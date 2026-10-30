@@ -576,10 +576,13 @@ defmodule Web.EquipmentLiveTest do
     hours = tag_fixture(ctx.team, "Primary Hours")
     water = tag_fixture(ctx.team, "Flat Water")
     boat = group_fixture(ctx.team, %{title: "Boat crew"})
+    group_member_fixture(boat, member_fixture(ctx.team, %{name: "Sam Rivera"}))
+    group_member_fixture(boat, member_fixture(ctx.team, %{name: "Ty Wong"}))
     template = template_fixture(ctx.team, "Boat training", [], [water, hours], [boat])
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}")
 
     assert has_element?(lv, "#template-groups-table #group-#{boat.id}", "Boat crew")
+    assert has_element?(lv, "#group-#{boat.id}-members", "2")
     assert has_element?(lv, "#template-details", "Primary")
     assert has_element?(lv, "#template-tags", "Flat Water")
     refute has_element?(lv, "#template-tags", "Primary Hours")

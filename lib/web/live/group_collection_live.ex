@@ -225,19 +225,18 @@ defmodule Web.GroupCollectionLive do
 
     context = BuildGroupRulePreview.load(team)
 
+    counts = GroupMember.counts(team.id)
+
     Group
     |> where([g], g.team_id == ^team.id)
-    |> join(:left, [g], gm in GroupMember, on: gm.group_id == g.id)
-    |> group_by([g], g.id)
     |> order_by([g], asc: g.title)
-    |> select([g, gm], %{group: g, member_count: count(gm.id)})
     |> Repo.all()
-    |> Enum.map(fn row ->
+    |> Enum.map(fn group ->
       rules =
-        if MapSet.member?(ruled_group_ids, row.group.d4h_group_id),
-          do: pending_changes(context, team, row.group)
+        if MapSet.member?(ruled_group_ids, group.d4h_group_id),
+          do: pending_changes(context, team, group)
 
-      Map.put(row, :rules, rules)
+      %{group: group, member_count: Map.get(counts, group.id, 0), rules: rules}
     end)
   end
 

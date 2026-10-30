@@ -172,6 +172,22 @@
     without its cell, or a date or duration formatted in the cell itself.
   </p>
 
+  <h2>Recommended tables</h2>
+  <p>
+    A list that recurs, such as groups, has the same columns on every page that shows it. Start
+    from its row here, then add what the page needs.
+  </p>
+  <.table
+    id="sample-recommended-tables"
+    rows={SampleData.recommended_tables()}
+    class="table-striped"
+  >
+    <:col :let={t} label="Table" class="w-px whitespace-nowrap">{t.table}</:col>
+    <:col :let={t} label="Columns" class="whitespace-nowrap">{t.columns}</:col>
+    <:col :let={t} label="Use for">{t.use}</:col>
+  </.table>
+  <p>A list that shows up on a second page gets a row here.</p>
+
   <h2>Wrapping cells</h2>
   <p>Long text wraps; the other cells stay on its first line.</p>
   <.table id="sample-wrapping" rows={rule_preview()} class="table-striped">

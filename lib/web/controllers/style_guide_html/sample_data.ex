@@ -447,6 +447,18 @@ defmodule Web.StyleGuideHTML.SampleData do
 
   # Members by standing, for the table's row groups.
   # The standard columns (#740) for /styles/table, in Web.Components.Columns' order.
+  def recommended_tables do
+    [
+      {"Groups", "Group, Members",
+       "Any list of groups people read, such as a template's groups. Members is the count, right-aligned. The Groups list adds Rules."},
+      {"Groups on a form", "Group, Remove",
+       "Groups being picked, such as on a template's groups form. No count: the reader is choosing, not reading."}
+    ]
+    |> Enum.map(fn {table, columns, use} ->
+      %{id: table, table: table, columns: columns, use: use}
+    end)
+  end
+
   def standard_columns do
     [
       {"Member", "member_cell", "Left",

@@ -6,6 +6,7 @@ defmodule Web.TemplateLive do
   alias App.Model.Activity
   alias App.Model.CustomField
   alias App.Model.EquipmentItem
+  alias App.Model.GroupMember
   alias App.Model.Template
   alias App.Operation.SaveTemplate
 
@@ -29,6 +30,7 @@ defmodule Web.TemplateLive do
         # The tags as an activity holds them, so the hours tag reads as Tax credit hours.
         tagged: %{tags: template |> Template.tags() |> Enum.map(& &1.title)},
         hours_tags: Activity.hours_tags(team),
+        member_counts: GroupMember.counts(team.id),
         fields?: fields != [],
         items: Enum.sort_by(template.template_items, &String.downcase(&1.equipment_item.title)),
         field_rows:
@@ -135,6 +137,9 @@ defmodule Web.TemplateLive do
           >
             <:col :let={group} label="Group">
               <.group_cell group={group} team={@current_team} />
+            </:col>
+            <:col :let={group} label="Members" class="w-px whitespace-nowrap" align="right">
+              <span id={"group-#{group.id}-members"}>{Map.get(@member_counts, group.id, 0)}</span>
             </:col>
           </.table>
           <p :if={@template.template_groups == []} class="hint">No groups.</p>
