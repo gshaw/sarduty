@@ -83,6 +83,44 @@ body.frame.bare { padding: 0; background: transparent; }
 .frames figure { margin: 0; }
 .frames figcaption { font: 600 15px/20px var(--mk-font); color: #3c4043; text-align: center; margin-bottom: 14px; }
 
+/* A shot's label, above its frame: the letter people use to talk about it. Dark, not
+   fuchsia, so it never reads as a pin. */
+body.frame.labelled { padding: 0; }
+.shot-label { display: flex; align-items: center; gap: 10px; padding: 24px 32px 0;
+  font: 600 17px/1 var(--mk-font); color: #1d1d1f; }
+.shot-label b, .contact figcaption b { display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 6px;
+  border-radius: 7px; background: #1d1d1f; color: #fff; font: 700 16px/1 var(--mk-font); }
+
+/* A diagram's frame: a plain sheet, no browser bar, so nobody takes it for a page. */
+.sheet { border-radius: 10px; overflow: hidden; background: #fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.12), 0 18px 40px -12px rgba(0,0,0,.25); }
+.sheet img { display: block; }
+
+/* The contact sheet: every shot of a round, small, with its label. */
+.contact { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px 24px; width: 1216px; align-items: start; }
+.contact figure { margin: 0; }
+.contact figcaption { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font: 600 15px/1 var(--mk-font); color: #1d1d1f; }
+.contact img { display: block; width: 100%; }
+.contact figure.narrow img { width: 62%; }
+
+/* ---- Diagrams: what a page can't show, drawn with the app's own CSS ---------- */
+
+/* A diagram page: the sheet's content, at the shot's width. */
+.diagram { padding: var(--sp-8); }
+.diagram > h2:first-child { margin-top: 0; }
+
+/* A flow: steps left to right, each leading to the next. */
+.flow { display: flex; align-items: stretch; gap: 0; }
+.flow-step { flex: 1; padding: var(--sp-4); border-radius: 8px; background: var(--surface-alt); }
+.flow-step h3 { margin: 0 0 var(--sp-1); font-size: 1rem; font-weight: 600; }
+.flow-step p { margin: 0; }
+.flow-arrow { align-self: center; padding: 0 var(--sp-2); color: var(--text-muted); font-size: 1.5rem; }
+
+/* A timeline: times down the left, what happens on the right. */
+.timeline { display: grid; grid-template-columns: max-content 1fr; gap: var(--sp-3) var(--sp-4); margin: 0; }
+.timeline dt { font-weight: 600; font-variant-numeric: tabular-nums; }
+.timeline dd { margin: 0; padding-left: var(--sp-4); border-left: 2px solid var(--border-subtle); }
+
 /* ---- Messages: a text thread as the member's phone shows it ----------------- */
 
 .sms { background: #fff; font: 17px/22px -apple-system, var(--mk-font); color: #000; }

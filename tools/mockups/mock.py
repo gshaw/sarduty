@@ -229,6 +229,27 @@ def mail(subject, from_, to, body_html, reply_to=None):
             f'<div class="mail-body">{body_html}</div></div>')
 
 
+# ---- Diagrams -----------------------------------------------------------------------
+
+def diagram(body, lead=None):
+    """A diagram page, for a shot with "frame": "sheet". Its title is the shot's label;
+    `lead` is one sentence above it. Build the body from flow(), timeline(), and table()."""
+    lead_ = f'<p class="lead">{lead}</p>' if lead else ""
+    return f'<div class="diagram">{lead_}{body}</div>'
+
+
+def flow(steps):
+    """Steps left to right: [(title, text), ...]. A step's text may hold marks."""
+    arrow = '<span class="flow-arrow" aria-hidden="true">→</span>'
+    return '<div class="flow">' + arrow.join(
+        f'<div class="flow-step"><h3>{t}</h3><p>{x}</p></div>' for t, x in steps) + "</div>"
+
+
+def timeline(events):
+    """Times down the left, what happens on the right: [(when, text), ...]."""
+    return '<dl class="timeline">' + "".join(f"<dt>{w}</dt><dd>{x}</dd>" for w, x in events) + "</dl>"
+
+
 # ---- SMS sums -------------------------------------------------------------------------
 
 # cspell:ignore èéùìò ΦΓΛΩΠΨΣΘΞ ÄÖÑÜ abcdefghijklmnopqrstuvwxyzäöñüà

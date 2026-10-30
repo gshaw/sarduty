@@ -1,8 +1,8 @@
 # Mockup kit: a round's review page, from its shots.json. See docs/mockups.md.
 #   python3 -I tools/mockups/review.py <round> > <round>/review.html
-# A tab per shot, with its pins as a numbered list under the picture, and the folder's
-# intro.html (if any) as the first tab. Images are absolute paths, which html_render
-# inlines.
+# A tab per shot, named by its label, with its pins as a numbered list under the picture,
+# and the folder's intro.html (if any) as the first tab, with the contact sheet under it.
+# Images are absolute paths, which html_render inlines.
 import html
 import json
 import pathlib
@@ -11,6 +11,15 @@ import sys
 d = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
 shots = json.loads((d / "shots.json").read_text())["shots"]
 intro = (d / "intro.html").read_text() if (d / "intro.html").exists() else ""
+if intro and (d / "shots/contact.jpg").exists():
+    intro += f'<img src="{d}/shots/contact.jpg" alt="Every shot in this round">'
+
+
+def narrow(k):
+    """A phone-width shot: under 600 CSS pixels, read from the PNG's header."""
+    png = d / "shots" / f"{k}.png"
+    return png.exists() and int.from_bytes(png.read_bytes()[16:20], "big") < 1200
+
 
 tabs, panes = [], []
 if intro:
@@ -19,10 +28,11 @@ if intro:
 for i, s in enumerate(shots):
     k = s.get("out", s["page"])
     first = not intro and i == 0
-    tabs.append(f'<button data-k="{k}" aria-pressed="{str(first).lower()}">{html.escape(s["title"])}</button>')
+    name = html.escape(f'{s["id"]} · {s["title"]}' if s.get("id") else s["title"])
+    tabs.append(f'<button data-k="{k}" aria-pressed="{str(first).lower()}">{name}</button>')
     pins = "".join(f"<li><span>{p}</span></li>" for p in s.get("pins", []))
     lead = f'<p class="lead">{s["lead"]}</p>' if s.get("lead") else ""
-    cls = "phone" if s.get("frame") == "phone" else ""
+    cls = "phone" if narrow(k) else ""
     panes.append(f'<section data-k="{k}"{"" if first else " hidden"}>{lead}'
                  f'<img class="{cls}" src="{d}/shots/{k}.jpg" alt="{html.escape(s["title"])}">'
                  f'{f"<ol class=pins>{pins}</ol>" if pins else ""}</section>')
