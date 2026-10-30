@@ -183,19 +183,20 @@ defmodule Web.MeActivitiesLive do
       row_id={&"attendance-#{&1.id}"}
     >
       <:col :let={attendance} label="Date" class="w-px whitespace-nowrap">
-        {Format.month_day(attendance.started_at, @team.timezone)}
+        <.date_cell value={attendance.started_at} timezone={@team.timezone} />
       </:col>
       <:col :let={attendance} label="Activity">
-        <.a navigate={~p"/teams/#{@team}/activities/#{attendance.activity.id}"}>{attendance.activity.title}</.a>
+        <.activity_cell activity={attendance.activity} team={@team} kind={false} />
       </:col>
       <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap max-md:hidden">
         <.activity_kind_mark activity={attendance.activity} />
       </:col>
-      <:col :let={attendance} label="Hours" class="w-px whitespace-nowrap max-md:hidden">
-        {hours_label(MemberRecords.hours_kind(attendance, @hours_tags))}
-      </:col>
-      <:col :let={attendance} label="Time" align="right" class="w-px whitespace-nowrap">
-        {Format.duration(MemberRecords.minutes(attendance))}
+      <%!-- Which tax credit hours it counts as, before the hours, as on Activities. --%>
+      <:col :let={attendance} label="Hours" align="right" class="w-px whitespace-nowrap">
+        <span class="text-text-muted max-md:hidden">
+          {hours_label(MemberRecords.hours_kind(attendance, @hours_tags))}
+        </span>
+        <.hours_cell minutes={MemberRecords.minutes(attendance)} />
       </:col>
     </.table>
     <p id="missing" class="hint mt-4">

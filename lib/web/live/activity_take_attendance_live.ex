@@ -8,7 +8,6 @@ defmodule Web.ActivityTakeAttendanceLive do
        view_events: ~w(set_kind change clear_override toggle_yet_to_arrive scan_failed),
        member_events: ~w(scanned pick undo)}
 
-  import Web.Components.MemberColumn
   import Web.Components.Scanner
   import Web.Components.YetToArrive
 

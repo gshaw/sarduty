@@ -216,16 +216,16 @@ defmodule Web.MeLive do
         row_id={&"activities-list-#{&1.id}"}
       >
         <:col :let={attendance} label="Date" class="w-px whitespace-nowrap">
-          {Format.date_short(attendance.started_at, @team.timezone)}
+          <.date_cell value={attendance.started_at} timezone={@team.timezone} />
         </:col>
         <:col :let={attendance} label="Activity">
-          <.a navigate={~p"/teams/#{@team}/activities/#{attendance.activity.id}"}>{attendance.activity.title}</.a>
+          <.activity_cell activity={attendance.activity} team={@team} kind={false} />
         </:col>
         <:col :let={attendance} label="Kind" class="w-px whitespace-nowrap max-md:hidden">
           <.activity_kind_mark activity={attendance.activity} />
         </:col>
-        <:col :let={attendance} label="Time" align="right" class="w-px whitespace-nowrap">
-          {Format.duration(MemberRecords.minutes(attendance))}
+        <:col :let={attendance} label="Hours" align="right" class="w-px whitespace-nowrap">
+          <.hours_cell minutes={MemberRecords.minutes(attendance)} />
         </:col>
       </.table>
       <p :if={@activities != []} class="action mt-2">
@@ -306,7 +306,7 @@ defmodule Web.MeLive do
         <:col :let={row} label="Qualification">
           <.sent_certificate :if={row[:certificate]} team={@team} certificate={row.certificate} />
           <%= if row[:award] do %>
-            {row.award.qualification.title}
+            <.qualification_cell qualification={row.award.qualification} team={@team} link={false} />
             <span :if={row.award.qualification.organization_owned} class="hint">
               · {@organization_name}
             </span>
@@ -318,16 +318,13 @@ defmodule Web.MeLive do
             </span>
           <% end %>
         </:col>
-        <:col :let={row} label="Expires" class="whitespace-nowrap">
+        <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
           <%= if certificate = row[:certificate] do %>
-            {certificate.ends_on && Format.date_short(certificate.ends_on)}
+            <.date_cell value={certificate.ends_on} timezone={@team.timezone} />
             <.badge :if={certificate.status == :waiting}>Waiting</.badge>
             <.badge :if={certificate.status == :declined} kind={:warning}>Declined</.badge>
           <% else %>
-            {QualificationText.expires(row.award, @now, @team.timezone)}
-            <.badge :if={row.status == :expiring} kind={:warning}>
-              {QualificationText.days_left(row)}
-            </.badge>
+            <.expires_cell value={row.award.ends_at} now={@now} timezone={@team.timezone} />
           <% end %>
         </:col>
       </.table>

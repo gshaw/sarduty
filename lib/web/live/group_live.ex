@@ -3,7 +3,6 @@ defmodule Web.GroupLive do
 
   import Ecto.Query
   import Web.Components.GroupRule
-  import Web.Components.MemberColumn
   import Web.Components.Standing, only: [standing_badge: 1]
 
   alias App.Model.Group
@@ -227,9 +226,6 @@ defmodule Web.GroupLive do
   defp shown_standing(standing, _team, _group), do: standing
 
   defp retired_count(facts), do: Enum.count(facts.standing, &(elem(&1, 1) == :retired))
-
-  defp last_attended(nil, _team), do: "Never"
-  defp last_attended(started_at, team), do: Service.Format.date_short(started_at, team.timezone)
 
   # The team's Retiring group (#514) can't have rules: "Standing is Active" on it would
   # take out every member. Settings offer only groups without rules for it.
@@ -474,10 +470,12 @@ defmodule Web.GroupLive do
         />
       </:col>
       <:col :let={gm} label="Role">{gm.member.position}</:col>
-      <:col :let={gm} label="Last attended" class="whitespace-nowrap">
-        <span id={"group-member-attended-#{gm.member.id}"}>
-          {last_attended(@facts.last_attended[gm.member.id], @team)}
-        </span>
+      <:col :let={gm} label="Last attended" class="w-px whitespace-nowrap">
+        <.last_attended_cell
+          id={"group-member-attended-#{gm.member.id}"}
+          value={@facts.last_attended[gm.member.id]}
+          timezone={@team.timezone}
+        />
       </:col>
       <:col :let={gm} :if={!@ruled?} label="" align="right">
         <.button

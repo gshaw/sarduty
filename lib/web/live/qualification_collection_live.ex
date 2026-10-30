@@ -4,7 +4,6 @@ defmodule Web.QualificationCollectionLive do
   import Ecto.Query
 
   import Web.Components.FilterBar
-  import Web.Components.MemberColumn
   import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
@@ -228,7 +227,7 @@ defmodule Web.QualificationCollectionLive do
       class="table-striped"
     >
       <:col :let={q} label="Qualification">
-        <.a navigate={~p"/teams/#{@current_team}/qualifications/#{q.id}"}>{q.title}</.a>
+        <.qualification_cell qualification={q} team={@current_team} />
         <span :if={q.organization_owned and @view != :organization} class="hint">
           · {@organization_name}
         </span>
@@ -292,10 +291,13 @@ defmodule Web.QualificationCollectionLive do
         />
       </:col>
       <:col :let={row} label="Qualification">
-        <.a navigate={~p"/teams/#{@team}/qualifications/#{row.qualification_id}"}>{row.qualification}</.a>
+        <.qualification_cell
+          qualification={%{id: row.qualification_id, title: row.qualification}}
+          team={@team}
+        />
       </:col>
-      <:col :let={row} label="Expires" align="right" class="w-1/12 whitespace-nowrap">
-        {Service.Format.date_short(row.ends_at, @team.timezone)}
+      <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
+        <.expires_cell value={row.ends_at} timezone={@team.timezone} />
       </:col>
     </.table>
     <.empty_state :if={@none} id="none-expiring" title="Nothing expiring">

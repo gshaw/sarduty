@@ -4,7 +4,6 @@ defmodule Web.QualificationLive do
   import Ecto.Query
 
   import Web.Components.FilterBar
-  import Web.Components.MemberColumn
   import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
@@ -294,10 +293,10 @@ defmodule Web.QualificationLive do
         />
       </:col>
       <:col :let={award} label="Start" class="w-px whitespace-nowrap">
-        {Service.Format.date_short(award.starts_at, @team.timezone)}
+        <.date_cell value={award.starts_at} timezone={@team.timezone} />
       </:col>
-      <:col :let={award} label="End" class="w-px whitespace-nowrap">
-        {Service.Format.date_short(award.ends_at, @team.timezone)}
+      <:col :let={award} label="Expires" class="w-px whitespace-nowrap">
+        <.expires_cell value={award.ends_at} timezone={@team.timezone} />
       </:col>
     </.table>
     <.empty_state

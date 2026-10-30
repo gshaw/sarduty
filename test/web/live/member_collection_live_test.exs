@@ -201,7 +201,7 @@ defmodule Web.MemberCollectionLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
 
-    assert has_element?(lv, "#last-attended-#{drifting.id}", "Jan 10, 2026")
+    assert has_element?(lv, ~s(#last-attended-#{drifting.id}[title="Jan 10, 2026"]))
     assert has_element?(lv, "#last-attended-#{never.id}", "Never")
 
     {:ok, _lv, html} =

@@ -1,7 +1,6 @@
 defmodule Web.ActivityAttendanceLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.MemberColumn
   import Web.Components.Phone, only: [phone: 1]
   import Web.Components.YetToArrive
 

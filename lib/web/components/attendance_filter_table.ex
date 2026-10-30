@@ -1,8 +1,7 @@
 defmodule Web.Components.AttendanceFilterTable do
   use Web, :function_component
 
-  import Web.Components.A
-  import Web.Components.D4H
+  import Web.Components.Columns
   import Web.Components.FilterBar
   import Web.Components.Pagination
   import Web.Components.Table
@@ -66,9 +65,7 @@ defmodule Web.Components.AttendanceFilterTable do
       path_fn={@path_fn}
     >
       <:col :let={record} label="Activity" sorts={[{"↓", "id-"}, {"↑", "id"}]}>
-        <.a navigate={~p"/teams/#{@member.team}/activities/#{record.activity.id}"}><.activity_title activity={
-          record.activity
-        } /></.a>
+        <.activity_cell activity={record.activity} team={@member.team} />
       </:col>
       <:col
         :let={record}
@@ -90,12 +87,12 @@ defmodule Web.Components.AttendanceFilterTable do
       </:col>
       <:col
         :let={record}
-        label="Duration"
+        label="Hours"
         align="right"
-        class="w-1/12 whitespace-nowrap"
+        class="w-px whitespace-nowrap"
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
-        {Service.Format.duration(record.duration_in_minutes)}
+        <.hours_cell minutes={record.duration_in_minutes} />
       </:col>
     </.table>
 

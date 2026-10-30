@@ -246,6 +246,12 @@ fi
   property and its token (`text-text-muted`, `bg-surface-alt`). Anything else, like
   `mt-5`, `mt-10`, or `text-zinc-600`, builds nothing, and
   `test/web/design_system_test.exs` fails on it.
+- **A table uses the standard columns** (#740): Member, Activity, Item, Qualification,
+  Group, Date, Expires, Hours, and Last attended, each a cell in
+  [Web.Components.Columns](lib/web/components/columns.ex) under that label. A member
+  column passes standings from `Standing.visible_by_member/4`. `/styles/table` shows
+  them, and `Web.StandardColumnsTest` fails on one built by hand. A column that recurs
+  on a second page becomes the next one.
 - **Reach for a component or a class before utilities.** Banners, warning text, empty
   states, the error summary, and the result band are components; `.hint`,
   `.lead`, `.action`, `.card`, `.media`, `.heading-row`, `.code-block`, and `.small-print` are

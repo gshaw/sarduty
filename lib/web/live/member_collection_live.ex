@@ -4,7 +4,6 @@ defmodule Web.MemberCollectionLive do
   use Web, {:live_view_app_layout, access: :team, view_events: ["change"]}
 
   import Web.Components.FilterBar
-  import Web.Components.MemberColumn
   import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
@@ -277,13 +276,15 @@ defmodule Web.MemberCollectionLive do
       <:col
         :let={record}
         label="Last attended"
-        align="right"
-        class="w-1/12 whitespace-nowrap"
+        class="w-px whitespace-nowrap"
         sorts={[{"↑", "attended"}, {"↓", "attended-"}]}
       >
-        <span id={"last-attended-#{record.member.id}"}>
-          {last_attended(record.last_attended_at, @current_team)}
-        </span>
+        <.last_attended_cell
+          id={"last-attended-#{record.member.id}"}
+          value={record.last_attended_at}
+          now={@now}
+          timezone={@current_team.timezone}
+        />
         <div
           :if={@attended not in [nil, "all"] and clock_why(record, @current_team)}
           id={"clock-starts-#{record.member.id}"}
@@ -303,31 +304,29 @@ defmodule Web.MemberCollectionLive do
       </:col>
       <:col
         :let={record}
-        label="Duration"
+        label="Hours"
         align="right"
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "duration-"}, {"↑", "duration"}]}
       >
-        {Service.Format.duration(record.total_minutes)}
+        <.hours_cell minutes={record.total_minutes} />
       </:col>
       <:col
         :let={record}
         label="Joined"
-        align="right"
-        class="w-1/12 whitespace-nowrap"
+        class="w-px whitespace-nowrap"
         sorts={[{"↓", "date-"}, {"↑", "date"}]}
       >
-        {Service.Format.date_short(record.member.joined_at, @current_team.timezone)}
+        <.date_cell value={record.member.joined_at} timezone={@current_team.timezone} />
       </:col>
       <:col
         :let={record}
         :if={@retired?}
         label="Retired"
-        align="right"
-        class="w-1/12 whitespace-nowrap"
+        class="w-px whitespace-nowrap"
         sorts={[{"↓", "retired-"}, {"↑", "retired"}]}
       >
-        {Service.Format.date_short(record.member.left_at, @current_team.timezone)}
+        <.date_cell value={record.member.left_at} timezone={@current_team.timezone} />
       </:col>
     </.table>
 
@@ -390,9 +389,6 @@ defmodule Web.MemberCollectionLive do
   defp clock_why(:checked_in), do: "Checked in"
   defp clock_why(:back), do: "Back from leave"
   defp clock_why(:joined), do: "Joined"
-
-  defp last_attended(nil, _team), do: "Never"
-  defp last_attended(started_at, team), do: Service.Format.date_short(started_at, team.timezone)
 
   # With a tag on, the member's page opens on the activities that were counted.
   defp member_path(team, member, %{activity_tag: tag} = filter_options)

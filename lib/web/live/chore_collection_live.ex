@@ -3,7 +3,6 @@ defmodule Web.ChoreCollectionLive do
 
   import Web.ChoreText, only: [own_box: 1, status_badge: 1]
   import Web.Components.Chart, only: [stat: 1]
-  import Web.Components.MemberColumn
   import Web.Components.StatSwitch
 
   alias App.Model.Chore
@@ -327,8 +326,8 @@ defmodule Web.ChoreCollectionLive do
         row_id={&"chore-#{&1.id}"}
         class="table-striped table-stack"
       >
-        <:col :let={chore} label="Date" class="w-1/12 whitespace-nowrap">
-          {Format.day_in_year(chore.date, @today)}
+        <:col :let={chore} label="Date" class="w-px whitespace-nowrap">
+          <.date_cell value={chore.date} timezone={@team.timezone} />
         </:col>
         <:col :let={chore} label="What you did" class="stack-title">
           <.a :if={@team_admin?} navigate={~p"/teams/#{@team}/chores/#{chore.id}"}>{chore.description}</.a>
@@ -338,8 +337,8 @@ defmodule Web.ChoreCollectionLive do
             {ChoreText.declined(chore, @team.timezone)}
           </span>
         </:col>
-        <:col :let={chore} label="Time" class="w-1/12 whitespace-nowrap" align="right">
-          {Format.duration(chore.minutes)}
+        <:col :let={chore} label="Hours" class="w-px whitespace-nowrap" align="right">
+          <.hours_cell minutes={chore.minutes} />
         </:col>
         <:col :let={chore} label="" class="stack-optional w-px whitespace-nowrap">
           <.status_badge chore={chore} />
@@ -405,8 +404,8 @@ defmodule Web.ChoreCollectionLive do
           Yours
         </.badge>
       </:col>
-      <:col :let={chore} label="Date" class="whitespace-nowrap">
-        {Format.day_in_year(chore.date, @today)}
+      <:col :let={chore} label="Date" class="w-px whitespace-nowrap">
+        <.date_cell value={chore.date} timezone={@current_team.timezone} />
         <span :if={note = logged_note(chore, @current_team.timezone)} class="hint block">
           {note}
         </span>
@@ -418,8 +417,8 @@ defmodule Web.ChoreCollectionLive do
         </span>
       </:col>
       <:col :let={chore} :if={@category} label="Category">{chore.chore_category.title}</:col>
-      <:col :let={chore} label="Time" class="whitespace-nowrap" align="right">
-        {Format.duration(chore.minutes)}
+      <:col :let={chore} label="Hours" class="w-px whitespace-nowrap" align="right">
+        <.hours_cell minutes={chore.minutes} />
       </:col>
     </.table>
     """

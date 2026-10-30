@@ -1,8 +1,6 @@
 defmodule Web.ActivityAddMembersLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.MemberColumn
-
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Group

@@ -1,13 +1,11 @@
 defmodule Web.CertificateCollectionLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.MemberColumn
   import Web.Components.StatSwitch
 
   alias App.Model.Certificate
   alias App.Model.Standing
   alias App.Model.Team
-  alias Service.Format
   alias Web.CertificateText
 
   # The certificates members sent (#493), /teams/:subdomain/certificates, by status. Each
@@ -118,7 +116,7 @@ defmodule Web.CertificateCollectionLive do
         {CertificateText.dates(certificate)}
       </:col>
       <:col :let={certificate} label="Sent" class="whitespace-nowrap">
-        {Format.date_short(certificate.inserted_at, @current_team.timezone)}
+        <.date_cell value={certificate.inserted_at} timezone={@current_team.timezone} />
       </:col>
     </.table>
     """

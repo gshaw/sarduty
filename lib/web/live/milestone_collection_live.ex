@@ -9,7 +9,6 @@ defmodule Web.MilestoneCollectionLive do
   use Web, {:live_view_app_layout, access: :team, view_events: ["change"]}
 
   import Web.Components.FilterBar
-  import Web.Components.MemberColumn
   import Web.Components.StatSwitch
 
   alias App.Model.Standing
@@ -116,7 +115,7 @@ defmodule Web.MilestoneCollectionLive do
       class="table-striped"
     >
       <:col :let={milestone} label="Date" class="w-px whitespace-nowrap">
-        {Format.date_short(milestone.on)}
+        <.date_cell value={milestone.on} timezone={@current_team.timezone} />
       </:col>
       <:col :let={milestone} label="Member">
         <.member_cell

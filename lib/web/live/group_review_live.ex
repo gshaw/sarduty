@@ -1,8 +1,6 @@
 defmodule Web.GroupReviewLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.MemberColumn
-
   alias App.Model.Group
   alias App.Model.Team
   alias App.Operation.ApplyGroupRuleChanges

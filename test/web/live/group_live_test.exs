@@ -326,7 +326,7 @@ defmodule Web.GroupLiveTest do
     assert has_element?(lv, "#group-member-standing-#{sam.id}", "Retired")
     refute has_element?(lv, "#group-member-standing-#{avery.id}")
     assert has_element?(lv, "#group_members", "Team Leader")
-    assert has_element?(lv, "#group-member-attended-#{avery.id}", "Mar 1, 2026")
+    assert has_element?(lv, ~s(#group-member-attended-#{avery.id}[title="Mar 1, 2026"]))
     assert has_element?(lv, "#group-member-attended-#{sam.id}", "Never")
   end
 

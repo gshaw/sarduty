@@ -2,7 +2,6 @@ defmodule Web.ActivitySendUpdateLive do
   use Web, :live_view_app_layout
 
   import Web.Components.EmailPreview
-  import Web.Components.MemberColumn
 
   alias App.Mailer.ActivityMailer
   alias App.Model.Activity

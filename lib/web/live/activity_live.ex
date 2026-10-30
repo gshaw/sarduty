@@ -6,7 +6,6 @@ defmodule Web.ActivityLive do
   import Web.Components.CopyButton
   import Web.Components.CustomFields
   import Web.Components.ActivityPanel
-  import Web.Components.MemberColumn
   import Web.Components.OpenInMaps
   import Web.Components.StatSwitch
 
@@ -735,11 +734,11 @@ defmodule Web.ActivityLive do
         <:col
           :let={row}
           :if={@started? and @view in [nil, "attending"]}
-          label="Duration"
+          label="Hours"
           align="right"
-          class="whitespace-nowrap"
+          class="w-px whitespace-nowrap"
         >
-          {if row.status == "attending", do: Format.duration(row.duration_in_minutes)}
+          <.hours_cell minutes={row.status == "attending" && row.duration_in_minutes} />
         </:col>
       </.table>
     </section>
@@ -816,11 +815,7 @@ defmodule Web.ActivityLive do
         class="table-striped w-fit"
       >
         <:col :let={usage} label="Item">
-          <.a
-            :if={@team_admin?}
-            navigate={~p"/teams/#{@activity.team}/equipment/#{usage.equipment_item.id}"}
-          >{usage.equipment_item.title}</.a>
-          <span :if={!@team_admin?}>{usage.equipment_item.title}</span>
+          <.item_cell item={usage.equipment_item} team={@activity.team} link={@team_admin?} />
         </:col>
         <:col :let={usage} label="Type">{usage.equipment_item.kind}</:col>
         <:col :let={usage} label="Used" align="right" class="whitespace-nowrap">

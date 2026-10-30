@@ -172,10 +172,10 @@ defmodule Web.EquipmentItemLive do
           <h2 class="heading">Activities · {length(@usages)}</h2>
           <.table :if={@usages != []} id="item-usages" rows={@usages} class="table-striped">
             <:col :let={usage} label="Activity">
-              <.a navigate={~p"/teams/#{@current_team}/activities/#{usage.activity.id}"}>{usage.activity.title}</.a>
+              <.activity_cell activity={usage.activity} team={@current_team} />
             </:col>
-            <:col :let={usage} label="Date" align="right" class="w-px whitespace-nowrap">
-              {Service.Format.date_short(usage.activity.started_at, @current_team.timezone)}
+            <:col :let={usage} label="Date" class="w-px whitespace-nowrap">
+              <.date_cell value={usage.activity.started_at} timezone={@current_team.timezone} />
             </:col>
             <:col :let={usage} label="Used" align="right" class="w-px whitespace-nowrap">
               {Web.ActivityEquipmentLive.amount(usage)}

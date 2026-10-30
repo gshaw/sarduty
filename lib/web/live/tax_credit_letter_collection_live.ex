@@ -2,7 +2,6 @@ defmodule Web.TaxCreditLetterCollectionLive do
   use Web, :live_view_app_layout
 
   import Web.Components.FilterBar
-  import Web.Components.MemberColumn
   import Web.Components.StatSwitch
 
   alias App.Model.Standing
@@ -128,7 +127,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "primary"}]}
       >
-        {Service.Format.duration(record.primary_minutes)}
+        <.hours_cell minutes={record.primary_minutes} />
       </:col>
       <:col
         :let={record}
@@ -137,7 +136,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "secondary"}]}
       >
-        {Service.Format.duration(record.secondary_minutes)}
+        <.hours_cell minutes={record.secondary_minutes} />
       </:col>
       <:col
         :let={record}
@@ -146,7 +145,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "total"}]}
       >
-        {Service.Format.duration(record.total_minutes)}
+        <.hours_cell minutes={record.total_minutes} />
       </:col>
       <:col :let={record} label="Letter" class="whitespace-nowrap">
         <.record_actions record={record} current_team={@current_team} />

@@ -413,28 +413,62 @@ defmodule Web.StyleGuideHTML.SampleData do
   end
 
   # One member's qualifications, soonest expiry first, for the table's greyed rows.
+  # Ends relative to now, so the Expires cell shows its three states.
   def qualification_rows do
+    now = DateTime.utc_now()
+
     [
-      %{id: 1, title: "Standard First Aid", expires: "Dec 5, 2026", days: 45, expired?: false},
+      %{
+        id: 1,
+        title: "Standard First Aid",
+        ends_at: DateTime.add(now, 45, :day),
+        expired?: false
+      },
       %{
         id: 2,
         title: "Rope Rescue Operations",
-        expires: "Sep 30, 2027",
-        days: nil,
+        ends_at: DateTime.add(now, 400, :day),
         expired?: false
       },
-      %{id: 3, title: "ICS 100", expires: nil, days: nil, expired?: false},
+      %{id: 3, title: "ICS 100", ends_at: nil, expired?: false},
       %{
         id: 4,
         title: "Swiftwater Awareness",
-        expires: "Expired Sep 30, 2024",
-        days: nil,
+        ends_at: DateTime.add(now, -400, :day),
         expired?: true
       }
     ]
   end
 
   # Members by standing, for the table's row groups.
+  # The standard columns (#740) for /styles/table, in Web.Components.Columns' order.
+  def standard_columns do
+    [
+      {"Member", "member_cell", "Left",
+       "Every table that lists the members of something: an activity, a group, a qualification, chores, tax letters. The standing badge follows the name."},
+      {"Activity", "activity_cell", "Left",
+       "Every table of activities. Pass kind={false} when the table has a Kind column."},
+      {"Item", "item_cell", "Left",
+       "Every table of equipment. The status badge shows unless the item is operational."},
+      {"Qualification", "qualification_cell", "Left", "Every table of qualifications."},
+      {"Group", "group_cell", "Left", "Every table of groups."},
+      {"Date", "date_cell", "Left",
+       "A day: when an activity started, a chore, a milestone. Also Joined, Retired, Start, and Sent."},
+      {"Expires", "expires_cell", "Left",
+       "When a qualification, certificate, or item runs out. The badge counts the days left within 60."},
+      {"Hours", "hours_cell", "Right",
+       "Time spent: on an activity, a chore, or a year's tax credit hours."},
+      {"Last attended", "last_attended_cell", "Left",
+       "How long since a member last attended. The date shows on hover."}
+    ]
+    |> Enum.map(fn {label, cell, align, use} ->
+      %{id: cell, label: label, cell: cell, align: align, use: use}
+    end)
+  end
+
+  def sample_item,
+    do: %App.Model.EquipmentItem{id: 1, title: "Rope kit 2", status: "unserviceable"}
+
   # The Member column's standings, one row each, for /styles/table.
   def member_column_rows do
     away = %App.Model.MemberAwayPeriod{ends_on: ~D[2026-03-01], reason: "Parental leave"}
@@ -449,23 +483,27 @@ defmodule Web.StyleGuideHTML.SampleData do
   end
 
   def member_groups do
+    now = DateTime.utc_now()
+
     [
       %{
         id: "active",
         title: "Active",
         rows: [
-          %{id: 1, name: "Casey Dhillon", last_attended: "Oct 14"},
-          %{id: 2, name: "Morgan Lee", last_attended: "Oct 2"}
+          %{id: 1, name: "Casey Dhillon", last_attended: DateTime.add(now, -15, :day)},
+          %{id: 2, name: "Morgan Lee", last_attended: DateTime.add(now, -27, :day)}
         ]
       },
-      %{id: "away", title: "Away", rows: [%{id: 3, name: "Sam Okafor", last_attended: "Jun 21"}]},
+      %{
+        id: "away",
+        title: "Away",
+        rows: [%{id: 3, name: "Sam Okafor", last_attended: DateTime.add(now, -130, :day)}]
+      },
       %{
         id: "retired",
         title: "Retired",
         muted: true,
-        rows: [
-          %{id: 4, name: "Jordan Price", last_attended: "Mar 3, 2024"}
-        ]
+        rows: [%{id: 4, name: "Jordan Price", last_attended: nil}]
       }
     ]
   end
