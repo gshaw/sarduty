@@ -67,6 +67,20 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
   defp plan(context), do: BuildGroupRulePreview.plan(context, @callout, @now)
   defp problems(context), do: BuildGroupRulePreview.problems(context, @callout)
 
+  describe "expiry/2" do
+    defp expiry_in(amount, unit),
+      do: @now |> DateTime.add(amount, unit) |> BuildGroupRulePreview.expiry(@now)
+
+    test "past is expired, within 60 days counts the days left, later is nothing" do
+      assert BuildGroupRulePreview.expiry(nil, @now) == nil
+      assert expiry_in(-1, :second) == :expired
+      assert expiry_in(0, :second) == :expired
+      assert expiry_in(3, :hour) == 1
+      assert expiry_in(60, :day) == 60
+      assert expiry_in(61, :day) == nil
+    end
+  end
+
   describe "In rules" do
     test "a member must meet every rule" do
       awards = [award(10, @rope), award(10, @first_aid), award(11, @rope)]

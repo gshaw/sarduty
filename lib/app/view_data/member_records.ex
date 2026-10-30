@@ -152,17 +152,12 @@ defmodule App.ViewData.MemberRecords do
     }
   end
 
-  defp status(%{ends_at: nil}, _now), do: :current
-
-  # Within the window means ending on or before its last moment, as the team's expiring
-  # view counts it.
-  defp status(%{ends_at: ends_at} = award, now) do
-    until = DateTime.add(now, BuildGroupRulePreview.expiring_days(), :day)
-
-    cond do
-      MemberQualificationAward.expired?(award, now) -> :expired
-      DateTime.after?(ends_at, until) -> :current
-      true -> :expiring
+  # The same rule as the Expires cell, so a muted row and its badge agree.
+  defp status(award, now) do
+    case BuildGroupRulePreview.expiry(award.ends_at, now) do
+      :expired -> :expired
+      nil -> :current
+      _days_left -> :expiring
     end
   end
 

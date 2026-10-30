@@ -143,29 +143,14 @@ defmodule Web.Components.Columns do
   `w-px whitespace-nowrap`.
   """
   def expires_cell(assigns) do
-    assigns = assign(assigns, :expiry, expiry(assigns.value, assigns.now || DateTime.utc_now()))
+    now = assigns.now || DateTime.utc_now()
+    assigns = assign(assigns, :expiry, BuildGroupRulePreview.expiry(assigns.value, now))
 
     ~H"""
     <span :if={@expiry == :expired}>Expired</span>
     {date(@value, @timezone)}
     <.badge :if={is_integer(@expiry)} kind={:warning}>{Format.days(@expiry)}</.badge>
     """
-  end
-
-  @doc """
-  Pure. Whether something ending at `ends_at` has expired by `now` (`:expired`), ends
-  within the warning window (the days left), or neither (nil).
-  """
-  def expiry(nil, _now), do: nil
-
-  def expiry(ends_at, now) do
-    days = Service.Convert.days_until(ends_at, now)
-
-    cond do
-      not DateTime.after?(ends_at, now) -> :expired
-      days <= BuildGroupRulePreview.expiring_days() -> days
-      true -> nil
-    end
   end
 
   attr :minutes, :any, required: true, doc: "nil for a blank cell"
