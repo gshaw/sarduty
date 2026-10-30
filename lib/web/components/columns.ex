@@ -22,7 +22,8 @@ defmodule Web.Components.Columns do
 
   attr :standing, :any,
     default: :active,
-    doc: "from Standing.visible_by_member/4; nil for a member with none is active"
+    doc:
+      "from Standing.visible_by_member/4 on a page members can open, else by_member/3; nil is active"
 
   attr :path, :string, default: nil, doc: "the link, such as a tab; the member page by default"
 

@@ -249,7 +249,9 @@ fi
 - **A table uses the standard columns** (#740): Member, Activity, Item, Qualification,
   Group, Date, Expires, Hours, and Last attended, each a cell in
   [Web.Components.Columns](lib/web/components/columns.ex) under that label. A member
-  column passes standings from `Standing.visible_by_member/4`. `/styles/table` shows
+  column on a page members can open passes standings from
+  `Standing.visible_by_member/4`; a team admin page can pass `Standing.by_member/3`.
+  `/styles/table` shows
   them, and `Web.StandardColumnsTest` fails on one built by hand. A column that recurs
   on a second page becomes the next one.
 - **Reach for a component or a class before utilities.** Banners, warning text, empty
