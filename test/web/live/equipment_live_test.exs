@@ -557,6 +557,7 @@ defmodule Web.EquipmentLiveTest do
     template = template_fixture(ctx.team, "Truck 1")
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}")
     refute has_element?(lv, "#template-edit-fields")
+    assert has_element?(lv, "#template-no-fields", "one kind of activity")
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/fields/edit")
     assert has_element?(lv, "#template-no-fields", "for any kind")
@@ -569,6 +570,18 @@ defmodule Web.EquipmentLiveTest do
 
     lv |> form("#template-form", template: %{activity_kind: "exercise"}) |> render_submit()
     assert Repo.get!(Template, template.id).custom_values == %{}
+  end
+
+  test "a template's hours tag is its Tax credit hours, not a tag", ctx do
+    hours = tag_fixture(ctx.team, "Primary Hours")
+    water = tag_fixture(ctx.team, "Flat Water")
+    template = template_fixture(ctx.team, "Boat training", [], [water, hours])
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}")
+
+    assert has_element?(lv, "#template-details", "Primary")
+    assert has_element?(lv, "#template-tags", "Flat Water")
+    refute has_element?(lv, "#template-tags", "Primary Hours")
+    assert has_element?(lv, "#template-tags #template-edit-tags", "Change tags")
   end
 
   test "a template's page shows what it adds, and deletes it from its Actions", ctx do
@@ -587,9 +600,16 @@ defmodule Web.EquipmentLiveTest do
              ~s|#template-edit[href="#{~p"/teams/#{ctx.team}/templates/#{template.id}/edit"}"]|
            )
 
-    assert has_element?(lv, "#template-edit-items")
-    assert has_element?(lv, "#template-edit-fields")
-    assert has_element?(lv, "#template-delete[data-confirm-button='Delete template']")
+    assert has_element?(lv, "#template-items #template-edit-items", "Change items")
+    assert has_element?(lv, "#template-groups #template-edit-groups", "Add groups")
+    assert has_element?(lv, "#template-edit-fields", "Change fields")
+
+    assert has_element?(
+             lv,
+             "#template-actions #template-delete[data-confirm-button='Delete template']"
+           )
+
+    refute has_element?(lv, "#template-actions #template-edit-items")
 
     {:ok, _lv, html} =
       lv
