@@ -104,10 +104,16 @@ defmodule Web.TemplateLive do
             class="table-striped"
           >
             <:col :let={line} label="Item">
-              <.a navigate={~p"/teams/#{@current_team}/equipment/#{line.equipment_item.id}"}>{line.equipment_item.title}</.a>
+              <.item_cell item={line.equipment_item} team={@current_team} />
             </:col>
-            <:col :let={line} label="Hours" class="w-px whitespace-nowrap">
-              {hours(line)}
+            <:col :let={line} label="Hours" align="right" class="w-px whitespace-nowrap">
+              <.hours_cell
+                :if={EquipmentItem.takes_hours?(line.equipment_item)}
+                minutes={line.minutes}
+              />
+              <span :if={!EquipmentItem.takes_hours?(line.equipment_item)} class="text-text-muted">
+                Not counted
+              </span>
             </:col>
           </.table>
           <p :if={@items == []} class="hint">No items.</p>
@@ -141,12 +147,6 @@ defmodule Web.TemplateLive do
       </main>
     </div>
     """
-  end
-
-  defp hours(%{equipment_item: item, minutes: minutes}) do
-    if EquipmentItem.takes_hours?(item),
-      do: Service.Format.duration(minutes),
-      else: "Not counted"
   end
 
   def handle_event("delete", _params, socket) do

@@ -18,6 +18,7 @@ defmodule Web.ActivityLive do
   alias App.Model.EquipmentUsage
   alias App.Model.Member
   alias App.Model.Reminder
+  alias App.Model.Standing
   alias App.Operation.DeleteActivity
   alias App.Operation.SendReminders
   alias App.Repo
@@ -83,13 +84,16 @@ defmodule Web.ActivityLive do
 
   # Who is invited and how they replied, again after a reply.
   defp assign_people(socket) do
-    %{activity: activity, replier: replier} = socket.assigns
+    %{activity: activity, replier: replier, current_team: team, now: now} = socket.assigns
     members = ActivityMembers.load(activity)
+    team_admin? = socket.assigns.team_admin?
     attendances = ActivityMembers.only(members, "attending")
 
     socket
     |> assign(
       members: members,
+      standings:
+        Standing.visible_by_member(team, Enum.map(members, & &1.member), now, team_admin?),
       attendances: attendances,
       attendance_count: length(attendances),
       counts: ActivityMembers.counts(members),
@@ -332,6 +336,7 @@ defmodule Web.ActivityLive do
           :if={@tab == :members}
           activity={@activity}
           members={@members}
+          standings={@standings}
           counts={@counts}
           view={@members_view}
           started?={!@coming?}
@@ -591,6 +596,7 @@ defmodule Web.ActivityLive do
 
   attr :activity, :map, required: true
   attr :members, :list, required: true
+  attr :standings, :map, required: true, doc: "each member's standing, by id"
   attr :counts, :map, required: true
   attr :view, :string, default: nil, doc: "the D4H status showing, nil for All"
   attr :started?, :boolean, required: true
@@ -665,10 +671,16 @@ defmodule Web.ActivityLive do
         row_id={&"member-row-#{&1.member.id}"}
         class="table-striped w-fit"
       >
-        <:col :let={row} label="Name" class="whitespace-nowrap">
-          <.a navigate={
-            ~p"/teams/#{@activity.team}/members/#{row.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
-          }>{row.member.name}</.a>
+        <:col :let={row} label="Member">
+          <.member_cell
+            id={"member-standing-#{row.member.id}"}
+            member={row.member}
+            team={@activity.team}
+            standing={@standings[row.member.id]}
+            path={
+              ~p"/teams/#{@activity.team}/members/#{row.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
+            }
+          />
         </:col>
         <:col
           :let={row}
@@ -722,11 +734,11 @@ defmodule Web.ActivityLive do
         <:col
           :let={row}
           :if={@started? and @view in [nil, "attending"]}
-          label="Duration"
+          label="Hours"
           align="right"
-          class="whitespace-nowrap"
+          class="w-px whitespace-nowrap"
         >
-          {if row.status == "attending", do: Format.duration(row.duration_in_minutes)}
+          <.hours_cell minutes={if row.status == "attending", do: row.duration_in_minutes} />
         </:col>
       </.table>
     </section>
@@ -803,11 +815,7 @@ defmodule Web.ActivityLive do
         class="table-striped w-fit"
       >
         <:col :let={usage} label="Item">
-          <.a
-            :if={@team_admin?}
-            navigate={~p"/teams/#{@activity.team}/equipment/#{usage.equipment_item.id}"}
-          >{usage.equipment_item.title}</.a>
-          <span :if={!@team_admin?}>{usage.equipment_item.title}</span>
+          <.item_cell item={usage.equipment_item} team={@activity.team} link={@team_admin?} />
         </:col>
         <:col :let={usage} label="Type">{usage.equipment_item.kind}</:col>
         <:col :let={usage} label="Used" align="right" class="whitespace-nowrap">

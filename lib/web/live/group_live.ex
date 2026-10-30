@@ -188,6 +188,7 @@ defmodule Web.GroupLive do
         <.rule_preview
           :if={@rules != []}
           preview={@preview}
+          standings={@context.standings}
           team={@current_team}
           group={@group}
         />
@@ -225,9 +226,6 @@ defmodule Web.GroupLive do
   defp shown_standing(standing, _team, _group), do: standing
 
   defp retired_count(facts), do: Enum.count(facts.standing, &(elem(&1, 1) == :retired))
-
-  defp last_attended(nil, _team), do: "Never"
-  defp last_attended(started_at, team), do: Service.Format.date_short(started_at, team.timezone)
 
   # The team's Retiring group (#514) can't have rules: "Standing is Active" on it would
   # take out every member. Settings offer only groups without rules for it.
@@ -338,6 +336,7 @@ defmodule Web.GroupLive do
         title="Would be removed"
         title_class="text-danger-text"
         rows={@preview.to_remove}
+        standings={@standings}
         team={@team}
       />
       <.change_list
@@ -345,6 +344,7 @@ defmodule Web.GroupLive do
         title="Would be added"
         title_class="text-success-text"
         rows={@preview.to_add}
+        standings={@standings}
         team={@team}
       />
       <.change_list
@@ -352,6 +352,7 @@ defmodule Web.GroupLive do
         title={"Expiring within #{Service.Format.days(BuildGroupRulePreview.expiring_days())}"}
         title_class=""
         rows={@preview.expiring}
+        standings={@standings}
         team={@team}
       />
 
@@ -398,6 +399,7 @@ defmodule Web.GroupLive do
   attr :title, :string, required: true
   attr :title_class, :string, required: true
   attr :rows, :list, required: true
+  attr :standings, :map, required: true
   attr :team, :map, required: true
 
   defp change_list(assigns) do
@@ -406,7 +408,12 @@ defmodule Web.GroupLive do
       <h3 class={["font-semibold mb-2", @title_class]}>{@title} ({length(@rows)})</h3>
       <.table id={@id} rows={@rows} row_id={&"#{@id}-#{&1.member.id}"} class="table-striped">
         <:col :let={row} label="Member" class="md:w-1/3">
-          <.a navigate={~p"/teams/#{@team}/members/#{row.member.id}/qualifications"}>{row.member.name}</.a>
+          <.member_cell
+            member={row.member}
+            team={@team}
+            standing={@standings[row.member.id]}
+            path={~p"/teams/#{@team}/members/#{row.member.id}/qualifications"}
+          />
         </:col>
         <:col :let={row} label="Why">
           {row.reason}
@@ -455,17 +462,20 @@ defmodule Web.GroupLive do
       class="table-striped"
     >
       <:col :let={gm} label="Member">
-        <.a navigate={~p"/teams/#{@team}/members/#{gm.member.id}"}>{gm.member.name}</.a>
-        <.standing_badge
+        <.member_cell
           id={"group-member-standing-#{gm.member.id}"}
+          member={gm.member}
+          team={@team}
           standing={shown_standing(@facts.standing[gm.member.id], @team, @group)}
         />
       </:col>
       <:col :let={gm} label="Role">{gm.member.position}</:col>
-      <:col :let={gm} label="Last attended" class="whitespace-nowrap">
-        <span id={"group-member-attended-#{gm.member.id}"}>
-          {last_attended(@facts.last_attended[gm.member.id], @team)}
-        </span>
+      <:col :let={gm} label="Last attended" class="w-px whitespace-nowrap">
+        <.last_attended_cell
+          id={"group-member-attended-#{gm.member.id}"}
+          value={@facts.last_attended[gm.member.id]}
+          timezone={@team.timezone}
+        />
       </:col>
       <:col :let={gm} :if={!@ruled?} label="" align="right">
         <.button

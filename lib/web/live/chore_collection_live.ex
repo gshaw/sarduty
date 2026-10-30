@@ -7,6 +7,7 @@ defmodule Web.ChoreCollectionLive do
 
   alias App.Model.Chore
   alias App.Model.ChoreEvent
+  alias App.Model.Standing
   alias App.Model.Team
   alias App.Operation.SaveChore
   alias App.Operation.SendChores
@@ -74,6 +75,16 @@ defmodule Web.ChoreCollectionLive do
     )
     |> load_yours()
     |> load_view(socket.assigns.view, team_id)
+    |> assign_standings()
+  end
+
+  # The standing of everyone in the view's tables, which only team admins see.
+  defp assign_standings(socket) do
+    %{current_team: team} = socket.assigns
+    events = Map.get(socket.assigns, :events, [])
+    chores = Map.get(socket.assigns, :chores, []) ++ Enum.flat_map(events, & &1.chores)
+    members = chores |> Enum.map(& &1.member) |> Enum.uniq_by(& &1.id)
+    assign(socket, :standings, Standing.by_member(team, members, DateTime.utc_now()))
   end
 
   # The member's own chores, for the Yours tile's count and its view.
@@ -181,8 +192,8 @@ defmodule Web.ChoreCollectionLive do
             <.chore_table
               id="waiting-chores"
               chores={@chores}
+              standings={@standings}
               selected={@selected}
-              today={@today}
               current_team={@current_team}
               current_member={@current_member}
             />
@@ -241,7 +252,7 @@ defmodule Web.ChoreCollectionLive do
             :if={row.chores != []}
             id={"chore-event-#{row.event.id}-chores"}
             chores={row.chores}
-            today={@today}
+            standings={@standings}
             current_team={@current_team}
             category={false}
           />
@@ -254,7 +265,7 @@ defmodule Web.ChoreCollectionLive do
           :if={@chores != []}
           id="declined-chores"
           chores={@chores}
-          today={@today}
+          standings={@standings}
           current_team={@current_team}
         />
       <% :yours -> %>
@@ -312,8 +323,8 @@ defmodule Web.ChoreCollectionLive do
         row_id={&"chore-#{&1.id}"}
         class="table-striped table-stack"
       >
-        <:col :let={chore} label="Date" class="w-1/12 whitespace-nowrap">
-          {Format.day_in_year(chore.date, @today)}
+        <:col :let={chore} label="Date" class="w-px whitespace-nowrap">
+          <.date_cell value={chore.date} timezone={@team.timezone} />
         </:col>
         <:col :let={chore} label="What you did" class="stack-title">
           <.a :if={@team_admin?} navigate={~p"/teams/#{@team}/chores/#{chore.id}"}>{chore.description}</.a>
@@ -323,8 +334,8 @@ defmodule Web.ChoreCollectionLive do
             {ChoreText.declined(chore, @team.timezone)}
           </span>
         </:col>
-        <:col :let={chore} label="Time" class="w-1/12 whitespace-nowrap" align="right">
-          {Format.duration(chore.minutes)}
+        <:col :let={chore} label="Hours" class="w-px whitespace-nowrap" align="right">
+          <.hours_cell minutes={chore.minutes} />
         </:col>
         <:col :let={chore} label="" class="stack-optional w-px whitespace-nowrap">
           <.status_badge chore={chore} />
@@ -353,8 +364,8 @@ defmodule Web.ChoreCollectionLive do
 
   attr :id, :string, required: true
   attr :chores, :list, required: true
+  attr :standings, :map, required: true
   attr :selected, :any, default: nil, doc: "the ids checked, or nil for no boxes"
-  attr :today, :any, required: true
   attr :current_team, :map, required: true
   attr :category, :boolean, default: true
   attr :current_member, :map, default: nil
@@ -376,7 +387,11 @@ defmodule Web.ChoreCollectionLive do
         />
       </:col>
       <:col :let={chore} label="Member" class="stack-title">
-        {chore.member.name}
+        <.member_cell
+          member={chore.member}
+          team={@current_team}
+          standing={@standings[chore.member.id]}
+        />
         <.badge
           :if={Chore.own?(chore, @current_member)}
           id={"chore-yours-#{chore.id}"}
@@ -385,8 +400,8 @@ defmodule Web.ChoreCollectionLive do
           Yours
         </.badge>
       </:col>
-      <:col :let={chore} label="Date" class="whitespace-nowrap">
-        {Format.day_in_year(chore.date, @today)}
+      <:col :let={chore} label="Date" class="w-px whitespace-nowrap">
+        <.date_cell value={chore.date} timezone={@current_team.timezone} />
         <span :if={note = logged_note(chore, @current_team.timezone)} class="hint block">
           {note}
         </span>
@@ -398,8 +413,8 @@ defmodule Web.ChoreCollectionLive do
         </span>
       </:col>
       <:col :let={chore} :if={@category} label="Category">{chore.chore_category.title}</:col>
-      <:col :let={chore} label="Time" class="whitespace-nowrap" align="right">
-        {Format.duration(chore.minutes)}
+      <:col :let={chore} label="Hours" class="w-px whitespace-nowrap" align="right">
+        <.hours_cell minutes={chore.minutes} />
       </:col>
     </.table>
     """

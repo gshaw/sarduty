@@ -112,7 +112,10 @@ defmodule Web.TemplateFormLive do
             row_id={&"group-result-#{&1.id}"}
             class="table-striped"
           >
-            <:col :let={group} label="Group">{group.title}</:col>
+            <%!-- No link: leaving the form drops the changes. --%>
+            <:col :let={group} label="Group">
+              <.group_cell group={group} link={false} />
+            </:col>
             <:col :let={group} label="" class="w-px whitespace-nowrap">
               <.button
                 id={"group-add-#{group.id}"}

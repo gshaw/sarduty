@@ -85,11 +85,98 @@
     A column that hides needs a reason in <code>Web.TableColumnsTest</code>.
   </p>
 
+  <h2>Standard columns</h2>
+  <p>
+    A column that recurs looks the same on every table. A record column is a record's name,
+    linked to its page, with the badge that says its state. A value column is one formatter,
+    one alignment, and one header.
+  </p>
+  <.table id="sample-standard-columns" rows={SampleData.standard_columns()} class="table-striped">
+    <:col :let={c} label="Column" class="w-px whitespace-nowrap">{c.label}</:col>
+    <:col :let={c} label="Looks like" class="whitespace-nowrap">
+      <%= case c.cell do %>
+        <% "member_cell" -> %>
+          <.member_cell
+            member={sample_member()}
+            team={sample_team()}
+            standing={:retiring}
+            path="#"
+          />
+        <% "activity_cell" -> %>
+          <.activity_cell activity={hd(activities())} team={sample_team()} path="#" />
+        <% "item_cell" -> %>
+          <.item_cell item={SampleData.sample_item()} team={sample_team()} />
+        <% "qualification_cell" -> %>
+          <.qualification_cell
+            qualification={%{id: 1, title: "Standard First Aid"}}
+            team={sample_team()}
+          />
+        <% "group_cell" -> %>
+          <.group_cell group={%{id: 1, title: "Rope team"}} team={sample_team()} />
+        <% "date_cell" -> %>
+          <.date_cell activity={hd(activities())} timezone={sample_team().timezone} times />
+        <% "expires_cell" -> %>
+          <.expires_cell
+            value={DateTime.add(DateTime.utc_now(), 20, :day)}
+            timezone={sample_team().timezone}
+          />
+        <% "hours_cell" -> %>
+          <.hours_cell minutes={150} />
+        <% "last_attended_cell" -> %>
+          <.last_attended_cell
+            value={DateTime.add(DateTime.utc_now(), -12, :day)}
+            timezone={sample_team().timezone}
+          />
+      <% end %>
+    </:col>
+    <:col :let={c} label="Cell" class="w-px whitespace-nowrap">
+      <code>&lt;.{c.cell}&gt;</code>
+    </:col>
+    <:col :let={c} label="Align" class="w-px">{c.align}</:col>
+    <:col :let={c} label="Use for">{c.use}</:col>
+  </.table>
+
+  <p>Every standing on the Member column:</p>
+  <.table id="sample-member-column" rows={SampleData.member_column_rows()} class="table-striped">
+    <:col :let={row} label="Member">
+      <.member_cell member={row} team={sample_team()} standing={row.standing} path="#" />
+    </:col>
+    <:col :let={row} label="Role">{row.role}</:col>
+  </.table>
+  <ul>
+    <li>
+      A column is labelled with its name, as above, and its cell goes in it: <code>&lt;:col label="Member"&gt;&lt;.member_cell … /&gt;&lt;/:col&gt;</code>. Every LiveView
+      imports <code>Web.Components.Columns</code>.
+    </li>
+    <li>
+      On a page members can open, the Member column takes the standings from <code>Standing.visible_by_member/4</code>, so a member sees nobody away. A team admin page
+      can pass <code>Standing.by_member/3</code>. A not-a-person member stays in the list with its badge, so a team
+      admin sees it and removes it.
+    </li>
+    <li>
+      A record column links unless the reader can't open the page, such as a member on an item,
+      or leaving would lose their work, such as a form or a scanner. A row with a checkbox makes
+      the member's name its label.
+    </li>
+    <li>
+      Other text can follow the cell, such as which tax credit hours an activity counts for,
+      or a qualification's organization.
+    </li>
+    <li>
+      Not standard: Why, Notes, Email, Change, Token, and When, a log's date and time.
+    </li>
+  </ul>
+  <p>
+    <code>Web.StandardColumnsTest</code>
+    fails on a column built by hand: a record linked without its cell, a standard label
+    without its cell, or a date or duration formatted in the cell itself.
+  </p>
+
   <h2>Wrapping cells</h2>
   <p>Long text wraps; the other cells stay on its first line.</p>
   <.table id="sample-wrapping" rows={rule_preview()} class="table-striped">
-    <:col :let={{name, _why, _detail, _days}} label="Member" class="whitespace-nowrap">
-      <.a href="#">{name}</.a>
+    <:col :let={{name, _why, _detail, _days}} label="Member">
+      <.member_cell member={%{id: 0, name: name}} team={sample_team()} path="#" />
     </:col>
     <:col :let={{_name, why, detail, days}} label="Why">
       {why}
@@ -112,10 +199,11 @@
     row_id={&"sample-greyed-#{&1.id}"}
     row_class={&(&1.expired? && "is-muted")}
   >
-    <:col :let={row} label="Qualification">{row.title}</:col>
+    <:col :let={row} label="Qualification">
+      <.qualification_cell qualification={row} team={sample_team()} />
+    </:col>
     <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
-      {row.expires}
-      <.badge :if={row.days} kind={:warning}>{Service.Format.days(row.days)}</.badge>
+      <.expires_cell value={row.ends_at} timezone={sample_team().timezone} />
     </:col>
   </.table>
 
@@ -129,9 +217,11 @@
     groups={SampleData.member_groups()}
     row_id={&"sample-groups-#{&1.id}"}
   >
-    <:col :let={member} label="Member">{member.name}</:col>
+    <:col :let={member} label="Member">
+      <.member_cell member={member} team={sample_team()} path="#" />
+    </:col>
     <:col :let={member} label="Last attended" class="w-px whitespace-nowrap">
-      {member.last_attended}
+      <.last_attended_cell value={member.last_attended} timezone={sample_team().timezone} />
     </:col>
   </.table>
   <ul>
@@ -155,9 +245,15 @@
     <form>
       <.table id="sample-select-all" rows={rule_preview()} class="table-striped">
         <:col :let={{name, _why, _detail, _days}} label="" class="w-px" select_all>
-          <input type="checkbox" name={name} aria-label={name} checked />
+          <input type="checkbox" id={"sample-select-#{name}"} name={name} checked />
         </:col>
-        <:col :let={{name, _why, _detail, _days}} label="Member">{name}</:col>
+        <:col :let={{name, _why, _detail, _days}} label="Member">
+          <.member_cell
+            member={%{id: 0, name: name}}
+            team={sample_team()}
+            label_for={"sample-select-#{name}"}
+          />
+        </:col>
         <:col :let={{_name, why, _detail, _days}} label="Why">{why}</:col>
       </.table>
     </form>

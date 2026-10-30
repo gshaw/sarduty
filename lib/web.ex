@@ -113,6 +113,7 @@ defmodule Web do
 
       import Web.Components.A
       import Web.Components.Breadcrumbs
+      import Web.Components.Columns
       import Web.Components.D4H
       import Web.Components.Email
       import Web.Components.HeadingRow

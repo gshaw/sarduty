@@ -6,6 +6,7 @@ defmodule Web.ActivitySendUpdateLive do
   alias App.Mailer.ActivityMailer
   alias App.Model.Activity
   alias App.Model.ActivityUpdate
+  alias App.Model.Standing
   alias App.Operation.SendActivityUpdate
   alias App.Operation.SendReminders
   alias App.Validate.Message
@@ -41,11 +42,14 @@ defmodule Web.ActivitySendUpdateLive do
 
   # Everyone starts checked, and the preview shows the first ending.
   defp assign_plan(socket) do
-    plan = socket.assigns.activity |> ActivityMembers.load() |> SendActivityUpdate.plan()
+    %{activity: activity, current_team: team} = socket.assigns
+    members = ActivityMembers.load(activity)
+    plan = SendActivityUpdate.plan(members)
     endings = endings(plan)
 
     assign(socket,
       plan: plan,
+      standings: Standing.by_member(team, Enum.map(members, & &1.member), DateTime.utc_now()),
       endings: endings,
       selected: plan.groups |> Enum.flat_map(&elem(&1, 1)) |> MapSet.new(& &1.member.id),
       ending: List.first(endings, :signed_up)
@@ -219,8 +223,13 @@ defmodule Web.ActivitySendUpdateLive do
                 checked={MapSet.member?(@selected, row.member.id)}
               />
             </:col>
-            <:col :let={row} label={status_title(status)} class="whitespace-nowrap">
-              <label for={"update-select-#{row.member.id}"}>{row.member.name}</label>
+            <:col :let={row} label={status_title(status)}>
+              <.member_cell
+                member={row.member}
+                team={@current_team}
+                standing={@standings[row.member.id]}
+                label_for={"update-select-#{row.member.id}"}
+              />
             </:col>
             <:col :let={row} label="">
               <span :if={ActivityMailer.update_ending(status, row.member) == :open} class="hint">

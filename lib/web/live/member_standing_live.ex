@@ -280,10 +280,10 @@ defmodule Web.MemberStandingLive do
             {period.reason}
           </:col>
           <:col :let={period} label="First day" class="w-px whitespace-nowrap">
-            {Service.Format.date_short(period.starts_on)}
+            <.date_cell value={period.starts_on} timezone={@member.team.timezone} />
           </:col>
           <:col :let={period} label="Last day" class="w-px whitespace-nowrap">
-            {Service.Format.date_short(period.ends_on)}
+            <.date_cell value={period.ends_on} timezone={@member.team.timezone} />
           </:col>
           <:col :let={period} label="" class="w-px whitespace-nowrap">
             <.button
@@ -354,8 +354,8 @@ defmodule Web.MemberStandingLive do
           row_id={&"check-in-#{&1.id}"}
           class="table-striped"
         >
-          <:col :let={check_in} label="Day" class="w-px whitespace-nowrap">
-            {Service.Format.date_short(check_in.checked_in_on)}
+          <:col :let={check_in} label="Date" class="w-px whitespace-nowrap">
+            <.date_cell value={check_in.checked_in_on} timezone={@member.team.timezone} />
           </:col>
           <:col :let={check_in} label="What they heard">
             {check_in.note}
@@ -415,10 +415,14 @@ defmodule Web.MemberStandingLive do
           class="table-striped"
         >
           <:col :let={no_show} label="Activity">
-            <.a navigate={~p"/teams/#{@current_team}/activities/#{no_show.activity.id}/attendance"}>{no_show.activity.title}</.a>
+            <.activity_cell
+              activity={no_show.activity}
+              team={@current_team}
+              path={~p"/teams/#{@current_team}/activities/#{no_show.activity.id}/attendance"}
+            />
           </:col>
-          <:col :let={no_show} label="Day" class="w-px whitespace-nowrap">
-            {Service.Format.date_short(no_show.activity.started_at, @member.team.timezone)}
+          <:col :let={no_show} label="Date" class="w-px whitespace-nowrap">
+            <.date_cell activity={no_show.activity} timezone={@member.team.timezone} />
           </:col>
           <:col :let={no_show} label="Followed up">
             {no_show.note}

@@ -156,7 +156,7 @@ defmodule Web.GroupCollectionLive do
       class="table-striped"
     >
       <:col :let={g} label="Group">
-        <.a navigate={~p"/teams/#{@current_team}/groups/#{g.group.id}"}>{g.group.title}</.a>
+        <.group_cell group={g.group} team={@current_team} />
         <span :if={g.group.organization_owned and @view != "organization"} class="hint">
           · {@organization_name}
         </span>

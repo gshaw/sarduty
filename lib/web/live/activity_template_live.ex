@@ -204,7 +204,10 @@ defmodule Web.ActivityTemplateLive do
   def groups_to_add(assigns) do
     ~H"""
     <.table id={@id} rows={@groups} row_id={&"group-#{&1.id}"} class="table-striped">
-      <:col :let={group} label="Group">{group.title}</:col>
+      <%!-- No link: leaving the page drops the picks. --%>
+      <:col :let={group} label="Group">
+        <.group_cell group={group} link={false} />
+      </:col>
       <:col :let={group} label="" class="w-px whitespace-nowrap">
         <.button
           id={"group-remove-#{group.id}"}

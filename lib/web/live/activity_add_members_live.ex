@@ -20,13 +20,16 @@ defmodule Web.ActivityAddMembersLive do
 
     case Activity.adding(activity, true, now) do
       :open ->
+        members = people(team, now)
+
         socket =
           socket
           |> assign(page_title: "Add members", activity: activity, picks: [])
           |> assign(
             on_activity: InviteMembers.on_activity(activity),
             away: InviteMembers.away(team, activity),
-            members: people(team, now),
+            members: members,
+            standings: Standing.by_member(team, members, now),
             groups: Group.get_all(team.id),
             day: Format.month_day(activity.started_at, team.timezone)
           )
@@ -138,8 +141,14 @@ defmodule Web.ActivityAddMembersLive do
             row_id={fn {_reason, member} -> "to-add-#{member.id}" end}
             class="table-striped"
           >
+            <%!-- No link: leaving the page drops the list. --%>
             <:col :let={{reason, member}} label="Member">
-              {member.name}
+              <.member_cell
+                member={member}
+                team={@current_team}
+                standing={@standings[member.id]}
+                link={false}
+              />
               <div class="hint">{InviteMembers.reason_text(reason)}</div>
             </:col>
             <:col :let={{_reason, member}} label="" class="w-px whitespace-nowrap">

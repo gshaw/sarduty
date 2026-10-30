@@ -133,7 +133,7 @@ defmodule Web.ActivityEquipmentLive do
             class="table-striped"
           >
             <:col :let={usage} label="Item">
-              <.a navigate={~p"/teams/#{@current_team}/equipment/#{usage.equipment_item.id}"}>{usage.equipment_item.title}</.a>
+              <.item_cell item={usage.equipment_item} team={@current_team} />
             </:col>
             <:col :let={usage} label="Used" align="right" class="w-px whitespace-nowrap">
               {amount(usage)}
@@ -185,7 +185,8 @@ defmodule Web.ActivityEquipmentLive do
     ~H"""
     <.table id={@id} rows={@lines} row_id={&"line-#{&1.item.id}"} class="table-striped">
       <:col :let={line} label="Item">
-        {line.item.title} <span :if={line.item.kind} class="hint">{line.item.kind}</span>
+        <.item_cell item={line.item} link={false} />
+        <span :if={line.item.kind} class="hint">{line.item.kind}</span>
       </:col>
       <:col :let={line} label={if @km, do: "Used", else: "Hours"} class="w-px whitespace-nowrap">
         <span class="flex items-center gap-2">
@@ -265,7 +266,8 @@ defmodule Web.ActivityEquipmentLive do
       class="table-striped"
     >
       <:col :let={item} label="Item">
-        {item.title} <span :if={item.kind} class="hint">{item.kind}</span>
+        <.item_cell item={item} link={false} />
+        <span :if={item.kind} class="hint">{item.kind}</span>
       </:col>
       <:col :let={item} label="" class="w-px whitespace-nowrap">
         <.button

@@ -167,11 +167,11 @@ defmodule Web.MemberQualificationsLive do
       <%!-- A member gets no Certificate (#440), since D4H marks the documents RESTRICTED,
       and no links to qualification pages, which are team admins'. --%>
       <:col :let={row} label="Qualification">
-        <.a
-          :if={@team_admin?}
-          navigate={~p"/teams/#{@member.team}/qualifications/#{row.award.qualification.id}"}
-        >{row.award.qualification.title}</.a>
-        <span :if={!@team_admin?}>{row.award.qualification.title}</span>
+        <.qualification_cell
+          qualification={row.award.qualification}
+          team={@member.team}
+          link={@team_admin?}
+        />
         <span :if={row.award.qualification.organization_owned} class="hint">
           · {@organization_name}
         </span>
@@ -183,10 +183,7 @@ defmodule Web.MemberQualificationsLive do
         </span>
       </:col>
       <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
-        {QualificationText.expires(row.award, @now, @member.team.timezone)}
-        <.badge :if={row.status == :expiring} kind={:warning}>
-          {QualificationText.days_left(row)}
-        </.badge>
+        <.expires_cell value={row.award.ends_at} now={@now} timezone={@member.team.timezone} />
       </:col>
       <:col :let={row} label="First held" class="w-px whitespace-nowrap">
         {QualificationText.first_held(row, @member.team.timezone)}

@@ -1,16 +1,13 @@
 defmodule Web.Components.Equipment do
   @moduledoc """
   Equipment's shared pieces (#490): the table of what a member holds, shown on their
-  Equipment tab, on Your membership, and in Equipment's member place, and an item's
-  status badge.
+  Equipment tab, on Your membership, and in Equipment's member place.
   """
 
   use Web, :function_component
 
-  import Web.Components.A
+  import Web.Components.Columns
   import Web.Components.Table
-
-  alias App.Model.EquipmentItem
 
   attr :id, :string, required: true
   attr :rows, :list, required: true, doc: "`%{item, inside}`, kits then their contents"
@@ -27,37 +24,15 @@ defmodule Web.Components.Equipment do
     ~H"""
     <.table id={@id} rows={@rows} row_id={&"#{@id}-#{&1.item.id}"} class="table-striped">
       <:col :let={row} label="Item">
-        <.a :if={@links} navigate={~p"/teams/#{@team}/equipment/#{row.item.id}"}>{row.item.title}</.a>
-        <span :if={!@links}>{row.item.title}</span>
-        <.status_badge item={row.item} />
+        <.item_cell item={row.item} team={@team} link={@links} />
       </:col>
       <:col :let={row} :if={@where?} label="Where">{row.inside}</:col>
       <:col :let={row} label="Category">{row.item.kind}</:col>
       <:col :let={row} label="Barcode" class="w-px whitespace-nowrap">{row.item.barcode}</:col>
-      <:col :let={row} label="Expires" align="right" class="w-px whitespace-nowrap">
-        <span :if={row.item.expires_at}>
-          {Service.Format.date_short(row.item.expires_at, @team.timezone)}
-        </span>
+      <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
+        <.expires_cell value={row.item.expires_at} timezone={@team.timezone} />
       </:col>
     </.table>
-    """
-  end
-
-  attr :item, EquipmentItem, required: true
-
-  @doc "An item's status, unless it's operational: red for unserviceable or lost."
-  def status_badge(%{item: %{status: "operational"}} = assigns), do: ~H""
-
-  def status_badge(%{item: %{status: status}} = assigns)
-      when status in ["unserviceable", "lost"] do
-    ~H"""
-    <.badge kind={:danger}>{String.capitalize(@item.status)}</.badge>
-    """
-  end
-
-  def status_badge(assigns) do
-    ~H"""
-    <.badge>{String.capitalize(@item.status)}</.badge>
     """
   end
 end

@@ -21,8 +21,6 @@ defmodule Web.TableColumnsTest do
       "Accepted puts each table under its category's heading",
     {"lib/web/live/endorsement_collection_live.ex", "@current_team.id_cards_enabled"} =>
       "On card means nothing on a team with no ID cards",
-    {"lib/web/live/member_collection_live.ex", "@standing?"} =>
-      "team data, not the filter: every current member is active",
     {"lib/web/live/member_collection_live.ex", ~s|@details == "missing"|} =>
       "Missing says why a row matched Details: Missing",
     {"lib/web/live/member_collection_live.ex", "@retired?"} =>

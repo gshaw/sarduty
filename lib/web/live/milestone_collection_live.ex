@@ -11,6 +11,7 @@ defmodule Web.MilestoneCollectionLive do
   import Web.Components.FilterBar
   import Web.Components.StatSwitch
 
+  alias App.Model.Standing
   alias App.ViewData.MemberMilestones
   alias App.ViewModel.MilestoneFilterViewModel
   alias Service.Format
@@ -22,13 +23,16 @@ defmodule Web.MilestoneCollectionLive do
     team = socket.assigns.current_team
     now = DateTime.utc_now()
     loaded? = connected?(socket)
+    milestones = if(loaded?, do: MemberMilestones.for_team(team, now), else: [])
+    members = milestones |> Enum.map(& &1.member) |> Enum.uniq_by(& &1.id)
 
     {:ok,
      assign(socket,
        page_title: "Milestones",
        now: now,
        loaded?: loaded?,
-       milestones: if(loaded?, do: MemberMilestones.for_team(team, now), else: [])
+       milestones: milestones,
+       standings: Standing.visible_by_member(team, members, now, socket.assigns.team_admin?)
      )}
   end
 
@@ -111,10 +115,14 @@ defmodule Web.MilestoneCollectionLive do
       class="table-striped"
     >
       <:col :let={milestone} label="Date" class="w-px whitespace-nowrap">
-        {Format.date_short(milestone.on)}
+        <.date_cell value={milestone.on} timezone={@current_team.timezone} />
       </:col>
-      <:col :let={milestone} label="Member" class="whitespace-nowrap">
-        <.a navigate={~p"/teams/#{@current_team}/members/#{milestone.member.id}"}>{milestone.member.name}</.a>
+      <:col :let={milestone} label="Member">
+        <.member_cell
+          member={milestone.member}
+          team={@current_team}
+          standing={@standings[milestone.member.id]}
+        />
       </:col>
       <%!-- The kind's icon, as on its count; not on a phone, where the column would overflow. --%>
       <:col :let={milestone} label="Milestone" class="whitespace-nowrap">

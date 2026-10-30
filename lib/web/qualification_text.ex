@@ -12,9 +12,6 @@ defmodule Web.QualificationText do
   def row_class(%{status: :expired}), do: "is-muted"
   def row_class(_row), do: nil
 
-  @doc ~s(The tag on an expiring row: "12 days", as on a group's expiring members.)
-  def days_left(row), do: Format.days(row.days_left)
-
   @doc ~s(When it ends: "Nov 30, 2026" or "Expired Sep 30, 2024". Nil with no end, a
   blank cell: most rows have none, and the same words on each made the list read long.)
   def expires(%{ends_at: nil}, _now, _timezone), do: nil

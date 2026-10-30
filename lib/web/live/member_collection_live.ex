@@ -64,7 +64,6 @@ defmodule Web.MemberCollectionLive do
     socket
     |> assign(Map.take(filter_options, [:sort, :details, :attended]))
     |> assign(filter_options: filter_options, now: now, today: today, retiring?: retiring?)
-    |> assign(:standing?, standing_column?(current_team, team_admin?, today, now))
     |> assign(:retired?, MemberFilterViewModel.shows_retired?(filter_options.standing))
     |> assign(:standing_tile?, tile?)
     |> assign(:paginated, build_paginated_content(current_team, filter_options))
@@ -250,20 +249,17 @@ defmodule Web.MemberCollectionLive do
       <:col :let={record} label="ID" class="w-px max-md:hidden" sorts={[{"↑", "id"}]}>
         {record.member.ref_id}
       </:col>
-      <:col :let={record} label="Name" class="whitespace-nowrap" sorts={[{"↑", "name"}]}>
-        <.a navigate={member_path(@current_team, record.member, @filter_options)}>{record.member.name}</.a>
+      <:col :let={record} label="Member" sorts={[{"↑", "name"}]}>
+        <.member_cell
+          id={"standing-#{record.member.id}"}
+          member={record.member}
+          team={@current_team}
+          standing={standing(record, @team_admin?, @today, @now)}
+          path={member_path(@current_team, record.member, @filter_options)}
+        />
       </:col>
       <:col :let={record} label="Role" sorts={[{"↑", "role"}]}>
         {record.member.position}
-      </:col>
-      <:col
-        :let={record}
-        :if={@standing?}
-        label="Standing"
-        class="whitespace-nowrap"
-        sorts={if @team_admin?, do: [{"↑", "standing"}, {"↓", "standing-"}]}
-      >
-        <span id={"standing-#{record.member.id}"}>{standing_text(record, @team_admin?, @today, @now)}</span>
       </:col>
       <:col :let={record} :if={@details == "missing"} label="Missing">
         <span id={"missing-#{record.member.id}"}>{missing_text(record.member)}</span>
@@ -271,13 +267,15 @@ defmodule Web.MemberCollectionLive do
       <:col
         :let={record}
         label="Last attended"
-        align="right"
-        class="w-1/12 whitespace-nowrap"
+        class="w-px whitespace-nowrap"
         sorts={[{"↑", "attended"}, {"↓", "attended-"}]}
       >
-        <span id={"last-attended-#{record.member.id}"}>
-          {last_attended(record.last_attended_at, @current_team)}
-        </span>
+        <.last_attended_cell
+          id={"last-attended-#{record.member.id}"}
+          value={record.last_attended_at}
+          now={@now}
+          timezone={@current_team.timezone}
+        />
         <div
           :if={@attended not in [nil, "all"] and clock_why(record, @current_team)}
           id={"clock-starts-#{record.member.id}"}
@@ -297,31 +295,29 @@ defmodule Web.MemberCollectionLive do
       </:col>
       <:col
         :let={record}
-        label="Duration"
+        label="Hours"
         align="right"
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "duration-"}, {"↑", "duration"}]}
       >
-        {Service.Format.duration(record.total_minutes)}
+        <.hours_cell minutes={record.total_minutes} />
       </:col>
       <:col
         :let={record}
         label="Joined"
-        align="right"
-        class="w-1/12 whitespace-nowrap"
+        class="w-px whitespace-nowrap"
         sorts={[{"↓", "date-"}, {"↑", "date"}]}
       >
-        {Service.Format.date_short(record.member.joined_at, @current_team.timezone)}
+        <.date_cell value={record.member.joined_at} timezone={@current_team.timezone} />
       </:col>
       <:col
         :let={record}
         :if={@retired?}
         label="Retired"
-        align="right"
-        class="w-1/12 whitespace-nowrap"
+        class="w-px whitespace-nowrap"
         sorts={[{"↓", "retired-"}, {"↑", "retired"}]}
       >
-        {Service.Format.date_short(record.member.left_at, @current_team.timezone)}
+        <.date_cell value={record.member.left_at} timezone={@current_team.timezone} />
       </:col>
     </.table>
 
@@ -340,25 +336,16 @@ defmodule Web.MemberCollectionLive do
     """
   end
 
-  # Shown only when some current member is not active, whatever the filter shows. A member
-  # never sees Away (#440), so their list shows it only for Retiring or Not a person:
-  # Retired has its own column.
-  defp standing_column?(team, team_admin?, today, now),
-    do: Member.any_not_active?(team, today, now, team_admin?)
-
-  # The row has the away period's last day only, which is all the column shows.
-  defp standing_text(record, team_admin?, today, now) do
+  # The row has the away period's last day only, which is all the badge shows.
+  defp standing(record, team_admin?, today, now) do
     away =
       if record.away_until,
         do: [%MemberAwayPeriod{starts_on: today, ends_on: record.away_until}],
         else: []
 
-    case record.member
-         |> Standing.of(away, record.retiring?, today, now)
-         |> Standing.visible(team_admin?) do
-      {:away, period} -> "Away until #{Service.Format.day_in_year(period.ends_on, today)}"
-      standing -> Standing.text(standing)
-    end
+    record.member
+    |> Standing.of(away, record.retiring?, today, now)
+    |> Standing.visible(team_admin?)
   end
 
   # Only when the clock starts somewhere other than the last activity, which the cell
@@ -380,9 +367,6 @@ defmodule Web.MemberCollectionLive do
   defp clock_why(:checked_in), do: "Checked in"
   defp clock_why(:back), do: "Back from leave"
   defp clock_why(:joined), do: "Joined"
-
-  defp last_attended(nil, _team), do: "Never"
-  defp last_attended(started_at, team), do: Service.Format.date_short(started_at, team.timezone)
 
   # With a tag on, the member's page opens on the activities that were counted.
   defp member_path(team, member, %{activity_tag: tag} = filter_options)

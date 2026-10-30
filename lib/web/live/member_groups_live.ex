@@ -137,8 +137,7 @@ defmodule Web.MemberGroupsLive do
     >
       <%!-- Plain text for a member: group pages are team admins' (#440). --%>
       <:col :let={gm} label="Group">
-        <.a :if={@team_admin?} navigate={~p"/teams/#{@member.team}/groups/#{gm.group.id}"}>{gm.group.title}</.a>
-        <span :if={!@team_admin?}>{gm.group.title}</span>
+        <.group_cell group={gm.group} team={@member.team} link={@team_admin?} />
         <span :if={gm.group.organization_owned} class="hint">· {@organization_name}</span>
       </:col>
       <%!-- No confirm: a member has few groups, so who to add back is plain. --%>

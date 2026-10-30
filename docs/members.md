@@ -38,8 +38,8 @@ Standing, Period, and Group sit in the filter bar's row. Details and Attended wa
 behind **More filters** until one is on, so the row doesn't wrap and a link such as
 the home item's still shows every filter it sets.
 
-No column chooser. A filter changes the rows, not the columns (2026-10-25), so Standing
-shows when some current member is not active, whatever the filter. Two columns come
+No column chooser. A filter changes the rows, not the columns (2026-10-25). There is no
+Standing column: the Member column's badge shows it (#740). Two columns come
 with a filter: Retired when the Standing filter can show retired members, since no
 other row has a date, and Missing with Details: Missing, since it says why each row
 matched. ID hides on narrow screens.
@@ -148,7 +148,9 @@ rules leave them in a group unless a rule on its page says "Standing is …" (ab
 
 **A new query that counts, contacts, invites, or lets members in skips retiring
 members.** Use `Member.counted_query/1`, or `Member.managers_query/2` for team admins.
-Don't read `group_members` for it yourself. A manager marked not a person doesn't log
+Don't read `group_members` for it yourself. Contacting skips retiring members only:
+reminders still go to a member marked not a person, on purpose (#740), and every member
+table shows them with the Not a person badge. A manager marked not a person doesn't log
 in as a team admin either: one bar for logins, Team admins, and team admin email
 (2026-10-28, #683).
 
@@ -535,8 +537,7 @@ away periods, check-ins, history, and ID cards.
 - **The list**: the same columns, search, and Period, Group, and Tag filters. The
   Standing switch is Not retired, Not a person, and Retired, and its menu adds All. No
   Active, since Not retired minus Active would name who is away. No Attended or Details
-  filter, no Standing sort, and no Add member. The Standing column shows only when a
-  current member is Not a person, and says Active for anyone away.
+  filter, and no Add member. The Member column's badge never says Away.
 - **A member's page** is the team admin's minus controls: Attendance, Qualifications
   (with no Certificate, since D4H marks the documents RESTRICTED), and Groups as plain
   text. The sidebar is the ID and Milestones. The header has the photo and facts, a

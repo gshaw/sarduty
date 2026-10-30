@@ -241,16 +241,13 @@ defmodule Web.EquipmentCollectionLive do
       class="table-striped"
     >
       <:col :let={row} label="Item">
-        <.a navigate={~p"/teams/#{@current_team}/equipment/#{row.item.id}"}>{row.item.title}</.a>
-        <.status_badge item={row.item} />
+        <.item_cell item={row.item} team={@current_team} />
       </:col>
       <:col :let={row} label="Where">{row.inside}</:col>
       <:col :let={row} label="Category">{row.item.kind}</:col>
       <:col :let={row} label="Barcode" class="w-px whitespace-nowrap">{row.item.barcode}</:col>
-      <:col :let={row} label="Expires" align="right" class="w-px whitespace-nowrap">
-        <span :if={row.item.expires_at}>
-          {Service.Format.date_short(row.item.expires_at, @current_team.timezone)}
-        </span>
+      <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
+        <.expires_cell value={row.item.expires_at} timezone={@current_team.timezone} />
       </:col>
     </.table>
 
@@ -275,18 +272,15 @@ defmodule Web.EquipmentCollectionLive do
         class="table-striped"
       >
         <:col :let={row} label="Item">
-          <.a navigate={~p"/teams/#{@current_team}/equipment/#{row.item.id}"}>{row.item.title}</.a>
-          <.status_badge item={row.item} />
+          <.item_cell item={row.item} team={@current_team} />
         </:col>
         <:col :let={row} label="Where">
           {where(row)}
         </:col>
         <:col :let={row} label="Category">{row.item.kind}</:col>
         <:col :let={row} label="Barcode" class="w-px whitespace-nowrap">{row.item.barcode}</:col>
-        <:col :let={row} label="Expires" align="right" class="w-px whitespace-nowrap">
-          <span :if={row.item.expires_at}>
-            {Service.Format.date_short(row.item.expires_at, @current_team.timezone)}
-          </span>
+        <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
+          <.expires_cell value={row.item.expires_at} timezone={@current_team.timezone} />
         </:col>
       </.table>
     </section>

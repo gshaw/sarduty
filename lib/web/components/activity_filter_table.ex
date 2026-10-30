@@ -2,6 +2,7 @@ defmodule Web.Components.ActivityFilterTable do
   use Web, :function_component
 
   import Web.Components.A
+  import Web.Components.Columns
   import Web.Components.D4H
   import Web.Components.FilterBar
   import Web.Components.Pagination
@@ -107,7 +108,7 @@ defmodule Web.Components.ActivityFilterTable do
       path_fn={@path_fn}
     >
       <:col :let={record} label="Activity" sorts={[{"↓", "id-"}, {"↑", "id"}]}>
-        <.a navigate={~p"/teams/#{@team}/activities/#{record.id}"}><.activity_title activity={record} /></.a>
+        <.activity_cell activity={record} team={@team} kind={false} />
         <div class="hint">
           {activity_summary(record)}
         </div>
@@ -128,23 +129,22 @@ defmodule Web.Components.ActivityFilterTable do
       <:col
         :let={record}
         label="Date"
-        align="right"
-        class="w-1/12 whitespace-nowrap"
+        class="w-px whitespace-nowrap"
         sorts={[{"↓", "date-"}, {"↑", "date"}]}
       >
-        {Service.Format.datetime_short(record.started_at, @team.timezone)}
+        <.date_cell activity={record} timezone={@team.timezone} times />
       </:col>
       <:col
         :let={record}
-        label="Duration"
-        class="w-1/12 whitespace-nowrap"
+        label="Hours"
+        class="w-px whitespace-nowrap"
         align="right"
         sorts={[{"↓", "hours-"}, {"↑", "hours"}]}
       >
         <span :if={activity_hours_type(record, @hours_tags)} class="text-text-muted">
           {activity_hours_type(record, @hours_tags)}
         </span>
-        {Service.Format.duration(duration_minutes(record))}
+        <.hours_cell minutes={duration_minutes(record)} />
       </:col>
     </.table>
     """

@@ -11,20 +11,18 @@ defmodule App.ViewModel.MemberFilterViewModelTest do
         do: assert({:error, _} = MemberFilterViewModel.validate(%{"when" => period}, true))
   end
 
-  # Away periods are often leave, so nothing in a member's URL may list, count, or sort
-  # by them (#440). The params go before anything reads them.
-  test "a member's params lose the filters, standings, and sort only team admins have" do
+  # Away periods are often leave, so nothing in a member's URL may list or count by them
+  # (#440). The params go before anything reads them.
+  test "a member's params lose the filters and standings only team admins have" do
     params = %{
       "attended" => "90",
       "details" => "missing",
       "standing" => "active,away",
-      "sort" => "standing-",
       "q" => "Sam"
     }
 
     assert {:ok, admin, _changeset} = MemberFilterViewModel.validate(params, true)
     assert {admin.attended, admin.details, admin.standing} == {"90", "missing", "active,away"}
-    assert admin.sort == "standing-"
 
     assert {:ok, member, changeset} = MemberFilterViewModel.validate(params, false)
     assert {member.attended, member.details, member.standing} == {"all", "all", "current"}

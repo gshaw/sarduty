@@ -10,6 +10,7 @@ defmodule Web.QualificationCollectionLive do
   alias App.Model.GroupMember
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
+  alias App.Model.Standing
   alias App.Model.Team
   alias App.Repo
   alias App.ViewModel.MemberFilterViewModel
@@ -66,6 +67,7 @@ defmodule Web.QualificationCollectionLive do
       expiring_count: length(expiring),
       qualifications: matching,
       expiring: expiring_matching,
+      standings: Standing.by_member(current_team, Enum.map(expiring, & &1.member), now),
       repeats:
         if(view == :expiring,
           do: length(expiring_matching) == length(expiring),
@@ -212,6 +214,7 @@ defmodule Web.QualificationCollectionLive do
       :if={@view == :expiring}
       team={@current_team}
       expiring={@expiring}
+      standings={@standings}
       none={@expiring_count == 0}
       within={@filter_options.within}
     />
@@ -224,7 +227,7 @@ defmodule Web.QualificationCollectionLive do
       class="table-striped"
     >
       <:col :let={q} label="Qualification">
-        <.a navigate={~p"/teams/#{@current_team}/qualifications/#{q.id}"}>{q.title}</.a>
+        <.qualification_cell qualification={q} team={@current_team} />
         <span :if={q.organization_owned and @view != :organization} class="hint">
           · {@organization_name}
         </span>
@@ -266,6 +269,7 @@ defmodule Web.QualificationCollectionLive do
 
   attr :team, :map, required: true
   attr :expiring, :list, required: true
+  attr :standings, :map, required: true
   attr :none, :boolean, required: true, doc: "nothing expires, before the search"
   attr :within, :integer, required: true, doc: "how many days ahead the view looks"
 
@@ -279,13 +283,21 @@ defmodule Web.QualificationCollectionLive do
       class="table-striped"
     >
       <:col :let={row} label="Member">
-        <.a navigate={~p"/teams/#{@team}/members/#{row.member_id}/qualifications"}>{row.member_name}</.a>
+        <.member_cell
+          member={row.member}
+          team={@team}
+          standing={@standings[row.member_id]}
+          path={~p"/teams/#{@team}/members/#{row.member_id}/qualifications"}
+        />
       </:col>
       <:col :let={row} label="Qualification">
-        <.a navigate={~p"/teams/#{@team}/qualifications/#{row.qualification_id}"}>{row.qualification}</.a>
+        <.qualification_cell
+          qualification={%{id: row.qualification_id, title: row.qualification}}
+          team={@team}
+        />
       </:col>
-      <:col :let={row} label="Expires" align="right" class="w-1/12 whitespace-nowrap">
-        {Service.Format.date_short(row.ends_at, @team.timezone)}
+      <:col :let={row} label="Expires" class="w-px whitespace-nowrap">
+        <.expires_cell value={row.ends_at} timezone={@team.timezone} />
       </:col>
     </.table>
     <.empty_state :if={@none} id="none-expiring" title="Nothing expiring">

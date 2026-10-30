@@ -120,8 +120,6 @@ defmodule App.ViewModel.MemberFilterViewModel do
       "Duration ↑" => "duration",
       "Activities ↓" => "activities-",
       "Activities ↑" => "activities",
-      "Standing ↑" => "standing",
-      "Standing ↓" => "standing-",
       "Last attended ↑" => "attended",
       "Last attended ↓" => "attended-"
     }
@@ -176,7 +174,6 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> Map.drop(["attended", "details", "items", "access"])
     |> Map.reject(fn
       {"standing", value} -> value not in member_values
-      {"sort", value} -> is_binary(value) and String.starts_with?(value, "standing")
       _other -> false
     end)
   end
@@ -230,7 +227,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> join_attendance_summary(team, filter_options, now)
     |> join_last_attended(team, now)
     |> join_clock(team, now)
-    |> sort(filter_options.sort, now)
+    |> scope(sort: filter_options.sort)
     |> select_member_with_attendance()
   end
 
@@ -475,27 +472,4 @@ defmodule App.ViewModel.MemberFilterViewModel do
 
   defp scope(q, sort: "attended-"),
     do: order_by(q, [r, last_attended: l], desc_nulls_last: l.last_attended_at, asc: r.name)
-
-  # Members who are not active first, either way: away by the day they are back, soonest
-  # first going up, then retiring, then not a person. Active, then retired, last.
-  defp sort(q, "standing", now),
-    do: order_by(q, ^[asc: standing_rank(now), asc: away_until(), asc: dynamic([m], m.name)])
-
-  defp sort(q, "standing-", now),
-    do: order_by(q, ^[asc: standing_rank(now), desc: away_until(), asc: dynamic([m], m.name)])
-
-  defp sort(q, sort, _now), do: scope(q, sort: sort)
-
-  defp standing_rank(now) do
-    standing = Standing.dynamic(now)
-
-    dynamic(
-      fragment(
-        "CASE ? WHEN 'away' THEN 0 WHEN 'retiring' THEN 1 WHEN 'not_a_person' THEN 2 WHEN 'active' THEN 3 ELSE 4 END",
-        ^standing
-      )
-    )
-  end
-
-  defp away_until, do: dynamic([away: w], w.away_until)
 end

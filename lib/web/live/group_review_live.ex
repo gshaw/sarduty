@@ -138,6 +138,8 @@ defmodule Web.GroupReviewLive do
         title="Remove from group"
         title_class="text-danger-text"
         rows={@preview.to_remove}
+        standings={@standings}
+        team={@current_team}
         selected={@selected}
       />
       <.review_list
@@ -145,6 +147,8 @@ defmodule Web.GroupReviewLive do
         title="Add to group"
         title_class="text-success-text"
         rows={@preview.to_add}
+        standings={@standings}
+        team={@current_team}
         selected={@selected}
       />
 
@@ -175,6 +179,8 @@ defmodule Web.GroupReviewLive do
   attr :title, :string, required: true
   attr :title_class, :string, required: true
   attr :rows, :list, required: true
+  attr :standings, :map, required: true
+  attr :team, :map, required: true
   attr :selected, :any, required: true
 
   defp review_list(assigns) do
@@ -192,7 +198,12 @@ defmodule Web.GroupReviewLive do
           />
         </:col>
         <:col :let={row} label="Member" class="md:w-1/3">
-          <label for={"select-#{row.member.id}"}>{row.member.name}</label>
+          <.member_cell
+            member={row.member}
+            team={@team}
+            standing={@standings[row.member.id]}
+            label_for={"select-#{row.member.id}"}
+          />
         </:col>
         <:col :let={row} label="Why">{row.reason}</:col>
       </.table>
@@ -201,11 +212,14 @@ defmodule Web.GroupReviewLive do
   end
 
   defp load_preview(socket) do
-    preview = BuildGroupRulePreview.for_group(socket.assigns.current_team, socket.assigns.group)
+    %{current_team: team, group: group} = socket.assigns
+    context = BuildGroupRulePreview.load(team)
+    preview = BuildGroupRulePreview.preview(context, team, group)
     everyone = Enum.map(preview.to_remove ++ preview.to_add, & &1.member.id)
 
     socket
     |> assign(:preview, preview)
+    |> assign(:standings, context.standings)
     |> assign(:selected, MapSet.new(everyone))
   end
 

@@ -17,6 +17,23 @@ defmodule App.Operation.BuildGroupRulePreview do
 
   def expiring_days, do: @expiring_days
 
+  @doc """
+  Pure. The app's one expiry rule, for awards and equipment alike: whether something
+  ending at `ends_at` has expired by `now` (`:expired`), ends within #{@expiring_days}
+  days (the days left), or neither (nil, also for no end).
+  """
+  def expiry(nil, _now), do: nil
+
+  def expiry(ends_at, now) do
+    days = Service.Convert.days_until(ends_at, now)
+
+    cond do
+      MemberQualificationAward.expired?(%{ends_at: ends_at}, now) -> :expired
+      days <= @expiring_days -> days
+      true -> nil
+    end
+  end
+
   # A group's rules are a list, and a member must meet every one (#334). An In rule is met
   # by being in any of its groups or holding any of its endorsements, and a Not in rule by
   # none of them. A group with rules counts whoever meets them; one without counts its D4H

@@ -43,4 +43,14 @@ defmodule Service.ConvertTest do
     assert Service.Convert.days_until(now, now) == 0
     assert Service.Convert.days_until(~U[2026-10-18 19:00:00Z], now) == -2
   end
+
+  test "days later counts calendar days in the zone, like a ticket's +1" do
+    zone = "America/Vancouver"
+    start = ~U[2026-09-04 06:00:00Z]
+
+    assert Service.Convert.days_later(start, ~U[2026-09-04 09:00:00Z], zone) == 1
+    assert Service.Convert.days_later(start, ~U[2026-09-04 06:30:00Z], zone) == 0
+    assert Service.Convert.days_later(start, ~U[2026-09-05 08:00:00Z], zone) == 2
+    assert Service.Convert.days_later(start, nil, zone) == 0
+  end
 end

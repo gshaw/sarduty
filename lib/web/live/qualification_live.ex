@@ -10,6 +10,7 @@ defmodule Web.QualificationLive do
   alias App.Model.GroupMember
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
+  alias App.Model.Standing
   alias App.Model.Team
   alias App.Operation.SaveTitledRecord
   alias App.Repo
@@ -45,10 +46,7 @@ defmodule Web.QualificationLive do
     current_team = socket.assigns.current_team
     qualification = find_qualification(id, current_team.id)
 
-    {active_awards, expired_awards} =
-      qualification
-      |> list_awards_for_qualification()
-      |> MemberQualificationAward.split_by_member(DateTime.utc_now())
+    {active_awards, expired_awards, standings} = load_awards(current_team, qualification)
 
     view = String.to_existing_atom(filter_options.view)
     q = filter_options.q || ""
@@ -62,6 +60,7 @@ defmodule Web.QualificationLive do
       active_awards: active_awards,
       expired_awards: expired_awards,
       expired_ids: MapSet.new(expired_awards, & &1.id),
+      standings: standings,
       filter_options: filter_options,
       view: view,
       q: q,
@@ -71,6 +70,14 @@ defmodule Web.QualificationLive do
         |> view_awards(active_awards, expired_awards)
         |> Enum.filter(&shown?(&1, q, group_member_ids))
     )
+  end
+
+  # Active and expired awards, and the standing of everyone holding one.
+  defp load_awards(team, qualification) do
+    now = DateTime.utc_now()
+    awards = list_awards_for_qualification(qualification)
+    {active, expired} = MemberQualificationAward.split_by_member(awards, now)
+    {active, expired, Standing.by_member(team, Enum.map(awards, & &1.member), now)}
   end
 
   # All is each member's latest award, so a member is in it once, by name.
@@ -155,6 +162,7 @@ defmodule Web.QualificationLive do
           active_count={length(@active_awards)}
           expired_count={length(@expired_awards)}
           awards={@awards}
+          standings={@standings}
           expired_ids={@expired_ids}
           view={@view}
           q={@q}
@@ -277,13 +285,18 @@ defmodule Web.QualificationLive do
       row_class={&(@view == :all and MapSet.member?(@expired_ids, &1.id) and "is-muted")}
     >
       <:col :let={award} label="Member">
-        <.a navigate={~p"/teams/#{@team}/members/#{award.member.id}/qualifications"}>{award.member.name}</.a>
+        <.member_cell
+          member={award.member}
+          team={@team}
+          standing={@standings[award.member.id]}
+          path={~p"/teams/#{@team}/members/#{award.member.id}/qualifications"}
+        />
       </:col>
       <:col :let={award} label="Start" class="w-px whitespace-nowrap">
-        {Service.Format.date_short(award.starts_at, @team.timezone)}
+        <.date_cell value={award.starts_at} timezone={@team.timezone} />
       </:col>
-      <:col :let={award} label="End" class="w-px whitespace-nowrap">
-        {Service.Format.date_short(award.ends_at, @team.timezone)}
+      <:col :let={award} label="Expires" class="w-px whitespace-nowrap">
+        <.expires_cell value={award.ends_at} timezone={@team.timezone} />
       </:col>
     </.table>
     <.empty_state

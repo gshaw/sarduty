@@ -512,6 +512,31 @@ defmodule Web.ActivityLiveTest do
       refute has_element?(lv, "#activity-members th", "Replied")
     end
 
+    test "Members: a not-a-person member keeps its row and count, with its badge (#740)",
+         %{conn: conn, team: team} do
+      activity = activity_fixture(team, %{started_at: hours_from_now(48)})
+      kiosk = member_fixture(team, %{name: "KIOSK SIGN-IN", not_a_person: true})
+      away = member_fixture(team, %{name: "Quinn Laval"})
+      today = Service.Period.today(DateTime.utc_now(), team.timezone)
+      away_period_fixture(away, Date.add(today, -1), Date.add(today, 30))
+      attendance_fixture(activity, kiosk, %{status: "absent"})
+      attendance_fixture(activity, away, %{status: "attending"})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+
+      assert has_element?(lv, "#members-view-cant-make-it", "1")
+      assert has_element?(lv, "#activity-members th", "Member")
+
+      assert has_element?(
+               lv,
+               "#member-row-#{kiosk.id} #member-standing-#{kiosk.id}",
+               "Not a person"
+             )
+
+      # Away is a team admin's record: a member sees nobody away (#440).
+      refute has_element?(lv, "#member-standing-#{away.id}")
+    end
+
     test "Members once it starts: D4H's words and each member's times",
          %{conn: conn, team: team, member: member} do
       started = hours_from_now(-3)
@@ -546,6 +571,10 @@ defmodule Web.ActivityLiveTest do
                "#member-row-#{late.id} td",
                Service.Format.month_day_time(next_day, team.timezone)
              )
+
+      # An absent member's Hours cell is blank, never "false".
+      assert has_element?(lv, "#activity-members th", "Hours")
+      refute has_element?(lv, "#member-row-#{away.id} td", "false")
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=absent")
       refute has_element?(lv, "#activity-members th", "Start")
