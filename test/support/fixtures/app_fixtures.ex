@@ -40,10 +40,14 @@ defmodule App.DataFixtures do
     {id_cards_enabled, attrs} = Map.pop(attrs, :id_cards_enabled, true)
     {whiteboard_enabled, attrs} = Map.pop(attrs, :whiteboard_enabled, true)
 
+    name = Map.get(attrs, :name, "Team #{unique}")
+
     params =
       Map.merge(
         %{
-          name: "Team #{unique}",
+          name: name,
+          legal_name: name,
+          abbreviated_name: "TEAM",
           subdomain: "team#{unique}",
           d4h_team_id: unique,
           d4h_api_host: "api.ca.d4h.org",

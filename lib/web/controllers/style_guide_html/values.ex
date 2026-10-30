@@ -120,6 +120,18 @@ defmodule Web.StyleGuideHTML.Values do
     ]
   end
 
+  defp sizes do
+    [
+      {:characters, "A length of text",
+       [{"characters(1)", Format.characters(1)}, {"characters(20)", Format.characters(20)}]},
+      {:file_size, "A file's size",
+       [
+         {"file_size(64_200)", Format.file_size(64_200)},
+         {"file_size(2_400_000)", Format.file_size(2_400_000)}
+       ]}
+    ]
+  end
+
   defp quantities do
     member = [one: "1 member", many: "%d members"]
 
@@ -135,6 +147,7 @@ defmodule Web.StyleGuideHTML.Values do
         ]}
      ] ++
        name_lists() ++
+       sizes() ++
        [
          {:duration, "Hours and minutes, everywhere",
           [
@@ -150,11 +163,6 @@ defmodule Web.StyleGuideHTML.Values do
          {:days, "A count of days", [{"days(1)", Format.days(1)}, {"days(30)", Format.days(30)}]},
          {:months, "How long a qualification lasts",
           [{"months(6)", Format.months(6)}, {"months(36)", Format.months(36)}]},
-         {:file_size, "A file's size",
-          [
-            {"file_size(64_200)", Format.file_size(64_200)},
-            {"file_size(2_400_000)", Format.file_size(2_400_000)}
-          ]},
          {:km, "A distance", [{"km(42)", Format.km(42)}]},
          {:coordinate, "A place",
           [

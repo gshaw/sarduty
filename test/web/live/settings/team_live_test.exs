@@ -121,6 +121,27 @@ defmodule Web.Settings.TeamLiveTest do
     refute has_element?(lv, "#team-key-advice")
   end
 
+  test "saves the team's three names (#738)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
+    assert has_element?(lv, "#team-names-lead")
+
+    names = %{
+      name: "York Sunbury SAR",
+      legal_name: "York Sunbury Search and Rescue Inc.",
+      abbreviated_name: "YSSR"
+    }
+
+    lv |> form("#team_settings_form", form: names) |> render_submit()
+
+    assert %{
+             name: "York Sunbury SAR",
+             legal_name: "York Sunbury Search and Rescue Inc.",
+             abbreviated_name: "YSSR"
+           } = Team.get!(team.id)
+  end
+
   test "changes the team in the URL, not the one last opened", %{conn: conn} do
     %{user: user, team: first} = user_with_team_fixture()
     second = team_fixture(%{name: "Second SAR"})
@@ -136,7 +157,7 @@ defmodule Web.Settings.TeamLiveTest do
   end
 
   describe "Refresh" do
-    test "takes the team's name and time zone from D4H", %{conn: conn} do
+    test "takes the team's time zone from D4H, and leaves its names (#738)", %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: @secret}})
 
       Req.Test.stub(App.Adapter.D4H, fn conn ->
@@ -150,7 +171,8 @@ defmodule Web.Settings.TeamLiveTest do
       {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
 
       assert render_click(lv, "refresh", %{}) =~ "Team refreshed."
-      assert %{name: "Renamed SAR", timezone: "America/Toronto"} = Team.get!(team.id)
+      assert %{timezone: "America/Toronto"} = refreshed = Team.get!(team.id)
+      assert refreshed.name == team.name
     end
 
     test "says D4H refused, rather than crashing, when the key is turned down", %{conn: conn} do

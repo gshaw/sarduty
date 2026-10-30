@@ -265,8 +265,10 @@ none and is never asked. See [custom-fields.md](custom-fields.md).
   deleted rows, so a row deleted by mistake loses nothing and the next refresh restores it.
   One gap remains: D4H pages by offset, so a row deleted in D4H mid-refresh shifts the
   next one out of view, and that row is gone until the next refresh.
-- The team's name and time zone are copied when the team is created and when an admin
-  clicks refresh in team settings, not on the daily sync.
+- The team's place and time zone are copied when the team is created and when an admin
+  clicks refresh in team settings, not on the daily sync. Its three names (#738) come
+  from D4H's title only at sign-up; after that they are the team's own, and Refresh
+  leaves them.
 - Activity tags are stored as titles. Letter hours depend on the exact titles of the
   team's hours tags: `Primary Hours` and `Secondary Hours`, unless its organization
   names its own (#289). A team names any its organization leaves blank in **Settings →

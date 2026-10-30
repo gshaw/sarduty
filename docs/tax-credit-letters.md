@@ -45,6 +45,10 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
   organization under subsection 118.07(1) of the Income Tax Act" is true in every
   province. A letter's text is saved when it's made, so changing the wording never
   changes a letter already issued.
+- **Letters name the team by its legal name** (#738), `legal_name`: the body, the signer
+  fallback, the PDF's title, author, and filename, the email, and the verify page. A team
+  sets it in team settings › General. It starts as the team's name, and nothing checks
+  it, so a team that shortened its name fixes it by hand before letter season.
 - **The letterhead is the organization's logo, then the team's** (#290), top right. Either
   is left out when it's missing, and a team without a logo never gets SAR Duty's. Logos
   are the current ones when the PDF is built: a letter saves its text and signature, not

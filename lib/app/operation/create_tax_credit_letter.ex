@@ -50,13 +50,13 @@ defmodule App.Operation.CreateTaxCreditLetter do
 
     #{member_lines(member)}
 
-    #{member.name} volunteered with #{team.name} in #{year}. #{team.name} is an eligible search and rescue organization under subsection 118.07(1) of the Income Tax Act.
+    #{member.name} volunteered with #{team.legal_name} in #{year}. #{team.legal_name} is an eligible search and rescue organization under subsection 118.07(1) of the Income Tax Act.
 
     Primary Hours: #{Format.duration(hours.primary_minutes)}
     Secondary Hours: #{Format.duration(hours.secondary_minutes)}
     Total Hours: #{Format.duration(hours.total_minutes)}
 
-    These hours come from #{team.name}'s attendance records.
+    These hours come from #{team.legal_name}'s attendance records.
 
     #{contact_line(team)}
 
@@ -79,14 +79,14 @@ defmodule App.Operation.CreateTaxCreditLetter do
 
   defp contact_line(team) do
     if Enum.all?([team.authorized_by_phone, team.authorized_by_email], &(&1 in [nil, ""])),
-      do: "If you have questions, contact #{team.name}.",
+      do: "If you have questions, contact #{team.legal_name}.",
       else: "If you have questions, contact me using the details below."
   end
 
   @doc "The signer's name, then their title, phone, and email when the team has them."
   def signer_block(team) do
     [
-      team.authorized_by_name || team.name,
+      team.authorized_by_name || team.legal_name,
       team.authorized_by_title,
       team.authorized_by_phone,
       team.authorized_by_email

@@ -68,14 +68,31 @@ defmodule Web.Settings.TeamLive do
 
       <.form for={@form} id="team_settings_form" phx-submit="save" phx-change="validate">
         <.error_summary form={@form} />
-        <.input field={@form[:name]} label="Name" />
+        <%!-- Three names for the room each place has (#738). --%>
+        <p id="team-names-lead">
+          Your team has three names, one for each amount of room. Each starts as your team's
+          name.
+        </p>
+        <.input field={@form[:name]} label="Name">
+          Used on most pages, emails, ID cards, and the phone top bar. {Service.Format.characters(
+            Team.name_advice(:name)
+          )} or fewer fits everywhere.
+        </.input>
+        <.input field={@form[:legal_name]} label="Legal name">
+          In full, as registered. Used on tax credit letters, the page that checks them, and
+          the back of ID cards.
+        </.input>
+        <.input field={@form[:abbreviated_name]} label="Abbreviated name">
+          Starts texts to members, where room is tight. {Service.Format.characters(
+            Team.name_advice(:abbreviated_name)
+          )} or fewer.
+        </.input>
         <div class="grid grid-cols-2 gap-x-6">
           <.input field={@form[:lat]} readonly label="Latitude" />
           <.input field={@form[:lng]} readonly label="Longitude" />
         </div>
         <.input field={@form[:timezone]} label="Time zone" readonly>
-          The place and time zone come from {@service}. Refresh copies them and the name
-          again.
+          The place and time zone come from {@service}. Refresh copies them again.
         </.input>
         <.input
           field={@form[:new_d4h_access_key]}

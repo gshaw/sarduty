@@ -89,7 +89,7 @@ defmodule Web.RecordsTeamTest do
              "Team refreshed."
 
     team = App.Repo.reload!(team)
-    assert {team.name, team.lat} == {"Demo SAR", 49.2}
+    assert team.lat == 49.2
   end
 
   test "a D4H team still links to D4H", %{conn: conn} do

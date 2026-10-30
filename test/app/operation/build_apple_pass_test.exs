@@ -13,6 +13,7 @@ defmodule App.Operation.BuildApplePassTest do
   defp card(attrs \\ %{}) do
     team = %Team{
       name: "Example SAR",
+      legal_name: "Example Search and Rescue Society",
       timezone: "America/Vancouver",
       d4h_refreshed_at: ~U[2026-09-30 13:05:00Z],
       organization: nil
@@ -162,7 +163,10 @@ defmodule App.Operation.BuildApplePassTest do
     json = BuildApplePass.pass_json(card, [], @config, @now)
 
     issuer = Enum.find(json.generic.backFields, &(&1.key == "issuer"))
-    assert issuer.value =~ "Example SAR, a member team of BC Search and Rescue Association."
+
+    assert issuer.value =~
+             "Example Search and Rescue Society, a member team of BC Search and Rescue Association."
+
     refute Jason.encode!(json) =~ "SAR Duty"
   end
 end
