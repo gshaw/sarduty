@@ -105,6 +105,8 @@ Phone shots go side by side as `<img width="320">`.
 
 - A pin at a narrow page's left edge falls off the screen: `right="inset"` pulls it
   inside, and `right=True` puts it on the right corner.
+- A table clips anything outside its scroll box, so a pin on a header cell vanishes.
+  `right="in"` (class `pin-in`) puts the pin inside the mark, on its right.
 - The dump logs every query: `tools/mockups/dump.sh … | grep -E "Result|was not dumped"`.
 - `app-css.sh` rewrites `/fonts/` to `fonts/` so file:// pages load IBM Plex.
 - LiveView's reconnect toasts are dropped by `Mock.page`; a page with other hidden

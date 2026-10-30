@@ -78,8 +78,9 @@ TAGS = {"new": "New", "changed": "Changed", "removed": "Removed"}
 
 
 def _mark_attrs(pin, kind, right=False):
-    """`right` is True for a pin on the right corner, or "inset" for one inside the left edge."""
-    cls = "mk" + ("" if kind == "new" else f" mk-{kind}") + {True: " pin-right", "inset": " pin-inset"}.get(right, "")
+    """`right` is True for a pin on the right corner, "inset" for one inside the left edge, or
+    "in" for one inside the mark, for marks in a box that clips, such as a table."""
+    cls = "mk" + ("" if kind == "new" else f" mk-{kind}") + {True: " pin-right", "inset": " pin-inset", "in": " pin-in"}.get(right, "")
     data = f' data-pin="{pin}" data-tag="{TAGS[kind]}"' if pin else ""
     return cls, data
 

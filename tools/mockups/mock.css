@@ -28,6 +28,8 @@
 .mk.pin-right[data-pin]::before { left: auto; right: -16px; }
 /* At a narrow page's edge the corner is off the screen: pull the pin inside. */
 .mk.pin-inset[data-pin]::before { left: 4px; top: -13px; }
+/* Inside a box that clips (a table's scroll wrapper): the pin sits inside the mark, on its right. */
+.mk.pin-in[data-pin]::before { left: auto; right: 6px; top: 50%; transform: translateY(-50%); }
 /* Block marks hug their content; add .fill to span the column. */
 div.mk:not(.fill), p.mk:not(.fill), section.mk:not(.fill) { width: fit-content; max-width: 100%; }
 /* Inline marks (a word in a sentence, a table cell) stay on their line. */
