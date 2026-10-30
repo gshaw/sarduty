@@ -52,12 +52,13 @@ defmodule Web.Components.Columns do
   attr :path, :string, default: nil, doc: "the link, such as a tab; the activity page by default"
   attr :kind, :boolean, default: true, doc: "false when the table has a Kind column"
 
-  @doc ~s(Activity: "ref: title", linked to the activity, and its kind.)
+  @doc ~s(Activity: "ref: title", linked to the activity, Draft when D4H hasn't published it, and its kind.)
   def activity_cell(assigns) do
     ~H"""
     <.a navigate={@path || ~p"/teams/#{@team}/activities/#{@activity.id}"}><.activity_title activity={
       @activity
     } /></.a>
+    <.badge :if={@activity.is_published == false}>Draft</.badge>
     <.activity_kind_mark :if={@kind} activity={@activity} class="ml-2 whitespace-nowrap" />
     """
   end

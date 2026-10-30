@@ -73,6 +73,16 @@ defmodule Web.ActivityCollectionLiveTest do
     refute has_element?(lv, "#activity_collection td", "Oct 1, 2026")
   end
 
+  test "Draft sits in the Activity cell, after the title, not under the kind", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity_fixture(team, %{title: "Unpublished training", is_published: false})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?when=all")
+
+    assert has_element?(lv, "#activity_collection td .badge", "Draft")
+    refute has_element?(lv, "#activity_collection .marker-more", "Draft")
+  end
+
   test "a team without chores has no Chores tile", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
