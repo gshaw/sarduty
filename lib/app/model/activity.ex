@@ -226,6 +226,15 @@ defmodule App.Model.Activity do
 
   def deleted?(%Activity{deleted_at: deleted_at}), do: deleted_at != nil
 
+  @doc """
+  Whether the activity has finished by `now` and D4H still holds it as a draft: someone
+  has to publish it. A coming activity is a draft until then, which needs no mark. Pure.
+  """
+  def finished_draft?(%{is_published: published?} = activity, %DateTime{} = now) do
+    finished_at = activity.finished_at || activity.started_at
+    published? == false and finished_at != nil and not DateTime.after?(finished_at, now)
+  end
+
   @doc "Whether the activity has started by `now`. Pure."
   def started?(%{started_at: started_at}, %DateTime{} = now),
     do: not DateTime.before?(now, started_at)
