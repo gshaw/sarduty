@@ -74,7 +74,7 @@ defmodule Web.NavigationTest do
 
   describe "sections/3" do
     test "a member sees Dashboard, Activities and Take attendance, Members and Milestones, and Your membership" do
-      sections = team_sections("/teams/squamish/me", member?: true, chores: 2)
+      sections = team_sections("/teams/squamish/me", member?: true)
 
       assert keys(sections) == [
                ["dashboard", "whiteboard"],
@@ -118,9 +118,9 @@ defmodule Web.NavigationTest do
       refute "me" in (sections |> keys() |> List.flatten())
     end
 
-    test "chores show with member logins and chores on, with a count for team admins while some wait" do
+    test "chores show with member logins and chores on, with no count (#698)" do
       refute "chores" in ("/teams/squamish"
-                          |> team_sections([team_admin?: true, chores: 3], %{
+                          |> team_sections([team_admin?: true], %{
                             @team
                             | member_logins: true
                           })
@@ -128,12 +128,15 @@ defmodule Web.NavigationTest do
                           |> List.flatten())
 
       team = %{@team | member_logins: true, chores_enabled: true}
-      sections = team_sections("/teams/squamish", [team_admin?: true, chores: 3], team)
-      assert [%{count: 3}] = for(links <- sections, link <- links, link.key == "chores", do: link)
+      sections = team_sections("/teams/squamish", [team_admin?: true], team)
+
+      assert [%{count: nil}] =
+               for(links <- sections, link <- links, link.key == "chores", do: link)
+
       assert ["equipment", "chores"] in keys(sections)
 
-      # Members log theirs on the same page (#645), in a section of its own, with no count.
-      sections = team_sections("/teams/squamish", [member?: true, chores: 3], team)
+      # Members log theirs on the same page (#645), in a section of its own.
+      sections = team_sections("/teams/squamish", [member?: true], team)
       assert ["chores"] in keys(sections)
 
       assert [%{count: nil}] =

@@ -7,7 +7,6 @@ defmodule Web.UserAuth do
   alias App.Accounts
   alias App.Adapter.D4H
   alias App.Model.Certificate
-  alias App.Model.Chore
   alias App.Model.Member
   alias App.Model.Organization
   alias App.Model.OrganizationAdmin
@@ -364,15 +363,11 @@ defmodule Web.UserAuth do
     if function_exported?(view, :__member_events__, 0), do: view.__member_events__(), else: []
   end
 
-  # What waits for a team admin, for the side navigation: members' chores and
-  # certificates.
+  # What waits for a team admin, for the side navigation: members' certificates.
   defp waiting(%{team_admin?: true, current_team: team}),
-    do: %{
-      chore_count: waiting_chores(team),
-      certificate_count: waiting_certificates(team)
-    }
+    do: %{certificate_count: waiting_certificates(team)}
 
-  defp waiting(_access), do: %{chore_count: 0, certificate_count: 0}
+  defp waiting(_access), do: %{certificate_count: 0}
 
   # Who the user is on the URL's team, as `current_team`, `current_member`, and
   # `team_admin?`, when `access` lets them in; otherwise a 404. The LiveView hook and the
@@ -435,8 +430,6 @@ defmodule Web.UserAuth do
   def delete_view_as(conn) do
     {get_session(conn, @view_as_key), delete_session(conn, @view_as_key)}
   end
-
-  defp waiting_chores(team), do: if(Team.chores?(team), do: Chore.count_waiting(team.id), else: 0)
 
   defp waiting_certificates(team),
     do: if(Team.certificates?(team), do: Certificate.count_waiting(team.id), else: 0)

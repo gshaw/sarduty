@@ -70,9 +70,10 @@ is left out, and so is its divider.
 - **Templates is a link of its own**, after Activities, so a team admin finds it without
   opening Activities first. Proposed changes sat beside it until the MCP became read-only
   (#627).
-- **Counts.** Chores and Certificates count what waits for a team admin in an amber tag
+- **Counts.** Certificates counts what waits for a team admin in an amber tag
   (assigned by the team pages' hook), and on a phone the Menu button gets an amber dot
-  while any link has a count.
+  while any link has a count. Chores has none (#698): waiting chores are on the
+  Dashboard's Needs attention, which leaves out a team admin's own.
 - **Team settings is one link** to `/teams/:subdomain/settings`. Its pages are tabs under
   the title Team settings ([TeamSettingsTabs](../lib/web/components/team_settings_tabs.ex)),
   one topic each (2026-10-27, #514): General (the team and its key), Team admins, and

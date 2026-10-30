@@ -67,7 +67,11 @@ defmodule Web.TeamDashboardLive do
     socket
     |> assign(now: now)
     |> assign(
-      view_data: TeamDashboardViewData.build(team, now, attention?: socket.assigns.team_admin?)
+      view_data:
+        TeamDashboardViewData.build(team, now,
+          attention?: socket.assigns.team_admin?,
+          member: socket.assigns.current_member
+        )
     )
     |> assign(has_logo: Team.logo_file(team.subdomain) != nil)
     |> assign_notes(team, now)

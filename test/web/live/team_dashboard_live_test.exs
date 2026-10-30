@@ -151,6 +151,36 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(lv, ~s{#attention-chores a[href="/teams/#{team.subdomain}/chores"]})
   end
 
+  test "a team admin's own chores need another team admin, unless there is none (#698)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    team =
+      team |> Ecto.Changeset.change(member_logins: true, chores_enabled: true) |> Repo.update!()
+
+    category = chore_category_fixture(team)
+    me = Repo.get_by!(App.Model.Member, team_id: team.id, email: user.email)
+    chore_fixture(me, category)
+    chore_fixture(me, category)
+
+    # Nobody else can accept them.
+    {:ok, lv, _html} = open(conn, user, team)
+    assert has_element?(lv, "#attention-chores", "2 chores to accept")
+
+    other = manager_fixture(team)
+    {:ok, lv, _html} = open(conn, user, team)
+    refute has_element?(lv, "#attention-chores")
+
+    chore_fixture(member_fixture(team), category)
+    {:ok, lv, _html} = open(conn, user, team)
+    assert has_element?(lv, "#attention-chores", "1 chore to accept")
+
+    # The other team admin sees them all.
+    other_user = App.AccountsFixtures.user_fixture(%{email: other.email})
+    {:ok, lv, _html} = open(conn, other_user, team)
+    assert has_element?(lv, "#attention-chores", "3 chores to accept")
+  end
+
   test "this team's drafts and members missing details need attention", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, at(-48, %{is_published: false}))

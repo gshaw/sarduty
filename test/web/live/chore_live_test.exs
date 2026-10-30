@@ -75,7 +75,7 @@ defmodule Web.ChoreLiveTest do
     left = chore_fixture(member, category, %{description: "Hall floors"})
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
-    assert has_element?(lv, "#side-nav-chores", "3")
+    refute has_element?(lv, "#side-nav-chores .badge")
     assert has_element?(lv, "#chores-view-waiting[aria-current=page]", "3")
     assert has_element?(lv, "#accept", "Accept 3 chores")
 
@@ -89,7 +89,6 @@ defmodule Web.ChoreLiveTest do
 
     assert has_element?(lv, "#waiting-chores #chore-#{left.id}")
     refute has_element?(lv, "#waiting-chores #chore-#{one.id}")
-    assert has_element?(lv, "#side-nav-chores", "1")
     assert %{status: :accepted, decided_at: %DateTime{}} = Repo.get!(Chore, one.id)
     assert Repo.get!(Chore, left.id).status == :waiting
 
