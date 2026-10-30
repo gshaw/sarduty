@@ -67,6 +67,11 @@ defmodule Web.StyleGuideHTML.Values do
       {:datetime_medium, "The same with the weekday",
        [{"datetime_medium(now, zone)", Format.datetime_medium(@now, @zone)}]},
       {:time_short, "A time alone", [{"time_short(now, zone)", Format.time_short(@now, @zone)}]},
+      {:time_range, "When an activity runs, under its date on the Activities list",
+       [
+         {"time_range(now, now + 3h, zone)",
+          Format.time_range(@now, DateTime.add(@now, 3, :hour), @zone)}
+       ]},
       {:month_day_time, "A time this year",
        [{"month_day_time(now, zone)", Format.month_day_time(@now, @zone)}]},
       {:month_day_time_seconds, "The same to the second",

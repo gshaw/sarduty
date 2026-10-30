@@ -422,7 +422,7 @@ defmodule Web.MemberStandingLive do
             />
           </:col>
           <:col :let={no_show} label="Date" class="w-px whitespace-nowrap">
-            <.date_cell value={no_show.activity.started_at} timezone={@member.team.timezone} />
+            <.date_cell activity={no_show.activity} timezone={@member.team.timezone} />
           </:col>
           <:col :let={no_show} label="Followed up">
             {no_show.note}

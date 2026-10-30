@@ -45,6 +45,12 @@ defmodule Web.StandardColumnsTest do
       "the Delete button's confirm names the check-in's day in a sentence"
   }
 
+  # Where people pick an activity by when it runs.
+  @times_allowed [
+    "lib/web/components/activity_filter_table.ex",
+    "lib/web/controllers/style_guide_html/pages/table.html.heex"
+  ]
+
   @cell_labelled_otherwise %{
     {"lib/web/live/activity_send_update_live.ex", "{status_title(status)}"} =>
       "a table per reply, each headed by the reply",
@@ -130,7 +136,7 @@ defmodule Web.StandardColumnsTest do
 
     by_hand =
       for col <- columns(),
-          {label, cell, _right?, formatter} <- @values,
+          {_label, cell, _right?, formatter} <- @values,
           formatter,
           col.body =~ formatter,
           not uses?(col, cell),
@@ -139,6 +145,15 @@ defmodule Web.StandardColumnsTest do
     assert misaligned == [], Enum.join(misaligned, "\n")
     check(by_hand, @formatted_by_hand, "Format it with the column's cell, or add the reason here")
     check_stale(by_hand, @formatted_by_hand)
+  end
+
+  test "only the Activities list shows an activity's times under its date" do
+    found =
+      for col <- columns(),
+          col.body =~ ~r/<\.date_cell[^>]*\stimes\b/,
+          do: col.path
+
+    assert Enum.uniq(found) -- @times_allowed == []
   end
 
   defp value_cells, do: for({label, cell, _right?, _formatter} <- @values, do: {label, cell})

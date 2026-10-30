@@ -47,6 +47,15 @@ defmodule Service.Format do
 
   def time_short(datetime, timezone), do: datetime(datetime, timezone, "%H:%M")
 
+  @doc """
+  A start and end time: "19:00–22:00", or the start alone with no end. The end's day
+  is left out; `Service.Convert.days_later/3` counts it, for the "+1" after.
+  """
+  def time_range(started_at, nil, timezone), do: time_short(started_at, timezone)
+
+  def time_range(started_at, finished_at, timezone),
+    do: "#{time_short(started_at, timezone)}–#{time_short(finished_at, timezone)}"
+
   @doc ~s(A date with no year, in a table under a heading that names the year: "Oct 20".)
   def month_day(datetime, timezone), do: datetime(datetime, timezone, "%b %-d")
 

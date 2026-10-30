@@ -48,6 +48,31 @@ defmodule Web.ActivityCollectionLiveTest do
     refute has_element?(lv, "#activity_collection", "Board meeting")
   end
 
+  test "Date: the day, its start and end under it with +1 overnight, and a chore activity's month",
+       %{conn: conn} do
+    %{user: user, team: team} =
+      user_with_team_fixture(%{team: %{member_logins: true, chores_enabled: true}})
+
+    activity_fixture(team, %{
+      title: "Overnight search",
+      started_at: ~U[2026-09-04 06:00:00Z],
+      finished_at: ~U[2026-09-04 09:00:00Z]
+    })
+
+    chore_activity_fixture(team, [60], %{
+      started_at: ~U[2026-10-01 07:00:00Z],
+      finished_at: ~U[2026-10-01 07:00:00Z]
+    })
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?when=all")
+
+    assert has_element?(lv, "#activity_collection td", "Sep 3, 2026")
+    assert has_element?(lv, "#activity_collection td .hint", "23:00–02:00")
+    assert has_element?(lv, "#activity_collection td .hint sup", "+1")
+    assert has_element?(lv, "#activity_collection td", "Oct 2026")
+    refute has_element?(lv, "#activity_collection td", "Oct 1, 2026")
+  end
+
   test "a team without chores has no Chores tile", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 

@@ -14,6 +14,7 @@ defmodule Web.Components.Columns do
   import Web.Components.D4H, only: [activity_title: 1, activity_kind_mark: 1]
   import Web.Components.Standing, only: [standing_badge: 1]
 
+  alias App.Model.Activity
   alias App.Operation.BuildGroupRulePreview
   alias Service.Format
 
@@ -119,10 +120,48 @@ defmodule Web.Components.Columns do
     """
   end
 
-  attr :value, :any, required: true, doc: "a DateTime, shown in `timezone`, or a Date"
+  attr :value, :any, default: nil, doc: "a DateTime, shown in `timezone`, or a Date"
+
+  attr :activity, :map,
+    default: nil,
+    doc: "an activity in place of `value`: its start, or its month for a chore activity"
+
   attr :timezone, :string, required: true
 
-  @doc ~s(Date: "Mar 1, 2026" in the team's zone. Left, `w-px whitespace-nowrap`.)
+  attr :times, :boolean,
+    default: false,
+    doc: "with `activity`, its start and end under the date: the Activities list only"
+
+  @doc """
+  Date: "Mar 1, 2026" in the team's zone. Given an activity, "Oct 2026" for a chore
+  activity, which stands for its month. Left, `w-px whitespace-nowrap`.
+  """
+  def date_cell(%{activity: %{} = activity} = assigns) do
+    %{started_at: started_at, finished_at: finished_at} = activity
+
+    assigns =
+      assign(assigns,
+        chores?: Activity.shown_kind(activity) == "chores",
+        days_later: Service.Convert.days_later(started_at, finished_at, assigns.timezone)
+      )
+
+    ~H"""
+    <%= if @chores? do %>
+      {Format.month_year(@activity.started_at, @timezone)}
+    <% else %>
+      {date(@activity.started_at, @timezone)}
+      <div :if={@times} class="hint">
+        {Format.time_range(@activity.started_at, @activity.finished_at, @timezone)}<sup
+          :if={@days_later > 0}
+          aria-hidden="true"
+        >+{@days_later}</sup><span :if={@days_later > 0} class="sr-only">, ending {Format.days(
+          @days_later
+        )} later</span>
+      </div>
+    <% end %>
+    """
+  end
+
   def date_cell(assigns) do
     ~H"""
     {date(@value, @timezone)}

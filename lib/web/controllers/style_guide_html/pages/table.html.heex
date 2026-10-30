@@ -114,7 +114,7 @@
         <% "group_cell" -> %>
           <.group_cell group={%{id: 1, title: "Rope team"}} team={sample_team()} />
         <% "date_cell" -> %>
-          <.date_cell value={hd(activities()).started_at} timezone={sample_team().timezone} />
+          <.date_cell activity={hd(activities())} timezone={sample_team().timezone} times />
         <% "expires_cell" -> %>
           <.expires_cell
             value={DateTime.add(DateTime.utc_now(), 20, :day)}

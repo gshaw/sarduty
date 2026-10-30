@@ -453,7 +453,7 @@ defmodule Web.StyleGuideHTML.SampleData do
       {"Qualification", "qualification_cell", "Left", "Every table of qualifications."},
       {"Group", "group_cell", "Left", "Every table of groups."},
       {"Date", "date_cell", "Left",
-       "A day: when an activity started, a chore, a milestone. Also Joined, Retired, Start, and Sent."},
+       "A day: when an activity started, a chore, a milestone. Also Joined, Retired, Start, and Sent. Pass activity={…} for an activity's start, so a chore activity reads as its month, \"Oct 2026\". The Activities list alone adds times, for its start and end under the date, with +1 when it ends the next day."},
       {"Expires", "expires_cell", "Left",
        "When a qualification, certificate, or item runs out. The badge counts the days left within 60."},
       {"Hours", "hours_cell", "Right",

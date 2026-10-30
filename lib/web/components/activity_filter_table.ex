@@ -132,7 +132,7 @@ defmodule Web.Components.ActivityFilterTable do
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "date-"}, {"↑", "date"}]}
       >
-        <.date_cell value={record.started_at} timezone={@team.timezone} />
+        <.date_cell activity={record} timezone={@team.timezone} times />
       </:col>
       <:col
         :let={record}

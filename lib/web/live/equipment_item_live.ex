@@ -175,7 +175,7 @@ defmodule Web.EquipmentItemLive do
               <.activity_cell activity={usage.activity} team={@current_team} />
             </:col>
             <:col :let={usage} label="Date" class="w-px whitespace-nowrap">
-              <.date_cell value={usage.activity.started_at} timezone={@current_team.timezone} />
+              <.date_cell activity={usage.activity} timezone={@current_team.timezone} />
             </:col>
             <:col :let={usage} label="Used" align="right" class="w-px whitespace-nowrap">
               {Web.ActivityEquipmentLive.amount(usage)}

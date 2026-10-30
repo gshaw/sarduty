@@ -43,6 +43,18 @@ defmodule Service.Convert do
   def days_until(%DateTime{} = datetime, %DateTime{} = now),
     do: ceil(DateTime.diff(datetime, now) / 86_400)
 
+  @doc """
+  How many calendar days after `started_at`'s day `finished_at` falls, in `timezone`: 1
+  for 23:00 to 02:00, like the "+1" on a ticket. 0 with no end.
+  """
+  def days_later(_started_at, nil, _timezone), do: 0
+
+  def days_later(started_at, finished_at, timezone),
+    do: finished_at |> local_date(timezone) |> Date.diff(local_date(started_at, timezone))
+
+  defp local_date(datetime, timezone),
+    do: datetime |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
+
   def duration_to_months(started_at, finished_at) do
     days =
       finished_at
