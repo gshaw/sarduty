@@ -1,0 +1,14 @@
+{"contact": true,
+ "shots": [
+ {"id": "A", "page": "1-account", "title": "Account settings", "url": "sarduty.com/account", "width": 1024,
+  "lead": "A member's reminder switches, with texts added.",
+  "pins": ["<b>Changed.</b> Emails becomes Reminders.",
+           "<b>New.</b> Text reminders, one switch per team, on from the start."]},
+ {"id": "B", "page": "2-text", "title": "The text", "frame": "none", "width": 454,
+  "lead": "Cameron's phone. Texts come from SAR Duty's one number.",
+  "pins": ["<b>New.</b> The reminder as a text: the team's abbreviated name, the activity, and YES or NO."]},
+ {"id": "C", "page": "3-who", "title": "Who gets a text", "frame": "sheet", "width": 1024,
+  "lead": "Four members, the same send."},
+ {"id": "D", "page": "4-flow", "title": "A reminder by text", "frame": "sheet", "width": 1024,
+  "lead": "From Send reminders to a reply."}
+]}

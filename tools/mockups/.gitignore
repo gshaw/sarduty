@@ -1,0 +1,9 @@
+# Built by app-css.sh from the app.
+/app.css
+/fonts/
+__pycache__/
+# What a round makes from its sources.
+real/
+shots/
+review.html
+/example/[0-9]*.html

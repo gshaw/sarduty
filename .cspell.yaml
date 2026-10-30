@@ -5,6 +5,8 @@ version: "0.2"
 # dictionary. Code keeps US spelling by convention (docs/writing.md), which cspell can't check.
 language: en,en-GB
 allowCompoundWords: true
+# What git ignores is built or scratch: deps, mockup rounds, dumped pages.
+useGitignore: true
 ignorePaths:
   - ".claude"
   - "_build/*"

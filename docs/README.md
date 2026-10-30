@@ -139,6 +139,8 @@ have decided since the page loaded, stays in `call`.
 - [deployment.md](deployment.md) — Fly, Litestream, migrations, backups, and changing production data.
 - [testing-strategy.md](testing-strategy.md) — what the test suite covers and why.
 - [writing.md](writing.md) — the rules and glossary for every word a person reads in the app.
+- [mockups.md](mockups.md) — how a design proposal is drawn: real pages, fuchsia marks,
+  numbered pins.
 - [history.md](history.md) — the project's story log, in place of a changelog.
 
 Recurring maintenance prompts for AI agents live in

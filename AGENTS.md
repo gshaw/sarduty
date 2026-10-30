@@ -312,6 +312,8 @@ change, read the relevant doc:
 - **What is tested and why** → [docs/testing-strategy.md](docs/testing-strategy.md).
 - **New routes and URL rules** → [docs/urls.md](docs/urls.md).
 - **Words in the UI, emails, and PDFs** → [docs/writing.md](docs/writing.md).
+- **Mockups for an issue** → [docs/mockups.md](docs/mockups.md). Draw on real pages
+  with the kit in `tools/mockups/`; never redraw a page by hand.
 
 Recurring maintenance prompts for agents are in
 [agent_prompts/](agent_prompts/README.md).
