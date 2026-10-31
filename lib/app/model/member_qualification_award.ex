@@ -116,7 +116,8 @@ defmodule App.Model.MemberQualificationAward do
       member_name: m.name,
       qualification_id: q.id,
       qualification: q.title,
-      ends_at: max(aw.ends_at)
+      ends_at: max(aw.ends_at),
+      award_id: max(aw.id)
     })
     |> order_by([aw, m], asc: max(aw.ends_at), asc: m.name)
   end

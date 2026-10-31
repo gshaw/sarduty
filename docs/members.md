@@ -189,7 +189,7 @@ admin through them.
    member whose permission D4H didn't send isn't counted.
 3. **Get the items back.** Needs attention's "1 retiring member holds 3 items" opens
    Equipment's With retiring members. Gear can take weeks to come back, so a team admin
-   can snooze this item; see [Snoozing an item](#snoozing-an-item).
+   can snooze this item; see [needs-attention.md](needs-attention.md#snoozing-an-item).
 4. **Retire them in D4H.** Needs attention's "2 retiring members hold no items" opens
    `standing=retiring&items=none`, and its hint, "Retire them in D4H.", is what stops a
    member staying Retiring for good. D4H sets No access when it retires someone, and
@@ -200,27 +200,6 @@ out. The Retiring group can't have group rules, since "Standing is Active" on it
 take out every member, and settings offer only groups without them. If D4H deletes the
 group, nobody is Retiring and Needs attention says so until a team admin picks another.
 Retiring is read from `group_members`, never stored, and no job.
-
-### Snoozing an item
-
-A team admin snoozes a Needs attention item until tomorrow, for a week (picked), or for a
-month (#751), with the alarm before its chevron. No forever. The snooze is the team's:
-every team admin stops seeing the item, and "1 snoozed" on the card's title row lists
-who snoozed it, until when, and Show again.
-
-Needs attention stays computed; `attention_snoozes` stores only the decision: the item's
-key, the local member ids behind it when snoozed, and when it ends. The item stays hidden
-while the snooze lasts and its members now are a subset of those ids
-(`TeamAttention.items/4`). Someone leaving it is progress and keeps it hidden; anyone
-new brings it back at once. A count would miss a swap, and the title changes with every
-returned item.
-
-An item can be snoozed exactly when it carries `ids`. Only the retiring members who hold
-items do so far; an item that breaks things, such as the danger item above, never
-does. A later item opts in by giving its members' ids instead of a count, one PR each,
-when someone asks. `SnoozeAttentionItem` reads the ids from the item, never from the
-browser. The MCP tool lists snoozed items last, with `snoozed_until`, and the nightly
-prune deletes snoozes a day after they end.
 
 ## The attendance check
 

@@ -1,8 +1,16 @@
 defmodule App.ViewData.TeamAttention do
   @moduledoc """
-  What the team dashboard's "Needs attention" list shows (#205). Pure: the counts from
+  What the team dashboard's "Needs attention" list shows (#205). Pure: the rows from
   `TeamDashboardViewData` and `now` in, items out, warnings first. An item leaves the
   list once its count is zero, so the list empties as the work gets done.
+
+  An item can be snoozed (#751) when it waits on people outside SAR Duty and can sit for
+  weeks: members replying, renewing, or returning gear. It carries `ids`, the local ids
+  of what it counts (members, activities, or awards), and a line in `@back_sooner`. An
+  item never is when it means something is broken (refresh, D4H access, a deleted
+  group), when the fix is one step in SAR Duty (accept, send, review), when it leaves
+  on its own (no-shows), or when it has a deadline (letters, last year's hours tags).
+  `docs/needs-attention.md` has the steps for a new item.
   """
 
   alias App.Adapter.D4H
@@ -16,10 +24,10 @@ defmodule App.ViewData.TeamAttention do
   #{@max_items} for the page, or `:all` for an agent (#595). Each is a map with `key`,
   `level` (`:danger`, `:warning`, or `:info`, sorted in that order), `title`, `detail`
   (where the fix happens, or nil), and `action`, the text of its link. The letters and
-  untagged items also carry the `year`; `untagged` is a list of `%{year:, count:}`.
+  untagged items also carry the `year`; `untagged` is a list of `%{year:, count:, ids:}`.
   `service` is where the team's records live, `:d4h` or `:records` (D4H.service/1).
 
-  An item with `ids`, the members behind it, can be snoozed (#751). It is snoozed while
+  An item with `ids`, what it counts, can be snoozed (#751). It is snoozed while
   one of `snoozes` (`AttentionSnooze`) has its key, has not ended, and holds every one of
   its ids, so anyone new brings it back. Snoozed items carry their `snooze` and free
   their place in the shown ones.
@@ -58,20 +66,32 @@ defmodule App.ViewData.TeamAttention do
 
   defp snoozed?(_item, _no_snooze, _now), do: false
 
-  @doc "Whether a team admin can snooze the item: only one that names the members behind it."
+  @doc "Whether a team admin can snooze the item: only one with the ids behind it."
   def can_snooze?(item), do: Map.has_key?(item, :ids)
 
+  # What brings each item that can be snoozed back early. An item that carries `ids` needs a line
+  # here; the tests check every one does.
+  @back_sooner %{
+    drafts: "another activity finishes as a draft",
+    missing_fields: "another draft is missing required fields",
+    expiring: "another award is about to expire",
+    missing_details: "another member is missing details",
+    not_seen: "another member stops attending",
+    retiring: "another retiring member holds items",
+    retiring_clear: "another retiring member holds no items",
+    untagged: "another activity has no hours tag"
+  }
+
   @doc "When a snoozed item comes back before its time, for the dialog that snoozes it."
-  def back_sooner(%{key: :retiring}),
-    do: "It comes back sooner if another retiring member holds items."
+  def back_sooner(%{key: key}), do: "It comes back sooner if #{Map.fetch!(@back_sooner, key)}."
 
   defp count_items(rows) do
     [
       refresh_item(rows.refresh, rows.service),
-      drafts_item(rows.draft_count, rows.service),
-      missing_fields_item(rows.missing_fields_count, rows.service),
-      expiring_item(rows.expiring_count, rows.expiring_days, rows.service),
-      missing_details_item(rows.missing_details_count, rows.service),
+      drafts_item(rows.draft_ids, rows.service),
+      missing_fields_item(rows.missing_fields_ids, rows.service),
+      expiring_item(rows.expiring_ids, rows.expiring_days, rows.service),
+      missing_details_item(rows.missing_details_ids, rows.service),
       not_seen_item(rows.not_seen),
       group_changes_item(rows.group_change_count),
       certificates_item(rows.certificate_count),
@@ -115,25 +135,29 @@ defmodule App.ViewData.TeamAttention do
 
   defp refresh_item(_ok_or_refreshing, _service), do: nil
 
-  defp drafts_item(0, _service), do: nil
+  defp drafts_item([], _service), do: nil
 
   # A team on SAR Duty Records publishes on the activity's page in SAR Duty.
-  defp drafts_item(count, :records),
+  defp drafts_item(ids, :records),
     do: %{
-      drafts_item(count, :d4h)
+      drafts_item(ids, :d4h)
       | detail:
-          Format.count(count,
+          ids
+          |> length()
+          |> Format.count(
             one: "Check its attendance, then publish it.",
             many: "Check their attendance, then publish them."
           )
     }
 
-  defp drafts_item(count, service) do
+  defp drafts_item(ids, service) do
     name = D4H.service_name(service)
+    count = length(ids)
 
     %{
       key: :drafts,
       level: :warning,
+      ids: ids,
       title: Format.count(count, one: "%d draft activity", many: "%d draft activities"),
       detail:
         Format.count(count,
@@ -144,12 +168,15 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp missing_fields_item(0, _service), do: nil
+  defp missing_fields_item([], _service), do: nil
 
-  defp missing_fields_item(count, service) do
+  defp missing_fields_item(ids, service) do
+    count = length(ids)
+
     %{
       key: :missing_fields,
       level: :warning,
+      ids: ids,
       title:
         Format.count(count,
           one: "%d draft activity is missing required fields",
@@ -164,19 +191,22 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp expiring_item(0, _days, _service), do: nil
+  defp expiring_item([], _days, _service), do: nil
 
   # A team on SAR Duty Records awards qualifications on each member's tab in SAR Duty.
-  defp expiring_item(count, days, :records),
+  defp expiring_item(ids, days, :records),
     do: %{
-      expiring_item(count, days, :d4h)
+      expiring_item(ids, days, :d4h)
       | detail: "Record renewals on each member's Qualifications tab."
     }
 
-  defp expiring_item(count, days, service) do
+  defp expiring_item(ids, days, service) do
+    count = length(ids)
+
     %{
       key: :expiring,
       level: :warning,
+      ids: ids,
       title:
         Format.count(count,
           one: "%d award expires within #{Format.days(days)}",
@@ -187,12 +217,15 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp missing_details_item(0, _service), do: nil
+  defp missing_details_item([], _service), do: nil
 
-  defp missing_details_item(count, service) do
+  defp missing_details_item(ids, service) do
+    count = length(ids)
+
     %{
       key: :missing_details,
       level: :info,
+      ids: ids,
       title:
         Format.count(count,
           one: "%d member has no email, mobile phone, or address",
@@ -216,11 +249,13 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp not_seen_item(%{count: 0}), do: nil
+  defp not_seen_item(%{ids: []}), do: nil
 
   # Members drifting away, for someone to check in with (#247, #366). `params` are the
   # Members list's filters, so the link shows the members counted.
-  defp not_seen_item(%{count: count, days: days, group: group, params: params}) do
+  defp not_seen_item(%{ids: ids, days: days, group: group, params: params}) do
+    count = length(ids)
+
     who =
       if group,
         do:
@@ -233,6 +268,7 @@ defmodule App.ViewData.TeamAttention do
     %{
       key: :not_seen,
       level: :info,
+      ids: ids,
       title: "#{who} not attended an activity in #{period(days)}",
       detail: Format.count(count, one: "Check in with them.", many: "Check in with each one."),
       action: "Show members",
@@ -287,7 +323,6 @@ defmodule App.ViewData.TeamAttention do
   def no_access(:records), do: "Set their access to No access on their Change member page."
   def no_access(service), do: "Set their access to No access in #{D4H.service_name(service)}."
 
-  # It can be snoozed (#751): the ids are the retiring members who hold anything.
   defp retiring_holding_item(%{holding: count, items: items, holding_ids: ids}) when count > 0 do
     who = Format.count(count, one: "%d retiring member holds", many: "%d retiring members hold")
 
@@ -303,10 +338,13 @@ defmodule App.ViewData.TeamAttention do
 
   defp retiring_holding_item(_none_or_missing), do: nil
 
-  defp retiring_clear_item(%{clear: count}, service) when count > 0 do
+  defp retiring_clear_item(%{clear_ids: [_ | _] = ids}, service) do
+    count = length(ids)
+
     %{
       key: :retiring_clear,
       level: :info,
+      ids: ids,
       title:
         Format.count(count,
           one: "%d retiring member holds no items",
@@ -456,7 +494,7 @@ defmodule App.ViewData.TeamAttention do
 
   # Letters count no hours for an activity with no hours tag (#323). Last year's shows only
   # in letter season, and has its own key so both can show.
-  defp untagged_item(%{count: count, year: year}, this_year, service) do
+  defp untagged_item(%{count: count, year: year} = row, this_year, service) do
     %{
       key: if(year == this_year, do: :untagged, else: :untagged_last_year),
       level: :info,
@@ -469,7 +507,12 @@ defmodule App.ViewData.TeamAttention do
       detail: untagged_detail(count, service),
       action: "Show activities"
     }
+    |> with_ids(year == this_year, row.ids)
   end
+
+  # Last year's waits on letter season's deadline, so only this year's can be snoozed.
+  defp with_ids(item, true, ids), do: Map.put(item, :ids, ids)
+  defp with_ids(item, false, _ids), do: item
 
   defp untagged_detail(count, :records),
     do:

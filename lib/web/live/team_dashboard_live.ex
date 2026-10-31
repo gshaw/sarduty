@@ -404,7 +404,7 @@ defmodule Web.TeamDashboardLive do
   attr :snoozed, :list, required: true
   attr :snooze_periods, :list, default: @snooze_periods
 
-  # An item that names the members behind it can be snoozed for the team (#751), with a
+  # An item with the ids behind it can be snoozed for the team (#751), with a
   # quiet alarm before its chevron, outside its link. Snoozed items wait under the count
   # on the title row, so they cost no height.
   defp needs_attention(assigns) do

@@ -290,6 +290,20 @@ defmodule Web.TeamDashboardLiveTest do
            )
   end
 
+  test "a team admin snoozes the drafts, and the rest stay (#751)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity_fixture(team, at(-48, %{is_published: false}))
+    member_fixture(team, %{phone: nil})
+    {:ok, lv, _html} = open(conn, user, team)
+
+    assert has_element?(lv, "#snooze-missing_details")
+    lv |> element("#snooze-drafts") |> render_click(%{"choice" => "day"})
+
+    refute has_element?(lv, "#attention-drafts")
+    assert has_element?(lv, "#snoozed-drafts", "1 draft activity")
+    assert has_element?(lv, "#attention-missing_details")
+  end
+
   test "Check activities lists the same drafts the dashboard counts", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, at(-48, %{title: "Counted draft", is_published: false}))
