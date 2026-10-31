@@ -59,6 +59,7 @@ defmodule Web.TeamDashboardLive do
       socket
       |> assign(page_title: current_team.name)
       |> assign(org_name: WhiteboardText.org_name(current_team))
+      |> assign(show_more_attention?: false)
       |> assign_page(current_team)
 
     {:ok, socket}
@@ -204,6 +205,8 @@ defmodule Web.TeamDashboardLive do
           :if={@team_admin?}
           team={@current_team}
           items={@view_data.attention}
+          more={@view_data.more_attention}
+          show_more?={@show_more_attention?}
           snoozed={@view_data.snoozed}
         />
         <.to_do :if={@current_member} team={@current_team} items={@to_do} />
@@ -400,12 +403,18 @@ defmodule Web.TeamDashboardLive do
 
   attr :team, :map, required: true
   attr :items, :list, required: true
+  attr :more, :list, required: true
+  attr :show_more?, :boolean, required: true
   attr :snoozed, :list, required: true
 
   # An item with the ids behind it can be snoozed for the team (#751), with a
   # quiet alarm before its chevron, outside its link. Snoozed items wait under the count
-  # on the title row, so they cost no height.
+  # on the title row, so they cost no height. Items past the first 7 wait behind
+  # "+2 more", which shows them in place until the page reloads.
   defp needs_attention(assigns) do
+    assigns =
+      assign(assigns, :items, assigns.items ++ if(assigns.show_more?, do: assigns.more, else: []))
+
     ~H"""
     <section id="needs-attention" class="card">
       <header class="relative">
@@ -445,6 +454,13 @@ defmodule Web.TeamDashboardLive do
           </button>
         </li>
       </ul>
+      <p :if={@more != [] and !@show_more?} class="action mt-2 mb-0">
+        <.a id="attention-more" href="#" icon="chevron-down" phx-click="show_more_attention">{Format.count(
+          length(@more),
+          one: "+%d more",
+          many: "+%d more"
+        )}</.a>
+      </p>
     </section>
     """
   end
@@ -871,6 +887,10 @@ defmodule Web.TeamDashboardLive do
          |> assign_top_half(team)}
     end
   end
+
+  # "+2 more" on Needs attention, which only team admins see.
+  def handle_event("show_more_attention", _params, socket),
+    do: {:noreply, assign(socket, show_more_attention?: true)}
 
   def handle_event("show_again", %{"key" => key}, socket) do
     team = socket.assigns.current_team

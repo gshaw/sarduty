@@ -20,8 +20,9 @@ defmodule App.ViewData.TeamAttention do
   @max_items 7
 
   @doc """
-  The items as `%{shown: items, snoozed: items}`. Shown are at most `limit`:
-  #{@max_items} for the page, or `:all` for an agent (#595). Each is a map with `key`,
+  The items as `%{shown: items, more: items, snoozed: items}`. Shown are at most
+  `limit`: #{@max_items} for the page, or `:all` for an agent (#595). `more` are the rest,
+  in order, which the page shows once asked ("+2 more"). Each is a map with `key`,
   `level` (`:danger`, `:warning`, or `:info`, sorted in that order), `title`, `detail`
   (where the fix happens, or nil), and `action`, the text of its link. The letters,
   untagged, and two hours tags items also carry the `year`; `untagged` is a list of
@@ -42,7 +43,8 @@ defmodule App.ViewData.TeamAttention do
       |> Enum.map(&with_snooze(&1, snoozes[Atom.to_string(&1.key)], now))
       |> Enum.split_with(&Map.has_key?(&1, :snooze))
 
-    %{shown: take(shown, limit), snoozed: snoozed}
+    {shown, more} = take(shown, limit)
+    %{shown: shown, more: more, snoozed: snoozed}
   end
 
   defp all_items(rows, now) do
@@ -116,8 +118,8 @@ defmodule App.ViewData.TeamAttention do
   defp two_hours_tags_items(rows, this_year),
     do: Enum.map(rows.two_hours_tags, &two_hours_tags_item(&1, this_year, rows.service))
 
-  defp take(items, :all), do: items
-  defp take(items, limit), do: Enum.take(items, limit)
+  defp take(items, :all), do: {items, []}
+  defp take(items, limit), do: Enum.split(items, limit)
 
   defp refresh_item(%{state: :failed, message: message}, service) do
     %{

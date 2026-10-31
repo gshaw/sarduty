@@ -335,6 +335,66 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(lv, "#attention-missing_details")
   end
 
+  test "past 7 items, +2 more shows the rest in place, each with its link and snooze",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    team =
+      team
+      |> Ecto.Changeset.change(
+        d4h_refresh_result: "Error: No access key. Save one in team settings.",
+        other_hours_tag: "Social",
+        not_seen_days: 180,
+        member_logins: true,
+        chores_enabled: true,
+        certificates_enabled: true
+      )
+      |> Repo.update!()
+
+    member = member_fixture(team, %{phone: nil})
+    member_fixture(team, %{joined_at: ~U[2024-01-01 00:00:00Z]})
+    chore_fixture(member, chore_category_fixture(team))
+    qualification = qualification_fixture(team)
+    certificate_fixture(member, qualification)
+    qualification_award_fixture(qualification, member, %{ends_at: hours_from_now(24 * 10)})
+    activity = activity_fixture(team, at(-48, %{title: "Training night", is_published: false}))
+    # This year's, whatever the date.
+    {:ok, june} =
+      DateTime.now!(team.timezone).year |> Date.new!(6, 15) |> DateTime.new(~T[18:00:00])
+
+    activity_fixture(team, %{
+      started_at: june,
+      finished_at: DateTime.add(june, 2, :hour),
+      tags: ["Primary Hours", "Social"],
+      is_published: true
+    })
+
+    AttendanceScan.insert!(%AttendanceScan{
+      team_id: team.id,
+      activity_id: activity.id,
+      member_id: member.id,
+      kind: "arrived",
+      method: "name",
+      scanned_at: DateTime.utc_now()
+    })
+
+    {:ok, lv, _html} = open(conn, user, team)
+
+    assert lv |> element("#needs-attention-list") |> render() |> count_items() == 7
+    assert has_element?(lv, "#attention-more", "+2 more")
+    refute has_element?(lv, "#attention-two_hours_tags")
+
+    lv |> element("#attention-more") |> render_click()
+
+    assert lv |> element("#needs-attention-list") |> render() |> count_items() == 9
+    assert has_element?(lv, "#attention-two_hours_tags a")
+    assert has_element?(lv, "#snooze-two_hours_tags")
+    refute has_element?(lv, "#attention-more")
+  end
+
+  defp count_items(html),
+    do: html |> LazyHTML.from_fragment() |> LazyHTML.query("li[id^=attention-]") |> Enum.count()
+
   test "Check activities lists the same drafts the dashboard counts", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, at(-48, %{title: "Counted draft", is_published: false}))

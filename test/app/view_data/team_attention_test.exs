@@ -410,6 +410,30 @@ defmodule App.ViewData.TeamAttentionTest do
     assert everything |> items(@march) |> length() == 6
   end
 
+  test "past 7, the rest wait in more, in order; an agent gets them all" do
+    nine =
+      rows(%{
+        draft_ids: ids(1),
+        missing_fields_ids: ids(1),
+        expiring_ids: ids(1),
+        missing_details_ids: ids(1),
+        group_change_count: 1,
+        chore_count: 1,
+        certificate_count: 1,
+        chores_to_send: 1,
+        attendance_to_send: [%{id: 1, title: "Training"}]
+      })
+
+    %{shown: all, more: []} = TeamAttention.items(nine, @october, [], :all)
+    %{shown: shown, more: more} = TeamAttention.items(nine, @october)
+
+    assert length(all) == 9
+    assert {shown, more} == Enum.split(all, 7)
+
+    snooze = %{key: "drafts", ids: [1], until: ~U[2026-10-13 16:00:00Z]}
+    assert %{more: [_last]} = TeamAttention.items(nine, @october, [snooze])
+  end
+
   test "a team on SAR Duty Records hears about Records, not D4H" do
     attrs = %{
       service: :records,
