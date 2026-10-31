@@ -1,5 +1,5 @@
 <.shell current={:index}>
-  <h1>Style guide</h1>
+  <h1>About</h1>
   <p class="lead">
     A design system for operational tools: search and rescue, emergency services, and teams
     like them. GOV.UK's patterns and plain look, Carbon's dense tables, in light and dark.
@@ -45,17 +45,6 @@
     Every example is drawn by the app's own components and stylesheet, so it looks as it does
     in the app. A pattern renders the same component as its page, with made-up data.
   </p>
-
-  <h2>What's in it</h2>
-  <.table id="guide-groups" rows={tl(groups())}>
-    <:col :let={{group, title, _about, _pages}} label="Section" class="w-px whitespace-nowrap">
-      <.a href={page_path(group)}>{title}</.a>
-    </:col>
-    <:col :let={{_group, _title, about, _pages}} label="What it covers">{about}</:col>
-    <:col :let={{_group, _title, _about, pages}} label="Pages" align="right">
-      {length(pages)}
-    </:col>
-  </.table>
   <p>
     Each component's page shows it, says when to use it and when not to, how it works, and
     the code to use it in the app. Pages in each section go A to Z.

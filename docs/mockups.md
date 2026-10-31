@@ -85,7 +85,8 @@ A round's files:
 | `intro.html`    | The review page's Overview tab: verdict, what changed, open questions.       |
 
 `dump_test.exs` calls `MockupSeed.team()` and ends with `MockupSeed.dump/1`, which writes
-to `real/`. `dump.sh` copies the test into `test/mockups/` for the run only. Times the
+to `real/`. It dumps LiveViews and controller pages, such as the style guide, alike.
+`dump.sh` copies the test into `test/mockups/` for the run only. Times the
 seed makes change every run, so splice around them with `cut(s, start, end, new)`, not
 `sub` on the exact text.
 

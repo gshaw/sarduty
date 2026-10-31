@@ -3,9 +3,11 @@ defmodule Web.StyleGuideControllerTest do
 
   alias Web.StyleGuideHTML
 
-  test "GET /styles shows the overview", %{conn: conn} do
-    conn = get(conn, ~p"/styles")
-    assert html_response(conn, 200) =~ "<h1>Style guide</h1>"
+  test "GET /styles shows About, the first page in Foundations", %{conn: conn} do
+    html = html_response(get(conn, ~p"/styles"), 200)
+    assert html =~ "<h1>About</h1>"
+    assert count(html, ~s(#side-nav #side-nav-foundations.is-open)) == 1
+    assert count(html, ~s(#side-nav #side-nav-index[aria-current="page"])) == 1
   end
 
   test "the logo goes to the home page", %{conn: conn} do
@@ -25,7 +27,7 @@ defmodule Web.StyleGuideControllerTest do
     assert count(html, ~s(#phone-menu #phone-nav-components.is-open)) == 1
   end
 
-  test "breadcrumbs lead back to the group and the overview", %{conn: conn} do
+  test "breadcrumbs lead back to the group and About", %{conn: conn} do
     html = html_response(get(conn, ~p"/styles/button"), 200)
     assert count(html, ~s(.breadcrumbs a[href="/styles"])) == 1
     assert count(html, ~s(.breadcrumbs a[href="/styles/components"])) == 1
@@ -35,7 +37,9 @@ defmodule Web.StyleGuideControllerTest do
     assert count(html, ~s(.breadcrumbs a[href="/styles"])) == 1
     assert count(html, ~s(.breadcrumbs a[href="/styles/components"])) == 0
 
-    assert count(html_response(get(conn, ~p"/styles"), 200), ".breadcrumbs") == 0
+    html = html_response(get(conn, ~p"/styles"), 200)
+    assert count(html, ~s(.breadcrumbs a[href="/styles"])) == 0
+    assert count(html, ~s(.breadcrumbs a[href="/styles/foundations"])) == 1
   end
 
   test "the bar has Log in for a visitor and the switcher once logged in", %{conn: conn} do
@@ -51,7 +55,7 @@ defmodule Web.StyleGuideControllerTest do
   end
 
   test "every group lists its pages", %{conn: conn} do
-    for {group, title, _about, pages} <- StyleGuideHTML.groups(), group != :index do
+    for {group, title, _about, pages} <- StyleGuideHTML.groups() do
       html = html_response(get(conn, StyleGuideHTML.page_path(group)), 200)
       assert html =~ "<h1>#{title}</h1>"
 
@@ -63,8 +67,7 @@ defmodule Web.StyleGuideControllerTest do
 
   test "every page in the guide renders", %{conn: conn} do
     for {_group, _title, _about, pages} <- StyleGuideHTML.groups(),
-        {page, title, _about} <- pages,
-        page != :index do
+        {page, title, _about} <- pages do
       html = html_response(get(conn, StyleGuideHTML.page_path(page)), 200)
       assert html =~ "<title>#{title} · SAR Duty style guide</title>"
     end

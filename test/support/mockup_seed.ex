@@ -72,18 +72,32 @@ defmodule Web.MockupSeed do
   def anonymous, do: build_conn()
 
   @doc """
-  Renders each `{name, conn, path}` LiveView to `name.html` in `dir`, by default the
-  folder `tools/mockups/dump.sh` names in `MOCKUP_OUT`. A path that redirects raises:
-  the conn can't see that page.
+  Renders each `{name, conn, path}` page to `name.html` in `dir`, by default the folder
+  `tools/mockups/dump.sh` names in `MOCKUP_OUT`. A LiveView renders as one; a controller
+  page, such as the style guide, is its `<body>`. A path that redirects raises: the conn
+  can't see that page.
   """
   def dump(pages, dir \\ System.fetch_env!("MOCKUP_OUT")) do
     File.mkdir_p!(dir)
 
     for {name, conn, path} <- pages do
-      case live(conn, path) do
-        {:ok, lv, _html} -> dir |> Path.join(name <> ".html") |> File.write!(render_async(lv))
-        other -> raise "#{name} (#{path}) was not dumped: #{inspect(other)}"
-      end
+      html =
+        case live(conn, path) do
+          {:ok, lv, _html} -> render_async(lv)
+          {:error, :nosession} -> conn |> get(path) |> html_response(200) |> body()
+          other -> raise "#{name} (#{path}) was not dumped: #{inspect(other)}"
+        end
+
+      dir |> Path.join(name <> ".html") |> File.write!(html)
     end
+  end
+
+  # The page's own <style> blocks travel with its body; app.css comes from the kit.
+  defp body(html) do
+    [head, body] =
+      Regex.run(~r{<head>(.*)</head>.*<body[^>]*>(.*)</body>}s, html, capture: :all_but_first)
+
+    styles = ~r{<style>.*?</style>}s |> Regex.scan(head) |> Enum.map_join("\n", &hd/1)
+    styles <> body
   end
 end
