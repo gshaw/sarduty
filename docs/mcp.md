@@ -155,7 +155,16 @@ and a library brings its own tables.
 and ChatGPT need a public address: a throwaway machine with made-up data, then one
 connection from each on South Fraser.
 
+**Why OAuth.** claude.ai, Claude Desktop and phone, and ChatGPT connect only with OAuth:
+they have nowhere to paste a token. Andrew, a South Fraser team admin on Claude, is who
+this is for. A personal token reaches only developer tools, so it can't be the main way
+in. (2026-10-31)
+
 ## Not yet
 
-A contacts scope, telling other team admins when an agent connects, paging, client ID
-metadata documents, and more web agents on the list, one when a team asks.
+One bearer check shared by MCP and any future API: OAuth tokens for agents and outside
+apps, and personal tokens only for scripts, as a second kind of `agent_connections` row,
+once someone asks. A REST read API, with OAuth for apps that run on their own servers,
+once a first outside app exists. Also a contacts scope, telling other team admins when
+an agent connects, paging, client ID metadata documents, and more web agents on the
+list, one when a team asks.
