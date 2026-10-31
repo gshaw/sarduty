@@ -34,6 +34,9 @@
           <li>
             <.a href="#" external={true}>Open in D4H</.a>
           </li>
+          <li>
+            <.a href="#">Delete activity</.a>
+          </li>
         </ul>
       </dd>
     </dl>
@@ -79,13 +82,19 @@
   </p>
   <ol class="list-decimal list-inside paragraph">
     <li>
-      Change the record: Change activity, Change item, or Rename, then Change fields, Change tags, and Apply a template.
+      Change the record: Change activity, Change item, or Rename group, then Change fields, Change tags, and Apply a
+      template.
     </li>
     <li>Send: Send reminders, Send an update, Send attendance.</li>
     <li>Reports and other pages about the record, such as Mileage report.</li>
     <li>Open in D4H.</li>
-    <li>Delete, last, away from Change.</li>
+    <li>Delete activity, last, away from Change.</li>
   </ol>
+  <p>
+    Each link is a verb and the record's noun, as <a href={page_path(:button)}>buttons</a>
+    are: Delete activity, Rename
+    group, never Delete or Rename alone. The noun says which record goes when the sidebar sits beside a list of others.
+  </p>
   <p>
     A hint that stands in for an action, such as a published activity's tags, takes that action's place. In the app:
     <code>Web.ActionOrderTest</code>

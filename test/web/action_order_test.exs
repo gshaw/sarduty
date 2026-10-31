@@ -34,6 +34,17 @@ defmodule Web.ActionOrderTest do
              Enum.join(out_of_order, "\n")
   end
 
+  test "every Actions link names its record: Delete activity, never Delete" do
+    bare =
+      for path <- Path.wildcard("lib/**/*.{ex,heex}"),
+          [list] <- Regex.scan(~r/>Actions<\/dt>.*?<\/ul>/s, File.read!(path)),
+          [text] <- Regex.scan(~r/>([^<>]+)<\/\.a>/, list, capture: :all_but_first),
+          text in ~w(Change Rename Delete),
+          do: "#{path}: #{text}"
+
+    assert bare == [], "Add the record's noun, as in Delete activity:\n" <> Enum.join(bare, "\n")
+  end
+
   defp rank(text) do
     Enum.find_value(@ranks, 6, fn {pattern, rank} -> Regex.match?(pattern, text) && rank end)
   end

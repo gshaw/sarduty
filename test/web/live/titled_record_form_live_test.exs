@@ -65,8 +65,18 @@ defmodule Web.TitledRecordFormLiveTest do
 
     qualification = qualification_fixture(team, %{title: "Swiftwater", d4h_qualification_id: 99})
     {:ok, page, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}")
-    assert has_element?(page, "#qualification-actions #qualification-edit", "Rename")
-    assert has_element?(page, "#qualification-actions #qualification-delete", "Delete")
+
+    assert has_element?(
+             page,
+             "#qualification-actions #qualification-edit",
+             "Rename qualification"
+           )
+
+    assert has_element?(
+             page,
+             "#qualification-actions #qualification-delete",
+             "Delete qualification"
+           )
 
     # Rename is a page; Delete opens the confirm dialog on the record's page (docs/urls.md).
     {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/qualifications/#{qualification.id}/edit")

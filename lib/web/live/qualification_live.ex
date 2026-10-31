@@ -202,7 +202,7 @@ defmodule Web.QualificationLive do
             <.a
               id="qualification-edit"
               navigate={~p"/teams/#{@team}/qualifications/#{@qualification.id}/edit"}
-            >Rename</.a>
+            >Rename qualification</.a>
           </li>
           <li :if={!D4H.records?(@team)}>
             <.a
@@ -218,7 +218,7 @@ defmodule Web.QualificationLive do
               phx-click="delete"
               phx-disable-with="Deleting…"
               {@delete_confirm}
-            >Delete</.a>
+            >Delete qualification</.a>
           </li>
         </ul>
       </dd>
