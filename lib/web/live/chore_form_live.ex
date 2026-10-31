@@ -20,7 +20,7 @@ defmodule Web.ChoreFormLive do
     if !Team.chores?(team), do: raise(Web.Status.NotFound)
     today = Service.Period.today(DateTime.utc_now(), team.timezone)
     {mode, chore} = mode_and_chore(socket.assigns, params["id"])
-    chore = chore && %{chore | time: Chore.time_text(chore.minutes)}
+    chore = chore && %{chore | time: Service.Convert.duration_text(chore.minutes)}
     categories = categories(team.id, chore)
     data = chore || new_chore(today, nil)
 
@@ -78,7 +78,7 @@ defmodule Web.ChoreFormLive do
       <.category_field form={@form} categories={@categories} />
       <.input field={@form[:description]} type="textarea" rows="3" label="What they did" />
       <.date_field form={@form} today={@today} />
-      <.time_field form={@form} />
+      <.duration_input field={@form[:time]} minutes={@form[:minutes]} label="Time" />
       <.form_actions>
         <.button id="chore-save" variant={:success} phx-disable-with="Sending…">
           Save chore
@@ -117,7 +117,7 @@ defmodule Web.ChoreFormLive do
       <.date_field form={@form} today={@today}>
         In the last {Service.Format.days(Chore.window_days())}.
       </.date_field>
-      <.time_field form={@form} />
+      <.duration_input field={@form[:time]} minutes={@form[:minutes]} label="Time" />
       <.form_actions>
         <.button
           id="chore-save"
@@ -204,29 +204,6 @@ defmodule Web.ChoreFormLive do
               {label}
             </.button>
           </div>
-        </:below>
-      </.input>
-    </div>
-    """
-  end
-
-  attr :form, Phoenix.HTML.Form, required: true
-
-  # What the box read, as it reads everywhere else, once it reads as a time.
-  defp time_field(assigns) do
-    %{source: changeset} = assigns.form
-    minutes = Ecto.Changeset.get_field(changeset, :minutes)
-    read = if minutes && !Keyword.has_key?(changeset.errors, :time), do: minutes
-    assigns = assign(assigns, read: read)
-
-    ~H"""
-    <div class="max-w-xs">
-      <.input field={@form[:time]} label="Time" autocomplete="off">
-        Like 45m, 2h, or 2.5h.
-        <:below>
-          <p :if={@read} id="chore-time-read" class="hint mt-1">
-            Reads as {Service.Format.duration(@read)}.
-          </p>
         </:below>
       </.input>
     </div>

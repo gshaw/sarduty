@@ -24,6 +24,7 @@ defmodule App.Model.RedactFieldsTest do
     {App.Model.Team, :mailing_address} => "the team's own address on its letters",
     {App.Model.TaxCreditLetter, :email_status} => "whether a letter's email was sent",
     {App.Model.Template, :custom_values} => "an activity template's defaults",
+    {App.Model.Template, :description} => "a template activity's description, like a training's",
     {App.Accounts.UserToken, :context} => "the kind of token: session or login"
   }
 

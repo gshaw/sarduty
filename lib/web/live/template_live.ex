@@ -9,11 +9,13 @@ defmodule Web.TemplateLive do
   alias App.Model.GroupMember
   alias App.Model.Template
   alias App.Operation.SaveTemplate
+  alias App.ViewModel.ActivityFormViewModel
 
   # A template's page (#307): what it adds to an activity, all on one page, laid out like
-  # the activity: tags under the title, the hours tag as Tax credit hours, and Change tags
-  # in Actions. Items, groups, and fields each have their Change link at their foot.
-  # Delete opens the confirm dialog here, with no page (#714).
+  # the activity: the activity details beside Kind (#746), the description first, tags
+  # under it, and Change template and Change tags in Actions. Items, groups, and fields
+  # each have their Change link at their foot. Delete opens the confirm dialog here, with
+  # no page (#714).
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     template = Template.find!(team, id)
@@ -27,7 +29,6 @@ defmodule Web.TemplateLive do
       assign(socket,
         page_title: template.title,
         template: template,
-        # The tags as an activity holds them, so the hours tag reads as Tax credit hours.
         tagged: %{tags: template |> Template.tags() |> Enum.map(& &1.title)},
         hours_tags: Activity.hours_tags(team),
         member_counts: GroupMember.counts(team.id),
@@ -53,10 +54,24 @@ defmodule Web.TemplateLive do
         <dl id="template-details">
           <dt>Kind</dt>
           <dd>{Template.kind_label(@template) || "Any kind"}</dd>
-          <div :if={hours_type = activity_hours_type(@tagged, @hours_tags)}>
-            <dt>Tax credit hours</dt>
-            <dd>{hours_type}</dd>
+          <div :if={@template.activity_title}>
+            <dt>Title</dt>
+            <dd>{@template.activity_title}</dd>
           </div>
+          <div :if={@template.start_time}>
+            <dt>Start time</dt>
+            <dd>{Service.Format.time_short(@template.start_time)}</dd>
+          </div>
+          <div :if={@template.duration_minutes}>
+            <dt>Duration</dt>
+            <dd>{Service.Format.duration(@template.duration_minutes)}</dd>
+          </div>
+          <div :if={@template.place}>
+            <dt>Address</dt>
+            <dd>{@template.place}</dd>
+          </div>
+          <dt>Tax credit hours</dt>
+          <dd>{hours_label(@template)}</dd>
         </dl>
         <dl>
           <dt>Actions</dt>
@@ -88,6 +103,11 @@ defmodule Web.TemplateLive do
         </dl>
       </aside>
       <main class="content-2/3">
+        <section :if={@template.description} id="template-description" class="mb-8">
+          <h2 class="heading">Description</h2>
+          <.markdown content={@template.description} />
+        </section>
+
         <.activity_tags
           id="template-tags"
           activity={@tagged}
@@ -178,6 +198,12 @@ defmodule Web.TemplateLive do
     </div>
     """
   end
+
+  defp hours_label(template),
+    do:
+      Enum.find_value(ActivityFormViewModel.hours(), fn {label, value} ->
+        value == template.hours && label
+      end)
 
   def handle_event("delete", _params, socket) do
     %{current_team: team, template: template} = socket.assigns

@@ -366,6 +366,54 @@ defmodule Web.EquipmentLiveTest do
              Enum.sort([{ctx.radio.id, 150}, {ctx.truck.id, 0}])
   end
 
+  test "Change template saves the activity a template starts, shown on its page and the list",
+       ctx do
+    template = template_fixture(ctx.team, "Monday night training")
+    path = ~p"/teams/#{ctx.team}/templates/#{template.id}/edit"
+    {:ok, lv, _html} = live(ctx.conn, path)
+
+    lv
+    |> form("#template-form",
+      template: %{start_time: "19:00", duration: "2.5h", place: "Hall", hours: "secondary"}
+    )
+    |> render_submit()
+
+    assert_redirect(lv, ~p"/teams/#{ctx.team}/templates/#{template.id}")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}")
+    assert has_element?(lv, "#template-details", "19:00")
+    assert has_element?(lv, "#template-details", "2h 30m")
+    assert has_element?(lv, "#template-details", "Hall")
+    assert has_element?(lv, "#template-details", "Secondary")
+    assert has_element?(lv, "#template-edit[href='#{path}']")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates")
+    assert has_element?(lv, "#template-#{template.id}", "19:00 · 2h 30m")
+  end
+
+  test "Change template reads the duration as it is typed, and refuses one it can't", ctx do
+    template = template_fixture(ctx.team)
+
+    {:ok, lv, _html} =
+      live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/edit")
+
+    lv |> form("#template-form", template: %{duration: "90"}) |> render_change()
+    assert has_element?(lv, "#template_duration-read", "Reads as 1h 30m.")
+
+    html = lv |> form("#template-form", template: %{duration: "two"}) |> render_submit()
+    assert html =~ "Enter the duration like 45m, 2h, or 2.5h."
+    refute has_element?(lv, "#template_duration-read")
+  end
+
+  test "Change tags leaves out the hours tags", ctx do
+    hours = tag_fixture(ctx.team, "Primary Hours")
+    activity_fixture(ctx.team, %{tags: ["Primary Hours"]})
+    template = template_fixture(ctx.team, "Boat training")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/tags/edit")
+
+    refute has_element?(lv, "#tag-add-#{hours.id}")
+  end
+
   test "a template gets tags from the team's tags", ctx do
     water = tag_fixture(ctx.team, "Flat Water")
     tag_fixture(ctx.team, "Medical")
@@ -437,6 +485,34 @@ defmodule Web.EquipmentLiveTest do
     assert tag_ids == Enum.sort([hours.d4h_tag_id, water.d4h_tag_id])
     assert Repo.get!(Activity, activity.id).tags == ["Flat Water", "Primary Hours"]
     assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
+  end
+
+  test "a template's Tax credit hours tags an activity with no hours tag, and only one", ctx do
+    secondary = tag_fixture(ctx.team, "Secondary Hours")
+    primary = tag_fixture(ctx.team, "Primary Hours")
+    untagged = activity_fixture(ctx.team, %{tags: []})
+    tagged = activity_fixture(ctx.team)
+
+    template =
+      ctx.team
+      |> template_fixture("Boat training")
+      |> Ecto.Changeset.change(hours: "secondary")
+      |> Repo.update!()
+
+    other = template_fixture(ctx.team, "Truck check")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{untagged.id}/templates")
+    lv |> element("#add-template-#{template.id}") |> render_click()
+    assert has_element?(lv, "#template-tags #tag-#{secondary.id}")
+
+    # The first template picked sets the hours.
+    lv |> element("#add-template-#{other.id}") |> render_click()
+    refute has_element?(lv, "#template-tags #tag-#{primary.id}")
+
+    # Hours someone chose stay.
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{tagged.id}/templates")
+    lv |> element("#add-template-#{template.id}") |> render_click()
+    refute has_element?(lv, "#template-tags #tag-#{secondary.id}")
   end
 
   test "a template gets groups whose members it adds", ctx do

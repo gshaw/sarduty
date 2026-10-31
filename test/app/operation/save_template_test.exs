@@ -95,4 +95,75 @@ defmodule App.Operation.SaveTemplateTest do
 
     assert changeset.errors[:activity_kind]
   end
+
+  test "a template's tags leave out the team's hours tags" do
+    team = team_fixture()
+    water = tag_fixture(team, "Flat Water")
+    primary = tag_fixture(team, "Primary Hours")
+    secondary = tag_fixture(team, "Secondary Hours")
+
+    {:ok, template} =
+      SaveTemplate.save(team, nil, %{"title" => "Boat"},
+        tag_ids: [water.id, primary.id, secondary.id]
+      )
+
+    assert team |> Template.find!(template.id) |> Template.tags() |> Enum.map(& &1.title) == [
+             "Flat Water"
+           ]
+  end
+
+  test "Change template keeps the activity's details, with the duration as a chore's time" do
+    team = team_fixture()
+    template = template_fixture(team, "Monday night training")
+
+    {:ok, template} =
+      SaveTemplate.save(team, template, %{
+        "activity_title" => " ",
+        "start_time" => "19:00",
+        "duration" => "2.5",
+        "place" => "49.1, -123.1",
+        "hours" => "secondary",
+        "description" => "Bring your radio."
+      })
+
+    template = Repo.reload!(template)
+    assert template.activity_title == nil
+    assert template.start_time == ~T[19:00:00]
+    assert template.duration_minutes == 150
+    assert template.coordinate == "49.10000,-123.10000"
+    assert template.hours == "secondary"
+    assert template.description =~ "Bring your radio."
+    assert Template.build_changeset(template).data.duration == "2h 30m"
+
+    {:ok, template} = SaveTemplate.save(team, template, %{"duration" => "30"})
+    assert Repo.reload!(template).duration_minutes == 30
+
+    # The other change pages send none of the details, so they stay.
+    {:ok, template} = SaveTemplate.save(team, Template.find!(team, template.id), %{}, tag_ids: [])
+    assert Repo.reload!(template).duration_minutes == 30
+    assert Repo.reload!(template).start_time == ~T[19:00:00]
+
+    {:ok, template} = SaveTemplate.save(team, template, %{"duration" => ""})
+    assert Repo.reload!(template).duration_minutes == nil
+  end
+
+  test "Change template refuses a duration it can't read, none, or over a week" do
+    team = team_fixture()
+    template = template_fixture(team)
+
+    for {duration, error} <- [
+          {"abc", "Enter the duration like 45m, 2h, or 2.5h."},
+          {"-1", "Enter the duration like 45m, 2h, or 2.5h."},
+          {"0", "Enter a duration over 0."},
+          {"169h", "Enter up to 168h."}
+        ] do
+      assert {:error, changeset} =
+               SaveTemplate.save(team, template, %{"duration" => duration})
+
+      assert {^error, _opts} = changeset.errors[:duration]
+    end
+
+    assert {:ok, template} = SaveTemplate.save(team, template, %{"duration" => "36h"})
+    assert template.duration_minutes == 36 * 60
+  end
 end

@@ -377,6 +377,10 @@ defmodule Web.Components.Core do
     |> input()
   end
 
+  # A time to the minute, as the browser's time box shows it, not "19:00:00".
+  def input(%{type: "time", value: %Time{} = time} = assigns),
+    do: assigns |> assign(value: Calendar.strftime(time, "%H:%M")) |> input()
+
   def input(%{type: "checkbox"} = assigns) do
     assigns =
       assign_new(assigns, :checked, fn ->
@@ -621,6 +625,40 @@ defmodule Web.Components.Core do
     </button>
     """
   end
+
+  attr :field, Phoenix.HTML.FormField, required: true, doc: "the text typed"
+  attr :minutes, Phoenix.HTML.FormField, required: true, doc: "the minutes it reads as"
+  attr :label, :string, required: true
+
+  @doc """
+  A box for how long something takes, as Service.Convert.parse_duration/1 reads it: "45m",
+  "2h", "2.5h", "1h 30m". Under it, once it reads, what it reads as: "Reads as 2h 30m."
+  Chores' Time and a template's Duration. See /styles/duration-input.
+  """
+  def duration_input(assigns) do
+    %{field: field, minutes: minutes} = assigns
+    assigns = assign(assigns, read: !duration_error?(field) && minutes.value)
+
+    ~H"""
+    <div class="max-w-xs">
+      <.input field={@field} label={@label} autocomplete="off">
+        Like 45m, 2h, or 2.5h.
+        <:below>
+          <p :if={@read} id={"#{@field.id}-read"} class="hint mt-1">
+            Reads as {Service.Format.duration(@read)}.
+          </p>
+        </:below>
+      </.input>
+    </div>
+    """
+  end
+
+  # A changeset's error shows only after a save, but the box reads as nothing from the
+  # moment it's typed wrong.
+  defp duration_error?(%{form: %{source: %Ecto.Changeset{errors: errors}}, field: name}),
+    do: Keyword.has_key?(errors, name)
+
+  defp duration_error?(field), do: field.errors != []
 
   @doc """
   Renders a select you type into (#324): a text box that lists the options containing every

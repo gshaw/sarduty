@@ -8,10 +8,15 @@ defmodule App.Operation.SaveTemplate do
   custom field values by D4H field id. An item, tag, or group that isn't the team's is
   dropped, so a template never points at another team's records. Only the template's
   kind's filled fields are kept, and a new kind drops the old kind's values.
+
+  Change template saves the name and kind with the activity details (#746). Their Tax
+  credit hours sets the hours tag, so a template's tags never hold the team's Primary or
+  Secondary Hours tag (taggable/2).
   """
 
   import Ecto.Query
 
+  alias App.Model.Activity
   alias App.Model.CustomField
   alias App.Model.EquipmentItem
   alias App.Model.Group
@@ -37,6 +42,12 @@ defmodule App.Operation.SaveTemplate do
     |> put_part(:template_tags, parts[:tag_ids], &template_tags(team, &1))
     |> put_part(:template_groups, parts[:group_ids], &template_groups(team, &1))
     |> Repo.insert_or_update()
+  end
+
+  @doc "`tags` less the team's hours tags, which a template's Tax credit hours sets."
+  def taggable(%Team{} = team, tags) do
+    hours_tags = Activity.hours_tags(team)
+    Enum.reject(tags, &(&1.title in [hours_tags.primary, hours_tags.secondary]))
   end
 
   defp put_part(changeset, _assoc, nil, _build), do: changeset
@@ -95,9 +106,9 @@ defmodule App.Operation.SaveTemplate do
     team_ids =
       Tag
       |> where([t], t.team_id == ^team.id and t.id in ^tag_ids)
-      |> select([t], t.id)
       |> Repo.all()
-      |> MapSet.new()
+      |> then(&taggable(team, &1))
+      |> MapSet.new(& &1.id)
 
     for id <- tag_ids, MapSet.member?(team_ids, id), do: %TemplateTag{tag_id: id}
   end

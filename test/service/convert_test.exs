@@ -53,4 +53,39 @@ defmodule Service.ConvertTest do
     assert Service.Convert.days_later(start, ~U[2026-09-05 08:00:00Z], zone) == 2
     assert Service.Convert.days_later(start, nil, zone) == 0
   end
+
+  test "a duration reads hours and minutes; a bare number is hours up to 24, then minutes" do
+    for {text, minutes} <- [
+          {"45m", 45},
+          {"45 min", 45},
+          {"2h", 120},
+          {"2.5h", 150},
+          {"2.5 hours", 150},
+          {".25h", 15},
+          {"1h 30m", 90},
+          {"1h30", 90},
+          {"1:30", 90},
+          {"3", 180},
+          {"24", 1440},
+          {"25", 25},
+          {"45", 45},
+          {" 1.5 ", 90},
+          {"2H", 120}
+        ],
+        do: assert(Service.Convert.parse_duration(text) == minutes, text)
+
+    for text <- ["", "abc", "1:75", "2h 30h", "-1", "1.5m"],
+        do: assert(Service.Convert.parse_duration(text) == nil, text)
+  end
+
+  test "a duration box shows minutes as parse_duration/1 reads them back" do
+    for minutes <- [15, 60, 90, 150, 480, 1440],
+        do:
+          assert(
+            minutes |> Service.Convert.duration_text() |> Service.Convert.parse_duration() ==
+              minutes
+          )
+
+    assert Service.Convert.duration_text(90) == "1h 30m"
+  end
 end

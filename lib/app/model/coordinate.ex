@@ -38,6 +38,17 @@ defmodule App.Model.Coordinate do
   def build(_lat, _lng), do: nil
 
   @doc """
+  Puts the pin in a form's changeset from its `:place` and `:coordinate` (#610): a pasted
+  latitude and longitude is the pin, otherwise the one picked, kept as "lat,lng" to 5
+  places, or none. Shared by every form with a place box.
+  """
+  def put_pin(%Ecto.Changeset{} = changeset) do
+    pasted = changeset |> Ecto.Changeset.get_field(:place) |> parse()
+    pin = pasted || changeset |> Ecto.Changeset.get_field(:coordinate) |> build()
+    Ecto.Changeset.put_change(changeset, :coordinate, pin && to_string(pin, 5))
+  end
+
+  @doc """
   The `{lat, lng}` in text a person pasted, or nil when it isn't one (#610). Takes
   decimals ("49.01732, -122.65634"), hemispheres ("49.0173 N 122.6563 W"), degrees and
   minutes, degrees, minutes, and seconds (49°01'02.4"N 122°39'22.8"W), and a Google or

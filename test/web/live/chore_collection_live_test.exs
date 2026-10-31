@@ -62,7 +62,7 @@ defmodule Web.ChoreCollectionLiveTest do
     refute has_element?(lv, "#chore-form", "Enter what you did")
 
     lv |> form("#chore-form", chore: %{time: "2.5h"}) |> render_change()
-    assert has_element?(lv, "#chore-time-read", "Reads as 2h 30m.")
+    assert has_element?(lv, "#chore_time-read", "Reads as 2h 30m.")
 
     html =
       lv
@@ -77,7 +77,7 @@ defmodule Web.ChoreCollectionLiveTest do
 
     selected = ~s{#chore_chore_category_id-select option[value="#{category.id}"][selected]}
     assert has_element?(lv, selected)
-    refute has_element?(lv, "#chore-time-read")
+    refute has_element?(lv, "#chore_time-read")
 
     # Today, before anything is typed, keeps it.
     lv |> element("#chore-date-today") |> render_click()
@@ -112,7 +112,7 @@ defmodule Web.ChoreCollectionLiveTest do
   test "a bare number over 24 reads as minutes", %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
     lv |> form("#chore-form", chore: %{time: "30"}) |> render_change()
-    assert has_element?(lv, "#chore-time-read", "30 min")
+    assert has_element?(lv, "#chore_time-read", "30 min")
   end
 
   test "a chore older than 60 days is refused", %{conn: conn, team: team, category: category} do

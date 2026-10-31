@@ -7,6 +7,7 @@ defmodule Web.ActivityTemplateLive do
   alias App.Model.CustomField
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
+  alias App.Model.Tag
   alias App.Model.Template
   alias App.Operation.ChangeActivityEquipment
   alias App.Operation.InviteMembers
@@ -290,7 +291,7 @@ defmodule Web.ActivityTemplateLive do
       socket
       |> assign(
         lines: ActivityEquipmentLive.add_lines(lines, new, used),
-        tags: add_tags(socket.assigns.tags, Template.tags(template), activity.tags),
+        tags: add_tags(socket.assigns.tags, apply_tags(socket, template), activity.tags),
         groups: add_groups(socket.assigns.groups, Template.groups(template))
       )
       |> add_fills(template)
@@ -364,6 +365,13 @@ defmodule Web.ActivityTemplateLive do
   end
 
   # A published activity's fields are locked, so a template's are left out and said so.
+  # The first template picked sets the hours, as for a field two of them set.
+  defp apply_tags(socket, template) do
+    %{current_team: team, activity: activity, tags: picked} = socket.assigns
+    titles = (activity.tags || []) ++ Enum.map(picked, & &1.title)
+    Template.apply_tags(template, titles, Tag.get_all(team.id), Activity.hours_tags(team))
+  end
+
   defp add_fills(socket, template) do
     %{activity: activity, fields: fields, fills: fills} = socket.assigns
     added = SaveCustomFields.fill_empty(fills, activity, fields, template.custom_values)

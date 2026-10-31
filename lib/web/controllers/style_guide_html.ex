@@ -82,6 +82,7 @@ defmodule Web.StyleGuideHTML do
          {:confirm_dialog, "Confirm dialog", "A question before a change that can't be undone."},
          {:copy_button, "Copy button", "Copies the value before it."},
          {:detail_list, "Detail list", "Key facts about one record."},
+         {:duration_input, "Duration input", "How long something takes, typed as people say it."},
          {:email, "Email", "An email address to reach someone by, with a copy button."},
          {:email_preview, "Email preview", "An email as members get it, before it's sent."},
          {:empty_state, "Empty state", "Why a list is empty and what to do."},

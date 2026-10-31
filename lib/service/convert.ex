@@ -17,6 +17,54 @@ defmodule Service.Convert do
   def hours_to_minutes(hours) when is_number(hours), do: max(round(hours * 60), 0)
   def hours_to_minutes(nil), do: 0
 
+  @doc """
+  Minutes from a duration someone typed: "45m", "2h", "2.5h", "1h 30m", or "1:30". A bare
+  whole number is hours up to 24, since most things here take an hour or more, and
+  minutes from 25, which few of them last in hours; "25h" is 25 hours. Nil when it is
+  none of these. A duration box shows minutes with duration_text/1.
+  """
+  def parse_duration(text) when is_binary(text) do
+    squeezed = text |> String.downcase() |> String.replace(~r/\s+/, "")
+
+    Enum.find_value(duration_formats(), fn {regex, kind} ->
+      if parts = Regex.run(regex, squeezed, capture: :all_but_first),
+        do: duration_minutes(kind, parts)
+    end)
+  end
+
+  def parse_duration(_text), do: nil
+
+  # h, hr, hrs, hour, hours; m, min, mins, minute, minutes.
+  defp duration_formats do
+    [
+      {~r/^(\d+)$/, :bare},
+      {~r/^(\d+(?:\.\d+)?|\.\d+)(?:h|hrs?|hours?)?$/, :hours},
+      {~r/^(\d+)(?:m|mins?|minutes?)$/, :minutes},
+      {~r/^(\d+)(?:h|hrs?|hours?)(\d+)(?:m|mins?|minutes?)?$/, :hours_minutes},
+      {~r/^(\d+):([0-5]\d)$/, :hours_minutes}
+    ]
+  end
+
+  defp duration_minutes(:bare, [number]) do
+    number = String.to_integer(number)
+    if number > 24, do: number, else: number * 60
+  end
+
+  defp duration_minutes(:hours, [hours]), do: round(decimal(hours) * 60)
+  defp duration_minutes(:minutes, [minutes]), do: String.to_integer(minutes)
+
+  defp duration_minutes(:hours_minutes, [hours, minutes]),
+    do: String.to_integer(hours) * 60 + String.to_integer(minutes)
+
+  defp decimal("." <> _rest = number), do: decimal("0" <> number)
+  defp decimal(number), do: number |> Float.parse() |> elem(0)
+
+  @doc ~s(Minutes as a duration box shows them, for parse_duration/1 to read back: "1h 30m".)
+  def duration_text(nil), do: nil
+  def duration_text(minutes) when minutes < 60, do: "#{minutes}m"
+  def duration_text(minutes) when rem(minutes, 60) == 0, do: "#{div(minutes, 60)}h"
+  def duration_text(minutes), do: "#{div(minutes, 60)}h #{rem(minutes, 60)}m"
+
   @doc ~s(Minutes as hours for a form field: 90 is "1.5", 120 is "2".)
   def minutes_to_hours(nil), do: "0"
 

@@ -1,0 +1,69 @@
+<.shell current={:duration_input}>
+  <h1>Duration input</h1>
+  <p class="lead">How long something takes, typed as people say it.</p>
+
+  <div class="demo">
+    <.duration_input
+      field={to_form(%{"time" => "", "minutes" => nil}, as: "duration_empty")[:time]}
+      minutes={to_form(%{"time" => "", "minutes" => nil}, as: "duration_empty")[:minutes]}
+      label="Time"
+    />
+    <.duration_input
+      field={to_form(%{"time" => "90", "minutes" => 90}, as: "duration_read")[:time]}
+      minutes={to_form(%{"time" => "90", "minutes" => 90}, as: "duration_read")[:minutes]}
+      label="Duration (optional)"
+    />
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    Any length of time someone types: a chore's Time, a template's Duration. People say "2 and a half hours" or "90 minutes", so the box takes either.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    A start and a finish, where the length follows from two times: use two date-and-time boxes, as an activity does. The hours an item adds to an activity, in a table row, take a plain number of hours.
+  </p>
+
+  <h2>What it reads</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Typed</th><th>Reads as</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>45m</code>, <code>45 min</code></td><td>45 min</td>
+      </tr>
+      <tr>
+        <td><code>2h</code>, <code>2</code></td><td>2 hours</td>
+      </tr>
+      <tr>
+        <td><code>2.5h</code>, <code>2h 30m</code>, <code>2:30</code></td><td>2h 30m</td>
+      </tr>
+      <tr>
+        <td><code>24</code></td><td>24 hours</td>
+      </tr>
+      <tr>
+        <td><code>25</code>, <code>90</code></td><td>25 min, 1h 30m</td>
+      </tr>
+      <tr>
+        <td><code>25h</code></td><td>25 hours</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    A bare whole number is hours up to 24, since most things here take an hour or more, and minutes from 25, which few of them last in hours. "25h" says hours outright. Anything else is an error, such as "Enter the duration like 45m, 2h, or 2.5h." Each form sets its own limit: a chore up to 24h, a template up to a week.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.duration_input field=&#123;@form[:time]&#125; minutes=&#123;@form[:minutes]&#125; label="Time" /&gt;</code>
+    takes two fields: the text typed, and the minutes the changeset read from it with <code>Service.Convert.parse_duration/1</code>. "Reads as 2h 30m." shows under the box once it reads, as
+    <code>Service.Format.duration/1</code>
+    writes it everywhere, and goes while the text has an error. To show saved minutes in the box, the form puts
+    <code>Service.Convert.duration_text/1</code>
+    in the text field, which reads back to the same minutes.
+  </p>
+</.shell>

@@ -21,6 +21,11 @@ defmodule Web.Components.PlaceBox do
   alias App.Operation.FindPlace
   alias Web.Components.Place
 
+  @kinds %{"incident" => :incident, "exercise" => :exercise, "event" => :event}
+
+  @doc "The pin's colour for an activity kind, as the form holds it; an event's for none."
+  def map_kind(kind), do: Map.get(@kinds, kind, :event)
+
   @doc "Tells the box `id` the address now reads `text`, so it lists what matches."
   def typed(id, text), do: send_update(__MODULE__, id: id, typed: text)
 
