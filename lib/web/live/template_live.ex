@@ -13,7 +13,7 @@ defmodule Web.TemplateLive do
 
   # A template's page (#307): what it adds to an activity, all on one page, laid out like
   # the activity: the activity details beside Kind (#746), the description first, tags
-  # under it, and Change details and Change tags in Actions. Items, groups, and fields
+  # under it, and Change template and Change tags in Actions. Items, groups, and fields
   # each have their Change link at their foot. Delete opens the confirm dialog here, with
   # no page (#714).
   def mount(%{"id" => id}, _session, socket) do
@@ -82,12 +82,6 @@ defmodule Web.TemplateLive do
                   id="template-edit"
                   navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/edit"}
                 >Change template</.a>
-              </li>
-              <li>
-                <.a
-                  id="template-edit-details"
-                  navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/details/edit"}
-                >Change details</.a>
               </li>
               <li>
                 <.a

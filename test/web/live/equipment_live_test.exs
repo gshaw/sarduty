@@ -366,10 +366,10 @@ defmodule Web.EquipmentLiveTest do
              Enum.sort([{ctx.radio.id, 150}, {ctx.truck.id, 0}])
   end
 
-  test "Change details saves the activity a template starts, shown on its page and the list",
+  test "Change template saves the activity a template starts, shown on its page and the list",
        ctx do
     template = template_fixture(ctx.team, "Monday night training")
-    path = ~p"/teams/#{ctx.team}/templates/#{template.id}/details/edit"
+    path = ~p"/teams/#{ctx.team}/templates/#{template.id}/edit"
     {:ok, lv, _html} = live(ctx.conn, path)
 
     lv
@@ -385,17 +385,17 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#template-details", "2h 30m")
     assert has_element?(lv, "#template-details", "Hall")
     assert has_element?(lv, "#template-details", "Secondary")
-    assert has_element?(lv, "#template-edit-details[href='#{path}']")
+    assert has_element?(lv, "#template-edit[href='#{path}']")
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates")
     assert has_element?(lv, "#template-#{template.id}", "19:00 · 2h 30m")
   end
 
-  test "Change details reads the duration as it is typed, and refuses one it can't", ctx do
+  test "Change template reads the duration as it is typed, and refuses one it can't", ctx do
     template = template_fixture(ctx.team)
 
     {:ok, lv, _html} =
-      live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/details/edit")
+      live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/edit")
 
     lv |> form("#template-form", template: %{duration: "90"}) |> render_change()
     assert has_element?(lv, "#template_duration-read", "Reads as 1h 30m.")

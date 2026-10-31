@@ -17,10 +17,10 @@ have their own link at their foot, to a page of its own that saves only that par
 (#307): Change items, Change groups, and Change fields (`/items/edit` and so on), or Add
 when the part is empty. The description comes first, then the tags, and Change tags is
 in Actions, as on the activity. Change fields shows only when the kind has fields; a
-template for any kind says to pick one. The details sit beside Kind, and Change details
-(`/details/edit`) is in Actions. Actions also hold Change template for the name and kind
-(`/edit`) and Delete template. Add template asks for the name and kind, then opens the template's
-page. Delete template opens the confirm dialog, with no
+template for any kind says to pick one. The details sit beside Kind. Actions also hold
+Change template (`/edit`), for the name, the kind, and the details in one form (decided
+2026-10-30: two short forms for one thing read as odd), and Delete template. Add
+template is the same form, then opens the template's page. Delete template opens the confirm dialog, with no
 page (#714). One form for everything ran a BC incident's template many screens long. They live in
 `templates` (with `activity_kind`, `custom_values`, and the details), `template_items`,
 `template_tags`, and `template_groups`, and the sync never
@@ -53,8 +53,8 @@ touches them, except that an item, tag, or group D4H deletes leaves its template
 ## Activity details
 
 What a template starts on Add activity: a title, a start time and a duration, an address,
-tax credit hours, and a description, on Change details in the Add activity form's order
-and with its labels, less the date. Every detail is optional. A blank title uses the
+tax credit hours, and a description, on Change template under the name and kind, in the
+Add activity form's order and with its labels, less the date. Every detail is optional. A blank title uses the
 template's name. Tax credit hours has no blank: Primary, as on the activity form. It
 sets the Primary Hours or Secondary Hours tag as the activity form does. The duration box
 is a chore's Time box (`<.duration_input>`, `Service.Convert.parse_duration/1`): "2h

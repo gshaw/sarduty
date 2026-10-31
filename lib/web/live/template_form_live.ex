@@ -19,10 +19,10 @@ defmodule Web.TemplateFormLive do
   alias Web.Components.PlaceBox
 
   # Adding a template, and its change pages, one per part (#307): Change template for its
-  # name and kind, then Change items with their usual hours (#271), Change tags, Change
-  # groups whose members it adds (#162), Change fields for its kind's D4H custom
-  # fields, and Change details for the activity it starts (#746). Each saves only what it
-  # shows. The live action names the page.
+  # name, kind, and the activity it starts (#746), then Change items with their usual
+  # hours (#271), Change tags, Change groups whose members it adds (#162), and Change
+  # fields for its kind's D4H custom fields. Each saves only what it shows. The live
+  # action names the page.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     template = if id = params["id"], do: Template.find!(team, id)
@@ -34,16 +34,9 @@ defmodule Web.TemplateFormLive do
       |> assign(values: (template && template.custom_values) || %{})
       |> assign_part(action, template)
       |> assign_form(Template.build_changeset(template || %Template{}, %{}))
-      |> assign_details_form(action, Template.build_details_changeset(template || %Template{}))
 
     {:ok, socket}
   end
-
-  # Change details has a form of its own, the activity's details.
-  defp assign_details_form(socket, :details, changeset),
-    do: assign(socket, form: to_form(changeset, as: "template"))
-
-  defp assign_details_form(socket, _action, _changeset), do: socket
 
   defp page_title(:new, nil), do: "Add template"
   defp page_title(:edit, template), do: "Change #{template.title}"
@@ -51,7 +44,6 @@ defmodule Web.TemplateFormLive do
   defp page_title(:tags, template), do: "Change tags for #{template.title}"
   defp page_title(:groups, template), do: "Change groups for #{template.title}"
   defp page_title(:fields, template), do: "Change fields for #{template.title}"
-  defp page_title(:details, template), do: "Change details for #{template.title}"
 
   defp assign_part(socket, :items, template),
     do: assign(socket, lines: template_lines(template), q: "", results: [])
@@ -74,7 +66,8 @@ defmodule Web.TemplateFormLive do
         all_groups: Group.get_all(socket.assigns.current_team.id)
       )
 
-  defp assign_part(socket, :details, _template), do: assign(socket, params: %{})
+  defp assign_part(socket, action, _template) when action in [:new, :edit],
+    do: assign(socket, params: %{})
 
   defp assign_part(socket, _action, _template), do: socket
 
@@ -152,7 +145,7 @@ defmodule Web.TemplateFormLive do
       </main>
     </div>
 
-    <div :if={@live_action in [:new, :edit, :fields, :details]} class="measure">
+    <div :if={@live_action in [:new, :edit, :fields]} class="measure">
       <.part_form {assigns} />
     </div>
     """
@@ -164,7 +157,6 @@ defmodule Web.TemplateFormLive do
   defp crumb(:tags), do: "Change tags"
   defp crumb(:groups), do: "Change groups"
   defp crumb(:fields), do: "Change fields"
-  defp crumb(:details), do: "Change details"
 
   defp part_form(assigns) do
     ~H"""
@@ -186,7 +178,6 @@ defmodule Web.TemplateFormLive do
   defp save_label(:tags), do: "Save tags"
   defp save_label(:groups), do: "Save groups"
   defp save_label(:fields), do: "Save fields"
-  defp save_label(:details), do: "Save details"
 
   defp part(%{live_action: action} = assigns) when action in [:new, :edit] do
     ~H"""
@@ -200,6 +191,39 @@ defmodule Web.TemplateFormLive do
     >
       {kind_hint(@current_team, @template)}
     </.input>
+    <h2 class="heading mt-8">The activity it starts</h2>
+    <p class="hint mb-6">
+      These fill Add activity when someone picks this template. Anything can be changed there before saving.
+    </p>
+    <.input field={@form[:activity_title]} label="Title (optional)">
+      Leave blank to use the template's name.
+    </.input>
+    <div class="max-w-xs">
+      <.input field={@form[:start_time]} type="time" label="Start time (optional)" />
+    </div>
+    <.duration_input
+      field={@form[:duration]}
+      minutes={@form[:duration_minutes]}
+      label="Duration (optional)"
+    />
+    <.live_component
+      module={PlaceBox}
+      id="template"
+      team={@current_team}
+      field={@form[:place]}
+      coordinate={@form[:coordinate]}
+      label="Address (optional)"
+      kind={PlaceBox.map_kind(@form[:activity_kind].value)}
+    />
+    <.input
+      field={@form[:hours]}
+      type="select"
+      label="Tax credit hours"
+      options={ActivityFormViewModel.hours()}
+    >
+      {hours_hint(@current_team)}
+    </.input>
+    <.input field={@form[:description]} type="rich_text" label="Description (optional)" />
     """
   end
 
@@ -221,8 +245,8 @@ defmodule Web.TemplateFormLive do
     <h2 class="heading">Tags · {length(@tags)}</h2>
     <p class="hint mb-4">
       Applying the template adds these tags to the activity and keeps the tags it has. The hours tag comes from Tax credit hours, on <.a navigate={
-        ~p"/teams/#{@current_team}/templates/#{@template.id}/details/edit"
-      }>Change details</.a>.
+        ~p"/teams/#{@current_team}/templates/#{@template.id}/edit"
+      }>Change template</.a>.
     </p>
     <.tags_to_add :if={@tags != []} id="template-tags" tags={@tags} />
     <p :if={@tags == []} id="template-no-tags" class="hint mb-4">
@@ -258,48 +282,6 @@ defmodule Web.TemplateFormLive do
     """
   end
 
-  defp part(%{live_action: :details} = assigns) do
-    ~H"""
-    <p class="lead">
-      These fill the Add activity form when someone picks this template. The date is picked there, and anything can be changed before saving. The kind is on Change template.
-    </p>
-    <.error_summary form={@form} />
-    <.input field={@form[:activity_title]} label="Title (optional)">
-      Leave blank to use the template's name.
-    </.input>
-    <div class="max-w-xs">
-      <.input field={@form[:start_time]} type="time" label="Start time (optional)" />
-    </div>
-    <.duration_input
-      field={@form[:duration]}
-      minutes={@form[:duration_minutes]}
-      label="Duration (optional)"
-    />
-    <.live_component
-      module={PlaceBox}
-      id="template"
-      team={@current_team}
-      field={@form[:place]}
-      coordinate={@form[:coordinate]}
-      label="Address (optional)"
-      kind={PlaceBox.map_kind(@template.activity_kind)}
-    />
-    <.input
-      field={@form[:hours]}
-      type="select"
-      label="Tax credit hours"
-      options={ActivityFormViewModel.hours()}
-    >
-      {hours_hint(@current_team)}
-    </.input>
-    <.input
-      field={@form[:description]}
-      type="rich_text"
-      label="Description (optional)"
-    />
-    """
-  end
-
   defp hours_hint(team) do
     hours_tags = Activity.hours_tags(team)
 
@@ -319,32 +301,14 @@ defmodule Web.TemplateFormLive do
   defp no_fields_text(team, template),
     do: "#{D4H.service_name(team)} has no fields for this #{template.activity_kind}."
 
-  def handle_event("validate", params, %{assigns: %{live_action: :details}} = socket) do
-    details = params["template"] || %{}
-    socket = socket |> assign(params: details) |> validate_details(details)
+  def handle_event("validate", params, socket) do
+    typed = params["template"] || %{}
 
     if params["_target"] == ["template", "place"],
-      do: PlaceBox.typed("template", details["place"])
+      do: PlaceBox.typed("template", typed["place"])
 
-    {:noreply, socket}
-  end
-
-  def handle_event("validate", params, socket) do
-    changeset =
-      (socket.assigns.template || %Template{})
-      |> Template.build_changeset(params["template"] || %{})
-      |> Map.put(:action, :validate)
-
-    {:noreply, socket |> put_typed(params) |> put_values(params) |> assign_form(changeset)}
-  end
-
-  def handle_event("save", params, %{assigns: %{live_action: :details}} = socket) do
-    %{current_team: team, template: template} = socket.assigns
-
-    case SaveTemplate.save_details(team, template, params["template"] || %{}) do
-      {:ok, template} -> {:noreply, saved(socket, template)}
-      {:error, changeset} -> {:noreply, assign(socket, form: to_form(changeset, as: "template"))}
-    end
+    socket = socket |> assign(params: typed) |> put_typed(params) |> put_values(params)
+    {:noreply, validate(socket, typed)}
   end
 
   def handle_event("save", params, socket) do
@@ -413,16 +377,16 @@ defmodule Web.TemplateFormLive do
   # A place picked, or its pin removed (#610).
   def handle_info({PlaceBox, values}, socket) do
     params = Map.merge(socket.assigns.params, values)
-    {:noreply, socket |> assign(params: params) |> validate_details(params)}
+    {:noreply, socket |> assign(params: params) |> validate(params)}
   end
 
-  defp validate_details(socket, params) do
+  defp validate(socket, params) do
     changeset =
-      socket.assigns.template
-      |> Template.build_details_changeset(params)
+      (socket.assigns.template || %Template{})
+      |> Template.build_changeset(params)
       |> Map.put(:action, :validate)
 
-    assign(socket, form: to_form(changeset, as: "template"))
+    assign_form(socket, changeset)
   end
 
   defp saved(socket, template) do

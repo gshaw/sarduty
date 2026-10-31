@@ -236,7 +236,6 @@ defmodule Web.Router do
       live "/teams/:subdomain/templates/:id/tags/edit", TemplateFormLive, :tags
       live "/teams/:subdomain/templates/:id/groups/edit", TemplateFormLive, :groups
       live "/teams/:subdomain/templates/:id/fields/edit", TemplateFormLive, :fields
-      live "/teams/:subdomain/templates/:id/details/edit", TemplateFormLive, :details
       live "/teams/:subdomain/equipment", EquipmentCollectionLive
       live "/teams/:subdomain/equipment/new", EquipmentItemFormLive, :new
       live "/teams/:subdomain/equipment/:id", EquipmentItemLive, :activities

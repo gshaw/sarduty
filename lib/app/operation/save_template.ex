@@ -9,8 +9,8 @@ defmodule App.Operation.SaveTemplate do
   dropped, so a template never points at another team's records. Only the template's
   kind's filled fields are kept, and a new kind drops the old kind's values.
 
-  Change details saves the activity details with save_details/3 (#746). Their Tax credit
-  hours sets the hours tag, so a template's tags never hold the team's Primary or
+  Change template saves the name and kind with the activity details (#746). Their Tax
+  credit hours sets the hours tag, so a template's tags never hold the team's Primary or
   Secondary Hours tag (taggable/2).
   """
 
@@ -42,14 +42,6 @@ defmodule App.Operation.SaveTemplate do
     |> put_part(:template_tags, parts[:tag_ids], &template_tags(team, &1))
     |> put_part(:template_groups, parts[:group_ids], &template_groups(team, &1))
     |> Repo.insert_or_update()
-  end
-
-  @doc "Saves Change details: `{:ok, template}`, or `{:error, changeset}` for the form."
-  def save_details(%Team{} = team, %Template{team_id: team_id} = template, params)
-      when team_id == team.id do
-    template
-    |> Template.build_details_changeset(params)
-    |> Repo.update()
   end
 
   @doc "`tags` less the team's hours tags, which a template's Tax credit hours sets."
