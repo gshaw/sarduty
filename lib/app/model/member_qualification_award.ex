@@ -52,14 +52,15 @@ defmodule App.Model.MemberQualificationAward do
     |> Repo.all()
   end
 
-  # active?/2 as a query.
-  defp active_only(query, now) do
-    where(
-      query,
-      [a],
-      (is_nil(a.starts_at) or a.starts_at <= ^now) and (is_nil(a.ends_at) or a.ends_at > ^now)
-    )
-  end
+  defp active_only(query, now), do: where(query, ^active_dynamic(now))
+
+  @doc "active?/2 in SQL, on the query's first binding."
+  def active_dynamic(now),
+    do:
+      dynamic(
+        [a],
+        (is_nil(a.starts_at) or a.starts_at <= ^now) and (is_nil(a.ends_at) or a.ends_at > ^now)
+      )
 
   defp current_members_only(query, now),
     do: where(query, ^Member.current_dynamic(now, :member))

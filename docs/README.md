@@ -34,6 +34,7 @@ database.
 | View models | `lib/app/view_model/`                 | Embedded schemas that validate filter and form params | Models                                                   |
 | View data   | `lib/app/view_data/`                  | Read-only query bundles for one page                  | Models                                                   |
 | MCP tools   | `lib/app/mcp/`                        | Views of a team's data for agents, and proposals      | Models, operations                                       |
+| Reports     | `lib/app/report/`                     | The report language: parse, check, and run a query    | Models, `Repo`                                           |
 | Service     | `lib/service/`                        | Stateless helpers: formatting, conversion, PDF        | — (no `Repo`, no HTTP)                                   |
 
 The rules that are easy to break:
@@ -132,6 +133,7 @@ have decided since the page loaded, stays in `call`.
 - [navigation.md](navigation.md) — areas, the side navigation, and the account menu that switches between them.
 - [search.md](search.md) — the top bar's search: what it matches, how it ranks, and who finds what.
 - [mcp.md](mcp.md) — the MCP endpoint trial: tokens, the read-only tools, and the call log.
+- [reports.md](reports.md) — reports: the query language, the catalog of fields, and how a query runs.
 - [taking-attendance.md](taking-attendance.md) — Take attendance: who scans ID cards at an activity and when, the times they record, and sending them to D4H.
 - [sar-command-assist.md](sar-command-assist.md) — SAR Command Assist, the incident tool many teams run beside SAR Duty, and where the two meet.
 - [organizations.md](organizations.md) — parent organizations like BCSARA, their branding, and giving one its own verify host.
