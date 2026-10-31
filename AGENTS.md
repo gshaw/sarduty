@@ -162,9 +162,9 @@ fi
   reflow — unlike the Markdown in this repo, which is wrapped. Numbered reproduction steps
   stay one step per line.
 - **Branch naming:** `<slug>` (e.g. `group-rule-apply`), or `<issue>-<slug>` when a GitHub
-  issue exists (e.g. `20-group-rule-apply`). kebab-case, 2–3 words, ≤ ~25 chars. **No
-  path prefixes or slashes** (`claude/…`, `copilot/…`, `feature/…`). If your tooling
-  defaults to a prefixed name, rename the branch before pushing.
+  issue exists (e.g. `20-group-rule-apply`). kebab-case, 2–3 words, ≤ ~25 chars. T3
+  Code names its worktree branches `t3/<slug>`; keep that name and don't rename a branch
+  T3 created. Add no other prefixes (`claude/…`, `feature/…`).
 
 ## Tests
 

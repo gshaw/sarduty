@@ -19,8 +19,7 @@ prompts in this folder are due, runs them, and bundles the result into one PR._
 4. **Make a branch for the run.** Start from a clean working tree on an up-to-date `main`
    (`git switch main && git pull`). Create one branch for the whole sweep:
    `git switch -c scheduled-<YYYY-MM>` (if that branch already exists, add a suffix:
-   `scheduled-<YYYY-MM>-2`, `-3`, …). Everything below happens on this branch. The name is
-   flat and slash-free on purpose — `AGENTS.md` forbids path prefixes in branch names.
+   `scheduled-<YYYY-MM>-2`, `-3`, …). Everything below happens on this branch.
 
 5. **Run each due task in table order** by following its prompt file. Each prompt makes its
    edits, shows its diff for your approval, and appends its own worklog entry — let it do
