@@ -7,6 +7,11 @@ defmodule Web.HelpLiveTest do
 
   setup %{conn: conn} do
     %{team: team, member: member, user: user} = member_with_login_fixture(%{name: "Cameron Ruiz"})
+    # The site admins: Jordan, named by their member on the team, and Riley, by email.
+    jordan = App.AccountsFixtures.user_fixture(%{email: "jordan.lee@example.com", is_admin: true})
+    member_fixture(team, %{name: "Jordan Lee", email: jordan.email})
+    App.AccountsFixtures.user_fixture(%{email: "riley.okafor@example.com", is_admin: true})
+
     %{conn: log_in_user(conn, user), team: team, member: member, user: user}
   end
 
@@ -30,14 +35,14 @@ defmodule Web.HelpLiveTest do
     assert has_element?(lv, "#help-to-team[checked]")
     refute has_element?(lv, "#help-to-site-admins[checked]")
     assert has_element?(lv, "#help-to", "Alex Chen and Sam Rivera")
-    assert has_element?(lv, "#help-to", "Gerry Shaw and Andrew Wallwork")
+    assert has_element?(lv, "#help-to", "Jordan Lee and riley.okafor@example.com")
     assert has_element?(lv, "#help-contact-#{alex.id}", "Alex Chen")
     assert has_element?(lv, ~s{#help-contact-#{alex.id} a[href="mailto:alex.chen@example.com"]})
 
     assert has_element?(
              lv,
-             ~s{#help-site-admin-0 a[href="mailto:support@sarduty.com"]},
-             "support@sarduty.com"
+             ~s{#help-site-admin-0 a[href="mailto:jordan.lee@example.com"]},
+             "jordan.lee@example.com"
            )
   end
 
@@ -63,7 +68,8 @@ defmodule Web.HelpLiveTest do
       assert email.to == [
                {"Alex Chen", "alex.chen@example.com"},
                {"Sam Rivera", "sam.rivera@example.com"},
-               {"SAR Duty site admins", "support@sarduty.com"}
+               {"Jordan Lee", "jordan.lee@example.com"},
+               {"riley.okafor@example.com", "riley.okafor@example.com"}
              ]
 
       assert email.reply_to == {"Cameron Ruiz", user.email}
@@ -102,7 +108,10 @@ defmodule Web.HelpLiveTest do
     |> render_submit(%{help: %{to: ["team", "site_admins"]}})
 
     assert_email_sent(fn email ->
-      email.to == [{"SAR Duty site admins", "support@sarduty.com"}]
+      email.to == [
+        {"Jordan Lee", "jordan.lee@example.com"},
+        {"riley.okafor@example.com", "riley.okafor@example.com"}
+      ]
     end)
   end
 

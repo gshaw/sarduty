@@ -15,16 +15,16 @@ defmodule App.Mailer.HelpMailer do
 
   @doc """
   Pure. The email for `message` from `sender` (`%{name:, email:}`, name may be nil) on
-  `team`, to `contacts` (the team's, `[]` when not ticked) and the site admins when
-  `site_admins?`. `about` has the `page` URL they came from and their `device`, either nil.
+  `team`, to `to`, SendHelpMessage.recipients/3: the team's `contacts` and the
+  `site_admins` ticked, each once. `about` has the `page` URL they came from and their `device`, either nil.
   """
   def build(%Team{} = team, sender, message, to, about) do
-    %{contacts: contacts, site_admins?: site_admins?} = to
     from_name = sender.name || sender.email
 
     recipients =
-      Enum.map(contacts, &{&1.name, &1.email}) ++
-        if(site_admins?, do: [{@site_admins, App.Support.email()}], else: [])
+      (to.contacts ++ to.site_admins)
+      |> Enum.uniq_by(&String.downcase(&1.email))
+      |> Enum.map(&{&1.name, &1.email})
 
     new()
     |> to(recipients)
@@ -44,9 +44,10 @@ defmodule App.Mailer.HelpMailer do
   end
 
   @doc ~s(Pure. Who got it, for the footer and the banner: "Alex Chen, Sam Rivera, and the SAR Duty site admins".)
-  def went_to(%{contacts: contacts, site_admins?: site_admins?}) do
+  def went_to(%{contacts: contacts, site_admins: site_admins}) do
     names =
-      Enum.map(contacts, & &1.name) ++ if(site_admins?, do: ["the " <> @site_admins], else: [])
+      Enum.map(contacts, & &1.name) ++
+        if(site_admins != [], do: ["the " <> @site_admins], else: [])
 
     Service.Format.and_list(names)
   end

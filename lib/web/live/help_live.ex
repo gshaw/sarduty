@@ -19,6 +19,7 @@ defmodule Web.HelpLive do
 
     socket
     |> assign(page_title: "Get help", contacts: contacts, sent: nil)
+    |> assign(site_admins: App.Support.site_admins())
     |> assign(from: params |> Map.get("from") |> local_path())
     |> assign(user_agent: user_agent(socket))
     |> new_form()
@@ -60,7 +61,7 @@ defmodule Web.HelpLive do
 
         <.form for={@form} id="help-form" phx-change="validate" phx-submit="send">
           <.error_summary form={@form} />
-          <.send_to form={@form} team={@current_team} contacts={@contacts} />
+          <.send_to form={@form} team={@current_team} contacts={@contacts} site_admins={@site_admins} />
           <.input field={@form[:message]} type="textarea" rows="6" label="Message">
             They get your name, your email to reply to, and the page you came from.
           </.input>
@@ -80,7 +81,7 @@ defmodule Web.HelpLive do
 
       <aside class="membership-aside">
         <div id="people-to-ask" class="membership-aside-bottom">
-          <.people_to_ask team={@current_team} contacts={@contacts} />
+          <.people_to_ask team={@current_team} contacts={@contacts} site_admins={@site_admins} />
         </div>
       </aside>
     </div>
@@ -90,6 +91,7 @@ defmodule Web.HelpLive do
   attr :form, Phoenix.HTML.Form, required: true
   attr :team, :map, required: true
   attr :contacts, :list, required: true
+  attr :site_admins, :list, required: true
 
   # Checkboxes, one line each: who gets it and what it's for. A team with no contacts is
   # greyed out and can't be ticked.
@@ -101,7 +103,7 @@ defmodule Web.HelpLive do
         field: field,
         to: List.wrap(field.value),
         errors: Enum.map(field.errors, &translate_error/1),
-        site_admins: Service.Format.and_list(App.Support.site_admins())
+        site_admins: assigns.site_admins |> Enum.map(& &1.name) |> Service.Format.and_list()
       )
 
     ~H"""
@@ -158,11 +160,12 @@ defmodule Web.HelpLive do
 
   attr :team, :map, required: true
   attr :contacts, :list, required: true
+  attr :site_admins, :list, required: true
 
   # Grouped by who they answer for, with Email, and Call and Text on a phone, under each
-  # name. The site admins' email is the support address.
+  # name.
   defp people_to_ask(assigns) do
-    assigns = assign(assigns, site_admins: Enum.with_index(App.Support.site_admins()))
+    assigns = assign(assigns, site_admins: Enum.with_index(assigns.site_admins))
 
     ~H"""
     <h2 class="subheading">People to ask</h2>
@@ -189,9 +192,9 @@ defmodule Web.HelpLive do
     <section id="help-site-admins" class="help-group">
       <h3 class="caps mb-2">SAR Duty site admins</h3>
       <ul class="help-people">
-        <li :for={{name, i} <- @site_admins} id={"help-site-admin-#{i}"}>
-          <div class="label">{name}</div>
-          <div><.email id={"help-site-admin-#{i}-email"} email={App.Support.email()} /></div>
+        <li :for={{admin, i} <- @site_admins} id={"help-site-admin-#{i}"}>
+          <div class="label">{admin.name}</div>
+          <div><.email id={"help-site-admin-#{i}-email"} email={admin.email} /></div>
         </li>
       </ul>
     </section>

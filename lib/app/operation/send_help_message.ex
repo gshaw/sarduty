@@ -12,13 +12,14 @@ defmodule App.Operation.SendHelpMessage do
   alias App.ViewModel.HelpFormViewModel
 
   @doc """
-  Pure. Who gets it, from the ticked values in `to` and the team's `contacts`:
-  `%{contacts:, site_admins?:}`.
+  Pure. Who gets it, from the ticked values in `to`, the team's `contacts`, and the
+  `site_admins` (App.Support.site_admins/1): `%{contacts:, site_admins:}`, each a list
+  of `%{name:, email:}`, empty when not ticked.
   """
-  def recipients(to, contacts) do
+  def recipients(to, contacts, site_admins) do
     %{
       contacts: if("team" in to, do: contacts, else: []),
-      site_admins?: "site_admins" in to
+      site_admins: if("site_admins" in to, do: site_admins, else: [])
     }
   end
 
@@ -31,7 +32,7 @@ defmodule App.Operation.SendHelpMessage do
     contacts = Member.get_team_contacts(team, now)
 
     with {:ok, form} <- HelpFormViewModel.validate(%HelpFormViewModel{}, params, contacts != []),
-         to = recipients(form.to, contacts),
+         to = recipients(form.to, contacts, App.Support.site_admins(now)),
          :ok <- team |> HelpMailer.build(sender, form.message, to, about) |> HelpMailer.deliver() do
       {:ok, to}
     end
