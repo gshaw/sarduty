@@ -138,8 +138,8 @@ defmodule Web.ActivityFormLiveTest do
 
     # Start was changed, so None asks before it empties the form.
     pick_none(lv)
-    assert has_element?(lv, "#activity-template-switch", "Picking None empties the form")
-    lv |> element("#activity-template-start-over") |> render_click()
+    assert has_element?(lv, "#activity-template-switch", "Start over with no template?")
+    render_hook(lv, "start-over", %{})
 
     refute has_element?(lv, "#activity-template-switch")
     assert has_element?(lv, ~s|#form_ends_at:not([value])|)
@@ -147,7 +147,7 @@ defmodule Web.ActivityFormLiveTest do
     refute has_element?(lv, "#activity-template-adds")
   end
 
-  test "switching templates starts the form over, asking first when something was changed",
+  test "switching templates starts the form over, asking in a dialog when something was changed",
        %{conn: conn, team: team} do
     %{template: monday} = template_with_details(team)
     truck = template_fixture(team, "Truck check")
@@ -162,16 +162,16 @@ defmodule Web.ActivityFormLiveTest do
 
     lv |> form("#activity-form", form: %{title: "Truck check, both trucks"}) |> render_change()
     pick_template(lv, monday)
-    assert has_element?(lv, "#activity-template-switch", "Picking Monday night training")
+    assert has_element?(lv, "#activity-template-switch", "Start over with Monday night training?")
 
-    # Keep my changes puts Truck check back.
-    lv |> element("#activity-template-keep") |> render_click()
+    # Cancel keeps the changes and puts Truck check back.
+    render_hook(lv, "keep-changes", %{})
     refute has_element?(lv, "#activity-template-switch")
     assert has_element?(lv, ~s|#form_template_id option[value="#{truck.id}"][selected]|)
     assert has_element?(lv, ~s|#form_title[value="Truck check, both trucks"]|)
 
     pick_template(lv, monday)
-    lv |> element("#activity-template-start-over") |> render_click()
+    render_hook(lv, "start-over", %{})
     assert has_element?(lv, ~s|#form_title[value="Monday night training"]|)
     assert has_element?(lv, ~s|#form_place[value="Hall"]|)
   end

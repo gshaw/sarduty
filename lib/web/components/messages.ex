@@ -171,7 +171,9 @@ defmodule Web.Components.Messages do
     going ahead.
 
   Cancel has the focus, so Enter by reflex does nothing. The style guide renders each
-  state with `open`, in place on the page.
+  state with `open`, in place on the page. A page that asks a question itself renders
+  one more, with `phx-hook="AskDialog"` and `data-confirm-event` and `data-cancel-event`
+  for the answers: it opens as soon as it renders (Add activity's template switch).
   """
   attr :id, :string, default: "confirm-dialog"
   attr :open, :boolean, default: false, doc: "shown in place, for the style guide"
@@ -188,6 +190,7 @@ defmodule Web.Components.Messages do
   attr :variant, :atom, default: :primary, values: [:primary, :danger, :default]
   attr :alt, :string, default: nil
   attr :alt_href, :string, default: nil
+  attr :rest, :global
 
   def confirm_dialog(assigns) do
     assigns = assign(assigns, :locked, confirm_locked?(assigns))
@@ -199,6 +202,7 @@ defmodule Web.Components.Messages do
       open={@open}
       aria-labelledby={"#{@id}-question"}
       data-confirm-dialog
+      {@rest}
     >
       <form method="dialog">
         <h2 id={"#{@id}-question"} class="confirm-dialog-question">{@question}</h2>

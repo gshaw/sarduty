@@ -37,6 +37,21 @@ export function listenForConfirms() {
   })
 }
 
+// A question the server asks (#747), in the same dialog: <.confirm_dialog
+// phx-hook="AskDialog" data-confirm-event="…" data-cancel-event="…">. It opens once it's
+// on the page, and closing it sends the event for the answer. Escape is Cancel.
+export const AskDialog = {
+  mounted() {
+    this.el.addEventListener("close", () => {
+      const {confirmEvent, cancelEvent} = this.el.dataset
+      const event = this.el.returnValue === "confirm" ? confirmEvent : cancelEvent
+      if (event) this.pushEvent(event, {})
+    })
+    this.el.showModal()
+    this.el.querySelector("button[value=cancel]").focus()
+  },
+}
+
 // The action waits on the check box or the typed text, in the page's dialog and in the
 // style guide's examples, which stay open.
 function watchLock(dialog) {

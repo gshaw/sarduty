@@ -132,8 +132,9 @@ Picking one fills the form from its [details](#activity-details)
 else its name, its tax credit hours, and each other detail it has. Picking another
 template, or None, starts the form over from it, so two templates never mix (decided
 2026-10-30, over swapping only the boxes a template filled, which clears boxes by a rule
-nobody sees). When anything was changed since the form started, it asks first, under the
-Template box: Start over, or Keep my changes, which puts the template back.
+nobody sees). When anything was changed since the form started, the confirm dialog asks first
+("Start over with Truck check?"); Cancel keeps the changes and puts the template back.
+The page opens it itself, through the `AskDialog` hook.
 
 The form keeps its Start and Finish date-and-time boxes (decided 2026-10-30, over a
 Date box and two times, which could not reach past the next day). A template is a start

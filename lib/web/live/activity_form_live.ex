@@ -117,17 +117,6 @@ defmodule Web.ActivityFormLive do
       >
         Fills in the form. Saving also adds the template's fields, items, tags, and groups.
       </.input>
-      <div :if={@switch_to} id="activity-template-switch" class="mb-6">
-        <.warning_text>{switch_text(@switch_to)}</.warning_text>
-        <div class="flex flex-wrap gap-2 mt-3">
-          <.button type="button" id="activity-template-start-over" phx-click="start-over">
-            Start over
-          </.button>
-          <.button type="button" id="activity-template-keep" phx-click="keep-changes">
-            Keep my changes
-          </.button>
-        </div>
-      </div>
       <.warning_text :if={@published_locked?} id="activity-published-locked" class="mb-6">
         A published activity cannot be changed. Untick Published and save first.
       </.warning_text>
@@ -209,6 +198,17 @@ defmodule Web.ActivityFormLive do
         </.button>
       </.form_actions>
     </.form>
+    <%!-- Outside the form: the dialog has a form of its own. --%>
+    <.confirm_dialog
+      :if={@switch_to}
+      id="activity-template-switch"
+      phx-hook="AskDialog"
+      data-confirm-event="start-over"
+      data-cancel-event="keep-changes"
+      question={switch_question(@switch_to)}
+      body={switch_body(@switch_to)}
+      action="Start over"
+    />
 
     <section :if={@live_action == :edit && @fields} id="activity-fields" class="mt-8 measure">
       <h2 class="heading">Fields</h2>
@@ -403,7 +403,7 @@ defmodule Web.ActivityFormLive do
   end
 
   # Picking a template, or None, starts the form over. When anything was changed since
-  # the form started, it waits for Start over or Keep my changes.
+  # the form started, a dialog asks first: Start over, or Cancel to keep the changes.
   defp pick(socket, params) do
     target = find_template(socket, params["template_id"]) || :none
 
@@ -414,11 +414,13 @@ defmodule Web.ActivityFormLive do
     end
   end
 
-  defp switch_text(:none),
-    do: "Picking None empties the form, and your changes are lost."
+  defp switch_question(:none), do: "Start over with no template?"
+  defp switch_question(template), do: "Start over with #{template.title}?"
 
-  defp switch_text(template),
-    do: "Picking #{template.title} starts the form over from it, and your changes are lost."
+  defp switch_body(:none), do: "The form empties, and your changes are lost."
+
+  defp switch_body(template),
+    do: "The form fills in from #{template.title}, and your changes are lost."
 
   # What the form holds, less the template picked and the description editor's markup.
   defp edited?(socket, params),
