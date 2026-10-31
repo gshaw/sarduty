@@ -83,8 +83,6 @@ defmodule Web.NavigationTest do
                ["me"]
              ]
 
-      assert [_dashboard, [%{count: nil}, _take_attendance] | _rest] = sections
-
       assert [
                _dashboard,
                _activities,
@@ -118,7 +116,7 @@ defmodule Web.NavigationTest do
       refute "me" in (sections |> keys() |> List.flatten())
     end
 
-    test "chores show with member logins and chores on, with no count (#698)" do
+    test "chores show with member logins and chores on" do
       refute "chores" in ("/teams/squamish"
                           |> team_sections([team_admin?: true], %{
                             @team
@@ -129,18 +127,11 @@ defmodule Web.NavigationTest do
 
       team = %{@team | member_logins: true, chores_enabled: true}
       sections = team_sections("/teams/squamish", [team_admin?: true], team)
-
-      assert [%{count: nil}] =
-               for(links <- sections, link <- links, link.key == "chores", do: link)
-
       assert ["equipment", "chores"] in keys(sections)
 
       # Members log theirs on the same page (#645), in a section of its own.
       sections = team_sections("/teams/squamish", [member?: true], team)
       assert ["chores"] in keys(sections)
-
-      assert [%{count: nil}] =
-               for(links <- sections, link <- links, link.key == "chores", do: link)
     end
 
     test "Whiteboard follows Dashboard once the team turns it on, while D4H has it on" do

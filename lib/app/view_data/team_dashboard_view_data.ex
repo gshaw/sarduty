@@ -38,7 +38,8 @@ defmodule App.ViewData.TeamDashboardViewData do
   @doc """
   The top half as of `now`. `attention?: false` leaves out Needs attention, which only
   team admins see, so a member's Dashboard doesn't count what nobody will read.
-  `member:` is the team admin reading it, whose own chores wait for someone else.
+  `member:` is the team admin reading it, whose own chores and certificates wait for
+  someone else.
   `attention` is the items shown, and `snoozed` the ones a team admin snoozed (#751), each
   with the name of who did, `snoozed_by`.
   """
@@ -62,7 +63,8 @@ defmodule App.ViewData.TeamDashboardViewData do
   @doc """
   Every Needs attention item a team admin would see, without the page's limit: for an
   agent's needs_attention tool (#595) and for snoozing one (#751). Snoozed items come
-  last, each with its `snooze`. Its chores are every one waiting, a team admin's own too.
+  last, each with its `snooze`. Its chores and certificates are every one waiting, a team
+  admin's own too.
   """
   def attention_items(%Team{} = team, now \\ DateTime.utc_now()) do
     refresh_result = refresh_result_value(team, refresh_job_active?(team))
@@ -101,7 +103,10 @@ defmodule App.ViewData.TeamDashboardViewData do
       group_change_count: count_group_changes(team, now),
       chore_count: if(Team.chores?(team), do: Chore.count_to_accept(team, member, now), else: 0),
       certificate_count:
-        if(Team.certificates?(team), do: Certificate.count_waiting(team.id), else: 0),
+        if(Team.certificates?(team),
+          do: Certificate.count_to_accept(team, member, now),
+          else: 0
+        ),
       chores_to_send: chores_to_send(team),
       attendance_to_send: attendance_to_send(team, now),
       no_shows: no_shows(team, now),

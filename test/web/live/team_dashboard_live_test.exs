@@ -181,6 +181,37 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(lv, "#attention-chores", "3 chores to accept")
   end
 
+  test "a team admin's own certificates need another team admin, unless there is none",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    team =
+      team
+      |> Ecto.Changeset.change(member_logins: true, certificates_enabled: true)
+      |> Repo.update!()
+
+    qualification = qualification_fixture(team)
+    me = Repo.get_by!(App.Model.Member, team_id: team.id, email: user.email)
+    certificate_fixture(me, qualification)
+
+    # Nobody else can accept it.
+    {:ok, lv, _html} = open(conn, user, team)
+    assert has_element?(lv, "#attention-certificates", "1 certificate to accept")
+
+    other = manager_fixture(team)
+    {:ok, lv, _html} = open(conn, user, team)
+    refute has_element?(lv, "#attention-certificates")
+
+    certificate_fixture(member_fixture(team), qualification)
+    {:ok, lv, _html} = open(conn, user, team)
+    assert has_element?(lv, "#attention-certificates", "1 certificate to accept")
+
+    # The other team admin sees them all.
+    other_user = App.AccountsFixtures.user_fixture(%{email: other.email})
+    {:ok, lv, _html} = open(conn, other_user, team)
+    assert has_element?(lv, "#attention-certificates", "2 certificates to accept")
+  end
+
   test "this team's drafts and members missing details need attention", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, at(-48, %{is_published: false}))

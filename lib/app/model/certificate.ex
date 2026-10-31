@@ -209,12 +209,28 @@ defmodule App.Model.Certificate do
     Map.merge(%{waiting: 0, accepted: 0, declined: 0}, counts)
   end
 
-  @doc "How many of the team's certificates wait for a team admin."
-  def count_waiting(team_id) do
+  @doc """
+  Whether `member` sent it: a team admin's own certificate, which another team admin
+  should accept (#697). Nil, a user who isn't one of the team's members, has none.
+  """
+  def own?(%Certificate{member_id: member_id}, %Member{id: member_id}), do: true
+  def own?(%Certificate{}, _member), do: false
+
+  @doc """
+  How many of the team's waiting certificates ask for `member`, a team admin: all but
+  their own, which another team admin should accept (#697). With no other team admin,
+  their own count too, since nobody else will accept them. A nil member, a SAR Duty admin
+  who isn't on the team, has none of their own.
+  """
+  def count_to_accept(%Team{} = team, member, now) do
     Certificate
-    |> where([c], c.team_id == ^team_id and c.status == :waiting)
+    |> where([c], c.team_id == ^team.id and c.status == :waiting)
+    |> without_own(member, Member.other_managers?(team, member, now))
     |> Repo.aggregate(:count)
   end
+
+  defp without_own(query, %Member{id: id}, true), do: where(query, [c], c.member_id != ^id)
+  defp without_own(query, _member, _other_managers?), do: query
 
   @doc "One of the team's certificates, with what its page shows."
   def find!(%Team{} = team, id) do
