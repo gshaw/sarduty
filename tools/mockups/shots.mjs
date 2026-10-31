@@ -3,8 +3,7 @@
 // Each shot is taken at 2x, cropped, then drawn inside its frame: a browser window with
 // the page's URL, an iPhone, a sheet for a diagram, or nothing for pages that draw their
 // own (phones of texts). A shot with an `id` gets its label above the frame. Writes
-// <folder>/shots/<page>.png and .jpg, and shots/contact.jpg when shots.json says
-// "contact": true.
+// <folder>/shots/<page>.png, and shots/contact.png when shots.json says "contact": true.
 import { createRequire } from "module";
 import { execFileSync } from "child_process";
 import fs from "fs";
@@ -92,12 +91,15 @@ async function contactSheet(done) {
   const out = path.join(dir, "shots", "contact");
   await shootHtml(out + ".html", `<!doctype html><html><head><meta charset="utf-8">${css}</head>` +
     `<body class="frame"><div class="contact">${tiles}</div></body></html>`, 1280, out + ".png");
-  jpg(out);
-  console.log("shot contact");
+  console.log("shot contact", optimize(out + ".png"));
 }
 
-const jpg = out =>
-  execFileSync("sips", ["-s", "format", "jpeg", "-s", "formatOptions", "82", out + ".png", "--out", out + ".jpg"], { stdio: "ignore" });
+// Always PNG: JPG blurs text. oxipng shrinks it about 30% without changing a pixel; -o 2
+// is as small as the slower levels, within 1%.
+function optimize(file) {
+  execFileSync("mise", ["exec", "--", "oxipng", "-q", "-o", "2", "--strip", "safe", file], { stdio: "inherit" });
+  return Math.round(fs.statSync(file).size / 1024) + " KB";
+}
 const done = [];
 
 for (const shot of shots) {
@@ -127,9 +129,8 @@ for (const shot of shots) {
     fs.rmSync(raw);
   }
   await label(shot, bare, out + ".png");
-  jpg(out);
   done.push({ shot, bare });
-  console.log("shot", shot.page);
+  console.log("shot", shot.page, optimize(out + ".png"));
 }
 if (contact && !only.length) await contactSheet(done);
 for (const { bare } of done) fs.rmSync(bare);

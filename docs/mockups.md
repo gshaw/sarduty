@@ -6,6 +6,10 @@ A design proposal on an issue is shown with mockups made by the kit in
 [tools/mockups/](../tools/mockups). Every round looks the same and reads in seconds: real
 pages from the app, with what changes marked in fuchsia and numbered.
 
+Screenshots of a finished feature on its PR come from the kit too, marked the same way;
+see [Screenshots on a PR](#screenshots-on-a-pr). Plain screenshots only when someone asks
+for them, and those are PNG too, through `mise exec -- oxipng -o 2 --strip safe <file>`.
+
 ## The rules
 
 1. **Draw on the real app.** Every screen starts as a real page, dumped from this checkout
@@ -48,10 +52,14 @@ pages from the app, with what changes marked in fuchsia and numbered.
    page), phones at 390 in an iPhone frame.
 9. **Words follow [writing.md](writing.md).** Mock copy is proposed copy: glossary words,
    short sentences, values as `Service.Format` writes them.
-10. **Light mode, 2x, JPG in issues.** Screenshots are attached to the issue, never
-    committed. A phone-width shot is `<img width="320">` in GitHub, never `![…]()`:
-    GitHub draws every image as wide as the column, and a 2x phone shot runs about five
-    screens tall. `body.py` writes it that way.
+10. **Light mode, 2x, PNG.** Every screenshot is a PNG, never a JPG, which blurs text.
+    `shots.mjs` runs each through oxipng (pinned in `.mise.toml`), which takes about 30%
+    off without changing a pixel: a desktop shot is about 100–300 KB. Screenshots are
+    attached to the issue or PR, never committed.
+11. **Phone shots are 320 wide in GitHub.** A phone-width shot is `<img width="320">`,
+    never `![…]()`: GitHub draws every image as wide as the column, and a 2x phone shot
+    runs about five screens tall. `body.py` writes it that way, so post its Markdown
+    rather than writing image tags by hand.
 
 ## A round
 
@@ -63,7 +71,7 @@ mkdir -p tmp/mockups && cp -R tools/mockups/example tmp/mockups/<topic>
 tools/mockups/app-css.sh                                  # today's CSS and fonts
 tools/mockups/dump.sh tmp/mockups/<topic>/dump_test.exs   # real/*.html
 python3 -I tmp/mockups/<topic>/build.py                   # the mockup pages
-node tools/mockups/shots.mjs tmp/mockups/<topic>          # shots/*.png and .jpg
+node tools/mockups/shots.mjs tmp/mockups/<topic>          # shots/*.png, optimized
 python3 -I tools/mockups/review.py tmp/mockups/<topic> > tmp/mockups/<topic>/review.html
 python3 -I tools/mockups/body.py tmp/mockups/<topic> > tmp/mockups/<topic>/body.md
 ```
@@ -94,7 +102,7 @@ A `shots.json` entry may also set `frame` (`browser`, the default; `phone`; `she
 diagram; or `none` for a page that draws its own frames, such as `sms()` or `mail()`),
 `url`, `width`, `crop` (`marks`, `full`, or `{top, bottom}` selectors), and `pad`. A
 `frame: none` page of one phone sets `"width": 454`, so the shot is phone-width. At the
-top, `"contact": true` adds `shots/contact.jpg`: every shot small, with its label, for a
+top, `"contact": true` adds `shots/contact`: every shot small, with its label, for a
 round of four shots or more.
 
 ## The Overview and diagrams
@@ -144,11 +152,35 @@ gh issue view <n> --json body -q .body | python3 -I ../../../tools/mockups/body.
 gh issue edit <n> --body-file posted.md
 ```
 
-`gh` swaps each `![…](./shots/x.jpg)` for its upload but leaves an `<img>` tag alone and
+`gh` swaps each `![…](./shots/x.png)` for its upload but leaves an `<img>` tag alone and
 adds the upload to the end, so the second step moves those back into their phone shots'
 tags. Check the body afterwards: every image is a `user-attachments` URL. Later edits
 start from the posted body, never from `body.md`, or its `./shots/` paths break the
 uploaded images. `gh pr edit` works the same way.
+
+## Screenshots on a PR
+
+A PR for something people see shows it with the kit: the finished pages, marked with
+what the PR changed. The round is the same as for a proposal, with three differences.
+
+- **Nothing is spliced in.** `dump_test.exs` dumps the pages from the PR's branch, so the
+  feature is already there. `build.py` only marks it: `mark(s, '<section id="x"', 1)` for
+  new, `mark(…, kind="changed")` for changed. Something the PR removed is gone from the
+  page, so splice it back in as `removed(html, pin)` where it was.
+- **Marked shots replace before and after.** A struck-through mark shows what went, so
+  one shot per screen says what a before-and-after pair says. Add a before shot only when
+  the page is redone too much to mark.
+- **No review page.** Put a sentence or two on what the PR does at the top of `body.md`,
+  then post it straight to the PR:
+
+```sh
+eval "gh pr create --title … --body-file body.md $(python3 -I ../../../tools/mockups/body.py . --attach)"
+gh pr view <n> --json body -q .body | python3 -I ../../../tools/mockups/body.py --attached > posted.md
+gh pr edit <n> --body-file posted.md
+```
+
+Captions say what changed for the person using the page, in the PR's words: "**New.**
+Text reminders, one switch per team." Desktop first; a phone shot only for a phone task.
 
 ## Gotchas
 
