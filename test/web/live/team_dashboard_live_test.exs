@@ -290,6 +290,20 @@ defmodule Web.TeamDashboardLiveTest do
            )
   end
 
+  test "a team admin snoozes the drafts, and the rest stay (#751)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity_fixture(team, at(-48, %{is_published: false}))
+    member_fixture(team, %{phone: nil})
+    {:ok, lv, _html} = open(conn, user, team)
+
+    assert has_element?(lv, "#snooze-missing_details")
+    lv |> element("#snooze-drafts") |> render_click(%{"choice" => "day"})
+
+    refute has_element?(lv, "#attention-drafts")
+    assert has_element?(lv, "#snoozed-drafts", "1 draft activity")
+    assert has_element?(lv, "#attention-missing_details")
+  end
+
   test "Check activities lists the same drafts the dashboard counts", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, at(-48, %{title: "Counted draft", is_published: false}))
@@ -705,6 +719,44 @@ defmodule Web.TeamDashboardLiveTest do
                lv,
                ~s{#attention-retiring_clear a[href="/teams/#{team.subdomain}/members?standing=retiring&items=none"]}
              )
+    end
+
+    test "a team admin snoozes the item for every team admin, and shows it again (#751)",
+         %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      leavers = group_fixture(team, %{title: "Leavers"})
+
+      team =
+        team
+        |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
+        |> App.Repo.update!()
+
+      holding = member_fixture(team)
+      group_member_fixture(leavers, holding)
+      equipment_item_fixture(team, %{member_id: holding.id})
+      group_member_fixture(leavers, member_fixture(team, %{d4h_permission: 1}))
+
+      {:ok, lv, _html} = open(conn, user, team)
+
+      assert has_element?(lv, "#snooze-retiring[data-confirm-choice=week]")
+      refute has_element?(lv, "#snooze-retiring_access")
+      refute has_element?(lv, "#attention-snoozed")
+
+      lv |> element("#snooze-retiring") |> render_click(%{"choice" => "week"})
+
+      refute has_element?(lv, "#attention-retiring")
+      assert has_element?(lv, "#attention-snoozed summary", "1 snoozed")
+      assert has_element?(lv, "#snoozed-retiring", "1 retiring member holds 1 item")
+      assert has_element?(lv, "#snoozed-retiring", "Snoozed by")
+
+      # Every team admin sees it snoozed.
+      {:ok, other, _html} = open(conn, user, team)
+      refute has_element?(other, "#attention-retiring")
+
+      lv |> element("#show-again-retiring") |> render_click()
+
+      assert has_element?(lv, "#attention-retiring")
+      refute has_element?(lv, "#attention-snoozed")
     end
 
     test "warns of retiring members D4H still lets log in", %{conn: conn} do

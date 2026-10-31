@@ -144,21 +144,12 @@ defmodule Web.ActivityLive do
     assign(socket,
       reminded: ActivityReminders.latest(reminders),
       batch: batch,
-      batch_sender: batch && sender_name(team, batch.sent_by_user, now),
+      batch_sender: batch && Member.name_for_user(team, batch.sent_by_user, now),
       send_reminders?:
         socket.assigns.team_admin? && coming? && !activity.deleted_at &&
           Enum.any?(members, &(&1.status == "requested")),
       send_update?: socket.assigns.team_admin? && coming? && !activity.deleted_at && members != []
     )
-  end
-
-  defp sender_name(_team, nil, _now), do: nil
-
-  defp sender_name(team, user, now) do
-    case Member.find_by_email(team, user.email, now) do
-      %Member{name: name} -> name
-      nil -> user.email
-    end
   end
 
   # The view's word in the URL, the same before and after the start, as a D4H status.

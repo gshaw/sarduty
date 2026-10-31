@@ -125,6 +125,7 @@ have decided since the page loaded, stays in `call`.
 - [templates.md](templates.md) — templates: items, tags, and groups whose members they add, applied to an activity in one step.
 - [group-rules.md](group-rules.md) — qualification rules for groups: storage, evaluation, and what applying them needs.
 - [member-cards.md](member-cards.md) — member ID cards and the public verify site.
+- [needs-attention.md](needs-attention.md) — the team home's Needs attention list: adding an item, and which can be snoozed.
 - [members.md](members.md) — the members list and its filters, and member logins: members get their own ID card and tax credit letters.
 - [tax-credit-letters.md](tax-credit-letters.md) — verifying a tax credit letter, its reference numbers, and the locked PDF.
 - [urls.md](urls.md) — how paths are named, and the URLs that can never move.

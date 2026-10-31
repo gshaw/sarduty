@@ -185,12 +185,21 @@ defmodule App.ViewModel.MemberFilterViewModel do
   end
 
   @doc """
-  How many members the list shows for `params`, from the same query, so a link to the
-  list and its count always match (the home page's attendance check, #366).
+  The ids of the members the list shows for `params`, sorted, from the same query, so a
+  link to the list and its count always match (the home page's attendance check, #366),
+  and a snooze can tell who is new (#751).
   """
-  def count(team, params, now \\ DateTime.utc_now()) do
+  def ids(team, params, now \\ DateTime.utc_now()) do
     {:ok, filter_options, _changeset} = validate(params, true)
-    team |> filter_query(filter_options, now) |> Repo.count_entries()
+
+    team
+    |> filter_query(filter_options, now)
+    |> exclude(:preload)
+    |> exclude(:order_by)
+    |> exclude(:select)
+    |> select([m], m.id)
+    |> order_by([m], m.id)
+    |> Repo.all()
   end
 
   @doc """
@@ -231,7 +240,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> select_member_with_attendance()
   end
 
-  # The members the filters keep, with only the joins a filter reads, so count/3 skips
+  # The members the filters keep, with only the joins a filter reads, so ids/3 skips
   # the summary and clock joins that never change which rows match.
   defp filter_query(team, filter_options, now) do
     Member

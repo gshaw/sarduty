@@ -188,7 +188,8 @@ admin through them.
    the synced `d4h_permission`, anything but No access (`Member.d4h_access?/1`); a
    member whose permission D4H didn't send isn't counted.
 3. **Get the items back.** Needs attention's "1 retiring member holds 3 items" opens
-   Equipment's With retiring members.
+   Equipment's With retiring members. Gear can take weeks to come back, so a team admin
+   can snooze this item; see [needs-attention.md](needs-attention.md#snoozing-an-item).
 4. **Retire them in D4H.** Needs attention's "2 retiring members hold no items" opens
    `standing=retiring&items=none`, and its hint, "Retire them in D4H.", is what stops a
    member staying Retiring for good. D4H sets No access when it retires someone, and

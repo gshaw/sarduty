@@ -423,6 +423,19 @@ defmodule App.Model.Member do
   end
 
   @doc """
+  Who a login is on the team, for "sent by" lines: their member name, or their email when
+  no current member has it. Nil for no user.
+  """
+  def name_for_user(%Team{} = _team, nil, _now), do: nil
+
+  def name_for_user(%Team{} = team, user, now) do
+    case find_by_email(team, user.email, now) do
+      %Member{name: name} -> name
+      nil -> user.email
+    end
+  end
+
+  @doc """
   The team's current member with this email, or nil when there is none or two share it.
   A team admin replies to invitations as this member (#444), on a team with member
   logins off too.

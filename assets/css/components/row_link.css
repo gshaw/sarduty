@@ -14,7 +14,21 @@
   .row-link-chevron { flex: none; color: var(--text-muted); }
   .row-link .text-link { text-decoration: underline; text-underline-offset: 0.15em; text-decoration-thickness: 1px; }
 
+  /* A quiet icon button in a row, just before the chevron and outside the link, since a
+     button cannot go in a link: Snooze on Needs attention (#751). Muted like the copy
+     button, and 44px on a touch screen. */
+  .row-links > li:has(> .row-link-tool) { position: relative; }
+  .row-links > li:has(> .row-link-tool) .row-link-body { padding-right: var(--sp-8); }
+  .row-link-tool {
+    position: absolute; right: 24px; top: 50%; translate: 0 -50%;
+    display: inline-flex; padding: 6px; border: 0; border-radius: var(--radius);
+    background: none; color: var(--text-muted); cursor: pointer;
+  }
+  .row-link-tool:focus-visible { outline: 3px solid transparent; background: var(--focus); color: #0b0c0c; }
+  @media (pointer: coarse) { .row-link-tool { padding: 14px; right: 16px; } }
+
   @media (hover: hover) {
+    .row-link-tool:hover { background: var(--surface-alt); color: var(--text); }
     .row-link:hover { background: var(--surface-alt); }
     .row-link:hover .text-link { color: var(--link-hover); text-decoration-thickness: 3px; }
     .row-link:hover .row-link-chevron { color: var(--text); }

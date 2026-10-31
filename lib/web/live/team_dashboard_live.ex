@@ -18,8 +18,10 @@ defmodule Web.TeamDashboardLive do
   alias App.Model.WhiteboardNote
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
+  alias App.Operation.SnoozeAttentionItem
   alias App.ViewData.MemberRecords
   alias App.ViewData.MemberToDo
+  alias App.ViewData.TeamAttention
   alias App.ViewData.TeamDashboardCharts
   alias App.ViewData.TeamDashboardViewData
   alias App.Worker.RefreshTeamDataWorker
@@ -39,6 +41,9 @@ defmodule Web.TeamDashboardLive do
   # Needs attention, and Refresh now. A team admin who is a member gets both lists.
   # Everyone reads the whiteboard (#515) in a strip under Next up: its Important notes, or
   # its newest, at most 2. Posting and archiving are on the Whiteboard page.
+
+  # How the dialog names each Snooze length (#751). No forever; a week is picked.
+  @snooze_labels %{day: "For a day", week: "For a week", month: "For a month"}
 
   def mount(_params, _session, socket) do
     current_team = socket.assigns.current_team
@@ -195,7 +200,12 @@ defmodule Web.TeamDashboardLive do
         now={@now}
       />
       <div class="card-stack span-6">
-        <.needs_attention :if={@team_admin?} team={@current_team} items={@view_data.attention} />
+        <.needs_attention
+          :if={@team_admin?}
+          team={@current_team}
+          items={@view_data.attention}
+          snoozed={@view_data.snoozed}
+        />
         <.to_do :if={@current_member} team={@current_team} items={@to_do} />
       </div>
     </div>
@@ -390,12 +400,17 @@ defmodule Web.TeamDashboardLive do
 
   attr :team, :map, required: true
   attr :items, :list, required: true
+  attr :snoozed, :list, required: true
 
+  # An item with the ids behind it can be snoozed for the team (#751), with a
+  # quiet alarm before its chevron, outside its link. Snoozed items wait under the count
+  # on the title row, so they cost no height.
   defp needs_attention(assigns) do
     ~H"""
     <section id="needs-attention" class="card">
-      <header>
+      <header class="relative">
         <h2 class="chart-title">Needs attention</h2>
+        <.snoozed :if={@snoozed != []} team={@team} items={@snoozed} />
       </header>
       <p :if={@items == []} id="needs-attention-empty" class="chart-caption">
         Nothing needs you right now.
@@ -411,10 +426,70 @@ defmodule Web.TeamDashboardLive do
               </span>
             </span>
           </.row_link>
+          <button
+            :if={TeamAttention.can_snooze?(item)}
+            id={"snooze-#{item.key}"}
+            type="button"
+            class="row-link-tool"
+            aria-label="Snooze"
+            title="Snooze"
+            phx-click="snooze"
+            phx-value-key={item.key}
+            data-confirm={"Snooze this item? #{item.title}. It leaves Needs attention for every team admin. #{TeamAttention.back_sooner(item)}"}
+            data-confirm-button="Snooze"
+            data-confirm-choices-label="For how long"
+            data-confirm-choices={Jason.encode!(snooze_choices())}
+            data-confirm-choice="week"
+          >
+            <.icon name="alarm-clock" size={:sm} />
+          </button>
         </li>
       </ul>
     </section>
     """
+  end
+
+  defp snooze_choices do
+    for period <- SnoozeAttentionItem.periods(),
+        do: [Atom.to_string(period), Map.fetch!(@snooze_labels, period)]
+  end
+
+  attr :team, :map, required: true
+  attr :items, :list, required: true
+
+  # "1 snoozed", opening a menu of what's snoozed, by whom, and until when, each with Show
+  # again. The menu hangs from the title row, so it spans the card.
+  defp snoozed(assigns) do
+    ~H"""
+    <details id="attention-snoozed" class="attention-snoozed">
+      <summary class="hint">
+        {Format.count(length(@items), one: "%d snoozed", many: "%d snoozed")}
+        <.icon name="chevron-down" size={:sm} />
+      </summary>
+      <ul class="menu">
+        <li :for={item <- @items} id={"snoozed-#{item.key}"}>
+          <span class="dash-row-title">
+            <strong>{item.title}</strong>
+            <span class="hint">{snoozed_line(item, @team)}</span>
+          </span>
+          <.button
+            id={"show-again-#{item.key}"}
+            size={:sm}
+            phx-click="show_again"
+            phx-value-key={item.key}
+          >
+            Show again
+          </.button>
+        </li>
+      </ul>
+    </details>
+    """
+  end
+
+  # "Snoozed by Alex Chen until November 6, 2026"
+  defp snoozed_line(%{snooze: snooze, snoozed_by: by}, team) do
+    until = Format.date_long(snooze.until, team.timezone)
+    if by, do: "Snoozed by #{by} until #{until}", else: "Snoozed until #{until}"
   end
 
   defp attention_path(team, %{key: key})
@@ -773,6 +848,30 @@ defmodule Web.TeamDashboardLive do
     if refreshing?(socket.assigns.view_data),
       do: {:noreply, socket},
       else: start_refresh(socket)
+  end
+
+  # Snooze and Show again, team admins only: Web.UserAuth drops a member's. The dialog's
+  # choice is how long.
+  def handle_event("snooze", %{"key" => key, "choice" => choice}, socket) do
+    %{current_team: team, current_user: user} = socket.assigns
+    period = Enum.find(SnoozeAttentionItem.periods(), &(Atom.to_string(&1) == choice))
+
+    case SnoozeAttentionItem.call(team, user, key, period) do
+      {:ok, _snooze} ->
+        {:noreply, assign_top_half(socket, team)}
+
+      {:error, :not_found} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "That item is no longer on Needs attention.")
+         |> assign_top_half(team)}
+    end
+  end
+
+  def handle_event("show_again", %{"key" => key}, socket) do
+    team = socket.assigns.current_team
+    :ok = SnoozeAttentionItem.show_again(team, key)
+    {:noreply, assign_top_half(socket, team)}
   end
 
   defp start_refresh(socket) do

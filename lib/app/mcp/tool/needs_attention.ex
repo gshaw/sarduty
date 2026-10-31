@@ -5,6 +5,7 @@ defmodule App.MCP.Tool.NeedsAttention do
   """
   @behaviour App.MCP.Tool
 
+  alias App.MCP.Output
   alias App.Model.Team
   alias App.ViewData.TeamDashboardViewData
 
@@ -17,23 +18,25 @@ defmodule App.MCP.Tool.NeedsAttention do
       "key, level (danger, warning, or info), title, and detail. Keys include chores, " <>
       "attendance_to_send, no_shows, untagged, drafts, expiring, not_seen, and letters. " <>
       "untagged and letters items give their year, and attendance_to_send and no_shows " <>
-      "give the oldest activity's id. An empty list means nothing is waiting. Start here to find work."
+      "give the oldest activity's id. An item a team admin snoozed comes last, with " <>
+      "snoozed_until, when it shows again. An empty list means nothing is waiting. " <>
+      "Start here to find work."
   end
 
   @impl App.MCP.Tool
   def input_schema, do: %{"type" => "object", "properties" => %{}}
 
   @impl App.MCP.Tool
-  def fields, do: ~w(key level title detail year activity_id)
+  def fields, do: ~w(key level title detail year activity_id snoozed_until)
 
   @impl App.MCP.Tool
   def call(%Team{} = team, _args, now) do
-    items = team |> TeamDashboardViewData.attention_items(now) |> build()
+    items = team |> TeamDashboardViewData.attention_items(now) |> build(team.timezone)
     {:ok, items, length(items)}
   end
 
-  @doc "The output for the team home's attention items (`TeamAttention.items/3`)."
-  def build(items) do
+  @doc "The output for the team home's attention items (`TeamAttention.items/4`). Never the members behind an item."
+  def build(items, timezone) do
     Enum.map(items, fn item ->
       %{
         "key" => Atom.to_string(item.key),
@@ -41,7 +44,8 @@ defmodule App.MCP.Tool.NeedsAttention do
         "title" => item.title,
         "detail" => item.detail,
         "year" => item[:year],
-        "activity_id" => item[:activity_id]
+        "activity_id" => item[:activity_id],
+        "snoozed_until" => item[:snooze] && Output.datetime(item.snooze.until, timezone)
       }
     end)
   end

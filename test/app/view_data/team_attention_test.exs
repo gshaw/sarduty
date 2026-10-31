@@ -15,11 +15,11 @@ defmodule App.ViewData.TeamAttentionTest do
         service: :d4h,
         refresh: %{state: :ok, message: nil},
         names: %{name: "Ridge SAR", abbreviated_name: "RIDGE"},
-        draft_count: 0,
-        missing_fields_count: 0,
+        draft_ids: [],
+        missing_fields_ids: [],
         expiring_days: 60,
-        expiring_count: 0,
-        missing_details_count: 0,
+        expiring_ids: [],
+        missing_details_ids: [],
         not_seen: nil,
         retiring: nil,
         group_change_count: 0,
@@ -35,14 +35,114 @@ defmodule App.ViewData.TeamAttentionTest do
     )
   end
 
-  # The items for these counts, with every other count at zero.
-  defp items(attrs, now), do: attrs |> rows() |> TeamAttention.items(now)
+  # The items shown for these counts, with every other count at zero.
+  defp items(attrs, now), do: attrs |> rows() |> TeamAttention.items(now) |> Map.fetch!(:shown)
 
   defp keys(items), do: Enum.map(items, & &1.key)
 
+  # `count` made-up ids, for an item that counts them.
+  defp ids(count), do: Enum.to_list(1..count//1)
+
+  describe "snoozing (#751)" do
+    # Blake, Dana, and Drew hold items; Sam is new.
+    @holding %{holding: 3, items: 7, holding_ids: [1, 2, 3], clear_ids: [], d4h_access: 0}
+
+    defp snooze(attrs),
+      do: Map.merge(%{key: "retiring", ids: [1, 2, 3], until: ~U[2026-10-13 16:00:00Z]}, attrs)
+
+    defp split(retiring, snoozes, limit \\ 7),
+      do: %{retiring: retiring} |> rows() |> TeamAttention.items(@october, snoozes, limit)
+
+    test "hides the item and carries its snooze" do
+      snooze = snooze(%{})
+
+      assert %{shown: [], snoozed: [%{key: :retiring, snooze: ^snooze}]} =
+               split(@holding, [snooze])
+    end
+
+    test "stays hidden as members leave the item" do
+      row = %{@holding | holding: 2, holding_ids: [1, 3]}
+      assert %{shown: [], snoozed: [_item]} = split(row, [snooze(%{})])
+    end
+
+    test "comes back when someone new is behind it" do
+      row = %{@holding | holding: 3, holding_ids: [1, 2, 4]}
+      assert %{shown: [%{key: :retiring}], snoozed: []} = split(row, [snooze(%{})])
+    end
+
+    test "comes back when the snooze ends" do
+      snooze = snooze(%{until: @october})
+      assert %{shown: [%{key: :retiring}], snoozed: []} = split(@holding, [snooze])
+    end
+
+    test "is only for items with ids" do
+      row = %{@holding | d4h_access: 2}
+      snoozes = [snooze(%{}), snooze(%{key: "retiring_access", ids: [1, 2, 3]})]
+      %{shown: [access], snoozed: [_retiring]} = split(row, snoozes)
+
+      assert access.key == :retiring_access
+      refute TeamAttention.can_snooze?(access)
+    end
+
+    # The rule in TeamAttention's moduledoc: can_snooze when it waits on people outside SAR
+    # Duty, never when it is broken, one step in SAR Duty, leaves on its own, or has a
+    # deadline. A new item lands in one list or the other here.
+    test "every item that waits on people can be snoozed, and says what brings it back" do
+      everything =
+        rows(%{
+          refresh: %{state: :failed, message: "No D4H key."},
+          draft_ids: ids(2),
+          missing_fields_ids: ids(1),
+          expiring_ids: ids(3),
+          missing_details_ids: ids(4),
+          not_seen: %{days: 90, ids: ids(5), group: nil, params: %{}},
+          retiring: %{@holding | clear_ids: [5], d4h_access: 1},
+          group_change_count: 1,
+          chore_count: 1,
+          certificate_count: 1,
+          chores_to_send: 1,
+          attendance_to_send: [%{id: 1, title: "Training"}],
+          no_shows: [%{id: 2, title: "Rope", count: 1}],
+          untagged: [%{count: 1, year: 2025, ids: [7]}, %{count: 1, year: 2026, ids: [8]}],
+          letters: %{year: 2025, count: 1},
+          names: %{name: String.duplicate("a", 21), abbreviated_name: String.duplicate("a", 11)}
+        })
+
+      %{shown: items} = TeamAttention.items(everything, @march, [], :all)
+      {can_snooze, cannot_snooze} = Enum.split_with(items, &TeamAttention.can_snooze?/1)
+
+      assert can_snooze |> keys() |> Enum.sort() ==
+               Enum.sort(~w(drafts missing_fields expiring missing_details not_seen retiring
+                            retiring_clear untagged)a)
+
+      assert cannot_snooze |> keys() |> Enum.sort() ==
+               Enum.sort(~w(refresh retiring_access group_changes chores certificates
+                            chores_to_send attendance_to_send no_shows untagged_last_year
+                            letters long_name long_abbreviated_name)a)
+
+      for item <- can_snooze do
+        assert TeamAttention.back_sooner(item) =~ ~r/^It comes back sooner if another .+\.$/
+        assert item.ids == Enum.sort(item.ids)
+      end
+    end
+
+    test "a snoozed draft stays hidden as drafts are published, and comes back for a new one" do
+      snooze = snooze(%{key: "drafts", ids: [1, 2, 3]})
+      assert %{shown: []} = split_rows(%{draft_ids: [2, 3]}, [snooze])
+      assert %{shown: [%{key: :drafts}]} = split_rows(%{draft_ids: [2, 3, 4]}, [snooze])
+    end
+
+    defp split_rows(attrs, snoozes), do: attrs |> rows() |> TeamAttention.items(@october, snoozes)
+
+    test "frees its place for the next item" do
+      row = %{@holding | clear_ids: [5]}
+      assert %{shown: [%{key: :retiring_clear}]} = split(row, [snooze(%{})], 1)
+    end
+  end
+
   test "nothing to do means no items" do
     assert items(%{}, @october) == []
-    assert items(%{untagged: [%{count: 0, year: 2026}]}, @october) == []
+    assert items(%{untagged: [%{count: 0, year: 2026, ids: ids(0)}]}, @october) == []
   end
 
   describe "names (#738)" do
@@ -142,23 +242,23 @@ defmodule App.ViewData.TeamAttentionTest do
   end
 
   test "members not at an activity name the team's time frame" do
-    assert items(%{not_seen: %{days: 90, count: 0}}, @october) == []
+    assert items(%{not_seen: %{days: 90, ids: []}}, @october) == []
 
-    row = %{days: 90, count: 3, group: nil, params: %{}}
+    row = %{days: 90, ids: ids(3), group: nil, params: %{}}
     assert [item] = items(%{not_seen: row}, @october)
     assert item.key == :not_seen
     assert item.title == "3 members have not attended an activity in 90 days"
 
-    assert [item] = items(%{not_seen: %{row | days: 365, count: 1}}, @october)
+    assert [item] = items(%{not_seen: %{row | days: 365, ids: ids(1)}}, @october)
     assert item.title == "1 member has not attended an activity in a year"
   end
 
   test "members not at an activity name the watched group (#366)" do
-    row = %{days: 90, count: 4, group: "Callout", params: %{}}
+    row = %{days: 90, ids: ids(4), group: "Callout", params: %{}}
     assert [item] = items(%{not_seen: row}, @october)
     assert item.title == "4 members of Callout have not attended an activity in 90 days"
 
-    assert [item] = items(%{not_seen: %{row | count: 1}}, @october)
+    assert [item] = items(%{not_seen: %{row | ids: ids(1)}}, @october)
     assert item.title == "1 member of Callout has not attended an activity in 90 days"
   end
 
@@ -170,14 +270,14 @@ defmodule App.ViewData.TeamAttentionTest do
   end
 
   test "activities with no hours tag name the year" do
-    assert [item] = items(%{untagged: [%{count: 12, year: 2026}]}, @october)
+    assert [item] = items(%{untagged: [%{count: 12, year: 2026, ids: ids(12)}]}, @october)
     assert item.key == :untagged
     assert item.year == 2026
     assert item.title == "12 activities in 2026 have no hours tag"
   end
 
   test "in letter season last year's activities with no hours tag show too" do
-    untagged = [%{count: 4, year: 2025}, %{count: 1, year: 2026}]
+    untagged = [%{count: 4, year: 2025, ids: ids(4)}, %{count: 1, year: 2026, ids: ids(1)}]
     items = items(%{untagged: untagged}, @march)
 
     assert keys(items) == [:untagged_last_year, :untagged]
@@ -189,9 +289,9 @@ defmodule App.ViewData.TeamAttentionTest do
       items(
         %{
           group_change_count: 2,
-          missing_details_count: 9,
-          expiring_count: 6,
-          draft_count: 3,
+          missing_details_ids: ids(9),
+          expiring_ids: ids(6),
+          draft_ids: ids(3),
           refresh: %{state: :failed, message: "D4H rejected the team key (401)."}
         },
         @october
@@ -202,8 +302,8 @@ defmodule App.ViewData.TeamAttentionTest do
   end
 
   test "titles carry the count, with the noun agreeing" do
-    one = items(%{draft_count: 1, missing_details_count: 1}, @october)
-    many = items(%{draft_count: 3, missing_details_count: 9}, @october)
+    one = items(%{draft_ids: ids(1), missing_details_ids: ids(1)}, @october)
+    many = items(%{draft_ids: ids(3), missing_details_ids: ids(9)}, @october)
 
     assert Enum.map(one, & &1.title) == [
              "1 draft activity",
@@ -216,7 +316,7 @@ defmodule App.ViewData.TeamAttentionTest do
            ]
 
     assert [%{title: "6 awards expire within 60 days"}] =
-             items(%{expiring_count: 6}, @october)
+             items(%{expiring_ids: ids(6)}, @october)
   end
 
   test "a failed refresh shows D4H's reason; a rejected key alone says so too" do
@@ -247,9 +347,9 @@ defmodule App.ViewData.TeamAttentionTest do
     everything =
       %{
         refresh: %{state: :failed, message: "No D4H key."},
-        draft_count: 1,
-        expiring_count: 1,
-        missing_details_count: 1,
+        draft_ids: ids(1),
+        expiring_ids: ids(1),
+        missing_details_ids: ids(1),
         group_change_count: 1,
         letters: %{year: 2025, count: 1}
       }
@@ -261,9 +361,9 @@ defmodule App.ViewData.TeamAttentionTest do
     attrs = %{
       service: :records,
       refresh: %{state: :key_rejected},
-      missing_details_count: 3,
-      draft_count: 2,
-      expiring_count: 1
+      missing_details_ids: ids(3),
+      draft_ids: ids(2),
+      expiring_ids: ids(1)
     }
 
     for item <- items(attrs, @october) do
@@ -276,13 +376,13 @@ defmodule App.ViewData.TeamAttentionTest do
   end
 
   test "drafts missing required fields (#681)" do
-    assert [item] = items(%{missing_fields_count: 2}, @october)
+    assert [item] = items(%{missing_fields_ids: ids(2)}, @october)
     assert item.key == :missing_fields
     assert item.level == :warning
     assert item.title == "2 draft activities are missing required fields"
     assert item.detail == "D4H won't publish them until they're filled in."
 
     assert [%{title: "1 draft activity is missing required fields"}] =
-             items(%{missing_fields_count: 1}, @october)
+             items(%{missing_fields_ids: ids(1)}, @october)
   end
 end

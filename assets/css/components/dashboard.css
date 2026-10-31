@@ -32,6 +32,16 @@ img.team-head-logo { width: auto; max-width: 128px; object-fit: contain; }
 .is-warning .attention-mark { background: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 35%, transparent); }
 .is-danger .attention-mark { background: var(--danger); box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 35%, transparent); }
 
+/* "1 snoozed" on Needs attention's title row (#751), opening a menu as wide as the card
+   with each snoozed item and Show again. */
+.attention-snoozed > summary { list-style: none; display: inline-flex; align-items: center; gap: var(--sp-1); white-space: nowrap; cursor: pointer; }
+.attention-snoozed > summary::-webkit-details-marker { display: none; }
+@media (pointer: coarse) { .attention-snoozed > summary { padding-block: var(--sp-3); margin-block: calc(-1 * var(--sp-3)); } }
+.attention-snoozed[open] > summary .icon { rotate: 180deg; }
+.attention-snoozed > .menu { top: calc(100% + var(--sp-1)); width: min(360px, 100%); margin: 0; padding: var(--sp-1) var(--sp-4); list-style: none; }
+.attention-snoozed > .menu > li { display: flex; align-items: center; gap: var(--sp-3); padding-block: var(--sp-2); }
+.attention-snoozed > .menu > li + li { border-top: 1px solid var(--border-subtle); }
+
 /* Phones: the team head shrinks, and the stats sit two to a row. */
 @media (width < 40rem) {
   /* The logo and name share a row; the line under them takes the full width. */

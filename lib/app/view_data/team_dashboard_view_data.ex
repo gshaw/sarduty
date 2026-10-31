@@ -10,6 +10,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.AttendanceScan
+  alias App.Model.AttentionSnooze
   alias App.Model.Certificate
   alias App.Model.Chore
   alias App.Model.ChoreEvent
@@ -38,35 +39,51 @@ defmodule App.ViewData.TeamDashboardViewData do
   The top half as of `now`. `attention?: false` leaves out Needs attention, which only
   team admins see, so a member's Dashboard doesn't count what nobody will read.
   `member:` is the team admin reading it, whose own chores wait for someone else.
+  `attention` is the items shown, and `snoozed` the ones a team admin snoozed (#751), each
+  with the name of who did, `snoozed_by`.
   """
   def build(%Team{} = team, now \\ DateTime.utc_now(), opts \\ []) do
     refresh_result = refresh_result_value(team, refresh_job_active?(team))
     {next_up, coming_up} = team |> agenda_activities(now) |> agenda(now)
+
+    %{shown: attention, snoozed: snoozed} =
+      attention(team, refresh_result, now, Keyword.get(opts, :attention?, true), opts[:member])
 
     %{
       refreshed_at: team.d4h_refreshed_at,
       refresh_result: refresh_result,
       next_up: next_up,
       coming_up: coming_up,
-      attention:
-        attention(team, refresh_result, now, Keyword.get(opts, :attention?, true), opts[:member])
+      attention: attention,
+      snoozed: Enum.map(snoozed, &Map.put(&1, :snoozed_by, snoozed_by(team, &1.snooze, now)))
     }
   end
 
   @doc """
   Every Needs attention item a team admin would see, without the page's limit: for an
-  agent's needs_attention tool (#595). Its chores are every one waiting, a team admin's
-  own too.
+  agent's needs_attention tool (#595) and for snoozing one (#751). Snoozed items come
+  last, each with its `snooze`. Its chores are every one waiting, a team admin's own too.
   """
   def attention_items(%Team{} = team, now \\ DateTime.utc_now()) do
     refresh_result = refresh_result_value(team, refresh_job_active?(team))
-    team |> attention_rows(refresh_result, now, nil) |> TeamAttention.items(now, :all)
+
+    %{shown: shown, snoozed: snoozed} =
+      team
+      |> attention_rows(refresh_result, now, nil)
+      |> TeamAttention.items(now, AttentionSnooze.get_all(team), :all)
+
+    shown ++ snoozed
   end
 
-  defp attention(team, refresh_result, now, true, member),
-    do: team |> attention_rows(refresh_result, now, member) |> TeamAttention.items(now)
+  defp snoozed_by(team, snooze, now), do: Member.name_for_user(team, snooze.user, now)
 
-  defp attention(_team, _refresh_result, _now, false, _member), do: []
+  defp attention(team, refresh_result, now, true, member) do
+    team
+    |> attention_rows(refresh_result, now, member)
+    |> TeamAttention.items(now, AttentionSnooze.get_all(team))
+  end
+
+  defp attention(_team, _refresh_result, _now, false, _member), do: %{shown: [], snoozed: []}
 
   defp attention_rows(team, refresh_result, now, member) do
     %{
@@ -74,11 +91,11 @@ defmodule App.ViewData.TeamDashboardViewData do
       service: D4H.service(team),
       refresh: refresh_row(team, refresh_result),
       names: Map.take(team, [:name, :abbreviated_name]),
-      draft_count: count_recent_drafts(team, now),
-      missing_fields_count: count_missing_fields(team, now),
+      draft_ids: recent_draft_ids(team, now),
+      missing_fields_ids: missing_fields_ids(team, now),
       expiring_days: BuildGroupRulePreview.expiring_days(),
-      expiring_count: count_expiring(team, now),
-      missing_details_count: count_missing_details(team, now),
+      expiring_ids: expiring_ids(team, now),
+      missing_details_ids: missing_details_ids(team, now),
       not_seen: not_seen_row(team, now),
       retiring: retiring_row(team, now),
       group_change_count: count_group_changes(team, now),
@@ -205,41 +222,51 @@ defmodule App.ViewData.TeamDashboardViewData do
     end
   end
 
+  # The items that can be snoozed (#751) read ids rather than a count, sorted, so a
+  # snooze can tell who is new behind the item.
+
   # Finished in the last 30 days and still a draft in D4H.
-  defp count_recent_drafts(team, now) do
+  defp recent_draft_ids(team, now) do
     Activity
     |> where([a], a.team_id == ^team.id and a.is_published == false)
     |> Activity.not_deleted()
     |> Activity.finished_recently(now)
-    |> Repo.aggregate(:count)
+    |> ids()
   end
+
+  defp ids(query), do: query |> select([r], r.id) |> order_by([r], r.id) |> Repo.all()
 
   # Finished drafts with a required custom field left empty (#681): D4H won't publish
   # them until it's filled in.
-  defp count_missing_fields(team, now) do
+  defp missing_fields_ids(team, now) do
     Activity
     |> where([a], a.team_id == ^team.id and a.is_published == false and a.finished_at < ^now)
     |> Activity.not_deleted()
     |> Activity.missing_required_fields()
-    |> Repo.aggregate(:count)
+    |> ids()
   end
 
-  defp count_expiring(team, now) do
+  # One row per member and qualification; its newest award stands for the row.
+  defp expiring_ids(team, now) do
     until = DateTime.add(now, BuildGroupRulePreview.expiring_days(), :day)
-    team.id |> MemberQualificationAward.expiring(now, until) |> length()
+
+    team.id
+    |> MemberQualificationAward.expiring(now, until)
+    |> Enum.map(& &1.award_id)
+    |> Enum.sort()
   end
 
-  defp count_missing_details(team, now) do
+  defp missing_details_ids(team, now) do
     Member
     |> where([m], m.team_id == ^team.id)
     |> Member.current_query(now)
     |> Member.counted_query()
     |> Member.missing_details_query()
-    |> Repo.aggregate(:count)
+    |> ids()
   end
 
-  # Nil when the team turned the item off in its settings. The count comes from the
-  # Members list's own query, with the params the item links with, so they match (#366).
+  # Nil when the team turned the item off in its settings. The ids come from the Members
+  # list's own query, with the params the item links with, so they match (#366).
   defp not_seen_row(%Team{not_seen_days: nil}, _now), do: nil
 
   defp not_seen_row(%Team{not_seen_days: days} = team, now) do
@@ -254,7 +281,7 @@ defmodule App.ViewData.TeamDashboardViewData do
           days: days,
           group: group && group.title,
           params: params,
-          count: MemberFilterViewModel.count(team, params, now)
+          ids: MemberFilterViewModel.ids(team, params, now)
         }
     end
   end
@@ -271,8 +298,9 @@ defmodule App.ViewData.TeamDashboardViewData do
 
       %{
         holding: map_size(counts),
+        holding_ids: counts |> Map.keys() |> Enum.sort(),
         items: counts |> Map.values() |> Enum.sum(),
-        clear: length(Repo.all(ids)) - map_size(counts),
+        clear_ids: ids |> Repo.all() |> Enum.reject(&Map.has_key?(counts, &1)) |> Enum.sort(),
         d4h_access:
           Member
           |> where([m], m.id in subquery(ids))
@@ -319,7 +347,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   @doc """
   Published activities with no hours tag (#323), for teams that use the hours tags: ones
   with their primary or secondary tag among their tags. One row per open year,
-  `%{year:, count:}`. Empty for other teams. An organization's Teams page counts them too
+  `%{year:, count:, ids:}`. Empty for other teams. An organization's Teams page counts them too
   (#512).
   """
   def untagged_rows(team, now) do
@@ -328,19 +356,22 @@ defmodule App.ViewData.TeamDashboardViewData do
     if uses_hours_tags?(team, hours_tags) do
       now
       |> Service.Period.open_years(team.timezone)
-      |> Enum.map(&%{year: &1, count: count_untagged(team, hours_tags, &1)})
+      |> Enum.map(&untagged_row(team, hours_tags, &1))
     else
       []
     end
   end
 
-  defp count_untagged(team, hours_tags, year) do
-    Activity
-    |> where([a], a.team_id == ^team.id and a.is_published == true)
-    |> Activity.not_deleted()
-    |> Activity.started_in(year, team.timezone)
-    |> Activity.without_hours_tag(hours_tags)
-    |> Repo.aggregate(:count)
+  defp untagged_row(team, hours_tags, year) do
+    ids =
+      Activity
+      |> where([a], a.team_id == ^team.id and a.is_published == true)
+      |> Activity.not_deleted()
+      |> Activity.started_in(year, team.timezone)
+      |> Activity.without_hours_tag(hours_tags)
+      |> ids()
+
+    %{year: year, count: length(ids), ids: ids}
   end
 
   defp uses_hours_tags?(team, hours_tags) do

@@ -12,6 +12,7 @@ defmodule App.Model.RedactFieldsTest do
 
   # Fields whose names match but hold no one's personal data or secret.
   @not_personal %{
+    {App.Model.AttentionSnooze, :key} => "which Needs attention item, like retiring",
     {App.Model.Certificate, :content_type} => "a file's MIME type",
     {App.Model.ChoreCategory, :description} => "what a team's chore category is for",
     {App.Model.CustomField, :value_units} => "a D4H field's unit, like km",

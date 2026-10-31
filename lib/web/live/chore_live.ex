@@ -24,20 +24,10 @@ defmodule Web.ChoreLive do
     socket
     |> assign(page_title: chore.description, chore: chore, own: false)
     |> assign(own_chore?: Chore.own?(chore, socket.assigns.current_member))
-    |> assign(decided_by: decider_name(team, chore.decided_by_user, DateTime.utc_now()))
+    |> assign(decided_by: Member.name_for_user(team, chore.decided_by_user, DateTime.utc_now()))
     |> assign(activity: chore.chore_event && ChoreEvent.local_activity(chore.chore_event))
     |> assign_decline_form(%{})
     |> then(&{:ok, &1})
-  end
-
-  # The team admin who decided, by their member name, or their email when no member has it.
-  defp decider_name(_team, nil, _now), do: nil
-
-  defp decider_name(team, user, now) do
-    case Member.find_by_email(team, user.email, now) do
-      %Member{name: name} -> name
-      nil -> user.email
-    end
   end
 
   defp assign_decline_form(socket, params, errors \\ []),
