@@ -27,6 +27,40 @@ defmodule App.Model.AttendanceTest do
     defp ids(query), do: query |> select([r], r.id) |> Repo.all() |> Enum.sort()
   end
 
+  # status_word_dynamic/1 is status_word/3 in SQL, for Reports (#768). Every status,
+  # before and after the start, through both, must agree.
+  test "status_word/3 and its SQL agree" do
+    team = team_fixture()
+    member = member_fixture(team)
+    past = activity_fixture(team, %{started_at: DateTime.add(@now, -1, :day)})
+    coming = activity_fixture(team, %{started_at: DateTime.add(@now, 1, :day)})
+
+    rows =
+      for activity <- [past, coming],
+          status <- ["attending", "absent", "requested", "unknown"],
+          started_at <- [activity.started_at, nil] do
+        attendance_fixture(activity, member, %{status: status, started_at: started_at})
+      end
+
+    from_sql =
+      Attendance
+      |> join(:inner, [r], a in assoc(r, :activity), as: :activity)
+      |> where([r], r.member_id == ^member.id)
+      |> select(^%{id: dynamic([r], r.id), word: Attendance.status_word_dynamic(@now)})
+      |> Repo.all()
+      |> Map.new(&{&1.id, &1.word})
+
+    activities = %{past.id => past, coming.id => coming}
+
+    for row <- rows do
+      expected = row |> Attendance.status_word(activities[row.activity_id], @now) |> to_string()
+      assert from_sql[row.id] == expected
+    end
+
+    assert from_sql |> Map.values() |> Enum.uniq() |> Enum.sort() ==
+             ~w(absent attended cant_make_it no_reply signed_up unknown)
+  end
+
   describe "one row per member per activity (#519)" do
     defp row(id, activity_id, member_id, status),
       do: %Attendance{id: id, activity_id: activity_id, member_id: member_id, status: status}

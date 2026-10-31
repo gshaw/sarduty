@@ -472,32 +472,28 @@ defmodule App.Model.Activity do
   Activities with none of the hours tags (#323): no primary, secondary, or other tag.
   `hours_tags` is hours_tags/1.
   """
-  def without_hours_tag(query, hours_tags) do
-    titles = hours_tags |> hours_titles() |> Jason.encode!()
-
-    where(
-      query,
-      [r],
-      fragment(
-        "NOT EXISTS (SELECT 1 FROM json_each(?) j WHERE j.value IN (SELECT value FROM json_each(?)))",
-        r.tags,
-        ^titles
-      )
-    )
-  end
+  def without_hours_tag(query, hours_tags),
+    do: where(query, ^dynamic([r], ^hours_tag_count_dynamic(hours_tags) == 0))
 
   @doc """
   Activities with two or more of the hours tags (#763), as `two_hours_tags?/2`.
   `hours_tags` is hours_tags/1.
   """
-  def with_two_hours_tags(query, hours_tags) do
+  def with_two_hours_tags(query, hours_tags),
+    do: where(query, ^dynamic([r], ^hours_tag_count_dynamic(hours_tags) >= 2))
+
+  @doc """
+  How many of the hours tags an activity has, in SQL, on the query's first binding: 0
+  for without_hours_tag/2, 2 or more for with_two_hours_tags/2, and Reports'
+  `hours_tag_count` (#768).
+  """
+  def hours_tag_count_dynamic(hours_tags) do
     titles = hours_tags |> hours_titles() |> Jason.encode!()
 
-    where(
-      query,
+    dynamic(
       [r],
       fragment(
-        "(SELECT COUNT(DISTINCT j.value) FROM json_each(?) j WHERE j.value IN (SELECT value FROM json_each(?))) >= 2",
+        "(SELECT COUNT(DISTINCT j.value) FROM json_each(?) j WHERE j.value IN (SELECT value FROM json_each(?)))",
         r.tags,
         ^titles
       )
