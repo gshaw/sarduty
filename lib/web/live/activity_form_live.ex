@@ -10,6 +10,7 @@ defmodule Web.ActivityFormLive do
   alias App.Model.GroupMember
   alias App.Model.Template
   alias App.Operation.SaveActivity
+  alias App.Operation.SaveCustomFields
   alias App.ViewModel.ActivityFormViewModel
   alias Web.ActivityTemplateLive
   alias Web.Components.PlaceBox
@@ -17,7 +18,7 @@ defmodule Web.ActivityFormLive do
   # Adding and changing activities (docs/records.md, #585). Delete is on the activity's
   # page, in Actions (docs/urls.md). Add activity can start from a template (#747): it
   # fills the form from the template's details, lists what saving adds after, and Save
-  # does what Apply a template does, then publishes last. `?template=` picks one.
+  # does what Apply a template does. `?template=` picks one.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     activity = if id = params["id"], do: Activity.find!(team, id)
@@ -52,7 +53,7 @@ defmodule Web.ActivityFormLive do
         socket
 
       template ->
-        params = ActivityFormViewModel.template_params(%{}, template)
+        params = ActivityFormViewModel.template_params(%{}, template, today(socket))
 
         socket
         |> picked(template, params)
@@ -123,14 +124,8 @@ defmodule Web.ActivityFormLive do
           options={ActivityFormViewModel.kinds()}
         />
         <.input field={@form[:title]} label="Title" />
-        <%!-- A template's activity is one evening, so it takes a date and two times. --%>
-        <div :if={@template} id="activity-date-times" class="grid md:grid-cols-3 gap-x-6">
-          <.input field={@form[:date]} type="date" label="Date" />
-          <.input field={@form[:start_time]} type="time" label="Start" />
-          <.input field={@form[:finish_time]} type="time" label="Finish" />
-        </div>
         <%!-- Side by side only where a date and time fit in half the width. --%>
-        <div :if={!@template} class="grid md:grid-cols-2 gap-x-6">
+        <div class="grid md:grid-cols-2 gap-x-6">
           <.input field={@form[:starts_at]} type="datetime-local" label="Start" />
           <.input field={@form[:ends_at]} type="datetime-local" label="Finish" />
         </div>
@@ -177,7 +172,8 @@ defmodule Web.ActivityFormLive do
         passed={passed_text(@form, @current_team)}
         team={@current_team}
       />
-      <.input field={@form[:published]} type="checkbox" label="Published">
+      <%!-- With a template, publishing is a second step, once what it added is checked. --%>
+      <.input :if={!@template} field={@form[:published]} type="checkbox" label="Published">
         Attendance cannot be changed once the activity is published.
       </.input>
       <.form_actions>
@@ -229,7 +225,12 @@ defmodule Web.ActivityFormLive do
             do:
               CustomField.rows(
                 assigns.fields,
-                assigns.template.custom_values,
+                SaveCustomFields.fill_empty(
+                  %{},
+                  %Activity{},
+                  assigns.fields,
+                  assigns.template.custom_values
+                ),
                 assigns.team.timezone,
                 restricted: true
               ),
@@ -326,9 +327,17 @@ defmodule Web.ActivityFormLive do
 
   def handle_event("validate", %{"form" => params} = event, socket) do
     socket =
-      if event["_target"] == ["form", "template_id"],
-        do: pick(socket, params),
-        else: socket |> assign(params: params) |> validate(params)
+      case {event["_target"], socket.assigns.template} do
+        {["form", "template_id"], _template} ->
+          pick(socket, params)
+
+        # While a template is picked, Finish keeps its length after Start.
+        {["form", "starts_at"], %Template{} = template} ->
+          typed(socket, ActivityFormViewModel.follow_start(params, template))
+
+        _other ->
+          typed(socket, params)
+      end
 
     if event["_target"] == ["form", "place"], do: PlaceBox.typed("activity", params["place"])
     {:noreply, socket}
@@ -338,7 +347,7 @@ defmodule Web.ActivityFormLive do
     %{current_team: team, current_user: user} = socket.assigns
     now = DateTime.utc_now()
 
-    case SaveActivity.call(team, nil, params, user, now, hold_publish: true) do
+    case SaveActivity.call(team, nil, params, user, now) do
       # The copy hasn't caught up, so the template waits for the activity's page.
       {:ok, nil} ->
         text = "Added #{params["title"]}. Apply the template from its page once it shows."
@@ -346,7 +355,7 @@ defmodule Web.ActivityFormLive do
         {:noreply, socket |> put_flash(:error, text) |> push_navigate(to: path)}
 
       {:ok, activity} ->
-        {:noreply, added(socket, activity, params["published"] == "true", now)}
+        {:noreply, added(socket, activity, now)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign_form(socket, changeset)}
@@ -366,42 +375,31 @@ defmodule Web.ActivityFormLive do
     end
   end
 
-  # Picking a template fills the form from it; None goes back to the two date-and-time
-  # boxes with the times picked.
+  # Picking a template fills the form from it; None leaves the form as it is.
   defp pick(socket, params) do
     case find_template(socket, params["template_id"]) do
       nil ->
-        # The times as the template's date and two times made them.
-        times = Map.put(params, "template_id", socket.assigns.params["template_id"])
-        changeset = ActivityFormViewModel.changeset(socket.assigns.form_data, times)
-
-        params =
-          Map.merge(params, %{
-            "starts_at" => naive_text(Ecto.Changeset.get_field(changeset, :starts_at)),
-            "ends_at" => naive_text(Ecto.Changeset.get_field(changeset, :ends_at))
-          })
-
-        socket |> assign(template: nil, params: params) |> validate(params)
+        socket |> assign(template: nil) |> typed(params)
 
       template ->
-        params = ActivityFormViewModel.template_params(params, template)
+        params = ActivityFormViewModel.template_params(params, template, today(socket))
         socket |> picked(template, params) |> validate(params)
     end
   end
 
-  defp naive_text(nil), do: nil
+  defp typed(socket, params), do: socket |> assign(params: params) |> validate(params)
 
-  defp naive_text(naive),
-    do: naive |> NaiveDateTime.truncate(:second) |> NaiveDateTime.to_iso8601()
+  defp today(socket) do
+    {today, _time} =
+      Service.Convert.utc_to_local(DateTime.utc_now(), socket.assigns.current_team.timezone)
 
-  # The template's steps on the new activity, then Published, then its page with one flash.
-  defp added(socket, activity, published?, now) do
+    today
+  end
+
+  # The template's steps on the new activity, then its page with one flash.
+  defp added(socket, activity, now) do
     %{current_team: team, current_user: user, template: template} = socket.assigns
-
-    {kind, lines} =
-      team
-      |> add_template(user, activity, template, now)
-      |> publish_last(published?, activity, socket)
+    {kind, lines} = add_template(team, user, activity, template, now)
 
     text = Enum.join(["Added #{activity.title}." | lines], " ")
     path = ~p"/teams/#{team}/activities/#{activity.id}"
@@ -419,22 +417,6 @@ defmodule Web.ActivityFormLive do
       {:error, text} -> {:error, [text]}
     end
   end
-
-  # Published goes last, once the fields and members have gone, since D4H locks them. A
-  # refusal before it leaves the activity unpublished.
-  defp publish_last(result, false = _published?, _activity, _socket), do: result
-
-  defp publish_last({:info, lines}, true, activity, socket) do
-    %{current_team: team, current_user: user} = socket.assigns
-
-    case SaveActivity.publish(team, activity, user, DateTime.utc_now()) do
-      {:ok, _activity} -> {:info, lines}
-      {:error, error} -> {:error, lines ++ ["It was not published.", error]}
-    end
-  end
-
-  defp publish_last({kind, lines}, true, _activity, _socket),
-    do: {kind, Enum.concat(lines, ["It was not published."])}
 
   # A place picked, or its pin removed (#610).
   def handle_info({PlaceBox, values}, socket) do

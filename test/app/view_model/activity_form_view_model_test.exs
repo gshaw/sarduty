@@ -21,7 +21,9 @@ defmodule App.ViewModel.ActivityFormViewModelTest do
     assert {"Enter a finish after the start.", _} = changeset.errors[:ends_at]
   end
 
-  test "a template fills its details, and the finish from its length" do
+  @today ~D[2026-11-02]
+
+  test "a template fills its details, its start time today, and the finish from its length" do
     template = %App.Model.Template{
       id: 7,
       title: "Monday night training",
@@ -34,14 +36,14 @@ defmodule App.ViewModel.ActivityFormViewModelTest do
       description: "<div>Bring a radio.</div>"
     }
 
-    params = ActivityFormViewModel.template_params(%{"tracking_number" => "A1"}, template)
+    params = ActivityFormViewModel.template_params(%{"tracking_number" => "A1"}, template, @today)
 
     assert params == %{
              "template_id" => "7",
              "kind" => "exercise",
              "title" => "Monday night training",
-             "start_time" => "19:00",
-             "finish_time" => "21:30",
+             "starts_at" => "2026-11-02T19:00",
+             "ends_at" => "2026-11-02T21:30",
              "place" => "Hall",
              "coordinate" => "49.10000,-123.10000",
              "hours" => "secondary",
@@ -50,35 +52,68 @@ defmodule App.ViewModel.ActivityFormViewModelTest do
            }
   end
 
-  test "a template with no details fills its name and leaves what was typed" do
-    template = %App.Model.Template{id: 7, title: "Truck 1", hours: "primary"}
-    params = ActivityFormViewModel.template_params(%{"place" => "Yard"}, template)
-
-    assert params == %{
-             "template_id" => "7",
-             "title" => "Truck 1",
-             "hours" => "primary",
-             "place" => "Yard"
-           }
-  end
-
-  test "with a template, a date and two times; a finish before the start is the next day" do
-    params = %{
-      template_id: "7",
-      title: "Night search",
-      date: "2026-11-02",
-      start_time: "22:00",
-      finish_time: "02:00"
+  test "a template's start time goes on the day Start has, and its length can run for days" do
+    template = %App.Model.Template{
+      id: 7,
+      title: "Weekend exercise",
+      start_time: ~T[08:00:00],
+      length_minutes: 36 * 60,
+      hours: "primary"
     }
 
-    assert {:ok, form} = ActivityFormViewModel.validate(%ActivityFormViewModel{}, params)
-    assert form.starts_at == ~N[2026-11-02 22:00:00]
-    assert form.ends_at == ~N[2026-11-03 02:00:00]
+    params = %{"starts_at" => "2026-11-07T10:15", "ends_at" => "2026-11-07T12:00"}
+    params = ActivityFormViewModel.template_params(params, template, @today)
 
-    assert {:error, changeset} =
-             ActivityFormViewModel.validate(%ActivityFormViewModel{}, %{params | date: ""})
-
-    assert {"Enter the date.", _} = changeset.errors[:date]
-    refute changeset.errors[:starts_at]
+    assert params["starts_at"] == "2026-11-07T08:00"
+    assert params["ends_at"] == "2026-11-08T20:00"
   end
+
+  test "a template with no details fills its name and leaves what was typed" do
+    template = %App.Model.Template{id: 7, title: "Truck 1", hours: "primary"}
+    typed = %{"place" => "Yard", "coordinate" => "49.10000,-123.10000", "starts_at" => "x"}
+    params = ActivityFormViewModel.template_params(typed, template, @today)
+
+    assert params ==
+             Map.merge(typed, %{"template_id" => "7", "title" => "Truck 1", "hours" => "primary"})
+  end
+
+  test "a template's address and pin replace the form's as a pair" do
+    typed = %{"place" => "Yard", "coordinate" => "49.10000,-123.10000"}
+
+    address = %App.Model.Template{
+      id: 7,
+      title: "Boat launch",
+      place: "Boat launch",
+      hours: "primary"
+    }
+
+    pin = %App.Model.Template{
+      id: 8,
+      title: "Pin",
+      coordinate: "49.20000,-123.20000",
+      hours: "primary"
+    }
+
+    params = ActivityFormViewModel.template_params(typed, address, @today)
+    assert {params["place"], params["coordinate"]} == {"Boat launch", ""}
+    assert {:ok, form} = ActivityFormViewModel.validate(%ActivityFormViewModel{}, filled(params))
+    assert form.coordinate == nil
+
+    params = ActivityFormViewModel.template_params(typed, pin, @today)
+    assert {params["place"], params["coordinate"]} == {"", "49.20000,-123.20000"}
+  end
+
+  test "Finish follows Start by the template's length, and stays as typed without one" do
+    params = %{"starts_at" => "2026-11-09T19:00", "ends_at" => "2026-11-02T21:30"}
+    template = %App.Model.Template{id: 7, title: "Training", length_minutes: 150}
+
+    assert ActivityFormViewModel.follow_start(params, template)["ends_at"] == "2026-11-09T21:30"
+    assert ActivityFormViewModel.follow_start(params, %{template | length_minutes: nil}) == params
+
+    assert ActivityFormViewModel.follow_start(%{params | "starts_at" => ""}, template)["ends_at"] ==
+             "2026-11-02T21:30"
+  end
+
+  defp filled(params),
+    do: Map.merge(params, %{"starts_at" => "2026-11-02T19:00", "ends_at" => "2026-11-02T21:00"})
 end

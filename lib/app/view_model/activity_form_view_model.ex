@@ -12,15 +12,11 @@ defmodule App.ViewModel.ActivityFormViewModel do
   @hours [{"Primary", "primary"}, {"Secondary", "secondary"}, {"Neither", "none"}]
 
   # Adding or changing an activity. Times are on the team's wall clock. The description is
-  # HTML, cleaned to what the editor makes (Service.DescriptionHTML). Add activity with a
-  # template picked (#747) takes a date and two times in place of the two date-and-time
-  # boxes, and a finish before the start is the next day.
+  # HTML, cleaned to what the editor makes (Service.DescriptionHTML). Add activity can
+  # start from a template (#747), which fills the form: template_params/3.
   @primary_key false
   embedded_schema do
     field :template_id, :integer
-    field :date, :date
-    field :start_time, :time
-    field :finish_time, :time
     field :kind, :string, default: "exercise"
     field :title, Field.TrimmedString
     field :description, Field.TrimmedString
@@ -38,9 +34,6 @@ defmodule App.ViewModel.ActivityFormViewModel do
     :template_id,
     :kind,
     :title,
-    :date,
-    :start_time,
-    :finish_time,
     :starts_at,
     :ends_at,
     :place,
@@ -109,40 +102,72 @@ defmodule App.ViewModel.ActivityFormViewModel do
   @doc """
   `params` with what `template` fills in on Add activity (#746, #747): its kind when it
   has one, its title or else its name, its tax credit hours, and each other detail it
-  has, its start time and its finish from the length. Picking it again replaces them. The
-  date stays as typed.
+  has. Its start time goes on Start's day, or `today` when Start is empty, and Finish is
+  Start and its length. Its address and pin go together, so an address with no pin
+  clears the pin picked before. Picking it again replaces them.
   """
-  def template_params(params, %Template{} = template) do
-    finish =
-      if template.start_time && template.length_minutes,
-        do: Time.add(template.start_time, template.length_minutes, :minute)
+  def template_params(params, %Template{} = template, %Date{} = today) do
+    starts_at = template_start(params["starts_at"], template.start_time, today)
 
     filled = %{
       "kind" => template.activity_kind,
       "title" => template.activity_title || template.title,
-      "start_time" => time_text(template.start_time),
-      "finish_time" => time_text(finish),
-      "place" => template.place,
-      "coordinate" => template.place && template.coordinate,
+      "starts_at" => template.start_time && input_text(starts_at),
+      "ends_at" => input_text(finish(starts_at, template)),
       "hours" => template.hours,
       "description" => template.description
     }
 
     params
     |> Map.merge(Map.reject(filled, fn {_key, value} -> is_nil(value) end))
+    |> Map.merge(place_params(template))
     |> Map.put("template_id", Integer.to_string(template.id))
   end
 
-  defp time_text(nil), do: nil
-  defp time_text(time), do: Calendar.strftime(time, "%H:%M")
+  @doc """
+  `params` with Finish moved to keep `template`'s length after Start, which just changed
+  (#747). A template with no length leaves Finish as typed.
+  """
+  def follow_start(params, %Template{} = template) do
+    case finish(cast_naive(params["starts_at"]), template) do
+      nil -> params
+      ends_at -> Map.put(params, "ends_at", input_text(ends_at))
+    end
+  end
+
+  defp template_start(typed, nil = _start_time, _today), do: cast_naive(typed)
+
+  defp template_start(typed, start_time, today) do
+    day = if starts_at = cast_naive(typed), do: NaiveDateTime.to_date(starts_at), else: today
+    NaiveDateTime.new!(day, start_time)
+  end
+
+  defp finish(%NaiveDateTime{} = starts_at, %Template{length_minutes: minutes})
+       when is_integer(minutes),
+       do: NaiveDateTime.add(starts_at, minutes, :minute)
+
+  defp finish(_starts_at, _template), do: nil
+
+  defp place_params(%Template{place: nil, coordinate: nil}), do: %{}
+
+  defp place_params(%Template{place: place, coordinate: coordinate}),
+    do: %{"place" => place || "", "coordinate" => coordinate || ""}
+
+  defp cast_naive(value) do
+    case Ecto.Type.cast(:naive_datetime, value) do
+      {:ok, %NaiveDateTime{} = naive} -> naive
+      _blank_or_not_a_time -> nil
+    end
+  end
+
+  # As the browser's date-and-time box takes it, to the minute.
+  defp input_text(nil), do: nil
+  defp input_text(naive), do: Calendar.strftime(naive, "%Y-%m-%dT%H:%M")
 
   def changeset(%__MODULE__{} = form, params \\ %{}) do
     form
     |> cast(params, [
       :template_id,
-      :date,
-      :start_time,
-      :finish_time,
       :kind,
       :title,
       :description,
@@ -155,7 +180,8 @@ defmodule App.ViewModel.ActivityFormViewModel do
       :published
     ])
     |> validate_required([:title], message: "Enter a title.")
-    |> validate_times()
+    |> validate_required([:starts_at], message: "Enter when it starts.")
+    |> validate_required([:ends_at], message: "Enter when it finishes.")
     |> validate_inclusion(:kind, Enum.map(@kinds, &elem(&1, 1)))
     |> validate_inclusion(:hours, Enum.map(@hours, &elem(&1, 1)))
     |> validate_length(:title, max: 100)
@@ -163,40 +189,8 @@ defmodule App.ViewModel.ActivityFormViewModel do
     |> Coordinate.put_pin()
     |> validate_length(:tracking_number, max: 50)
     |> validate_length(:description, max: 10_000)
+    |> validate_ends_after_starts()
     |> Validate.in_field_order(@fields)
-  end
-
-  defp validate_times(changeset) do
-    if get_field(changeset, :template_id) do
-      changeset
-      |> validate_required([:date], message: "Enter the date.")
-      |> validate_required([:start_time], message: "Enter when it starts.")
-      |> validate_required([:finish_time], message: "Enter when it finishes.")
-      |> put_date_times()
-    else
-      changeset
-      |> validate_required([:starts_at], message: "Enter when it starts.")
-      |> validate_required([:ends_at], message: "Enter when it finishes.")
-      |> validate_ends_after_starts()
-    end
-  end
-
-  # The start and finish from the date and two times. A finish before the start is the
-  # next day, such as a night search from 22:00 to 02:00.
-  defp put_date_times(changeset) do
-    date = get_field(changeset, :date)
-    start = get_field(changeset, :start_time)
-    finish = get_field(changeset, :finish_time)
-
-    if date && start && finish do
-      finish_date = if Time.before?(finish, start), do: Date.add(date, 1), else: date
-
-      changeset
-      |> put_change(:starts_at, NaiveDateTime.new!(date, start))
-      |> put_change(:ends_at, NaiveDateTime.new!(finish_date, finish))
-    else
-      changeset
-    end
   end
 
   # A finish at the start is fine: chore events last no time (#487), and D4H and Records

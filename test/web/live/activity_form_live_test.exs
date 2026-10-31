@@ -109,36 +109,48 @@ defmodule Web.ActivityFormLiveTest do
        %{conn: conn, team: team} do
     %{template: template, radio: radio, gone: gone, group: group} = template_with_details(team)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
-    assert has_element?(lv, "#form_starts_at")
+    assert has_element?(lv, "#form_published")
     refute has_element?(lv, "#activity-template-adds")
 
     pick_template(lv, template)
+    {today, _time} = Service.Convert.utc_to_local(DateTime.utc_now(), team.timezone)
 
     assert has_element?(lv, ~s|#form_title[value="Monday night training"]|)
-    assert has_element?(lv, ~s|#form_start_time[value="19:00"]|)
-    assert has_element?(lv, ~s|#form_finish_time[value="21:30"]|)
+    assert has_element?(lv, ~s|#form_starts_at[value="#{today}T19:00"]|)
+    assert has_element?(lv, ~s|#form_ends_at[value="#{today}T21:30"]|)
     assert has_element?(lv, ~s|#form_hours option[value="secondary"][selected]|)
-    assert has_element?(lv, "#form_date")
-    refute has_element?(lv, "#form_starts_at")
+    refute has_element?(lv, "#form_published")
     assert has_element?(lv, "#activity-template-items #item-#{radio.id}")
     refute has_element?(lv, "#activity-template-items #item-#{gone.id}")
     assert has_element?(lv, "#activity-template-tags", "Rope")
+
+    # Finish follows Start.
+    next_week = Date.add(today, 7)
+    change_start(lv, "#{next_week}T18:30")
+    assert has_element?(lv, ~s|#form_ends_at[value="#{next_week}T21:00"]|)
     assert has_element?(lv, "#activity-template-groups #group-#{group.id}-members", "2")
 
     # A date gone by leaves the groups out, as Apply a template does.
-    lv |> form("#activity-form", form: %{date: "2020-11-02"}) |> render_change()
+    change_start(lv, "2020-11-02T19:00")
+    assert has_element?(lv, ~s|#form_ends_at[value="2020-11-02T21:30"]|)
     refute has_element?(lv, "#activity-template-groups")
     assert has_element?(lv, "#activity-template-groups-passed", "Nov 2 has passed.")
 
-    # None goes back to the two date-and-time boxes, with the times picked.
+    # None leaves the form as it is.
     lv
     |> form("#activity-form", form: %{template_id: ""})
     |> render_change(%{"_target" => ["form", "template_id"]})
 
-    assert has_element?(lv, ~s|#form_starts_at[value="2020-11-02T19:00"]|)
     assert has_element?(lv, ~s|#form_ends_at[value="2020-11-02T21:30"]|)
+    assert has_element?(lv, "#form_published")
     refute has_element?(lv, "#activity-template-adds")
   end
+
+  defp change_start(lv, starts_at),
+    do:
+      lv
+      |> form("#activity-form", form: %{starts_at: starts_at})
+      |> render_change(%{"_target" => ["form", "starts_at"]})
 
   test "the template's page opens Add activity with it picked", %{conn: conn, team: team} do
     %{template: template} = template_with_details(team)
@@ -159,10 +171,8 @@ defmodule Web.ActivityFormLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
     pick_template(lv, template)
-
-    lv
-    |> form("#activity-form", form: %{date: Date.to_iso8601(date)})
-    |> render_submit()
+    change_start(lv, "#{date}T09:00")
+    lv |> form("#activity-form") |> render_submit()
 
     assert_received {:write, "/exercises", %{"referenceDescription" => "Monday night training"}}
     assert_received {:write, "/exercises/88/tags", %{"tagIds" => [2]}}
@@ -179,7 +189,7 @@ defmodule Web.ActivityFormLiveTest do
     assert flash["info"] =~ "2 members added."
   end
 
-  test "with Published ticked, the template's fields go first and Published last",
+  test "with a template, the activity is added unpublished, with the template's fields",
        %{conn: conn, team: team} do
     field = custom_field_fixture(team, %{target: "exercise", title: "Lead instructor"})
     %{template: template} = template_with_details(team, %{start_time: ~T[09:00:00]})
@@ -191,13 +201,11 @@ defmodule Web.ActivityFormLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
     pick_template(lv, template)
     assert has_element?(lv, "#activity-template-fields", "Dana")
-
-    lv
-    |> form("#activity-form", form: %{date: Date.to_iso8601(date), published: true})
-    |> render_submit()
+    change_start(lv, "#{date}T09:00")
+    lv |> form("#activity-form") |> render_submit()
 
     assert_received {:write, "/exercises/88/publish", %{"published" => false}}
-    assert_received {:write, "/exercises/88/publish", %{"published" => true}}
+    refute_received {:write, "/exercises/88/publish", %{"published" => true}}
     refute_received {:write, "/attendance", _json}
 
     {_path, flash} = assert_redirect(lv)

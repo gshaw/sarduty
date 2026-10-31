@@ -129,13 +129,19 @@ Add activity starts with a Template box (#747), and a template's page has "Add a
 from this template" in Actions, which opens it picked (`/activities/new?template=<id>`).
 None leaves the form as it was. Picking one fills the form from its
 [details](#activity-details)
-(`ActivityFormViewModel.template_params/2`): its kind when it has one, its title or
+(`ActivityFormViewModel.template_params/3`): its kind when it has one, its title or
 else its name, its tax credit hours, and each other detail it has. Picking again
-replaces them; a detail the template lacks leaves what was typed. With a template the
-form takes a Date, a Start, and a Finish in place of the two date-and-time boxes, since
-a template's activity is one evening; a Finish before the Start is the next day. The
-template fills the times and leaves the date empty. Several nights are one at a time:
-no recurrence, no Save and add another.
+replaces them; a detail the template lacks leaves what was typed. The address and pin
+go as a pair, so a template's address with no pin clears the pin picked before.
+
+The form keeps its Start and Finish date-and-time boxes (decided 2026-10-30, over a
+Date box and two times, which could not reach past the next day). A template is a start
+time and a length; the activity is a start and a finish. Picking one puts its start time
+on Start's day, or today when Start is empty, and Finish is Start and the length, so a
+36-hour exercise finishes the day after next. While a template is picked, changing
+Start moves Finish to keep the length (`follow_start/2`); Finish can still be typed.
+With no template the two boxes are independent. Several nights are one at a time: no
+recurrence, no Save and add another.
 
 Under the form, read only, is what saving adds after: the template's fields (only when
 Kind is still the template's), its items in service, its tags, and its groups with their
@@ -147,7 +153,7 @@ Save adds the activity, then sends the rest as Apply a template does, through th
 members, stopping at the first refusal. One flash says it all in that order, starting
 "Added Monday night training." A refusal after the activity went still lands on its
 page, with an error flash saying what went and what didn't; Apply a template sends the
-rest once it is fixed. With Published ticked the activity is added unpublished and
-published last (`SaveActivity.publish/4`), since D4H locks a published activity's
-fields and attendance; if anything before it was refused, it stays unpublished and the
-flash says so. Records teams have the same form and steps.
+rest once it is fixed. With a template there is no Published box: the activity is added
+unpublished, and publishing is a second step on Change activity, once what the template
+added is checked (decided 2026-10-30). D4H locks a published activity's fields and
+attendance, so they go first. Records teams have the same form and steps.
