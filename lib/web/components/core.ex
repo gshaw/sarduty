@@ -633,15 +633,11 @@ defmodule Web.Components.Core do
   @doc """
   A box for how long something takes, as Service.Convert.parse_duration/1 reads it: "45m",
   "2h", "2.5h", "1h 30m". Under it, once it reads, what it reads as: "Reads as 2h 30m."
-  Chores' Time and a template's Duration. See /styles/forms#below.
+  Chores' Time and a template's Duration. See /styles/duration-input.
   """
   def duration_input(assigns) do
     %{field: field, minutes: minutes} = assigns
-
-    errors =
-      if match?(%Ecto.Changeset{}, field.form.source), do: field.form.source.errors, else: []
-
-    assigns = assign(assigns, read: !Keyword.has_key?(errors, field.field) && minutes.value)
+    assigns = assign(assigns, read: !duration_error?(field) && minutes.value)
 
     ~H"""
     <div class="max-w-xs">
@@ -656,6 +652,13 @@ defmodule Web.Components.Core do
     </div>
     """
   end
+
+  # A changeset's error shows only after a save, but the box reads as nothing from the
+  # moment it's typed wrong.
+  defp duration_error?(%{form: %{source: %Ecto.Changeset{errors: errors}}, field: name}),
+    do: Keyword.has_key?(errors, name)
+
+  defp duration_error?(field), do: field.errors != []
 
   @doc """
   Renders a select you type into (#324): a text box that lists the options containing every
