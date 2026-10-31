@@ -99,6 +99,25 @@ defmodule Web.ActivityCollectionLiveTest do
     refute has_element?(lv, "#activity_collection .marker-more", "Draft")
   end
 
+  test "a coming activity's badge follows its title (#447)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    starts = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+
+    short =
+      team
+      |> activity_fixture(%{started_at: starts, finished_at: DateTime.add(starts, 2, :hour)})
+      |> Ecto.Changeset.change(enough_at: 2)
+      |> App.Repo.update!()
+
+    plain =
+      activity_fixture(team, %{started_at: starts, finished_at: DateTime.add(starts, 2, :hour)})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?when=all")
+
+    assert has_element?(lv, "#activity-#{short.id}-need", "2 more needed")
+    refute has_element?(lv, "#activity-#{plain.id}-need")
+  end
+
   test "a team without chores has no Chores tile", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 

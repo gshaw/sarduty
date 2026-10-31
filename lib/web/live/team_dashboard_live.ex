@@ -198,6 +198,7 @@ defmodule Web.TeamDashboardLive do
         team={@current_team}
         activities={@view_data.coming_up}
         replies={Enum.map(@view_data.coming_up, &reply_assigns(assigns, &1))}
+        counts={@counts}
         now={@now}
       />
       <div class="card-stack span-6">
@@ -313,7 +314,12 @@ defmodule Web.TeamDashboardLive do
       <h2 class="activity-panel-title">
         <.a navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>{@activity.title}</.a>
       </h2>
-      <p id="next-up-hint" class="hint">{where_and_when(@activity, @counts, @now)}</p>
+      <p id="next-up-hint" class="hint">
+        <span class="with-badge">
+          {where_and_when(@activity, @counts, @now)}
+          <.need_badge id="next-up-need" activity={@activity} counts={@counts} now={@now} />
+        </span>
+      </p>
       <.open_in_maps
         id="next-up-maps"
         app={@maps_app}
@@ -344,6 +350,7 @@ defmodule Web.TeamDashboardLive do
   attr :team, :map, required: true
   attr :activities, :list, required: true
   attr :replies, :list, required: true, doc: "each activity's reply assigns, or nil"
+  attr :counts, :map, required: true, doc: "`Attendance.reply_counts/2` by activity id"
   attr :now, :any, required: true
 
   # The title is each row's link, so a row can hold the reply's buttons.
@@ -362,7 +369,13 @@ defmodule Web.TeamDashboardLive do
           :for={{activity, reply} <- Enum.zip(@activities, @replies)}
           id={"coming-up-#{activity.id}"}
         >
-          <.coming_up_row team={@team} activity={activity} reply={reply} now={@now} />
+          <.coming_up_row
+            team={@team}
+            activity={activity}
+            counts={@counts[activity.id]}
+            reply={reply}
+            now={@now}
+          />
         </li>
       </ul>
       <footer class="action">
@@ -374,6 +387,7 @@ defmodule Web.TeamDashboardLive do
 
   attr :team, :map, required: true
   attr :activity, :map, required: true
+  attr :counts, :map, required: true
   attr :reply, :map, default: nil
   attr :now, :any, required: true
 
@@ -388,7 +402,15 @@ defmodule Web.TeamDashboardLive do
       </div>
       <div class="dash-row-title">
         <.activity_kind_mark activity={@activity} class="text-sm" />
-        <.a navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>{@activity.title}</.a>
+        <span class="with-badge">
+          <.a navigate={~p"/teams/#{@team}/activities/#{@activity.id}"}>{@activity.title}</.a>
+          <.need_badge
+            id={"coming-up-need-#{@activity.id}"}
+            activity={@activity}
+            counts={@counts}
+            now={@now}
+          />
+        </span>
         <.live_component
           :if={@reply}
           module={ReplyControl}

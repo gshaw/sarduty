@@ -66,6 +66,14 @@ defmodule Web.TemplateLive do
             <dt>Duration</dt>
             <dd>{Service.Format.duration(@template.duration_minutes)}</dd>
           </div>
+          <div :if={@template.enough_at}>
+            <dt>Enough at</dt>
+            <dd>{@template.enough_at}</dd>
+          </div>
+          <div :if={@template.full_at}>
+            <dt>Full at</dt>
+            <dd>{@template.full_at}</dd>
+          </div>
           <div :if={@template.place}>
             <dt>Address</dt>
             <dd>{@template.place}</dd>

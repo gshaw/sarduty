@@ -85,8 +85,9 @@ defmodule App.Operation.SaveActivityTest do
     row = SaveActivity.plan(activity(), values(%{hours: "secondary"}), @tag_ids, @team)
 
     assert row.action == :update_activity
-    assert row.new_value == %{"tag_ids" => [2, 3]}
+    assert row.new_value == %{"tag_ids" => [2, 3], "hours" => "secondary"}
     assert row.old_value["kind"] == "exercise"
+    assert row.old_value["hours"] == "primary"
   end
 
   test "a change names only the fields that differ" do
@@ -111,7 +112,59 @@ defmodule App.Operation.SaveActivityTest do
 
     values = struct(ActivityFormViewModel.from_activity(activity, team), hours: "secondary")
     row = SaveActivity.plan(activity, values, tag_ids, team)
-    assert row.new_value == %{"tag_ids" => [3, 8]}
+    assert row.new_value == %{"tag_ids" => [3, 8], "hours" => "secondary"}
+  end
+
+  describe "Enough at and Full at (#447)" do
+    test "a numbers-only save is a row of the numbers alone, which the adapter sends nothing of" do
+      activity = %{activity() | enough_at: 8}
+      form = ActivityFormViewModel.from_activity(activity, @team)
+      assert SaveActivity.plan(activity, form, @tag_ids, @team) == :unchanged
+
+      row = SaveActivity.plan(activity, %{form | enough_at: 10, full_at: 14}, @tag_ids, @team)
+
+      assert row.action == :update_activity
+      assert row.new_value == %{"enough_at" => 10, "full_at" => 14}
+      assert row.old_value == %{"enough_at" => 8, "full_at" => nil, "kind" => "exercise"}
+    end
+
+    test "a mixed save names the numbers beside the title" do
+      row =
+        SaveActivity.plan(activity(), values(%{title: "Night nav", full_at: 14}), @tag_ids, @team)
+
+      assert row.new_value == %{"title" => "Night nav", "full_at" => 14}
+
+      assert row.old_value == %{
+               "title" => "Night navigation",
+               "full_at" => nil,
+               "kind" => "exercise"
+             }
+    end
+
+    test "Add activity puts the numbers it has on the create, and none it doesn't" do
+      form = %ActivityFormViewModel{
+        title: "Pancake breakfast",
+        starts_at: ~N[2026-11-07 09:00:00],
+        ends_at: ~N[2026-11-07 13:00:00],
+        enough_at: 10
+      }
+
+      new = SaveActivity.plan(nil, form, @tag_ids, @team).new_value
+      assert new["enough_at"] == 10
+      refute Map.has_key?(new, "full_at")
+    end
+
+    test "a published activity keeps its numbers, as its other boxes" do
+      activity = %{activity() | is_published: true}
+      form = ActivityFormViewModel.from_activity(activity, @team)
+      assert SaveActivity.plan(activity, %{form | enough_at: 10}, @tag_ids, @team) == :unchanged
+    end
+
+    test "numbers_row/2 sets both, from what the activity has" do
+      row = SaveActivity.numbers_row(%{activity() | full_at: 3}, %{enough_at: 10, full_at: nil})
+      assert row.new_value == %{"enough_at" => 10, "full_at" => nil}
+      assert row.old_value == %{"enough_at" => nil, "full_at" => 3, "kind" => "exercise"}
+    end
   end
 
   # The form's time inputs send minutes, so seconds from D4H must not read as a change.
@@ -203,7 +256,11 @@ defmodule App.Operation.SaveActivityTest do
           team
         )
 
-      assert row.new_value == %{"description" => "<ul><li>Headlamp</li></ul>", "tag_ids" => [3]}
+      assert row.new_value == %{
+               "description" => "<ul><li>Headlamp</li></ul>",
+               "tag_ids" => [3],
+               "hours" => "none"
+             }
     end
   end
 end

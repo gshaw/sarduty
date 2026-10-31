@@ -251,6 +251,9 @@ and must not be used for it.
 | away period                         | LOA, absence                                   | Dated time a member is away, with a short reason such as "Parental leave".                           |
 | no-show                             | absentee, missing member, did not attend       | A member who signed up for an activity and did not arrive.                                           |
 | signed up for                       | registered, going, coming, attending, RSVP     | A member's yes to an activity that hasn't started: Attending in D4H. Hours count once it starts.     |
+| Enough at                           | minimum, target                                | How many signed up is enough for an activity. Short of it, it shows "4 more needed".                 |
+| Full at                             | capacity, limit, maximum, spots, seats         | How many signed up makes an activity full. Members can still reply I'll be there.                    |
+| full                                | at capacity, booked                            | An activity with Full at or more signed up. A grey badge, nothing to act on.                         |
 | add (to an activity)                | invite, request                                | Putting a member on an activity, as No reply, so they can reply. SAR Duty emails nobody.             |
 | invitation                          | request                                        | What a member on an activity sees and replies to: Will you be there?                                 |
 | reply                               | RSVP, response, answer                         | A member's answer to an invitation: "I'll be there" or "Can't make it".                              |

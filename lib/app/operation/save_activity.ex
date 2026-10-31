@@ -12,6 +12,11 @@ defmodule App.Operation.SaveActivity do
   (Service.DescriptionHTML), and only when it changed; one the editor can't hold is left
   out. On a D4H team, a new activity has `full_team` and `shared` false, as a chore event
   does (#341), so D4H adds no one's attendance. Records ignores them.
+
+  Enough at and Full at (#447) are SAR Duty's own. They ride on the row, as does the hours
+  choice when it changes, so History names them (App.ViewData.ChangeHistory), and the
+  adapter sends neither: a row with only them makes no request. Once the row applies,
+  call/5 writes them to the activity, since a refresh never copies them.
   """
 
   alias App.Accounts.User
@@ -22,6 +27,8 @@ defmodule App.Operation.SaveActivity do
   alias App.Operation.ApplyEdit
   alias App.Repo
   alias App.ViewModel.ActivityFormViewModel
+
+  @numbers ["enough_at", "full_at"]
 
   @doc """
   `{:ok, activity}`, `{:error, changeset}` for the form, or `{:error, text}` when the
@@ -53,9 +60,47 @@ defmodule App.Operation.SaveActivity do
 
   defp apply_row(team, user, activity, row, now) do
     with {:ok, d4h_activity_id} <-
-           ApplyEdit.call(team, user, row, now, activity_id: activity && activity.id),
-         do: {:ok, Repo.get_by(Activity, team_id: team.id, d4h_activity_id: d4h_activity_id)}
+           ApplyEdit.call(team, user, row, now, activity_id: activity && activity.id) do
+      Activity
+      |> Repo.get_by(team_id: team.id, d4h_activity_id: d4h_activity_id)
+      |> put_enough_and_full(row)
+    end
   end
+
+  # The copy hasn't caught up with a new activity: the caller says so.
+  defp put_enough_and_full(nil, _row), do: {:ok, nil}
+
+  defp put_enough_and_full(activity, %ChangeSetRow{new_value: new}) do
+    if Enum.any?(@numbers, &Map.has_key?(new, &1)),
+      do:
+        {:ok,
+         Activity.put_enough_and_full(activity, %{
+           enough_at: Map.get(new, "enough_at", activity.enough_at),
+           full_at: Map.get(new, "full_at", activity.full_at)
+         })},
+      else: {:ok, activity}
+  end
+
+  @doc """
+  The change set row that sets an open activity's Enough at and Full at to `numbers`,
+  `%{enough_at:, full_at:}`, alone: Apply a template's (#447). D4H gets no request.
+  """
+  def numbers_row(%Activity{} = activity, %{enough_at: enough_at, full_at: full_at}) do
+    %ChangeSetRow{
+      action: :update_activity,
+      d4h_record_id: activity.d4h_activity_id,
+      old_value: %{
+        "kind" => activity.activity_kind,
+        "enough_at" => activity.enough_at,
+        "full_at" => activity.full_at
+      },
+      new_value: %{"enough_at" => enough_at, "full_at" => full_at}
+    }
+  end
+
+  @doc "Sends numbers_row/2 and writes the numbers: `{:ok, activity}` or `{:error, text}`."
+  def put_numbers(%Team{} = team, %User{} = user, %Activity{} = activity, numbers, now),
+    do: apply_row(team, user, activity, numbers_row(activity, numbers), now)
 
   @doc """
   The change set row for the form's values, or `:unchanged`. `tag_ids` maps the team's
@@ -69,7 +114,7 @@ defmodule App.Operation.SaveActivity do
       values
       |> fields(team.timezone)
       |> Map.merge(%{"tag_ids" => hours_tag_ids, "full_team" => false, "shared" => false})
-      |> Map.reject(fn {key, value} -> key == "location" and is_nil(value) end)
+      |> Map.reject(fn {key, value} -> key in ["location" | @numbers] and is_nil(value) end)
 
     %ChangeSetRow{
       action: :create_activity,
@@ -90,10 +135,13 @@ defmodule App.Operation.SaveActivity do
       |> put_hours(values.hours != form.hours, activity, values, tag_ids, team)
       |> unless_locked(activity)
 
-    if new == %{}, do: :unchanged, else: update_row(activity, old, new)
+    if new == %{},
+      do: :unchanged,
+      else: update_row(activity, Map.put(old, "hours", form.hours), new)
   end
 
-  # The old description is the one the store had, before cleaning.
+  # The old description is the one the store had, before cleaning. The old hours choice
+  # goes with the new one.
   defp update_row(activity, old, new) do
     old =
       old
@@ -126,7 +174,10 @@ defmodule App.Operation.SaveActivity do
 
   defp put_hours(new, true, activity, values, tag_ids, team) do
     hours_tags = Activity.hours_tags(team)
-    Map.put(new, "tag_ids", tag_ids_for(values.hours, activity.tags || [], tag_ids, hours_tags))
+
+    new
+    |> Map.put("tag_ids", tag_ids_for(values.hours, activity.tags || [], tag_ids, hours_tags))
+    |> Map.put("hours", values.hours)
   end
 
   defp fields(values, timezone) do
@@ -138,7 +189,9 @@ defmodule App.Operation.SaveActivity do
       "tracking_number" => values.tracking_number,
       "started_at" => utc(values.starts_at, timezone),
       "finished_at" => utc(values.ends_at, timezone),
-      "published" => values.published
+      "published" => values.published,
+      "enough_at" => values.enough_at,
+      "full_at" => values.full_at
     }
   end
 

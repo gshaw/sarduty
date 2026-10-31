@@ -18,7 +18,7 @@ img.team-head-logo { width: auto; max-width: 128px; object-fit: contain; }
 .dash-list { list-style: none; padding: 0; margin: 0; }
 .dash-list > li { padding-block: var(--sp-2); border-bottom: 1px solid var(--border-subtle); }
 .dash-list > li:last-child { border-bottom: 0; }
-@media (pointer: coarse) { .dash-list .dash-row-title > a { padding-block: var(--sp-3); } }
+@media (pointer: coarse) { .dash-list .dash-row-title > .with-badge > a { padding-block: var(--sp-3); } }
 
 /* A row in a list: when, or a mark, beside the title. */
 .dash-row { display: flex; align-items: flex-start; gap: var(--sp-3); }
