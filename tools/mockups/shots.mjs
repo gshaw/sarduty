@@ -3,8 +3,8 @@
 // Each shot is taken at 2x, cropped, then drawn inside its frame: a browser window with
 // the page's URL, an iPhone, a sheet for a diagram, or nothing for pages that draw their
 // own (phones of texts). A shot with an `id` gets its label above the frame. Writes
-// <folder>/shots/<page>.png and .jpg, and shots/contact.jpg when shots.json says
-// "contact": true.
+// <folder>/shots/<page>.png, plus a .jpg when that is smaller, and shots/contact when
+// shots.json says "contact": true. The smaller of the two is the one posted.
 import { createRequire } from "module";
 import { execFileSync } from "child_process";
 import fs from "fs";
@@ -92,12 +92,17 @@ async function contactSheet(done) {
   const out = path.join(dir, "shots", "contact");
   await shootHtml(out + ".html", `<!doctype html><html><head><meta charset="utf-8">${css}</head>` +
     `<body class="frame"><div class="contact">${tiles}</div></body></html>`, 1280, out + ".png");
-  jpg(out);
-  console.log("shot contact");
+  console.log("shot contact", jpg(out));
 }
 
-const jpg = out =>
-  execFileSync("sips", ["-s", "format", "jpeg", "-s", "formatOptions", "82", out + ".png", "--out", out + ".jpg"], { stdio: "ignore" });
+// Flat UI is smaller and sharper as PNG; a page with photos or a map is smaller as JPG.
+// Keep the JPG only when it wins, so body.py posts the smaller file.
+function jpg(out) {
+  execFileSync("sips", ["-s", "format", "jpeg", "-s", "formatOptions", "85", out + ".png", "--out", out + ".jpg"], { stdio: "ignore" });
+  const [png, jpeg] = [".png", ".jpg"].map(ext => fs.statSync(out + ext).size);
+  if (jpeg >= png) fs.rmSync(out + ".jpg");
+  return Math.round(Math.min(png, jpeg) / 1024) + " KB";
+}
 const done = [];
 
 for (const shot of shots) {
@@ -127,9 +132,8 @@ for (const shot of shots) {
     fs.rmSync(raw);
   }
   await label(shot, bare, out + ".png");
-  jpg(out);
   done.push({ shot, bare });
-  console.log("shot", shot.page);
+  console.log("shot", shot.page, jpg(out));
 }
 if (contact && !only.length) await contactSheet(done);
 for (const { bare } of done) fs.rmSync(bare);
