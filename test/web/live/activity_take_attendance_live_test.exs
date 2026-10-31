@@ -29,6 +29,11 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
   defp hours_from_now(hours),
     do: DateTime.utc_now() |> DateTime.add(hours, :hour) |> DateTime.truncate(:second)
 
+  defp set_time(lv, time) do
+    lv |> element("#set-time") |> render_click()
+    lv |> form("#door-form", override: time) |> render_change()
+  end
+
   defp pick(lv, member) do
     lv
     |> form("#door-form")
@@ -217,7 +222,7 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
     card = member_card_fixture(member)
     {:ok, lv, _html} = live(conn, path)
 
-    lv |> form("#door-form", override: "09:15") |> render_change()
+    set_time(lv, "09:15")
     render_hook(lv, "scanned", %{code: card.code})
 
     assert has_element?(lv, "#message", "arrived at 09:15")
@@ -235,15 +240,22 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
     assert has_element?(lv, "#no-scans")
   end
 
-  test "a typed time shows until it's cleared", %{conn: conn, path: path} do
+  test "the time box waits behind a link, and a typed time shows until it's cleared", %{
+    conn: conn,
+    path: path
+  } do
     {:ok, lv, _html} = live(conn, path)
+    refute has_element?(lv, "#override")
     refute has_element?(lv, "#override-note")
 
-    lv |> form("#door-form", override: "14:30") |> render_change()
+    set_time(lv, "14:30")
+    refute has_element?(lv, "#set-time")
     assert has_element?(lv, "#override-note", "Recording as 14:30")
 
     lv |> element("#clear-override") |> render_click()
     refute has_element?(lv, "#override-note")
+    refute has_element?(lv, "#override")
+    assert has_element?(lv, "#set-time")
   end
 
   test "a good scan's confirmation clears for the next one", %{
@@ -259,13 +271,24 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
     assert has_element?(lv, "#message", "Mei Chen arrived at")
 
     # A timer from an older scan leaves the newer confirmation alone.
-    send(lv.pid, {:clear_message, {:arrived, "Sam Ortiz arrived at 09:00."}})
+    older = %{
+      kind: :arrived,
+      text: "Sam Ortiz arrived at 09:00.",
+      title: "Sam Ortiz",
+      detail: "Arrived 09:00"
+    }
+
+    send(lv.pid, {:clear_message, older})
     assert has_element?(lv, "#message")
+    assert has_element?(lv, "#scanner-result", "Mei Chen")
 
     [scan] = scans(activity)
     time = scan |> AttendanceScan.time() |> Service.Format.time_short(team.timezone)
-    send(lv.pid, {:clear_message, {:arrived, "Mei Chen arrived at #{time}."}})
+    text = "Mei Chen arrived at #{time}."
+    mei = %{kind: :arrived, text: text, title: "Mei Chen", detail: "Arrived #{time}"}
+    send(lv.pid, {:clear_message, mei})
     refute has_element?(lv, "#message")
+    refute has_element?(lv, "#scanner-result")
   end
 
   # The phone may never send a change for the time box, so a pick reads it from the form.
@@ -276,6 +299,7 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
     member: member
   } do
     {:ok, lv, _html} = live(conn, path)
+    lv |> element("#set-time") |> render_click()
     lv |> form("#door-form", search: "mei") |> render_change()
 
     lv
@@ -339,6 +363,7 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
       {:ok, lv, _html} = live(conn, path)
 
       code = MemberCard.format_code(card.code)
+      lv |> element("#set-time") |> render_click()
       lv |> form("#door-form", search: code, override: "09:15") |> render_submit()
 
       assert has_element?(lv, "#message", "arrived at 09:15")
@@ -571,7 +596,7 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
       assert has_element?(lv, "#message", "Raj Patel arrived at")
 
       lv |> element("#kind-left") |> render_click()
-      lv |> form("#door-form", override: "21:15") |> render_change()
+      set_time(lv, "21:15")
       assert has_element?(lv, "#override-note", "Recording as 21:15")
       lv |> element("#clear-override") |> render_click()
       refute has_element?(lv, "#override-note")

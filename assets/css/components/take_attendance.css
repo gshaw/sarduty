@@ -1,0 +1,34 @@
+/* Take attendance (activity_take_attendance_live.ex, #752). A phone is one column: the
+   camera, the name box, the time link, Recorded. From an iPad up, Recorded sits beside
+   the camera, so each new name lands where the person at the door is looking. In
+   landscape the name box and time link move to the top of the right column. Recorded
+   and the camera span a 1fr row, so neither stretches the rows beside it. */
+@layer components {
+  .door { display: grid; grid-template-areas: "scan" "names" "time" "recorded"; margin-top: var(--sp-4); }
+  .door-scan { grid-area: scan; }
+  .door-names { grid-area: names; margin-top: var(--sp-4); }
+  .door-time { grid-area: time; }
+  .door-recorded { grid-area: recorded; margin-top: var(--sp-4); }
+  /* While the camera runs, each read shows on its picture instead of the band. */
+  .door-controls:has([data-scanning]) .door-band { display: none; }
+
+  @media (width >= 40rem) {
+    .door {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto auto 1fr;
+      grid-template-areas: "scan recorded" "names recorded" "time recorded" ". recorded";
+      align-items: start;
+      column-gap: var(--sp-6);
+    }
+    .door-recorded { margin-top: 0; }
+  }
+
+  @media (width >= 40rem) and (orientation: landscape) {
+    .door {
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas: "scan names" "scan time" "scan recorded";
+    }
+    .door-names { margin-top: 0; }
+    .door-recorded { margin-top: var(--sp-4); }
+  }
+}

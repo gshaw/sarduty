@@ -14,8 +14,15 @@
 // Switch camera, shown when the device has more than one, swaps the back and front
 // cameras. The front camera serves an iPad kiosk facing the members (#248). The choice
 // is remembered on the device, and the front camera's picture is mirrored like a mirror.
+// A QR reader reads only around the aim square drawn on the picture, which is faster on
+// an iPad than reading every whole frame (#752). The screen stays on while it scans, so
+// an iPad at the door doesn't sleep and stop the camera.
 const PAUSE_MS = 1500
 const SAME_CARD_MS = 5000
+// The aim square's share of the picture's short side, as .scanner-aim in scanner.css,
+// and how much more than it is read, so a card held a little off still reads.
+const AIM = 0.62
+const AIM_MARGIN = 1.3
 
 // Each reader is its own chunk, so a page downloads only the one it uses. A reader takes
 // the camera's picture and answers the text it found, or nothing.
@@ -42,6 +49,7 @@ export const QRScanner = {
     this.reader = this.el.dataset.reader in READERS ? this.el.dataset.reader : "qr"
     this.decoder = READERS[this.reader]()
     this.video = this.el.querySelector("video")
+    this.aim = this.el.querySelector("[data-scan-aim]")
     this.canvas = document.createElement("canvas")
     this.state = this.el.querySelector("[data-scan-state]")
     this.el.querySelector("[data-scan-start]").addEventListener("click", () => this.start())
@@ -84,6 +92,7 @@ export const QRScanner = {
     }
     this.state.dataset.scanning = "true"
     this.showFlip()
+    this.keepAwake()
     this.tick()
   },
 
@@ -120,6 +129,25 @@ export const QRScanner = {
     this.stream?.getTracks().forEach(track => track.stop())
     this.stream = null
     delete this.state.dataset.scanning
+    this.wakeLock?.then(lock => lock?.release()).catch(() => {})
+    this.wakeLock = null
+  },
+
+  // Safari 16.4 and up. A browser without it, or one that refuses, just sleeps as before.
+  keepAwake() {
+    this.wakeLock = navigator.wakeLock?.request("screen").catch(() => null)
+  },
+
+  // The part of the camera's frame to read: around the aim square, or all of it. The
+  // picture covers its box, so the square's size in the frame is its size on screen
+  // divided by the cover's scale.
+  readArea(width, height) {
+    if (!this.aim) return {x: 0, y: 0, width, height}
+    const {clientWidth: boxWidth, clientHeight: boxHeight} = this.video
+    const scale = Math.max(boxWidth / width, boxHeight / height) || 1
+    const onScreen = Math.min(boxWidth, boxHeight) * AIM * AIM_MARGIN
+    const size = Math.round(Math.min(onScreen / scale, width, height))
+    return {x: Math.round((width - size) / 2), y: Math.round((height - size) / 2), width: size, height: size}
   },
 
   pushScanned(code) {
@@ -132,12 +160,13 @@ export const QRScanner = {
   async tick() {
     const stream = this.stream
     if (!stream) return
-    const {videoWidth: width, videoHeight: height} = this.video
-    if (width > 0) {
+    const {videoWidth, videoHeight} = this.video
+    if (videoWidth > 0) {
+      const {x, y, width, height} = this.readArea(videoWidth, videoHeight)
       this.canvas.width = width
       this.canvas.height = height
       const context = this.canvas.getContext("2d", {willReadFrequently: true})
-      context.drawImage(this.video, 0, 0, width, height)
+      context.drawImage(this.video, x, y, width, height, 0, 0, width, height)
       let found
       try {
         found = await this.decode(context.getImageData(0, 0, width, height))
