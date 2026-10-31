@@ -20,8 +20,9 @@
 const PAUSE_MS = 1500
 const SAME_CARD_MS = 5000
 // The aim square's share of the picture's short side, as .scanner-aim in scanner.css,
-// and how much more than it is read, so a card held a little off still reads.
-const AIM = 0.62
+// and how much more than it is read, so a card held a little off still reads. The read
+// area is centred, and covers the square set a little above the centre.
+const AIM = 0.56
 const AIM_MARGIN = 1.3
 
 // Each reader is its own chunk, so a page downloads only the one it uses. A reader takes

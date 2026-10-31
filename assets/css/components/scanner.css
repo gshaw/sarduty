@@ -19,13 +19,15 @@
   .scanner-picture { position: relative; background: #000; }
   .scanner-video { display: block; width: 100%; height: 100%; object-fit: cover; }
 
-  /* Where to hold the card: its corners, with the rest of the picture dimmed. The hook
-     reads a little more than this square, so qr_scanner.js keeps AIM in step. */
+  /* Where to hold the card: its corners, with the rest of the picture dimmed. Set a
+     little high, so the hint under it has room. The hook reads more than this square,
+     around the picture's centre, so qr_scanner.js keeps AIM in step. */
   .scanner-aim {
     position: absolute;
     left: 50%;
-    top: 50%;
-    width: 62%;
+    top: 46%;
+    /* The picture is never taller than wide, so its height is the short side. */
+    height: 56%;
     aspect-ratio: 1;
     translate: -50% -50%;
     border-radius: 12px;
