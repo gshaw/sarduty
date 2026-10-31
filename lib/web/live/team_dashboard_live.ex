@@ -42,9 +42,8 @@ defmodule Web.TeamDashboardLive do
   # Everyone reads the whiteboard (#515) in a strip under Next up: its Important notes, or
   # its newest, at most 2. Posting and archiving are on the Whiteboard page.
 
-  # How long Snooze lasts (#751). No forever; a week is picked.
-  @snooze_periods [{"day", "Until tomorrow"}, {"week", "For a week"}, {"month", "For a month"}]
-  @snooze_choices %{"day" => :day, "week" => :week, "month" => :month}
+  # How the dialog names each Snooze length (#751). No forever; a week is picked.
+  @snooze_labels %{day: "For a day", week: "For a week", month: "For a month"}
 
   def mount(_params, _session, socket) do
     current_team = socket.assigns.current_team
@@ -402,7 +401,6 @@ defmodule Web.TeamDashboardLive do
   attr :team, :map, required: true
   attr :items, :list, required: true
   attr :snoozed, :list, required: true
-  attr :snooze_periods, :list, default: @snooze_periods
 
   # An item with the ids behind it can be snoozed for the team (#751), with a
   # quiet alarm before its chevron, outside its link. Snoozed items wait under the count
@@ -440,7 +438,7 @@ defmodule Web.TeamDashboardLive do
             data-confirm={"Snooze this item? #{item.title}. It leaves Needs attention for every team admin. #{TeamAttention.back_sooner(item)}"}
             data-confirm-button="Snooze"
             data-confirm-choices-label="For how long"
-            data-confirm-choices={Jason.encode!(Enum.map(@snooze_periods, &Tuple.to_list/1))}
+            data-confirm-choices={Jason.encode!(snooze_choices())}
             data-confirm-choice="week"
           >
             <.icon name="alarm-clock" size={:sm} />
@@ -449,6 +447,11 @@ defmodule Web.TeamDashboardLive do
       </ul>
     </section>
     """
+  end
+
+  defp snooze_choices do
+    for period <- SnoozeAttentionItem.periods(),
+        do: [Atom.to_string(period), Map.fetch!(@snooze_labels, period)]
   end
 
   attr :team, :map, required: true
@@ -849,11 +852,11 @@ defmodule Web.TeamDashboardLive do
 
   # Snooze and Show again, team admins only: Web.UserAuth drops a member's. The dialog's
   # choice is how long.
-  def handle_event("snooze", %{"key" => key, "choice" => choice}, socket)
-      when is_map_key(@snooze_choices, choice) do
+  def handle_event("snooze", %{"key" => key, "choice" => choice}, socket) do
     %{current_team: team, current_user: user} = socket.assigns
+    period = Enum.find(SnoozeAttentionItem.periods(), &(Atom.to_string(&1) == choice))
 
-    case SnoozeAttentionItem.call(team, user, key, @snooze_choices[choice]) do
+    case SnoozeAttentionItem.call(team, user, key, period) do
       {:ok, _snooze} ->
         {:noreply, assign_top_half(socket, team)}
 

@@ -240,7 +240,7 @@ defmodule App.ViewModel.MemberFilterViewModel do
     |> select_member_with_attendance()
   end
 
-  # The members the filters keep, with only the joins a filter reads, so count/3 skips
+  # The members the filters keep, with only the joins a filter reads, so ids/3 skips
   # the summary and clock joins that never change which rows match.
   defp filter_query(team, filter_options, now) do
     Member

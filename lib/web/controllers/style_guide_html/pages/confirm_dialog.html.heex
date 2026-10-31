@@ -206,7 +206,7 @@
       open
       question="Snooze this item?"
       body="6 retiring members hold 16 items. It leaves Needs attention for every team admin. It comes back sooner if another retiring member holds items."
-      choices={[{"day", "Until tomorrow"}, {"week", "For a week"}, {"month", "For a month"}]}
+      choices={[{"day", "For a day"}, {"week", "For a week"}, {"month", "For a month"}]}
       choice="week"
       choices_label="For how long"
       action="Snooze"
@@ -219,7 +219,7 @@
         data-confirm-choices-label="For how long"
         data-confirm-choices={
           Jason.encode!([
-            ["day", "Until tomorrow"],
+            ["day", "For a day"],
             ["week", "For a week"],
             ["month", "For a month"]
           ])

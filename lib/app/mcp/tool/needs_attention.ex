@@ -35,7 +35,7 @@ defmodule App.MCP.Tool.NeedsAttention do
     {:ok, items, length(items)}
   end
 
-  @doc "The output for the team home's attention items (`TeamAttention.items/4`). Never the members behind an item.."
+  @doc "The output for the team home's attention items (`TeamAttention.items/4`). Never the members behind an item."
   def build(items, timezone) do
     Enum.map(items, fn item ->
       %{
