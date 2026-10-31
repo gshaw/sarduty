@@ -96,7 +96,7 @@ defmodule Web.NavigationTest do
       assert help.href == "/teams/squamish/help?" <> URI.encode_query(from: "/teams/squamish/me")
     end
 
-    test "a team admin who is a member sees all six sections" do
+    test "a team admin who is a member sees all seven sections" do
       assert "/teams/squamish" |> team_sections(team_admin?: true, member?: true) |> keys() ==
                [
                  ["dashboard", "whiteboard"],
@@ -110,14 +110,15 @@ defmodule Web.NavigationTest do
                    "tax-credit-letters"
                  ],
                  ["equipment"],
+                 ["reports"],
                  ["settings"],
                  ["me", "help"]
                ]
     end
 
-    test "a SAR Duty site admin on a team they don't belong to sees sections 1 to 5, then Get help" do
+    test "a SAR Duty site admin on a team they don't belong to sees sections 1 to 6, then Get help" do
       sections = team_sections("/teams/squamish", team_admin?: true)
-      assert length(sections) == 6
+      assert length(sections) == 7
       assert sections |> keys() |> List.last() == ["help"]
       refute "me" in (sections |> keys() |> List.flatten())
     end
