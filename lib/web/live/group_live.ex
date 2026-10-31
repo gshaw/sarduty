@@ -250,7 +250,7 @@ defmodule Web.GroupLive do
       <dd :if={!@group.organization_owned}>
         <ul id="group-actions" class="action-list">
           <li>
-            <.a id="group-edit" navigate={~p"/teams/#{@team}/groups/#{@group.id}/edit"}>Rename</.a>
+            <.a id="group-edit" navigate={~p"/teams/#{@team}/groups/#{@group.id}/edit"}>Rename group</.a>
           </li>
           <li>
             <.a
@@ -259,7 +259,7 @@ defmodule Web.GroupLive do
               phx-click="delete"
               phx-disable-with="Deleting…"
               {@delete_confirm}
-            >Delete</.a>
+            >Delete group</.a>
           </li>
         </ul>
       </dd>

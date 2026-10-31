@@ -20,13 +20,22 @@
       <dd>
         <ul id="detail-list-actions" class="action-list">
           <li>
-            <.a href="#" external={true}>Open in D4H</.a>
+            <.a href="#">Change activity</.a>
           </li>
           <li>
-            <.a href="#">Take attendance</.a>
+            <.a href="#">Change tags</.a>
+          </li>
+          <li>
+            <.a href="#">Send reminders</.a>
           </li>
           <li>
             <.a href="#">Mileage report</.a>
+          </li>
+          <li>
+            <.a href="#" external={true}>Open in D4H</.a>
+          </li>
+          <li>
+            <.a href="#">Delete activity</.a>
           </li>
         </ul>
       </dd>
@@ -66,6 +75,31 @@
     Things to do with the record go last, under Actions, as a
     <code>&lt;ul class="action-list"&gt;</code>
     of links. Each link fills its row, so the whole row takes a tap. On a touch screen each row is 44px tall.
+  </p>
+  <p>
+    Actions run in the same order on every record, so a link is where you left it on the last one. A page shows only
+    the ones it has:
+  </p>
+  <ol class="list-decimal list-inside paragraph">
+    <li>
+      Change the record: Change activity, Change item, or Rename group, then Change fields, Change tags, and Apply a
+      template.
+    </li>
+    <li>Send: Send reminders, Send an update, Send attendance.</li>
+    <li>Reports and other pages about the record, such as Mileage report.</li>
+    <li>Open in D4H.</li>
+    <li>Delete activity, last, away from Change.</li>
+  </ol>
+  <p>
+    Each link is a verb and the record's noun, as <a href={page_path(:button)}>buttons</a>
+    are: Delete activity, Rename
+    group, never Delete or Rename alone. The noun says which record goes when the sidebar sits beside a list of others. Rename
+    when the form changes only the name, as for a group or qualification; Change when it changes more.
+  </p>
+  <p>
+    A hint that stands in for an action, such as a published activity's tags, takes that action's place. In the app:
+    <code>Web.ActionOrderTest</code>
+    checks every Actions list.
   </p>
   <p>
     Change and Rename open a page of their own. Delete stays on the record's page: it opens the <a href={

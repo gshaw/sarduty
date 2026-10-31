@@ -513,14 +513,23 @@ defmodule Web.ActivityLive do
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/fields/edit"}
             >Change fields</.a>
           </li>
-          <li :if={@delete_confirm}>
+          <%!-- D4H refuses tags on a published activity (#358). --%>
+          <li :if={@admin_actions? and Activity.locked?(@activity)}>
+            <div id="activity-tags-locked" class="hint">
+              Published, so unpublish it to change its tags.
+            </div>
+          </li>
+          <li :if={@admin_actions? and !Activity.locked?(@activity)}>
             <.a
-              id="activity-delete"
-              href="#"
-              phx-click="delete"
-              phx-disable-with="Deleting…"
-              {@delete_confirm}
-            >Delete activity</.a>
+              id="activity-change-tags"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/tags"}
+            >Change tags</.a>
+          </li>
+          <li :if={@admin_actions?}>
+            <.a
+              id="activity-apply-template"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/templates"}
+            >Apply a template</.a>
           </li>
           <li :if={@admin_actions? and @send_reminders?}>
             <.a
@@ -540,24 +549,6 @@ defmodule Web.ActivityLive do
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/attendance"}
             >Send attendance</.a>
           </li>
-          <%!-- D4H refuses tags on a published activity (#358). --%>
-          <li :if={@admin_actions? and Activity.locked?(@activity)}>
-            <div id="activity-tags-locked" class="hint">
-              Published, so unpublish it to change its tags.
-            </div>
-          </li>
-          <li :if={@admin_actions? and !Activity.locked?(@activity)}>
-            <.a
-              id="activity-change-tags"
-              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/tags"}
-            >Change tags</.a>
-          </li>
-          <li :if={@admin_actions?}>
-            <.a
-              id="activity-apply-template"
-              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/templates"}
-            >Apply a template</.a>
-          </li>
           <li :if={@admin_actions?}>
             <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/mileage"}>Mileage report</.a>
           </li>
@@ -567,6 +558,15 @@ defmodule Web.ActivityLive do
               external={true}
               href={D4H.activity_url(@activity.team, @activity)}
             >Open in {D4H.service_name(@activity.team)}</.a>
+          </li>
+          <li :if={@delete_confirm}>
+            <.a
+              id="activity-delete"
+              href="#"
+              phx-click="delete"
+              phx-disable-with="Deleting…"
+              {@delete_confirm}
+            >Delete activity</.a>
           </li>
         </ul>
       </dd>
