@@ -9,10 +9,10 @@ defmodule Web.ActivityFormLive do
   alias App.Model.EquipmentItem
   alias App.Model.GroupMember
   alias App.Model.Template
+  alias App.Operation.ApplyTemplate
   alias App.Operation.SaveActivity
   alias App.Operation.SaveCustomFields
   alias App.ViewModel.ActivityFormViewModel
-  alias Web.ActivityTemplateLive
   alias Web.Components.PlaceBox
 
   # Adding and changing activities (docs/records.md, #585). Delete is on the activity's
@@ -486,10 +486,7 @@ defmodule Web.ActivityFormLive do
 
   # What Apply a template does, on the new activity: `{flash_kind, lines}`.
   defp add_template(team, user, activity, template, now) do
-    fields = CustomField.get_all(team.id, activity.activity_kind)
-    adds = ActivityTemplateLive.template_adds(template, activity, fields)
-
-    case ActivityTemplateLive.send_all(team, user, activity, adds, now) do
+    case ApplyTemplate.call(team, user, activity, template, now) do
       {:ok, kind, ""} -> {kind, []}
       {:ok, kind, text} -> {kind, [text]}
       {:error, text} -> {:error, [text]}

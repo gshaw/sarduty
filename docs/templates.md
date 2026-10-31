@@ -80,6 +80,8 @@ The activity's Actions list has "Apply a template"
 puts its fields, items, tags, and groups in one list to send, so several combine. The items'
 hours and a vehicle's km can change before sending, and anything can be removed.
 Retired and lost items are left out, and so is any item already on the activity.
+Sending is [ApplyTemplate](../lib/app/operation/apply_template.ex), which also words
+the one flash that says what went.
 
 The template's [fields](#fields) go first. Then the items and tags, as one change set of source `equipment`
 ([ChangeActivityEquipment](../lib/app/operation/change_activity_equipment.ex)): one
@@ -155,11 +157,11 @@ member counts. A date and time already gone leaves the groups out, with a line s
 so. To change any of them, save, then change it on the activity.
 
 Save adds the activity, then sends the rest as Apply a template does, through the same
-`ActivityTemplateLive.send_all/5`: fields, then items and tags, then the groups'
-members, stopping at the first refusal. One flash says it all in that order, starting
-"Added Monday night training." A refusal after the activity went still lands on its
-page, with an error flash saying what went and what didn't; Apply a template sends the
-rest once it is fixed. With a template there is no Published box: the activity is added
+`ApplyTemplate.call/5`: fields, then items and tags, then the groups' members, stopping
+at the first refusal. One flash says it all in that order, starting "Added Monday night
+training." A refusal after the activity went still lands on its page, with an error
+flash saying what went and what didn't; Apply a template sends the rest once it is
+fixed. With a template there is no Published box: the activity is added
 unpublished, and publishing is a second step on Change activity, once what the template
 added is checked (decided 2026-10-30). D4H locks a published activity's fields and
 attendance, so they go first. Records teams have the same form and steps.

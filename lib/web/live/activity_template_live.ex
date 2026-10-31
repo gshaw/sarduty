@@ -9,15 +9,13 @@ defmodule Web.ActivityTemplateLive do
   alias App.Model.EquipmentUsage
   alias App.Model.Tag
   alias App.Model.Template
-  alias App.Operation.ChangeActivityEquipment
-  alias App.Operation.InviteMembers
+  alias App.Operation.ApplyTemplate
   alias App.Operation.SaveCustomFields
   alias Web.ActivityEquipmentLive
 
   # Applying templates to an activity (#162). Each template adds its items, with hours to
-  # check, its tags, its custom field values, and its groups to one list. Sending fills in
-  # the activity's empty fields (#307), writes the items and tags to D4H as equipment
-  # usages and the activity's tags, then adds the groups' members (#564).
+  # check, its tags, its custom field values, and its groups to one list. Sending is
+  # ApplyTemplate.call/5.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     activity = Web.ActivityLive.fetch_activity(team, id)
@@ -238,45 +236,9 @@ defmodule Web.ActivityTemplateLive do
     |> then(&if(template.activity_kind, do: "#{Template.kind_label(template)}: #{&1}", else: &1))
   end
 
-  @doc """
-  `tags` with a template's `new` tags added, A to Z, leaving out any the activity has by
-  title (`titles`). The send reads D4H again, so a stale title only means a tag goes
-  unlisted.
-  """
-  def add_tags(tags, new, titles) do
-    titles = titles || []
-
-    (tags ++ Enum.reject(new, &(&1.title in titles)))
-    |> Enum.uniq_by(& &1.id)
-    |> Enum.sort_by(&String.downcase(&1.title))
-  end
-
   @doc "`groups` with a template's `new` groups added, each once, A to Z."
   def add_groups(groups, new),
     do: (groups ++ new) |> Enum.uniq_by(& &1.id) |> Enum.sort_by(&String.downcase(&1.title))
-
-  @doc """
-  What adding the groups' members did, from InviteMembers.call/6's result: "8 members
-  added.", then the rows that did not go and why, then how many were away on `day`. No
-  rows and nobody away means everyone was on the activity already.
-  """
-  def invite_text(%{rows: [], away: []}, _day),
-    do: "Everyone in those groups is on the activity already."
-
-  def invite_text(%{rows: rows, away: away}, day),
-    do: (InviteMembers.result_lines(rows) ++ away_text(away, day)) |> Enum.join(" ")
-
-  defp away_text([], _day), do: []
-
-  defp away_text(away, day) do
-    away
-    |> length()
-    |> Service.Format.count(
-      one: "1 member away on #{day} was left out.",
-      many: "%d members away on #{day} were left out."
-    )
-    |> List.wrap()
-  end
 
   def handle_event("add-template", %{"id" => id}, socket) do
     %{activity: activity, lines: lines, used: used} = socket.assigns
@@ -291,7 +253,8 @@ defmodule Web.ActivityTemplateLive do
       socket
       |> assign(
         lines: ActivityEquipmentLive.add_lines(lines, new, used),
-        tags: add_tags(socket.assigns.tags, apply_tags(socket, template), activity.tags),
+        tags:
+          ApplyTemplate.add_tags(socket.assigns.tags, apply_tags(socket, template), activity.tags),
         groups: add_groups(socket.assigns.groups, Template.groups(template))
       )
       |> add_fills(template)
@@ -327,7 +290,7 @@ defmodule Web.ActivityTemplateLive do
     %{current_team: team, current_user: user, activity: activity} = socket.assigns
     adds = socket.assigns |> Map.take([:fills, :tags, :groups]) |> Map.put(:lines, lines)
 
-    case send_all(team, user, activity, adds, DateTime.utc_now()) do
+    case ApplyTemplate.call(team, user, activity, adds, DateTime.utc_now()) do
       {:ok, kind, text} ->
         socket =
           socket
@@ -338,50 +301,6 @@ defmodule Web.ActivityTemplateLive do
 
       {:error, text} ->
         {:noreply, put_flash(socket, :error, text)}
-    end
-  end
-
-  @doc """
-  What `template` adds to a new `activity` on Add activity (#747), as send_all/5 takes
-  it: the fields of the activity's kind, the items in service with their hours, the tags,
-  and the groups.
-  """
-  def template_adds(%Template{} = template, %Activity{} = activity, custom_fields) do
-    lines =
-      for line <- template.template_items, EquipmentItem.in_service?(line.equipment_item) do
-        %{item: line.equipment_item, minutes: line.minutes, km: nil}
-      end
-
-    %{
-      fills: SaveCustomFields.fill_empty(%{}, activity, custom_fields, template.custom_values),
-      lines: lines,
-      tags: add_tags([], Template.tags(template), activity.tags),
-      groups: Template.groups(template)
-    }
-  end
-
-  @doc """
-  Sends `adds` to the activity: `fills` first, then the `lines` (as
-  ActivityEquipmentLive.to_add/1 makes them) and `tags`, then the `groups`' members. A
-  refusal leaves the rest unsent. `{:ok, flash_kind, text}`, or `{:error, text}` when
-  nothing went. Shared with Add activity (#747).
-  """
-  def send_all(team, user, activity, %{fills: fills} = adds, now) do
-    with :ok <- fill_fields(team, activity, fills, user, now),
-         {:ok, rows} <- add_after_fields(team, user, activity, adds, now) do
-      {kind, text} = invite(team, activity, adds.groups, user, now, rows)
-      {:ok, kind, Enum.join(fields_text(fills) ++ List.wrap(text), " ")}
-    end
-  end
-
-  # Once the fields went, a refusal leaves the page to say so, as for a refused invite.
-  defp add_after_fields(team, user, activity, %{fills: fills} = adds, now) do
-    case add_equipment(team, activity, adds.lines, adds.tags, user, now) do
-      {:error, text} when fills != %{} ->
-        {:ok, :error, "#{count_fields(map_size(fills))} filled in. #{text}"}
-
-      result ->
-        result
     end
   end
 
@@ -404,56 +323,7 @@ defmodule Web.ActivityTemplateLive do
     end
   end
 
-  defp fill_fields(_team, _activity, fills, _user, _now) when fills == %{}, do: :ok
-
-  defp fill_fields(team, activity, fills, user, now) do
-    case SaveCustomFields.call(team, activity, fills, user, now) do
-      {:ok, _activity} -> :ok
-      {:error, text} -> {:error, "The fields were not sent. #{text}"}
-    end
-  end
-
-  defp fields_text(fills) when fills == %{}, do: []
-
-  defp fields_text(fills),
-    do: [count_fields(map_size(fills)) <> " filled in."]
-
   defp reject_id(records, id), do: Enum.reject(records, &(Integer.to_string(&1.id) == id))
-
-  defp add_equipment(_team, _activity, [], [], _user, _now), do: {:ok, []}
-
-  defp add_equipment(team, activity, lines, tags, user, now),
-    do: ChangeActivityEquipment.add(team, activity, lines, tags, user, now)
-
-  # The flash for the equipment `rows` and the invites, as {kind, text}. Nothing for a
-  # template that only fills in fields.
-  defp invite(_team, _activity, [], _user, _now, []), do: {:info, nil}
-
-  defp invite(_team, _activity, [], _user, _now, rows),
-    do: {ActivityEquipmentLive.flash_kind(rows), ActivityEquipmentLive.result_text(rows, "added")}
-
-  defp invite(team, activity, groups, user, now, rows) do
-    picks = InviteMembers.group_picks(team, groups, now)
-
-    {kind, text} =
-      case InviteMembers.call(team, activity, picks, user, :template, now) do
-        {:ok, result} ->
-          day = Service.Format.month_day(activity.started_at, team.timezone)
-          {ActivityEquipmentLive.flash_kind(rows ++ result.rows), invite_text(result, day)}
-
-        # A template still logs equipment after an activity, but adds nobody.
-        {:error, :started} ->
-          {ActivityEquipmentLive.flash_kind(rows),
-           "Its groups were left out: the activity has started."}
-
-        {:error, reason} ->
-          {:error, InviteMembers.error_text(team, reason)}
-      end
-
-    if rows == [],
-      do: {kind, text},
-      else: {kind, "#{ActivityEquipmentLive.result_text(rows, "added")} #{text}"}
-  end
 
   defp count_items(n), do: Service.Format.count(n, one: "%d item", many: "%d items")
   defp count_tags(n), do: Service.Format.count(n, one: "%d tag", many: "%d tags")

@@ -6,7 +6,7 @@ defmodule App.Operation.ChangeActivityEquipment do
   added tags copied, so its page shows them before the next sync.
 
   plan_adds/3 decides which items to add and plan_tags/3 which tags; add/6 and remove/5
-  write.
+  write; flash_kind/1 and result_text/2 say what the written rows did.
   """
 
   alias App.Accounts.User
@@ -168,6 +168,40 @@ defmodule App.Operation.ChangeActivityEquipment do
         activity |> Ecto.Changeset.change(tags: tags) |> Repo.update!()
     end
   end
+
+  @doc "The flash kind for written `rows`: :info when all applied, else :error."
+  def flash_kind(rows),
+    do: if(Enum.all?(rows, &(&1.status == :applied)), do: :info, else: :error)
+
+  @doc """
+  What the written `rows` did, as one message: "3 items added.", "2 tags added." when a
+  template's tags went, and then each row that didn't go, with why. `verb` is "added" or
+  "removed".
+  """
+  def result_text(rows, verb) do
+    {tag_rows, item_rows} = Enum.split_with(rows, &(&1.action == :set_activity_tags))
+    applied = Enum.count(item_rows, &(&1.status == :applied))
+
+    items =
+      if item_rows != [] or tag_rows == [], do: ["#{count_items(applied)} #{verb}."], else: []
+
+    tags = for %{status: :applied} = row <- tag_rows, do: tags_added(row)
+
+    rows
+    |> Enum.reject(&(&1.status == :applied))
+    |> Enum.map(&"#{row_title(&1)}: #{&1.error}")
+    |> then(&Enum.join(items ++ tags ++ &1, " "))
+  end
+
+  defp tags_added(row), do: "#{row.new_value["titles"] |> length() |> count_tags()} added."
+
+  defp count_items(n), do: Service.Format.count(n, one: "%d item", many: "%d items")
+  defp count_tags(n), do: Service.Format.count(n, one: "%d tag", many: "%d tags")
+
+  defp row_title(%ChangeSetRow{action: :set_activity_tags}), do: "Tags"
+  defp row_title(%ChangeSetRow{new_value: %{"title" => title}}), do: title
+  defp row_title(%ChangeSetRow{old_value: %{"title" => title}}), do: title
+  defp row_title(%ChangeSetRow{}), do: "An item"
 
   defp describe(_team, :no_team_key), do: "Save your team's access key in team settings first."
   defp describe(_team, :deleted), do: "This activity is deleted."
