@@ -58,6 +58,15 @@ local time with a CASE over the zone's periods from tzdata, so `year()`, `month(
 `days_since()` follow daylight saving time. Ranges (`TODAY`, `THIS_YEAR`,
 `LAST_N_DAYS:n`) and `date '2026-01-01'` become UTC bounds in `App.Report.Range`.
 
+## Built-in and saved reports
+
+Built-in reports live in `App.Report.BuiltIn`, change with the app, and can be copied
+but not changed; a test opens every one. A team's own reports are rows in `reports`
+(`App.Model.SavedReport`): the query and its picked values, never the rows. The query
+is checked again on every run, so a field that goes fails with a message on the
+report's page. `App.ViewData.Reports` treats both the same, by slug: a saved report's
+slug is never a built-in one's, and stays when it's renamed.
+
 ## Limits
 
 5,000 rows, 12 pivot columns, and 2 seconds. A run past 2 seconds is interrupted (the

@@ -2,17 +2,19 @@ defmodule Web.ReportController do
   use Web, :controller
 
   alias App.Report
-  alias App.Report.BuiltIn
   alias App.Report.Error
   alias App.ViewData.ReportRecords
+  alias App.ViewData.Reports
 
   @doc "A report's rows as CSV (#768), run with the values in the URL, as its page shows them."
   def csv(conn, %{"slug" => slug} = params) do
-    report = BuiltIn.get(slug) || raise Web.Status.NotFound
     team = conn.assigns.current_team
     now = DateTime.utc_now()
+    report = Reports.find(team, slug, now) || raise Web.Status.NotFound
+    given = Map.drop(params, ["subdomain", "slug"])
+    given = if given == %{}, do: report.values, else: given
 
-    case Report.run(report.query, team, Map.drop(params, ["subdomain", "slug"]), now) do
+    case Report.run(report.query, team, given, now) do
       {:ok, result} ->
         csv = Web.ReportCSV.build(result, ReportRecords.load(result, team, now), team.timezone)
 

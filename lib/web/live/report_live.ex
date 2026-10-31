@@ -1,8 +1,9 @@
 defmodule Web.ReportLive do
   @moduledoc """
-  One report (#768), run on the team's records. Each `:name` in its query is a menu
-  above the rows, and the picked values ride in the URL, so two team admins can run it
-  for different years. Download CSV gives the same rows.
+  One report (#768), the team's own or built in, run on the team's records. Each `:name`
+  in its query is a menu above the rows, and the picked values ride in the URL, so two
+  team admins can run it for different years; without them, a team's own report runs
+  with the values saved with it. Download CSV gives the same rows.
   """
   use Web, :live_view_app_layout
 
@@ -11,29 +12,36 @@ defmodule Web.ReportLive do
   alias App.Adapter.D4H
   alias App.Report
   alias App.Report.BuiltIn
+  alias App.Report.Compiler
   alias App.Report.Error
   alias App.Report.Value
   alias App.ViewData.ReportRecords
+  alias App.ViewData.Reports
   alias Service.Format
 
   def mount(_params, _session, socket), do: {:ok, socket}
 
   def handle_params(%{"slug" => slug} = params, _uri, socket) do
-    report = BuiltIn.get(slug) || raise Web.Status.NotFound
     team = socket.assigns.current_team
     now = DateTime.utc_now()
+    report = Reports.find(team, slug, now) || raise Web.Status.NotFound
 
     socket =
       socket
       |> assign(page_title: report.name, report: report, now: now)
       |> assign(fix: BuiltIn.fix(slug, D4H.service(team)))
-      |> run(report, given(params), now)
+      |> run(report, given(params, report), now)
 
     {:noreply, socket}
   end
 
-  # The URL's picked values, by name.
-  defp given(params), do: Map.drop(params, ["subdomain", "slug"])
+  # The URL's picked values by name, or the ones saved with the report.
+  defp given(params, report) do
+    case Map.drop(params, ["subdomain", "slug"]) do
+      empty when empty == %{} -> report.values
+      values -> values
+    end
+  end
 
   defp run(socket, report, given, now) do
     team = socket.assigns.current_team
@@ -57,9 +65,8 @@ defmodule Web.ReportLive do
   end
 
   def handle_event("change", %{"values" => values}, socket) do
-    path =
-      ~p"/teams/#{socket.assigns.current_team}/reports/#{socket.assigns.report.slug}?#{values}"
-
+    team = socket.assigns.current_team
+    path = ~p"/teams/#{team}/reports/#{socket.assigns.report.slug}?#{values}"
     {:noreply, push_patch(socket, to: path, replace: true)}
   end
 
@@ -73,18 +80,38 @@ defmodule Web.ReportLive do
     <.heading_row>
       <h1 class="title">{@report.name}</h1>
       <:action>
+        <.button
+          :if={@report.saved}
+          id="report-change"
+          navigate={~p"/teams/#{@current_team}/reports/#{@report.slug}/edit"}
+        >
+          Change report
+        </.button>
+        <.button
+          :if={!@report.saved}
+          id="report-copy"
+          navigate={~p"/teams/#{@current_team}/reports/new?#{[from: @report.slug]}"}
+        >
+          Copy and change
+        </.button>
         <.button :if={@csv_path} id="report-csv" href={@csv_path}>Download CSV</.button>
       </:action>
     </.heading_row>
-    <p class="lead">{@report.about}</p>
+    <p :if={@report.about} class="lead">{@report.about}</p>
     <p :if={@fix} id="report-fix" class="hint">{@fix}</p>
 
     <.filter_form :if={@values != []} for={@form} id="report-values">
-      <.value_input :for={value <- @values} value={value} form={@form} />
+      <.report_value
+        :for={value <- @values}
+        value={value}
+        id={"report-value-#{value.name}"}
+        name={"values[#{value.name}]"}
+      />
     </.filter_form>
 
     <.banner :if={@error} kind={:danger} title="This report cannot run" id="report-error">
       <p>{@error}</p>
+      <p :if={@report.saved}>Change the report to fix its query.</p>
     </.banner>
 
     <div :if={@result}>
@@ -98,7 +125,7 @@ defmodule Web.ReportLive do
         now={@now}
       />
       <p :if={@result.more?} id="report-more" class="hint">
-        Shows the first {Format.number(App.Report.Compiler.max_rows())} rows.
+        Shows the first {Format.number(Compiler.max_rows())} rows.
       </p>
       <.empty_state :if={@result.rows == []} id="report-empty" title="Nothing to show">
         {if @values == [], do: "Nothing matches the report yet.", else: "Pick other values above."}
@@ -107,39 +134,20 @@ defmodule Web.ReportLive do
 
     <details id="report-query" class="mt-8">
       <summary class="heading">Query</summary>
-      <p class="hint">Built in, part of SAR Duty.</p>
+      <p :if={!@report.saved} class="hint">Built in, part of SAR Duty. Copy it to make your own.</p>
+      <p :if={@report.saved} class="hint">
+        Made by {@report.made_by || "a team admin"} on {Format.date_short(
+          @report.made_on,
+          @current_team.timezone
+        )}.
+      </p>
       <pre class="code-block"><code>{@report.query}</code></pre>
     </details>
     """
   end
 
-  attr :value, Value, required: true
-  attr :form, :any, required: true
-
-  # A menu for a year or a choice, a date box for a date, and a text box for the rest.
-  defp value_input(%{value: %Value{kind: kind}} = assigns) when kind in [:year, :choice] do
-    ~H"""
-    <.input
-      type={if length(@value.choices) > 12, do: "combobox", else: "select"}
-      field={@form[@value.name]}
-      label={@value.label}
-      options={@value.choices}
-    />
-    """
-  end
-
-  defp value_input(%{value: %Value{kind: :date}} = assigns),
-    do: ~H"""
-    <.input type="date" field={@form[@value.name]} label={@value.label} />
-    """
-
-  defp value_input(assigns),
-    do: ~H"""
-    <.input type="text" field={@form[@value.name]} label={@value.label} phx-debounce="400" />
-    """
-
-  # "7 members" when the first column is a record, "12 rows" otherwise.
-  defp count(result) do
+  @doc ~s(How many rows: "7 members" when the first column is a record, "12 rows" otherwise.)
+  def count(result) do
     n = length(result.rows)
 
     case result.columns do
@@ -151,7 +159,6 @@ defmodule Web.ReportLive do
     end
   end
 
-  defp kind_name(:item), do: "item"
   defp kind_name(kind), do: Atom.to_string(kind)
 
   defp kind_names(:activity), do: "activities"

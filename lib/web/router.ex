@@ -256,7 +256,9 @@ defmodule Web.Router do
       live "/teams/:subdomain/members/:id/fields/edit", CustomFieldsFormLive, :member
       live "/teams/:subdomain/members/:id/history", MemberHistoryLive
       live "/teams/:subdomain/reports", ReportCollectionLive
+      live "/teams/:subdomain/reports/new", ReportFormLive, :new
       live "/teams/:subdomain/reports/:slug", ReportLive
+      live "/teams/:subdomain/reports/:slug/edit", ReportFormLive, :edit
       live "/teams/:subdomain/groups", GroupCollectionLive
       live "/teams/:subdomain/groups/new", TitledRecordFormLive, :new_group
       live "/teams/:subdomain/groups/:id", GroupLive
