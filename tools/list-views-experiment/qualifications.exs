@@ -3,13 +3,13 @@ import Ecto.Query
 alias App.Model.{MemberQualificationAward, Qualification, GroupMember}
 alias Service.StringHelpers
 
-quals = ListSpec.parse(File.read!("tools/list-views-experiment/specs/qualifications.report"))
+qualification_list = ListSpec.parse(File.read!("tools/list-views-experiment/specs/qualifications.report"))
 expiring = ListSpec.parse(File.read!("tools/list-views-experiment/specs/awards_expiring.report"))
 awards = ListSpec.parse(File.read!("tools/list-views-experiment/specs/qualification_awards.report"))
 now = DateTime.utc_now()
 
 # The pages keep these steps in private functions; this mirrors them from their public parts.
-page_quals = fn team, view, q ->
+page_qualifications = fn team, view, q ->
   team.id
   |> Qualification.get_all()
   |> Enum.filter(fn x ->
@@ -55,8 +55,8 @@ for team <- App.Repo.all(App.Model.Team) do
   group = App.Repo.one(from g in App.Model.Group, where: g.team_id == ^team.id, order_by: [desc: g.id], limit: 1)
 
   for {view, q} <- [{"all", ""}, {"organization", ""}, {"team", ""}, {"all", "first"}, {"all", "a"}] do
-    ours = ListSpec.ids(quals, team, %{"view" => view, "q" => q}, now)
-    Check.same_set("Qualifications (team #{team.id})", "#{view} q=#{q}", ours, page_quals.(team, view, q))
+    ours = ListSpec.ids(qualification_list, team, %{"view" => view, "q" => q}, now)
+    Check.same_set("Qualifications (team #{team.id})", "#{view} q=#{q}", ours, page_qualifications.(team, view, q))
   end
 
   for within <- [30, 60, 90, 180], {q, g} <- [{"", nil}, {"a", nil}] ++ if(group, do: [{"", group}], else: []) do

@@ -19,16 +19,16 @@ mise exec -- mix run --no-start tools/list-views-experiment/activities.exs
 Run on 2026-10-31 against a copy of the sanitized dev database (7 teams), 1,763 of
 1,763 checks matched:
 
-| List | Checks |
-| --- | --- |
-| Activities | 245 |
-| Members | 354 |
-| A member's Attendance tab | 321 |
-| Qualifications, Expiring, one qualification's awards | 179 |
-| Equipment | 90 |
-| Groups | 56 |
-| Tax credit letters | 308 |
-| Milestones | 210 |
+| List                                                 | Checks |
+| ---------------------------------------------------- | ------ |
+| Activities                                           | 245    |
+| Members                                              | 354    |
+| A member's Attendance tab                            | 321    |
+| Qualifications, Expiring, one qualification's awards | 179    |
+| Equipment                                            | 90     |
+| Groups                                               | 56     |
+| Tax credit letters                                   | 308    |
+| Milestones                                           | 210    |
 
 What the language needed is in the commit "Experiment: list views on the report
 language", each part marked `Experiment (list views)`.

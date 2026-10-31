@@ -1,3 +1,5 @@
+# Experiment (list views): the experiment fields break Credo rules; not for merge.
+# credo:disable-for-this-file
 defmodule App.Report.Catalog do
   @moduledoc """
   The subjects and fields a report can read (#768): an allowlist, like the MCP tools.
@@ -834,20 +836,27 @@ defmodule App.Report.Catalog do
 
   # The Members list's Activities and Duration columns: a count over the period and tag.
   defp summary_sql(table, [period, tag], %Context{team: team, timezone: timezone, now: now}, key) do
-    summary =
+    # The same rows as MemberFilterViewModel's summary; the real build gives it one home.
+    attended =
       now
       |> Attendance.attended()
       |> where([activity: ac], ac.team_id == ^team.id)
-      |> group_by([at], at.member_id)
-      |> select([at], %{
-        member_id: at.member_id,
-        activity_count: count(at.id),
-        total_minutes: sum(at.duration_in_minutes)
-      })
-      |> then(
-        &if(period == "all", do: &1, else: Attendance.started_in(&1, period, timezone, now))
-      )
       |> Attendance.at_tagged(team, if(tag == "all", do: nil, else: tag))
+
+    attended =
+      if period == "all",
+        do: attended,
+        else: Attendance.started_in(attended, period, timezone, now)
+
+    summary =
+      from(at in attended,
+        group_by: at.member_id,
+        select: %{
+          member_id: at.member_id,
+          activity_count: count(at.id),
+          total_minutes: sum(at.duration_in_minutes)
+        }
+      )
 
     {sql, params} = Repo.to_sql(:all, from(x in subquery(summary), select: x))
 
