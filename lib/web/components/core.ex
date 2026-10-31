@@ -377,6 +377,10 @@ defmodule Web.Components.Core do
     |> input()
   end
 
+  # A time to the minute, as the browser's time box shows it, not "19:00:00".
+  def input(%{type: "time", value: %Time{} = time} = assigns),
+    do: assigns |> assign(value: Calendar.strftime(time, "%H:%M")) |> input()
+
   def input(%{type: "checkbox"} = assigns) do
     assigns =
       assign_new(assigns, :checked, fn ->
