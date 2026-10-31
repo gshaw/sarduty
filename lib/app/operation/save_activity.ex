@@ -25,12 +25,16 @@ defmodule App.Operation.SaveActivity do
 
   @doc """
   `{:ok, activity}`, `{:error, changeset}` for the form, or `{:error, text}` when the
-  store refused the change.
+  store refused the change. `hold_publish: true` checks Published but adds the activity
+  unpublished, for publish/4 once a template's fields and members have gone (#747): D4H
+  locks a published activity's fields and attendance.
   """
-  def call(%Team{} = team, activity, params, %User{} = user, now) do
+  def call(%Team{} = team, activity, params, %User{} = user, now, opts \\ []) do
     form = ActivityFormViewModel.from_activity(activity, team)
 
     with {:ok, values} <- ActivityFormViewModel.validate(form, params, finished_by(team, now)) do
+      values = if opts[:hold_publish], do: %{values | published: false}, else: values
+
       tag_ids =
         team
         |> D4H.build_context_from_team()
@@ -41,6 +45,16 @@ defmodule App.Operation.SaveActivity do
         :unchanged -> {:ok, activity}
         row -> apply_row(team, user, activity, row, now)
       end
+    end
+  end
+
+  @doc "Publishes `activity`, as it is in the copy. `{:ok, activity}` or `{:error, text}`."
+  def publish(%Team{} = team, %Activity{} = activity, %User{} = user, now) do
+    form = ActivityFormViewModel.from_activity(activity, team)
+
+    case plan(activity, %{form | published: true}, %{}, team) do
+      :unchanged -> {:ok, activity}
+      row -> apply_row(team, user, activity, row, now)
     end
   end
 

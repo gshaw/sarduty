@@ -123,7 +123,31 @@ values. If D4H refuses them, nothing else is sent. The flash starts "2 fields fi
 in.", and if the items or tags are refused after the fields went, the page leaves with
 that line before the error, as for a refused invite.
 
-## Still to come
+## Add activity from a template
 
-From #307 and #747: picking a template on Add activity, so it fills the form from the
-details and applies the rest when saving.
+Add activity starts with a Template box (#747), and a template's page has "Add activity
+from this template" in Actions, which opens it picked (`/activities/new?template=<id>`).
+None leaves the form as it was. Picking one fills the form from its
+[details](#activity-details)
+(`ActivityFormViewModel.template_params/2`): its kind when it has one, its title or
+else its name, its tax credit hours, and each other detail it has. Picking again
+replaces them; a detail the template lacks leaves what was typed. With a template the
+form takes a Date, a Start, and a Finish in place of the two date-and-time boxes, since
+a template's activity is one evening; a Finish before the Start is the next day. The
+template fills the times and leaves the date empty. Several nights are one at a time:
+no recurrence, no Save and add another.
+
+Under the form, read only, is what saving adds after: the template's fields (only when
+Kind is still the template's), its items in service, its tags, and its groups with their
+member counts. A date and time already gone leaves the groups out, with a line saying
+so. To change any of them, save, then change it on the activity.
+
+Save adds the activity, then sends the rest as Apply a template does, through the same
+`ActivityTemplateLive.send_all/5`: fields, then items and tags, then the groups'
+members, stopping at the first refusal. One flash says it all in that order, starting
+"Added Monday night training." A refusal after the activity went still lands on its
+page, with an error flash saying what went and what didn't; Apply a template sends the
+rest once it is fixed. With Published ticked the activity is added unpublished and
+published last (`SaveActivity.publish/4`), since D4H locks a published activity's
+fields and attendance; if anything before it was refused, it stays unpublished and the
+flash says so. Records teams have the same form and steps.

@@ -324,10 +324,11 @@ defmodule Web.ActivityTemplateLive do
       |> ActivityEquipmentLive.put_typed(params)
       |> Enum.map(&ActivityEquipmentLive.to_add/1)
 
-    case send_all(socket.assigns, lines, DateTime.utc_now()) do
-      {:ok, kind, text} ->
-        %{current_team: team, activity: activity} = socket.assigns
+    %{current_team: team, current_user: user, activity: activity} = socket.assigns
+    adds = socket.assigns |> Map.take([:fills, :tags, :groups]) |> Map.put(:lines, lines)
 
+    case send_all(team, user, activity, adds, DateTime.utc_now()) do
+      {:ok, kind, text} ->
         socket =
           socket
           |> put_flash(kind, text)
@@ -340,22 +341,42 @@ defmodule Web.ActivityTemplateLive do
     end
   end
 
-  # Fields go first, then equipment and tags; a refusal leaves the rest unsent.
-  defp send_all(assigns, lines, now) do
-    %{current_team: team, current_user: user, activity: activity, fills: fills} = assigns
+  @doc """
+  What `template` adds to a new `activity` on Add activity (#747), as send_all/5 takes
+  it: the fields of the activity's kind, the items in service with their hours, the tags,
+  and the groups.
+  """
+  def template_adds(%Template{} = template, %Activity{} = activity, custom_fields) do
+    lines =
+      for line <- template.template_items, EquipmentItem.in_service?(line.equipment_item) do
+        %{item: line.equipment_item, minutes: line.minutes, km: nil}
+      end
 
+    %{
+      fills: SaveCustomFields.fill_empty(%{}, activity, custom_fields, template.custom_values),
+      lines: lines,
+      tags: add_tags([], Template.tags(template), activity.tags),
+      groups: Template.groups(template)
+    }
+  end
+
+  @doc """
+  Sends `adds` to the activity: `fills` first, then the `lines` (as
+  ActivityEquipmentLive.to_add/1 makes them) and `tags`, then the `groups`' members. A
+  refusal leaves the rest unsent. `{:ok, flash_kind, text}`, or `{:error, text}` when
+  nothing went. Shared with Add activity (#747).
+  """
+  def send_all(team, user, activity, %{fills: fills} = adds, now) do
     with :ok <- fill_fields(team, activity, fills, user, now),
-         {:ok, rows} <- add_after_fields(assigns, lines, now) do
-      {kind, text} = invite(team, activity, assigns.groups, user, now, rows)
+         {:ok, rows} <- add_after_fields(team, user, activity, adds, now) do
+      {kind, text} = invite(team, activity, adds.groups, user, now, rows)
       {:ok, kind, Enum.join(fields_text(fills) ++ List.wrap(text), " ")}
     end
   end
 
   # Once the fields went, a refusal leaves the page to say so, as for a refused invite.
-  defp add_after_fields(%{fills: fills} = assigns, lines, now) do
-    %{current_team: team, current_user: user, activity: activity, tags: tags} = assigns
-
-    case add_equipment(team, activity, lines, tags, user, now) do
+  defp add_after_fields(team, user, activity, %{fills: fills} = adds, now) do
+    case add_equipment(team, activity, adds.lines, adds.tags, user, now) do
       {:error, text} when fills != %{} ->
         {:ok, :error, "#{count_fields(map_size(fills))} filled in. #{text}"}
 

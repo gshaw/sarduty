@@ -49,7 +49,7 @@ defmodule Web.ActivityFormLiveTest do
       |> render_submit()
       |> follow_redirect(conn)
 
-    assert html =~ "Saved Missing hiker."
+    assert html =~ "Added Missing hiker."
 
     assert_received {:records, "POST", "/incidents", body}
     assert body["referenceDescription"] == "Missing hiker"
@@ -66,6 +66,203 @@ defmodule Web.ActivityFormLiveTest do
     assert_received {:records, "POST", "/incidents/88/tags", %{"tagIds" => [1]}}
     assert_received {:records, "POST", "/incidents/88/publish", %{"published" => false}}
     assert [%ChangeSetRow{action: :create_activity, status: :applied}] = edit_rows(team)
+  end
+
+  defp template_with_details(team, attrs \\ %{}) do
+    group = group_fixture(team, %{title: "Instructors"})
+
+    for name <- ["Dana", "Lee"],
+        do: group_member_fixture(group, member_fixture(team, %{name: name}))
+
+    radio = equipment_item_fixture(team, %{title: "Radio kit A"})
+    gone = equipment_item_fixture(team, %{title: "Old radio", status: "retired"})
+    rope = tag_fixture(team, "Rope")
+
+    template =
+      template_fixture(team, "Monday night training", [{radio, 150}, {gone, 60}], [rope], [group])
+
+    template
+    |> Ecto.Changeset.change(
+      Map.merge(
+        %{
+          activity_kind: "exercise",
+          start_time: ~T[19:00:00],
+          length_minutes: 150,
+          place: "Hall",
+          hours: "secondary",
+          description: "<div>Bring a radio.</div>"
+        },
+        attrs
+      )
+    )
+    |> Repo.update!()
+    |> then(&%{template: &1, group: group, radio: radio, gone: gone, rope: rope})
+  end
+
+  defp pick_template(lv, template),
+    do:
+      lv
+      |> form("#activity-form", form: %{template_id: template.id})
+      |> render_change(%{"_target" => ["form", "template_id"]})
+
+  test "picking a template fills Add activity and lists what saving adds (#747)",
+       %{conn: conn, team: team} do
+    %{template: template, radio: radio, gone: gone, group: group} = template_with_details(team)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+    assert has_element?(lv, "#form_starts_at")
+    refute has_element?(lv, "#activity-template-adds")
+
+    pick_template(lv, template)
+
+    assert has_element?(lv, ~s|#form_title[value="Monday night training"]|)
+    assert has_element?(lv, ~s|#form_start_time[value="19:00"]|)
+    assert has_element?(lv, ~s|#form_finish_time[value="21:30"]|)
+    assert has_element?(lv, ~s|#form_hours option[value="secondary"][selected]|)
+    assert has_element?(lv, "#form_date")
+    refute has_element?(lv, "#form_starts_at")
+    assert has_element?(lv, "#activity-template-items #item-#{radio.id}")
+    refute has_element?(lv, "#activity-template-items #item-#{gone.id}")
+    assert has_element?(lv, "#activity-template-tags", "Rope")
+    assert has_element?(lv, "#activity-template-groups #group-#{group.id}-members", "2")
+
+    # A date gone by leaves the groups out, as Apply a template does.
+    lv |> form("#activity-form", form: %{date: "2020-11-02"}) |> render_change()
+    refute has_element?(lv, "#activity-template-groups")
+    assert has_element?(lv, "#activity-template-groups-passed", "Nov 2 has passed.")
+
+    # None goes back to the two date-and-time boxes, with the times picked.
+    lv
+    |> form("#activity-form", form: %{template_id: ""})
+    |> render_change(%{"_target" => ["form", "template_id"]})
+
+    assert has_element?(lv, ~s|#form_starts_at[value="2020-11-02T19:00"]|)
+    assert has_element?(lv, ~s|#form_ends_at[value="2020-11-02T21:30"]|)
+    refute has_element?(lv, "#activity-template-adds")
+  end
+
+  test "the template's page opens Add activity with it picked", %{conn: conn, team: team} do
+    %{template: template} = template_with_details(team)
+    {:ok, page, _html} = live(conn, ~p"/teams/#{team}/templates/#{template.id}")
+    path = ~p"/teams/#{team}/activities/new?template=#{template.id}"
+    assert has_element?(page, ~s|#template-add-activity[href="#{path}"]|)
+
+    {:ok, lv, _html} = live(conn, path)
+    assert has_element?(lv, ~s|#form_title[value="Monday night training"]|)
+    assert has_element?(lv, "#activity-template-adds")
+  end
+
+  test "saving with a template adds the activity, then its tags and members (#747)",
+       %{conn: conn, team: team} do
+    %{template: template, rope: rope} = template_with_details(team, %{start_time: ~T[09:00:00]})
+    date = Date.utc_today() |> Date.add(7)
+    stub_template_add(team, date)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+    pick_template(lv, template)
+
+    lv
+    |> form("#activity-form", form: %{date: Date.to_iso8601(date)})
+    |> render_submit()
+
+    assert_received {:write, "/exercises", %{"referenceDescription" => "Monday night training"}}
+    assert_received {:write, "/exercises/88/tags", %{"tagIds" => [2]}}
+    assert_received {:write, "/exercises/88/tags", %{"tagIds" => tag_ids}}
+    assert rope.d4h_tag_id in tag_ids
+
+    for _ <- 1..2,
+        do: assert_received({:write, "/attendance", %{"status" => "REQUESTED"}})
+
+    {path, flash} = assert_redirect(lv)
+    assert path =~ ~r{/activities/\d+$}
+    assert flash["info"] =~ "Added Monday night training."
+    assert flash["info"] =~ "1 tag added."
+    assert flash["info"] =~ "2 members added."
+  end
+
+  test "with Published ticked, the template's fields go first and Published last",
+       %{conn: conn, team: team} do
+    field = custom_field_fixture(team, %{target: "exercise", title: "Lead instructor"})
+    %{template: template} = template_with_details(team, %{start_time: ~T[09:00:00]})
+    id = Integer.to_string(field.d4h_custom_field_id)
+    template = template |> Ecto.Changeset.change(custom_values: %{id => "Dana"}) |> Repo.update!()
+    date = Date.utc_today() |> Date.add(-7)
+    stub_template_add(team, date)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+    pick_template(lv, template)
+    assert has_element?(lv, "#activity-template-fields", "Dana")
+
+    lv
+    |> form("#activity-form", form: %{date: Date.to_iso8601(date), published: true})
+    |> render_submit()
+
+    assert_received {:write, "/exercises/88/publish", %{"published" => false}}
+    assert_received {:write, "/exercises/88/publish", %{"published" => true}}
+    refute_received {:write, "/attendance", _json}
+
+    {_path, flash} = assert_redirect(lv)
+    assert flash["info"] =~ "1 field filled in."
+    assert flash["info"] =~ "Its groups were left out: the activity has started."
+  end
+
+  # Records adds activity 88 on `date`, 09:00 to 11:30, and takes every write after it.
+  defp stub_template_add(team, date) do
+    starts_at = Service.Convert.local_to_utc(date, ~T[09:00:00], team.timezone)
+    ends_at = DateTime.add(starts_at, 150, :minute)
+
+    activity =
+      RecordsStub.activity_json(88, %{
+        "referenceDescription" => "Monday night training",
+        "startsAt" => DateTime.to_iso8601(starts_at),
+        "endsAt" => DateTime.to_iso8601(ends_at),
+        "updatedAt" => DateTime.to_iso8601(DateTime.utc_now())
+      })
+
+    test_pid = self()
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      path = String.replace(conn.request_path, ~r{^/v3/team/\d+}, "")
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+
+      # The sync after the add copies it; here the copy has it at once.
+      if {conn.method, path} == {"POST", "/exercises"} do
+        activity_fixture(team, %{
+          d4h_activity_id: 88,
+          title: "Monday night training",
+          started_at: starts_at,
+          finished_at: ends_at,
+          tags: ["Secondary Hours"]
+        })
+      end
+
+      case {conn.method, path} do
+        {"GET", "/exercises/88"} -> Req.Test.json(conn, activity)
+        {"GET", "/exercises"} -> page(conn, [activity])
+        {"GET", "/tags"} -> page(conn, RecordsStub.tags_json())
+        {"GET", _path} -> page(conn, [])
+        {_write, path} -> written(conn, test_pid, path, body, activity)
+      end
+    end)
+  end
+
+  defp page(conn, results),
+    do: Req.Test.json(conn, %{"results" => results, "totalSize" => length(results), "page" => 0})
+
+  defp written(conn, test_pid, path, body, activity) do
+    json = if body == "", do: nil, else: Jason.decode!(body)
+    send(test_pid, {:write, path, json})
+
+    if path == "/attendance",
+      do:
+        Req.Test.json(conn, %{
+          "id" => System.unique_integer([:positive]),
+          "activity" => %{"resourceType" => "Exercise", "id" => 88},
+          "member" => %{"id" => json["memberId"]},
+          "status" => json["status"],
+          "startsAt" => json["startsAt"],
+          "endsAt" => json["endsAt"]
+        }),
+      else: Req.Test.json(conn, activity)
   end
 
   # The activity exists in Records once the POST answers, so the save keeps its id rather
