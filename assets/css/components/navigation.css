@@ -17,7 +17,7 @@
 
   /* Between the logo and the area's name (#779), so the name reads as the place you're in. */
   .site-bar-slash {
-    margin-left: calc(-1 * var(--sp-2));
+    margin-left: calc(-1 * var(--sp-1));
     color: rgb(255 255 255 / 0.45);
     font-size: var(--fs-lg);
     line-height: var(--lh-lg);
