@@ -2,6 +2,7 @@ defmodule App.Model.Template do
   use App, :model
 
   alias App.Field.TrimmedString
+  alias App.Model.Activity
   alias App.Model.Coordinate
   alias App.Model.Team
   alias App.Model.Template
@@ -15,7 +16,8 @@ defmodule App.Model.Template do
   # members it adds, that a team admin applies to an activity in one step (#271, #162). Templates are SAR Duty's
   # own; D4H never sees them. A template for one kind of activity also holds values for
   # that kind's D4H custom fields (#307), keyed by D4H field id as on activities, and the
-  # details that fill Add activity (#746). Applying a template leaves the details out.
+  # details that fill Add activity (#746). Applying a template leaves the details out,
+  # but for its Tax credit hours on an activity with no hours tag (apply_tags/4).
   schema "templates" do
     belongs_to :team, Team
     has_many :template_items, TemplateItem, on_replace: :delete
@@ -98,10 +100,6 @@ defmodule App.Model.Template do
     end
   end
 
-  @doc "Whether the template has a start time or a length: the Start column's test."
-  def starts?(%Template{start_time: time, length_minutes: minutes}),
-    do: time != nil or minutes != nil
-
   @doc "The kinds a template can be for, as the form offers them."
   def kind_options,
     do: [{"Any kind", ""}, {"Incident", "incident"}, {"Exercise", "exercise"}, {"Event", "event"}]
@@ -130,6 +128,22 @@ defmodule App.Model.Template do
   @doc "The template's tags by title."
   def tags(%Template{template_tags: template_tags}),
     do: template_tags |> Enum.map(& &1.tag) |> Enum.sort_by(&String.downcase(&1.title))
+
+  @doc """
+  The tags applying the template adds to an activity whose tags are `titles`: its own,
+  and the hours tag its Tax credit hours names, from the team's `team_tags`, while
+  `titles` hold no hours tag. Hours someone chose are never changed. `hours_tags` is
+  `Activity.hours_tags/1`.
+  """
+  def apply_tags(%Template{} = template, titles, team_tags, hours_tags) do
+    title = !Activity.hours_tagged?(titles, hours_tags) && hours_title(template, hours_tags)
+    hours_tag = title && Enum.find(team_tags, &(&1.title == title))
+    if hours_tag, do: [hours_tag | tags(template)], else: tags(template)
+  end
+
+  defp hours_title(%Template{hours: "primary"}, hours_tags), do: hours_tags.primary
+  defp hours_title(%Template{hours: "secondary"}, hours_tags), do: hours_tags.secondary
+  defp hours_title(%Template{}, _hours_tags), do: nil
 
   @doc "The groups whose members the template adds, by title."
   def groups(%Template{template_groups: template_groups}),

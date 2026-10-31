@@ -483,6 +483,34 @@ defmodule Web.EquipmentLiveTest do
     assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
   end
 
+  test "a template's Tax credit hours tags an activity with no hours tag, and only one", ctx do
+    secondary = tag_fixture(ctx.team, "Secondary Hours")
+    primary = tag_fixture(ctx.team, "Primary Hours")
+    untagged = activity_fixture(ctx.team, %{tags: []})
+    tagged = activity_fixture(ctx.team)
+
+    template =
+      ctx.team
+      |> template_fixture("Boat training")
+      |> Ecto.Changeset.change(hours: "secondary")
+      |> Repo.update!()
+
+    other = template_fixture(ctx.team, "Truck check")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{untagged.id}/templates")
+    lv |> element("#add-template-#{template.id}") |> render_click()
+    assert has_element?(lv, "#template-tags #tag-#{secondary.id}")
+
+    # The first template picked sets the hours.
+    lv |> element("#add-template-#{other.id}") |> render_click()
+    refute has_element?(lv, "#template-tags #tag-#{primary.id}")
+
+    # Hours someone chose stay.
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{tagged.id}/templates")
+    lv |> element("#add-template-#{template.id}") |> render_click()
+    refute has_element?(lv, "#template-tags #tag-#{secondary.id}")
+  end
+
   test "a template gets groups whose members it adds", ctx do
     managers = group_fixture(ctx.team, %{title: "Search Managers"})
     template = template_fixture(ctx.team, "Managers' training")

@@ -62,7 +62,10 @@ Change template, since it also picks the fields. The templates list has a Start 
 start time and length, blank for a template with neither.
 
 The details only fill Add activity. Applying a template leaves them out: it never changes
-an activity's title, time, or address.
+an activity's title, time, or address. The one exception is Tax credit hours, which adds
+its hours tag to an activity with no hours tag, such as an incident made in D4H
+(`Template.apply_tags/4`), so its hours reach the letters as they did when templates
+held the tag. The first template picked wins, and hours someone chose stay.
 
 When the details came (2026-10-30), each template's hours tag moved into Tax credit hours
 and left its tags. A template with neither tag got Primary.
