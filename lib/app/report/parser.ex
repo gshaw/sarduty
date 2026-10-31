@@ -223,6 +223,7 @@ defmodule App.Report.Parser do
   defp comparison_tail(left, tokens), do: {left, tokens}
 
   @matches %{"contains" => :contains, "like" => :like}
+  @lists %{"includes" => :includes, "excludes" => :excludes}
 
   defp word_tail("is", left, rest, line, _tokens) do
     case lower_words(rest, 2) do
@@ -252,7 +253,7 @@ defmodule App.Report.Parser do
 
   defp word_tail(kind, left, rest, line, _tokens) when kind in ["includes", "excludes"] do
     {items, rest} = items(rest, line)
-    {{String.to_existing_atom(kind), left, items, line}, rest}
+    {{Map.fetch!(@lists, kind), left, items, line}, rest}
   end
 
   defp word_tail(word, left, rest, line, _tokens) when is_map_key(@matches, word) do
