@@ -36,11 +36,6 @@ def narrow(k):
     return png.exists() and int.from_bytes(png.read_bytes()[16:20], "big") < 1200
 
 
-def posted(k):
-    """The file to post: the JPG when shots.mjs kept one because it was smaller, else the PNG."""
-    return f"{k}.jpg" if (d / f"shots/{k}.jpg").exists() else f"{k}.png"
-
-
 def md(text):
     """Captions are written as HTML for the review page; GitHub reads them as Markdown."""
     return re.sub(r"</?b>", "**", text)
@@ -49,21 +44,21 @@ def md(text):
 if sys.argv[2:] == ["--attach"]:
     files = [("contact", "Every shot in this round")] if data.get("contact") else []
     files += [(s.get("out", s["page"]), f'{s["id"]} · {s["title"]}' if s.get("id") else s["title"]) for s in data["shots"]]
-    print(" ".join("--attach " + shlex.quote(f"./shots/{posted(k)}#{alt}") for k, alt in files if (d / f"shots/{k}.png").exists()))
+    print(" ".join("--attach " + shlex.quote(f"./shots/{k}.png#{alt}") for k, alt in files if (d / f"shots/{k}.png").exists()))
     sys.exit()
 
 out = []
 if data.get("contact") and (d / "shots/contact.png").exists():
-    out.append(f"![Every shot in this round](./shots/{posted('contact')})")
+    out.append("![Every shot in this round](./shots/contact.png)")
 for s in data["shots"]:
     k = s.get("out", s["page"])
     name = f'{s["id"]} · {s["title"]}' if s.get("id") else s["title"]
     alt = html.escape(name, quote=True)
     out.append(f"**{name}**" + (f'\n\n{md(s["lead"])}' if s.get("lead") else ""))
     if narrow(k):
-        out.append(f'<img width="320" alt="{alt}" src="./shots/{posted(k)}">')
+        out.append(f'<img width="320" alt="{alt}" src="./shots/{k}.png">')
     else:
-        out.append(f"![{alt}](./shots/{posted(k)})")
+        out.append(f"![{alt}](./shots/{k}.png)")
     if s.get("pins"):
         out.append("\n".join(f"{i}. {md(p)}" for i, p in enumerate(s["pins"], 1)))
 print("\n\n".join(out))

@@ -8,7 +8,7 @@ pages from the app, with what changes marked in fuchsia and numbered.
 
 Screenshots of a finished feature on its PR come from the kit too, marked the same way;
 see [Screenshots on a PR](#screenshots-on-a-pr). Plain screenshots only when someone asks
-for them.
+for them, and those are PNG too, through `mise exec -- oxipng -o 2 --strip safe <file>`.
 
 ## The rules
 
@@ -52,10 +52,10 @@ for them.
    page), phones at 390 in an iPhone frame.
 9. **Words follow [writing.md](writing.md).** Mock copy is proposed copy: glossary words,
    short sentences, values as `Service.Format` writes them.
-10. **Light mode, 2x, the smaller file.** `shots.mjs` writes a PNG and keeps a JPG only
-    when it is smaller. Flat pages come out as PNG, sharp at about 100–200 KB; a page with
-    photos or a map comes out as JPG. Screenshots are attached to the issue or PR, never
-    committed.
+10. **Light mode, 2x, PNG.** Every screenshot is a PNG, never a JPG, which blurs text.
+    `shots.mjs` runs each through oxipng (pinned in `.mise.toml`), which takes about 30%
+    off without changing a pixel: a desktop shot is about 100–300 KB. Screenshots are
+    attached to the issue or PR, never committed.
 11. **Phone shots are 320 wide in GitHub.** A phone-width shot is `<img width="320">`,
     never `![…]()`: GitHub draws every image as wide as the column, and a 2x phone shot
     runs about five screens tall. `body.py` writes it that way, so post its Markdown
@@ -71,7 +71,7 @@ mkdir -p tmp/mockups && cp -R tools/mockups/example tmp/mockups/<topic>
 tools/mockups/app-css.sh                                  # today's CSS and fonts
 tools/mockups/dump.sh tmp/mockups/<topic>/dump_test.exs   # real/*.html
 python3 -I tmp/mockups/<topic>/build.py                   # the mockup pages
-node tools/mockups/shots.mjs tmp/mockups/<topic>          # shots/*.png, or .jpg if smaller
+node tools/mockups/shots.mjs tmp/mockups/<topic>          # shots/*.png, optimized
 python3 -I tools/mockups/review.py tmp/mockups/<topic> > tmp/mockups/<topic>/review.html
 python3 -I tools/mockups/body.py tmp/mockups/<topic> > tmp/mockups/<topic>/body.md
 ```

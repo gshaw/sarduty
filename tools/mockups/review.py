@@ -11,15 +11,8 @@ import sys
 d = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
 shots = json.loads((d / "shots.json").read_text())["shots"]
 intro = (d / "intro.html").read_text() if (d / "intro.html").exists() else ""
-
-
-def posted(k):
-    """The file body.py posts: the JPG when shots.mjs kept one because it was smaller."""
-    return f"{k}.jpg" if (d / f"shots/{k}.jpg").exists() else f"{k}.png"
-
-
 if intro and (d / "shots/contact.png").exists():
-    intro += f'<img src="{d}/shots/{posted("contact")}" alt="Every shot in this round">'
+    intro += f'<img src="{d}/shots/contact.png" alt="Every shot in this round">'
 
 
 def narrow(k):
@@ -41,7 +34,7 @@ for i, s in enumerate(shots):
     lead = f'<p class="lead">{s["lead"]}</p>' if s.get("lead") else ""
     cls = "phone" if narrow(k) else ""
     panes.append(f'<section data-k="{k}"{"" if first else " hidden"}>{lead}'
-                 f'<img class="{cls}" src="{d}/shots/{posted(k)}" alt="{html.escape(s["title"])}">'
+                 f'<img class="{cls}" src="{d}/shots/{k}.png" alt="{html.escape(s["title"])}">'
                  f'{f"<ol class=pins>{pins}</ol>" if pins else ""}</section>')
 
 print(f"""<!doctype html><html><head><meta charset="utf-8"><style>
