@@ -139,17 +139,17 @@ mockups, are on #645.
   team, else your first organization, else SAR Duty admin (`Navigation.outside_area/4`),
   with the switcher on it. The
   page is in no area, so the switcher marks nothing and the name always opens it.
-- **After the logo, the area's name**: the team's, the organization's, SAR Duty admin, or
-  Account settings.
-- **The team switcher** sits on the name when you can go somewhere else, at every width.
-  Its menu lists Your teams, each team where you are a team admin or a member, A to Z,
-  one row per team (`Navigation.switch_rows/5`), then Your organizations, each one you are
-  an organization admin of, with a building icon (#512). SAR Duty admins reach the other
-  organizations from Admin › Organizations. For SAR Duty admins, SAR Duty admin comes
-  last, below a divider and with a shield, so it never reads as one more team
-  (2026-10-23). The team you're on is marked, and each row goes to the team's Dashboard; a
-  team opened from Admin › Teams that isn't yours marks nothing. With one place to be,
-  the name is plain text.
+- **After the logo, a faint slash and the area's name**: the team's, the organization's,
+  SAR Duty admin, or Account settings (#779).
+- **The team switcher** sits on the name for everyone logged in, at every width, even on
+  one team (#779). Its menu lists Your team or Your teams, each team where you are a team
+  admin or a member, A to Z, one row per team (`Navigation.switch_rows/5`), then Your
+  organizations, each one you are an organization admin of, with a building icon (#512).
+  Then SAR Duty's home page, the wordmark, below a divider: on a phone it is the only way
+  home. SAR Duty admins reach the other organizations from Admin › Organizations. For SAR
+  Duty admins, SAR Duty admin comes last, below a divider and with a shield, so it never
+  reads as one more team (2026-10-23). The team you're on is marked, and each row goes to
+  the team's Dashboard; a team opened from Admin › Teams that isn't yours marks nothing.
 - **Your avatar, top right** at every width: your initials in a circle, from the name of
   the member you log in as, or else your email (`Navigation.person/3`). It opens your name
   and email, Account settings, and Log out. It is the same on every team, and Your
@@ -168,8 +168,8 @@ mockups, are on #645.
   A record's tabs sit under its title, above both columns. An activity's and an
   equipment item's sit in the main column, under what the record is.
 - Below 1024px the side navigation hides (#471). The Menu button moves to the left of the
-  bar, the logo sits over the area's name in the middle, and your avatar stays on the
-  right with the same account menu. The switcher stays on the name, with a chevron, and
+  bar, the area's name alone sits in the middle, with no logo (#779), and your avatar
+  stays on the right with the same account menu. The switcher stays on the name, with a chevron, and
   opens its own panel under the bar (2026-10-23: #472 had moved it into Menu, where
   people on two teams didn't find it). Menu holds the side navigation's sections with
   their dividers; with none, there is no Menu button. The bar's menus share one

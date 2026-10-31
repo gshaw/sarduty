@@ -276,12 +276,13 @@ defmodule Web.Navigation do
 
   @doc """
   The team switcher's rows: each team where you're a team admin or a member, A to Z, one
-  row per team, then each organization you're an organization admin of (#512), then "SAR
-  Duty admin" and "Style guide" last for SAR Duty admins, which the switcher sets apart. SAR Duty admins
-  reach other organizations from Admin › Organizations. The area you're in is current; a
-  team or organization opened as a SAR Duty admin that isn't yours marks nothing. Empty
-  when there is nowhere else to go, so the bar's name is plain text.
-  `[%{kind: :team | :org | :admin | :styles, key:, label:, path:, current:}]`.
+  row per team, then each organization you're an organization admin of (#512), then SAR
+  Duty's home page (#779), then "SAR Duty admin" and "Style guide" last for SAR Duty
+  admins, which the switcher sets apart. SAR Duty admins reach other organizations from
+  Admin › Organizations. The area you're in is current; a team or organization opened as
+  a SAR Duty admin that isn't yours marks nothing. The home page is always somewhere to
+  go, so everyone logged in gets the switcher, even on one team.
+  `[%{kind: :team | :org | :home | :admin | :styles, key:, label:, path:, current:}]`.
   """
   def switch_rows(is_admin, managed_teams, member_logins, organizations \\ [], area) do
     teams = for team <- teams(managed_teams, member_logins), do: team_row(team, area)
@@ -292,8 +293,7 @@ defmodule Web.Navigation do
 
     admin = if is_admin, do: [admin_row(area), styles_row()], else: []
 
-    rows = teams ++ orgs ++ admin
-    if Enum.all?(rows, &(&1.current or &1.kind == :styles)), do: [], else: rows
+    teams ++ orgs ++ [home_row()] ++ admin
   end
 
   defp team_row(team, area) do
@@ -324,6 +324,11 @@ defmodule Web.Navigation do
       path: ~p"/admin",
       current: match?(%{kind: :admin}, area)
     }
+  end
+
+  # The home page is no area, so it is never current.
+  defp home_row do
+    %{kind: :home, key: "home", label: "SAR Duty", path: "/", current: false}
   end
 
   # The style guide is no area, so it is never current.

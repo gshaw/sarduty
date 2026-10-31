@@ -15,8 +15,7 @@ defmodule Web.TeamNavigationTest do
        %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members")
 
-    assert has_element?(lv, "span#nav-area", team.name)
-    refute has_element?(lv, "#team-switcher")
+    assert has_element?(lv, "#team-switcher #nav-area", team.name)
     assert has_element?(lv, ~s{#side-nav-activities[href="/teams/#{team.subdomain}/activities"]})
     assert has_element?(lv, "#side-nav-members[aria-current=page]")
     refute has_element?(lv, "#side-nav-activities[aria-current]")
@@ -31,7 +30,7 @@ defmodule Web.TeamNavigationTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members")
 
     assert has_element?(lv, ~s{a.brand[href="/"]})
-    assert has_element?(lv, "span#nav-area", team.name)
+    assert has_element?(lv, "#team-switcher #nav-area", team.name)
     refute has_element?(lv, "#site-footer")
 
     {:ok, lv, _html} = live(conn, ~p"/")
@@ -132,11 +131,33 @@ defmodule Web.TeamNavigationTest do
              "#phone-team-switcher #phone-switch-team-#{team.subdomain}[aria-current=page]"
            )
 
-    assert has_element?(lv, "#phone-nav-area .brand")
+    refute has_element?(lv, "#phone-nav-area > a.brand")
     refute has_element?(lv, "#phone-menu .menu-person")
     refute has_element?(lv, "#phone-menu a[href='/logout']")
     assert has_element?(lv, "#account-menu .menu-note", user.email)
     assert has_element?(lv, ~s{#account-menu #nav-log-out[href="/logout"]})
+  end
+
+  test "a member on one team gets the picker: Your team, then SAR Duty's home page (#779)" do
+    team =
+      %{name: "Alpha SAR"}
+      |> team_fixture()
+      |> Ecto.Changeset.change(member_logins: true)
+      |> Repo.update!()
+
+    user = App.AccountsFixtures.user_fixture()
+    member_fixture(team, %{email: user.email})
+    {:ok, lv, _html} = live(log_in_user(build_conn(), user), ~p"/teams/#{team}/me")
+
+    assert has_element?(lv, ".site-bar-slash")
+    assert has_element?(lv, "#team-switcher #nav-area", "Alpha SAR")
+    assert has_element?(lv, "#team-switcher .menu-heading", "Your team")
+    assert has_element?(lv, "#switch-team-#{team.subdomain}[aria-current=page]")
+    assert has_element?(lv, ~s{#team-switcher #switch-home[href="/"]}, "Home page")
+    assert has_element?(lv, "#phone-team-switcher summary", "Alpha SAR")
+    assert has_element?(lv, "#phone-team-switcher .menu-heading", "Your team")
+    assert has_element?(lv, ~s{#phone-team-switcher #phone-switch-home[href="/"]})
+    refute has_element?(lv, "#switch-admin")
   end
 
   test "a member on two teams gets the switcher at every width, and no SAR Duty admin" do
@@ -162,6 +183,7 @@ defmodule Web.TeamNavigationTest do
            )
 
     assert has_element?(lv, "#phone-team-switcher #phone-switch-team-#{second.subdomain}")
+    assert has_element?(lv, "#team-switcher .menu-heading", "Your teams")
     refute has_element?(lv, "#switch-admin")
   end
 
