@@ -113,15 +113,6 @@ defmodule Web.EquipmentItemLive do
               <li>
                 <.a id="item-edit" navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/edit"}>Change item</.a>
               </li>
-              <li :if={D4H.records?(@current_team)}>
-                <.a
-                  id="item-delete"
-                  href="#"
-                  phx-click="delete"
-                  phx-disable-with="Deleting…"
-                  {Web.DeleteConfirm.item(@item)}
-                >Delete item</.a>
-              </li>
               <li :if={@fields?}>
                 <.a
                   id="item-actions-change-fields"
@@ -130,6 +121,15 @@ defmodule Web.EquipmentItemLive do
               </li>
               <li :if={!D4H.records?(@current_team)}>
                 <.a external={true} href={D4H.equipment_url(@current_team, @item)}>Open in {@service}</.a>
+              </li>
+              <li :if={D4H.records?(@current_team)}>
+                <.a
+                  id="item-delete"
+                  href="#"
+                  phx-click="delete"
+                  phx-disable-with="Deleting…"
+                  {Web.DeleteConfirm.item(@item)}
+                >Delete item</.a>
               </li>
             </ul>
           </dd>
