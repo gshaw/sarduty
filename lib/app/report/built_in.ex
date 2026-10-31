@@ -31,7 +31,7 @@ defmodule App.Report.BuiltIn do
       name: "Activities with two hours tags",
       about: "Tax credit letters count one of the tags and say nothing about the other.",
       query: """
-      select ref_id, title, started_at, tags
+      select title, started_at, tags
       from activities
       where hours_tag_count > 1 and year(started_at) = :year
       order by started_at desc
@@ -42,7 +42,7 @@ defmodule App.Report.BuiltIn do
       name: "Activities with no hours tag",
       about: "Published activities that tax credit letters count no hours for.",
       query: """
-      select ref_id, title, started_at
+      select title, started_at
       from activities
       where hours_tag_count = 0 and published = true and year(started_at) = :year
       order by started_at desc

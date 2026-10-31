@@ -88,7 +88,7 @@ defmodule Web.ReportLive do
     </.banner>
 
     <div :if={@result}>
-      <p id="report-count" class="hint mt-4">{count(@result)}</p>
+      <p id="report-count" class="hint">{count(@result)}</p>
       <.report_table
         :if={@result.rows != []}
         id="report-rows"
