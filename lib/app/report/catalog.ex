@@ -13,6 +13,7 @@ defmodule App.Report.Catalog do
 
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.ChoreEvent
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
   alias App.Model.Group
@@ -70,7 +71,32 @@ defmodule App.Report.Catalog do
           "Whether a team admin sent its attendance from SAR Duty."
         ),
         number(:attended_count, "Attended", "How many members attended."),
-        %Field{name: "attended_hours", label: "Hours", type: :hours, column: :attended_hours}
+        %Field{name: "attended_hours", label: "Hours", type: :hours, column: :attended_hours},
+        # Experiment (list views): what the Activities list filters, searches, and sorts by.
+        text(:tracking_number, "Tracking number"),
+        text(:description, "Description"),
+        number(:duration, "Duration", "Minutes: a chore activity's members' total."),
+        scope_field("chore", "Chore", "One of the team's chore activities.", &chore_ids/2),
+        scope_field("current", "Current", "Overlaps Current.", &current_ids/2),
+        scope_field("recent", "Recent", "Finished in the last 30 days.", &recent_ids/2),
+        scope_field(
+          "missing_required_fields",
+          "Missing fields",
+          "A draft incident with a required field empty.",
+          &missing_fields_ids/2
+        ),
+        scope_field(
+          "primary_tag",
+          "Primary hours tag",
+          "Has the primary hours tag.",
+          &primary_ids/2
+        ),
+        scope_field(
+          "secondary_tag",
+          "Secondary hours tag",
+          "Has the secondary hours tag.",
+          &secondary_ids/2
+        )
       ]
     }
   end
@@ -97,7 +123,15 @@ defmodule App.Report.Catalog do
         },
         date(:started_at, "Started"),
         %Field{name: "hours", label: "Hours", type: :hours, column: :hours},
-        date(:replied_at, "Replied")
+        date(:replied_at, "Replied"),
+        # Experiment (list views)
+        scope_field(
+          "in_period",
+          "In period",
+          "in_period('90d') or in_period('2026'): started in a period.",
+          &attendance_in_period_ids/2,
+          [:period]
+        )
       ]
     }
   end
@@ -136,6 +170,68 @@ defmodule App.Report.Catalog do
           sql: &not_seen_sql/3,
           about:
             "not_seen(365): current members whose attendance clock is older than 365 days, as Needs attention counts."
+        },
+        # Experiment (list views): what the Members list filters, searches, and sorts by.
+        date(:left_at, "Retired"),
+        bool(:current, "Not retired"),
+        scope_field(
+          "details_missing",
+          "Details missing",
+          "No phone, email, or address.",
+          &details_missing_ids/2
+        ),
+        scope_field(
+          "holds_items",
+          "Holds items",
+          "Holds some of the team's items.",
+          &holder_ids/2
+        ),
+        scope_field(
+          "can_log_in",
+          "Can log in",
+          "D4H lets them log in.",
+          &access_ids(&1, &2, true)
+        ),
+        scope_field(
+          "no_access",
+          "No access",
+          "D4H doesn't let them log in.",
+          &access_ids(&1, &2, false)
+        ),
+        scope_field(
+          "on_team",
+          "On the team",
+          "on_team('2026'): on the team at any point in the period.",
+          &on_team_ids/2,
+          [:period]
+        ),
+        %Field{
+          name: "activity_count",
+          label: "Activities",
+          type: :number,
+          args: [:period, :tag],
+          sql: &summary_sql(&1, &2, &3, :activity_count)
+        },
+        %Field{
+          name: "attended_minutes",
+          label: "Duration",
+          type: :hours,
+          args: [:period, :tag],
+          sql: &summary_sql(&1, &2, &3, :total_minutes)
+        },
+        %Field{
+          name: "tax_hours",
+          label: "Tax credit hours",
+          type: :hours,
+          args: [:year, :part],
+          sql: &tax_hours_sql/3
+        },
+        %Field{
+          name: "letter",
+          label: "Letter",
+          type: :text,
+          args: [:year],
+          sql: &letter_sql/3
         }
       ]
     }
@@ -255,7 +351,15 @@ defmodule App.Report.Catalog do
       fields: [
         id(),
         record("title", "Group", :group, :title),
-        number(:member_count, "Members", "How many current members are in it.")
+        number(:member_count, "Members", "How many current members are in it."),
+        # Experiment (list views)
+        bool(:organization_owned, "Organization's"),
+        scope_field(
+          "out_of_step",
+          "Out of step",
+          "Its rules would change members now, or need fixing.",
+          &out_of_step_ids/2
+        )
       ]
     }
   end
@@ -355,6 +459,10 @@ defmodule App.Report.Catalog do
     |> where([a], a.team_id == ^team.id)
     |> Activity.not_deleted()
     |> join(:left, [a], t in subquery(attended), as: :attended, on: t.activity_id == a.id)
+    |> join(:left, [a], c in subquery(ChoreEvent.totals(team.id)),
+      as: :chores,
+      on: c.d4h_activity_id == a.d4h_activity_id
+    )
     |> select(
       ^%{
         id: dynamic([a], a.id),
@@ -368,7 +476,19 @@ defmodule App.Report.Catalog do
         hours_tag_count: Activity.hours_tag_count_dynamic(hours_tags),
         attendance_sent: dynamic([a], not is_nil(a.attendance_sent_at)),
         attended_count: dynamic([attended: t], coalesce(t.count, 0)),
-        attended_hours: dynamic([attended: t], coalesce(t.minutes, 0))
+        attended_hours: dynamic([attended: t], coalesce(t.minutes, 0)),
+        tracking_number: dynamic([a], a.tracking_number),
+        description: dynamic([a], a.description),
+        duration:
+          dynamic(
+            [a, chores: c],
+            fragment(
+              "COALESCE(?, (JULIANDAY(?) - JULIANDAY(?)) * 1440.0)",
+              c.minutes,
+              a.finished_at,
+              a.started_at
+            )
+          )
       }
     )
   end
@@ -440,7 +560,9 @@ defmodule App.Report.Catalog do
         person: dynamic([m], not m.not_a_person),
         groups: dynamic([groups: g], g.titles),
         qualifications: dynamic([awards: q], q.titles),
-        last_attended: dynamic([last: l], l.last_attended_at)
+        last_attended: dynamic([last: l], l.last_attended_at),
+        left_at: dynamic([m], m.left_at),
+        current: Member.current_dynamic(now)
       }
     )
   end
@@ -519,7 +641,12 @@ defmodule App.Report.Catalog do
       where: g.team_id == ^team.id,
       left_join: c in subquery(current),
       on: c.group_id == g.id,
-      select: %{id: g.id, title: g.title, member_count: coalesce(c.count, 0)}
+      select: %{
+        id: g.id,
+        title: g.title,
+        member_count: coalesce(c.count, 0),
+        organization_owned: g.organization_owned
+      }
     )
   end
 
@@ -528,5 +655,166 @@ defmodule App.Report.Catalog do
     query = Member |> Member.not_seen_query(team, days, now) |> select([m], m.id)
     {sql, params} = Repo.to_sql(:all, query)
     {[table, ".\"id\" IN (", sql, ")"], params}
+  end
+
+  # Experiment (list views): a field that is an existing scope function, as
+  # `id IN (the ids it keeps)`, so the rule stays in its home.
+  defp scope_field(name, label, about, fun, args \\ []) do
+    %Field{
+      name: name,
+      label: label,
+      type: :bool,
+      about: about,
+      args: args,
+      sql: fn table, args, context -> in_ids(table, fun.(context, args)) end
+    }
+  end
+
+  defp in_ids(table, ids) when is_list(ids) do
+    marks = ids |> Enum.map(fn _ -> "?" end) |> Enum.join(", ")
+    {[table, ".\"id\" IN (", marks, ")"], ids}
+  end
+
+  defp in_ids(table, query) do
+    {sql, params} = Repo.to_sql(:all, query)
+    {[table, ".\"id\" IN (", sql, ")"], params}
+  end
+
+  defp activity_ids(team), do: Activity |> where([a], a.team_id == ^team.id) |> select([a], a.id)
+
+  defp chore_ids(%Context{team: team}, []) do
+    chores = from(t in subquery(ChoreEvent.totals(team.id)), select: t.d4h_activity_id)
+    where(activity_ids(team), [a], a.d4h_activity_id in subquery(chores))
+  end
+
+  defp current_ids(%Context{team: team, now: now, timezone: timezone}, []) do
+    {start, finish} = Service.Period.current(now, timezone)
+    team |> activity_ids() |> Activity.overlapping(start, finish)
+  end
+
+  defp recent_ids(%Context{team: team, now: now}, []),
+    do: team |> activity_ids() |> Activity.finished_recently(now)
+
+  defp missing_fields_ids(%Context{team: team}, []),
+    do: team |> activity_ids() |> Activity.missing_required_fields()
+
+  defp primary_ids(%Context{team: team, hours_tags: tags}, []),
+    do: team |> activity_ids() |> Activity.tagged(tags.primary)
+
+  defp secondary_ids(%Context{team: team, hours_tags: tags}, []),
+    do: team |> activity_ids() |> Activity.tagged(tags.secondary)
+
+  defp attendance_in_period_ids(%Context{timezone: timezone, now: now}, [period]) do
+    Attendance |> Attendance.started_in(period, timezone, now) |> select([r], r.id)
+  end
+
+  defp member_ids(team), do: Member |> where([m], m.team_id == ^team.id) |> select([m], m.id)
+
+  defp details_missing_ids(%Context{team: team, now: now}, []) do
+    team
+    |> member_ids()
+    |> Member.current_query(now)
+    |> Member.counted_query()
+    |> Member.missing_details_query()
+  end
+
+  defp holder_ids(%Context{team: team}, []),
+    do: where(member_ids(team), [m], m.id in subquery(EquipmentItem.holder_ids_query(team)))
+
+  defp access_ids(%Context{team: team}, [], access?),
+    do: team |> member_ids() |> Member.d4h_access_query(access?)
+
+  # The Members list's Period filter, from MemberFilterViewModel (its rule has no model home).
+  defp on_team_ids(%Context{team: team}, ["all"]), do: member_ids(team)
+
+  defp on_team_ids(%Context{team: team, timezone: timezone, now: now}, [period]) do
+    {start, finish} = Service.Period.bounds(period, timezone, now)
+
+    team
+    |> member_ids()
+    |> where([m], is_nil(m.joined_at) or m.joined_at < ^finish)
+    |> where([m], is_nil(m.left_at) or m.left_at >= ^start)
+  end
+
+  # The Members list's Activities and Duration columns: a count over the period and tag.
+  defp summary_sql(table, [period, tag], %Context{team: team, timezone: timezone, now: now}, key) do
+    summary =
+      now
+      |> Attendance.attended()
+      |> where([activity: ac], ac.team_id == ^team.id)
+      |> group_by([at], at.member_id)
+      |> select([at], %{
+        member_id: at.member_id,
+        activity_count: count(at.id),
+        total_minutes: sum(at.duration_in_minutes)
+      })
+      |> then(
+        &if(period == "all", do: &1, else: Attendance.started_in(&1, period, timezone, now))
+      )
+      |> Attendance.at_tagged(team, if(tag == "all", do: nil, else: tag))
+
+    {sql, params} = Repo.to_sql(:all, from(x in subquery(summary), select: x))
+
+    {[
+       "COALESCE((SELECT xs.\"",
+       Atom.to_string(key),
+       "\" FROM (",
+       sql,
+       ") xs WHERE xs.\"member_id\" = ",
+       table,
+       ".\"id\"), 0)"
+     ], params}
+  end
+
+  # Experiment: fields an Elixir rule computes, sent to SQLite as a CASE over ids.
+  defp tax_hours_sql(table, [year, part], %Context{team: team, now: now}) do
+    hours = App.Operation.CountTaxCreditHours.call(team, String.to_integer(year), nil, now)
+    key = String.to_existing_atom("#{part}_minutes")
+
+    hours
+    |> Enum.map(fn {member_id, counted} -> {member_id, Map.get(counted, key, 0)} end)
+    |> case_sql(table, 0)
+  end
+
+  defp letter_sql(table, [year], %Context{team: team, now: now}) do
+    year = String.to_integer(year)
+    hours = App.Operation.CountTaxCreditHours.call(team, year, nil, now)
+
+    from(l in App.Model.TaxCreditLetter,
+      join: m in assoc(l, :member),
+      where: m.team_id == ^team.id and l.year == ^year
+    )
+    |> Repo.all()
+    |> Enum.map(fn letter ->
+      counted = App.Operation.CountTaxCreditHours.get(hours, letter.member_id)
+      status = App.Model.TaxCreditLetter.hours_status(letter, counted, now, team.timezone)
+      {letter.member_id, if(status == :changed, do: "changed", else: "made")}
+    end)
+    |> case_sql(table, "none")
+  end
+
+  defp case_sql([], _table, default), do: {["?"], [default]}
+
+  defp case_sql(pairs, table, default) do
+    whens = Enum.map(pairs, fn _ -> " WHEN ? THEN ?" end)
+    params = Enum.flat_map(pairs, fn {id, value} -> [id, value] end)
+    {["(CASE ", table, ".\"id\"", whens, " ELSE ? END)"], params ++ [default]}
+  end
+
+  defp out_of_step_ids(%Context{team: team}, []) do
+    context = App.Operation.BuildGroupRulePreview.load(team)
+
+    ruled =
+      team.id |> App.Model.GroupRule.ruled_d4h_group_ids_query() |> Repo.all() |> MapSet.new()
+
+    Group
+    |> where([g], g.team_id == ^team.id)
+    |> Repo.all()
+    |> Enum.filter(&MapSet.member?(ruled, &1.d4h_group_id))
+    |> Enum.filter(fn group ->
+      preview = App.Operation.BuildGroupRulePreview.preview(context, team, group)
+      preview.problems != [] or preview.to_add != [] or preview.to_remove != []
+    end)
+    |> Enum.map(& &1.id)
   end
 end

@@ -14,7 +14,7 @@ defmodule App.Report.Parser do
   @clauses ~w(select from where group pivot order limit offset label totals)
   @functions ~w(count sum avg min max year month quarter lower upper days_since)
 
-  @ranges ~w(TODAY THIS_MONTH LAST_MONTH THIS_YEAR LAST_YEAR)
+  @ranges ~w(NOW TODAY THIS_MONTH LAST_MONTH THIS_YEAR LAST_YEAR)
   @ranges_with_n ~w(LAST_N_DAYS NEXT_N_DAYS LAST_N_MONTHS)
 
   @doc "The functions a query can call."
@@ -131,8 +131,9 @@ defmodule App.Report.Parser do
     case rest do
       [{:word, word, _} | after_word] ->
         case String.downcase(word) do
-          "asc" -> {{expr, :asc}, after_word}
-          "desc" -> {{expr, :desc}, after_word}
+          "asc" -> nulls(expr, :asc, after_word)
+          "desc" -> nulls(expr, :desc, after_word)
+          "nulls" -> nulls(expr, :asc, rest)
           _other -> {{expr, :asc}, rest}
         end
 
@@ -140,6 +141,17 @@ defmodule App.Report.Parser do
         {{expr, :asc}, rest}
     end
   end
+
+  # Experiment (list views): `nulls first` or `nulls last` after the direction.
+  defp nulls(expr, dir, [{:word, nulls, _}, {:word, where, _} | rest]) do
+    case {String.downcase(nulls), String.downcase(where)} do
+      {"nulls", "first"} -> {{expr, {dir, :nulls_first}}, rest}
+      {"nulls", "last"} -> {{expr, {dir, :nulls_last}}, rest}
+      _other -> {{expr, dir}, [{:word, nulls, nil}, {:word, where, nil} | rest]}
+    end
+  end
+
+  defp nulls(expr, dir, rest), do: {{expr, dir}, rest}
 
   defp label_item(tokens) do
     case expr(tokens) do

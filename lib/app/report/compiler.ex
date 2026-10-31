@@ -273,6 +273,10 @@ defmodule App.Report.Compiler do
     {sql, Enum.map(params, &SQL.param/1)}
   end
 
+  # Bug found by the list views experiment: count(id) with no group by wrote an empty
+  # GROUP BY, a syntax error the runner reported as too slow.
+  defp group_by([]), do: nil
+
   defp group_by(es),
     do: SQL.join([{" GROUP BY ", []}, SQL.join(Enum.map(es, &Expr.id_sql/1), ", ")])
 
@@ -285,6 +289,8 @@ defmodule App.Report.Compiler do
 
   defp direction(:asc), do: " ASC"
   defp direction(:desc), do: " DESC"
+  defp direction({dir, :nulls_first}), do: direction(dir) <> " NULLS FIRST"
+  defp direction({dir, :nulls_last}), do: direction(dir) <> " NULLS LAST"
 
   # One more row than a report shows, to tell when there are more.
   defp limit_offset(query),

@@ -180,6 +180,11 @@ defmodule App.Report.Expr do
   defp field_expr(%{args: [_ | _]} = field, _subject, via, args, line, st),
     do: roll_up(field, via, args, line, st)
 
+  # Experiment (list views): a field that is a scope function, `id IN (its query)`.
+  defp field_expr(%{sql: fun, args: []} = field, _subject, via, [], line, st)
+       when is_function(fun),
+       do: roll_up(field, via, [], line, st)
+
   defp field_expr(field, _subject, via, [_ | _], line, _st) do
     name = if via, do: "#{via}.#{field.name}", else: field.name
     fail(line, "#{name} takes nothing in brackets. Write #{name}.")
@@ -235,7 +240,7 @@ defmodule App.Report.Expr do
     if length(args) != length(field.args),
       do: fail(line, "Write #{field.name}(365): it takes a number of days.")
 
-    days = Enum.map(args, &days(&1, field, line))
+    days = Enum.map(args, &days(&1, field, line, st))
     table = SQL.table(via)
     {sql, params} = field.sql.(table, days, st.context)
 
@@ -246,9 +251,14 @@ defmodule App.Report.Expr do
     )
   end
 
-  defp days({:literal, n, _}, _field, _line) when is_integer(n) and n > 0, do: n
+  defp days({:literal, n, _}, _field, _line, _st) when is_integer(n) and n > 0, do: n
+  # Experiment (list views): a period such as '90d' or '2026', or a tag's title.
+  defp days({:literal, text, _}, _field, _line, _st) when is_binary(text), do: text
 
-  defp days(_arg, field, line),
+  # Experiment (list views): a filter's picked value, such as on_team(:when).
+  defp days({:value, name, _}, _field, _line, st), do: Map.get(st.given, name, "all")
+
+  defp days(_arg, field, line, _st),
     do: fail(line, "Write #{field.name}(365): it takes a whole number of days.")
 
   defp no_field(subject, name, others) do
@@ -411,7 +421,18 @@ defmodule App.Report.Expr do
     do: compare_sides(op, l, compile(right, st), line, st)
 
   defp compare_value(op, l, name, line, st) do
-    value = value(name, l, st)
+    # Experiment (list views): a value matched with contains is typed text, whatever
+    # field it meets, so a search over a list field doesn't become a menu of its titles.
+    value =
+      if op in @matches,
+        do: %Value{
+          name: name,
+          label: Value.label(name),
+          kind: :text,
+          value: Map.get(st.given, name, "")
+        },
+        else: value(name, l, st)
+
     r = new("?", [value_param(value, l)], :value, line, value: value.value)
     e = value_compare(value.kind, op, l, r, value, line, st)
     %{e | values: [value | e.values]}
@@ -481,7 +502,8 @@ defmodule App.Report.Expr do
   defp choice_list(choices), do: Enum.map_join(choices, ", ", &"'#{elem(&1, 0)}'")
 
   defp match(op, l, r, line) do
-    unless text_like?(l) or l.type == :choice,
+    # Experiment (list views): a list field matches on any of its titles, as search does.
+    unless text_like?(l) or l.type in [:choice, :list],
       do: fail(line, "Use #{op_sql(op)} with a text field, such as title contains 'river'.")
 
     unless r.type in [:text_literal, :value],

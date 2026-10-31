@@ -20,6 +20,13 @@ defmodule App.Report.Runner do
       {:ok, %{rows: rows}} ->
         shape(plan, rows, timezone)
 
+      {:error, %{message: message}} when is_binary(message) ->
+        if message =~ "interrupt",
+          do:
+            {:error,
+             Error.new(nil, "Narrow the report with where: it took longer than 2 seconds.")},
+          else: raise("Experiment: SQLite refused the report: " <> message)
+
       {:error, _reason} ->
         {:error, Error.new(nil, "Narrow the report with where: it took longer than 2 seconds.")}
     end

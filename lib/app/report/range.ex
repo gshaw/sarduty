@@ -10,6 +10,8 @@ defmodule App.Report.Range do
   alias App.Report.Context
 
   @doc "The range a date range's name and number say, on the context's day."
+  def of("NOW", _n, %Context{now: now}), do: {now, now}
+
   def of(name, n, %Context{today: today, timezone: timezone}) do
     {first, last} = days(name, n, today)
     {midnight(first, timezone), midnight(Date.add(last, 1), timezone)}
