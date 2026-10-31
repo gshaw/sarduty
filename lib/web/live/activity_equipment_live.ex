@@ -3,7 +3,6 @@ defmodule Web.ActivityEquipmentLive do
 
   import Web.Components.Scanner
 
-  alias App.Model.ChangeSetRow
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
   alias App.Operation.ChangeActivityEquipment
@@ -442,7 +441,10 @@ defmodule Web.ActivityEquipmentLive do
       {:ok, rows} ->
         socket =
           socket
-          |> put_flash(flash_kind(rows), result_text(rows, "added"))
+          |> put_flash(
+            ChangeActivityEquipment.flash_kind(rows),
+            ChangeActivityEquipment.result_text(rows, "added")
+          )
           |> push_navigate(to: ~p"/teams/#{team}/activities/#{activity.id}/equipment")
 
         {:noreply, socket}
@@ -465,8 +467,8 @@ defmodule Web.ActivityEquipmentLive do
             {:noreply,
              socket
              |> put_flash(
-               flash_kind(rows),
-               result_text(rows, "removed")
+               ChangeActivityEquipment.flash_kind(rows),
+               ChangeActivityEquipment.result_text(rows, "removed")
              )
              |> load_usages()}
 
@@ -493,36 +495,5 @@ defmodule Web.ActivityEquipmentLive do
     |> push_event("scan-sound", %{sound: if(kind == :success, do: :ok, else: :error)})
   end
 
-  @doc "The flash kind for written rows: :info when all applied, else :error."
-  def flash_kind(rows),
-    do: if(Enum.all?(rows, &(&1.status == :applied)), do: :info, else: :error)
-
-  @doc """
-  What happened, as one message: "3 items added.", "2 tags added." when a template's tags
-  went, and then each row that didn't go, with why. Shared with ActivityTemplateLive.
-  """
-  def result_text(rows, verb) do
-    {tag_rows, item_rows} = Enum.split_with(rows, &(&1.action == :set_activity_tags))
-    applied = Enum.count(item_rows, &(&1.status == :applied))
-
-    items =
-      if item_rows != [] or tag_rows == [], do: ["#{count_items(applied)} #{verb}."], else: []
-
-    tags = for %{status: :applied} = row <- tag_rows, do: tags_added(row)
-
-    rows
-    |> Enum.reject(&(&1.status == :applied))
-    |> Enum.map(&"#{row_title(&1)}: #{&1.error}")
-    |> then(&Enum.join(items ++ tags ++ &1, " "))
-  end
-
-  defp tags_added(row), do: "#{row.new_value["titles"] |> length() |> count_tags()} added."
-
   defp count_items(n), do: Service.Format.count(n, one: "%d item", many: "%d items")
-  defp count_tags(n), do: Service.Format.count(n, one: "%d tag", many: "%d tags")
-
-  defp row_title(%ChangeSetRow{action: :set_activity_tags}), do: "Tags"
-  defp row_title(%ChangeSetRow{new_value: %{"title" => title}}), do: title
-  defp row_title(%ChangeSetRow{old_value: %{"title" => title}}), do: title
-  defp row_title(%ChangeSetRow{}), do: "An item"
 end
