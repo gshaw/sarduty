@@ -20,6 +20,7 @@ defmodule Web.Components.ActivityFilterTable do
   attr :path_fn, :map, required: true
   attr :team, :map, required: true
   attr :kind_counts, :map, required: true, doc: "activities of each kind, from `kind_counts/3`"
+  attr :counts, :map, default: %{}, doc: "`Attendance.reply_counts/2` for the page's activities"
 
   def activity_filter_table(assigns) do
     ~H"""
@@ -82,6 +83,7 @@ defmodule Web.Components.ActivityFilterTable do
       path_fn={@path_fn}
       team={@team}
       hours={@form[:hours].value}
+      counts={@counts}
     />
 
     <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
@@ -94,6 +96,10 @@ defmodule Web.Components.ActivityFilterTable do
   attr :path_fn, :any, required: true
   attr :team, :map, required: true
   attr :hours, :string, default: nil, doc: "the Hours tag filter, set to list ones to fix"
+
+  attr :counts, :map,
+    default: %{},
+    doc: "`Attendance.reply_counts/2` by activity id, for the badges after the title (#447)"
 
   # The activity list's table, without its filters. The style guide shows it with made-up rows.
   def activity_table(assigns) do
@@ -109,7 +115,7 @@ defmodule Web.Components.ActivityFilterTable do
       path_fn={@path_fn}
     >
       <:col :let={record} label="Activity" sorts={[{"↓", "id-"}, {"↑", "id"}]}>
-        <.activity_cell activity={record} team={@team} kind={false} />
+        <.activity_cell activity={record} team={@team} kind={false} counts={@counts[record.id]} />
         <div class="hint">
           {activity_summary(record)}
         </div>

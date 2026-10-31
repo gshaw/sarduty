@@ -268,6 +268,42 @@ defmodule Web.ActivityLiveTest do
     |> Enum.flat_map(&Floki.attribute(&1, "id"))
   end
 
+  test "an activity short of Enough at says how many more, and lists its numbers (#447)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    starts = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+
+    activity =
+      team
+      |> activity_fixture(%{started_at: starts, finished_at: DateTime.add(starts, 3, :hour)})
+      |> Ecto.Changeset.change(enough_at: 3, full_at: 5)
+      |> Repo.update!()
+
+    for _ <- 1..2,
+        do: attendance_fixture(activity, member_fixture(team), %{status: "attending"})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
+
+    assert has_element?(
+             lv,
+             "#activity-panel-counts #activity-panel-need.badge-warning",
+             "1 more needed"
+           )
+
+    assert has_element?(lv, "#activity-enough-at", "3")
+    assert has_element?(lv, "#activity-full-at", "5")
+
+    for _ <- 1..3,
+        do: attendance_fixture(activity, member_fixture(team), %{status: "attending"})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
+
+    assert has_element?(lv, "#activity-panel-need", "Full")
+    refute has_element?(lv, "#activity-panel-need.badge-warning")
+  end
+
   describe "an activity deleted in D4H" do
     setup %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()

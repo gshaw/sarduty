@@ -7,6 +7,7 @@ defmodule App.ViewData.ChangeHistory do
   alias App.Model.MemberStandingChange
   alias App.Model.Team
   alias App.Repo
+  alias App.ViewModel.ActivityFormViewModel
 
   # A member's or an activity's history (#174, step 3): what SAR Duty changed in D4H,
   # from applied change set rows, and what the sync saw change in D4H, from `d4h_changes`.
@@ -74,7 +75,8 @@ defmodule App.ViewData.ChangeHistory do
   end
 
   defp merge(changes, rows, page, tz) do
-    (Enum.map(changes, &d4h_entry(&1, page, tz)) ++ Enum.map(rows, &sar_duty_entry(&1, page)))
+    (Enum.map(changes, &d4h_entry(&1, page, tz)) ++
+       Enum.map(rows, &sar_duty_entry(&1, page, tz)))
     |> Enum.sort_by(& &1.at, {:desc, DateTime})
     |> Enum.take(@limit)
   end
@@ -90,7 +92,7 @@ defmodule App.ViewData.ChangeHistory do
     }
   end
 
-  defp sar_duty_entry(%ChangeSetRow{} = row, page) do
+  defp sar_duty_entry(%ChangeSetRow{} = row, page, tz) do
     %{
       id: "row-#{row.id}",
       at: row.applied_at,
@@ -100,7 +102,7 @@ defmodule App.ViewData.ChangeHistory do
       source: row.change_set.source,
       applied_by: row.change_set.applied_by_user && row.change_set.applied_by_user.email,
       reason: row.reason,
-      text: describe_row(row, page)
+      text: describe_row(row, page, tz)
     }
   end
 
@@ -224,8 +226,9 @@ defmodule App.ViewData.ChangeHistory do
   defp activity_field("started_at", c, tz),
     do: "Start changed to #{time(c.new_value["started_at"], tz)}"
 
+  # The form's word, so one tab uses one word.
   defp activity_field("finished_at", c, tz),
-    do: "End changed to #{time(c.new_value["finished_at"], tz)}"
+    do: "Finish changed to #{time(c.new_value["finished_at"], tz)}"
 
   defp activity_field("is_published", c, _tz),
     do: if(c.new_value["is_published"], do: "Published", else: "No longer published")
@@ -285,7 +288,109 @@ defmodule App.ViewData.ChangeHistory do
 
   defp row_kind(_action), do: :record
 
-  @doc "One change SAR Duty applied, as a sentence."
+  # A Change activity save's boxes in the form's order, each with the row keys it sends
+  # (SaveActivity). Enough at and Full at are SAR Duty's own and ride on the row (#447).
+  @activity_boxes [
+    {"Title", ["title"]},
+    {"Start", ["started_at"]},
+    {"Finish", ["finished_at"]},
+    {"Enough at", ["enough_at"]},
+    {"Full at", ["full_at"]},
+    {"Address", ["place", "location"]},
+    {"Tax credit hours", ["hours", "tag_ids"]},
+    {"Tracking number", ["tracking_number"]},
+    {"Description", ["description"]},
+    {"Published", ["published"]}
+  ]
+
+  @activity_row_keys Enum.flat_map(@activity_boxes, &elem(&1, 1))
+
+  @doc """
+  One change SAR Duty applied, as a sentence, with times in time zone `tz`. An activity's
+  add names the numbers it set, and a change says what each box it changed became, a
+  sentence each (#447). A row with a key no box sends reads "Details changed in SAR
+  Duty". Every other row is describe_row/2.
+  """
+  def describe_row(%ChangeSetRow{action: :create_activity, new_value: new}, _page, _tz) do
+    numbers =
+      for {label, key} <- [{"Enough at", "enough_at"}, {"Full at", "full_at"}],
+          new[key] != nil,
+          do: number_line(label, nil, new[key])
+
+    sentences(["Added in SAR Duty" | numbers])
+  end
+
+  def describe_row(%ChangeSetRow{action: :update_activity, new_value: new} = row, page, tz) do
+    keys = Map.keys(new)
+
+    if keys != [] and Enum.all?(keys, &(&1 in @activity_row_keys)) do
+      old = row.old_value || %{}
+
+      @activity_boxes
+      |> Enum.filter(fn {_label, box_keys} -> Enum.any?(box_keys, &Map.has_key?(new, &1)) end)
+      |> Enum.map(fn {label, _keys} -> activity_box(label, old, new, tz) end)
+      |> sentences()
+    else
+      describe_row(row, page)
+    end
+  end
+
+  def describe_row(%ChangeSetRow{} = row, page, _tz), do: describe_row(row, page)
+
+  defp activity_box("Title", old, new, _tz),
+    do: "Title changed from #{blank(old["title"])} to #{blank(new["title"])}"
+
+  defp activity_box("Start", _old, new, tz),
+    do: "Start changed to #{time(new["started_at"], tz)}"
+
+  defp activity_box("Finish", _old, new, tz),
+    do: "Finish changed to #{time(new["finished_at"], tz)}"
+
+  defp activity_box("Enough at", old, new, _tz),
+    do: number_line("Enough at", old["enough_at"], new["enough_at"])
+
+  defp activity_box("Full at", old, new, _tz),
+    do: number_line("Full at", old["full_at"], new["full_at"])
+
+  # No values: an address is personal, and a moved pin is a change of address too.
+  defp activity_box("Address", _old, _new, _tz), do: "Address changed"
+
+  # Rows from before #447 kept only the tags, which are D4H ids.
+  defp activity_box("Tax credit hours", old, %{"hours" => hours}, _tz),
+    do: "Tax credit hours changed from #{hours_label(old["hours"])} to #{hours_label(hours)}"
+
+  defp activity_box("Tax credit hours", _old, _new, _tz), do: "Tax credit hours changed"
+
+  defp activity_box("Tracking number", old, new, _tz),
+    do: number_line("Tracking number", old["tracking_number"], new["tracking_number"])
+
+  defp activity_box("Description", _old, _new, _tz), do: "Description changed"
+
+  defp activity_box("Published", _old, new, _tz),
+    do: if(new["published"], do: "Published", else: "No longer published")
+
+  # "Enough at changed from 8 to 10", "Full at set to 14", "Enough at cleared".
+  defp number_line(label, old, new) do
+    case {blank_to_nil(old), blank_to_nil(new)} do
+      {_old, nil} -> "#{label} cleared"
+      {nil, new} -> "#{label} set to #{new}"
+      {old, new} -> "#{label} changed from #{old} to #{new}"
+    end
+  end
+
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(value), do: value
+
+  # As the form names them.
+  defp hours_label(nil), do: "none"
+
+  defp hours_label(hours),
+    do:
+      Enum.find_value(ActivityFormViewModel.hours(), hours, fn {label, value} ->
+        value == hours && label
+      end)
+
+  @doc "One change SAR Duty applied, as a sentence. Activity rows are describe_row/3."
   def describe_row(
         %ChangeSetRow{action: :create_attendance, new_value: %{"status" => "REQUESTED"}} = row,
         page
@@ -386,8 +491,6 @@ defmodule App.ViewData.ChangeHistory do
 
   def describe_row(%ChangeSetRow{action: :rejoin_member}, _page),
     do: "Marked as rejoined in SAR Duty"
-
-  def describe_row(%ChangeSetRow{action: :create_activity}, _page), do: "Added in SAR Duty"
 
   # Change fields (#705) sends the custom fields alone.
   def describe_row(%ChangeSetRow{action: :update_activity, new_value: new}, _page)

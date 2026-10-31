@@ -166,4 +166,107 @@ defmodule App.ViewData.ChangeHistoryTest do
              :activity
            ) == "Area and Primary Cause changed"
   end
+
+  describe "an activity's own saves (#447)" do
+    defp activity_row(action, old_value, new_value) do
+      ChangeHistory.describe_row(
+        %ChangeSetRow{action: action, old_value: old_value, new_value: new_value},
+        :activity,
+        @tz
+      )
+    end
+
+    test "a numbers-only save says from what to what" do
+      assert activity_row(:update_activity, %{"enough_at" => 8, "full_at" => nil}, %{
+               "enough_at" => 10,
+               "full_at" => 14
+             }) == "Enough at changed from 8 to 10. Full at set to 14"
+
+      assert activity_row(:update_activity, %{"enough_at" => 8}, %{"enough_at" => nil}) ==
+               "Enough at cleared"
+    end
+
+    test "a save names each box it changed, in the form's order" do
+      old = %{"title" => "Pancake breakfast", "hours" => "primary", "tracking_number" => "26-104"}
+
+      new = %{
+        "title" => "Pancake breakfast (Nov)",
+        "full_at" => 14,
+        "description" => "<p>Bring an apron.</p>",
+        "place" => "Hall",
+        "location" => "49.1,-123.1",
+        "started_at" => "2026-11-07T17:00:00Z",
+        "finished_at" => "2026-11-07T21:00:00Z",
+        "published" => true,
+        "tag_ids" => [2],
+        "hours" => "secondary",
+        "tracking_number" => "26-105"
+      }
+
+      assert activity_row(:update_activity, old, new) ==
+               Enum.join(
+                 [
+                   "Title changed from Pancake breakfast to Pancake breakfast (Nov)",
+                   "Start changed to Nov 7, 2026, 10:00",
+                   "Finish changed to Nov 7, 2026, 14:00",
+                   "Full at set to 14",
+                   "Address changed",
+                   "Tax credit hours changed from Primary to Secondary",
+                   "Tracking number changed from 26-104 to 26-105",
+                   "Description changed",
+                   "Published"
+                 ],
+                 ". "
+               )
+    end
+
+    test "a tracking number set or cleared, and a pin moved alone" do
+      assert activity_row(:update_activity, %{"tracking_number" => nil}, %{
+               "tracking_number" => "26-105"
+             }) == "Tracking number set to 26-105"
+
+      assert activity_row(:update_activity, %{"tracking_number" => "26-105"}, %{
+               "tracking_number" => nil
+             }) == "Tracking number cleared"
+
+      assert activity_row(:update_activity, %{}, %{"location" => nil}) == "Address changed"
+      assert activity_row(:update_activity, %{}, %{"published" => false}) == "No longer published"
+    end
+
+    test "a save from before kept no hours choice" do
+      assert activity_row(:update_activity, %{"kind" => "exercise"}, %{"tag_ids" => [1]}) ==
+               "Tax credit hours changed"
+    end
+
+    test "a key no box sends, and Change fields, keep their lines" do
+      assert activity_row(:update_activity, %{}, %{"title" => "Nav", "shared" => false}) ==
+               "Details changed in SAR Duty"
+
+      assert activity_row(:update_activity, %{}, %{"custom_values" => %{"1" => "x"}}) ==
+               "Fields changed in SAR Duty"
+    end
+
+    test "an add names the numbers it set" do
+      assert activity_row(:create_activity, %{}, %{"title" => "Pancake breakfast"}) ==
+               "Added in SAR Duty"
+
+      assert activity_row(:create_activity, %{}, %{
+               "title" => "Pancake breakfast",
+               "enough_at" => 10
+             }) ==
+               "Added in SAR Duty. Enough at set to 10"
+    end
+  end
+
+  test "a finish seen in D4H uses the form's word" do
+    assert describe_change(
+             %{
+               record_kind: :activity,
+               action: :changed,
+               fields: ["finished_at"],
+               new_value: %{"finished_at" => "2026-11-07T21:00:00Z"}
+             },
+             :activity
+           ) == "Finish changed to Nov 7, 2026, 14:00"
+  end
 end

@@ -17,6 +17,28 @@
     </.activity_panel>
   </div>
 
+  <h3>Short of Enough at</h3>
+  <div class="demo">
+    <.activity_panel
+      id="activity-panel-short-demo"
+      activity={%{panel_activity() | enough_at: 10}}
+      team={sample_team()}
+      now={panel_now()}
+      counts={panel_counts()}
+    />
+  </div>
+
+  <h3>Full</h3>
+  <div class="demo">
+    <.activity_panel
+      id="activity-panel-full-demo"
+      activity={%{panel_activity() | enough_at: 4, full_at: 6}}
+      team={sample_team()}
+      now={panel_now()}
+      counts={panel_counts()}
+    />
+  </div>
+
   <h3>As Next up</h3>
   <div class="demo">
     <.activity_panel
@@ -28,7 +50,16 @@
     >
       <.activity_kind_mark activity={panel_activity()} class="text-sm" />
       <h2 class="activity-panel-title"><a href="#" class="link">Rope rescue, Murrin Park</a></h2>
-      <p class="hint">Murrin Park · in 3 hours · 6 signed up</p>
+      <p class="hint">
+        <span class="with-badge">
+          Murrin Park · in 3 hours · 6 signed up
+          <.need_badge
+            activity={%{panel_activity() | enough_at: 10}}
+            counts={panel_counts()}
+            now={panel_now()}
+          />
+        </span>
+      </p>
       <:reply><.reply id="activity-panel-next-up-demo-reply" state={:ask} /></:reply>
     </.activity_panel>
   </div>
@@ -54,6 +85,9 @@
       The counts read "6 signed up · 2 can't make it · 5 no reply", then "6 attended · 2 absent · 5 no reply" once it starts. A zero is left out, except the first.
     </li>
     <li>
+      An activity with Enough at gets "4 more needed" in amber after the counts while fewer have signed up. One with Full at gets Full in grey from that many on: worth knowing, nothing to act on. Neither shows once it starts.
+    </li>
+    <li>
       A member it invites gets their <a href={page_path(:reply)}>reply</a>
       under the counts, until it starts. Anyone else gets the counts alone.
     </li>
@@ -73,6 +107,11 @@
     with the reply control in its <code>&lt;:reply&gt;</code>
     slot, and <code>take_attendance?</code>
     from <code>Activity.take_attendance?/3</code>. Next up adds <code>label="Next up"</code>
-    and its title and place inside, and leaves out <code>counts</code>.
+    and its title and place inside, and leaves out <code>counts</code>. Its badge is
+    <code>&lt;.need_badge activity=&#123;…&#125; counts=&#123;…&#125; now=&#123;…&#125; /&gt;</code>
+    in a <code>.with-badge</code>
+    after the count, as on Coming up and the Activities list. It asks
+    <code>Activity.more_needed/3</code>
+    and <code>Activity.full?/3</code>.
   </p>
 </.shell>

@@ -1,12 +1,14 @@
 defmodule App.Operation.ApplyTemplate do
   @moduledoc """
-  Applies templates to an activity (#162, #307, #564): fills in its empty fields, writes
-  the items and tags to D4H as equipment usages and the activity's tags, then adds the
-  groups' members. A refusal leaves the rest unsent. Apply a template sends what its list
-  holds; Add activity sends one template's adds on the activity it just added (#747).
+  Applies templates to an activity (#162, #307, #564): sets Enough at and Full at when it
+  has neither (#447), fills in its empty fields, writes the items and tags to D4H as
+  equipment usages and the activity's tags, then adds the groups' members. A refusal
+  leaves the rest unsent. Apply a template sends what its list holds; Add activity sends
+  one template's adds on the activity it just added (#747), whose form took the
+  template's numbers already.
 
-  adds/3 decides what a template adds, add_tags/3 combines tags, and result/3 and
-  refused/2 word what went; call/5 reads and writes.
+  adds/3 decides what a template adds, numbers/4 the numbers, add_tags/3 combines tags,
+  and result/3 and refused/2 word what went; call/5 reads and writes.
   """
 
   alias App.Accounts.User
@@ -17,13 +19,14 @@ defmodule App.Operation.ApplyTemplate do
   alias App.Model.Template
   alias App.Operation.ChangeActivityEquipment
   alias App.Operation.InviteMembers
+  alias App.Operation.SaveActivity
   alias App.Operation.SaveCustomFields
 
   @doc """
-  Sends `adds` to the activity: `fills` first, then the `lines` (as
-  ChangeActivityEquipment.add/6 takes them) and `tags`, then the `groups`' members. A
-  `%Template{}` sends what adds/3 says it adds. `{:ok, flash_kind, text}`, or
-  `{:error, text}` when nothing went.
+  Sends `adds` to the activity: the `numbers` from numbers/4 when it has them, then
+  `fills`, then the `lines` (as ChangeActivityEquipment.add/6 takes them) and `tags`, then
+  the `groups`' members. A `%Template{}` sends what adds/3 says it adds.
+  `{:ok, flash_kind, text}`, or `{:error, text}` when nothing went.
   """
   def call(%Team{} = team, %User{} = user, %Activity{} = activity, %Template{} = template, now) do
     fields = CustomField.get_all(team.id, activity.activity_kind)
@@ -31,8 +34,12 @@ defmodule App.Operation.ApplyTemplate do
   end
 
   def call(%Team{} = team, %User{} = user, %Activity{} = activity, %{fills: fills} = adds, now) do
-    with :ok <- fill_fields(team, activity, fills, user, now),
-         do: add_after_fields(team, user, activity, adds, now)
+    numbers = put_numbers?(Map.get(adds, :numbers), activity, now)
+
+    with :ok <- put_numbers(team, user, activity, numbers, now),
+         :ok <- fill_fields(team, activity, fills, user, now) do
+      team |> add_after_fields(user, activity, adds, now) |> with_numbers(numbers)
+    end
   end
 
   defp add_after_fields(team, user, activity, %{fills: fills} = adds, now) do
@@ -65,6 +72,53 @@ defmodule App.Operation.ApplyTemplate do
       groups: Template.groups(template)
     }
   end
+
+  @doc """
+  The Enough at and Full at that `template` sets on `activity` (#447), as
+  `%{enough_at:, full_at:}`, or nil. `picked` is what an earlier template set, which wins,
+  as for a field two templates fill. Only on an activity that is open?/2 at `now`, as for
+  the groups, and has neither number: one alone could put Full at under Enough at.
+  """
+  def numbers(%{} = picked, _template, _activity, _now), do: picked
+
+  def numbers(nil, %Template{} = template, %Activity{} = activity, now) do
+    if template_numbers?(template) and put_numbers?(activity, now),
+      do: %{enough_at: template.enough_at, full_at: template.full_at}
+  end
+
+  defp template_numbers?(template), do: template.enough_at != nil or template.full_at != nil
+
+  defp put_numbers?(%Activity{} = activity, now),
+    do: Activity.open?(activity, now) and activity.enough_at == nil and activity.full_at == nil
+
+  # Checked again on send: the activity may have started since the page opened.
+  defp put_numbers?(nil, _activity, _now), do: nil
+  defp put_numbers?(numbers, activity, now), do: if(put_numbers?(activity, now), do: numbers)
+
+  @doc ~s|What numbers/4 set, for the flash and the list: "Enough at 10 and Full at 14".|
+  def numbers_text(numbers) do
+    [{"Enough at", numbers.enough_at}, {"Full at", numbers.full_at}]
+    |> Enum.reject(fn {_label, n} -> is_nil(n) end)
+    |> Enum.map(fn {label, n} -> "#{label} #{n}" end)
+    |> Service.Format.and_list()
+  end
+
+  defp put_numbers(_team, _user, _activity, nil, _now), do: :ok
+
+  defp put_numbers(team, user, activity, numbers, now) do
+    case SaveActivity.put_numbers(team, user, activity, numbers, now) do
+      {:ok, _activity} -> :ok
+      {:error, text} -> {:error, "Enough at and Full at were not set. #{text}"}
+    end
+  end
+
+  defp with_numbers(result, nil), do: result
+
+  defp with_numbers({:ok, kind, text}, numbers),
+    do: {:ok, kind, String.trim("#{numbers_text(numbers)} set. #{text}")}
+
+  defp with_numbers({:error, text}, numbers),
+    do: {:ok, :error, "#{numbers_text(numbers)} set. #{text}"}
 
   @doc """
   `tags` with a template's `new` tags added, A to Z, leaving out any the activity has by

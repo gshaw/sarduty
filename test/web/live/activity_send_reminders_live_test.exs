@@ -110,6 +110,18 @@ defmodule Web.ActivitySendRemindersLiveTest do
     assert text =~ "Bring your rope kit."
   end
 
+  test "the message starts with how many more are needed, while short (#447)", ctx do
+    for {enough_at, text} <- [{5, "We need 4 more people."}, {2, "We need 1 more person."}] do
+      ctx.activity |> Ecto.Changeset.change(enough_at: enough_at) |> Repo.update!()
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+      assert has_element?(lv, "#email-message", text)
+    end
+
+    ctx.activity |> Ecto.Changeset.change(enough_at: 1) |> Repo.update!()
+    {:ok, lv, _html} = live(ctx.conn, path(ctx))
+    refute has_element?(lv, "#email-message", "We need")
+  end
+
   test "sends only to the members still checked", ctx do
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
 

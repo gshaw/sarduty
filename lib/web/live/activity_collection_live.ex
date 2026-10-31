@@ -3,6 +3,7 @@ defmodule Web.ActivityCollectionLive do
 
   import Web.Components.ActivityFilterTable
 
+  alias App.Model.Attendance
   alias App.ViewModel.ActivityFilterViewModel
 
   def mount(_params, _session, socket) do
@@ -17,11 +18,14 @@ defmodule Web.ActivityCollectionLive do
       {:ok, filter_options, changeset} ->
         current_team = socket.assigns.current_team
 
+        paginated = build_paginated_content(socket.assigns, filter_options)
+
         socket =
           socket
           |> assign(:sort, filter_options.sort)
           |> assign(:when, filter_options.when)
-          |> assign(:paginated, build_paginated_content(socket.assigns, filter_options))
+          |> assign(:paginated, paginated)
+          |> assign(:counts, need_counts(current_team, paginated.entries))
           |> assign(
             :kind_counts,
             ActivityFilterViewModel.kind_counts(current_team, nil, filter_options)
@@ -58,6 +62,7 @@ defmodule Web.ActivityCollectionLive do
       path_fn={@path_fn}
       team={@current_team}
       kind_counts={@kind_counts}
+      counts={@counts}
     />
     """
   end
@@ -86,6 +91,14 @@ defmodule Web.ActivityCollectionLive do
   end
 
   defp sort_for_new_when(form_params, _old_when), do: form_params
+
+  # The counts for the badges after a title (#447), for activities with Enough at or Full at.
+  defp need_counts(team, activities) do
+    case for a <- activities, a.enough_at || a.full_at, do: a.id do
+      [] -> %{}
+      ids -> Attendance.reply_counts(team, ids)
+    end
+  end
 
   defp build_paginated_content(%{current_team: team}, filter_options),
     do: ActivityFilterViewModel.build_paginated_content(team, nil, filter_options)

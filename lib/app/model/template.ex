@@ -17,7 +17,8 @@ defmodule App.Model.Template do
   # own; D4H never sees them. A template for one kind of activity also holds values for
   # that kind's D4H custom fields (#307), keyed by D4H field id as on activities, and the
   # details that fill Add activity (#746). Applying a template leaves the details out,
-  # but for its Tax credit hours on an activity with no hours tag (apply_tags/4).
+  # but for its Tax credit hours on an activity with no hours tag (apply_tags/4), and its
+  # Enough at and Full at on an open activity with neither (ApplyTemplate.numbers/4).
   schema "templates" do
     belongs_to :team, Team
     has_many :template_items, TemplateItem, on_replace: :delete
@@ -33,6 +34,9 @@ defmodule App.Model.Template do
     field :duration_minutes, :integer
     # The duration as Change template takes it: "2h 30m" (Service.Convert.parse_duration/1).
     field :duration, :string, virtual: true
+    # How many signed up is enough, and full (#447), as on the activity form.
+    field :enough_at, :integer
+    field :full_at, :integer
     field :place, TrimmedString
     # The place's pin, "lat,lng" as the sync stores it, or nil (#610).
     field :coordinate, :string
@@ -54,6 +58,8 @@ defmodule App.Model.Template do
     :activity_title,
     :start_time,
     :duration,
+    :enough_at,
+    :full_at,
     :place,
     :coordinate,
     :hours,
@@ -68,7 +74,7 @@ defmodule App.Model.Template do
   def build_changeset(%Template{} = data, params \\ %{}) do
     data
     |> Map.put(:duration, Service.Convert.duration_text(data.duration_minutes))
-    |> cast(params, @fields)
+    |> cast(params, @fields, message: &Activity.number_message/2)
     |> validate_required([:title], message: "Enter a name for the template")
     |> validate_length(:title, max: 100)
     |> validate_inclusion(:activity_kind, @kinds)
@@ -79,6 +85,7 @@ defmodule App.Model.Template do
     |> validate_inclusion(:hours, @hours)
     |> Coordinate.put_pin()
     |> put_duration_minutes()
+    |> Activity.validate_enough_and_full()
     |> Validate.in_field_order(@fields)
   end
 

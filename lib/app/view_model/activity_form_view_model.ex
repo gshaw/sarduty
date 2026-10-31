@@ -26,6 +26,9 @@ defmodule App.ViewModel.ActivityFormViewModel do
     field :tracking_number, Field.TrimmedString
     field :starts_at, :naive_datetime
     field :ends_at, :naive_datetime
+    # How many signed up is enough, and full (#447): SAR Duty's own, never sent.
+    field :enough_at, :integer
+    field :full_at, :integer
     field :hours, :string, default: "primary"
     field :published, :boolean, default: false
   end
@@ -36,6 +39,8 @@ defmodule App.ViewModel.ActivityFormViewModel do
     :title,
     :starts_at,
     :ends_at,
+    :enough_at,
+    :full_at,
     :place,
     :hours,
     :tracking_number,
@@ -58,6 +63,8 @@ defmodule App.ViewModel.ActivityFormViewModel do
       tracking_number: activity.tracking_number,
       starts_at: local(activity.started_at, timezone),
       ends_at: local(activity.finished_at, timezone),
+      enough_at: activity.enough_at,
+      full_at: activity.full_at,
       hours: hours_of(activity.tags, Activity.hours_tags(team)),
       published: activity.is_published == true
     }
@@ -101,7 +108,8 @@ defmodule App.ViewModel.ActivityFormViewModel do
 
   @doc """
   The form's params from `template` on Add activity (#746, #747): its kind when it has
-  one, its title or else its name, its tax credit hours, and each other detail it has.
+  one, its title or else its name, its tax credit hours, and each other detail it has,
+  Enough at and Full at among them (#447).
   Its start time goes on `today`, and Finish is Start and its duration. Picking a
   template starts the form over, so nothing typed before is kept.
   """
@@ -114,6 +122,8 @@ defmodule App.ViewModel.ActivityFormViewModel do
       "title" => template.activity_title || template.title,
       "starts_at" => input_text(starts_at),
       "ends_at" => input_text(finish(starts_at, template)),
+      "enough_at" => number_text(template.enough_at),
+      "full_at" => number_text(template.full_at),
       "place" => template.place,
       "coordinate" => template.coordinate,
       "hours" => template.hours,
@@ -146,25 +156,34 @@ defmodule App.ViewModel.ActivityFormViewModel do
     end
   end
 
+  defp number_text(nil), do: nil
+  defp number_text(n), do: Integer.to_string(n)
+
   # As the browser's date-and-time box takes it, to the minute.
   defp input_text(nil), do: nil
   defp input_text(naive), do: Calendar.strftime(naive, "%Y-%m-%dT%H:%M")
 
   def changeset(%__MODULE__{} = form, params \\ %{}) do
     form
-    |> cast(params, [
-      :template_id,
-      :kind,
-      :title,
-      :description,
-      :place,
-      :coordinate,
-      :tracking_number,
-      :starts_at,
-      :ends_at,
-      :hours,
-      :published
-    ])
+    |> cast(
+      params,
+      [
+        :template_id,
+        :kind,
+        :title,
+        :description,
+        :place,
+        :coordinate,
+        :tracking_number,
+        :starts_at,
+        :ends_at,
+        :enough_at,
+        :full_at,
+        :hours,
+        :published
+      ],
+      message: &Activity.number_message/2
+    )
     |> validate_required([:title], message: "Enter a title.")
     |> validate_required([:starts_at], message: "Enter when it starts.")
     |> validate_required([:ends_at], message: "Enter when it finishes.")
@@ -176,6 +195,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
     |> validate_length(:tracking_number, max: 50)
     |> validate_length(:description, max: 10_000)
     |> validate_ends_after_starts()
+    |> Activity.validate_enough_and_full()
     |> Validate.in_field_order(@fields)
   end
 
