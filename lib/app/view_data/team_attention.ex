@@ -12,13 +12,31 @@ defmodule App.ViewData.TeamAttention do
   @max_items 7
 
   @doc """
-  The items to show, at most `limit`: #{@max_items} for the page, or `:all` for an agent
-  (#595). Each is a map with `key`, `level`
-  (`:danger`, `:warning`, or `:info`, sorted in that order), `title`, `detail` (where the fix happens, or nil), and
-  `action`, the text of its link. The letters and untagged items also carry the `year`; `untagged` is a list of `%{year:, count:}`. `service`
-  is where the team's records live, `:d4h` or `:records` (D4H.service/1).
+  The items as `%{shown: items, snoozed: items}`. Shown are at most `limit`:
+  #{@max_items} for the page, or `:all` for an agent (#595). Each is a map with `key`,
+  `level` (`:danger`, `:warning`, or `:info`, sorted in that order), `title`, `detail`
+  (where the fix happens, or nil), and `action`, the text of its link. The letters and
+  untagged items also carry the `year`; `untagged` is a list of `%{year:, count:}`.
+  `service` is where the team's records live, `:d4h` or `:records` (D4H.service/1).
+
+  An item with `ids`, the members behind it, can be snoozed (#751). It is snoozed while
+  one of `snoozes` (`AttentionSnooze`) has its key, has not ended, and holds every one of
+  its ids, so anyone new brings it back. Snoozed items carry their `snooze` and free
+  their place in the shown ones.
   """
-  def items(rows, now, limit \\ @max_items) do
+  def items(rows, now, snoozes \\ [], limit \\ @max_items) do
+    snoozes = Map.new(snoozes, &{&1.key, &1})
+
+    {snoozed, shown} =
+      rows
+      |> all_items(now)
+      |> Enum.map(&with_snooze(&1, snoozes[Atom.to_string(&1.key)], now))
+      |> Enum.split_with(&Map.has_key?(&1, :snooze))
+
+    %{shown: take(shown, limit), snoozed: snoozed}
+  end
+
+  defp all_items(rows, now) do
     this_year = Service.YearRange.year_in(now, rows.timezone)
 
     rows
@@ -29,8 +47,23 @@ defmodule App.ViewData.TeamAttention do
     |> Enum.concat(name_items(rows.names))
     |> Enum.reject(&is_nil/1)
     |> Enum.sort_by(&level_order/1)
-    |> take(limit)
   end
+
+  defp with_snooze(item, snooze, now) do
+    if snoozed?(item, snooze, now), do: Map.put(item, :snooze, snooze), else: item
+  end
+
+  defp snoozed?(%{ids: ids}, %{until: until, ids: saved}, now),
+    do: DateTime.before?(now, until) and ids |> MapSet.new() |> MapSet.subset?(MapSet.new(saved))
+
+  defp snoozed?(_item, _no_snooze, _now), do: false
+
+  @doc "Whether a team admin can snooze the item: only one that names the members behind it."
+  def can_snooze?(item), do: Map.has_key?(item, :ids)
+
+  @doc "When a snoozed item comes back before its time, for the dialog that snoozes it."
+  def back_sooner(%{key: :retiring}),
+    do: "It comes back sooner if another retiring member holds items."
 
   defp count_items(rows) do
     [
@@ -254,12 +287,14 @@ defmodule App.ViewData.TeamAttention do
   def no_access(:records), do: "Set their access to No access on their Change member page."
   def no_access(service), do: "Set their access to No access in #{D4H.service_name(service)}."
 
-  defp retiring_holding_item(%{holding: count, items: items}) when count > 0 do
+  # It can be snoozed (#751): the ids are the retiring members who hold anything.
+  defp retiring_holding_item(%{holding: count, items: items, holding_ids: ids}) when count > 0 do
     who = Format.count(count, one: "%d retiring member holds", many: "%d retiring members hold")
 
     %{
       key: :retiring,
       level: :info,
+      ids: ids,
       title: "#{who} #{Format.count(items, one: "%d item", many: "%d items")}",
       detail: nil,
       action: "Show items"

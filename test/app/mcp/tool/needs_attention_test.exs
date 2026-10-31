@@ -23,11 +23,29 @@ defmodule App.MCP.Tool.NeedsAttentionTest do
       }
     ]
 
-    [untagged, attendance] = NeedsAttention.build(items)
+    [untagged, attendance] = NeedsAttention.build(items, "America/Vancouver")
 
     assert untagged["key"] == "untagged"
     assert untagged["year"] == 2026
     assert attendance["activity_id"] == 7
     refute Map.has_key?(attendance, "action")
+    assert untagged["snoozed_until"] == nil
+  end
+
+  test "marks a snoozed item with when it shows again, and never its members (#751)" do
+    item = %{
+      key: :retiring,
+      level: :info,
+      ids: [4, 9],
+      title: "2 retiring members hold 3 items",
+      detail: nil,
+      action: "Show items",
+      snooze: %{until: ~U[2026-11-06 16:00:00Z]}
+    }
+
+    [retiring] = NeedsAttention.build([item], "America/Vancouver")
+
+    assert retiring["snoozed_until"] =~ "2026-11-06T09:00:00"
+    refute Map.has_key?(retiring, "ids")
   end
 end

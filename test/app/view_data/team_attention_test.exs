@@ -35,10 +35,57 @@ defmodule App.ViewData.TeamAttentionTest do
     )
   end
 
-  # The items for these counts, with every other count at zero.
-  defp items(attrs, now), do: attrs |> rows() |> TeamAttention.items(now)
+  # The items shown for these counts, with every other count at zero.
+  defp items(attrs, now), do: attrs |> rows() |> TeamAttention.items(now) |> Map.fetch!(:shown)
 
   defp keys(items), do: Enum.map(items, & &1.key)
+
+  describe "snoozing (#751)" do
+    # Blake, Dana, and Drew hold items; Sam is new.
+    @holding %{holding: 3, items: 7, holding_ids: [1, 2, 3], clear: 0, d4h_access: 0}
+
+    defp snooze(attrs),
+      do: Map.merge(%{key: "retiring", ids: [1, 2, 3], until: ~U[2026-10-13 16:00:00Z]}, attrs)
+
+    defp split(retiring, snoozes, limit \\ 7),
+      do: %{retiring: retiring} |> rows() |> TeamAttention.items(@october, snoozes, limit)
+
+    test "hides the item and carries its snooze" do
+      snooze = snooze(%{})
+
+      assert %{shown: [], snoozed: [%{key: :retiring, snooze: ^snooze}]} =
+               split(@holding, [snooze])
+    end
+
+    test "stays hidden as members leave the item" do
+      row = %{@holding | holding: 2, holding_ids: [1, 3]}
+      assert %{shown: [], snoozed: [_item]} = split(row, [snooze(%{})])
+    end
+
+    test "comes back when someone new is behind it" do
+      row = %{@holding | holding: 3, holding_ids: [1, 2, 4]}
+      assert %{shown: [%{key: :retiring}], snoozed: []} = split(row, [snooze(%{})])
+    end
+
+    test "comes back when the snooze ends" do
+      snooze = snooze(%{until: @october})
+      assert %{shown: [%{key: :retiring}], snoozed: []} = split(@holding, [snooze])
+    end
+
+    test "is only for items with ids" do
+      row = %{@holding | d4h_access: 2}
+      snoozes = [snooze(%{}), snooze(%{key: "retiring_access", ids: [1, 2, 3]})]
+      %{shown: [access], snoozed: [_retiring]} = split(row, snoozes)
+
+      assert access.key == :retiring_access
+      refute TeamAttention.can_snooze?(access)
+    end
+
+    test "frees its place for the next item" do
+      row = %{@holding | clear: 1}
+      assert %{shown: [%{key: :retiring_clear}]} = split(row, [snooze(%{})], 1)
+    end
+  end
 
   test "nothing to do means no items" do
     assert items(%{}, @october) == []

@@ -229,6 +229,7 @@ defmodule Web.StyleGuideHTML do
       {"external-link",
        "A link that leaves SAR Duty, such as Open in D4H or Open in Google Maps"},
       {"copy", "Copy the value before it"},
+      {"alarm-clock", "Snooze a Needs attention item, before its row's chevron"},
       {"menu", "Open the top bar's menu on a phone"},
       {"x", "Close a toast, remove a chip, close the phone menu"},
       {"circle-check", "Success banners, toasts, and bands"},

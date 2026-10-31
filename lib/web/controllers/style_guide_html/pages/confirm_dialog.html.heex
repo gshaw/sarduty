@@ -3,7 +3,10 @@
   <p class="lead">A question before a change that can't be undone.</p>
 
   <h2>When to use</h2>
-  <p>Before a delete or a send that can't be undone.</p>
+  <p>
+    Before a delete or a send that can't be undone. And before a change for the whole team
+    that needs a choice first, such as snoozing a Needs attention item.
+  </p>
 
   <h2>When not to use</h2>
   <p>A change that can be undone, or one the person reviews on the page first.</p>
@@ -187,6 +190,43 @@
         data-confirm-button="Delete team"
       >
         Delete team
+      </.button>
+    </div>
+  </div>
+
+  <h2 id="choices">Choices</h2>
+  <p>
+    Radios when the action needs an answer, such as how long Snooze lasts on Needs
+    attention. One is picked, so going ahead needs nothing more. The answer goes to the
+    LiveView event as <code>choice</code>.
+  </p>
+  <div class="demo grid gap-6">
+    <.confirm_dialog
+      id="confirm-example-choices"
+      open
+      question="Snooze this item?"
+      body="6 retiring members hold 16 items. It leaves Needs attention for every team admin. It comes back sooner if another retiring member holds items."
+      choices={[{"day", "Until tomorrow"}, {"week", "For a week"}, {"month", "For a month"}]}
+      choice="week"
+      choices_label="For how long"
+      action="Snooze"
+    />
+    <div>
+      <.button
+        id="confirm-try-choices"
+        data-confirm="Snooze this item? 6 retiring members hold 16 items. It leaves Needs attention for every team admin."
+        data-confirm-button="Snooze"
+        data-confirm-choices-label="For how long"
+        data-confirm-choices={
+          Jason.encode!([
+            ["day", "Until tomorrow"],
+            ["week", "For a week"],
+            ["month", "For a month"]
+          ])
+        }
+        data-confirm-choice="week"
+      >
+        Snooze
       </.button>
     </div>
   </div>

@@ -167,6 +167,10 @@ defmodule Web.Components.Messages do
     other things with it, or stops a tax credit letter verifying.
   - `data-confirm-type`, with `data-confirm-type-label`: text to type before the action
     turns on, matched ignoring case and spaces.
+  - `data-confirm-choices`, with `data-confirm-choices-label`: radios the action needs an
+    answer from, as a JSON array of `[value, label]`, the first picked unless
+    `data-confirm-choice` names another. Going ahead sets the button's
+    `phx-value-choice` to the answer, such as how long Snooze lasts (#751).
   - `data-confirm-alt` and `data-confirm-alt-href`: a link that's a better way out than
     going ahead.
 
@@ -183,6 +187,9 @@ defmodule Web.Components.Messages do
   attr :checked, :boolean, default: false
   attr :type, :string, default: nil
   attr :type_label, :string, default: "Type this to confirm"
+  attr :choices, :list, default: [], doc: "radios, each `{value, label}`"
+  attr :choice, :string, default: nil, doc: "the value picked"
+  attr :choices_label, :string, default: nil
   attr :typed, :string, default: nil
   attr :action, :string, default: nil
   attr :variant, :atom, default: :primary, values: [:primary, :danger, :default]
@@ -211,6 +218,20 @@ defmodule Web.Components.Messages do
           <input type="checkbox" checked={@checked} />
           <span>{@check}</span>
         </label>
+        <fieldset data-part="choices" class="confirm-dialog-choices" hidden={@choices == []}>
+          <legend>{@choices_label}</legend>
+          <div>
+            <label :for={{value, label} <- @choices} class="choice">
+              <input
+                type="radio"
+                name={"#{@id}-choice"}
+                value={value}
+                checked={value == (@choice || elem(hd(@choices), 0))}
+              />
+              <span>{label}</span>
+            </label>
+          </div>
+        </fieldset>
         <div data-part="type" class="confirm-dialog-type" hidden={!@type}>
           <label for={"#{@id}-typed"}>{@type_label}</label>
           <code>{@type}</code>

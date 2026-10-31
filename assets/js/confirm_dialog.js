@@ -31,6 +31,10 @@ export function listenForConfirms() {
     const button = dialog.button
     dialog.button = null
     if (dialog.returnValue !== "confirm" || !button?.isConnected) return
+    const choices = part(dialog, "choices")
+    if (!choices.hidden) {
+      button.setAttribute("phx-value-choice", choices.querySelector("input:checked")?.value || "")
+    }
     pending = button
     button.click()
     pending = null
@@ -87,6 +91,20 @@ function ask(dialog, button, message) {
   type.querySelector("label").textContent = data("type-label") || "Type this to confirm"
   type.querySelector("code").textContent = data("type") || ""
   type.querySelector("input").value = ""
+
+  // Radios the action needs an answer from, such as how long to snooze.
+  const choices = part(dialog, "choices")
+  const options = JSON.parse(data("choices") || "[]")
+  const picked = data("choice") || options[0]?.[0]
+  choices.hidden = options.length === 0
+  choices.querySelector("legend").textContent = data("choices-label") || ""
+  choices.querySelector("div").replaceChildren(...options.map(([value, text]) => {
+    const label = Object.assign(document.createElement("label"), {className: "choice"})
+    const input = Object.assign(document.createElement("input"),
+      {type: "radio", name: `${dialog.id}-choice`, value, checked: value === picked})
+    label.append(input, Object.assign(document.createElement("span"), {textContent: text}))
+    return label
+  }))
 
   const link = part(dialog, "alt")
   fill(link, alt)

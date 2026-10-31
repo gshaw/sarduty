@@ -79,6 +79,8 @@
   .confirm-dialog-type { display: grid; gap: var(--sp-1); justify-items: start; margin-bottom: var(--sp-6); }
   .confirm-dialog-type label { font-weight: 700; }
   .confirm-dialog-type input { width: 100%; }
+  .confirm-dialog-choices { margin: 0 0 var(--sp-6); padding: 0; border: 0; }
+  .confirm-dialog-choices legend { padding: 0; margin-bottom: var(--sp-1); font-weight: 700; }
   .confirm-dialog-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
   /* Focus is on Cancel, but yellow means the keyboard: a dialog opened by a mouse or a
      finger shows it only once a key is pressed (confirm_dialog.js). */

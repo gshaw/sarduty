@@ -10,6 +10,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.AttendanceScan
+  alias App.Model.AttentionSnooze
   alias App.Model.Certificate
   alias App.Model.Chore
   alias App.Model.ChoreEvent
@@ -38,35 +39,51 @@ defmodule App.ViewData.TeamDashboardViewData do
   The top half as of `now`. `attention?: false` leaves out Needs attention, which only
   team admins see, so a member's Dashboard doesn't count what nobody will read.
   `member:` is the team admin reading it, whose own chores wait for someone else.
+  `attention` is the items shown, and `snoozed` the ones a team admin snoozed (#751), each
+  with the name of who did, `snoozed_by`.
   """
   def build(%Team{} = team, now \\ DateTime.utc_now(), opts \\ []) do
     refresh_result = refresh_result_value(team, refresh_job_active?(team))
     {next_up, coming_up} = team |> agenda_activities(now) |> agenda(now)
+
+    %{shown: attention, snoozed: snoozed} =
+      attention(team, refresh_result, now, Keyword.get(opts, :attention?, true), opts[:member])
 
     %{
       refreshed_at: team.d4h_refreshed_at,
       refresh_result: refresh_result,
       next_up: next_up,
       coming_up: coming_up,
-      attention:
-        attention(team, refresh_result, now, Keyword.get(opts, :attention?, true), opts[:member])
+      attention: attention,
+      snoozed: Enum.map(snoozed, &Map.put(&1, :snoozed_by, snoozed_by(team, &1.snooze, now)))
     }
   end
 
   @doc """
   Every Needs attention item a team admin would see, without the page's limit: for an
-  agent's needs_attention tool (#595). Its chores are every one waiting, a team admin's
-  own too.
+  agent's needs_attention tool (#595) and for snoozing one (#751). Snoozed items come
+  last, each with its `snooze`. Its chores are every one waiting, a team admin's own too.
   """
   def attention_items(%Team{} = team, now \\ DateTime.utc_now()) do
     refresh_result = refresh_result_value(team, refresh_job_active?(team))
-    team |> attention_rows(refresh_result, now, nil) |> TeamAttention.items(now, :all)
+
+    %{shown: shown, snoozed: snoozed} =
+      team
+      |> attention_rows(refresh_result, now, nil)
+      |> TeamAttention.items(now, AttentionSnooze.get_all(team), :all)
+
+    shown ++ snoozed
   end
 
-  defp attention(team, refresh_result, now, true, member),
-    do: team |> attention_rows(refresh_result, now, member) |> TeamAttention.items(now)
+  defp snoozed_by(team, snooze, now), do: Member.name_for_user(team, snooze.user, now)
 
-  defp attention(_team, _refresh_result, _now, false, _member), do: []
+  defp attention(team, refresh_result, now, true, member) do
+    team
+    |> attention_rows(refresh_result, now, member)
+    |> TeamAttention.items(now, AttentionSnooze.get_all(team))
+  end
+
+  defp attention(_team, _refresh_result, _now, false, _member), do: %{shown: [], snoozed: []}
 
   defp attention_rows(team, refresh_result, now, member) do
     %{
@@ -271,6 +288,7 @@ defmodule App.ViewData.TeamDashboardViewData do
 
       %{
         holding: map_size(counts),
+        holding_ids: counts |> Map.keys() |> Enum.sort(),
         items: counts |> Map.values() |> Enum.sum(),
         clear: length(Repo.all(ids)) - map_size(counts),
         d4h_access:

@@ -16,6 +16,14 @@
           <span class="hint block">Add the missing details in D4H.</span>
         </.row_link>
       </li>
+      <li>
+        <.row_link navigate="#">
+          <strong class="text-link">6 retiring members hold 16 items</strong>
+        </.row_link>
+        <button type="button" class="row-link-tool" aria-label="Snooze" title="Snooze">
+          <.icon name="alarm-clock" size={:sm} />
+        </button>
+      </li>
     </ul>
   </div>
 
@@ -38,5 +46,10 @@
     <code>&lt;ul class="row-links"&gt;</code>
     with a <code>&lt;.row_link navigate=&#123;…&#125;&gt;</code>
     in each item. Give the row's title <code>text-link</code>. Each row is at least 44px tall, with a chevron at the end.
+  </p>
+  <p>
+    One quiet icon button may sit before the chevron, such as Snooze on Needs attention: a
+    <code>&lt;button class="row-link-tool"&gt;</code>
+    after the link, in the same item, since a button cannot go in a link. It has an <code>aria-label</code>, and is 44px on a touch screen.
   </p>
 </.shell>
