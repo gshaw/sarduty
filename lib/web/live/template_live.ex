@@ -79,12 +79,6 @@ defmodule Web.TemplateLive do
             <ul id="template-actions" class="action-list">
               <li>
                 <.a
-                  id="template-add-activity"
-                  navigate={~p"/teams/#{@current_team}/activities/new?template=#{@template.id}"}
-                >Add activity from this template</.a>
-              </li>
-              <li>
-                <.a
                   id="template-edit"
                   navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/edit"}
                 >Change template</.a>
@@ -94,6 +88,12 @@ defmodule Web.TemplateLive do
                   id="template-edit-tags"
                   navigate={~p"/teams/#{@current_team}/templates/#{@template.id}/tags/edit"}
                 >Change tags</.a>
+              </li>
+              <li>
+                <.a
+                  id="template-add-activity"
+                  navigate={~p"/teams/#{@current_team}/activities/new?template=#{@template.id}"}
+                >Add activity from this template</.a>
               </li>
               <li>
                 <.a
