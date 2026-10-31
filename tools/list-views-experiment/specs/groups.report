@@ -1,0 +1,9 @@
+select id, title, member_count
+from groups
+order by title
+search title
+switch view 'Groups' default all
+  option all 'All'
+  option organization 'Your organization' where organization_owned = true
+  option team 'Your team' where organization_owned = false
+  option out-of-step 'Out of step' where out_of_step = true

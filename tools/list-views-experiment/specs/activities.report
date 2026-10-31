@@ -1,0 +1,27 @@
+select id, title, started_at, attended_count, attended_hours
+from activities
+order by started_at desc
+search title, ref_id, tracking_number, tags, description
+switch activity 'Kind'
+  option incident 'Incidents' where kind = 'incident' and chore = false
+  option exercise 'Exercises' where kind = 'exercise' and chore = false
+  option event 'Events' where kind = 'event' and chore = false
+  option chores 'Chores' where chore = true
+filter when 'When'
+  option current 'Current' where current = true
+  option recent 'Last 30 days' where recent = true
+  option past 'Past' where started_at <= NOW
+  option future 'Future' where started_at >= NOW
+  each year(started_at) where year(started_at) = :when
+filter status 'Status'
+  option draft 'Draft' where published = false
+  option published 'Published' where published = true
+filter hours 'Hours tag'
+  option untagged 'No hours tag' where hours_tag_count = 0
+  option two 'Two hours tags' where hours_tag_count >= 2
+filter fields 'Required fields'
+  option missing 'Missing' where missing_required_fields = true
+sort date 'Date' started_at
+sort hours 'Duration' duration desc
+sort id 'ID' ref_id
+page 50

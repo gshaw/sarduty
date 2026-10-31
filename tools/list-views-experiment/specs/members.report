@@ -1,0 +1,40 @@
+select id, name, position, activity_count(:when,:activity_tag), attended_minutes(:when,:activity_tag), last_attended
+from members
+order by name
+search name, position, ref_id
+switch standing 'Standing' default current
+  option current 'Not retired' where current = true
+  option active 'Active' where standing = 'active'
+  option away 'Away' where standing = 'away'
+  option retiring 'Retiring' where standing = 'retiring'
+  option retired 'Retired' where standing = 'retired'
+  option not_a_person 'Not a person' where standing = 'not_a_person'
+filter when 'Period' default 2026
+  each period where on_team(:when)
+filter details 'Details'
+  option missing 'Missing' where details_missing = true
+filter attended 'Attended'
+  option 30 'Not in 30 days' where not_seen(30) = true
+  option 60 'Not in 60 days' where not_seen(60) = true
+  option 90 'Not in 90 days' where not_seen(90) = true
+  option 180 'Not in 180 days' where not_seen(180) = true
+  option 365 'Not in 1 year' where not_seen(365) = true
+filter items 'Items'
+  option held 'Holds some' where holds_items = true
+  option none 'Holds none' where holds_items = false
+filter access 'Access'
+  option some 'Can log in to D4H' where can_log_in = true
+  option none 'No access' where no_access = true
+filter group 'Group'
+  each group where groups includes (:group)
+filter activity_tag 'Tag'
+  each tag
+sort name 'Name' name
+sort role 'Role' position nulls last
+sort id 'ID' ref_id nulls last
+sort date 'Joined' joined_at
+sort retired 'Retired' left_at nulls last
+sort duration 'Duration' attended_minutes(:when,:activity_tag)
+sort activities 'Activities' activity_count(:when,:activity_tag), name
+sort attended 'Last attended' last_attended, name
+page 50

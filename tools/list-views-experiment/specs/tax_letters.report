@@ -1,0 +1,21 @@
+select id, name, tax_hours(:year,'primary'), tax_hours(:year,'secondary'), tax_hours(:year,'total'), letter(:year)
+from members
+order by tax_hours(:year,'total') desc, name
+search name, ref_id
+switch letter 'Letters'
+  option none 'No letter' where letter(:year) = 'none'
+  option made 'Letter' where letter(:year) = 'made'
+  option changed 'Hours changed' where letter(:year) = 'changed'
+filter year 'Year' default 2025 required
+  each tax_year
+filter filter 'Hours' default any required
+  option none 'None' where tax_hours(:year,'total') = 0
+  option any 'Any' where tax_hours(:year,'total') > 0
+  option 50 '50+' where tax_hours(:year,'total') >= 50
+  option 100 '100+' where tax_hours(:year,'total') >= 100
+  option 150 '150+' where tax_hours(:year,'total') >= 150
+  option 200 '200+' where tax_hours(:year,'total') >= 200
+sort name 'Name' name
+sort primary 'Primary' tax_hours(:year,'primary') desc, name
+sort secondary 'Secondary' tax_hours(:year,'secondary') desc, name
+sort total 'Total' tax_hours(:year,'total') desc, name

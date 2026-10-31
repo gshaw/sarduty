@@ -1,0 +1,11 @@
+select id, member, starts_at, ends_at
+from awards
+where qualification.id = :qualification
+order by member.name
+search member.name
+switch view 'Members' default active
+  option active 'Active' where latest_active = true
+  option expired 'Expired' where latest_expired = true
+  option all 'All' where latest_active = true or latest_expired = true
+filter group 'Group'
+  each group where member.groups includes (:group)

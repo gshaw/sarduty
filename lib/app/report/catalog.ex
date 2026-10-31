@@ -29,7 +29,7 @@ defmodule App.Report.Catalog do
   alias App.Report.Subject
   alias App.ViewModel.EquipmentItemFormViewModel
 
-  @subjects ~w(activities attendance members awards qualifications equipment equipment_use groups)
+  @subjects ~w(activities attendance members awards qualifications equipment equipment_use groups milestones)
 
   @doc "The subjects' names, in the order the editor lists them."
   def names, do: @subjects
@@ -254,7 +254,27 @@ defmodule App.Report.Catalog do
         parent("qualification", "Qualification", :qualification),
         date(:starts_at, "Starts"),
         date(:ends_at, "Expires"),
-        bool(:current, "Current", "Whether it has started and not ended.")
+        bool(:current, "Current", "Whether it has started and not ended."),
+        # Experiment (list views): the awards pages' rules, from their Elixir homes.
+        scope_field(
+          "latest_active",
+          "Held",
+          "The member's latest current award of it.",
+          &latest_award_ids(&1, &2, :active)
+        ),
+        scope_field(
+          "latest_expired",
+          "Expired",
+          "The member's latest award, expired, with none current.",
+          &latest_award_ids(&1, &2, :expired)
+        ),
+        scope_field(
+          "expiring",
+          "Expiring",
+          "expiring(60): a current member's latest award of it ends in the next 60 days.",
+          &expiring_ids/2,
+          [:days]
+        )
       ]
     }
   end
@@ -273,7 +293,23 @@ defmodule App.Report.Catalog do
           :expires_months,
           "Lasts",
           "How many months an award lasts, or null when it never expires."
-        )
+        ),
+        # Experiment (list views)
+        bool(:organization_owned, "Organization's"),
+        %Field{
+          name: "held_count",
+          label: "Held",
+          type: :number,
+          args: [],
+          sql: &held_count_sql(&1, &2, &3, :active)
+        },
+        %Field{
+          name: "expired_count",
+          label: "Expired",
+          type: :number,
+          args: [],
+          sql: &held_count_sql(&1, &2, &3, :expired)
+        }
       ]
     }
   end
@@ -314,7 +350,28 @@ defmodule App.Report.Catalog do
         text(:serial, "Serial"),
         text(:location, "Location"),
         date(:expires_at, "Expires"),
-        parent("holder", "Held by", :member)
+        parent("holder", "Held by", :member),
+        # Experiment (list views): the Equipment page's rules, from EquipmentList.
+        %Field{
+          name: "place",
+          label: "Where",
+          type: :text,
+          args: [],
+          sql: &equipment_text_sql(&1, &2, &3, :place)
+        },
+        %Field{
+          name: "category",
+          label: "Category",
+          type: :text,
+          args: [],
+          sql: &equipment_text_sql(&1, &2, &3, :category)
+        },
+        scope_field(
+          "expires_soon",
+          "Expires soon",
+          "Expired, or expires within the app's window.",
+          &expires_soon_ids/2
+        )
       ]
     }
   end
@@ -359,6 +416,40 @@ defmodule App.Report.Catalog do
           "Out of step",
           "Its rules would change members now, or need fixing.",
           &out_of_step_ids/2
+        )
+      ]
+    }
+  end
+
+  # Experiment (list views): a subject an Elixir rule makes, sent to SQLite as VALUES.
+  def subject("milestones") do
+    %Subject{
+      name: "milestones",
+      label: "Milestones",
+      one: "milestone",
+      many: "milestones",
+      source: &milestones/1,
+      parents: %{"member" => {"members", :member_id}},
+      fields: [
+        id(),
+        parent("member", "Member", :member),
+        %Field{
+          name: "kind",
+          label: "Kind",
+          type: :choice,
+          column: :kind,
+          choices: fn _ ->
+            [{"Hours", "hours"}, {"Years", "years"}, {"Incidents", "incidents"}]
+          end
+        },
+        number(:count, "Count", "The hours, years, or incidents reached."),
+        text(:reached_on, "Reached"),
+        scope_field(
+          "in_period",
+          "In period",
+          "in_period('90d'): reached in a period.",
+          &milestone_period_ids/2,
+          [:period]
         )
       ]
     }
@@ -587,7 +678,12 @@ defmodule App.Report.Catalog do
   defp qualifications(%Context{team: team}) do
     from(q in Qualification,
       where: q.team_id == ^team.id,
-      select: %{id: q.id, title: q.title, expires_months: q.expires_months_default}
+      select: %{
+        id: q.id,
+        title: q.title,
+        expires_months: q.expires_months_default,
+        organization_owned: q.organization_owned
+      }
     )
   end
 
@@ -672,12 +768,12 @@ defmodule App.Report.Catalog do
 
   defp in_ids(table, ids) when is_list(ids) do
     marks = ids |> Enum.map(fn _ -> "?" end) |> Enum.join(", ")
-    {[table, ".\"id\" IN (", marks, ")"], ids}
+    {["(", table, ".\"id\" IN (", marks, "))"], ids}
   end
 
   defp in_ids(table, query) do
     {sql, params} = Repo.to_sql(:all, query)
-    {[table, ".\"id\" IN (", sql, ")"], params}
+    {["(", table, ".\"id\" IN (", sql, "))"], params}
   end
 
   defp activity_ids(team), do: Activity |> where([a], a.team_id == ^team.id) |> select([a], a.id)
@@ -816,5 +912,116 @@ defmodule App.Report.Catalog do
       preview.problems != [] or preview.to_add != [] or preview.to_remove != []
     end)
     |> Enum.map(& &1.id)
+  end
+
+  # Each qualification's awards split as MemberQualificationAward.split_by_member/2 does.
+  defp split_awards(%Context{team: team, now: now}) do
+    MemberQualificationAward
+    |> join(:inner, [a], q in assoc(a, :qualification))
+    |> where([a, q], q.team_id == ^team.id)
+    |> order_by([a], desc: a.starts_at)
+    |> Repo.all()
+    |> Enum.group_by(& &1.qualification_id)
+    |> Map.new(fn {id, awards} -> {id, MemberQualificationAward.split_by_member(awards, now)} end)
+  end
+
+  defp latest_award_ids(context, [], part) do
+    context
+    |> split_awards()
+    |> Enum.flat_map(fn {_id, {active, expired}} ->
+      if part == :active, do: active, else: expired
+    end)
+    |> Enum.map(& &1.id)
+  end
+
+  defp expiring_ids(%Context{team: team, now: now}, [days]) do
+    days = if is_binary(days), do: String.to_integer(days), else: days
+
+    team.id
+    |> MemberQualificationAward.expiring(now, DateTime.add(now, days, :day))
+    |> Enum.map(& &1.award_id)
+  end
+
+  defp held_count_sql(table, [], context, part) do
+    context
+    |> split_awards()
+    |> Enum.map(fn {id, {active, expired}} ->
+      {id, length(if part == :active, do: active, else: expired)}
+    end)
+    |> case_sql(table, 0)
+  end
+
+  defp equipment_rows(%Context{team: team}),
+    do: team.id |> EquipmentItem.get_all() |> App.ViewData.EquipmentList.rows()
+
+  defp equipment_text_sql(table, [], context, :place) do
+    context |> equipment_rows() |> Enum.map(&{&1.item.id, &1.place}) |> case_sql(table, nil)
+  end
+
+  defp equipment_text_sql(table, [], context, :category) do
+    context
+    |> equipment_rows()
+    |> Enum.map(&{&1.item.id, App.ViewData.EquipmentList.category(&1.item)})
+    |> case_sql(table, nil)
+  end
+
+  defp expires_soon_ids(%Context{team: team, now: now}, []) do
+    team.id
+    |> EquipmentItem.get_all()
+    |> Enum.filter(&(App.Operation.BuildGroupRulePreview.expiry(&1.expires_at, now) != nil))
+    |> Enum.map(& &1.id)
+  end
+
+  defp milestone_rows(%Context{team: team, now: now}),
+    do: team |> App.ViewData.MemberMilestones.for_team(now) |> Enum.with_index(1)
+
+  defp milestones(context) do
+    rows =
+      context
+      |> milestone_rows()
+      |> Enum.map(fn {m, i} ->
+        %{
+          id: i,
+          member_id: m.member.id,
+          kind: Atom.to_string(m.kind),
+          count: m.count,
+          reached_on: Date.to_iso8601(m.on)
+        }
+      end)
+
+    rows =
+      if rows == [], do: [%{id: 0, member_id: 0, kind: "", count: 0, reached_on: ""}], else: rows
+
+    types = %{
+      id: :integer,
+      member_id: :integer,
+      kind: :string,
+      count: :integer,
+      reached_on: :string
+    }
+
+    from(v in values(rows, types),
+      where: v.id > 0,
+      select: %{
+        id: v.id,
+        member_id: v.member_id,
+        kind: v.kind,
+        count: v.count,
+        reached_on: v.reached_on
+      }
+    )
+  end
+
+  defp milestone_period_ids(%Context{} = context, [period]) do
+    rows = milestone_rows(context)
+    options = %App.ViewModel.MilestoneFilterViewModel{when: period}
+
+    kept =
+      rows
+      |> Enum.map(&elem(&1, 0))
+      |> App.ViewModel.MilestoneFilterViewModel.filter(options, context.timezone, context.now)
+
+    kept = MapSet.new(kept)
+    for {m, i} <- rows, MapSet.member?(kept, m), do: i
   end
 end

@@ -1,0 +1,18 @@
+select id, activity, started_at, hours
+from attendance
+where member.id = :member and status = 'Attended'
+order by started_at desc
+search activity.title, activity.ref_id, activity.tracking_number
+filter when 'When' default 2026
+  each period where in_period(:when)
+filter tag 'Hours tag'
+  option both 'Both' where activity.primary_tag = true or activity.secondary_tag = true
+  option primary 'Primary' where activity.primary_tag = true
+  option secondary 'Secondary' where activity.secondary_tag = true
+  option other 'Other' where activity.primary_tag = false and activity.secondary_tag = false
+filter activity_tag 'Tag'
+  each tag where activity.tags includes (:activity_tag)
+sort date 'Date' started_at
+sort hours 'Duration' hours
+sort id 'ID' activity.id
+page 50

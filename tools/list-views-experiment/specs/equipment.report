@@ -1,0 +1,15 @@
+select id, title, place, status
+from equipment
+order by place, title
+search title, barcode, serial, kind
+switch show 'Show' default in-service
+  option in-service 'In service' where status = 'operational'
+  option unserviceable 'Unserviceable' where status = 'unserviceable'
+  option lost 'Lost' where status = 'lost'
+  option retired 'Retired' where status = 'retired'
+filter place 'Where'
+  each place where place = :place
+filter category 'Category'
+  each category where category = :category
+filter expires 'Expires'
+  option soon 'Expired or within 60 days' where expires_soon = true

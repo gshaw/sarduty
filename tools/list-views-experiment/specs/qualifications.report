@@ -1,0 +1,8 @@
+select id, title, held_count, expired_count
+from qualifications
+order by title
+search title
+switch view 'Qualifications' default all
+  option all 'All'
+  option organization 'Your organization' where organization_owned = true
+  option team 'Your team' where organization_owned = false

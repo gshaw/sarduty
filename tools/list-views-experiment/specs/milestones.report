@@ -1,0 +1,12 @@
+select id, member, kind, reached_on
+from milestones
+order by id
+switch kind 'Milestones'
+  option hours 'Hours' where kind = 'hours'
+  option years 'Years' where kind = 'years'
+  option incidents 'Incidents' where kind = 'incidents'
+filter when 'When' default 90d
+  each period where in_period(:when)
+filter member 'Member'
+  each member where member.id = :member
+page 50
