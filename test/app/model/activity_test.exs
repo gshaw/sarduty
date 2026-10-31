@@ -129,6 +129,50 @@ defmodule App.Model.ActivityTest do
     assert Activity.counts_as(nil, @defaults) == nil
   end
 
+  describe "two hours tags (#763)" do
+    @hours_tags %{@defaults | other: "Social"}
+
+    @cases [
+      {["Primary Hours", "Secondary Hours"], true},
+      {["Primary Hours", "Social"], true},
+      {["Secondary Hours", "Social"], true},
+      {["Primary Hours", "Rope", "Secondary Hours", "Social"], true},
+      {["Primary Hours", "Rope"], false},
+      {["Social"], false},
+      {["Rope", "Training"], false},
+      {[], false},
+      {nil, false}
+    ]
+
+    test "two_hours_tags?/2 is true for two or more of the hours tags, the other one too" do
+      for {tags, expected} <- @cases,
+          do: assert(Activity.two_hours_tags?(tags, @hours_tags) == expected, inspect(tags))
+    end
+
+    test "with_two_hours_tags/2 finds the activities two_hours_tags?/2 does" do
+      team = team_fixture()
+
+      activities =
+        Enum.map(@cases, fn {tags, _expected} -> activity_fixture(team, %{tags: tags}) end)
+
+      ids =
+        Activity
+        |> where([a], a.team_id == ^team.id)
+        |> Activity.with_two_hours_tags(@hours_tags)
+        |> Repo.all()
+        |> Enum.map(& &1.id)
+        |> Enum.sort()
+
+      expected = for a <- activities, Activity.two_hours_tags?(a.tags, @hours_tags), do: a.id
+      assert length(expected) == 4
+      assert ids == Enum.sort(expected)
+    end
+
+    test "with no other tag named, the other tag is just a tag" do
+      refute Activity.two_hours_tags?(["Primary Hours", "Social"], @defaults)
+    end
+  end
+
   test "only Activity says whether an activity has started" do
     copies =
       for path <- Path.wildcard("lib/**/*.{ex,exs,heex}"),

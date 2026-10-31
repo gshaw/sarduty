@@ -106,6 +106,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       attendance_to_send: attendance_to_send(team, now),
       no_shows: no_shows(team, now),
       untagged: untagged_rows(team, now),
+      two_hours_tags: two_hours_tags_rows(team, now),
       letters: letters_row(team, now)
     }
   end
@@ -372,6 +373,31 @@ defmodule App.ViewData.TeamDashboardViewData do
       |> ids()
 
     %{year: year, count: length(ids), ids: ids}
+  end
+
+  @doc """
+  Activities with two hours tags (#763), drafts too, since letters count drafts.
+  One row per open year, `%{year:, primary:, secondary:}`: how many count for each kind
+  (`Activity.counts_as/2`).
+  """
+  def two_hours_tags_rows(team, now) do
+    hours_tags = Activity.hours_tags(team)
+
+    now
+    |> Service.Period.open_years(team.timezone)
+    |> Enum.map(fn year ->
+      kinds =
+        Activity
+        |> where([a], a.team_id == ^team.id)
+        |> Activity.not_deleted()
+        |> Activity.started_in(year, team.timezone)
+        |> Activity.with_two_hours_tags(hours_tags)
+        |> select([a], a.tags)
+        |> Repo.all()
+        |> Enum.frequencies_by(&Activity.counts_as(&1, hours_tags))
+
+      %{year: year, primary: kinds[:primary] || 0, secondary: kinds[:secondary] || 0}
+    end)
   end
 
   defp uses_hours_tags?(team, hours_tags) do

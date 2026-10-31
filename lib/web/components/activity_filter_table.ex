@@ -81,7 +81,7 @@ defmodule Web.Components.ActivityFilterTable do
       sort={@sort}
       path_fn={@path_fn}
       team={@team}
-      untagged?={@form[:hours].value == "untagged"}
+      hours={@form[:hours].value}
     />
 
     <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
@@ -93,7 +93,7 @@ defmodule Web.Components.ActivityFilterTable do
   attr :sort, :string, required: true
   attr :path_fn, :any, required: true
   attr :team, :map, required: true
-  attr :untagged?, :boolean, default: false, doc: "listing activities with no hours tag"
+  attr :hours, :string, default: nil, doc: "the Hours tag filter, set to list ones to fix"
 
   # The activity list's table, without its filters. The style guide shows it with made-up rows.
   def activity_table(assigns) do
@@ -116,11 +116,13 @@ defmodule Web.Components.ActivityFilterTable do
         <.activity_tags activity={record} hours_tags={@hours_tags} />
         <%!-- Needs attention links here, and a published activity is locked (#358, #585). --%>
         <div
-          :if={@untagged? and Activity.locked?(record)}
+          :if={@hours in ["untagged", "two"] and Activity.locked?(record)}
           id={"activity-#{record.id}-tags-locked"}
           class="hint"
         >
-          Published, so unpublish it to set its hours tag.
+          {if @hours == "two",
+            do: "Published, so unpublish it to change its tags.",
+            else: "Published, so unpublish it to set its hours tag."}
           <.a navigate={~p"/teams/#{@team}/activities/#{record.id}/edit"}>Change activity</.a>
         </div>
       </:col>
