@@ -382,8 +382,8 @@ defmodule App.ViewData.TeamDashboardViewData do
 
   @doc """
   Activities with two hours tags (#763), drafts too, since letters count drafts.
-  One row per open year, `%{year:, primary:, secondary:}`: how many count for each kind
-  (`Activity.counts_as/2`).
+  One row per open year, `%{year:, primary:, secondary:, ids:}`: how many count for each
+  kind (`Activity.counts_as/2`), and their ids, sorted, for snoozing (#751).
   """
   def two_hours_tags_rows(team, now) do
     hours_tags = Activity.hours_tags(team)
@@ -391,17 +391,25 @@ defmodule App.ViewData.TeamDashboardViewData do
     now
     |> Service.Period.open_years(team.timezone)
     |> Enum.map(fn year ->
-      kinds =
+      rows =
         Activity
         |> where([a], a.team_id == ^team.id)
         |> Activity.not_deleted()
         |> Activity.started_in(year, team.timezone)
         |> Activity.with_two_hours_tags(hours_tags)
-        |> select([a], a.tags)
+        |> select([a], {a.id, a.tags})
+        |> order_by([a], a.id)
         |> Repo.all()
-        |> Enum.frequencies_by(&Activity.counts_as(&1, hours_tags))
 
-      %{year: year, primary: kinds[:primary] || 0, secondary: kinds[:secondary] || 0}
+      kinds =
+        Enum.frequencies_by(rows, fn {_id, tags} -> Activity.counts_as(tags, hours_tags) end)
+
+      %{
+        year: year,
+        primary: kinds[:primary] || 0,
+        secondary: kinds[:secondary] || 0,
+        ids: Enum.map(rows, &elem(&1, 0))
+      }
     end)
   end
 

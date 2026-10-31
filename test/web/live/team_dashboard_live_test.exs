@@ -423,6 +423,8 @@ defmodule Web.TeamDashboardLiveTest do
              "count primary hours for 1 and secondary hours for 1."
            )
 
+    assert has_element?(lv, "#snooze-two_hours_tags")
+
     {:ok, list, _html} =
       lv |> element("#attention-two_hours_tags a") |> render_click() |> follow_redirect(conn)
 
