@@ -29,7 +29,7 @@ defmodule App.ViewModel.ActivityFormViewModelTest do
       title: "Monday night training",
       activity_kind: "exercise",
       start_time: ~T[19:00:00],
-      length_minutes: 150,
+      duration_minutes: 150,
       place: "Hall",
       coordinate: "49.10000,-123.10000",
       hours: "secondary",
@@ -57,7 +57,7 @@ defmodule App.ViewModel.ActivityFormViewModelTest do
       id: 7,
       title: "Weekend exercise",
       start_time: ~T[08:00:00],
-      length_minutes: 36 * 60,
+      duration_minutes: 36 * 60,
       hours: "primary"
     }
 
@@ -105,10 +105,12 @@ defmodule App.ViewModel.ActivityFormViewModelTest do
 
   test "Finish follows Start by the template's length, and stays as typed without one" do
     params = %{"starts_at" => "2026-11-09T19:00", "ends_at" => "2026-11-02T21:30"}
-    template = %App.Model.Template{id: 7, title: "Training", length_minutes: 150}
+    template = %App.Model.Template{id: 7, title: "Training", duration_minutes: 150}
 
     assert ActivityFormViewModel.follow_start(params, template)["ends_at"] == "2026-11-09T21:30"
-    assert ActivityFormViewModel.follow_start(params, %{template | length_minutes: nil}) == params
+
+    assert ActivityFormViewModel.follow_start(params, %{template | duration_minutes: nil}) ==
+             params
 
     assert ActivityFormViewModel.follow_start(%{params | "starts_at" => ""}, template)["ends_at"] ==
              "2026-11-02T21:30"

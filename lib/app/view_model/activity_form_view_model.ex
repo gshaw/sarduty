@@ -103,7 +103,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
   `params` with what `template` fills in on Add activity (#746, #747): its kind when it
   has one, its title or else its name, its tax credit hours, and each other detail it
   has. Its start time goes on Start's day, or `today` when Start is empty, and Finish is
-  Start and its length. Its address and pin go together, so an address with no pin
+  Start and its duration. Its address and pin go together, so an address with no pin
   clears the pin picked before. Picking it again replaces them.
   """
   def template_params(params, %Template{} = template, %Date{} = today) do
@@ -125,8 +125,8 @@ defmodule App.ViewModel.ActivityFormViewModel do
   end
 
   @doc """
-  `params` with Finish moved to keep `template`'s length after Start, which just changed
-  (#747). A template with no length leaves Finish as typed.
+  `params` with Finish moved to keep `template`'s duration after Start, which just changed
+  (#747). A template with no duration leaves Finish as typed.
   """
   def follow_start(params, %Template{} = template) do
     case finish(cast_naive(params["starts_at"]), template) do
@@ -142,7 +142,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
     NaiveDateTime.new!(day, start_time)
   end
 
-  defp finish(%NaiveDateTime{} = starts_at, %Template{length_minutes: minutes})
+  defp finish(%NaiveDateTime{} = starts_at, %Template{duration_minutes: minutes})
        when is_integer(minutes),
        do: NaiveDateTime.add(starts_at, minutes, :minute)
 

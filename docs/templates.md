@@ -136,10 +136,10 @@ go as a pair, so a template's address with no pin clears the pin picked before.
 
 The form keeps its Start and Finish date-and-time boxes (decided 2026-10-30, over a
 Date box and two times, which could not reach past the next day). A template is a start
-time and a length; the activity is a start and a finish. Picking one puts its start time
-on Start's day, or today when Start is empty, and Finish is Start and the length, so a
+time and a duration; the activity is a start and a finish. Picking one puts its start time
+on Start's day, or today when Start is empty, and Finish is Start and the duration, so a
 36-hour exercise finishes the day after next. While a template is picked, changing
-Start moves Finish to keep the length (`follow_start/2`); Finish can still be typed.
+Start moves Finish to keep the duration (`follow_start/2`); Finish can still be typed.
 With no template the two boxes are independent. Several nights are one at a time: no
 recurrence, no Save and add another.
 

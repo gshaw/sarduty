@@ -87,7 +87,7 @@ defmodule Web.ActivityFormLiveTest do
         %{
           activity_kind: "exercise",
           start_time: ~T[19:00:00],
-          length_minutes: 150,
+          duration_minutes: 150,
           place: "Hall",
           hours: "secondary",
           description: "<div>Bring a radio.</div>"
