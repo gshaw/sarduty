@@ -4,8 +4,9 @@ defmodule App.Repo.Migrations.AddDetailsToTemplates do
   # A template's activity details, which fill Add activity (#746): title, start time,
   # length, place and pin, tax credit hours, and description. Tax credit hours replaces
   # the hours tag a template held, so each template's Primary or Secondary Hours tag
-  # moves into it and leaves its tags. A template with neither gets Primary, as a new
-  # one does. The tag names are the team's, as App.Model.Activity.hours_tags/1 reads
+  # moves into it and leaves its tags. A template with neither gets Neither, since
+  # applying a template adds its hours tag to an activity with none, and that one added
+  # none before. A new template gets Primary. The tag names are the team's, as App.Model.Activity.hours_tags/1 reads
   # them: its organization's, then its own, then the defaults.
   @hours_tags """
   SELECT tt.id, tt.template_id, tags.title = h.primary_tag, tags.title = h.secondary_tag
@@ -35,14 +36,15 @@ defmodule App.Repo.Migrations.AddDetailsToTemplates do
     flush()
 
     %{rows: rows} = repo().query!(@hours_tags)
+    repo().query!("UPDATE templates SET hours = 'none'")
 
     # Primary wins when a template has both, as Activity.counts_as/2 reads them.
     rows
     |> Enum.group_by(fn [_id, template_id, _primary, _secondary] -> template_id end)
     |> Enum.each(fn {template_id, tags} ->
-      unless Enum.any?(tags, fn [_id, _template_id, primary, _secondary] -> primary == 1 end) do
-        repo().query!("UPDATE templates SET hours = 'secondary' WHERE id = ?", [template_id])
-      end
+      primary? = Enum.any?(tags, fn [_id, _template_id, primary, _secondary] -> primary == 1 end)
+      hours = if primary?, do: "primary", else: "secondary"
+      repo().query!("UPDATE templates SET hours = ? WHERE id = ?", [hours, template_id])
     end)
 
     for [id | _rest] <- rows, do: repo().query!("DELETE FROM template_tags WHERE id = ?", [id])

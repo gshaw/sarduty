@@ -68,7 +68,8 @@ its hours tag to an activity with no hours tag, such as an incident made in D4H
 held the tag. The first template picked wins, and hours someone chose stay.
 
 When the details came (2026-10-30), each template's hours tag moved into Tax credit hours
-and left its tags. A template with neither tag got Primary.
+and left its tags. A template with neither tag got Neither, so applying it still adds no
+hours tag.
 
 ## Applying a template
 
