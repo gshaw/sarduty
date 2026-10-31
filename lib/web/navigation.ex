@@ -51,22 +51,22 @@ defmodule Web.Navigation do
   @doc """
   The area's pages in sections, each a list of links, split by a divider and never
   headed. A section with nothing you can see is left out. Each link is
-  `%{key:, label:, path:, current:, count:}`; the one for `path` is current.
+  `%{key:, label:, path:, current:}`; the one for `path` is current.
 
-  On a team: `team_admin?` when you manage it, `member?` when you log in as one of its
-  members, and `certificates`, members' certificates waiting for a team admin.
+  On a team: `team_admin?` when you manage it, and `member?` when you log in as one of
+  its members. No link has a count: what waits for a team admin is on the Dashboard's
+  Needs attention, which leaves out their own (#698).
   """
   def sections(area, path, opts \\ [])
 
   def sections(%{kind: :team, team: team}, path, opts) do
     team_admin? = Keyword.get(opts, :team_admin?, false)
     member? = Keyword.get(opts, :member?, false)
-    certificates = Keyword.get(opts, :certificates, 0)
 
     team_sections =
       cond do
         team_admin? ->
-          team_admin_sections(team, certificates)
+          team_admin_sections(team)
 
         member? ->
           [
@@ -116,11 +116,11 @@ defmodule Web.Navigation do
 
   def sections(_area, _path, _opts), do: []
 
-  defp team_admin_sections(team, certificates) do
+  defp team_admin_sections(team) do
     [
       dashboard_links(team),
       activity_links(team),
-      people_links(team, certificates),
+      people_links(team),
       [link("equipment", "Equipment", ~p"/teams/#{team}/equipment") | chore_links(team)],
       [link("settings", "Team settings", ~p"/teams/#{team}/settings")]
     ]
@@ -155,8 +155,7 @@ defmodule Web.Navigation do
   # Chores is one page for everyone (#645): members log theirs there, and team admins
   # accept them. It shows with member logins and chores on. For team admins it shares
   # Equipment's section: chores are mostly equipment upkeep, and a section of one link
-  # looked lost. It has no count: chores wait on the Dashboard's Needs attention, which
-  # leaves out a team admin's own (#698).
+  # looked lost.
   defp chore_links(team) do
     if Team.chores?(team),
       do: [link("chores", "Chores", ~p"/teams/#{team}/chores")],
@@ -164,13 +163,13 @@ defmodule Web.Navigation do
   end
 
   # Certificates follow Qualifications on a team where members send them (#493).
-  defp people_links(team, certificates) do
+  defp people_links(team) do
     member_links(team) ++
       [
         link("groups", "Groups", ~p"/teams/#{team}/groups"),
         link("qualifications", "Qualifications", ~p"/teams/#{team}/qualifications")
       ] ++
-      certificate_links(team, certificates) ++
+      certificate_links(team) ++
       [
         link("endorsements", "Endorsements", ~p"/teams/#{team}/endorsements"),
         link("tax-credit-letters", "Tax credit letters", ~p"/teams/#{team}/tax-credit-letters")
@@ -185,9 +184,9 @@ defmodule Web.Navigation do
     ]
   end
 
-  defp certificate_links(team, count) do
+  defp certificate_links(team) do
     if Team.certificates?(team),
-      do: [link("certificates", "Certificates", ~p"/teams/#{team}/certificates", count: count)],
+      do: [link("certificates", "Certificates", ~p"/teams/#{team}/certificates")],
       else: []
   end
 
@@ -203,15 +202,12 @@ defmodule Web.Navigation do
       )
 
   defp link(key, label, path, opts \\ []) do
-    count = opts[:count]
-
     %{
       key: key,
       label: label,
       path: path,
       also: Keyword.get(opts, :also, []),
       exact: Keyword.get(opts, :exact, false),
-      count: if(count && count > 0, do: count),
       current: false
     }
   end

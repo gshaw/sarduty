@@ -197,21 +197,12 @@ defmodule App.Model.Chore do
   def count_to_accept(%Team{} = team, member, now) do
     Chore
     |> where([c], c.team_id == ^team.id and c.status == :waiting)
-    |> without_own(member, other_managers?(team, member, now))
+    |> without_own(member, Member.other_managers?(team, member, now))
     |> Repo.aggregate(:count)
   end
 
   defp without_own(query, %Member{id: id}, true), do: where(query, [c], c.member_id != ^id)
   defp without_own(query, _member, _other_managers?), do: query
-
-  defp other_managers?(_team, nil, _now), do: false
-
-  defp other_managers?(team, member, now) do
-    Member
-    |> where([m], m.team_id == ^team.id and m.id != ^member.id)
-    |> Member.managers_query(now)
-    |> Repo.exists?()
-  end
 
   @doc "How many chores each of the team's categories has in `year`, as category id to count."
   def count_by_category(team_id, year) do

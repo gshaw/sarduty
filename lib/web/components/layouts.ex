@@ -268,8 +268,7 @@ defmodule Web.Layouts do
       managed_teams: assigns[:managed_teams] || [],
       member_logins: assigns[:member_logins] || [],
       user_organizations: assigns[:user_organizations] || [],
-      current_path: assigns[:current_path],
-      certificate_count: assigns[:certificate_count] || 0
+      current_path: assigns[:current_path]
     }
   end
 
@@ -282,8 +281,7 @@ defmodule Web.Layouts do
     sections =
       Navigation.sections(area, assigns.current_path,
         team_admin?: assigns.team_admin?,
-        member?: assigns.current_member != nil,
-        certificates: assigns.certificate_count
+        member?: assigns.current_member != nil
       )
 
     {area, sections}
@@ -299,7 +297,6 @@ defmodule Web.Layouts do
   attr :member_logins, :list, default: []
   attr :user_organizations, :list, default: []
   attr :current_path, :string, default: nil
-  attr :certificate_count, :integer, default: 0
   attr :size, :atom, default: :wide
 
   attr :pages, :list,
@@ -393,10 +390,7 @@ defmodule Web.Layouts do
         </div>
         <.login_link :if={@search == [] and !login_page?(@current_path)} />
       <% end %>
-      <.site_bar_phone_menu
-        :if={@sections != []}
-        waiting?={Enum.any?(List.flatten(@sections), & &1.count)}
-      >
+      <.site_bar_phone_menu :if={@sections != []}>
         <%= for {links, index} <- Enum.with_index(@sections) do %>
           <.menu_divider :if={index > 0} />
           <.nav_link :for={link <- links} link={link} id_prefix="phone-nav-" />
@@ -543,8 +537,8 @@ defmodule Web.Layouts do
   attr :link, :map, required: true
   attr :id_prefix, :string, required: true
 
-  # One page in the side navigation or the phone menu, with a count when something waits
-  # there. An open link is a section whose pages are listed below it, as in the style guide.
+  # One page in the side navigation or the phone menu. An open link is a section whose
+  # pages are listed below it, as in the style guide.
   def nav_link(assigns) do
     ~H"""
     <.link
@@ -554,7 +548,6 @@ defmodule Web.Layouts do
       class={["nav-link", @link[:open] && "is-open"]}
     >
       {@link.label}
-      <.badge :if={@link.count} kind={:warning}>{@link.count}</.badge>
     </.link>
     """
   end

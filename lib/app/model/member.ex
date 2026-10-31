@@ -413,6 +413,20 @@ defmodule App.Model.Member do
     |> not_retiring_query()
   end
 
+  @doc """
+  Whether the team has a manager (managers_query/2) besides `member`, who can accept what
+  `member` sent: their own chores and certificates (#697). False for nil, a SAR Duty admin
+  who isn't on the team.
+  """
+  def other_managers?(_team, nil, _now), do: false
+
+  def other_managers?(%Team{} = team, %Member{} = member, now) do
+    Member
+    |> where([m], m.team_id == ^team.id and m.id != ^member.id)
+    |> managers_query(now)
+    |> Repo.exists?()
+  end
+
   @doc "The team's managers (managers_query/2), by name."
   def get_managers(%Team{} = team, now) do
     Member

@@ -10,7 +10,8 @@ defmodule Web.CertificateCollectionLive do
 
   # The certificates members sent (#493), /teams/:subdomain/certificates, by status. Each
   # opens its own page, where a team admin compares the file with its dates and accepts
-  # or declines it.
+  # or declines it. A team admin's own say Yours: another team admin should accept them
+  # (#697).
   @views [waiting: "Waiting", accepted: "Accepted", declined: "Declined"]
 
   def mount(_params, _session, socket) do
@@ -29,7 +30,7 @@ defmodule Web.CertificateCollectionLive do
     members = Enum.map(certificates, & &1.member)
 
     socket
-    |> assign(view: view, counts: counts, certificate_count: counts.waiting)
+    |> assign(view: view, counts: counts)
     |> assign(certificates: certificates)
     |> assign(standings: Standing.by_member(team, members, DateTime.utc_now()))
     |> then(&{:noreply, &1})
@@ -92,11 +93,20 @@ defmodule Web.CertificateCollectionLive do
       class="table-stack"
     >
       <:col :let={certificate} label="Member" class="stack-title">
-        <.member_cell
-          member={certificate.member}
-          team={@current_team}
-          standing={@standings[certificate.member.id]}
-        />
+        <span class="with-badge">
+          <.member_cell
+            member={certificate.member}
+            team={@current_team}
+            standing={@standings[certificate.member.id]}
+          />
+          <.badge
+            :if={Certificate.own?(certificate, @current_member)}
+            id={"certificate-yours-#{certificate.id}"}
+            kind={:primary}
+          >
+            Yours
+          </.badge>
+        </span>
       </:col>
       <:col :let={certificate} label="Qualification" class="stack-full">
         <.a navigate={~p"/teams/#{@current_team}/certificates/#{certificate.id}"}>{CertificateText.title(

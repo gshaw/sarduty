@@ -12,6 +12,9 @@ defmodule App.Operation.AcceptCertificate do
   accepting again applies the same set: only the failed row goes. Until the award is in
   D4H, the team admin's qualification and dates replace the member's, and each accept is
   a new set.
+
+  Another team admin should accept a team admin's own certificate, but they may accept it
+  when they say so, `own: true`, as with chores (#697).
   """
 
   import Ecto.Query
@@ -34,12 +37,19 @@ defmodule App.Operation.AcceptCertificate do
 
   @doc """
   `{:ok, certificate}` once it is in D4H. Otherwise `{:error, changeset}` for the form,
-  `{:error, :decided}`, or `{:error, text}` saying what did not go through.
+  `{:error, :decided}`, `{:error, :own}` for the `member:`'s own without `own: true`, or
+  `{:error, text}` saying what did not go through.
   """
-  def call(%Team{} = team, %Certificate{team_id: team_id} = certificate, params, user, now)
+  def call(%Team{} = team, %Certificate{team_id: team_id} = certificate, params, user, now, opts)
       when team_id == team.id and is_struct(user, User) do
-    # One change at a time per certificate, so two team admins never award it twice, and
-    # a member's change or another team admin's decline waits until it is in D4H.
+    if Certificate.own?(certificate, Keyword.fetch!(opts, :member)) and opts[:own] != true,
+      do: {:error, :own},
+      else: accept(team, certificate, params, user, now)
+  end
+
+  # One change at a time per certificate, so two team admins never award it twice, and a
+  # member's change or another team admin's decline waits until it is in D4H.
+  defp accept(team, certificate, params, user, now) do
     SaveCertificate.locked(certificate, fn ->
       current = Repo.get_by!(Certificate, id: certificate.id, team_id: team.id)
 

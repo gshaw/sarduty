@@ -29,6 +29,7 @@ defmodule Web.CertificateLiveTest do
 
     %{
       conn: log_in_user(conn, user),
+      user: user,
       team: team,
       member: member,
       qualification: qualification,
@@ -55,9 +56,12 @@ defmodule Web.CertificateLiveTest do
     end)
   end
 
-  test "waiting certificates are counted in the side navigation and listed", ctx do
+  # The side navigation has no count (#698): Needs attention leaves out a team admin's own.
+  test "waiting certificates are listed, and counted under Needs attention", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates")
-    assert has_element?(lv, "#side-nav-certificates[aria-current=page]", "1")
+    assert has_element?(lv, "#side-nav-certificates[aria-current=page]")
+    refute has_element?(lv, "#side-nav-certificates .badge")
+    refute has_element?(lv, "#certificate-yours-#{ctx.certificate.id}")
     assert has_element?(lv, "#certificates-view-waiting", "1")
     assert has_element?(lv, "#certificate-#{ctx.certificate.id}", "Sam Rivera")
     assert has_element?(lv, "#certificate-#{ctx.certificate.id}", "Oct 18, 2026 to Oct 18, 2029")
@@ -313,6 +317,43 @@ defmodule Web.CertificateLiveTest do
   end
 
   # A team admin who is also a member sends their own from the page they manage (#645).
+  test "a team admin's own certificate says Yours and takes a box to accept (#697)", ctx do
+    %{user: user, team: team, qualification: qualification} = ctx
+    me = Repo.get_by!(App.Model.Member, team_id: team.id, email: user.email)
+    mine = certificate_fixture(me, qualification)
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{team}/certificates")
+    assert has_element?(lv, "#certificate-yours-#{mine.id}", "Yours")
+    refute has_element?(lv, "#certificate-yours-#{ctx.certificate.id}")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{team}/certificates/#{ctx.certificate.id}")
+    refute has_element?(lv, "#accept-own")
+    refute has_element?(lv, "#certificate-accept[disabled]")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{team}/certificates/#{mine.id}")
+    assert has_element?(lv, "#accept-own")
+    assert has_element?(lv, "#certificate-accept[disabled]")
+    assert has_element?(lv, "#certificate-decline-button")
+
+    values = %{qualification_id: qualification.id, confirmed: true}
+
+    assert render_submit(lv, "accept", %{certificate: values}) =~
+             "Select Accept my own certificate to accept yours."
+
+    assert Repo.reload!(mine).status == :waiting
+
+    lv |> form("#accept-form", certificate: values, own: "true") |> render_change()
+    refute has_element?(lv, "#certificate-accept[disabled]")
+
+    {:ok, _lv, _html} =
+      lv
+      |> form("#accept-form", certificate: values, own: "true")
+      |> render_submit()
+      |> follow_redirect(ctx.conn)
+
+    assert Repo.reload!(mine).status == :accepted
+  end
+
   test "a team admin who is a member adds their own certificate from Certificates", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates")
 

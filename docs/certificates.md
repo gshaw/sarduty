@@ -72,6 +72,11 @@ qualification and dates, then accept it
   Standard First Aid, Oct 18, 2026 to Oct 18, 2029." It names what goes, since only D4H
   can change an award once it is there. It clears when the qualification or dates change
   after it was selected. Nothing keeps it.
+- **Another team admin should accept a team admin's own certificate**, as with chores
+  (#697), but it is not a rule: a team with one team admin has no one else. Their own say
+  Yours on Certificates. Accepting one takes a second box, Accept my own certificate, and
+  AcceptCertificate refuses it without one, before anything goes to D4H. Declining needs
+  none.
 - **The qualification's hint** says whether the member picked it, and when the member
   has never held it: "New for Sam: no award of it yet."
 - **The expiry fills in** as on the member's form when the team admin picks another
@@ -111,8 +116,10 @@ qualification and dates, then accept it
 
 ## Where else certificates show
 
-- **Team home**: "N certificates to accept" under Needs attention, and the waiting count
-  beside Certificates in the side navigation. For a member, "Your X expires in N days"
+- **Team home**: "N certificates to accept" under Needs attention. The count leaves out
+  the reader's own, which another team admin should accept, unless no other team admin
+  can (`Certificate.count_to_accept/3`). Certificates in the side navigation has no
+  count (2026-10-31), as Chores (#698). For a member, "Your X expires in N days"
   under For you to do opens the form for that qualification, and leaves while a
   certificate for it waits. A declined certificate shows there until they delete it.
 - **SAR Duty Records**: a team admin's Award a qualification form on a member's

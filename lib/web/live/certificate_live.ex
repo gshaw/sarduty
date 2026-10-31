@@ -21,13 +21,15 @@ defmodule Web.CertificateLive do
   # the box that says they checked them against the certificate, then accepts it, which
   # adds the award to D4H with the file, or declines it with a reason the member sees.
   # Dates that look wrong get a warning, never an error. When D4H already has the award,
-  # read as the page opens, Attach certificate puts the file on it instead.
+  # read as the page opens, Attach certificate puts the file on it instead. A team admin's
+  # own certificate takes a box that says they meant it (#697): another team admin should
+  # accept it.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     if !Team.certificates?(team), do: raise(Web.Status.NotFound)
 
     socket
-    |> assign(now: DateTime.utc_now(), checked_key: nil)
+    |> assign(now: DateTime.utc_now(), checked_key: nil, own: false)
     |> assign(qualifications: Qualification.get_all(team.id))
     |> load(id)
     |> assign_decline_form(%{})
@@ -41,6 +43,7 @@ defmodule Web.CertificateLive do
 
     socket
     |> assign(certificate: certificate, latest: latest)
+    |> assign(own_certificate?: Certificate.own?(certificate, socket.assigns.current_member))
     |> assign(page_title: page_title(certificate))
     |> assign(
       options:
@@ -287,10 +290,12 @@ defmodule Web.CertificateLive do
                   team={@current_team}
                 />
             <% end %>
+            <CertificateText.own_box :if={@own_certificate?} checked={@own} />
             <.form_actions>
               <.button
                 id="certificate-accept"
                 variant={:success}
+                disabled={@own_certificate? and !@own}
                 phx-disable-with="Sending…"
               >
                 {accept_label(@certificate, @existing)}
@@ -479,29 +484,25 @@ defmodule Web.CertificateLive do
     end
   end
 
-  def handle_event("validate", %{"certificate" => params}, socket),
-    do: {:noreply, assign_form(socket, params, :validate)}
+  # Send again has no fields, only the own box.
+  def handle_event("validate", params, socket) do
+    socket = assign(socket, :own, params["own"] == "true")
+
+    case params do
+      %{"certificate" => values} -> {:noreply, assign_form(socket, values, :validate)}
+      _own_only -> {:noreply, socket}
+    end
+  end
 
   def handle_event("accept", params, socket) do
-    %{current_team: team, current_user: user, certificate: certificate} = socket.assigns
+    %{current_team: team, current_user: user, current_member: member, certificate: certificate} =
+      socket.assigns
+
     values = params["certificate"] || %{}
+    opts = [member: member, own: params["own"] == "true"]
 
-    case AcceptCertificate.call(team, certificate, values, user, DateTime.utc_now()) do
-      {:ok, accepted} ->
-        {:noreply, accepted(socket, Repo.preload(accepted, [:member, :qualification]))}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign_changeset(socket, changeset)}
-
-      {:error, :decided} ->
-        {:noreply, decided(socket)}
-
-      {:error, text} ->
-        socket
-        |> put_flash(:error, text)
-        |> load(certificate.id)
-        |> then(&{:noreply, &1})
-    end
+    result = AcceptCertificate.call(team, certificate, values, user, DateTime.utc_now(), opts)
+    {:noreply, after_accept(socket, result)}
   end
 
   def handle_event("rotate", %{"direction" => direction}, socket)
@@ -552,6 +553,20 @@ defmodule Web.CertificateLive do
         {:noreply, assign_decline_form(socket, %{"reason" => reason}, errors)}
     end
   end
+
+  defp after_accept(socket, {:ok, accepted}),
+    do: accepted(socket, Repo.preload(accepted, [:member, :qualification]))
+
+  defp after_accept(socket, {:error, %Ecto.Changeset{} = changeset}),
+    do: assign_changeset(socket, changeset)
+
+  defp after_accept(socket, {:error, :decided}), do: decided(socket)
+
+  defp after_accept(socket, {:error, :own}),
+    do: put_flash(socket, :error, CertificateText.own_refused())
+
+  defp after_accept(socket, {:error, text}),
+    do: socket |> put_flash(:error, text) |> load(socket.assigns.certificate.id)
 
   defp accepted(socket, certificate) do
     socket

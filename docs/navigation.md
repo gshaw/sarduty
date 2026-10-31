@@ -70,10 +70,12 @@ is left out, and so is its divider.
 - **Templates is a link of its own**, after Activities, so a team admin finds it without
   opening Activities first. Proposed changes sat beside it until the MCP became read-only
   (#627).
-- **Counts.** Certificates counts what waits for a team admin in an amber tag
-  (assigned by the team pages' hook), and on a phone the Menu button gets an amber dot
-  while any link has a count. Chores has none (#698): waiting chores are on the
-  Dashboard's Needs attention, which leaves out a team admin's own.
+- **No counts** (2026-10-31). Chores and Certificates each counted what waited for a team
+  admin in an amber tag, and lit an amber dot on the phone's Menu button. Both counted a
+  team admin's own, which another team admin should accept, so a team admin whose own
+  waited saw a count they shouldn't act on. Chores lost its count first (#698), then
+  Certificates. What waits is on the Dashboard's Needs attention, which leaves out the
+  reader's own unless no other team admin can accept it.
 - **Team settings is one link** to `/teams/:subdomain/settings`. Its pages are tabs under
   the title Team settings ([TeamSettingsTabs](../lib/web/components/team_settings_tabs.ex)),
   one topic each (2026-10-27, #514): General (the team and its key), Team admins, and
@@ -91,8 +93,7 @@ is left out, and so is its divider.
   letter is about members, and a section of one link made the menu look like a table.
 - **Chores shares Equipment's section** for team admins (2026-10-22): most chores are
   equipment upkeep, and a section of one link looked lost. Members get it in a section of
-  its own (#645). Chores shows only with member logins and chores on (#463), and only team
-  admins get its count.
+  its own (#645). Chores shows only with member logins and chores on (#463).
 - **Milestones sits right after Members** (2026-10-23): every current member's
   milestones. It's about members themselves, as Members is; Groups, Qualifications, and
   Endorsements set up what members hold. Members open both (#440).

@@ -61,10 +61,11 @@ defmodule App.Operation.AcceptCertificateTest do
     end)
   end
 
-  # The team admin has selected the box that says they checked the certificate.
-  defp accept(ctx, params \\ %{}) do
+  # The team admin, not the certificate's member, has selected the box that says they
+  # checked the certificate.
+  defp accept(ctx, params \\ %{}, opts \\ [member: nil]) do
     params = Map.put_new(params, "confirmed", "true")
-    AcceptCertificate.call(ctx.team, ctx.certificate, params, ctx.user, @now)
+    AcceptCertificate.call(ctx.team, ctx.certificate, params, ctx.user, @now, opts)
   end
 
   defp posts do
@@ -88,6 +89,18 @@ defmodule App.Operation.AcceptCertificateTest do
     assert award.d4h_document_id == 900
     assert award.starts_at == ~U[2026-10-17 07:00:00Z]
     assert award.ends_at == ~U[2029-10-18 07:00:00Z]
+  end
+
+  # Another team admin should accept a team admin's own (#697): no request goes to D4H
+  # until they say they mean it.
+  test "a team admin's own certificate needs own: true", ctx do
+    stub_d4h(200)
+
+    assert {:error, :own} = accept(ctx, %{}, member: ctx.member)
+    assert posts() == []
+    assert Repo.reload!(ctx.certificate).status == :waiting
+
+    assert {:ok, %{status: :accepted}} = accept(ctx, %{}, member: ctx.member, own: true)
   end
 
   # A D4H award id is unique only for one member.

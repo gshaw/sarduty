@@ -80,7 +80,6 @@ defmodule Web.TeamNavigationTest do
        %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities")
     assert has_element?(lv, ~s{#side-nav-templates[href="/teams/#{team.subdomain}/templates"]})
-    refute has_element?(lv, "#phone-menu-dot")
     refute has_element?(lv, ".tabs")
   end
 

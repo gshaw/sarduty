@@ -4,8 +4,35 @@ defmodule Web.CertificateText do
   same thing.
   """
 
+  use Phoenix.Component
+
+  import Web.Components.Core, only: [input: 1]
+
   alias App.Model.Member
   alias Service.Format
+
+  attr :checked, :boolean, required: true
+
+  @doc """
+  The box a team admin selects to accept their own certificate (#697), as for chores
+  (Web.ChoreText.own_box/1). Accept stays off until it is selected.
+  """
+  def own_box(assigns) do
+    ~H"""
+    <.input
+      type="checkbox"
+      id="accept-own"
+      name="own"
+      value={@checked}
+      label="Accept my own certificate"
+    >
+      I know another team admin should accept the certificates I send. I'm making an exception.
+    </.input>
+    """
+  end
+
+  @doc "The flash when a team admin's own certificate goes to accept without the box checked."
+  def own_refused, do: "Select Accept my own certificate to accept yours."
 
   @doc """
   The certificate's qualification, or "Certificate" when it has none: the member did not
