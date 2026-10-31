@@ -99,8 +99,26 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(lv, "#team-head-facts #open-d4h[target=_blank]", "Open in D4H")
   end
 
+  test "a team with no contacts asks its team admins to pick them (#780)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    {:ok, lv, _html} = open(conn, user, team)
+
+    assert has_element?(
+             lv,
+             ~s{#attention-team_contacts a[href="/teams/#{team.subdomain}/settings/team-admins#team-contacts"]},
+             "Pick team contacts"
+           )
+
+    refute has_element?(lv, "#snooze-team_contacts")
+
+    {:ok, lv, _html} = open(conn, user, team_contact_fixture(team))
+    refute has_element?(lv, "#attention-team_contacts")
+  end
+
   test "an empty team has nothing coming up and nothing to do", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
+    team = team_contact_fixture(team)
 
     {:ok, lv, _html} = open(conn, user, team)
 
@@ -350,6 +368,7 @@ defmodule Web.TeamDashboardLiveTest do
         certificates_enabled: true
       )
       |> Repo.update!()
+      |> team_contact_fixture()
 
     member = member_fixture(team, %{phone: nil})
     member_fixture(team, %{joined_at: ~U[2024-01-01 00:00:00Z]})

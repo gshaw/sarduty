@@ -51,7 +51,7 @@ defmodule Web.Search do
 
     search_opts = [
       kinds: kinds(team, team_admin?, Keyword.fetch!(opts, :member?)),
-      pages: opts |> Keyword.get(:sections, []) |> pages(),
+      pages: pages(team, Keyword.get(opts, :sections, []), team_admin?),
       now: Keyword.get(opts, :now, DateTime.utc_now())
     ]
 
@@ -74,7 +74,7 @@ defmodule Web.Search do
 
     search_opts = [
       kinds: kinds(team, team_admin?, Keyword.fetch!(opts, :member?)),
-      pages: opts |> Keyword.get(:sections, []) |> pages()
+      pages: pages(team, Keyword.get(opts, :sections, []), team_admin?)
     ]
 
     keys =
@@ -151,8 +151,21 @@ defmodule Web.Search do
   defp opens?(kind, team_admin?, member?),
     do: kind |> page_access() |> UserAuth.opens?(team_admin?, member?)
 
-  defp pages(sections) do
-    for link <- List.flatten(sections), do: %{id: link.key, title: link.label, path: link.path}
+  # The side navigation's pages, each with the `words` that find it too, such as Get
+  # help's (#780), then Team admins for team admins, where they pick the team contacts.
+  defp pages(team, sections, team_admin?) do
+    side =
+      for link <- List.flatten(sections),
+          do: %{id: link.key, title: link.label, path: link.path, words: link[:words] || []}
+
+    team_admins = %{
+      id: "team-admins",
+      title: "Team admins",
+      path: ~p"/teams/#{team}/settings/team-admins",
+      words: ~w(contacts)
+    }
+
+    side ++ if(team_admin?, do: [team_admins], else: [])
   end
 
   # A hit with where it opens, and a member's standing as the person searching sees it.

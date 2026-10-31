@@ -15,6 +15,7 @@ defmodule App.ViewData.TeamAttentionTest do
         service: :d4h,
         refresh: %{state: :ok, message: nil},
         names: %{name: "Ridge SAR", abbreviated_name: "RIDGE"},
+        contacts?: true,
         draft_ids: [],
         missing_fields_ids: [],
         expiring_days: 60,
@@ -110,7 +111,8 @@ defmodule App.ViewData.TeamAttentionTest do
             %{year: 2026, primary: 0, secondary: 1, ids: [10]}
           ],
           letters: %{year: 2025, count: 1},
-          names: %{name: String.duplicate("a", 21), abbreviated_name: String.duplicate("a", 11)}
+          names: %{name: String.duplicate("a", 21), abbreviated_name: String.duplicate("a", 11)},
+          contacts?: false
         })
 
       %{shown: items} = TeamAttention.items(everything, @march, [], :all)
@@ -124,7 +126,7 @@ defmodule App.ViewData.TeamAttentionTest do
                Enum.sort(~w(refresh retiring_access group_changes chores certificates
                             chores_to_send attendance_to_send no_shows untagged_last_year
                             two_hours_tags_last_year letters long_name
-                            long_abbreviated_name)a)
+                            long_abbreviated_name team_contacts)a)
 
       for item <- can_snooze do
         assert TeamAttention.back_sooner(item) =~ ~r/^It comes back sooner if another .+\.$/

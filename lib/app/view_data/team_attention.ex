@@ -57,6 +57,7 @@ defmodule App.ViewData.TeamAttention do
     |> Enum.concat(two_hours_tags_items(rows, this_year))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
     |> Enum.concat(name_items(rows.names))
+    |> Enum.concat([contacts_item(rows.contacts?)])
     |> Enum.reject(&is_nil/1)
     |> Enum.sort_by(&level_order/1)
   end
@@ -596,6 +597,20 @@ defmodule App.ViewData.TeamAttention do
       one: "Take the extra tag off with Change tags, or in #{name} if it is published.",
       many: "Take each extra tag off with Change tags, or in #{name} for a published one."
     )
+  end
+
+  # Get help sends the team's messages to its contacts (#780), and never to every team
+  # admin, so a team with none leaves members only the SAR Duty site admins.
+  defp contacts_item(true), do: nil
+
+  defp contacts_item(false) do
+    %{
+      key: :team_contacts,
+      level: :warning,
+      title: "Pick team contacts",
+      detail: "Members who use Get help have nobody on the team to ask.",
+      action: "Pick team contacts"
+    }
   end
 
   # The team's names start as one, so these nudge until the short ones are short (#738).

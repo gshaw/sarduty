@@ -55,11 +55,15 @@ is left out, and so is its divider.
 | 4       | Chores                                                   | everyone    |
 | 5       | Team settings                                            | team admins |
 | 6       | Your membership                                          | members     |
+| 6       | Get help                                                 | everyone    |
 
-- A team admin who is a member sees all six. A SAR Duty admin who opened a team from
-  Admin and is not a member there sees 1 to 5. A member sees Dashboard and Whiteboard,
-  Activities and Take attendance, Members and Milestones, Chores, and Your membership,
-  each in its own section (#440, #645).
+- A team admin who is a member sees all six. A SAR Duty site admin who opened a team
+  from Adminland and is not a member there sees 1 to 5, then Get help. A member sees
+  Dashboard and Whiteboard, Activities and Take attendance, Members and Milestones,
+  Chores, and Your membership and Get help, each in its own section (#440, #645).
+- Get help (#780) is in the side navigation, not the team picker: on two teams, a row
+  in the picker couldn't say which team it asks. Its link carries the page it was
+  opened on, `?from=`, for its email.
 - **Whiteboard follows Dashboard** while the team has D4H's whiteboard on (#515). The
   Dashboard shows a line or 2 of its notes; the page has them all, and team admins post
   from it.
@@ -136,21 +140,22 @@ mockups, are on #645.
 - **The logo** always goes to the home page, logged in or not, so the public site is
   never out of reach. Logged in on a page outside every area (home, terms, privacy), the
   bar looks as it does elsewhere: it names the team logging in lands on, else your member
-  team, else your first organization, else SAR Duty admin (`Navigation.outside_area/4`),
+  team, else your first organization, else Adminland (`Navigation.outside_area/4`),
   with the switcher on it. The
   page is in no area, so the switcher marks nothing and the name always opens it.
 - **After the logo, a faint slash and the area's name**: the team's, the organization's,
-  SAR Duty admin, or Account settings (#779).
+  Adminland, or Account settings (#779).
 - **The team switcher** sits on the name for everyone logged in, at every width, even on
   one team (#779). Its menu lists Your team or Your teams, each team where you are a team
   admin or a member, A to Z, one row per team (`Navigation.switch_rows/5`), then Your
   organizations, each one you are an organization admin of, with a building icon (#512).
   Then SAR Duty's own rows in a navy band at the foot, a lighter strip in dark mode and on
   a phone's navy panel: its home page, the wordmark in its colours, which on a phone is
-  the only way home, and for SAR Duty admins, SAR Duty admin with a shield and the style
-  guide, so they never read as more teams (2026-10-23; band 2026-10-31). SAR Duty admins
-  reach the other organizations from Admin › Organizations. The team you're on is marked, and each row goes to
-  the team's Dashboard; a team opened from Admin › Teams that isn't yours marks nothing.
+  the only way home, and for SAR Duty site admins, Adminland with a key and the style
+  guide, so they never read as more teams (2026-10-23; band and Adminland 2026-10-31).
+  SAR Duty site admins reach the other organizations from Adminland › Organizations. The
+  team you're on is marked, and each row goes to the team's Dashboard; a team opened from
+  Adminland › Teams that isn't yours marks nothing.
 - **Your avatar, top right** at every width: your initials in a circle, from the name of
   the member you log in as, or else your email (`Navigation.person/3`). It opens your name
   and email, Account settings, and Log out. It is the same on every team, and Your

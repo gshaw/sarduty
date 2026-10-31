@@ -519,6 +519,9 @@ defmodule Web.TeamDashboardLive do
        when key in [:two_hours_tags, :two_hours_tags_last_year],
        do: ~p"/teams/#{team}/activities?hours=two&when=#{year}&sort=date-"
 
+  defp attention_path(team, %{key: :team_contacts}),
+    do: ~p"/teams/#{team}/settings/team-admins#team-contacts"
+
   defp attention_path(team, %{key: :drafts}),
     do: ~p"/teams/#{team}/activities?status=draft&when=recent&sort=date-"
 

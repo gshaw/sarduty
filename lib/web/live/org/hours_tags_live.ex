@@ -58,7 +58,7 @@ defmodule Web.Org.HoursTagsLive do
         when a tag changes.
       </p>
       <.empty_state :if={@teams == []} id="no-teams" title="No teams yet">
-        The tags come from its teams. A SAR Duty admin adds them.
+        The tags come from its teams. A SAR Duty site admin adds them.
       </.empty_state>
       <.form
         :if={@teams != []}

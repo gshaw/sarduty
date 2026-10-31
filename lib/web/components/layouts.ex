@@ -321,6 +321,15 @@ defmodule Web.Layouts do
     {area, sections} = navigation(assigns)
     sections = assigns.pages || sections
 
+    bar_area =
+      area ||
+        Navigation.outside_area(
+          assigns.current_user,
+          assigns.current_team,
+          assigns.member_logins,
+          assigns.user_organizations
+        )
+
     {switch_rows, person} =
       if user = assigns.current_user do
         {Navigation.switch_rows(
@@ -333,15 +342,6 @@ defmodule Web.Layouts do
       else
         {[], nil}
       end
-
-    bar_area =
-      area ||
-        Navigation.outside_area(
-          assigns.current_user,
-          assigns.current_team,
-          assigns.member_logins,
-          assigns.user_organizations
-        )
 
     assigns =
       assign(assigns,
@@ -442,8 +442,8 @@ defmodule Web.Layouts do
 
   # The switcher's rows, in the bar's menu or the phone's panel: your places on top, Your
   # teams then Your organizations (#512), and SAR Duty's own rows in a navy band at the
-  # foot (#779): its home page, the wordmark in its colours, then SAR Duty admin with its
-  # shield and the style guide, so they never read as one more team.
+  # foot (#779): its home page, the wordmark in its colours, then Adminland with its
+  # key and the style guide, so they never read as one more team.
   defp switch_menu(assigns) do
     groups = Enum.group_by(assigns.rows, & &1.kind)
 
@@ -499,7 +499,7 @@ defmodule Web.Layouts do
       aria-current={@row.current && "page"}
       class={["nav-link", @row.kind in [:admin, :styles] && "switch-admin"]}
     >
-      <.icon :if={@row.kind == :admin} name="shield-check" size={:sm} />
+      <.icon :if={@row.kind == :admin} name="key" size={:sm} />
       <.icon :if={@row.kind == :org} name="building-complex" size={:sm} />
       <.icon :if={@row.kind == :styles} name="palette" size={:sm} />
       {@row.label}
@@ -556,7 +556,7 @@ defmodule Web.Layouts do
   def nav_link(assigns) do
     ~H"""
     <.link
-      navigate={@link.path}
+      navigate={@link[:href] || @link.path}
       id={@id_prefix <> @link.key}
       aria-current={@link.current && "page"}
       class={["nav-link", @link[:open] && "is-open"]}

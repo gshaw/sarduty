@@ -215,6 +215,12 @@ defmodule App.DataFixtures do
     user_with_team_fixture(%{team: team_attrs})
   end
 
+  @doc "A member the team picks as its first team contact (#780). Returns the team."
+  def team_contact_fixture(%Team{} = team, attrs \\ %{}) do
+    contact = member_fixture(team, attrs)
+    team |> Ecto.Changeset.change(first_contact_id: contact.id) |> App.Repo.update!()
+  end
+
   @doc "A member D4H makes an Owner, so a user with their email manages the team."
   def manager_fixture(%Team{} = team, attrs \\ %{}) do
     member_fixture(team, Map.merge(%{d4h_permission: 0, d4h_status: "OPERATIONAL"}, attrs))

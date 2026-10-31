@@ -61,7 +61,7 @@ defmodule Web.Components.TeamManagers do
         %{
           id: "grant-#{grant.id}",
           name: nil,
-          access: "Let in by a SAR Duty admin",
+          access: "Let in by a SAR Duty site admin",
           email: grant.email,
           badges: [],
           reason: grant.reason

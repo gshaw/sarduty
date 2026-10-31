@@ -100,6 +100,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       service: D4H.service(team),
       refresh: refresh_row(team, refresh_result),
       names: Map.take(team, [:name, :abbreviated_name]),
+      contacts?: Member.get_team_contacts(team, now) != [],
       draft_ids: recent_draft_ids(team, now),
       missing_fields_ids: missing_fields_ids(team, now),
       expiring_days: BuildGroupRulePreview.expiring_days(),

@@ -1,0 +1,8 @@
+/* Get help (#780): People to ask, grouped by who they answer for, split by space. A team
+   with no contacts is greyed out in Send to. */
+@layer components {
+  .help-group + .help-group { margin-top: var(--sp-6); }
+  .help-people { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--sp-4); }
+  .choice.is-off { cursor: default; }
+  .choice.is-off strong { color: var(--text-muted); }
+}

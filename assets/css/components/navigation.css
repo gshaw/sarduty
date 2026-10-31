@@ -24,7 +24,7 @@
     font-weight: 300;
   }
 
-  /* The area you're in, after the brand (#312, #406): the team's name, or SAR Duty admin, or
+  /* The area you're in, after the brand (#312, #406): the team's name, or Adminland, or
      Account settings. Plain text with nowhere else to go; otherwise the team switcher. */
   .site-bar-area {
     display: inline-flex;
@@ -180,13 +180,13 @@
   .site-bar-phone-panel .menu-note { padding: var(--sp-2) var(--sp-4) var(--sp-1); color: rgb(255 255 255 / 0.6); font-size: var(--fs-xs); line-height: var(--lh-xs); }
   .site-bar-phone-panel hr { margin: var(--sp-2) 0; border-color: rgb(255 255 255 / 0.15); }
 
-  /* SAR Duty admin in the switcher: below the teams, with a shield, so it is not a team. */
+  /* Adminland in the switcher: below the teams, with a key, so it is not a team. */
   :is(.menu, .site-bar-phone-panel) a.switch-admin { display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-2); }
   /* An organization's row starts with its building, its name beside it. */
   .site-bar-phone-panel a.nav-link:has(> .icon) { justify-content: flex-start; }
-  .menu a.switch-admin :is(.icon-shield-check, .icon-palette) { color: var(--text-muted); }
+  .menu a.switch-admin :is(.icon-key, .icon-palette) { color: var(--text-muted); }
 
-  /* SAR Duty's own rows (#779): the home page, then SAR Duty admin and the style guide, in
+  /* SAR Duty's own rows (#779): the home page, then Adminland and the style guide, in
      a navy band at the foot of the switcher, so the wordmark keeps its colours on the light
      menu. In dark mode, and on the phone's navy panel, a lighter strip. */
   .menu:has(> .switch-band) { padding-bottom: 0; overflow: hidden; }
@@ -203,6 +203,7 @@
   .switch-band .brand { color: #fff; font-weight: 700; font-size: var(--fs-md); line-height: var(--lh-md); }
   .switch-band .brand span { color: var(--accent); }
   .switch-home .switch-note { font-weight: 400; font-size: var(--fs-sm); line-height: var(--lh-sm); color: rgb(255 255 255 / 0.65); }
+  .switch-home > * { white-space: nowrap; }
 
   /* The compact bar, below 1024px and on narrow pages at every width (compact-bar, in
      app.css). Three columns, the outer two the same width, keep the name centred whether

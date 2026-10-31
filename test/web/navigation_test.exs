@@ -33,7 +33,7 @@ defmodule Web.NavigationTest do
     end
 
     test "SAR Duty admin, account settings, and nothing elsewhere" do
-      assert %{kind: :admin, name: "SAR Duty admin"} = Navigation.area("/admin/orgs/3", nil)
+      assert %{kind: :admin, name: "Adminland"} = Navigation.area("/admin/orgs/3", nil)
       assert %{kind: :settings, name: "Account settings"} = Navigation.area("/account", @team)
       assert Navigation.area("/", @team) == nil
       assert Navigation.area("/administrators", @team) == nil
@@ -73,22 +73,27 @@ defmodule Web.NavigationTest do
   end
 
   describe "sections/3" do
-    test "a member sees Dashboard, Activities and Take attendance, Members and Milestones, and Your membership" do
+    test "a member sees Dashboard, Activities and Take attendance, Members and Milestones, and Your membership and Get help" do
       sections = team_sections("/teams/squamish/me", member?: true)
 
       assert keys(sections) == [
                ["dashboard", "whiteboard"],
                ["activities", "take-attendance"],
                ["members", "milestones"],
-               ["me"]
+               ["me", "help"]
              ]
 
       assert [
                _dashboard,
                _activities,
                _people,
-               [%{label: "Your membership", path: "/teams/squamish/me", current: true}]
+               [
+                 %{label: "Your membership", path: "/teams/squamish/me", current: true},
+                 %{label: "Get help", path: "/teams/squamish/help", current: false} = help
+               ]
              ] = sections
+
+      assert help.href == "/teams/squamish/help?" <> URI.encode_query(from: "/teams/squamish/me")
     end
 
     test "a team admin who is a member sees all six sections" do
@@ -106,13 +111,14 @@ defmodule Web.NavigationTest do
                  ],
                  ["equipment"],
                  ["settings"],
-                 ["me"]
+                 ["me", "help"]
                ]
     end
 
-    test "a SAR Duty admin on a team they don't belong to sees sections 1 to 5" do
+    test "a SAR Duty site admin on a team they don't belong to sees sections 1 to 5, then Get help" do
       sections = team_sections("/teams/squamish", team_admin?: true)
-      assert length(sections) == 5
+      assert length(sections) == 6
+      assert sections |> keys() |> List.last() == ["help"]
       refute "me" in (sections |> keys() |> List.flatten())
     end
 
@@ -203,7 +209,7 @@ defmodule Web.NavigationTest do
                {"Pemberton SAR", false},
                {"Squamish SAR", true},
                {"SAR Duty", false},
-               {"SAR Duty admin", false},
+               {"Adminland", false},
                {"Style guide", false}
              ]
 
@@ -220,7 +226,7 @@ defmodule Web.NavigationTest do
                [{"Squamish SAR", true}, {"SAR Duty", false}]
 
       assert rows(Navigation.switch_rows(true, [], [], Navigation.area("/admin", nil))) ==
-               [{"SAR Duty", false}, {"SAR Duty admin", true}, {"Style guide", false}]
+               [{"SAR Duty", false}, {"Adminland", true}, {"Style guide", false}]
     end
 
     test "a team opened from Admin that isn't yours marks nothing" do
@@ -229,7 +235,7 @@ defmodule Web.NavigationTest do
 
       assert rows(rows) == [
                {"SAR Duty", false},
-               {"SAR Duty admin", false},
+               {"Adminland", false},
                {"Style guide", false}
              ]
     end

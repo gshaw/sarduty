@@ -79,6 +79,10 @@ defmodule App.Model.Team do
     field :retiring_d4h_group_id, :integer
     # Set by an admin on the organization's page, never cast from a form.
     belongs_to :organization, Organization
+    # The one or two members Get help sends the team's messages to (#780). Set by
+    # App.Operation.SaveTeamContacts; read through Member.get_team_contacts/2.
+    belongs_to :first_contact, Member
+    belongs_to :second_contact, Member
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -164,6 +168,10 @@ defmodule App.Model.Team do
     |> validate_names()
     |> validate_length(:new_d4h_access_key, min: 5, max: 2000)
   end
+
+  @doc "Team settings' Team contacts (#780). App.Operation.SaveTeamContacts checks who."
+  def build_contacts_changeset(data, params \\ %{}),
+    do: cast(data, params, [:first_contact_id, :second_contact_id])
 
   @legal_name_max 100
   @abbreviated_name_max 20

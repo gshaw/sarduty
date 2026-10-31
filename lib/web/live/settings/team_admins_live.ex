@@ -9,15 +9,19 @@ defmodule Web.Settings.TeamAdminsLive do
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.OrganizationAdmin
+  alias App.Model.Team
   alias App.Model.TeamLoginGrant
+  alias App.Operation.SaveTeamContacts
   alias App.Repo
 
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
     managers = Member.get_managers(team, DateTime.utc_now())
+
     login_emails = managers |> Enum.map(& &1.email) |> Accounts.login_emails()
 
     organization = team |> Repo.preload(:organization) |> Map.get(:organization)
+    now = DateTime.utc_now()
 
     socket =
       assign(socket,
@@ -27,11 +31,29 @@ defmodule Web.Settings.TeamAdminsLive do
         login_emails: login_emails,
         organization: organization,
         organization_admins: organization_admins(organization),
-        sar_duty_admins: Enum.sort(Accounts.admin_emails())
+        sar_duty_admins: Enum.sort(Accounts.admin_emails()),
+        contact_choices: SaveTeamContacts.choices(team, now)
       )
 
-    {:ok, socket}
+    {:ok, assign_saved_contacts(socket, team, now)}
   end
+
+  defp assign_saved_contacts(socket, team, now) do
+    changeset = team |> contacts_data(now) |> Team.build_contacts_changeset()
+    assign_contacts_form(socket, changeset)
+  end
+
+  # The saved contacts that still count, so one who left shows as None.
+  defp contacts_data(team, now) do
+    case Member.get_team_contacts(team, now) do
+      [] -> %{team | first_contact_id: nil, second_contact_id: nil}
+      [first] -> %{team | first_contact_id: first.id, second_contact_id: nil}
+      [first, second] -> %{team | first_contact_id: first.id, second_contact_id: second.id}
+    end
+  end
+
+  defp assign_contacts_form(socket, changeset),
+    do: assign(socket, contacts_form: to_form(changeset, as: "contacts"))
 
   def render(assigns) do
     ~H"""
@@ -67,8 +89,47 @@ defmodule Web.Settings.TeamAdminsLive do
       </ul>
     </section>
 
+    <section id="team-contacts" class="mt-8 measure">
+      <h2 class="heading">Team contacts</h2>
+      <p>
+        One or two people members can ask for help. Get help lists them with their email and phone,
+        and messages to the team go to them. They do not need to be team admins.
+      </p>
+      <.form
+        for={@contacts_form}
+        id="team-contacts-form"
+        phx-change="validate_contacts"
+        phx-submit="save_contacts"
+      >
+        <.input
+          :for={
+            {field, label} <- [
+              first_contact_id: "First contact",
+              second_contact_id: "Second contact"
+            ]
+          }
+          field={@contacts_form[field]}
+          type="combobox"
+          label={label}
+          options={Enum.map(@contact_choices, &{&1.name, &1.id})}
+          prompt="None"
+          clearable
+        />
+        <.form_actions>
+          <.button
+            id="team-contacts-save"
+            variant={:success}
+            disabled={@viewing_as != nil}
+            phx-disable-with="Saving…"
+          >
+            Save contacts
+          </.button>
+        </.form_actions>
+      </.form>
+    </section>
+
     <section id="sar-duty-admins" class="mt-8 measure">
-      <h2 class="heading">SAR Duty admins</h2>
+      <h2 class="heading">SAR Duty site admins</h2>
       <p>
         They run SAR Duty and can open every team. Reach them at <.a href="mailto:support@sarduty.com">support@sarduty.com</.a>.
       </p>
@@ -79,6 +140,29 @@ defmodule Web.Settings.TeamAdminsLive do
       </ul>
     </section>
     """
+  end
+
+  def handle_event("validate_contacts", %{"contacts" => params}, socket) do
+    changeset =
+      socket.assigns.current_team
+      |> Team.build_contacts_changeset(params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign_contacts_form(socket, changeset)}
+  end
+
+  def handle_event("save_contacts", %{"contacts" => params}, socket) do
+    case SaveTeamContacts.call(socket.assigns.current_team, params) do
+      {:ok, team} ->
+        socket
+        |> assign(current_team: team)
+        |> assign_saved_contacts(team, DateTime.utc_now())
+        |> put_flash(:info, "Saved team contacts.")
+        |> then(&{:noreply, &1})
+
+      {:error, changeset} ->
+        {:noreply, assign_contacts_form(socket, changeset)}
+    end
   end
 
   defp organization_admins(nil), do: []

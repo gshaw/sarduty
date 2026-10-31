@@ -22,7 +22,7 @@
   an activity's scanner, scanning kit; see `/styles/layout`), or
   `:live_view_marketing_layout` (public pages) — see [lib/web.ex](lib/web.ex). Every
   layout imports the same shared components; a page imports the ones only it uses.
-- **Navigation**: every page is in an area — a team's space, SAR Duty admin, or account
+- **Navigation**: every page is in an area — a team's space, Adminland, or account
   settings. One space per team: team admins and members open the same URLs, and a
   person's role decides which pages they see. The top bar names the area with a team
   switcher on it, a side navigation lists its pages in sections, and an avatar opens the

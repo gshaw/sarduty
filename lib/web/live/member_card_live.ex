@@ -84,7 +84,7 @@ defmodule Web.MemberCardLive do
 
   # Once a team is in an organization, its organization admins turn cards on (#512).
   defp id_cards_off(%{organization_id: nil}),
-    do: "A SAR Duty admin turns them on after checking your team. Ask one to turn them on."
+    do: "A SAR Duty site admin turns them on after checking your team. Ask one to turn them on."
 
   defp id_cards_off(_team), do: "Your organization admins turn them on. Ask one to turn them on."
 

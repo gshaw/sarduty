@@ -16,7 +16,7 @@ defmodule Web.Admin.AdminCollectionLiveTest do
     assert has_element?(lv, "#admin-#{admin.id}")
     assert has_element?(lv, "#admin-#{other_admin.id}", other_admin.email)
     refute has_element?(lv, "#admin-#{not_admin.id}")
-    assert has_element?(lv, "#nav-area", "SAR Duty admin")
+    assert has_element?(lv, "#nav-area", "Adminland")
   end
 
   test "is for admins only", %{conn: conn} do
