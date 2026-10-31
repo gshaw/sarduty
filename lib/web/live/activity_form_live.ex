@@ -108,15 +108,25 @@ defmodule Web.ActivityFormLive do
       class="measure"
     >
       <.error_summary form={@form} />
-      <.input
-        :if={@templates != []}
-        field={@form[:template_id]}
-        type="select"
-        label="Template (optional)"
-        options={[{"None", ""} | Enum.map(@templates, &{&1.title, &1.id})]}
-      >
-        Fills in the form. Saving also adds the template's fields, items, tags, and groups.
-      </.input>
+      <%!-- Set apart, so the template reads as what fills the form, not part of it. --%>
+      <section :if={@templates != []} id="activity-template-box" class="card card-alt mb-8">
+        <h2 id="activity-template-heading" class="heading">Start from a template</h2>
+        <.input
+          field={@form[:template_id]}
+          type="select"
+          aria-labelledby="activity-template-heading"
+          options={[{"None", ""} | Enum.map(@templates, &{&1.title, &1.id})]}
+        >
+          Optional. Fills in the form below.
+        </.input>
+        <p :if={@template} id="activity-template-summary" class="mt-3">
+          {adds_text(
+            adds(@template, @form[:kind].value, @template_fields, @current_team),
+            passed_text(@form, @current_team)
+          )}
+        </p>
+      </section>
+      <h2 :if={@templates != []} class="heading">Activity</h2>
       <.warning_text :if={@published_locked?} id="activity-published-locked" class="mb-6">
         A published activity cannot be changed. Untick Published and save first.
       </.warning_text>
@@ -232,34 +242,10 @@ defmodule Web.ActivityFormLive do
   attr :passed, :string, required: true, doc: "nil, or why the groups are left out"
   attr :team, :map, required: true
 
-  # What saving adds after the activity, read only (#747). A template's fields go only on
-  # an activity of its kind.
+  # What saving adds after the activity, read only (#747).
   defp template_adds(assigns) do
     assigns =
-      assign(assigns,
-        field_rows:
-          if(assigns.kind == assigns.template.activity_kind,
-            do:
-              CustomField.rows(
-                assigns.fields,
-                SaveCustomFields.fill_empty(
-                  %{},
-                  %Activity{},
-                  assigns.fields,
-                  assigns.template.custom_values
-                ),
-                assigns.team.timezone,
-                restricted: true
-              ),
-            else: []
-          ),
-        items:
-          assigns.template.template_items
-          |> Enum.filter(&EquipmentItem.in_service?(&1.equipment_item))
-          |> Enum.sort_by(&String.downcase(&1.equipment_item.title)),
-        tags: Template.tags(assigns.template),
-        groups: Template.groups(assigns.template)
-      )
+      assign(assigns, adds(assigns.template, assigns.kind, assigns.fields, assigns.team))
 
     ~H"""
     <section
@@ -299,6 +285,52 @@ defmodule Web.ActivityFormLive do
       </.warning_text>
     </section>
     """
+  end
+
+  # A template's fields go only on an activity of its kind.
+  defp adds(template, kind, fields, team) do
+    %{
+      field_rows:
+        if(kind == template.activity_kind,
+          do:
+            CustomField.rows(
+              fields,
+              SaveCustomFields.fill_empty(%{}, %Activity{}, fields, template.custom_values),
+              team.timezone,
+              restricted: true
+            ),
+          else: []
+        ),
+      items:
+        template.template_items
+        |> Enum.filter(&EquipmentItem.in_service?(&1.equipment_item))
+        |> Enum.sort_by(&String.downcase(&1.equipment_item.title)),
+      tags: Template.tags(template),
+      groups: Template.groups(template)
+    }
+  end
+
+  # The box's one line on what the list under the form holds: "Saving also adds 2 fields,
+  # 1 tag, and the members of 2 groups, listed under the form." Nil when it adds nothing.
+  defp adds_text(adds, passed) do
+    parts =
+      Enum.filter(
+        [
+          adds.field_rows != [] &&
+            Service.Format.count(length(adds.field_rows), one: "%d field", many: "%d fields"),
+          adds.items != [] &&
+            Service.Format.count(length(adds.items), one: "%d item", many: "%d items"),
+          adds.tags != [] &&
+            Service.Format.count(length(adds.tags), one: "%d tag", many: "%d tags"),
+          adds.groups != [] && !passed &&
+            "the members of " <>
+              Service.Format.count(length(adds.groups), one: "%d group", many: "%d groups")
+        ],
+        & &1
+      )
+
+    if parts != [],
+      do: "Saving also adds #{Service.Format.and_list(parts)}, listed under the form."
   end
 
   # Members are only added before the start, as with Apply a template: "Oct 26 has

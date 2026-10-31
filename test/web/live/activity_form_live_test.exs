@@ -111,6 +111,7 @@ defmodule Web.ActivityFormLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
     assert has_element?(lv, "#form_published")
     refute has_element?(lv, "#activity-template-adds")
+    refute has_element?(lv, "#activity-template-summary")
 
     pick_template(lv, template)
     {today, _time} = Service.Convert.utc_to_local(DateTime.utc_now(), team.timezone)
@@ -130,11 +131,18 @@ defmodule Web.ActivityFormLiveTest do
     assert has_element?(lv, ~s|#form_ends_at[value="#{next_week}T21:00"]|)
     assert has_element?(lv, "#activity-template-groups #group-#{group.id}-members", "2")
 
+    assert has_element?(
+             lv,
+             "#activity-template-summary",
+             "Saving also adds 1 item, 1 tag, and the members of 1 group, listed under the form."
+           )
+
     # A date gone by leaves the groups out, as Apply a template does.
     change_start(lv, "2020-11-02T19:00")
     assert has_element?(lv, ~s|#form_ends_at[value="2020-11-02T21:30"]|)
     refute has_element?(lv, "#activity-template-groups")
     assert has_element?(lv, "#activity-template-groups-passed", "Nov 2 has passed.")
+    assert has_element?(lv, "#activity-template-summary", "Saving also adds 1 item and 1 tag,")
 
     # Start was changed, so None asks before it empties the form.
     pick_none(lv)

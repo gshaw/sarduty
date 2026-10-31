@@ -128,6 +128,9 @@
 .card-stack { display: grid; gap: var(--sp-6); align-content: start; min-width: 0; }
 .card-stack > .card { grid-column: auto; }
 .card { border: 1px solid var(--border-subtle); border-radius: var(--radius); padding: var(--sp-4); background: var(--bg); min-width: 0; }
+/* Grey: a box above a form that fills it in, such as Add activity's template (#747). */
+.card-alt { background: var(--surface-alt); }
+.card-alt > :last-child { margin-bottom: 0; }
 @media (min-width: 960px) {
   .card-grid > .span-4 { grid-column: span 4; }
   .card-grid > .span-5 { grid-column: span 5; }

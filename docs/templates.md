@@ -125,8 +125,12 @@ that line before the error, as for a refused invite.
 
 ## Add activity from a template
 
-Add activity starts with a Template box (#747), and a template's page has "Add activity
-from this template" in Actions, which opens it picked (`/activities/new?template=<id>`).
+Add activity starts with a grey "Start from a template" box (#747), above an Activity
+heading, so the template reads as what fills the form rather than part of it. Once one is
+picked, a line in the box counts what saving adds, listed under the form. It has no link
+to the template (decided 2026-10-30): a change made there wouldn't reach the form until
+the template was picked again. A template's page has "Add activity from this template" in
+Actions, which opens it picked (`/activities/new?template=<id>`).
 Picking one fills the form from its [details](#activity-details)
 (`ActivityFormViewModel.template_params/2`): its kind when it has one, its title or
 else its name, its tax credit hours, and each other detail it has. Picking another
