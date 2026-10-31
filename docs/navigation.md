@@ -145,10 +145,11 @@ mockups, are on #645.
   one team (#779). Its menu lists Your team or Your teams, each team where you are a team
   admin or a member, A to Z, one row per team (`Navigation.switch_rows/5`), then Your
   organizations, each one you are an organization admin of, with a building icon (#512).
-  Then SAR Duty's home page, the wordmark, below a divider: on a phone it is the only way
-  home. SAR Duty admins reach the other organizations from Admin › Organizations. For SAR
-  Duty admins, SAR Duty admin comes last, below a divider and with a shield, so it never
-  reads as one more team (2026-10-23). The team you're on is marked, and each row goes to
+  Then SAR Duty's own rows in a navy band at the foot, a lighter strip in dark mode and on
+  a phone's navy panel: its home page, the wordmark in its colours, which on a phone is
+  the only way home, and for SAR Duty admins, SAR Duty admin with a shield and the style
+  guide, so they never read as more teams (2026-10-23; band 2026-10-31). SAR Duty admins
+  reach the other organizations from Admin › Organizations. The team you're on is marked, and each row goes to
   the team's Dashboard; a team opened from Admin › Teams that isn't yours marks nothing.
 - **Your avatar, top right** at every width: your initials in a circle, from the name of
   the member you log in as, or else your email (`Navigation.person/3`). It opens your name

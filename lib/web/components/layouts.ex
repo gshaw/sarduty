@@ -440,10 +440,10 @@ defmodule Web.Layouts do
   attr :rows, :list, required: true, doc: "from Web.Navigation.switch_rows/5"
   attr :id_prefix, :string, required: true
 
-  # The switcher's rows, in the bar's menu or the phone's panel: Your teams, then Your
-  # organizations (#512), then SAR Duty's home page below a divider (#779), then SAR Duty
-  # admin below another with its shield, so it never reads as one more team, and the style
-  # guide under it.
+  # The switcher's rows, in the bar's menu or the phone's panel: your places on top, Your
+  # teams then Your organizations (#512), and SAR Duty's own rows in a navy band at the
+  # foot (#779): its home page, the wordmark in its colours, then SAR Duty admin with its
+  # shield and the style guide, so they never read as one more team.
   defp switch_menu(assigns) do
     groups = Enum.group_by(assigns.rows, & &1.kind)
 
@@ -465,10 +465,11 @@ defmodule Web.Layouts do
       <div class="caps menu-heading">{your("organization", @orgs)}</div>
       <.switch_link :for={row <- @orgs} row={row} id_prefix={@id_prefix} />
     <% end %>
-    <.menu_divider :if={@teams != [] or @orgs != []} />
-    <.switch_link :for={row <- @home} row={row} id_prefix={@id_prefix} />
-    <.menu_divider :if={@admin != []} />
-    <.switch_link :for={row <- @admin} row={row} id_prefix={@id_prefix} />
+    <div class="switch-band">
+      <.switch_link :for={row <- @home} row={row} id_prefix={@id_prefix} />
+      <.menu_divider :if={@admin != []} />
+      <.switch_link :for={row <- @admin} row={row} id_prefix={@id_prefix} />
+    </div>
     """
   end
 

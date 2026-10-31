@@ -99,7 +99,7 @@ defmodule Web.TeamNavigationTest do
     {:ok, lv, _html} = live(conn, ~p"/admin/orgs")
 
     assert has_element?(lv, "#nav-area", "SAR Duty admin")
-    assert has_element?(lv, ~s{#switch-admin[href="/admin"][aria-current=page]})
+    assert has_element?(lv, ~s{.switch-band #switch-admin[href="/admin"][aria-current=page]})
     assert has_element?(lv, ~s{#switch-styles[href="/styles"]})
     assert has_element?(lv, "#switch-team-#{team.subdomain}")
     assert has_element?(lv, "#side-nav-admin-orgs[aria-current=page]")
@@ -153,10 +153,10 @@ defmodule Web.TeamNavigationTest do
     assert has_element?(lv, "#team-switcher #nav-area", "Alpha SAR")
     assert has_element?(lv, "#team-switcher .menu-heading", "Your team")
     assert has_element?(lv, "#switch-team-#{team.subdomain}[aria-current=page]")
-    assert has_element?(lv, ~s{#team-switcher #switch-home[href="/"]}, "Home page")
+    assert has_element?(lv, ~s{#team-switcher .switch-band #switch-home[href="/"]}, "Home page")
     assert has_element?(lv, "#phone-team-switcher summary", "Alpha SAR")
     assert has_element?(lv, "#phone-team-switcher .menu-heading", "Your team")
-    assert has_element?(lv, ~s{#phone-team-switcher #phone-switch-home[href="/"]})
+    assert has_element?(lv, ~s{#phone-team-switcher .switch-band #phone-switch-home[href="/"]})
     refute has_element?(lv, "#switch-admin")
   end
 
