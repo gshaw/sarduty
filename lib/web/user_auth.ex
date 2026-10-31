@@ -511,12 +511,15 @@ defmodule Web.UserAuth do
     end
   end
 
-  # On the way to Take attendance the login page says what logging in is for (#475), so a
-  # toast there would only cover it on the hall's iPad.
+  # On the way to Take attendance (#475) or to allow an AI agent (#761) the login page
+  # says what logging in is for, so a toast there would only cover it.
   defp put_login_flash(conn) do
-    if conn.method == "GET" and conn |> current_path() |> Web.TakeAttendanceLive.path?(),
-      do: conn,
-      else: put_flash(conn, :error, "Log in to see this page.")
+    path = current_path(conn)
+
+    if conn.method == "GET" and
+         (Web.TakeAttendanceLive.path?(path) or Web.AgentAuthorizeLive.login_team_name(path)),
+       do: conn,
+       else: put_flash(conn, :error, "Log in to see this page.")
   end
 
   def require_authorized_team_subdomain(conn, _opts) do

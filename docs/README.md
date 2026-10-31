@@ -130,7 +130,7 @@ have decided since the page loaded, stays in `call`.
 - [urls.md](urls.md) — how paths are named, and the URLs that can never move.
 - [navigation.md](navigation.md) — areas, the side navigation, and the account menu that switches between them.
 - [search.md](search.md) — the top bar's search: what it matches, how it ranks, and who finds what.
-- [mcp.md](mcp.md) — the MCP endpoint trial: tokens, the read-only tools, and the call log.
+- [mcp.md](mcp.md) — the MCP endpoint: connecting agents with OAuth, the read-only tools, and the call log.
 - [taking-attendance.md](taking-attendance.md) — Take attendance: who scans ID cards at an activity and when, the times they record, and sending them to D4H.
 - [sar-command-assist.md](sar-command-assist.md) — SAR Command Assist, the incident tool many teams run beside SAR Duty, and where the two meet.
 - [organizations.md](organizations.md) — parent organizations like BCSARA, their branding, and giving one its own verify host.

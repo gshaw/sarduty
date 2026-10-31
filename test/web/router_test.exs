@@ -8,7 +8,7 @@ defmodule Web.RouterTest do
   # purpose: a fixed word at the top could block a future section, and one under
   # /teams/ or /orgs/ would block a team or organization with that name.
   @main_top_level ~w(teams orgs admin account signup login logout replies reminders wallet styles
-                     terms privacy maps)
+                     terms privacy maps .well-known)
   @verify_top_level ["orgs", "letters", ":code", "*path"]
 
   test "the main site's top-level paths are the allowed ones" do
@@ -115,7 +115,15 @@ defmodule Web.RouterTest do
     {"POST", "/reminders/token", Web.InvitationRemindersController, :unsubscribe},
     {"GET", "/teams/nsr/logo", Web.TeamController, :logo},
     {"GET", "/teams/nsr/take-attendance", Web.TakeAttendanceLive, nil},
-    {"POST", "/teams/nsr/mcp", Web.MCPController, :post}
+    {"POST", "/teams/nsr/mcp", Web.MCPController, :post},
+    # Agents keep these from their first connection (#761).
+    {"GET", "/.well-known/oauth-protected-resource/teams/nsr/mcp", Web.OAuthController,
+     :resource_metadata},
+    {"GET", "/.well-known/oauth-authorization-server/teams/nsr", Web.OAuthController,
+     :server_metadata},
+    {"POST", "/teams/nsr/oauth/register", Web.OAuthController, :register},
+    {"POST", "/teams/nsr/oauth/token", Web.OAuthController, :token},
+    {"GET", "/teams/nsr/oauth/authorize", Web.AgentAuthorizeLive, nil}
   ]
 
   @pinned_verify [

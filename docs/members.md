@@ -154,7 +154,7 @@ team admin uses to finish retiring them still show them.
 
 | Skips retiring members                                                                                                               | Through                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| Logging in as a team admin, MCP tokens, Team admins, the last team admin check, and team admin email                                 | `Member.managers_query/2`                            |
+| Logging in as a team admin, Agents, Team admins, the last team admin check, and team admin email                                     | `Member.managers_query/2`                            |
 | Logging in as a member                                                                                                               | `Member.counted_query/1` in `Member.get_logins/2`    |
 | Dashboard counts and charts, Missing details, Add members, a template's groups, Take attendance, and an organization's member totals | `Member.counted_query/1`                             |
 | Reminders                                                                                                                            | Send reminders names them under "Who doesn't get it" |

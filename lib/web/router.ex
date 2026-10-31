@@ -70,12 +70,26 @@ defmodule Web.Router do
     post "/", GoogleWalletController, :callback
   end
 
-  # The MCP endpoint (#28): a bearer token only, so no session, CSRF token, or Accept
-  # check. The token decides the team. docs/mcp.md.
+  # The MCP endpoint (#28): an agent's access token only, so no session, CSRF token, or
+  # Accept check. The token decides the team. How an agent gets one (#761): metadata,
+  # registration, and tokens, also without a session. docs/mcp.md.
   scope "/teams/:subdomain", Web do
     post "/mcp", MCPController, :post
     get "/mcp", MCPController, :get
     delete "/mcp", MCPController, :delete
+    post "/oauth/register", OAuthController, :register
+    post "/oauth/token", OAuthController, :token
+    options "/oauth/register", OAuthController, :preflight
+    options "/oauth/token", OAuthController, :preflight
+  end
+
+  # RFC 9728 and RFC 8414 put metadata under /.well-known/, with the resource's or the
+  # issuer's path after it.
+  scope "/.well-known", Web do
+    get "/oauth-protected-resource/teams/:subdomain/mcp", OAuthController, :resource_metadata
+    get "/oauth-authorization-server/teams/:subdomain", OAuthController, :server_metadata
+    options "/oauth-protected-resource/teams/:subdomain/mcp", OAuthController, :preflight
+    options "/oauth-authorization-server/teams/:subdomain", OAuthController, :preflight
   end
 
   # A mail app's one-click unsubscribe from a reminder (RFC 8058, #444): it posts with no
@@ -163,7 +177,12 @@ defmodule Web.Router do
     live_session :require_authenticated_user_session,
       on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :ensure_authenticated}] do
       live "/account", AccountLive
+      # Allowing an AI agent (#761). Anyone logged in reaches it; the page says who may
+      # allow, so a member who tries learns why not.
+      live "/teams/:subdomain/oauth/authorize", AgentAuthorizeLive
     end
+
+    post "/teams/:subdomain/oauth/authorize", OAuthController, :authorize
 
     live_session :require_admin_session,
       on_mount: [
@@ -299,7 +318,6 @@ defmodule Web.Router do
            :edit
 
       live "/teams/:subdomain/settings/mcp", Settings.MCPLive
-      live "/teams/:subdomain/settings/mcp/new", Settings.MCPTokenFormLive, :new
       live "/teams/:subdomain/me", MeLive
       live "/teams/:subdomain/me/activities", MeActivitiesLive
       live "/teams/:subdomain/me/details", MeDetailsLive

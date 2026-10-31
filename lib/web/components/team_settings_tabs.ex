@@ -4,7 +4,7 @@ defmodule Web.Components.TeamSettingsTabs do
   # Team settings is one link in the side navigation (#406); its pages are tabs under one
   # title, a topic each: the team and what it has turned on, then its members, its
   # letters, and its activities.
-  # Chore categories shows with chores on, and MCP tokens with MCP on.
+  # Chore categories shows with chores on, and Agents with Agents on.
 
   attr :team, :map, required: true
 
@@ -62,7 +62,7 @@ defmodule Web.Components.TeamSettingsTabs do
         navigate={~p"/teams/#{@team}/settings/mcp"}
         current={@current == :mcp}
       >
-        MCP tokens
+        Agents
       </:tab>
     </.tabs>
     """

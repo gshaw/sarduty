@@ -25,7 +25,7 @@ still lists the area's pages.
 - **SAR Duty admin**, `/admin/…`, for SAR Duty admins: Teams and Organizations, then
   Admins, Events, and MCP calls. The Style guide is in the team switcher. Each team has
   its own page, `/admin/teams/:id`, under Teams, with its refresh, team admins and login
-  grants, and its ID cards and MCP switches (#513). Every admin page is a 404 for anyone else.
+  grants, and its ID cards and Agents switches (#513). Every admin page is a 404 for anyone else.
 - **The footer** (Verify an ID card, Terms, Privacy) is only on the public pages: home,
   terms, and privacy. In an area its links are noise. In dev, app pages keep a line with
   the dashboard and the mailbox.
@@ -78,14 +78,14 @@ is left out, and so is its divider.
   the title Team settings ([TeamSettingsTabs](../lib/web/components/team_settings_tabs.ex)),
   one topic each (2026-10-27, #514): General (the team and its key), Team admins, and
   Features; Members (the Retiring group and the attendance check); Tax credit letters
-  (address and signer) and Hours tags; Places and Chore categories; then MCP tokens.
+  (address and signer) and Hours tags; Places and Chore categories; then Agents (#761).
   Features comes before the tabs it decides on (2026-10-28). General held the letters and the attendance check until then, one long form
   with four topics.
 - **Features is where a team turns things on** (2026-10-28): member logins, with chores
   and certificates under them, and the whiteboard, one switch each that saves when
-  flipped. ID cards show as on or off; SAR Duty turns them on when a team asks. MCP isn't
-  offered: it shows only once a SAR Duty admin turns it on. A feature's own settings
-  are a tab that shows only while it is on: Chore categories, MCP tokens. A new feature a
+  flipped. ID cards show as on or off; SAR Duty turns them on when a team asks. Agents
+  isn't offered: it shows only once a SAR Duty admin turns it on. A feature's own
+  settings are a tab that shows only while it is on: Chore categories, Agents. A new feature a
   team can go without gets a switch here, off on a new team.
 - **Tax credit letters sits with the people pages**, after Endorsements (2026-10-22): a
   letter is about members, and a section of one link made the menu look like a table.
