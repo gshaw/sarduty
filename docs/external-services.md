@@ -195,12 +195,12 @@ link codes and card codes are cut from paths, URLs and the referrer, the same wa
 
 ## MCP endpoint
 
-Agents call in rather than SAR Duty calling out: `POST /teams/:subdomain/mcp`, read-only
-apart from proposals a team admin must send,
-for teams an admin turns it on for (#28). Each manager's token is in the database, hashed,
-so there is no environment variable. The old test version's `MCP_ACCESS_KEY` and its
-`?access=…` parameter are gone; unset the Fly secret if it is still there. See
-[mcp.md](mcp.md).
+Agents call in rather than SAR Duty calling out: `POST /teams/:subdomain/mcp`,
+read-only, for teams an admin turns it on for (#28). Agents connect with OAuth, and
+SAR Duty is the authorization server itself (#761): registrations and tokens are in the
+database, hashed, so there is no environment variable and no outside service. The old
+test version's `MCP_ACCESS_KEY` and its `?access=…` parameter are gone; unset the Fly
+secret if it is still there. See [mcp.md](mcp.md).
 
 ## Other secrets
 

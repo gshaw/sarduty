@@ -142,11 +142,11 @@ defmodule Web.Settings.FeaturesLive do
         <.set_by_sar_duty
           :if={@current_team.mcp_enabled}
           id="feature-mcp"
-          label="MCP"
+          label="Agents"
           on?={true}
         >
-          Team admins connect an AI agent, such as Claude Code, that reads your team's data.
-          <.a navigate={~p"/teams/#{@current_team}/settings/mcp"}>MCP tokens</.a>
+          Team admins connect an AI agent, such as Claude or ChatGPT, that reads your team’s
+          data. <.a navigate={~p"/teams/#{@current_team}/settings/mcp"}>Agents</.a>
         </.set_by_sar_duty>
 
         <.set_by_sar_duty id="feature-id-cards" label="ID cards" on?={@current_team.id_cards_enabled}>

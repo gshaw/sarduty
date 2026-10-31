@@ -6,7 +6,7 @@ defmodule Web.Admin.MCPLive do
   @limit 200
 
   # The MCP trial (#28): every tool call agents made. Each team's page, /admin/teams/:id,
-  # turns it on or off (#513).
+  # turns Agents on or off (#513).
   def mount(_params, _session, socket) do
     {:ok,
      assign(socket, page_title: "MCP calls", limit: @limit, calls: MCPCall.get_recent(@limit))}
@@ -16,7 +16,7 @@ defmodule Web.Admin.MCPLive do
     ~H"""
     <h1 class="title">MCP calls</h1>
     <p class="mb-4 max-w-3xl">
-      Every tool call agents made. A SAR Duty admin turns MCP on or off on each team's page.
+      Every tool call agents made. A SAR Duty admin turns Agents on or off on each team's page.
       Agents only read: members, attendance hours, activities, qualifications, chores, and
       change history. See <code>docs/mcp.md</code>.
     </p>
@@ -27,7 +27,7 @@ defmodule Web.Admin.MCPLive do
       <:col :let={call} label="Team">{call.team.name}</:col>
       <:col :let={call} label="Account">
         {call.user && call.user.email}
-        <.hint :if={call.mcp_token}>{call.mcp_token.name}</.hint>
+        <.hint :if={call.agent_connection}>{call.agent_connection.name}</.hint>
       </:col>
       <:col :let={call} label="Tool">{call.tool}</:col>
       <:col :let={call} label="Arguments">{arguments(call.arguments)}</:col>

@@ -1,17 +1,17 @@
 defmodule Web.MCPControllerTest do
   # The MCP endpoint (#28): who gets in, which team they read, and what they never see.
+  # Agents get in with an OAuth access token (#761); Web.OAuthControllerTest covers how.
   use Web.ConnCase
 
   import App.DataFixtures
 
   alias App.AccountsFixtures
   alias App.MCP.Tools
+  alias App.Model.AgentConnection
   alias App.Model.D4HChange
   alias App.Model.MCPCall
-  alias App.Model.MCPToken
   alias App.Model.Member
-  alias App.Operation.CreateMCPToken
-  alias App.Operation.RevokeMCPToken
+  alias App.Operation.DisconnectAgent
   alias App.Operation.SetTeamMCP
   alias App.Repo
 
@@ -20,10 +20,9 @@ defmodule Web.MCPControllerTest do
     %{user: user, team: team} = user_with_team_fixture()
     {:ok, team} = SetTeamMCP.call(team, true, admin)
 
-    {:ok, token, record} =
-      CreateMCPToken.call(team, user, %{"name" => "Laptop", "no_training" => "true"})
+    %{tokens: tokens, connection: record} = agent_connection_fixture(team, user)
 
-    %{admin: admin, user: user, team: team, token: token, record: record}
+    %{admin: admin, user: user, team: team, token: tokens["access_token"], record: record}
   end
 
   defp rpc(conn, token, subdomain, method, params \\ %{}) do
@@ -84,21 +83,45 @@ defmodule Web.MCPControllerTest do
       %{team: team, token: token} = ctx
 
       assert build_conn() |> post(~p"/teams/#{team}/mcp", %{}) |> json_response(401)
-      conn = rpc(build_conn(), "sarduty_mcp_wrong", team.subdomain, "ping")
+      conn = rpc(build_conn(), "sarduty_at_wrong", team.subdomain, "ping")
       assert json_response(conn, 401)
 
       conn = post(build_conn(), ~p"/teams/#{team}/mcp?access=#{token}", %{})
       assert json_response(conn, 401)
-      assert get_resp_header(conn, "www-authenticate") != []
     end
 
-    test "a revoked token gets 401", %{conn: conn, team: team, user: user} = ctx do
-      {:ok, _} = RevokeMCPToken.call(team, ctx.record.id, user)
+    test "a 401 points the agent to the team's OAuth metadata", %{team: team} do
+      metadata =
+        Web.Endpoint.url() <> "/.well-known/oauth-protected-resource/teams/#{team.subdomain}/mcp"
+
+      conn = post(build_conn(), ~p"/teams/#{team}/mcp", %{})
+
+      assert get_resp_header(conn, "www-authenticate") == [
+               ~s(Bearer resource_metadata="#{metadata}")
+             ]
+
+      assert json_response(conn, 401)["error"] =~ "Team settings, then Agents"
+
+      conn = rpc(build_conn(), "sarduty_at_wrong", team.subdomain, "ping")
+
+      assert get_resp_header(conn, "www-authenticate") == [
+               ~s(Bearer error="invalid_token", resource_metadata="#{metadata}")
+             ]
+    end
+
+    test "an expired access token gets 401", %{conn: conn, team: team} = ctx do
+      ctx.record |> Ecto.Changeset.change(access_expires_at: DateTime.utc_now()) |> Repo.update!()
       conn = rpc(conn, ctx.token, team.subdomain, "ping")
       assert json_response(conn, 401)
     end
 
-    test "a token on a team with MCP off gets 401, and stays revoked when it's on again",
+    test "a disconnected agent gets 401", %{conn: conn, team: team, user: user} = ctx do
+      {:ok, _} = DisconnectAgent.call(team, ctx.record.id, user)
+      conn = rpc(conn, ctx.token, team.subdomain, "ping")
+      assert json_response(conn, 401)
+    end
+
+    test "an agent on a team with Agents off gets 401, and stays out when it's on again",
          ctx do
       %{conn: conn, team: team, token: token, admin: admin} = ctx
 
@@ -138,7 +161,7 @@ defmodule Web.MCPControllerTest do
       assert json_response(conn, 403)
     end
 
-    test "records when the token was last used", %{conn: conn, team: team} = ctx do
+    test "records when the agent was last used", %{conn: conn, team: team} = ctx do
       rpc(conn, ctx.token, team.subdomain, "ping")
       assert Repo.reload!(ctx.record).last_used_at
     end
@@ -390,9 +413,9 @@ defmodule Web.MCPControllerTest do
   end
 
   test "tokens are stored hashed", %{token: token, record: record} do
-    refute record.token_hash == token
-    assert MCPToken.hash(token) == record.token_hash
-    refute MCPToken |> Repo.all() |> Enum.any?(&(&1.token_hash == token))
+    refute record.access_token_hash == token
+    assert AgentConnection.hash(token) == record.access_token_hash
+    refute AgentConnection |> Repo.all() |> Enum.any?(&(&1.access_token_hash == token))
   end
 
   defp tool_calls do

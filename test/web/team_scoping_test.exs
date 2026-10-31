@@ -134,8 +134,13 @@ defmodule Web.TeamScopingTest do
   defp request(conn, _template, path), do: get(conn, path)
 
   describe "a member who is not a team admin" do
-    # Public or bearer-token routes under /teams/:subdomain, outside the team pages.
-    @public ["/teams/:subdomain/logo", "/teams/:subdomain/mcp"]
+    # Public or bearer-token routes under /teams/:subdomain, outside the team pages, and
+    # the Allow page, which tells a member who may connect an agent (#761).
+    @public [
+      "/teams/:subdomain/logo",
+      "/teams/:subdomain/mcp",
+      "/teams/:subdomain/oauth/authorize"
+    ]
 
     setup %{conn: conn} do
       %{team: team, user: user} = member_with_login_fixture()

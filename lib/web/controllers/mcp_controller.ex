@@ -1,15 +1,16 @@
 defmodule Web.MCPController do
   @moduledoc """
   The MCP endpoint, `/teams/:subdomain/mcp` (#28): Streamable HTTP with JSON responses
-  and no server-sent events, so GET and DELETE get 405. A bearer token decides the
-  team, and a subdomain that isn't the token's team gets 404. Tools are in
-  App.MCP.Tools and only read. See docs/mcp.md.
+  and no server-sent events, so GET and DELETE get 405. An agent's access token (#761)
+  decides the team, and a subdomain that isn't the token's team gets 404. With no
+  token, or a bad one, the 401 points the agent to the team's OAuth metadata
+  (Web.OAuthController). Tools are in App.MCP.Tools and only read. See docs/mcp.md.
   """
   use Web, :controller
 
   alias App.Adapter.D4H
   alias App.MCP.Tools
-  alias App.Model.MCPToken
+  alias App.Model.AgentConnection
   alias App.Operation.AuthorizeMCPRequest
   alias App.Operation.CallMCPTool
 
@@ -20,7 +21,8 @@ defmodule Web.MCPController do
   plug :authorize
   plug :check_protocol_version
 
-  def post(conn, _params), do: handle_message(conn, conn.assigns.mcp_token, conn.body_params)
+  def post(conn, _params),
+    do: handle_message(conn, conn.assigns.agent_connection, conn.body_params)
 
   # No server-sent event stream and no sessions to end.
   def get(conn, _params), do: method_not_allowed(conn)
@@ -47,20 +49,29 @@ defmodule Web.MCPController do
   end
 
   defp authorize(conn, _opts) do
-    with {:ok, token} <- bearer_token(conn),
-         {:ok, %MCPToken{} = record} <- AuthorizeMCPRequest.call(token) do
-      if record.team.subdomain == conn.path_params["subdomain"] do
-        assign(conn, :mcp_token, record)
+    sent = bearer_token(conn)
+
+    with {:ok, token} <- sent,
+         {:ok, %AgentConnection{} = connection} <- AuthorizeMCPRequest.call(token) do
+      if connection.team.subdomain == conn.path_params["subdomain"] do
+        assign(conn, :agent_connection, connection)
       else
         conn |> send_json_error(404, "Not found") |> halt()
       end
     else
-      _error ->
-        conn
-        |> put_resp_header("www-authenticate", ~s(Bearer error="invalid_token"))
-        |> send_json_error(401, "Send a live MCP token as Authorization: Bearer <token>.")
-        |> halt()
+      _error -> conn |> unauthorized(sent) |> halt()
     end
+  end
+
+  # RFC 9728 section 5.1: where the agent finds how to get a token. A sent token that
+  # failed also says so (RFC 6750 section 3.1).
+  defp unauthorized(conn, sent) do
+    metadata = Web.OAuthController.resource_metadata_url(conn.path_params["subdomain"])
+    error = if match?({:ok, _token}, sent), do: ~s(error="invalid_token", ), else: ""
+
+    conn
+    |> put_resp_header("www-authenticate", ~s(Bearer #{error}resource_metadata="#{metadata}"))
+    |> send_json_error(401, "Connect this agent from Team settings, then Agents, in SAR Duty.")
   end
 
   defp bearer_token(conn) do
@@ -92,9 +103,13 @@ defmodule Web.MCPController do
     rpc_error(conn, 400, nil, -32_600, "Batches are not supported")
   end
 
-  defp handle_message(conn, token, %{"jsonrpc" => "2.0", "method" => method, "id" => id} = body)
+  defp handle_message(
+         conn,
+         connection,
+         %{"jsonrpc" => "2.0", "method" => method, "id" => id} = body
+       )
        when is_binary(method) do
-    case dispatch(token, method, Map.get(body, "params") || %{}) do
+    case dispatch(connection, method, Map.get(body, "params") || %{}) do
       {:ok, result} -> json(conn, %{"jsonrpc" => "2.0", "id" => id, "result" => result})
       {:error, code, message} -> rpc_error(conn, 200, id, code, message)
     end
@@ -113,10 +128,10 @@ defmodule Web.MCPController do
     rpc_error(conn, 400, nil, -32_600, "Send one JSON-RPC 2.0 message")
   end
 
-  defp dispatch(token, "initialize", params) do
+  defp dispatch(connection, "initialize", params) do
     requested = params["protocolVersion"]
     version = if requested in @protocol_versions, do: requested, else: hd(@protocol_versions)
-    team = token.team
+    team = connection.team
     service = D4H.service_name(team)
 
     {:ok,
@@ -131,12 +146,12 @@ defmodule Web.MCPController do
      }}
   end
 
-  defp dispatch(_token, "ping", _params), do: {:ok, %{}}
+  defp dispatch(_connection, "ping", _params), do: {:ok, %{}}
 
-  defp dispatch(_token, "tools/list", _params), do: {:ok, %{"tools" => Tools.definitions()}}
+  defp dispatch(_connection, "tools/list", _params), do: {:ok, %{"tools" => Tools.definitions()}}
 
-  defp dispatch(token, "tools/call", params) when is_map(params) do
-    case CallMCPTool.call(token, params["name"], params["arguments"]) do
+  defp dispatch(connection, "tools/call", params) when is_map(params) do
+    case CallMCPTool.call(connection, params["name"], params["arguments"]) do
       {:ok, output} ->
         {:ok, %{"content" => [text(Jason.encode!(output))], "isError" => false}}
 
@@ -148,7 +163,8 @@ defmodule Web.MCPController do
     end
   end
 
-  defp dispatch(_token, method, _params), do: {:error, -32_601, "Method not found: #{method}"}
+  defp dispatch(_connection, method, _params),
+    do: {:error, -32_601, "Method not found: #{method}"}
 
   defp text(text), do: %{"type" => "text", "text" => text}
 

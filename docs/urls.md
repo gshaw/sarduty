@@ -65,6 +65,9 @@ Devices, Google, Apple, and shared links hold these. They don't move.
 - `/teams/:subdomain/logo`: Google Wallet objects fetch it.
 - `/teams/:subdomain/take-attendance`: teams print a QR code of it for the hall (#475).
 - `/teams/:subdomain/mcp`: agents' MCP configs hold it ([mcp.md](mcp.md)).
+- `/teams/:subdomain/oauth/register`, `/oauth/token`, `/oauth/authorize`, and the two
+  `/.well-known/oauth-…/teams/:subdomain…` metadata addresses: agents keep them from
+  their first connection (#761).
 - On the verify site: `/:code` (the QR code), `/:code/photo`, `/:code/banner` (the Google
   Wallet banner), `/orgs/:slug`, and `/letters/:ref` (the QR code on every tax credit
   letter since #207).
