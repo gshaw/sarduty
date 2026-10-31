@@ -31,7 +31,7 @@ defmodule App.Model.AgentConnectionTest do
     later = DateTime.add(now, 25, :hour)
     %{connection: connected, client: kept} = agent_connection_fixture(ctx.team, ctx.user, now)
     pending = connected |> Map.take([:team_id, :user_id, :name, :redirect_uri])
-    pending = Repo.insert!(struct(AgentConnection, pending))
+    pending = AgentConnection |> struct(pending) |> Repo.insert!()
     {:ok, unused} = RegisterAgentClient.call(%{"redirect_uris" => ["http://localhost:1/cb"]})
 
     assert AgentConnection.prune_pending(now) == 0
