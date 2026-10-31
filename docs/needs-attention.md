@@ -3,7 +3,9 @@
 The team home's list of work waiting for a team admin (#205): counts of live data, never
 stored. `App.ViewData.TeamAttention` turns rows into items and is pure;
 `App.ViewData.TeamDashboardViewData` reads the rows. The page shows 7 items, danger
-first, then warnings, then info. The MCP tool `needs_attention` lists every one.
+first, then warnings, then info, and "+2 more" under them shows the rest in place until
+the page reloads. Snoozed items don't count toward the 7. The MCP tool `needs_attention`
+lists every one.
 
 ## Snoozing an item
 

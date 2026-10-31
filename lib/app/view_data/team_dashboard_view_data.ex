@@ -40,24 +40,23 @@ defmodule App.ViewData.TeamDashboardViewData do
   team admins see, so a member's Dashboard doesn't count what nobody will read.
   `member:` is the team admin reading it, whose own chores and certificates wait for
   someone else.
-  `attention` is the items shown, and `snoozed` the ones a team admin snoozed (#751), each
-  with the name of who did, `snoozed_by`.
+  `attention` is the items shown, `more_attention` the ones past the page's limit, and
+  `snoozed` the ones a team admin snoozed (#751), each with the name of who did,
+  `snoozed_by`.
   """
   def build(%Team{} = team, now \\ DateTime.utc_now(), opts \\ []) do
     refresh_result = refresh_result_value(team, refresh_job_active?(team))
     {next_up, coming_up} = team |> agenda_activities(now) |> agenda(now)
 
-    %{shown: attention, snoozed: snoozed} =
+    attention =
       attention(team, refresh_result, now, Keyword.get(opts, :attention?, true), opts[:member])
 
-    %{
+    Map.merge(attention, %{
       refreshed_at: team.d4h_refreshed_at,
       refresh_result: refresh_result,
       next_up: next_up,
-      coming_up: coming_up,
-      attention: attention,
-      snoozed: Enum.map(snoozed, &Map.put(&1, :snoozed_by, snoozed_by(team, &1.snooze, now)))
-    }
+      coming_up: coming_up
+    })
   end
 
   @doc """
@@ -80,12 +79,20 @@ defmodule App.ViewData.TeamDashboardViewData do
   defp snoozed_by(team, snooze, now), do: Member.name_for_user(team, snooze.user, now)
 
   defp attention(team, refresh_result, now, true, member) do
-    team
-    |> attention_rows(refresh_result, now, member)
-    |> TeamAttention.items(now, AttentionSnooze.get_all(team))
+    %{shown: shown, more: more, snoozed: snoozed} =
+      team
+      |> attention_rows(refresh_result, now, member)
+      |> TeamAttention.items(now, AttentionSnooze.get_all(team))
+
+    %{
+      attention: shown,
+      more_attention: more,
+      snoozed: Enum.map(snoozed, &Map.put(&1, :snoozed_by, snoozed_by(team, &1.snooze, now)))
+    }
   end
 
-  defp attention(_team, _refresh_result, _now, false, _member), do: %{shown: [], snoozed: []}
+  defp attention(_team, _refresh_result, _now, false, _member),
+    do: %{attention: [], more_attention: [], snoozed: []}
 
   defp attention_rows(team, refresh_result, now, member) do
     %{
