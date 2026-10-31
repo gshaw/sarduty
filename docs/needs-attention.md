@@ -36,11 +36,11 @@ other kind of item stays on the list until it's done:
 | Retiring members holding items                             | Yes    | Waits on gear coming back          |
 | Retiring members holding nothing                           | Yes    | Can wait on the board or paperwork |
 | Activities with no hours tag, this year                    | Yes    | Tidied at year end                 |
+| Activities with two hours tags, this year                  | Yes    | Tidied at year end                 |
 | Can't refresh, key rejected, a group deleted               | No     | Something is broken                |
 | Retiring members can still log in to D4H                   | No     | A risk while it lasts              |
 | Certificates, chores to accept                             | No     | A member waits on the team admin   |
 | Attendance to send, group rule changes, chores out of date | No     | One step in SAR Duty               |
-| Activities with two hours tags                             | No     | One or two, and a quick fix        |
 | No-shows to follow up                                      | No     | Leaves on its own after a week     |
 | Tax credit letters, last year's hours tags                 | No     | Has a deadline                     |
 | Team name too long                                         | No     | No ids to come back on             |

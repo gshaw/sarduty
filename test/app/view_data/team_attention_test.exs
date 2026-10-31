@@ -106,8 +106,8 @@ defmodule App.ViewData.TeamAttentionTest do
           no_shows: [%{id: 2, title: "Rope", count: 1}],
           untagged: [%{count: 1, year: 2025, ids: [7]}, %{count: 1, year: 2026, ids: [8]}],
           two_hours_tags: [
-            %{year: 2025, primary: 1, secondary: 0},
-            %{year: 2026, primary: 0, secondary: 1}
+            %{year: 2025, primary: 1, secondary: 0, ids: [9]},
+            %{year: 2026, primary: 0, secondary: 1, ids: [10]}
           ],
           letters: %{year: 2025, count: 1},
           names: %{name: String.duplicate("a", 21), abbreviated_name: String.duplicate("a", 11)}
@@ -118,12 +118,12 @@ defmodule App.ViewData.TeamAttentionTest do
 
       assert can_snooze |> keys() |> Enum.sort() ==
                Enum.sort(~w(drafts missing_fields expiring missing_details not_seen retiring
-                            retiring_clear untagged)a)
+                            retiring_clear untagged two_hours_tags)a)
 
       assert cannot_snooze |> keys() |> Enum.sort() ==
                Enum.sort(~w(refresh retiring_access group_changes chores certificates
                             chores_to_send attendance_to_send no_shows untagged_last_year
-                            two_hours_tags two_hours_tags_last_year letters long_name
+                            two_hours_tags_last_year letters long_name
                             long_abbreviated_name)a)
 
       for item <- can_snooze do
@@ -292,9 +292,9 @@ defmodule App.ViewData.TeamAttentionTest do
 
   describe "two hours tags (#763)" do
     test "say which hours letters count and where to fix them" do
-      row = %{year: 2026, primary: 2, secondary: 0}
+      row = %{year: 2026, primary: 2, secondary: 0, ids: [3, 4]}
       assert [item] = items(%{two_hours_tags: [row]}, @october)
-      assert %{key: :two_hours_tags, level: :info, year: 2026} = item
+      assert %{key: :two_hours_tags, level: :info, year: 2026, ids: [3, 4]} = item
       assert item.title == "2 activities in 2026 have two hours tags"
 
       assert item.detail ==
@@ -303,7 +303,11 @@ defmodule App.ViewData.TeamAttentionTest do
     end
 
     test "one counted as secondary on a Records team stays in SAR Duty" do
-      rows = %{two_hours_tags: [%{year: 2026, primary: 0, secondary: 1}], service: :records}
+      rows = %{
+        two_hours_tags: [%{year: 2026, primary: 0, secondary: 1, ids: [5]}],
+        service: :records
+      }
+
       assert [item] = items(rows, @october)
       assert item.title == "1 activity in 2026 has two hours tags"
 
@@ -314,14 +318,21 @@ defmodule App.ViewData.TeamAttentionTest do
 
     test "a mix names both counts" do
       assert [item] =
-               items(%{two_hours_tags: [%{year: 2026, primary: 2, secondary: 1}]}, @october)
+               items(
+                 %{two_hours_tags: [%{year: 2026, primary: 2, secondary: 1, ids: [1, 2, 3]}]},
+                 @october
+               )
 
       assert item.title == "3 activities in 2026 have two hours tags"
       assert item.detail =~ "count primary hours for 2 and secondary hours for 1."
     end
 
     test "in letter season last year's show too, and none means no item" do
-      rows = [%{year: 2025, primary: 1, secondary: 0}, %{year: 2026, primary: 0, secondary: 0}]
+      rows = [
+        %{year: 2025, primary: 1, secondary: 0, ids: [1]},
+        %{year: 2026, primary: 0, secondary: 0, ids: []}
+      ]
+
       assert keys(items(%{two_hours_tags: rows}, @march)) == [:two_hours_tags_last_year]
     end
   end

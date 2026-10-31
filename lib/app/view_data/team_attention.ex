@@ -25,7 +25,7 @@ defmodule App.ViewData.TeamAttention do
   `level` (`:danger`, `:warning`, or `:info`, sorted in that order), `title`, `detail`
   (where the fix happens, or nil), and `action`, the text of its link. The letters,
   untagged, and two hours tags items also carry the `year`; `untagged` is a list of
-  `%{year:, count:, ids:}`, and `two_hours_tags` of `%{year:, primary:, secondary:}`.
+  `%{year:, count:, ids:}`, and `two_hours_tags` of `%{year:, primary:, secondary:, ids:}`.
   `service` is where the team's records live, `:d4h` or `:records` (D4H.service/1).
 
   An item with `ids`, what it counts, can be snoozed (#751). It is snoozed while
@@ -81,7 +81,8 @@ defmodule App.ViewData.TeamAttention do
     not_seen: "another member stops attending",
     retiring: "another retiring member holds items",
     retiring_clear: "another retiring member holds no items",
-    untagged: "another activity has no hours tag"
+    untagged: "another activity has no hours tag",
+    two_hours_tags: "another activity has two hours tags"
   }
 
   @doc "When a snoozed item comes back before its time, for the dialog that snoozes it."
@@ -555,6 +556,7 @@ defmodule App.ViewData.TeamAttention do
       detail: "#{counted_as(row)} #{two_hours_tags_fix(count, service)}",
       action: "Show activities"
     }
+    |> with_ids(year == this_year, row.ids)
   end
 
   defp counted_as(%{primary: primary, secondary: secondary}) do
