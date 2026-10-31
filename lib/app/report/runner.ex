@@ -88,7 +88,7 @@ defmodule App.Report.Runner do
       for p <- layout.pivots, {column, _i} <- layout.aggregates do
         label = pivot_label(p, pivot, timezone)
         label = if one? or is_nil(label), do: label, else: "#{label} #{column.label}"
-        Map.merge(column, %{label: label, pivot: p})
+        Map.merge(column, %{label: label, pivot: p, pivot_type: pivot.type})
       end
 
     totals =

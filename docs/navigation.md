@@ -53,11 +53,12 @@ is left out, and so is its divider.
 | 3       | Groups, Qualifications, Endorsements, Tax credit letters | team admins |
 | 4       | Equipment                                                | team admins |
 | 4       | Chores                                                   | everyone    |
-| 5       | Team settings                                            | team admins |
-| 6       | Your membership                                          | members     |
+| 5       | Reports                                                  | team admins |
+| 6       | Team settings                                            | team admins |
+| 7       | Your membership                                          | members     |
 
-- A team admin who is a member sees all six. A SAR Duty admin who opened a team from
-  Admin and is not a member there sees 1 to 5. A member sees Dashboard and Whiteboard,
+- A team admin who is a member sees all seven. A SAR Duty admin who opened a team from
+  Admin and is not a member there sees 1 to 6. A member sees Dashboard and Whiteboard,
   Activities and Take attendance, Members and Milestones, Chores, and Your membership,
   each in its own section (#440, #645).
 - **Whiteboard follows Dashboard** while the team has D4H's whiteboard on (#515). The

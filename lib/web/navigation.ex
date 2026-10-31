@@ -122,6 +122,7 @@ defmodule Web.Navigation do
       activity_links(team),
       people_links(team),
       [link("equipment", "Equipment", ~p"/teams/#{team}/equipment") | chore_links(team)],
+      [link("reports", "Reports", ~p"/teams/#{team}/reports")],
       [link("settings", "Team settings", ~p"/teams/#{team}/settings")]
     ]
   end
