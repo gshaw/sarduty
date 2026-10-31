@@ -25,6 +25,7 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/sarduty"
 import topbar from "../vendor/topbar"
 import {AskDialog, listenForConfirms} from "./confirm_dialog"
+import {trackPointer} from "./pointer_focus"
 import {QRScanner} from "./qr_scanner"
 import {SoundSwitch, listenForScanSounds} from "./scan_sound"
 import {Combobox} from "./combobox"
@@ -42,6 +43,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
   hooks: {...colocatedHooks, AskDialog, Combobox, FileDrop, QRScanner, RichText, ScannerInput, Search, SelectAll, SoundSwitch},
 })
 
+trackPointer()
 listenForConfirms()
 listenForScanSounds()
 listenForBarMenuKeys()

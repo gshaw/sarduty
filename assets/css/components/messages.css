@@ -80,9 +80,6 @@
   .confirm-dialog-type label { font-weight: 700; }
   .confirm-dialog-type input { width: 100%; }
   .confirm-dialog-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-  /* Focus is on Cancel, but yellow means the keyboard: a dialog opened by a mouse or a
-     finger shows it only once a key is pressed (confirm_dialog.js). */
-  .confirm-dialog[data-pointer] .btn:focus-visible { background: var(--btn-bg); color: var(--btn-fg); box-shadow: 0 2px 0 var(--btn-edge); }
   /* Grey, not a faded red, until the box is ticked or the text matches. */
   .confirm-dialog-actions .btn:disabled { opacity: 1; --btn-bg: var(--surface-alt); --btn-fg: var(--text-muted); box-shadow: none; }
   @media (max-width: 640px) {
