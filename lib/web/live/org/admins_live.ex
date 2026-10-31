@@ -38,7 +38,7 @@ defmodule Web.Org.AdminsLive do
       on or off for its teams. They see each team's totals, never its members.
     </p>
     <p class="max-w-3xl">
-      Each logs in with their email. A SAR Duty admin adds and removes them.
+      Each logs in with their email. A SAR Duty site admin adds and removes them.
     </p>
 
     <.empty_state
@@ -48,7 +48,7 @@ defmodule Web.Org.AdminsLive do
     >
       {if @sar_duty_admin?,
         do: "Add one with Add organization admin.",
-        else: "A SAR Duty admin adds them."}
+        else: "A SAR Duty site admin adds them."}
     </.empty_state>
     <.table
       :if={@admins != []}
@@ -101,7 +101,7 @@ defmodule Web.Org.AdminsLive do
     </section>
 
     <section id="sar-duty-admins" class="mt-8 max-w-3xl">
-      <h2 class="heading">SAR Duty admins</h2>
+      <h2 class="heading">SAR Duty site admins</h2>
       <p>
         They run SAR Duty, open every organization, and add or remove its teams and
         organization admins. Reach them at <.a href="mailto:support@sarduty.com">support@sarduty.com</.a>.
@@ -158,5 +158,5 @@ defmodule Web.Org.AdminsLive do
     end
   end
 
-  defp refused, do: "Only a SAR Duty admin adds or removes organization admins."
+  defp refused, do: "Only a SAR Duty site admin adds or removes organization admins."
 end

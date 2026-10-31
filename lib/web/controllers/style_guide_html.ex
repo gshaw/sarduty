@@ -248,7 +248,7 @@ defmodule Web.StyleGuideHTML do
       {"clock", "Hours milestones"},
       {"cake", "Years milestones"},
       {"life-buoy", "Incidents milestones"},
-      {"shield-check", "SAR Duty admin, in the team switcher"},
+      {"key", "Adminland, in the team picker"},
       {"palette", "Style guide, in the team switcher"},
       {"building-complex", "An organization, in the team switcher"},
       {"scan-line", "Start scanning, on the QR scanner"},

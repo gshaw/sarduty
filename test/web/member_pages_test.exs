@@ -77,6 +77,7 @@ defmodule Web.MemberPagesTest do
       "/teams/#{s}/chores/new",
       "/teams/#{s}/chores/#{chore.id}/edit",
       "/teams/#{s}/whiteboard",
+      "/teams/#{s}/help",
       "/teams/#{s}/me",
       "/teams/#{s}/me/activities",
       "/teams/#{s}/certificates/new",

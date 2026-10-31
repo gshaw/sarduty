@@ -105,7 +105,7 @@ defmodule App.Operation.ApplyEdit do
       Logger.warning("Sync after an edit failed for team #{team.id}: #{inspect(error)}")
   end
 
-  defp describe(_team, :no_team_key), do: "This team has no key. Ask a SAR Duty admin."
+  defp describe(_team, :no_team_key), do: "This team has no key. Ask a SAR Duty site admin."
   defp describe(_team, :deleted), do: "This activity is deleted. Nothing can change on it."
   defp describe(_team, :published), do: "This activity is published. Unpublish it first."
   defp describe(team, error) when is_exception(error), do: D4H.error_text(team, error)

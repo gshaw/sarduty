@@ -93,7 +93,7 @@ defmodule Web.Org.TeamCollectionLive do
     </.heading_row>
 
     <.empty_state :if={@teams == []} id="no-teams" title="No teams yet">
-      A SAR Duty admin adds {@current_organization.short_name}'s teams.
+      A SAR Duty site admin adds {@current_organization.short_name}'s teams.
     </.empty_state>
 
     <.stat_switch :if={@teams != []} id="team-views" label="Teams">
@@ -171,7 +171,7 @@ defmodule Web.Org.TeamCollectionLive do
       </dd>
       <dt>Adding a team</dt>
       <dd>
-        A SAR Duty admin adds and removes {@current_organization.short_name}'s teams. Reach them at <.a href="mailto:support@sarduty.com">support@sarduty.com</.a>.
+        A SAR Duty site admin adds and removes {@current_organization.short_name}'s teams. Reach them at <.a href="mailto:support@sarduty.com">support@sarduty.com</.a>.
       </dd>
     </dl>
     """

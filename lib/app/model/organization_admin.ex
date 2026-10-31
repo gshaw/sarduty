@@ -48,7 +48,7 @@ defmodule App.Model.OrganizationAdmin do
         add_error(
           changeset,
           :email,
-          "Enter someone who is not a SAR Duty admin. SAR Duty admins already reach every organization."
+          "Enter someone who is not a SAR Duty site admin. SAR Duty site admins already reach every organization."
         ),
       else: changeset
   end

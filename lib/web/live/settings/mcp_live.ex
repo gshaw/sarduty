@@ -57,7 +57,7 @@ defmodule Web.Settings.MCPLive do
       </p>
       <p>
         Agents only read: they cannot change anything in SAR Duty or {@service}. They never see
-        email, phone numbers, or addresses. SAR Duty logs every request, and SAR Duty admins can read the log.
+        email, phone numbers, or addresses. SAR Duty logs every request, and SAR Duty site admins can read the log.
       </p>
       <p id="no-training" class="font-semibold">
         Use a token only with an AI service set not to train on your data. Personal

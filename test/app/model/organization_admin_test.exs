@@ -45,7 +45,7 @@ defmodule App.Model.OrganizationAdminTest do
 
     assert {:error, changeset} = OrganizationAdmin.add(organization, %{email: admin.email}, admin)
 
-    assert %{email: ["Enter someone who is not a SAR Duty admin." <> _rest]} =
+    assert %{email: ["Enter someone who is not a SAR Duty site admin." <> _rest]} =
              errors_on(changeset)
   end
 

@@ -1,7 +1,7 @@
 defmodule Web.Navigation do
   @moduledoc """
   Where a page sits, for the top bar and the side navigation (#312, #406). A page is in one
-  area: a team's space, an organization's space (#512), SAR Duty admin, or Account
+  area: a team's space, an organization's space (#512), Adminland, or Account
   settings. The bar names the area, with the team switcher on it, and the side navigation
   lists the area's pages in sections. Who you are on the team decides which sections you
   see.
@@ -34,7 +34,7 @@ defmodule Web.Navigation do
           do: org_area(current_organization)
 
       ["admin" | _rest] ->
-        %{kind: :admin, name: "SAR Duty admin", team: nil}
+        %{kind: :admin, name: "Adminland", team: nil}
 
       ["account"] ->
         %{kind: :settings, name: "Account settings", team: nil}
@@ -80,9 +80,13 @@ defmodule Web.Navigation do
           []
       end
 
-    member_sections = if member?, do: [[me_link(team, team_admin?)]], else: []
+    # Your membership, then Get help (#780) for everyone on the team.
+    last =
+      if(member?, do: [me_link(team, team_admin?)], else: []) ++
+        if(team_admin? or member?, do: [help_link(team, path)], else: [])
 
-    (team_sections ++ member_sections)
+    [last | Enum.reverse(team_sections)]
+    |> Enum.reverse()
     |> Enum.reject(&(&1 == []))
     |> mark_current(path)
   end
@@ -201,6 +205,22 @@ defmodule Web.Navigation do
         also: [~p"/teams/#{team}/certificates"]
       )
 
+  # Get help's link carries the page it was opened on, `?from=`, for its email; `path`
+  # stays bare, so it is current on its own page and search finds it. Its words are the
+  # ones people search for it by (#780). Not "admin", which team admins search for the
+  # admin pages, or "report", which is for reports (#768).
+  defp help_link(team, current) do
+    path = ~p"/teams/#{team}/help"
+    from = if current && current != path, do: "?" <> URI.encode_query(from: current), else: ""
+
+    path
+    |> then(&link("help", "Get help", &1))
+    |> Map.merge(%{
+      href: path <> from,
+      words: ~w(help support contact question problem bug feedback)
+    })
+  end
+
   defp link(key, label, path, opts \\ []) do
     %{
       key: key,
@@ -230,7 +250,7 @@ defmodule Web.Navigation do
   The area the bar names on a page outside every area (home, terms, privacy) when logged
   in, so it looks as it does everywhere else: the team logging in lands on (the last you
   opened, or your first), else the team you log in to as a member, else your first
-  organization, else SAR Duty admin for an admin; nil otherwise. Only for the bar's name:
+  organization, else Adminland for an admin; nil otherwise. Only for the bar's name:
   the page stays outside, so the switcher marks nothing. Pass the `current_team` the page
   assigned.
   """
@@ -243,7 +263,7 @@ defmodule Web.Navigation do
       current_team -> team_area(current_team)
       member = List.first(member_logins) -> team_area(member.team)
       organization = List.first(organizations) -> org_area(organization)
-      user.is_admin -> %{kind: :admin, name: "SAR Duty admin", team: nil}
+      user.is_admin -> %{kind: :admin, name: "Adminland", team: nil}
       true -> nil
     end
   end
@@ -277,7 +297,7 @@ defmodule Web.Navigation do
   @doc """
   The team switcher's rows: each team where you're a team admin or a member, A to Z, one
   row per team, then each organization you're an organization admin of (#512), then SAR
-  Duty's home page (#779), then "SAR Duty admin" and "Style guide" last for SAR Duty
+  Duty's home page (#779), then "Adminland" and "Style guide" last for SAR Duty
   admins, which the switcher sets apart. SAR Duty admins reach other organizations from
   Admin › Organizations. The area you're in is current; a team or organization opened as
   a SAR Duty admin that isn't yours marks nothing. The home page is always somewhere to
@@ -320,7 +340,7 @@ defmodule Web.Navigation do
     %{
       kind: :admin,
       key: "admin",
-      label: "SAR Duty admin",
+      label: "Adminland",
       path: ~p"/admin",
       current: match?(%{kind: :admin}, area)
     }

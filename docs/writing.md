@@ -8,7 +8,7 @@ The guide is about words, not layout. Where something sits on a page belongs wit
 design: the feature's issue, then the component's page in `/styles`. If a line here would
 change when the layout changes, it does not belong here.
 
-SAR Duty admin pages follow these rules too, but they are for the people who run SAR Duty
+Adminland's pages follow these rules too, but they are for the people who run SAR Duty
 and can use the docs' words for its internals, such as the 10-minute sync. MCP tool text is
 for AI agents: it uses the glossary, and names fields and formats where an agent needs them.
 
@@ -191,9 +191,12 @@ and must not be used for it.
 | team settings                       | settings (alone, in the menu), admin settings  | A team's settings, for its team admins: General, Team admins, Members, and more.                     |
 | team admin                          | administrator, manager, superuser              | A person who can change the team's settings. On a D4H team, a member D4H makes an Owner or Editor.   |
 | Owner, Editor                       | owner, editor                                  | D4H's access levels that make a member a team admin. Capitalized, as D4H writes them.                |
-| SAR Duty admin                      | superuser, staff, admin (alone, on team pages) | A person who runs SAR Duty and can open every team.                                                  |
+| SAR Duty site admin                 | SAR Duty admin, superuser, staff               | A person who runs SAR Duty and can open every team: Gerry Shaw and Andrew Wallwork.                  |
+| Adminland                           | SAR Duty admin, admin panel, admin (alone)     | The area where SAR Duty site admins run SAR Duty, at /admin, with a key icon. Never the people.      |
+| team contact                        | support contact, help contact, support person  | A member a team admin picks to answer Get help. Any member can be one.                               |
+| Get help                            | support, contact us, help desk                 | The page that sends a question to the team contacts or the SAR Duty site admins.                     |
 | organization                        | association, parent, society                   | An association of teams, such as BCSARA, with its own space in SAR Duty.                             |
-| organization admin                  | org admin, association admin, administrator    | Someone a SAR Duty admin lets into an organization's space. They see team totals, never people.      |
+| organization admin                  | org admin, association admin, administrator    | Someone a SAR Duty site admin lets into an organization's space. They see team totals, not people.   |
 | organization settings               | settings (alone, in the menu), org settings    | An organization's settings: General, Organization admins, and Hours tags.                            |
 | member logins                       | member portal, self-service, member access     | A team setting that lets current members log in to see their year, ID card, and letters.             |
 | activity                            | event, callout, mission, task, deployment      | Anything in D4H that members attend. There are three kinds.                                          |

@@ -108,7 +108,7 @@ defmodule App.Operation.SetGroupMembers do
 
     case ApplyChangeSet.call(team, change_set, user, now) do
       {:ok, rows} -> {:ok, Enum.zip_with(changes, rows, &update_local_copy(group, &1, &2))}
-      {:error, :no_team_key} -> {:error, "This team has no key. Ask a SAR Duty admin."}
+      {:error, :no_team_key} -> {:error, "This team has no key. Ask a SAR Duty site admin."}
     end
   end
 

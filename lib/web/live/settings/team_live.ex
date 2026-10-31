@@ -56,12 +56,12 @@ defmodule Web.Settings.TeamLive do
         <li :if={!@current_team.id_cards_enabled} id="settings-cards-off" class="py-2">
           ID cards
           <span :if={!@organization} class="hint block">
-            Members carry them in Apple Wallet or Google Wallet. A SAR Duty admin turns them
+            Members carry them in Apple Wallet or Google Wallet. A SAR Duty site admin turns them
             on once they have checked your team.
           </span>
           <span :if={@organization} class="hint block">
             Members carry them in Apple Wallet or Google Wallet. {@organization.short_name}'s
-            organization admins or a SAR Duty admin turn them on.
+            organization admins or a SAR Duty site admin turn them on.
           </span>
         </li>
       </ul>

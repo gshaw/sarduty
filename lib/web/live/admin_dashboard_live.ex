@@ -165,7 +165,7 @@ defmodule Web.AdminDashboardLive do
     <dl id="key-notes" class="mt-8 max-w-3xl text-sm">
       <dt>Last seen</dt>
       <dd>
-        The last time a team admin opened one of the team's pages. Members' and SAR Duty admins'
+        The last time a team admin opened one of the team's pages. Members' and SAR Duty site admins'
         visits do not count. Dates before mid-September 2026 are last logins, so the real last
         visit can be up to 60 days later.
       </dd>

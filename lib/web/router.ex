@@ -300,6 +300,7 @@ defmodule Web.Router do
 
       live "/teams/:subdomain/settings/mcp", Settings.MCPLive
       live "/teams/:subdomain/settings/mcp/new", Settings.MCPTokenFormLive, :new
+      live "/teams/:subdomain/help", HelpLive
       live "/teams/:subdomain/me", MeLive
       live "/teams/:subdomain/me/activities", MeActivitiesLive
       live "/teams/:subdomain/me/details", MeDetailsLive

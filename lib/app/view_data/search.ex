@@ -49,7 +49,7 @@ defmodule App.ViewData.Search do
   @doc """
   The groups matching `query`, best first: `[%{kind:, hits:, more?:}]`, with up to 5 hits
   each and `more?` when more matched. Only `kinds` are searched; `:page` searches `pages`,
-  a list of `%{key:, title:, path:}`. A hit is `%{kind:, id:, title:, score:}` plus what
+  a list of `%{key:, title:, path:}`, each with optional `words` that find it too. A hit is `%{kind:, id:, title:, score:}` plus what
   its kind shows. Blank or wordless queries find nothing.
   """
   def run(%Team{} = team, query, opts) do
@@ -280,12 +280,13 @@ defmodule App.ViewData.Search do
   end
 
   # Pages match at the start of a word, so "ali" doesn't find Qualifications.
+  # A page's title, or its other `words` (#780), each matched at the start of a word.
   defp candidates(:page, _team, {:terms, terms}, opts) do
     opts
     |> Keyword.get(:pages, [])
     |> Enum.filter(fn page ->
-      title = String.downcase(page.title)
-      Enum.all?(terms, &word_start?(title, &1))
+      text = [page.title | Map.get(page, :words, [])] |> Enum.join(" ") |> String.downcase()
+      Enum.all?(terms, &word_start?(text, &1))
     end)
   end
 

@@ -217,7 +217,7 @@ defmodule Web.Org.TeamLive do
         {:noreply, socket}
 
       {:error, :forbidden} ->
-        {:noreply, put_flash(socket, :error, "Only a SAR Duty admin removes a team.")}
+        {:noreply, put_flash(socket, :error, "Only a SAR Duty site admin removes a team.")}
 
       {:error, :not_in_organization} ->
         {:noreply, push_navigate(socket, to: ~p"/orgs/#{organization}")}

@@ -427,6 +427,24 @@ defmodule App.Model.Member do
     |> Repo.exists?()
   end
 
+  @doc """
+  The team's contacts (#780), first then second: the members a team admin picked, while
+  they are current, not retiring, and have an email. One who leaves drops off, so the
+  team is asked to pick again. `[]` for none.
+  """
+  def get_team_contacts(%Team{} = team, now) do
+    ids = [team.first_contact_id, team.second_contact_id] |> Enum.reject(&is_nil/1) |> Enum.uniq()
+    found = team |> team_contacts_query(ids) |> current_query(now) |> Repo.all()
+    Enum.flat_map(ids, fn id -> Enum.filter(found, &(&1.id == id)) end)
+  end
+
+  defp team_contacts_query(team, ids) do
+    Member
+    |> where([m], m.team_id == ^team.id and m.id in ^ids)
+    |> where([m], not is_nil(m.email) and m.email != "")
+    |> not_retiring_query()
+  end
+
   @doc "The team's managers (managers_query/2), by name."
   def get_managers(%Team{} = team, now) do
     Member

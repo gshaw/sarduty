@@ -170,11 +170,11 @@ defmodule Web.StyleGuideHTML.SampleData do
        Map.merge(on_squamish, %{current_user: avery, member_logins: [sample_member()]})},
       {"teams", "On two teams",
        Map.merge(on_squamish, %{current_user: avery, member_logins: sample_member_logins()})},
-      {"admin-one-team", "A SAR Duty admin on one team",
+      {"admin-one-team", "A SAR Duty site admin on one team",
        Map.merge(on_squamish, %{current_user: admin, member_logins: [sample_member()]})},
-      {"admin-teams", "A SAR Duty admin on two teams",
+      {"admin-teams", "A SAR Duty site admin on two teams",
        Map.merge(on_squamish, %{current_user: admin, member_logins: sample_member_logins()})},
-      {"admin-area", "A SAR Duty admin in SAR Duty admin",
+      {"admin-area", "A SAR Duty site admin in Adminland",
        %{
          current_user: admin,
          current_team: squamish,
@@ -182,7 +182,7 @@ defmodule Web.StyleGuideHTML.SampleData do
          member_logins: sample_member_logins(),
          current_path: "/admin"
        }},
-      {"admin-other-team", "A SAR Duty admin on a team that isn't theirs",
+      {"admin-other-team", "A SAR Duty site admin on a team that isn't theirs",
        %{
          current_user: admin,
          current_team: pemberton,

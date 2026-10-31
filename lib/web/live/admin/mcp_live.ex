@@ -16,7 +16,7 @@ defmodule Web.Admin.MCPLive do
     ~H"""
     <h1 class="title">MCP calls</h1>
     <p class="mb-4 max-w-3xl">
-      Every tool call agents made. A SAR Duty admin turns MCP on or off on each team's page.
+      Every tool call agents made. A SAR Duty site admin turns MCP on or off on each team's page.
       Agents only read: members, attendance hours, activities, qualifications, chores, and
       change history. See <code>docs/mcp.md</code>.
     </p>

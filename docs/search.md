@@ -42,8 +42,12 @@ on a team with chores on (`Team.chores?/1`), as their pages open only there, and
 certificates only on a team with them on (`Team.certificates?/1`).
 
 Pages come from the side navigation the person sees, from `Web.Navigation.sections/3`, so
-a page added there is found with no change here. A page matches only where a word of its
-name starts, so "ali" finds Alice but not Qualifications.
+a page added there is found with no change here. `Web.Search` adds Team admins for team
+admins, where they pick the team contacts (#780). A page matches only where a word of its name starts, so "ali" finds
+Alice but not Qualifications, or where one of the link's other `words` starts: help, support,
+contact, question, problem, bug, and feedback find Get help, and contacts finds Team
+admins. Never "admin", which team admins search for the admin pages, or "report", which
+is for reports (#768).
 
 ## Recent picks
 

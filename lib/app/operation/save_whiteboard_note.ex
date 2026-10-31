@@ -138,7 +138,7 @@ defmodule App.Operation.SaveWhiteboardNote do
     case ApplyChangeSet.call(team, change_set, user, now) do
       {:ok, [%ChangeSetRow{status: :applied, d4h_record_id: d4h_id}]} -> {:ok, d4h_id}
       {:ok, [%ChangeSetRow{error: error}]} -> {:error, refused_text(team, error)}
-      {:error, :no_team_key} -> {:error, "This team has no key. Ask a SAR Duty admin."}
+      {:error, :no_team_key} -> {:error, "This team has no key. Ask a SAR Duty site admin."}
       {:error, error} -> {:error, D4H.error_text(team, error)}
     end
   end

@@ -90,6 +90,40 @@ defmodule Web.SearchTest do
     end
   end
 
+  describe "Get help (#780)" do
+    test "each of its words finds it, for a member and for a team admin" do
+      team = team_fixture()
+
+      for who <- [[team_admin?: false, member?: true], [team_admin?: true, member?: false]],
+          word <- ~w(help support contact question problem bug feedback) do
+        hits = for group <- search(team, word, who), hit <- group.hits, do: hit
+        assert hit = Enum.find(hits, &(&1.title == "Get help")), "#{word} as #{inspect(who)}"
+        assert hit.path == "/teams/#{team.subdomain}/help"
+      end
+    end
+
+    test "contacts finds Team admins for team admins, where the team contacts are picked" do
+      team = team_fixture()
+
+      assert [%{kind: :page, hits: [%{title: "Team admins", path: path}]}] =
+               search(team, "contacts", team_admin?: true, member?: false)
+
+      assert path == "/teams/#{team.subdomain}/settings/team-admins"
+
+      assert search(team, "contacts", team_admin?: false, member?: true) == []
+    end
+
+    test "admin and report don't find it" do
+      team = team_fixture()
+
+      for word <- ~w(admin report),
+          group <- search(team, word, team_admin?: true, member?: false),
+          hit <- group.hits do
+        refute hit.title == "Get help"
+      end
+    end
+  end
+
   describe "chores" do
     setup do
       team = team_fixture()

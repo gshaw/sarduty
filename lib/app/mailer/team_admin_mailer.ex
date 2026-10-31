@@ -13,8 +13,6 @@ defmodule App.Mailer.TeamAdminMailer do
   alias App.Model.Team
   alias App.ViewData.TeamSummary
 
-  @support "support@sarduty.com"
-
   @doc "The team is now in the organization."
   def deliver_joined(%Team{} = team, %Organization{} = organization, now) do
     deliver(team, now, "#{team.name} is now in #{organization.short_name}", [
@@ -108,7 +106,7 @@ defmodule App.Mailer.TeamAdminMailer do
       new()
       |> to(email)
       |> from({"SAR Duty", "noreply@sarduty.com"})
-      |> reply_to(@support)
+      |> reply_to(App.Support.email())
       |> subject(subject)
       |> text_body(body)
       |> Mailer.deliver()

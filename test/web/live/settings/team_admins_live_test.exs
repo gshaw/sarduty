@@ -31,4 +31,30 @@ defmodule Web.Settings.TeamAdminsLiveTest do
     assert has_element?(lv, "#manager-#{person.id}", "Kim Lee")
     refute has_element?(lv, "#manager-#{person.id}", "Not a person")
   end
+
+  test "team contacts: a team admin picks one or two members (#780)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    sam = member_fixture(team, %{name: "Sam Rivera"})
+    alex = member_fixture(team, %{name: "Alex Chen"})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/team-admins")
+
+    lv
+    |> form("#team-contacts-form",
+      contacts: %{first_contact_id: sam.id, second_contact_id: alex.id}
+    )
+    |> render_submit()
+
+    assert render(lv) =~ "Saved team contacts."
+    team = App.Repo.reload!(team)
+    assert {team.first_contact_id, team.second_contact_id} == {sam.id, alex.id}
+
+    lv
+    |> form("#team-contacts-form",
+      contacts: %{first_contact_id: sam.id, second_contact_id: sam.id}
+    )
+    |> render_submit()
+
+    assert has_element?(lv, "#team-contacts-form", "Select someone else, or None.")
+  end
 end
