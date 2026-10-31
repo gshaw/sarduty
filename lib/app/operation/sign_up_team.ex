@@ -12,6 +12,7 @@ defmodule App.Operation.SignUpTeam do
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.Team
+  alias App.Operation.CheckTeamKey
   alias App.Repo
   alias App.ViewModel.TeamSignupViewModel
   alias App.Worker.NotifyTeamSignedUpWorker
@@ -128,10 +129,11 @@ defmodule App.Operation.SignUpTeam do
   # admins' notice, and the login code are jobs that commit with it.
   defp create_team(view_model, whoami, d4h_team, signer) do
     {lat, lng} = d4h_team.coordinate || {0.0, 0.0}
+    now = DateTime.utc_now()
 
     Repo.transaction(fn ->
       team =
-        Team.insert!(%{
+        %{
           name: cut_name(d4h_team.name, :name),
           legal_name: cut_name(d4h_team.name, :legal_name),
           abbreviated_name: cut_name(d4h_team.name, :abbreviated_name),
@@ -143,10 +145,10 @@ defmodule App.Operation.SignUpTeam do
           lng: lng,
           timezone: d4h_team.timezone,
           d4h_access_key: view_model.access_key,
-          d4h_access_key_saved_at: DateTime.utc_now(),
-          d4h_access_key_owner: D4H.WhoAmI.member_name(whoami, whoami.d4h_team_id),
-          d4h_access_key_member_id: D4H.WhoAmI.member_id(whoami, whoami.d4h_team_id)
-        })
+          d4h_access_key_saved_at: now
+        }
+        |> Map.merge(CheckTeamKey.changes(whoami, whoami.d4h_team_id, now))
+        |> Team.insert!()
 
       member =
         Member.insert!(%{

@@ -4,7 +4,6 @@ defmodule Web.Settings.TeamLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
-  alias App.Model.Event
   alias App.Model.Team
 
   @secret "SECRET-TEAM-PAT-123"
@@ -20,105 +19,19 @@ defmodule Web.Settings.TeamLiveTest do
     assert html =~ "Team settings"
   end
 
-  test "never puts the saved team key in the page", %{conn: conn} do
-    %{user: user, team: team} =
-      user_with_team_fixture(%{
-        team: %{d4h_access_key: @secret, d4h_access_key_saved_at: ~U[2026-08-01 18:00:00Z]}
-      })
-
-    {:ok, lv, html} =
-      conn
-      |> log_in_user(user)
-      |> live(~p"/teams/#{team}/settings")
-
-    refute html =~ @secret
-    refute render(lv) =~ @secret
-    assert has_element?(lv, "#form_new_d4h_access_key")
-    refute has_element?(lv, "#form_new_d4h_access_key[value]")
-    assert has_element?(lv, "#team-key-status", "Key saved August 1, 2026")
-  end
-
-  test "says when no team key is saved", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-
-    {:ok, lv, _html} =
-      conn
-      |> log_in_user(user)
-      |> live(~p"/teams/#{team}/settings")
-
-    assert has_element?(lv, "#team-key-status", "SAR Duty cannot reach D4H")
-  end
-
-  test "saving with a blank key field keeps the saved key", %{conn: conn} do
+  test "General has no key field; the key is on Access key (#727)", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: @secret}})
 
-    {:ok, lv, _html} =
-      conn
-      |> log_in_user(user)
-      |> live(~p"/teams/#{team}/settings")
+    {:ok, lv, html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
 
-    html =
-      lv
-      |> form("#team_settings_form", form: %{name: "Renamed SAR", new_d4h_access_key: ""})
-      |> render_submit()
-
-    assert html =~ "Team settings saved."
     refute html =~ @secret
+    refute has_element?(lv, "#form_new_d4h_access_key")
 
-    team = Team.get!(team.id)
-    assert team.name == "Renamed SAR"
-    assert team.d4h_access_key == @secret
-  end
-
-  test "a new key is saved and recorded as changed, by whom", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: @secret}})
-
-    Req.Test.stub(App.Adapter.D4H, fn conn ->
-      owner = %{"resourceType" => "Team", "id" => team.d4h_team_id, "title" => team.name}
-
-      Req.Test.json(conn, %{
-        "members" => [
-          %{"resourceType" => "Member", "id" => 900, "name" => "SAR Duty", "owner" => owner}
-        ]
-      })
-    end)
-
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
-
-    assert lv
-           |> form("#team_settings_form", form: %{new_d4h_access_key: "new-key"})
-           |> render_submit() =~ "Team settings saved."
-
-    assert Team.get!(team.id).d4h_access_key == "new-key"
-
-    assert %Event{team_id: team_id, user_id: user_id, data: %{"sar_duty_account" => true}} =
-             Event.get_last(:team_key_changed)
-
-    assert {team_id, user_id} == {team.id, user.id}
-  end
-
-  test "names the key's D4H member and asks for a SAR Duty account", %{conn: conn} do
-    %{user: user, team: team} =
-      user_with_team_fixture(%{
-        team: %{d4h_access_key: @secret, d4h_access_key_owner: "Sam Rivers"}
-      })
-
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
-
-    assert has_element?(lv, "#team-key-owner", "Sam Rivers")
-    assert has_element?(lv, "#team-key-advice", "SAR Duty")
-  end
-
-  test "drops the advice once the key is a SAR Duty account's", %{conn: conn} do
-    %{user: user, team: team} =
-      user_with_team_fixture(%{
-        team: %{d4h_access_key: @secret, d4h_access_key_owner: "SAR Duty"}
-      })
-
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
-
-    assert has_element?(lv, "#team-key-owner", "SAR Duty")
-    refute has_element?(lv, "#team-key-advice")
+    assert has_element?(
+             lv,
+             ~s(a[href="/teams/#{team.subdomain}/settings/access-key"]),
+             "Access key"
+           )
   end
 
   test "saves the team's three names (#738)", %{conn: conn} do

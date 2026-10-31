@@ -284,6 +284,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/tax-credit-letters/:id", TaxCreditLetterLive
       live "/teams/:subdomain/settings", Settings.TeamLive
       live "/teams/:subdomain/settings/team-admins", Settings.TeamAdminsLive
+      live "/teams/:subdomain/settings/access-key", Settings.AccessKeyLive
       live "/teams/:subdomain/settings/members", Settings.MembersLive
       live "/teams/:subdomain/settings/features", Settings.FeaturesLive
       live "/teams/:subdomain/settings/tax-credit-letters", Settings.TaxCreditLettersLive

@@ -134,11 +134,11 @@ defmodule App.ViewData.TeamAttention do
 
   defp refresh_item(%{state: :key_rejected}, service) do
     %{
-      key: :refresh,
+      key: :key_rejected,
       level: :warning,
       title: "SAR Duty cannot refresh from #{D4H.service_name(service)}",
       detail: "Your #{D4H.key_name(service)} no longer works.",
-      action: "Open team settings"
+      action: "Open Access key"
     }
   end
 

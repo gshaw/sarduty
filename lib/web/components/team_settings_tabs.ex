@@ -3,7 +3,7 @@ defmodule Web.Components.TeamSettingsTabs do
 
   # Team settings is one link in the side navigation (#406); its pages are tabs under one
   # title, a topic each: the team and what it has turned on, then its members, its
-  # letters, and its activities.
+  # letters, and its activities. Access key is last: it's rarely needed (#727).
   # Chore categories shows with chores on, and MCP tokens with MCP on.
 
   attr :team, :map, required: true
@@ -19,7 +19,8 @@ defmodule Web.Components.TeamSettingsTabs do
       :hours_tags,
       :places,
       :chore_categories,
-      :mcp
+      :mcp,
+      :access_key
     ]
 
   def team_settings_tabs(assigns) do
@@ -63,6 +64,9 @@ defmodule Web.Components.TeamSettingsTabs do
         current={@current == :mcp}
       >
         MCP tokens
+      </:tab>
+      <:tab navigate={~p"/teams/#{@team}/settings/access-key"} current={@current == :access_key}>
+        Access key
       </:tab>
     </.tabs>
     """

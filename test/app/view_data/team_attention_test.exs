@@ -379,7 +379,7 @@ defmodule App.ViewData.TeamAttentionTest do
     assert [%{key: :refresh, detail: "No D4H key."}] = items(failed, @october)
 
     rejected = %{refresh: %{state: :key_rejected, message: nil}}
-    assert [%{key: :refresh, detail: detail}] = items(rejected, @october)
+    assert [%{key: :key_rejected, detail: detail}] = items(rejected, @october)
     assert detail == "Your D4H access key no longer works."
 
     assert items(%{refresh: %{state: :refreshing, message: nil}}, @october) ==

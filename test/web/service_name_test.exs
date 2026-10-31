@@ -24,6 +24,8 @@ defmodule Web.ServiceNameTest do
     "lib/web/live/admin_dashboard_live.ex" => "a SAR Duty admin page",
     "lib/web/live/home_page_live.ex" => "a public page about D4H itself",
     "lib/web/live/privacy_live.ex" => "a public page about D4H itself",
+    "lib/web/live/settings/access_key_live.ex" =>
+      "a D4H key's owner, rights, and fixes are D4H's, and send the reader there (#727)",
     "lib/web/live/team_signup_live.ex" => "signup asks which service the team uses",
     "lib/web/live/terms_live.ex" => "a public page about D4H itself",
     "lib/web/live/user_login_code_live.ex" => "a public page about D4H itself",
@@ -35,9 +37,6 @@ defmodule Web.ServiceNameTest do
   @lines %{
     {"lib/web/components/layouts.ex", "teams that use D4H"} =>
       "the public description of SAR Duty, about D4H itself",
-    {"lib/web/live/settings/team_live.ex",
-     ["every D4H request", "the D4H member", "D4H member named", "In D4H, add", "a D4H access"]} =>
-      "a D4H team's key steps in team settings, which send the reader to D4H",
     {"lib/web/controllers/style_guide_html", "Open in D4H"} =>
       "the style guide's example of a link that sends the reader to D4H",
     {"lib/web/controllers/style_guide_html/pages/forms.html.heex", "From D4H. Change it there."} =>

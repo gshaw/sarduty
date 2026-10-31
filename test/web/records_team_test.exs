@@ -8,7 +8,10 @@ defmodule Web.RecordsTeamTest do
 
   setup %{conn: conn} do
     %{user: user, team: team} =
-      records_team_with_user_fixture(%{d4h_access_key_owner: "SAR Duty"})
+      records_team_with_user_fixture(%{
+        d4h_access_key: "records-key",
+        d4h_access_key_owner: "SAR Duty"
+      })
 
     %{conn: log_in_user(conn, user), team: team}
   end
@@ -64,12 +67,13 @@ defmodule Web.RecordsTeamTest do
     assert has_element?(lv, "#coming-up-empty", "No activities planned.")
   end
 
-  test "team settings asks for a Records access key", %{conn: conn, team: team} do
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
+  test "Access key asks for a Records access key, with no D4H check", %{conn: conn, team: team} do
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/access-key")
     assert has_element?(lv, "label", "Records access key")
     assert has_element?(lv, "#team-key-owner", "SAR Duty")
     assert has_element?(lv, "#records-keys")
     refute has_element?(lv, "#team-key-advice")
+    refute has_element?(lv, "#key-rights")
   end
 
   # Records may have no place for a team, so the refresh keeps the one SAR Duty has.
