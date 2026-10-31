@@ -112,7 +112,7 @@ defmodule App.Operation.SaveTemplateTest do
            ]
   end
 
-  test "Change details keeps the activity's details, with the length in hours" do
+  test "Change details keeps the activity's details, with the duration as a chore's time" do
     team = team_fixture()
     template = template_fixture(team, "Monday night training")
 
@@ -120,7 +120,7 @@ defmodule App.Operation.SaveTemplateTest do
       SaveTemplate.save_details(team, template, %{
         "activity_title" => " ",
         "start_time" => "19:00",
-        "length" => "2.5",
+        "duration" => "2.5",
         "place" => "49.1, -123.1",
         "hours" => "secondary",
         "description" => "Bring your radio."
@@ -129,25 +129,36 @@ defmodule App.Operation.SaveTemplateTest do
     template = Repo.reload!(template)
     assert template.activity_title == nil
     assert template.start_time == ~T[19:00:00]
-    assert template.length_minutes == 150
+    assert template.duration_minutes == 150
     assert template.coordinate == "49.10000,-123.10000"
     assert template.hours == "secondary"
     assert template.description =~ "Bring your radio."
-    assert Template.build_details_changeset(template).data.length == "2.5"
+    assert Template.build_details_changeset(template).data.duration == "2h 30m"
 
-    {:ok, template} = SaveTemplate.save_details(team, template, %{"length" => ""})
-    assert Repo.reload!(template).length_minutes == nil
+    {:ok, template} = SaveTemplate.save_details(team, template, %{"duration" => "30"})
+    assert Repo.reload!(template).duration_minutes == 30
+
+    {:ok, template} = SaveTemplate.save_details(team, template, %{"duration" => ""})
+    assert Repo.reload!(template).duration_minutes == nil
   end
 
-  test "Change details refuses a length that is not hours" do
+  test "Change details refuses a duration it can't read, none, or over a week" do
     team = team_fixture()
     template = template_fixture(team)
 
-    for length <- ["abc", "0", "-1", "200"] do
+    for {duration, error} <- [
+          {"abc", "Enter the duration like 45m, 2h, or 2.5h."},
+          {"-1", "Enter the duration like 45m, 2h, or 2.5h."},
+          {"0", "Enter a duration over 0."},
+          {"169h", "Enter up to 168h."}
+        ] do
       assert {:error, changeset} =
-               SaveTemplate.save_details(team, template, %{"length" => length})
+               SaveTemplate.save_details(team, template, %{"duration" => duration})
 
-      assert {"Enter the length in hours, such as 2.5.", _opts} = changeset.errors[:length]
+      assert {^error, _opts} = changeset.errors[:duration]
     end
+
+    assert {:ok, template} = SaveTemplate.save_details(team, template, %{"duration" => "36h"})
+    assert template.duration_minutes == 36 * 60
   end
 end

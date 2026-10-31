@@ -267,12 +267,14 @@ defmodule Web.TemplateFormLive do
     <.input field={@form[:activity_title]} label="Title (optional)">
       Leave blank to use the template's name.
     </.input>
-    <div class="grid md:grid-cols-2 gap-x-6">
+    <div class="max-w-xs">
       <.input field={@form[:start_time]} type="time" label="Start time (optional)" />
-      <.input field={@form[:length]} label="Length (optional)" inputmode="decimal">
-        In hours, such as 2.5.
-      </.input>
     </div>
+    <.duration_input
+      field={@form[:duration]}
+      minutes={@form[:duration_minutes]}
+      label="Duration (optional)"
+    />
     <.live_component
       module={PlaceBox}
       id="template"

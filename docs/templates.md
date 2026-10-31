@@ -52,14 +52,16 @@ touches them, except that an item, tag, or group D4H deletes leaves its template
 
 ## Activity details
 
-What a template starts on Add activity: a title, a start time and a length, an address,
+What a template starts on Add activity: a title, a start time and a duration, an address,
 tax credit hours, and a description, on Change details in the Add activity form's order
 and with its labels, less the date. Every detail is optional. A blank title uses the
 template's name. Tax credit hours has no blank: Primary, as on the activity form. It
-sets the Primary Hours or Secondary Hours tag as the activity form does. The length is
-in hours ("2.5"), as Change items takes them, and shows as 2h 30m. The kind stays on
+sets the Primary Hours or Secondary Hours tag as the activity form does. The duration box
+is a chore's Time box (`<.duration_input>`, `Service.Convert.parse_duration/1`): "2h
+30m", "2.5h", "1:30", or a bare number, which is hours up to 24 and minutes from 25, so
+"25h" for 25 hours. Under it, "Reads as 2h 30m." Up to a week. The kind stays on
 Change template, since it also picks the fields. The templates list has a Start column,
-start time and length, blank for a template with neither.
+start time and duration, blank for a template with neither.
 
 The details only fill Add activity. Applying a template leaves them out: it never changes
 an activity's title, time, or address. The one exception is Tax credit hours, which adds

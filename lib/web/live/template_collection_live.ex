@@ -65,7 +65,7 @@ defmodule Web.TemplateCollectionLive do
   defp starts(template) do
     [
       template.start_time && Service.Format.time_short(template.start_time),
-      template.length_minutes && Service.Format.duration(template.length_minutes)
+      template.duration_minutes && Service.Format.duration(template.duration_minutes)
     ]
     |> Enum.reject(&is_nil/1)
     |> Enum.join(" · ")

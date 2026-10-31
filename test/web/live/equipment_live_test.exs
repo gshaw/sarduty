@@ -374,7 +374,7 @@ defmodule Web.EquipmentLiveTest do
 
     lv
     |> form("#template-form",
-      template: %{start_time: "19:00", length: "2.5", place: "Hall", hours: "secondary"}
+      template: %{start_time: "19:00", duration: "2.5h", place: "Hall", hours: "secondary"}
     )
     |> render_submit()
 
@@ -391,14 +391,18 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#template-#{template.id}", "19:00 · 2h 30m")
   end
 
-  test "Change details refuses a length that is not hours", ctx do
+  test "Change details reads the duration as it is typed, and refuses one it can't", ctx do
     template = template_fixture(ctx.team)
 
     {:ok, lv, _html} =
       live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/details/edit")
 
-    html = lv |> form("#template-form", template: %{length: "two"}) |> render_submit()
-    assert html =~ "Enter the length in hours, such as 2.5."
+    lv |> form("#template-form", template: %{duration: "90"}) |> render_change()
+    assert has_element?(lv, "#template_duration-read", "Reads as 1h 30m.")
+
+    html = lv |> form("#template-form", template: %{duration: "two"}) |> render_submit()
+    assert html =~ "Enter the duration like 45m, 2h, or 2.5h."
+    refute has_element?(lv, "#template_duration-read")
   end
 
   test "Change tags leaves out the hours tags", ctx do

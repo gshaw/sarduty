@@ -42,7 +42,7 @@ defmodule App.Model.Chore do
 
   @doc """
   A chore's category, description, date, and time. The form sends its time as text, read
-  by parse_time/1 into minutes. `category_ids` are the ones it may have. With `today`, the
+  by Service.Convert.parse_duration/1 into minutes. `category_ids` are the ones it may have. With `today`, the
   date must not be in the future, where D4H counts the hours as signed up, not attended; a
   member's must also be within the last #{@window_days} days. A team admin passes
   `:team_admin` for any date that has passed.
@@ -66,9 +66,14 @@ defmodule App.Model.Chore do
   # The minutes from the Time box. A chore whose time wasn't sent keeps its minutes.
   defp put_minutes(changeset) do
     case fetch_change(changeset, :time) do
-      {:ok, text} -> put_minutes(changeset, String.trim(text || ""), parse_time(text))
-      :error when is_nil(changeset.data.minutes) -> add_error(changeset, :time, @time_blank)
-      :error -> changeset
+      {:ok, text} ->
+        put_minutes(changeset, String.trim(text || ""), Service.Convert.parse_duration(text))
+
+      :error when is_nil(changeset.data.minutes) ->
+        add_error(changeset, :time, @time_blank)
+
+      :error ->
+        changeset
     end
   end
 
@@ -84,53 +89,6 @@ defmodule App.Model.Chore do
     do: add_error(changeset, :time, "Enter up to 24h")
 
   defp put_minutes(changeset, _text, minutes), do: put_change(changeset, :minutes, minutes)
-
-  @doc """
-  Minutes from what someone types for a chore's time: "45m", "2h", "2.5h", "1h 30m", or
-  "1:30". A bare whole number is hours up to 24, since most chores take an hour or more,
-  and minutes over 24, which can't be hours. Nil when it is none of these.
-  """
-  def parse_time(text) when is_binary(text) do
-    squeezed = text |> String.downcase() |> String.replace(~r/\s+/, "")
-
-    Enum.find_value(time_formats(), fn {regex, kind} ->
-      if parts = Regex.run(regex, squeezed, capture: :all_but_first),
-        do: to_minutes(kind, parts)
-    end)
-  end
-
-  def parse_time(_text), do: nil
-
-  # h, hr, hrs, hour, hours; m, min, mins, minute, minutes.
-  defp time_formats do
-    [
-      {~r/^(\d+)$/, :bare},
-      {~r/^(\d+(?:\.\d+)?|\.\d+)(?:h|hrs?|hours?)?$/, :hours},
-      {~r/^(\d+)(?:m|mins?|minutes?)$/, :minutes},
-      {~r/^(\d+)(?:h|hrs?|hours?)(\d+)(?:m|mins?|minutes?)?$/, :hours_minutes},
-      {~r/^(\d+):([0-5]\d)$/, :hours_minutes}
-    ]
-  end
-
-  defp to_minutes(:bare, [number]) do
-    number = String.to_integer(number)
-    if number > div(@max_minutes, 60), do: number, else: number * 60
-  end
-
-  defp to_minutes(:hours, [hours]), do: round(decimal(hours) * 60)
-  defp to_minutes(:minutes, [minutes]), do: String.to_integer(minutes)
-
-  defp to_minutes(:hours_minutes, [hours, minutes]),
-    do: String.to_integer(hours) * 60 + String.to_integer(minutes)
-
-  defp decimal("." <> _rest = number), do: decimal("0" <> number)
-  defp decimal(number), do: number |> Float.parse() |> elem(0)
-
-  @doc "A chore's minutes as the Time box shows them, for parse_time/1 to read back: \"1h 30m\"."
-  def time_text(nil), do: nil
-  def time_text(minutes) when minutes < 60, do: "#{minutes}m"
-  def time_text(minutes) when rem(minutes, 60) == 0, do: "#{div(minutes, 60)}h"
-  def time_text(minutes), do: "#{div(minutes, 60)}h #{rem(minutes, 60)}m"
 
   defp validate_date(changeset, nil, _who), do: changeset
 

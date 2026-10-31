@@ -62,9 +62,9 @@ defmodule Web.TemplateLive do
             <dt>Start time</dt>
             <dd>{Service.Format.time_short(@template.start_time)}</dd>
           </div>
-          <div :if={@template.length_minutes}>
-            <dt>Length</dt>
-            <dd>{Service.Format.duration(@template.length_minutes)}</dd>
+          <div :if={@template.duration_minutes}>
+            <dt>Duration</dt>
+            <dd>{Service.Format.duration(@template.duration_minutes)}</dd>
           </div>
           <div :if={@template.place}>
             <dt>Address</dt>

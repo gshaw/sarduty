@@ -626,6 +626,37 @@ defmodule Web.Components.Core do
     """
   end
 
+  attr :field, Phoenix.HTML.FormField, required: true, doc: "the text typed"
+  attr :minutes, Phoenix.HTML.FormField, required: true, doc: "the minutes it reads as"
+  attr :label, :string, required: true
+
+  @doc """
+  A box for how long something takes, as Service.Convert.parse_duration/1 reads it: "45m",
+  "2h", "2.5h", "1h 30m". Under it, once it reads, what it reads as: "Reads as 2h 30m."
+  Chores' Time and a template's Duration. See /styles/forms#below.
+  """
+  def duration_input(assigns) do
+    %{field: field, minutes: minutes} = assigns
+
+    errors =
+      if match?(%Ecto.Changeset{}, field.form.source), do: field.form.source.errors, else: []
+
+    assigns = assign(assigns, read: !Keyword.has_key?(errors, field.field) && minutes.value)
+
+    ~H"""
+    <div class="max-w-xs">
+      <.input field={@field} label={@label} autocomplete="off">
+        Like 45m, 2h, or 2.5h.
+        <:below>
+          <p :if={@read} id={"#{@field.id}-read"} class="hint mt-1">
+            Reads as {Service.Format.duration(@read)}.
+          </p>
+        </:below>
+      </.input>
+    </div>
+    """
+  end
+
   @doc """
   Renders a select you type into (#324): a text box that lists the options containing every
   word typed. The hidden `<select>` is what the form submits, so the event and its params

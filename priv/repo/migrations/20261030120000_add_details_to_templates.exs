@@ -2,7 +2,7 @@ defmodule App.Repo.Migrations.AddDetailsToTemplates do
   use Ecto.Migration
 
   # A template's activity details, which fill Add activity (#746): title, start time,
-  # length, place and pin, tax credit hours, and description. Tax credit hours replaces
+  # duration, place and pin, tax credit hours, and description. Tax credit hours replaces
   # the hours tag a template held, so each template's Primary or Secondary Hours tag
   # moves into it and leaves its tags. A template with neither gets Neither, since
   # applying a template adds its hours tag to an activity with none, and that one added
@@ -26,7 +26,7 @@ defmodule App.Repo.Migrations.AddDetailsToTemplates do
     alter table(:templates) do
       add :activity_title, :string
       add :start_time, :time
-      add :length_minutes, :integer
+      add :duration_minutes, :integer
       add :place, :string
       add :coordinate, :string
       add :hours, :string, null: false, default: "primary"
@@ -68,7 +68,7 @@ defmodule App.Repo.Migrations.AddDetailsToTemplates do
     alter table(:templates) do
       remove :activity_title
       remove :start_time
-      remove :length_minutes
+      remove :duration_minutes
       remove :place
       remove :coordinate
       remove :hours

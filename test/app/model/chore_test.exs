@@ -39,37 +39,6 @@ defmodule App.Model.ChoreTest do
            ]
   end
 
-  test "the time reads hours and minutes; a bare number is hours up to 24, then minutes" do
-    for {text, minutes} <- [
-          {"45m", 45},
-          {"45 min", 45},
-          {"2h", 120},
-          {"2.5h", 150},
-          {"2.5 hours", 150},
-          {".25h", 15},
-          {"1h 30m", 90},
-          {"1h30", 90},
-          {"1:30", 90},
-          {"3", 180},
-          {"24", 1440},
-          {"25", 25},
-          {"45", 45},
-          {" 1.5 ", 90},
-          {"2H", 120}
-        ],
-        do: assert(Chore.parse_time(text) == minutes, text)
-
-    for text <- ["", "abc", "1:75", "2h 30h", "-1", "1.5m"],
-        do: assert(Chore.parse_time(text) == nil, text)
-  end
-
-  test "the Time box shows minutes as parse_time/1 reads them back" do
-    for minutes <- [15, 60, 90, 150, 480, 1440],
-        do: assert(minutes |> Chore.time_text() |> Chore.parse_time() == minutes)
-
-    assert Chore.time_text(90) == "1h 30m"
-  end
-
   test "the time is more than 0 and up to a day, and the category is one it may have" do
     changeset = Chore.build_changeset(%Chore{}, @params, [7], @today)
     assert Ecto.Changeset.get_change(changeset, :minutes) == 60

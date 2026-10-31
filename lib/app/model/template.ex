@@ -30,9 +30,9 @@ defmodule App.Model.Template do
     # The activity's details (#746), each optional. A blank title uses the template's.
     field :activity_title, TrimmedString
     field :start_time, :time
-    field :length_minutes, :integer
-    # The length as Change details takes it, in hours ("2.5").
-    field :length, :string, virtual: true
+    field :duration_minutes, :integer
+    # The duration as Change details takes it: "2h 30m" (Service.Convert.parse_duration/1).
+    field :duration, :string, virtual: true
     field :place, TrimmedString
     # The place's pin, "lat,lng" as the sync stores it, or nil (#610).
     field :coordinate, :string
@@ -59,17 +59,17 @@ defmodule App.Model.Template do
   @detail_fields [
     :activity_title,
     :start_time,
-    :length,
+    :duration,
     :place,
     :coordinate,
     :hours,
     :description
   ]
 
-  @doc "Change details (#746). The length is typed in hours."
+  @doc "Change details (#746). The duration is typed as a chore's time is."
   def build_details_changeset(%Template{} = data, params \\ %{}) do
     data
-    |> Map.put(:length, length_text(data.length_minutes))
+    |> Map.put(:duration, Service.Convert.duration_text(data.duration_minutes))
     |> cast(params, @detail_fields)
     |> validate_length(:activity_title, max: 100)
     |> validate_length(:place, max: 100)
@@ -77,26 +77,22 @@ defmodule App.Model.Template do
     |> update_change(:description, &Service.DescriptionHTML.clean/1)
     |> validate_inclusion(:hours, @hours)
     |> Coordinate.put_pin()
-    |> put_length_minutes()
+    |> put_duration_minutes()
     |> Validate.in_field_order(@detail_fields)
   end
 
-  defp length_text(nil), do: nil
-  defp length_text(minutes), do: Service.Convert.minutes_to_hours(minutes)
-
   # A week at most, so a slip of the keys can't make a month-long activity.
-  defp put_length_minutes(changeset) do
-    text = changeset |> get_field(:length) |> to_string() |> String.trim()
+  @max_minutes 7 * 24 * 60
 
-    case Float.parse(text) do
-      _blank when text == "" ->
-        put_change(changeset, :length_minutes, nil)
+  defp put_duration_minutes(changeset) do
+    text = changeset |> get_field(:duration) |> to_string() |> String.trim()
 
-      {hours, ""} when hours > 0 and hours <= 168 ->
-        put_change(changeset, :length_minutes, Service.Convert.hours_to_minutes(hours))
-
-      _other ->
-        add_error(changeset, :length, "Enter the length in hours, such as 2.5.")
+    case Service.Convert.parse_duration(text) do
+      _blank when text == "" -> put_change(changeset, :duration_minutes, nil)
+      nil -> add_error(changeset, :duration, "Enter the duration like 45m, 2h, or 2.5h.")
+      0 -> add_error(changeset, :duration, "Enter a duration over 0.")
+      minutes when minutes > @max_minutes -> add_error(changeset, :duration, "Enter up to 168h.")
+      minutes -> put_change(changeset, :duration_minutes, minutes)
     end
   end
 
