@@ -4,8 +4,8 @@ defmodule Web.TemplateCollectionLive do
   alias App.Model.Template
 
   # Templates: named sets of items with default hours, tags, and groups whose members they
-  # add, applied to an activity in one step (#271, #162), and for one kind of activity its
-  # D4H custom field values (#307).
+  # add, applied to an activity in one step (#271, #162), for one kind of activity its D4H
+  # custom field values (#307), and the details that start an activity (#746).
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
     {:ok, assign(socket, page_title: "Templates", templates: Template.get_all(team.id))}
@@ -22,7 +22,7 @@ defmodule Web.TemplateCollectionLive do
       </:action>
     </.heading_row>
     <p class="lead">
-      A template adds items, tags, members, and field values to an activity in one step. Apply one from the activity's page.
+      A template starts an activity, or adds items, tags, members, and field values to one in one step.
     </p>
 
     <.table
@@ -37,6 +37,9 @@ defmodule Web.TemplateCollectionLive do
       </:col>
       <:col :let={template} label="Kind">
         {Template.kind_label(template)}
+      </:col>
+      <:col :let={template} label="Start" class="whitespace-nowrap">
+        {starts(template)}
       </:col>
       <:col :let={template} label="Items" class="w-px whitespace-nowrap" align="right">
         {length(template.template_items)}
@@ -56,5 +59,15 @@ defmodule Web.TemplateCollectionLive do
       Add one for what goes together, such as the items and tags for boat training.
     </.empty_state>
     """
+  end
+
+  # "19:00 · 2h 30m", either half alone, or blank for a template with no details.
+  defp starts(template) do
+    [
+      template.start_time && Service.Format.time_short(template.start_time),
+      template.length_minutes && Service.Format.duration(template.length_minutes)
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" · ")
   end
 end

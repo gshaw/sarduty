@@ -95,4 +95,59 @@ defmodule App.Operation.SaveTemplateTest do
 
     assert changeset.errors[:activity_kind]
   end
+
+  test "a template's tags leave out the team's hours tags" do
+    team = team_fixture()
+    water = tag_fixture(team, "Flat Water")
+    primary = tag_fixture(team, "Primary Hours")
+    secondary = tag_fixture(team, "Secondary Hours")
+
+    {:ok, template} =
+      SaveTemplate.save(team, nil, %{"title" => "Boat"},
+        tag_ids: [water.id, primary.id, secondary.id]
+      )
+
+    assert team |> Template.find!(template.id) |> Template.tags() |> Enum.map(& &1.title) == [
+             "Flat Water"
+           ]
+  end
+
+  test "Change details keeps the activity's details, with the length in hours" do
+    team = team_fixture()
+    template = template_fixture(team, "Monday night training")
+
+    {:ok, template} =
+      SaveTemplate.save_details(team, template, %{
+        "activity_title" => " ",
+        "start_time" => "19:00",
+        "length" => "2.5",
+        "place" => "49.1, -123.1",
+        "hours" => "secondary",
+        "description" => "Bring your radio."
+      })
+
+    template = Repo.reload!(template)
+    assert template.activity_title == nil
+    assert template.start_time == ~T[19:00:00]
+    assert template.length_minutes == 150
+    assert template.coordinate == "49.10000,-123.10000"
+    assert template.hours == "secondary"
+    assert template.description =~ "Bring your radio."
+    assert Template.build_details_changeset(template).data.length == "2.5"
+
+    {:ok, template} = SaveTemplate.save_details(team, template, %{"length" => ""})
+    assert Repo.reload!(template).length_minutes == nil
+  end
+
+  test "Change details refuses a length that is not hours" do
+    team = team_fixture()
+    template = template_fixture(team)
+
+    for length <- ["abc", "0", "-1", "200"] do
+      assert {:error, changeset} =
+               SaveTemplate.save_details(team, template, %{"length" => length})
+
+      assert {"Enter the length in hours, such as 2.5.", _opts} = changeset.errors[:length]
+    end
+  end
 end

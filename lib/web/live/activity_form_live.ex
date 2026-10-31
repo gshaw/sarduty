@@ -79,7 +79,7 @@ defmodule Web.ActivityFormLive do
           field={@form[:place]}
           coordinate={@form[:coordinate]}
           label="Address (optional)"
-          kind={map_kind(@form[:kind].value)}
+          kind={PlaceBox.map_kind(@form[:kind].value)}
         />
         <.input
           field={@form[:hours]}
@@ -154,11 +154,6 @@ defmodule Web.ActivityFormLive do
 
   defp breadcrumb(:new), do: "Add activity"
   defp breadcrumb(:edit), do: "Change"
-
-  @kinds %{"incident" => :incident, "exercise" => :exercise, "event" => :event}
-
-  # The pin's dot takes the kind's colour.
-  defp map_kind(kind), do: Map.get(@kinds, kind, :event)
 
   def handle_event("validate", %{"form" => params} = event, socket) do
     socket = socket |> assign(params: params) |> validate(params)

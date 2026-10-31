@@ -65,7 +65,7 @@ defmodule App.ViewModel.ActivityFormViewModel do
       else: Service.DescriptionHTML.clean(description)
   end
 
-  # As put_coordinate/1 writes it, so an untouched pin is unchanged.
+  # As Coordinate.put_pin/1 writes it, so an untouched pin is unchanged.
   defp coordinate(text) do
     if pin = Coordinate.build(text), do: Coordinate.to_string(pin, 5)
   end
@@ -107,19 +107,11 @@ defmodule App.ViewModel.ActivityFormViewModel do
     |> validate_inclusion(:hours, Enum.map(@hours, &elem(&1, 1)))
     |> validate_length(:title, max: 100)
     |> validate_length(:place, max: 100)
-    |> put_coordinate()
+    |> Coordinate.put_pin()
     |> validate_length(:tracking_number, max: 50)
     |> validate_length(:description, max: 10_000)
     |> validate_ends_after_starts()
     |> Validate.in_field_order(@fields)
-  end
-
-  # A pasted latitude and longitude is the pin. Otherwise the pin is the one picked, kept
-  # in the stored form, or none.
-  defp put_coordinate(changeset) do
-    pasted = changeset |> get_field(:place) |> Coordinate.parse()
-    pin = pasted || changeset |> get_field(:coordinate) |> Coordinate.build()
-    put_change(changeset, :coordinate, pin && Coordinate.to_string(pin, 5))
   end
 
   # A finish at the start is fine: chore events last no time (#487), and D4H and Records

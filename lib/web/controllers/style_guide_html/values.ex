@@ -66,7 +66,11 @@ defmodule Web.StyleGuideHTML.Values do
        [{"datetime_short(now, zone)", Format.datetime_short(@now, @zone)}]},
       {:datetime_medium, "The same with the weekday",
        [{"datetime_medium(now, zone)", Format.datetime_medium(@now, @zone)}]},
-      {:time_short, "A time alone", [{"time_short(now, zone)", Format.time_short(@now, @zone)}]},
+      {:time_short, "A time alone, or a template's start time",
+       [
+         {"time_short(now, zone)", Format.time_short(@now, @zone)},
+         {"time_short(~T[19:00:00])", Format.time_short(~T[19:00:00])}
+       ]},
       {:time_range, "When an activity runs, under its date on the Activities list",
        [
          {"time_range(now, now + 3h, zone)",

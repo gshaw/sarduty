@@ -45,6 +45,7 @@ defmodule Service.Format do
   @doc ~s(The same with the weekday: "Tue Oct 20, 2026, 12:00".)
   def datetime_medium(datetime, timezone), do: datetime(datetime, timezone, "%a %c")
 
+  def time_short(%Time{} = time), do: Calendar.strftime(time, "%H:%M")
   def time_short(datetime, timezone), do: datetime(datetime, timezone, "%H:%M")
 
   @doc """

@@ -7,21 +7,22 @@ whose members it adds, applied to an activity in one step (#271, #162). D4H neve
 They started as equipment "kits" (#271) and became templates on 2026-10-13, once they
 held more than items. Since #307 a template for one kind of activity also holds values
 for that kind's D4H custom fields, such as an incident's primary cause and requesting
-agency.
+agency. Since #746 a template also holds the [details](#activity-details) of the
+activity it starts.
 
 Templates have their own menu item, `/teams/:subdomain/templates`. A template's page,
 `/templates/:id`, shows everything it adds on one page, since you read a template whole
 before applying it (decided 2026-10-29, over tabs). Items, groups, and fields each
 have their own link at their foot, to a page of its own that saves only that part
 (#307): Change items, Change groups, and Change fields (`/items/edit` and so on), or Add
-when the part is empty. Tags sit under the title and Change tags in Actions, as on the
-activity. Change fields shows only when the kind has fields; a template for any kind says
-to pick one. The hours tag shows as Tax credit hours beside Kind, as on the activity,
-and not among the tags. Actions also hold Change template for the name and kind
+when the part is empty. The description comes first, then the tags, and Change tags is
+in Actions, as on the activity. Change fields shows only when the kind has fields; a
+template for any kind says to pick one. The details sit beside Kind, and Change details
+(`/details/edit`) is in Actions. Actions also hold Change template for the name and kind
 (`/edit`) and Delete template. Add template asks for the name and kind, then opens the template's
 page. Delete template opens the confirm dialog, with no
 page (#714). One form for everything ran a BC incident's template many screens long. They live in
-`templates` (with `activity_kind` and `custom_values`), `template_items`,
+`templates` (with `activity_kind`, `custom_values`, and the details), `template_items`,
 `template_tags`, and `template_groups`, and the sync never
 touches them, except that an item, tag, or group D4H deletes leaves its templates.
 
@@ -31,7 +32,9 @@ touches them, except that an item, tag, or group D4H deletes leaves its template
   response": the command truck, the command phone, and the command rate. Hours only count
   for equipment. D4H takes km for a vehicle and a count for a supply, so a template's
   vehicle lines have no hours and their usages go without a duration.
-- **Tags**, such as Flat Water and Primary Hours for boat training. The picker lists the
+- **Tags**, such as Flat Water for boat training. Never the team's Primary or Secondary
+  Hours tag: the details' Tax credit hours sets it, so Change tags doesn't offer them
+  and saving drops them (`SaveTemplate.taggable/2`). The picker lists the
   team's tags from the sync's copy in `tags`: with no search, the 8 its activities used
   most in the last year, and A to Z with one. D4H's API has no tag bundles
   (`resource-bundles` only groups custom fields), so the picker can't group them the way
@@ -45,6 +48,24 @@ touches them, except that an item, tag, or group D4H deletes leaves its template
   D4H field id as on activities. Any kind holds no values, and changing the kind drops
   the old kind's. RESTRICTED fields are offered: templates are for team admins only. A
   field D4H deletes is ignored, since only the kind's live fields are read.
+- **Activity details** (#746), below.
+
+## Activity details
+
+What a template starts on Add activity: a title, a start time and a length, an address,
+tax credit hours, and a description, on Change details in the Add activity form's order
+and with its labels, less the date. Every detail is optional. A blank title uses the
+template's name. Tax credit hours has no blank: Primary, as on the activity form. It
+sets the Primary Hours or Secondary Hours tag as the activity form does. The length is
+in hours ("2.5"), as Change items takes them, and shows as 2h 30m. The kind stays on
+Change template, since it also picks the fields. The templates list has a Start column,
+start time and length, blank for a template with neither.
+
+The details only fill Add activity. Applying a template leaves them out: it never changes
+an activity's title, time, or address.
+
+When the details came (2026-10-30), each template's hours tag moved into Tax credit hours
+and left its tags. A template with neither tag got Primary.
 
 ## Applying a template
 
@@ -98,6 +119,5 @@ that line before the error, as for a refused invite.
 
 ## Still to come
 
-From #307: picking a template on Add activity, so it fills the form and applies the rest
-when saving, and a template's activity details (title, description, location, tax
-credit hours, start time, and length).
+From #307 and #747: picking a template on Add activity, so it fills the form from the
+details and applies the rest when saving.

@@ -366,6 +366,50 @@ defmodule Web.EquipmentLiveTest do
              Enum.sort([{ctx.radio.id, 150}, {ctx.truck.id, 0}])
   end
 
+  test "Change details saves the activity a template starts, shown on its page and the list",
+       ctx do
+    template = template_fixture(ctx.team, "Monday night training")
+    path = ~p"/teams/#{ctx.team}/templates/#{template.id}/details/edit"
+    {:ok, lv, _html} = live(ctx.conn, path)
+
+    lv
+    |> form("#template-form",
+      template: %{start_time: "19:00", length: "2.5", place: "Hall", hours: "secondary"}
+    )
+    |> render_submit()
+
+    assert_redirect(lv, ~p"/teams/#{ctx.team}/templates/#{template.id}")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}")
+    assert has_element?(lv, "#template-details", "19:00")
+    assert has_element?(lv, "#template-details", "2h 30m")
+    assert has_element?(lv, "#template-details", "Hall")
+    assert has_element?(lv, "#template-details", "Secondary")
+    assert has_element?(lv, "#template-edit-details[href='#{path}']")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates")
+    assert has_element?(lv, "#template-#{template.id}", "19:00 · 2h 30m")
+  end
+
+  test "Change details refuses a length that is not hours", ctx do
+    template = template_fixture(ctx.team)
+
+    {:ok, lv, _html} =
+      live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/details/edit")
+
+    html = lv |> form("#template-form", template: %{length: "two"}) |> render_submit()
+    assert html =~ "Enter the length in hours, such as 2.5."
+  end
+
+  test "Change tags leaves out the hours tags", ctx do
+    hours = tag_fixture(ctx.team, "Primary Hours")
+    activity_fixture(ctx.team, %{tags: ["Primary Hours"]})
+    template = template_fixture(ctx.team, "Boat training")
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}/tags/edit")
+
+    refute has_element?(lv, "#tag-add-#{hours.id}")
+  end
+
   test "a template gets tags from the team's tags", ctx do
     water = tag_fixture(ctx.team, "Flat Water")
     tag_fixture(ctx.team, "Medical")

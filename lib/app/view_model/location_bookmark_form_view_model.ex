@@ -34,15 +34,7 @@ defmodule App.ViewModel.LocationBookmarkFormViewModel do
     |> validate_required([:title], message: "Enter a name.")
     |> validate_length(:title, max: 100)
     |> validate_length(:place, max: 100)
-    |> put_coordinate()
-  end
-
-  # A pasted latitude and longitude is the pin. Otherwise the pin is the one picked, kept
-  # in the stored form, or none.
-  defp put_coordinate(changeset) do
-    pasted = changeset |> get_field(:place) |> Coordinate.parse()
-    pin = pasted || changeset |> get_field(:coordinate) |> Coordinate.build()
-    put_change(changeset, :coordinate, pin && Coordinate.to_string(pin, 5))
+    |> Coordinate.put_pin()
   end
 
   @doc "The row's fields as a change set stores them: the pin as \"lat,lng\" or nil."
