@@ -202,26 +202,36 @@ defmodule Web.NavigationTest do
       assert rows(rows) == [
                {"Pemberton SAR", false},
                {"Squamish SAR", true},
+               {"SAR Duty", false},
                {"SAR Duty admin", false},
                {"Style guide", false}
              ]
 
       assert Enum.map(rows, & &1.path) ==
-               ["/teams/pemberton", "/teams/squamish", "/admin", "/styles"]
+               ["/teams/pemberton", "/teams/squamish", "/", "/admin", "/styles"]
 
-      assert Enum.map(rows, & &1.kind) == [:team, :team, :admin, :styles]
+      assert Enum.map(rows, & &1.kind) == [:team, :team, :home, :admin, :styles]
     end
 
-    test "one place is nothing to switch to, so the name is plain text" do
+    test "one team still gets the switcher, for SAR Duty's home page (#779)" do
       area = Navigation.area("/teams/squamish/me", @team)
-      assert Navigation.switch_rows(false, [], [%Member{team: @team}], area) == []
-      assert Navigation.switch_rows(true, [], [], Navigation.area("/admin", nil)) == []
+
+      assert rows(Navigation.switch_rows(false, [], [%Member{team: @team}], area)) ==
+               [{"Squamish SAR", true}, {"SAR Duty", false}]
+
+      assert rows(Navigation.switch_rows(true, [], [], Navigation.area("/admin", nil))) ==
+               [{"SAR Duty", false}, {"SAR Duty admin", true}, {"Style guide", false}]
     end
 
     test "a team opened from Admin that isn't yours marks nothing" do
       area = Navigation.area("/teams/pemberton", @pemberton)
       rows = Navigation.switch_rows(true, [], [], area)
-      assert rows(rows) == [{"SAR Duty admin", false}, {"Style guide", false}]
+
+      assert rows(rows) == [
+               {"SAR Duty", false},
+               {"SAR Duty admin", false},
+               {"Style guide", false}
+             ]
     end
   end
 
@@ -253,14 +263,17 @@ defmodule Web.NavigationTest do
                {:team, "team-squamish", false},
                {:org, "org-nsara", false},
                {:org, "org-wsara", true},
+               {:home, "home", false},
                {:admin, "admin", false},
                {:styles, "styles", false}
              ]
     end
 
-    test "an organization admin with no team sees no switcher in their one organization" do
+    test "an organization admin with no team gets their organization, then the home page" do
       area = Navigation.area("/orgs/wsara", nil, @wsara)
-      assert Navigation.switch_rows(false, [], [], [@wsara], area) == []
+
+      rows = Navigation.switch_rows(false, [], [], [@wsara], area)
+      assert Enum.map(rows, & &1.kind) == [:org, :home]
     end
 
     test "outside every area, the bar names their first organization after member teams" do

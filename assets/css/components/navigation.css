@@ -13,7 +13,16 @@
   .site-bar .brand { color: #fff; font-weight: 700; font-size: var(--fs-lg); line-height: var(--lh-lg); text-decoration: none; white-space: nowrap; }
   .site-bar .brand span { color: var(--accent); }
 
-  .site-bar-links { display: flex; gap: 2px; flex: 1; overflow: hidden; min-width: 0; }
+  .site-bar-links { display: flex; align-items: center; gap: 2px; flex: 1; overflow: hidden; min-width: 0; }
+
+  /* Between the logo and the area's name (#779), so the name reads as the place you're in. */
+  .site-bar-slash {
+    margin-left: calc(-1 * var(--sp-1));
+    color: rgb(255 255 255 / 0.45);
+    font-size: var(--fs-lg);
+    line-height: var(--lh-lg);
+    font-weight: 300;
+  }
 
   /* The area you're in, after the brand (#312, #406): the team's name, or SAR Duty admin, or
      Account settings. Plain text with nowhere else to go; otherwise the team switcher. */
@@ -28,19 +37,18 @@
     white-space: nowrap;
   }
 
-  /* Phones (#471): the logo over the area's name, centred on the bar, with the switcher on
-     the name. A name too long ends in an ellipsis. */
+  /* Phones (#471): the area's name alone, centred on the bar, with the switcher on it
+     (#779). At this size, with the bar's tighter gaps, a 20-character name fits a 390px
+     phone; a size up cut 16 characters. A name too long ends in an ellipsis. */
   .site-bar-area-phone {
     display: none;
     min-width: 0;
-    flex-direction: column;
-    align-items: center;
+    justify-content: center;
     color: #fff;
     font-weight: 600;
     font-size: var(--fs-md);
-    line-height: var(--lh-sm);
+    line-height: var(--lh-md);
   }
-  .site-bar-area-phone .brand { font-size: var(--fs-sm); line-height: var(--lh-sm); }
   .site-bar-area-phone .site-bar-area-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .phone-team-switcher { max-width: 100%; }
   .phone-team-switcher > summary {
@@ -174,7 +182,27 @@
 
   /* SAR Duty admin in the switcher: below the teams, with a shield, so it is not a team. */
   :is(.menu, .site-bar-phone-panel) a.switch-admin { display: flex; align-items: center; justify-content: flex-start; gap: var(--sp-2); }
+  /* An organization's row starts with its building, its name beside it. */
+  .site-bar-phone-panel a.nav-link:has(> .icon) { justify-content: flex-start; }
   .menu a.switch-admin :is(.icon-shield-check, .icon-palette) { color: var(--text-muted); }
+
+  /* SAR Duty's own rows (#779): the home page, then SAR Duty admin and the style guide, in
+     a navy band at the foot of the switcher, so the wordmark keeps its colours on the light
+     menu. In dark mode, and on the phone's navy panel, a lighter strip. */
+  .menu:has(> .switch-band) { padding-bottom: 0; overflow: hidden; }
+  .switch-band { padding-block: var(--sp-1); }
+  .menu > .switch-band { margin-top: var(--sp-1); background: light-dark(var(--nav), rgb(255 255 255 / 0.06)); }
+  .site-bar-phone-panel > .switch-band { margin: var(--sp-2) 0 calc(-1 * var(--sp-2)); background: rgb(255 255 255 / 0.06); }
+  .menu > .switch-band a { color: #fff; }
+  .menu > .switch-band a:hover { background: rgb(255 255 255 / 0.08); }
+  .menu > .switch-band a[aria-current="page"] { box-shadow: inset 4px 0 var(--accent); }
+  .switch-band hr { border-color: rgb(255 255 255 / 0.15); }
+  .menu > .switch-band hr { margin: var(--sp-1) 0; }
+  .menu > .switch-band a.switch-admin .icon { color: rgb(255 255 255 / 0.65); }
+  :is(.menu, .site-bar-phone-panel) a.switch-home { display: flex; align-items: baseline; justify-content: flex-start; gap: var(--sp-2); }
+  .switch-band .brand { color: #fff; font-weight: 700; font-size: var(--fs-md); line-height: var(--lh-md); }
+  .switch-band .brand span { color: var(--accent); }
+  .switch-home .switch-note { font-weight: 400; font-size: var(--fs-sm); line-height: var(--lh-sm); color: rgb(255 255 255 / 0.65); }
 
   /* The compact bar, below 1024px and on narrow pages at every width (compact-bar, in
      app.css). Three columns, the outer two the same width, keep the name centred whether
@@ -184,6 +212,7 @@
     @variant compact-bar {
       display: grid;
       grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
+      gap: var(--sp-2);
     }
   }
   .site-bar-inner:has(> .site-bar-area-phone) > .brand { @variant compact-bar { display: none; } }

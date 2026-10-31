@@ -1,7 +1,7 @@
 <.shell current={:top_bar}>
   <h1>Top bar</h1>
   <p class="lead">
-    Navy, with the amber rule and logo. It names the team you're on, switches teams, and holds your account menu.
+    Navy, with the amber rule. The team you're on leads it: the name opens the team picker, and your initials open your account menu.
   </p>
 
   <div class="demo bar-demo" style="padding: 0">
@@ -27,13 +27,13 @@
   <h2>How it works</h2>
   <ul>
     <li>
-      Every page is in one area: a team's space, SAR Duty admin, or Account settings. The bar names it after the logo, such as "Squamish SAR". There is one space per team: your role there decides which pages you see.
+      Every page is in one area: a team's space, an organization's, SAR Duty admin, or Account settings. The bar reads logo, a faint slash, then the area's name, such as "SAR Duty / Squamish SAR". There is one space per team: your role there decides which pages you see.
     </li>
     <li>
-      The team switcher sits on the name when you can go somewhere else. It lists Your teams, each team where you are a team admin or a member, A to Z. For SAR Duty admins, SAR Duty admin comes last, below a divider and with a shield, so it never reads as one more team. The team you're on is marked; a team opened from Admin › Teams that isn't yours marks nothing. With one place to be, the name is plain text.
+      The team picker is on the name for everyone logged in, even on one team. It lists your teams, each team where you are a team admin or a member, A to Z, under "Your team" or "Your teams". Then SAR Duty's own rows, in a navy band at the foot of the menu, so the wordmark keeps its colours: SAR Duty's home page, where Privacy and Terms are, and for SAR Duty admins, SAR Duty admin with a shield and the Style guide. On a phone's navy panel the band is a lighter strip. The team you're on is marked; a team opened from Admin › Teams that isn't yours marks nothing.
     </li>
     <li>
-      The logo always goes to the home page. Logged in on the home, terms, or privacy page, the bar still names your team with the switcher on it, marking nothing, so the public site never strands you.
+      The logo always goes to the home page, and so does the picker's home row, so the picker is the same menu at every width. Logged in on the home, terms, or privacy page, the bar still names your team with the picker on it, marking nothing, so the public site never strands you.
     </li>
     <li>
       On a team's pages, <a href={page_path(:search)}>search</a>
@@ -49,7 +49,7 @@
 
   <h3>On a phone</h3>
   <p>
-    Below 1024px the Menu button moves to the left, the logo sits over the area's name in the middle, and your initials stay on the right, so a phone or a shared iPad always shows who is logged in. The name ends in an ellipsis when it is too long. The switcher stays on the name, with a chevron, as on a desktop. Menu holds the area's pages in their sections; with none, there is no Menu. Your initials open the same account menu as on a desktop. Each panel opens under the amber rule, the width of the screen, with the current page marked in amber. Opening one closes the other, and going to another page closes both.
+    Below 1024px the Menu button moves to the left, the area's name alone sits in the middle, and your initials stay on the right, so a phone or a shared iPad always shows who is logged in. The logo leaves the bar: people know which app they opened, and the picker's home row is one tap away. The name ends in an ellipsis when it is too long. The picker stays on the name, with a chevron, with the same rows as on a desktop. Menu holds the area's pages in their sections; with none, there is no Menu. Your initials open the same account menu as on a desktop. Each panel opens under the amber rule, the width of the screen, with the current page marked in amber. Opening one closes the other, and going to another page closes both.
   </p>
   <p>
     <a href={page_path(:layout) <> "#narrow-pages"}>Narrow pages</a>
@@ -77,9 +77,9 @@
     </Web.Layouts.main_nav_bar>
   </div>
 
-  <h3>Who sees which switcher</h3>
+  <h3>Who sees which rows</h3>
   <p>
-    Each case on a desktop, then on a phone, with the switcher open.
+    Everyone logged in gets the picker. Each case on a desktop, then on a phone, with the picker open.
   </p>
   <%= for {id, title, bar} <- sample_switchers() do %>
     <h4>{title}</h4>

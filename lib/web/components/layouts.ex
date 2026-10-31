@@ -309,15 +309,14 @@ defmodule Web.Layouts do
 
   slot :menu_foot, doc: "after the Menu's links, such as the style guide's theme switch"
 
-  # The top bar (#406): the area's name after the logo, with the team switcher on it when
-  # you can go somewhere else, and your avatar on the right, which opens the account menu.
-  # Outside every area (home, terms, privacy, the style guide), a logged-in person's bar
-  # names their team, with the switcher on it and nothing marked, so the name always opens
-  # the way back. Below 1024px (#471) the Menu button on the left holds the area's pages,
-  # or the style guide's, logged in or not, the logo sits
-  # over the area's name in the middle, with the switcher on the name, and the avatar stays
-  # on the right. Its menus share one details name, so opening one closes the others.
-  # See /styles/top-bar.
+  # The top bar (#406): the logo, a faint slash, and the area's name with the team switcher
+  # on it (#779), and your avatar on the right, which opens the account menu. Outside every
+  # area (home, terms, privacy, the style guide), a logged-in person's bar names their
+  # team, with the switcher on it and nothing marked, so the name always opens the way
+  # back. Below 1024px (#471) the Menu button on the left holds the area's pages, or the
+  # style guide's, logged in or not, the area's name alone sits in the middle with the
+  # switcher on it, and the avatar stays on the right. Its menus share one details name,
+  # so opening one closes the others. See /styles/top-bar.
   def main_nav_bar(assigns) do
     {area, sections} = navigation(assigns)
     sections = assigns.pages || sections
@@ -355,14 +354,13 @@ defmodule Web.Layouts do
     ~H"""
     <.site_bar size={@size}>
       <:links :if={@bar_area}>
+        <span class="site-bar-slash" aria-hidden="true">/</span>
         <.team_switcher :if={@switch_rows != []} name={@bar_area.name} rows={@switch_rows} />
         <span :if={@switch_rows == []} id="nav-area" class="site-bar-area">{@bar_area.name}</span>
       </:links>
       <%= if @current_user do %>
         <div :if={@bar_area} id="phone-nav-area" class="site-bar-area-phone">
-          <a href="/" class="brand">SAR <span>Duty</span></a>
           <details
-            :if={@switch_rows != []}
             id="phone-team-switcher"
             name="site-bar"
             class="phone-team-switcher group"
@@ -375,9 +373,6 @@ defmodule Web.Layouts do
               <.switch_menu rows={@switch_rows} id_prefix="phone-switch-" />
             </nav>
           </details>
-          <span :if={@switch_rows == []} class="site-bar-area-name">
-            {@bar_area[:short_name] || @bar_area.name}
-          </span>
         </div>
         <div class="site-bar-end">
           {render_slot(@search)}
@@ -445,9 +440,10 @@ defmodule Web.Layouts do
   attr :rows, :list, required: true, doc: "from Web.Navigation.switch_rows/5"
   attr :id_prefix, :string, required: true
 
-  # The switcher's rows, in the bar's menu or the phone's panel: Your teams, then Your
-  # organizations (#512), then SAR Duty admin below a divider with its shield, so it never
-  # reads as one more team, and the style guide under it.
+  # The switcher's rows, in the bar's menu or the phone's panel: your places on top, Your
+  # teams then Your organizations (#512), and SAR Duty's own rows in a navy band at the
+  # foot (#779): its home page, the wordmark in its colours, then SAR Duty admin with its
+  # shield and the style guide, so they never read as one more team.
   defp switch_menu(assigns) do
     groups = Enum.group_by(assigns.rows, & &1.kind)
 
@@ -455,26 +451,44 @@ defmodule Web.Layouts do
       assign(assigns,
         teams: groups[:team] || [],
         orgs: groups[:org] || [],
+        home: groups[:home] || [],
         admin: (groups[:admin] || []) ++ (groups[:styles] || [])
       )
 
     ~H"""
     <%= if @teams != [] do %>
-      <div class="caps menu-heading">Your teams</div>
+      <div class="caps menu-heading">{your("team", @teams)}</div>
       <.switch_link :for={row <- @teams} row={row} id_prefix={@id_prefix} />
     <% end %>
     <%= if @orgs != [] do %>
       <.menu_divider :if={@teams != []} />
-      <div class="caps menu-heading">Your organizations</div>
+      <div class="caps menu-heading">{your("organization", @orgs)}</div>
       <.switch_link :for={row <- @orgs} row={row} id_prefix={@id_prefix} />
     <% end %>
-    <.menu_divider :if={(@teams != [] or @orgs != []) and @admin != []} />
-    <.switch_link :for={row <- @admin} row={row} id_prefix={@id_prefix} />
+    <div class="switch-band">
+      <.switch_link :for={row <- @home} row={row} id_prefix={@id_prefix} />
+      <.menu_divider :if={@admin != []} />
+      <.switch_link :for={row <- @admin} row={row} id_prefix={@id_prefix} />
+    </div>
     """
   end
 
+  # "Your team" over one, "Your teams" over more.
+  defp your(noun, [_one]), do: "Your " <> noun
+  defp your(noun, _rows), do: "Your " <> noun <> "s"
+
   attr :row, :map, required: true
   attr :id_prefix, :string, required: true
+
+  # The home row is the wordmark, with what it opens beside it.
+  defp switch_link(%{row: %{kind: :home}} = assigns) do
+    ~H"""
+    <a href={@row.path} id={@id_prefix <> @row.key} class="nav-link switch-home">
+      <span class="brand">SAR <span>Duty</span></span>
+      <span class="switch-note">Home page</span>
+    </a>
+    """
+  end
 
   defp switch_link(assigns) do
     ~H"""
