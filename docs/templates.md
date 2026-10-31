@@ -127,18 +127,19 @@ that line before the error, as for a refused invite.
 
 Add activity starts with a Template box (#747), and a template's page has "Add activity
 from this template" in Actions, which opens it picked (`/activities/new?template=<id>`).
-None leaves the form as it was. Picking one fills the form from its
-[details](#activity-details)
-(`ActivityFormViewModel.template_params/3`): its kind when it has one, its title or
-else its name, its tax credit hours, and each other detail it has. Picking again
-replaces them; a detail the template lacks leaves what was typed. The address and pin
-go as a pair, so a template's address with no pin clears the pin picked before.
+Picking one fills the form from its [details](#activity-details)
+(`ActivityFormViewModel.template_params/2`): its kind when it has one, its title or
+else its name, its tax credit hours, and each other detail it has. Picking another
+template, or None, starts the form over from it, so two templates never mix (decided
+2026-10-30, over swapping only the boxes a template filled, which clears boxes by a rule
+nobody sees). When anything was changed since the form started, it asks first, under the
+Template box: Start over, or Keep my changes, which puts the template back.
 
 The form keeps its Start and Finish date-and-time boxes (decided 2026-10-30, over a
 Date box and two times, which could not reach past the next day). A template is a start
 time and a duration; the activity is a start and a finish. Picking one puts its start time
-on Start's day, or today when Start is empty, and Finish is Start and the duration, so a
-36-hour exercise finishes the day after next. While a template is picked, changing
+on today, and Finish is Start and the duration, so a 36-hour exercise finishes a day and
+a half later. While a template is picked, changing
 Start moves Finish to keep the duration (`follow_start/2`); Finish can still be typed.
 With no template the two boxes are independent. Several nights are one at a time: no
 recurrence, no Save and add another.

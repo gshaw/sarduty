@@ -100,28 +100,26 @@ defmodule App.ViewModel.ActivityFormViewModel do
   end
 
   @doc """
-  `params` with what `template` fills in on Add activity (#746, #747): its kind when it
-  has one, its title or else its name, its tax credit hours, and each other detail it
-  has. Its start time goes on Start's day, or `today` when Start is empty, and Finish is
-  Start and its duration. Its address and pin go together, so an address with no pin
-  clears the pin picked before. Picking it again replaces them.
+  The form's params from `template` on Add activity (#746, #747): its kind when it has
+  one, its title or else its name, its tax credit hours, and each other detail it has.
+  Its start time goes on `today`, and Finish is Start and its duration. Picking a
+  template starts the form over, so nothing typed before is kept.
   """
-  def template_params(params, %Template{} = template, %Date{} = today) do
-    starts_at = template_start(params["starts_at"], template.start_time, today)
+  def template_params(%Template{} = template, %Date{} = today) do
+    starts_at = template.start_time && NaiveDateTime.new!(today, template.start_time)
 
-    filled = %{
+    %{
+      "template_id" => Integer.to_string(template.id),
       "kind" => template.activity_kind,
       "title" => template.activity_title || template.title,
-      "starts_at" => template.start_time && input_text(starts_at),
+      "starts_at" => input_text(starts_at),
       "ends_at" => input_text(finish(starts_at, template)),
+      "place" => template.place,
+      "coordinate" => template.coordinate,
       "hours" => template.hours,
       "description" => template.description
     }
-
-    params
-    |> Map.merge(Map.reject(filled, fn {_key, value} -> is_nil(value) end))
-    |> Map.merge(place_params(template))
-    |> Map.put("template_id", Integer.to_string(template.id))
+    |> Map.reject(fn {_key, value} -> is_nil(value) end)
   end
 
   @doc """
@@ -135,23 +133,11 @@ defmodule App.ViewModel.ActivityFormViewModel do
     end
   end
 
-  defp template_start(typed, nil = _start_time, _today), do: cast_naive(typed)
-
-  defp template_start(typed, start_time, today) do
-    day = if starts_at = cast_naive(typed), do: NaiveDateTime.to_date(starts_at), else: today
-    NaiveDateTime.new!(day, start_time)
-  end
-
   defp finish(%NaiveDateTime{} = starts_at, %Template{duration_minutes: minutes})
        when is_integer(minutes),
        do: NaiveDateTime.add(starts_at, minutes, :minute)
 
   defp finish(_starts_at, _template), do: nil
-
-  defp place_params(%Template{place: nil, coordinate: nil}), do: %{}
-
-  defp place_params(%Template{place: place, coordinate: coordinate}),
-    do: %{"place" => place || "", "coordinate" => coordinate || ""}
 
   defp cast_naive(value) do
     case Ecto.Type.cast(:naive_datetime, value) do

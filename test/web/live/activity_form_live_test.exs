@@ -136,15 +136,51 @@ defmodule Web.ActivityFormLiveTest do
     refute has_element?(lv, "#activity-template-groups")
     assert has_element?(lv, "#activity-template-groups-passed", "Nov 2 has passed.")
 
-    # None leaves the form as it is.
-    lv
-    |> form("#activity-form", form: %{template_id: ""})
-    |> render_change(%{"_target" => ["form", "template_id"]})
+    # Start was changed, so None asks before it empties the form.
+    pick_none(lv)
+    assert has_element?(lv, "#activity-template-switch", "Picking None empties the form")
+    lv |> element("#activity-template-start-over") |> render_click()
 
-    assert has_element?(lv, ~s|#form_ends_at[value="2020-11-02T21:30"]|)
+    refute has_element?(lv, "#activity-template-switch")
+    assert has_element?(lv, ~s|#form_ends_at:not([value])|)
     assert has_element?(lv, "#form_published")
     refute has_element?(lv, "#activity-template-adds")
   end
+
+  test "switching templates starts the form over, asking first when something was changed",
+       %{conn: conn, team: team} do
+    %{template: monday} = template_with_details(team)
+    truck = template_fixture(team, "Truck check")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+
+    # Nothing changed: Truck check replaces Monday night training whole.
+    pick_template(lv, monday)
+    pick_template(lv, truck)
+    refute has_element?(lv, "#activity-template-switch")
+    assert has_element?(lv, ~s|#form_title[value="Truck check"]|)
+    assert has_element?(lv, ~s|#form_place:not([value])|)
+
+    lv |> form("#activity-form", form: %{title: "Truck check, both trucks"}) |> render_change()
+    pick_template(lv, monday)
+    assert has_element?(lv, "#activity-template-switch", "Picking Monday night training")
+
+    # Keep my changes puts Truck check back.
+    lv |> element("#activity-template-keep") |> render_click()
+    refute has_element?(lv, "#activity-template-switch")
+    assert has_element?(lv, ~s|#form_template_id option[value="#{truck.id}"][selected]|)
+    assert has_element?(lv, ~s|#form_title[value="Truck check, both trucks"]|)
+
+    pick_template(lv, monday)
+    lv |> element("#activity-template-start-over") |> render_click()
+    assert has_element?(lv, ~s|#form_title[value="Monday night training"]|)
+    assert has_element?(lv, ~s|#form_place[value="Hall"]|)
+  end
+
+  defp pick_none(lv),
+    do:
+      lv
+      |> form("#activity-form", form: %{template_id: ""})
+      |> render_change(%{"_target" => ["form", "template_id"]})
 
   defp change_start(lv, starts_at),
     do:

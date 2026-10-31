@@ -18,7 +18,8 @@ defmodule Web.ActivityFormLive do
   # Adding and changing activities (docs/records.md, #585). Delete is on the activity's
   # page, in Actions (docs/urls.md). Add activity can start from a template (#747): it
   # fills the form from the template's details, lists what saving adds after, and Save
-  # does what Apply a template does. `?template=` picks one.
+  # does what Apply a template does. `?template=` picks one. Picking another starts the
+  # form over, and asks first when anything was changed, so two templates never mix.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     activity = if id = params["id"], do: Activity.find!(team, id)
@@ -38,6 +39,8 @@ defmodule Web.ActivityFormLive do
       )
       |> assign(templates: if(activity, do: [], else: Template.get_all(team.id)))
       |> assign(template: nil, filled: 0, member_counts: %{}, template_fields: [])
+      # The params the form started from, and the template a pick waits on (#747).
+      |> assign(started: %{}, switch_to: nil)
       |> assign_form(ActivityFormViewModel.changeset(form))
       |> pick_on_mount(params["template"])
 
@@ -49,22 +52,18 @@ defmodule Web.ActivityFormLive do
 
   defp pick_on_mount(socket, id) do
     case find_template(socket, id) do
-      nil ->
-        socket
-
-      template ->
-        params = ActivityFormViewModel.template_params(%{}, template, today(socket))
-
-        socket
-        |> picked(template, params)
-        |> assign_form(ActivityFormViewModel.changeset(socket.assigns.form_data, params))
+      nil -> socket
+      template -> start_over(socket, template)
     end
   end
 
   defp find_template(socket, id),
     do: Enum.find(socket.assigns.templates, &(Integer.to_string(&1.id) == id))
 
-  defp picked(socket, template, params) do
+  # The form from `template`, or empty for :none, with no errors until something is typed.
+  defp start_over(socket, :none), do: socket |> assign(template: nil) |> reset(%{})
+
+  defp start_over(socket, template) do
     team = socket.assigns.current_team
 
     fields =
@@ -72,13 +71,20 @@ defmodule Web.ActivityFormLive do
         do: CustomField.get_all(team.id, template.activity_kind),
         else: []
 
-    assign(socket,
+    socket
+    |> assign(
       template: template,
-      params: params,
-      filled: socket.assigns.filled + 1,
       template_fields: fields,
       member_counts: GroupMember.counts(team.id)
     )
+    |> reset(ActivityFormViewModel.template_params(template, today(socket)))
+  end
+
+  # A new id draws the description's editor again.
+  defp reset(socket, params) do
+    socket
+    |> assign(params: params, started: params, switch_to: nil, filled: socket.assigns.filled + 1)
+    |> assign_form(ActivityFormViewModel.changeset(socket.assigns.form_data, params))
   end
 
   def render(assigns) do
@@ -111,6 +117,17 @@ defmodule Web.ActivityFormLive do
       >
         Fills in the form. Saving also adds the template's fields, items, tags, and groups.
       </.input>
+      <div :if={@switch_to} id="activity-template-switch" class="mb-6">
+        <.warning_text>{switch_text(@switch_to)}</.warning_text>
+        <div class="flex flex-wrap gap-2 mt-3">
+          <.button type="button" id="activity-template-start-over" phx-click="start-over">
+            Start over
+          </.button>
+          <.button type="button" id="activity-template-keep" phx-click="keep-changes">
+            Keep my changes
+          </.button>
+        </div>
+      </div>
       <.warning_text :if={@published_locked?} id="activity-published-locked" class="mb-6">
         A published activity cannot be changed. Untick Published and save first.
       </.warning_text>
@@ -343,6 +360,16 @@ defmodule Web.ActivityFormLive do
     {:noreply, socket}
   end
 
+  def handle_event("start-over", _params, socket),
+    do: {:noreply, start_over(socket, socket.assigns.switch_to)}
+
+  # The template stays as it was picked.
+  def handle_event("keep-changes", _params, socket) do
+    id = if template = socket.assigns.template, do: Integer.to_string(template.id), else: ""
+    params = Map.put(socket.assigns.params, "template_id", id)
+    {:noreply, socket |> assign(switch_to: nil) |> typed(params)}
+  end
+
   def handle_event("save", %{"form" => params}, %{assigns: %{template: %Template{}}} = socket) do
     %{current_team: team, current_user: user} = socket.assigns
     now = DateTime.utc_now()
@@ -375,16 +402,33 @@ defmodule Web.ActivityFormLive do
     end
   end
 
-  # Picking a template fills the form from it; None leaves the form as it is.
+  # Picking a template, or None, starts the form over. When anything was changed since
+  # the form started, it waits for Start over or Keep my changes.
   defp pick(socket, params) do
-    case find_template(socket, params["template_id"]) do
-      nil ->
-        socket |> assign(template: nil) |> typed(params)
+    target = find_template(socket, params["template_id"]) || :none
 
-      template ->
-        params = ActivityFormViewModel.template_params(params, template, today(socket))
-        socket |> picked(template, params) |> validate(params)
+    cond do
+      target == (socket.assigns.template || :none) -> typed(socket, params)
+      edited?(socket, params) -> socket |> assign(switch_to: target) |> typed(params)
+      true -> start_over(socket, target)
     end
+  end
+
+  defp switch_text(:none),
+    do: "Picking None empties the form, and your changes are lost."
+
+  defp switch_text(template),
+    do: "Picking #{template.title} starts the form over from it, and your changes are lost."
+
+  # What the form holds, less the template picked and the description editor's markup.
+  defp edited?(socket, params),
+    do: values(socket, params) != values(socket, socket.assigns.started)
+
+  defp values(socket, params) do
+    socket.assigns.form_data
+    |> ActivityFormViewModel.changeset(Map.delete(params, "template_id"))
+    |> Ecto.Changeset.apply_changes()
+    |> Map.update!(:description, &(&1 && Service.DescriptionHTML.clean(&1)))
   end
 
   defp typed(socket, params), do: socket |> assign(params: params) |> validate(params)
