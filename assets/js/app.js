@@ -30,6 +30,7 @@ import {QRScanner} from "./qr_scanner"
 import {SoundSwitch, listenForScanSounds} from "./scan_sound"
 import {Combobox} from "./combobox"
 import {FileDrop} from "./file_drop"
+import {InsertField} from "./insert_field"
 import {SelectAll} from "./select_all"
 import {ScannerInput} from "./scanner_input"
 import {RichText} from "./rich_text"
@@ -40,7 +41,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, AskDialog, Combobox, FileDrop, QRScanner, RichText, ScannerInput, Search, SelectAll, SoundSwitch},
+  hooks: {...colocatedHooks, AskDialog, Combobox, FileDrop, InsertField, QRScanner, RichText, ScannerInput, Search, SelectAll, SoundSwitch},
 })
 
 trackPointer()

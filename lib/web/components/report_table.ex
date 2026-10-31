@@ -10,6 +10,7 @@ defmodule Web.Components.ReportTable do
   import Web.Components.Table
 
   alias App.Report.Runner
+  alias App.Report.Value
   alias Service.Format
 
   attr :id, :string, required: true
@@ -128,6 +129,46 @@ defmodule Web.Components.ReportTable do
 
   defp record_cell(%{kind: :group} = assigns),
     do: ~H"<.group_cell group={@record} team={@team} />"
+
+  attr :value, Value, required: true
+  attr :id, :string, required: true
+  attr :name, :string, required: true, doc: ~s(the form's name for it, such as "values[year]")
+
+  @doc """
+  A value picked when the report runs (App.Report.Value): a menu for a year or a choice,
+  a date box for a date, and a text box for the rest.
+  """
+  def report_value(%{value: %Value{kind: kind}} = assigns) when kind in [:year, :choice] do
+    ~H"""
+    <.input
+      type={if length(@value.choices) > 12, do: "combobox", else: "select"}
+      id={@id}
+      name={@name}
+      value={Value.param(@value)}
+      label={@value.label}
+      options={@value.choices}
+    />
+    """
+  end
+
+  def report_value(%{value: %Value{kind: :date}} = assigns) do
+    ~H"""
+    <.input type="date" id={@id} name={@name} value={Value.param(@value)} label={@value.label} />
+    """
+  end
+
+  def report_value(assigns) do
+    ~H"""
+    <.input
+      type="text"
+      id={@id}
+      name={@name}
+      value={Value.param(@value)}
+      label={@value.label}
+      phx-debounce="400"
+    />
+    """
+  end
 
   @doc "A value as text, as a cell shows it."
   def value_text(nil, _column, _team), do: ""
