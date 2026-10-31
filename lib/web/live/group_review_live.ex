@@ -121,7 +121,7 @@ defmodule Web.GroupReviewLive do
       class="callout mb-4"
     >
       Sending changes needs your team's access key.
-      <.a navigate={~p"/teams/#{@current_team}/settings"}>Save it in team settings.</.a>
+      <.a navigate={~p"/teams/#{@current_team}/settings/access-key"}>Save it on Access key.</.a>
     </p>
 
     <p

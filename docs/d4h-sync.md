@@ -120,18 +120,26 @@ door's, leaves it as it was (`Attendance.replied_at/4`).
 ## Which key
 
 Every D4H request uses the team's key (`teams.d4h_access_key`, an `EncryptedString` set
-in team settings). Users have no D4H keys.
+on team settings' Access key tab). Users have no D4H keys.
 
 Each team should create the key from a D4H member named "SAR Duty" rather than a
 person, so D4H history shows SAR Duty for changes made here and the key outlives the
 people on the team. `teams.d4h_access_key_owner` holds the key's D4H member name, from
-`whoami` when the key is saved and at the start of every refresh. Team settings and
+`whoami` when the key is saved and at the start of every refresh. Access key and
 `/admin` flag a key whose owner isn't a SAR Duty account. D4H doesn't say when a token
 expires.
 
-Team settings never sends the saved key back to the page. A new key goes through
-[UpdateTeamSettings](../lib/app/operation/update_team_settings.ex), which asks D4H `whoami`
-and saves it only if the key's member is on this team. A blank field keeps the saved key.
+A key acts as the D4H member who made it: an Owner's key can do everything SAR Duty
+does, an Editor's lacks a few rights (#727). `whoami`'s `context.permissions` says which,
+stored as `teams.d4h_permissions` with `d4h_permissions_checked_at`, read by
+[CheckTeamKey](../lib/app/operation/check_team_key.ex) when a key is saved, on Check
+again, and at the start of every refresh. [D4HAccess](../lib/app/model/d4h_access.ex)
+maps each thing SAR Duty does to the rights it needs; `Team.d4h_can?/2` asks it. Records
+sends no permissions, so a Records team refuses nothing.
+
+Access key never sends the saved key back to the page. A new key goes through
+[SaveTeamKey](../lib/app/operation/save_team_key.ex), which asks D4H `whoami` and saves
+it only if the key's member is on this team.
 
 ## The stages
 

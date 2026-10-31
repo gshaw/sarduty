@@ -23,6 +23,7 @@ defmodule Web.FormCancelTest do
     "lib/web/live/org/admins_live.ex" => "organization settings tab",
     "lib/web/live/org/hours_tags_live.ex" => "organization settings tab",
     "lib/web/live/org/settings_live.ex" => "organization settings tab",
+    "lib/web/live/settings/access_key_live.ex" => "team settings tab",
     "lib/web/live/settings/hours_tags_live.ex" => "team settings tab",
     "lib/web/live/settings/tax_credit_letters_live.ex" => "team settings tab",
     "lib/web/live/settings/mcp_live.ex" => "team settings tab",

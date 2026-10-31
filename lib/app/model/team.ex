@@ -4,6 +4,7 @@ defmodule App.Model.Team do
   alias App.Field.EncryptedString
   alias App.Field.TrimmedString
   alias App.Model.Activity
+  alias App.Model.D4HAccess
   alias App.Model.Member
   alias App.Model.Organization
   alias App.Model.Team
@@ -37,7 +38,10 @@ defmodule App.Model.Team do
     field :d4h_access_key_saved_at, :utc_datetime_usec
     field :d4h_access_key_owner, :string
     field :d4h_access_key_member_id, :integer
-    # The settings form takes a replacement key here, so the saved key never
+    # What D4H lets the key do (#727): whoami's rights map, App.Model.D4HAccess.
+    field :d4h_permissions, :map
+    field :d4h_permissions_checked_at, :utc_datetime_usec
+    # The Access key tab takes a replacement key here, so the saved key never
     # goes back to the page.
     field :new_d4h_access_key, TrimmedString, virtual: true, redact: true
     field :d4h_refresh_result, :string
@@ -160,12 +164,18 @@ defmodule App.Model.Team do
 
   @watch_standings ~w(active away retiring not_a_person)
 
-  # Settings' General tab. d4h_team_id and the saved key are not castable here;
-  # UpdateTeamSettings sets the key after checking it with D4H.
+  # Settings' General tab. d4h_team_id and the key are not castable here.
   def build_settings_changeset(data, params \\ %{}) do
     data
-    |> cast(params, [:name, :legal_name, :abbreviated_name, :new_d4h_access_key])
+    |> cast(params, [:name, :legal_name, :abbreviated_name])
     |> validate_names()
+  end
+
+  # Settings' Access key tab (#727). SaveTeamKey saves the key after checking it with D4H.
+  def build_key_changeset(data, params \\ %{}) do
+    data
+    |> cast(params, [:new_d4h_access_key])
+    |> validate_required(:new_d4h_access_key, message: "Paste the new key.")
     |> validate_length(:new_d4h_access_key, min: 5, max: 2000)
   end
 
@@ -266,6 +276,8 @@ defmodule App.Model.Team do
       :d4h_access_key_saved_at,
       :d4h_access_key_owner,
       :d4h_access_key_member_id,
+      :d4h_permissions,
+      :d4h_permissions_checked_at,
       :d4h_refresh_result,
       :d4h_refreshed_at,
       :d4h_synced_at,
@@ -400,6 +412,10 @@ defmodule App.Model.Team do
     do: String.match?(owner, ~r/sar\s*duty/i)
 
   def key_owner_is_sar_duty?(%Team{}), do: false
+
+  @doc "Whether D4H lets the team's key do `feature`, from App.Model.D4HAccess.features/0."
+  def d4h_can?(%Team{d4h_permissions: permissions}, feature),
+    do: D4HAccess.can?(permissions, feature)
 
   def logo_path(team_subdomain) do
     logo_path = System.fetch_env!("TEAM_LOGO_PATH")

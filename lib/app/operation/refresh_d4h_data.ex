@@ -10,6 +10,7 @@ defmodule App.Operation.RefreshD4HData do
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Model.Team
+  alias App.Operation.CheckTeamKey
   alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData
   alias App.Operation.SyncD4HChanges
@@ -22,7 +23,7 @@ defmodule App.Operation.RefreshD4HData do
   def call(%Team{d4h_access_key: key}) when key in [nil, ""], do: {:error, :no_key}
 
   def call(%Team{} = team) do
-    team = record_key_owner(team)
+    team = check_key(team)
     d4h = D4H.build_context_from_team(team)
     progress = RefreshD4HData.Progress.new(team.id)
     refresh(d4h, team, progress)
@@ -41,20 +42,12 @@ defmodule App.Operation.RefreshD4HData do
     do:
       "#{D4H.service_name(team)} refused your access key (#{status}). Save a new one in team settings."
 
-  # Keys saved before the owner was recorded get it here. A rejected key is left for the
-  # refresh's own requests to report.
-  defp record_key_owner(team) do
-    case D4H.fetch_whoami(access_key: team.d4h_access_key, api_host: team.d4h_api_host) do
-      {:ok, whoami} ->
-        params = %{
-          d4h_access_key_owner: D4H.WhoAmI.member_name(whoami, team.d4h_team_id),
-          d4h_access_key_member_id: D4H.WhoAmI.member_id(whoami, team.d4h_team_id)
-        }
-
-        team |> Team.build_changeset(params) |> Repo.update!()
-
-      {:error, _reason} ->
-        team
+  # Who the key belongs to and what D4H lets it do, read again on every full refresh
+  # (#727). A rejected key is left for the refresh's own requests to report.
+  defp check_key(team) do
+    case CheckTeamKey.call(team) do
+      {:ok, team} -> team
+      {:error, _reason} -> team
     end
   end
 
