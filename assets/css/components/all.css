@@ -14,8 +14,10 @@
 @import "./navigation";
 @import "./rich_text";
 @import "./row_link";
+@import "./scanner";
 @import "./search";
 @import "./table";
+@import "./take_attendance";
 @import "./typography";
 @import "./stat_switch";
 @import "./chart";

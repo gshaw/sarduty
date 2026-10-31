@@ -13,7 +13,15 @@
 
   <h2>How it works</h2>
   <ul>
-    <li>One big button starts the camera. The picture fills the width while it scans.</li>
+    <li>
+      One big button starts the camera. Its picture is 4:3 on a phone and a square from an
+      iPad up, never taller than 45% of the screen, so Stop scanning stays in sight.
+    </li>
+    <li>
+      A QR reader draws a square to aim at and reads only around it. A hint under the square
+      says what to hold there.
+    </li>
+    <li>The screen stays on while it scans, so an iPad at the door does not sleep.</li>
     <li>Stop scanning puts the button back.</li>
     <li>
       Switch camera, shown when the device has more than one, swaps the back and front cameras,
@@ -23,7 +31,11 @@
       The Sound switch is a <a href={page_path(:forms) <> "#switch"}>compact switch</a>
       under the button. The phone remembers it.
     </li>
-    <li>Each read goes to the page, which answers with a <a href={page_path(:band)}>band</a>.</li>
+    <li>
+      Each read goes to the page, which answers with a <a href={page_path(:band)}>band</a>.
+      A page that scans one card after another, like Take attendance, draws each answer on
+      the picture instead: the member's name in large type, green, blue, or red, for 3 seconds.
+    </li>
   </ul>
 
   <h2>In the app</h2>
@@ -31,6 +43,10 @@
     <code>&lt;.qr_scanner label="Scan ID cards" /&gt;</code>. The page handles <code>"scanned"</code>.
     <code>data-continuous</code>
     keeps scanning after a read. <code>reader={:barcode}</code>
-    reads equipment barcodes, such as Code 128 and UPC, as well as QR codes.
+    reads equipment barcodes, such as Code 128 and UPC, as well as QR codes, with no aim
+    square. <code>hint</code>
+    goes under the square, and a <code>:result</code>
+    slot, with a <code>kind</code>
+    of <code>:success</code>, <code>:info</code>, or <code>:danger</code>, draws over the picture while it scans.
   </p>
 </.shell>

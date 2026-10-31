@@ -1,0 +1,79 @@
+/* The camera scanner (Web.Components.Scanner, #752). The picture is 4:3 on a phone and a
+   square from an iPad up, never taller than 45% of the screen, so Stop scanning stays in
+   sight. A read's result covers the picture. See /styles/qr-scanner. */
+@layer components {
+  .scanner { position: relative; }
+
+  .scanner-picture, .scanner-result {
+    width: 100%;
+    max-width: calc(45dvh * 4 / 3);
+    aspect-ratio: 4 / 3;
+    margin-inline: auto;
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (width >= 40rem) {
+    .scanner-picture, .scanner-result { max-width: min(22rem, 45dvh); aspect-ratio: 1; }
+  }
+
+  .scanner-picture { position: relative; background: #000; }
+  .scanner-video { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+  /* Where to hold the card: its corners, with the rest of the picture dimmed. Set a
+     little high, so the hint under it has room. The hook reads more than this square,
+     around the picture's centre, so qr_scanner.js keeps AIM in step. */
+  .scanner-aim {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    /* The picture is never taller than wide, so its height is the short side. */
+    height: 56%;
+    aspect-ratio: 1;
+    translate: -50% -50%;
+    border-radius: 12px;
+    box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.35);
+  }
+  .scanner-aim::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 4px solid #fff;
+    border-radius: 12px;
+    --corner: conic-gradient(#000 0 0);
+    mask: var(--corner) top left / 22% 22% no-repeat, var(--corner) top right / 22% 22% no-repeat,
+      var(--corner) bottom left / 22% 22% no-repeat, var(--corner) bottom right / 22% 22% no-repeat;
+  }
+  .scanner-hint {
+    position: absolute;
+    inset: auto 0 var(--sp-2);
+    margin: 0;
+    text-align: center;
+    color: #fff;
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.6);
+  }
+
+  /* Only while the camera runs: with it off, the page's own band says it. */
+  .scanner-result {
+    position: absolute;
+    inset: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-1);
+    padding: var(--sp-4);
+    color: #fff;
+    text-align: center;
+    background: color-mix(in srgb, var(--c) 90%, transparent);
+  }
+  .scanner:not(:has([data-scanning])) .scanner-result { display: none; }
+  .scanner:has(.scanner-result) :is(.scanner-aim, .scanner-hint) { visibility: hidden; }
+  .scanner-result-success { --c: var(--success); }
+  .scanner-result-info { --c: var(--info); }
+  .scanner-result-danger { --c: var(--danger); }
+  .scanner-result .icon { width: 40px; height: 40px; }
+  .scanner-result-title { margin: 0; font-size: var(--fs-2xl); line-height: 1.15; font-weight: 700; }
+  .scanner-result-danger .scanner-result-title { font-size: var(--fs-xl); }
+  .scanner-result-detail { margin: 0; font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 600; }
+}

@@ -5,7 +5,7 @@ defmodule Web.ActivityTakeAttendanceLive do
       {:live_view_narrow_layout,
        size: :tool,
        access: :team,
-       view_events: ~w(set_kind change clear_override toggle_yet_to_arrive scan_failed),
+       view_events: ~w(set_kind change show_time clear_override toggle_yet_to_arrive scan_failed),
        member_events: ~w(scanned pick undo)}
 
   import Web.Components.Scanner
@@ -29,7 +29,8 @@ defmodule Web.ActivityTakeAttendanceLive do
   # until a team admin sends it from the Attendance page.
   @max_name_matches 8
   @recent_count 30
-  # A good scan's confirmation shows this long, then the page is ready for the next.
+  # A good scan's confirmation shows this long, then the page is ready for the next. Every
+  # read leaves the camera's picture after it, so the aim square comes back (#752).
   @confirm_ms 3000
   @tick_ms :timer.minutes(1)
 
@@ -66,9 +67,11 @@ defmodule Web.ActivityTakeAttendanceLive do
       members: members,
       kind: "arrived",
       override: "",
+      show_time: false,
       search: "",
       matches: [],
       message: nil,
+      picture: nil,
       scan_failed: false,
       show_yet_to_arrive: false
     )
@@ -110,11 +113,16 @@ defmodule Web.ActivityTakeAttendanceLive do
     {:noreply, assign(socket, others_now?: others_now?(socket.assigns.activity, now))}
   end
 
-  # Only clears the confirmation it was set for, not a newer one.
+  # Only clears the confirmation it was set for, not a newer one. A problem stays in the
+  # band until the next read, but leaves the picture.
   def handle_info({:clear_message, message}, socket) do
-    if socket.assigns[:message] == message,
-      do: {:noreply, assign(socket, message: nil)},
-      else: {:noreply, socket}
+    %{message: shown, picture: picture} = socket.assigns
+    good? = message.kind in [:arrived, :left]
+
+    {:noreply,
+     socket
+     |> assign(picture: if(picture == message, do: nil, else: picture))
+     |> assign(message: if(shown == message and good?, do: nil, else: shown))}
   end
 
   def handle_event("set_kind", %{"kind" => kind}, socket) when kind in ["arrived", "left"],
@@ -131,8 +139,10 @@ defmodule Web.ActivityTakeAttendanceLive do
      )}
   end
 
+  def handle_event("show_time", _params, socket), do: {:noreply, assign(socket, show_time: true)}
+
   def handle_event("clear_override", _params, socket),
-    do: {:noreply, assign(socket, override: "")}
+    do: {:noreply, assign(socket, override: "", show_time: false)}
 
   # The scanner sends the time box's value with each read, so the scan uses what the
   # box shows even when the phone never sent a change for it.
@@ -190,7 +200,7 @@ defmodule Web.ActivityTakeAttendanceLive do
     socket =
       with_open_door(socket, fn socket, now ->
         case socket |> door() |> RecordAttendanceScan.undo(scan_id, now) do
-          :ok -> assign(socket, message: {:info, "Scan removed."})
+          :ok -> assign(socket, message: %{kind: :info, text: "Scan removed."})
           # Closed between the check and the undo.
           {:error, _reason} -> assign_closed(socket, now)
         end
@@ -207,14 +217,12 @@ defmodule Web.ActivityTakeAttendanceLive do
 
   defp record(socket, record) do
     with_open_door(socket, fn socket, now ->
-      {kind, _text} = message = socket |> door() |> record.(now) |> message(socket.assigns.team)
-
-      if kind in [:arrived, :left],
-        do: Process.send_after(self(), {:clear_message, message}, @confirm_ms)
+      message = socket |> door() |> record.(now) |> message(socket.assigns.team)
+      Process.send_after(self(), {:clear_message, message}, @confirm_ms)
 
       socket
-      |> assign(message: message)
-      |> push_event("scan-sound", %{sound: kind})
+      |> assign(message: message, picture: message)
+      |> push_event("scan-sound", %{sound: message.kind})
     end)
   end
 
@@ -250,25 +258,46 @@ defmodule Web.ActivityTakeAttendanceLive do
     |> Enum.any?(&(&1.id != activity.id))
   end
 
-  # `{kind, text}`: `:arrived` or `:left` for a good scan, `:error`, or `:info`. The kind
-  # picks the banner's colour and the scan's sound.
+  # `kind` is `:arrived` or `:left` for a good scan, `:error`, or `:info`, and picks the
+  # colour and the scan's sound. `text` is the band's sentence. On the camera's picture,
+  # `title` is big, a good scan's member, and `detail` under it.
   defp message({:ok, scan}, team) do
+    name = scan.member.name
     time = scan |> AttendanceScan.time() |> Service.Format.time_short(team.timezone)
 
     case scan.kind do
-      "arrived" -> {:arrived, "#{scan.member.name} arrived at #{time}."}
-      "left" -> {:left, "#{scan.member.name} left at #{time}."}
+      "arrived" ->
+        %{
+          kind: :arrived,
+          text: "#{name} arrived at #{time}.",
+          title: name,
+          detail: "Arrived #{time}"
+        }
+
+      "left" ->
+        %{kind: :left, text: "#{name} left at #{time}.", title: name, detail: "Left #{time}"}
     end
   end
 
-  defp message({:error, reason}, _team), do: {:error, error_text(reason)}
+  defp message({:error, reason}, _team) do
+    {title, detail} = error_text(reason)
+    text = [title, detail] |> Enum.reject(&is_nil/1) |> Enum.join(" ")
+    %{kind: :error, text: text, title: title, detail: detail}
+  end
 
-  defp error_text(:not_found), do: "No ID card has this code. Find the member by name instead."
-  defp error_text(:other_site), do: "This is not a SAR Duty ID card. Find the member by name."
-  defp error_text(:other_team), do: "This ID card is for another team."
-  defp error_text(:revoked), do: "This ID card is cancelled. Find the member by name instead."
-  defp error_text(:left_team), do: "This member is retired."
-  defp error_text(:bad_time), do: "Enter the time as hours and minutes, like 09:30."
+  defp error_text(:not_found),
+    do: {"No ID card has this code.", "Find the member by name instead."}
+
+  defp error_text(:other_site),
+    do: {"This is not a SAR Duty ID card.", "Find the member by name."}
+
+  defp error_text(:other_team), do: {"This ID card is for another team.", nil}
+
+  defp error_text(:revoked),
+    do: {"This ID card is cancelled.", "Find the member by name instead."}
+
+  defp error_text(:left_team), do: {"This member is retired.", nil}
+  defp error_text(:bad_time), do: {"Enter the time as hours and minutes, like 09:30.", nil}
 
   # Signed up is read again with the scans, so the 10-minute sync's changes show too.
   defp load_scans(socket) do
@@ -315,26 +344,23 @@ defmodule Web.ActivityTakeAttendanceLive do
 
   attr :message, :any, required: true
 
-  # Big and coloured, so the person at the door sees each scan land at a glance.
-  defp message(%{message: {:info, text}} = assigns) do
-    assigns = assign(assigns, :text, text)
-
+  # Big and coloured, so the person at the door sees each scan land at a glance. While the
+  # camera runs, a read shows on its picture instead.
+  defp message(%{message: %{kind: :info}} = assigns) do
     ~H"""
-    <p id="message" role="status" class="mt-4 mb-0 font-semibold">{@text}</p>
+    <p id="message" role="status" class="mt-4 mb-0 font-semibold">{@message.text}</p>
     """
   end
 
-  defp message(%{message: {kind, text}} = assigns) do
-    assigns = assign(assigns, kind: kind, text: text)
-
+  defp message(assigns) do
     ~H"""
     <.band
       id="message"
       role="status"
-      kind={message_kind(@kind)}
-      icon={message_icon(@kind)}
-      title={@text}
-      class="mt-4"
+      kind={message_kind(@message.kind)}
+      icon={message_icon(@message.kind)}
+      title={@message.text}
+      class="door-band mt-4"
     />
     """
   end
@@ -365,7 +391,7 @@ defmodule Web.ActivityTakeAttendanceLive do
     <p :if={@closed} id="closed" class="mt-4 font-semibold">
       {closed_text(@closed, @activity, @team)}
     </p>
-    <div :if={!@closed} id="controls">
+    <div :if={!@closed} id="controls" class="door-controls">
       <div :if={@yet_to_arrive.signed_up > 0} class="mt-4">
         <.button
           id="toggle-yet-to-arrive"
@@ -400,92 +426,116 @@ defmodule Web.ActivityTakeAttendanceLive do
         </.button>
       </div>
 
-      <form id="door-form" phx-change="change" phx-submit="pick">
-        <div class="mt-4">
-          <.input type="time" id="override" name="override" value={@override} label="Time (optional)">
-            Leave this empty to use the time of each scan. Set it to catch up from a paper list.
-          </.input>
-          <p :if={@override != ""} id="override-note" class="-mt-4 font-semibold">
-            Recording as {@override} ·
-            <.a id="clear-override" href="#" phx-click="clear_override">Clear time</.a>
-          </p>
-        </div>
+      <.message :if={@message} message={@message} />
 
-        <.message :if={@message} message={@message} />
+      <div id="door" class="door">
+        <form id="door-form" phx-change="change" phx-submit="pick" class="contents">
+          <div class="door-scan">
+            <.qr_scanner
+              label="Scan ID cards"
+              variant={:success}
+              hint="Hold the ID card in the square"
+              data-continuous
+              data-override-input="override"
+            >
+              <:result :if={@picture} kind={message_kind(@picture.kind)}>
+                <.icon name={message_icon(@picture.kind)} />
+                <p class="scanner-result-title">{@picture.title}</p>
+                <p :if={@picture.detail} class="scanner-result-detail">{@picture.detail}</p>
+              </:result>
+            </.qr_scanner>
+            <p :if={@scan_failed} id="scan-failed" class="text-danger-text">
+              The camera did not start. Allow camera access, or find members by name.
+            </p>
+          </div>
 
-        <.qr_scanner
-          label="Scan ID cards"
-          variant={:success}
-          data-continuous
-          data-override-input="override"
-          class="mt-4"
-        />
-        <p :if={@scan_failed} id="scan-failed" class="text-danger-text">
-          The camera did not start. Allow camera access, or find members by name.
-        </p>
+          <div class="door-names">
+            <.input
+              type="search"
+              id="search"
+              name="search"
+              value={@search}
+              label="Find a member by name"
+              autocomplete="off"
+              phx-debounce="150"
+              phx-hook="ScannerInput"
+            >
+              Or scan an ID card with a plug-in barcode scanner.
+            </.input>
+            <ul :if={@matches != []} id="matches" class="-mt-4">
+              <li :for={member <- @matches} class="flex items-center justify-between gap-2 py-1">
+                <span>{member.name}</span>
+                <.button id={"pick-#{member.id}"} type="submit" name="pick" value={member.id}>
+                  {if @kind == "arrived", do: "Record arrival", else: "Record departure"}
+                </.button>
+              </li>
+            </ul>
+            <p
+              :if={@matches == [] and String.length(@search) >= 2 and not card_text?(@search)}
+              id="no-matches"
+              class="-mt-4"
+            >
+              No current member has that name.
+            </p>
+          </div>
 
-        <div class="mt-4">
-          <.input
-            type="search"
-            id="search"
-            name="search"
-            value={@search}
-            label="Find a member by name"
-            autocomplete="off"
-            phx-debounce="150"
-            phx-hook="ScannerInput"
-          >
-            Or scan an ID card with a plug-in barcode scanner.
-          </.input>
-        </div>
-        <ul :if={@matches != []} id="matches" class="-mt-4">
-          <li :for={member <- @matches} class="flex items-center justify-between gap-2 py-1">
-            <span>{member.name}</span>
-            <.button id={"pick-#{member.id}"} type="submit" name="pick" value={member.id}>
-              {if @kind == "arrived", do: "Record arrival", else: "Record departure"}
-            </.button>
-          </li>
-        </ul>
-        <p
-          :if={@matches == [] and String.length(@search) >= 2 and not card_text?(@search)}
-          id="no-matches"
-          class="-mt-4"
-        >
-          No current member has that name.
-        </p>
-      </form>
+          <div class="door-time">
+            <p :if={!@show_time and @override == ""} id="set-time-line" class="mb-0">
+              Catching up from a paper list?
+              <.a id="set-time" href="#" phx-click="show_time">Set the time</.a>
+            </p>
+            <div :if={@show_time or @override != ""}>
+              <.input
+                type="time"
+                id="override"
+                name="override"
+                value={@override}
+                label="Time (optional)"
+              >
+                Leave this empty to use the time of each scan. Set it to catch up from a paper list.
+              </.input>
+              <p :if={@override != ""} id="override-note" class="-mt-4 font-semibold">
+                Recording as {@override} ·
+                <.a id="clear-override" href="#" phx-click="clear_override">Clear time</.a>
+              </p>
+            </div>
+          </div>
+        </form>
 
-      <h2 class="heading mt-4">Recorded</h2>
-      <p :if={@scans == []} id="no-scans">Nobody yet. Scans show here as you take them.</p>
-      <.table :if={@scans != []} id="scans" rows={@scans} class="table-striped">
-        <%!-- No link: the door's tool stays open for the next scan. --%>
-        <:col :let={scan} label="Member">
-          <.member_cell
-            member={scan.member}
-            team={@team}
-            standing={@standings[scan.member.id]}
-            link={false}
-          />
-        </:col>
-        <:col :let={scan} label="Scan" class="whitespace-nowrap">
-          {if scan.kind == "arrived", do: "Arrived", else: "Left"} {Service.Format.time_short(
-            AttendanceScan.time(scan),
-            @team.timezone
-          )}
-        </:col>
-        <:col :let={scan} label="" class="w-px">
-          <.button
-            id={"undo-#{scan.id}"}
-            type="button"
-            size={:sm}
-            variant={:link}
-            phx-click="undo"
-            phx-value-id={scan.id}
-          >
-            Undo
-          </.button>
-        </:col>
-      </.table>
+        <section class="door-recorded">
+          <h2 class="heading">Recorded</h2>
+          <p :if={@scans == []} id="no-scans">Nobody yet. Scans show here as you take them.</p>
+          <.table :if={@scans != []} id="scans" rows={@scans} class="table-striped">
+            <%!-- No link: the door's tool stays open for the next scan. --%>
+            <:col :let={scan} label="Member">
+              <.member_cell
+                member={scan.member}
+                team={@team}
+                standing={@standings[scan.member.id]}
+                link={false}
+              />
+            </:col>
+            <:col :let={scan} label="Scan" class="whitespace-nowrap">
+              {if scan.kind == "arrived", do: "Arrived", else: "Left"} {Service.Format.time_short(
+                AttendanceScan.time(scan),
+                @team.timezone
+              )}
+            </:col>
+            <:col :let={scan} label="" class="w-px">
+              <.button
+                id={"undo-#{scan.id}"}
+                type="button"
+                size={:sm}
+                variant={:link}
+                phx-click="undo"
+                phx-value-id={scan.id}
+              >
+                Undo
+              </.button>
+            </:col>
+          </.table>
+        </section>
+      </div>
     </div>
 
     <p :if={@team_admin?} class="action mt-8">
