@@ -49,14 +49,14 @@ defmodule Web.StyleGuideHTML do
   # cspell:ignore HETS
 
   # The guide's groups, in the side nav's order: {group, title, about, [{page, title, about}]}.
-  # A group lists its pages at /styles/<group>, A to Z after Get started. A page is also
-  # its template name, and its path is the name with dashes.
+  # A group lists its pages at /styles/<group>, A to Z. A page is also its template name,
+  # and its path is the name with dashes, except About, which is /styles itself.
   def groups do
     [
-      {:index, "Get started", "What the guide is for and the principles behind it.",
-       [{:index, "Overview", "What the guide is for and the principles behind it."}]},
-      {:foundations, "Foundations", "What every page shares: colour, type, space, and words.",
+      {:foundations, "Foundations",
+       "The guide's principles, and what every page shares: colour, type, space, and words.",
        [
+         {:index, "About", "What the guide is for and the principles behind it."},
          {:colour, "Colour", "Every token in light and dark, what each is for, and its class."},
          {:focus, "Focus", "The yellow keyboard focus on everything you can reach."},
          {:icons, "Icons", "The small set of icons, their sizes, and when to use one."},
@@ -132,7 +132,7 @@ defmodule Web.StyleGuideHTML do
     path = "/styles/" <> slug
 
     Enum.find_value(groups(), fn {group, _title, _about, pages} = g ->
-      if group != :index && page_path(group) == path,
+      if page_path(group) == path,
         do: {:group, g},
         else: find_page(pages, path)
     end)
@@ -140,7 +140,7 @@ defmodule Web.StyleGuideHTML do
 
   defp find_page(pages, path) do
     Enum.find_value(pages, fn {page, _title, _about} ->
-      page != :index && page_path(page) == path && {:page, page}
+      page_path(page) == path && {:page, page}
     end)
   end
 
@@ -164,18 +164,17 @@ defmodule Web.StyleGuideHTML do
     end
   end
 
-  # The side nav and the phone's Menu: the 4 groups, the open one marked, then its pages.
-  # Get started is one page, so it lists none. Links as Web.Navigation makes them.
+  # The side nav and the phone's Menu: the groups, the open one marked, then its pages.
+  # Links as Web.Navigation makes them.
   def nav_sections(current) do
     {open, _title, _about, pages} = group_of(current)
 
     groups =
       for {group, title, _about, _pages} <- groups(), do: nav_link(group, title, current, open)
 
-    pages =
-      for {page, title, _about} <- pages, open != :index, do: nav_link(page, title, current, nil)
+    pages = for {page, title, _about} <- pages, do: nav_link(page, title, current, nil)
 
-    Enum.reject([groups, pages], &(&1 == []))
+    [groups, pages]
   end
 
   defp nav_link(key, label, current, open) do

@@ -12,8 +12,8 @@
     </:section>
   </.side_nav>
   <main class="guide-main">
-    <.breadcrumbs :if={@current != :index}>
-      <:item label="Style guide" path={page_path(:index)} />
+    <.breadcrumbs>
+      <:item :if={@current != :index} label="Style guide" path={page_path(:index)} />
       <:item :if={group != @current} label={group_title} path={page_path(group)} />
       <:item label={page_title(@current)} />
     </.breadcrumbs>
