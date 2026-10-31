@@ -35,7 +35,9 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   def status_kinds, do: [{"All", "all"}, {"Draft", "draft"}, {"Published", "published"}]
 
   # "untagged": none of the team's hours tags, so it counts for no hours by mistake (#323).
-  def hours_kinds, do: [{"All", "all"}, {"No hours tag", "untagged"}]
+  # "two": two of them, so it counts for one without a word (#763).
+  def hours_kinds,
+    do: [{"All", "all"}, {"No hours tag", "untagged"}, {"Two hours tags", "two"}]
 
   # "missing": a required custom field of the activity's kind is empty (#681).
   def fields_kinds, do: [{"All", "all"}, {"Missing", "missing"}]
@@ -226,6 +228,9 @@ defmodule App.ViewModel.ActivityFilterViewModel do
 
   defp scope(q, hours: "untagged", team: team),
     do: Activity.without_hours_tag(q, Activity.hours_tags(team))
+
+  defp scope(q, hours: "two", team: team),
+    do: Activity.with_two_hours_tags(q, Activity.hours_tags(team))
 
   defp scope(q, hours: _all, team: _team), do: q
 

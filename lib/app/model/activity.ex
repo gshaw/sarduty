@@ -111,6 +111,24 @@ defmodule App.Model.Activity do
     Enum.any?(@hours_kinds, &(hours_tags[&1] && hours_tags[&1] in tags))
   end
 
+  @doc """
+  Whether the tags hold two or more of the hours tags (#763), so the activity counts for
+  hours its other tag says it doesn't: `counts_as/2` picks one without a word.
+  `with_two_hours_tags/2` is the same rule as a query.
+  """
+  def two_hours_tags?(tags, hours_tags) do
+    tags = tags || []
+    hours_tags |> hours_titles() |> Enum.count(&(&1 in tags)) >= 2
+  end
+
+  defp hours_titles(hours_tags),
+    do:
+      hours_tags
+      |> Map.take(@hours_kinds)
+      |> Map.values()
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+
   @doc "Which hours the tags count for: `:primary`, `:secondary`, or nil. Primary wins."
   def counts_as(tags, %{primary: primary, secondary: secondary}) do
     tags = tags || []
@@ -386,13 +404,31 @@ defmodule App.Model.Activity do
   `hours_tags` is hours_tags/1.
   """
   def without_hours_tag(query, hours_tags) do
-    titles = hours_tags |> Map.values() |> Enum.reject(&is_nil/1) |> Jason.encode!()
+    titles = hours_tags |> hours_titles() |> Jason.encode!()
 
     where(
       query,
       [r],
       fragment(
         "NOT EXISTS (SELECT 1 FROM json_each(?) j WHERE j.value IN (SELECT value FROM json_each(?)))",
+        r.tags,
+        ^titles
+      )
+    )
+  end
+
+  @doc """
+  Activities with two or more of the hours tags (#763), as `two_hours_tags?/2`.
+  `hours_tags` is hours_tags/1.
+  """
+  def with_two_hours_tags(query, hours_tags) do
+    titles = hours_tags |> hours_titles() |> Jason.encode!()
+
+    where(
+      query,
+      [r],
+      fragment(
+        "(SELECT COUNT(DISTINCT j.value) FROM json_each(?) j WHERE j.value IN (SELECT value FROM json_each(?))) >= 2",
         r.tags,
         ^titles
       )

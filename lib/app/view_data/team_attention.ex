@@ -23,8 +23,9 @@ defmodule App.ViewData.TeamAttention do
   The items as `%{shown: items, snoozed: items}`. Shown are at most `limit`:
   #{@max_items} for the page, or `:all` for an agent (#595). Each is a map with `key`,
   `level` (`:danger`, `:warning`, or `:info`, sorted in that order), `title`, `detail`
-  (where the fix happens, or nil), and `action`, the text of its link. The letters and
-  untagged items also carry the `year`; `untagged` is a list of `%{year:, count:, ids:}`.
+  (where the fix happens, or nil), and `action`, the text of its link. The letters,
+  untagged, and two hours tags items also carry the `year`; `untagged` is a list of
+  `%{year:, count:, ids:}`, and `two_hours_tags` of `%{year:, primary:, secondary:}`.
   `service` is where the team's records live, `:d4h` or `:records` (D4H.service/1).
 
   An item with `ids`, what it counts, can be snoozed (#751). It is snoozed while
@@ -51,6 +52,7 @@ defmodule App.ViewData.TeamAttention do
     |> count_items()
     |> Enum.concat(retiring_items(rows))
     |> Enum.concat(untagged_items(rows, this_year))
+    |> Enum.concat(two_hours_tags_items(rows, this_year))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
     |> Enum.concat(name_items(rows.names))
     |> Enum.reject(&is_nil/1)
@@ -109,6 +111,9 @@ defmodule App.ViewData.TeamAttention do
 
   defp untagged_items(rows, this_year),
     do: Enum.map(rows.untagged, &untagged_item(&1, this_year, rows.service))
+
+  defp two_hours_tags_items(rows, this_year),
+    do: Enum.map(rows.two_hours_tags, &two_hours_tags_item(&1, this_year, rows.service))
 
   defp take(items, :all), do: items
   defp take(items, limit), do: Enum.take(items, limit)
@@ -528,6 +533,64 @@ defmodule App.ViewData.TeamAttention do
     Format.count(count,
       one: "Tax credit letters count no hours for it. Set its hours tag in #{name}.",
       many: "Tax credit letters count no hours for them. Set each one's hours tag in #{name}."
+    )
+  end
+
+  defp two_hours_tags_item(%{primary: 0, secondary: 0}, _this_year, _service), do: nil
+
+  # Letters count primary over secondary, and either over the other tag, without a word
+  # (#763). Like the untagged item, last year's shows only in letter season.
+  defp two_hours_tags_item(%{year: year} = row, this_year, service) do
+    count = row.primary + row.secondary
+
+    %{
+      key: if(year == this_year, do: :two_hours_tags, else: :two_hours_tags_last_year),
+      level: :info,
+      year: year,
+      title:
+        Format.count(count,
+          one: "%d activity in #{year} has two hours tags",
+          many: "%d activities in #{year} have two hours tags"
+        ),
+      detail: "#{counted_as(row)} #{two_hours_tags_fix(count, service)}",
+      action: "Show activities"
+    }
+  end
+
+  defp counted_as(%{primary: primary, secondary: secondary}) do
+    case {primary, secondary} do
+      {1, 0} ->
+        "Tax credit letters count primary hours for it."
+
+      {0, 1} ->
+        "Tax credit letters count secondary hours for it."
+
+      {_, 0} ->
+        "Tax credit letters count primary hours for them."
+
+      {0, _} ->
+        "Tax credit letters count secondary hours for them."
+
+      _ ->
+        "Tax credit letters count primary hours for #{Format.number(primary)} " <>
+          "and secondary hours for #{Format.number(secondary)}."
+    end
+  end
+
+  defp two_hours_tags_fix(count, :records),
+    do:
+      Format.count(count,
+        one: "Take the extra tag off with Change tags.",
+        many: "Take each extra tag off with Change tags."
+      )
+
+  # A published activity is locked (#358), so its tags change in D4H.
+  defp two_hours_tags_fix(count, service) do
+    name = D4H.service_name(service)
+
+    Format.count(count,
+      one: "Take the extra tag off with Change tags, or in #{name} if it is published.",
+      many: "Take each extra tag off with Change tags, or in #{name} for a published one."
     )
   end
 

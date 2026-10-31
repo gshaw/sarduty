@@ -29,6 +29,7 @@ defmodule App.ViewData.TeamAttentionTest do
         attendance_to_send: [],
         no_shows: [],
         untagged: [],
+        two_hours_tags: [],
         letters: nil
       },
       attrs
@@ -104,6 +105,10 @@ defmodule App.ViewData.TeamAttentionTest do
           attendance_to_send: [%{id: 1, title: "Training"}],
           no_shows: [%{id: 2, title: "Rope", count: 1}],
           untagged: [%{count: 1, year: 2025, ids: [7]}, %{count: 1, year: 2026, ids: [8]}],
+          two_hours_tags: [
+            %{year: 2025, primary: 1, secondary: 0},
+            %{year: 2026, primary: 0, secondary: 1}
+          ],
           letters: %{year: 2025, count: 1},
           names: %{name: String.duplicate("a", 21), abbreviated_name: String.duplicate("a", 11)}
         })
@@ -118,7 +123,8 @@ defmodule App.ViewData.TeamAttentionTest do
       assert cannot_snooze |> keys() |> Enum.sort() ==
                Enum.sort(~w(refresh retiring_access group_changes chores certificates
                             chores_to_send attendance_to_send no_shows untagged_last_year
-                            letters long_name long_abbreviated_name)a)
+                            two_hours_tags two_hours_tags_last_year letters long_name
+                            long_abbreviated_name)a)
 
       for item <- can_snooze do
         assert TeamAttention.back_sooner(item) =~ ~r/^It comes back sooner if another .+\.$/
@@ -282,6 +288,42 @@ defmodule App.ViewData.TeamAttentionTest do
 
     assert keys(items) == [:untagged_last_year, :untagged]
     assert hd(items).title == "4 activities in 2025 have no hours tag"
+  end
+
+  describe "two hours tags (#763)" do
+    test "say which hours letters count and where to fix them" do
+      row = %{year: 2026, primary: 2, secondary: 0}
+      assert [item] = items(%{two_hours_tags: [row]}, @october)
+      assert %{key: :two_hours_tags, level: :info, year: 2026} = item
+      assert item.title == "2 activities in 2026 have two hours tags"
+
+      assert item.detail ==
+               "Tax credit letters count primary hours for them. " <>
+                 "Take each extra tag off with Change tags, or in D4H for a published one."
+    end
+
+    test "one counted as secondary on a Records team stays in SAR Duty" do
+      rows = %{two_hours_tags: [%{year: 2026, primary: 0, secondary: 1}], service: :records}
+      assert [item] = items(rows, @october)
+      assert item.title == "1 activity in 2026 has two hours tags"
+
+      assert item.detail ==
+               "Tax credit letters count secondary hours for it. " <>
+                 "Take the extra tag off with Change tags."
+    end
+
+    test "a mix names both counts" do
+      assert [item] =
+               items(%{two_hours_tags: [%{year: 2026, primary: 2, secondary: 1}]}, @october)
+
+      assert item.title == "3 activities in 2026 have two hours tags"
+      assert item.detail =~ "count primary hours for 2 and secondary hours for 1."
+    end
+
+    test "in letter season last year's show too, and none means no item" do
+      rows = [%{year: 2025, primary: 1, secondary: 0}, %{year: 2026, primary: 0, secondary: 0}]
+      assert keys(items(%{two_hours_tags: rows}, @march)) == [:two_hours_tags_last_year]
+    end
   end
 
   test "each count shows its item, warnings first" do

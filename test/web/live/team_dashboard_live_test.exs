@@ -354,6 +354,53 @@ defmodule Web.TeamDashboardLiveTest do
     refute has_element?(list, "#activity_collection", "Draft")
   end
 
+  test "activities with two hours tags need attention, and the link lists them (#763)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    year = DateTime.now!(team.timezone).year
+    {:ok, june} = year |> Date.new!(6, 15) |> DateTime.new(~T[18:00:00])
+    june = %{started_at: june, finished_at: DateTime.add(june, 2, :hour), is_published: true}
+
+    team |> Ecto.Changeset.change(other_hours_tag: "Social") |> Repo.update!()
+
+    both =
+      activity_fixture(team, Map.merge(june, %{title: "Both", tags: ["Primary Hours", "Social"]}))
+
+    activity_fixture(
+      team,
+      Map.merge(june, %{
+        title: "Draft both",
+        tags: ["Secondary Hours", "Social"],
+        is_published: false
+      })
+    )
+
+    activity_fixture(team, Map.merge(june, %{title: "One tag", tags: ["Primary Hours", "Rope"]}))
+    conn = log_in_user(conn, user)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+
+    assert has_element?(
+             lv,
+             "#attention-two_hours_tags",
+             "2 activities in #{year} have two hours tags"
+           )
+
+    assert has_element?(
+             lv,
+             "#attention-two_hours_tags",
+             "count primary hours for 1 and secondary hours for 1."
+           )
+
+    {:ok, list, _html} =
+      lv |> element("#attention-two_hours_tags a") |> render_click() |> follow_redirect(conn)
+
+    assert has_element?(list, "#activity_collection", "Both")
+    assert has_element?(list, "#activity_collection", "Draft both")
+    assert has_element?(list, "#activity-#{both.id}-tags-locked", "change its tags")
+    refute has_element?(list, "#activity_collection", "One tag")
+  end
+
   test "a team that does not use the hours tags is not told about them", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, %{tags: [], is_published: true})
