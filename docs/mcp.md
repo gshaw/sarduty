@@ -72,7 +72,9 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
   then lists of members, activities, an activity's attendance (`list_attendance`), and
   hours. Statuses use the glossary's words, which change when the activity starts:
   `no_reply`, `signed_up`, `cant_make_it` before, `attended` and `absent` after. A chore
-  activity's kind is `chores`, as on the Activities page. `list_members` gives each
+  activity's kind is `chores`, as on the Activities page. `list_activities` gives
+  `enough_at` and `full_at` beside `signed_up` (#447), SAR Duty's own numbers, null when
+  unset. `list_members` gives each
   member's standing, never an away period's reason or dates (#366).
 - **Hours, chores, and what is waiting.** `tax_credit_hours` counts with
   `CountTaxCreditHours`, as the letter does, so it can be lower than

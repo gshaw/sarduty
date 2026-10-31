@@ -137,6 +137,31 @@ defmodule Web.TeamDashboardLiveTest do
     refute has_element?(lv, "#next-up", "Another team's")
   end
 
+  test "Next up and Coming up show more needed and Full (#447)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    soon =
+      team
+      |> activity_fixture(at(3, %{title: "Pancake breakfast"}))
+      |> Ecto.Changeset.change(enough_at: 4)
+      |> Repo.update!()
+
+    later =
+      team
+      |> activity_fixture(at(72, %{title: "First aid course"}))
+      |> Ecto.Changeset.change(full_at: 1)
+      |> Repo.update!()
+
+    attendance_fixture(soon, member_fixture(team), %{status: "attending"})
+    attendance_fixture(later, member_fixture(team), %{status: "attending"})
+
+    {:ok, lv, _html} = open(conn, user, team)
+
+    assert has_element?(lv, "#next-up-hint", "1 signed up")
+    assert has_element?(lv, "#next-up-hint #next-up-need", "3 more needed")
+    assert has_element?(lv, "#coming-up-#{later.id} #coming-up-need-#{later.id}", "Full")
+  end
+
   test "waiting chores need attention, with member logins on", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     category = chore_category_fixture(team)

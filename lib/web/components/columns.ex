@@ -17,6 +17,7 @@ defmodule Web.Components.Columns do
   alias App.Model.Activity
   alias App.Operation.BuildGroupRulePreview
   alias Service.Format
+  alias Web.Components.ActivityPanel
 
   attr :member, :map, required: true, doc: "with `id` and `name`"
   attr :team, :any, required: true
@@ -55,14 +56,28 @@ defmodule Web.Components.Columns do
   attr :kind, :boolean, default: true, doc: "false when the table has a Kind column"
   attr :now, :any, default: nil, doc: "the time now, when the page has one"
 
+  attr :counts, :map,
+    default: nil,
+    doc:
+      "`Attendance.reply_counts/2`'s for the activity, for its badge (#447): the Activities list"
+
   @doc ~s(Activity: "ref: title", linked to the activity, Draft once it has finished unpublished, and its kind.)
   def activity_cell(assigns) do
+    assigns = assign(assigns, :now, assigns.now || DateTime.utc_now())
+
     ~H"""
     <span class="with-badge">
       <.a navigate={@path || ~p"/teams/#{@team}/activities/#{@activity.id}"}><.activity_title activity={
         @activity
       } /></.a>
-      <.badge :if={Activity.finished_draft?(@activity, @now || DateTime.utc_now())}>Draft</.badge>
+      <ActivityPanel.need_badge
+        :if={@counts}
+        id={"activity-#{@activity.id}-need"}
+        activity={@activity}
+        counts={@counts}
+        now={@now}
+      />
+      <.badge :if={Activity.finished_draft?(@activity, @now)}>Draft</.badge>
       <.activity_kind_mark :if={@kind} activity={@activity} />
     </span>
     """

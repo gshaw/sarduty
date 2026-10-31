@@ -29,22 +29,36 @@ defmodule Web.ActivitySendRemindersLive do
         members
         |> SendReminders.plan(Reminder.for_activity(activity), Standing.retiring_ids(team))
 
-      sender = SendReminders.sender(team, user, now)
+      socket =
+        socket
+        |> assign(
+          page_title: "Send reminders",
+          activity: activity,
+          plan: plan,
+          standings: Standing.by_member(team, Enum.map(members, & &1.member), now),
+          selected: MapSet.new(plan.send, & &1.member.id),
+          sender: SendReminders.sender(team, user, now)
+        )
+        |> assign_message(start_message(activity, members, now))
 
-      {:ok,
-       assign(socket,
-         page_title: "Send reminders",
-         activity: activity,
-         plan: plan,
-         standings: Standing.by_member(team, Enum.map(members, & &1.member), now),
-         selected: MapSet.new(plan.send, & &1.member.id),
-         sender: sender,
-         message: "",
-         preview: ActivityMailer.reminder_preview(activity, team, sender, nil)
-       )}
+      {:ok, socket}
     else
       {:ok, leave(socket, activity)}
     end
+  end
+
+  # The message as typed, and the preview with it.
+  defp assign_message(socket, message) do
+    %{current_team: team, activity: activity, sender: sender} = socket.assigns
+    preview = ActivityMailer.reminder_preview(activity, team, sender, Message.normalize(message))
+    assign(socket, message: message, preview: preview)
+  end
+
+  # "We need 4 more people." while short of Enough at (#447).
+  defp start_message(activity, members, now) do
+    activity
+    |> Activity.more_needed(ActivityMembers.counts(members), now)
+    |> SendReminders.start_message()
   end
 
   # A stale visitor goes back to the activity, as Add members sends them.
@@ -58,16 +72,10 @@ defmodule Web.ActivitySendRemindersLive do
   end
 
   def handle_event("change", params, socket) do
-    %{current_team: team, activity: activity, sender: sender} = socket.assigns
-    message = Map.get(params, "message", "")
-
     {:noreply,
-     assign(socket,
-       selected: params |> selected_ids() |> MapSet.new(),
-       message: message,
-       preview:
-         ActivityMailer.reminder_preview(activity, team, sender, Message.normalize(message))
-     )}
+     socket
+     |> assign(selected: params |> selected_ids() |> MapSet.new())
+     |> assign_message(Map.get(params, "message", ""))}
   end
 
   # The batch note on the activity says what went, so there's no flash.

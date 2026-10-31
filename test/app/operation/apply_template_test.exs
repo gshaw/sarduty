@@ -57,6 +57,38 @@ defmodule App.Operation.ApplyTemplateTest do
     end
   end
 
+  describe "numbers/4 (#447)" do
+    @now ~U[2026-11-01 12:00:00Z]
+    @open %Activity{started_at: ~U[2026-11-07 17:00:00Z], finished_at: ~U[2026-11-07 21:00:00Z]}
+    @template %Template{enough_at: 10, full_at: 14}
+
+    test "both from the template, on an open activity with neither" do
+      assert ApplyTemplate.numbers(nil, @template, @open, @now) == %{enough_at: 10, full_at: 14}
+
+      assert ApplyTemplate.numbers(nil, %Template{enough_at: 10}, @open, @now) ==
+               %{enough_at: 10, full_at: nil}
+    end
+
+    test "none on an activity with either number, or once it starts" do
+      assert ApplyTemplate.numbers(nil, @template, %{@open | full_at: 8}, @now) == nil
+      assert ApplyTemplate.numbers(nil, @template, %{@open | enough_at: 3}, @now) == nil
+      assert ApplyTemplate.numbers(nil, @template, @open, @open.started_at) == nil
+    end
+
+    test "none from a template without them, and the first template added wins" do
+      assert ApplyTemplate.numbers(nil, %Template{}, @open, @now) == nil
+      first = %{enough_at: 4, full_at: nil}
+      assert ApplyTemplate.numbers(first, @template, @open, @now) == first
+    end
+
+    test "numbers_text/1 names the ones it sets" do
+      assert ApplyTemplate.numbers_text(%{enough_at: 10, full_at: 14}) ==
+               "Enough at 10 and Full at 14"
+
+      assert ApplyTemplate.numbers_text(%{enough_at: nil, full_at: 14}) == "Full at 14"
+    end
+  end
+
   test "add_tags/3 adds each tag once, A to Z, leaving out the activity's" do
     picked = [tag(3, "Swiftwater")]
     new = [tag(1, "rope"), tag(3, "Swiftwater"), tag(2, "Flat Water")]

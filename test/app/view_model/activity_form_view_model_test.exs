@@ -21,6 +21,35 @@ defmodule App.ViewModel.ActivityFormViewModelTest do
     assert {"Enter a finish after the start.", _} = changeset.errors[:ends_at]
   end
 
+  describe "Enough at and Full at (#447)" do
+    defp numbers(enough_at, full_at) do
+      ActivityFormViewModel.validate(%ActivityFormViewModel{}, %{
+        title: "Pancake breakfast",
+        starts_at: "2026-11-07T09:00",
+        ends_at: "2026-11-07T13:00",
+        enough_at: enough_at,
+        full_at: full_at
+      })
+    end
+
+    test "both are optional whole numbers of 1 or more" do
+      assert {:ok, %{enough_at: nil, full_at: nil}} = numbers("", "")
+      assert {:ok, %{enough_at: 10, full_at: 14}} = numbers("10", "14")
+      assert {:ok, %{enough_at: 10, full_at: 10}} = numbers("10", "10")
+
+      for bad <- ["0", "-2", "2.5", "ten"] do
+        assert {:error, changeset} = numbers(bad, "")
+        assert {"Enter a whole number, 1 or more.", _} = changeset.errors[:enough_at]
+      end
+    end
+
+    test "Full at is no lower than Enough at" do
+      assert {:error, changeset} = numbers("10", "8")
+      assert {"Enter 10 or more, since Enough at is 10.", _} = changeset.errors[:full_at]
+      assert {:ok, %{full_at: 8}} = numbers("", "8")
+    end
+  end
+
   @today ~D[2026-11-02]
 
   test "a template fills its details, its start time today, and the finish from its duration" do
@@ -33,7 +62,8 @@ defmodule App.ViewModel.ActivityFormViewModelTest do
       place: "Hall",
       coordinate: "49.10000,-123.10000",
       hours: "secondary",
-      description: "<div>Bring a radio.</div>"
+      description: "<div>Bring a radio.</div>",
+      enough_at: 10
     }
 
     assert ActivityFormViewModel.template_params(template, @today) == %{
@@ -42,6 +72,7 @@ defmodule App.ViewModel.ActivityFormViewModelTest do
              "title" => "Monday night training",
              "starts_at" => "2026-11-02T19:00",
              "ends_at" => "2026-11-02T21:30",
+             "enough_at" => "10",
              "place" => "Hall",
              "coordinate" => "49.10000,-123.10000",
              "hours" => "secondary",

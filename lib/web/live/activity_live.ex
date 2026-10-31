@@ -460,6 +460,15 @@ defmodule Web.ActivityLive do
       <dt>Duration</dt>
       <dd>{format_activity_duration(@activity)}</dd>
 
+      <div :if={@activity.enough_at}>
+        <dt>Enough at</dt>
+        <dd id="activity-enough-at">{@activity.enough_at}</dd>
+      </div>
+      <div :if={@activity.full_at}>
+        <dt>Full at</dt>
+        <dd id="activity-full-at">{@activity.full_at}</dd>
+      </div>
+
       <div :if={hours_type = activity_hours_type(@activity, @hours_tags)}>
         <dt>Tax credit hours</dt>
         <dd>{hours_type}</dd>

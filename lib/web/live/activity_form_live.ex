@@ -145,6 +145,7 @@ defmodule Web.ActivityFormLive do
           <.input field={@form[:starts_at]} type="datetime-local" label="Start" />
           <.input field={@form[:ends_at]} type="datetime-local" label="Finish" />
         </div>
+        <.enough_and_full form={@form} />
         <.live_component
           module={PlaceBox}
           id="activity"
@@ -232,6 +233,36 @@ defmodule Web.ActivityFormLive do
         >Change fields</.a>
       </p>
     </section>
+    """
+  end
+
+  attr :form, :any, required: true, doc: "a form with `enough_at` and `full_at`"
+
+  @doc "Enough at and Full at (#447), the same on Change template."
+  def enough_and_full(assigns) do
+    ~H"""
+    <div class="grid md:grid-cols-2 gap-x-6">
+      <.input
+        field={@form[:enough_at]}
+        type="number"
+        min="1"
+        step="1"
+        inputmode="numeric"
+        label="Enough at (optional)"
+      >
+        Shows how many more are needed until this many have signed up.
+      </.input>
+      <.input
+        field={@form[:full_at]}
+        type="number"
+        min="1"
+        step="1"
+        inputmode="numeric"
+        label="Full at (optional)"
+      >
+        Shows a Full badge from this many. Members can still reply I'll be there.
+      </.input>
+    </div>
     """
   end
 
@@ -428,6 +459,7 @@ defmodule Web.ActivityFormLive do
     %{current_team: team, current_user: user, activity: activity} = socket.assigns
 
     case SaveActivity.call(team, activity, params, user, DateTime.utc_now()) do
+      {:ok, nil} when activity == nil -> {:noreply, added_slowly(socket, params)}
       {:ok, saved} -> {:noreply, saved(socket, saved, saved_text(activity, params))}
       {:error, %Ecto.Changeset{} = changeset} -> {:noreply, assign_form(socket, changeset)}
       {:error, text} -> {:noreply, put_flash(socket, :error, text)}
@@ -497,6 +529,20 @@ defmodule Web.ActivityFormLive do
   def handle_info({PlaceBox, values}, socket) do
     params = Map.merge(socket.assigns.params, values)
     {:noreply, socket |> assign(params: params) |> validate(params)}
+  end
+
+  # The copy hasn't caught up, so Enough at and Full at had nowhere to go (#447).
+  defp added_slowly(socket, params) do
+    if Enum.any?(~w(enough_at full_at), &(params[&1] not in [nil, ""])) do
+      text =
+        "Added #{params["title"]}. Set Enough at and Full at with Change activity once it shows."
+
+      socket
+      |> put_flash(:error, text)
+      |> push_navigate(to: ~p"/teams/#{socket.assigns.current_team}/activities")
+    else
+      saved(socket, nil, saved_text(nil, params))
+    end
   end
 
   defp saved_text(nil, params), do: "Added #{params["title"]}."
