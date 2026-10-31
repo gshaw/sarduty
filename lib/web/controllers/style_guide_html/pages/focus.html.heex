@@ -26,11 +26,17 @@
       The yellow is <code>--focus</code>, the one token with the same value in light and dark.
     </li>
     <li>It shows only for the keyboard, through <code>:focus-visible</code>, not on a click.</li>
+    <li>
+      A button a script focuses, such as a dialog's Cancel, turns yellow only once a key is pressed. After a click or a tap it keeps its own look.
+    </li>
   </ul>
 
   <h2>Rules</h2>
   <ul>
     <li>Never remove the focus style, and never restyle it on one page.</li>
     <li>A custom control takes the base styles in <code>assets/css/base/base.css</code>.</li>
+    <li>
+      A script that moves focus just calls <code>focus()</code>. The click-or-key rule is app-wide, in <code>assets/js/pointer_focus.js</code>, so a new dialog or hook needs nothing of its own.
+    </li>
   </ul>
 </.shell>

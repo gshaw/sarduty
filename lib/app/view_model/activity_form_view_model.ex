@@ -5,15 +5,18 @@ defmodule App.ViewModel.ActivityFormViewModel do
   alias App.Model.Activity
   alias App.Model.Coordinate
   alias App.Model.Team
+  alias App.Model.Template
   alias App.Validate
 
   @kinds [{"Exercise", "exercise"}, {"Incident", "incident"}, {"Event", "event"}]
   @hours [{"Primary", "primary"}, {"Secondary", "secondary"}, {"Neither", "none"}]
 
   # Adding or changing an activity. Times are on the team's wall clock. The description is
-  # HTML, cleaned to what the editor makes (Service.DescriptionHTML).
+  # HTML, cleaned to what the editor makes (Service.DescriptionHTML). Add activity can
+  # start from a template (#747), which fills the form: template_params/3.
   @primary_key false
   embedded_schema do
+    field :template_id, :integer
     field :kind, :string, default: "exercise"
     field :title, Field.TrimmedString
     field :description, Field.TrimmedString
@@ -27,7 +30,17 @@ defmodule App.ViewModel.ActivityFormViewModel do
     field :published, :boolean, default: false
   end
 
-  @fields [:kind, :title, :starts_at, :ends_at, :place, :hours, :tracking_number, :description]
+  @fields [
+    :template_id,
+    :kind,
+    :title,
+    :starts_at,
+    :ends_at,
+    :place,
+    :hours,
+    :tracking_number,
+    :description
+  ]
 
   def kinds, do: @kinds
   def hours, do: @hours
@@ -86,9 +99,61 @@ defmodule App.ViewModel.ActivityFormViewModel do
     NaiveDateTime.new!(date, %{time | second: 0})
   end
 
+  @doc """
+  The form's params from `template` on Add activity (#746, #747): its kind when it has
+  one, its title or else its name, its tax credit hours, and each other detail it has.
+  Its start time goes on `today`, and Finish is Start and its duration. Picking a
+  template starts the form over, so nothing typed before is kept.
+  """
+  def template_params(%Template{} = template, %Date{} = today) do
+    starts_at = template.start_time && NaiveDateTime.new!(today, template.start_time)
+
+    %{
+      "template_id" => Integer.to_string(template.id),
+      "kind" => template.activity_kind,
+      "title" => template.activity_title || template.title,
+      "starts_at" => input_text(starts_at),
+      "ends_at" => input_text(finish(starts_at, template)),
+      "place" => template.place,
+      "coordinate" => template.coordinate,
+      "hours" => template.hours,
+      "description" => template.description
+    }
+    |> Map.reject(fn {_key, value} -> is_nil(value) end)
+  end
+
+  @doc """
+  `params` with Finish moved to keep `template`'s duration after Start, which just changed
+  (#747). A template with no duration leaves Finish as typed.
+  """
+  def follow_start(params, %Template{} = template) do
+    case finish(cast_naive(params["starts_at"]), template) do
+      nil -> params
+      ends_at -> Map.put(params, "ends_at", input_text(ends_at))
+    end
+  end
+
+  defp finish(%NaiveDateTime{} = starts_at, %Template{duration_minutes: minutes})
+       when is_integer(minutes),
+       do: NaiveDateTime.add(starts_at, minutes, :minute)
+
+  defp finish(_starts_at, _template), do: nil
+
+  defp cast_naive(value) do
+    case Ecto.Type.cast(:naive_datetime, value) do
+      {:ok, %NaiveDateTime{} = naive} -> naive
+      _blank_or_not_a_time -> nil
+    end
+  end
+
+  # As the browser's date-and-time box takes it, to the minute.
+  defp input_text(nil), do: nil
+  defp input_text(naive), do: Calendar.strftime(naive, "%Y-%m-%dT%H:%M")
+
   def changeset(%__MODULE__{} = form, params \\ %{}) do
     form
     |> cast(params, [
+      :template_id,
       :kind,
       :title,
       :description,

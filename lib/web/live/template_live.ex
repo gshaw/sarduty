@@ -91,6 +91,12 @@ defmodule Web.TemplateLive do
               </li>
               <li>
                 <.a
+                  id="template-add-activity"
+                  navigate={~p"/teams/#{@current_team}/activities/new?template=#{@template.id}"}
+                >Add activity from this template</.a>
+              </li>
+              <li>
+                <.a
                   id="template-delete"
                   href="#"
                   phx-click="delete"
@@ -117,26 +123,12 @@ defmodule Web.TemplateLive do
 
         <section id="template-items">
           <h2 class="heading">Items · {length(@items)}</h2>
-          <.table
+          <.items_table
             :if={@items != []}
             id="template-items-table"
-            rows={@items}
-            row_id={&"item-#{&1.id}"}
-            class="table-striped"
-          >
-            <:col :let={line} label="Item">
-              <.item_cell item={line.equipment_item} team={@current_team} />
-            </:col>
-            <:col :let={line} label="Hours" align="right" class="w-px whitespace-nowrap">
-              <.hours_cell
-                :if={EquipmentItem.takes_hours?(line.equipment_item)}
-                minutes={line.minutes}
-              />
-              <span :if={!EquipmentItem.takes_hours?(line.equipment_item)} class="text-text-muted">
-                Not counted
-              </span>
-            </:col>
-          </.table>
+            items={@items}
+            team={@current_team}
+          />
           <p :if={@items == []} class="hint">No items.</p>
           <p class="action">
             <.a
@@ -148,20 +140,13 @@ defmodule Web.TemplateLive do
 
         <section id="template-groups" class="mt-8">
           <h2 class="heading">Groups · {length(@template.template_groups)}</h2>
-          <.table
+          <.groups_table
             :if={@template.template_groups != []}
             id="template-groups-table"
-            rows={Template.groups(@template)}
-            row_id={&"group-#{&1.id}"}
-            class="table-striped"
-          >
-            <:col :let={group} label="Group">
-              <.group_cell group={group} team={@current_team} />
-            </:col>
-            <:col :let={group} label="Members" class="w-px whitespace-nowrap" align="right">
-              <span id={"group-#{group.id}-members"}>{Map.get(@member_counts, group.id, 0)}</span>
-            </:col>
-          </.table>
+            groups={Template.groups(@template)}
+            member_counts={@member_counts}
+            team={@current_team}
+          />
           <p :if={@template.template_groups == []} class="hint">No groups.</p>
           <p class="action">
             <.a
@@ -196,6 +181,48 @@ defmodule Web.TemplateLive do
         </section>
       </main>
     </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :items, :list, required: true, doc: "template items, with their equipment items"
+  attr :team, :map, required: true
+  attr :link, :boolean, default: true, doc: "false on a form, which a link would leave"
+
+  @doc "A template's items and their hours. Shared with Add activity (#747)."
+  def items_table(assigns) do
+    ~H"""
+    <.table id={@id} rows={@items} row_id={&"item-#{&1.id}"} class="table-striped">
+      <:col :let={line} label="Item">
+        <.item_cell item={line.equipment_item} team={@team} link={@link} />
+      </:col>
+      <:col :let={line} label="Hours" align="right" class="w-px whitespace-nowrap">
+        <.hours_cell :if={EquipmentItem.takes_hours?(line.equipment_item)} minutes={line.minutes} />
+        <span :if={!EquipmentItem.takes_hours?(line.equipment_item)} class="text-text-muted">
+          Not counted
+        </span>
+      </:col>
+    </.table>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :groups, :list, required: true
+  attr :member_counts, :map, required: true, doc: "from GroupMember.counts/1"
+  attr :team, :map, required: true
+  attr :link, :boolean, default: true, doc: "false on a form, which a link would leave"
+
+  @doc "A template's groups and how many members each has. Shared with Add activity (#747)."
+  def groups_table(assigns) do
+    ~H"""
+    <.table id={@id} rows={@groups} row_id={&"group-#{&1.id}"} class="table-striped">
+      <:col :let={group} label="Group">
+        <.group_cell group={group} team={@team} link={@link} />
+      </:col>
+      <:col :let={group} label="Members" class="w-px whitespace-nowrap" align="right">
+        <span id={"group-#{group.id}-members"}>{Map.get(@member_counts, group.id, 0)}</span>
+      </:col>
+    </.table>
     """
   end
 

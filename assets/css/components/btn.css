@@ -113,6 +113,11 @@
     background-origin: content-box;
   }
 
+  /* Yellow means the keyboard. A button a script focuses after a click or a tap, such as
+     a dialog's Cancel, keeps its own look until a key is pressed (pointer_focus.js). */
+  :root[data-pointer] .btn:focus-visible { background: var(--btn-bg); color: var(--btn-fg); box-shadow: 0 2px 0 var(--btn-edge); }
+  :root[data-pointer] .btn-link:focus-visible { box-shadow: none; text-decoration: underline; }
+
   .btn:disabled, .btn[disabled], .btn-disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* Busy: while a phx-disable-with button waits, LiveView gives it its loading class, so it

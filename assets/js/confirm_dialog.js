@@ -9,12 +9,6 @@ export function listenForConfirms() {
   if (!dialog?.showModal) return
   let pending = null
 
-  // Whether the dialog was opened with a mouse or a finger, not a key.
-  let pointer = false
-  window.addEventListener("pointerdown", () => { pointer = true }, true)
-  window.addEventListener("keydown", () => { pointer = false }, true)
-  dialog.addEventListener("keydown", () => { delete dialog.dataset.pointer })
-
   window.addEventListener("phoenix.link.click", event => {
     const button = event.target
     const message = button.getAttribute?.("data-confirm")
@@ -23,7 +17,6 @@ export function listenForConfirms() {
     event.stopPropagation()
     if (button === pending) return
     event.preventDefault()
-    dialog.toggleAttribute("data-pointer", pointer)
     ask(dialog, button, message)
   }, true)
 
@@ -35,6 +28,21 @@ export function listenForConfirms() {
     button.click()
     pending = null
   })
+}
+
+// A question the server asks (#747), in the same dialog: <.confirm_dialog
+// phx-hook="AskDialog" data-confirm-event="…" data-cancel-event="…">. It opens once it's
+// on the page, and closing it sends the event for the answer. Escape is Cancel.
+export const AskDialog = {
+  mounted() {
+    this.el.addEventListener("close", () => {
+      const {confirmEvent, cancelEvent} = this.el.dataset
+      const event = this.el.returnValue === "confirm" ? confirmEvent : cancelEvent
+      if (event) this.pushEvent(event, {})
+    })
+    this.el.showModal()
+    this.el.querySelector("button[value=cancel]").focus()
+  },
 }
 
 // The action waits on the check box or the typed text, in the page's dialog and in the
@@ -100,7 +108,7 @@ function ask(dialog, button, message) {
   lock(dialog)
 
   // Cancel takes focus, so Return cancels, as Apple's alerts do for a delete. Opened
-  // with a mouse or a finger it keeps its own look until a key is pressed (messages.css).
+  // with a mouse or a finger it keeps its own look until a key is pressed (pointer_focus.js).
   dialog.showModal()
   ;(type.hidden ? dialog.querySelector("button[value=cancel]") : type.querySelector("input")).focus()
 }
