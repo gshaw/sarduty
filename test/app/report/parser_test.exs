@@ -138,6 +138,11 @@ defmodule App.Report.ParserTest do
       refute Query.page_clauses?(query)
     end
 
+    test "a sort may be named id: its name is only the sort's value in the URL" do
+      {:ok, query} = Parser.parse("select title from activities\nsort id 'ID' ref_id")
+      assert [%{value: "id"}] = query.sorts
+    end
+
     defp page_error(text), do: text |> Parser.parse() |> then(fn {:error, e} -> Error.text(e) end)
 
     test "says what's wrong with them" do

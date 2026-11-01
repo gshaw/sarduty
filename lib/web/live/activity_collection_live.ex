@@ -1,42 +1,52 @@
 defmodule Web.ActivityCollectionLive do
+  @moduledoc """
+  Activities, drawn by its report (#784): the tiles, search, filters, sorts, and pages
+  are the clauses in `App.Report.Lists.activities/0`, run by `App.Report.page/4`. The
+  cells, Add activity, and Save as report stay here.
+  """
   use Web, {:live_view_app_layout, access: :team, view_events: ["change"]}
 
-  import Web.Components.ActivityFilterTable
+  import Web.Components.ActivityTable
+  import Web.Components.ReportPage
 
   alias App.Model.Attendance
-  alias App.ViewModel.ActivityFilterViewModel
+  alias App.Model.ChoreEvent
+  alias App.Model.Team
+  alias App.Report
+  alias App.Report.Error
+  alias App.Report.Lists
+  alias App.ViewData.ReportRecords
+  alias Web.Components.ReportPage
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, page_title: "Activities")}
   end
 
   # Members open it too (#406) and get the same list, filters, and default as a team
-  # admin. Team admins also get Add activity and the Templates tab.
+  # admin. Team admins also get Add activity and Save as report.
   def handle_params(params, _uri, socket) do
-    case ActivityFilterViewModel.validate(params) do
-      # credo:disable-for-next-line
-      {:ok, filter_options, changeset} ->
-        current_team = socket.assigns.current_team
+    team = socket.assigns.current_team
+    now = DateTime.utc_now()
+    given = Map.drop(params, ["subdomain"])
 
-        paginated = build_paginated_content(socket.assigns, filter_options)
+    case Report.page(Lists.activities().query, team, given, now) do
+      {:ok, view} ->
+        view = without_chores_tile(view, team)
+        activities = activities(view, team, now)
 
-        socket =
-          socket
-          |> assign(:sort, filter_options.sort)
-          |> assign(:when, filter_options.when)
-          |> assign(:paginated, paginated)
-          |> assign(:counts, need_counts(current_team, paginated.entries))
-          |> assign(
-            :kind_counts,
-            ActivityFilterViewModel.kind_counts(current_team, nil, filter_options)
-          )
-          |> assign(:path_fn, build_path_fn(current_team, filter_options))
-          |> assign(:form, to_form(changeset, as: "form"))
+        {:noreply,
+         assign(socket,
+           view: view,
+           activities: activities,
+           counts: need_counts(team, activities),
+           form: ReportPage.controls_form(view),
+           path_fn: &ReportPage.path(view, ~p"/teams/#{team}/activities", &1),
+           save_path: ~p"/teams/#{team}/reports/new?#{Map.put(view.params, "list", "activities")}"
+         )}
 
-        {:noreply, socket}
-
-      {:error, _} ->
-        raise Web.Status.NotFound
+      # The list's own text failing is a bug, not a bad URL; a test runs it.
+      {:error, error} ->
+        raise "Activities' report: #{Error.text(error)}"
     end
   end
 
@@ -52,45 +62,65 @@ defmodule Web.ActivityCollectionLive do
         >
           Add activity
         </.button>
+        <.button :if={@team_admin?} id="activity-save-report" navigate={@save_path}>
+          Save as report
+        </.button>
       </:action>
     </.heading_row>
 
-    <.activity_filter_table
-      form={@form}
-      paginated={@paginated}
-      sort={@sort}
-      path_fn={@path_fn}
+    <.report_page
+      id="activity"
+      view={@view}
+      records={%{}}
       team={@current_team}
-      kind_counts={@kind_counts}
-      counts={@counts}
-    />
+      now={nil}
+      path_fn={@path_fn}
+      form={@form}
+      marker={&marker/1}
+    >
+      <:table>
+        <.activity_table
+          rows={@activities}
+          sort={@view.sort}
+          path_fn={@path_fn}
+          team={@current_team}
+          hours={picked(@view, "hours")}
+          counts={@counts}
+        />
+      </:table>
+    </.report_page>
     """
   end
 
-  def handle_event("change", %{"form" => form_params}, socket) do
-    form_params = sort_for_new_when(form_params, socket.assigns.when)
-
-    case ActivityFilterViewModel.validate(form_params) do
-      {:ok, filter_options, _changeset} ->
-        current_team = socket.assigns.current_team
-        path = build_filter_path(current_team, filter_options)
-        {:noreply, push_patch(socket, to: path, replace: true)}
-
-      {:error, _changeset} ->
-        raise Web.Status.NotFound
-    end
+  def handle_event("change", %{"values" => values}, socket) do
+    path = socket.assigns.path_fn.([{:page, nil} | Map.to_list(values)])
+    {:noreply, push_patch(socket, to: path, replace: true)}
   end
 
-  # Picking Past or Future also picks the sort, so Future doesn't open on next year.
-  defp sort_for_new_when(%{"when" => new_when} = form_params, old_when)
-       when new_when != old_when do
-    case ActivityFilterViewModel.sort_for_when(new_when) do
-      nil -> form_params
-      sort -> Map.put(form_params, "sort", sort)
-    end
+  # The rows hold the activities' ids; the cells read the activities, each chore activity
+  # with its members' minutes (#575).
+  defp activities(view, team, now) do
+    records = view.result |> ReportRecords.load(team, now) |> Map.get(:activity, %{})
+
+    view.result.rows
+    |> Enum.map(fn [id | _] -> Map.fetch!(records, id) end)
+    |> ChoreEvent.put_chore_minutes(team.id)
   end
 
-  defp sort_for_new_when(form_params, _old_when), do: form_params
+  # Chores only on a team that logs them, or once had chore activities in this view.
+  defp without_chores_tile(%{switch: switch} = view, team) do
+    chores? =
+      Team.chores?(team) or Enum.any?(switch.tiles, &(&1.value == "chores" and &1.count > 0))
+
+    tiles = Enum.reject(switch.tiles, &(&1.value == "chores" and not chores?))
+    %{view | switch: %{switch | tiles: tiles}}
+  end
+
+  # Each kind's tile has its marker, as the rows show it.
+  defp marker("all"), do: nil
+  defp marker(kind), do: kind
+
+  defp picked(view, name), do: Enum.find_value(view.filters, &(&1.name == name && &1.picked))
 
   # The counts for the badges after a title (#447), for activities with Enough at or Full at.
   defp need_counts(team, activities) do
@@ -98,23 +128,5 @@ defmodule Web.ActivityCollectionLive do
       [] -> %{}
       ids -> Attendance.reply_counts(team, ids)
     end
-  end
-
-  defp build_paginated_content(%{current_team: team}, filter_options),
-    do: ActivityFilterViewModel.build_paginated_content(team, nil, filter_options)
-
-  def build_path_fn(team, filter_options) do
-    fn
-      :all ->
-        build_filter_path(team, %ActivityFilterViewModel{})
-
-      changed_options ->
-        build_filter_path(team, Map.merge(filter_options, Map.new(changed_options)))
-    end
-  end
-
-  def build_filter_path(team, filter_options) do
-    query_params = Service.PathHelpers.build_filter_query_params(filter_options)
-    ~p"/teams/#{team}/activities?#{query_params}"
   end
 end

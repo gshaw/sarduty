@@ -6,7 +6,7 @@ defmodule Web.Components.ReportPage do
 
   On the report's page, each control is a link or a form whose change patches the URL.
   In the editor, `click` turns them into events, so a pick changes the preview, not the
-  page.
+  page. A list such as Activities draws its own cells in the `table` slot.
   """
   use Web, :function_component
 
@@ -32,6 +32,9 @@ defmodule Web.Components.ReportPage do
 
   attr :form, :any, default: nil, doc: "the controls' form, from `controls_form/1`"
   attr :count, :string, default: nil, doc: "the line over the rows, when not the count"
+  attr :marker, :any, default: nil, doc: "a tile's value to its marker, or nil for none"
+
+  slot :table, doc: "the page's own table for the rows, in place of the report's cells"
 
   def report_page(assigns) do
     assigns = assign(assigns, bar?: assigns.view.search? or assigns.view.filters != [])
@@ -45,6 +48,7 @@ defmodule Web.Components.ReportPage do
         click={!@path_fn && pick(@view.switch.name, tile.value)}
         current={@view.switch.picked == tile.value}
         count={tile.count}
+        marker={@marker && @marker.(tile.value)}
       >
         {tile.label}
       </:view>
@@ -95,8 +99,10 @@ defmodule Web.Components.ReportPage do
 
     <p :if={!@bar? or !@path_fn} id={"#{@id}-count"} class="hint">{@count || count(@view)}</p>
 
+    {render_slot(@table)}
+
     <.report_table
-      :if={@view.result.rows != []}
+      :if={@table == [] and @view.result.rows != []}
       id={"#{@id}-rows"}
       result={@view.result}
       records={@records}

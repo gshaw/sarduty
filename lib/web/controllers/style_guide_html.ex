@@ -3,7 +3,7 @@ defmodule Web.StyleGuideHTML do
 
   import Web.Components.ActivityMap, only: [activity_map: 1]
   import Web.Components.ActivityPanel
-  import Web.Components.ActivityFilterTable, only: [activity_table: 1]
+  import Web.Components.ActivityTable
   import Web.Components.Breadcrumbs
   import Web.Components.Chart
   import Web.Components.CopyButton
@@ -24,6 +24,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.Phone, only: [phone: 1]
   import Web.Components.Place, only: [place_field: 1]
   import Web.Components.Reply, only: [reply: 1]
+  import Web.Components.ReportPage, only: [report_page: 1]
   import Web.Components.RowLink
   import Web.Components.Search, only: [search_box: 1]
   import Web.Components.Scanner
@@ -423,6 +424,7 @@ defmodule Web.StyleGuideHTML do
   defdelegate panel_counts(), to: SampleData
   defdelegate sample_page(), to: SampleData
   defdelegate sample_filters(), to: SampleData
+  defdelegate sample_activity_view(), to: SampleData
   defdelegate sample_filter_page(), to: SampleData
   defdelegate sample_kinds(), to: SampleData
   defdelegate sample_whens(), to: SampleData

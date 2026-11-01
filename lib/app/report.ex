@@ -11,6 +11,7 @@ defmodule App.Report do
   """
 
   alias App.Model.Team
+  alias App.Report.Catalog
   alias App.Report.Compiler
   alias App.Report.Context
   alias App.Report.Error
@@ -29,7 +30,7 @@ defmodule App.Report do
   def run(text, %Team{} = team, given \\ %{}, now \\ DateTime.utc_now()) do
     context = Context.new(team, now)
 
-    with {:ok, query} <- Parser.parse(text),
+    with {:ok, query} <- parse(text, context),
          :ok <- check_page(query, context, given) do
       picks = Picks.resolve(query, given, context.today)
 
@@ -43,7 +44,7 @@ defmodule App.Report do
   def check(text, %Team{} = team, given \\ %{}, now \\ DateTime.utc_now()) do
     context = Context.new(team, now)
 
-    with {:ok, query} <- Parser.parse(text),
+    with {:ok, query} <- parse(text, context),
          :ok <- check_page(query, context, given) do
       picks = Picks.resolve(query, given, context.today)
       query |> Picks.plain(picks) |> Compiler.compile(context, picks.given)
@@ -58,13 +59,50 @@ defmodule App.Report do
   def page(text, %Team{} = team, given \\ %{}, now \\ DateTime.utc_now()) do
     context = Context.new(team, now)
 
-    with {:ok, query} <- Parser.parse(text),
+    with {:ok, query} <- parse(text, context),
          :ok <- check_page(query, context, given),
          {:ok, menus} <- menus(query, context),
          {:ok, starts} <- starts(query, given, menus, context) do
       picks = Picks.resolve(query, given, context.today, menus)
       build_view(query, picks, menus, starts, context)
     end
+  end
+
+  defp parse(text, context) do
+    with {:ok, query} <- Parser.parse(text), do: {:ok, visible(query, context)}
+  end
+
+  # The page without the options, sorts, and search fields that read a field the team may
+  # not read, and a filter left with no choices, as Records teams have no Required fields.
+  defp visible(%Query{from: from} = query, context) do
+    case Catalog.subject(from) do
+      nil -> query
+      subject -> drop_hidden(query, &Catalog.reads_hidden?(subject, &1, context))
+    end
+  end
+
+  defp drop_hidden(query, hidden?) do
+    filters =
+      query.filters
+      |> Enum.map(&visible_filter(&1, hidden?))
+      |> Enum.reject(&(&1.options == [] and &1.each == nil))
+
+    %{
+      query
+      | search: Enum.reject(query.search, hidden?),
+        filters: filters,
+        sorts: Enum.reject(query.sorts, &hidden?.(&1.order))
+    }
+  end
+
+  defp visible_filter(filter, hidden?) do
+    each = filter.each && !hidden?.({filter.each.expr, filter.each.where}) && filter.each
+
+    %{
+      filter
+      | options: Enum.reject(filter.options, &hidden?.(&1.where)),
+        each: each || nil
+    }
   end
 
   # What each control starts on, whatever the URL picks, so a URL leaves it out: the sort

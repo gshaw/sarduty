@@ -24,6 +24,9 @@ defmodule App.Model.SavedReport do
   @max_name 80
   @max_about 200
 
+  @doc "The longest a name may be."
+  def max_name, do: @max_name
+
   @doc "A changeset for what a team admin types: name, about, query, and picked values."
   def changeset(%SavedReport{} = report, params) do
     report
