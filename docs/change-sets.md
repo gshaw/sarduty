@@ -68,7 +68,8 @@ new kind of write is a new row action there, not a new call from a page or an op
   and the applier skips one D4H has changed since; a row D4H has deleted already is
   done. Before the start, on a draft only. The copy loses the rows D4H deleted, and a
   signed up member with an email and no row left gets the team admin's message, which is
-  also the rows' reason.
+  also the rows' reason. A team admin who told them already can send no email, as an
+  exception; the message is still required, for History.
 - **Chores are a set per event** (source `chores`, #341): a team admin's decision on a
   chore makes or rebuilds its chore category's D4H event for the month. A new event's
   set creates the activity, then its attendance: those rows say `created_in_set` and get

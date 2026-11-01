@@ -18,8 +18,10 @@ defmodule Web.ActivityRemoveMembersLive do
   # reply, each with select all, and nothing checked. No reply and Can't make it come
   # first, since removing them emails nobody. A checked signed up member with an email
   # needs the team admin's message, which SAR Duty emails them; one with no email gets
-  # nothing, and the page says to tell them. Only before the start, on an activity
-  # neither deleted nor published.
+  # nothing, and the page says to tell them. A team admin who told them already sends no
+  # email only once they select the box that says they meant it, as with their own chores
+  # (#697); the message is still required, for History. Only before the start, on an
+  # activity neither deleted nor published.
   def mount(%{"id" => id}, _session, socket) do
     %{current_team: team, current_user: user} = socket.assigns
     activity = Web.ActivityLive.fetch_activity(team, id)
@@ -35,6 +37,7 @@ defmodule Web.ActivityRemoveMembersLive do
            sender: SendReminders.sender(team, user, now),
            selected: MapSet.new(),
            message: "",
+           skip_email: false,
            now: now
          )
          |> assign_rows(ActivityMembers.load(activity))
@@ -65,21 +68,25 @@ defmodule Web.ActivityRemoveMembersLive do
         do: {status, group}
   end
 
-  # Who of the checked gets an email, and the signed up members who can't.
+  # The checked signed up members who need a message, who of them gets it by email, and
+  # those SAR Duty can't email.
   defp assign_checked(socket) do
     %{selected: selected, shown: shown, members: members} = socket.assigns
     checked = for id <- selected, member = members[id], do: {member, shown[id]}
     signed_up = for {member, "attending"} <- checked, do: member
-    {emailed, no_email} = Enum.split_with(signed_up, &RemoveMembers.email?/1)
+    {messaged, no_email} = signed_up |> by_name() |> Enum.split_with(&RemoveMembers.email?/1)
 
     socket
     |> assign(
       checked: checked,
-      emailed: Enum.sort_by(emailed, &String.downcase(&1.name)),
-      no_email: Enum.sort_by(no_email, &String.downcase(&1.name))
+      messaged: messaged,
+      emailed: if(socket.assigns.skip_email, do: [], else: messaged),
+      no_email: no_email
     )
     |> assign_preview()
   end
+
+  defp by_name(members), do: Enum.sort_by(members, &String.downcase(&1.name))
 
   defp assign_preview(socket) do
     %{activity: activity, current_team: team, sender: sender, message: message} =
@@ -112,7 +119,8 @@ defmodule Web.ActivityRemoveMembersLive do
      socket
      |> assign(
        selected: params |> selected_ids() |> MapSet.new(),
-       message: Map.get(params, "message", socket.assigns.message)
+       message: Map.get(params, "message", socket.assigns.message),
+       skip_email: params["skip_email"] == "true"
      )
      |> assign_checked()}
   end
@@ -122,8 +130,10 @@ defmodule Web.ActivityRemoveMembersLive do
   def handle_event("remove", params, socket) do
     %{current_team: team, current_user: user, activity: activity} = socket.assigns
     checked = checked_ids(params, socket.assigns.shown)
+    opts = [email: params["skip_email"] != "true"]
+    now = DateTime.utc_now()
 
-    case RemoveMembers.call(team, activity, checked, params["message"], user, DateTime.utc_now()) do
+    case RemoveMembers.call(team, activity, checked, params["message"], user, now, opts) do
       {:ok, result} ->
         {:noreply,
          socket
@@ -226,18 +236,31 @@ defmodule Web.ActivityRemoveMembersLive do
         </.table>
       </div>
 
-      <div :if={@emailed != []} class="measure">
+      <div :if={@messaged != []} class="measure">
         <.input
           id="remove-message"
           name="message"
           type="textarea"
-          label={"Message to #{to_text(@emailed)}"}
+          label={message_label(@messaged, @skip_email)}
           value={@message}
           rows="4"
           maxlength={Message.max_length()}
           phx-debounce="300"
         >
-          Required to remove a signed up member. SAR Duty emails it, and the activity's history keeps it. Up to {Message.limit_text()}.
+          <%= if @skip_email do %>
+            Required. Nobody gets an email, and the activity's history keeps it. Up to {Message.limit_text()}.
+          <% else %>
+            Required to remove a signed up member. SAR Duty emails it, and the activity's history keeps it. Up to {Message.limit_text()}.
+          <% end %>
+        </.input>
+        <.input
+          type="checkbox"
+          id="remove-skip-email"
+          name="skip_email"
+          value={@skip_email}
+          label="Remove without emailing them"
+        >
+          I know members who signed up should get my message by email. I'm making an exception.
         </.input>
       </div>
 
@@ -306,6 +329,9 @@ defmodule Web.ActivityRemoveMembersLive do
 
   defp remove_text(count),
     do: Format.count(count, one: "Remove 1 member", many: "Remove %d members")
+
+  defp message_label(members, false = _skip_email), do: "Message to #{to_text(members)}"
+  defp message_label(members, true), do: "Why you removed #{to_text(members)}"
 
   defp to_text([member]), do: member.name
   defp to_text(members), do: "#{length(members)} signed up members"

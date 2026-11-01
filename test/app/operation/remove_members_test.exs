@@ -26,7 +26,7 @@ defmodule App.Operation.RemoveMembersTest do
   defp row(member, id, status),
     do: %Attendance{id: id, member_id: member.id, d4h_attendance_id: 900 + id, status: status}
 
-  describe "plan/3" do
+  describe "plan/4" do
     test "each member goes with all their rows, each with its own status (K)" do
       jordan = member(1)
       rows = [row(jordan, 1, "attending"), row(jordan, 2, "requested")]
@@ -78,6 +78,19 @@ defmodule App.Operation.RemoveMembersTest do
 
       assert plan.remove |> RemoveMembers.rows(nil) |> Enum.all?(&(&1.reason == nil))
     end
+
+    # The exception: they were told already. The message still goes to History.
+    test "with no email, a signed up member still needs the message, as the reason" do
+      drew = member(1)
+      rows = [row(drew, 1, "attending")]
+
+      assert {:error, :no_message} = RemoveMembers.plan([{drew, "attending"}], rows, nil, false)
+
+      assert {:ok, %{remove: [%{message?: true, email?: false}] = remove}} =
+               RemoveMembers.plan([{drew, "attending"}], rows, "Told them", false)
+
+      assert [%ChangeSetRow{reason: "Told them"}] = RemoveMembers.rows(remove, "Told them")
+    end
   end
 
   test "result_text names who gets the email and each member not removed (L)" do
@@ -98,7 +111,7 @@ defmodule App.Operation.RemoveMembersTest do
              "Nobody was removed. Eli Haddad was off the activity already."
   end
 
-  describe "call/6" do
+  describe "call/7" do
     setup do
       %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: "team-key"}})
       now = DateTime.utc_now()
@@ -170,6 +183,25 @@ defmodule App.Operation.RemoveMembersTest do
 
       reasons = ChangeSetRow |> Repo.all() |> Map.new(&{&1.member_id, &1.reason})
       assert reasons == %{ctx.drew.id => "Sorry", ctx.sam.id => nil, ctx.wren.id => nil}
+    end
+
+    test "email: false removes a signed up member with no email, keeping the reason", ctx do
+      ctx.rows |> Map.values() |> AttendanceStub.stub()
+
+      assert {:ok, %{removed: [_drew], emailed: []}} =
+               RemoveMembers.call(
+                 ctx.team,
+                 ctx.activity,
+                 checked(ctx, drew: "attending"),
+                 "Told them on the phone",
+                 ctx.user,
+                 ctx.now,
+                 email: false
+               )
+
+      assert Repo.all(ActivityUpdate) == []
+      refute_received {:email, _}
+      assert [%ChangeSetRow{reason: "Told them on the phone"}] = Repo.all(ChangeSetRow)
     end
 
     test "a member with a row D4H changed stays on, gets no email, and is named (H3)", ctx do

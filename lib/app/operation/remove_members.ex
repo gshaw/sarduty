@@ -7,9 +7,10 @@ defmodule App.Operation.RemoveMembers do
   No reply and Can't make it members go with no email. A signed up member who has an
   email gets the team admin's message, which is required for them and kept as the rows'
   reason; one with no email gets nothing, and the page says to tell them. A member's
-  email goes only once none of their rows is left.
+  email goes only once none of their rows is left. A team admin who told them already
+  can send no email, as an exception: the message is still required, for History.
 
-  plan/3 decides who goes, pure; call/6 reads and writes.
+  plan/4 decides who goes, pure; call/7 reads and writes.
   """
 
   import Ecto.Query
@@ -32,34 +33,39 @@ defmodule App.Operation.RemoveMembers do
   Who goes, from `checked`, each `{%Member{}, status}` with the D4H status the page
   showed for them, and `rows`, the copy's rows on the activity in any status.
 
-  `{:ok, %{remove: [%{member:, rows:, email?:}], not_removed: [{member, reason}]}}`. A
-  member is left out as `:changed` when their row (`Attendance.one_per_member/1`) no
-  longer has the status shown, and as `:gone` with no row at all. Each member goes with
-  every row they have: D4H allows two (#520), and one left keeps them on. `email?` is a
-  signed up member with an email. `{:error, :no_message}` when one gets an email and
-  `message` is nil.
+  `{:ok, %{remove: [%{member:, rows:, message?:, email?:}], not_removed: [{member,
+  reason}]}}`. A member is left out as `:changed` when their row
+  (`Attendance.one_per_member/1`) no longer has the status shown, and as `:gone` with no
+  row at all. Each member goes with every row they have: D4H allows two (#520), and one
+  left keeps them on. `message?` is a signed up member with an email, and `email?` one
+  who gets it, unless `email` is false. `{:error, :no_message}` when one needs a message
+  and `message` is nil.
   """
-  def plan(checked, rows, message) do
+  def plan(checked, rows, message, email \\ true) do
     by_member = Enum.group_by(rows, & &1.member_id)
 
     {remove, not_removed} =
       checked
       |> Enum.uniq_by(fn {member, _status} -> member.id end)
-      |> Enum.map(fn {member, shown} -> plan_member(member, shown, by_member[member.id]) end)
+      |> Enum.map(fn {member, shown} ->
+        plan_member(member, shown, by_member[member.id], email)
+      end)
       |> Enum.split_with(&is_map/1)
 
-    if message == nil and Enum.any?(remove, & &1.email?),
+    if message == nil and Enum.any?(remove, & &1.message?),
       do: {:error, :no_message},
       else: {:ok, %{remove: remove, not_removed: not_removed}}
   end
 
-  defp plan_member(member, _shown, nil), do: {member, :gone}
+  defp plan_member(member, _shown, nil, _email), do: {member, :gone}
 
-  defp plan_member(member, shown, rows) do
+  defp plan_member(member, shown, rows, email) do
     [row] = Attendance.one_per_member(rows)
 
+    message? = shown == "attending" and email?(member)
+
     if row.status == shown,
-      do: %{member: member, rows: rows, email?: shown == "attending" and email?(member)},
+      do: %{member: member, rows: rows, message?: message?, email?: message? and email},
       else: {member, :changed}
   end
 
@@ -67,17 +73,17 @@ defmodule App.Operation.RemoveMembers do
   def email?(%Member{email: email}), do: email not in [nil, ""]
 
   @doc """
-  The rows that take plan/3's `remove` off the activity. Each keeps the status of its own
-  row in the copy, so the applier skips one D4H has changed since. A member who gets the
-  email has it as their rows' reason, for the activity's history.
+  The rows that take plan/4's `remove` off the activity. Each keeps the status of its own
+  row in the copy, so the applier skips one D4H has changed since. A member who needs
+  the message has it as their rows' reason, for the activity's history, emailed or not.
   """
   def rows(remove, message) do
-    for %{member: member, rows: rows, email?: email?} <- remove, row <- rows do
+    for %{member: member, rows: rows, message?: message?} <- remove, row <- rows do
       %ChangeSetRow{
         action: :delete_attendance,
         member_id: member.id,
         d4h_record_id: row.d4h_attendance_id,
-        reason: if(email?, do: message),
+        reason: if(message?, do: message),
         old_value: %{"d4h_member_id" => member.d4h_member_id, "status" => row.status},
         new_value: %{}
       }
@@ -86,8 +92,9 @@ defmodule App.Operation.RemoveMembers do
 
   @doc """
   Removes the checked members, each `{member_id, status}` with the status the page
-  showed, from `user`. `{:ok, %{removed: members, emailed: members, not_removed:
-  [{member, reason}]}}`, where the reason is `:changed`, `:gone`, or D4H's refusal.
+  showed, from `user`. `email: false` in `opts` sends no email. `{:ok, %{removed:
+  members, emailed: members, not_removed: [{member, reason}]}}`, where the reason is
+  `:changed`, `:gone`, or D4H's refusal.
   `{:error, reason}` for nobody checked (`:none_selected`), a missing or long message
   (`:no_message`, `:message_too_long`), an activity that is deleted (`:deleted`), has
   started (`:started`), or is published (`:published`), or when D4H refuses; error_text/2
@@ -99,10 +106,12 @@ defmodule App.Operation.RemoveMembers do
         checked,
         message,
         %User{} = user,
-        now
+        now,
+        opts \\ []
       )
       when team_id == team.id do
     message = Message.normalize(message)
+    email = Keyword.get(opts, :email, true)
 
     cond do
       activity.deleted_at -> {:error, :deleted}
@@ -110,12 +119,12 @@ defmodule App.Operation.RemoveMembers do
       activity.is_published -> {:error, :published}
       checked == [] -> {:error, :none_selected}
       not Message.fits?(message) -> {:error, :message_too_long}
-      true -> remove(team, activity, scope(team, checked), message, user, now)
+      true -> remove(team, activity, scope(team, checked), {message, email}, user, now)
     end
   end
 
-  defp remove(team, activity, checked, message, user, now) do
-    with {:ok, plan} <- plan(checked, copy_rows(activity), message),
+  defp remove(team, activity, checked, {message, email}, user, now) do
+    with {:ok, plan} <- plan(checked, copy_rows(activity), message, email),
          {:ok, rows} <- apply_plan(team, activity, plan, message, user, now) do
       {:ok, finish(activity, plan, rows, user, message, now)}
     end
@@ -201,7 +210,7 @@ defmodule App.Operation.RemoveMembers do
   end
 
   @doc """
-  What call/6 did, as one line: "4 members removed. Drew Patel gets your email.", then
+  What call/7 did, as one line: "4 members removed. Drew Patel gets your email.", then
   each member not removed, with why.
   """
   def result_text(%{removed: removed, emailed: emailed, not_removed: not_removed}) do
@@ -241,7 +250,7 @@ defmodule App.Operation.RemoveMembers do
 
   defp names(members), do: members |> Enum.map(& &1.name) |> Format.and_list()
 
-  @doc "What to show for call/6's `{:error, reason}`."
+  @doc "What to show for call/7's `{:error, reason}`."
   def error_text(_team, :none_selected), do: "Select at least 1 member to remove."
   def error_text(_team, :no_message), do: "Enter a message for the signed up members."
   def error_text(_team, :message_too_long), do: Message.error_text()
