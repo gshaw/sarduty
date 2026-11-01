@@ -2,7 +2,8 @@ defmodule App.Report.Runner do
   @moduledoc """
   Runs a plan (App.Report.Compiler) and reads its rows back by type, then makes the
   pivot's columns and the total row in Elixir. A run stops after 2 seconds: SQLite is
-  interrupted, and the report says to narrow it.
+  interrupted, and the report says to narrow it. Any other SQLite error is a bug in the
+  SQL App.Report.Compiler wrote, so it is logged for Honeybadger.
   """
 
   alias App.Repo
@@ -12,6 +13,8 @@ defmodule App.Report.Runner do
   alias App.Report.Result
   alias Service.Format
 
+  require Logger
+
   @timeout 2_000
 
   @doc "`{:ok, %Result{}}`, or `{:error, %Error{}}` when it takes too long or makes too many columns."
@@ -20,8 +23,12 @@ defmodule App.Report.Runner do
       {:ok, %{rows: rows}} ->
         shape(plan, rows, timezone)
 
-      {:error, _reason} ->
+      {:error, %Exqlite.Error{message: "interrupted"}} ->
         {:error, Error.new(nil, "Narrow the report with where: it took longer than 2 seconds.")}
+
+      {:error, reason} ->
+        Logger.error("Report could not run: #{Exception.message(reason)}")
+        {:error, Error.new(nil, "This report could not run. Try again, or change its query.")}
     end
   end
 

@@ -287,6 +287,9 @@ defmodule App.Report.Compiler do
     {sql, Enum.map(params, &SQL.param/1)}
   end
 
+  # count(id) with nothing to group by counts every row, with no GROUP BY at all.
+  defp group_by([]), do: nil
+
   defp group_by(es),
     do: SQL.join([{" GROUP BY ", []}, SQL.join(Enum.map(es, &Expr.id_sql/1), ", ")])
 

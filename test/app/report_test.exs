@@ -2,12 +2,15 @@ defmodule App.ReportTest do
   use App.DataCase, async: true
 
   import App.DataFixtures
+  import ExUnit.CaptureLog
 
   alias App.Model.Activity
   alias App.Model.Member
   alias App.Report
   alias App.Report.Catalog
   alias App.Report.Error
+  alias App.Report.Plan
+  alias App.Report.Runner
 
   @now ~U[2026-06-15 19:00:00Z]
 
@@ -73,6 +76,38 @@ defmodule App.ReportTest do
 
     assert run!("select id from attendance", team).rows == []
     assert run!("select id from attendance", other).rows == []
+  end
+
+  # No group by: one row that counts every row, on the team's records only.
+  test "count without group by counts every row" do
+    team = team_fixture()
+    member_fixture(team)
+    member_fixture(team)
+    member_fixture(team_fixture())
+
+    assert run!("select count(id) from members", team).rows == [[2]]
+    assert run!("select count(id) from members totals", team).totals == [2]
+  end
+
+  # Only an interrupted run took too long. Any other error is bad SQL, logged as a bug. The
+  # slow run goes last: its timeout drops the test's connection.
+  test "a run past the time limit says to narrow it; other errors say it could not run" do
+    log =
+      capture_log(fn ->
+        assert {:error,
+                %Error{message: "This report could not run. Try again, or change its query."}} =
+                 Runner.run(%Plan{sql: "SELECT 1 GROUP BY", params: []}, "Etc/UTC")
+      end)
+
+    assert log =~ "Report could not run: incomplete input"
+
+    slow =
+      "WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c WHERE x < 1000000000) SELECT count(*) FROM c"
+
+    capture_log(fn ->
+      assert {:error, %Error{message: "Narrow the report with where" <> _}} =
+               Runner.run(%Plan{sql: slow, params: []}, "Etc/UTC")
+    end)
   end
 
   test "hours by member pivots by kind, with a total row and column" do
