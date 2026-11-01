@@ -19,7 +19,14 @@ defmodule App.Operation.SaveTeamKey do
     changeset =
       if changeset.valid? do
         new_key = get_change(changeset, :new_d4h_access_key)
-        whoami = D4H.fetch_whoami(access_key: new_key, api_host: team.d4h_api_host)
+
+        whoami =
+          D4H.fetch_whoami(
+            access_key: new_key,
+            api_host: team.d4h_api_host,
+            d4h_team_id: team.d4h_team_id
+          )
+
         check_new_key(changeset, team, whoami, DateTime.utc_now())
       else
         changeset

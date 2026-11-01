@@ -10,7 +10,11 @@ defmodule App.Operation.CheckTeamKey do
   alias App.Model.Team
 
   def call(%Team{} = team) do
-    case D4H.fetch_whoami(access_key: team.d4h_access_key, api_host: team.d4h_api_host) do
+    case D4H.fetch_whoami(
+           access_key: team.d4h_access_key,
+           api_host: team.d4h_api_host,
+           d4h_team_id: team.d4h_team_id
+         ) do
       {:ok, whoami} -> Team.update(team, changes(whoami, team.d4h_team_id, DateTime.utc_now()))
       {:error, reason} -> {:error, reason}
     end

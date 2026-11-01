@@ -184,26 +184,25 @@ defmodule App.Adapter.D4H do
   defp test_options, do: Application.get_env(:sarduty, App.Adapter.D4H, [])
 
   @doc """
-  Who the key belongs to. `{:error, :refused}` when D4H turns the key down (401, 403, or
+  Who the key belongs to, and what D4H lets it do on `d4h_team_id`, or on its first
+  team when that's nil. `{:error, :refused}` when D4H turns the key down (401, 403, or
   no team), and `{:error, :unreachable}` for anything else, so a good key isn't blamed
   for an outage.
   """
-  def fetch_whoami(access_key: access_key, api_host: api_host) do
-    context =
-      [
-        base_url: "https://#{api_host}/v3",
-        headers: %{"User-Agent" => "sarduty.com"},
-        auth: {:bearer, access_key || ""}
-      ]
-      |> Keyword.merge(test_options())
-      |> Req.new()
-      |> report_rate_limits()
+  def fetch_whoami(opts) do
+    access_key = Keyword.fetch!(opts, :access_key)
+    api_host = Keyword.fetch!(opts, :api_host)
+
+    context = whoami_context(access_key, api_host)
 
     case Req.get(context, url: "/whoami", retry: false) do
       {:ok, %{status: 200, body: body}} when is_map(body) ->
         case D4H.WhoAmI.build(body) do
-          %D4H.WhoAmI{} = whoami -> {:ok, whoami}
-          _ -> {:error, :refused}
+          %D4H.WhoAmI{} = whoami ->
+            add_permissions(context, whoami, api_host, opts[:d4h_team_id] || whoami.d4h_team_id)
+
+          _ ->
+            {:error, :refused}
         end
 
       {:ok, %{status: status}} when status in [401, 403] ->
@@ -211,6 +210,37 @@ defmodule App.Adapter.D4H do
 
       _ ->
         {:error, :unreachable}
+    end
+  end
+
+  defp whoami_context(access_key, api_host) do
+    [
+      base_url: "https://#{api_host}/v3",
+      headers: %{"User-Agent" => "sarduty.com"},
+      auth: {:bearer, access_key || ""}
+    ]
+    |> Keyword.merge(test_options())
+    |> Req.new()
+    |> report_rate_limits()
+  end
+
+  # The account's /whoami has no rights; the team's /team/{id}/whoami sends them in
+  # `context.permissions` (#727). Records sends none, and a key for another team has
+  # none to read here.
+  defp add_permissions(context, whoami, api_host, d4h_team_id) do
+    if records?(api_host) or d4h_team_id not in whoami.d4h_team_ids do
+      {:ok, whoami}
+    else
+      case Req.get(context, url: "/team/#{d4h_team_id}/whoami", retry: false) do
+        {:ok, %{status: 200, body: %{"context" => %{"permissions" => %{} = permissions}}}} ->
+          {:ok, %{whoami | permissions: permissions}}
+
+        {:ok, %{status: status}} when status in [401, 403] ->
+          {:error, :refused}
+
+        _ ->
+          {:error, :unreachable}
+      end
     end
   end
 
