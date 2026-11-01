@@ -26,6 +26,19 @@ defmodule App.ViewData.ChangeHistoryTest do
     assert describe_change(change, :activity) == "Jane Doe attendance changed: attended"
   end
 
+  # The same words as a removal in SAR Duty (#704), not as if the activity went.
+  test "a row removed in D4H reads Removed from on the member's page" do
+    change = %{
+      record_kind: :attendance,
+      action: :removed,
+      activity: %{title: "Rope rescue"},
+      member: %{name: "Jane Doe"}
+    }
+
+    assert describe_change(change, :member) == "Removed from Rope rescue"
+    assert describe_change(change, :activity) == "Jane Doe removed from attendance"
+  end
+
   test "an award shows its expiry in the team's time zone" do
     assert describe_change(%{
              record_kind: :award,
