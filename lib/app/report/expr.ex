@@ -410,6 +410,15 @@ defmodule App.Report.Expr do
   defp compare_right(op, l, right, line, st),
     do: compare_sides(op, l, compile(right, st), line, st)
 
+  # A value matched with contains, such as the search box's :q, is text whatever it
+  # meets: compared with tags, it would otherwise be a menu of their titles.
+  defp compare_value(op, l, name, line, st) when op in @matches do
+    given = Map.get(st.given, name)
+    value = %Value{name: name, label: Value.label(name), kind: :text, value: given || ""}
+    r = new("?", [value.value], :value, line, value: value.value)
+    %{match(op, l, r, line) | values: [value | l.values]}
+  end
+
   defp compare_value(op, l, name, line, st) do
     value = value(name, l, st)
     r = new("?", [value_param(value, l)], :value, line, value: value.value)
@@ -422,9 +431,6 @@ defmodule App.Report.Expr do
 
   defp value_compare(:date, _op, _l, _r, value, line, _st),
     do: fail(line, "Compare :#{value.name} with =, <, or >.")
-
-  defp value_compare(_kind, op, l, r, _value, line, _st) when op in @matches,
-    do: match(op, l, r, line)
 
   defp value_compare(_kind, op, l, r, _value, line, st), do: compare_sides(op, l, r, line, st)
 
@@ -481,16 +487,24 @@ defmodule App.Report.Expr do
   defp choice_list(choices), do: Enum.map_join(choices, ", ", &"'#{elem(&1, 0)}'")
 
   defp match(op, l, r, line) do
-    unless text_like?(l) or l.type == :choice,
+    unless text_like?(l) or l.type in [:choice, :list],
       do: fail(line, "Use #{op_sql(op)} with a text field, such as title contains 'river'.")
 
     unless r.type in [:text_literal, :value],
       do: fail(line, "Write text in quotes after #{op_sql(op)}, such as '#{op_example(op)}'.")
 
     {sql, params} = compared_sql(l)
-    {match_sql, match_params} = match_sql(op, sql, Map.get(r, :value) || "")
+    {match_sql, match_params} = list_match(l.type, op, sql, Map.get(r, :value) || "")
     uses(new(match_sql, params ++ match_params, :condition, line), [l, r])
   end
+
+  # A list matches when one of its titles does, so a search can look in tags (#784).
+  defp list_match(:list, op, sql, value) do
+    {inner, params} = match_sql(op, "value", value)
+    {["EXISTS (SELECT 1 FROM json_each(", sql, ") WHERE ", inner, ")"], params}
+  end
+
+  defp list_match(_type, op, sql, value), do: match_sql(op, sql, value)
 
   defp match_sql(:contains, sql, value), do: {["instr(lower(", sql, "), lower(?)) > 0"], [value]}
   defp match_sql(:like, sql, value), do: {[sql, " LIKE ?"], [value]}

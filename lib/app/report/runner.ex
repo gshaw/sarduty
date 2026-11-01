@@ -11,6 +11,7 @@ defmodule App.Report.Runner do
   alias App.Report.Error
   alias App.Report.Plan
   alias App.Report.Result
+  alias App.Report.SQL
   alias Service.Format
 
   require Logger
@@ -19,17 +20,41 @@ defmodule App.Report.Runner do
 
   @doc "`{:ok, %Result{}}`, or `{:error, %Error{}}` when it takes too long or makes too many columns."
   def run(%Plan{} = plan, timezone) do
-    case Repo.query(plan.sql, plan.params, timeout: @timeout) do
-      {:ok, %{rows: rows}} ->
-        shape(plan, rows, timezone)
-
-      {:error, %Exqlite.Error{message: "interrupted"}} ->
-        {:error, Error.new(nil, "Narrow the report with where: it took longer than 2 seconds.")}
-
-      {:error, reason} ->
-        Logger.error("Report could not run: #{Exception.message(reason)}")
-        {:error, Error.new(nil, "This report could not run. Try again, or change its query.")}
+    case query(plan.sql, plan.params) do
+      {:ok, %{rows: rows}} -> shape(plan, rows, timezone)
+      {:error, error} -> {:error, error}
     end
+  end
+
+  @doc "The one number a count's SQL gives (App.Report.Compiler.count/3), or an error."
+  def count({sql, params}) do
+    case query(sql, params) do
+      {:ok, %{rows: [[n]]}} -> {:ok, n}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  @doc "The values an each's SQL gives (App.Report.Compiler.values/3), decoded as `type`."
+  def values({sql, params}, type) do
+    case query(sql, params) do
+      {:ok, %{rows: rows}} -> {:ok, Enum.map(rows, fn [v] -> decode(v, type) end)}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  defp query(sql, params) do
+    case Repo.query(sql, Enum.map(params, &SQL.param/1), timeout: @timeout) do
+      {:ok, result} -> {:ok, result}
+      {:error, reason} -> {:error, failed(reason)}
+    end
+  end
+
+  defp failed(%Exqlite.Error{message: "interrupted"}),
+    do: Error.new(nil, "Narrow the report with where: it took longer than 2 seconds.")
+
+  defp failed(reason) do
+    Logger.error("Report could not run: #{Exception.message(reason)}")
+    Error.new(nil, "This report could not run. Try again, or change its query.")
   end
 
   defp shape(%Plan{pivot: nil} = plan, rows, _timezone) do
@@ -159,6 +184,11 @@ defmodule App.Report.Runner do
 
   defp before?([]), do: true
   defp before?([{a, a, _dir} | rest]), do: before?(rest)
+  defp before?([{nil, _b, {_dir, :nulls_first}} | _rest]), do: true
+  defp before?([{_a, nil, {_dir, :nulls_first}} | _rest]), do: false
+  defp before?([{nil, _b, {_dir, :nulls_last}} | _rest]), do: false
+  defp before?([{_a, nil, {_dir, :nulls_last}} | _rest]), do: true
+  defp before?([{a, b, {dir, _nulls}} | rest]), do: before?([{a, b, dir} | rest])
   defp before?([{a, b, :asc} | _rest]), do: lesser?(a, b)
   defp before?([{a, b, :desc} | _rest]), do: lesser?(b, a)
 

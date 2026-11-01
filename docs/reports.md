@@ -51,6 +51,52 @@ Adding a field:
    labels (docs/writing.md): a query compares by the label or the value, and a cell shows
    the label.
 
+## The page's clauses
+
+Clauses after the query draw the page around its rows (#784): a search box, tiles with
+counts, filter menus, sortable headers, and pages. `App.Report.page/4` runs a report
+this way; `App.Report.run/4` keeps every row the picks keep, for Download CSV.
+
+```sql
+select title, started_at, attended_count
+from activities
+order by started_at desc
+search title, ref_id, tags
+switch activity 'Kind'
+  option incident 'Incidents' where kind = 'incident'
+  option exercise 'Exercises' where kind = 'exercise'
+filter when 'When'
+  option past 'Past' where started_at <= NOW
+  option future 'Future' where started_at >= NOW sort date
+  each year(started_at) where year(started_at) = :when
+filter status 'Status' more
+  option draft 'Draft' where published = false
+sort date 'Date' started_at
+page 50
+```
+
+- `search` ORs `contains :q` over its fields. A list field matches on any of its titles.
+- `switch` is the tiles, All first. Each counts its rows with every other pick on and the
+  search off.
+- `filter` is a menu, All first. `required` drops All, `default` picks where it starts (a
+  value, or `THIS_YEAR`), and `more` puts it behind More filters.
+- `option` is a value for the URL, a label, the `where` it adds, and the sort it picks,
+  if any. `each` makes an option for each value of a field: each year, a choice's
+  values, or a list's titles.
+- `sort` is a column header: its label, or its first field, names the column. `date` in
+  the URL sorts as written, `date-` the other way.
+- `page` shows that many rows at a time, and sorts by `id` last so no row lands on two.
+
+A pick is a `:name` value, like `:year`, and rides in the URL by name, so the `reports`
+table keeps no more than it did. `App.Report.Picks` turns the picks into a plain query,
+so the catalog checks every name and the limits hold. Before anything runs, every
+option, each, search, and sort is checked as the query's own is, and a mistake names its
+part: `Line 5, option draft: activities has no field publshed.` A filter whose value the
+query reads, as in `where year(started_at) = :year`, must be `required`. A report with
+`pivot` has no tiles, pages, or sorts.
+
+<!-- cspell:ignore publshed -->
+
 ## Dates and time zones
 
 SQLite has no time zones. `App.Report.LocalTime` writes a stored UTC time as the team's
@@ -73,5 +119,6 @@ own report by its row's id, a number, and a built-in one by its slug, never a nu
 
 ## Limits
 
-5,000 rows, 12 pivot columns, and 2 seconds. A run past 2 seconds is interrupted (the
+5,000 rows, 12 pivot columns, and 2 seconds. A page shows at most 500 rows, and a report
+with `page` has no 5,000-row limit, since each page reads only its own. A run past 2 seconds is interrupted (the
 connection's timeout interrupts SQLite) and says to narrow the report.

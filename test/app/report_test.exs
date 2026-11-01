@@ -352,4 +352,206 @@ defmodule App.ReportTest do
       assert error(text, team) == message, text
     end
   end
+
+  describe "a page (#784)" do
+    @page """
+    select title, started_at
+    from activities
+    order by started_at desc
+    search title, tags
+    switch activity 'Kind'
+      option incident 'Incidents' where kind = 'incident'
+      option exercise 'Exercises' where kind = 'exercise'
+    filter when 'When'
+      option past 'Past' where started_at <= NOW
+      option future 'Future' where started_at >= NOW sort date
+      each year(started_at) where year(started_at) = :when
+    filter status 'Status'
+      option draft 'Draft' where published = false
+    sort date 'Date' started_at
+    page 2
+    """
+
+    defp page!(team, params, text \\ @page) do
+      {:ok, view} = Report.page(text, team, params, @now)
+      view
+    end
+
+    defp titles(view, team) do
+      ids = Enum.map(view.result.rows, &hd/1)
+      by_id = Activity |> where([a], a.team_id == ^team.id) |> Repo.all() |> Map.new(&{&1.id, &1})
+      Enum.map(ids, &by_id[&1].title)
+    end
+
+    setup do
+      team = team_fixture()
+
+      for {title, kind, at, tags} <- [
+            {"Rope rescue", "exercise", ~U[2026-03-01 18:00:00Z], ["Rope"]},
+            {"Lost hiker", "incident", ~U[2026-04-01 18:00:00Z], []},
+            {"Swiftwater", "exercise", ~U[2025-05-01 18:00:00Z], ["Water"]},
+            {"Night search", "incident", ~U[2026-08-01 18:00:00Z], ["Rope"]}
+          ] do
+        activity_fixture(team, %{
+          title: title,
+          activity_kind: kind,
+          started_at: at,
+          finished_at: DateTime.add(at, 3600),
+          tags: tags
+        })
+      end
+
+      %{team: team}
+    end
+
+    test "with nothing picked, the first page of every row, in the query's order", %{team: team} do
+      view = page!(team, %{})
+
+      assert titles(view, team) == ["Night search", "Lost hiker"]
+      assert view.total == 4
+      assert %App.Page{page_number: 1, total_pages: 2, page_size: 2} = view.page
+      assert view.sort == "date-"
+      assert view.params == %{}
+
+      assert %{name: "activity", picked: "all", tiles: tiles} = view.switch
+
+      assert Enum.map(tiles, &{&1.label, &1.count}) == [
+               {"All", 4},
+               {"Incidents", 2},
+               {"Exercises", 2}
+             ]
+
+      assert [%{name: "when", options: options}, %{name: "status", picked: "all"}] = view.filters
+
+      assert options == [
+               {"All", "all"},
+               {"Past", "past"},
+               {"Future", "future"},
+               {"2026", "2026"},
+               {"2025", "2025"}
+             ]
+    end
+
+    test "a pick adds its where; tiles count with the search off", %{team: team} do
+      view = page!(team, %{"when" => "2026", "q" => "rope", "page" => "1"})
+
+      assert titles(view, team) == ["Night search", "Rope rescue"]
+      assert view.params == %{"when" => "2026", "q" => "rope"}
+      assert Enum.map(view.switch.tiles, & &1.count) == [3, 2, 1]
+
+      view = page!(team, %{"activity" => "incident", "when" => "past"})
+      assert titles(view, team) == ["Lost hiker"]
+    end
+
+    test "the search looks in a list's titles, as text", %{team: team} do
+      assert titles(page!(team, %{"q" => "wat"}), team) == ["Swiftwater"]
+      assert titles(page!(team, %{"q" => "zzz"}), team) == []
+    end
+
+    test "a sort from the URL, either way, and an option's sort", %{team: team} do
+      assert titles(page!(team, %{"sort" => "date"}), team) == ["Swiftwater", "Rope rescue"]
+      assert page!(team, %{"sort" => "date"}).params == %{"sort" => "date"}
+      assert page!(team, %{"sort" => "date-"}).params == %{}
+
+      future = page!(team, %{"when" => "future"})
+      assert future.sort == "date"
+      assert titles(future, team) == ["Night search"]
+      assert future.sorts == %{1 => [{"↑", "date"}, {"↓", "date-"}]}
+    end
+
+    test "page 2, and a page past the last shows the last", %{team: team} do
+      assert titles(page!(team, %{"page" => "2"}), team) == ["Rope rescue", "Swiftwater"]
+      assert page!(team, %{"page" => "9"}).page.page_number == 2
+    end
+
+    test "a pick that isn't on the menu picks nothing", %{team: team} do
+      view = page!(team, %{"when" => "1999", "activity" => "nope"})
+      assert view.total == 4
+      assert hd(view.filters).picked == "all"
+    end
+
+    test "run/4 keeps every row the picks keep, without pages", %{team: team} do
+      {:ok, result} = Report.run(@page, team, %{"activity" => "exercise"}, @now)
+      assert length(result.rows) == 2
+    end
+
+    test "a required filter starts on its value's default", %{team: team} do
+      text = """
+      select title from activities
+      filter year 'Year' required
+        each year(started_at) where year(started_at) = :year
+      """
+
+      view = page!(team, %{}, text)
+      assert view |> titles(team) |> Enum.sort() == ["Lost hiker", "Night search", "Rope rescue"]
+
+      assert [%{picked: "2026", default: "2026", options: [{"2026", _}, {"2025", _}]}] =
+               view.filters
+    end
+
+    test "a filter's value can feed the query's own where, when it's required", %{team: team} do
+      text = """
+      select title from activities
+      where year(started_at) = :year
+      filter year 'Year'
+        each year(started_at)
+      """
+
+      assert {:error, error} = Report.page(text, team, %{}, @now)
+
+      assert Error.text(error) ==
+               "Line 3: Write required after filter year: the query reads :year, so it always needs a pick."
+
+      required = String.replace(text, "'Year'", "'Year' required")
+      {:ok, view} = Report.page(required, team, %{"year" => "2025"}, @now)
+
+      assert titles(view, team) == ["Swiftwater"]
+    end
+
+    test "a grouped report counts and pages its groups", %{team: team} do
+      text = """
+      select kind, count(id)
+      from activities
+      group by kind
+      order by count(id) desc
+      switch status 'Status'
+        option draft 'Draft' where published = false
+      page 1
+      """
+
+      view = page!(team, %{}, text)
+      assert view.total == 2
+      assert Enum.map(view.switch.tiles, & &1.count) == [2, 2]
+      assert length(view.result.rows) == 1
+    end
+
+    test "a mistake names its line and the part of the page it's in", %{team: team} do
+      text = """
+      select title, started_at
+      from activities
+      order by started_at desc
+      filter status 'Status'
+        option draft 'Draft' where publshed = false
+        option published 'Published' where published = true
+      page 50
+      """
+
+      assert {:error, error} = Report.page(text, team, %{}, @now)
+
+      assert Error.text(error) ==
+               "Line 5, option draft: activities has no field publshed. Did you mean published?"
+
+      assert {:error, error} = Report.run(text, team, %{}, @now)
+      assert error.part == "option draft"
+
+      assert error("select title from activities\nsearch nope", team) =~
+               "Line 2, search: activities has no field nope."
+
+      assert error("select title from activities\nsort when 'When' finished_at", team) ==
+               "Line 2, sort when: Label it like the column it sorts, one of 'Activity', or show its field."
+
+      assert error("select title from activities\nfilter f 'F'\n  each started_at", team) ==
+               "Line 3, filter f: Write each with a field it can list, such as year(started_at), kind, or member.groups."
+    end
+  end
 end

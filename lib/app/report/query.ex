@@ -17,7 +17,19 @@ defmodule App.Report.Query do
     `{:in, expr, items, negated?, line}`, `{:includes, expr, items, line}`, and
     `{:excludes, expr, items, line}`
 
-  `order_by` holds `{expr, :asc | :desc}` and `labels` holds `{expr, text}`.
+  `order_by` holds `{expr, dir}`, where `dir` is `:asc`, `:desc`, or `{:asc | :desc,
+  :nulls_first | :nulls_last}`, and `labels` holds `{expr, text}`.
+
+  The page's clauses after the query (#784), which draw the controls around the rows:
+
+  - `search`: the fields the search box looks in, `[expr]`
+  - `filters`: each `switch` (tiles) and `filter` (a menu), in order:
+    `%{kind: :switch | :filter, name, label, required, default, more, options, each, line}`.
+    An option is `%{value, label, where, sort, line}`, where `sort` is nil or `{value, dir}`
+    (`dir` nil for the sort as written), and `each` is nil or `%{expr, where, line}`. A
+    `default` is a value's text, or `:this_year`.
+  - `sorts`: `%{value, label, order, line}`, with `order` like `order_by`
+  - `page`: how many rows a page shows, or nil
   """
 
   defstruct select: [],
@@ -30,7 +42,12 @@ defmodule App.Report.Query do
             limit: nil,
             offset: nil,
             labels: [],
-            totals: false
+            totals: false,
+            search: [],
+            search_line: nil,
+            filters: [],
+            sorts: [],
+            page: nil
 
   @doc "The line an expression is on."
   def line(expr) when is_tuple(expr), do: elem(expr, tuple_size(expr) - 1)
@@ -79,6 +96,10 @@ defmodule App.Report.Query do
   defp op_text(:starts_with), do: "starts with"
   defp op_text(:ends_with), do: "ends with"
   defp op_text(op), do: to_string(op)
+
+  @doc "Whether the query has any of the page's clauses."
+  def page_clauses?(%__MODULE__{} = q),
+    do: q.search != [] or q.filters != [] or q.sorts != [] or q.page != nil
 
   @doc "Whether two expressions are the same, whatever their lines."
   def same?(a, b), do: strip(a) == strip(b)
