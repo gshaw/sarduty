@@ -69,7 +69,7 @@ defmodule App.Model.StandingTest do
     assert Standing.order() == [:retired, :not_a_person, :retiring, :away, :active]
   end
 
-  # Standing.dynamic/1 is Standing.of/5 in SQL. Every mix of the parts that decide a
+  # Standing.visible_dynamic/2 is Standing.of/5, through visible/2, in SQL. Every mix of the parts that decide a
   # standing, through both, must agree, so the order can't drift between the two.
   test "the query and the pure function agree on every mix of standings" do
     team = team_fixture(%{timezone: "America/Vancouver"})
@@ -98,35 +98,40 @@ defmodule App.Model.StandingTest do
         member
       end
 
-    standing = Standing.dynamic(@now)
-
-    from_sql =
-      Member
-      |> where([m], m.team_id == ^team.id)
-      |> Standing.join(team, @today)
-      |> select(^%{id: dynamic([m], m.id), standing: standing})
-      |> Repo.all()
-      |> Map.new(&{&1.id, &1.standing})
-
     retiring = Standing.retiring_ids(team)
 
-    for member <- members do
-      expected =
-        member
-        |> Standing.of(
-          MemberAwayPeriod.for_member(member),
-          MapSet.member?(retiring, member.id),
-          @today,
-          @now
-        )
-        |> Standing.kind()
-        |> Atom.to_string()
+    # As a team admin sees it, and as a member does: someone away is active (#784).
+    for team_admin? <- [true, false] do
+      standing = Standing.visible_dynamic(@now, team_admin?)
 
-      assert from_sql[member.id] == expected
+      from_sql =
+        Member
+        |> where([m], m.team_id == ^team.id)
+        |> Standing.join(team, @today)
+        |> select(^%{id: dynamic([m], m.id), standing: standing})
+        |> Repo.all()
+        |> Map.new(&{&1.id, &1.standing})
+
+      for member <- members do
+        expected =
+          member
+          |> Standing.of(
+            MemberAwayPeriod.for_member(member),
+            MapSet.member?(retiring, member.id),
+            @today,
+            @now
+          )
+          |> Standing.visible(team_admin?)
+          |> Standing.kind()
+          |> Atom.to_string()
+
+        assert from_sql[member.id] == expected
+      end
+
+      seen = from_sql |> Map.values() |> Enum.uniq() |> Enum.sort()
+      assert seen -- ["away"] == ~w(active not_a_person retired retiring)
+      assert "away" in seen == team_admin?
     end
-
-    assert from_sql |> Map.values() |> Enum.uniq() |> Enum.sort() ==
-             ~w(active away not_a_person retired retiring)
   end
 
   test "no Retiring group, or one that was deleted, makes nobody retiring" do

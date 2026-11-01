@@ -443,10 +443,14 @@ defmodule App.Report.Parser do
     end
   end
 
-  defp check_choices(%{options: [], each: nil} = filter),
-    do: fail_line(filter.line, "Write an option or each under #{filter.kind} #{filter.name}.")
+  # A filter with neither takes its menu from the value of its name that a field takes,
+  # such as on_team(:when); App.Report checks there is one.
+  defp check_choices(%{kind: :switch, options: []} = filter),
+    do: fail_line(filter.line, "Write an option under switch #{filter.name}: each is a tile.")
 
   defp check_choices(_filter), do: :ok
+
+  defp check_default(%{options: [], each: nil}), do: :ok
 
   defp check_default(%{default: :this_year, each: nil} = filter),
     do:

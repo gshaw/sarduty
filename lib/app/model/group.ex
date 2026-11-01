@@ -43,6 +43,9 @@ defmodule App.Model.Group do
     |> Repo.all()
   end
 
+  @doc "The team's groups as `{title, id}`, by title, for a Group menu (#350)."
+  def kinds(%Team{} = team), do: team.id |> get_all() |> Enum.map(&{&1.title, &1.id})
+
   @doc "The team's groups without rules, the lists kept by hand, by title."
   def get_kept_by_hand(team_id) do
     ruled = GroupRule.ruled_d4h_group_ids_query(team_id)

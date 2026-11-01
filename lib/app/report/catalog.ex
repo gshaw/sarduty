@@ -288,7 +288,8 @@ defmodule App.Report.Catalog do
         type: :choice,
         column: :standing,
         about: "Active, Away, Retiring, Not a person, or Retired.",
-        choices: fn _ -> standings() end
+        choices: &standings/1,
+        hidden_choices: &hidden_standings/1
       },
       bool(:counted, "Counted", "Whether SAR Duty counts them: not retiring, and a person."),
       bool(:person, "Person", "Whether they are a person, not a pager or a shared login."),
@@ -309,6 +310,7 @@ defmodule App.Report.Catalog do
         type: :bool,
         args: [:days],
         query: &not_seen/2,
+        shown: &team_admin?/1,
         about:
           "not_seen(365): current members whose attendance clock is older than 365 days, as Needs attention counts."
       },
@@ -319,6 +321,14 @@ defmodule App.Report.Catalog do
         args: [:period],
         query: &on_team/2,
         about: "on_team('2026'): on the team at any point in the period, as Members' Period."
+      },
+      %Field{
+        name: "in_group",
+        label: "In group",
+        type: :bool,
+        args: [:group],
+        query: &in_group/2,
+        about: "in_group('Callout'): in the group, as Members' Group filter."
       }
     ]
   end
@@ -341,7 +351,13 @@ defmodule App.Report.Catalog do
         args: [:period, :tag],
         sql: &totals_sql(&1, &2, &3, :total_minutes),
         about: "attended_minutes('2026', 'all'): hours attended in the period, with the tag."
-      },
+      }
+    ] ++ for(field <- team_admin_fields(), do: %{field | shown: &team_admin?/1})
+  end
+
+  # Team admins' own records, which a member's Members has never filtered by (#440).
+  defp team_admin_fields do
+    [
       rule(
         "details_missing",
         "Details missing",
@@ -359,6 +375,8 @@ defmodule App.Report.Catalog do
     ]
   end
 
+  defp team_admin?(%Context{team_admin?: team_admin?}), do: team_admin?
+
   @doc "The field named `name` in `subject` that `context`'s team may read, or nil."
   def field(%Subject{fields: fields}, name, %Context{} = context),
     do: Enum.find(fields, &(&1.name == name and readable?(&1, context)))
@@ -371,12 +389,60 @@ defmodule App.Report.Catalog do
   defp readable?(%Field{shown: shown}, context), do: shown.(context)
 
   @doc """
-  Whether `expr`, read in `subject`, names a field `context`'s team may not read, so a
-  page's option, sort, or search with it drops out (#784). A name that isn't a field at
-  all is the compiler's to report.
+  Whether `expr`, read in `subject`, names a field `context`'s team or viewer may not
+  read, or compares a choice with a value they may not see, as `standing = 'away'` for a
+  member, so a page's option, sort, or search with it drops out (#784). A name that isn't
+  a field at all is the compiler's to report.
   """
   def reads_hidden?(%Subject{} = subject, expr, %Context{} = context),
-    do: expr |> field_paths() |> Enum.any?(&hidden_path?(subject, &1, context))
+    do:
+      expr |> field_paths() |> Enum.any?(&hidden_path?(subject, &1, context)) or
+        hidden_value?(subject, expr, context)
+
+  defp hidden_value?(subject, {:op, _op, {:field, path, [], _}, {:literal, text, _}, _}, context)
+       when is_binary(text),
+       do: hidden_choice?(subject, path, text, context)
+
+  defp hidden_value?(subject, {:op, _op, {:literal, text, _}, {:field, path, [], _}, _}, context)
+       when is_binary(text),
+       do: hidden_choice?(subject, path, text, context)
+
+  defp hidden_value?(subject, {:in, {:field, path, [], _}, items, _negated?, _}, context),
+    do:
+      Enum.any?(items, fn
+        {:literal, text, _} when is_binary(text) -> hidden_choice?(subject, path, text, context)
+        _item -> false
+      end)
+
+  defp hidden_value?(subject, tuple, context) when is_tuple(tuple),
+    do: hidden_value?(subject, Tuple.to_list(tuple), context)
+
+  defp hidden_value?(subject, list, context) when is_list(list),
+    do: Enum.any?(list, &hidden_value?(subject, &1, context))
+
+  defp hidden_value?(_subject, _other, _context), do: false
+
+  # A value or its label, as a query may compare with either.
+  defp hidden_choice?(subject, [name], text, context) do
+    case Enum.find(subject.fields, &(&1.name == String.downcase(name))) do
+      %Field{hidden_choices: hidden} = field when hidden != nil ->
+        hidden_text?(field, hidden.(context), String.downcase(text), context)
+
+      _other ->
+        false
+    end
+  end
+
+  defp hidden_choice?(_subject, _path, _text, _context), do: false
+
+  # A team admin sees every value, so their choices hold the hidden ones' labels.
+  defp hidden_text?(field, hidden, lower, context) do
+    %{context | team_admin?: true}
+    |> field.choices.()
+    |> Enum.any?(fn {label, value} ->
+      value in hidden and lower in [String.downcase(label), value]
+    end)
+  end
 
   defp field_paths({:field, path, args, _line}), do: [path | field_paths(args)]
   defp field_paths(tuple) when is_tuple(tuple), do: tuple |> Tuple.to_list() |> field_paths()
@@ -444,13 +510,19 @@ defmodule App.Report.Catalog do
       {"No reply", "no_reply"}
     ]
 
-  # Away's text names its period; a report's choice is Away alone.
-  defp standings,
-    do:
-      Enum.map(Standing.order(), fn
-        :away -> {"Away", "away"}
-        standing -> {Standing.text(standing), Atom.to_string(standing)}
-      end)
+  # Away's text names its period; a report's choice is Away alone. A member reads Away as
+  # Active (Standing.visible/2), so to them there is no Away (#784).
+  defp standings(context) do
+    hidden = hidden_standings(context)
+
+    for standing <- Standing.order(),
+        value = Atom.to_string(standing),
+        value not in hidden,
+        do: {if(standing == :away, do: "Away", else: Standing.text(standing)), value}
+  end
+
+  defp hidden_standings(%Context{team_admin?: true}), do: []
+  defp hidden_standings(%Context{team_admin?: false}), do: ["away"]
 
   @doc "The team's tags' titles, as choices."
   def tag_titles(%Context{team: team}),
@@ -578,7 +650,7 @@ defmodule App.Report.Catalog do
         ref_id: dynamic([m], m.ref_id),
         position: dynamic([m], m.position),
         joined_at: dynamic([m], m.joined_at),
-        standing: Standing.dynamic(now),
+        standing: Standing.visible_dynamic(now, context.team_admin?),
         counted: Member.counted_dynamic(),
         person: dynamic([m], not m.not_a_person),
         groups: dynamic([groups: g], g.titles),
@@ -731,6 +803,12 @@ defmodule App.Report.Catalog do
 
   defp on_team(%Context{team: team, now: now, timezone: timezone}, [period]),
     do: team |> team_members() |> Member.on_team_query(period, timezone, now)
+
+  defp in_group(%Context{team: team}, ["all"]), do: team_members(team)
+
+  # The group's id, as its menu's value: Value.pick/4 has checked it's one of the team's.
+  defp in_group(%Context{team: team}, [group_id]),
+    do: GroupMember.member_ids_query(team.id, String.to_integer(group_id))
 
   defp details_missing(%Context{team: team, now: now}, []),
     do: team |> team_members() |> Member.details_missing_query(now)
