@@ -126,14 +126,18 @@ keeps the picks as the report's values.
 
 ## Lists drawn by a report
 
-Activities is drawn by its report (#784): `App.Report.Lists` holds the list's text, and
-the page runs it with `App.Report.page/4`. The tiles, the search, the filters, the sorts,
+Activities and Members are drawn by their reports (#784): `App.Report.Lists` holds each
+list's text, and the page runs it with `App.Report.page/5`. The tiles, the search, the filters, the sorts,
 and the pages come from the clauses; the cells, Add activity, and Save as report stay in
 the page's code, which passes its own table to `<.report_page>`. A filter's name is the
-URL param the page always used, so Home's links still open the same list.
+URL param the page always used, so Home's links still open the same list. Members' Period,
+Group, and Tag are filters without options: each shows the menu of the value it gives
+`on_team(:when)`, `in_group(:group)`, and `activity_count(:when, :activity_tag)`. Home's
+attendance check counts Members with `App.Report.ids/4` on its link's params, so the
+count and the list agree.
 
 Save as report opens New report on the list's text, with the picks as its values and in
-its name: `/reports/new?list=activities&activity=exercise`. A copy draws plain report
+its name: `/reports/new?list=activities&activity=exercise`. Members has it too. A copy draws plain report
 cells, not the list's own. Lists are not on the Reports page.
 
 A field can say which teams, and which viewers, may read it (`shown` in

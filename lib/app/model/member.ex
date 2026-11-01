@@ -282,6 +282,32 @@ defmodule App.Model.Member do
   end
 
   @doc """
+  What clock_start/2 reads besides the last activity, for `member_ids`: by id, each
+  member's `away_ends_on`, the last day of their latest away period that has started by
+  `today`, and `checked_in_on`, their latest check-in. Members' Attended filter shows it
+  (#384).
+  """
+  def clock_parts(%Team{} = team, member_ids, %Date{} = today) do
+    away = team |> last_away_query(member_ids, today) |> Repo.all() |> Map.new()
+
+    checked_in =
+      team
+      |> MemberCheckIn.latest_query()
+      |> where([c], c.member_id in ^member_ids)
+      |> Repo.all()
+      |> Map.new(&{&1.member_id, &1.checked_in_on})
+
+    Map.new(member_ids, &{&1, %{away_ends_on: away[&1], checked_in_on: checked_in[&1]}})
+  end
+
+  defp last_away_query(team, member_ids, today) do
+    from p in MemberAwayPeriod,
+      where: p.team_id == ^team.id and p.member_id in ^member_ids and p.starts_on <= ^today,
+      group_by: p.member_id,
+      select: {p.member_id, type(max(p.ends_on), :date)}
+  end
+
+  @doc """
   Each of the team's members' last activity (#367), as rows of `member_id` and
   `last_attended_at`: the latest start of a row they attended by `now`, any kind.
   Members who never attended have no row.

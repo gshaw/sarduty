@@ -7,6 +7,7 @@ defmodule Web.QualificationLive do
   import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
+  alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
@@ -14,7 +15,6 @@ defmodule Web.QualificationLive do
   alias App.Model.Team
   alias App.Operation.SaveTitledRecord
   alias App.Repo
-  alias App.ViewModel.MemberFilterViewModel
   alias App.ViewModel.QualificationFilterViewModel
   alias Service.StringHelpers
 
@@ -272,7 +272,7 @@ defmodule Web.QualificationLive do
         field={@form[:group]}
         label="Group"
         type="combobox"
-        options={MemberFilterViewModel.group_kinds(@team)}
+        options={Group.kinds(@team)}
         default=""
       />
     </.filter_bar>

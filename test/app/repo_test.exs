@@ -91,7 +91,7 @@ defmodule App.RepoTest do
       attendance_fixture(other_activity, first, %{duration_in_minutes: 45})
       attendance_fixture(activity, second, %{duration_in_minutes: 60})
 
-      # The shape of MemberFilterViewModel.build_paginated_content/2.
+      # The shape of the old Members list's query: a grouped subquery joined to members.
       summary =
         from(a in Attendance,
           group_by: a.member_id,

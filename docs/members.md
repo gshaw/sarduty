@@ -5,10 +5,12 @@ and member logins.
 
 ## The members list
 
-`/teams/:subdomain/members` ([MemberCollectionLive](../lib/web/live/member_collection_live.ex),
-[MemberFilterViewModel](../lib/app/view_model/member_filter_view_model.ex)) answers
-questions with general filters and sortable columns rather than one Needs attention item
-each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last attended.
+`/teams/:subdomain/members` ([MemberCollectionLive](../lib/web/live/member_collection_live.ex))
+answers questions with general filters and sortable columns rather than one Needs
+attention item each (#367): "who in Callout is drifting away?" is Group: Callout sorted
+by Last attended. Its report draws the tiles, the search, the filters, the sorts, and the
+pages (#784): the text is `App.Report.Lists.members/0`, and
+[docs/reports.md](reports.md#lists-drawn-by-a-report) says how a list runs.
 
 - **Last attended** is the start of the latest activity the member attended, any kind
   (incidents, exercises, events), not deleted. Showing up to anything is the sign it is
@@ -16,8 +18,8 @@ each (#367): "who in Callout is drifting away?" is Group: Callout sorted by Last
   attended sorts first going up. The member's page shows the same date.
 - **Period** sets what Activities and Duration count, and limits the list to members on
   the team at some point in it: All, the last 30, 60, 90, 180, or 365 days (`when=90d`),
-  or a year (`when=2026`, the default this year). It replaced Year, so old year links
-  open the same list.
+  or a year with activities (`when=2026`, the default this year). It replaced Year, so
+  old year links open the same list.
 - **Standing** filters by [standing](#standing): Not retired (the default, `current`),
   Active, Away, Retiring (with a Retiring group), Retired, Not a person, or All: a
   member's path, then Not a person, which is no step on it. It was Current until 2026-10-20, which
@@ -214,8 +216,8 @@ Retiring group, decided 2026-10-18: no live summary.
 - **Standing**: which standings to watch (`teams.watch_standings`), Active by default.
 
 The home item is "4 members of Callout have not attended an activity in 90 days", linking
-to `/members?attended=90&group=<id>&standing=active`. Its count is
-`MemberFilterViewModel.count/3` on the same params, so it always matches the list. If D4H
+to `/members?attended=90&group=<id>&standing=active`. Its count runs the Members report
+on the same params (`App.Report.ids/4`), so it always matches the list. If D4H
 deletes the watched group, the item is a warning that says so, and settings keep the
 group, named as gone, until a team admin picks another. It never watches everyone
 quietly.
@@ -552,10 +554,12 @@ see what they could work out from activities they open, plus role, ID, groups, a
 qualifications. They don't see what comes from team admins' own tools: contact details,
 away periods, check-ins, history, and ID cards.
 
-- **The list**: the same columns, search, and Period, Group, and Tag filters. The
-  Standing switch is Not retired, Not a person, and Retired, and its menu adds All. No
-  Active, since Not retired minus Active would name who is away. No Attended or Details
-  filter, and no Add member. The Member column's badge never says Away.
+- **The list**: the same columns, search, and Period, Group, and Tag filters. A
+  member's Standing reads Away as Active (decision 4 of #784), so the switch is Not
+  retired, Active, Retiring, Retired, and Not a person, and its menu adds All. Active
+  counts everyone away too, so it can't name who is away. No Away, no Attended,
+  Details, Items, or Access filter, and no Add member or Save as report. The Member
+  column's badge never says Away.
 - **A member's page** is the team admin's minus controls: Attendance, Qualifications
   (with no Certificate, since D4H marks the documents RESTRICTED), and Groups as plain
   text. The sidebar is the ID and Milestones. The header has the photo and facts, a
@@ -589,9 +593,11 @@ someone or their welfare. A value members can already see needs no guard.
    itself. Team admin pages stay the team admin's. Events a component handles
    (`phx-target`), such as replies and search, go to the component, which checks for
    itself.
-3. **Params**: the view model's `validate/2` takes `team_admin?` and drops what members
-   can't set before it casts ([MemberFilterViewModel](../lib/app/view_model/member_filter_view_model.ex)).
-   The list, its counts, and the form all read the result, so nothing after checks again.
+3. **Params**: a list drawn by a report runs as the viewer (`team_admin?: false` for a
+   member), and the catalog leaves out what members can't read, so the filters, options,
+   and tiles that read it drop out and a URL that names them picks nothing
+   ([docs/reports.md](reports.md#lists-drawn-by-a-report)). The list, its counts, and the
+   form all read the result, so nothing after checks again.
 4. **Parts of the page**: the page decides, and a part doesn't ask. Something only team
    admins see is its own component or column, shown with `:if={@team_admin?}`. A shared
    component with such a part takes `team_admin?` with `default: false`, so a page that
