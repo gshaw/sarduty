@@ -60,15 +60,37 @@ defmodule App.Report do
 
     with {:ok, query} <- Parser.parse(text),
          :ok <- check_page(query, context, given),
-         {:ok, menus} <- menus(query, context) do
+         {:ok, menus} <- menus(query, context),
+         {:ok, starts} <- starts(query, given, menus, context) do
       picks = Picks.resolve(query, given, context.today, menus)
-      # The sort the rows would have without one in the URL, so a URL leaves it out.
-      implicit = Picks.resolve(query, Map.delete(given, "sort"), context.today, menus).sort
-      build_view(query, picks, menus, implicit, context)
+      build_view(query, picks, menus, starts, context)
     end
   end
 
-  defp build_view(query, picks, menus, implicit_sort, context) do
+  # What each control starts on, whatever the URL picks, so a URL leaves it out: the sort
+  # without one in the URL, and a required filter's value's own default, such as this year.
+  defp starts(query, given, menus, context) do
+    sort = Picks.resolve(query, Map.delete(given, "sort"), context.today, menus).sort
+
+    start =
+      Picks.resolve(
+        query,
+        Map.drop(given, Enum.map(query.filters, & &1.name)),
+        context.today,
+        menus
+      )
+
+    if Enum.any?(start.filters, &(elem(&1, 1) == :each_default)) do
+      with {:ok, plan} <-
+             query |> Picks.plain(start) |> Compiler.compile(context, start.given) do
+        {:ok, %{sort: sort, values: Map.new(plan.values, &{&1.name, Value.param(&1)})}}
+      end
+    else
+      {:ok, %{sort: sort, values: %{}}}
+    end
+  end
+
+  defp build_view(query, picks, menus, starts, context) do
     with {:ok, total, page} <- total(query, picks, context),
          {:ok, plan} <- rows_plan(query, picks, page, context),
          {:ok, result} <- Runner.run(plan, context.timezone),
@@ -80,13 +102,15 @@ defmodule App.Report do
         switch: switch
       }
 
-      {:ok, controls(view, query, picks, menus, implicit_sort, context)}
+      {:ok, controls(view, query, picks, menus, starts, context)}
     end
   end
 
-  defp controls(view, query, picks, menus, implicit_sort, context) do
-    filters = Enum.flat_map(query.filters, &filter_menu(&1, picks, menus, view.result, context))
-    defaults = query |> defaults(filters) |> Map.put("sort", implicit_sort)
+  defp controls(view, query, picks, menus, starts, context) do
+    filters =
+      Enum.flat_map(query.filters, &filter_menu(&1, picks, menus, view.result, starts, context))
+
+    defaults = query |> defaults(filters) |> Map.put("sort", starts.sort)
 
     %{
       view
@@ -161,9 +185,9 @@ defmodule App.Report do
     end)
   end
 
-  defp filter_menu(%{kind: :switch}, _picks, _menus, _result, _context), do: []
+  defp filter_menu(%{kind: :switch}, _picks, _menus, _result, _starts, _context), do: []
 
-  defp filter_menu(filter, picks, menus, result, context) do
+  defp filter_menu(filter, picks, menus, result, starts, context) do
     all = if filter.required, do: [], else: [{"All", "all"}]
     options = Enum.map(filter.options, &{&1.label, &1.value})
     each = Map.get(menus, filter.name, [])
@@ -173,7 +197,7 @@ defmodule App.Report do
         name: filter.name,
         label: filter.label,
         picked: picked(picks.filters[filter.name], filter.name, result),
-        default: filter_default(filter, context, result),
+        default: filter_default(filter, context, starts),
         more: filter.more,
         options: all ++ options ++ each
       }
@@ -191,13 +215,13 @@ defmodule App.Report do
     end
   end
 
-  defp filter_default(filter, context, result) do
+  defp filter_default(filter, context, starts) do
     cond do
       filter.default == :this_year -> Integer.to_string(context.today.year)
       filter.default -> filter.default
       not filter.required -> "all"
       filter.options != [] -> hd(filter.options).value
-      true -> value_param(result, filter.name)
+      true -> Map.get(starts.values, filter.name)
     end
   end
 

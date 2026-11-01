@@ -18,6 +18,9 @@ defmodule Web.Components.ReportTable do
   attr :records, :map, required: true, doc: "from App.ViewData.ReportRecords.load/3"
   attr :team, :any, required: true
   attr :now, :any, required: true
+  attr :sorts, :map, default: %{}, doc: "each sortable column's sorts by index (App.Report.View)"
+  attr :sort, :string, default: nil, doc: "the rows' sort"
+  attr :path_fn, :any, default: nil, doc: "for a sortable header, as `<.table>` takes it"
 
   def report_table(assigns) do
     assigns =
@@ -27,12 +30,20 @@ defmodule Web.Components.ReportTable do
       )
 
     ~H"""
-    <.table id={@id} rows={@rows} row_id={&"#{@id}-#{&1.key}"} class="table-striped">
+    <.table
+      id={@id}
+      rows={@rows}
+      row_id={&"#{@id}-#{&1.key}"}
+      class="table-striped"
+      sort={@sort}
+      path_fn={@path_fn}
+    >
       <:col
         :let={row}
         :for={{column, i} <- @columns}
         label={label(column, @records)}
         align={align(column)}
+        sorts={@sorts[i]}
       >
         <.report_cell
           value={Enum.at(row.cells, i)}

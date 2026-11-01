@@ -1,12 +1,14 @@
 defmodule Web.ReportLive do
   @moduledoc """
   One report (#768), the team's own or built in, run on the team's records. Each `:name`
-  in its query is a menu above the rows, and the picked values ride in the URL, so two
-  team admins can run it for different years; without them, a team's own report runs
-  with the values saved with it. Download CSV gives the same rows.
+  in its query is a menu above the rows, and its page's clauses draw tiles, a search,
+  filters, sortable headers, and pages (#784). Every pick rides in the URL, so two team
+  admins can run it for different years; what the URL leaves out, a team's own report
+  takes from the values saved with it. Download CSV gives the same rows, every page.
   """
   use Web, :live_view_app_layout
 
+  import Web.Components.ReportPage
   import Web.Components.ReportTable
 
   alias App.Adapter.D4H
@@ -18,6 +20,7 @@ defmodule Web.ReportLive do
   alias App.ViewData.ReportRecords
   alias App.ViewData.Reports
   alias Service.Format
+  alias Web.Components.ReportPage
 
   def mount(_params, _session, socket), do: {:ok, socket}
 
@@ -35,38 +38,42 @@ defmodule Web.ReportLive do
     {:noreply, socket}
   end
 
-  # The URL's picked values by name, or the ones saved with the report.
-  defp given(params, report) do
-    case Map.drop(params, ["subdomain", "id"]) do
-      empty when empty == %{} -> report.values
-      values -> values
-    end
-  end
+  # The URL's picks by name, over the ones saved with the report.
+  defp given(params, report), do: Map.merge(report.values, Map.drop(params, ["subdomain", "id"]))
 
   defp run(socket, report, given, now) do
     team = socket.assigns.current_team
 
-    case Report.run(report.query, team, given, now) do
-      {:ok, result} ->
-        values = Map.new(result.values, &{&1.name, Value.param(&1)})
+    case Report.page(report.query, team, given, now) do
+      {:ok, view} ->
+        # A pick the report was saved with is where it starts, so a URL leaves it out.
+        view = %{view | defaults: Map.merge(view.defaults, report.values)}
+        values = Map.new(view.values, &{&1.name, Value.param(&1)})
+        base = ~p"/teams/#{team}/reports/#{report.id}"
 
         assign(socket,
-          result: result,
-          records: ReportRecords.load(result, team, now),
-          values: result.values,
+          view: view,
+          records: ReportRecords.load(view.result, team, now),
+          values: view.values,
           form: to_form(values, as: "values"),
-          csv_path: ~p"/teams/#{team}/reports/#{report.id}/csv?#{values}",
+          controls: ReportPage.controls_form(view),
+          path_fn: &ReportPage.path(view, base, &1),
+          csv_path: csv_path(team, report, view),
           error: nil
         )
 
       {:error, %Error{} = error} ->
-        assign(socket, result: nil, values: [], error: Error.text(error), csv_path: nil)
+        assign(socket, view: nil, values: [], error: Error.text(error), csv_path: nil)
     end
   end
 
+  defp csv_path(team, report, view) do
+    params = Map.delete(view.params, "page")
+    ~p"/teams/#{team}/reports/#{report.id}/csv?#{params}"
+  end
+
   def handle_event("change", %{"values" => values}, socket) do
-    team = socket.assigns.current_team
-    path = ~p"/teams/#{team}/reports/#{socket.assigns.report.id}?#{values}"
+    path = socket.assigns.path_fn.([{:page, nil} | Map.to_list(values)])
     {:noreply, push_patch(socket, to: path, replace: true)}
   end
 
@@ -114,21 +121,23 @@ defmodule Web.ReportLive do
       <p :if={@report.saved}>Change the report to fix its query.</p>
     </.banner>
 
-    <div :if={@result}>
-      <p id="report-count" class="hint">{count(@result)}</p>
-      <.report_table
-        :if={@result.rows != []}
-        id="report-rows"
-        result={@result}
+    <div :if={@view}>
+      <.report_page
+        id="report"
+        view={@view}
         records={@records}
         team={@current_team}
         now={@now}
+        path_fn={@path_fn}
+        form={@controls}
       />
-      <p :if={@result.more?} id="report-more" class="hint">
+      <p :if={@view.result.more?} id="report-more" class="hint">
         Shows the first {Format.number(Compiler.max_rows())} rows.
       </p>
-      <.empty_state :if={@result.rows == []} id="report-empty" title="Nothing to show">
-        {if @values == [], do: "Nothing matches the report yet.", else: "Pick other values above."}
+      <.empty_state :if={@view.result.rows == []} id="report-empty" title="Nothing to show">
+        {if @values == [] and @view.filters == [] and !@view.search?,
+          do: "Nothing matches the report yet.",
+          else: "Pick other values above."}
       </.empty_state>
     </div>
 
@@ -145,22 +154,4 @@ defmodule Web.ReportLive do
     </details>
     """
   end
-
-  @doc ~s(How many rows: "7 members" when the first column is a record, "12 rows" otherwise.)
-  def count(result) do
-    n = length(result.rows)
-
-    case result.columns do
-      [%{type: {:record, kind}} | _] ->
-        Format.count(n, one: "%d #{kind_name(kind)}", many: "%d #{kind_names(kind)}")
-
-      _other ->
-        Format.count(n, one: "%d row", many: "%d rows")
-    end
-  end
-
-  defp kind_name(kind), do: Atom.to_string(kind)
-
-  defp kind_names(:activity), do: "activities"
-  defp kind_names(kind), do: kind_name(kind) <> "s"
 end

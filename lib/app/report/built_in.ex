@@ -24,6 +24,9 @@ defmodule App.Report.BuiltIn do
       pivot activity.kind
       order by member.name
       totals
+      search member.name
+      filter year 'Year' required
+        each year(activity.started_at)
       """
     },
     %{
@@ -35,6 +38,11 @@ defmodule App.Report.BuiltIn do
       from activities
       where hours_tag_count > 1 and year(started_at) = :year
       order by started_at desc
+      search title, tags
+      filter year 'Year' required
+        each year(started_at)
+      sort title 'Activity' title
+      sort started 'Started' started_at
       """
     },
     %{
@@ -46,6 +54,11 @@ defmodule App.Report.BuiltIn do
       from activities
       where hours_tag_count = 0 and published = true and year(started_at) = :year
       order by started_at desc
+      search title
+      filter year 'Year' required
+        each year(started_at)
+      sort title 'Activity' title
+      sort started 'Started' started_at
       """
     },
     %{
@@ -59,6 +72,8 @@ defmodule App.Report.BuiltIn do
       group by month(started_at)
       pivot kind
       totals
+      filter year 'Year' required
+        each year(started_at)
       """
     },
     %{
@@ -84,6 +99,7 @@ defmodule App.Report.BuiltIn do
       group by member
       pivot status
       order by member.name
+      search member.name
       """
     },
     %{
@@ -111,6 +127,9 @@ defmodule App.Report.BuiltIn do
       from members
       where counted = true and not_seen(365)
       order by last_attended
+      search name
+      sort name 'Member' name
+      sort attended 'Last attended' last_attended
       """
     },
     %{
@@ -123,6 +142,10 @@ defmodule App.Report.BuiltIn do
       where standing = 'Active' and counted = true
         and qualifications excludes (:qualification)
       order by name
+      search name, position
+      filter qualification 'Qualification' required
+        each qualifications
+      sort name 'Member' name
       """
     },
     %{
@@ -134,6 +157,9 @@ defmodule App.Report.BuiltIn do
       from members
       where joined_at = THIS_YEAR
       order by joined_at
+      search name, position
+      sort name 'Member' name
+      sort joined 'Joined' joined_at
       """
     },
     %{
@@ -158,6 +184,9 @@ defmodule App.Report.BuiltIn do
       where ends_at = NEXT_N_DAYS:60 and member.counted = true
         and member.standing != 'Retired'
       order by ends_at
+      search member.name, qualification.title
+      sort member 'Member' member.name
+      sort expires 'Expires' ends_at
       """
     },
     %{
@@ -182,6 +211,12 @@ defmodule App.Report.BuiltIn do
       from equipment
       where status in ('Unserviceable', 'Lost')
       order by location, title
+      search title, kind, location
+      switch status 'Status'
+        option unserviceable 'Unserviceable' where status = 'Unserviceable'
+        option lost 'Lost' where status = 'Lost'
+      sort title 'Item' title
+      sort location 'Location' location
       """
     },
     %{
@@ -231,6 +266,8 @@ defmodule App.Report.BuiltIn do
       group by item
       order by sum(km) desc
       label count(activity) 'Activities'
+      filter year 'Year' required
+        each year(activity.started_at)
       """
     },
     %{
@@ -241,6 +278,9 @@ defmodule App.Report.BuiltIn do
       select title, member_count
       from groups
       order by member_count desc
+      search title
+      sort title 'Group' title
+      sort members 'Members' member_count desc
       """
     }
   ]

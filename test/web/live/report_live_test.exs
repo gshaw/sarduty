@@ -65,7 +65,11 @@ defmodule Web.ReportLiveTest do
 
     for report <- BuiltIn.all() do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.slug}")
-      assert has_element?(lv, "#report-count"), report.slug
+      # The count, the filter bar's line for a report with a search or filters, or
+      # nothing to show under tiles that count none.
+      assert has_element?(lv, "#report-count, #report-filters-summary, #report-empty"),
+             report.slug
+
       refute has_element?(lv, "#report-error"), report.slug
     end
   end
@@ -85,11 +89,12 @@ defmodule Web.ReportLiveTest do
     assert has_element?(lv, "#report-rows-0", "Avery Chen")
     assert has_element?(lv, "#report-rows-0", "2h 30m")
     assert has_element?(lv, "#report-rows-total", "Total")
-    assert has_element?(lv, "#report-count", "1 member")
+    assert has_element?(lv, "#report-filters-summary", "1 member")
     assert has_element?(lv, "#report-csv[href$='/reports/hours-by-member/csv?year=2025']")
 
-    lv |> form("#report-values", values: %{year: "#{Date.utc_today().year}"}) |> render_change()
-    assert_patch(lv, ~p"/teams/#{team}/reports/hours-by-member?year=#{Date.utc_today().year}")
+    lv |> form("#report-filters", values: %{year: "#{Date.utc_today().year}"}) |> render_change()
+    # This year is where Year starts, so the URL leaves it out.
+    assert_patch(lv, ~p"/teams/#{team}/reports/hours-by-member")
     assert has_element?(lv, "#report-empty")
   end
 
@@ -107,6 +112,98 @@ defmodule Web.ReportLiveTest do
 
     assert_raise Web.Status.NotFound, fn ->
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/nothing")
+    end
+  end
+
+  describe "a report's page (#784)" do
+    @rope """
+    select title, started_at
+    from activities
+    order by started_at desc
+    search title
+    switch activity 'Kind'
+      option incident 'Incidents' where kind = 'incident'
+      option exercise 'Exercises' where kind = 'exercise'
+    filter when 'When'
+      each year(started_at) where year(started_at) = :when
+    sort date 'Date' started_at
+    page 2
+    """
+
+    setup do
+      %{user: user, team: team} = user_with_team_fixture()
+
+      for {title, kind, at} <- [
+            {"Rope rescue", "exercise", ~U[2026-03-01 18:00:00Z]},
+            {"Lost hiker", "incident", ~U[2026-04-01 18:00:00Z]},
+            {"Swiftwater", "exercise", ~U[2025-05-01 18:00:00Z]}
+          ] do
+        activity_fixture(team, %{
+          title: title,
+          activity_kind: kind,
+          started_at: at,
+          finished_at: DateTime.add(at, 3600)
+        })
+      end
+
+      {:ok, report} =
+        SaveReport.call(team, user, nil, %{"name" => "Activities by kind", "query" => @rope})
+
+      %{user: user, team: team, report: report}
+    end
+
+    test "draws the tiles, the search and filters, sortable headers, and pages", ctx do
+      %{conn: conn, user: user, team: team, report: report} = ctx
+      path = ~p"/teams/#{team}/reports/#{report.id}"
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(path)
+
+      assert has_element?(lv, "#report-tile-all", "3")
+      assert has_element?(lv, "#report-tile-exercise", "2")
+      # The All tile says 3, so the line under the bar gives the page's range alone.
+      assert has_element?(lv, "#report-filters-summary", "1–2 of 3")
+      assert has_element?(lv, "#report-rows-0", "Lost hiker")
+      assert has_element?(lv, "nav.pagination", "Page 1 of 2")
+      assert has_element?(lv, "th[aria-sort=descending] a[href='#{path}?sort=date']")
+
+      lv |> element("#report-tile-exercise") |> render_click()
+      assert_patch(lv, path <> "?activity=exercise")
+      assert has_element?(lv, "#report-rows-0", "Rope rescue")
+
+      lv |> form("#report-filters", values: %{when: "2025"}) |> render_change()
+      assert_patch(lv, path <> "?activity=exercise&when=2025")
+      assert has_element?(lv, "#report-rows-0", "Swiftwater")
+      assert has_element?(lv, "#report-csv[href$='/csv?activity=exercise&when=2025']")
+
+      lv |> form("#report-filters", values: %{q: "nothing"}) |> render_change()
+      assert has_element?(lv, "#report-empty", "Pick other values above.")
+    end
+
+    test "starts on the picks saved with the report, and the URL leaves them out", ctx do
+      %{conn: conn, user: user, team: team, report: report} = ctx
+      {:ok, report} = SaveReport.call(team, user, report, %{"values" => %{"when" => "2025"}})
+      path = ~p"/teams/#{team}/reports/#{report.id}"
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(path)
+
+      assert has_element?(lv, "#report-rows-0", "Swiftwater")
+      assert has_element?(lv, "#report-tile-all", "1")
+
+      lv |> form("#report-filters", values: %{when: "all"}) |> render_change()
+      assert_patch(lv, path <> "?when=all")
+      assert has_element?(lv, "#report-tile-all", "3")
+    end
+
+    test "Download CSV gives every row the picks keep", ctx do
+      %{conn: conn, user: user, team: team, report: report} = ctx
+
+      csv =
+        conn
+        |> log_in_user(user)
+        |> get(~p"/teams/#{team}/reports/#{report.id}/csv?activity=exercise&page=2")
+        |> response(200)
+
+      assert csv =~ "Rope rescue"
+      assert csv =~ "Swiftwater"
+      refute csv =~ "Lost hiker"
     end
   end
 end

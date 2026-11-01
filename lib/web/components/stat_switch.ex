@@ -24,7 +24,8 @@ defmodule Web.Components.StatSwitch do
   attr :id, :string, default: nil
 
   slot :view, required: true do
-    attr :patch, :string, required: true
+    attr :patch, :string, doc: "the list's path with this view; or give `click`"
+    attr :click, Phoenix.LiveView.JS, doc: "what a click runs instead, as in a form"
     attr :current, :boolean
     attr :count, :integer, required: true
     attr :marker, :string
@@ -38,7 +39,8 @@ defmodule Web.Components.StatSwitch do
       <.link
         :for={view <- @view}
         id={view[:id]}
-        patch={view.patch}
+        patch={view[:patch]}
+        phx-click={view[:click]}
         aria-current={view[:current] && "page"}
         class={view.count == 0 && "is-zero"}
       >

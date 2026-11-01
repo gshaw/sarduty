@@ -105,6 +105,12 @@ query reads, as in `where year(started_at) = :year`, must be `required`. A repor
 
 <!-- cspell:ignore publshed -->
 
+`<.report_page>` draws them on a report's page and in the editor's preview, from the
+same `App.Report.View`. On the page, each pick is a link or a menu that patches the URL,
+and the URL leaves out what a control starts on; a team's own report starts on the picks
+saved with it. In the editor, a tile, a menu, or a header changes the preview, and Save
+keeps the picks as the report's values.
+
 ## Dates and time zones
 
 SQLite has no time zones. `App.Report.LocalTime` writes a stored UTC time as the team's
