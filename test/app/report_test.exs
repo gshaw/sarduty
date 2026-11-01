@@ -294,6 +294,8 @@ defmodule App.ReportTest do
            "Line 1: There is no subject member. Did you mean members?"},
           {"select member, count(id)\nfrom attendance",
            "Line 1: Add member to group by, or count it: count(member)."},
+          {"select member, sum(hours) from attendance\ngroup by member\norder by started_at",
+           "Line 3: Order by a field in group by, or a count, not started_at."},
           {"select name from members\nwhere count(id) > 3",
            "Line 2: Take count, sum, avg, min, and max out of where: it picks rows before they are counted."},
           {"select kind from activities pivot kind",

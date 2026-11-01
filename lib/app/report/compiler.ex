@@ -104,11 +104,25 @@ defmodule App.Report.Compiler do
 
     query.select
     |> Enum.zip(parts.select)
-    |> Enum.reject(fn {ast, e} -> e.agg != false or grouped_by?(ast, query.group_by) end)
-    |> Enum.each(fn {ast, _e} ->
+    |> ungrouped(query.group_by)
+    |> Enum.each(fn ast ->
       text = Query.text(ast)
       fail(Query.line(ast), "Add #{text} to group by, or count it: count(#{text}).")
     end)
+
+    # SQLite sorts by any one row of a group otherwise, so the order would be chance.
+    query.order_by
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.zip(Enum.map(parts.order, &elem(&1, 0)))
+    |> ungrouped(query.group_by)
+    |> Enum.each(fn ast ->
+      fail(Query.line(ast), "Order by a field in group by, or a count, not #{Query.text(ast)}.")
+    end)
+  end
+
+  # The expressions that are neither counted nor grouped by.
+  defp ungrouped(pairs, group_by) do
+    for {ast, e} <- pairs, e.agg == false and not grouped_by?(ast, group_by), do: ast
   end
 
   defp check_group_by({ast, %{agg: false}}), do: ast
