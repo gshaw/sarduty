@@ -5,11 +5,14 @@ defmodule Service.Period do
 
   - **Current**: 7 days either side of today. The activity list's "Current".
   - **Recent**: the last 30 days. The activity list's "Last 30 days" and the drafts count.
+  - **The last n days**: today and the n days before it, whole days in the team's time
+    zone (`Service.DayRange.last/3`). Recent, a filter's rolling period, the attendance
+    check, and a report's `LAST_N_DAYS` all mean this (#784).
   - **Letter season**: January to April. Members file their taxes by April 30.
   - **Open years**: this year, and last year too in letter season. Letters can still be
     made or changed for these years, so their activities must match D4H.
   - **A filter's period**: All, a year as `"2026"`, or the last 30 to 365 days as
-    `"90d"`, ending now. The members list and a member's activities offer the same.
+    `"90d"`. The members list and a member's activities offer the same.
   """
 
   # A busy team runs about six activities a week, so this fits on one screen.
@@ -59,7 +62,7 @@ defmodule Service.Period do
 
   @doc """
   The UTC `{start, finish}` a year or rolling period covers, as `Service.YearRange`
-  bounds: start inclusive, finish exclusive. A rolling period ends at `now`.
+  bounds: start inclusive, finish exclusive. A rolling period is the last n days.
   """
   def bounds(year, timezone, _now) when is_integer(year),
     do: Service.YearRange.bounds(year, timezone)
@@ -67,8 +70,7 @@ defmodule Service.Period do
   def bounds(period, timezone, %DateTime{} = now) when is_binary(period) do
     case Integer.parse(period) do
       {days, "d"} ->
-        finish = DateTime.truncate(now, :second)
-        {DateTime.add(finish, -days, :day), finish}
+        Service.DayRange.last(now, timezone, days)
 
       {_year, ""} ->
         Service.YearRange.bounds(period, timezone)

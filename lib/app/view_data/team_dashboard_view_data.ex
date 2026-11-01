@@ -244,7 +244,7 @@ defmodule App.ViewData.TeamDashboardViewData do
     Activity
     |> where([a], a.team_id == ^team.id and a.is_published == false)
     |> Activity.not_deleted()
-    |> Activity.finished_recently(now)
+    |> Activity.finished_recently(now, team.timezone)
     |> ids()
   end
 

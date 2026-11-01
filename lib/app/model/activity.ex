@@ -431,12 +431,13 @@ defmodule App.Model.Activity do
   end
 
   @doc """
-  Activities that started in the last #{Service.Period.recent_days()} days and have finished by `now`.
-  The dashboard counts drafts this way, and the activity list's "Last 30 days" shows
-  the same rows, so the count and the list agree.
+  Activities that started in the last #{Service.Period.recent_days()} days (whole days in
+  `timezone`, `Service.DayRange.last/3`) and have finished by `now`. The dashboard counts
+  drafts this way, and the activity list's "Last 30 days" shows the same rows, so the
+  count and the list agree.
   """
-  def finished_recently(query, now) do
-    since = now |> DateTime.add(-Service.Period.recent_days(), :day) |> DateTime.truncate(:second)
+  def finished_recently(query, now, timezone) do
+    {since, _finish} = Service.DayRange.last(now, timezone, Service.Period.recent_days())
     now = DateTime.truncate(now, :second)
 
     query

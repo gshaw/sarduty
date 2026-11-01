@@ -208,12 +208,12 @@ defmodule App.Model.Member do
 
   defp not_in(query, member_ids), do: where(query, [m], m.id not in subquery(member_ids))
 
-  # Away periods and check-ins are days on the team's clock.
+  # The last `days` days, whole days on the team's clock (#784), as the time attendance
+  # is compared with and the first day away periods and check-ins count from.
   defp clock_bounds(team, days, now) do
-    since = DateTime.add(now, -days, :day)
-
-    {DateTime.truncate(since, :second), Service.Period.today(since, team.timezone),
-     Service.Period.today(now, team.timezone)}
+    {since, _finish} = Service.DayRange.last(now, team.timezone, days)
+    today = Service.Period.today(now, team.timezone)
+    {since, Date.add(today, -days), today}
   end
 
   defp seen_since(team, since, now) do

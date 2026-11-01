@@ -25,9 +25,9 @@ defmodule Service.PeriodTest do
   describe "a filter's period" do
     @filter_now ~U[2026-10-18 20:30:15.123456Z]
 
-    test "a rolling period ends now and reaches back that many days" do
+    test "a rolling period is today and that many days before it, whole days (#784)" do
       assert Service.Period.bounds("90d", "America/Vancouver", @filter_now) ==
-               {~U[2026-07-20 20:30:15Z], ~U[2026-10-18 20:30:15Z]}
+               {~U[2026-07-20 07:00:00Z], ~U[2026-10-19 07:00:00Z]}
     end
 
     test "a year is the calendar year in the team's time zone" do
