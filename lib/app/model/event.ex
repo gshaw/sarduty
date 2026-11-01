@@ -25,6 +25,7 @@ defmodule App.Model.Event do
     logged_out: 90,
     verify_limit_reached: 90,
     team_signup_failed: 90,
+    integration_tested: 90,
     team_signed_up: 730,
     team_key_changed: 730,
     login_grant_added: 730,
@@ -88,6 +89,16 @@ defmodule App.Model.Event do
     })
   end
 
+  @doc "Sets an integration test's outcome and how long it took, once it has an answer (#789)."
+  def put_outcome!(%Event{} = event, outcome, duration_ms) do
+    event
+    |> Ecto.Changeset.change(
+      data: Map.put(event.data, :outcome, outcome),
+      duration_ms: duration_ms
+    )
+    |> Repo.update!()
+  end
+
   @doc "Milliseconds from `started_at` to `now`."
   def duration_ms(started_at, now), do: DateTime.diff(now, started_at, :millisecond)
 
@@ -110,6 +121,18 @@ defmodule App.Model.Event do
     |> order_by([e], desc: e.occurred_at, desc: e.id)
     |> limit(1)
     |> Repo.one()
+  end
+
+  @doc """
+  The newest event of a kind for each value of `data[key]`, as a map from that value to
+  the event: the last test of each service on Adminland's Integrations page (#789).
+  """
+  def get_last_by(kind, key) when kind in @kinds do
+    Event
+    |> where([e], e.kind == ^kind)
+    |> order_by([e], asc: e.occurred_at, asc: e.id)
+    |> Repo.all()
+    |> Map.new(&{&1.data[key], &1})
   end
 
   @doc "How many events of a kind since `since`, and how many of those match `data`."

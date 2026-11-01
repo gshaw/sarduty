@@ -52,6 +52,26 @@ defmodule App.Adapter.Mapbox do
     end
   end
 
+  @doc """
+  Whether Mapbox takes the token (#789): `{:ok, account}`, or `{:error, code}` with
+  Mapbox's code, such as "TokenRevoked". Draws no map and counts as no use.
+  """
+  def check_token(context) do
+    case Req.get(context, url: "tokens/v2", retry: false) do
+      {:ok, %{status: 200, body: %{"code" => "TokenValid", "token" => token}}} ->
+        {:ok, token["user"]}
+
+      {:ok, %{body: %{"code" => code}}} ->
+        {:error, code}
+
+      {:ok, %{status: status}} ->
+        {:error, "Mapbox answered #{status}"}
+
+      {:error, exception} ->
+        {:error, Exception.message(exception)}
+    end
+  end
+
   defp header(response, name), do: response |> Req.Response.get_header(name) |> List.first()
 
   def fetch_coordinate(context, address), do: fetch_coordinate(context, address, nil)

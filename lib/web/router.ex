@@ -178,6 +178,15 @@ defmodule Web.Router do
       live "/admin/mcp", Admin.MCPLive
       live "/admin/orgs", Admin.OrganizationCollectionLive
       live "/admin/orgs/new", Admin.OrganizationNewLive
+      live "/admin/integrations", Admin.IntegrationsLive
+    end
+
+    # The Wallet tests on Adminland › Integrations (#789): a download and a redirect to
+    # Google, which a LiveView can't send.
+    scope "/admin/integrations" do
+      pipe_through :require_admin
+      get "/apple-pass", Admin.IntegrationPassController, :apple_pass
+      get "/google-pass", Admin.IntegrationPassController, :google_pass
     end
 
     # An organization's space (#512): its organization admins and SAR Duty admins. Its

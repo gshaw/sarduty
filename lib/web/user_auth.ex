@@ -497,6 +497,11 @@ defmodule Web.UserAuth do
     end
   end
 
+  @doc "A controller under /admin: a 404 for anyone who isn't a SAR Duty admin, like :ensure_admin."
+  def require_admin(conn, _opts) do
+    if conn.assigns.current_user.is_admin, do: conn, else: raise(Web.Status.NotFound)
+  end
+
   # On the way to Take attendance the login page says what logging in is for (#475), so a
   # toast there would only cover it on the hall's iPad.
   defp put_login_flash(conn) do

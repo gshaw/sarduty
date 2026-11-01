@@ -26,6 +26,19 @@ defmodule Service.ApplePass do
     zip
   end
 
+  @doc "The day a PEM certificate stops working, in UTC: the pass type certificate's expiry."
+  def certificate_expires_on(pem) do
+    [entry | _] = :public_key.pem_decode(pem)
+    {:Certificate, tbs, _algorithm, _signature} = :public_key.pem_entry_decode(entry)
+    {:Validity, _not_before, not_after} = elem(tbs, 5)
+
+    not_after
+    |> :pubkey_cert.time_str_2_gregorian_sec()
+    |> Kernel.-(62_167_219_200)
+    |> DateTime.from_unix!()
+    |> DateTime.to_date()
+  end
+
   def wwdr_certificate_path, do: Application.app_dir(:sarduty, "priv/apple/wwdr_g4.pem")
 
   defp sha1(data), do: :sha |> :crypto.hash(data) |> Base.encode16(case: :lower)
