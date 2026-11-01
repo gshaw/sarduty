@@ -257,8 +257,8 @@ defmodule Web.Router do
       live "/teams/:subdomain/members/:id/history", MemberHistoryLive
       live "/teams/:subdomain/reports", ReportCollectionLive
       live "/teams/:subdomain/reports/new", ReportFormLive, :new
-      live "/teams/:subdomain/reports/:slug", ReportLive
-      live "/teams/:subdomain/reports/:slug/edit", ReportFormLive, :edit
+      live "/teams/:subdomain/reports/:id", ReportLive
+      live "/teams/:subdomain/reports/:id/edit", ReportFormLive, :edit
       live "/teams/:subdomain/groups", GroupCollectionLive
       live "/teams/:subdomain/groups/new", TitledRecordFormLive, :new_group
       live "/teams/:subdomain/groups/:id", GroupLive
@@ -336,7 +336,7 @@ defmodule Web.Router do
 
       get "/members/:id/certificates/:award_id", MemberController, :certificate
       get "/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
-      get "/reports/:slug/csv", ReportController, :csv
+      get "/reports/:id/csv", ReportController, :csv
       post "/members/:id/view-as", ViewAsController, :create
       delete "/view-as", ViewAsController, :delete
     end

@@ -22,7 +22,7 @@ defmodule Web.ReportControllerTest do
     assert response_content_type(conn, :csv)
 
     assert get_resp_header(conn, "content-disposition") == [
-             ~s(attachment; filename="hours-by-member.csv")
+             ~s(attachment; filename="#{team.subdomain}-report-hours-by-member.csv")
            ]
 
     assert response(conn, 200) ==

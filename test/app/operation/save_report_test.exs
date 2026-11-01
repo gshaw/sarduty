@@ -7,27 +7,12 @@ defmodule App.Operation.SaveReportTest do
   alias App.Model.SavedReport
   alias App.Operation.SaveReport
 
-  describe "slug/2" do
-    test "a slug comes from the name, and steps around ones taken" do
-      assert SaveReport.slug("Swiftwater hours, 2 years!", []) == "swiftwater-hours-2-years"
-      assert SaveReport.slug("Hours by member", ["hours-by-member"]) == "hours-by-member-2"
-
-      assert SaveReport.slug("Hours by member", ["hours-by-member", "hours-by-member-2"]) ==
-               "hours-by-member-3"
-
-      assert SaveReport.slug("!!!", []) == "report"
-    end
-  end
-
   describe "call/5" do
     setup do
       %{team: team_fixture(), user: AccountsFixtures.user_fixture()}
     end
 
-    test "saves a report whose query runs, with a slug no built-in report has", %{
-      team: team,
-      user: user
-    } do
+    test "saves a report whose query runs, with who made it", %{team: team, user: user} do
       params = %{
         "name" => "Hours by member",
         "about" => "Mine",
@@ -35,14 +20,8 @@ defmodule App.Operation.SaveReportTest do
       }
 
       assert {:ok, report} = SaveReport.call(team, user, nil, params)
-      assert report.slug == "hours-by-member-2"
       assert report.created_by_user_id == user.id
-      assert SavedReport.get_by_slug(team, report.slug).query == "select name from members"
-    end
-
-    test "a report named New steps around the New report page", %{team: team, user: user} do
-      params = %{"name" => "New", "query" => "select name from members"}
-      assert {:ok, %{slug: "new-2"}} = SaveReport.call(team, user, nil, params)
+      assert SavedReport.get(team, report.id).query == "select name from members"
     end
 
     test "a query that cannot run is refused, with its line", %{team: team, user: user} do
@@ -59,17 +38,6 @@ defmodule App.Operation.SaveReportTest do
                SaveReport.call(team, user, nil, %{"query" => "select name from members"})
 
       assert {"Enter a name for the report", _} = changeset.errors[:name]
-    end
-
-    test "a renamed report keeps its slug, so links to it still work", %{team: team, user: user} do
-      {:ok, report} =
-        SaveReport.call(team, user, nil, %{
-          "name" => "First",
-          "query" => "select name from members"
-        })
-
-      {:ok, renamed} = SaveReport.call(team, user, report, %{"name" => "Second"})
-      assert {renamed.name, renamed.slug} == {"Second", "first"}
     end
   end
 end

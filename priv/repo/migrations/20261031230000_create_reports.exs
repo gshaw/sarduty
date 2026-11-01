@@ -8,7 +8,6 @@ defmodule App.Repo.Migrations.CreateReports do
   def change do
     create table(:reports) do
       add :team_id, references(:teams, on_delete: :delete_all), null: false
-      add :slug, :string, null: false
       add :name, :string, null: false
       add :about, :string
       add :query, :text, null: false
@@ -18,7 +17,7 @@ defmodule App.Repo.Migrations.CreateReports do
       timestamps(type: :utc_datetime)
     end
 
-    create unique_index(:reports, [:team_id, :slug])
+    create index(:reports, [:team_id])
     create index(:reports, [:created_by_user_id])
   end
 end

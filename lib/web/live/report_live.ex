@@ -21,15 +21,15 @@ defmodule Web.ReportLive do
 
   def mount(_params, _session, socket), do: {:ok, socket}
 
-  def handle_params(%{"slug" => slug} = params, _uri, socket) do
+  def handle_params(%{"id" => id} = params, _uri, socket) do
     team = socket.assigns.current_team
     now = DateTime.utc_now()
-    report = Reports.find(team, slug, now) || raise Web.Status.NotFound
+    report = Reports.find(team, id, now) || raise Web.Status.NotFound
 
     socket =
       socket
       |> assign(page_title: report.name, report: report, now: now)
-      |> assign(fix: BuiltIn.fix(slug, D4H.service(team)))
+      |> assign(fix: BuiltIn.fix(report.id, D4H.service(team)))
       |> run(report, given(params, report), now)
 
     {:noreply, socket}
@@ -37,7 +37,7 @@ defmodule Web.ReportLive do
 
   # The URL's picked values by name, or the ones saved with the report.
   defp given(params, report) do
-    case Map.drop(params, ["subdomain", "slug"]) do
+    case Map.drop(params, ["subdomain", "id"]) do
       empty when empty == %{} -> report.values
       values -> values
     end
@@ -55,7 +55,7 @@ defmodule Web.ReportLive do
           records: ReportRecords.load(result, team, now),
           values: result.values,
           form: to_form(values, as: "values"),
-          csv_path: ~p"/teams/#{team}/reports/#{report.slug}/csv?#{values}",
+          csv_path: ~p"/teams/#{team}/reports/#{report.id}/csv?#{values}",
           error: nil
         )
 
@@ -66,7 +66,7 @@ defmodule Web.ReportLive do
 
   def handle_event("change", %{"values" => values}, socket) do
     team = socket.assigns.current_team
-    path = ~p"/teams/#{team}/reports/#{socket.assigns.report.slug}?#{values}"
+    path = ~p"/teams/#{team}/reports/#{socket.assigns.report.id}?#{values}"
     {:noreply, push_patch(socket, to: path, replace: true)}
   end
 
@@ -83,14 +83,14 @@ defmodule Web.ReportLive do
         <.button
           :if={@report.saved}
           id="report-change"
-          navigate={~p"/teams/#{@current_team}/reports/#{@report.slug}/edit"}
+          navigate={~p"/teams/#{@current_team}/reports/#{@report.id}/edit"}
         >
           Change report
         </.button>
         <.button
           :if={!@report.saved}
           id="report-copy"
-          navigate={~p"/teams/#{@current_team}/reports/new?#{[from: @report.slug]}"}
+          navigate={~p"/teams/#{@current_team}/reports/new?#{[from: @report.id]}"}
         >
           Copy and change
         </.button>

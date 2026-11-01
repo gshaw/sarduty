@@ -8,12 +8,10 @@ defmodule App.Model.SavedReport do
   alias App.Repo
 
   # A team's own report (#768): its query, never its rows. The query is checked again on
-  # every run, so a field that goes fails with a message, never wrong rows. `slug` is its
-  # URL, unique on the team and never a built-in report's.
+  # every run, so a field that goes fails with a message, never wrong rows.
   schema "reports" do
     belongs_to :team, Team
     belongs_to :created_by_user, User
-    field :slug, :string
     field :name, TrimmedString
     field :about, TrimmedString
     field :query, :string
@@ -51,15 +49,11 @@ defmodule App.Model.SavedReport do
     |> Repo.all()
   end
 
-  @doc "The team's report with `slug`, or nil."
-  def get_by_slug(%Team{} = team, slug) do
+  @doc "The team's report with `id`, or nil."
+  def get(%Team{} = team, id) do
     SavedReport
-    |> where([r], r.team_id == ^team.id and r.slug == ^slug)
+    |> where([r], r.team_id == ^team.id and r.id == ^id)
     |> preload(:created_by_user)
     |> Repo.one()
   end
-
-  @doc "The slugs the team's reports use, for a new one to steer clear of."
-  def slugs(%Team{} = team),
-    do: SavedReport |> where([r], r.team_id == ^team.id) |> select([r], r.slug) |> Repo.all()
 end

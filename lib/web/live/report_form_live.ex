@@ -3,7 +3,7 @@ defmodule Web.ReportFormLive do
   New report and Change report (#768). The query first, its rows as you type, then the
   name: a report is named once it's right. Save keeps the query and the picked values,
   never the rows. Beside the query, the fields of the subject after `from`; a click puts
-  one in the query where the cursor is. `?from=<slug>` starts from a copy of another
+  one in the query where the cursor is. `?from=<id>` starts from a copy of another
   report, such as a built-in one.
   """
   use Web, :live_view_app_layout
@@ -47,15 +47,15 @@ defmodule Web.ReportFormLive do
     |> then(&{:ok, &1})
   end
 
-  defp start(:edit, %{"slug" => slug}, team, now) do
-    case Reports.find(team, slug, now) do
+  defp start(:edit, %{"id" => id}, team, now) do
+    case Reports.find(team, id, now) do
       %{saved: %SavedReport{} = saved} -> {saved, %{}}
       _built_in_or_none -> raise Web.Status.NotFound
     end
   end
 
-  defp start(:new, %{"from" => slug}, team, now) do
-    report = Reports.find(team, slug, now) || raise Web.Status.NotFound
+  defp start(:new, %{"from" => id}, team, now) do
+    report = Reports.find(team, id, now) || raise Web.Status.NotFound
 
     {nil,
      %{
@@ -126,7 +126,7 @@ defmodule Web.ReportFormLive do
 
     case SaveReport.call(team, user, saved, params, socket.assigns.now) do
       {:ok, report} ->
-        {:noreply, push_navigate(socket, to: ~p"/teams/#{team}/reports/#{report.slug}")}
+        {:noreply, push_navigate(socket, to: ~p"/teams/#{team}/reports/#{report.id}")}
 
       {:error, changeset} ->
         {:noreply, socket |> assign_form(changeset) |> preview(params)}
@@ -150,7 +150,7 @@ defmodule Web.ReportFormLive do
       <:item
         :if={@saved}
         label={@saved.name}
-        path={~p"/teams/#{@current_team}/reports/#{@saved.slug}"}
+        path={~p"/teams/#{@current_team}/reports/#{@saved.id}"}
       />
       <:item label={@page_title} />
     </.breadcrumbs>
@@ -244,7 +244,7 @@ defmodule Web.ReportFormLive do
   defp field_text(field), do: field.name
 
   defp cancel_path(team, nil), do: ~p"/teams/#{team}/reports"
-  defp cancel_path(team, saved), do: ~p"/teams/#{team}/reports/#{saved.slug}"
+  defp cancel_path(team, saved), do: ~p"/teams/#{team}/reports/#{saved.id}"
 
   defp preview_count(result, total) do
     count = Web.ReportLive.count(%{result | rows: List.duplicate(nil, total)})

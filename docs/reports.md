@@ -64,8 +64,8 @@ Built-in reports live in `App.Report.BuiltIn`, change with the app, and can be c
 but not changed; a test opens every one. A team's own reports are rows in `reports`
 (`App.Model.SavedReport`): the query and its picked values, never the rows. The query
 is checked again on every run, so a field that goes fails with a message on the
-report's page. `App.ViewData.Reports` treats both the same, by slug: a saved report's
-slug is never a built-in one's, and stays when it's renamed.
+report's page. `App.ViewData.Reports` treats both the same, by `id` in the URL: a team's
+own report by its row's id, a number, and a built-in one by its slug, never a number.
 
 ## Limits
 

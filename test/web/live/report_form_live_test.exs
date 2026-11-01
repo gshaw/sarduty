@@ -35,8 +35,8 @@ defmodule Web.ReportFormLiveTest do
     )
     |> render_submit()
 
-    assert_redirect(lv, ~p"/teams/#{team}/reports/everyone")
-    assert %SavedReport{name: "Everyone"} = SavedReport.get_by_slug(team, "everyone")
+    report = App.Repo.get_by!(SavedReport, team_id: team.id, name: "Everyone")
+    assert_redirect(lv, ~p"/teams/#{team}/reports/#{report.id}")
   end
 
   # A new member after the rows ran shows only if typing the name ran the query again.
@@ -94,21 +94,21 @@ defmodule Web.ReportFormLiveTest do
     conn = log_in_user(conn, user)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports")
-    assert has_element?(lv, "#saved-reports #report-groups", "Groups")
+    assert has_element?(lv, "#report-#{report.id}", "Groups")
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.slug}")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}")
     assert has_element?(lv, "#report-change")
     assert has_element?(lv, "#report-query", "Made by")
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.slug}/edit")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
     lv |> form("#report-form", report: %{name: "Group list"}) |> render_submit()
-    assert_redirect(lv, ~p"/teams/#{team}/reports/groups")
-    assert SavedReport.get_by_slug(team, "groups").name == "Group list"
+    assert_redirect(lv, ~p"/teams/#{team}/reports/#{report.id}")
+    assert SavedReport.get(team, report.id).name == "Group list"
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.slug}/edit")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
     lv |> element("#report-delete-button") |> render_click()
     assert_redirect(lv, ~p"/teams/#{team}/reports")
-    assert SavedReport.get_by_slug(team, "groups") == nil
+    assert SavedReport.get(team, report.id) == nil
   end
 
   test "a built-in report cannot be changed", %{conn: conn} do
@@ -123,14 +123,23 @@ defmodule Web.ReportFormLiveTest do
     %{user: user, team: team} = user_with_team_fixture()
     other = team_fixture()
 
-    {:ok, _report} =
+    {:ok, theirs} =
       SaveReport.call(other, user, nil, %{
         "name" => "Theirs",
         "query" => "select title from groups"
       })
 
+    conn = log_in_user(conn, user)
+
+    for path <- [
+          ~p"/teams/#{team}/reports/#{theirs.id}",
+          ~p"/teams/#{team}/reports/#{theirs.id}/edit"
+        ] do
+      assert_raise Web.Status.NotFound, fn -> live(conn, path) end
+    end
+
     assert_raise Web.Status.NotFound, fn ->
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/theirs")
+      get(conn, ~p"/teams/#{team}/reports/#{theirs.id}/csv")
     end
   end
 end

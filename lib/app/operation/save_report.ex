@@ -1,8 +1,7 @@
 defmodule App.Operation.SaveReport do
   @moduledoc """
   Saves a team admin's report (#768), new or changed. Its query must run on the team's
-  fields: a mistake goes on the Query field with its line, as the editor shows it. A new
-  report gets a slug from its name, kept when it's renamed so links to it keep working.
+  fields: a mistake goes on the Query field with its line, as the editor shows it.
   """
 
   alias App.Accounts.User
@@ -10,7 +9,6 @@ defmodule App.Operation.SaveReport do
   alias App.Model.Team
   alias App.Repo
   alias App.Report
-  alias App.Report.BuiltIn
   alias App.Report.Error
   alias Ecto.Changeset
 
@@ -21,7 +19,6 @@ defmodule App.Operation.SaveReport do
     report
     |> SavedReport.changeset(params)
     |> check_query(team, now)
-    |> put_slug(team)
     |> Repo.insert_or_update()
   end
 
@@ -38,33 +35,5 @@ defmodule App.Operation.SaveReport do
       {:ok, _plan} -> changeset
       {:error, error} -> Changeset.add_error(changeset, :query, Error.text(error))
     end
-  end
-
-  defp put_slug(%Changeset{data: %SavedReport{id: nil}} = changeset, team) do
-    name = Changeset.get_field(changeset, :name) || ""
-    # /reports/new is the New report page.
-    taken = ["new" | Enum.map(BuiltIn.all(), & &1.slug)] ++ SavedReport.slugs(team)
-    Changeset.put_change(changeset, :slug, slug(name, taken))
-  end
-
-  defp put_slug(changeset, _team), do: changeset
-
-  @doc ~S"""
-  Pure. A URL slug from `name` that isn't in `taken`: "Swiftwater hours" is
-  "swiftwater-hours", then "swiftwater-hours-2".
-  """
-  def slug(name, taken) do
-    base =
-      name
-      |> String.downcase()
-      |> String.replace(~r/[^a-z0-9]+/, "-")
-      |> String.trim("-")
-      |> String.slice(0, 60)
-      |> String.trim("-")
-
-    base = if base == "", do: "report", else: base
-    taken = MapSet.new(taken)
-
-    Enum.find([base | Enum.map(2..1000, &"#{base}-#{&1}")], &(not MapSet.member?(taken, &1)))
   end
 end
