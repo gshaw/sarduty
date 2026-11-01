@@ -14,7 +14,7 @@ defmodule App.Report.Lists do
       slug: "activities",
       name: "Activities",
       query: """
-      select title, kind, started_at, duration
+      select title, started_at, duration
       from activities
       order by started_at desc
       search title, ref_id, tracking_number, tags, description
