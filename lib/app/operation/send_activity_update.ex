@@ -8,13 +8,15 @@ defmodule App.Operation.SendActivityUpdate do
 
   plan/1 says who can get one, pure. call/6 records a queued row per update with its
   job, in one transaction. App.Worker.SendActivityUpdateWorker then sends each with
-  deliver/3, retrying a refusal.
+  deliver/3, retrying a refusal. Remove members (#704) queues its message to a signed up
+  member here too, as a `:removal`.
   """
   alias App.Accounts.User
   alias App.Mailer.ActivityMailer
   alias App.Model.Activity
   alias App.Model.ActivityUpdate
   alias App.Model.Attendance
+  alias App.Model.Member
   alias App.Model.Team
   alias App.Operation.SendReminders
   alias App.Repo
@@ -44,10 +46,11 @@ defmodule App.Operation.SendActivityUpdate do
 
   @doc """
   The activity's earlier sends, newest first, as `%{sent_at:, sent_by_user:, message:,
-  members:, failed:}`.
+  members:, failed:}`. Removals are not updates, so they're left out.
   """
   def sent_before(updates) do
     updates
+    |> Enum.filter(&(&1.kind == :update))
     |> Enum.group_by(& &1.sent_at)
     |> Enum.map(fn {sent_at, [first | _] = batch} ->
       %{
@@ -95,7 +98,7 @@ defmodule App.Operation.SendActivityUpdate do
     for {_status, rows} <- groups,
         row <- rows,
         MapSet.member?(ids, row.member.id),
-        do: queue(activity, row.member, user, message, now)
+        do: queue(activity, row.member, user, message, now, :update)
   end
 
   @doc "What a call/6 error says."
@@ -105,8 +108,12 @@ defmodule App.Operation.SendActivityUpdate do
   def error_text(:deleted), do: "This activity is deleted. Nothing can be sent to it."
   def error_text(:started), do: "Updates closed when the activity started."
 
-  # The row and its job commit together, or neither does.
-  defp queue(activity, member, user, message, now) do
+  @doc """
+  Records a queued `kind` email of `message` to `member` from `user`, with its job. The
+  row and its job commit together, or neither does.
+  """
+  def queue(%Activity{} = activity, %Member{} = member, %User{} = user, message, now, kind)
+      when kind in [:update, :removal] do
     {:ok, update} =
       Repo.transaction(fn ->
         update =
@@ -117,7 +124,8 @@ defmodule App.Operation.SendActivityUpdate do
             sent_by_user_id: user.id,
             message: message,
             sent_at: now,
-            status: :queued
+            status: :queued,
+            kind: kind
           })
 
         SendActivityUpdateWorker.enqueue(update)
@@ -132,12 +140,22 @@ defmodule App.Operation.SendActivityUpdate do
   as it is now. A refusal is `{:error, reason}`, so the job tries again; on the `last?`
   attempt the update is marked failed first. One no longer queued is `{:cancel,
   reason}`, and so is one whose activity started or was deleted, or whose member is no
-  longer on it, before it went, which is marked failed.
+  longer on it, before it went, which is marked failed. A removal goes whenever its job
+  runs, unless the member is back on the activity by then.
   """
   def deliver(update_id, last?, now) do
     case ActivityUpdate.get_queued(update_id) do
       nil -> {:cancel, "no queued update"}
       update -> deliver_queued(update, last?, now)
+    end
+  end
+
+  defp deliver_queued(%ActivityUpdate{kind: :removal} = update, last?, now) do
+    if Attendance.invitation(update.activity, update.member) do
+      ActivityUpdate.fail!(update, "The member was back on the activity before it went.")
+      {:cancel, "the member is back on the activity"}
+    else
+      send_email(update, :removed, last?, now)
     end
   end
 
@@ -158,17 +176,25 @@ defmodule App.Operation.SendActivityUpdate do
     end
   end
 
+  defp deliver_email(update, team, sender, :removed),
+    do:
+      ActivityMailer.deliver_removal(update.member, update.activity, team, sender, update.message)
+
+  defp deliver_email(update, team, sender, ending),
+    do:
+      ActivityMailer.deliver_update(
+        update.member,
+        update.activity,
+        team,
+        sender,
+        update.message,
+        ending
+      )
+
   defp send_email(%ActivityUpdate{team: team} = update, ending, last?, now) do
     sender = SendReminders.sender(team, update.sent_by_user, now)
 
-    case ActivityMailer.deliver_update(
-           update.member,
-           update.activity,
-           team,
-           sender,
-           update.message,
-           ending
-         ) do
+    case deliver_email(update, team, sender, ending) do
       {:ok, _sent} ->
         ActivityUpdate.sent!(update)
         :ok

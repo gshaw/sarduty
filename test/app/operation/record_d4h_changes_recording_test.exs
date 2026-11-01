@@ -142,6 +142,36 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
     assert Repo.all(D4HChange) == []
   end
 
+  # A sync during Remove members' apply (#704) sees the row gone before the copy drops it.
+  test "skips a row SAR Duty deleted, and records one deleted in D4H", ctx do
+    ours = attendance_fixture(ctx.activity, ctx.member, %{status: "requested"})
+    theirs = attendance_fixture(ctx.activity, member_fixture(ctx.team), %{status: "requested"})
+
+    change_set =
+      ChangeSet.propose!(
+        %ChangeSet{team_id: ctx.team.id, activity_id: ctx.activity.id, source: :remove},
+        [
+          %ChangeSetRow{
+            member_id: ctx.member.id,
+            action: :delete_attendance,
+            d4h_record_id: ours.d4h_attendance_id,
+            old_value: %{"status" => "requested"},
+            new_value: %{}
+          }
+        ]
+      )
+
+    [row] = change_set.rows
+    ChangeSetRow.record!(row, {:applied, ours.d4h_attendance_id}, @synced)
+
+    RecordD4HChanges.recording(ctx.team, @now, fn ->
+      RecordD4HChanges.removed(:attendance, [ours, theirs])
+    end)
+
+    assert [%D4HChange{action: :removed, d4h_record_id: id}] = Repo.all(D4HChange)
+    assert id == theirs.d4h_attendance_id
+  end
+
   describe "an edit of a team on SAR Duty Records" do
     defp apply_edit(ctx, applied_at) do
       change_set =

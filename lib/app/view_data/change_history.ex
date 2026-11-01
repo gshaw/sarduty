@@ -439,15 +439,12 @@ defmodule App.ViewData.ChangeHistory do
     "#{subject || "Attendance"} set to #{status(row.new_value["status"])}"
   end
 
-  def describe_row(%ChangeSetRow{action: :delete_attendance} = row, page) do
-    subject =
-      case page do
-        :member -> row.change_set.activity && row.change_set.activity.title
-        :activity -> row.member && row.member.name
-      end
+  def describe_row(%ChangeSetRow{action: :delete_attendance} = row, :member),
+    do:
+      "Removed from #{(row.change_set.activity && row.change_set.activity.title) || "an activity"}"
 
-    "#{subject || "Attendance"} removed"
-  end
+  def describe_row(%ChangeSetRow{action: :delete_attendance} = row, :activity),
+    do: "#{(row.member && row.member.name) || "Attendance"} removed"
 
   def describe_row(%ChangeSetRow{action: :publish_activity} = row, _page),
     do:
@@ -566,6 +563,7 @@ defmodule App.ViewData.ChangeHistory do
   def source_label(:equipment), do: "equipment"
   def source_label(:template), do: "template"
   def source_label(:invite), do: "Add members"
+  def source_label(:remove), do: "Remove members"
   def source_label(:tags), do: "tags"
   def source_label(:chores), do: "chores"
   def source_label(:certificates), do: "certificates"

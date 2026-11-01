@@ -155,6 +155,10 @@ defmodule Web.ReplyLinkLive do
     <p :if={@activity.deleted_at} id="reply-link-deleted" class="mt-6">
       This activity is deleted.
     </p>
+    <%!-- True however they came off, D4H included, so it names nobody and no date. --%>
+    <p :if={!@invitation && !@activity.deleted_at} id="reply-link-gone" class="mt-6">
+      You're no longer on this activity.
+    </p>
     <p
       :if={@invitation && !@activity.deleted_at && !Reply.open?(@invitation, @activity, @now)}
       id="reply-link-closed"

@@ -63,7 +63,8 @@ defmodule App.Operation.SendActivityUpdateTest do
     updates = [
       %ActivityUpdate{sent_at: earlier, message: "First", status: :sent},
       %ActivityUpdate{sent_at: @now, message: "Second", status: :sent},
-      %ActivityUpdate{sent_at: @now, message: "Second", status: :failed}
+      %ActivityUpdate{sent_at: @now, message: "Second", status: :failed},
+      %ActivityUpdate{sent_at: @now, message: "Sorry", status: :sent, kind: :removal}
     ]
 
     assert [
@@ -154,6 +155,37 @@ defmodule App.Operation.SendActivityUpdateTest do
 
       Repo.delete_all(Attendance)
 
+      assert {:cancel, _} = SendActivityUpdate.deliver(update.id, false, now())
+      assert Repo.reload!(update).status == :failed
+      refute_email_sent()
+    end
+
+    # Remove members (#704) deletes the copy's rows before the job runs.
+    test "a removal goes after the start, unless the member is back on", ctx do
+      removal = fn ->
+        Repo.insert!(%ActivityUpdate{
+          team_id: ctx.team.id,
+          activity_id: ctx.activity.id,
+          member_id: ctx.avery.id,
+          sent_by_user_id: ctx.user.id,
+          message: "Sorry",
+          sent_at: now(),
+          status: :queued,
+          kind: :removal
+        })
+      end
+
+      Repo.delete_all(Attendance)
+      later = DateTime.add(ctx.activity.started_at, 1, :hour)
+      update = removal.()
+      assert SendActivityUpdate.deliver(update.id, false, later) == :ok
+      assert Repo.reload!(update).status == :sent
+      assert_received {:email, %{subject: "You're no longer on Training night"} = email}
+      assert email.html_body =~ "You're no longer on this activity."
+      refute email.html_body =~ "Open activity"
+
+      attendance_fixture(ctx.activity, ctx.avery, %{status: "requested"})
+      update = removal.()
       assert {:cancel, _} = SendActivityUpdate.deliver(update.id, false, now())
       assert Repo.reload!(update).status == :failed
       refute_email_sent()
