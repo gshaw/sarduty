@@ -5,8 +5,8 @@ defmodule App.Model.D4HAccess do
   action → true or false, stored on the team as `d4h_permissions`.
 
   A key acts as the D4H member who made it. Owners' keys have every right SAR Duty
-  uses; Editors' lack a few, such as adding custom fields (#724). Custom field answers
-  need only the record's own UPDATE.
+  uses; Editors' lack the custom field rights, so they can't change fields (#724).
+  Custom field answers need only the record's own UPDATE.
 
   Pure. A nil map, a Records team's or one never checked, refuses nothing.
   """
@@ -80,6 +80,18 @@ defmodule App.Model.D4HAccess do
       name: "Fill in fields",
       what: "Answers to custom fields on activities, members, and equipment.",
       needs: for(type <- ~w(Incident Exercise Event Member Equipment), do: {type, "UPDATE"})
+    },
+    # Custom field definitions (#724). An Editor's key lacks these.
+    %{
+      id: :custom_fields,
+      name: "Change fields",
+      what: "Add, change, and delete custom fields on activities, members, and equipment.",
+      needs:
+        for(
+          type <- ~w(Incident Exercise Event Member Equipment),
+          action <- ~w(CREATE_CUSTOM_FIELDS UPDATE_CUSTOM_FIELDS DELETE_CUSTOM_FIELDS),
+          do: {type, action}
+        )
     },
     %{
       id: :awards,

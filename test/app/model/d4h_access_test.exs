@@ -40,9 +40,9 @@ defmodule App.Model.D4HAccessTest do
     assert ids(D4HAccess.refused(rights)) == [:groups]
   end
 
-  # South Fraser's Editor key on 2026-10-29: no custom field definitions, no saved
-  # places, no settings. SAR Duty uses none of those, so it refuses nothing.
-  test "an Editor's key as D4H sends it today refuses nothing SAR Duty does" do
+  # South Fraser's Editor key on 2026-10-29 and 2026-10-31: no custom field definitions,
+  # no saved places, no settings. Of those, SAR Duty only changes fields.
+  test "an Editor's key as D4H sends it refuses only changing fields" do
     rights =
       all_rights()
       |> put_in(["Incident", "CREATE_CUSTOM_FIELDS"], false)
@@ -50,6 +50,7 @@ defmodule App.Model.D4HAccessTest do
       |> Map.put("LocationBookmark", %{"CREATE" => false})
       |> Map.put("Setting", %{"UPDATE" => false})
 
-    assert D4HAccess.refused(rights) == []
+    assert ids(D4HAccess.refused(rights)) == [:custom_fields]
+    assert Team.d4h_can?(%Team{d4h_permissions: rights}, :field_values)
   end
 end
