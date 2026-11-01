@@ -3,6 +3,7 @@ defmodule App.Adapter.D4H.WhoAmI do
 
   # d4h_team_id is the first membership's team; d4h_team_ids is every team the
   # key's member belongs to, and member_names and member_ids their name and id on each.
+  # permissions come from a second, team-level whoami (D4H.fetch_whoami/1).
   defstruct d4h_team_id: nil,
             d4h_team_ids: [],
             member_names: %{},
@@ -17,7 +18,7 @@ defmodule App.Adapter.D4H.WhoAmI do
     with {:ok, members} <- Map.fetch(record, "members"),
          [member | _] <- members,
          {:ok, team} <- Map.fetch(member, "owner") do
-      %{build(members, member, team) | permissions: permissions(record)}
+      build(members, member, team)
     else
       _ -> nil
     end
@@ -35,9 +36,6 @@ defmodule App.Adapter.D4H.WhoAmI do
       team_name: team["title"]
     }
   end
-
-  defp permissions(%{"context" => %{"permissions" => %{} = permissions}}), do: permissions
-  defp permissions(_record), do: nil
 
   @doc "The key's member name on the given D4H team, or nil."
   def member_name(%__MODULE__{} = whoami, d4h_team_id),

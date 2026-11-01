@@ -50,7 +50,10 @@ defmodule App.Adapter.D4HTest do
   end
 
   describe "fetch_whoami (#537)" do
-    defp whoami, do: D4H.fetch_whoami(access_key: "key", api_host: "api.ca.d4h.org")
+    defp whoami, do: fetch_whoami([])
+
+    defp fetch_whoami(opts),
+      do: D4H.fetch_whoami([access_key: "key", api_host: "api.ca.d4h.org"] ++ opts)
 
     test "a 401, a 403, or no team is a refused key" do
       for status <- [401, 403] do
@@ -60,6 +63,31 @@ defmodule App.Adapter.D4HTest do
 
       Req.Test.stub(App.Adapter.D4H, &Req.Test.json(&1, %{"members" => []}))
       assert whoami() == {:error, :refused}
+    end
+
+    # #727: the account whoami has no rights, so a check that read only it saw none.
+    test "the key's rights come from the team's whoami, and Records sends none" do
+      member = %{
+        "id" => 70,
+        "name" => "SAR Duty",
+        "owner" => %{"resourceType" => "Team", "id" => 7}
+      }
+
+      rights = %{"Team" => %{"READ" => true}}
+
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        case conn.request_path do
+          "/v3/whoami" -> Req.Test.json(conn, %{"account" => %{}, "members" => [member]})
+          "/v3/team/7/whoami" -> Req.Test.json(conn, %{"context" => %{"permissions" => rights}})
+        end
+      end)
+
+      assert {:ok, %{permissions: ^rights}} = whoami()
+      assert {:ok, %{permissions: ^rights}} = fetch_whoami(d4h_team_id: 7)
+      assert {:ok, %{permissions: nil}} = fetch_whoami(d4h_team_id: 8)
+
+      records = D4H.fetch_whoami(access_key: "key", api_host: D4H.records_host())
+      assert {:ok, %{permissions: nil}} = records
     end
 
     test "an outage is D4H not answering, not a bad key" do

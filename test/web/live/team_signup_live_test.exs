@@ -38,6 +38,9 @@ defmodule Web.TeamSignupLiveTest do
             ]
           })
 
+        "/v3/team/7700/whoami" ->
+          Req.Test.json(conn, %{"context" => %{"permissions" => %{"Team" => %{"READ" => true}}}})
+
         "/v3/team/7700/teams/7700" ->
           Req.Test.json(conn, %{
             "id" => @d4h_team_id,
@@ -106,6 +109,7 @@ defmodule Web.TeamSignupLiveTest do
     assert {team.legal_name, team.abbreviated_name} == {"Ridge SAR", "Ridge SAR"}
     assert team.d4h_access_key == "team-token"
     assert team.d4h_access_key_owner == "SAR Duty"
+    assert team.d4h_permissions == %{"Team" => %{"READ" => true}}
 
     assert_received {:email, %{subject: "New team on SAR Duty: Ridge SAR", to: admins}}
     assert [{_, "admin@example.com"}] = admins
@@ -130,6 +134,7 @@ defmodule Web.TeamSignupLiveTest do
     assert_received {:req_host, "records.sarduty.com"}
     team = Team.get_by(d4h_team_id: @d4h_team_id)
     assert team.d4h_api_host == "records.sarduty.com"
+    assert team.d4h_permissions == nil
     assert D4H.records?(team)
   end
 

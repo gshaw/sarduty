@@ -18,15 +18,18 @@ defmodule Web.Settings.AccessKeyLiveTest do
     end
   end
 
-  defp whoami(team, permissions) do
+  # D4H's account whoami names the key's member; only the team's whoami has its rights.
+  defp stub_whoami(team, permissions) do
     owner = %{"resourceType" => "Team", "id" => team.d4h_team_id, "title" => team.name}
+    member = %{"resourceType" => "Member", "id" => 900, "name" => "SAR Duty", "owner" => owner}
+    team_whoami = "/v3/team/#{team.d4h_team_id}/whoami"
 
-    %{
-      "members" => [
-        %{"resourceType" => "Member", "id" => 900, "name" => "SAR Duty", "owner" => owner}
-      ],
-      "context" => %{"permissions" => permissions}
-    }
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      case conn.request_path do
+        "/v3/whoami" -> Req.Test.json(conn, %{"account" => %{}, "members" => [member]})
+        ^team_whoami -> Req.Test.json(conn, %{"context" => %{"permissions" => permissions}})
+      end
+    end)
   end
 
   test "never puts the saved team key in the page", %{conn: conn} do
@@ -68,7 +71,7 @@ defmodule Web.Settings.AccessKeyLiveTest do
   test "a new key is saved with what D4H lets it do, and recorded as changed, by whom",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: @secret}})
-    Req.Test.stub(App.Adapter.D4H, &Req.Test.json(&1, whoami(team, all_rights())))
+    stub_whoami(team, all_rights())
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/access-key")
 
@@ -147,7 +150,7 @@ defmodule Web.Settings.AccessKeyLiveTest do
       })
 
     rights = put_in(all_rights(), ["Whiteboard", "CREATE"], false)
-    Req.Test.stub(App.Adapter.D4H, &Req.Test.json(&1, whoami(team, rights)))
+    stub_whoami(team, rights)
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/access-key")
     assert has_element?(lv, "#key-unchecked")

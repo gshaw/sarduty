@@ -130,8 +130,9 @@ people on the team. `teams.d4h_access_key_owner` holds the key's D4H member name
 expires.
 
 A key acts as the D4H member who made it: an Owner's key can do everything SAR Duty
-does, an Editor's lacks a few rights (#727). `whoami`'s `context.permissions` says which,
-stored as `teams.d4h_permissions` with `d4h_permissions_checked_at`, read by
+does, an Editor's lacks a few rights (#727). The team's `/team/{id}/whoami` says which
+in `context.permissions` (the account's `/whoami` has none), stored as
+`teams.d4h_permissions` with `d4h_permissions_checked_at`, read by
 [CheckTeamKey](../lib/app/operation/check_team_key.ex) when a key is saved, on Check
 again, and at the start of every refresh. [D4HAccess](../lib/app/model/d4h_access.ex)
 maps each thing SAR Duty does to the rights it needs; `Team.d4h_can?/2` asks it. Records

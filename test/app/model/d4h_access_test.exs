@@ -1,7 +1,6 @@
 defmodule App.Model.D4HAccessTest do
   use ExUnit.Case, async: true
 
-  alias App.Adapter.D4H.WhoAmI
   alias App.Model.D4HAccess
   alias App.Model.Team
 
@@ -52,17 +51,5 @@ defmodule App.Model.D4HAccessTest do
       |> Map.put("Setting", %{"UPDATE" => false})
 
     assert D4HAccess.refused(rights) == []
-  end
-
-  test "whoami's rights come from its context, and Records sends none" do
-    team = %{"resourceType" => "Team", "id" => 7, "title" => "Coast Range SAR"}
-    member = %{"id" => 70, "name" => "SAR Duty", "owner" => team}
-    rights = %{"Team" => %{"READ" => true}}
-
-    d4h = WhoAmI.build(%{"members" => [member], "context" => %{"permissions" => rights}})
-    records = WhoAmI.build(%{"members" => [member]})
-
-    assert d4h.permissions == rights
-    assert records.permissions == nil
   end
 end
