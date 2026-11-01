@@ -318,24 +318,9 @@ defmodule App.ViewModel.MemberFilterViewModel do
     )
   end
 
-  defp build_attendance_summary(team, filter_options, now) do
-    now
-    |> Attendance.attended()
-    |> where([activity: ac], ac.team_id == ^team.id)
-    |> group_by([at], at.member_id)
-    |> select([at], %{
-      member_id: at.member_id,
-      activity_count: count(at.id),
-      total_minutes: sum(at.duration_in_minutes)
-    })
-    |> started_in(filter_options.when, team.timezone, now)
-    |> Attendance.at_tagged(team, filter_options.activity_tag)
-  end
-
-  defp started_in(query, period, _timezone, _now) when period in [nil, "all"], do: query
-
-  defp started_in(query, period, timezone, now),
-    do: Attendance.started_in(query, period, timezone, now)
+  defp build_attendance_summary(team, filter_options, now),
+    do:
+      Attendance.member_totals_query(team, filter_options.when, filter_options.activity_tag, now)
 
   defp join_last_attended(query, team, now) do
     from(
@@ -405,24 +390,10 @@ defmodule App.ViewModel.MemberFilterViewModel do
     where(q, [r], r.id in subquery(subquery))
   end
 
-  defp scope(q, when: "all", timezone: _, now: _), do: q
-  defp scope(q, when: nil, timezone: _, now: _), do: q
+  defp scope(q, when: period, timezone: timezone, now: now),
+    do: Member.on_team_query(q, period, timezone, now)
 
-  # Members on the team at any point in the period.
-  defp scope(q, when: period, timezone: timezone, now: now) when is_binary(period) do
-    {start, finish} = Service.Period.bounds(period, timezone, now)
-
-    q
-    |> where([m], is_nil(m.joined_at) or m.joined_at < ^finish)
-    |> where([m], is_nil(m.left_at) or m.left_at >= ^start)
-  end
-
-  defp scope(q, details: "missing"),
-    do:
-      q
-      |> Member.current_query(DateTime.utc_now())
-      |> Member.counted_query()
-      |> Member.missing_details_query()
+  defp scope(q, details: "missing"), do: Member.details_missing_query(q, DateTime.utc_now())
 
   defp scope(q, details: _all), do: q
 

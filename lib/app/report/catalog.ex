@@ -5,14 +5,17 @@ defmodule App.Report.Catalog do
 
   A field is a rule's existing home, never a copy: `status` is
   `Attendance.status_word_dynamic/1`, `standing` is `Standing.dynamic/1`, `counted` is
-  `Member.counted_dynamic/0`, and `not_seen(days)` is `Member.not_seen_query/4`. Each
-  subject's `source` scopes its rows to the team before a query's `where` runs.
+  `Member.counted_dynamic/0`, and `not_seen(days)` is `Member.not_seen_query/4`. A field
+  with a `query` is that rule's own query of ids (#784), such as `current`, which is
+  `Activity.overlapping/3` over Current. Each subject's `source` scopes its rows to the
+  team before a query's `where` runs.
   """
 
   import Ecto.Query
 
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.ChoreEvent
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
   alias App.Model.Group
@@ -44,34 +47,7 @@ defmodule App.Report.Catalog do
       one: "activity",
       many: "activities",
       source: &activities/1,
-      fields: [
-        id(),
-        record("title", "Activity", :activity, :title),
-        text(:ref_id, "ID", "The activity's ID."),
-        %Field{
-          name: "kind",
-          label: "Kind",
-          type: :choice,
-          column: :kind,
-          choices: fn _ -> activity_kinds() end
-        },
-        date(:started_at, "Started"),
-        date(:finished_at, "Finished"),
-        bool(:published, "Published"),
-        list(:tags, "Tags", &tag_titles/1),
-        number(
-          :hours_tag_count,
-          "Hours tags",
-          "How many of the hours tags it has: 0, 1, or more."
-        ),
-        bool(
-          :attendance_sent,
-          "Attendance sent",
-          "Whether a team admin sent its attendance from SAR Duty."
-        ),
-        number(:attended_count, "Attended", "How many members attended."),
-        %Field{name: "attended_hours", label: "Hours", type: :hours, column: :attended_hours}
-      ]
+      fields: activity_fields()
     }
   end
 
@@ -109,35 +85,7 @@ defmodule App.Report.Catalog do
       one: "member",
       many: "members",
       source: &members/1,
-      fields: [
-        id(),
-        record("name", "Member", :member, :name),
-        text(:ref_id, "ID", "The member's ID on the team."),
-        text(:position, "Position"),
-        date(:joined_at, "Joined"),
-        %Field{
-          name: "standing",
-          label: "Standing",
-          type: :choice,
-          column: :standing,
-          about: "Active, Away, Retiring, Not a person, or Retired.",
-          choices: fn _ -> standings() end
-        },
-        bool(:counted, "Counted", "Whether SAR Duty counts them: not retiring, and a person."),
-        bool(:person, "Person", "Whether they are a person, not a pager or a shared login."),
-        list(:groups, "Groups", &group_titles/1),
-        list(:qualifications, "Qualifications", &qualification_titles/1),
-        date(:last_attended, "Last attended"),
-        %Field{
-          name: "not_seen",
-          label: "Not seen",
-          type: :bool,
-          args: [:days],
-          sql: &not_seen_sql/3,
-          about:
-            "not_seen(365): current members whose attendance clock is older than 365 days, as Needs attention counts."
-        }
-      ]
+      fields: member_fields()
     }
   end
 
@@ -262,6 +210,150 @@ defmodule App.Report.Catalog do
 
   def subject(_name), do: nil
 
+  defp activity_fields do
+    [
+      id(),
+      record("title", "Activity", :activity, :title),
+      text(:ref_id, "ID", "The activity's ID."),
+      %Field{
+        name: "kind",
+        label: "Kind",
+        type: :choice,
+        column: :kind,
+        choices: fn _ -> activity_kinds() end
+      },
+      date(:started_at, "Started"),
+      date(:finished_at, "Finished"),
+      bool(:published, "Published"),
+      list(:tags, "Tags", &tag_titles/1),
+      number(
+        :hours_tag_count,
+        "Hours tags",
+        "How many of the hours tags it has: 0, 1, or more."
+      ),
+      bool(
+        :attendance_sent,
+        "Attendance sent",
+        "Whether a team admin sent its attendance from SAR Duty."
+      ),
+      number(:attended_count, "Attended", "How many members attended."),
+      %Field{name: "attended_hours", label: "Hours", type: :hours, column: :attended_hours}
+    ] ++ activity_rule_fields()
+  end
+
+  # What Activities searches, sorts, and filters by (#784).
+  defp activity_rule_fields do
+    [
+      text(:tracking_number, "Tracking number"),
+      text(:description, "Description"),
+      %Field{
+        name: "duration",
+        label: "Duration",
+        type: :hours,
+        column: :duration,
+        about: "How long it ran: a chore activity's, its members' chores."
+      },
+      bool(:chore, "Chore", "One of the team's chore activities."),
+      rule("current", "Current", "Within 7 days of today, as Activities' Current.", &current/2),
+      rule(
+        "recent",
+        "Recent",
+        "Started in the last 30 days and finished, as Activities' Last 30 days.",
+        &recent/2
+      ),
+      rule(
+        "missing_required_fields",
+        "Missing fields",
+        "A required field of its kind is empty.",
+        &missing_fields/2
+      )
+    ]
+  end
+
+  defp member_fields do
+    [
+      id(),
+      record("name", "Member", :member, :name),
+      text(:ref_id, "ID", "The member's ID on the team."),
+      text(:position, "Position"),
+      date(:joined_at, "Joined"),
+      %Field{
+        name: "standing",
+        label: "Standing",
+        type: :choice,
+        column: :standing,
+        about: "Active, Away, Retiring, Not a person, or Retired.",
+        choices: fn _ -> standings() end
+      },
+      bool(:counted, "Counted", "Whether SAR Duty counts them: not retiring, and a person."),
+      bool(:person, "Person", "Whether they are a person, not a pager or a shared login."),
+      list(:groups, "Groups", &group_titles/1),
+      list(:qualifications, "Qualifications", &qualification_titles/1),
+      date(:last_attended, "Last attended"),
+      date(:left_at, "Left"),
+      bool(:current, "Not retired", "On the team now: every member but the retired.")
+    ] ++ member_rule_fields() ++ member_list_fields()
+  end
+
+  # Rules over a time frame: Needs attention's not_seen, and Members' Period (#784).
+  defp member_rule_fields do
+    [
+      %Field{
+        name: "not_seen",
+        label: "Not seen",
+        type: :bool,
+        args: [:days],
+        query: &not_seen/2,
+        about:
+          "not_seen(365): current members whose attendance clock is older than 365 days, as Needs attention counts."
+      },
+      %Field{
+        name: "on_team",
+        label: "On the team",
+        type: :bool,
+        args: [:period],
+        query: &on_team/2,
+        about: "on_team('2026'): on the team at any point in the period, as Members' Period."
+      }
+    ]
+  end
+
+  # What Members shows and filters by (#784).
+  defp member_list_fields do
+    [
+      %Field{
+        name: "activity_count",
+        label: "Activities",
+        type: :number,
+        args: [:period, :tag],
+        sql: &totals_sql(&1, &2, &3, :activity_count),
+        about: "activity_count('2026', 'all'): activities attended in the period, with the tag."
+      },
+      %Field{
+        name: "attended_minutes",
+        label: "Hours",
+        type: :hours,
+        args: [:period, :tag],
+        sql: &totals_sql(&1, &2, &3, :total_minutes),
+        about: "attended_minutes('2026', 'all'): hours attended in the period, with the tag."
+      },
+      rule(
+        "details_missing",
+        "Details missing",
+        "A current member with no phone, email, or address on file.",
+        &details_missing/2
+      ),
+      rule("holds_items", "Holds items", "Holds any of the team's items.", &holds_items/2),
+      rule(
+        "can_log_in",
+        "Can log in",
+        "Can log in to the team's records.",
+        &access(&1, &2, true)
+      ),
+      rule("no_access", "No access", "Has No access: cannot log in.", &access(&1, &2, false))
+    ]
+  end
+
   @doc "The field named `name` in `subject`, or nil."
   def field(%Subject{fields: fields}, name), do: Enum.find(fields, &(&1.name == name))
 
@@ -276,6 +368,10 @@ defmodule App.Report.Catalog do
   defp date(column, label), do: plain(column, label, :date, [])
   defp bool(column, label, about \\ nil), do: plain(column, label, :bool, about: about)
   defp list(column, label, choices), do: plain(column, label, :list, choices: choices)
+
+  # A field that is a rule's own query of ids: true for the rows it keeps.
+  defp rule(name, label, about, query),
+    do: %Field{name: name, label: label, type: :bool, about: about, query: query}
 
   defp plain(column, label, type, attrs) do
     struct!(
@@ -311,7 +407,8 @@ defmodule App.Report.Catalog do
         standing -> {Standing.text(standing), Atom.to_string(standing)}
       end)
 
-  defp tag_titles(%Context{team: team}),
+  @doc "The team's tags' titles, as choices."
+  def tag_titles(%Context{team: team}),
     do: titles(from(t in Tag, where: t.team_id == ^team.id, select: t.title))
 
   defp group_titles(%Context{team: team}),
@@ -355,6 +452,10 @@ defmodule App.Report.Catalog do
     |> where([a], a.team_id == ^team.id)
     |> Activity.not_deleted()
     |> join(:left, [a], t in subquery(attended), as: :attended, on: t.activity_id == a.id)
+    |> join(:left, [a], c in subquery(ChoreEvent.totals(team.id)),
+      as: :chores,
+      on: c.d4h_activity_id == a.d4h_activity_id
+    )
     |> select(
       ^%{
         id: dynamic([a], a.id),
@@ -368,7 +469,11 @@ defmodule App.Report.Catalog do
         hours_tag_count: Activity.hours_tag_count_dynamic(hours_tags),
         attendance_sent: dynamic([a], not is_nil(a.attendance_sent_at)),
         attended_count: dynamic([attended: t], coalesce(t.count, 0)),
-        attended_hours: dynamic([attended: t], coalesce(t.minutes, 0))
+        attended_hours: dynamic([attended: t], coalesce(t.minutes, 0)),
+        tracking_number: dynamic([a], a.tracking_number),
+        description: dynamic([a], a.description),
+        duration: Activity.duration_dynamic(),
+        chore: dynamic([chores: c], not is_nil(c.d4h_activity_id))
       }
     )
   end
@@ -440,7 +545,9 @@ defmodule App.Report.Catalog do
         person: dynamic([m], not m.not_a_person),
         groups: dynamic([groups: g], g.titles),
         qualifications: dynamic([awards: q], q.titles),
-        last_attended: dynamic([last: l], l.last_attended_at)
+        last_attended: dynamic([last: l], l.last_attended_at),
+        left_at: dynamic([m], m.left_at),
+        current: Member.current_dynamic(now)
       }
     )
   end
@@ -523,10 +630,54 @@ defmodule App.Report.Catalog do
     )
   end
 
+  # Rules' own queries of ids, each scoped to the team.
+
+  defp team_activities(team),
+    do: Activity |> where([a], a.team_id == ^team.id) |> select([a], a.id)
+
+  defp team_members(team), do: Member |> where([m], m.team_id == ^team.id) |> select([m], m.id)
+
+  defp current(%Context{team: team, now: now, timezone: timezone}, []) do
+    {start, finish} = Service.Period.current(now, timezone)
+    team |> team_activities() |> Activity.overlapping(start, finish)
+  end
+
+  defp recent(%Context{team: team, now: now, timezone: timezone}, []),
+    do: team |> team_activities() |> Activity.finished_recently(now, timezone)
+
+  defp missing_fields(%Context{team: team}, []),
+    do: team |> team_activities() |> Activity.missing_required_fields()
+
   # The members whose attendance clock is older than `days`, as Needs attention counts.
-  defp not_seen_sql(table, [days], %Context{team: team, now: now}) do
-    query = Member |> Member.not_seen_query(team, days, now) |> select([m], m.id)
+  defp not_seen(%Context{team: team, now: now}, [days]),
+    do: Member |> Member.not_seen_query(team, days, now) |> select([m], m.id)
+
+  defp on_team(%Context{team: team, now: now, timezone: timezone}, [period]),
+    do: team |> team_members() |> Member.on_team_query(period, timezone, now)
+
+  defp details_missing(%Context{team: team, now: now}, []),
+    do: team |> team_members() |> Member.details_missing_query(now)
+
+  defp holds_items(%Context{team: team}, []),
+    do: where(team_members(team), [m], m.id in subquery(EquipmentItem.holder_ids_query(team)))
+
+  defp access(%Context{team: team}, [], access?),
+    do: team |> team_members() |> Member.d4h_access_query(access?)
+
+  # A member's attended activities or minutes in a period, with a tag: 0 for none.
+  defp totals_sql(table, [period, tag], %Context{team: team, now: now}, key) do
+    query = from(t in subquery(Attendance.member_totals_query(team, period, tag, now)), select: t)
     {sql, params} = Repo.to_sql(:all, query)
-    {[table, ".\"id\" IN (", sql, ")"], params}
+    column = Atom.to_string(key)
+
+    {[
+       "COALESCE((SELECT t.\"",
+       column,
+       "\" FROM (",
+       sql,
+       ") AS t WHERE t.\"member_id\" = ",
+       table,
+       ".\"id\"), 0)"
+     ], params}
   end
 end

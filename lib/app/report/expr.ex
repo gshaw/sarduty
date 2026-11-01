@@ -13,6 +13,7 @@ defmodule App.Report.Expr do
   import Ecto.Query, only: [where: 3]
 
   alias App.Model.Activity
+  alias App.Repo
   alias App.Report.Catalog
   alias App.Report.Context
   alias App.Report.Error
@@ -180,6 +181,9 @@ defmodule App.Report.Expr do
   defp field_expr(%{args: [_ | _]} = field, _subject, via, args, line, st),
     do: roll_up(field, via, args, line, st)
 
+  defp field_expr(%{query: query} = field, _subject, via, [], line, st) when query != nil,
+    do: roll_up(field, via, [], line, st)
+
   defp field_expr(field, _subject, via, [_ | _], line, _st) do
     name = if via, do: "#{via}.#{field.name}", else: field.name
     fail(line, "#{name} takes nothing in brackets. Write #{name}.")
@@ -233,23 +237,79 @@ defmodule App.Report.Expr do
 
   defp roll_up(field, via, args, line, st) do
     if length(args) != length(field.args),
-      do: fail(line, "Write #{field.name}(365): it takes a number of days.")
+      do: fail(line, "Write #{example(field)}: #{takes(field)}.")
 
-    days = Enum.map(args, &days(&1, field, line))
+    {args, values} =
+      field.args
+      |> Enum.zip(args)
+      |> Enum.map(fn {kind, arg} -> arg(kind, arg, field, line, st) end)
+      |> Enum.unzip()
+
     table = SQL.table(via)
-    {sql, params} = field.sql.(table, days, st.context)
+    {sql, params} = field_sql(field, table, args, st.context)
 
     new(sql, Enum.map(params, &SQL.param/1), field.type, line,
       field: field,
       label: field.label,
-      parents: List.wrap(via)
+      parents: List.wrap(via),
+      values: Enum.reject(values, &is_nil/1)
     )
   end
 
-  defp days({:literal, n, _}, _field, _line) when is_integer(n) and n > 0, do: n
+  # A rule's query of ids, as a true-or-false field.
+  defp field_sql(%{query: query}, table, args, context) when query != nil do
+    {sql, params} = Repo.to_sql(:all, query.(context, args))
+    {["(", table, ".\"id\" IN (", sql, "))"], params}
+  end
 
-  defp days(_arg, field, line),
-    do: fail(line, "Write #{field.name}(365): it takes a whole number of days.")
+  defp field_sql(field, table, args, context), do: field.sql.(table, args, context)
+
+  @doc "A field as written with example arguments, such as `not_seen(365)`."
+  def example(%{args: []} = field), do: field.name
+
+  def example(field),
+    do: "#{field.name}(#{Enum.map_join(field.args, ", ", &arg_example/1)})"
+
+  defp arg_example(:days), do: "365"
+  defp arg_example(:period), do: "'2026'"
+  defp arg_example(:tag), do: "'all'"
+
+  defp takes(field), do: "it takes " <> Enum.map_join(field.args, " and ", &arg_text/1)
+
+  defp arg_text(:days), do: "a number of days"
+  defp arg_text(:period), do: "a period: 'all', a year, or '90d'"
+  defp arg_text(:tag), do: "a tag's title, or 'all'"
+
+  defp arg(:days, {:literal, n, _}, _field, _line, _st) when is_integer(n) and n > 0, do: {n, nil}
+
+  defp arg(:days, _arg, field, line, _st),
+    do: fail(line, "Write #{example(field)}: it takes a whole number of days.")
+
+  defp arg(:period, {:literal, text, _}, field, line, _st) when is_binary(text) do
+    if Service.Period.valid?(text),
+      do: {text, nil},
+      else: fail(line, "Write #{example(field)}: a period is 'all', a year, or '90d'.")
+  end
+
+  defp arg(:tag, {:literal, text, _}, _field, _line, _st) when is_binary(text), do: {text, nil}
+
+  defp arg(kind, {:value, name, _}, _field, _line, st) when kind in [:period, :tag] do
+    choices = arg_choices(kind, st.context)
+    picked = Value.pick(:choice, Map.get(st.given, name), choices, st.context.today)
+
+    {picked,
+     %Value{name: name, label: Value.label(name), kind: :choice, choices: choices, value: picked}}
+  end
+
+  defp arg(_kind, _arg, field, line, _st),
+    do: fail(line, "Write #{example(field)}: #{takes(field)}.")
+
+  # A picked period or tag's menu: All first.
+  defp arg_choices(:period, context),
+    do: [{"All", "all"} | Service.Period.rolling_kinds()] ++ year_choices(context)
+
+  defp arg_choices(:tag, context),
+    do: [{"All", "all"} | Catalog.tag_titles(context)]
 
   defp no_field(subject, name, others) do
     names = subject |> Catalog.shown_fields() |> Enum.map(& &1.name) |> Enum.concat(others)

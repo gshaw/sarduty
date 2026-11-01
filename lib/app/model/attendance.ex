@@ -256,6 +256,26 @@ defmodule App.Model.Attendance do
       else: join(query, :inner, [r], a in assoc(r, :activity), as: :activity)
   end
 
+  @doc """
+  Each member's attended activities and minutes at the team's activities in `period` (a
+  filter's period, or `"all"`), only those tagged `tag` unless it's `"all"` or blank:
+  `%{member_id, activity_count, total_minutes}`. The Members list's Activities and Hours
+  columns, and a report's `activity_count` and `attended_minutes`.
+  """
+  def member_totals_query(%Team{} = team, period, tag, now) do
+    now
+    |> attended()
+    |> where([activity: ac], ac.team_id == ^team.id)
+    |> group_by([at], at.member_id)
+    |> select([at], %{
+      member_id: at.member_id,
+      activity_count: count(at.id),
+      total_minutes: sum(at.duration_in_minutes)
+    })
+    |> then(&if(period in [nil, "all"], do: &1, else: started_in(&1, period, team.timezone, now)))
+    |> at_tagged(team, if(tag == "all", do: nil, else: tag))
+  end
+
   @doc "Rows that started in a year or rolling period in `timezone` (Service.Period.bounds/3)."
   def started_in(query, period, timezone, now \\ DateTime.utc_now()) do
     {start, finish} = Service.Period.bounds(period, timezone, now)

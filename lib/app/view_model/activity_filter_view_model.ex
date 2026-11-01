@@ -242,23 +242,10 @@ defmodule App.ViewModel.ActivityFilterViewModel do
   defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.started_at)
   defp scope(q, sort: "date"), do: order_by(q, [r], asc: r.started_at)
 
-  # A chore activity lasts no time, so it sorts by its members' total (#575).
-  defp scope(q, sort: "hours-"), do: order_by(q, ^[desc: duration_days()])
-  defp scope(q, sort: "hours"), do: order_by(q, ^[asc: duration_days()])
+  # Duration ↓, hours-, has always listed the shortest first.
+  defp scope(q, sort: "hours-"), do: order_by(q, ^[asc: Activity.duration_dynamic()])
+  defp scope(q, sort: "hours"), do: order_by(q, ^[desc: Activity.duration_dynamic()])
 
   defp scope(q, sort: "id-"), do: order_by(q, [r], desc: r.ref_id)
   defp scope(q, sort: "id"), do: order_by(q, [r], asc: r.ref_id)
-
-  # Kept as JULIANDAY(start) - JULIANDAY(finish), as the sort has always been.
-  defp duration_days,
-    do:
-      dynamic(
-        [r, chores: c],
-        fragment(
-          "COALESCE(? / -1440.0, JULIANDAY(?) - JULIANDAY(?))",
-          c.minutes,
-          r.started_at,
-          r.finished_at
-        )
-      )
 end

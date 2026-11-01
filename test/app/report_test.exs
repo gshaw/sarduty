@@ -259,6 +259,132 @@ defmodule App.ReportTest do
     refute [new.id] in expected
   end
 
+  describe "fields that are a rule's own query (#784)" do
+    defp ids(text, team, given \\ %{}),
+      do: text |> run!(team, given) |> Map.fetch!(:rows) |> Enum.map(&hd/1) |> Enum.sort()
+
+    test "Activities' Current, Last 30 days, Missing fields, and chores" do
+      team = team_fixture()
+      now = @now
+      two_days_ago = DateTime.add(now, -2, :day)
+
+      current =
+        activity_fixture(team, %{
+          started_at: two_days_ago,
+          finished_at: DateTime.add(two_days_ago, 3600)
+        })
+
+      recent =
+        activity_fixture(team, %{
+          started_at: DateTime.add(now, -20, :day),
+          finished_at: DateTime.add(now, -20, :day)
+        })
+
+      _old =
+        activity_fixture(team, %{
+          started_at: DateTime.add(now, -90, :day),
+          finished_at: DateTime.add(now, -90, :day)
+        })
+
+      chore =
+        chore_activity_fixture(team, [30, 45], %{
+          started_at: DateTime.add(now, -100, :day),
+          finished_at: DateTime.add(now, -100, :day)
+        })
+
+      custom_field_fixture(team, %{required: true})
+      long_ago = DateTime.add(now, -200, :day)
+
+      missing =
+        activity_fixture(team, %{
+          activity_kind: "incident",
+          custom_values: %{},
+          started_at: long_ago,
+          finished_at: long_ago
+        })
+
+      assert ids("select id from activities where current = true", team) == [current.id]
+
+      assert ids("select id from activities where recent = true", team) ==
+               Enum.sort([current.id, recent.id])
+
+      assert ids("select id from activities where missing_required_fields", team) == [missing.id]
+      assert ids("select id from activities where chore = true", team) == [chore.id]
+
+      assert run!("select duration from activities where chore = true", team).rows == [[75]]
+      assert run!("select duration from activities where id = #{current.id}", team).rows == [[60]]
+    end
+
+    test "Members' Period, totals by period and tag, and the members list's filters" do
+      team = team_fixture()
+      tag_fixture(team, "Rope")
+      avery = member_fixture(team, %{name: "Avery Chen", joined_at: ~U[2020-01-01 00:00:00Z]})
+
+      blake =
+        member_fixture(team, %{
+          name: "Blake Morrison",
+          joined_at: ~U[2020-01-01 00:00:00Z],
+          left_at: ~U[2025-06-01 00:00:00Z]
+        })
+
+      rope =
+        activity_fixture(team, %{
+          tags: ["Rope"],
+          started_at: ~U[2026-03-01 18:00:00Z],
+          finished_at: ~U[2026-03-01 20:00:00Z]
+        })
+
+      other =
+        activity_fixture(team, %{
+          tags: [],
+          started_at: ~U[2026-04-01 18:00:00Z],
+          finished_at: ~U[2026-04-01 19:00:00Z]
+        })
+
+      attendance_fixture(rope, avery, %{duration_in_minutes: 120})
+      attendance_fixture(other, avery, %{duration_in_minutes: 60})
+
+      assert ids("select id from members where on_team('2026')", team) == [avery.id]
+
+      assert ids("select id from members where on_team('all')", team) ==
+               Enum.sort([avery.id, blake.id])
+
+      assert ids("select id from members where on_team(:when)", team, %{"when" => "2025"}) ==
+               Enum.sort([avery.id, blake.id])
+
+      assert ids("select id from members where current = true", team) == [avery.id]
+
+      totals =
+        "select name, activity_count(:when, :tag), attended_minutes(:when, :tag) from members where current"
+
+      assert run!(totals, team, %{"when" => "2026"}).rows == [[avery.id, 2, 180]]
+      assert run!(totals, team, %{"when" => "2026", "tag" => "Rope"}).rows == [[avery.id, 1, 120]]
+
+      %{values: values} = run!(totals, team, %{})
+
+      assert [
+               %{name: "when", value: "all", choices: [{"All", "all"} | _]},
+               %{name: "tag", choices: [{"All", "all"}, {"Rope", "Rope"}]}
+             ] = values
+
+      assert run!("select activity_count('2025', 'all') from members where current", team).rows ==
+               [[0]]
+    end
+
+    test "says what a field takes" do
+      team = team_fixture()
+
+      assert error("select name from members where on_team(5)", team) ==
+               "Line 1: Write on_team('2026'): it takes a period: 'all', a year, or '90d'."
+
+      assert error("select name from members where on_team('soon')", team) ==
+               "Line 1: Write on_team('2026'): a period is 'all', a year, or '90d'."
+
+      assert error("select activity_count('2026') from members", team) ==
+               "Line 1: Write activity_count('2026', 'all'): it takes a period: 'all', a year, or '90d' and a tag's title, or 'all'."
+    end
+  end
+
   test "hours_tag_count is the count the hours tag checks use" do
     team = team_fixture()
     none = activity_fixture(team, %{tags: ["Rope"]})
