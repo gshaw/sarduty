@@ -93,6 +93,27 @@ defmodule Web.ActivityRemoveMembersLiveTest do
            )
   end
 
+  # The exception, worded as accepting your own chores is (#697).
+  test "Remove without emailing them sends no email, and still asks why", ctx do
+    AttendanceStub.stub(ctx.rows)
+    {:ok, lv, _html} = live(ctx.conn, path(ctx))
+    params = check(lv, [ctx.drew], "Told them on the phone.")
+    refute has_element?(lv, "#remove-skip-email[checked]")
+
+    params = Map.put(params, "skip_email", "true")
+    lv |> form("#remove-form", params) |> render_change()
+
+    assert has_element?(lv, "label[for=remove-message]", "Why you removed Drew Patel")
+    refute has_element?(lv, "#remove-preview-section")
+    refute has_element?(lv, "#remove-send[data-confirm]")
+
+    lv |> form("#remove-form", params) |> render_submit()
+
+    {_to, flash} = assert_redirect(lv)
+    assert flash["info"] == "1 member removed."
+    refute_received {:email, _}
+  end
+
   # Option 2: nobody gets an email, so there's no message box and no confirm.
   test "a signed up member with no email needs no message", ctx do
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
