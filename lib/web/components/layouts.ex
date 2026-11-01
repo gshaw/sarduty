@@ -199,23 +199,16 @@ defmodule Web.Layouts do
 
   # App and login pages have no footer, but in dev the mailbox is where login codes go.
   defp dev_footer(assigns) do
-    assigns =
-      assign(assigns,
-        dev_routes?: Application.get_env(:sarduty, :dev_routes) == true,
-        mailbox?: dev_mailbox?()
-      )
+    assigns = assign(assigns, mailbox?: dev_mailbox?())
 
     ~H"""
     <footer
-      :if={@dev_routes?}
+      :if={@mailbox?}
       id="dev-footer"
       class={["m-auto px-2 mb-8 text-sm", column_width(@size)]}
     >
       <p class="pt-4 border-t border-border-subtle">
-        Development: <.a href="/dev/dashboard" external={true}>Dashboard</.a>
-        <%= if @mailbox? do %>
-          · <.a href="/dev/mailbox" external={true}>Mailbox</.a>
-        <% end %>
+        Development: <.a href="/dev/mailbox" external={true}>Mailbox</.a>
       </p>
     </footer>
     """
@@ -232,8 +225,7 @@ defmodule Web.Layouts do
     assigns =
       assign(assigns,
         support_url: "https://buymeacoffee.com/gshaw",
-        dev_routes?: Application.get_env(:sarduty, :dev_routes),
-        mailbox?: Application.get_env(:swoosh, :local)
+        mailbox?: dev_mailbox?()
       )
 
     ~H"""
@@ -244,11 +236,8 @@ defmodule Web.Layouts do
         · <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
         · <.a id="footer-support" href={@support_url} external={true}>Support SAR Duty</.a>
         · <.a id="footer-github" href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
-        <%= if @dev_routes? do %>
-          · <.a href="/dev/dashboard" external={true}>Dashboard</.a>
-          <%= if @mailbox? do %>
-            · <.a href="/dev/mailbox" external={true}>Mailbox</.a>
-          <% end %>
+        <%= if @mailbox? do %>
+          · <.a href="/dev/mailbox" external={true}>Mailbox</.a>
         <% end %>
       </p>
     </footer>

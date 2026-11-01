@@ -39,10 +39,6 @@ defmodule Web.Endpoint do
     plug Phoenix.Ecto.CheckRepoStatus, otp_app: :sarduty
   end
 
-  plug Phoenix.LiveDashboard.RequestLogger,
-    param_key: "request_logger",
-    cookie_key: "request_logger"
-
   plug Plug.RequestId
   # Web.RequestLog logs requests instead of Phoenix, with secrets cut from the path.
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint], log: false

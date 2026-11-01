@@ -55,15 +55,12 @@ defmodule App.MixProject do
       {:pdf, "~> 0.6"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 4.0"},
-      {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.6", only: :dev},
       {:phoenix_live_view, "~> 1.1"},
       {:phoenix, "~> 1.8"},
       {:req, "~> 0.5"},
       {:swoosh, "~> 1.20"},
       {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
-      {:telemetry_metrics, "~> 1.0"},
-      {:telemetry_poller, "~> 1.0"},
       {:tzdata, "~> 1.1"}
     ]
   end
