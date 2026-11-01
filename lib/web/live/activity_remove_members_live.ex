@@ -261,7 +261,7 @@ defmodule Web.ActivityRemoveMembersLive do
           phx-disable-with="Removing…"
           {confirm(@activity, @checked, @emailed)}
         >
-          {Format.count(length(@checked), one: "Remove 1 member", many: "Remove %d members")}
+          {remove_text(length(@checked))}
         </.button>
         <.button id="remove-cancel" navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}"}>
           Cancel
@@ -301,6 +301,11 @@ defmodule Web.ActivityRemoveMembersLive do
     who = others |> length() |> Format.count(one: "1 other gets", many: "%d others get")
     "#{who} no email: #{Enum.join(counts, ", ")}."
   end
+
+  defp remove_text(0), do: "Remove members"
+
+  defp remove_text(count),
+    do: Format.count(count, one: "Remove 1 member", many: "Remove %d members")
 
   defp to_text([member]), do: member.name
   defp to_text(members), do: "#{length(members)} signed up members"
