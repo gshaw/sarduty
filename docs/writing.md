@@ -119,8 +119,9 @@ same text. When D4H or SAR Duty Records refuses or does not answer, name it and 
 to try: "D4H did not answer. Try again." `D4H.error_text/2` writes both.
 
 **Success messages.** What changed, in the past tense, with the count: "4 attendance
-changes sent". No "successfully". When the page already shows the change, such as
-a reply or a ticked box, skip the message.
+changes sent". No "successfully". A success message confirms what the person's own
+action did, even when the page also shows the change. Skip it only where the page has
+its own confirmation, such as a reply's "Signed up".
 
 **Confirmations.** Before a change that cannot be undone, name the thing and what happens:
 "Delete First Aid? It comes off ID cards and the rules of Callout." The buttons are the action

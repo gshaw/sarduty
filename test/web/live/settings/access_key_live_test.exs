@@ -156,9 +156,8 @@ defmodule Web.Settings.AccessKeyLiveTest do
     assert has_element?(lv, "#key-unchecked")
 
     lv |> element("#check-key") |> render_click()
-    # The Checked line is the answer: no toast says so too.
+    assert has_element?(lv, "#flash-info", "Key checked.")
     assert has_element?(lv, "#key-checked")
-    refute has_element?(lv, "#flash-info")
     assert has_element?(lv, "#key-refused-whiteboard", "Whiteboard")
     assert Team.get!(team.id).d4h_permissions_checked_at
   end
