@@ -91,10 +91,10 @@ defmodule App.Report do
   end
 
   defp build_view(query, picks, menus, starts, context) do
-    with {:ok, total, page} <- total(query, picks, context),
+    with {:ok, switch} <- switch(query, picks, context),
+         {:ok, total, page} <- total(query, picks, switch, context),
          {:ok, plan} <- rows_plan(query, picks, page, context),
-         {:ok, result} <- Runner.run(plan, context.timezone),
-         {:ok, switch} <- switch(query, picks, context) do
+         {:ok, result} <- Runner.run(plan, context.timezone) do
       view = %View{
         result: result,
         total: total || length(result.rows),
@@ -132,10 +132,10 @@ defmodule App.Report do
   end
 
   # With page, the count of every row first, so the page is never past the last.
-  defp total(%Query{page: nil}, _picks, _context), do: {:ok, nil, nil}
+  defp total(%Query{page: nil}, _picks, _switch, _context), do: {:ok, nil, nil}
 
-  defp total(query, picks, context) do
-    with {:ok, n} <- count(Picks.plain(query, picks), picks, context) do
+  defp total(query, picks, switch, context) do
+    with {:ok, n} <- picked_count(query, picks, switch, context) do
       pages = max(div(n + query.page - 1, query.page), 1)
       number = min(picks.page, pages)
 
@@ -153,6 +153,17 @@ defmodule App.Report do
   defp count(plain, picks, context) do
     with {:ok, sql} <- Compiler.count(plain, context, picks.given), do: Runner.count(sql)
   end
+
+  # With no search, the picked tile has already counted every row.
+  defp picked_count(query, %{q: ""} = picks, %{picked: picked, tiles: tiles}, context) do
+    case Enum.find(tiles, &(&1.value == picked)) do
+      nil -> count(Picks.plain(query, picks), picks, context)
+      tile -> {:ok, tile.count}
+    end
+  end
+
+  defp picked_count(query, picks, _switch, context),
+    do: count(Picks.plain(query, picks), picks, context)
 
   # Each tile counts its rows with every other pick on and the search off.
   defp switch(query, picks, context) do
@@ -172,7 +183,32 @@ defmodule App.Report do
     end
   end
 
+  # One pass counts every tile; a query that groups counts each tile's groups on its own.
   defp counts(tiles, query, picks, context) do
+    base = Picks.plain(query, picks, switch: :all, search: false)
+    wheres = Enum.map(tiles, fn {_value, _label, pick} -> tile_where(pick) end)
+
+    case Compiler.counts(base, wheres, context, picks.given) do
+      {:ok, sql} ->
+        with {:ok, ns} <- Runner.counts(sql) do
+          {:ok,
+           Enum.zip_with(tiles, ns, fn {value, label, _pick}, n ->
+             %{value: value, label: label, count: n}
+           end)}
+        end
+
+      :grouped ->
+        each_count(tiles, query, picks, context)
+
+      error ->
+        error
+    end
+  end
+
+  defp tile_where(:all), do: nil
+  defp tile_where({:option, option}), do: option.where
+
+  defp each_count(tiles, query, picks, context) do
     tiles
     |> Enum.reverse()
     |> Enum.reduce_while({:ok, []}, fn {value, label, pick}, {:ok, acc} ->

@@ -1,8 +1,8 @@
 defmodule App.Report.LocalTime do
   @moduledoc """
   A stored UTC time as the team's local time, in SQL. SQLite knows no time zones, so the
-  offset comes from the zone's periods in tzdata: a CASE that picks each time's offset by
-  when it falls, for the years a team's records can span. A fixed offset would put the
+  offset comes from the zone's periods in tzdata: nested CASEs that pick each time's offset
+  by when it falls, for the years a team's records can span. A fixed offset would put the
   last hour of a summer day in the next one.
 
   Every value in the SQL comes from tzdata, never from a query, so it is written inline.
@@ -25,15 +25,29 @@ defmodule App.Report.LocalTime do
         modifier(offset)
 
       periods ->
-        {last, [{_until, final}]} = Enum.split(periods, -1)
-
-        whens =
-          Enum.map(last, fn {until, offset} ->
-            [" WHEN ", column, " < '", until, "' THEN ", modifier(offset)]
-          end)
-
-        ["(CASE", whens, " ELSE ", modifier(final), " END)"]
+        tree(column, periods)
     end
+  end
+
+  # Halves the periods at each CASE, so a time takes 7 comparisons, not one per period
+  # since 1990 (#784).
+  defp tree(_column, [{_until, offset}]), do: modifier(offset)
+
+  defp tree(column, periods) do
+    {earlier, later} = Enum.split(periods, div(length(periods), 2))
+    {until, _offset} = List.last(earlier)
+
+    [
+      "(CASE WHEN ",
+      column,
+      " < '",
+      until,
+      "' THEN ",
+      tree(column, earlier),
+      " ELSE ",
+      tree(column, later),
+      " END)"
+    ]
   end
 
   defp modifier(seconds), do: "'#{seconds} seconds'"

@@ -52,6 +52,18 @@ defmodule App.ReportTest do
       end
     end
 
+    # A source selects only the columns a report reads, with only their joins (#784), so a
+    # column whose join is missing from its `needs` fails here, alone, and not beside others.
+    test "every field runs alone" do
+      team = team_fixture()
+
+      for subject <- Catalog.subjects(), field <- subject.fields, field.args == [] do
+        assert {:ok, %{rows: []}} =
+                 Report.run("select #{field.name} from #{subject.name}", team, %{}, @now),
+               "#{subject.name}.#{field.name} does not run alone"
+      end
+    end
+
     test "reports leave out contact details" do
       team = team_fixture()
 

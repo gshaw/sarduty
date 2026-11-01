@@ -34,6 +34,14 @@ defmodule App.Report.Runner do
     end
   end
 
+  @doc "The numbers a counts' SQL gives (App.Report.Compiler.counts/4), in order, or an error."
+  def counts({sql, params}) do
+    case query(sql, params) do
+      {:ok, %{rows: [ns]}} -> {:ok, ns}
+      {:error, error} -> {:error, error}
+    end
+  end
+
   @doc "The values an each's SQL gives (App.Report.Compiler.values/3), decoded as `type`."
   def values({sql, params}, type) do
     case query(sql, params) do

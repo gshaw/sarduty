@@ -5,14 +5,12 @@ defmodule App.Report.Expr do
   An expression is a map: `sql` and `params`; its `type`, a field type
   (App.Report.Field) or `:condition`, `:year`, `:month`, `:quarter`, or a literal's;
   `agg`, the aggregate it is or holds, or false; for a record, `id`, its id, and `text`,
-  the SQL it sorts and compares by; `name` and `label`; the `field` it reads; and the
-  `parents` and `values` it uses. A mistake throws `{:report_error, %Error{}}`, which
-  App.Report.Compiler catches.
+  the SQL it sorts and compares by; `name` and `label`; the `field` it reads; the
+  `parents` and `values` it uses; and `reads`, the source columns it reads as
+  `{parent, column}`, with nil for the subject's own. A mistake throws
+  `{:report_error, %Error{}}`, which App.Report.Compiler catches.
   """
 
-  import Ecto.Query, only: [where: 3]
-
-  alias App.Model.Activity
   alias App.Repo
   alias App.Report.Catalog
   alias App.Report.Context
@@ -108,7 +106,8 @@ defmodule App.Report.Expr do
         label: nil,
         field: nil,
         parents: [],
-        values: []
+        values: [],
+        reads: []
       },
       Map.new(attrs)
     )
@@ -121,7 +120,8 @@ defmodule App.Report.Expr do
       e
       | agg: e.agg || Enum.find_value(others, false, & &1.agg),
         parents: Enum.uniq(e.parents ++ Enum.flat_map(others, & &1.parents)),
-        values: e.values ++ Enum.flat_map(others, & &1.values)
+        values: e.values ++ Enum.flat_map(others, & &1.values),
+        reads: Enum.uniq(e.reads ++ Enum.flat_map(others, & &1.reads))
     }
   end
 
@@ -203,7 +203,13 @@ defmodule App.Report.Expr do
 
   defp field_expr(%{id_column: nil} = field, _subject, via, _args, line, _st) do
     sql = via |> SQL.table() |> SQL.column(field.column)
-    new(sql, [], field.type, line, label: field.label, field: field, parents: List.wrap(via))
+
+    new(sql, [], field.type, line,
+      label: field.label,
+      field: field,
+      parents: List.wrap(via),
+      reads: [{via, field.column}]
+    )
   end
 
   defp field_expr(field, _subject, via, _args, line, _st) do
@@ -215,13 +221,14 @@ defmodule App.Report.Expr do
       text: {SQL.column(table, field.column), []},
       label: field.label,
       field: field,
-      parents: List.wrap(via)
+      parents: List.wrap(via),
+      reads: [{via, field.id_column}, {via, field.column}]
     )
   end
 
   # A parent, such as attendance's member: its id, and the text its own subject shows.
   defp parent_record(subject, field, line) do
-    {subject_name, _fk} = Map.fetch!(subject.parents, field.parent)
+    {subject_name, fk} = Map.fetch!(subject.parents, field.parent)
     shown = subject_name |> Catalog.subject() |> Map.fetch!(:fields) |> Enum.find(& &1.id_column)
     table = SQL.table(field.parent)
     id = SQL.column(table, :id)
@@ -231,7 +238,8 @@ defmodule App.Report.Expr do
       text: {SQL.column(table, shown.column), []},
       label: field.label,
       field: field,
-      parents: [field.parent]
+      parents: [field.parent],
+      reads: [{nil, fk}, {field.parent, :id}, {field.parent, shown.column}]
     )
   end
 
@@ -252,7 +260,8 @@ defmodule App.Report.Expr do
       field: field,
       label: field.label,
       parents: List.wrap(via),
-      values: Enum.reject(values, &is_nil/1)
+      values: Enum.reject(values, &is_nil/1),
+      reads: [{via, :id}]
     )
   end
 
@@ -715,10 +724,8 @@ defmodule App.Report.Expr do
   defp value_param(%Value{value: value}, _l), do: value
 
   # The years with activities, newest first, and this year.
-  defp year_choices(%Context{team: team, today: today, timezone: timezone}) do
-    query = where(Activity, [a], a.team_id == ^team.id and is_nil(a.deleted_at))
-
-    [today.year | Activity.years(query, timezone)]
+  defp year_choices(%Context{today: today, years: years}) do
+    [today.year | years]
     |> Enum.uniq()
     |> Enum.sort(:desc)
     |> Enum.map(&{Integer.to_string(&1), Integer.to_string(&1)})
