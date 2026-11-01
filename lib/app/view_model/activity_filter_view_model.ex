@@ -205,8 +205,8 @@ defmodule App.ViewModel.ActivityFilterViewModel do
     Activity.overlapping(q, start, finish)
   end
 
-  defp scope(q, when: "recent", timezone: _),
-    do: Activity.finished_recently(q, DateTime.utc_now())
+  defp scope(q, when: "recent", timezone: timezone),
+    do: Activity.finished_recently(q, DateTime.utc_now(), timezone)
 
   defp scope(q, when: "past", timezone: _), do: where(q, [r], r.started_at <= ^DateTime.utc_now())
 
