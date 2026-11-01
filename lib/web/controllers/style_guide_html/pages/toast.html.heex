@@ -5,6 +5,9 @@
   <div class="demo">
     <div class="toasts">
       <.flash id="sample-flash-info" kind={:info}>4 attendance changes sent.</.flash>
+      <.flash id="sample-flash-info-sub" kind={:info} title="ID cards saved.">
+        Cards on members' phones update in about a minute.
+      </.flash>
       <.flash id="sample-flash-error" kind={:error} title="D4H refused the change">
         Nothing changed. Check the access key in team settings.
       </.flash>
@@ -37,15 +40,18 @@
         toast.removeAttribute("id");
         document.getElementById("toasts").appendChild(toast);
         toast.addEventListener("click", function () { toast.remove(); });
-        if (kind !== "error") setTimeout(function () { toast.remove(); }, 5000);
+        if (kind !== "error") setTimeout(function () { toast.remove(); }, 6000);
       });
     });
   </script>
 
   <h2>When to use</h2>
   <ul>
-    <li>Info toasts are for success and progress.</li>
-    <li>Error toasts are for an action that failed. A short title, then what to do.</li>
+    <li>A result toast says what the person's action did.</li>
+    <li>
+      An error toast is for an action that failed. The first sentence says what went wrong, the
+      next what to do.
+    </li>
     <li>
       A page open since a deploy says SAR Duty has a new version, with a link to reload it.
     </li>
@@ -55,15 +61,26 @@
   <p>
     Never put the only copy of important information in a toast. Use a <a href={
       page_path(:banner)
-    }>banner</a>.
+    }>banner</a>. When the page already shows the change, such as a switch or a ticked choice,
+    skip the toast.
   </p>
 
   <h2>How it works</h2>
   <ul>
     <li>
-      One card per message, stacked at the top right of the page on a desktop and at the bottom on a phone, where a thumb can close it.
+      One pill, centred under the top bar on every screen, clear of the page's buttons. A new
+      message takes its place.
     </li>
-    <li>A toast goes when it is selected or the person goes to another page.</li>
+    <li>
+      A result is the theme turned inside out: dark on the light theme, light on the dark one.
+      An error is red. The first sentence is the title, the rest the subtitle.
+    </li>
+    <li>
+      A result fades after 6 seconds, or 10 with a subtitle. The clock stops while the pointer,
+      a finger, or focus is on it, or the person is in another app or tab.
+    </li>
+    <li>An error stays until it is closed, replaced, or the person goes to another page.</li>
+    <li>× or a tap anywhere on the toast closes it.</li>
     <li>
       The Server disconnected toast shows while LiveView reconnects and goes when it is back.
     </li>

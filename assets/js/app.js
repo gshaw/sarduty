@@ -34,13 +34,14 @@ import {SelectAll} from "./select_all"
 import {ScannerInput} from "./scanner_input"
 import {RichText} from "./rich_text"
 import {Search} from "./search"
+import {Toast} from "./toast"
 import {listenForBarMenuKeys} from "./bar_menu_keys"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, AskDialog, Combobox, FileDrop, QRScanner, RichText, ScannerInput, Search, SelectAll, SoundSwitch},
+  hooks: {...colocatedHooks, AskDialog, Combobox, FileDrop, QRScanner, RichText, ScannerInput, Search, SelectAll, SoundSwitch, Toast},
 })
 
 trackPointer()

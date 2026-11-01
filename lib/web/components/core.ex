@@ -16,12 +16,15 @@ defmodule Web.Components.Core do
   @icon_names Enum.map(@icon_files, &Path.basename(&1, ".svg"))
 
   @doc """
-  Renders flash notices.
+  Renders a flash as a toast: a pill under the top bar, dark or light against the theme
+  for a result, red for an error. A message's first sentence is its title and the rest
+  its subtitle. A result fades after 6 seconds, or 10 with a subtitle (the Toast hook);
+  an error stays until it is closed, replaced, or the page changes. See /styles/toast.
 
   ## Examples
 
       <.flash kind={:info} flash={@flash} />
-      <.flash kind={:info} phx-mounted={show("#flash")}>Welcome Back!</.flash>
+      <.flash kind={:info} title="SAR Duty has a new version">Reload this page.</.flash>
   """
   attr :id, :string, doc: "the optional id of flash container"
   attr :flash, :map, default: %{}, doc: "the map of flash messages to display"
@@ -32,28 +35,59 @@ defmodule Web.Components.Core do
   slot :inner_block, doc: "the optional inner block that renders the flash message"
 
   def flash(assigns) do
+    {head, sub} = split_message(Phoenix.Flash.get(assigns.flash, assigns.kind))
     assigns = assign_new(assigns, :id, fn -> "flash-#{assigns.kind}" end)
+
+    assigns =
+      assign(assigns,
+        head: head,
+        sub: sub,
+        seconds: fade_seconds(assigns.kind, assigns.inner_block, sub),
+        dismiss: JS.push("lv:clear-flash", value: %{key: assigns.kind}) |> hide("##{assigns.id}")
+      )
 
     ~H"""
     <div
-      :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
+      :if={@inner_block != [] or @head}
       id={@id}
-      phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
-      role="alert"
+      phx-hook="Toast"
+      phx-click={@dismiss}
+      data-dismiss={@dismiss}
+      data-seconds={@seconds}
+      role={if @kind == :error, do: "alert", else: "status"}
       class={["toast", @kind == :error && "toast-error"]}
       {@rest}
     >
       <.icon name={if @kind == :error, do: "circle-alert", else: "circle-check"} class="toast-icon" />
-      <div class="toast-body">
+      <div :if={@inner_block != []} class="toast-body">
         <span :if={@title} class="toast-title">{@title}</span>
-        {msg}
+        <span class={if @title, do: "toast-sub", else: "toast-title"}>{render_slot(@inner_block)}</span>
+      </div>
+      <div :if={@inner_block == []} class="toast-body">
+        <span class="toast-title">{@head}</span>
+        <span :if={@sub} class="toast-sub">{@sub}</span>
       </div>
       <button type="button" class="toast-close" aria-label={gettext("Close")}>
-        <.icon name="x" />
+        <.icon name="x" size={:sm} />
       </button>
     </div>
     """
   end
+
+  # "D4H refused the key. Save a new one below." reads as a title and a subtitle.
+  defp split_message(nil), do: {nil, nil}
+
+  defp split_message(text) do
+    case Regex.run(~r/\A(.+?\.)\s+(\S.*)\z/s, text) do
+      [_, head, sub] -> {head, sub}
+      nil -> {text, nil}
+    end
+  end
+
+  # Results fade, long enough to read slowly; errors and the layout's own toasts stay.
+  defp fade_seconds(:info, [], nil), do: 6
+  defp fade_seconds(:info, [], _sub), do: 10
+  defp fade_seconds(_kind, _inner_block, _sub), do: nil
 
   @doc """
   Renders a button, or a link styled as one when given `navigate` or `href`.

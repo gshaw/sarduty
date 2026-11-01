@@ -71,7 +71,9 @@ defmodule Web.ChoreCollectionLiveTest do
       )
       |> render_submit(%{another: "true"})
 
-    assert html =~ "Logged Radio programming. Add the next one."
+    assert html =~ "Logged Radio programming."
+
+    assert html =~ "Add the next one."
     assert [%{minutes: 150, date: ^yesterday}] = Chore.get_all_for_member(member)
     assert has_element?(lv, ~s{#chore_date[value="#{yesterday}"]})
 

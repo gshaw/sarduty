@@ -301,7 +301,9 @@ defmodule Web.ActivitySendAttendanceTest do
     lv = open(ctx)
     lv |> element("#review") |> render_click()
 
-    assert render(lv) =~ "D4H did not answer. Try again."
+    assert render(lv) =~ "D4H did not answer."
+
+    assert render(lv) =~ "Try again."
     refute has_element?(lv, "#send-form")
   end
 

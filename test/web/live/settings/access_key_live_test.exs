@@ -155,7 +155,10 @@ defmodule Web.Settings.AccessKeyLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/access-key")
     assert has_element?(lv, "#key-unchecked")
 
-    assert lv |> element("#check-key") |> render_click() =~ "Key checked."
+    lv |> element("#check-key") |> render_click()
+    # The Checked line is the answer: no toast says so too.
+    assert has_element?(lv, "#key-checked")
+    refute has_element?(lv, "#flash-info")
     assert has_element?(lv, "#key-refused-whiteboard", "Whiteboard")
     assert Team.get!(team.id).d4h_permissions_checked_at
   end

@@ -1,47 +1,62 @@
 /* Toasts (LiveView flash), banners, warning text, empty states, the error summary, the
    result band, the confirm dialog, and the spinner (Web.Components.Messages and Core). See /styles/components. */
 @layer components {
+  /* Centred under the fixed top bar on every screen, clear of a form's Save button. */
   .toasts {
     position: fixed;
-    top: 72px;
-    /* On a wide monitor, line up with the page's right edge (1280px), not the window's. */
-    right: max(var(--sp-6), calc((100vw - 80rem) / 2 + var(--sp-2)));
+    top: 66px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 50;
-    width: min(400px, calc(100vw - 32px));
+    width: max-content;
+    max-width: min(440px, calc(100vw - 32px));
     display: grid;
+    justify-items: center;
     gap: var(--sp-2);
   }
 
-  @media (max-width: 800px) {
-    .toasts { top: auto; bottom: var(--sp-4); left: var(--sp-4); right: var(--sp-4); width: auto; }
-  }
-
+  /* A pill. A result is the theme inside out, dark on light and light on dark; an error
+     is red. The icon carries the kind as well as the colour. */
   .toast {
-    --c: var(--success);
-    --c-text: var(--success-text);
     display: flex;
-    gap: var(--sp-3);
-    align-items: flex-start;
-    background: var(--bg);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-left: 6px solid var(--c);
-    /* The coloured edge stays straight: no rounding on its side. */
-    border-radius: 0 var(--radius) var(--radius) 0;
-    padding: var(--sp-3) var(--sp-2) var(--sp-3) var(--sp-3);
-    box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
-    font-size: var(--fs-sm);
+    gap: 10px;
+    align-items: center;
+    max-width: 100%;
+    background: var(--text);
+    color: var(--bg);
+    border-radius: 24px;
+    padding: var(--sp-3) var(--sp-3) var(--sp-3) 14px;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.18), 0 10px 28px rgb(0 0 0 / 0.26);
+    font-size: 15px;
     line-height: var(--lh-sm);
+    text-align: left;
     cursor: pointer;
     animation: toast-in 0.2s ease-out;
   }
 
-  .toast > .toast-icon { color: var(--c-text); flex: none; }
-  .toast .toast-body { flex: 1; }
-  .toast .toast-title { display: block; font-weight: 700; font-size: var(--fs-md); line-height: var(--lh-md); }
-  .toast .toast-close { display: inline-flex; border: 0; background: none; color: var(--text-muted); padding: 2px; cursor: pointer; }
-  .toast-error { --c: var(--danger); --c-text: var(--danger-text); }
-  .toast-connection { --c: var(--border); --c-text: var(--text-muted); }
+  .toast:has(.toast-sub) { align-items: flex-start; }
+  .toast > .toast-icon { flex: none; color: light-dark(#4cc38a, #00703c); }
+  .toast .toast-body { min-width: 0; }
+  .toast .toast-title { display: block; font-weight: 700; }
+  .toast .toast-sub { display: block; font-size: var(--fs-sm); opacity: 0.8; }
+  .toast .toast-close {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    margin: -4px 0 -4px 2px;
+    border: 0;
+    border-radius: 50%;
+    background: light-dark(rgb(255 255 255 / 0.14), rgb(0 0 0 / 0.08));
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .toast-error { background: var(--danger); color: var(--on-fill); }
+  .toast-error > .toast-icon { color: inherit; }
+  .toast-error .toast-sub { opacity: 0.88; }
+  .toast-error .toast-close { background: rgb(255 255 255 / 0.16); }
 
   @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } }
   @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }

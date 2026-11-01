@@ -22,7 +22,6 @@ defmodule Web.Settings.FeaturesLive do
 
     socket
     |> assign(current_team: team)
-    |> put_flash(:info, message(team, feature))
     |> read_whiteboard(feature)
     |> then(&{:noreply, &1})
   end
@@ -54,17 +53,6 @@ defmodule Web.Settings.FeaturesLive do
   defp on?(team, :chores), do: team.chores_enabled
   defp on?(team, :certificates), do: team.certificates_enabled
   defp on?(team, :whiteboard), do: team.whiteboard_enabled
-
-  defp message(%{member_logins: true}, :member_logins),
-    do: "Member logins turned on. Members can log in now."
-
-  defp message(_team, :member_logins), do: "Member logins turned off. Members cannot log in."
-  defp message(%{chores_enabled: true}, :chores), do: "Chores turned on."
-  defp message(_team, :chores), do: "Chores turned off."
-  defp message(%{certificates_enabled: true}, :certificates), do: "Certificates turned on."
-  defp message(_team, :certificates), do: "Certificates turned off."
-  defp message(%{whiteboard_enabled: true}, :whiteboard), do: "Whiteboard turned on."
-  defp message(_team, :whiteboard), do: "Whiteboard turned off."
 
   def render(assigns) do
     ~H"""
