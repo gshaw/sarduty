@@ -8,7 +8,10 @@ defmodule App.ReportTest do
   alias App.Model.Member
   alias App.Report
   alias App.Report.Catalog
+  alias App.Report.Compiler
+  alias App.Report.Context
   alias App.Report.Error
+  alias App.Report.Parser
   alias App.Report.Plan
   alias App.Report.Runner
 
@@ -62,6 +65,22 @@ defmodule App.ReportTest do
                  Report.run("select #{field.name} from #{subject.name}", team, %{}, @now),
                "#{subject.name}.#{field.name} does not run alone"
       end
+    end
+
+    # A count's rows are the where's, so it leaves out the joins only the select needs:
+    # Members' tiles don't add up everyone's attendance (#784).
+    test "a count reads only the columns its where reads" do
+      context = Context.new(team_fixture(), @now)
+      {:ok, query} = Parser.parse("select name, last_attended from members where current")
+
+      {:ok, {sql, _params}} = Compiler.count(query, context)
+      refute IO.iodata_to_binary(sql) =~ "attendances"
+
+      {:ok, {sql, _params}} = Compiler.counts(query, [nil], context)
+      refute IO.iodata_to_binary(sql) =~ "attendances"
+
+      {:ok, plan} = Compiler.compile(query, context)
+      assert IO.iodata_to_binary(plan.sql) =~ "attendances"
     end
 
     test "reports leave out contact details" do

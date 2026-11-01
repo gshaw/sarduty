@@ -50,20 +50,28 @@ defmodule App.Report.Compiler do
     with_subject(query, context, given, fn st ->
       parts = parts(query, st)
       check(query, parts)
-      used = used(parts)
-      where = where_sql(parts.where)
-
-      inner =
-        SQL.join([
-          {"SELECT ", []},
-          select_list(parts, false),
-          from_sql(st.subject, used, st.context),
-          where,
-          grouped?(query, parts) && group_by(parts.group)
-        ])
-
-      {:ok, SQL.join([{"SELECT COUNT(*) FROM (", []}, inner, {")", []}])}
+      {:ok, SQL.join([{"SELECT COUNT(*) FROM (", []}, count_inner(query, parts, st), {")", []}])}
     end)
+  end
+
+  # Rows that don't group are counted by their where alone: a column the query only shows,
+  # and the join it needs, can't change how many rows there are.
+  defp count_inner(query, parts, st) do
+    if grouped?(query, parts) do
+      SQL.join([
+        {"SELECT ", []},
+        select_list(parts, false),
+        from_sql(st.subject, used(parts), st.context),
+        where_sql(parts.where),
+        group_by(parts.group)
+      ])
+    else
+      SQL.join([
+        {"SELECT 1", []},
+        from_sql(st.subject, List.wrap(parts.where), st.context),
+        where_sql(parts.where)
+      ])
+    end
   end
 
   @doc """
@@ -80,9 +88,10 @@ defmodule App.Report.Compiler do
     end)
   end
 
+  # As count/3, each tile reads only the where's columns and its own.
   defp counts_sql(parts, wheres, st) do
     conditions = Enum.map(wheres, &(&1 && Expr.condition(&1, st)))
-    used = used(parts) ++ Enum.reject(conditions, &is_nil/1)
+    used = List.wrap(parts.where) ++ Enum.reject(conditions, &is_nil/1)
 
     SQL.join([
       {"SELECT ", []},

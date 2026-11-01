@@ -4,6 +4,8 @@ defmodule App.Report.Source do
   the team; `fields`, each column's dynamic; `joins`, each a function that adds a named
   join; and `needs`, the joins each column reads. A report selects only the columns it
   reads, with only their joins, so a page that never shows attendance never adds it up.
+  Every join is a left join of at most one row per row, so leaving one out never changes
+  which rows there are: a count reads only the columns its where does.
   """
 
   import Ecto.Query, only: [select: 2]
