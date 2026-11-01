@@ -31,6 +31,12 @@ subquery, and joins the sources of the parents the query names. Names in the SQL
 only from the catalog; every value a query writes is a parameter. A query never reaches
 a table the catalog doesn't name, so there is no `team_id` for it to forget.
 
+A source selects only the columns the query reads. When a column needs a join of its
+own, such as `attended_count` adding up the team's attendance, the source is an
+`App.Report.Source` that says which columns need which join, and the join comes only with
+them (#784). Before this, every page added up every activity's attendance for each of
+its nine queries, and Activities took 274 ms where the old page took 10.
+
 ## The catalog is an allowlist
 
 Like the MCP tools, the fields leave out contact details, addresses, coordinates, letter
@@ -52,9 +58,10 @@ tag's title; a period or a tag can be a picked value, as in
 
 Adding a field:
 
-1. Select its column in the subject's `source`, from the rule's home.
+1. Select its column in the subject's `source`, from the rule's home. A column that
+   reads a join names it in the source's `needs`.
 2. Add a `%Field{}` with a label and a type. `App.ReportTest` fails on a field without
-   them, and runs every subject with every field.
+   them, and runs every field alone, which fails on a join missing from `needs`.
 3. A field that holds one of a few values is a `:choice` with the glossary's words as
    labels (docs/writing.md): a query compares by the label or the value, and a cell shows
    the label.
@@ -85,7 +92,7 @@ page 50
 
 - `search` ORs `contains :q` over its fields. A list field matches on any of its titles.
 - `switch` is the tiles, All first. Each counts its rows with every other pick on and the
-  search off.
+  search off, all in one query; a query that groups counts each tile's groups on its own.
 - `filter` is a menu, All first. `required` drops All, `default` picks where it starts (a
   value, or `THIS_YEAR`), and `more` puts it behind More filters.
 - `option` is a value for the URL, a label, the `where` it adds, and the sort it picks,
@@ -117,6 +124,10 @@ SQLite has no time zones. `App.Report.LocalTime` writes a stored UTC time as the
 local time with a CASE over the zone's periods from tzdata, so `year()`, `month()`, and
 `days_since()` follow daylight saving time. Ranges (`TODAY`, `THIS_YEAR`,
 `LAST_N_DAYS:n`) and `date '2026-01-01'` become UTC bounds in `App.Report.Range`.
+
+A year compared with one, as in `year(started_at) = :when`, is a range too: the stored
+time between two UTC bounds, not each row's local year worked out first. It keeps the
+same rows and reads 3,559 activities in a quarter of the time (#784).
 
 `LAST_N_DAYS:n` is today and the n days before it, whole days in the team's time zone:
 `Service.DayRange.last/3`, the app's one rule for "the last n days" (#784). Activities'

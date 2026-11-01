@@ -21,6 +21,7 @@ defmodule App.Report.Compiler do
   alias App.Report.Expr
   alias App.Report.Plan
   alias App.Report.Query
+  alias App.Report.Source
   alias App.Report.SQL
   alias App.Report.Subject
   alias Service.Format
@@ -50,14 +51,13 @@ defmodule App.Report.Compiler do
       parts = parts(query, st)
       check(query, parts)
       used = used(parts)
-      parents = used |> Enum.flat_map(& &1.parents) |> Enum.uniq()
-      where = parts.where && SQL.join([{" WHERE ", []}, {parts.where.sql, parts.where.params}])
+      where = where_sql(parts.where)
 
       inner =
         SQL.join([
           {"SELECT ", []},
           select_list(parts, false),
-          from_sql(st.subject, parents, st.context),
+          from_sql(st.subject, used, st.context),
           where,
           grouped?(query, parts) && group_by(parts.group)
         ])
@@ -67,9 +67,46 @@ defmodule App.Report.Compiler do
   end
 
   @doc """
+  `{:ok, {sql, params}}` for one row that counts the rows `query` gives under each of
+  `wheres`, in one pass: a condition's rows, or every row for nil. For the page's tiles
+  (#784). `:grouped` when the query groups, as a tile then counts groups.
+  """
+  def counts(%Query{} = query, wheres, %Context{} = context, given \\ %{}) do
+    with_subject(query, context, given, fn st ->
+      parts = parts(query, st)
+      check(query, parts)
+
+      if grouped?(query, parts), do: :grouped, else: {:ok, counts_sql(parts, wheres, st)}
+    end)
+  end
+
+  defp counts_sql(parts, wheres, st) do
+    conditions = Enum.map(wheres, &(&1 && Expr.condition(&1, st)))
+    used = used(parts) ++ Enum.reject(conditions, &is_nil/1)
+
+    SQL.join([
+      {"SELECT ", []},
+      SQL.join(Enum.map(conditions, &count_where/1), ", "),
+      from_sql(st.subject, used, st.context),
+      where_sql(parts.where)
+    ])
+  end
+
+  defp count_where(nil), do: {"COUNT(*)", []}
+
+  defp count_where(condition),
+    do:
+      SQL.join([
+        {"COALESCE(SUM(CASE WHEN (", []},
+        {condition.sql, condition.params},
+        {") THEN 1 ELSE 0 END), 0)", []}
+      ])
+
+  @doc """
   The values `expr` takes in the subject's rows, for a filter's `each` (#784):
   `{:ok, {:choices, [{label, value}]}}` for a field that holds a few, such as a choice or a
-  list's titles, or `{:ok, {:sql, {sql, params}, type}}` for the SQL that reads the rest.
+  list's titles, or `{:ok, {:sql, {sql, params}, type}}` for the SQL that reads the rest,
+  blanks and all: App.Report.Runner.values/2 leaves them out.
   """
   def values(%Query{} = query, expr, %Context{} = context) do
     with_subject(query, context, %{}, fn st ->
@@ -89,13 +126,7 @@ defmodule App.Report.Compiler do
        when type in [:year, :month, :quarter, :text, :number] do
     {sql, params} = Expr.id_sql(e)
 
-    query =
-      SQL.join([
-        {["SELECT DISTINCT ", sql], params},
-        from_sql(st.subject, e.parents, st.context),
-        {[" WHERE ", sql, " IS NOT NULL"], params}
-      ])
-
+    query = SQL.join([{["SELECT DISTINCT ", sql], params}, from_sql(st.subject, [e], st.context)])
     {:sql, query, type}
   end
 
@@ -265,13 +296,12 @@ defmodule App.Report.Compiler do
   # With a pivot, the order and limit wait for the pivot's columns.
   defp sql(query, parts, st, used) do
     pivot? = parts.pivot != []
-    parents = used |> Enum.flat_map(& &1.parents) |> Enum.uniq()
-    where = parts.where && SQL.join([{" WHERE ", []}, {parts.where.sql, parts.where.params}])
+    where = where_sql(parts.where)
 
     SQL.join([
       {"SELECT ", []},
       select_list(parts, pivot?),
-      from_sql(st.subject, parents, st.context),
+      from_sql(st.subject, used, st.context),
       where,
       grouped?(query, parts) && group_by(parts.group ++ parts.pivot),
       !pivot? && order_by(parts.order),
@@ -338,25 +368,34 @@ defmodule App.Report.Compiler do
     ])
   end
 
-  defp from_sql(subject, parents, context) do
-    {sql, params} = source(subject, context)
-    joins = Enum.map(parents, &parent_join(subject, &1, context))
+  # The subject's rows and its parents', each with only the columns the expressions read.
+  defp from_sql(subject, es, context) do
+    parents = es |> Enum.flat_map(& &1.parents) |> Enum.uniq()
+    reads = Enum.flat_map(es, & &1.reads)
+    fks = Enum.map(parents, &elem(Map.fetch!(subject.parents, &1), 1))
+    {sql, params} = source(subject, context, fks ++ columns(reads, nil))
+    joins = Enum.map(parents, &parent_join(subject, &1, context, columns(reads, &1)))
     SQL.join([{[" FROM (", sql, ") AS \"s\""], params} | joins])
   end
 
-  defp parent_join(subject, parent, context) do
+  defp columns(reads, parent), do: for({^parent, column} <- reads, do: column)
+
+  defp parent_join(subject, parent, context, columns) do
     {subject_name, fk} = Map.fetch!(subject.parents, parent)
-    {sql, params} = subject_name |> Catalog.subject() |> source(context)
+    {sql, params} = subject_name |> Catalog.subject() |> source(context, columns)
     table = SQL.table(parent)
     {[" LEFT JOIN (", sql, ") AS ", table, " ON ", table, ".\"id\" = \"s\".\"#{fk}\""], params}
   end
 
   # The source's columns by name, wrapped so each keeps its name in SQL.
-  defp source(%Subject{source: source}, context) do
-    query = from(s in subquery(source.(context)), select: s)
+  defp source(%Subject{source: source}, context, columns) do
+    query = from(s in subquery(context |> source.() |> Source.query(columns)), select: s)
     {sql, params} = Repo.to_sql(:all, query)
     {sql, Enum.map(params, &SQL.param/1)}
   end
+
+  defp where_sql(nil), do: nil
+  defp where_sql(where), do: SQL.join([{" WHERE ", []}, {where.sql, where.params}])
 
   # count(id) with nothing to group by counts every row, with no GROUP BY at all.
   defp group_by([]), do: nil

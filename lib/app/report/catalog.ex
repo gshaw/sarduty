@@ -28,6 +28,7 @@ defmodule App.Report.Catalog do
   alias App.Repo
   alias App.Report.Context
   alias App.Report.Field
+  alias App.Report.Source
   alias App.Report.Subject
   alias App.ViewModel.EquipmentItemFormViewModel
 
@@ -436,28 +437,19 @@ defmodule App.Report.Catalog do
 
   # Each source selects its subject's columns, scoped to the team.
 
-  defp activities(%Context{team: team, now: now, hours_tags: hours_tags}) do
-    attended =
-      now
-      |> Attendance.attended()
-      |> where([activity: a], a.team_id == ^team.id)
-      |> group_by([r], r.activity_id)
-      |> select([r], %{
-        activity_id: r.activity_id,
-        count: count(r.member_id, :distinct),
-        minutes: sum(r.duration_in_minutes)
-      })
-
-    Activity
-    |> where([a], a.team_id == ^team.id)
-    |> Activity.not_deleted()
-    |> join(:left, [a], t in subquery(attended), as: :attended, on: t.activity_id == a.id)
-    |> join(:left, [a], c in subquery(ChoreEvent.totals(team.id)),
-      as: :chores,
-      on: c.d4h_activity_id == a.d4h_activity_id
-    )
-    |> select(
-      ^%{
+  # ABCSize skips what sits inside a select, and these columns were one until #784.
+  # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
+  defp activities(%Context{team: team, hours_tags: hours_tags} = context) do
+    %Source{
+      query: Activity |> where([a], a.team_id == ^team.id) |> Activity.not_deleted(),
+      joins: activity_joins(context),
+      needs: %{
+        attended_count: [:attended],
+        attended_hours: [:attended],
+        duration: [:chores],
+        chore: [:chores]
+      },
+      fields: %{
         id: dynamic([a], a.id),
         title: dynamic([a], a.title),
         ref_id: dynamic([a], a.ref_id),
@@ -475,7 +467,30 @@ defmodule App.Report.Catalog do
         duration: Activity.duration_dynamic(),
         chore: dynamic([chores: c], not is_nil(c.d4h_activity_id))
       }
-    )
+    }
+  end
+
+  defp activity_joins(%Context{team: team, now: now}) do
+    attended =
+      now
+      |> Attendance.attended()
+      |> where([activity: a], a.team_id == ^team.id)
+      |> group_by([r], r.activity_id)
+      |> select([r], %{
+        activity_id: r.activity_id,
+        count: count(r.member_id, :distinct),
+        minutes: sum(r.duration_in_minutes)
+      })
+
+    %{
+      attended:
+        &join(&1, :left, [a], t in subquery(attended), as: :attended, on: t.activity_id == a.id),
+      chores:
+        &join(&1, :left, [a], c in subquery(ChoreEvent.totals(team.id)),
+          as: :chores,
+          on: c.d4h_activity_id == a.d4h_activity_id
+        )
+    }
   end
 
   defp attendance(%Context{team: team, now: now}) do
@@ -501,7 +516,37 @@ defmodule App.Report.Catalog do
     )
   end
 
-  defp members(%Context{team: team, now: now, today: today}) do
+  # One dynamic per column, as activities/1 has.
+  # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
+  defp members(%Context{team: team, now: now} = context) do
+    %Source{
+      query: where(Member, [m], m.team_id == ^team.id),
+      joins: member_joins(context),
+      needs: %{
+        standing: [:standing],
+        groups: [:groups],
+        qualifications: [:awards],
+        last_attended: [:last]
+      },
+      fields: %{
+        id: dynamic([m], m.id),
+        name: dynamic([m], m.name),
+        ref_id: dynamic([m], m.ref_id),
+        position: dynamic([m], m.position),
+        joined_at: dynamic([m], m.joined_at),
+        standing: Standing.dynamic(now),
+        counted: Member.counted_dynamic(),
+        person: dynamic([m], not m.not_a_person),
+        groups: dynamic([groups: g], g.titles),
+        qualifications: dynamic([awards: q], q.titles),
+        last_attended: dynamic([last: l], l.last_attended_at),
+        left_at: dynamic([m], m.left_at),
+        current: Member.current_dynamic(now)
+      }
+    }
+  end
+
+  defp member_joins(%Context{team: team, now: now, today: today}) do
     groups =
       from(gm in GroupMember,
         join: g in assoc(gm, :group),
@@ -524,32 +569,17 @@ defmodule App.Report.Catalog do
         titles: fragment("json_group_array(DISTINCT ?)", q.title)
       })
 
-    Member
-    |> where([m], m.team_id == ^team.id)
-    |> Standing.join(team, today)
-    |> join(:left, [m], l in subquery(Member.last_attended_query(team, now)),
-      as: :last,
-      on: l.member_id == m.id
-    )
-    |> join(:left, [m], g in subquery(groups), as: :groups, on: g.member_id == m.id)
-    |> join(:left, [m], q in subquery(qualifications), as: :awards, on: q.member_id == m.id)
-    |> select(
-      ^%{
-        id: dynamic([m], m.id),
-        name: dynamic([m], m.name),
-        ref_id: dynamic([m], m.ref_id),
-        position: dynamic([m], m.position),
-        joined_at: dynamic([m], m.joined_at),
-        standing: Standing.dynamic(now),
-        counted: Member.counted_dynamic(),
-        person: dynamic([m], not m.not_a_person),
-        groups: dynamic([groups: g], g.titles),
-        qualifications: dynamic([awards: q], q.titles),
-        last_attended: dynamic([last: l], l.last_attended_at),
-        left_at: dynamic([m], m.left_at),
-        current: Member.current_dynamic(now)
-      }
-    )
+    %{
+      standing: &Standing.join(&1, team, today),
+      last:
+        &join(&1, :left, [m], l in subquery(Member.last_attended_query(team, now)),
+          as: :last,
+          on: l.member_id == m.id
+        ),
+      groups: &join(&1, :left, [m], g in subquery(groups), as: :groups, on: g.member_id == m.id),
+      awards:
+        &join(&1, :left, [m], q in subquery(qualifications), as: :awards, on: q.member_id == m.id)
+    }
   end
 
   defp awards(%Context{team: team, now: now}) do

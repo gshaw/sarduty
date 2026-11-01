@@ -52,6 +52,18 @@ defmodule App.ReportTest do
       end
     end
 
+    # A source selects only the columns a report reads, with only their joins (#784), so a
+    # column whose join is missing from its `needs` fails here, alone, and not beside others.
+    test "every field runs alone" do
+      team = team_fixture()
+
+      for subject <- Catalog.subjects(), field <- subject.fields, field.args == [] do
+        assert {:ok, %{rows: []}} =
+                 Report.run("select #{field.name} from #{subject.name}", team, %{}, @now),
+               "#{subject.name}.#{field.name} does not run alone"
+      end
+    end
+
     test "reports leave out contact details" do
       team = team_fixture()
 
@@ -211,14 +223,25 @@ defmodule App.ReportTest do
   test "local dates follow daylight saving time" do
     team = team_fixture(%{timezone: "America/Toronto"})
     # 11:30 pm on June 30 (EDT) and on December 31 (EST).
-    activity_fixture(team, %{started_at: ~U[2026-07-01 03:30:00Z]})
-    activity_fixture(team, %{started_at: ~U[2026-01-01 04:30:00Z]})
+    june = activity_fixture(team, %{started_at: ~U[2026-07-01 03:30:00Z]})
+    december = activity_fixture(team, %{started_at: ~U[2026-01-01 04:30:00Z]})
 
     assert run!(
              "select year(started_at), month(started_at) from activities order by started_at",
              team
            ).rows ==
              [[2025, 12], [2026, 6]]
+
+    # A year compared with one is a range of the stored time (#784), with the same edge.
+    assert run!("select id from activities where year(started_at) = 2025", team).rows ==
+             [[december.id]]
+
+    assert run!("select id from activities where year(started_at) > 2025", team).rows ==
+             [[june.id]]
+
+    assert run!("select id from activities where year(started_at) = :year", team, %{
+             "year" => "2025"
+           }).rows == [[december.id]]
   end
 
   test "a value takes its default, or the one given" do
