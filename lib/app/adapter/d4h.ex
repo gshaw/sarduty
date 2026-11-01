@@ -193,15 +193,7 @@ defmodule App.Adapter.D4H do
     access_key = Keyword.fetch!(opts, :access_key)
     api_host = Keyword.fetch!(opts, :api_host)
 
-    context =
-      [
-        base_url: "https://#{api_host}/v3",
-        headers: %{"User-Agent" => "sarduty.com"},
-        auth: {:bearer, access_key || ""}
-      ]
-      |> Keyword.merge(test_options())
-      |> Req.new()
-      |> report_rate_limits()
+    context = whoami_context(access_key, api_host)
 
     case Req.get(context, url: "/whoami", retry: false) do
       {:ok, %{status: 200, body: body}} when is_map(body) ->
@@ -219,6 +211,17 @@ defmodule App.Adapter.D4H do
       _ ->
         {:error, :unreachable}
     end
+  end
+
+  defp whoami_context(access_key, api_host) do
+    [
+      base_url: "https://#{api_host}/v3",
+      headers: %{"User-Agent" => "sarduty.com"},
+      auth: {:bearer, access_key || ""}
+    ]
+    |> Keyword.merge(test_options())
+    |> Req.new()
+    |> report_rate_limits()
   end
 
   # The account's /whoami has no rights; the team's /team/{id}/whoami sends them in
