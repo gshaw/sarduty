@@ -63,6 +63,21 @@ defmodule App.Operation.ApplyChangeSetTest do
     assert {:skipped, _} = ApplyChangeSet.check(row, [info(501, 7, "requested")])
   end
 
+  # Remove members (#704): each row with its own status from the copy.
+  test "a delete goes ahead on the status it was proposed from, or a row gone already" do
+    row = %ChangeSetRow{
+      action: :delete_attendance,
+      d4h_record_id: 501,
+      old_value: %{"status" => "requested"}
+    }
+
+    assert ApplyChangeSet.check(row, [info(501, 7, "requested")]) == :ok
+    assert ApplyChangeSet.check(row, [info(502, 7, "attending")]) == :ok
+
+    assert {:skipped, "This changed since you reviewed it. Review again."} =
+             ApplyChangeSet.check(row, [info(501, 7, "attending")])
+  end
+
   test "group rows aren't checked against attendance" do
     assert %ChangeSetRow{action: :add_group_member} |> ApplyChangeSet.check(nil) == :ok
     assert %ChangeSetRow{action: :remove_group_member} |> ApplyChangeSet.check(nil) == :ok

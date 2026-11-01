@@ -640,6 +640,12 @@ defmodule Web.ActivityLive do
           navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/members/add"}
         >Add members</.a>
       </p>
+      <p :if={@adding == :open and @members != []} class="action">
+        <.a
+          id="members-remove"
+          navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/members/remove"}
+        >Remove members</.a>
+      </p>
       <.stat_switch
         :if={@members != []}
         id="members-switch"

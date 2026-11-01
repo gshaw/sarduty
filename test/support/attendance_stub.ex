@@ -4,7 +4,9 @@ defmodule App.AttendanceStub do
   a draft activity holding these attendance rows, taken from the copy. A PATCH answers
   with the row and its new status, and the test receives `{:d4h_write, d4h_id, body}`.
   A POST adds a row (#564), and the test receives `{:d4h_write, :create, body}`; D4H
-  refuses one for a member in `refuse:`, their D4H member ids.
+  refuses one for a member in `refuse:`, their D4H member ids. A DELETE (#704) answers
+  204, or 500 for a row of a refused member, and the test receives `{:d4h_write,
+  :delete, d4h_id}`.
   """
 
   alias App.Model.Attendance
@@ -31,10 +33,10 @@ defmodule App.AttendanceStub do
         Req.Test.json(conn, %{"published" => false})
 
       {"PATCH", "/attendance/" <> id} ->
-        {body, conn} = read_json(conn)
-        id = String.to_integer(id)
-        send(test, {:d4h_write, id, body})
-        Req.Test.json(conn, Map.merge(d4h_rows[id], body))
+        patch(conn, test, String.to_integer(id), d4h_rows)
+
+      {"DELETE", "/attendance/" <> id} ->
+        delete(conn, test, String.to_integer(id), d4h_rows, refuse)
 
       {"POST", "/attendance"} ->
         {body, conn} = read_json(conn)
@@ -46,6 +48,20 @@ defmodule App.AttendanceStub do
   defp read_json(conn) do
     {:ok, body, conn} = Plug.Conn.read_body(conn)
     {Jason.decode!(body), conn}
+  end
+
+  defp patch(conn, test, id, d4h_rows) do
+    {body, conn} = read_json(conn)
+    send(test, {:d4h_write, id, body})
+    Req.Test.json(conn, Map.merge(d4h_rows[id], body))
+  end
+
+  defp delete(conn, test, id, d4h_rows, refuse) do
+    send(test, {:d4h_write, :delete, id})
+
+    if get_in(d4h_rows, [id, "member", "id"]) in refuse,
+      do: conn |> Plug.Conn.put_status(500) |> Req.Test.json(%{"message" => "Down"}),
+      else: Plug.Conn.send_resp(conn, 204, "")
   end
 
   defp created(conn, _body, true = _refused),

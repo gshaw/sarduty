@@ -8,9 +8,10 @@ defmodule App.Mailer.ActivityMailer do
   alias Service.Format
   alias Web.ReplyLinks
 
-  # The emails a team admin sends about an activity: a reminder to reply (#444) and an
-  # update (#609). Both come from the team, with replies going to the team admin who
-  # sent it: Cloudflare takes Reply-To as its API's `reply_to` field, not a header.
+  # The emails a team admin sends about an activity: a reminder to reply (#444), an
+  # update (#609), and the message to a signed up member they removed (#704). Each comes
+  # from the team, with replies going to the team admin who sent it: Cloudflare takes
+  # Reply-To as its API's `reply_to` field, not a header.
   # `sender` is `%{name:, email:}`, and `message` the team admin's own words, or nil.
 
   # The two buttons, in SAR Duty's success and secondary colours. Mail apps drop
@@ -64,6 +65,17 @@ defmodule App.Mailer.ActivityMailer do
   end
 
   @doc """
+  Emails a signed up member the team admin's message for taking them off the activity
+  (#704). It has no Open activity link: there is nothing for them to do there.
+  """
+  def deliver_removal(%Member{} = member, %Activity{} = activity, %Team{} = team, sender, message) do
+    member
+    |> email(team, sender, removal_subject(activity))
+    |> bodies(activity, team, sender, message, :removed, nowhere(nil))
+    |> Mailer.deliver()
+  end
+
+  @doc """
   How an update ends for a member, from their reply (a D4H status) and their invitation
   reminders: `:ask` with the reply buttons, `:open` with only the activity's link for
   one who turned reminders off, or `:signed_up` or `:cant_make_it` with a link to change
@@ -92,8 +104,16 @@ defmodule App.Mailer.ActivityMailer do
       html: html(activity, team, from_name(sender), message, ending, nowhere(nil))
     }
 
+  @doc "A removal as Remove members shows it, like reminder_preview/4."
+  def removal_preview(%Activity{} = activity, %Team{} = team, sender, message),
+    do: %{
+      subject: removal_subject(activity),
+      html: html(activity, team, from_name(sender), message, :removed, nowhere(nil))
+    }
+
   defp reminder_subject(activity), do: "Will you be there? #{activity.title}"
   defp update_subject(activity), do: "Update: #{activity.title}"
+  defp removal_subject(activity), do: "You're no longer on #{activity.title}"
 
   defp email(member, team, sender, subject) do
     new()
@@ -136,6 +156,8 @@ defmodule App.Mailer.ActivityMailer do
   defp footer(from_name),
     do: "#{from_name}, a team admin, sent this email. Reply to this email to reach them."
 
+  @removed "You're no longer on this activity."
+
   # Where the member stands, and the link that changes it.
   defp standing(:signed_up), do: {"You're signed up.", :no}
   defp standing(:cant_make_it), do: {"You said you can't make it.", :yes}
@@ -147,9 +169,8 @@ defmodule App.Mailer.ActivityMailer do
     #{activity.title}
     #{Enum.join(facts(activity, team), "\n")}
     #{if message, do: "\n" <> message <> "\n"}
-    #{ending_text(ending, links)}
-    Open activity (log in):
-    #{links.activity}
+    #{ending_text(ending, links)}\
+    #{if ending != :removed, do: "\nOpen activity (log in):\n" <> links.activity}
 
     #{footer(from_name)}
     #{if links.reminders, do: "\nTurn off invitation reminders:\n" <> links.reminders <> "\n"}\
@@ -169,6 +190,7 @@ defmodule App.Mailer.ActivityMailer do
   end
 
   defp ending_text(:open, _links), do: ""
+  defp ending_text(:removed, _links), do: @removed
 
   defp ending_text(ending, links) do
     {line, answer} = standing(ending)
@@ -188,12 +210,16 @@ defmodule App.Mailer.ActivityMailer do
     #{Enum.map_join(facts(activity, team), "\n", &"<p style=\"margin:0\">#{escape(&1)}</p>")}
     #{message_html(message)}
     #{ending_html(ending, links)}
-    <p style="margin:16px 0 0"><a href="#{escape(links.activity)}">Open activity</a> (log in)</p>
+    #{if ending != :removed, do: open_html(links)}
     <hr style="border:0;border-top:1px solid #b1b4b6;margin:32px 0 16px">
     <p style="font-size:14px;margin:0 0 8px">#{escape(footer(from_name))}</p>
     #{if links.reminders, do: ~s(<p style="font-size:14px;margin:0"><a href="#{escape(links.reminders)}">Turn off invitation reminders</a></p>)}
     """
   end
+
+  defp open_html(links),
+    do:
+      ~s|<p style="margin:16px 0 0"><a href="#{escape(links.activity)}">Open activity</a> (log in)</p>|
 
   defp ending_html(:ask, links) do
     """
@@ -203,6 +229,9 @@ defmodule App.Mailer.ActivityMailer do
   end
 
   defp ending_html(:open, _links), do: ""
+
+  defp ending_html(:removed, _links),
+    do: ~s(<p style="margin:24px 0 0"><strong>#{@removed}</strong></p>)
 
   defp ending_html(ending, links) do
     {line, answer} = standing(ending)

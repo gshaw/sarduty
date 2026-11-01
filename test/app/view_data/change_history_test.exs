@@ -93,6 +93,19 @@ defmodule App.ViewData.ChangeHistoryTest do
     assert row.(%{"title" => "Old group"}) == "Deleted Old group"
   end
 
+  # On the member's page it reads as them coming off, not the activity going (#704).
+  test "a removed row says who came off what" do
+    row = %ChangeSetRow{
+      action: :delete_attendance,
+      member: %App.Model.Member{name: "Drew Patel"},
+      change_set: %App.Model.ChangeSet{activity: %App.Model.Activity{title: "BBQ"}}
+    }
+
+    assert ChangeHistory.describe_row(row, :member) == "Removed from BBQ"
+    assert ChangeHistory.describe_row(row, :activity) == "Drew Patel removed"
+    assert ChangeHistory.source_label(:remove) == "Remove members"
+  end
+
   # Sent before the start, so never "attended" (#444).
   test "a member's reply reads in the reply words" do
     reply = fn status, page ->

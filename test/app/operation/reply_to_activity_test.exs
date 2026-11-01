@@ -161,10 +161,11 @@ defmodule App.Operation.ReplyToActivityTest do
       assert Repo.reload(ctx.row).status == "requested"
     end
 
-    test "a member who is not invited gets an answer, and D4H is never called", ctx do
+    # The same words however they came off, removed by a team admin or in D4H (#704).
+    test "a member who is not on the activity gets an answer, and D4H is never called", ctx do
       outsider = member_fixture(ctx.team)
 
-      assert {:error, "Only invited members can reply."} =
+      assert {:error, "You're no longer on this activity."} =
                ReplyToActivity.call(ctx.team, ctx.activity, outsider, :yes, ctx.user, ctx.now)
 
       assert Repo.all(ChangeSet) == []

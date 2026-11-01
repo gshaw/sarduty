@@ -13,6 +13,10 @@ defmodule Web.TableColumnsTest do
     {"lib/web/live/activity_live.ex",
      ~s|!@started? and (@view != "requested" or @reminded_shown?)|} =>
       "Replied: before the start only, and No reply has no reply dates",
+    {"lib/web/live/activity_remove_members_live.ex", ~s|status != "requested"|} =>
+      "Replied: a table per reply, and No reply has no reply dates",
+    {"lib/web/live/activity_remove_members_live.ex", ~s|status == "attending"|} =>
+      "the no email hint: only a signed up member is emailed",
     {"lib/web/live/activity_live.ex", ~s|@started? and @view in [nil, "attending"]|} =>
       "Start, Finish, and Duration: only rows that attended have times",
     {"lib/web/live/chore_collection_live.ex", "@selected"} =>
