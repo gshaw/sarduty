@@ -85,7 +85,8 @@ defmodule Web.ChoreLiveTest do
 
     stub_d4h(member)
     html = lv |> form("#accept-form", %{chore_ids: ids}) |> render_submit()
-    assert html =~ "Accepted 2 chores. Chore activities are up to date."
+    assert html =~ "Accepted 2 chores."
+    assert html =~ "Chore activities are up to date."
 
     assert has_element?(lv, "#waiting-chores #chore-#{left.id}")
     refute has_element?(lv, "#waiting-chores #chore-#{one.id}")
@@ -115,7 +116,8 @@ defmodule Web.ChoreLiveTest do
 
     stub_d4h(member, true)
     html = lv |> form("#accept-form", %{chore_ids: [to_string(chore.id)]}) |> render_submit()
-    assert html =~ "Accepted 1 chore. 1 activity did not go through."
+    assert html =~ "Accepted 1 chore."
+    assert html =~ "1 activity did not go through."
     assert has_element?(lv, "#chores-to-send", "1 activity is out of date.")
 
     stub_d4h(member)
@@ -165,7 +167,9 @@ defmodule Web.ChoreLiveTest do
       |> render_submit()
       |> follow_redirect(conn)
 
-    assert html =~ "Declined Truck 1 wash. Chore activities are up to date."
+    assert html =~ "Declined Truck 1 wash."
+
+    assert html =~ "Chore activities are up to date."
     assert %{status: :declined, chore_event_id: nil} = Repo.get!(Chore, chore.id)
   end
 
@@ -183,7 +187,9 @@ defmodule Web.ChoreLiveTest do
       |> render_submit()
       |> follow_redirect(conn, ~p"/teams/#{team}/chores?view=accepted")
 
-    assert html =~ "Saved Truck 1 wash. Chore activities are up to date."
+    assert html =~ "Saved Truck 1 wash."
+
+    assert html =~ "Chore activities are up to date."
     assert has_element?(lv, "#chore-#{chore.id}", "2 hours")
     assert %{status: :accepted, date: ~D[2025-01-15], minutes: 120} = Repo.get!(Chore, chore.id)
     assert [%{month: ~D[2025-01-01]}] = Repo.all(ChoreEvent)

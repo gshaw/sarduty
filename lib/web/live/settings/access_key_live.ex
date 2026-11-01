@@ -204,7 +204,7 @@ defmodule Web.Settings.AccessKeyLive do
   def handle_event("check", _params, socket) do
     case CheckTeamKey.call(socket.assigns.current_team) do
       {:ok, team} ->
-        {:noreply, socket |> assign_team(team) |> put_flash(:info, "Key checked.")}
+        {:noreply, assign_team(socket, team)}
 
       {:error, :refused} ->
         {:noreply, put_flash(socket, :error, "D4H refused the key. Save a new one below.")}

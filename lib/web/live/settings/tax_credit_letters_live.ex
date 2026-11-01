@@ -60,7 +60,7 @@ defmodule Web.Settings.TaxCreditLettersLive do
 
   def handle_event("remove_signature", _params, socket) do
     {:ok, team} = SaveTeamSignature.call(socket.assigns.current_team, nil)
-    {:noreply, socket |> assign(current_team: team) |> put_flash(:info, "Signature removed.")}
+    {:noreply, assign(socket, current_team: team)}
   end
 
   defp consume_signature(socket) do
