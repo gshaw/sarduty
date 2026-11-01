@@ -1,19 +1,27 @@
 defmodule Web.MemberCollectionLive do
+  @moduledoc """
+  Members, drawn by its report (#784): the tiles, search, filters, sorts, and pages are
+  the clauses in `App.Report.Lists.members/0`, run by `App.Report.page/5`. A member runs
+  it as a member, so team admins' own filters and the Away tile drop out (#440). The
+  cells, Add member, Add to group, and Save as report stay here.
+  """
   # A member gets the list but not the group form: "select" and "set-group" are not in
   # view_events (#547).
   use Web, {:live_view_app_layout, access: :team, view_events: ["change"]}
 
-  import Web.Components.FilterBar
-  import Web.Components.StatSwitch
+  import Web.Components.ReportPage
 
   alias App.Adapter.D4H
   alias App.Model.Group
   alias App.Model.Member
-  alias App.Model.MemberAwayPeriod
   alias App.Model.Standing
   alias App.Model.Team
   alias App.Operation.SetGroupMembers
-  alias App.ViewModel.MemberFilterViewModel
+  alias App.Report
+  alias App.Report.Error
+  alias App.Report.Lists
+  alias App.ViewData.ReportRecords
+  alias Web.Components.ReportPage
 
   def mount(_params, _session, socket) do
     groups = groups(socket.assigns)
@@ -37,45 +45,75 @@ defmodule Web.MemberCollectionLive do
   defp groups(_assigns), do: []
 
   def handle_params(params, _uri, socket) do
-    case MemberFilterViewModel.validate(params, socket.assigns.team_admin?) do
-      {:ok, filter_options, changeset} ->
-        socket =
-          socket
-          |> assign(:form, to_form(changeset, as: "form"))
-          |> assign(:not_changed, nil)
-          |> assign_list(filter_options)
+    socket =
+      socket
+      |> assign(:given, Map.drop(params, ["subdomain"]))
+      |> assign(:not_changed, nil)
+      |> assign_list()
 
-        {:noreply, socket}
+    {:noreply, socket}
+  end
 
-      {:error, _} ->
-        raise Web.Status.NotFound
+  defp assign_list(socket) do
+    %{current_team: team, team_admin?: team_admin?, given: given} = socket.assigns
+    now = DateTime.utc_now()
+
+    case Report.page(Lists.members().query, team, given, now, team_admin?: team_admin?) do
+      {:ok, view} ->
+        view = without_tiles(view, team)
+        rows = rows(view, team, team_admin?, now)
+        attended = picked(view, "attended")
+
+        socket
+        |> assign(view: view, rows: rows, now: now, selected: MapSet.new())
+        |> assign(attended: attended, details: picked(view, "details"))
+        |> assign(:clock, clock(rows, attended, team, Service.Period.today(now, team.timezone)))
+        |> assign_paths(view, team)
+
+      # The list's own text failing is a bug, not a bad URL; a test runs it.
+      {:error, error} ->
+        raise "Members' report: #{Error.text(error)}"
     end
   end
 
-  defp assign_list(socket, filter_options) do
-    %{current_team: current_team, team_admin?: team_admin?} = socket.assigns
-    now = DateTime.utc_now()
-    today = Service.Period.today(now, current_team.timezone)
-    retiring? = Team.retiring?(current_team)
-
-    tile? =
-      MemberFilterViewModel.switch_standing?(filter_options.standing, team_admin?, retiring?)
-
-    socket
-    |> assign(Map.take(filter_options, [:sort, :details, :attended]))
-    |> assign(filter_options: filter_options, now: now, today: today, retiring?: retiring?)
-    |> assign(:retired?, MemberFilterViewModel.shows_retired?(filter_options.standing))
-    |> assign(:standing_tile?, tile?)
-    |> assign(:paginated, build_paginated_content(current_team, filter_options))
-    |> assign(
-      :standing_counts,
-      MemberFilterViewModel.standing_counts(current_team, filter_options, team_admin?, now)
+  defp assign_paths(socket, view, team) do
+    assign(socket,
+      form: ReportPage.controls_form(view),
+      path_fn: &ReportPage.path(view, ~p"/teams/#{team}/members", &1),
+      save_path: ~p"/teams/#{team}/reports/new?#{Map.put(view.params, "list", "members")}"
     )
-    |> assign(:path_fn, build_path_fn(current_team, filter_options))
-    |> assign(:selected, MapSet.new())
+  end
+
+  # No All tile: Not retired and Retired add up to it (#469), and All shows as the
+  # Standing menu. Retiring only for a team with a Retiring group (#514).
+  defp without_tiles(%{switch: switch} = view, team) do
+    retiring? = Team.retiring?(team)
+    keep? = fn value -> value != "retiring" or retiring? end
+    tiles = Enum.filter(switch.tiles, &(&1.value != "all" and keep?.(&1.value)))
+    options = Enum.filter(switch.options, &keep?.(elem(&1, 1)))
+    %{view | switch: %{switch | tiles: tiles, options: options}}
+  end
+
+  # The rows hold the members' ids and the columns' values; the cells read the members,
+  # each standing as the viewer sees it.
+  defp rows(view, team, team_admin?, now) do
+    records = ReportRecords.load(view.result, team, now)
+    members = Map.get(records, :member, %{})
+
+    for [id, _ref_id, _position, last_attended, count, minutes | _] <- view.result.rows do
+      %{
+        member: Map.fetch!(members, id),
+        standing: records.standings |> Map.get(id) |> Standing.visible(team_admin?),
+        last_attended_at: last_attended,
+        activity_count: count,
+        total_minutes: minutes
+      }
+    end
   end
 
   def render(assigns) do
+    assigns = assign(assigns, :standing, assigns.view.switch.picked)
+
     ~H"""
     <.heading_row>
       <h1 class="title">{@page_title}</h1>
@@ -87,303 +125,250 @@ defmodule Web.MemberCollectionLive do
         >
           Add member
         </.button>
+        <.button :if={@team_admin?} id="member-save-report" navigate={@save_path}>
+          Save as report
+        </.button>
       </:action>
     </.heading_row>
-    <.stat_switch id="member-switch" label="Standing">
-      <:view
-        :for={{label, standing} <- MemberFilterViewModel.standing_switch(@team_admin?, @retiring?)}
-        id={"member-view-#{standing}"}
-        patch={@path_fn.(standing: standing, page: nil)}
-        current={@filter_options.standing == standing}
-        count={@standing_counts[standing]}
-      >
-        {label}
-      </:view>
-    </.stat_switch>
-    <.filter_bar
-      for={@form}
-      id="member_filter_form"
-      count={Service.Format.count(@paginated.total_entries, one: "%d member", many: "%d members")}
-      repeats={@paginated.total_entries == @standing_counts[@filter_options.standing]}
-      clear={@path_fn.(:reset)}
+
+    <.report_page
+      id="member"
+      view={@view}
+      records={%{}}
+      team={@current_team}
+      now={nil}
       path_fn={@path_fn}
-      page={@paginated}
-      hidden={[@form[:sort]] ++ if(@standing_tile?, do: [@form[:standing]], else: [])}
+      form={@form}
+      combobox={["group", "activity_tag"]}
     >
-      <:search field={@form[:q]} />
-      <:filter
-        :if={!@standing_tile?}
-        field={@form[:standing]}
-        label="Standing"
-        options={
-          MemberFilterViewModel.standing_kinds(
-            @form[:standing].value,
-            @team_admin?,
-            @retiring?
-          )
-        }
-        default="current"
-      />
-      <:filter
-        field={@form[:when]}
-        label="Period"
-        options={MemberFilterViewModel.when_kinds(@current_team)}
-        default={MemberFilterViewModel.current_year()}
-      />
-      <:filter
-        field={@form[:group]}
-        label="Group"
-        type="combobox"
-        options={MemberFilterViewModel.group_kinds(@current_team)}
-        default=""
-      />
-      <:filter
-        field={@form[:activity_tag]}
-        label="Tag"
-        type="combobox"
-        more
-        options={MemberFilterViewModel.activity_tag_kinds(@current_team)}
-        default=""
-      />
-      <%!-- Team admins' own lists: missing details, and check-ins and away periods (#440). --%>
-      <:filter
-        :if={@team_admin?}
-        field={@form[:details]}
-        label="Details"
-        more
-        options={MemberFilterViewModel.details_kinds()}
-        default="all"
-      />
-      <:filter
-        :if={@team_admin?}
-        field={@form[:attended]}
-        label="Attended"
-        more
-        options={MemberFilterViewModel.attended_kinds()}
-        default="all"
-      />
-      <:filter
-        :if={@team_admin?}
-        field={@form[:items]}
-        label="Items"
-        more
-        options={MemberFilterViewModel.items_kinds()}
-        default="all"
-      />
-      <:filter
-        :if={@team_admin?}
-        field={@form[:access]}
-        label="Access"
-        more
-        options={MemberFilterViewModel.access_kinds(D4H.service_name(@current_team))}
-        default="all"
-      />
-    </.filter_bar>
-    <p :if={@attended not in [nil, "all"]} id="attended-hint" class="hint">
-      Attended counts from the latest of a member's last activity, the day they joined, the
-      end of an away period, and a check-in.
-    </p>
+      <:table>
+        <p :if={@attended not in [nil, "all"]} id="attended-hint" class="hint">
+          Attended counts from the latest of a member's last activity, the day they joined,
+          the end of an away period, and a check-in.
+        </p>
 
-    <.banner
-      :if={@not_changed}
-      kind={:danger}
-      title={@not_changed.title}
-      id="group-not-changed"
-      class="mb-4"
-    >
-      <ul>
-        <li :for={{member, text} <- @not_changed.failed} id={"not-changed-#{member.id}"}>
-          {member.name}: {text}
-        </li>
-      </ul>
-    </.banner>
+        <.banner
+          :if={@not_changed}
+          kind={:danger}
+          title={@not_changed.title}
+          id="group-not-changed"
+          class="mb-4"
+        >
+          <ul>
+            <li :for={{member, text} <- @not_changed.failed} id={"not-changed-#{member.id}"}>
+              {member.name}: {text}
+            </li>
+          </ul>
+        </.banner>
 
-    <%!-- Team admins only. Apart from the filter bar's form, as forms cannot nest; the
-    tick boxes join it with their form attribute. --%>
-    <.form
-      :if={@group_form? and @paginated.entries != []}
-      for={%{}}
-      id="member-group-form"
-      phx-change="select"
-      phx-submit="set-group"
-      class="table-actions"
-    >
-      <.combobox
-        id="member-group-id"
-        name="group_id"
-        value={@group_id}
-        options={@groups}
-        aria-label="Group"
-      />
-      <.button id="member-group-add" name="do" value="add" phx-disable-with="Adding…">
-        Add to group
-      </.button>
-      <.button
-        id="member-group-remove"
-        name="do"
-        value="remove"
-        phx-disable-with="Removing…"
-        data-confirm={remove_confirm(@selected, @paginated.entries, @group_id, @groups)}
-      >
-        Remove from group
-      </.button>
-    </.form>
+        <%!-- Team admins only. Apart from the filter bar's form, as forms cannot nest; the
+        tick boxes join it with their form attribute. --%>
+        <.form
+          :if={@group_form? and @rows != []}
+          for={%{}}
+          id="member-group-form"
+          phx-change="select"
+          phx-submit="set-group"
+          class="table-actions"
+        >
+          <.combobox
+            id="member-group-id"
+            name="group_id"
+            value={@group_id}
+            options={@groups}
+            aria-label="Group"
+          />
+          <.button id="member-group-add" name="do" value="add" phx-disable-with="Adding…">
+            Add to group
+          </.button>
+          <.button
+            id="member-group-remove"
+            name="do"
+            value="remove"
+            phx-disable-with="Removing…"
+            data-confirm={remove_confirm(@selected, @rows, @group_id, @groups)}
+          >
+            Remove from group
+          </.button>
+        </.form>
+
+        <.member_table
+          rows={@rows}
+          clock={@clock}
+          view={@view}
+          path_fn={@path_fn}
+          team={@current_team}
+          now={@now}
+          group_form?={@group_form?}
+          selected={@selected}
+          details={@details}
+          retired?={retired?(@standing)}
+        />
+
+        <.empty_state
+          :if={@rows == [] and @view.q != ""}
+          id="no-matching-members"
+          title="No members match"
+        >
+          Change the search or the filters.
+          <:action :if={@standing != "all"}>
+            <.a patch={@path_fn.(standing: "all", page: nil)}>Search all members</.a>
+          </:action>
+        </.empty_state>
+      </:table>
+    </.report_page>
+    """
+  end
+
+  attr :rows, :list, required: true
+  attr :clock, :map, required: true, doc: "where each member's clock starts, by id, or %{}"
+  attr :view, App.Report.View, required: true
+  attr :path_fn, :any, required: true
+  attr :team, :any, required: true
+  attr :now, :any, required: true
+  attr :group_form?, :boolean, required: true, doc: "tick boxes for Add to group"
+  attr :selected, :any, required: true
+  attr :details, :string, required: true, doc: "the Details filter's pick"
+  attr :retired?, :boolean, required: true
+
+  defp member_table(assigns) do
+    ~H"""
     <.table
       id="member_collection"
-      rows={@paginated.entries}
-      sort={@sort}
+      rows={@rows}
+      sort={@view.sort}
       path_fn={@path_fn}
       class="table-striped"
     >
-      <:col :let={record} :if={@group_form?} label="" class="w-px" select_all>
+      <:col :let={row} :if={@group_form?} label="" class="w-px" select_all>
         <input
           type="checkbox"
-          id={"select-#{record.member.id}"}
+          id={"select-#{row.member.id}"}
           name="member_ids[]"
           form="member-group-form"
-          value={record.member.id}
-          checked={MapSet.member?(@selected, record.member.id)}
-          aria-label={record.member.name}
+          value={row.member.id}
+          checked={MapSet.member?(@selected, row.member.id)}
+          aria-label={row.member.name}
         />
       </:col>
-      <:col :let={record} label="ID" class="w-px max-md:hidden" sorts={[{"↑", "id"}]}>
-        {record.member.ref_id}
+      <:col :let={row} label="ID" class="w-px max-md:hidden" sorts={[{"↑", "id"}]}>
+        {row.member.ref_id}
       </:col>
-      <:col :let={record} label="Member" sorts={[{"↑", "name"}]}>
+      <:col :let={row} label="Member" sorts={[{"↑", "name"}]}>
         <.member_cell
-          id={"standing-#{record.member.id}"}
-          member={record.member}
-          team={@current_team}
-          standing={
-            record |> standing(@team_admin?, @today, @now) |> unless_tile(@filter_options.standing)
-          }
-          path={member_path(@current_team, record.member, @filter_options)}
+          id={"standing-#{row.member.id}"}
+          member={row.member}
+          team={@team}
+          standing={unless_tile(row.standing, @view.switch.picked)}
+          path={member_path(@team, row.member, @view)}
         />
       </:col>
-      <:col :let={record} label="Role" sorts={[{"↑", "role"}]}>
-        {record.member.position}
+      <:col :let={row} label="Role" sorts={[{"↑", "role"}]}>
+        {row.member.position}
       </:col>
-      <:col :let={record} :if={@details == "missing"} label="Missing">
-        <span id={"missing-#{record.member.id}"}>{missing_text(record.member)}</span>
+      <:col :let={row} :if={@details == "missing"} label="Missing">
+        <span id={"missing-#{row.member.id}"}>{missing_text(row.member)}</span>
       </:col>
       <:col
-        :let={record}
+        :let={row}
         label="Last attended"
         class="w-px whitespace-nowrap"
         sorts={[{"↑", "attended"}, {"↓", "attended-"}]}
       >
         <.last_attended_cell
-          id={"last-attended-#{record.member.id}"}
-          value={record.last_attended_at}
+          id={"last-attended-#{row.member.id}"}
+          value={row.last_attended_at}
           now={@now}
-          timezone={@current_team.timezone}
+          timezone={@team.timezone}
         />
         <div
-          :if={@attended not in [nil, "all"] and clock_why(record, @current_team)}
-          id={"clock-starts-#{record.member.id}"}
+          :if={@clock[row.member.id]}
+          id={"clock-starts-#{row.member.id}"}
           class="text-text-muted"
         >
-          {clock_starts(record, @current_team, @today)}
+          {@clock[row.member.id]}
         </div>
       </:col>
       <:col
-        :let={record}
+        :let={row}
         label="Activities"
         align="right"
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "activities-"}, {"↑", "activities"}]}
       >
-        {record.activity_count}
+        {row.activity_count}
       </:col>
       <:col
-        :let={record}
+        :let={row}
         label="Hours"
         align="right"
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "duration-"}, {"↑", "duration"}]}
       >
-        <.hours_cell minutes={record.total_minutes} />
+        <.hours_cell minutes={row.total_minutes} />
       </:col>
       <:col
-        :let={record}
+        :let={row}
         label="Joined"
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "date-"}, {"↑", "date"}]}
       >
-        <.date_cell value={record.member.joined_at} timezone={@current_team.timezone} />
+        <.date_cell value={row.member.joined_at} timezone={@team.timezone} />
       </:col>
       <:col
-        :let={record}
+        :let={row}
         :if={@retired?}
         label="Retired"
         class="w-px whitespace-nowrap"
         sorts={[{"↓", "retired-"}, {"↑", "retired"}]}
       >
-        <.date_cell value={record.member.left_at} timezone={@current_team.timezone} />
+        <.date_cell value={row.member.left_at} timezone={@team.timezone} />
       </:col>
     </.table>
-
-    <.empty_state
-      :if={@paginated.entries == [] and @filter_options.q not in [nil, ""]}
-      id="no-matching-members"
-      title="No members match"
-    >
-      Change the search or the filters.
-      <:action :if={@filter_options.standing != "all"}>
-        <.a patch={@path_fn.(standing: "all", page: nil)}>Search all members</.a>
-      </:action>
-    </.empty_state>
-
-    <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
     """
   end
 
+  defp picked(view, name), do: Enum.find_value(view.filters, &(&1.name == name && &1.picked))
+
+  defp retired?(standing), do: standing == "all" or "retired" in String.split(standing, ",")
+
   # A tile that names one standing, such as Retired, says it for every row: no badge.
   # Away keeps its badge, since each row's last day differs.
-  defp unless_tile({:away, _period} = away, _tile), do: away
+  defp unless_tile({:away, _period} = away, _picked), do: away
 
-  defp unless_tile(standing, tile),
-    do: if(Atom.to_string(standing) == tile, do: :active, else: standing)
+  defp unless_tile(standing, picked),
+    do: if(Atom.to_string(standing) == picked, do: :active, else: standing)
 
-  # The row has the away period's last day only, which is all the badge shows.
-  defp standing(record, team_admin?, today, now) do
-    away =
-      if record.away_until,
-        do: [%MemberAwayPeriod{starts_on: today, ends_on: record.away_until}],
-        else: []
+  # With Attended on, where each member's clock starts, when it's somewhere other than
+  # the last activity, which the cell already shows.
+  defp clock(_rows, attended, _team, _today) when attended in [nil, "all"], do: %{}
 
-    record.member
-    |> Standing.of(away, record.retiring?, today, now)
-    |> Standing.visible(team_admin?)
+  defp clock(rows, _attended, team, today) do
+    parts = Member.clock_parts(team, Enum.map(rows, & &1.member.id), today)
+
+    for row <- rows,
+        {why, date} <- [
+          row |> Map.merge(parts[row.member.id]) |> Member.clock_start(team.timezone)
+        ],
+        why != :attended,
+        into: %{},
+        do: {row.member.id, "#{clock_why(why)} #{Service.Format.day_in_year(date, today)}"}
   end
 
-  # Only when the clock starts somewhere other than the last activity, which the cell
-  # already shows.
-  defp clock_why(record, team) do
-    case Member.clock_start(record, team.timezone) do
-      {:attended, _date} -> nil
-      {why, _date} -> why
-      nil -> nil
-    end
-  end
-
-  defp clock_starts(record, team, today) do
-    {why, date} = Member.clock_start(record, team.timezone)
-    "#{clock_why(why)} #{Service.Format.day_in_year(date, today)}"
-  end
-
-  defp clock_why(:attended), do: "Last attended"
   defp clock_why(:checked_in), do: "Checked in"
   defp clock_why(:back), do: "Back from leave"
   defp clock_why(:joined), do: "Joined"
 
   # With a tag on, the member's page opens on the activities that were counted.
-  defp member_path(team, member, %{activity_tag: tag} = filter_options)
-       when tag not in [nil, ""],
-       do:
-         ~p"/teams/#{team}/members/#{member.id}?#{[when: filter_options.when || "all", activity_tag: tag]}"
+  defp member_path(team, member, view) do
+    case picked(view, "activity_tag") do
+      tag when tag in [nil, "all"] ->
+        ~p"/teams/#{team}/members/#{member.id}"
 
-  defp member_path(team, member, _filter_options), do: ~p"/teams/#{team}/members/#{member.id}"
+      tag ->
+        ~p"/teams/#{team}/members/#{member.id}?#{[when: picked(view, "when") || "all", activity_tag: tag]}"
+    end
+  end
 
   defp missing_text(member) do
     member
@@ -394,6 +379,11 @@ defmodule Web.MemberCollectionLive do
   defp missing_label(:mobile_phone), do: "Mobile phone"
   defp missing_label(:email), do: "Email"
   defp missing_label(:address), do: "Address"
+
+  def handle_event("change", %{"values" => values}, socket) do
+    path = socket.assigns.path_fn.([{:page, nil} | Map.to_list(values)])
+    {:noreply, push_patch(socket, to: path, replace: true)}
+  end
 
   def handle_event("select", params, socket) do
     selected = params |> ids() |> MapSet.new()
@@ -412,9 +402,9 @@ defmodule Web.MemberCollectionLive do
       {:ok, result} ->
         socket =
           socket
+          |> assign_list()
           |> assign(:group_id, group_id)
           |> assign(:not_changed, not_changed(action, result))
-          |> assign_list(socket.assigns.filter_options)
 
         {:noreply, put_result_flash(socket, action, result)}
 
@@ -423,22 +413,11 @@ defmodule Web.MemberCollectionLive do
     end
   end
 
-  def handle_event("change", %{"form" => form_params}, socket) do
-    case MemberFilterViewModel.validate(form_params, socket.assigns.team_admin?) do
-      {:ok, filter_options, _changeset} ->
-        path = build_filter_path(socket.assigns.current_team, filter_options)
-        {:noreply, push_patch(socket, to: path, replace: true)}
-
-      {:error, _} ->
-        raise Web.Status.NotFound
-    end
-  end
-
   # No confirm without a group and ticks: the click gets "Select a group" or "Select
   # members" instead.
-  defp remove_confirm(selected, entries, group_id, groups) do
+  defp remove_confirm(selected, rows, group_id, groups) do
     group = Enum.find_value(groups, fn {label, id} -> id == group_id && label end)
-    names = for %{member: m} <- entries, MapSet.member?(selected, m.id), do: m.name
+    names = for %{member: m} <- rows, MapSet.member?(selected, m.id), do: m.name
 
     cond do
       is_nil(group) or names == [] -> nil
@@ -491,25 +470,4 @@ defmodule Web.MemberCollectionLive do
   end
 
   defp parse_id(_id), do: nil
-
-  def build_paginated_content(team, filter_options) do
-    MemberFilterViewModel.build_paginated_content(team, filter_options)
-  end
-
-  def build_path_fn(team, filter_options) do
-    fn changed_options ->
-      case changed_options do
-        :reset ->
-          build_filter_path(team, %MemberFilterViewModel{})
-
-        _ ->
-          build_filter_path(team, Map.merge(filter_options, Map.new(changed_options)))
-      end
-    end
-  end
-
-  def build_filter_path(team, filter_options) do
-    query_params = Service.PathHelpers.build_filter_query_params(filter_options)
-    ~p"/teams/#{team}/members?#{query_params}"
-  end
 end

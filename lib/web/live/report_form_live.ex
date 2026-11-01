@@ -100,9 +100,9 @@ defmodule Web.ReportFormLive do
 
   defp pick_labels(view) do
     tile =
-      for %{picked: picked, tiles: tiles} <- List.wrap(view.switch),
-          %{value: ^picked, label: label} <- tiles,
-          picked != "all",
+      for %{picked: picked, options: options} = switch <- List.wrap(view.switch),
+          picked not in ["all", switch.default],
+          {label, ^picked} <- options,
           do: label
 
     filters =

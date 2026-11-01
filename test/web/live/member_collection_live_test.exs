@@ -54,15 +54,15 @@ defmodule Web.MemberCollectionLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
 
-    lv |> form("#member_filter_form", form: %{group: rope.id}) |> render_change()
+    lv |> form("#member-filters", values: %{group: rope.id}) |> render_change()
 
     assert has_element?(lv, "#member_collection", "Avery Rope")
     refute has_element?(lv, "#member_collection", "Blake Ground")
     assert has_element?(lv, ".filter-bar-chips a", "Rope rescue")
 
     # The combobox lists its empty option, All, so one pick clears the filter.
-    assert has_element?(lv, "#form_group-combobox[data-clearable] option[value='']", "All")
-    lv |> form("#member_filter_form", form: %{group: ""}) |> render_change()
+    assert has_element?(lv, "#values_group-combobox[data-clearable] option[value='']", "All")
+    lv |> form("#member-filters", values: %{group: ""}) |> render_change()
     assert has_element?(lv, "#member_collection", "Blake Ground")
   end
 
@@ -89,7 +89,7 @@ defmodule Web.MemberCollectionLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
 
     lv
-    |> form("#member_filter_form", form: %{when: "all", activity_tag: "Rope Rescue"})
+    |> form("#member-filters", values: %{when: "all", activity_tag: "Rope Rescue"})
     |> render_change()
 
     assert has_element?(lv, "#member_collection tr", "Avery Rope")
@@ -105,7 +105,9 @@ defmodule Web.MemberCollectionLiveTest do
     assert blake_row =~ ~r/>\s*0\s*</
   end
 
-  test "another team's group finds no one", %{conn: conn} do
+  # Another team's group isn't on the menu, so the filter starts at All (#784): the list
+  # is this team's members, and never the other team's.
+  test "another team's group filters nothing and finds none of its members", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     other_team = team_fixture()
     other_group = group_fixture(other_team)
@@ -115,7 +117,7 @@ defmodule Web.MemberCollectionLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?group=#{other_group.id}")
 
-    refute has_element?(lv, "#member_collection", "Our Member")
+    assert has_element?(lv, "#member_collection", "Our Member")
     refute has_element?(lv, "#member_collection", "Other Member")
   end
 
@@ -136,7 +138,7 @@ defmodule Web.MemberCollectionLiveTest do
       |> log_in_user(user)
       |> live(~p"/teams/#{team}/members?attended=90")
 
-    assert has_element?(lv, "#member_filter_form select[name='form[attended]']")
+    assert has_element?(lv, "#member-filters select[name='values[attended]']")
     assert has_element?(lv, "#last-attended-#{drifting.id}")
     refute has_element?(lv, "#last-attended-#{drifting.id}", "Never")
     assert has_element?(lv, "#last-attended-#{never.id}", "Never")
@@ -161,7 +163,7 @@ defmodule Web.MemberCollectionLiveTest do
       |> live(~p"/teams/#{team}/members?attended=180")
 
     for days <- ~w(30 60 90 180 365),
-        do: assert(has_element?(lv, "select[name='form[attended]'] option[value='#{days}']"))
+        do: assert(has_element?(lv, "select[name='values[attended]'] option[value='#{days}']"))
 
     assert has_element?(lv, "#last-attended-#{drifting.id}")
 
@@ -263,8 +265,8 @@ defmodule Web.MemberCollectionLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?when=90d")
 
-    assert has_element?(lv, "#member_filter_form select[name='form[when]'] option[value='90d']")
-    assert has_element?(lv, "#member_filter_form .filter-menu.is-on", "Period")
+    assert has_element?(lv, "#member-filters select[name='values[when]'] option[value='90d']")
+    assert has_element?(lv, "#member-filters .filter-menu.is-on", "Period")
   end
 
   test "an old year link still opens that year (#367)", %{conn: conn} do
@@ -277,7 +279,7 @@ defmodule Web.MemberCollectionLiveTest do
 
     assert has_element?(
              lv,
-             "#member_filter_form select[name='form[when]'] option[selected][value='2025']"
+             "#member-filters select[name='values[when]'] option[selected][value='2025']"
            )
   end
 
@@ -316,7 +318,7 @@ defmodule Web.MemberCollectionLiveTest do
     end
 
     {:ok, lv, _html} = live(conn |> log_in_user(user), ~p"/teams/#{team}/members")
-    assert has_element?(lv, "#member-view-current[aria-current=page]", "Not retired")
+    assert has_element?(lv, "#member-tile-current[aria-current=page]", "Not retired")
 
     {:ok, lv, _html} =
       live(conn |> log_in_user(user), ~p"/teams/#{team}/members?when=all&standing=all")
@@ -345,13 +347,13 @@ defmodule Web.MemberCollectionLiveTest do
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?when=all&q=cara")
 
     # The logged-in user is an active member too.
-    assert has_element?(lv, "#member-view-current", "3")
-    assert has_element?(lv, "#member-view-active", "2")
-    assert has_element?(lv, "#member-view-not_a_person", "1")
-    assert has_element?(lv, "#member-view-retired", "1")
-    refute has_element?(lv, "#member-view-all")
-    refute has_element?(lv, "select[name='form[standing]']")
-    assert has_element?(lv, "#member_filter_form-summary strong", "1 member")
+    assert has_element?(lv, "#member-tile-current", "3")
+    assert has_element?(lv, "#member-tile-active", "2")
+    assert has_element?(lv, "#member-tile-not_a_person", "1")
+    assert has_element?(lv, "#member-tile-retired", "1")
+    refute has_element?(lv, "#member-tile-all")
+    refute has_element?(lv, "select[name='values[standing]']")
+    assert has_element?(lv, "#member-filters-summary strong", "1 member")
   end
 
   test "a search that finds no one offers all members, and All shows as a menu (#469)",
@@ -366,7 +368,7 @@ defmodule Web.MemberCollectionLiveTest do
     assert assert_patch(lv) =~ "standing=all"
     assert has_element?(lv, "td", "Rae Retired")
     refute has_element?(lv, "#member-switch [aria-current]")
-    assert has_element?(lv, "select[name='form[standing]'] option[selected]", "All")
+    assert has_element?(lv, "select[name='values[standing]'] option[selected]", "All")
   end
 
   test "the Standing filter keeps active, away, or not a person members (#367)",
@@ -423,14 +425,16 @@ defmodule Web.MemberCollectionLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=active,away")
 
-    assert has_element?(lv, "select[name='form[standing]'] option[selected]", "Active or away")
+    assert has_element?(lv, "select[name='values[standing]'] option[selected]", "Active or away")
     assert has_element?(lv, "#last-attended-#{active.id}")
     assert has_element?(lv, "#last-attended-#{away.id}")
     refute has_element?(lv, "#last-attended-#{bot.id}")
 
-    assert_raise Web.Status.NotFound, fn ->
-      live(log_in_user(conn, user), ~p"/teams/#{team}/members?standing=active,gone")
-    end
+    # A standing that isn't one starts the switch where it starts (#784).
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=active,gone")
+
+    assert has_element?(lv, "#member-tile-current[aria-current]")
   end
 
   test "less common filters wait behind More filters until one is on", %{conn: conn} do
@@ -438,15 +442,41 @@ defmodule Web.MemberCollectionLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
 
-    assert has_element?(lv, "#member_filter_form-more", "More filters")
-    assert has_element?(lv, ".filter-menu.is-more select[name='form[attended]']")
-    refute has_element?(lv, ".filter-menu.is-more select[name='form[when]']")
+    assert has_element?(lv, "#member-filters-more", "More filters")
+    assert has_element?(lv, ".filter-menu.is-more select[name='values[attended]']")
+    refute has_element?(lv, ".filter-menu.is-more select[name='values[when]']")
 
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?attended=90")
 
-    refute has_element?(lv, ".filter-menu.is-more select[name='form[attended]']")
-    assert has_element?(lv, ".filter-menu.is-on select[name='form[attended]']")
+    refute has_element?(lv, ".filter-menu.is-more select[name='values[attended]']")
+    assert has_element?(lv, ".filter-menu.is-on select[name='values[attended]']")
+  end
+
+  test "Save as report opens New report on Members' text, named for the picks (#784)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member_fixture(team, %{name: "Avery Chen"})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=active,away")
+
+    assert lv |> element("#member-save-report") |> render() =~ "list=members"
+
+    {:ok, lv, _html} =
+      conn
+      |> log_in_user(user)
+      |> live(~p"/teams/#{team}/reports/new?list=members&standing=active,away&when=all")
+
+    assert has_element?(lv, ~s|#report_name[value="Members: Active or away"]|)
+    assert lv |> element("#report_query") |> render() =~ "switch standing"
+    assert has_element?(lv, "#report-preview", "Avery Chen")
+
+    # Not retired is where the list starts, so the name leaves it out.
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new?list=members")
+
+    assert has_element?(lv, ~s|#report_name[value="Members"]|)
   end
 
   defp names_in_order(html, names) do
@@ -455,7 +485,9 @@ defmodule Web.MemberCollectionLiveTest do
   end
 
   # Away periods are often leave, and check-ins and missing details are team admins' own
-  # lists: a member's list never filters, counts, sorts, or labels by them (#440).
+  # lists: a member's list never filters, counts, sorts, or labels by them (#440). A
+  # member reads Away as Active, so they get the Active tile: its count is everyone not
+  # retired, retiring, or not a person, and can't say who is away (#784).
   describe "for a member" do
     setup %{conn: conn} do
       %{team: team, user: user, member: member} = member_with_login_fixture()
@@ -467,19 +499,19 @@ defmodule Web.MemberCollectionLiveTest do
       %{conn: log_in_user(conn, user), team: team, member: member, away: away, bot: bot}
     end
 
-    test "the roster with Not retired, Not a person, and Retired, and no team admin filters",
+    test "the roster with Not retired, Active, Not a person, and Retired, and no team admin filters",
          %{conn: conn, team: team, away: away, bot: bot} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?when=all")
 
       assert has_element?(lv, "td", "Avery Away")
       assert has_element?(lv, "td", "Nico Bot")
-      assert has_element?(lv, "#member-view-current", "3")
-      assert has_element?(lv, "#member-view-retired", "1")
-      refute has_element?(lv, "#member-view-active")
-      refute has_element?(lv, "#member-view-away")
-      assert has_element?(lv, "#member-view-not_a_person", "1")
-      refute has_element?(lv, "select[name='form[details]']")
-      refute has_element?(lv, "select[name='form[attended]']")
+      assert has_element?(lv, "#member-tile-current", "3")
+      assert has_element?(lv, "#member-tile-retired", "1")
+      assert has_element?(lv, "#member-tile-active", "2")
+      refute has_element?(lv, "#member-tile-away")
+      assert has_element?(lv, "#member-tile-not_a_person", "1")
+      refute has_element?(lv, "select[name='values[details]']")
+      refute has_element?(lv, "select[name='values[attended]']")
       refute has_element?(lv, "#member-add")
       refute render(lv) =~ "Away until"
 
@@ -489,18 +521,17 @@ defmodule Web.MemberCollectionLiveTest do
       refute has_element?(lv, ~s{th a[href*="sort=standing"]})
     end
 
-    test "ignores the URL's standings, Attended, and Details",
+    test "ignores the URL's Away, Attended, and Details",
          %{conn: conn, team: team} do
       for params <- [
             "standing=away",
-            "standing=active",
             "standing=active,away",
             "attended=30",
             "details=missing"
           ] do
         {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/members?when=all&#{params}")
 
-        assert has_element?(lv, "#member-view-current[aria-current]"), params
+        assert has_element?(lv, "#member-tile-current[aria-current]"), params
         assert has_element?(lv, "td", "Avery Away"), params
         assert has_element?(lv, "td", "Nico Bot"), params
         refute has_element?(lv, "#attended-hint"), params
@@ -508,10 +539,19 @@ defmodule Web.MemberCollectionLiveTest do
       end
     end
 
+    test "Active lists members who are away, with no badge", %{conn: conn, team: team, away: away} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?when=all&standing=active")
+
+      assert has_element?(lv, "#member-tile-active[aria-current]")
+      assert has_element?(lv, "td", away.name)
+      refute has_element?(lv, "#standing-#{away.id}")
+      refute has_element?(lv, "td", "Nico Bot")
+    end
+
     test "Not a person filters to bot accounts", %{conn: conn, team: team, away: away} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?when=all&standing=not_a_person")
 
-      assert has_element?(lv, "#member-view-not_a_person[aria-current]")
+      assert has_element?(lv, "#member-tile-not_a_person[aria-current]")
       assert has_element?(lv, "td", "Nico Bot")
       refute has_element?(lv, "td", away.name)
     end
@@ -522,8 +562,9 @@ defmodule Web.MemberCollectionLiveTest do
       assert has_element?(lv, "td", "Rae Retired")
       assert has_element?(lv, "th", "Retired")
 
-      for {value, shown?} <- [current: true, retired: true, all: true, active: false, away: false] do
-        assert has_element?(lv, "select[name='form[standing]'] option[value=#{value}]") == shown?
+      for {value, shown?} <- [current: true, retired: true, all: true, active: true, away: false] do
+        assert has_element?(lv, "select[name='values[standing]'] option[value=#{value}]") ==
+                 shown?
       end
     end
   end
@@ -755,14 +796,14 @@ defmodule Web.MemberCollectionLiveTest do
     active = member_fixture(team, %{name: "Aaron Active"})
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
-    refute has_element?(lv, "#member-view-retiring")
+    refute has_element?(lv, "#member-tile-retiring")
 
     team
     |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
     |> App.Repo.update!()
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
-    assert has_element?(lv, "#member-view-retiring", "1")
+    assert has_element?(lv, "#member-tile-retiring", "1")
     assert has_element?(lv, "#standing-#{retiring.id}", "Retiring")
     refute has_element?(lv, "#standing-#{active.id}")
 

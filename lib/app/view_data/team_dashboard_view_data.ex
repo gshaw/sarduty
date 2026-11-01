@@ -26,8 +26,9 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Operation.BuildGroupRulePreview
   alias App.Operation.SyncD4HChanges
   alias App.Repo
+  alias App.Report
+  alias App.Report.Lists
   alias App.ViewData.TeamAttention
-  alias App.ViewModel.MemberFilterViewModel
   alias App.ViewModel.TaxCreditLetterFilterViewModel
 
   # NextUp shows an activity this close to starting, or this long into one still running.
@@ -295,9 +296,17 @@ defmodule App.ViewData.TeamDashboardViewData do
           days: days,
           group: group && group.title,
           params: params,
-          ids: MemberFilterViewModel.ids(team, params, now)
+          ids: member_ids(team, params, now)
         }
     end
+  end
+
+  # The Members report's rows for the link's params, so the count and the list agree
+  # (#784).
+  defp member_ids(team, params, now) do
+    given = for {name, value} <- params, value not in [nil, ""], into: %{}, do: {"#{name}", value}
+    {:ok, ids} = Report.ids(Lists.members().query, team, given, now)
+    ids
   end
 
   # Retiring members (#514), counted apart by whether they still hold the team's items,

@@ -7,13 +7,13 @@ defmodule Web.QualificationCollectionLive do
   import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
+  alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Model.Standing
   alias App.Model.Team
   alias App.Repo
-  alias App.ViewModel.MemberFilterViewModel
   alias App.ViewModel.QualificationFilterViewModel
   alias Service.StringHelpers
 
@@ -198,7 +198,7 @@ defmodule Web.QualificationCollectionLive do
         field={@form[:group]}
         label="Group"
         type="combobox"
-        options={MemberFilterViewModel.group_kinds(@current_team)}
+        options={Group.kinds(@current_team)}
         default=""
       />
       <:filter
