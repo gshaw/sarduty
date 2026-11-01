@@ -10,7 +10,9 @@ defmodule App.Report.Range do
 
   alias App.Report.Context
 
-  @doc "The range a date range's name and number say, on the context's day."
+  @doc "The range a date range's name and number say, on the context's day. NOW is a moment."
+  def of("NOW", _n, %Context{now: now}), do: {now, now}
+
   def of("LAST_N_DAYS", n, %Context{now: now, timezone: timezone}),
     do: Service.DayRange.last(now, timezone, n)
 

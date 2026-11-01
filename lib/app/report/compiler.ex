@@ -38,10 +38,78 @@ defmodule App.Report.Compiler do
   `{:ok, %Plan{}}`, or `{:error, %Error{}}` for the first mistake. `given` holds the
   picked values by name, as text; a value not given gets its default (App.Report.Value).
   """
-  def compile(%Query{} = query, %Context{} = context, given \\ %{}) do
+  def compile(%Query{} = query, %Context{} = context, given \\ %{}),
+    do: with_subject(query, context, given, &plan(query, &1))
+
+  @doc """
+  `{:ok, {sql, params}}` that counts the rows `query` gives: groups when it groups, rows
+  otherwise. For the page's total and its tiles (#784).
+  """
+  def count(%Query{} = query, %Context{} = context, given \\ %{}) do
+    with_subject(query, context, given, fn st ->
+      parts = parts(query, st)
+      check(query, parts)
+      used = used(parts)
+      parents = used |> Enum.flat_map(& &1.parents) |> Enum.uniq()
+      where = parts.where && SQL.join([{" WHERE ", []}, {parts.where.sql, parts.where.params}])
+
+      inner =
+        SQL.join([
+          {"SELECT ", []},
+          select_list(parts, false),
+          from_sql(st.subject, parents, st.context),
+          where,
+          grouped?(query, parts) && group_by(parts.group)
+        ])
+
+      {:ok, SQL.join([{"SELECT COUNT(*) FROM (", []}, inner, {")", []}])}
+    end)
+  end
+
+  @doc """
+  The values `expr` takes in the subject's rows, for a filter's `each` (#784):
+  `{:ok, {:choices, [{label, value}]}}` for a field that holds a few, such as a choice or a
+  list's titles, or `{:ok, {:sql, {sql, params}, type}}` for the SQL that reads the rest.
+  """
+  def values(%Query{} = query, expr, %Context{} = context) do
+    with_subject(query, context, %{}, fn st ->
+      e = Expr.compile(expr, st)
+      if e.agg, do: fail(Query.line(expr), "Write each with a field, not #{Query.text(expr)}.")
+      {:ok, each_values(e, expr, st)}
+    end)
+  end
+
+  defp each_values(%{type: type, field: %{choices: choices}}, _expr, st)
+       when type in [:choice, :list] and is_function(choices),
+       do: {:choices, choices.(st.context)}
+
+  defp each_values(%{type: :bool}, _expr, _st), do: {:choices, [{"Yes", "true"}, {"No", "false"}]}
+
+  defp each_values(%{type: type} = e, _expr, st)
+       when type in [:year, :month, :quarter, :text, :number] do
+    {sql, params} = Expr.id_sql(e)
+
+    query =
+      SQL.join([
+        {["SELECT DISTINCT ", sql], params},
+        from_sql(st.subject, e.parents, st.context),
+        {[" WHERE ", sql, " IS NOT NULL"], params}
+      ])
+
+    {:sql, query, type}
+  end
+
+  defp each_values(_e, expr, _st),
+    do:
+      fail(
+        Query.line(expr),
+        "Write each with a field it can list, such as year(started_at), kind, or member.groups."
+      )
+
+  defp with_subject(query, context, given, fun) do
     case Catalog.subject(query.from) do
       nil -> {:error, Error.new(query.from_line, unknown_subject(query.from))}
-      subject -> plan(query, %{subject: subject, context: context, given: given})
+      subject -> fun.(%{subject: subject, context: context, given: given})
     end
   catch
     {:report_error, %Error{} = error} -> {:error, error}
@@ -55,16 +123,19 @@ defmodule App.Report.Compiler do
   end
 
   defp plan(query, st) do
-    parts = %{
+    parts = parts(query, st)
+    check(query, parts)
+    {:ok, build(query, parts, st)}
+  end
+
+  defp parts(query, st) do
+    %{
       select: Enum.map(query.select, &Expr.compile(&1, st)),
       where: query.where && Expr.condition(query.where, st),
       group: Enum.map(query.group_by, &Expr.compile(&1, st)),
       pivot: Enum.map(query.pivot, &Expr.compile(&1, st)),
       order: Enum.map(query.order_by, fn {ast, dir} -> {Expr.compile(ast, st), dir} end)
     }
-
-    check(query, parts)
-    {:ok, build(query, parts, st)}
   end
 
   # Checks
@@ -302,6 +373,8 @@ defmodule App.Report.Compiler do
 
   defp direction(:asc), do: " ASC"
   defp direction(:desc), do: " DESC"
+  defp direction({dir, :nulls_first}), do: direction(dir) <> " NULLS FIRST"
+  defp direction({dir, :nulls_last}), do: direction(dir) <> " NULLS LAST"
 
   # One more row than a report shows, to tell when there are more.
   defp limit_offset(query),
