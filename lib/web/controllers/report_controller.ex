@@ -6,13 +6,13 @@ defmodule Web.ReportController do
   alias App.ViewData.ReportRecords
   alias App.ViewData.Reports
 
-  @doc "A report's rows as CSV (#768), run with the values in the URL, as its page shows them."
+  @doc "A report's rows as CSV (#768), run with the picks in the URL, every page of them."
   def csv(conn, %{"id" => id} = params) do
     team = conn.assigns.current_team
     now = DateTime.utc_now()
     report = Reports.find(team, id, now) || raise Web.Status.NotFound
-    given = Map.drop(params, ["subdomain", "id"])
-    given = if given == %{}, do: report.values, else: given
+    # The URL's picks, over the ones saved with the report, as its page runs it.
+    given = Map.merge(report.values, Map.drop(params, ["subdomain", "id"]))
 
     case Report.run(report.query, team, given, now) do
       {:ok, result} ->

@@ -141,7 +141,11 @@ defmodule Web.Components.Table do
     doc: ~s(the column's {suffix, sort} pairs, such as [{"↓", "date-"}, {"↑", "date"}])
 
   attr :sort, :string, default: nil, doc: "the sort the table has now"
-  attr :path_fn, :any, default: nil
+
+  attr :path_fn, :any,
+    default: nil,
+    doc: "the list's path with the sort changed, or a `JS` command a click runs, as a form does"
+
   attr :select_all, :string, default: nil, doc: "the id of the column's select all checkbox"
 
   # Starts checked, as review lists start with every row checked, until the hook syncs it.
@@ -166,16 +170,23 @@ defmodule Web.Components.Table do
   end
 
   def table_header(assigns) do
-    assigns = assign(assigns, :header, sort_header(assigns.sorts, assigns.sort))
+    header = sort_header(assigns.sorts, assigns.sort)
+    target = if header.link?, do: assigns.path_fn.(page: 1, sort: header.next_sort)
+    assigns = assign(assigns, header: header, target: target)
 
     ~H"""
     <th class={[@class, @align == "right" && "text-right"]} aria-sort={@header.aria_sort}>
       <.a
-        :if={@header.link?}
+        :if={is_binary(@target)}
         kind={:custom}
         class="w-full inline-block"
-        navigate={@path_fn.(page: 1, sort: @header.next_sort)}
+        navigate={@target}
       ><.sort_header_content label={@label} header={@header} align={@align} /></.a>
+      <.link
+        :if={is_struct(@target, Phoenix.LiveView.JS)}
+        class="w-full inline-block"
+        phx-click={@target}
+      ><.sort_header_content label={@label} header={@header} align={@align} /></.link>
       <.sort_header_content :if={!@header.link?} label={@label} header={@header} align={@align} />
     </th>
     """

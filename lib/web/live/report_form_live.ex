@@ -1,13 +1,16 @@
 defmodule Web.ReportFormLive do
   @moduledoc """
   New report and Change report (#768). The query first, its rows as you type, then the
-  name: a report is named once it's right. Save keeps the query and the picked values,
-  never the rows. Beside the query, the fields of the subject after `from`; a click puts
-  one in the query where the cursor is. `?from=<id>` starts from a copy of another
-  report, such as a built-in one.
+  name: a report is named once it's right. The preview draws the page's clauses too
+  (#784): its tiles, filters, and headers pick as they will on the report's page. Save
+  keeps the query and the picked values, never the rows. Beside the query, the page's
+  clauses and the fields of the subject after `from`; a click puts a field in the query
+  where the cursor is. `?from=<id>` starts from a copy of another report, such as a
+  built-in one.
   """
   use Web, :live_view_app_layout
 
+  import Web.Components.ReportPage
   import Web.Components.ReportTable
 
   alias App.Model.SavedReport
@@ -17,10 +20,11 @@ defmodule Web.ReportFormLive do
   alias App.Report.Error
   alias App.Report.Expr
   alias App.Report.Parser
-  alias App.Report.Result
+  alias App.Report.View
   alias App.ViewData.ReportRecords
   alias App.ViewData.Reports
   alias Service.Format
+  alias Web.Components.ReportPage
 
   @preview_rows 50
 
@@ -41,7 +45,8 @@ defmodule Web.ReportFormLive do
       page_title: if(saved, do: "Change report", else: "New report"),
       saved: saved,
       now: now,
-      subject: Catalog.subject("members")
+      subject: Catalog.subject("members"),
+      params: start
     )
     |> assign_form(SavedReport.changeset(saved || %SavedReport{}, start))
     |> preview(start)
@@ -83,23 +88,23 @@ defmodule Web.ReportFormLive do
     else
       socket
       |> assign(ran: {query, values}, subject: subject(query) || socket.assigns.subject)
-      |> assign_preview(Report.run(query, team, values, socket.assigns.now))
+      |> assign_preview(Report.page(query, team, values, socket.assigns.now))
     end
   end
 
-  defp assign_preview(socket, {:ok, %Result{} = result}) do
-    shown = %{result | rows: Enum.take(result.rows, @preview_rows), totals: nil}
+  defp assign_preview(socket, {:ok, %View{} = view}) do
+    rows = Enum.take(view.result.rows, @preview_rows)
+    view = %{view | result: %{view.result | rows: rows, totals: nil}}
 
     assign(socket,
-      result: shown,
-      total_rows: length(result.rows),
-      records: ReportRecords.load(shown, socket.assigns.current_team, socket.assigns.now),
+      view: view,
+      records: ReportRecords.load(view.result, socket.assigns.current_team, socket.assigns.now),
       query_error: nil
     )
   end
 
   defp assign_preview(socket, {:error, %Error{} = error}),
-    do: assign(socket, result: nil, query_error: Error.text(error))
+    do: assign(socket, view: nil, query_error: Error.text(error))
 
   defp subject(query) do
     case Parser.parse(query) do
@@ -108,9 +113,20 @@ defmodule Web.ReportFormLive do
     end
   end
 
+  # A tile, or a header that sorts, in the preview: a pick, as a menu's change is.
+  def handle_event("pick", %{"name" => name, "value" => value}, socket) do
+    values = Map.put(socket.assigns.form[:values].value || %{}, name, value)
+
+    handle_event(
+      "change",
+      %{"report" => Map.put(socket.assigns.params, "values", values)},
+      socket
+    )
+  end
+
   # The query's mistake goes on its field as you type, as Save would put it there.
   def handle_event("change", %{"report" => params}, socket) do
-    socket = preview(socket, params)
+    socket = socket |> assign(params: params) |> preview(params)
     report = socket.assigns.saved || %SavedReport{}
     changeset = report |> SavedReport.changeset(params) |> Map.put(:action, :validate)
 
@@ -159,7 +175,14 @@ defmodule Web.ReportFormLive do
 
     <div class="content-wrapper">
       <aside id="report-fields" class="content-1/3">
-        <h2 class="heading">Fields in {@subject.name}</h2>
+        <h2 class="heading">The page</h2>
+        <p class="hint">Clauses after the query that draw the page around the rows.</p>
+        <.table id="report-clause-table" rows={clauses()} row_id={&"clause-#{elem(&1, 0)}"}>
+          <:col :let={{clause, _draws}} label="Clause"><code>{clause}</code></:col>
+          <:col :let={{_clause, draws}} label="Draws">{draws}</:col>
+        </.table>
+
+        <h2 class="heading mt-8">Fields in {@subject.name}</h2>
         <p class="hint">Click a field to add it where the cursor is.</p>
         <div id="report-field-list" phx-hook="InsertField" data-target="report_query">
           <.table
@@ -194,21 +217,26 @@ defmodule Web.ReportFormLive do
           </.input>
 
           <.report_value
-            :for={value <- (@result && @result.values) || []}
+            :for={value <- (@view && @view.values) || []}
             value={value}
             id={"report-form-value-#{value.name}"}
             name={"report[values][#{value.name}]"}
           />
+          <input
+            :for={{name, value} <- picks(@view)}
+            type="hidden"
+            name={"report[values][#{name}]"}
+            value={value}
+          />
 
-          <div :if={@result} id="report-preview" class="mb-8">
-            <p id="report-preview-count" class="hint">{preview_count(@result, @total_rows)}</p>
-            <.report_table
-              :if={@result.rows != []}
-              id="report-preview-rows"
-              result={@result}
+          <div :if={@view} id="report-preview" class="mb-8">
+            <.report_page
+              id="report-preview"
+              view={@view}
               records={@records}
               team={@current_team}
               now={@now}
+              count={preview_count(@view)}
             />
           </div>
 
@@ -246,11 +274,32 @@ defmodule Web.ReportFormLive do
   defp cancel_path(team, nil), do: ~p"/teams/#{team}/reports"
   defp cancel_path(team, saved), do: ~p"/teams/#{team}/reports/#{saved.id}"
 
-  defp preview_count(result, total) do
-    count = Web.ReportLive.count(%{result | rows: List.duplicate(nil, total)})
+  defp clauses,
+    do: [
+      {"search", "The search box, over the fields named."},
+      {"switch", "The tiles, each with its count."},
+      {"filter", "A menu: All, then its options."},
+      {"option", "One choice, and the where it adds."},
+      {"each", "A choice per value, such as each year."},
+      {"sort", "A column header that sorts."},
+      {"page", "Pages of that many rows."}
+    ]
 
-    if total > @preview_rows,
-      do: "#{count} · shows the first #{Format.number(@preview_rows)} · runs as you type",
+  # The picks the preview's tiles and headers keep, as the form saves them.
+  defp picks(nil), do: []
+
+  defp picks(view) do
+    switch = if view.switch, do: [{view.switch.name, view.switch.picked}], else: []
+    sort = if view.sort, do: [{"sort", view.sort}], else: []
+    switch ++ sort
+  end
+
+  defp preview_count(view) do
+    count = ReportPage.count(view)
+
+    if view.total > length(view.result.rows),
+      do:
+        "#{count} · shows the first #{Format.number(length(view.result.rows))} · runs as you type",
       else: "#{count} · runs as you type"
   end
 end
