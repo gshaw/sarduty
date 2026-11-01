@@ -1,0 +1,22 @@
+/* Adminland › Integrations (#789): a dense list, one line per service from an iPad mini
+   up: the service, its last test, then the test at the right edge, so the buttons line
+   up. On a phone the test drops to a second line, full width. */
+.integration-list { list-style: none; margin: 0 0 var(--sp-8); padding: 0; border-top: 1px solid var(--border-subtle); }
+.integration-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "name status" "test test";
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  padding-block: var(--sp-2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.integration-name { grid-area: name; min-width: 0; }
+.integration-status { grid-area: status; display: flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-sm); line-height: var(--lh-sm); white-space: nowrap; }
+.integration-test { grid-area: test; display: flex; align-items: center; gap: var(--sp-2); }
+.integration-form { display: flex; flex: 1 1 auto; align-items: center; gap: var(--sp-2); min-width: 0; }
+.integration-form > input, .integration-form > .combobox { flex: 1 1 auto; min-width: 0; width: auto; }
+@media (min-width: 700px) {
+  .integration-row { grid-template-columns: minmax(10rem, 16rem) minmax(9rem, 1fr) minmax(0, 26rem); grid-template-areas: "name status test"; }
+  .integration-test { justify-content: flex-end; }
+}

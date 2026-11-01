@@ -23,82 +23,113 @@ defmodule Web.Admin.IntegrationsLive do
   defp assign_last_tests(socket),
     do: assign(socket, last: Event.get_last_by(:integration_tested, "service"))
 
-  @doc "Each row: its key, name, the service behind it, and what SAR Duty uses it for."
-  def rows,
+  @doc "SAR Duty's own parts, then the services it calls: `{key, name, service, used for}`."
+  def groups,
     do: [
-      {"website", "Website", "#{Web.Endpoint.host()}/health",
-       "Fly's check every 15 seconds: the app answers and its database replies"},
-      {"jobs", "Background jobs", "Oban, #{length(IntegrationTestWorker.queues())} queues",
-       "Reminders, emails, passes, and the D4H sync and refresh"},
-      {"backups", "Backups", "Litestream to Cloudflare R2",
-       "A copy of the database, kept up to the second"},
-      {"email", "Email", "Cloudflare", "Login codes, reminders, replies, letters, team emails"},
-      {"texts", "Texts", "Twilio", "Login codes by text"},
-      {"errors", "Errors", "Honeybadger", "Errors on pages and in jobs"},
-      {"d4h", "D4H", "Each team's access key", "Everything a team reads and sends"},
-      {"maps", "Maps", "Mapbox", "Maps on activities and places, place search"},
-      {"health", "Health checks", "Healthchecks.io",
-       "Alerts when the nightly refresh or the D4H sync is late"},
-      {"apple", "Apple Wallet", "Apple", "ID cards on iPhones"},
-      {"google", "Google Wallet", "Google", "ID cards on Android phones"}
+      {"SAR Duty",
+       [
+         {"website", "Website", "#{Web.Endpoint.host()}/health",
+          "Fly's check every 15 seconds: the app answers and its database replies"},
+         {"jobs", "Background jobs", "Oban, #{length(IntegrationTestWorker.queues())} queues",
+          "Reminders, emails, passes, and the D4H sync and refresh"},
+         {"backups", "Backups", "Litestream to R2",
+          "A copy of the database, kept up to the second"}
+       ]},
+      {"Services",
+       [
+         {"email", "Email", "Cloudflare",
+          "Login codes, reminders, replies, letters, and team emails"},
+         {"texts", "Texts", "Twilio", "Login codes by text"},
+         {"errors", "Errors", "Honeybadger", "Errors on pages and in jobs"},
+         {"d4h", "D4H", "Each team's key",
+          "Everything a team reads and sends; Records teams too"},
+         {"maps", "Maps", "Mapbox", "Maps on activities and places, and place search"},
+         {"health", "Health checks", "Healthchecks.io",
+          "Alerts when the nightly refresh or the D4H sync is late"},
+         {"apple", "Apple Wallet", apple_service(), "ID cards on iPhones"},
+         {"google", "Google Wallet", "Google", "ID cards on Android phones"}
+       ]}
     ]
 
   def render(assigns) do
     ~H"""
     <h1 class="title">Integrations</h1>
     <p class="mb-4 max-w-3xl">
-      The services SAR Duty sends through. Each test sends one real email, text, or call, and is
-      saved in Events.
+      Each test makes one real call to the service, and is saved in Events.
     </p>
-    <.table id="integrations" rows={rows()} row_id={fn {key, _, _, _} -> "integration-#{key}" end}>
-      <:col :let={{_key, name, service, _used_for}} label="Service">
-        <div class="font-semibold">{name}</div>
-        <.hint>{service}</.hint>
-      </:col>
-      <:col :let={{key, _name, _service, used_for}} label="Used for">
-        {used_for}<span :if={key == "apple"} id="apple-expires">. {apple_expiry()}</span>
-      </:col>
-      <:col :let={{key, _name, _service, _used_for}} label="Last test" class="whitespace-nowrap">
-        <.last_test id={"integration-#{key}-last"} event={@last[key]} />
-      </:col>
-      <:col :let={{key, _name, _service, _used_for}} label="Test" class="w-px">
-        <.spinner :if={key in @running} id={"integration-#{key}-running"} class="text-sm text-link">
-          Testing
-        </.spinner>
-        <.test_form
-          :if={key not in @running}
-          key={key}
-          email_to={@email_to}
-          text_to={@text_to}
-          team_id={@team_id}
-          teams={@teams}
-        />
-      </:col>
-    </.table>
-    <p class="hint mt-4">Records teams test through D4H: Records is a D4H host.</p>
+    <section :for={{group, services} <- groups()} id={"integrations-#{group_id(group)}"}>
+      <h2 class="subheading">{group}</h2>
+      <ul class="integration-list">
+        <li
+          :for={{key, name, service, used_for} <- services}
+          id={"integration-#{key}"}
+          class="integration-row"
+        >
+          <div class="integration-name" title={used_for}>
+            <span class="font-semibold">{name}</span>
+            <span class="hint">· {service}</span>
+          </div>
+          <.last_test id={"integration-#{key}-last"} event={@last[key]} />
+          <div class="integration-test">
+            <.spinner
+              :if={key in @running}
+              id={"integration-#{key}-running"}
+              class="text-sm text-link"
+            >
+              Testing
+            </.spinner>
+            <.test_form
+              :if={key not in @running}
+              key={key}
+              email_to={@email_to}
+              text_to={@text_to}
+              team_id={@team_id}
+              teams={@teams}
+            />
+          </div>
+        </li>
+      </ul>
+    </section>
     """
   end
+
+  defp group_id(group), do: group |> String.downcase() |> String.replace(" ", "-")
 
   attr :id, :string, required: true
   attr :event, :any, required: true
 
   defp last_test(%{event: nil} = assigns),
     do: ~H"""
-    <span id={@id} class="text-text-muted">Never</span>
+    <span id={@id} class="integration-status text-text-muted">Never</span>
     """
 
   defp last_test(assigns) do
+    assigns = assign(assigns, outcome: assigns.event.data["outcome"])
+
     ~H"""
-    <span id={@id}>
-      <span class={outcome_class(@event.data["outcome"])}>{outcome_label(@event.data["outcome"])}</span>
-      <.hint>{Service.Format.month_day_time(@event.occurred_at, "America/Vancouver")}</.hint>
+    <span
+      id={@id}
+      class={["integration-status", outcome_class(@outcome)]}
+      title={Service.Format.month_day_time(@event.occurred_at, "America/Vancouver")}
+    >
+      <.icon name={if ok?(@outcome), do: "circle-check", else: "circle-alert"} size={:sm} />
+      {outcome_label(@outcome)} · {Service.Format.month_day_time(
+        @event.occurred_at,
+        "America/Vancouver"
+      )}
     </span>
     """
   end
 
-  defp outcome_class(outcome) when outcome in ["sent", "works"], do: "text-success-text"
-  defp outcome_class("running"), do: "text-text-muted"
-  defp outcome_class(_outcome), do: "text-danger-text"
+  defp ok?(outcome), do: outcome in ["sent", "works"]
+
+  defp outcome_class(outcome) do
+    cond do
+      ok?(outcome) -> "text-success-text"
+      outcome == "running" -> "text-text-muted"
+      true -> "text-danger-text"
+    end
+  end
 
   defp outcome_label("running"), do: "Didn't finish"
   defp outcome_label(outcome), do: String.capitalize(outcome)
@@ -111,15 +142,16 @@ defmodule Web.Admin.IntegrationsLive do
 
   defp test_form(%{key: "email"} = assigns) do
     ~H"""
-    <form id="test-email" phx-submit="test" class="flex items-center gap-2 whitespace-nowrap">
+    <form id="test-email" phx-submit="test" class="integration-form">
       <input type="hidden" name="service" value="email" />
       <input
         type="email"
         name="to"
         id="test-email-to"
         value={@email_to}
-        aria-label="To"
-        class="w-2xs"
+        aria-label="Send to"
+        placeholder="Email address"
+        class="input-sm"
       />
       <.button size={:sm}>Send test email</.button>
     </form>
@@ -128,16 +160,16 @@ defmodule Web.Admin.IntegrationsLive do
 
   defp test_form(%{key: "texts"} = assigns) do
     ~H"""
-    <form id="test-texts" phx-submit="test" class="flex items-center gap-2 whitespace-nowrap">
+    <form id="test-texts" phx-submit="test" class="integration-form">
       <input type="hidden" name="service" value="texts" />
       <input
         type="tel"
         name="to"
         id="test-texts-to"
         value={@text_to}
-        aria-label="To"
+        aria-label="Send to"
         placeholder="Mobile number"
-        class="w-2xs"
+        class="input-sm"
       />
       <.button size={:sm}>Send test text</.button>
     </form>
@@ -146,18 +178,17 @@ defmodule Web.Admin.IntegrationsLive do
 
   defp test_form(%{key: "d4h"} = assigns) do
     ~H"""
-    <form id="test-d4h" phx-submit="test" class="flex items-center gap-2 whitespace-nowrap">
+    <form id="test-d4h" phx-submit="test" class="integration-form">
       <input type="hidden" name="service" value="d4h" />
-      <div class="w-2xs">
-        <.combobox
-          id="test-d4h-team"
-          name="team_id"
-          value={@team_id}
-          options={Enum.map(@teams, &{&1.name, &1.id})}
-          prompt="Team"
-          aria-label="Team"
-        />
-      </div>
+      <.combobox
+        id="test-d4h-team"
+        name="team_id"
+        value={@team_id}
+        options={Enum.map(@teams, &{&1.name, &1.id})}
+        placeholder="Pick a team"
+        size={:sm}
+        aria-label="Team"
+      />
       <.button size={:sm}>Check key</.button>
     </form>
     """
@@ -181,13 +212,7 @@ defmodule Web.Admin.IntegrationsLive do
 
   defp test_form(assigns) do
     ~H"""
-    <.button
-      id={"test-#{@key}"}
-      type="button"
-      size={:sm}
-      phx-click="test"
-      phx-value-service={@key}
-    >
+    <.button id={"test-#{@key}"} type="button" size={:sm} phx-click="test" phx-value-service={@key}>
       {button_label(@key)}
     </.button>
     """
@@ -200,13 +225,14 @@ defmodule Web.Admin.IntegrationsLive do
   defp button_label("maps"), do: "Check token"
   defp button_label("health"), do: "Send test ping"
 
-  defp apple_expiry do
+  defp apple_service do
     case Application.get_env(:sarduty, :apple_pass, [])[:certificate] do
       pem when is_binary(pem) and pem != "" ->
-        "The certificate expires #{Service.Format.day_in_year(Service.ApplePass.certificate_expires_on(pem), ~D[1970-01-01])}"
+        expires = Service.ApplePass.certificate_expires_on(pem)
+        "certificate to #{Service.Format.day_in_year(expires, ~D[1970-01-01])}"
 
       _ ->
-        "Not set up on this server"
+        "not set up here"
     end
   end
 
