@@ -98,6 +98,13 @@ defmodule Web.StyleGuideHTML.Values do
          {"minutes_ago(now - 2 days, now, zone)",
           Format.minutes_ago(~U[2026-10-18 19:00:00Z], @now, @zone)}
        ]},
+      {:time_ago, "A last check or test: minutes for a day, then calendar days",
+       [
+         {"time_ago(now - 4 min, now, zone)",
+          Format.time_ago(~U[2026-10-20 18:56:00Z], @now, @zone)},
+         {"time_ago(now - 2 days, now, zone)",
+          Format.time_ago(~U[2026-10-18 19:00:00Z], @now, @zone)}
+       ]},
       {:days_ago, "Last seen, in calendar days",
        [
          {"days_ago(now - 1 day, now, zone)",

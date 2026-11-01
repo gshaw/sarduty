@@ -19,6 +19,39 @@ defmodule App.Adapter.Healthchecks do
     end
   end
 
+  @doc "Whether any check has a ping URL on this server."
+  def configured?,
+    do:
+      Enum.any?(@checks, fn {_check, key} ->
+        Application.get_env(:sarduty, key) not in [nil, ""]
+      end)
+
+  @doc """
+  Adds a line to each set-up check's log without changing whether it is up or down
+  (Adminland's test, #789). `{:ok, count}` of checks pinged, or `{:error, reason}`.
+  """
+  def log_all(message) do
+    urls =
+      for {_check, key} <- @checks,
+          url = Application.get_env(:sarduty, key),
+          url not in [nil, ""],
+          do: url
+
+    results =
+      Enum.map(urls, fn url ->
+        Req.post(
+          url <> "/log",
+          [body: message, retry: false] ++ Application.get_env(:sarduty, __MODULE__, [])
+        )
+      end)
+
+    case Enum.find(results, &(not match?({:ok, %{status: 200}}, &1))) do
+      nil -> {:ok, length(urls)}
+      {:ok, %{status: status}} -> {:error, "Healthchecks answered #{status}"}
+      {:error, exception} -> {:error, Exception.message(exception)}
+    end
+  end
+
   defp suffix(:start), do: "/start"
   defp suffix(:success), do: ""
   defp suffix(:fail), do: "/fail"

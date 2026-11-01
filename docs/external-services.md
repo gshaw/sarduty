@@ -3,6 +3,10 @@
 Every boundary the app crosses, what it needs, and what breaks without it. Environment
 variables are read in [config/runtime.exs](../config/runtime.exs) unless noted.
 
+A SAR Duty site admin tests each one from Adminland › Integrations (#789, at
+`/admin/integrations`): one real call per service, saved as an `integration_tested` event. A service added
+here gets a row there, in `App.Operation.TestIntegration`.
+
 ## D4H
 
 The system of record. Each team has an API host (its region) and a bearer token, both in
@@ -152,7 +156,8 @@ Team logos on the same volume are not replicated. See [deployment.md](deployment
 
 - `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` — Fly secrets, from an R2 API token
   with **Object Read & Write** on `sarduty-db` only. Without them Litestream logs
-  errors and the app runs without a backup.
+  errors and the app runs without a backup. The app reads them too, to list the bucket
+  for the backup test.
 
 Litestream 0.5 has no client-side encryption, so the replica holds readable data. R2
 encrypts it at rest; reading it takes the bucket token or the Cloudflare account.

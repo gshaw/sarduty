@@ -42,6 +42,16 @@ config :sarduty, App.Adapter.Mapbox, plug: {Req.Test, App.Adapter.Mapbox}
 # Healthchecks pings too, when a test sets a check's URL.
 config :sarduty, App.Adapter.Healthchecks, plug: {Req.Test, App.Adapter.Healthchecks}
 
+# Adminland's checks (#789): the backup's metrics and bucket, and the site's /health.
+config :sarduty, App.Adapter.Litestream, plug: {Req.Test, App.Adapter.Litestream}
+
+config :sarduty, App.Adapter.R2,
+  plug: {Req.Test, App.Adapter.R2},
+  bucket: "sarduty-db",
+  path: "database"
+
+config :sarduty, App.Adapter.Website, plug: {Req.Test, App.Adapter.Website}
+
 # Wallet pass pushes go to Req.Test too, so no test reaches Apple.
 config :sarduty, App.Adapter.APNs, plug: {Req.Test, App.Adapter.APNs}
 

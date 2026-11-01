@@ -231,9 +231,34 @@
     </div>
   </div>
 
+  <h2 id="field">A field</h2>
+  <p>
+    A box when the action needs a value no button can hold, such as where a test email goes
+    on Adminland's Integrations page. The page asks it: the dialog renders with <code>phx-hook="AskDialog"</code>, its fields in its inner block, and going ahead sends their
+    values with the confirm event. The first field has the focus, filled in when there's a
+    likely answer, so Enter goes ahead.
+  </p>
+  <div class="demo grid gap-6">
+    <.confirm_dialog
+      id="confirm-example-field"
+      open
+      question="Send a test email?"
+      body="It comes from noreply@sarduty.com."
+      action="Send test email"
+    >
+      <div class="confirm-dialog-field">
+        <label for="confirm-example-field-to">To</label>
+        <input type="email" id="confirm-example-field-to" value="alex.chen@example.com" />
+      </div>
+    </.confirm_dialog>
+  </div>
+
   <h2>How it works</h2>
   <ul>
-    <li>Cancel has the focus, so Enter by reflex does nothing. Escape cancels.</li>
+    <li>
+      Cancel has the focus, so Enter by reflex does nothing. Escape cancels. A dialog with a
+      field focuses the field instead.
+    </li>
     <li>On a phone the buttons stack full width, the action on top.</li>
     <li>
       It is our own dialog, not the browser's: some phone browsers never show <code>window.confirm</code>, so the button did nothing.

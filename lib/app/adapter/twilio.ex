@@ -16,11 +16,26 @@ defmodule App.Adapter.Twilio do
     Enum.all?(@settings, &(is_binary(config[&1]) and config[&1] != ""))
   end
 
+  @doc "The number texts come from, in E.164."
+  def from_number, do: config()[:from_number]
+
   @doc "Whether a text really goes to Twilio. False in dev unless DEV_SEND_SMS is set."
   def delivers?, do: config()[:deliver] == true
 
   @doc "Texts `body` to an E.164 number. `:ok`, or `{:error, status}`."
   def send_sms(to, body) do
+    case send_sms_with_reason(to, body) do
+      {:error, %{status: status}} -> {:error, status}
+      result -> result
+    end
+  end
+
+  @doc """
+  Like send_sms/2, with Twilio's own reason when it refuses: `{:error, %{status:,
+  code:, message:}}`. The message can repeat the number, so it is for the person who
+  typed it (Adminland's test text, #789), never a log.
+  """
+  def send_sms_with_reason(to, body) do
     if delivers?() do
       post_message(config(), to, body)
     else
@@ -50,11 +65,11 @@ defmodule App.Adapter.Twilio do
         # Twilio's error code, not the body: the body repeats the member's number.
         code = if is_map(body), do: body["code"]
         Logger.warning("Twilio text failed: #{status} code #{inspect(code)}")
-        {:error, status}
+        {:error, %{status: status, code: code, message: is_map(body) && body["message"]}}
 
       {:error, exception} ->
         Logger.warning("Twilio text failed: #{Exception.message(exception)}")
-        {:error, :unreachable}
+        {:error, %{status: :unreachable, code: nil, message: nil}}
     end
   end
 

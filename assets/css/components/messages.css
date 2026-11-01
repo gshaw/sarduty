@@ -94,6 +94,13 @@
   .confirm-dialog-type { display: grid; gap: var(--sp-1); justify-items: start; margin-bottom: var(--sp-6); }
   .confirm-dialog-type label { font-weight: 700; }
   .confirm-dialog-type input { width: 100%; }
+  /* Fields the answer needs, such as where a test email goes (#789): a label over a box
+     the dialog's width. A combobox's list may hang below the dialog's edge. */
+  .confirm-dialog-fields { display: grid; gap: var(--sp-4); margin-bottom: var(--sp-6); }
+  .confirm-dialog-field { display: grid; gap: var(--sp-1); }
+  .confirm-dialog-field label { font-weight: 700; }
+  .confirm-dialog-field input { width: 100%; }
+  .confirm-dialog:has(.combobox) { overflow: visible; }
   .confirm-dialog-choices { margin: 0 0 var(--sp-6); padding: 0; border: 0; }
   .confirm-dialog-choices legend { padding: 0; margin-bottom: var(--sp-1); font-weight: 700; }
   .confirm-dialog-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }

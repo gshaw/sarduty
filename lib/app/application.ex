@@ -21,7 +21,6 @@ defmodule App.Application do
     :ok = Web.RequestLog.attach()
 
     children = [
-      Web.Telemetry,
       # Before the Repo, so it sees every transaction.
       App.Repo.SlowLog,
       App.Repo,

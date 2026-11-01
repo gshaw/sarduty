@@ -16,6 +16,9 @@ defmodule App.Adapter.Mapbox do
 
   defp access_token, do: config()[:access_token]
 
+  @doc "Whether this server has a Mapbox token."
+  def configured?, do: access_token() not in [nil, ""]
+
   defp config, do: Application.get_env(:sarduty, __MODULE__, [])
 
   @doc """
@@ -49,6 +52,26 @@ defmodule App.Adapter.Mapbox do
 
       {:error, _exception} ->
         {:error, :unreachable}
+    end
+  end
+
+  @doc """
+  Whether Mapbox takes the token (#789): `{:ok, account}`, or `{:error, code}` with
+  Mapbox's code, such as "TokenRevoked". Draws no map and counts as no use.
+  """
+  def check_token(context) do
+    case Req.get(context, url: "tokens/v2", retry: false) do
+      {:ok, %{status: 200, body: %{"code" => "TokenValid", "token" => token}}} ->
+        {:ok, token["user"]}
+
+      {:ok, %{body: %{"code" => code}}} ->
+        {:error, code}
+
+      {:ok, %{status: status}} ->
+        {:error, "Mapbox answered #{status}"}
+
+      {:error, exception} ->
+        {:error, Exception.message(exception)}
     end
   end
 

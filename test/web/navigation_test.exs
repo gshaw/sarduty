@@ -182,7 +182,14 @@ defmodule Web.NavigationTest do
 
     test "SAR Duty admin has two sections; account settings and pages outside an area none" do
       sections = "/admin/orgs" |> Navigation.area(nil) |> Navigation.sections("/admin/orgs")
-      assert sections |> keys() |> List.last() == ["admin-admins", "admin-events", "admin-mcp"]
+
+      assert sections |> keys() |> List.last() == [
+               "admin-admins",
+               "admin-events",
+               "admin-mcp",
+               "admin-integrations"
+             ]
+
       assert length(sections) == 2
       assert current(sections) == ["admin-orgs"]
 

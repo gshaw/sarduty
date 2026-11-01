@@ -177,6 +177,19 @@ defmodule Service.Format do
   end
 
   @doc """
+  How long before `now` something last happened, such as a test on Adminland's
+  Integrations page: "just now", "4 min ago", "3 hours ago" within a day, then calendar
+  days in `timezone`: "Yesterday", "4 days ago", "2 months ago".
+  """
+  def time_ago(nil, _now, _timezone), do: nil
+
+  def time_ago(datetime, now, timezone) do
+    if DateTime.diff(now, datetime) < 24 * 60 * 60,
+      do: minutes_ago(datetime, now, timezone),
+      else: days_ago(datetime, now, timezone)
+  end
+
+  @doc """
   The day of an activity coming up, in `timezone`: "Today", "Tomorrow", then "Sat Oct 11".
   """
   def day_coming_up(datetime, now, timezone) do

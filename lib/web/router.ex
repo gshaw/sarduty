@@ -89,19 +89,11 @@ defmodule Web.Router do
     get "/:key", MapImageController, :show
   end
 
-  # Enable LiveDashboard and Swoosh mailbox preview in development
+  # The Swoosh mailbox preview, in development only.
   if Application.compile_env(:sarduty, :dev_routes) do
-    # If you want to use the LiveDashboard in production, you should put
-    # it behind authentication and allow only admins to access it.
-    # If your application does not have an admins-only section yet,
-    # you can use Plug.BasicAuth to set up some basic authentication
-    # as long as you are also using SSL (which you should anyway).
-    import Phoenix.LiveDashboard.Router
-
     scope "/dev" do
       pipe_through :browser
 
-      live_dashboard "/dashboard", metrics: Web.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end
@@ -178,6 +170,15 @@ defmodule Web.Router do
       live "/admin/mcp", Admin.MCPLive
       live "/admin/orgs", Admin.OrganizationCollectionLive
       live "/admin/orgs/new", Admin.OrganizationNewLive
+      live "/admin/integrations", Admin.IntegrationsLive
+    end
+
+    # The Wallet tests on Adminland › Integrations (#789): a download and a redirect to
+    # Google, which a LiveView can't send.
+    scope "/admin/integrations" do
+      pipe_through :require_admin
+      get "/apple-pass", Admin.IntegrationPassController, :apple_pass
+      get "/google-pass", Admin.IntegrationPassController, :google_pass
     end
 
     # An organization's space (#512): its organization admins and SAR Duty admins. Its

@@ -98,6 +98,15 @@ if config_env() == :prod do
       }
     ]
 
+  # Litestream's replica (litestream.yml), for Adminland's backup check (#789). The
+  # bucket and path repeat litestream.yml's; the keys are the ones Litestream reads.
+  config :sarduty, App.Adapter.R2,
+    account_id: System.fetch_env!("CLOUDFLARE_ACCOUNT_ID"),
+    bucket: "sarduty-db",
+    path: "database",
+    access_key_id: System.get_env("R2_ACCESS_KEY_ID"),
+    secret_access_key: System.get_env("R2_SECRET_ACCESS_KEY")
+
   config :sarduty, App.Mailer,
     adapter: App.Adapter.CloudflareEmail,
     account_id: System.fetch_env!("CLOUDFLARE_ACCOUNT_ID"),

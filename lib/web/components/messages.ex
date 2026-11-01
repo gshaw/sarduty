@@ -178,6 +178,9 @@ defmodule Web.Components.Messages do
   state with `open`, in place on the page. A page that asks a question itself renders
   one more, with `phx-hook="AskDialog"` and `data-confirm-event` and `data-cancel-event`
   for the answers: it opens as soon as it renders (Add activity's template switch).
+  Fields in its inner block are what the answer needs, such as where a test email goes
+  (#789): the first takes the focus in place of Cancel, and their values go with the
+  confirm event.
   """
   attr :id, :string, default: "confirm-dialog"
   attr :open, :boolean, default: false, doc: "shown in place, for the style guide"
@@ -198,6 +201,8 @@ defmodule Web.Components.Messages do
   attr :alt, :string, default: nil
   attr :alt_href, :string, default: nil
   attr :rest, :global
+
+  slot :inner_block, doc: "fields the answer needs, each a `.confirm-dialog-field`"
 
   def confirm_dialog(assigns) do
     assigns = assign(assigns, :locked, confirm_locked?(assigns))
@@ -240,6 +245,9 @@ defmodule Web.Components.Messages do
           <label for={"#{@id}-typed"}>{@type_label}</label>
           <code>{@type}</code>
           <input id={"#{@id}-typed"} type="text" autocomplete="off" value={@typed} />
+        </div>
+        <div :if={@inner_block != []} data-part="fields" class="confirm-dialog-fields">
+          {render_slot(@inner_block)}
         </div>
         <div class="confirm-dialog-actions">
           <.button data-part="alt" variant={:primary} href={@alt_href || "#"} hidden={!@alt}>

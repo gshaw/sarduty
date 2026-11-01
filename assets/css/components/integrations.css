@@ -1,0 +1,52 @@
+/* Adminland › Integrations (#789): every service in one box, like a table. A row is the
+   service and what it runs on, its last test as a marker, then its test in a column of
+   even buttons. On a phone the last test goes under the name, and the button stays at
+   the right beside both lines. */
+.integration-board {
+  border: 1px solid var(--border-subtle);
+  margin-bottom: var(--sp-8);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+/* A group's title, in small capitals on the header colour, like a table's group row. */
+.integration-group {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3) var(--sp-1);
+  background: var(--surface-alt);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.integration-rows { list-style: none; margin: 0; padding: 0; }
+
+.integration-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "name test" "status test";
+  align-items: center;
+  column-gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* The name, then what it runs on, muted; on a narrow row the second wraps under. */
+.integration-name { grid-area: name; min-width: 0; display: flex; flex-wrap: wrap; column-gap: var(--sp-2); }
+.integration-status { grid-area: status; min-width: 0; }
+.integration-test { grid-area: test; }
+.integration-test > .btn { margin-block: 0 2px; }
+
+@media (width >= 40rem) {
+  .integration-row {
+    grid-template-columns: minmax(0, 1.4fr) minmax(11rem, 1fr) 10.5rem;
+    grid-template-areas: "name status test";
+    min-height: 44px;
+  }
+  .integration-test > .btn { width: 100%; }
+}
+
+@media (hover: hover) { .integration-row:hover { background: var(--row-hover); } }
