@@ -159,6 +159,15 @@ defmodule App.ViewData.ChangeHistory do
   def describe(%D4HChange{record_kind: :activity, action: :changed} = c, _page, tz),
     do: c.fields |> Enum.map(&activity_field(&1, c, tz)) |> sentences()
 
+  # On the member's page, a row removed in D4H reads as one removed in SAR Duty (#704),
+  # not as if the activity went.
+  def describe(
+        %D4HChange{record_kind: :attendance, action: :removed, activity: %{title: title}},
+        :member,
+        _tz
+      ),
+      do: "Removed from #{title}"
+
   def describe(%D4HChange{record_kind: :attendance} = c, page, _tz) do
     who = attendance_subject(c, page)
 
