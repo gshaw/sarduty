@@ -1,47 +1,39 @@
 <.shell current={:filter_a_list}>
   <h1>Filter a list</h1>
-  <p class="lead">The activity list: filters, a summary line, the table, and pages.</p>
+  <p class="lead">The activity list: tiles, filters, a summary line, the table, and pages.</p>
 
   <div class="example">
-    <.filter_bar
-      for={sample_filters()}
-      id="sample-filters"
-      count="212 activities"
-      clear="#"
-      path_fn={fn _ -> "#" end}
-      page={sample_filter_page()}
-      onsubmit="return false"
-    >
-      <:search field={sample_filters()[:q]} />
-      <:filter
-        field={sample_filters()[:kind]}
-        label="Kind"
-        options={sample_kinds()}
-        default="all"
-      />
-      <:filter
-        field={sample_filters()[:when]}
-        label="When"
-        options={sample_whens()}
-        default="all"
-      />
-    </.filter_bar>
-    <div class="table-actions">
-      <.button type="button">Add to group</.button>
-      <.button type="button">Remove from group</.button>
-    </div>
-    <.activity_table
-      id="sample-activities"
-      rows={activities()}
-      sort="date-"
-      path_fn={fn _ -> "#" end}
+    <.report_page
+      id="sample-list"
+      view={sample_activity_view()}
+      records={%{}}
       team={sample_team()}
-    />
-    <.pagination class="my-4" paginated={sample_page()} path_fn={fn _ -> "#" end} />
+      now={nil}
+      path_fn={fn _ -> "#" end}
+      form={Web.Components.ReportPage.controls_form(sample_activity_view())}
+      marker={&if(&1 == "all", do: nil, else: &1)}
+    >
+      <:table>
+        <div class="table-actions">
+          <.button type="button">Add to group</.button>
+          <.button type="button">Remove from group</.button>
+        </div>
+        <.activity_table
+          id="sample-activities"
+          rows={activities()}
+          sort="date-"
+          path_fn={fn _ -> "#" end}
+          team={sample_team()}
+        />
+      </:table>
+    </.report_page>
   </div>
 
   <h2>How it works</h2>
   <ul>
+    <li>
+      The <a href={page_path(:stat_switch)}>stat switch</a> splits the list into counts.
+    </li>
     <li>
       The <a href={page_path(:filter_bar)}>filter bar</a>
       sits above the table: a search box and a menu per filter. A menu that filters something turns blue.
@@ -55,6 +47,8 @@
     <li><a href={page_path(:pagination)}>Pagination</a> goes under the table, 50 rows a page.</li>
   </ul>
   <p class="spec">
-    In the app: <code>&lt;.activity_filter_table&gt;</code>. The bar is <code>&lt;.filter_bar&gt;</code>, and the table is <code>&lt;.activity_table&gt;</code>, shown here with made-up activities.
+    In the app: <code>&lt;.report_page&gt;</code>, which draws the tiles, the bar, and the pages from the list's report (<code>App.Report.Lists</code>). The page passes its own table, here
+    <code>&lt;.activity_table&gt;</code>
+    with made-up activities.
   </p>
 </.shell>

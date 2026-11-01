@@ -118,6 +118,23 @@ and the URL leaves out what a control starts on; a team's own report starts on t
 saved with it. In the editor, a tile, a menu, or a header changes the preview, and Save
 keeps the picks as the report's values.
 
+## Lists drawn by a report
+
+Activities is drawn by its report (#784): `App.Report.Lists` holds the list's text, and
+the page runs it with `App.Report.page/4`. The tiles, the search, the filters, the sorts,
+and the pages come from the clauses; the cells, Add activity, and Save as report stay in
+the page's code, which passes its own table to `<.report_page>`. A filter's name is the
+URL param the page always used, so Home's links still open the same list.
+
+Save as report opens New report on the list's text, with the picks as its values and in
+its name: `/reports/new?list=activities&activity=exercise`. A copy draws plain report
+cells, not the list's own. Lists are not on the Reports page.
+
+A field can say which teams may read it (`shown` in `App.Report.Field`). To a team that
+may not, it's no field, and an option, sort, or search that reads it drops out of the
+page, as Records teams have no Required fields filter. The text has no rule of its own
+for who sees what.
+
 ## Dates and time zones
 
 SQLite has no time zones. `App.Report.LocalTime` writes a stored UTC time as the team's

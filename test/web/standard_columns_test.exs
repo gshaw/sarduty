@@ -47,7 +47,7 @@ defmodule Web.StandardColumnsTest do
 
   # Where people pick an activity by when it runs.
   @times_allowed [
-    "lib/web/components/activity_filter_table.ex",
+    "lib/web/components/activity_table.ex",
     "lib/web/controllers/style_guide_html/pages/table.html.heex"
   ]
 

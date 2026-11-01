@@ -18,6 +18,9 @@ defmodule App.Report.Field do
     field is `id IN (that query)`, true or false, so the rule stays in its home (#784).
   - `choices`: `fn context -> [{label, value}]`: what a `choice` field holds, or the
     titles a `list` field can include. A value picked for the field offers them.
+  - `shown`: `fn context -> boolean`, whether the team may read it, or nil for always. A
+    field it may not read is no field to it, and an option, sort, or search that reads
+    one drops out of the page (#784).
   """
 
   @enforce_keys [:name, :label, :type]
@@ -32,6 +35,7 @@ defmodule App.Report.Field do
     :sql,
     :query,
     :choices,
+    :shown,
     args: [],
     hidden: false
   ]

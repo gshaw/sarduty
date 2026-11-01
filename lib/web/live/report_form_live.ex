@@ -6,7 +6,8 @@ defmodule Web.ReportFormLive do
   keeps the query and the picked values, never the rows. Beside the query, the page's
   clauses and the fields of the subject after `from`; a click puts a field in the query
   where the cursor is. `?from=<id>` starts from a copy of another report, such as a
-  built-in one.
+  built-in one. `?list=<slug>` is Save as report on a list such as Activities (#784): the
+  list's text, with the list's picks as the values and in the name.
   """
   use Web, :live_view_app_layout
 
@@ -17,8 +18,10 @@ defmodule Web.ReportFormLive do
   alias App.Operation.SaveReport
   alias App.Report
   alias App.Report.Catalog
+  alias App.Report.Context
   alias App.Report.Error
   alias App.Report.Expr
+  alias App.Report.Lists
   alias App.Report.Parser
   alias App.Report.View
   alias App.ViewData.ReportRecords
@@ -45,6 +48,7 @@ defmodule Web.ReportFormLive do
       page_title: if(saved, do: "Change report", else: "New report"),
       saved: saved,
       now: now,
+      context: Context.new(team, now),
       subject: Catalog.subject("members"),
       params: start
     )
@@ -72,7 +76,44 @@ defmodule Web.ReportFormLive do
      }}
   end
 
+  defp start(:new, %{"list" => slug} = params, team, now) do
+    list = Lists.get(slug) || raise Web.Status.NotFound
+    values = Map.drop(params, ["list", "subdomain", "page"])
+
+    {nil,
+     %{"name" => list_name(list, values, team, now), "query" => list.query, "values" => values}}
+  end
+
   defp start(:new, _params, _team, _now), do: {nil, %{"query" => @first_query}}
+
+  # Named for the picks: "Activities: Exercises, 2026, rope".
+  defp list_name(list, values, team, now) do
+    picks =
+      case Report.page(list.query, team, values, now) do
+        {:ok, view} -> pick_labels(view)
+        {:error, _error} -> []
+      end
+
+    name = if picks == [], do: list.name, else: "#{list.name}: #{Enum.join(picks, ", ")}"
+    String.slice(name, 0, SavedReport.max_name())
+  end
+
+  defp pick_labels(view) do
+    tile =
+      for %{picked: picked, tiles: tiles} <- List.wrap(view.switch),
+          %{value: ^picked, label: label} <- tiles,
+          picked != "all",
+          do: label
+
+    filters =
+      for %{picked: picked} = filter <- view.filters,
+          picked not in [nil, "all", filter.default],
+          {label, ^picked} <- filter.options,
+          do: label
+
+    search = if view.q == "", do: [], else: [view.q]
+    tile ++ filters ++ search
+  end
 
   defp assign_form(socket, changeset), do: assign(socket, form: to_form(changeset, as: "report"))
 
@@ -187,7 +228,7 @@ defmodule Web.ReportFormLive do
         <div id="report-field-list" phx-hook="InsertField" data-target="report_query">
           <.table
             id="report-field-table"
-            rows={Catalog.shown_fields(@subject)}
+            rows={Catalog.shown_fields(@subject, @context)}
             row_id={&"field-#{&1.name}"}
           >
             <:col :let={field} label="Field">

@@ -36,12 +36,12 @@ defmodule Web.ActivityCollectionLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
 
-    assert has_element?(lv, "#activity-view-event", "1")
-    assert has_element?(lv, "#activity-view-all", "2")
-    assert has_element?(lv, "#activity-view-chores", "1")
+    assert has_element?(lv, "#activity-tile-event", "1")
+    assert has_element?(lv, "#activity-tile-all", "2")
+    assert has_element?(lv, "#activity-tile-chores", "1")
     assert has_element?(lv, "#activity_collection", "Chores: Equipment maintenance")
 
-    lv |> element("#activity-view-chores") |> render_click()
+    lv |> element("#activity-tile-chores") |> render_click()
 
     assert has_element?(lv, "#activity_collection", "Chores: Equipment maintenance")
     assert has_element?(lv, "#activity_collection", "2 hours")
@@ -123,8 +123,8 @@ defmodule Web.ActivityCollectionLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
 
-    assert has_element?(lv, "#activity-view-event")
-    refute has_element?(lv, "#activity-view-chores")
+    assert has_element?(lv, "#activity-tile-event")
+    refute has_element?(lv, "#activity-tile-chores")
   end
 
   test "Current shows a week either side of today, oldest first", %{conn: conn} do
@@ -153,7 +153,7 @@ defmodule Web.ActivityCollectionLiveTest do
     conn = log_in_user(conn, user)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities")
 
-    lv |> form("#activity_filter_form", form: %{when: "current"}) |> render_change()
+    lv |> form("#activity-filters", values: %{when: "current"}) |> render_change()
 
     assert has_element?(lv, "#activity_collection", "Rope rescue night")
     assert has_element?(lv, "#activity_collection", "Board meeting")
@@ -175,9 +175,9 @@ defmodule Web.ActivityCollectionLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?when=past&sort=date-")
 
-    lv |> form("#activity_filter_form", form: %{when: "future"}) |> render_change()
+    lv |> form("#activity-filters", values: %{when: "future"}) |> render_change()
 
-    assert has_element?(lv, ~s|#activity_filter_form input[name="form[sort]"][value="date"]|)
+    assert has_element?(lv, ~s|#activity-filters input[name="values[sort]"][value="date"]|)
     html = lv |> element("#activity_collection") |> render()
     assert :binary.match(html, "Next week") < :binary.match(html, "Next year")
   end
@@ -189,7 +189,8 @@ defmodule Web.ActivityCollectionLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?sort=date")
 
     assert has_element?(lv, ~s|th[aria-sort="ascending"]|, "Date")
-    assert lv |> element("th[aria-sort]") |> render() =~ "sort=date-"
+    # Newest first is where the list starts, so its link leaves the sort out.
+    assert has_element?(lv, ~s|th[aria-sort] a[href="/teams/#{team.subdomain}/activities"]|)
   end
 
   test "the draft filter lists only activities D4H hasn't published", %{conn: conn} do
@@ -222,13 +223,13 @@ defmodule Web.ActivityCollectionLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?status=published")
 
-    assert has_element?(lv, "#activity-view-all[aria-current]", "2")
-    assert has_element?(lv, "#activity-view-incident", "1")
-    assert has_element?(lv, "#activity-view-exercise", "1")
-    assert has_element?(lv, "#activity-view-event", "0")
+    assert has_element?(lv, "#activity-tile-all[aria-current]", "2")
+    assert has_element?(lv, "#activity-tile-incident", "1")
+    assert has_element?(lv, "#activity-tile-exercise", "1")
+    assert has_element?(lv, "#activity-tile-event", "0")
     assert has_element?(lv, "thead th", "Kind")
 
-    lv |> element("#activity-view-exercise") |> render_click()
+    lv |> element("#activity-tile-exercise") |> render_click()
     assert has_element?(lv, "#activity_collection", "Rope night")
     refute has_element?(lv, "#activity_collection", "Missing hiker")
     refute has_element?(lv, "#activity_collection", "Old drill")
@@ -243,7 +244,7 @@ defmodule Web.ActivityCollectionLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
 
-    lv |> form("#activity_filter_form", form: %{q: "rope"}) |> render_submit()
+    lv |> form("#activity-filters", values: %{q: "rope"}) |> render_submit()
 
     assert_patch(lv)
     assert has_element?(lv, "#activity_collection", "Rope rescue night")
@@ -257,14 +258,14 @@ defmodule Web.ActivityCollectionLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?status=draft")
 
-    assert has_element?(lv, "#activity_filter_form .filter-menu.is-on", "Status")
-    refute has_element?(lv, "#activity_filter_form .filter-menu.is-on", "Kind")
-    assert has_element?(lv, "#activity_filter_form .filter-bar-count", "1")
-    assert has_element?(lv, "#activity_filter_form-summary a", "Clear filters")
+    assert has_element?(lv, "#activity-filters .filter-menu.is-on", "Status")
+    refute has_element?(lv, "#activity-filters .filter-menu.is-on", "Kind")
+    assert has_element?(lv, "#activity-filters .filter-bar-count", "1")
+    assert has_element?(lv, "#activity-filters-summary a", "Clear filters")
 
     lv |> element(".filter-bar-chips a", "Draft") |> render_click()
 
-    assert assert_patch(lv) =~ "status=all"
+    assert_patch(lv, ~p"/teams/#{team}/activities")
     refute has_element?(lv, ".filter-bar-chips")
   end
 
@@ -275,24 +276,67 @@ defmodule Web.ActivityCollectionLiveTest do
     activity_fixture(team, %{title: "Navigation night"})
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
-    refute has_element?(lv, "#activity_filter_form-summary")
+    refute has_element?(lv, "#activity-filters-summary")
 
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?q=rope")
 
-    assert has_element?(lv, "#activity_filter_form-summary strong", "1 activity")
+    assert has_element?(lv, "#activity-filters-summary strong", "1 activity")
   end
 
   test "Clear shows only while a filter or search is on, and says which", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
-    refute has_element?(lv, "#activity_filter_form-summary a", "Clear")
+    refute has_element?(lv, "#activity-filters-summary a", "Clear")
 
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?q=rope")
 
-    lv |> element("#activity_filter_form-summary a", "Clear search") |> render_click()
+    lv |> element("#activity-filters-summary a", "Clear search") |> render_click()
     assert_patch(lv, ~p"/teams/#{team}/activities")
+  end
+
+  describe "Save as report (#784)" do
+    test "team admins get it, with the list's picks; members don't", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?activity=exercise")
+
+      assert lv |> element("#activity-save-report") |> render() =~ "list=activities"
+      assert lv |> element("#activity-save-report") |> render() =~ "activity=exercise"
+
+      %{team: team, user: member_user} = member_with_login_fixture()
+
+      {:ok, lv, _html} =
+        build_conn() |> log_in_user(member_user) |> live(~p"/teams/#{team}/activities")
+
+      refute has_element?(lv, "#activity-save-report")
+      refute has_element?(lv, "#activity-add")
+    end
+
+    test "opens New report with the list's text, named for the picks", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      activity_fixture(team, %{title: "Rope night", activity_kind: "exercise"})
+
+      {:ok, lv, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/teams/#{team}/reports/new?list=activities&activity=exercise&q=rope")
+
+      assert has_element?(lv, ~s|#report_name[value="Activities: Exercises, rope"]|)
+      assert lv |> element("#report_query") |> render() =~ "switch activity"
+      assert has_element?(lv, "#report-preview", "Rope night")
+    end
+  end
+
+  test "a Records team has no Required fields filter", %{conn: conn} do
+    %{user: user, team: team} = records_team_with_user_fixture()
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
+
+    assert has_element?(lv, "#activity-filters", "Hours tag")
+    refute has_element?(lv, "#activity-filters", "Required fields")
   end
 end

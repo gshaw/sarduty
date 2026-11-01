@@ -15,7 +15,8 @@ defmodule App.Report.Parser do
 
   @clauses ~w(select from where group pivot order limit offset label totals)
   @page_clauses ~w(search switch filter sort page)
-  # Names a filter can't take: the URL's own words.
+  # Names a filter can't take: the URL's own words. A sort's name is only the sort's
+  # value in the URL, so `sort id` is fine.
   @reserved ~w(q sort page id subdomain all)
   @max_page 500
   @functions ~w(count sum avg min max year month quarter lower upper days_since)
@@ -241,7 +242,7 @@ defmodule App.Report.Parser do
   defp name_label([{:word, name, _}, {:string, label, _} | rest], kind, line) do
     name = String.downcase(name)
 
-    if name in @reserved,
+    if name in @reserved and kind != "sort",
       do: fail_line(line, "Name the #{kind} something other than #{name}: the page uses it.")
 
     {name, label, rest}

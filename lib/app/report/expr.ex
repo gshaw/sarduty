@@ -152,7 +152,7 @@ defmodule App.Report.Expr do
         subject_field(Catalog.subject(subject_name), parent, name, args, line, st)
 
       :error ->
-        fail(line, no_field(st.subject, parent, Map.keys(st.subject.parents)))
+        fail(line, no_field(st.subject, parent, Map.keys(st.subject.parents), st.context))
     end
   end
 
@@ -162,21 +162,21 @@ defmodule App.Report.Expr do
 
   defp subject_field(subject, via, name, args, line, st) do
     subject
-    |> Catalog.field(name)
-    |> known(subject, via, name, line)
+    |> Catalog.field(name, st.context)
+    |> known(subject, via, name, line, st.context)
     |> field_expr(subject, via, args, line, st)
     |> Map.put(:name, if(via, do: "#{via}.#{name}", else: name))
   end
 
-  defp known(nil, subject, _via, name, line) when name in @contact,
+  defp known(nil, subject, _via, name, line, _context) when name in @contact,
     do: fail(line, "Reports leave out contact details. #{subject.name} has no field #{name}.")
 
-  defp known(nil, subject, via, name, line) do
+  defp known(nil, subject, via, name, line, context) do
     others = if via, do: [], else: Map.keys(subject.parents)
-    fail(line, no_field(subject, name, others))
+    fail(line, no_field(subject, name, others, context))
   end
 
-  defp known(field, _subject, _via, _name, _line), do: field
+  defp known(field, _subject, _via, _name, _line, _context), do: field
 
   defp field_expr(%{args: [_ | _]} = field, _subject, via, args, line, st),
     do: roll_up(field, via, args, line, st)
@@ -320,8 +320,8 @@ defmodule App.Report.Expr do
   defp arg_choices(:tag, context),
     do: [{"All", "all"} | Catalog.tag_titles(context)]
 
-  defp no_field(subject, name, others) do
-    names = subject |> Catalog.shown_fields() |> Enum.map(& &1.name) |> Enum.concat(others)
+  defp no_field(subject, name, others, context) do
+    names = subject |> Catalog.shown_fields(context) |> Enum.map(& &1.name) |> Enum.concat(others)
 
     case closest(name, names) do
       nil -> "#{subject.name} has no field #{name}. Its fields are listed beside the query."

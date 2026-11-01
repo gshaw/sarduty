@@ -129,6 +129,47 @@ defmodule Web.StyleGuideHTML.SampleData do
   def sample_whens,
     do: [{"All", "all"}, {"Current", "current"}, {"2025", "2025"}, {"2024", "2024"}]
 
+  # Activities' page as its report draws it (#784): tiles, the search, filters, and pages.
+  def sample_activity_view do
+    %App.Report.View{
+      result: %App.Report.Result{columns: [%{label: "Activity", type: {:record, :activity}}]},
+      total: 212,
+      page: sample_filter_page(),
+      sort: "date-",
+      search?: true,
+      switch: %{
+        name: "activity",
+        label: "Kind",
+        picked: "all",
+        tiles: [
+          %{value: "all", label: "All", count: 212},
+          %{value: "incident", label: "Incidents", count: 58},
+          %{value: "exercise", label: "Exercises", count: 96},
+          %{value: "event", label: "Events", count: 58}
+        ]
+      },
+      filters: [
+        %{
+          name: "when",
+          label: "When",
+          picked: "2025",
+          default: "all",
+          more: false,
+          options: sample_whens()
+        },
+        %{
+          name: "status",
+          label: "Status",
+          picked: "all",
+          default: "all",
+          more: false,
+          options: sample_statuses()
+        }
+      ],
+      defaults: %{"activity" => "all", "when" => "all", "status" => "all", "sort" => "date-"}
+    }
+  end
+
   # Page 2 of a long activity list, for the pagination example.
   def sample_page do
     %App.Page{entries: [], page_number: 2, page_size: 50, total_entries: 1912, total_pages: 39}

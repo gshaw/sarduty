@@ -1,94 +1,16 @@
-defmodule Web.Components.ActivityFilterTable do
+defmodule Web.Components.ActivityTable do
+  @moduledoc """
+  The activity list's table (#784). Activities draws its tiles, filters, and pages from
+  its report; these are its cells. The header sorts are the report's sorts by name.
+  """
   use Web, :function_component
 
   import Web.Components.A
   import Web.Components.Columns
   import Web.Components.D4H
-  import Web.Components.FilterBar
-  import Web.Components.Pagination
-  import Web.Components.StatSwitch
   import Web.Components.Table
 
-  alias App.Adapter.D4H
   alias App.Model.Activity
-  alias App.Model.Team
-  alias App.ViewModel.ActivityFilterViewModel
-
-  attr :form, :map, required: true
-  attr :paginated, :map, required: true
-  attr :sort, :map, required: true
-  attr :path_fn, :map, required: true
-  attr :team, :map, required: true
-  attr :kind_counts, :map, required: true, doc: "activities of each kind, from `kind_counts/3`"
-  attr :counts, :map, default: %{}, doc: "`Attendance.reply_counts/2` for the page's activities"
-
-  def activity_filter_table(assigns) do
-    ~H"""
-    <.stat_switch id="activity-switch" label="Kind">
-      <:view
-        :for={{label, kind} <- kinds(@team, @kind_counts)}
-        id={"activity-view-#{kind}"}
-        patch={@path_fn.(activity: kind, page: nil)}
-        current={@form[:activity].value == kind}
-        count={Map.get(@kind_counts, kind, 0)}
-        marker={kind != "all" && kind}
-      >
-        {label}
-      </:view>
-    </.stat_switch>
-
-    <.filter_bar
-      for={@form}
-      id="activity_filter_form"
-      count={
-        Service.Format.count(@paginated.total_entries, one: "%d activity", many: "%d activities")
-      }
-      repeats={@paginated.total_entries == Map.get(@kind_counts, @form[:activity].value, 0)}
-      clear={@path_fn.(:all)}
-      path_fn={@path_fn}
-      page={@paginated}
-      hidden={[@form[:sort], @form[:activity]]}
-    >
-      <:search field={@form[:q]} />
-      <:filter
-        field={@form[:when]}
-        label="When"
-        options={ActivityFilterViewModel.when_kinds(@team)}
-        default="all"
-      />
-      <:filter
-        field={@form[:status]}
-        label="Status"
-        options={ActivityFilterViewModel.status_kinds()}
-        default="all"
-      />
-      <:filter
-        field={@form[:hours]}
-        label="Hours tag"
-        options={ActivityFilterViewModel.hours_kinds()}
-        default="all"
-      />
-      <:filter
-        :if={!D4H.records?(@team)}
-        field={@form[:fields]}
-        label="Required fields"
-        options={ActivityFilterViewModel.fields_kinds()}
-        default="all"
-      />
-    </.filter_bar>
-
-    <.activity_table
-      rows={@paginated.entries}
-      sort={@sort}
-      path_fn={@path_fn}
-      team={@team}
-      hours={@form[:hours].value}
-      counts={@counts}
-    />
-
-    <.pagination class="my-4" paginated={@paginated} path_fn={@path_fn} />
-    """
-  end
 
   attr :id, :string, default: "activity_collection"
   attr :rows, :list, required: true
@@ -101,7 +23,7 @@ defmodule Web.Components.ActivityFilterTable do
     default: %{},
     doc: "`Attendance.reply_counts/2` by activity id, for the badges after the title (#447)"
 
-  # The activity list's table, without its filters. The style guide shows it with made-up rows.
+  # The style guide shows it with made-up rows.
   def activity_table(assigns) do
     assigns = assign(assigns, :hours_tags, Activity.hours_tags(assigns.team))
 
@@ -157,15 +79,6 @@ defmodule Web.Components.ActivityFilterTable do
       </:col>
     </.table>
     """
-  end
-
-  # Chores only on a team that logs them, or once had chore activities in this view.
-  defp kinds(team, kind_counts) do
-    chores? = Team.chores?(team) or Map.get(kind_counts, "chores", 0) > 0
-
-    Enum.filter(ActivityFilterViewModel.activity_kinds(), fn {_, kind} ->
-      kind != "chores" or chores?
-    end)
   end
 
   # A chore activity lasts no time: its duration is its members' chores (#575).

@@ -13,6 +13,7 @@ defmodule App.Report.Catalog do
 
   import Ecto.Query
 
+  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.ChoreEvent
@@ -262,12 +263,15 @@ defmodule App.Report.Catalog do
         "Started in the last 30 days and finished, as Activities' Last 30 days.",
         &recent/2
       ),
-      rule(
-        "missing_required_fields",
-        "Missing fields",
-        "A required field of its kind is empty.",
-        &missing_fields/2
-      )
+      %{
+        rule(
+          "missing_required_fields",
+          "Missing fields",
+          "A required field of its kind is empty.",
+          &missing_fields/2
+        )
+        | shown: &custom_fields?/1
+      }
     ]
   end
 
@@ -355,11 +359,51 @@ defmodule App.Report.Catalog do
     ]
   end
 
-  @doc "The field named `name` in `subject`, or nil."
-  def field(%Subject{fields: fields}, name), do: Enum.find(fields, &(&1.name == name))
+  @doc "The field named `name` in `subject` that `context`'s team may read, or nil."
+  def field(%Subject{fields: fields}, name, %Context{} = context),
+    do: Enum.find(fields, &(&1.name == name and readable?(&1, context)))
 
-  @doc "The fields the editor lists for `subject`: all but the id."
-  def shown_fields(%Subject{fields: fields}), do: Enum.reject(fields, & &1.hidden)
+  @doc "The fields the editor lists for `subject`: all but the id, and those the team may read."
+  def shown_fields(%Subject{fields: fields}, %Context{} = context),
+    do: Enum.filter(fields, &(not &1.hidden and readable?(&1, context)))
+
+  defp readable?(%Field{shown: nil}, _context), do: true
+  defp readable?(%Field{shown: shown}, context), do: shown.(context)
+
+  @doc """
+  Whether `expr`, read in `subject`, names a field `context`'s team may not read, so a
+  page's option, sort, or search with it drops out (#784). A name that isn't a field at
+  all is the compiler's to report.
+  """
+  def reads_hidden?(%Subject{} = subject, expr, %Context{} = context),
+    do: expr |> field_paths() |> Enum.any?(&hidden_path?(subject, &1, context))
+
+  defp field_paths({:field, path, args, _line}), do: [path | field_paths(args)]
+  defp field_paths(tuple) when is_tuple(tuple), do: tuple |> Tuple.to_list() |> field_paths()
+  defp field_paths(list) when is_list(list), do: Enum.flat_map(list, &field_paths/1)
+  defp field_paths(_other), do: []
+
+  defp hidden_path?(subject, path, context) do
+    case Enum.map(path, &String.downcase/1) do
+      [name] -> hidden_field?(subject, name, context)
+      [parent, name] -> hidden_parent_field?(subject, parent, name, context)
+      _other -> false
+    end
+  end
+
+  defp hidden_parent_field?(subject, parent, name, context) do
+    case Map.fetch(subject.parents, parent) do
+      {:ok, {subject_name, _fk}} -> hidden_field?(subject(subject_name), name, context)
+      :error -> false
+    end
+  end
+
+  defp hidden_field?(subject, name, context) do
+    case Enum.find(subject.fields, &(&1.name == name)) do
+      nil -> false
+      field -> not readable?(field, context)
+    end
+  end
 
   defp id, do: %Field{name: "id", label: "ID", type: :number, column: :id, hidden: true}
 
@@ -674,6 +718,9 @@ defmodule App.Report.Catalog do
 
   defp recent(%Context{team: team, now: now, timezone: timezone}, []),
     do: team |> team_activities() |> Activity.finished_recently(now, timezone)
+
+  # Teams on SAR Duty Records have no required fields.
+  defp custom_fields?(%Context{team: team}), do: not D4H.records?(team)
 
   defp missing_fields(%Context{team: team}, []),
     do: team |> team_activities() |> Activity.missing_required_fields()
