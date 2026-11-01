@@ -11,7 +11,7 @@ defmodule Web.ReportCSV do
 
   @doc "The CSV text for `result`, with a header row, and a Total row when it has one."
   def build(%Result{} = result, records, timezone) do
-    header = Enum.map(result.columns, &ReportTable.label(&1, records))
+    header = Enum.map(result.columns, &safe(ReportTable.label(&1, records) || ""))
     rows = Enum.map(result.rows, &row(&1, result.columns, records, timezone))
     totals = if result.totals, do: [total_row(result, records, timezone)], else: []
 

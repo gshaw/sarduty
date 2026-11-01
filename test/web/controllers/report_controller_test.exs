@@ -31,6 +31,17 @@ defmodule Web.ReportControllerTest do
                "Total,1.00,2.50,3.50\r\n"
   end
 
+  # A header can be a label or a pivot value someone typed, or blank for a plain value.
+  test "the header row is safe from formulas and takes a blank label" do
+    team = team_fixture()
+    activity_fixture(team, %{ref_id: "A1"})
+
+    {:ok, result} =
+      App.Report.run("select 'x', ref_id from activities label ref_id '=1+1'", team)
+
+    assert Web.ReportCSV.build(result, %{}, team.timezone) == ",'=1+1\r\nx,A1\r\n"
+  end
+
   test "a member who logs in cannot download a report", %{conn: conn} do
     %{user: user, team: team} = member_with_login_fixture()
 
