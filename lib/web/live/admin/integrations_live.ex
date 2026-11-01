@@ -119,7 +119,7 @@ defmodule Web.Admin.IntegrationsLive do
         id="test-email-to"
         value={@email_to}
         aria-label="To"
-        class="w-full max-w-xs"
+        class="w-2xs"
       />
       <.button size={:sm}>Send test email</.button>
     </form>
@@ -137,7 +137,7 @@ defmodule Web.Admin.IntegrationsLive do
         value={@text_to}
         aria-label="To"
         placeholder="Mobile number"
-        class="w-full max-w-xs"
+        class="w-2xs"
       />
       <.button size={:sm}>Send test text</.button>
     </form>
@@ -148,7 +148,7 @@ defmodule Web.Admin.IntegrationsLive do
     ~H"""
     <form id="test-d4h" phx-submit="test" class="flex items-center gap-2 whitespace-nowrap">
       <input type="hidden" name="service" value="d4h" />
-      <div class="w-full max-w-xs">
+      <div class="w-2xs">
         <.combobox
           id="test-d4h-team"
           name="team_id"
