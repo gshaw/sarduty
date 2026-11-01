@@ -53,12 +53,13 @@ is left out, and so is its divider.
 | 3       | Groups, Qualifications, Endorsements, Tax credit letters | team admins |
 | 4       | Equipment                                                | team admins |
 | 4       | Chores                                                   | everyone    |
-| 5       | Team settings                                            | team admins |
-| 6       | Your membership                                          | members     |
-| 6       | Get help                                                 | everyone    |
+| 5       | Reports                                                  | team admins |
+| 6       | Team settings                                            | team admins |
+| 7       | Your membership                                          | members     |
+| 7       | Get help                                                 | everyone    |
 
-- A team admin who is a member sees all six. A SAR Duty site admin who opened a team
-  from Adminland and is not a member there sees 1 to 5, then Get help. A member sees
+- A team admin who is a member sees all seven. A SAR Duty site admin who opened a team
+  from Adminland and is not a member there sees 1 to 6, then Get help. A member sees
   Dashboard and Whiteboard, Activities and Take attendance, Members and Milestones,
   Chores, and Your membership and Get help, each in its own section (#440, #645).
 - Get help (#780) is in the side navigation, not the team picker: on two teams, a row
