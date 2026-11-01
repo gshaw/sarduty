@@ -75,7 +75,11 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/me/tax-credit-letters/:id/pdf",
     "/teams/:subdomain/me/qualifications/:id/certificate",
     # Add to calendar (#406). Web.ActivityLiveTest covers an incident a member can't see.
-    "/teams/:subdomain/activities/:id/calendar"
+    "/teams/:subdomain/activities/:id/calendar",
+    # A team's own report (#768). A built-in one's id is its slug, the same on every team.
+    "/teams/:subdomain/reports/:id",
+    "/teams/:subdomain/reports/:id/edit",
+    "/teams/:subdomain/reports/:id/csv"
   ]
 
   setup %{conn: conn} do
@@ -106,7 +110,13 @@ defmodule Web.TeamScopingTest do
       place: location_bookmark_fixture(other_team),
       letter: tax_credit_letter_fixture(member),
       award: certificate_award_fixture(other_team, member),
-      certificate: certificate_fixture(member, qualification_fixture(other_team))
+      certificate: certificate_fixture(member, qualification_fixture(other_team)),
+      report:
+        Repo.insert!(%App.Model.SavedReport{
+          team_id: other_team.id,
+          name: "Theirs",
+          query: "select title from groups"
+        })
     }
 
     %{conn: log_in_user(conn, user), team: team, other: other}
@@ -335,4 +345,7 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/whiteboard/:id/edit", s, o),
     do: ~p"/teams/#{s}/whiteboard/#{o.whiteboard_note.id}/edit"
+
+  defp path_for("/teams/:subdomain/reports/:id" <> rest, s, o),
+    do: "/teams/#{s}/reports/#{o.report.id}#{rest}"
 end
