@@ -54,6 +54,8 @@ defmodule Web.StandardColumnsTest do
   @cell_labelled_otherwise %{
     {"lib/web/live/activity_send_update_live.ex", "{status_title(status)}"} =>
       "a table per reply, each headed by the reply",
+    {"lib/web/live/activity_remove_members_live.ex", "{Reply.status_text(status, false)}"} =>
+      "a table per reply, each headed by the reply",
     {"lib/web/controllers/style_guide_html/pages/table.html.heex", "Looks like"} =>
       "the style guide's list of the standard columns, one of each"
   }

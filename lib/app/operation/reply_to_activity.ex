@@ -127,8 +127,7 @@ defmodule App.Operation.ReplyToActivity do
     case reason do
       :started -> "Replies closed when the activity started."
       :deleted -> "This activity is deleted."
-      :not_invited -> "Only invited members can reply."
-      :gone -> "Your invitation was deleted. Ask a team admin."
+      reason when reason in [:not_invited, :gone] -> "You're no longer on this activity."
       :published -> "Your reply cannot be sent. This activity is published."
       :no_team_key -> "Your team has no access key. Ask a team admin."
       _failed -> "Your reply was not sent. Try again, or ask a team admin."

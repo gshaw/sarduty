@@ -89,6 +89,16 @@ defmodule Web.ReplyLinkLiveTest do
     refute_received {:d4h_write, _id, _body}
   end
 
+  # However they came off, a team admin's Remove members (#704) or D4H.
+  test "a member no longer on the activity is told so",
+       %{conn: conn, member: member, activity: activity, row: row} do
+    Repo.delete!(row)
+    {:ok, lv, _html} = live(conn, ReplyLinks.reply_path(member, activity, :yes))
+
+    refute has_element?(lv, "#reply-link-form")
+    assert has_element?(lv, "#reply-link-gone", "You're no longer on this activity.")
+  end
+
   test "the same answer as their reply shows the reply, not the form",
        %{conn: conn, member: member, activity: activity, row: row} do
     row |> Ecto.Changeset.change(status: "attending") |> Repo.update!()

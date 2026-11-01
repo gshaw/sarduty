@@ -215,8 +215,8 @@ defmodule App.Operation.RecordD4HChanges do
 
   # SAR Duty's own writes reach the copy on the next sync, like anyone's. They're on the
   # page already from their change set, so a change that matches a row applied in the
-  # last day isn't recorded twice. Group rules update the copy as they write, so their
-  # changes never show up here.
+  # last day isn't recorded twice, and nor is a row SAR Duty deleted (#704). Group rules
+  # update the copy as they write, so their changes never show up here.
   defp own_write?(run, :attendance, %{action: action}, record)
        when action in [:added, :changed] do
     since = DateTime.add(run.seen_at, -1, :day)
@@ -227,6 +227,16 @@ defmodule App.Operation.RecordD4HChanges do
     |> select([r], r.new_value)
     |> Repo.all()
     |> Enum.any?(&same_status?(&1["status"], record.status))
+  end
+
+  defp own_write?(run, :attendance, %{action: :removed}, record) do
+    since = DateTime.add(run.seen_at, -1, :day)
+
+    ChangeSetRow
+    |> where([r], r.team_id == ^run.team_id and r.status == :applied)
+    |> where([r], r.action == :delete_attendance)
+    |> where([r], r.d4h_record_id == ^record.d4h_attendance_id and r.applied_at >= ^since)
+    |> Repo.exists?()
   end
 
   # An edit of a team on SAR Duty Records (docs/records.md) is on the page from its row,

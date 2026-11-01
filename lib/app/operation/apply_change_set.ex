@@ -249,6 +249,17 @@ defmodule App.Operation.ApplyChangeSet do
       else: :ok
   end
 
+  # A row gone already is done, as D4H.delete_attendance/2 takes a 404 (#704).
+  def check(%ChangeSetRow{action: :delete_attendance} = row, current) when is_list(current) do
+    old_status = row.old_value["status"]
+
+    case Enum.find(current, &(&1.d4h_attendance_id == row.d4h_record_id)) do
+      nil -> :ok
+      %{status: ^old_status} -> :ok
+      _changed -> {:skipped, "This changed since you reviewed it. Review again."}
+    end
+  end
+
   def check(%ChangeSetRow{action: action}, nil)
       when action in [:add_group_member, :remove_group_member],
       do: :ok

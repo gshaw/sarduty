@@ -159,6 +159,15 @@ defmodule App.ViewData.ChangeHistory do
   def describe(%D4HChange{record_kind: :activity, action: :changed} = c, _page, tz),
     do: c.fields |> Enum.map(&activity_field(&1, c, tz)) |> sentences()
 
+  # On the member's page, a row removed in D4H reads as one removed in SAR Duty (#704),
+  # not as if the activity went.
+  def describe(
+        %D4HChange{record_kind: :attendance, action: :removed, activity: %{title: title}},
+        :member,
+        _tz
+      ),
+      do: "Removed from #{title}"
+
   def describe(%D4HChange{record_kind: :attendance} = c, page, _tz) do
     who = attendance_subject(c, page)
 
@@ -439,15 +448,12 @@ defmodule App.ViewData.ChangeHistory do
     "#{subject || "Attendance"} set to #{status(row.new_value["status"])}"
   end
 
-  def describe_row(%ChangeSetRow{action: :delete_attendance} = row, page) do
-    subject =
-      case page do
-        :member -> row.change_set.activity && row.change_set.activity.title
-        :activity -> row.member && row.member.name
-      end
+  def describe_row(%ChangeSetRow{action: :delete_attendance} = row, :member),
+    do:
+      "Removed from #{(row.change_set.activity && row.change_set.activity.title) || "an activity"}"
 
-    "#{subject || "Attendance"} removed"
-  end
+  def describe_row(%ChangeSetRow{action: :delete_attendance} = row, :activity),
+    do: "#{(row.member && row.member.name) || "Attendance"} removed"
 
   def describe_row(%ChangeSetRow{action: :publish_activity} = row, _page),
     do:
@@ -566,6 +572,7 @@ defmodule App.ViewData.ChangeHistory do
   def source_label(:equipment), do: "equipment"
   def source_label(:template), do: "template"
   def source_label(:invite), do: "Add members"
+  def source_label(:remove), do: "Remove members"
   def source_label(:tags), do: "tags"
   def source_label(:chores), do: "chores"
   def source_label(:certificates), do: "certificates"
