@@ -177,7 +177,12 @@ defmodule App.Model.Member do
   counts, Missing details, Add members, Take attendance, and organization totals read
   this. Logins don't: not a person changes counts and pickers, never access.
   """
-  def counted_query(query), do: query |> people_query() |> not_retiring_query()
+  def counted_query(query), do: where(query, ^counted_dynamic())
+
+  @doc "counted_query/1's condition, on the query's first binding, for Reports' `counted` (#768)."
+  def counted_dynamic,
+    do:
+      dynamic([m], not m.not_a_person and m.id not in subquery(Standing.all_retiring_ids_query()))
 
   @doc "Pure. counted_query/1 for one current member, given the team's retiring ids."
   def counted?(%Member{} = member, retiring_ids),

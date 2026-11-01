@@ -206,6 +206,28 @@ defmodule App.Model.Attendance do
   def status_word(%{status: "requested"}, _activity, _now), do: :no_reply
   def status_word(%{status: other}, _activity, _now), do: other
 
+  @doc """
+  status_word/3 in SQL, as the word's name ("attended", "signed_up", "absent",
+  "cant_make_it", "no_reply", or D4H's word), for Reports' `status` (#768). The query's
+  first binding is the row, with its activity joined as `:activity`. A test keeps the
+  two in agreement.
+  """
+  def status_word_dynamic(%DateTime{} = now) do
+    dynamic(
+      [r, activity: a],
+      fragment(
+        "CASE ? WHEN 'attending' THEN (CASE WHEN COALESCE(?, ?) > ? THEN 'signed_up' ELSE 'attended' END) WHEN 'absent' THEN (CASE WHEN ? > ? THEN 'cant_make_it' ELSE 'absent' END) WHEN 'requested' THEN 'no_reply' ELSE ? END",
+        r.status,
+        r.started_at,
+        a.started_at,
+        type(^now, :utc_datetime),
+        a.started_at,
+        type(^now, :utc_datetime),
+        r.status
+      )
+    )
+  end
+
   @doc "How many members attended the activity by `now`."
   def attended_count(%Activity{} = activity, %DateTime{} = now) do
     Attendance
