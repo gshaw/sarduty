@@ -1,7 +1,8 @@
 defmodule App.MCP.Tool.ListActivities do
   @moduledoc """
   Activities that started in a date range, optionally with one tag or one kind of tax
-  credit hours, with their length, published flag, and attendance counts. No address.
+  credit hours, with their length, published flag, attendance counts, and Enough at and
+  Full at (#447). No address.
   """
   @behaviour App.MCP.Tool
 
@@ -27,7 +28,8 @@ defmodule App.MCP.Tool.ListActivities do
       "chores for the chore activities SAR Duty makes), tags, hours (primary, secondary, " <>
       "other, or none), start, finish, and length in minutes. It also has whether it is " <>
       "published, how many members attended, and how many signed up for it before it " <>
-      "starts. Give tag to list only activities with that tag, or hours to list only that " <>
+      "starts, with enough_at and full_at: how many signed up is enough, and full, as " <>
+      "the team set them in SAR Duty, or null. Give tag to list only activities with that tag, or hours to list only that " <>
       "kind: none finds activities that count no hours. Activities deleted in D4H are " <>
       "left out. No address or location."
   end
@@ -57,7 +59,8 @@ defmodule App.MCP.Tool.ListActivities do
 
   @impl App.MCP.Tool
   def fields,
-    do: ~w(id title kind tags hours started_at finished_at minutes published attended signed_up)
+    do: ~w(id title kind tags hours started_at finished_at minutes published attended signed_up
+         enough_at full_at)
 
   @impl App.MCP.Tool
   def call(%Team{} = team, args, now) do
@@ -105,7 +108,9 @@ defmodule App.MCP.Tool.ListActivities do
         "minutes" => Output.minutes(activity.started_at, activity.finished_at),
         "published" => activity.is_published == true,
         "attended" => activity.attended,
-        "signed_up" => activity.signed_up
+        "signed_up" => activity.signed_up,
+        "enough_at" => activity.enough_at,
+        "full_at" => activity.full_at
       }
     end)
   end
@@ -138,6 +143,8 @@ defmodule App.MCP.Tool.ListActivities do
         started_at: a.started_at,
         finished_at: a.finished_at,
         is_published: a.is_published,
+        enough_at: a.enough_at,
+        full_at: a.full_at,
         chore_minutes: c.minutes
       })
       |> Repo.all()

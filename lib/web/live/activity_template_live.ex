@@ -14,8 +14,8 @@ defmodule Web.ActivityTemplateLive do
   alias Web.ActivityEquipmentLive
 
   # Applying templates to an activity (#162). Each template adds its items, with hours to
-  # check, its tags, its custom field values, and its groups to one list. Sending is
-  # ApplyTemplate.call/5.
+  # check, its tags, its custom field values, its groups, and its Enough at and Full at
+  # (#447) to one list. Sending is ApplyTemplate.call/5.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     activity = Web.ActivityLive.fetch_activity(team, id)
@@ -30,6 +30,7 @@ defmodule Web.ActivityTemplateLive do
         socket
         |> assign(page_title: "Apply a template", activity: activity, used: used)
         |> assign(lines: [], tags: [], groups: [], fills: %{}, fields_locked?: false)
+        |> assign(numbers: nil, numbers_left_out: nil)
         |> assign(fields: CustomField.get_all(team.id, activity.activity_kind))
         |> assign(templates: Template.get_all(team.id))
 
@@ -103,6 +104,13 @@ defmodule Web.ActivityTemplateLive do
                 rows={CustomField.rows(@fields, @fills, @current_team.timezone, restricted: true)}
               />
             </div>
+            <div :if={@numbers} id="template-numbers" class="mb-4">
+              <h3 class="subheading">Enough at and Full at</h3>
+              <p class="hint mb-2">
+                These fill in an activity with neither. When two templates have them, the first one added wins.
+              </p>
+              <.numbers_to_set id="template-numbers-table" numbers={@numbers} />
+            </div>
             <.lines_table :if={@lines != []} id="template-lines-table" lines={@lines} km />
             <div :if={@tags != []} id="template-tags" class="mt-4">
               <h3 class="subheading">Tags</h3>
@@ -134,6 +142,9 @@ defmodule Web.ActivityTemplateLive do
           <p :if={@fields_locked?} id="template-fields-locked" class="hint mt-4">
             The templates' fields are left out: the activity is published.
           </p>
+          <p :if={@numbers_left_out} id="template-numbers-left-out" class="hint mt-4">
+            The templates' Enough at and Full at are left out: {@numbers_left_out}
+          </p>
         </section>
       </main>
     </div>
@@ -141,7 +152,27 @@ defmodule Web.ActivityTemplateLive do
   end
 
   defp anything?(assigns),
-    do: assigns.lines != [] or assigns.tags != [] or assigns.groups != [] or assigns.fills != %{}
+    do:
+      assigns.lines != [] or assigns.tags != [] or assigns.groups != [] or assigns.fills != %{} or
+        assigns.numbers != nil
+
+  attr :id, :string, required: true
+  attr :numbers, :map, required: true, doc: "from ApplyTemplate.numbers/4"
+
+  # One row: the two numbers go as a pair.
+  defp numbers_to_set(assigns) do
+    ~H"""
+    <.table id={@id} rows={[@numbers]} row_id={fn _numbers -> "numbers" end} class="table-striped">
+      <:col :let={numbers} label="Enough at">{numbers.enough_at || "None"}</:col>
+      <:col :let={numbers} label="Full at">{numbers.full_at || "None"}</:col>
+      <:col label="" class="w-px whitespace-nowrap">
+        <.button id="numbers-remove" type="button" size={:sm} phx-click="remove-numbers">
+          Remove
+        </.button>
+      </:col>
+    </.table>
+    """
+  end
 
   attr :id, :string, required: true
   attr :rows, :list, required: true, doc: "from CustomField.rows/4"
@@ -258,6 +289,7 @@ defmodule Web.ActivityTemplateLive do
         groups: add_groups(socket.assigns.groups, Template.groups(template))
       )
       |> add_fills(template)
+      |> add_numbers(template)
 
     {:noreply, socket}
   end
@@ -278,6 +310,9 @@ defmodule Web.ActivityTemplateLive do
   def handle_event("remove-group", %{"id" => id}, socket),
     do: {:noreply, assign(socket, groups: reject_id(socket.assigns.groups, id))}
 
+  def handle_event("remove-numbers", _params, socket),
+    do: {:noreply, assign(socket, numbers: nil)}
+
   def handle_event("remove-field", %{"id" => id}, socket),
     do: {:noreply, assign(socket, fills: Map.delete(socket.assigns.fills, id))}
 
@@ -288,7 +323,9 @@ defmodule Web.ActivityTemplateLive do
       |> Enum.map(&ActivityEquipmentLive.to_add/1)
 
     %{current_team: team, current_user: user, activity: activity} = socket.assigns
-    adds = socket.assigns |> Map.take([:fills, :tags, :groups]) |> Map.put(:lines, lines)
+
+    adds =
+      socket.assigns |> Map.take([:fills, :tags, :groups, :numbers]) |> Map.put(:lines, lines)
 
     case ApplyTemplate.call(team, user, activity, adds, DateTime.utc_now()) do
       {:ok, kind, text} ->
@@ -320,6 +357,26 @@ defmodule Web.ActivityTemplateLive do
       added == fills -> socket
       Activity.locked?(activity) -> assign(socket, fields_locked?: true)
       true -> assign(socket, fills: added)
+    end
+  end
+
+  # A template with numbers it can't set says why, as for a published activity's fields.
+  defp add_numbers(socket, template) do
+    %{activity: activity, numbers: numbers} = socket.assigns
+    now = DateTime.utc_now()
+
+    cond do
+      template.enough_at == nil and template.full_at == nil ->
+        socket
+
+      numbers = ApplyTemplate.numbers(numbers, template, activity, now) ->
+        assign(socket, numbers: numbers)
+
+      not Activity.open?(activity, now) ->
+        assign(socket, numbers_left_out: "the activity has started.")
+
+      true ->
+        assign(socket, numbers_left_out: "the activity has its own.")
     end
   end
 

@@ -29,6 +29,13 @@ make again get none.
   names and its rules as words, and `ChangeHistory.describe_row/2` prints "Deleted MIT
   2026: 14 members; rules: In MIT Applicants, Not in LOA". A mistaken delete can be
   rebuilt by hand. No new table and no new source.
+- **An activity's own SAR Duty fields ride on its change set row**, an exception to the
+  rule: Enough at and Full at (#447) never go to D4H, yet History names who changed them
+  and from what to what. `SaveActivity` puts them, and the hours choice, on the row's old
+  and new values; the adapter sends neither, so a row with only them makes no request.
+  `ChangeHistory.describe_row/3` writes a sentence per form box ("Enough at changed from
+  8 to 10. Full at set to 14"), and a row with a key no box sends reads "Details changed
+  in SAR Duty".
 - **Group rule edits aren't logged.** The snapshot covers the delete that loses work.
 - **A no-show's Remove is a plain delete**, with no entry (#650).
 - **No undo, no trash, no delayed delete.** D4H can't restore what it deletes, so none of

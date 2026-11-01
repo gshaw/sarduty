@@ -10,6 +10,8 @@ defmodule App.Model.Activity do
   alias App.Model.Team
   alias App.Repo
 
+  @number_message "Enter a whole number, 1 or more."
+
   @default_hours_tags %{primary: "Primary Hours", secondary: "Secondary Hours", other: nil}
   @hours_kinds [:primary, :secondary, :other]
 
@@ -172,6 +174,10 @@ defmodule App.Model.Activity do
     field :deleted_at, :utc_datetime
     # SAR Duty's own, never D4H's: see mark_attendance_sent/2.
     field :attendance_sent_at, :utc_datetime_usec
+    # SAR Duty's own too (#447): how many signed up is enough, and how many is full. Nil
+    # for no number. Change activity sets them through SaveActivity.
+    field :enough_at, :integer
+    field :full_at, :integer
     # The members' accepted chore minutes on a chore activity (#575), nil on any other.
     # Set where it is read, from ChoreEvent.totals/1 or put_chore_minutes/1.
     field :chore_minutes, :integer, virtual: true
@@ -262,6 +268,56 @@ defmodule App.Model.Activity do
   def open?(%Activity{} = activity, %DateTime{} = now),
     do: not deleted?(activity) and not started?(activity, now)
 
+  @doc """
+  How many more members the activity needs until Enough at have signed up (#447), or nil
+  when it has no Enough at, has enough, or is no longer open?/2. `counts` is the counts
+  map the page shows: `ActivityMembers.counts/1` or `Attendance.reply_counts/2`'s. Pure.
+  """
+  def more_needed(%Activity{enough_at: enough_at} = activity, %{attending: yes}, now)
+      when is_integer(enough_at) do
+    if open?(activity, now) and yes < enough_at, do: enough_at - yes
+  end
+
+  def more_needed(%Activity{}, _counts, _now), do: nil
+
+  @doc "Whether Full at or more have signed up while the activity is open?/2 (#447). Pure."
+  def full?(%Activity{full_at: full_at} = activity, %{attending: yes}, now)
+      when is_integer(full_at),
+      do: open?(activity, now) and yes >= full_at
+
+  def full?(%Activity{}, _counts, _now), do: false
+
+  @doc """
+  Checks Enough at and Full at, on Change activity and Change template (#447): whole
+  numbers of 1 or more, and a Full at no lower than Enough at. Cast them with
+  `message: &number_message/2`, so a typed word or fraction says the same.
+  """
+  def validate_enough_and_full(changeset) do
+    changeset
+    |> validate_number(:enough_at, greater_than_or_equal_to: 1, message: @number_message)
+    |> validate_number(:full_at, greater_than_or_equal_to: 1, message: @number_message)
+    |> validate_full_at()
+  end
+
+  defp validate_full_at(changeset) do
+    enough_at = get_field(changeset, :enough_at)
+    full_at = get_field(changeset, :full_at)
+
+    if is_integer(enough_at) and is_integer(full_at) and full_at < enough_at and
+         changeset.errors[:enough_at] == nil,
+       do:
+         add_error(
+           changeset,
+           :full_at,
+           "Enter #{enough_at} or more, since Enough at is #{enough_at}."
+         ),
+       else: changeset
+  end
+
+  @doc "The cast error for Enough at and Full at: `cast(…, message: &number_message/2)`."
+  def number_message(field, _meta) when field in [:enough_at, :full_at], do: @number_message
+  def number_message(_field, _meta), do: nil
+
   @attendance_window_hours 2
 
   def attendance_window_hours, do: @attendance_window_hours
@@ -321,6 +377,19 @@ defmodule App.Model.Activity do
     |> Repo.update_all(set: [attendance_sent_at: at])
 
     :ok
+  end
+
+  @doc """
+  Writes Enough at and Full at, `%{enough_at: n, full_at: n}` with either nil, once the
+  change set row that names them has applied (#447). The refresh never copies them, as
+  D4H never has them. Answers the activity with them.
+  """
+  def put_enough_and_full(%Activity{} = activity, %{enough_at: enough_at, full_at: full_at}) do
+    Activity
+    |> where([a], a.id == ^activity.id and a.team_id == ^activity.team_id)
+    |> Repo.update_all(set: [enough_at: enough_at, full_at: full_at])
+
+    %{activity | enough_at: enough_at, full_at: full_at}
   end
 
   @doc """

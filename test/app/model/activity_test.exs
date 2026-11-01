@@ -22,6 +22,29 @@ defmodule App.Model.ActivityTest do
     end
   end
 
+  describe "more_needed/3 and full?/3 (#447)" do
+    @before ~U[2026-10-10 18:00:00Z]
+
+    test "how many more until Enough at, while it is open" do
+      short = %{@evening | enough_at: 10}
+
+      assert Activity.more_needed(short, %{attending: 6}, @before) == 4
+      assert Activity.more_needed(short, %{attending: 10}, @before) == nil
+      assert Activity.more_needed(short, %{attending: 6}, @evening.started_at) == nil
+      assert Activity.more_needed(@evening, %{attending: 0}, @before) == nil
+    end
+
+    test "full from Full at on, while it is open" do
+      full = %{@evening | full_at: 10}
+
+      refute Activity.full?(full, %{attending: 9}, @before)
+      assert Activity.full?(full, %{attending: 10}, @before)
+      assert Activity.full?(full, %{attending: 12}, @before)
+      refute Activity.full?(full, %{attending: 12}, @evening.started_at)
+      refute Activity.full?(@evening, %{attending: 12}, @before)
+    end
+  end
+
   describe "open?/2" do
     test "an activity is open until it starts" do
       assert Activity.open?(@evening, ~U[2026-10-10 18:59:59Z])

@@ -15,6 +15,8 @@ defmodule App.MCP.Tool.ListActivitiesTest do
       chore_minutes: nil,
       attended: 3,
       signed_up: 0,
+      enough_at: nil,
+      full_at: nil,
       address: "1 Secret Road"
     }
   end
@@ -61,6 +63,7 @@ defmodule App.MCP.Tool.ListActivitiesTest do
     assert primary["minutes"] == 60
     assert primary["published"]
     assert primary["attended"] == 3
+    assert primary["enough_at"] == nil
     untagged = build(activities(), %{hours: "none"})
     assert Enum.map(untagged, & &1["id"]) == [1, 3]
     assert Enum.map(output, & &1["kind"]) == ~w(exercise exercise exercise)
@@ -69,5 +72,10 @@ defmodule App.MCP.Tool.ListActivitiesTest do
   test "a chore activity is kind chores" do
     chores = %{activity(4, ~U[2026-03-01 08:00:00Z], ["Primary Hours"]) | chore_minutes: 90}
     assert [%{"kind" => "chores"}] = build([chores], %{})
+  end
+
+  test "gives Enough at and Full at beside signed up (#447)" do
+    short = %{activity(5, ~U[2026-03-01 08:00:00Z], []) | enough_at: 10, full_at: 14}
+    assert [%{"signed_up" => 0, "enough_at" => 10, "full_at" => 14}] = build([short], %{})
   end
 end

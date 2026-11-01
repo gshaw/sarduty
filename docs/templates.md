@@ -52,8 +52,8 @@ touches them, except that an item, tag, or group D4H deletes leaves its template
 
 ## Activity details
 
-What a template starts on Add activity: a title, a start time and a duration, an address,
-tax credit hours, and a description, on Change template under the name and kind, in the
+What a template starts on Add activity: a title, a start time and a duration, Enough at
+and Full at (#447), an address, tax credit hours, and a description, on Change template under the name and kind, in the
 Add activity form's order and with its labels, less the date. Every detail is optional. A blank title uses the
 template's name. Tax credit hours has no blank: Primary, as on the activity form. It
 sets the Primary Hours or Secondary Hours tag as the activity form does. The duration box
@@ -68,6 +68,14 @@ an activity's title, time, or address. The one exception is Tax credit hours, wh
 its hours tag to an activity with no hours tag, such as an incident made in D4H
 (`Template.apply_tags/4`), so its hours reach the letters as they did when templates
 held the tag. The first template picked wins, and hours someone chose stay.
+
+Enough at and Full at are the other exception (#447). Apply a template sets both, as a
+pair, on an activity that has neither, and only before the start, as it adds the groups'
+members only then (`ApplyTemplate.numbers/4`). Setting one alone could put Full at below
+Enough at. They show in its list with a Remove button, the first template added wins,
+and they go first, as their own `update_activity` row with the numbers alone: no
+request to D4H, and History names them. Add activity's form takes them from the template
+already, so its save sends no second row.
 
 When the details came (2026-10-30), each template's hours tag moved into Tax credit hours
 and left its tags. A template with neither tag got Neither, so applying it still adds no

@@ -515,6 +515,100 @@ defmodule Web.EquipmentLiveTest do
     refute has_element?(lv, "#template-tags #tag-#{secondary.id}")
   end
 
+  test "Change template takes Enough at and Full at, checked as on the activity form (#447)",
+       ctx do
+    template = template_fixture(ctx.team, "Pancake breakfast")
+    path = ~p"/teams/#{ctx.team}/templates/#{template.id}/edit"
+    {:ok, lv, _html} = live(ctx.conn, path)
+
+    html =
+      lv |> form("#template-form", template: %{enough_at: "10", full_at: "8"}) |> render_submit()
+
+    assert html =~ "Enter 10 or more, since Enough at is 10."
+
+    lv |> form("#template-form", template: %{enough_at: "10", full_at: "14"}) |> render_submit()
+    assert_redirect(lv, ~p"/teams/#{ctx.team}/templates/#{template.id}")
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/templates/#{template.id}")
+    assert has_element?(lv, "#template-details", "Enough at")
+    assert has_element?(lv, "#template-details", "14")
+  end
+
+  defp numbers_template(team, title, enough_at, full_at) do
+    team
+    |> template_fixture(title)
+    |> Ecto.Changeset.change(enough_at: enough_at, full_at: full_at)
+    |> Repo.update!()
+  end
+
+  defp coming_activity(team, attrs \\ %{}) do
+    starts_at = DateTime.utc_now() |> DateTime.add(7, :day) |> DateTime.truncate(:second)
+
+    # The refresh's changeset never takes the numbers, so the fixture can't either.
+    team
+    |> activity_fixture(%{started_at: starts_at, finished_at: DateTime.add(starts_at, 3, :hour)})
+    |> Ecto.Changeset.change(attrs)
+    |> Repo.update!()
+  end
+
+  test "a template sets Enough at and Full at on an open activity with neither, sending nothing (#447)",
+       ctx do
+    breakfast = numbers_template(ctx.team, "Pancake breakfast", 10, 14)
+    other = numbers_template(ctx.team, "Barbecue", 3, nil)
+    activity = coming_activity(ctx.team)
+    test_pid = self()
+
+    Req.Test.stub(App.Adapter.D4H, fn
+      %{method: "GET"} = conn ->
+        Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+      conn ->
+        send(test_pid, {:d4h_write, conn.method, conn.request_path})
+        Req.Test.json(conn, %{})
+    end)
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/templates")
+    lv |> element("#add-template-#{breakfast.id}") |> render_click()
+    assert has_element?(lv, "#template-numbers-table #numbers", "10")
+    assert has_element?(lv, "#template-numbers-table #numbers", "14")
+
+    # The first template added wins, and Remove takes the pair.
+    lv |> element("#add-template-#{other.id}") |> render_click()
+    assert has_element?(lv, "#template-numbers-table #numbers", "14")
+    lv |> element("#numbers-remove") |> render_click()
+    refute has_element?(lv, "#template-numbers")
+    lv |> element("#add-template-#{breakfast.id}") |> render_click()
+
+    lv |> form("#template-lines") |> render_submit()
+
+    refute_received {:d4h_write, _method, _path}
+    flash = assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
+    assert flash["info"] == "Enough at 10 and Full at 14 set."
+    assert %{enough_at: 10, full_at: 14} = Repo.get!(Activity, activity.id)
+
+    {:ok, history, _html} =
+      live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/history")
+
+    assert render(history) =~ "Enough at set to 10. Full at set to 14"
+  end
+
+  test "a template leaves the numbers of an activity with either, or one that started (#447)",
+       ctx do
+    breakfast = numbers_template(ctx.team, "Pancake breakfast", 10, 14)
+
+    for {activity, why} <- [
+          {coming_activity(ctx.team, %{full_at: 20}), "the activity has its own."},
+          {activity_fixture(ctx.team), "the activity has started."}
+        ] do
+      {:ok, lv, _html} =
+        live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/templates")
+
+      lv |> element("#add-template-#{breakfast.id}") |> render_click()
+      refute has_element?(lv, "#template-numbers")
+      assert has_element?(lv, "#template-numbers-left-out", why)
+    end
+  end
+
   test "a template gets groups whose members it adds", ctx do
     managers = group_fixture(ctx.team, %{title: "Search Managers"})
     template = template_fixture(ctx.team, "Managers' training")

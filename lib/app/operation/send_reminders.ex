@@ -113,6 +113,16 @@ defmodule App.Operation.SendReminders do
         do: queue(activity, email.member, user, message, now)
   end
 
+  @doc """
+  The message Send reminders starts with (#447): "We need 4 more people." while the
+  activity is short of Enough at (`Activity.more_needed/3`), and empty otherwise. The
+  team admin can change or clear it.
+  """
+  def start_message(nil), do: ""
+
+  def start_message(more) when is_integer(more),
+    do: Service.Format.count(more, one: "We need 1 more person.", many: "We need %d more people.")
+
   @doc "What a call/6 error says."
   def error_text(:none_selected), do: "Select at least 1 member to email."
 

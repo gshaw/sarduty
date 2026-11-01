@@ -369,6 +369,107 @@ defmodule Web.ActivityFormLiveTest do
     assert Repo.reload!(activity).deleted_at
   end
 
+  describe "Enough at and Full at (#447)" do
+    test "a numbers-only save sends nothing, and History says from what to what",
+         %{conn: conn, team: team} do
+      stub()
+      # The refresh's changeset never takes the numbers, so the fixture can't either.
+      activity =
+        team
+        |> activity_fixture(%{title: "Practice", d4h_activity_id: 88})
+        |> Ecto.Changeset.change(enough_at: 8)
+        |> Repo.update!()
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
+      assert has_element?(lv, ~s|#form_enough_at[value="8"]|)
+
+      lv |> form("#activity-form", form: %{enough_at: "10", full_at: "14"}) |> render_submit()
+
+      refute_received {:records, _method, _path, _body}
+      assert %{enough_at: 10, full_at: 14} = Repo.reload!(activity)
+
+      assert [%ChangeSetRow{action: :update_activity, status: :applied} = row] = edit_rows(team)
+      assert row.new_value == %{"enough_at" => 10, "full_at" => 14}
+
+      {:ok, history, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/history")
+      assert render(history) =~ "Enough at changed from 8 to 10. Full at set to 14"
+    end
+
+    test "a mixed save sends the title alone, then sets the numbers",
+         %{conn: conn, team: team} do
+      stub()
+      activity = activity_fixture(team, %{title: "Practice", d4h_activity_id: 88})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
+
+      lv
+      |> form("#activity-form", form: %{title: "Rope practice", full_at: "14"})
+      |> render_submit()
+
+      assert_received {:records, "PATCH", "/exercises/88", body}
+      assert body == %{"referenceDescription" => "Rope practice"}
+      assert Repo.reload!(activity).full_at == 14
+
+      {:ok, history, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/history")
+      assert render(history) =~ "Title changed from Practice to Rope practice. Full at set to 14"
+    end
+
+    test "Full at under Enough at is refused, in the summary too", %{conn: conn, team: team} do
+      activity = activity_fixture(team, %{d4h_activity_id: 88})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
+
+      html =
+        lv |> form("#activity-form", form: %{enough_at: "10", full_at: "8"}) |> render_submit()
+
+      assert html =~ "Enter 10 or more, since Enough at is 10."
+      assert has_element?(lv, ".error-summary", "Enter 10 or more")
+    end
+
+    test "Add activity from a template takes its numbers, on the add's own row",
+         %{conn: conn, team: team} do
+      %{template: template} =
+        template_with_details(team, %{start_time: ~T[09:00:00], enough_at: 10})
+
+      date = Date.utc_today() |> Date.add(7)
+      stub_template_add(team, date)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+      pick_template(lv, template)
+      assert has_element?(lv, ~s|#form_enough_at[value="10"]|)
+      change_start(lv, "#{date}T09:00")
+      lv |> form("#activity-form") |> render_submit()
+      {_path, _flash} = assert_redirect(lv)
+
+      assert %{enough_at: 10, full_at: nil} =
+               Repo.get_by!(App.Model.Activity, team_id: team.id, d4h_activity_id: 88)
+
+      assert [%ChangeSetRow{action: :create_activity} = row] = edit_rows(team)
+      assert row.new_value["enough_at"] == 10
+    end
+
+    test "when the copy hasn't caught up, the flash says to set them with Change activity",
+         %{conn: conn, team: team} do
+      stub()
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/new")
+
+      lv
+      |> form("#activity-form",
+        form: %{
+          title: "Pancake breakfast",
+          starts_at: "2026-11-07T09:00",
+          ends_at: "2026-11-07T13:00",
+          enough_at: "10"
+        }
+      )
+      |> render_submit()
+
+      {path, flash} = assert_redirect(lv)
+      assert path == ~p"/teams/#{team}/activities"
+
+      assert flash["error"] ==
+               "Added Pancake breakfast. Set Enough at and Full at with Change activity once it shows."
+    end
+  end
+
   test "deleting an activity with attendance asks for the box ticked (#651)",
        %{conn: conn, team: team} do
     started = DateTime.utc_now() |> DateTime.add(-7200, :second) |> DateTime.truncate(:second)

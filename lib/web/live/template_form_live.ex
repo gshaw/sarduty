@@ -206,6 +206,7 @@ defmodule Web.TemplateFormLive do
       minutes={@form[:duration_minutes]}
       label="Duration (optional)"
     />
+    <Web.ActivityFormLive.enough_and_full form={@form} />
     <.live_component
       module={PlaceBox}
       id="template"
