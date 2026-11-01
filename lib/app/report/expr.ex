@@ -11,7 +11,6 @@ defmodule App.Report.Expr do
   `{:report_error, %Error{}}`, which App.Report.Compiler catches.
   """
 
-  alias App.Model.Group
   alias App.Repo
   alias App.Report.Catalog
   alias App.Report.Context
@@ -334,8 +333,8 @@ defmodule App.Report.Expr do
   defp arg_choices(:tag, context),
     do: [{"All", "all"} | Catalog.tag_titles(context)]
 
-  defp arg_choices(:group, %Context{team: team}),
-    do: [{"All", "all"} | for({title, id} <- Group.kinds(team), do: {title, "#{id}"})]
+  defp arg_choices(:group, %Context{groups: groups}),
+    do: [{"All", "all"} | for({title, id} <- groups, do: {title, "#{id}"})]
 
   defp no_field(subject, name, others, context) do
     names = subject |> Catalog.shown_fields(context) |> Enum.map(& &1.name) |> Enum.concat(others)

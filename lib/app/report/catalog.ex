@@ -26,6 +26,7 @@ defmodule App.Report.Catalog do
   alias App.Model.Qualification
   alias App.Model.Standing
   alias App.Model.Tag
+  alias App.Model.Team
   alias App.Repo
   alias App.Report.Context
   alias App.Report.Field
@@ -525,7 +526,10 @@ defmodule App.Report.Catalog do
   defp hidden_standings(%Context{team_admin?: false}), do: ["away"]
 
   @doc "The team's tags' titles, as choices."
-  def tag_titles(%Context{team: team}),
+  def tag_titles(%Context{tags: tags}), do: tags
+
+  @doc "The team's tags' titles, as choices, read once for a page's Context (#784)."
+  def read_tag_titles(%Team{} = team),
     do: titles(from(t in Tag, where: t.team_id == ^team.id, select: t.title))
 
   defp group_titles(%Context{team: team}),
