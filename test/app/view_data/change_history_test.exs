@@ -170,7 +170,12 @@ defmodule App.ViewData.ChangeHistoryTest do
   describe "an activity's own saves (#447)" do
     defp activity_row(action, old_value, new_value) do
       ChangeHistory.describe_row(
-        %ChangeSetRow{action: action, old_value: old_value, new_value: new_value},
+        %ChangeSetRow{
+          action: action,
+          old_value: old_value,
+          new_value: new_value,
+          change_set: %App.Model.ChangeSet{source: :edit}
+        },
         :activity,
         @tz
       )
@@ -244,6 +249,17 @@ defmodule App.ViewData.ChangeHistoryTest do
 
       assert activity_row(:update_activity, %{}, %{"custom_values" => %{"1" => "x"}}) ==
                "Fields changed in SAR Duty"
+    end
+
+    test "a chore send keeps its line: its old value holds only the kind" do
+      row = %ChangeSetRow{
+        action: :update_activity,
+        old_value: %{"kind" => "event"},
+        new_value: %{"title" => "Admin chores", "tracking_number" => ""},
+        change_set: %App.Model.ChangeSet{source: :chores}
+      }
+
+      assert ChangeHistory.describe_row(row, :activity, @tz) == "Details changed in SAR Duty"
     end
 
     test "an add names the numbers it set" do

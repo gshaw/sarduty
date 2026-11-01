@@ -308,8 +308,9 @@ defmodule App.ViewData.ChangeHistory do
   @doc """
   One change SAR Duty applied, as a sentence, with times in time zone `tz`. An activity's
   add names the numbers it set, and a change says what each box it changed became, a
-  sentence each (#447). A row with a key no box sends reads "Details changed in SAR
-  Duty". Every other row is describe_row/2.
+  sentence each (#447). A row with a key no box sends, or from a chore send, whose old
+  value holds only the kind, reads "Details changed in SAR Duty". Every other row is
+  describe_row/2.
   """
   def describe_row(%ChangeSetRow{action: :create_activity, new_value: new}, _page, _tz) do
     numbers =
@@ -320,7 +321,12 @@ defmodule App.ViewData.ChangeHistory do
     sentences(["Added in SAR Duty" | numbers])
   end
 
-  def describe_row(%ChangeSetRow{action: :update_activity, new_value: new} = row, page, tz) do
+  def describe_row(
+        %ChangeSetRow{action: :update_activity, new_value: new, change_set: %{source: :edit}} =
+          row,
+        page,
+        tz
+      ) do
     keys = Map.keys(new)
 
     if keys != [] and Enum.all?(keys, &(&1 in @activity_row_keys)) do
