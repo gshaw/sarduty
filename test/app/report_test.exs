@@ -223,14 +223,25 @@ defmodule App.ReportTest do
   test "local dates follow daylight saving time" do
     team = team_fixture(%{timezone: "America/Toronto"})
     # 11:30 pm on June 30 (EDT) and on December 31 (EST).
-    activity_fixture(team, %{started_at: ~U[2026-07-01 03:30:00Z]})
-    activity_fixture(team, %{started_at: ~U[2026-01-01 04:30:00Z]})
+    june = activity_fixture(team, %{started_at: ~U[2026-07-01 03:30:00Z]})
+    december = activity_fixture(team, %{started_at: ~U[2026-01-01 04:30:00Z]})
 
     assert run!(
              "select year(started_at), month(started_at) from activities order by started_at",
              team
            ).rows ==
              [[2025, 12], [2026, 6]]
+
+    # A year compared with one is a range of the stored time (#784), with the same edge.
+    assert run!("select id from activities where year(started_at) = 2025", team).rows ==
+             [[december.id]]
+
+    assert run!("select id from activities where year(started_at) > 2025", team).rows ==
+             [[june.id]]
+
+    assert run!("select id from activities where year(started_at) = :year", team, %{
+             "year" => "2025"
+           }).rows == [[december.id]]
   end
 
   test "a value takes its default, or the one given" do

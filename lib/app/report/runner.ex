@@ -42,10 +42,13 @@ defmodule App.Report.Runner do
     end
   end
 
-  @doc "The values an each's SQL gives (App.Report.Compiler.values/3), decoded as `type`."
+  @doc """
+  The values an each's SQL gives (App.Report.Compiler.values/3), decoded as `type`, with no
+  blank: leaving it out here, not in SQL, reads each row's value once.
+  """
   def values({sql, params}, type) do
     case query(sql, params) do
-      {:ok, %{rows: rows}} -> {:ok, Enum.map(rows, fn [v] -> decode(v, type) end)}
+      {:ok, %{rows: rows}} -> {:ok, for([v] <- rows, v != nil, do: decode(v, type))}
       {:error, error} -> {:error, error}
     end
   end

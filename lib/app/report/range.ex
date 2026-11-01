@@ -25,18 +25,22 @@ defmodule App.Report.Range do
   def day(%Date{} = date, %Context{timezone: timezone}),
     do: {midnight(date, timezone), midnight(Date.add(date, 1), timezone)}
 
+  @doc "One year in `context`'s time zone."
+  def year(year, %Context{timezone: timezone}) when is_integer(year),
+    do: {midnight(Date.new!(year, 1, 1), timezone), midnight(Date.new!(year + 1, 1, 1), timezone)}
+
   defp days("TODAY", _n, today), do: {today, today}
 
   defp days("THIS_MONTH", _n, today),
     do: {Date.beginning_of_month(today), Date.end_of_month(today)}
 
   defp days("LAST_MONTH", _n, today), do: month_before(today)
-  defp days("THIS_YEAR", _n, today), do: year(today.year)
-  defp days("LAST_YEAR", _n, today), do: year(today.year - 1)
+  defp days("THIS_YEAR", _n, today), do: whole_year(today.year)
+  defp days("LAST_YEAR", _n, today), do: whole_year(today.year - 1)
   defp days("NEXT_N_DAYS", n, today), do: {today, Date.add(today, n)}
   defp days("LAST_N_MONTHS", n, today), do: {Date.shift(today, month: -n), today}
 
-  defp year(year), do: {Date.new!(year, 1, 1), Date.new!(year, 12, 31)}
+  defp whole_year(year), do: {Date.new!(year, 1, 1), Date.new!(year, 12, 31)}
 
   defp month_before(today) do
     first = today |> Date.beginning_of_month() |> Date.add(-1) |> Date.beginning_of_month()

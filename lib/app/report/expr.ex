@@ -358,7 +358,10 @@ defmodule App.Report.Expr do
     unless arg.type == :date and arg.params == [],
       do: fail(line, "#{name} takes a date field, such as #{name}(started_at).")
 
-    uses(date_part(name, LocalTime.sql(arg.sql, st.context.timezone), arg, line, st.context), arg)
+    uses(
+      date_part(name, LocalTime.args(arg.sql, st.context.timezone), arg, line, st.context),
+      arg
+    )
   end
 
   defp call(name, false, args, line, st) when name in ["lower", "upper"] do
@@ -404,21 +407,26 @@ defmodule App.Report.Expr do
   defp aggregate(name, _distinct?, arg, line),
     do: fail(line, "#{name} adds up numbers and hours. #{arg.name} is #{type_text(arg.type)}.")
 
-  defp date_part("year", local, _arg, line, _context),
-    do: new(["CAST(strftime('%Y', ", local, ") AS INTEGER)"], [], :year, line, label: "Year")
-
-  defp date_part("month", local, _arg, line, _context),
-    do: new(["CAST(strftime('%m', ", local, ") AS INTEGER)"], [], :month, line, label: "Month")
-
-  defp date_part("quarter", local, _arg, line, _context),
+  # `time` is the column and its local offset, as SQLite's date functions take them.
+  defp date_part("year", time, arg, line, _context),
     do:
-      new(["((CAST(strftime('%m', ", local, ") AS INTEGER) + 2) / 3)"], [], :quarter, line,
+      new(["CAST(strftime('%Y', ", time, ") AS INTEGER)"], [], :year, line,
+        label: "Year",
+        date: arg
+      )
+
+  defp date_part("month", time, _arg, line, _context),
+    do: new(["CAST(strftime('%m', ", time, ") AS INTEGER)"], [], :month, line, label: "Month")
+
+  defp date_part("quarter", time, _arg, line, _context),
+    do:
+      new(["((CAST(strftime('%m', ", time, ") AS INTEGER) + 2) / 3)"], [], :quarter, line,
         label: "Quarter"
       )
 
-  defp date_part("days_since", local, arg, line, context) do
+  defp date_part("days_since", time, arg, line, context) do
     new(
-      ["CAST(julianday(?) - julianday(date(", local, ")) AS INTEGER)"],
+      ["CAST(julianday(?) - julianday(date(", time, ")) AS INTEGER)"],
       [Date.to_iso8601(context.today)],
       :number,
       line,
@@ -502,6 +510,12 @@ defmodule App.Report.Expr do
     do: fail(line, "Compare :#{value.name} with =, <, or >.")
 
   defp value_compare(_kind, op, l, r, _value, line, st), do: compare_sides(op, l, r, line, st)
+
+  # A year compared with one is a range of its date, compared as stored (#784): no row's
+  # local year to work out, and `year(started_at) = 2025` reads as `started_at` in 2025.
+  defp compare_sides(op, %{date: date}, %{value: year}, line, st)
+       when is_integer(year) and year in 1900..2199 and is_map_key(@flip, op),
+       do: dates(op, date, Range.year(year, st.context), line)
 
   defp compare_sides(op, l, r, line, st) do
     {left_sql, left_params} = compared_sql(l)

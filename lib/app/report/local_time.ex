@@ -13,10 +13,11 @@ defmodule App.Report.LocalTime do
   @last ~U[2045-01-01 00:00:00Z]
 
   @doc """
-  SQL for `column`, a UTC time stored as ISO 8601 text, as the local time in `timezone`:
-  SQLite's datetime text, "2026-10-31 14:00:00".
+  `column`, a UTC time stored as ISO 8601 text, and its offset in `timezone`, as the
+  arguments of one of SQLite's date functions: `["date(", args(column, timezone), ")"]` is
+  the local day, "2026-10-31". The function reads the time once and moves it.
   """
-  def sql(column, timezone), do: ["datetime(", column, ", ", offset_sql(column, timezone), ")"]
+  def args(column, timezone), do: [column, ", ", offset_sql(column, timezone)]
 
   @doc "The offset of `column` in `timezone`, as SQLite's datetime modifier: '-25200 seconds'."
   def offset_sql(column, timezone) do

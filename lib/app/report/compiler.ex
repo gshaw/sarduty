@@ -105,7 +105,8 @@ defmodule App.Report.Compiler do
   @doc """
   The values `expr` takes in the subject's rows, for a filter's `each` (#784):
   `{:ok, {:choices, [{label, value}]}}` for a field that holds a few, such as a choice or a
-  list's titles, or `{:ok, {:sql, {sql, params}, type}}` for the SQL that reads the rest.
+  list's titles, or `{:ok, {:sql, {sql, params}, type}}` for the SQL that reads the rest,
+  blanks and all: App.Report.Runner.values/2 leaves them out.
   """
   def values(%Query{} = query, expr, %Context{} = context) do
     with_subject(query, context, %{}, fn st ->
@@ -125,13 +126,7 @@ defmodule App.Report.Compiler do
        when type in [:year, :month, :quarter, :text, :number] do
     {sql, params} = Expr.id_sql(e)
 
-    query =
-      SQL.join([
-        {["SELECT DISTINCT ", sql], params},
-        from_sql(st.subject, [e], st.context),
-        {[" WHERE ", sql, " IS NOT NULL"], params}
-      ])
-
+    query = SQL.join([{["SELECT DISTINCT ", sql], params}, from_sql(st.subject, [e], st.context)])
     {:sql, query, type}
   end
 
