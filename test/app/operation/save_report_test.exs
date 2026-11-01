@@ -40,6 +40,11 @@ defmodule App.Operation.SaveReportTest do
       assert SavedReport.get_by_slug(team, report.slug).query == "select name from members"
     end
 
+    test "a report named New steps around the New report page", %{team: team, user: user} do
+      params = %{"name" => "New", "query" => "select name from members"}
+      assert {:ok, %{slug: "new-2"}} = SaveReport.call(team, user, nil, params)
+    end
+
     test "a query that cannot run is refused, with its line", %{team: team, user: user} do
       params = %{"name" => "Broken", "query" => "select name\nfrom members\nwhere nme = 'x'"}
 

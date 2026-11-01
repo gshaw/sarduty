@@ -71,15 +71,19 @@ defmodule Web.ReportFormLive do
   defp assign_form(socket, changeset), do: assign(socket, form: to_form(changeset, as: "report"))
 
   # Runs the query as it stands, for the rows under it, and keeps the fields beside it on
-  # the last subject that read.
+  # the last subject that read. Typing the name or about leaves the rows as they are.
   defp preview(socket, params) do
     query = Map.get(params, "query") || socket.assigns.form[:query].value || ""
     values = Map.get(params, "values") || socket.assigns.form[:values].value || %{}
     team = socket.assigns.current_team
 
-    socket
-    |> assign(subject: subject(query) || socket.assigns.subject)
-    |> assign_preview(Report.run(query, team, values, socket.assigns.now))
+    if socket.assigns[:ran] == {query, values} do
+      socket
+    else
+      socket
+      |> assign(ran: {query, values}, subject: subject(query) || socket.assigns.subject)
+      |> assign_preview(Report.run(query, team, values, socket.assigns.now))
+    end
   end
 
   defp assign_preview(socket, {:ok, %Result{} = result}) do

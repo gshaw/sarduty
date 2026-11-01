@@ -42,7 +42,8 @@ defmodule App.Operation.SaveReport do
 
   defp put_slug(%Changeset{data: %SavedReport{id: nil}} = changeset, team) do
     name = Changeset.get_field(changeset, :name) || ""
-    taken = Enum.map(BuiltIn.all(), & &1.slug) ++ SavedReport.slugs(team)
+    # /reports/new is the New report page.
+    taken = ["new" | Enum.map(BuiltIn.all(), & &1.slug)] ++ SavedReport.slugs(team)
     Changeset.put_change(changeset, :slug, slug(name, taken))
   end
 

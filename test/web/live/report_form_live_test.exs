@@ -39,6 +39,26 @@ defmodule Web.ReportFormLiveTest do
     assert %SavedReport{name: "Everyone"} = SavedReport.get_by_slug(team, "everyone")
   end
 
+  # A new member after the rows ran shows only if typing the name ran the query again.
+  test "typing the name leaves the rows as they ran", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member_fixture(team, %{name: "Avery Chen"})
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+    query = "select name from members"
+
+    count = fn -> lv |> element("#report-preview-count") |> render() end
+
+    lv |> form("#report-form", report: %{query: query}) |> render_change()
+    before = count.()
+
+    member_fixture(team, %{name: "Blake Diaz"})
+    lv |> form("#report-form", report: %{query: query, name: "Everyone"}) |> render_change()
+    assert count.() == before
+
+    lv |> form("#report-form", report: %{query: query <> " order by name"}) |> render_change()
+    refute count.() == before
+  end
+
   test "Save with a mistake lists it in the error summary", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
