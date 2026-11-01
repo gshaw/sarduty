@@ -42,6 +42,14 @@ text, and keys. `select email from members` answers "Reports leave out contact d
 and `not_seen(days)` is `Member.not_seen_query/4`. A rule that has only a pure function
 gets an SQL twin on its model, with a test that the two agree, before a field reads it.
 
+A field with a `query` is a rule's own query of ids (#784): it's true for the rows the
+rule keeps, `id IN (that query)`, so a rule that's already a query needs no twin.
+`current` is `Activity.overlapping/3` over Current, `recent` is
+`Activity.finished_recently/3`, and `on_team(period)` is `Member.on_team_query/4`. A
+field's arguments are a number of days, a period (`'all'`, a year, or `'90d'`), or a
+tag's title; a period or a tag can be a picked value, as in
+`activity_count(:when, :tag)`, and its menu lists All, then the choices.
+
 Adding a field:
 
 1. Select its column in the subject's `source`, from the rule's home.

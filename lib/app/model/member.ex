@@ -118,6 +118,13 @@ defmodule App.Model.Member do
 
   defp blank?(value), do: value in [nil, ""]
 
+  @doc """
+  Narrows `query` to current, counted members missing a detail: the Members list's
+  Details: Missing, and a report's `details_missing`.
+  """
+  def details_missing_query(query, now),
+    do: query |> current_query(now) |> counted_query() |> missing_details_query()
+
   @doc "Narrows `query` to members `missing_details/1` finds something for."
   def missing_details_query(query) do
     where(
@@ -155,6 +162,21 @@ defmodule App.Model.Member do
       (is_nil(m.left_at) or m.left_at > ^now) and
         (is_nil(m.d4h_status) or m.d4h_status != "RETIRED")
     )
+  end
+
+  @doc """
+  Narrows `query` to members on the team at any point in `period`, a filter's period
+  (Service.Period): joined before it ends and not left before it starts. `"all"` keeps
+  everyone. The Members list's Period, and a report's `on_team(period)`.
+  """
+  def on_team_query(query, period, _timezone, _now) when period in [nil, "all"], do: query
+
+  def on_team_query(query, period, timezone, now) do
+    {start, finish} = Service.Period.bounds(period, timezone, now)
+
+    query
+    |> where([m], is_nil(m.joined_at) or m.joined_at < ^finish)
+    |> where([m], is_nil(m.left_at) or m.left_at >= ^start)
   end
 
   @doc "Pure. current_query/2 for one member. A map without those keys is current."

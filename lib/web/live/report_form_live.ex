@@ -15,6 +15,7 @@ defmodule Web.ReportFormLive do
   alias App.Report
   alias App.Report.Catalog
   alias App.Report.Error
+  alias App.Report.Expr
   alias App.Report.Parser
   alias App.Report.Result
   alias App.ViewData.ReportRecords
@@ -240,8 +241,7 @@ defmodule Web.ReportFormLive do
     """
   end
 
-  defp field_text(%{args: [_ | _]} = field), do: "#{field.name}(365)"
-  defp field_text(field), do: field.name
+  defp field_text(field), do: Expr.example(field)
 
   defp cancel_path(team, nil), do: ~p"/teams/#{team}/reports"
   defp cancel_path(team, saved), do: ~p"/teams/#{team}/reports/#{saved.id}"

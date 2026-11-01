@@ -534,6 +534,23 @@ defmodule App.Model.Activity do
     )
   end
 
+  @doc """
+  How long an activity ran, in whole minutes, for a query joined to
+  `ChoreEvent.totals/1` as `:chores`: a chore activity lasts no time, so it's its members'
+  chores (#575). Activities' Duration sort, and a report's `duration`.
+  """
+  def duration_dynamic do
+    dynamic(
+      [r, chores: c],
+      fragment(
+        "CAST(ROUND(COALESCE(?, (JULIANDAY(?) - JULIANDAY(?)) * 1440.0)) AS INTEGER)",
+        c.minutes,
+        r.finished_at,
+        r.started_at
+      )
+    )
+  end
+
   @doc "Activities that carry the tag titled `title`."
   def tagged(query, title),
     do:
