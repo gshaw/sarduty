@@ -15,6 +15,7 @@ defmodule Web.AccountLive do
   alias App.Model.Member
   alias App.Operation.SetInvitationReminders
   alias App.Operation.SetMapsApp
+  alias Web.Components.OpenInMaps
   alias Web.UserAuth
 
   def mount(_params, session, socket) do
@@ -78,7 +79,10 @@ defmodule Web.AccountLive do
   def handle_event("set-maps-app", %{"maps_app" => app}, socket) do
     case SetMapsApp.call(socket.assigns.current_user, app) do
       {:ok, user} ->
-        {:noreply, assign(socket, :current_user, user)}
+        {:noreply,
+         socket
+         |> assign(:current_user, user)
+         |> put_flash(:info, "Places now open in #{OpenInMaps.app_name(user.maps_app)}.")}
 
       {:error, _changeset} ->
         {:noreply, socket}
