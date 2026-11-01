@@ -35,13 +35,34 @@ defmodule App.Operation.TestIntegration do
   def services, do: @services
 
   @doc """
-  Runs one test. `params` holds what the row's form sent ("to", "team_id"). Returns
+  Whether this server has what a service's test needs, so the page says Not set up here
+  rather than offer a test that can only fail. Production has them all; dev has no
+  Litestream or Honeybadger, and often no Wallet keys or Healthchecks.
+  """
+  def set_up?("backups"), do: R2.configured?()
+  def set_up?("texts"), do: Twilio.configured?()
+  def set_up?("errors"), do: honeybadger_reports?()
+  def set_up?("maps"), do: Mapbox.configured?()
+  def set_up?("health"), do: Healthchecks.configured?()
+  def set_up?("apple"), do: BuildApplePass.configured?()
+  def set_up?("google"), do: BuildGooglePass.configured?()
+  def set_up?(service) when service in @services, do: true
+
+  @doc """
+  Runs one test. `params` holds what the page sent ("to", "team_id"). Returns
   `{:ok, outcome, message}` or `{:error, outcome, message}`, where `outcome` is the
   word the row shows ("sent", "works", "failed", "behind", "stuck") and `message` the
-  toast. An Apple Wallet test that works returns `{:ok, outcome, message, pkpass}`.
+  toast. An Apple Wallet test that works returns `{:ok, outcome, message, pkpass}`. A
+  service that isn't set up here is not called and saves no event.
   """
   def call(service, params, %User{} = user, now \\ DateTime.utc_now())
       when service in @services do
+    if set_up?(service),
+      do: run_and_record(service, params, user, now),
+      else: {:error, "failed", not_set_up(service)}
+  end
+
+  defp run_and_record(service, params, user, now) do
     started = System.monotonic_time(:millisecond)
     # The backup test needs Litestream's newest transaction from before its write, which
     # is this event.
@@ -60,6 +81,14 @@ defmodule App.Operation.TestIntegration do
     Event.put_outcome!(event, elem(result, 1), System.monotonic_time(:millisecond) - started)
     result
   end
+
+  defp not_set_up("backups"), do: "Backup not checked. R2 isn't set up on this server."
+  defp not_set_up("texts"), do: "Test text not sent. Twilio isn't set up on this server."
+  defp not_set_up("errors"), do: "Test error not sent. Honeybadger is off on this server."
+  defp not_set_up("maps"), do: "Token not checked. Mapbox has no token on this server."
+  defp not_set_up("health"), do: "Nothing pinged. No Healthchecks check is set up on this server."
+  defp not_set_up("apple"), do: "Test pass not made. Apple Wallet isn't set up on this server."
+  defp not_set_up("google"), do: "Test pass not made. Google Wallet isn't set up on this server."
 
   defp team_id("d4h", %{"team_id" => id}), do: parse_id(id)
   defp team_id(_service, _params), do: nil
@@ -116,26 +145,17 @@ defmodule App.Operation.TestIntegration do
         {:error, "failed", "Test text not sent. Type a mobile number."}
 
       e164 ->
-        if Twilio.configured?() do
-          text(e164)
-        else
-          {:error, "failed", "Test text not sent. Twilio isn't set up on this server."}
-        end
+        text(e164)
     end
   end
 
   defp run("errors", _params, user, _now) do
-    if honeybadger_reports?() do
-      Honeybadger.notify(%RuntimeError{message: "Integration test from Adminland"},
-        metadata: %{user_id: user.id},
-        fingerprint: "integration-test"
-      )
+    Honeybadger.notify(%RuntimeError{message: "Integration test from Adminland"},
+      metadata: %{user_id: user.id},
+      fingerprint: "integration-test"
+    )
 
-      {:ok, "sent",
-       "Test error sent. It shows in Honeybadger as Integration test from Adminland."}
-    else
-      {:error, "failed", "Test error not sent. Honeybadger is off on this server."}
-    end
+    {:ok, "sent", "Test error sent. It shows in Honeybadger as Integration test from Adminland."}
   end
 
   defp run("d4h", params, _user, _now) do
@@ -163,9 +183,6 @@ defmodule App.Operation.TestIntegration do
 
   defp run("health", _params, user, _now) do
     case Healthchecks.log_all("Integration test from Adminland by #{user.email}") do
-      {:ok, 0} ->
-        {:error, "failed", "Nothing pinged. No Healthchecks check is set up on this server."}
-
       {:ok, count} ->
         {:ok, "sent",
          "Test ping sent. #{Service.Format.count(count, one: "%d check", many: "Each of %d checks")} has a line in its log; none went up or down."}
@@ -176,64 +193,47 @@ defmodule App.Operation.TestIntegration do
   end
 
   defp run("apple", _params, user, now) do
-    if BuildApplePass.configured?() do
-      config = :sarduty |> Application.get_env(:apple_pass) |> Map.new()
-      pkpass = user |> apple_files(config, now) |> Service.ApplePass.package(config)
-
-      {:ok, "works", "Test pass signed. Open it on an iPhone or a Mac to add it to Wallet.",
-       pkpass}
-    else
-      {:error, "failed", "Test pass not made. Apple Wallet isn't set up on this server."}
-    end
+    config = :sarduty |> Application.get_env(:apple_pass) |> Map.new()
+    pkpass = user |> apple_files(config, now) |> Service.ApplePass.package(config)
+    {:ok, "works", "Test pass signed. Open it on an iPhone or a Mac to add it to Wallet.", pkpass}
   rescue
     error -> {:error, "failed", "Test pass not signed. #{Exception.message(error)}"}
   end
 
   defp run("google", _params, user, now) do
-    if BuildGooglePass.configured?() do
-      config = BuildGooglePass.config()
-      class = BuildGooglePass.pass_class(config)
-      object = google_object(class.id, user, config)
+    config = BuildGooglePass.config()
+    class = BuildGooglePass.pass_class(config)
+    object = google_object(class.id, user, config)
 
-      with {:ok, token} <- GoogleWallet.access_token(config.credentials, now),
-           :ok <- GoogleWallet.upsert(token, "genericClass", class),
-           :ok <- GoogleWallet.upsert(token, "genericObject", object) do
-        url = GoogleWallet.save_url(object.id, config.credentials, now)
-        {:ok, "works", "Test pass ready in Google Wallet.", url}
-      else
-        {:error, reason} ->
-          {:error, "failed", "Google Wallet refused the test pass. #{error_text(reason)}"}
-      end
+    with {:ok, token} <- GoogleWallet.access_token(config.credentials, now),
+         :ok <- GoogleWallet.upsert(token, "genericClass", class),
+         :ok <- GoogleWallet.upsert(token, "genericObject", object) do
+      url = GoogleWallet.save_url(object.id, config.credentials, now)
+      {:ok, "works", "Test pass ready in Google Wallet.", url}
     else
-      {:error, "failed", "Test pass not made. Google Wallet isn't set up on this server."}
+      {:error, reason} ->
+        {:error, "failed", "Google Wallet refused the test pass. #{error_text(reason)}"}
     end
   end
 
   # The backup round trip: the test's event is a write, so it waits for Litestream to
   # see a transaction newer than `before`'s, then for a file in R2 that holds it.
-  defp check_backup(before) do
-    cond do
-      not R2.configured?() ->
-        {:error, "failed", "Backup not checked. R2 isn't set up on this server."}
+  defp check_backup({:ok, %{txid: txid} = metrics}) when is_integer(txid) do
+    started = System.monotonic_time(:millisecond)
 
-      not match?({:ok, %{txid: txid}} when is_integer(txid), before) ->
-        {:error, "failed", "Backup not checked. Litestream isn't running on this server."}
-
-      true ->
-        {:ok, metrics} = before
-        started = System.monotonic_time(:millisecond)
-
-        with {:ok, target} <- wait_for_litestream(metrics.txid, started),
-             {:ok, ms} <- wait_for_r2(target, started) do
-          {:ok, "works",
-           "Backup works. A test write reached R2 in #{seconds(ms)}. #{sync_errors(metrics.sync_errors)}"}
-        else
-          {:error, reason} ->
-            {:error, "behind",
-             "Backup behind. A test write didn't reach R2 in #{div(@backup_wait_ms, 1000)} seconds. #{reason}"}
-        end
+    with {:ok, target} <- wait_for_litestream(txid, started),
+         {:ok, ms} <- wait_for_r2(target, started) do
+      {:ok, "works",
+       "Backup works. A test write reached R2 in #{seconds(ms)}. #{sync_errors(metrics.sync_errors)}"}
+    else
+      {:error, reason} ->
+        {:error, "behind",
+         "Backup behind. A test write didn't reach R2 in #{div(@backup_wait_ms, 1000)} seconds. #{reason}"}
     end
   end
+
+  defp check_backup(_before),
+    do: {:error, "failed", "Backup not checked. Litestream isn't running on this server."}
 
   # Litestream sees the write within a second: a transaction newer than the one before.
   defp wait_for_litestream(before_txid, started) do

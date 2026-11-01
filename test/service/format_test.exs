@@ -76,6 +76,16 @@ defmodule Service.FormatTest do
     end
   end
 
+  describe "time_ago/3" do
+    test "counts minutes and hours for a day, then calendar days" do
+      assert @now |> DateTime.add(-4, :minute) |> Format.time_ago(@now, @zone) == "4 min ago"
+      assert @now |> DateTime.add(-23, :hour) |> Format.time_ago(@now, @zone) == "23 hours ago"
+      assert @now |> DateTime.add(-25, :hour) |> Format.time_ago(@now, @zone) == "Yesterday"
+      assert @now |> DateTime.add(-4, :day) |> Format.time_ago(@now, @zone) == "4 days ago"
+      assert Format.time_ago(nil, @now, @zone) == nil
+    end
+  end
+
   describe "day_coming_up/3 and starts_in/2" do
     test "names today and tomorrow in the team's zone, then the date" do
       # 11 p.m. on the 14th in Vancouver, though already the 15th in UTC.

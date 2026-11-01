@@ -70,9 +70,14 @@ defmodule App.Operation.TestIntegrationTest do
              TestIntegration.call("texts", %{"to" => "604-555-0112"}, user)
   end
 
-  test "errors: says when Honeybadger is off here", %{user: user} do
+  test "a service this server doesn't have isn't called, and saves no event", %{user: user} do
+    refute TestIntegration.set_up?("errors")
+    assert TestIntegration.set_up?("email")
+
     assert {:error, "failed", "Test error not sent. Honeybadger is off on this server."} =
              TestIntegration.call("errors", %{}, user)
+
+    assert last_event("errors") == nil
   end
 
   test "website: fetches /health", %{user: user} do

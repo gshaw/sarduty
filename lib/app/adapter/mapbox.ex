@@ -16,6 +16,9 @@ defmodule App.Adapter.Mapbox do
 
   defp access_token, do: config()[:access_token]
 
+  @doc "Whether this server has a Mapbox token."
+  def configured?, do: access_token() not in [nil, ""]
+
   defp config, do: Application.get_env(:sarduty, __MODULE__, [])
 
   @doc """

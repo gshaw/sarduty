@@ -36,16 +36,21 @@ export function listenForConfirms() {
 
 // A question the server asks (#747), in the same dialog: <.confirm_dialog
 // phx-hook="AskDialog" data-confirm-event="…" data-cancel-event="…">. It opens once it's
-// on the page, and closing it sends the event for the answer. Escape is Cancel.
+// on the page, and closing it sends the event for the answer. Escape is Cancel. Fields
+// in the dialog (#789), such as where a test email goes, go with the confirm event, and
+// the first takes the focus.
 export const AskDialog = {
   mounted() {
     this.el.addEventListener("close", () => {
       const {confirmEvent, cancelEvent} = this.el.dataset
-      const event = this.el.returnValue === "confirm" ? confirmEvent : cancelEvent
-      if (event) this.pushEvent(event, {})
+      const confirmed = this.el.returnValue === "confirm"
+      const event = confirmed ? confirmEvent : cancelEvent
+      const values = confirmed ? Object.fromEntries(new FormData(this.el.querySelector("form"))) : {}
+      if (event) this.pushEvent(event, values)
     })
     this.el.showModal()
-    this.el.querySelector("button[value=cancel]").focus()
+    const field = this.el.querySelector("[data-part=fields] input:not([type=hidden])")
+    ;(field || this.el.querySelector("button[value=cancel]")).focus()
   },
 }
 

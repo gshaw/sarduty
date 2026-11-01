@@ -16,6 +16,9 @@ defmodule App.Adapter.Twilio do
     Enum.all?(@settings, &(is_binary(config[&1]) and config[&1] != ""))
   end
 
+  @doc "The number texts come from, in E.164."
+  def from_number, do: config()[:from_number]
+
   @doc "Whether a text really goes to Twilio. False in dev unless DEV_SEND_SMS is set."
   def delivers?, do: config()[:deliver] == true
 

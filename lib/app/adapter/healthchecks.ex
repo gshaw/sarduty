@@ -19,6 +19,13 @@ defmodule App.Adapter.Healthchecks do
     end
   end
 
+  @doc "Whether any check has a ping URL on this server."
+  def configured?,
+    do:
+      Enum.any?(@checks, fn {_check, key} ->
+        Application.get_env(:sarduty, key) not in [nil, ""]
+      end)
+
   @doc """
   Adds a line to each set-up check's log without changing whether it is up or down
   (Adminland's test, #789). `{:ok, count}` of checks pinged, or `{:error, reason}`.
