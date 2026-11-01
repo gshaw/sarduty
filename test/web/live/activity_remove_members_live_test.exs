@@ -74,7 +74,7 @@ defmodule Web.ActivityRemoveMembersLiveTest do
     assert has_element?(lv, "#remove-row-#{ctx.sam.id}", "No email in D4H, so tell them yourself")
     refute has_element?(lv, "#remove-row-#{ctx.drew.id}", "No email")
     refute has_element?(lv, ~s|#remove-form input[name="member_ids[]"][checked]|)
-    assert has_element?(lv, "#remove-send[disabled]", "Remove 0 members")
+    assert has_element?(lv, "#remove-send[disabled]", "Remove members")
     refute has_element?(lv, "#remove-message")
   end
 
