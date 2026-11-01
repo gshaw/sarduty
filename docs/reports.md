@@ -52,9 +52,10 @@ A field with a `query` is a rule's own query of ids (#784): it's true for the ro
 rule keeps, `id IN (that query)`, so a rule that's already a query needs no twin.
 `current` is `Activity.overlapping/3` over Current, `recent` is
 `Activity.finished_recently/3`, and `on_team(period)` is `Member.on_team_query/4`. A
-field's arguments are a number of days, a period (`'all'`, a year, or `'90d'`), or a
-tag's title; a period or a tag can be a picked value, as in
-`activity_count(:when, :tag)`, and its menu lists All, then the choices.
+field's arguments are a number of days, a period (`'all'`, a year, or `'90d'`), a tag's
+title, or a group's title; a period, a tag, or a group can be a picked value, as in
+`activity_count(:when, :tag)`, and its menu lists All, then the choices. A picked group
+is its id, as Members' Group filter has always linked (`in_group(:group)`).
 
 Adding a field:
 
@@ -94,7 +95,9 @@ page 50
 - `switch` is the tiles, All first. Each counts its rows with every other pick on and the
   search off, all in one query; a query that groups counts each tile's groups on its own.
 - `filter` is a menu, All first. `required` drops All, `default` picks where it starts (a
-  value, or `THIS_YEAR`), and `more` puts it behind More filters.
+  value, or `THIS_YEAR`), and `more` puts it behind More filters. A filter with neither
+  options nor `each` shows the menu of the value its name gives a field: `filter when
+'Period'` with `on_team(:when)` lists All, the last 30 to 365 days, and the years.
 - `option` is a value for the URL, a label, the `where` it adds, and the sort it picks,
   if any. `each` makes an option for each value of a field: each year, a choice's
   values, or a list's titles.
@@ -103,7 +106,10 @@ page 50
 - `page` shows that many rows at a time, and sorts by `id` last so no row lands on two.
 
 A pick is a `:name` value, like `:year`, and rides in the URL by name, so the `reports`
-table keeps no more than it did. `App.Report.Picks` turns the picks into a plain query,
+table keeps no more than it did. A pick can name several options, as the attendance
+check's link to Members does with `standing=active,away`: their `where`s are ORed, and
+the menu says "Active or away". A switch's pick with no tile shows as a menu in the bar.
+A value no menu has starts the control where it starts, its default or All. `App.Report.Picks` turns the picks into a plain query,
 so the catalog checks every name and the limits hold. Before anything runs, every
 option, each, search, and sort is checked as the query's own is, and a mistake names its
 part: `Line 5, option draft: activities has no field publshed.` A filter whose value the
@@ -130,10 +136,20 @@ Save as report opens New report on the list's text, with the picks as its values
 its name: `/reports/new?list=activities&activity=exercise`. A copy draws plain report
 cells, not the list's own. Lists are not on the Reports page.
 
-A field can say which teams may read it (`shown` in `App.Report.Field`). To a team that
-may not, it's no field, and an option, sort, or search that reads it drops out of the
-page, as Records teams have no Required fields filter. The text has no rule of its own
-for who sees what.
+A field can say which teams, and which viewers, may read it (`shown` in
+`App.Report.Field`). To one that may not, it's no field, and an option, sort, or search
+that reads it drops out of the page, as Records teams have no Required fields filter. A
+choice can hide some of its values from a viewer too (`hidden_choices`), and an option
+that compares with one drops out. The text has no rule of its own for who sees what.
+
+A page runs as a team admin unless it's given `team_admin?: false`, for a member
+(decision 4 of #784). A member can't read Details missing, Not seen, Holds
+items, or D4H access, so those filters go. Their `standing` is `Standing.visible/2`'s:
+someone away is Active, so they get the Active tile, and its count can't give away who
+is away. Reports themselves are only for team admins.
+
+`App.Report.ids/4` gives the ids of every row the picks keep without reading the
+fields the list shows, so a count elsewhere can agree with the list it links to.
 
 ## Dates and time zones
 

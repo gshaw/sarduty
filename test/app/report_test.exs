@@ -703,4 +703,160 @@ defmodule App.ReportTest do
                "Line 3, filter f: Write each with a field it can list, such as year(started_at), kind, or member.groups."
     end
   end
+
+  describe "who reads it, several picks, and menus from values (#784)" do
+    @members """
+    select name, activity_count(:when, :tag)
+    from members
+    where on_team(:when) and in_group(:group)
+    order by name
+    switch standing 'Standing' default current
+      option current 'Not retired' where current = true
+      option active 'Active' where standing = 'active'
+      option away 'Away' where standing = 'away'
+      option retired 'Retired' where standing = 'retired'
+    filter when 'Period' default THIS_YEAR
+    filter group 'Group'
+    filter tag 'Tag' more
+    filter items 'Items'
+      option held 'Holds some' where holds_items = true
+    """
+
+    defp names(view) do
+      ids = Enum.map(view.result.rows, &hd/1)
+      Member |> where([m], m.id in ^ids) |> Repo.all() |> Enum.map(& &1.name) |> Enum.sort()
+    end
+
+    defp tiles(view), do: Map.new(view.switch.tiles, &{&1.value, &1.count})
+
+    setup do
+      team = team_fixture(%{timezone: "America/Vancouver"})
+      tag_fixture(team, "Rope")
+      callout = group_fixture(team, %{title: "Callout"})
+      joined = ~U[2020-01-01 00:00:00Z]
+
+      avery = member_fixture(team, %{name: "Avery Chen", joined_at: joined})
+      blake = member_fixture(team, %{name: "Blake Morrison", joined_at: joined})
+
+      casey =
+        member_fixture(team, %{
+          name: "Casey Dhillon",
+          joined_at: joined,
+          left_at: ~U[2025-03-01 00:00:00Z]
+        })
+
+      away_period_fixture(blake, ~D[2026-06-01], ~D[2026-06-30])
+      group_member_fixture(callout, avery)
+
+      rope =
+        activity_fixture(team, %{
+          tags: ["Rope"],
+          started_at: ~U[2026-03-01 18:00:00Z],
+          finished_at: ~U[2026-03-01 20:00:00Z]
+        })
+
+      attendance_fixture(rope, avery, %{duration_in_minutes: 120})
+
+      %{team: team, callout: callout, avery: avery, blake: blake, casey: casey}
+    end
+
+    test "a team admin sees Away; a member reads it as Active and loses its option", %{
+      team: team
+    } do
+      {:ok, admin} = Report.page(@members, team, %{}, @now)
+
+      assert tiles(admin) == %{
+               "all" => 2,
+               "current" => 2,
+               "active" => 1,
+               "away" => 1,
+               "retired" => 0
+             }
+
+      assert Enum.map(admin.filters, & &1.name) == ~w(when group tag items)
+
+      {:ok, member} = Report.page(@members, team, %{}, @now, team_admin?: false)
+      assert tiles(member) == %{"all" => 2, "current" => 2, "active" => 2, "retired" => 0}
+      assert Enum.map(member.filters, & &1.name) == ~w(when group tag)
+
+      # A member's URL that names what they can't see starts where the page starts.
+      {:ok, member} =
+        Report.page(@members, team, %{"standing" => "away", "items" => "held"}, @now,
+          team_admin?: false
+        )
+
+      assert member.switch.picked == "current"
+      assert names(member) == ["Avery Chen", "Blake Morrison"]
+      assert member.params == %{}
+    end
+
+    test "several picks OR their wheres, and the menu names them", %{team: team} do
+      {:ok, view} = Report.page(@members, team, %{"standing" => "active,away"}, @now)
+
+      assert names(view) == ["Avery Chen", "Blake Morrison"]
+      assert view.switch.picked == "active,away"
+      assert view.params == %{"standing" => "active,away"}
+      assert {"Active or away", "active,away"} in view.switch.options
+      assert hd(view.switch.options) == {"All", "all"}
+
+      {:ok, view} = Report.page(@members, team, %{"standing" => "away,active"}, @now)
+      assert view.switch.picked == "active,away"
+
+      {:ok, view} = Report.page(@members, team, %{"standing" => "active,nope"}, @now)
+      assert view.switch.picked == "current"
+    end
+
+    test "a filter without options shows its value's menu and feeds its fields", %{
+      team: team,
+      callout: callout,
+      avery: avery
+    } do
+      {:ok, view} = Report.page(@members, team, %{}, @now)
+      [period, group, tag, _items] = view.filters
+
+      assert %{picked: "2026", default: "2026"} = period
+      assert [{"All", "all"}, {"Last 30 days", "30d"} | _] = period.options
+      assert {"2026", "2026"} in period.options
+      assert group.options == [{"All", "all"}, {"Callout", Integer.to_string(callout.id)}]
+      assert %{picked: "all", more: true, options: [{"All", "all"}, {"Rope", "Rope"}]} = tag
+
+      {:ok, view} = Report.page(@members, team, %{"when" => "all"}, @now)
+      assert names(view) == ["Avery Chen", "Blake Morrison"]
+
+      {:ok, view} =
+        Report.page(@members, team, %{"when" => "all", "standing" => "all"}, @now)
+
+      assert names(view) == ["Avery Chen", "Blake Morrison", "Casey Dhillon"]
+
+      {:ok, view} = Report.page(@members, team, %{"group" => "#{callout.id}"}, @now)
+      assert view.result.rows == [[avery.id, 1]]
+      assert view.params == %{"group" => "#{callout.id}"}
+
+      {:ok, view} = Report.page(@members, team, %{"tag" => "Rope", "when" => "30d"}, @now)
+      assert Enum.map(view.result.rows, &List.last/1) == [0, 0]
+    end
+
+    test "in_group takes a group's title", %{team: team, avery: avery} do
+      assert ids("select id from members where in_group('callout')", team) == [avery.id]
+
+      assert error("select id from members where in_group('Nope')", team) ==
+               "Line 1: Write in_group('Callout'): there is no group 'Nope'."
+    end
+
+    test "ids/4 keeps the rows the picks keep, by id", %{team: team, avery: avery, blake: blake} do
+      assert Report.ids(@members, team, %{"standing" => "active,away"}, @now) ==
+               {:ok, Enum.sort([avery.id, blake.id])}
+
+      assert Report.ids(@members, team, %{"items" => "held"}, @now) == {:ok, []}
+    end
+
+    test "a filter with no choices must name a value a field takes", %{team: team} do
+      text = "select name from members\nfilter period 'Period'"
+
+      assert {:error, error} = Report.page(text, team, %{}, @now)
+
+      assert Error.text(error) ==
+               "Line 2: Write an option or each under filter period, or pass :period to a field, such as on_team(:period)."
+    end
+  end
 end

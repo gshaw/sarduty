@@ -52,12 +52,37 @@ defmodule App.Report do
   end
 
   @doc """
+  The ids of the rows `text` keeps for `given`'s picks, by id: every row, without
+  reading the fields it shows, so a count can agree with the list it links to (#784).
+  """
+  def ids(text, %Team{} = team, given \\ %{}, now \\ DateTime.utc_now()) do
+    context = Context.new(team, now)
+
+    with {:ok, query} <- parse(text, context),
+         :ok <- check_page(query, context, given) do
+      picks = Picks.resolve(query, given, context.today)
+
+      with {:ok, plan} <- query |> ids_plain(picks) |> Compiler.compile(context, picks.given),
+           {:ok, result} <- Runner.run(plan, team.timezone) do
+        {:ok, Enum.map(result.rows, &hd/1)}
+      end
+    end
+  end
+
+  defp ids_plain(query, picks) do
+    id = {:field, ["id"], [], query.from_line}
+    %{Picks.plain(query, picks) | select: [id], order_by: [{id, :asc}], labels: []}
+  end
+
+  @doc """
   Runs `text` as a page (#784): `{:ok, %App.Report.View{}}` with one page of rows, the
   total, each tile's count, and each control's menu, or `{:error, %App.Report.Error{}}`.
-  `given` is the URL's params: the values, the picks, `q`, `sort`, and `page`.
+  `given` is the URL's params: the values, the picks, `q`, `sort`, and `page`. With
+  `team_admin?: false` it's a member's page: the catalog's fields and values for members,
+  and only the controls that read them.
   """
-  def page(text, %Team{} = team, given \\ %{}, now \\ DateTime.utc_now()) do
-    context = Context.new(team, now)
+  def page(text, %Team{} = team, given \\ %{}, now \\ DateTime.utc_now(), opts \\ []) do
+    context = Context.new(team, now, opts)
 
     with {:ok, query} <- parse(text, context),
          :ok <- check_page(query, context, given),
@@ -81,11 +106,14 @@ defmodule App.Report do
     end
   end
 
+  # A filter that had choices and lost them all goes; one that never had any takes its
+  # menu from its value.
   defp drop_hidden(query, hidden?) do
     filters =
       query.filters
-      |> Enum.map(&visible_filter(&1, hidden?))
-      |> Enum.reject(&(&1.options == [] and &1.each == nil))
+      |> Enum.map(&{&1, visible_filter(&1, hidden?)})
+      |> Enum.reject(fn {filter, visible} -> no_choices?(visible) and not no_choices?(filter) end)
+      |> Enum.map(&elem(&1, 1))
 
     %{
       query
@@ -94,6 +122,8 @@ defmodule App.Report do
         sorts: Enum.reject(query.sorts, &hidden?.(&1.order))
     }
   end
+
+  defp no_choices?(filter), do: filter.options == [] and filter.each == nil
 
   defp visible_filter(filter, hidden?) do
     each = filter.each && !hidden?.({filter.each.expr, filter.each.where}) && filter.each
@@ -216,10 +246,42 @@ defmodule App.Report do
     options = Enum.map(switch.options, &{&1.value, &1.label, {:option, &1}})
 
     with {:ok, tiles} <- counts(all ++ options, query, picks, context) do
-      picked = Picks.value(picks.filters[switch.name]) || "all"
-      {:ok, %{name: switch.name, label: switch.label, picked: picked, tiles: tiles}}
+      pick = picks.filters[switch.name]
+
+      {:ok,
+       %{
+         name: switch.name,
+         label: switch.label,
+         picked: Picks.value(pick) || "all",
+         default: switch_default(switch),
+         tiles: tiles,
+         options: menu_options(switch, pick, [])
+       }}
     end
   end
+
+  defp switch_default(switch) do
+    cond do
+      switch.default -> switch.default
+      switch.required -> hd(switch.options).value
+      true -> "all"
+    end
+  end
+
+  # A menu's choices: All first unless it's required, the options, several picked at
+  # once as one more ("Active or away"), then each value.
+  defp menu_options(filter, pick, each) do
+    all = if filter.required, do: [], else: [{"All", "all"}]
+    options = Enum.map(filter.options, &{&1.label, &1.value})
+    all ++ options ++ several(pick) ++ each
+  end
+
+  defp several({:options, options} = pick) do
+    [first | rest] = Enum.map(options, & &1.label)
+    [{Enum.join([first | Enum.map(rest, &String.downcase/1)], " or "), Picks.value(pick)}]
+  end
+
+  defp several(_pick), do: []
 
   # One pass counts every tile; a query that groups counts each tile's groups on its own.
   defp counts(tiles, query, picks, context) do
@@ -262,18 +324,16 @@ defmodule App.Report do
   defp filter_menu(%{kind: :switch}, _picks, _menus, _result, _starts, _context), do: []
 
   defp filter_menu(filter, picks, menus, result, starts, context) do
-    all = if filter.required, do: [], else: [{"All", "all"}]
-    options = Enum.map(filter.options, &{&1.label, &1.value})
-    each = Map.get(menus, filter.name, [])
+    pick = picks.filters[filter.name]
 
     [
       %{
         name: filter.name,
         label: filter.label,
-        picked: picked(picks.filters[filter.name], filter.name, result),
+        picked: picked(pick, filter.name, result),
         default: filter_default(filter, context, starts),
         more: filter.more,
-        options: all ++ options ++ each
+        options: menu_options(filter, pick, Map.get(menus, filter.name, []))
       }
     ]
   end
@@ -300,14 +360,7 @@ defmodule App.Report do
   end
 
   defp defaults(query, filters) do
-    switch =
-      for %{kind: :switch} = s <- query.filters, into: %{} do
-        cond do
-          s.default -> {s.name, s.default}
-          s.required -> {s.name, hd(s.options).value}
-          true -> {s.name, "all"}
-        end
-      end
+    switch = for %{kind: :switch} = s <- query.filters, into: %{}, do: {s.name, switch_default(s)}
 
     filters |> Map.new(&{&1.name, &1.default}) |> Map.merge(switch)
   end
@@ -355,16 +408,34 @@ defmodule App.Report do
     end
   end
 
-  # Each filter's `each` values, read once per page.
+  # Each filter's `each` values, read once per page, and the menus of the values that
+  # filters without choices of their own name.
   defp menus(query, context) do
     query.filters
     |> Enum.filter(& &1.each)
-    |> Enum.reduce_while({:ok, %{}}, fn filter, {:ok, acc} ->
+    |> Enum.reduce_while({:ok, value_menus(query, context)}, fn filter, {:ok, acc} ->
       case each_menu(query, filter, context) do
         {:ok, menu} -> {:cont, {:ok, Map.put(acc, filter.name, menu)}}
         {:error, error} -> {:halt, {:error, Error.in_part(error, "filter #{filter.name}")}}
       end
     end)
+  end
+
+  # A value's own choices but its All, which the menu adds unless the filter is required.
+  defp value_menus(query, context) do
+    case Enum.filter(query.filters, &no_choices?/1) do
+      [] ->
+        %{}
+
+      filters ->
+        {:ok, plan} = query |> Picks.clear() |> Compiler.compile(context, %{})
+        names = Enum.map(filters, & &1.name)
+
+        for %Value{name: name, choices: choices} <- plan.values,
+            name in names,
+            into: %{},
+            do: {name, Enum.reject(choices, &(elem(&1, 1) == "all"))}
+    end
   end
 
   defp each_menu(query, filter, context) do
@@ -410,10 +481,29 @@ defmodule App.Report do
     base = Picks.clear(query)
 
     with {:ok, plan} <- Compiler.compile(base, context, given),
+         :ok <- check_choices(query, plan),
          :ok <- check_required(query),
          :ok <- check_search(base, query, context, given),
          :ok <- check_filters(base, query, context, given) do
       check_sorts(base, query, plan, context, given)
+    end
+  end
+
+  # A filter without options or each must name a value a field takes, whose menu it
+  # shows, as `filter when 'Period'` does for `on_team(:when)`.
+  defp check_choices(query, plan) do
+    values = for %Value{kind: :choice, name: name} <- plan.values, do: name
+
+    case Enum.find(query.filters, &(no_choices?(&1) and &1.name not in values)) do
+      nil ->
+        :ok
+
+      filter ->
+        {:error,
+         Error.new(
+           filter.line,
+           "Write an option or each under #{filter.kind} #{filter.name}, or pass :#{filter.name} to a field, such as on_team(:#{filter.name})."
+         )}
     end
   end
 

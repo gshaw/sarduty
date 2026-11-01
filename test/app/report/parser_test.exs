@@ -157,8 +157,8 @@ defmodule App.Report.ParserTest do
       assert page_error(base <> "filter q 'Search'\n  option a 'A'") ==
                "Line 2: Name the filter something other than q: the page uses it."
 
-      assert page_error(base <> "filter status 'Status'") ==
-               "Line 2: Write an option or each under filter status."
+      assert page_error(base <> "switch status 'Status'") ==
+               "Line 2: Write an option under switch status: each is a tile."
 
       assert page_error(base <> "page 50\nsearch title") == "Line 3: Move search before page."
       assert page_error(base <> "page 0") =~ "Line 2: Write how many rows a page shows"

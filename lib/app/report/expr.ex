@@ -11,6 +11,7 @@ defmodule App.Report.Expr do
   `{:report_error, %Error{}}`, which App.Report.Compiler catches.
   """
 
+  alias App.Model.Group
   alias App.Repo
   alias App.Report.Catalog
   alias App.Report.Context
@@ -282,12 +283,14 @@ defmodule App.Report.Expr do
   defp arg_example(:days), do: "365"
   defp arg_example(:period), do: "'2026'"
   defp arg_example(:tag), do: "'all'"
+  defp arg_example(:group), do: "'Callout'"
 
   defp takes(field), do: "it takes " <> Enum.map_join(field.args, " and ", &arg_text/1)
 
   defp arg_text(:days), do: "a number of days"
   defp arg_text(:period), do: "a period: 'all', a year, or '90d'"
   defp arg_text(:tag), do: "a tag's title, or 'all'"
+  defp arg_text(:group), do: "a group's title, or 'all'"
 
   defp arg(:days, {:literal, n, _}, _field, _line, _st) when is_integer(n) and n > 0, do: {n, nil}
 
@@ -302,7 +305,18 @@ defmodule App.Report.Expr do
 
   defp arg(:tag, {:literal, text, _}, _field, _line, _st) when is_binary(text), do: {text, nil}
 
-  defp arg(kind, {:value, name, _}, _field, _line, st) when kind in [:period, :tag] do
+  # A group by its title; picked, by its id, as Members' Group filter links (#784).
+  defp arg(:group, {:literal, text, _}, field, line, st) when is_binary(text) do
+    lower = String.downcase(text)
+    titled? = fn {title, _id} -> String.downcase(title) == lower end
+
+    case :group |> arg_choices(st.context) |> Enum.find(titled?) do
+      {_title, id} -> {id, nil}
+      nil -> fail(line, "Write #{example(field)}: there is no group '#{text}'.")
+    end
+  end
+
+  defp arg(kind, {:value, name, _}, _field, _line, st) when kind in [:period, :tag, :group] do
     choices = arg_choices(kind, st.context)
     picked = Value.pick(:choice, Map.get(st.given, name), choices, st.context.today)
 
@@ -319,6 +333,9 @@ defmodule App.Report.Expr do
 
   defp arg_choices(:tag, context),
     do: [{"All", "all"} | Catalog.tag_titles(context)]
+
+  defp arg_choices(:group, %Context{team: team}),
+    do: [{"All", "all"} | for({title, id} <- Group.kinds(team), do: {title, "#{id}"})]
 
   defp no_field(subject, name, others, context) do
     names = subject |> Catalog.shown_fields(context) |> Enum.map(& &1.name) |> Enum.concat(others)

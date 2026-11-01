@@ -159,6 +159,26 @@ defmodule App.Model.Standing do
     )
   end
 
+  @doc """
+  dynamic/1 as `team_admin?` sees it, visible/2 in SQL: to a member, someone away is
+  "active" (#784). The query needs join/3.
+  """
+  def visible_dynamic(now, true = _team_admin?), do: __MODULE__.dynamic(now)
+
+  def visible_dynamic(now, false = _team_admin?) do
+    current = Member.current_dynamic(now)
+
+    dynamic(
+      [m, retiring: r],
+      fragment(
+        "CASE WHEN NOT (?) THEN 'retired' WHEN ? THEN 'not_a_person' WHEN ? IS NOT NULL THEN 'retiring' ELSE 'active' END",
+        ^current,
+        m.not_a_person,
+        r.member_id
+      )
+    )
+  end
+
   @doc "The kind of a standing, without the away period: `:away` for `{:away, period}`."
   def kind({:away, _period}), do: :away
   def kind(standing) when is_atom(standing), do: standing

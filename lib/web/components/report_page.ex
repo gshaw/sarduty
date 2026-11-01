@@ -34,10 +34,23 @@ defmodule Web.Components.ReportPage do
   attr :count, :string, default: nil, doc: "the line over the rows, when not the count"
   attr :marker, :any, default: nil, doc: "a tile's value to its marker, or nil for none"
 
+  attr :combobox, :list,
+    default: [],
+    doc: "the filters drawn as a combobox, by name: those that list the team's own names"
+
   slot :table, doc: "the page's own table for the rows, in place of the report's cells"
 
   def report_page(assigns) do
-    assigns = assign(assigns, bar?: assigns.view.search? or assigns.view.filters != [])
+    view = assigns.view
+    switch_menu = switch_menu(view)
+    filters = Enum.map(List.wrap(switch_menu) ++ view.filters, &menu(&1, assigns.combobox))
+
+    assigns =
+      assign(assigns,
+        bar?: view.search? or filters != [],
+        filters: filters,
+        switch_menu?: switch_menu != nil
+      )
 
     ~H"""
     <.stat_switch :if={@view.switch} id={"#{@id}-switch"} label={@view.switch.label}>
@@ -63,16 +76,17 @@ defmodule Web.Components.ReportPage do
       clear={@path_fn.(:clear)}
       path_fn={@path_fn}
       page={@view.page}
-      hidden={hidden(@form, @view)}
+      hidden={hidden(@form, @view, @switch_menu?)}
     >
       <:search :if={@view.search?} field={@form["q"]} />
       <:filter
-        :for={filter <- @view.filters}
-        field={@form[filter.name]}
+        :for={filter <- @filters}
+        field={field(@form, filter)}
         label={filter.label}
         options={filter.options}
         default={filter.default || ""}
         more={filter.more}
+        type={filter.type}
       />
     </.filter_bar>
 
@@ -176,10 +190,42 @@ defmodule Web.Components.ReportPage do
   defp repeats?(%View{switch: switch, total: total}),
     do: Enum.any?(switch.tiles, &(&1.value == switch.picked and &1.count == total))
 
-  defp hidden(form, view) do
-    switch = if view.switch, do: [form[view.switch.name]], else: []
+  # The switch rides in the form unless its menu shows it.
+  defp hidden(form, view, switch_menu?) do
+    switch = if view.switch && !switch_menu?, do: [form[view.switch.name]], else: []
     [form["sort"] | switch]
   end
+
+  # A switch whose pick has no tile, such as All with no All tile, or several picks at
+  # once, shows as a menu in the bar, first.
+  defp switch_menu(%View{switch: nil}), do: nil
+
+  defp switch_menu(%View{switch: switch}) do
+    unless Enum.any?(switch.tiles, &(&1.value == switch.picked)),
+      do: %{
+        name: switch.name,
+        label: switch.label,
+        picked: switch.picked,
+        default: switch.default,
+        more: false,
+        options: switch.options
+      }
+  end
+
+  # A combobox's empty choice is All, so its options leave All out.
+  defp menu(filter, combobox) do
+    if filter.name in combobox,
+      do:
+        Map.merge(filter, %{type: "combobox", options: List.keydelete(filter.options, "all", 1)}),
+      else: Map.put(filter, :type, "select")
+  end
+
+  defp field(form, %{type: "combobox"} = filter) do
+    field = form[filter.name]
+    if field.value == "all", do: %{field | value: ""}, else: field
+  end
+
+  defp field(form, filter), do: form[filter.name]
 
   # In the editor, a pick is an event the form takes.
   defp pick(name, value), do: JS.push("pick", value: %{name: name, value: value})

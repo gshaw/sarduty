@@ -192,6 +192,26 @@ defmodule Web.ReportLiveTest do
       assert has_element?(lv, "#report-tile-all", "3")
     end
 
+    test "several picks at once show as the switch's menu in the bar", ctx do
+      %{conn: conn, user: user, team: team, report: report} = ctx
+      path = ~p"/teams/#{team}/reports/#{report.id}"
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(path <> "?activity=incident,exercise")
+
+      refute has_element?(lv, "#report-switch [aria-current]")
+
+      assert has_element?(
+               lv,
+               "#report-filters select[name='values[activity]'] option[selected]",
+               "Incidents or exercises"
+             )
+
+      lv |> form("#report-filters", values: %{activity: "incident"}) |> render_change()
+      assert_patch(lv, path <> "?activity=incident")
+      refute has_element?(lv, "#report-filters select[name='values[activity]']")
+    end
+
     test "Download CSV gives every row the picks keep", ctx do
       %{conn: conn, user: user, team: team, report: report} = ctx
 

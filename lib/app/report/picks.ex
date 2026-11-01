@@ -4,8 +4,10 @@ defmodule App.Report.Picks do
   sort, and the page, read from the URL's params. `plain/3` turns them into a plain query
   for App.Report.Compiler, so a pick is never more than a `where` and an `order by`. Pure.
 
-  - `filters`: by name, `:all`, `{:option, option}`, `{:each, value}`, or `:each_default`
-    (a required filter with nothing picked: the value's own default, such as this year)
+  - `filters`: by name, `:all`, `{:option, option}`, `{:options, [option]}` (several,
+    as the URL's `standing=active,away`: their `where`s are ORed), `{:each, value}`, or
+    `:each_default` (a required filter with nothing picked: the value's own default,
+    such as this year). A value no menu has starts the filter where it starts.
   - `given`: the values the query runs with, the URL's and the picks'
   - `sort`: the sort the rows have, as the URL writes it (`"date"` or `"date-"`), or nil
   """
@@ -32,19 +34,34 @@ defmodule App.Report.Picks do
   end
 
   defp pick(filter, params, today, menus) do
-    raw = blank(params[filter.name]) || default(filter.default, today)
-    option = Enum.find(filter.options, &(&1.value == raw))
+    picked(filter, blank(params[filter.name]), menus) ||
+      picked(filter, default(filter.default, today), menus) ||
+      if(filter.required, do: first(filter), else: :all)
+  end
 
+  defp picked(_filter, nil, _menus), do: nil
+  defp picked(%{required: true}, "all", _menus), do: nil
+  defp picked(_filter, "all", _menus), do: :all
+
+  defp picked(filter, raw, menus) do
     cond do
-      option -> {:option, option}
-      raw in [nil, "all"] and not filter.required -> :all
-      raw not in [nil, "all"] and in_menu?(filter, raw, menus) -> {:each, raw}
-      filter.required -> first(filter)
-      true -> :all
+      option = Enum.find(filter.options, &(&1.value == raw)) -> {:option, option}
+      options = several(filter, raw) -> {:options, options}
+      in_menu?(filter, raw, menus) -> {:each, raw}
+      true -> nil
     end
   end
 
-  defp in_menu?(%{each: nil}, _raw, _menus), do: false
+  # `active,away`: two or more of the options, in the menu's order.
+  defp several(filter, raw) do
+    values = raw |> String.split(",") |> Enum.map(&String.trim/1) |> Enum.uniq()
+    options = Enum.filter(filter.options, &(&1.value in values))
+    if length(values) > 1 and length(options) == length(values), do: options
+  end
+
+  # A filter with neither options nor each takes its menu from the value it names, as
+  # Period's is `on_team(:when)`'s.
+  defp in_menu?(%{each: nil, options: [_ | _]}, _raw, _menus), do: false
 
   defp in_menu?(filter, raw, menus) do
     case Map.fetch(menus, filter.name) do
@@ -93,6 +110,7 @@ defmodule App.Report.Picks do
   def value(pick), do: picked_value(pick)
 
   defp picked_value({:option, option}), do: option.value
+  defp picked_value({:options, options}), do: Enum.map_join(options, ",", & &1.value)
   defp picked_value({:each, value}), do: value
   defp picked_value(_pick), do: nil
 
@@ -187,6 +205,13 @@ defmodule App.Report.Picks do
   defp condition(_filter, :all), do: []
   defp condition(_filter, {:option, %{where: nil}}), do: []
   defp condition(_filter, {:option, %{where: where}}), do: [where]
+
+  defp condition(_filter, {:options, options}) do
+    if Enum.any?(options, &is_nil(&1.where)),
+      do: [],
+      else: [options |> Enum.map(& &1.where) |> Enum.reduce(&{:op, :or, &2, &1, Query.line(&1)})]
+  end
+
   defp condition(%{each: %{where: where}}, pick) when where != nil and pick != :all, do: [where]
   defp condition(_filter, _pick), do: []
 
