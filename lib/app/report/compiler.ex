@@ -14,7 +14,6 @@ defmodule App.Report.Compiler do
 
   import Ecto.Query, only: [from: 2, subquery: 1]
 
-  alias App.Repo
   alias App.Report.Catalog
   alias App.Report.Context
   alias App.Report.Error
@@ -115,7 +114,7 @@ defmodule App.Report.Compiler do
   The values `expr` takes in the subject's rows, for a filter's `each` (#784):
   `{:ok, {:choices, [{label, value}]}}` for a field that holds a few, such as a choice or a
   list's titles, or `{:ok, {:sql, {sql, params}, type}}` for the SQL that reads the rest,
-  blanks and all: App.Report.Runner.values/2 leaves them out.
+  blanks and all: App.Report.Runner.values/3 leaves them out.
   """
   def values(%Query{} = query, expr, %Context{} = context) do
     with_subject(query, context, %{}, fn st ->
@@ -411,7 +410,7 @@ defmodule App.Report.Compiler do
   # The source's columns by name, wrapped so each keeps its name in SQL.
   defp source(%Subject{source: source}, context, columns) do
     query = from(s in subquery(context |> source.() |> Source.query(columns)), select: s)
-    {sql, params} = Repo.to_sql(:all, query)
+    {sql, params} = context.repo.to_sql(:all, query)
     {sql, Enum.map(params, &SQL.param/1)}
   end
 

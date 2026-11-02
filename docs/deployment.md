@@ -1,7 +1,10 @@
 # Deployment
 
 One Fly app, `sarduty`, in `yyz`: one always-on machine with a volume at `/mnt/sarduty`
-holding the SQLite database and team logos. Deploys are manual.
+holding the SQLite database and team logos. Deploys are manual. Beside the database,
+`sarduty_sample.db` is Coast Range SAR, the made-up team agents' reports run on
+([reports.md](reports.md#coast-range-sar)): rebuilt at every boot and every night, so
+Litestream and backups leave it out.
 
 It answers on two hosts, each with a Fly certificate (`fly certs list`): `sarduty.com`,
 and `verify.sarduty.com` for checking ID cards. The verify host is a Cloudflare CNAME to

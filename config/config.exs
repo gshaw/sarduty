@@ -80,6 +80,14 @@ config :logger, :console,
 # write lock at BEGIN, so they wait like any other write (#385).
 config :sarduty, App.Repo, busy_timeout: 30_000, default_transaction_mode: :immediate
 
+# Coast Range SAR's own database (#816). Not in ecto_repos: App.SampleRepo.prepare/1
+# migrates and seeds it at boot. Reports only read it, so two connections run two at once.
+config :sarduty, App.SampleRepo,
+  busy_timeout: 5_000,
+  default_transaction_mode: :immediate,
+  pool_size: 2,
+  log: false
+
 # Precompiled NIFs: GitHub's release redirect sends more headers than OTP 29's :httpc
 # accepts, so a download from there fails (#497). exqlite builds from the SQLite source
 # it ships, and mdex_native downloads from its own Cloudflare mirror. vix builds against
@@ -105,7 +113,8 @@ config :sarduty, Oban,
       {"0 6 * * *", App.Worker.ScheduleTeamRefreshesWorker},
       # The sync every 10 minutes (#163). The nightly full refresh is its safety net.
       {"*/10 * * * *", App.Worker.ScheduleTeamSyncsWorker},
-      {"30 5 * * *", App.Worker.PruneEventsWorker}
+      {"30 5 * * *", App.Worker.PruneEventsWorker},
+      {"15 8 * * *", App.Worker.ReseedSampleWorker}
     ]
   ]
 

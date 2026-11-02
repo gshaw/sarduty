@@ -1,0 +1,18 @@
+defmodule App.Worker.ReseedSampleWorkerTest do
+  # Not async: it rewrites Coast Range SAR's database, which async tests read.
+  use ExUnit.Case, async: false
+
+  alias App.Model.Member
+  alias App.Worker.ReseedSampleWorker
+
+  test "seeds Coast Range SAR again, with the same ids" do
+    team = App.SampleRepo.team()
+    cameron = App.SampleRepo.get_by!(Member, ref_id: "132")
+
+    assert :ok = ReseedSampleWorker.perform(%Oban.Job{args: %{}})
+
+    assert App.SampleRepo.team().id == team.id
+    assert App.SampleRepo.get_by!(Member, ref_id: "132").id == cameron.id
+    assert App.SampleRepo.aggregate(Member, :count) == length(App.CoastRange.names())
+  end
+end

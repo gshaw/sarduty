@@ -6,7 +6,6 @@ defmodule App.Report.Runner do
   SQL App.Report.Compiler wrote, so it is logged for Honeybadger.
   """
 
-  alias App.Repo
   alias App.Report.Compiler
   alias App.Report.Error
   alias App.Report.Plan
@@ -18,25 +17,28 @@ defmodule App.Report.Runner do
 
   @timeout 2_000
 
-  @doc "`{:ok, %Result{}}`, or `{:error, %Error{}}` when it takes too long or makes too many columns."
-  def run(%Plan{} = plan, timezone) do
-    case query(plan.sql, plan.params) do
+  @doc """
+  `{:ok, %Result{}}`, or `{:error, %Error{}}` when it takes too long or makes too many
+  columns. Each function runs on `repo`, the run's App.Report.Context's.
+  """
+  def run(%Plan{} = plan, timezone, repo) do
+    case query(repo, plan.sql, plan.params) do
       {:ok, %{rows: rows}} -> shape(plan, rows, timezone)
       {:error, error} -> {:error, error}
     end
   end
 
   @doc "The one number a count's SQL gives (App.Report.Compiler.count/3), or an error."
-  def count({sql, params}) do
-    case query(sql, params) do
+  def count({sql, params}, repo) do
+    case query(repo, sql, params) do
       {:ok, %{rows: [[n]]}} -> {:ok, n}
       {:error, error} -> {:error, error}
     end
   end
 
   @doc "The numbers a counts' SQL gives (App.Report.Compiler.counts/4), in order, or an error."
-  def counts({sql, params}) do
-    case query(sql, params) do
+  def counts({sql, params}, repo) do
+    case query(repo, sql, params) do
       {:ok, %{rows: [ns]}} -> {:ok, ns}
       {:error, error} -> {:error, error}
     end
@@ -46,15 +48,15 @@ defmodule App.Report.Runner do
   The values an each's SQL gives (App.Report.Compiler.values/3), decoded as `type`, with no
   blank: leaving it out here, not in SQL, reads each row's value once.
   """
-  def values({sql, params}, type) do
-    case query(sql, params) do
+  def values({sql, params}, type, repo) do
+    case query(repo, sql, params) do
       {:ok, %{rows: rows}} -> {:ok, for([v] <- rows, v != nil, do: decode(v, type))}
       {:error, error} -> {:error, error}
     end
   end
 
-  defp query(sql, params) do
-    case Repo.query(sql, Enum.map(params, &SQL.param/1), timeout: @timeout) do
+  defp query(repo, sql, params) do
+    case repo.query(sql, Enum.map(params, &SQL.param/1), timeout: @timeout) do
       {:ok, result} -> {:ok, result}
       {:error, reason} -> {:error, failed(reason)}
     end

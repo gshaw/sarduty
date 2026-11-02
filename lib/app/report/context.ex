@@ -7,6 +7,9 @@ defmodule App.Report.Context do
 
   `team_admin?` is false for a member reading a list such as Members (#784): the catalog
   hides what only team admins see, and a page's options that read it drop out.
+
+  `repo` is the database every read goes to: App.Repo, or App.SampleRepo for Coast Range
+  SAR (#816). Nothing in a run reads another.
   """
 
   import Ecto.Query, only: [where: 3]
@@ -25,11 +28,13 @@ defmodule App.Report.Context do
     :years,
     :tags,
     :groups,
+    repo: App.Repo,
     team_admin?: true
   ]
 
   def new(%Team{} = team, %DateTime{} = now, opts \\ []) do
     now = DateTime.truncate(now, :second)
+    repo = Keyword.get(opts, :repo, App.Repo)
     activities = where(Activity, [a], a.team_id == ^team.id and is_nil(a.deleted_at))
 
     %__MODULE__{
@@ -37,10 +42,11 @@ defmodule App.Report.Context do
       now: now,
       timezone: team.timezone,
       today: Service.Period.today(now, team.timezone),
-      hours_tags: Activity.hours_tags(team),
-      years: Activity.years(activities, team.timezone),
-      tags: Catalog.read_tag_titles(team),
-      groups: Group.kinds(team),
+      hours_tags: Activity.hours_tags(team, repo),
+      years: Activity.years(activities, team.timezone, repo),
+      tags: Catalog.read_tag_titles(team, repo),
+      groups: Group.kinds(team, repo),
+      repo: repo,
       team_admin?: Keyword.get(opts, :team_admin?, true)
     }
   end

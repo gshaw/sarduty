@@ -1,6 +1,6 @@
 # Mockups
 
-<!-- cspell:ignore CRSAR VSAR -->
+<!-- cspell:ignore CRSAR Priya VSAR -->
 
 A design proposal on an issue is shown with mockups made by the kit in
 [tools/mockups/](../tools/mockups). Every round looks the same and reads in seconds: real
@@ -45,9 +45,13 @@ for them, and those are PNG too, through `mise exec -- oxipng -o 2 --strip safe 
    edge fades. The browser frame shows the page's real URL.
 7. **One cast.** Coast Range SAR (CRSAR; legal name Coast Range Search and Rescue Society),
    team admin Alex Chen, member Cameron Ruiz, and the cast in
-   [Web.MockupSeed](../test/support/mockup_seed.ex). A second team is Valley SAR (VSAR).
-   Phone numbers are 604-555-01xx; SAR Duty's own number is 604-555-0100. Never a real
-   person, team, or number: issues are public.
+   [App.CoastRange](../lib/app/coast_range.ex): a year of activities, attendance,
+   groups, qualifications, equipment, and chores. It is the team agents' reports run on
+   too ([reports.md](reports.md#coast-range-sar)). A dump test picks the records it shows
+   from the cast, such as `MockupSeed.activity(cast, "Missing hiker")`, rather than
+   making its own; it adds only what the cast lacks. A second team is Valley SAR (VSAR),
+   for mockups only. Phone numbers are 604-555-01xx; SAR Duty's own number is
+   604-555-0100. Never a real person, team, or number: issues are public.
 8. **Desktop first, phones for phone tasks.** Desktop at 1280 (1024 for a narrow settings
    page), phones at 390 in an iPhone frame.
 9. **Words follow [writing.md](writing.md).** Mock copy is proposed copy: glossary words,
@@ -85,15 +89,17 @@ npm install --prefix tmp/puppeteer puppeteer-core@24
 
 A round's files:
 
-| File            | What                                                                         |
-| --------------- | ---------------------------------------------------------------------------- |
-| `dump_test.exs` | Seeds the cast, adds what the topic needs with the app's fixtures, dumps it. |
-| `build.py`      | Splices the proposal into `real/` pages and writes one page per shot.        |
-| `shots.json`    | Each shot's `id`, `page`, `title`, `lead`, `pins`, and its frame and crop.   |
-| `intro.html`    | The review page's Overview tab: verdict, what changed, open questions.       |
+| File            | What                                                                       |
+| --------------- | -------------------------------------------------------------------------- |
+| `dump_test.exs` | Seeds the cast, picks its records, adds only what it lacks, and dumps it.  |
+| `build.py`      | Splices the proposal into `real/` pages and writes one page per shot.      |
+| `shots.json`    | Each shot's `id`, `page`, `title`, `lead`, `pins`, and its frame and crop. |
+| `intro.html`    | The review page's Overview tab: verdict, what changed, open questions.     |
 
 `dump_test.exs` calls `MockupSeed.team()` and ends with `MockupSeed.dump/1`, which writes
-to `real/`. It dumps LiveViews and controller pages, such as the style guide, alike.
+to `real/`. The cast it returns has each member by name (`cast["Priya Nair"]`), and every
+row by kind and key in `cast.rows`; `MockupSeed.activity(cast, title)` is the latest
+activity with that title. It dumps LiveViews and controller pages, such as the style guide, alike.
 `dump.sh` copies the test into `test/mockups/` for the run only. Times the
 seed makes change every run, so splice around them with `cut(s, start, end, new)`, not
 `sub` on the exact text.

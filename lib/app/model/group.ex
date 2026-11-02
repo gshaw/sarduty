@@ -36,15 +36,16 @@ defmodule App.Model.Group do
 
   def scope(q, team_id: team_id), do: where(q, team_id: ^team_id)
 
-  def get_all(team_id) do
+  def get_all(team_id, repo \\ Repo) do
     Group
     |> where([r], r.team_id == ^team_id)
     |> order_by([r], asc: r.title)
-    |> Repo.all()
+    |> repo.all()
   end
 
-  @doc "The team's groups as `{title, id}`, by title, for a Group menu (#350)."
-  def kinds(%Team{} = team), do: team.id |> get_all() |> Enum.map(&{&1.title, &1.id})
+  @doc "The team's groups in `repo` as `{title, id}`, by title, for a Group menu (#350)."
+  def kinds(%Team{} = team, repo \\ Repo),
+    do: team.id |> get_all(repo) |> Enum.map(&{&1.title, &1.id})
 
   @doc "The team's groups without rules, the lists kept by hand, by title."
   def get_kept_by_hand(team_id) do

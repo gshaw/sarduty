@@ -1,68 +1,45 @@
 defmodule Web.MockupSeed do
   @moduledoc """
   The made-up cast every mockup draws, and a page dumper (docs/mockups.md). A mockup's
-  dump test calls `team/1`, adds what its topic needs with the app's fixtures, and ends
-  with `dump/1`. `Web.MockupSeedTest` keeps it working.
+  dump test calls `team/1`, picks the records it shows from the cast, adds only what
+  the cast lacks with the app's fixtures, and ends with `dump/1`. `Web.MockupSeedTest`
+  keeps it working.
   """
 
   import App.AccountsFixtures
-  import App.DataFixtures
   import Phoenix.ConnTest
   import Phoenix.LiveViewTest
 
-  alias App.Repo
+  alias App.Operation.SeedCoastRange
 
   @endpoint Web.Endpoint
 
-  # cspell:ignore CRSAR Kowal Noor Priya
-  @cast ~w(Avery_Chen Blake_Morrison Cameron_Ruiz Casey_Dhillon Dana_Kowal Drew_Patel
-    Eli_Haddad Harper_Nguyen Jordan_Lee Noor_Aziz Priya_Nair Quinn_Laval Riley_Okafor Sam_Rivera)
-
   @doc """
-  Coast Range SAR, its admin Alex Chen (alex.chen@example.com), and the cast as members.
-  Cameron Ruiz also has a user, so pages can be dumped as a member. Returns a map of
-  names to members, plus `:team`, `:alex`, and `:cameron`.
+  Coast Range SAR (App.CoastRange), the team agents' reports run on too, with every
+  record a report reads. Alex Chen (alex.chen@example.com), its team admin, and Cameron
+  Ruiz, a member, have users, so pages can be dumped as either. Returns a map of names
+  to members, `:team`, `:alex`, `:cameron`, and `:rows`, every row by `{kind, key}` as
+  App.Operation.SeedCoastRange.call/3 returns them: `cast.rows[{:activity, d4h_id}]`.
   """
   def team(attrs \\ %{}) do
-    team =
-      %{
-        name: "Coast Range SAR",
-        legal_name: "Coast Range Search and Rescue Society",
-        abbreviated_name: "CRSAR",
-        subdomain: "coastrange"
-      }
-      |> Map.merge(attrs)
-      |> member_logins_team_fixture()
-      |> Ecto.Changeset.change(d4h_synced_at: DateTime.utc_now())
-      |> Repo.update!()
+    rows = SeedCoastRange.call(App.Repo, DateTime.utc_now(), attrs)
+    members = for {{:member, name}, member} <- rows, into: %{}, do: {name, member}
 
-    alex = user_fixture(%{email: "alex.chen@example.com"})
-
-    manager_fixture(team, %{
-      name: "Alex Chen",
-      email: alex.email,
-      ref_id: "112",
-      phone: "604-555-0112"
+    Map.merge(members, %{
+      team: rows[{:team, :coastrange}],
+      alex: user_fixture(%{email: "alex.chen@example.com"}),
+      cameron: user_fixture(%{email: "cameron.ruiz@example.com"}),
+      rows: rows
     })
+  end
 
-    cameron = user_fixture(%{email: "cameron.ruiz@example.com"})
-
-    members =
-      for {n, i} <- Enum.with_index(@cast), into: %{} do
-        name = String.replace(n, "_", " ")
-        slug = name |> String.downcase() |> String.replace(" ", ".")
-
-        {name,
-         member_fixture(team, %{
-           name: name,
-           email: "#{slug}@example.com",
-           phone: "604-555-01#{20 + i}",
-           ref_id: "#{130 + i}",
-           d4h_permission: 3
-         })}
-      end
-
-    Map.merge(members, %{team: team, alex: alex, cameron: cameron})
+  @doc """
+  The cast's latest activity titled `title`, such as "Missing hiker" or "Rope rescue
+  training", for a dump test that shows one.
+  """
+  def activity(cast, title) do
+    activities = for {{:activity, _}, %{title: ^title} = a} <- cast.rows, do: a
+    Enum.max_by(activities, & &1.started_at, DateTime)
   end
 
   @doc "A conn logged in as `user`, for `dump/1`."

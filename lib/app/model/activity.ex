@@ -28,12 +28,14 @@ defmodule App.Model.Activity do
   nil when nobody names one. A team's organization names each tag (#289); a team names
   the ones its organization leaves blank (#323); otherwise "Primary Hours" and
   "Secondary Hours". Uses the team's organization when it is preloaded, and reads just
-  its tags when it isn't.
+  its tags from `repo` when it isn't.
   """
-  def hours_tags(%Organization{} = organization),
+  def hours_tags(team_or_organization, repo \\ Repo)
+
+  def hours_tags(%Organization{} = organization, _repo),
     do: Map.merge(@default_hours_tags, organization_hours_tags(organization), &pick/3)
 
-  def hours_tags(%Team{} = team) do
+  def hours_tags(%Team{} = team, repo) do
     team_tags = %{
       primary: team.primary_hours_tag,
       secondary: team.secondary_hours_tag,
@@ -42,7 +44,7 @@ defmodule App.Model.Activity do
 
     @default_hours_tags
     |> Map.merge(team_tags, &pick/3)
-    |> Map.merge(organization_hours_tags(team), &pick/3)
+    |> Map.merge(organization_hours_tags(team, repo), &pick/3)
   end
 
   defp pick(_kind, default, nil), do: default
@@ -52,7 +54,9 @@ defmodule App.Model.Activity do
   The hours tags the team's organization names, as `%{kind => tag or nil}`. A team can
   name only the ones that are nil.
   """
-  def organization_hours_tags(%Organization{} = organization) do
+  def organization_hours_tags(team_or_organization, repo \\ Repo)
+
+  def organization_hours_tags(%Organization{} = organization, _repo) do
     %{
       primary: organization.primary_hours_tag,
       secondary: organization.secondary_hours_tag,
@@ -60,12 +64,13 @@ defmodule App.Model.Activity do
     }
   end
 
-  def organization_hours_tags(%Team{organization: %Organization{} = organization}),
+  def organization_hours_tags(%Team{organization: %Organization{} = organization}, _repo),
     do: organization_hours_tags(organization)
 
-  def organization_hours_tags(%Team{organization_id: nil}), do: Map.new(@hours_kinds, &{&1, nil})
+  def organization_hours_tags(%Team{organization_id: nil}, _repo),
+    do: Map.new(@hours_kinds, &{&1, nil})
 
-  def organization_hours_tags(%Team{organization_id: organization_id}) do
+  def organization_hours_tags(%Team{organization_id: organization_id}, repo) do
     Organization
     |> where([o], o.id == ^organization_id)
     |> select([o], %Organization{
@@ -73,7 +78,7 @@ defmodule App.Model.Activity do
       secondary_hours_tag: o.secondary_hours_tag,
       other_hours_tag: o.other_hours_tag
     })
-    |> Repo.one!()
+    |> repo.one!()
     |> organization_hours_tags()
   end
 
@@ -567,12 +572,12 @@ defmodule App.Model.Activity do
     |> where([r], r.finished_at > ^start)
   end
 
-  @doc "The years `query`'s rows span, newest first, in `timezone`."
-  def years(query, timezone) do
+  @doc "The years `query`'s rows in `repo` span, newest first, in `timezone`."
+  def years(query, timezone, repo \\ Repo) do
     {first, last} =
       query
       |> select([r], {min(r.started_at), max(r.started_at)})
-      |> Repo.one()
+      |> repo.one()
 
     Service.YearRange.years(first, last, timezone)
   end

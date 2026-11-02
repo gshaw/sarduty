@@ -1,6 +1,9 @@
 import Config
 
 # Configure your database
+config :sarduty, App.SampleRepo,
+  database: Path.expand("../db/sarduty_sample_dev.db", Path.dirname(__ENV__.file))
+
 config :sarduty, App.Repo,
   database: Path.expand("../db/sarduty_dev.db", Path.dirname(__ENV__.file)),
   pool_size: 5,

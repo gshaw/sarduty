@@ -11,7 +11,6 @@ defmodule App.Report.Expr do
   `{:report_error, %Error{}}`, which App.Report.Compiler catches.
   """
 
-  alias App.Repo
   alias App.Report.Catalog
   alias App.Report.Context
   alias App.Report.Error
@@ -270,7 +269,7 @@ defmodule App.Report.Expr do
 
   # A rule's query of ids, as a true-or-false field.
   defp field_sql(%{query: query}, table, args, context) when query != nil do
-    {sql, params} = Repo.to_sql(:all, query.(context, args))
+    {sql, params} = context.repo.to_sql(:all, query.(context, args))
     {["(", table, ".\"id\" IN (", sql, "))"], params}
   end
 
