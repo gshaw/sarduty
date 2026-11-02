@@ -14,7 +14,16 @@ defmodule Web.TeamSignupLive do
       )
 
     changeset = TeamSignupViewModel.build_new_changeset(%{api_host: D4H.default_region()})
-    {:ok, socket |> assign(page_title: "Sign up a team", done: nil) |> assign_form(changeset)}
+
+    {:ok,
+     socket
+     |> assign(
+       page_title: "Sign up a team",
+       page_description:
+         "Sign up your search and rescue team for SAR Duty with its D4H access key.",
+       done: nil
+     )
+     |> assign_form(changeset)}
   end
 
   def render(assigns) do
@@ -66,8 +75,8 @@ defmodule Web.TeamSignupLive do
         />
         <p id="signup-terms" class="hint">
           By signing up, you agree to the <.a navigate={~p"/terms"}>Terms</.a>
-          for your team. <.a navigate={~p"/privacy"}>Privacy</.a>
-          says what SAR Duty keeps.
+          on behalf of your team. <.a navigate={~p"/privacy"}>Privacy</.a>
+          says what SAR Duty keeps and who sees it.
         </p>
         <.form_actions>
           <.button

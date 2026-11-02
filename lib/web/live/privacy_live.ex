@@ -6,7 +6,13 @@ defmodule Web.PrivacyLive do
   @contact "privacy@sarduty.com"
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Privacy", contact: @contact)}
+    {:ok,
+     assign(socket,
+       page_title: "Privacy",
+       page_description:
+         "What SAR Duty keeps about your team and its members, who sees it, and where it is stored.",
+       contact: @contact
+     )}
   end
 
   def render(assigns) do

@@ -20,6 +20,8 @@ defmodule Web.ReportLanguageLive do
     {:ok,
      assign(socket,
        page_title: "How to write a report",
+       page_description:
+         "SAR Duty's report language, with examples: clauses, functions, dates, and fields. For team admins and their AI agents.",
        intro_html: Phoenix.HTML.raw(intro),
        rest_html: Phoenix.HTML.raw(rest),
        sections: sections

@@ -9,7 +9,13 @@ defmodule Web.Layouts do
     <html lang="en">
       <head>
         <meta charset="utf-8" />
-        <meta name="description" content="Less paperwork for search and rescue teams that use D4H." />
+        <%!-- A public page sets its own, for search results and link previews. --%>
+        <meta
+          name="description"
+          content={
+            assigns[:page_description] || "Less paperwork for search and rescue teams that use D4H."
+          }
+        />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
         <meta name="theme-color" content="#13243a" media="(prefers-color-scheme: light)" />

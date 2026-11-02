@@ -9,7 +9,11 @@ defmodule Web.ChangelogLive do
                   |> MDEx.to_html!(extension: [header_id_prefix: ""])
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Changelog")}
+    {:ok,
+     assign(socket,
+       page_title: "Changelog",
+       page_description: "What changed in SAR Duty for search and rescue teams, newest first."
+     )}
   end
 
   def render(assigns) do

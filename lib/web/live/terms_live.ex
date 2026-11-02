@@ -3,7 +3,12 @@ defmodule Web.TermsLive do
 
   # Kept short and general on purpose, like Web.PrivacyLive.
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Terms")}
+    {:ok,
+     assign(socket,
+       page_title: "Terms",
+       page_description:
+         "The terms for search and rescue teams that use SAR Duty: what your team is responsible for, and what SAR Duty is not."
+     )}
   end
 
   def render(assigns) do

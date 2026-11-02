@@ -5,7 +5,12 @@ defmodule Web.AgentsLive do
   # organizations deciding about agents. Each team's MCP tokens tab links here. Its
   # pages list what agents read under /agents, each also as Markdown.
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "How agents work with SAR Duty")}
+    {:ok,
+     assign(socket,
+       page_title: "How agents work with SAR Duty",
+       page_description:
+         "How AI agents help team admins write SAR Duty reports from how a team is organized, never its members or records."
+     )}
   end
 
   def render(assigns) do

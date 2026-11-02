@@ -146,6 +146,7 @@ defmodule Web.TeamSignupLiveTest do
     assert has_element?(lv, "label", "Access key")
     assert has_element?(lv, ~s(#signup-terms a[href="/terms"]))
     assert has_element?(lv, ~s(#signup-terms a[href="/privacy"]))
+    assert has_element?(lv, "#signup-terms", "on behalf of your team")
   end
 
   test "a host off the list is refused", %{conn: conn} do

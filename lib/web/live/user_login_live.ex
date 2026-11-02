@@ -77,6 +77,7 @@ defmodule Web.UserLoginLive do
     {:ok,
      assign(socket,
        page_title: "Log in",
+       page_description: "Log in to SAR Duty with a one-time code. There is no password.",
        take_attendance?: Web.TakeAttendanceLive.path?(session["user_return_to"]),
        agent_team: Web.AgentAuthorizeLive.login_team_name(session["user_return_to"]),
        text_login: Accounts.text_login?(),
