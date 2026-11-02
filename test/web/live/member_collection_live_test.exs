@@ -20,31 +20,6 @@ defmodule Web.MemberCollectionLiveTest do
     assert html =~ "Members"
   end
 
-  test "lists current members missing a mobile phone, an email, or an address, and what they lack",
-       %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    no_phone = member_fixture(team, %{phone: nil})
-    no_email = member_fixture(team, %{email: ""})
-    neither = member_fixture(team, %{phone: "", email: nil})
-    no_address = member_fixture(team, %{address: ""})
-    complete = member_fixture(team)
-    retired = member_fixture(team, %{phone: nil, left_at: ~U[2025-01-01 00:00:00Z]})
-    other_team = member_fixture(team_fixture(), %{phone: nil})
-
-    {:ok, lv, _html} =
-      conn
-      |> log_in_user(user)
-      |> live(~p"/teams/#{team}/members?details=missing")
-
-    assert has_element?(lv, "#missing-#{no_phone.id}", "Mobile phone")
-    assert has_element?(lv, "#missing-#{no_email.id}", "Email")
-    assert has_element?(lv, "#missing-#{neither.id}", "Mobile phone, Email")
-    assert has_element?(lv, "#missing-#{no_address.id}", "Address")
-    refute has_element?(lv, "#missing-#{complete.id}")
-    refute has_element?(lv, "#missing-#{retired.id}")
-    refute has_element?(lv, "#missing-#{other_team.id}")
-  end
-
   test "the Group filter lists the group's members only", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     rope = group_fixture(team, %{title: "Rope rescue"})
@@ -64,45 +39,6 @@ defmodule Web.MemberCollectionLiveTest do
     assert has_element?(lv, "#values_group-combobox[data-clearable] option[value='']", "All")
     lv |> form("#member-filters", values: %{group: ""}) |> render_change()
     assert has_element?(lv, "#member_collection", "Blake Ground")
-  end
-
-  test "the Tag filter counts only the activities with the tag, and links to them",
-       %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    tag_fixture(team, "Rope Rescue")
-    rope = activity_fixture(team, %{title: "Rope night", tags: ["Rope Rescue"]})
-    other = activity_fixture(team, %{title: "Board meeting", tags: ["Primary Hours"]})
-    avery = member_fixture(team, %{name: "Avery Rope"})
-    blake = member_fixture(team, %{name: "Blake Ground"})
-    attendance_fixture(rope, avery, %{duration_in_minutes: 180})
-    attendance_fixture(other, avery, %{duration_in_minutes: 60})
-    attendance_fixture(other, blake, %{duration_in_minutes: 60})
-
-    # Another team's activity with the same tag counts for nothing here.
-    other_team = team_fixture()
-
-    attendance_fixture(
-      activity_fixture(other_team, %{tags: ["Rope Rescue"]}),
-      member_fixture(other_team)
-    )
-
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
-
-    lv
-    |> form("#member-filters", values: %{when: "all", activity_tag: "Rope Rescue"})
-    |> render_change()
-
-    assert has_element?(lv, "#member_collection tr", "Avery Rope")
-    assert has_element?(lv, "#member_collection tr", "3 hours")
-    assert has_element?(lv, ".filter-bar-chips a", "Rope Rescue")
-
-    assert has_element?(
-             lv,
-             ~s|a[href="/teams/#{team.subdomain}/members/#{avery.id}?when=all&activity_tag=Rope+Rescue"]|
-           )
-
-    blake_row = lv |> element("#member_collection tr", "Blake Ground") |> render()
-    assert blake_row =~ ~r/>\s*0\s*</
   end
 
   # Another team's group isn't on the menu, so the filter starts at All (#784): the list
@@ -437,20 +373,21 @@ defmodule Web.MemberCollectionLiveTest do
     assert has_element?(lv, "#member-tile-current[aria-current]")
   end
 
-  test "less common filters wait behind More filters until one is on", %{conn: conn} do
+  # Tag, Details, Items, and Access are built-in reports now (#784 feedback), so what's
+  # left fits on one row with no More filters.
+  test "Period, Group, and Attended, with no More filters", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
 
-    assert has_element?(lv, "#member-filters-more", "More filters")
-    assert has_element?(lv, ".filter-menu.is-more select[name='values[attended]']")
-    refute has_element?(lv, ".filter-menu.is-more select[name='values[when]']")
+    refute has_element?(lv, "#member-filters-more")
+    refute has_element?(lv, ".filter-menu.is-more")
 
-    {:ok, lv, _html} =
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?attended=90")
+    for name <- ~w(when group attended),
+        do: assert(has_element?(lv, "#member-filters [name='values[#{name}]']"), name)
 
-    refute has_element?(lv, ".filter-menu.is-more select[name='values[attended]']")
-    assert has_element?(lv, ".filter-menu.is-on select[name='values[attended]']")
+    for name <- ~w(activity_tag details items access),
+        do: refute(has_element?(lv, "#member-filters [name='values[#{name}]']"), name)
   end
 
   test "Save as report opens New report on Members' text, named for the picks (#784)",
@@ -817,42 +754,5 @@ defmodule Web.MemberCollectionLiveTest do
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=away")
 
     refute has_element?(lv, "#last-attended-#{retiring.id}")
-  end
-
-  test "Items: who holds some of the team's equipment, and who holds none (#514)",
-       %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    holding = member_fixture(team, %{name: "Holly Holding"})
-    clear = member_fixture(team, %{name: "Clara Clear"})
-    equipment_item_fixture(team, %{member_id: holding.id, status: "retired"})
-    other_team = team_fixture()
-    equipment_item_fixture(other_team, %{member_id: member_fixture(other_team).id})
-    conn = log_in_user(conn, user)
-
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?items=held")
-    assert has_element?(lv, "#last-attended-#{holding.id}")
-    refute has_element?(lv, "#last-attended-#{clear.id}")
-
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?items=none")
-    assert has_element?(lv, "#last-attended-#{clear.id}")
-    refute has_element?(lv, "#last-attended-#{holding.id}")
-  end
-
-  test "Access: who D4H lets log in, and who has No access (#514)", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    can = member_fixture(team, %{name: "Cam Can", d4h_permission: 2})
-    cannot = member_fixture(team, %{name: "Nell None", d4h_permission: 4})
-    unknown = member_fixture(team, %{name: "Una Unknown", d4h_permission: nil})
-    conn = log_in_user(conn, user)
-
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?access=some")
-    assert has_element?(lv, "#last-attended-#{can.id}")
-    refute has_element?(lv, "#last-attended-#{cannot.id}")
-    refute has_element?(lv, "#last-attended-#{unknown.id}")
-
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members?access=none")
-    assert has_element?(lv, "#last-attended-#{cannot.id}")
-    refute has_element?(lv, "#last-attended-#{can.id}")
-    refute has_element?(lv, "#last-attended-#{unknown.id}")
   end
 end

@@ -288,7 +288,7 @@ defmodule Web.TeamDashboardLiveTest do
 
     assert has_element?(
              lv,
-             ~s{#attention-missing_details a[href="/teams/#{team.subdomain}/members?details=missing"]}
+             ~s{#attention-missing_details a[href="/teams/#{team.subdomain}/reports/members-missing-details"]}
            )
   end
 
@@ -901,7 +901,7 @@ defmodule Web.TeamDashboardLiveTest do
 
       assert has_element?(
                lv,
-               ~s{#attention-retiring_clear a[href="/teams/#{team.subdomain}/members?standing=retiring&items=none"]}
+               ~s{#attention-retiring_clear a[href="/teams/#{team.subdomain}/reports/members-holding-items?standing=retiring&items=none"]}
              )
     end
 
@@ -974,7 +974,7 @@ defmodule Web.TeamDashboardLiveTest do
 
       assert has_element?(
                lv,
-               ~s{#attention-retiring_access a[href="/teams/#{team.subdomain}/members?standing=retiring&access=some"]}
+               ~s{#attention-retiring_access a[href="/teams/#{team.subdomain}/reports/members-who-can-log-in?standing=retiring&access=some"]}
              )
     end
 

@@ -36,15 +36,16 @@ pages (#784): the text is `App.Report.Lists.members/0`, and
   Last attended). The filter guesses at nothing: bots and members on leave are left out
   by the Standing filter, not by the clock.
 
-Standing, Period, and Group sit in the filter bar's row. Details and Attended wait
-behind **More filters** until one is on, so the row doesn't wrap and a link such as
-the home item's still shows every filter it sets.
+Period, Group, and Attended sit in the filter bar's row, with no More filters. The list
+answered too many questions, so Tag, Details, Items, and Access left it for built-in
+reports on 2026-11-01 (#784 feedback): **Hours in a tag**, **Members missing details**,
+**Members holding items**, and **Members who can log in**. Home's links to them open
+those reports.
 
 No column chooser. A filter changes the rows, not the columns (2026-10-25). There is no
-Standing column: the Member column's badge shows it (#740). Two columns come
+Standing column: the Member column's badge shows it (#740). One column comes
 with a filter: Retired when the Standing filter can show retired members, since no
-other row has a date, and Missing with Details: Missing, since it says why each row
-matched. ID hides on narrow screens.
+other row has a date. ID hides on narrow screens.
 
 ## Changing a member's details
 
@@ -80,11 +81,11 @@ or **Retired**. Decided 2026-10-18; the issue has the reasons. Retired was added
   person never go to D4H. Teams on D4H and on SAR Duty Records work the same.
 - **Retiring** (#514) is a current member in the team's Retiring group. They no longer
   count as a member: see [Retiring](#retiring).
-- **Access** (`access=some` or `none`, behind More filters, team admins only) keeps the
-  members D4H lets log in, or those with No access.
-- **Items** (`items=held` or `none`, behind More filters, team admins only) keeps the
+- **Access** is the built-in report Members who can log in (`access=some` or `none`):
+  the members D4H lets log in, or those with No access.
+- **Items** is the built-in report Members holding items (`items=held` or `none`): the
   members who hold any of the team's equipment, retired items too, or those who hold
-  none. Needs attention's "2 retiring members hold no items" opens
+  none. Needs attention's "2 retiring members hold no items" opens it with
   `standing=retiring&items=none`, the members to retire now.
 - **Retired comes from D4H**: D4H marks the member Retired, or gives them a leave date
   that has passed, or stops listing them. The same test as `Member.current_query/2`. It is read, never stored or set, and wins over
@@ -185,7 +186,7 @@ admin through them.
 2. **Set their access to No access in D4H.** SAR Duty can't: D4H sets access only in
    its web app (a Records team can, on Change member). Until it's done, two red notices
    say so. Needs attention's one danger item, red and first in the list: "2 retiring
-   members can still log in to D4H", opening `standing=retiring&access=some`. And a red
+   members can still log in to D4H", opening Members who can log in with `standing=retiring&access=some`. And a red
    banner on every tab of that member's page, with an Open in D4H link. Access is
    the synced `d4h_permission`, anything but No access (`Member.d4h_access?/1`); a
    member whose permission D4H didn't send isn't counted.
@@ -193,7 +194,7 @@ admin through them.
    Equipment's With retiring members. Gear can take weeks to come back, so a team admin
    can snooze this item; see [needs-attention.md](needs-attention.md#snoozing-an-item).
 4. **Retire them in D4H.** Needs attention's "2 retiring members hold no items" opens
-   `standing=retiring&items=none`, and its hint, "Retire them in D4H.", is what stops a
+   Members holding items with `standing=retiring&items=none`, and its hint, "Retire them in D4H.", is what stops a
    member staying Retiring for good. D4H sets No access when it retires someone, and
    they become Retired.
 
@@ -554,11 +555,11 @@ see what they could work out from activities they open, plus role, ID, groups, a
 qualifications. They don't see what comes from team admins' own tools: contact details,
 away periods, check-ins, history, and ID cards.
 
-- **The list**: the same columns, search, and Period, Group, and Tag filters. A
+- **The list**: the same columns, search, and Period and Group filters. A
   member's Standing reads Away as Active (decision 4 of #784), so the switch is Not
   retired, Active, Retiring, Retired, and Not a person, and its menu adds All. Active
-  counts everyone away too, so it can't name who is away. No Away, no Attended,
-  Details, Items, or Access filter, and no Add member or Save as report. The Member
+  counts everyone away too, so it can't name who is away. No Away, no Attended
+  filter, and no Add member or Save as report. The Member
   column's badge never says Away.
 - **A member's page** is the team admin's minus controls: Attendance, Qualifications
   (with no Certificate, since D4H marks the documents RESTRICTED), and Groups as plain

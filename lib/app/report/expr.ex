@@ -184,6 +184,9 @@ defmodule App.Report.Expr do
   defp field_expr(%{query: query} = field, _subject, via, [], line, st) when query != nil,
     do: roll_up(field, via, [], line, st)
 
+  defp field_expr(%{sql: sql} = field, _subject, via, [], line, st) when sql != nil,
+    do: roll_up(field, via, [], line, st)
+
   defp field_expr(field, _subject, via, [_ | _], line, _st) do
     name = if via, do: "#{via}.#{field.name}", else: field.name
     fail(line, "#{name} takes nothing in brackets. Write #{name}.")

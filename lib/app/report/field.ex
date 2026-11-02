@@ -14,7 +14,8 @@ defmodule App.Report.Field do
     filter's period: `'all'`, a year, or `'90d'`), `:tag` (a tag's title, or `'all'`), or
     `:group` (a group's title, or `'all'`). A period, a tag, or a group can be a picked
     value, as in `on_team(:when)` (#784); a picked group is its id.
-  - `sql` builds a field from its args: `fn table, args, context -> {sql, params}`.
+  - `sql` builds a field from its args, or from none: `fn table, args, context -> {sql,
+    params}`.
   - `query` is a rule's own query of the ids it keeps, `fn context, args -> query`: the
     field is `id IN (that query)`, true or false, so the rule stays in its home (#784).
   - `choices`: `fn context -> [{label, value}]`: what a `choice` field holds, or the
