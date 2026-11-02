@@ -30,6 +30,7 @@ defmodule App.Model.ChangeSet do
     # :chores sends a team admin's accepted chores as a D4H event (#341). :certificates
     # adds a member's certificate to D4H, as an award with the file on it (#493).
     # :whiteboard posts, changes, archives, or deletes a whiteboard note (#515).
+    # :remove takes members off an activity from its Remove members page (#704).
     field :source, Ecto.Enum,
       values: [
         :door,
@@ -44,7 +45,8 @@ defmodule App.Model.ChangeSet do
         :tags,
         :chores,
         :certificates,
-        :whiteboard
+        :whiteboard,
+        :remove
       ]
 
     field :summary, :string

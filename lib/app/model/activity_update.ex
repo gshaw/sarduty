@@ -13,7 +13,8 @@ defmodule App.Model.ActivityUpdate do
   # An update a team admin emailed to a member on an activity (#609): their own message,
   # with where the member stands. A send's rows share their `sent_at` and message.
   # Queued waits for its job, App.Worker.SendActivityUpdateWorker. Failed is Cloudflare
-  # refusing it every time, or the activity starting first, with why in `error`.
+  # refusing it every time, or the activity starting first, with why in `error`. A
+  # `:removal` is the message to a signed up member taken off the activity (#704).
   schema "activity_updates" do
     belongs_to :team, Team
     belongs_to :activity, Activity
@@ -22,6 +23,7 @@ defmodule App.Model.ActivityUpdate do
     field :message, :string, redact: true
     field :sent_at, :utc_datetime_usec
     field :status, Ecto.Enum, values: [:queued, :sent, :failed]
+    field :kind, Ecto.Enum, values: [:update, :removal], default: :update
     field :error, :string
     timestamps(type: :utc_datetime_usec)
   end

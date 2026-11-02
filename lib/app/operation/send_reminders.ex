@@ -168,7 +168,8 @@ defmodule App.Operation.SendReminders do
   Emails one queued reminder and marks it sent, for its job. A refusal is `{:error,
   reason}`, so the job tries again; on the `last?` attempt the reminder is marked failed
   first. One no longer queued is `{:cancel, reason}`, and so is one whose activity
-  started or was deleted before it went, which is marked failed. The activity's page
+  started or was deleted, or whose member came off it (#704), before it went, which is
+  marked failed. The activity's page
   hears through `topic/1` once a reminder is sent or failed.
   """
   def deliver(reminder_id, last?, now) do
@@ -179,11 +180,17 @@ defmodule App.Operation.SendReminders do
   end
 
   defp deliver_queued(%Reminder{activity: activity} = reminder, last?, now) do
-    if Activity.open?(activity, now) do
-      send_email(reminder, last?, now)
-    else
-      reminder |> Reminder.fail!("The activity started before it went.") |> broadcast()
-      {:cancel, "the activity started"}
+    cond do
+      not Activity.open?(activity, now) ->
+        reminder |> Reminder.fail!("The activity started before it went.") |> broadcast()
+        {:cancel, "the activity started"}
+
+      Attendance.invitation(activity, reminder.member) == nil ->
+        reminder |> Reminder.fail!("The member left the activity before it went.") |> broadcast()
+        {:cancel, "the member left the activity"}
+
+      true ->
+        send_email(reminder, last?, now)
     end
   end
 

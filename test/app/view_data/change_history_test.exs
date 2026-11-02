@@ -26,6 +26,19 @@ defmodule App.ViewData.ChangeHistoryTest do
     assert describe_change(change, :activity) == "Jane Doe attendance changed: attended"
   end
 
+  # The same words as a removal in SAR Duty (#704), not as if the activity went.
+  test "a row removed in D4H reads Removed from on the member's page" do
+    change = %{
+      record_kind: :attendance,
+      action: :removed,
+      activity: %{title: "Rope rescue"},
+      member: %{name: "Jane Doe"}
+    }
+
+    assert describe_change(change, :member) == "Removed from Rope rescue"
+    assert describe_change(change, :activity) == "Jane Doe removed from attendance"
+  end
+
   test "an award shows its expiry in the team's time zone" do
     assert describe_change(%{
              record_kind: :award,
@@ -91,6 +104,19 @@ defmodule App.ViewData.ChangeHistoryTest do
              "Deleted Swiftwater: 0 members"
 
     assert row.(%{"title" => "Old group"}) == "Deleted Old group"
+  end
+
+  # On the member's page it reads as them coming off, not the activity going (#704).
+  test "a removed row says who came off what" do
+    row = %ChangeSetRow{
+      action: :delete_attendance,
+      member: %App.Model.Member{name: "Drew Patel"},
+      change_set: %App.Model.ChangeSet{activity: %App.Model.Activity{title: "BBQ"}}
+    }
+
+    assert ChangeHistory.describe_row(row, :member) == "Removed from BBQ"
+    assert ChangeHistory.describe_row(row, :activity) == "Drew Patel removed"
+    assert ChangeHistory.source_label(:remove) == "Remove members"
   end
 
   # Sent before the start, so never "attended" (#444).

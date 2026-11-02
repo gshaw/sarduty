@@ -12,6 +12,7 @@ defmodule App.Worker.SendReminderWorkerTest do
     starts = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
     activity = activity_fixture(team, %{started_at: starts})
     member = member_fixture(team, %{name: "Cameron Ruiz", email: "cameron@example.com"})
+    attendance_fixture(activity, member, %{status: "requested"})
 
     reminder =
       Repo.insert!(%Reminder{
@@ -68,6 +69,17 @@ defmodule App.Worker.SendReminderWorkerTest do
     refute_received {:email, _}
 
     assert %Reminder{status: :failed, error: "The activity started before it went."} =
+             Repo.reload!(ctx.reminder)
+  end
+
+  # Remove members (#704) can take them off after the reminder was queued.
+  test "a member no longer on the activity gets none, and it shows as failed", ctx do
+    Repo.delete_all(App.Model.Attendance)
+
+    assert {:cancel, _reason} = perform(ctx.reminder)
+    refute_received {:email, _}
+
+    assert %Reminder{status: :failed, error: "The member left the activity before it went."} =
              Repo.reload!(ctx.reminder)
   end
 
