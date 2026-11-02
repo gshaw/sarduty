@@ -41,7 +41,9 @@ defmodule Web.ActivityCollectionLive do
            counts: need_counts(team, activities),
            form: ReportPage.controls_form(view),
            path_fn: &ReportPage.path(view, ~p"/teams/#{team}/activities", &1),
-           save_path: ~p"/teams/#{team}/reports/new?#{Map.put(view.params, "list", "activities")}"
+           save_path:
+             ~p"/teams/#{team}/reports/new?#{Map.put(view.params, "list", "activities")}",
+           csv_path: ~p"/teams/#{team}/reports/activities/csv?#{Map.delete(view.params, "page")}"
          )}
 
       # The list's own text failing is a bug, not a bad URL; a test runs it.
@@ -62,9 +64,6 @@ defmodule Web.ActivityCollectionLive do
         >
           Add activity
         </.button>
-        <.button :if={@team_admin?} id="activity-save-report" navigate={@save_path}>
-          Save as report
-        </.button>
       </:action>
     </.heading_row>
 
@@ -76,6 +75,8 @@ defmodule Web.ActivityCollectionLive do
       now={nil}
       path_fn={@path_fn}
       form={@form}
+      save_path={@team_admin? && @save_path}
+      csv_path={@team_admin? && @csv_path}
       marker={&marker/1}
     >
       <:table>
