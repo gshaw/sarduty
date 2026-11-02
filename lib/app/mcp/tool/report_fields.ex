@@ -64,7 +64,7 @@ defmodule App.MCP.Tool.ReportFields do
     %{
       "team" => team.name,
       "language" => Language.markdown(),
-      "language_url" => url(~p"/reports/language"),
+      "language_url" => url(~p"/agents/reports"),
       "groups" => names.groups,
       "qualifications" => names.qualifications,
       "tags" => names.tags,

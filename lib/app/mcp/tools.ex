@@ -61,8 +61,7 @@ defmodule App.MCP.Tools do
 
   @doc """
   The arguments a tool's input schema declares, for the call log. Anything else the
-  agent sent is dropped, and strings are cut at 2,000 characters, long enough for a
-  report's query, which the Agents tab opens again (#816).
+  agent sent is dropped, and long strings are cut.
   """
   def loggable_arguments(tool, args) when is_map(args) do
     known = tool.input_schema() |> Map.get("properties", %{}) |> Map.keys()
@@ -70,7 +69,7 @@ defmodule App.MCP.Tools do
     args
     |> Map.take(known)
     |> Map.new(fn
-      {key, value} when is_binary(value) -> {key, String.slice(value, 0, 2_000)}
+      {key, value} when is_binary(value) -> {key, String.slice(value, 0, 100)}
       {key, value} when is_number(value) or is_boolean(value) or is_nil(value) -> {key, value}
       {key, _other} -> {key, "(not shown)"}
     end)

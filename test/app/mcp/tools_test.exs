@@ -37,7 +37,7 @@ defmodule App.MCP.ToolsTest do
     logged = Tools.loggable_arguments(CheckReport, args)
 
     assert Map.keys(logged) == ["query"]
-    assert String.length(logged["query"]) == 2_000
+    assert String.length(logged["query"]) == 100
   end
 
   test "an argument that isn't a plain value is not logged as is" do

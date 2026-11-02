@@ -22,7 +22,7 @@ defmodule Web.AgentsLive do
             A team admin asks their agent for a report, such as members on Callout without First Aid.
           </li>
           <li>
-            The agent writes it in SAR Duty's <.a navigate={~p"/reports/language"}>report language</.a>, from the team's saved reports and its names for groups, qualifications, and tags. It tries the report on Coast Range SAR, a made-up team.
+            The agent writes it in SAR Duty's <.a navigate={~p"/agents/reports"}>report language</.a>, from the team's saved reports and its names for groups, qualifications, and tags. It tries the report on Coast Range SAR, a made-up team.
           </li>
           <li>The team admin opens the report in SAR Duty. It runs there, on the team's records.</li>
         </ol>
@@ -34,7 +34,7 @@ defmodule Web.AgentsLive do
 
         <h2 class="heading mt-8">Who decides</h2>
         <p id="agents-who">
-          A team admin connects an agent, and any team admin can disconnect it. The team's Agents tab shows every report an agent wrote. Agents never change anything.
+          A team admin connects an agent, and any team admin can disconnect it. Agents never change anything.
         </p>
       </div>
     </article>

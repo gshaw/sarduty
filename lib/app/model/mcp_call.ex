@@ -54,20 +54,6 @@ defmodule App.Model.MCPCall do
     |> Repo.all()
   end
 
-  @doc """
-  The queries agents checked for `team` (#816), newest first, with the token that sent
-  each: what the Agents tab lists as reports agents wrote. A try on Coast Range SAR is
-  only a step toward one, so it isn't listed.
-  """
-  def get_report_queries(%Team{} = team, limit) do
-    MCPCall
-    |> where([c], c.team_id == ^team.id and c.tool == "check_report")
-    |> order_by([c], desc: c.called_at, desc: c.id)
-    |> limit(^limit)
-    |> preload(:mcp_token)
-    |> Repo.all()
-  end
-
   @doc "Deletes calls older than #{@retention_days} days. Returns how many."
   def prune(now) do
     cutoff = DateTime.add(now, -@retention_days, :day)

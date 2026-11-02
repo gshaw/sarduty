@@ -228,12 +228,14 @@ defmodule Web.ReportFormLive do
       <aside id="report-fields" class="content-1/3 report-help">
         <p class="action mb-4"><.a id="report-hide-help" href="#" data-help="hide">Hide help</.a></p>
         <p class="action mb-4">
-          <.a id="report-language-link" href={~p"/reports/language"} external={true}>How to write a report</.a>
+          <.a id="report-language-link" href={~p"/agents/reports"} external={true}>How to write a report</.a>
         </p>
         <h2 class="heading">The page</h2>
         <p class="hint">Clauses after the query that draw the page around the rows.</p>
         <.table id="report-clause-table" rows={clauses()} row_id={&"clause-#{elem(&1, 0)}"}>
-          <:col :let={{clause, _draws}} label="Clause"><code>{clause}</code></:col>
+          <:col :let={{clause, _draws}} label="Clause" class="whitespace-nowrap">
+            <code>{clause}</code>
+          </:col>
           <:col :let={{_clause, draws}} label="Draws">{draws}</:col>
         </.table>
 

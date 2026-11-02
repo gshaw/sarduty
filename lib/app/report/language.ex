@@ -1,7 +1,7 @@
 defmodule App.Report.Language do
   @moduledoc """
-  How to write a report (#803): the language page at `/reports/language`, and the same
-  text as Markdown at `/reports/language.md` for agents. Built from App.Report.Parser's
+  How to write a report (#803): the language page at `/agents/reports`, and the same
+  text as Markdown at `/agents/reports.md` for agents. Built from App.Report.Parser's
   clauses, functions, and ranges, App.Report.Formats, App.Report.Catalog's subjects and fields, and
   App.Report.Compiler's limits, so it cannot drift from the code. A test fails on a
   clause, function, or range with no entry here, and runs every example.
@@ -173,7 +173,7 @@ defmodule App.Report.Language do
 
     A report is a query on one team's records: which fields to show, which rows to keep, \
     and how to sort them. Team admins write one on Reports, with New report. An agent can \
-    read this page as text at `/reports/language.md`.
+    read this page as text at `/agents/reports.md`.
 
     The language is Google Sheets' QUERY language, plus `from`, a dot to a parent's \
     fields, date ranges, and values picked when the report runs. Keywords, functions, and \
