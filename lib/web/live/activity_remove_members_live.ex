@@ -37,6 +37,7 @@ defmodule Web.ActivityRemoveMembersLive do
            sender: SendReminders.sender(team, user, now),
            selected: MapSet.new(),
            message: "",
+           message_error: nil,
            skip_email: false,
            now: now
          )
@@ -114,12 +115,17 @@ defmodule Web.ActivityRemoveMembersLive do
     |> push_navigate(to: activity_path(socket, activity))
   end
 
+  # The message box keeps its error until the team admin types in it.
   def handle_event("change", params, socket) do
+    %{message: message, message_error: message_error} = socket.assigns
+    new_message = Map.get(params, "message", message)
+
     {:noreply,
      socket
      |> assign(
        selected: params |> selected_ids() |> MapSet.new(),
-       message: Map.get(params, "message", socket.assigns.message),
+       message: new_message,
+       message_error: if(new_message == message, do: message_error),
        skip_email: params["skip_email"] == "true"
      )
      |> assign_checked()}
@@ -144,8 +150,17 @@ defmodule Web.ActivityRemoveMembersLive do
         {:noreply, Web.ActivityLive.leave_deleted(socket, activity)}
 
       {:error, reason} ->
-        {:noreply, put_flash(socket, :error, RemoveMembers.error_text(team, reason))}
+        {:noreply, refuse(socket, team, reason)}
     end
+  end
+
+  # A missing or long message marks the message box too, in the toast's words.
+  defp refuse(socket, team, reason) do
+    text = RemoveMembers.error_text(team, reason)
+
+    socket
+    |> assign(message_error: if(reason in [:no_message, :message_too_long], do: text))
+    |> put_flash(:error, text)
   end
 
   # Swoosh's test adapter tells each process an email came from, this one included.
@@ -243,6 +258,7 @@ defmodule Web.ActivityRemoveMembersLive do
           type="textarea"
           label={message_label(@messaged, @skip_email)}
           value={@message}
+          errors={List.wrap(@message_error)}
           rows="4"
           maxlength={Message.max_length()}
           phx-debounce="300"

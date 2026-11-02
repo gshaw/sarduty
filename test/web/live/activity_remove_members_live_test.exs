@@ -146,14 +146,21 @@ defmodule Web.ActivityRemoveMembersLiveTest do
     assert_received {:email, %{to: [{"Drew Patel", _}]}}
   end
 
-  test "no message for a member who gets an email refuses, and removes nobody", ctx do
+  test "no message for a member who gets an email refuses, marks the box, and removes nobody",
+       ctx do
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
     params = check(lv, [ctx.drew], " ")
 
     lv |> form("#remove-form", params) |> render_submit()
 
     assert render(lv) =~ "Enter a message for the signed up members."
+    assert has_element?(lv, ".field-error", "Enter a message for the signed up members.")
+    assert has_element?(lv, ".field-error #remove-message")
     assert length(Repo.all(Attendance)) == 4
+
+    lv |> form("#remove-form", Map.put(params, "message", "Sorry, it's full.")) |> render_change()
+
+    refute has_element?(lv, ".field-error")
   end
 
   test "a published activity sends the visitor back", ctx do
