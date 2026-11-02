@@ -27,7 +27,7 @@ defmodule App.Model.SavedReport do
   @doc "The longest a name may be."
   def max_name, do: @max_name
 
-  @doc "A changeset for what a team admin types: name, about, query, and picked values."
+  @doc "A changeset for what a team admin types: name, description (`about`), query, and picked values."
   def changeset(%SavedReport{} = report, params) do
     report
     |> cast(params, [:name, :about, :query, :values])
@@ -39,7 +39,7 @@ defmodule App.Model.SavedReport do
     )
     |> validate_length(:about,
       max: @max_about,
-      message: "About must be #{@max_about} characters or fewer"
+      message: "Description must be #{@max_about} characters or fewer"
     )
   end
 

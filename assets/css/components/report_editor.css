@@ -1,0 +1,8 @@
+@layer components {
+  /* The report editor (#784): its help column hides and shows (help_toggle.js). Hidden,
+     the form takes the full width and Show help sits on the Query label's line. */
+  .report-editor.is-help-hidden > .report-help { display: none; }
+  .report-editor.is-help-hidden > .report-main { width: 100%; }
+  .report-show-help { display: none; float: right; margin: 0; }
+  .report-editor.is-help-hidden .report-show-help { display: block; }
+}

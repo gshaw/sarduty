@@ -70,6 +70,24 @@ defmodule Web.ReportFormLiveTest do
     assert has_element?(lv, "#report-errors", "activities has no field hour_tags")
   end
 
+  test "the name and description come first, Save is at the top, and help can hide",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    {:ok, lv, html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+
+    assert has_element?(lv, ".heading-row #report-save[form=report-form]")
+    assert has_element?(lv, "label[for=report_about]", "Description")
+    {name, _} = :binary.match(html, ~s(id="report_name"))
+    {query, _} = :binary.match(html, ~s(id="report_query"))
+    assert name < query
+
+    # The toggle is the browser's (help_toggle.js): both links are there, CSS shows one.
+    assert has_element?(lv, "#report-editor[phx-hook=HelpToggle]")
+    assert has_element?(lv, "#report-fields #report-hide-help[data-help=hide]")
+    assert has_element?(lv, "#report-show-help[data-help=show]")
+    refute has_element?(lv, "#report-delete-button")
+  end
+
   test "Copy report starts from a built-in report", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     conn = log_in_user(conn, user)

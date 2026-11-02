@@ -1,7 +1,7 @@
 defmodule Web.ReportFormLive do
   @moduledoc """
-  New report and Change report (#768). The query first, its rows as you type, then the
-  name: a report is named once it's right. The preview draws the page's clauses too
+  New report and Change report (#768). Save report at the top; the name and description
+  first, then the query and its rows as you type (#784). The preview draws the page's clauses too
   (#784): its tiles, filters, and headers pick as they will on the report's page. Save
   keeps the query and the picked values, never the rows. Beside the query, the page's
   clauses and the fields of the subject after `from`; a click puts a field in the query
@@ -118,7 +118,7 @@ defmodule Web.ReportFormLive do
   defp assign_form(socket, changeset), do: assign(socket, form: to_form(changeset, as: "report"))
 
   # Runs the query as it stands, for the rows under it, and keeps the fields beside it on
-  # the last subject that read. Typing the name or about leaves the rows as they are.
+  # the last subject that read. Typing the name or description leaves the rows as they are.
   defp preview(socket, params) do
     query = Map.get(params, "query") || socket.assigns.form[:query].value || ""
     values = Map.get(params, "values") || socket.assigns.form[:values].value || %{}
@@ -202,10 +202,19 @@ defmodule Web.ReportFormLive do
       />
       <:item label={@page_title} />
     </.breadcrumbs>
-    <h1 class="title">{@page_title}</h1>
+    <.heading_row>
+      <h1 class="title">{@page_title}</h1>
+      <:action>
+        <.button id="report-save" form="report-form" variant={:success} phx-disable-with="Saving…">
+          Save report
+        </.button>
+        <.button id="report-cancel" navigate={cancel_path(@current_team, @saved)}>Cancel</.button>
+      </:action>
+    </.heading_row>
 
-    <div class="content-wrapper">
-      <aside id="report-fields" class="content-1/3">
+    <div id="report-editor" class="content-wrapper report-editor" phx-hook="HelpToggle">
+      <aside id="report-fields" class="content-1/3 report-help">
+        <p class="action mb-4"><.a id="report-hide-help" href="#" data-help="hide">Hide help</.a></p>
         <h2 class="heading">The page</h2>
         <p class="hint">Clauses after the query that draw the page around the rows.</p>
         <.table id="report-clause-table" rows={clauses()} row_id={&"clause-#{elem(&1, 0)}"}>
@@ -232,9 +241,17 @@ defmodule Web.ReportFormLive do
         </p>
       </aside>
 
-      <div class="content-2/3">
+      <div class="content-2/3 report-main">
         <.form for={@form} id="report-form" phx-change="change" phx-submit="save">
           <.error_summary form={@form} />
+          <.input field={@form[:name]} type="text" label="Name" maxlength="80" />
+          <.input field={@form[:about]} type="text" label="Description" maxlength="200">
+            One line under the name on Reports.
+          </.input>
+
+          <p class="action report-show-help">
+            <.a id="report-show-help" href="#" data-help="show">Show help</.a>
+          </p>
           <.input
             field={@form[:query]}
             type="textarea"
@@ -260,7 +277,7 @@ defmodule Web.ReportFormLive do
             value={value}
           />
 
-          <div :if={@view} id="report-preview" class="mb-8">
+          <div :if={@view} id="report-preview">
             <.report_page
               id="report-preview"
               view={@view}
@@ -270,16 +287,6 @@ defmodule Web.ReportFormLive do
               count={preview_count(@view)}
             />
           </div>
-
-          <.input field={@form[:name]} type="text" label="Name" maxlength="80" />
-          <.input field={@form[:about]} type="text" label="About" maxlength="200">
-            One line under the name on Reports.
-          </.input>
-
-          <.form_actions>
-            <.button id="report-save" variant={:success} phx-disable-with="Saving…">Save report</.button>
-            <.button id="report-cancel" navigate={cancel_path(@current_team, @saved)}>Cancel</.button>
-          </.form_actions>
         </.form>
       </div>
     </div>
