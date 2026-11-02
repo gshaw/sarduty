@@ -19,8 +19,7 @@ defmodule Web.TeamSignupLive do
      socket
      |> assign(
        page_title: "Sign up a team",
-       page_description:
-         "Sign up your search and rescue team for SAR Duty with its D4H access key.",
+       page_description: "Sign up your search and rescue team for SAR Duty.",
        done: nil
      )
      |> assign_form(changeset)}

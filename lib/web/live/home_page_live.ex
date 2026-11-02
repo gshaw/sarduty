@@ -20,7 +20,7 @@ defmodule Web.HomePageLive do
      assign(socket,
        page_title: "Less paperwork for search and rescue teams",
        page_description:
-         "Tax credit letters, ID cards on members' phones, attendance at the door, and reports, for search and rescue teams that use D4H.",
+         "Tax credit letters, ID cards on members' phones, attendance at the door, and reports, for search and rescue teams.",
        teams: teams,
        members: socket.assigns[:member_logins] || []
      )}
