@@ -6,11 +6,14 @@ defmodule Web.Components.ReportPage do
 
   On the report's page, each control is a link or a form whose change patches the URL.
   In the editor, `click` turns them into events, so a pick changes the preview, not the
-  page. A list such as Activities draws its own cells in the `table` slot.
+  page. A list such as Activities draws its own cells in the `table` slot, and ends, for
+  a team admin, with Save as report and Download CSV (#784).
   """
   use Web, :function_component
 
+  import Web.Components.A
   import Web.Components.FilterBar
+  import Web.Components.PageActions
   import Web.Components.Pagination
   import Web.Components.ReportTable
   import Web.Components.StatSwitch
@@ -37,6 +40,12 @@ defmodule Web.Components.ReportPage do
   attr :combobox, :list,
     default: [],
     doc: "the filters drawn as a combobox, by name: those that list the team's own names"
+
+  attr :save_path, :string,
+    default: nil,
+    doc: "Save as report for a list, with its picks; nil for none, such as for a member"
+
+  attr :csv_path, :string, default: nil, doc: "the list's rows as CSV, every page"
 
   slot :table, doc: "the page's own table for the rows, in place of the report's cells"
 
@@ -128,6 +137,14 @@ defmodule Web.Components.ReportPage do
     />
 
     <.pagination :if={@view.page && @path_fn} class="my-4" paginated={@view.page} path_fn={@path_fn} />
+
+    <.page_actions :if={@save_path} id={"#{@id}-report-actions"} class="mt-8">
+      <:byline>
+        This list is a report: save it as your own to change its columns, filters, and tiles.
+      </:byline>
+      <:action><.a id={"#{@id}-save-report"} navigate={@save_path}>Save as report</.a></:action>
+      <:action :if={@csv_path}><.a id={"#{@id}-csv"} href={@csv_path}>Download CSV</.a></:action>
+    </.page_actions>
     """
   end
 

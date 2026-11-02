@@ -80,7 +80,8 @@ defmodule Web.MemberCollectionLive do
     assign(socket,
       form: ReportPage.controls_form(view),
       path_fn: &ReportPage.path(view, ~p"/teams/#{team}/members", &1),
-      save_path: ~p"/teams/#{team}/reports/new?#{Map.put(view.params, "list", "members")}"
+      save_path: ~p"/teams/#{team}/reports/new?#{Map.put(view.params, "list", "members")}",
+      csv_path: ~p"/teams/#{team}/reports/members/csv?#{Map.delete(view.params, "page")}"
     )
   end
 
@@ -125,9 +126,6 @@ defmodule Web.MemberCollectionLive do
         >
           Add member
         </.button>
-        <.button :if={@team_admin?} id="member-save-report" navigate={@save_path}>
-          Save as report
-        </.button>
       </:action>
     </.heading_row>
 
@@ -139,6 +137,8 @@ defmodule Web.MemberCollectionLive do
       now={nil}
       path_fn={@path_fn}
       form={@form}
+      save_path={@team_admin? && @save_path}
+      csv_path={@team_admin? && @csv_path}
       combobox={["group", "activity_tag"]}
     >
       <:table>

@@ -306,6 +306,10 @@ defmodule Web.ActivityCollectionLiveTest do
 
       assert lv |> element("#activity-save-report") |> render() =~ "list=activities"
       assert lv |> element("#activity-save-report") |> render() =~ "activity=exercise"
+      assert has_element?(lv, "#activity-report-actions", "This list is a report")
+
+      assert lv |> element("#activity-csv") |> render() =~
+               "reports/activities/csv?activity=exercise"
 
       %{team: team, user: member_user} = member_with_login_fixture()
 
@@ -313,7 +317,23 @@ defmodule Web.ActivityCollectionLiveTest do
         build_conn() |> log_in_user(member_user) |> live(~p"/teams/#{team}/activities")
 
       refute has_element?(lv, "#activity-save-report")
+      refute has_element?(lv, "#activity-csv")
       refute has_element?(lv, "#activity-add")
+    end
+
+    test "Download CSV gives the list's rows with its picks", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      activity_fixture(team, %{title: "Rope rescue training", activity_kind: "exercise"})
+      activity_fixture(team, %{title: "Overdue kayaker", activity_kind: "incident"})
+
+      csv =
+        conn
+        |> log_in_user(user)
+        |> get(~p"/teams/#{team}/reports/activities/csv?activity=exercise")
+        |> response(200)
+
+      assert csv =~ "Rope rescue training"
+      refute csv =~ "Overdue kayaker"
     end
 
     test "opens New report with the list's text, named for the picks", %{conn: conn} do
