@@ -43,7 +43,7 @@ defmodule App.MCP.Tool.ReportFields do
     names = %{
       groups: titles(Group.get_all(team.id)),
       qualifications: titles(Qualification.get_all(team.id)),
-      tags: team |> Catalog.read_tag_titles() |> Enum.map(&elem(&1, 0)),
+      tags: team |> Catalog.read_tag_titles(App.Repo) |> Enum.map(&elem(&1, 0)),
       hours_tags: Activity.hours_tags(team),
       custom_fields: custom_fields(team)
     }

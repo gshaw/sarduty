@@ -241,6 +241,30 @@ defmodule Web.MCPControllerTest do
              }
     end
 
+    test "try_report runs on Coast Range SAR, never the team's records", ctx do
+      %{conn: conn, team: team, token: token} = ctx
+      member_fixture(team, %{name: "Pat Example"})
+
+      {result, text} =
+        call_tool(conn, token, team, "try_report", %{
+          "query" => "select name, standing from members where name = 'Cameron Ruiz'"
+        })
+
+      refute result["isError"]
+      output = Jason.decode!(text)
+      assert output["team"] == "Coast Range SAR"
+      assert output["made_up"]
+      assert output["columns"] == ["Member", "Standing"]
+      assert [["Cameron Ruiz", _standing]] = output["rows"]
+      refute text =~ "Pat Example"
+
+      {result, text} =
+        call_tool(conn, token, team, "try_report", %{"query" => "select nme from members"})
+
+      assert result["isError"]
+      assert text =~ "members has no field nme"
+    end
+
     test "check_report links a saved report to Change report", ctx do
       %{conn: conn, team: team, token: token} = ctx
       saved = saved_report_fixture(team, "Callout list")
@@ -305,7 +329,8 @@ defmodule Web.MCPControllerTest do
       conn = rpc(ctx.conn, ctx.token, ctx.team.subdomain, "tools/list")
       tools = json_response(conn, 200)["result"]["tools"]
 
-      assert Enum.map(tools, & &1["name"]) == ~w(report_fields list_reports check_report)
+      assert Enum.map(tools, & &1["name"]) ==
+               ~w(report_fields list_reports try_report check_report)
 
       assert Enum.all?(tools, & &1["annotations"]["readOnlyHint"])
     end
@@ -377,6 +402,7 @@ defmodule Web.MCPControllerTest do
     [
       {"report_fields", %{}},
       {"list_reports", %{}},
+      {"try_report", %{"query" => query}},
       {"check_report", %{"query" => query, "name" => "Who went"}}
     ]
   end

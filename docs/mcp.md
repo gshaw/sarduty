@@ -72,8 +72,10 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
   report, or Change report with `report_id`, with the query, name, and description in
   the URL and `agent=` the token's name. Saving from that link fills `reports.agent`.
   A mistake comes back as the editor shows it, with its line.
-- `try_report` (next): runs a query on Coast Range SAR, the made-up team, so the agent
-  can catch a wrong answer before the team admin sees it.
+- `try_report`: runs a query on Coast Range SAR, the made-up team in `App.SampleRepo`
+  (`App.Report.run_sample/3`), and gives back the first 50 rows as text, as the CSV
+  writes them, marked `made_up`. The agent catches a wrong answer, such as no rows or a
+  double count, before the team admin sees it. It never reads the token's team.
 
 - **No records** (#816). No tool returns a member, an activity's title, a row, or a
   count from the team's records. `Web.MCPControllerTest` seeds them, with contact

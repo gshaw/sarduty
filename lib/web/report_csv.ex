@@ -10,14 +10,15 @@ defmodule Web.ReportCSV do
   alias Web.Components.ReportTable
 
   @doc "The CSV text for `result`, with a header row, and a Total row when it has one."
-  def build(%Result{} = result, records, timezone) do
+  def build(%Result{} = result, records, timezone),
+    do: result |> table(records, timezone) |> Enum.map_join("", &line/1)
+
+  @doc "The header row, then each row, then a Total row when it has one, each cell as text."
+  def table(%Result{} = result, records, timezone) do
     header = Enum.map(result.columns, &safe(ReportTable.label(&1, records) || ""))
     rows = Enum.map(result.rows, &row(&1, result.columns, records, timezone))
     totals = if result.totals, do: [total_row(result, records, timezone)], else: []
-
-    [header | rows]
-    |> Enum.concat(totals)
-    |> Enum.map_join("", &line/1)
+    [header | rows] ++ totals
   end
 
   defp total_row(result, records, timezone) do

@@ -8,6 +8,7 @@ defmodule App.MCP.Tools do
   @tools [
     App.MCP.Tool.ReportFields,
     App.MCP.Tool.ListReports,
+    App.MCP.Tool.TryReport,
     App.MCP.Tool.CheckReport
   ]
 
