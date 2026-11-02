@@ -234,6 +234,7 @@ defmodule Web.Layouts do
         <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
         · <.a id="footer-terms" navigate={~p"/terms"}>Terms</.a>
         · <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
+        · <.a id="footer-changelog" navigate={~p"/changelog"}>Changelog</.a>
         · <.a id="footer-support" href={@support_url} external={true}>Support SAR Duty</.a>
         · <.a id="footer-github" href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
         <%= if @mailbox? do %>
