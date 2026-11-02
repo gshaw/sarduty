@@ -133,7 +133,7 @@ have decided since the page loaded, stays in `call`.
 - [navigation.md](navigation.md) — areas, the side navigation, and the account menu that switches between them.
 - [search.md](search.md) — the top bar's search: what it matches, how it ranks, and who finds what.
 - [mcp.md](mcp.md) — the MCP endpoint trial: tokens, the read-only tools, and the call log.
-- [reports.md](reports.md) — reports: the query language, the catalog of fields, and how a query runs.
+- [reports.md](reports.md) — reports: the query language, the catalog of fields, how a query runs, and Coast Range SAR, the made-up team agents try them on.
 - [taking-attendance.md](taking-attendance.md) — Take attendance: who scans ID cards at an activity and when, the times they record, and sending them to D4H.
 - [sar-command-assist.md](sar-command-assist.md) — SAR Command Assist, the incident tool many teams run beside SAR Duty, and where the two meet.
 - [organizations.md](organizations.md) — parent organizations like BCSARA, their branding, and giving one its own verify host.

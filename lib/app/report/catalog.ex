@@ -27,7 +27,6 @@ defmodule App.Report.Catalog do
   alias App.Model.Standing
   alias App.Model.Tag
   alias App.Model.Team
-  alias App.Repo
   alias App.Report.Context
   alias App.Report.Field
   alias App.Report.Source
@@ -536,30 +535,31 @@ defmodule App.Report.Catalog do
   @doc "The team's tags' titles, as choices."
   def tag_titles(%Context{tags: tags}), do: tags
 
-  @doc "The team's tags' titles, as choices, read once for a page's Context (#784)."
-  def read_tag_titles(%Team{} = team),
-    do: titles(from(t in Tag, where: t.team_id == ^team.id, select: t.title))
+  @doc "The team's tags' titles in `repo`, as choices, read once for a page's Context (#784)."
+  def read_tag_titles(%Team{} = team, repo),
+    do: titles(from(t in Tag, where: t.team_id == ^team.id, select: t.title), repo)
 
-  defp group_titles(%Context{team: team}),
-    do: titles(from(g in Group, where: g.team_id == ^team.id, select: g.title))
+  defp group_titles(%Context{team: team, repo: repo}),
+    do: titles(from(g in Group, where: g.team_id == ^team.id, select: g.title), repo)
 
-  defp qualification_titles(%Context{team: team}),
-    do: titles(from(q in Qualification, where: q.team_id == ^team.id, select: q.title))
+  defp qualification_titles(%Context{team: team, repo: repo}),
+    do: titles(from(q in Qualification, where: q.team_id == ^team.id, select: q.title), repo)
 
-  defp equipment_kinds(%Context{team: team}),
+  defp equipment_kinds(%Context{team: team, repo: repo}),
     do:
       titles(
         from(e in EquipmentItem,
           where: e.team_id == ^team.id and not is_nil(e.kind),
           select: e.kind
-        )
+        ),
+        repo
       )
 
-  defp titles(query),
+  defp titles(query, repo),
     do:
       query
       |> distinct(true)
-      |> Repo.all()
+      |> repo.all()
       |> Enum.sort_by(&String.downcase/1)
       |> Enum.map(&{&1, &1})
 
@@ -832,9 +832,9 @@ defmodule App.Report.Catalog do
     do: team |> team_members() |> Member.d4h_access_query(access?)
 
   # A member's attended activities or minutes in a period, with a tag: 0 for none.
-  defp totals_sql(table, [period, tag], %Context{team: team, now: now}, key) do
+  defp totals_sql(table, [period, tag], %Context{team: team, now: now, repo: repo}, key) do
     query = from(t in subquery(Attendance.member_totals_query(team, period, tag, now)), select: t)
-    {sql, params} = Repo.to_sql(:all, query)
+    {sql, params} = repo.to_sql(:all, query)
     column = Atom.to_string(key)
 
     {[

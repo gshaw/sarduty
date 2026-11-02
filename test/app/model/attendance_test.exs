@@ -183,7 +183,8 @@ defmodule App.Model.AttendanceTest do
     "lib/app/operation/remove_members.ex" => "a signed up member's reply, before the start",
     "lib/web/live/activity_remove_members_live.ex" => "a table per reply, before the start",
     "lib/app/operation/refresh_d4h_data/upsert_attendances.ex" =>
-      "a no-show's row changed to attending in D4H"
+      "a no-show's row changed to attending in D4H",
+    "lib/app/coast_range.ex" => "the made-up team's rows, written as D4H writes them"
   }
 
   test "only Attendance says what attended means" do

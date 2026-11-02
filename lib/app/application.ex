@@ -15,6 +15,7 @@ defmodule App.Application do
     # connections a migration can be prepared against another one's stale schema: a
     # fresh database failed at an ALTER TABLE every time (2026-10-23).
     App.Release.migrate()
+    App.SampleRepo.prepare()
 
     :ok = Oban.Telemetry.attach_default_logger()
     :ok = ErrorReporter.attach()
@@ -24,6 +25,7 @@ defmodule App.Application do
       # Before the Repo, so it sees every transaction.
       App.Repo.SlowLog,
       App.Repo,
+      App.SampleRepo,
       # Before Oban: jobs broadcast refresh progress, and children stop in reverse
       # order, so a job still draining at shutdown needs PubSub running.
       {Phoenix.PubSub, name: App.PubSub},

@@ -127,7 +127,7 @@ defmodule App.ReportTest do
       capture_log(fn ->
         assert {:error,
                 %Error{message: "This report could not run. Try again, or change its query."}} =
-                 Runner.run(%Plan{sql: "SELECT 1 GROUP BY", params: []}, "Etc/UTC")
+                 Runner.run(%Plan{sql: "SELECT 1 GROUP BY", params: []}, "Etc/UTC", App.Repo)
       end)
 
     assert log =~ "Report could not run: incomplete input"
@@ -137,9 +137,32 @@ defmodule App.ReportTest do
 
     capture_log(fn ->
       assert {:error, %Error{message: "Narrow the report with where" <> _}} =
-               Runner.run(%Plan{sql: slow, params: []}, "Etc/UTC")
+               Runner.run(%Plan{sql: slow, params: []}, "Etc/UTC", App.Repo)
     end)
   end
+
+  # Each repo's queries come with its own telemetry event, in the process that ran them.
+  # App.SampleRepoTest checks a sample run the other way.
+  test "a real team's run never reads Coast Range SAR's database" do
+    team = team_fixture()
+    activity_fixture(team)
+    id = "report-test-#{inspect(self())}"
+    events = [[:app, :repo, :query], [:app, :sample_repo, :query]]
+    :telemetry.attach_many(id, events, &__MODULE__.forward/4, self())
+    on_exit(fn -> :telemetry.detach(id) end)
+
+    assert {:ok, _result} =
+             Report.run("select title, attended_count from activities", team, %{}, @now)
+
+    assert {:ok, _view} = Report.page("select name, groups from members page 10", team, %{}, @now)
+
+    assert_received {:query, [:app, :repo, :query]}
+    refute_received {:query, [:app, :sample_repo, :query]}
+  end
+
+  @doc false
+  def forward(event, _measurements, _metadata, test),
+    do: if(self() == test, do: send(test, {:query, event}))
 
   test "hours by member pivots by kind, with a total row and column" do
     team = team_fixture()

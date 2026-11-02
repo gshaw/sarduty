@@ -3,7 +3,8 @@
 Reports (#768) are saved queries in a small language, run on one team's records. The
 language is Google Sheets' QUERY language plus four pieces of Salesforce's SOQL: `from`,
 dotted fields to a parent record, date ranges such as `LAST_N_DAYS:365`, and `:name`
-values. `App.Report.run/4` is the way in.
+values. `App.Report.run/4` is the way in, and `App.Report.run_sample/3` runs a query on
+[Coast Range SAR](#coast-range-sar), the made-up team.
 
 <!-- cspell:ignore SOQL -->
 
@@ -186,3 +187,46 @@ so a Records team doesn't see it.
 5,000 rows, 12 pivot columns, and 2 seconds. A page shows at most 500 rows, and a report
 with `page` has no 5,000-row limit, since each page reads only its own. A run past 2 seconds is interrupted (the
 connection's timeout interrupts SQLite) and says to narrow the report.
+
+## Coast Range SAR
+
+<!-- cspell:ignore CRSAR -->
+
+Coast Range SAR (CRSAR) is a made-up team, the same for every team (#816). An agent
+writing a report runs it there with `App.Report.run_sample/3`, which returns the same
+`%App.Report.Result{}` as `run/4`, so it catches a wrong answer, such as 0 rows or a
+double count, before a team admin sees the report on their own team. It is also the cast
+every mockup draws ([mockups.md](mockups.md)).
+
+- **The cast** is `App.CoastRange.build/1`: plain structs, a pure function of `now`, with
+  every date counted back from it. Names, ref ids, and 604-555-01xx numbers never change.
+  `App.SampleRepoTest` fails when a field in the catalog has no value on the team, or a
+  choice or a true or false never shows up, so a new field needs rows here too.
+  `App.Operation.SeedCoastRange.call/3` inserts it into any repo.
+- **Its own database**: `App.SampleRepo`, with App.Repo's migrations, in
+  `sarduty_sample.db` beside the main database (`db/sarduty_sample_dev.db` in dev,
+  `_test` in tests). It is migrated and seeded before the supervisor starts, as the main
+  database is, and `ReseedSampleWorker` seeds it again every night so "last 30 days"
+  always has rows. A reseed is one transaction, so a run reads the old rows or the new.
+- **The engine takes its database from the context.** `App.Report.Context`'s `repo` is
+  where every read goes: the context's own reads, the catalog's menus, and the runner.
+  It is App.Repo unless `run_sample/3` sets App.SampleRepo. A test proves a sample run
+  never reads App.Repo, and a team's run never reads App.SampleRepo.
+
+Decided 2026-11-02:
+
+- **A file, not `:memory:`.** A run past 2 seconds ends with DBConnection disconnecting
+  its connection, and exqlite closes the database. An in-memory database closes with it,
+  and the next connection opens an empty one. A file keeps its rows. `:memory:` also
+  means one connection, so every agent's run would wait on the one before; a shared-cache
+  URI needs a connection held open forever, and its table locks fail at once with
+  `SQLITE_LOCKED` rather than waiting. The file is about 1 MB, two connections, and its
+  pages in the OS cache: nothing to count against the machine's memory.
+- **On the volume, not `/tmp`.** Fly resets the root file system at every boot, so `/tmp`
+  would run all 127 migrations on each deploy (about 1 s on a laptop). On the volume, a
+  deploy runs only the new ones, and seeding takes about 150 ms.
+- **No sandbox in tests.** Tests only read it, async, without checking out a connection.
+  The one test that reseeds it is not async, so it never runs beside them.
+- **Migrated on one connection**, as the main database is (App.Application), so no
+  migration is prepared against a schema another connection has stale. A failure is
+  logged and the site starts without it; `run_sample/3` then says it isn't ready.

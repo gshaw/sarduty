@@ -27,15 +27,28 @@ defmodule App.Report do
   `{:error, %App.Report.Error{}}` for a mistake, checked before anything runs. `given`
   holds picked values by name, and the page's picks: every row they keep, not a page.
   """
-  def run(text, %Team{} = team, given \\ %{}, now \\ DateTime.utc_now()) do
-    context = Context.new(team, now)
+  def run(text, %Team{} = team, given \\ %{}, now \\ DateTime.utc_now()),
+    do: run_in(Context.new(team, now), text, given)
 
+  @doc """
+  Runs `text` on Coast Range SAR, the made-up team in App.SampleRepo (#816), as run/4
+  does on a real team: `{:ok, %App.Report.Result{}}` or `{:error, %App.Report.Error{}}`.
+  An agent tries a report here, so it never reads a real team's rows.
+  """
+  def run_sample(text, given \\ %{}, now \\ DateTime.utc_now()) do
+    case App.SampleRepo.team() do
+      nil -> {:error, Error.new(nil, "Coast Range SAR isn't ready. Try again in a minute.")}
+      team -> run_in(Context.new(team, now, repo: App.SampleRepo), text, given)
+    end
+  end
+
+  defp run_in(context, text, given) do
     with {:ok, query} <- parse(text, context),
          :ok <- check_page(query, context, given) do
       picks = Picks.resolve(query, given, context.today)
 
       with {:ok, plan} <- query |> Picks.plain(picks) |> Compiler.compile(context, picks.given) do
-        Runner.run(plan, team.timezone)
+        Runner.run(plan, context.timezone, context.repo)
       end
     end
   end
@@ -63,7 +76,7 @@ defmodule App.Report do
       picks = Picks.resolve(query, given, context.today)
 
       with {:ok, plan} <- query |> ids_plain(picks) |> Compiler.compile(context, picks.given),
-           {:ok, result} <- Runner.run(plan, team.timezone) do
+           {:ok, result} <- Runner.run(plan, team.timezone, context.repo) do
         {:ok, Enum.map(result.rows, &hd/1)}
       end
     end
@@ -162,7 +175,7 @@ defmodule App.Report do
     with {:ok, switch} <- switch(query, picks, context),
          {:ok, total, page} <- total(query, picks, switch, context),
          {:ok, plan} <- rows_plan(query, picks, page, context),
-         {:ok, result} <- Runner.run(plan, context.timezone) do
+         {:ok, result} <- Runner.run(plan, context.timezone, context.repo) do
       view = %View{
         result: result,
         total: total || length(result.rows),
@@ -219,7 +232,8 @@ defmodule App.Report do
   end
 
   defp count(plain, picks, context) do
-    with {:ok, sql} <- Compiler.count(plain, context, picks.given), do: Runner.count(sql)
+    with {:ok, sql} <- Compiler.count(plain, context, picks.given),
+         do: Runner.count(sql, context.repo)
   end
 
   # With no search, the picked tile has already counted every row.
@@ -290,7 +304,7 @@ defmodule App.Report do
 
     case Compiler.counts(base, wheres, context, picks.given) do
       {:ok, sql} ->
-        with {:ok, ns} <- Runner.counts(sql) do
+        with {:ok, ns} <- Runner.counts(sql, context.repo) do
           {:ok,
            Enum.zip_with(tiles, ns, fn {value, label, _pick}, n ->
              %{value: value, label: label, count: n}
@@ -444,7 +458,7 @@ defmodule App.Report do
         {:ok, choices}
 
       {:ok, {:sql, sql, type}} ->
-        with {:ok, values} <- Runner.values(sql, type),
+        with {:ok, values} <- Runner.values(sql, type, context.repo),
              do: {:ok, each_choices(values, type, context)}
 
       error ->
