@@ -4,6 +4,7 @@ defmodule App.Report.BuiltInTest do
 
   import App.DataFixtures
 
+  alias App.Adapter.D4H
   alias App.Report
   alias App.Report.BuiltIn
 
@@ -92,5 +93,29 @@ defmodule App.Report.BuiltInTest do
     none = ids(team, "members-who-can-log-in", %{"access" => "none"})
     assert cannot.id in none
     refute can.id in none or unknown.id in none
+  end
+
+  test "Activities missing required fields keeps the past ones with a required field empty" do
+    team = team_fixture()
+    custom_field_fixture(team, %{d4h_custom_field_id: 454, required: true})
+    past = %{activity_kind: "incident", started_at: ~U[2026-05-01 18:00:00Z]}
+    missing = activity_fixture(team, Map.merge(past, %{custom_values: %{}}))
+    activity_fixture(team, Map.merge(past, %{custom_values: %{"454" => "1"}}))
+
+    activity_fixture(team, %{
+      activity_kind: "incident",
+      custom_values: %{},
+      started_at: ~U[2026-07-01 18:00:00Z]
+    })
+
+    assert ids(team, "activities-missing-required-fields") == MapSet.new([missing.id])
+  end
+
+  test "a Records team has no D4H-only built-in: its fields are not the team's to read" do
+    records = team_fixture(%{d4h_api_host: D4H.records_host()})
+
+    refute BuiltIn.get(records, "activities-missing-required-fields")
+    assert BuiltIn.get(team_fixture(), "activities-missing-required-fields")
+    assert length(BuiltIn.all(records)) == length(BuiltIn.all()) - 1
   end
 end

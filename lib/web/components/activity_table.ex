@@ -5,7 +5,6 @@ defmodule Web.Components.ActivityTable do
   """
   use Web, :function_component
 
-  import Web.Components.A
   import Web.Components.Columns
   import Web.Components.D4H
   import Web.Components.Table
@@ -17,7 +16,6 @@ defmodule Web.Components.ActivityTable do
   attr :sort, :string, required: true
   attr :path_fn, :any, required: true
   attr :team, :map, required: true
-  attr :hours, :string, default: nil, doc: "the Hours tag filter, set to list ones to fix"
 
   attr :counts, :map,
     default: %{},
@@ -42,17 +40,6 @@ defmodule Web.Components.ActivityTable do
           {activity_summary(record)}
         </div>
         <.activity_tags activity={record} hours_tags={@hours_tags} />
-        <%!-- Needs attention links here, and a published activity is locked (#358, #585). --%>
-        <div
-          :if={@hours in ["untagged", "two"] and Activity.locked?(record)}
-          id={"activity-#{record.id}-tags-locked"}
-          class="hint"
-        >
-          {if @hours == "two",
-            do: "Published, so unpublish it to change its tags.",
-            else: "Published, so unpublish it to set its hours tag."}
-          <.a navigate={~p"/teams/#{@team}/activities/#{record.id}/edit"}>Change activity</.a>
-        </div>
       </:col>
       <:col :let={record} label="Kind" class="w-1/12">
         <.activity_kind activity={record} />

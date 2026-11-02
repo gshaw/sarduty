@@ -18,7 +18,7 @@ defmodule App.ViewData.Reports do
   def list(%Team{} = team, now) do
     %{
       saved: team |> SavedReport.get_all() |> Enum.map(&from_saved(&1, team, now)),
-      built_in: Enum.map(BuiltIn.all(), &from_built_in/1)
+      built_in: team |> BuiltIn.all() |> Enum.map(&from_built_in/1)
     }
   end
 
@@ -26,7 +26,7 @@ defmodule App.ViewData.Reports do
   def find(%Team{} = team, id, now) do
     case Integer.parse(id) do
       {n, ""} -> team |> SavedReport.get(n) |> then(&(&1 && from_saved(&1, team, now)))
-      _slug -> id |> BuiltIn.get() |> then(&(&1 && from_built_in(&1)))
+      _slug -> team |> BuiltIn.get(id) |> then(&(&1 && from_built_in(&1)))
     end
   end
 
@@ -46,7 +46,7 @@ defmodule App.ViewData.Reports do
 
   defp from_built_in(%{slug: slug} = report) do
     report
-    |> Map.delete(:slug)
+    |> Map.drop([:slug, :teams])
     |> Map.merge(%{id: slug, values: %{}, shows: shows(report.query)})
     |> Map.merge(%{saved: nil, made_by: nil, made_on: nil})
   end
