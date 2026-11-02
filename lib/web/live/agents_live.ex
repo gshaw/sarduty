@@ -2,8 +2,8 @@ defmodule Web.AgentsLive do
   use Web, :live_view_marketing_layout
 
   # How agents work with SAR Duty (#816): public, beside Privacy and Terms, for teams and
-  # organizations deciding about agents. Each team's MCP tokens tab links here. Its
-  # pages list what agents read under /agents, each also as Markdown.
+  # organizations deciding about agents. Each team's Agents tab and the page that lets an
+  # agent in link here. It lists what agents read under /agents, each also as Markdown.
   def mount(_params, _session, socket) do
     {:ok,
      assign(socket,
