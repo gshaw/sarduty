@@ -66,7 +66,7 @@ defmodule Web.MemberCollectionLive do
 
         socket
         |> assign(view: view, rows: rows, now: now, selected: MapSet.new())
-        |> assign(attended: attended, details: picked(view, "details"))
+        |> assign(attended: attended)
         |> assign(:clock, clock(rows, attended, team, Service.Period.today(now, team.timezone)))
         |> assign_paths(view, team)
 
@@ -139,7 +139,7 @@ defmodule Web.MemberCollectionLive do
       form={@form}
       save_path={@team_admin? && @save_path}
       csv_path={@team_admin? && @csv_path}
-      combobox={["group", "activity_tag"]}
+      combobox={["group"]}
     >
       <:table>
         <p :if={@attended not in [nil, "all"]} id="attended-hint" class="hint">
@@ -201,7 +201,6 @@ defmodule Web.MemberCollectionLive do
           now={@now}
           group_form?={@group_form?}
           selected={@selected}
-          details={@details}
           retired?={retired?(@standing)}
         />
 
@@ -228,7 +227,6 @@ defmodule Web.MemberCollectionLive do
   attr :now, :any, required: true
   attr :group_form?, :boolean, required: true, doc: "tick boxes for Add to group"
   attr :selected, :any, required: true
-  attr :details, :string, required: true, doc: "the Details filter's pick"
   attr :retired?, :boolean, required: true
 
   defp member_table(assigns) do
@@ -260,14 +258,11 @@ defmodule Web.MemberCollectionLive do
           member={row.member}
           team={@team}
           standing={unless_tile(row.standing, @view.switch.picked)}
-          path={member_path(@team, row.member, @view)}
+          path={~p"/teams/#{@team}/members/#{row.member.id}"}
         />
       </:col>
       <:col :let={row} label="Role" sorts={[{"↑", "role"}]}>
         {row.member.position}
-      </:col>
-      <:col :let={row} :if={@details == "missing"} label="Missing">
-        <span id={"missing-#{row.member.id}"}>{missing_text(row.member)}</span>
       </:col>
       <:col
         :let={row}
@@ -358,27 +353,6 @@ defmodule Web.MemberCollectionLive do
   defp clock_why(:checked_in), do: "Checked in"
   defp clock_why(:back), do: "Back from leave"
   defp clock_why(:joined), do: "Joined"
-
-  # With a tag on, the member's page opens on the activities that were counted.
-  defp member_path(team, member, view) do
-    case picked(view, "activity_tag") do
-      tag when tag in [nil, "all"] ->
-        ~p"/teams/#{team}/members/#{member.id}"
-
-      tag ->
-        ~p"/teams/#{team}/members/#{member.id}?#{[when: picked(view, "when") || "all", activity_tag: tag]}"
-    end
-  end
-
-  defp missing_text(member) do
-    member
-    |> Member.missing_details()
-    |> Enum.map_join(", ", &missing_label/1)
-  end
-
-  defp missing_label(:mobile_phone), do: "Mobile phone"
-  defp missing_label(:email), do: "Email"
-  defp missing_label(:address), do: "Address"
 
   def handle_event("change", %{"values" => values}, socket) do
     path = socket.assigns.path_fn.([{:page, nil} | Map.to_list(values)])

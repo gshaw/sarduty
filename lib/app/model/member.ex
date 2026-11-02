@@ -119,8 +119,26 @@ defmodule App.Model.Member do
   defp blank?(value), do: value in [nil, ""]
 
   @doc """
-  Narrows `query` to current, counted members missing a detail: the Members list's
-  Details: Missing, and a report's `details_missing`.
+  `missing_details/1` as SQL for the member whose id is `table`'s `id`: the details'
+  names, such as "Mobile phone, Address", or "" for none. A report's `missing_details`
+  (#784), which names what's missing and never a detail itself.
+  """
+  # cspell:ignore rtrim
+  def missing_details_sql(table) do
+    [
+      "(SELECT rtrim(",
+      "CASE WHEN COALESCE(m.phone, '') = '' THEN 'Mobile phone, ' ELSE '' END || ",
+      "CASE WHEN COALESCE(m.email, '') = '' THEN 'Email, ' ELSE '' END || ",
+      "CASE WHEN COALESCE(m.address, '') = '' THEN 'Address' ELSE '' END, ', ') ",
+      "FROM members AS m WHERE m.id = ",
+      table,
+      ".\"id\")"
+    ]
+  end
+
+  @doc """
+  Narrows `query` to current, counted members missing a detail: a report's
+  `details_missing`, as in Members missing details.
   """
   def details_missing_query(query, now),
     do: query |> current_query(now) |> counted_query() |> missing_details_query()

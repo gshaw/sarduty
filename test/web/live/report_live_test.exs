@@ -65,9 +65,13 @@ defmodule Web.ReportLiveTest do
 
     for report <- BuiltIn.all() do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.slug}")
-      # The count, the filter bar's line for a report with a search or filters, or
-      # nothing to show under tiles that count none.
-      assert has_element?(lv, "#report-count, #report-filters-summary, #report-empty"),
+      # The count, the filter bar's line for a report with a search or filters, the
+      # tiles when that line would repeat a tile's count, or nothing to show under tiles
+      # that count none.
+      assert has_element?(
+               lv,
+               "#report-count, #report-filters-summary, #report-switch, #report-empty"
+             ),
              report.slug
 
       refute has_element?(lv, "#report-error"), report.slug

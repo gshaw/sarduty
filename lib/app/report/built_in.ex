@@ -163,6 +163,81 @@ defmodule App.Report.BuiltIn do
       """
     },
     %{
+      slug: "hours-in-a-tag",
+      name: "Hours in a tag",
+      about:
+        "Each member's activities and hours with a tag you pick, such as rope or swiftwater.",
+      query: """
+      select name, activity_count(:when, :tag), attended_minutes(:when, :tag)
+      from members
+      where on_team(:when) and counted = true
+      order by attended_minutes(:when, :tag) desc, name
+      label activity_count(:when, :tag) 'Activities', attended_minutes(:when, :tag) 'Hours'
+      search name
+      switch standing 'Standing' default current
+        option current 'Not retired' where current = true
+        option retired 'Retired' where standing = 'retired'
+      filter tag 'Tag'
+      filter when 'Period' default THIS_YEAR
+      sort name 'Member' name
+      sort activities 'Activities' activity_count(:when, :tag), name
+      sort hours 'Hours' attended_minutes(:when, :tag), name
+      """
+    },
+    %{
+      slug: "members-missing-details",
+      name: "Members missing details",
+      about: "Members with no mobile number, email, or address, and which they're missing.",
+      query: """
+      select name, position, missing_details
+      from members
+      where details_missing = true
+      order by name
+      search name, position
+      sort name 'Member' name
+      """
+    },
+    %{
+      slug: "members-holding-items",
+      name: "Members holding items",
+      about: "Who holds the team's items, and, for retiring members, who holds none.",
+      query: """
+      select name, position, standing
+      from members
+      where counted = true
+      order by name
+      search name, position
+      switch standing 'Standing' default current
+        option current 'Not retired' where current = true
+        option retiring 'Retiring' where standing = 'retiring'
+        option retired 'Retired' where standing = 'retired'
+      filter items 'Items' default held
+        option held 'Holds some' where holds_items = true
+        option none 'Holds none' where holds_items = false
+      sort name 'Member' name
+      """
+    },
+    %{
+      slug: "members-who-can-log-in",
+      name: "Members who can log in",
+      about: "Who can log in to the team's records, and who has no access.",
+      query: """
+      select name, position, standing
+      from members
+      where counted = true
+      order by name
+      search name, position
+      switch standing 'Standing' default current
+        option current 'Not retired' where current = true
+        option retiring 'Retiring' where standing = 'retiring'
+        option retired 'Retired' where standing = 'retired'
+      filter access 'Access' default some
+        option some 'Can log in' where can_log_in = true
+        option none 'No access' where no_access = true
+      sort name 'Member' name
+      """
+    },
+    %{
       slug: "members-by-standing",
       name: "Members by standing",
       about: "How many members are active, away, retiring, and retired.",

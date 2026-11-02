@@ -7,6 +7,7 @@ defmodule App.Report.ListsTest do
   alias App.Model.Activity
   alias App.Model.Team
   alias App.Report
+  alias App.Report.BuiltIn
   alias App.Report.Lists
 
   @now ~U[2026-06-15 19:00:00Z]
@@ -128,15 +129,13 @@ defmodule App.Report.ListsTest do
                Enum.map(Team.not_seen_days(), &Integer.to_string/1)
     end
 
-    test "a member gets Period, Group, and Tag, and the Active tile but not Away" do
+    test "a member gets Period and Group, and the Active tile but not Away" do
       team = team_fixture()
       admin = members_page(team, %{})
       member = members_page(team, %{}, team_admin?: false)
 
-      assert Enum.map(admin.filters, & &1.name) ==
-               ~w(when group activity_tag details attended items access)
-
-      assert Enum.map(member.filters, & &1.name) == ~w(when group activity_tag)
+      assert Enum.map(admin.filters, & &1.name) == ~w(when group attended)
+      assert Enum.map(member.filters, & &1.name) == ~w(when group)
 
       assert Enum.map(member.switch.tiles, & &1.value) ==
                ~w(all current active retiring retired not_a_person)
@@ -144,7 +143,7 @@ defmodule App.Report.ListsTest do
       assert "away" in Enum.map(admin.switch.tiles, & &1.value)
     end
 
-    test "Period starts on this year; the Activities and Hours columns follow Period and Tag" do
+    test "Period starts on this year; the columns follow it, and Hours in a tag takes a tag" do
       team = team_fixture()
       tag_fixture(team, "Rope")
       avery = member_fixture(team, %{joined_at: ~U[2020-01-01 00:00:00Z]})
@@ -169,8 +168,11 @@ defmodule App.Report.ListsTest do
       assert Enum.find(view.filters, &(&1.name == "when")).picked == "2026"
       assert [[_id, _, _, _, 2, 180, _, _]] = view.result.rows
 
-      view = members_page(team, %{"activity_tag" => "Rope"})
-      assert [[_id, _, _, _, 1, 120, _, _]] = view.result.rows
+      # Members has no Tag filter; the built-in Hours in a tag counts one tag (#784).
+      assert {:ok, view} =
+               Report.page(BuiltIn.get("hours-in-a-tag").query, team, %{"tag" => "Rope"}, @now)
+
+      assert [[_id, 1, 120]] = view.result.rows
     end
   end
 end

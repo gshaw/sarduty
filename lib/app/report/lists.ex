@@ -48,7 +48,7 @@ defmodule App.Report.Lists do
       name: "Members",
       query: """
       select name, ref_id, position, last_attended,
-        activity_count(:when, :activity_tag), attended_minutes(:when, :activity_tag),
+        activity_count(:when, 'all'), attended_minutes(:when, 'all'),
         joined_at, left_at
       from members
       where on_team(:when) and in_group(:group)
@@ -63,27 +63,18 @@ defmodule App.Report.Lists do
         option not_a_person 'Not a person' where standing = 'not_a_person'
       filter when 'Period' default THIS_YEAR
       filter group 'Group'
-      filter activity_tag 'Tag' more
-      filter details 'Details' more
-        option missing 'Missing' where details_missing = true
-      filter attended 'Attended' more
+      filter attended 'Attended'
         option 30 'Not in 30 days' where not_seen(30) = true
         option 60 'Not in 60 days' where not_seen(60) = true
         option 90 'Not in 90 days' where not_seen(90) = true
         option 180 'Not in 180 days' where not_seen(180) = true
         option 365 'Not in a year' where not_seen(365) = true
-      filter items 'Items' more
-        option held 'Holds some' where holds_items = true
-        option none 'Holds none' where holds_items = false
-      filter access 'Access' more
-        option some 'Can log in' where can_log_in = true
-        option none 'No access' where no_access = true
       sort id 'ID' ref_id nulls last
       sort name 'Member' name
       sort role 'Role' position nulls last
       sort attended 'Last attended' last_attended, name
-      sort activities 'Activities' activity_count(:when, :activity_tag), name
-      sort duration 'Hours' attended_minutes(:when, :activity_tag)
+      sort activities 'Activities' activity_count(:when, 'all'), name
+      sort duration 'Hours' attended_minutes(:when, 'all')
       sort date 'Joined' joined_at
       sort retired 'Retired' left_at nulls last
       page 50
@@ -98,9 +89,10 @@ defmodule App.Report.Lists do
   def activities, do: get("activities")
 
   @doc """
-  The Members list. Period and Tag feed the Activities and Hours columns as well as the
-  rows. A member opens it with `team_admin?: false`, so team admins' own filters (Details,
-  Attended, Items, and Access) and the Away tile drop out (decision 4 of #784).
+  The Members list. Period feeds the Activities and Hours columns as well as the rows. A
+  member opens it with `team_admin?: false`, so Attended, a team admin's own filter, and
+  the Away tile drop out (decision 4 of #784). Hours in a tag, missing details, items
+  held, and access are built-in reports, not filters here (#784 feedback).
   """
   def members, do: get("members")
 end

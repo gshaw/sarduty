@@ -556,7 +556,7 @@ defmodule Web.TeamDashboardLive do
     do: ~p"/teams/#{team}/qualifications?view=expiring"
 
   defp attention_path(team, %{key: :missing_details}),
-    do: ~p"/teams/#{team}/members?details=missing"
+    do: ~p"/teams/#{team}/reports/members-missing-details"
 
   # The item's own filters, from the team's attendance check (#366).
   defp attention_path(team, %{key: :not_seen, params: params}),
@@ -570,10 +570,10 @@ defmodule Web.TeamDashboardLive do
     do: ~p"/teams/#{team}/equipment?place=retiring"
 
   defp attention_path(team, %{key: :retiring_access}),
-    do: ~p"/teams/#{team}/members?standing=retiring&access=some"
+    do: ~p"/teams/#{team}/reports/members-who-can-log-in?standing=retiring&access=some"
 
   defp attention_path(team, %{key: :retiring_clear}),
-    do: ~p"/teams/#{team}/members?standing=retiring&items=none"
+    do: ~p"/teams/#{team}/reports/members-holding-items?standing=retiring&items=none"
 
   defp attention_path(team, %{key: :group_changes}), do: ~p"/teams/#{team}/groups"
 
