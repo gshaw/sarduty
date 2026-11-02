@@ -226,7 +226,6 @@ defmodule Web.ReportFormLive do
 
     <div id="report-editor" class="content-wrapper report-editor" phx-hook="HelpToggle">
       <aside id="report-fields" class="content-1/3 report-help">
-        <p class="action mb-4"><.a id="report-hide-help" href="#" data-help="hide">Hide help</.a></p>
         <p class="action mb-4">
           <.a id="report-language-link" href={~p"/agents/reports"} external={true}>How to write a report</.a>
         </p>
@@ -266,7 +265,8 @@ defmodule Web.ReportFormLive do
             One line under the name on Reports.
           </.input>
 
-          <p class="action report-show-help">
+          <p class="action report-help-toggle">
+            <.a id="report-hide-help" href="#" data-help="hide">Hide help</.a>
             <.a id="report-show-help" href="#" data-help="show">Show help</.a>
           </p>
           <.input
