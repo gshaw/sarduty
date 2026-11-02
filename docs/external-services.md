@@ -159,6 +159,11 @@ Team logos on the same volume are not replicated. See [deployment.md](deployment
   errors and the app runs without a backup. The app reads them too, to list the bucket
   for the backup test.
 
+Litestream lists the bucket from its background loops, and each list is an R2 Class A
+operation. At the defaults the two buckets passed R2's free million a month, so
+`litestream.yml` runs the L0 retention check and the first compaction level every 5
+minutes, not every 15 and 30 seconds (#810). Syncs stay every second.
+
 Litestream 0.5 has no client-side encryption, so the replica holds readable data. R2
 encrypts it at rest; reading it takes the bucket token or the Cloudflare account.
 
