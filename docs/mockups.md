@@ -1,6 +1,6 @@
 # Mockups
 
-<!-- cspell:ignore CRSAR Priya VSAR -->
+<!-- cspell:ignore CRSAR Kowal Priya VSAR -->
 
 A design proposal on an issue is shown with mockups made by the kit in
 [tools/mockups/](../tools/mockups). Every round looks the same and reads in seconds: real
@@ -47,9 +47,12 @@ for them, and those are PNG too, through `mise exec -- oxipng -o 2 --strip safe 
    team admin Alex Chen, member Cameron Ruiz, and the cast in
    [App.CoastRange](../lib/app/coast_range.ex): a year of activities, attendance,
    groups, qualifications, equipment, and chores. It is the team agents' reports run on
-   too ([reports.md](reports.md#coast-range-sar)). A dump test picks the records it shows
-   from the cast, such as `MockupSeed.activity(cast, "Missing hiker")`, rather than
-   making its own; it adds only what the cast lacks. A second team is Valley SAR (VSAR),
+   too ([reports.md](reports.md#coast-range-sar)). Each member stands for one case, such
+   as Dana Kowal for Away and Drew Patel for an expired award: its moduledoc's "Who to
+   use" says who, and a test keeps it true. A dump test picks the records it shows from
+   the cast by that list, such as `MockupSeed.activity(cast, "Missing hiker")`, rather
+   than making its own; it adds only what the cast lacks, and a new case gets a new
+   member. A second team is Valley SAR (VSAR),
    for mockups only. Phone numbers are 604-555-01xx; SAR Duty's own number is
    604-555-0100. Never a real person, team, or number: issues are public.
 8. **Desktop first, phones for phone tasks.** Desktop at 1280 (1024 for a narrow settings

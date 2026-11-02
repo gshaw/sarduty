@@ -12,6 +12,44 @@ defmodule App.CoastRange do
   member, a retired one, and one that isn't a person.
 
   Pure: build/1 is rows, and App.Operation.SeedCoastRange inserts them.
+
+  ## Who to use
+
+  Each member stands for one case. A mockup or a test that needs the case picks that
+  member, so the same person always means the same thing; App.CoastRangeTest keeps each
+  line true. A case not listed gets a new member, never a second meaning for one here.
+
+  - **Alex Chen**, team leader: the team admin. Logs in to every team admin page, and
+    is who did it in history and change sets. Search manager, Rope team.
+  - **Cameron Ruiz**, ground searcher: the member. Logs in to Your membership, replies,
+    and the ID card. First aid expires in 15 days; holds Radio 3; a chore waiting.
+  - **Avery Chen**, search manager: in Team leaders beside Alex, and the same last name,
+    for sorting and search. First aid expires in 25 days.
+  - **Blake Morrison**, rope rescue technician: a current member holding team equipment
+    (Rope kit B). Rope rescue expires in 20 days.
+  - **Casey Dhillon**, swiftwater technician: an ordinary member, nothing to flag. Use
+    for a row that should show no badge or warning.
+  - **Dana Kowal**, ground searcher: Away, from 10 days ago to 20 days on.
+  - **Drew Patel**, rope rescue technician: an award that has expired (first aid, 10
+    days ago).
+  - **Eli Haddad**, ground searcher: details missing, with no address.
+  - **Harper Nguyen**, team leader: the third in Team leaders, for a list of several.
+  - **Jordan Lee**, ground searcher: a newer member, a year on. A chore waiting.
+  - **Noor Aziz**, swiftwater technician: chores accepted every month, with Priya.
+  - **Priya Nair**, first aid lead: chores accepted every month, and an expired
+    swiftwater award.
+  - **Quinn Laval**, ground searcher: No access in D4H, so no login.
+  - **Riley Okafor**, ground searcher: new, joined 40 days ago. In no group and holds no
+    award yet.
+  - **Sam Rivera**, ground searcher: Retiring. Hasn't attended in 120 days; holds Radio 2,
+    so equipment with a retiring member.
+  - **Robin Tse**: Retired, 120 days ago.
+  - **Duty pager**: not a person. No email, never attends.
+
+  Activities, by title: **Missing hiker** is the newest incident, a draft missing its
+  agency file number; **Trail safety booth** is an event in 4 days; the coming Tuesday's
+  training has sign-ups, can't-make-its, and no replies; **Night search exercise** is in
+  12 days; **Evidence search** has no hours tag and **Missing hunter** has both.
   """
 
   alias App.Model.Activity
