@@ -339,8 +339,20 @@ defmodule App.Report.Compiler do
   defp column({ast, e}, labels, st) do
     key = Query.strip(ast)
     label = Enum.find_value(labels, e.label, fn {k, text} -> if k == key, do: text end)
-    %{label: label, type: e.type, agg: e.agg, total: total(e), choices: choices(e, st)}
+
+    %{
+      label: label,
+      type: e.type,
+      agg: e.agg,
+      total: total(e),
+      choices: choices(e, st),
+      cell: cell(e)
+    }
   end
+
+  # A field's own cell holds for the field itself, not a count or sum of it.
+  defp cell(%{agg: agg, field: %{cell: cell}}) when agg in [nil, false], do: cell
+  defp cell(_e), do: nil
 
   # How a total row adds up a column: counts, sums, and plain numbers add up.
   defp total(%{agg: "min", type: type}) when type in [:number, :hours, :km], do: :min

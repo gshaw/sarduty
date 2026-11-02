@@ -120,7 +120,7 @@ defmodule Web.ReportCollectionLive do
     </.table>
 
     <.empty_state :if={@rows == []} id="reports-empty" title="Your team has no reports yet">
-      New report makes one. Copy and change on a built-in report starts from that one.
+      New report makes one. Copy report on a built-in report starts from that one.
     </.empty_state>
     """
   end

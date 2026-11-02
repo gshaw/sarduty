@@ -25,6 +25,8 @@ defmodule App.Report.Field do
   - `hidden_choices`: `fn context -> [value]`, the values of a `choice` the viewer may
     not see, which `choices` leaves out for them. An option that compares with one drops
     out of the page, as Away does for members (#784).
+  - `cell`: how its column draws, when not as its type: `:activity_kind` is the kind's
+    coloured marker, and the Activity cell beside it leaves its own out (#784).
   """
 
   @enforce_keys [:name, :label, :type]
@@ -41,6 +43,7 @@ defmodule App.Report.Field do
     :choices,
     :shown,
     :hidden_choices,
+    :cell,
     args: [],
     hidden: false
   ]

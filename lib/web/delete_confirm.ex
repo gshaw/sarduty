@@ -65,6 +65,14 @@ defmodule Web.DeleteConfirm do
     )
   end
 
+  @doc "A saved report is only its query: the records it reads stay."
+  def report(report) do
+    simple(
+      "Delete the #{report.name} report? Its query goes for good. The records it reads stay.",
+      "Delete report"
+    )
+  end
+
   @doc """
   A group takes its members and rules with it, and stops what names it: other groups'
   rules, templates that add its members, and the attendance check. `context` is
