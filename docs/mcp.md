@@ -25,13 +25,11 @@ downloads a report's CSV and gives it to the agent.
   turning it back on wakes none of them.
 - **Personal tokens.** A manager creates one on `/teams/:subdomain/settings/mcp/new`, and
   the list at `/teams/:subdomain/settings/mcp` revokes them. Both are not found while the
-  switch is off. Creating one takes a checked box promising to use it only with an AI
-  service set not to train on the manager's data; the `mcp_token_created` event records
-  it. The token shows once, on the same page, in place of the form, so there is no second
-  Create token to press. The database keeps its
-  SHA-256 hash ([MCPToken](../lib/app/model/mcp_token.ex)). It belongs to a user and a
-  team. An admin who doesn't manage the team can't create one, but anyone who can open
-  the page can revoke any of the team's tokens.
+  switch is off. The token shows once, on the same page, in place of the form, so there
+  is no second Create token to press. The database keeps its SHA-256 hash
+  ([MCPToken](../lib/app/model/mcp_token.ex)). It belongs to a user and a team. An admin
+  who doesn't manage the team can't create one, but anyone who can open the page can
+  revoke any of the team's tokens.
 - **Every request rechecks** the token is live, the team's switch is on, and the user
   still passes the D4H bar, `Team.managed_by?/3`
   ([AuthorizeMCPRequest](../lib/app/operation/authorize_mcp_request.ex)). Losing Owner or

@@ -20,7 +20,7 @@ defmodule Web.Admin.MCPLiveTest do
     team = Repo.reload!(team)
 
     {:ok, _token, record} =
-      CreateMCPToken.call(team, user, %{"name" => "Laptop", "no_training" => "true"})
+      CreateMCPToken.call(team, user, %{"name" => "Laptop"})
 
     record = Repo.preload(record, :team)
 
