@@ -10,4 +10,16 @@ defmodule Web.AgentsLiveTest do
     assert has_element?(lv, "#agents-stays", "not from who is in it")
     assert has_element?(lv, ~s(#footer-agents[href="/agents"]))
   end
+
+  test "it lists its pages, each with its Markdown", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/agents")
+
+    assert has_element?(
+             lv,
+             ~s(#agents-page-reports a[href="/agents/reports"]),
+             "How to write a report"
+           )
+
+    assert has_element?(lv, ~s(#agents-page-reports a[href="/agents/reports.md"]))
+  end
 end

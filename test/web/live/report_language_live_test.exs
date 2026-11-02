@@ -9,6 +9,8 @@ defmodule Web.ReportLanguageLiveTest do
 
     assert has_element?(lv, "#report-language h1", "How to write a report")
     assert has_element?(lv, "#report-language h3", "activities")
+    assert has_element?(lv, ~s(#report-language .breadcrumbs a[href="/agents"]), "Agents")
+    assert has_element?(lv, ~s(#report-language a[href="/agents/reports.md"]))
   end
 
   test "agents read it as Markdown", %{conn: conn} do

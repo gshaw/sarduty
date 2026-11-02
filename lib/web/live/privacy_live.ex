@@ -43,7 +43,7 @@ defmodule Web.PrivacyLive do
           Gerry Shaw, a volunteer member of South Fraser Search and Rescue, runs SAR Duty. SAR Duty is an independent project. South Fraser Search and Rescue and the other teams that use it do not run, own, or endorse it.
         </p>
         <p id="privacy-access">
-          SAR Duty's admins can see every team's data in SAR Duty. There are 2 today: Gerry Shaw and Andrew Wallwork. They look at team data only to run, fix, support, secure, or improve SAR Duty, or to look into a security problem, misuse, or failure. They share it only when the law requires it. SAR Duty does not use team data for anything else.
+          SAR Duty site admins can see every team's data in SAR Duty. There are 2 today: Gerry Shaw and Andrew Wallwork. They look at team data only to run, fix, support, secure, or improve SAR Duty, or to look into a security problem, misuse, or failure. They share it only when the law requires it. SAR Duty does not use team data for anything else.
         </p>
         <p id="privacy-organizations">
           When a team belongs to an organization, its organization admins, such as an association's staff, see each of its teams' totals, never members' names or contact details.

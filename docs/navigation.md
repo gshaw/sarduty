@@ -26,14 +26,17 @@ still lists the area's pages.
   Admins, Events, and MCP calls. The Style guide is in the team switcher. Each team has
   its own page, `/admin/teams/:id`, under Teams, with its refresh, team admins and login
   grants, and its ID cards and Agents switches (#513). Every admin page is a 404 for anyone else.
-- **The footer** (Verify an ID card, Terms, Privacy) is only on the public pages: home,
-  terms, and privacy. In an area its links are noise. In dev, app pages keep a line with
+- **The footer** (Verify an ID card, Terms, Privacy, Agents, Changelog, Support SAR Duty,
+  GitHub) is only on the public pages in the marketing layout: home, terms, privacy,
+  changelog, and the agents pages. Sign up and Log in are narrow pages, with none. In an
+  area its links are noise. In dev, app pages keep a line with
   the dashboard and the mailbox.
 - **Account settings**, `/account`: one page, so no side navigation. It is about the login,
   the same on every team.
 
 Public pages and logging in are in no area. Their bar has the account menu and no area
-name.
+name. `/agents` is the one public section: its pages, such as How to write a report, have
+a trail that starts at Agents, and `/agents` lists them.
 
 The style guide, `/styles`, is in no area either, so its bar is the home page's. Its own
 side navigation lists its 3 groups, then the open group's pages, and on a phone it goes
