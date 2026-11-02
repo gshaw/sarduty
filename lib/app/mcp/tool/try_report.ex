@@ -48,7 +48,7 @@ defmodule App.MCP.Tool.TryReport do
   @impl App.MCP.Tool
   def call(%Team{}, args, now, _agent) do
     query = args["query"]
-    values = if is_map(args["values"]), do: args["values"], else: %{}
+    values = values(args["values"])
 
     with :ok <- check_query(query),
          {:ok, result} <- run(query, values, now) do
@@ -58,6 +58,17 @@ defmodule App.MCP.Tool.TryReport do
       {:ok, build(columns, rows), min(length(rows), @max_rows)}
     end
   end
+
+  # Values as a URL gives them, so {"year": 2024} picks 2024 rather than this year. Lists
+  # and maps aren't values a query picks, so they go.
+  defp values(values) when is_map(values) do
+    for {name, value} <- values,
+        is_binary(value) or is_number(value),
+        into: %{},
+        do: {name, to_string(value)}
+  end
+
+  defp values(_values), do: %{}
 
   defp check_query(query) when is_binary(query) and query != "", do: :ok
   defp check_query(_query), do: {:error, "Give query as the report's text."}

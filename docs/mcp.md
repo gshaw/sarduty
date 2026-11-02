@@ -64,7 +64,7 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
   team's names for things: groups, qualifications, tags, hours tags, and custom fields
   with what they're on.
 - `list_reports`: the built-in reports, the team's own, and the lists that run on
-  reports, each with its name, description, query, and saved values.
+  reports, each with its name, description, and query. Never a saved report's values.
 - `check_report`: checks a query against the team's fields with `App.Report.check/4`,
   which compiles it and never runs it. It gives the columns' labels and a link: New
   report, or Change report with `report_id`, with the query, name, and description in
@@ -78,8 +78,8 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
 - **No records** (#816). No tool returns a member, an activity's title, a row, or a
   count from the team's records. `Web.MCPControllerTest` seeds them, with contact
   details and letter text, and checks every tool's output for each. A saved report's
-  values can hold what a team admin typed, such as a member's ID; agents see those, as
-  decided in #768.
+  values can hold what a team admin typed, such as a member's ID or a list's search, so
+  list_reports leaves them out (#816 replaces #768's choice to show them).
 - **Read-only** (#627). Every tool's `readOnlyHint` is true, and a test fails if anything
   in `lib/app/mcp/` mentions `ChangeSet`, a `Repo` write, the D4H adapter, `SendChores`,
   or `SaveChore`. The agent never saves a report: the team admin does, from its link.
@@ -95,9 +95,9 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
 MCP calls, `/admin/mcp`, shows the newest 200. `PruneEventsWorker` deletes calls after 90
 days. Creating and revoking tokens and the switch are events, kept two years.
 
-The team's MCP tokens tab lists the last 50 queries its agents checked or tried, as
-Reports agents wrote (#816): when, the token's name, the query, and Open, a New report
-link with the query, or the mistake it needed fixed. The tab opens with what agents are
+The team's MCP tokens tab lists the last 50 queries its agents checked, as Reports
+agents wrote (#816): when, the token's name, the query, and Open, the link check_report
+gave the agent, or the mistake it needed fixed. Tries on Coast Range SAR aren't listed. The tab opens with what agents are
 for and what stays in SAR Duty, and links to `/agents`, a public page that says the same
 for teams and organizations deciding about agents.
 

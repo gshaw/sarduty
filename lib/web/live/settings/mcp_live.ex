@@ -3,13 +3,15 @@ defmodule Web.Settings.MCPLive do
 
   import Web.Components.TeamSettingsTabs
 
+  alias App.MCP.Tool.CheckReport
   alias App.Model.MCPCall
   alias App.Model.MCPToken
+  alias App.Model.SavedReport
   alias App.Model.Team
   alias App.Operation.RevokeMCPToken
 
   # The team's MCP tokens (#28), /teams/:subdomain/settings/mcp: what agents are for
-  # (#816), the tokens, and the reports agents checked or tried. A SAR Duty admin turns
+  # (#816), the tokens, and the reports agents checked. A SAR Duty admin turns
   # MCP on and off (App.Operation.SetTeamMCP). It isn't offered to teams, so while it is
   # off this page is not found.
   def mount(_params, _session, socket) do
@@ -136,7 +138,7 @@ defmodule Web.Settings.MCPLive do
 
         <h2 class="heading mt-8">Reports agents wrote</h2>
         <.empty_state :if={@queries == []} id="no-agent-reports" title="No reports yet">
-          Each report an agent checks or tries shows here.
+          Each report an agent checks shows here.
         </.empty_state>
         <.table
           :if={@queries != []}
@@ -161,14 +163,10 @@ defmodule Web.Settings.MCPLive do
     """
   end
 
-  # New report with the query the agent checked, as its own link opened it.
+  # The link check_report gave the agent: New report, or Change report with report_id.
   defp open_path(team, call) do
-    params = %{
-      "query" => call.arguments["query"],
-      "agent" => call.mcp_token && call.mcp_token.name
-    }
-
-    ~p"/teams/#{team}/reports/new?#{Map.reject(params, fn {_k, v} -> is_nil(v) end)}"
+    saved = if id = call.arguments["report_id"], do: %SavedReport{id: id}
+    CheckReport.link(team, saved, call.arguments, call.mcp_token && call.mcp_token.name)
   end
 
   defp last_used(%MCPToken{last_used_at: nil}, _timezone), do: "Never"

@@ -20,7 +20,7 @@ defmodule Web.MCPControllerTest do
     {:ok, team} = SetTeamMCP.call(team, true, admin)
 
     {:ok, token, record} =
-      CreateMCPToken.call(team, user, %{"name" => "Laptop", "no_training" => "true"})
+      CreateMCPToken.call(team, user, %{"name" => "Laptop"})
 
     %{admin: admin, user: user, team: team, token: token, record: record}
   end
@@ -177,7 +177,8 @@ defmodule Web.MCPControllerTest do
       })
 
       tax_credit_letter_fixture(member, %{letter_content: "Dear Pat, private letter text"})
-      saved_report_fixture(team, "Callout list")
+      # A list saved while searching for a member keeps the search in its values.
+      saved_report_fixture(team, "Callout list", %{"q" => "4471"})
 
       secrets = [
         "Pat Example",
@@ -257,6 +258,15 @@ defmodule Web.MCPControllerTest do
       assert output["columns"] == ["Member", "Standing"]
       assert [["Cameron Ruiz", _standing]] = output["rows"]
       refute text =~ "Pat Example"
+
+      # A year sent as a JSON number picks that year, not this one.
+      {_result, text} =
+        call_tool(conn, token, team, "try_report", %{
+          "query" => "select title from activities where year(started_at) = :year",
+          "values" => %{"year" => 1999}
+        })
+
+      assert Jason.decode!(text)["rows"] == []
 
       {result, text} =
         call_tool(conn, token, team, "try_report", %{"query" => "select nme from members"})
@@ -407,10 +417,11 @@ defmodule Web.MCPControllerTest do
     ]
   end
 
-  defp saved_report_fixture(team, name) do
+  defp saved_report_fixture(team, name, values \\ %{}) do
     Repo.insert!(%App.Model.SavedReport{
       team_id: team.id,
       name: name,
+      values: values,
       about: "Members of Callout",
       query: "select name from members where groups includes ('Callout')"
     })
