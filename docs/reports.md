@@ -21,7 +21,7 @@ totals
 
 ## How to write a report
 
-`/reports/language` is the language for people, and `/reports/language.md` the same
+`/agents/reports` is the language for people, and `/agents/reports.md` the same
 text for agents (#803). No login. `App.Report.Language` builds it from the parser's
 clauses, functions, and ranges, the catalog's subjects and fields, and the compiler's
 limits. A new clause, function, range, subject, or field argument fails

@@ -3,17 +3,14 @@ defmodule Web.Settings.MCPLive do
 
   import Web.Components.TeamSettingsTabs
 
-  alias App.MCP.Tool.CheckReport
-  alias App.Model.MCPCall
   alias App.Model.MCPToken
-  alias App.Model.SavedReport
   alias App.Model.Team
   alias App.Operation.RevokeMCPToken
 
   # The team's MCP tokens (#28), /teams/:subdomain/settings/mcp: what agents are for
-  # (#816), the tokens, and the reports agents checked. A SAR Duty admin turns
-  # MCP on and off (App.Operation.SetTeamMCP). It isn't offered to teams, so while it is
-  # off this page is not found.
+  # (#816) and the tokens. A SAR Duty admin turns MCP on and off
+  # (App.Operation.SetTeamMCP). It isn't offered to teams, so while it is off this page
+  # is not found.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
     if !team.mcp_enabled, do: raise(Web.Status.NotFound)
@@ -24,7 +21,6 @@ defmodule Web.Settings.MCPLive do
       socket
       |> assign(page_title: "Team settings · MCP tokens", can_create: can_create)
       |> assign(endpoint_url: url(~p"/teams/#{team}/mcp"))
-      |> assign(queries: MCPCall.get_report_queries(team, 50))
       |> assign_tokens()
 
     {:ok, socket}
@@ -135,38 +131,9 @@ defmodule Web.Settings.MCPLive do
           <li>Transport: Streamable HTTP</li>
         </ul>
         <p class="mt-4">The claude.ai and ChatGPT connectors cannot send a header yet.</p>
-
-        <h2 class="heading mt-8">Reports agents wrote</h2>
-        <.empty_state :if={@queries == []} id="no-agent-reports" title="No reports yet">
-          Each report an agent checks shows here.
-        </.empty_state>
-        <.table
-          :if={@queries != []}
-          id="agent-reports"
-          rows={@queries}
-          row_id={&"agent-report-#{&1.id}"}
-        >
-          <:col :let={call} label="When" class="whitespace-nowrap">
-            {Service.Format.minutes_ago(call.called_at, DateTime.utc_now(), @current_team.timezone)}
-          </:col>
-          <:col :let={call} label="Agent">{call.mcp_token && call.mcp_token.name}</:col>
-          <:col :let={call} label="Report">
-            <code class="line-clamp-2">{call.arguments["query"]}</code>
-          </:col>
-          <:col :let={call} label="">
-            <span :if={call.error} class="hint">Needed a fix: {call.error}</span>
-            <.a :if={!call.error} href={open_path(@current_team, call)}>Open</.a>
-          </:col>
-        </.table>
       </div>
     </div>
     """
-  end
-
-  # The link check_report gave the agent: New report, or Change report with report_id.
-  defp open_path(team, call) do
-    saved = if id = call.arguments["report_id"], do: %SavedReport{id: id}
-    CheckReport.link(team, saved, call.arguments, call.mcp_token && call.mcp_token.name)
   end
 
   defp last_used(%MCPToken{last_used_at: nil}, _timezone), do: "Never"

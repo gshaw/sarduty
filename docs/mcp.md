@@ -93,15 +93,12 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
 ## The call log
 
 [CallMCPTool](../lib/app/operation/call_mcp_tool.ex) logs every `tools/call` in
-`mcp_calls`: user, team, token, tool, the arguments the tool's schema declares (cut at
-2,000 characters, long enough for a query), items returned or the error, and time taken.
+`mcp_calls`: user, team, token, tool, the arguments the tool's schema declares (long strings cut
+at 100 characters), items returned or the error, and time taken.
 MCP calls, `/admin/mcp`, shows the newest 200. `PruneEventsWorker` deletes calls after 90
 days. Creating and revoking tokens and the switch are events, kept two years.
 
-The team's MCP tokens tab lists the last 50 queries its agents checked, as Reports
-agents wrote (#816): when, the token's name, the query, and Open, the link check_report
-gave the agent, or the mistake it needed fixed. Tries on Coast Range SAR aren't listed.
-The tab opens with what agents are for and what stays in SAR Duty, and links to
+The team's MCP tokens tab opens with what agents are for and what stays in SAR Duty, and links to
 `/agents`, a public page that says the same for teams and organizations deciding about
 agents.
 

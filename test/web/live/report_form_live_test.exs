@@ -132,10 +132,12 @@ defmodule Web.ReportFormLiveTest do
     {query, _} = :binary.match(html, ~s(id="report_query"))
     assert name < query
 
-    # The toggle is the browser's (help_toggle.js): both links are there, CSS shows one.
+    # The toggle is the browser's (help_toggle.js): both links sit on the Query line, and
+    # CSS shows one.
     assert has_element?(lv, "#report-editor[phx-hook=HelpToggle]")
-    assert has_element?(lv, "#report-fields #report-hide-help[data-help=hide]")
-    assert has_element?(lv, "#report-show-help[data-help=show]")
+    assert has_element?(lv, "#report-form .report-help-toggle #report-hide-help[data-help=hide]")
+    assert has_element?(lv, "#report-form .report-help-toggle #report-show-help[data-help=show]")
+    refute has_element?(lv, "#report-fields #report-hide-help")
     refute has_element?(lv, "#report-delete-button")
   end
 

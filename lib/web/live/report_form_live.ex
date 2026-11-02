@@ -226,14 +226,15 @@ defmodule Web.ReportFormLive do
 
     <div id="report-editor" class="content-wrapper report-editor" phx-hook="HelpToggle">
       <aside id="report-fields" class="content-1/3 report-help">
-        <p class="action mb-4"><.a id="report-hide-help" href="#" data-help="hide">Hide help</.a></p>
         <p class="action mb-4">
-          <.a id="report-language-link" href={~p"/reports/language"} external={true}>How to write a report</.a>
+          <.a id="report-language-link" href={~p"/agents/reports"} external={true}>How to write a report</.a>
         </p>
         <h2 class="heading">The page</h2>
         <p class="hint">Clauses after the query that draw the page around the rows.</p>
         <.table id="report-clause-table" rows={clauses()} row_id={&"clause-#{elem(&1, 0)}"}>
-          <:col :let={{clause, _draws}} label="Clause"><code>{clause}</code></:col>
+          <:col :let={{clause, _draws}} label="Clause" class="whitespace-nowrap">
+            <code>{clause}</code>
+          </:col>
           <:col :let={{_clause, draws}} label="Draws">{draws}</:col>
         </.table>
 
@@ -247,8 +248,8 @@ defmodule Web.ReportFormLive do
           >
             <:col :let={field} label="Field">
               <.button type="button" size={:sm} data-field={field_text(field)}>{field_text(field)}</.button>
+              <span class="hint block mt-1">{field.about || field.label}</span>
             </:col>
-            <:col :let={field} label="Holds">{field.about || field.label}</:col>
           </.table>
         </div>
         <p class="hint mt-4">
@@ -264,7 +265,8 @@ defmodule Web.ReportFormLive do
             One line under the name on Reports.
           </.input>
 
-          <p class="action report-show-help">
+          <p class="action report-help-toggle">
+            <.a id="report-hide-help" href="#" data-help="hide">Hide help</.a>
             <.a id="report-show-help" href="#" data-help="show">Show help</.a>
           </p>
           <.input

@@ -4,7 +4,7 @@ defmodule Web.ReportLanguageLive do
   alias App.Report.Language
 
   # How to write a report (#803): public, for team admins and their agents. The same
-  # text is at /reports/language.md (Web.ReportLanguageController).
+  # text is at /agents/reports.md (Web.MarkdownController).
   def mount(_params, _session, socket) do
     html =
       Language.markdown()
