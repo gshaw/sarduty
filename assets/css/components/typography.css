@@ -105,4 +105,7 @@
   .prose li { margin-block: 0; }
   .prose > :first-child { margin-top: 0; }
   .prose > :last-child { margin-bottom: 0; }
+  /* Code reads as code by its font: no backticks around it. */
+  .prose :where(code)::before, .prose :where(code)::after { content: none; }
+  .prose pre { overflow-x: auto; }
 }
