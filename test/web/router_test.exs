@@ -8,7 +8,7 @@ defmodule Web.RouterTest do
   # purpose: a fixed word at the top could block a future section, and one under
   # /teams/ or /orgs/ would block a team or organization with that name.
   @main_top_level ~w(teams orgs admin account signup login logout replies reminders wallet styles
-                     terms privacy maps)
+                     terms privacy changelog maps)
   @verify_top_level ["orgs", "letters", ":code", "*path"]
 
   test "the main site's top-level paths are the allowed ones" do

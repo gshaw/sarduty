@@ -49,9 +49,11 @@ COPY priv priv
 
 COPY lib lib
 
-# Web.StyleGuideHTML embeds assets/css/tokens.css and docs/writing.md at compile time
+# Web.StyleGuideHTML embeds assets/css/tokens.css and docs/writing.md at compile time,
+# and Web.ChangelogLive embeds CHANGELOG.md
 COPY assets assets
 COPY docs/writing.md docs/
+COPY CHANGELOG.md ./
 
 # Compile the release
 RUN mix compile
