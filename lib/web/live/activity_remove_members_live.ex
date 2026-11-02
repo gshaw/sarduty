@@ -20,7 +20,7 @@ defmodule Web.ActivityRemoveMembersLive do
   # needs the team admin's message, which SAR Duty emails them; one with no email gets
   # nothing, and the page says to tell them. A team admin who told them already sends no
   # email only once they select the box that says they meant it, as with their own chores
-  # (#697); the message is still required, for History. Only before the start, on an
+  # (#697); the message is then optional, for History. Only before the start, on an
   # activity neither deleted nor published.
   def mount(%{"id" => id}, _session, socket) do
     %{current_team: team, current_user: user} = socket.assigns
@@ -264,7 +264,7 @@ defmodule Web.ActivityRemoveMembersLive do
           phx-debounce="300"
         >
           <%= if @skip_email do %>
-            Required. Nobody gets an email, and the activity's history keeps it. Up to {Message.limit_text()}.
+            Nobody gets an email. The activity's history keeps it. Up to {Message.limit_text()}.
           <% else %>
             Required to remove a signed up member. SAR Duty emails it, and the activity's history keeps it. Up to {Message.limit_text()}.
           <% end %>
@@ -347,7 +347,7 @@ defmodule Web.ActivityRemoveMembersLive do
     do: Format.count(count, one: "Remove 1 member", many: "Remove %d members")
 
   defp message_label(members, false = _skip_email), do: "Message to #{to_text(members)}"
-  defp message_label(members, true), do: "Why you removed #{to_text(members)}"
+  defp message_label(members, true), do: "Why you removed #{to_text(members)} (optional)"
 
   defp to_text([member]), do: member.name
   defp to_text(members), do: "#{length(members)} signed up members"

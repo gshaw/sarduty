@@ -79,16 +79,15 @@ defmodule App.Operation.RemoveMembersTest do
       assert plan.remove |> RemoveMembers.rows(nil) |> Enum.all?(&(&1.reason == nil))
     end
 
-    # The exception: they were told already. The message still goes to History.
-    test "with no email, a signed up member still needs the message, as the reason" do
+    # The exception: they were told already. A message is optional, and goes to History.
+    test "with no email, a signed up member's message is optional, kept as the reason" do
       drew = member(1)
       rows = [row(drew, 1, "attending")]
 
-      assert {:error, :no_message} = RemoveMembers.plan([{drew, "attending"}], rows, nil, false)
-
       assert {:ok, %{remove: [%{message?: true, email?: false}] = remove}} =
-               RemoveMembers.plan([{drew, "attending"}], rows, "Told them", false)
+               RemoveMembers.plan([{drew, "attending"}], rows, nil, false)
 
+      assert [%ChangeSetRow{reason: nil}] = RemoveMembers.rows(remove, nil)
       assert [%ChangeSetRow{reason: "Told them"}] = RemoveMembers.rows(remove, "Told them")
     end
   end

@@ -8,7 +8,8 @@ defmodule App.Operation.RemoveMembers do
   email gets the team admin's message, which is required for them and kept as the rows'
   reason; one with no email gets nothing, and the page says to tell them. A member's
   email goes only once none of their rows is left. A team admin who told them already
-  can send no email, as an exception: the message is still required, for History.
+  can send no email, as an exception: the message is then optional, and History keeps
+  it as the reason when there is one. A required one would collect filler.
 
   plan/4 decides who goes, pure; call/7 reads and writes.
   """
@@ -38,7 +39,7 @@ defmodule App.Operation.RemoveMembers do
   (`Attendance.one_per_member/1`) no longer has the status shown, and as `:gone` with no
   row at all. Each member goes with every row they have: D4H allows two (#520), and one
   left keeps them on. `message?` is a signed up member with an email, and `email?` one
-  who gets it, unless `email` is false. `{:error, :no_message}` when one needs a message
+  who gets it, unless `email` is false. `{:error, :no_message}` when one gets the email
   and `message` is nil.
   """
   def plan(checked, rows, message, email \\ true) do
@@ -52,7 +53,7 @@ defmodule App.Operation.RemoveMembers do
       end)
       |> Enum.split_with(&is_map/1)
 
-    if message == nil and Enum.any?(remove, & &1.message?),
+    if message == nil and Enum.any?(remove, & &1.email?),
       do: {:error, :no_message},
       else: {:ok, %{remove: remove, not_removed: not_removed}}
   end
@@ -74,8 +75,9 @@ defmodule App.Operation.RemoveMembers do
 
   @doc """
   The rows that take plan/4's `remove` off the activity. Each keeps the status of its own
-  row in the copy, so the applier skips one D4H has changed since. A member who needs
-  the message has it as their rows' reason, for the activity's history, emailed or not.
+  row in the copy, so the applier skips one D4H has changed since. A signed up member
+  with an email has the message, when there is one, as their rows' reason, for the
+  activity's history, emailed or not.
   """
   def rows(remove, message) do
     for %{member: member, rows: rows, message?: message?} <- remove, row <- rows do

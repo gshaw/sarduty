@@ -93,17 +93,18 @@ defmodule Web.ActivityRemoveMembersLiveTest do
            )
   end
 
-  # The exception, worded as accepting your own chores is (#697).
-  test "Remove without emailing them sends no email, and still asks why", ctx do
+  # The exception, worded as accepting your own chores is (#697). A required why would
+  # collect filler, so it's optional.
+  test "Remove without emailing them sends no email, and the why is optional", ctx do
     AttendanceStub.stub(ctx.rows)
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
-    params = check(lv, [ctx.drew], "Told them on the phone.")
+    params = check(lv, [ctx.drew])
     refute has_element?(lv, "#remove-skip-email[checked]")
 
     params = Map.put(params, "skip_email", "true")
     lv |> form("#remove-form", params) |> render_change()
 
-    assert has_element?(lv, "label[for=remove-message]", "Why you removed Drew Patel")
+    assert has_element?(lv, "label[for=remove-message]", "Why you removed Drew Patel (optional)")
     refute has_element?(lv, "#remove-preview-section")
     refute has_element?(lv, "#remove-send[data-confirm]")
 
