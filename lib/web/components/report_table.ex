@@ -1,8 +1,9 @@
 defmodule Web.Components.ReportTable do
   @moduledoc """
-  A report's rows (#768), each cell the standard column for its type: a member, an
-  activity, an item, a qualification, and a group link to their pages; a date, hours, and
-  numbers through Service.Format. A report with `totals` ends in a Total row.
+  A report's rows (#768), each cell drawn by its column's format (App.Report.Formats,
+  #804): a member, an activity, an item, a qualification, and a group link to their
+  pages, or are their names; a date, hours, and numbers go through Service.Format. A
+  report with `totals` ends in a Total row.
   """
   use Web, :function_component
 
@@ -27,7 +28,7 @@ defmodule Web.Components.ReportTable do
       assign(assigns,
         rows: rows(assigns.result),
         columns: Enum.with_index(assigns.result.columns),
-        kind?: Enum.any?(assigns.result.columns, &(&1[:cell] == :activity_kind))
+        kind?: Enum.any?(assigns.result.columns, &(&1[:format] == "marker"))
       )
 
     ~H"""
@@ -102,6 +103,13 @@ defmodule Web.Components.ReportTable do
 
   defp report_cell(%{value: nil} = assigns), do: ~H""
 
+  defp report_cell(%{column: %{type: {:record, kind}, format: "text"}} = assigns) do
+    assigns =
+      assign(assigns, text: assigns.records |> get_in([kind, assigns.value]) |> record_text())
+
+    ~H"{@text}"
+  end
+
   defp report_cell(%{column: %{type: {:record, kind}}} = assigns) do
     assigns = assign(assigns, kind: kind, record: get_in(assigns.records, [kind, assigns.value]))
 
@@ -118,15 +126,17 @@ defmodule Web.Components.ReportTable do
     """
   end
 
-  defp report_cell(%{column: %{cell: :activity_kind}} = assigns),
+  defp report_cell(%{column: %{format: "marker"}} = assigns),
     do: ~H"""
     <span class={["marker", "marker-#{@value}"]}>{value_text(@value, @column, @team)}</span>
     """
 
-  defp report_cell(%{column: %{type: :date}} = assigns),
+  defp report_cell(%{column: %{type: :date, format: "date"}} = assigns),
     do: ~H"<.date_cell value={@value} timezone={@team.timezone} />"
 
-  defp report_cell(%{column: %{type: :hours}} = assigns), do: ~H"<.hours_cell minutes={@value} />"
+  defp report_cell(%{column: %{type: :date, format: "days_ago"}} = assigns),
+    do: ~H"{Format.days_ago(@value, @now, @team.timezone)}"
+
   defp report_cell(assigns), do: ~H"{value_text(@value, @column, @team)}"
 
   attr :kind, :atom, required: true
@@ -193,9 +203,23 @@ defmodule Web.Components.ReportTable do
 
   @doc "A value as text, as a cell shows it."
   def value_text(nil, _column, _team), do: ""
+  def value_text(value, %{type: :hours, format: "hours"}, _team), do: Format.tenths(value / 60)
   def value_text(value, %{type: :hours}, _team), do: Format.duration(value)
   def value_text(value, %{type: :km}, _team), do: Format.km(value)
   def value_text(value, %{type: :number}, _team), do: Format.number(value)
+
+  def value_text(value, %{type: :date, format: "date_long"}, team),
+    do: Format.date_long(value, team.timezone)
+
+  def value_text(value, %{type: :date, format: "date_time"}, team),
+    do: Format.datetime_short(value, team.timezone)
+
+  def value_text(value, %{type: :date, format: "month"}, team),
+    do: Format.month_year(value, team.timezone)
+
+  def value_text(value, %{type: :date, format: "time"}, team),
+    do: Format.time_short(value, team.timezone)
+
   def value_text(value, %{type: :date}, team), do: Format.date_short(value, team.timezone)
   def value_text(true, %{type: :bool}, _team), do: "Yes"
   def value_text(false, %{type: :bool}, _team), do: "No"

@@ -2,7 +2,7 @@ defmodule App.Report.Language do
   @moduledoc """
   How to write a report (#803): the language page at `/reports/language`, and the same
   text as Markdown at `/reports/language.md` for agents. Built from App.Report.Parser's
-  clauses, functions, and ranges, App.Report.Catalog's subjects and fields, and
+  clauses, functions, and ranges, App.Report.Formats, App.Report.Catalog's subjects and fields, and
   App.Report.Compiler's limits, so it cannot drift from the code. A test fails on a
   clause, function, or range with no entry here, and runs every example.
 
@@ -16,6 +16,7 @@ defmodule App.Report.Language do
   alias App.Report.Compiler
   alias App.Report.Context
   alias App.Report.Field
+  alias App.Report.Formats
   alias App.Report.Parser
   alias Service.Format
 
@@ -56,6 +57,9 @@ defmodule App.Report.Language do
      "select title, attended_count\nfrom activities\norder by attended_count desc\nlimit 10\noffset 10"},
     {"label", "label field 'Label', …", "A column's heading, in place of the field's own.",
      "select title, attended_count\nfrom activities\nlabel attended_count 'Members'"},
+    {"format", "format field as format, …",
+     "How a column looks, in place of its field's own. Formats lists them.",
+     "select title, started_at, attended_hours\nfrom activities\nformat title as text, started_at as month, attended_hours as hours"},
     {"totals", "totals", "A total row under a report that groups.",
      "select activity.kind, sum(hours)\nfrom attendance\nwhere status = 'Attended'\ngroup by activity.kind\ntotals"},
     {"search", "search field, …", "The search box. It looks for the words in each field named.",
@@ -134,6 +138,7 @@ defmodule App.Report.Language do
         clauses(),
         conditions(),
         functions(),
+        formats(),
         dates(),
         values(),
         subjects(),
@@ -265,6 +270,26 @@ defmodule App.Report.Language do
 
     | Write | Gives |
     | ----- | ----- |
+    #{rows}\
+    """
+  end
+
+  defp formats do
+    rows =
+      Enum.map_join(Formats.by_type(), "\n", fn {type, formats} ->
+        Enum.map_join(formats, "\n", fn {name, shows} -> "| #{type} | `#{name}` | #{shows} |" end)
+      end)
+
+    """
+    ## Formats
+
+    Each field draws its own cell: a date as a date, an activity's kind as its coloured \
+    square, a member as a link to their page. `format` picks another look for a column. \
+    The first for each type is the field's own. Other types show one way. Download CSV \
+    keeps the values as they are.
+
+    | For | Format | Shows |
+    | --- | ------ | ----- |
     #{rows}\
     """
   end

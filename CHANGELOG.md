@@ -6,6 +6,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 - How to write a report: one page on the report language, linked from the editor. Point
   your AI assistant at it and it has what it needs to write one.
+- Reports can show a column another way: `format started_at as month`, a member as plain
+  text, hours as a number.
 
 ## Oct 26–Nov 1
 

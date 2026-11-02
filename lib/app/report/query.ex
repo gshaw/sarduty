@@ -18,7 +18,8 @@ defmodule App.Report.Query do
     `{:excludes, expr, items, line}`
 
   `order_by` holds `{expr, dir}`, where `dir` is `:asc`, `:desc`, or `{:asc | :desc,
-  :nulls_first | :nulls_last}`, and `labels` holds `{expr, text}`.
+  :nulls_first | :nulls_last}`, `labels` holds `{expr, text}`, and `formats` holds
+  `{expr, name}` (#804).
 
   The page's clauses after the query (#784), which draw the controls around the rows:
 
@@ -42,6 +43,7 @@ defmodule App.Report.Query do
             limit: nil,
             offset: nil,
             labels: [],
+            formats: [],
             totals: false,
             search: [],
             search_line: nil,

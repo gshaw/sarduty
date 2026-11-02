@@ -2,9 +2,9 @@ defmodule App.Report.Result do
   @moduledoc """
   A report's rows, as App.Report.Runner reads them back.
 
-  - `columns`: `%{label, type, choices, total, pivot, cell}`: `pivot` is the pivot value a
-    column shows, or nil, and `pivot_type` its type; `cell` is the field's own cell
-    (App.Report.Field)
+  - `columns`: `%{label, type, choices, total, pivot, cell, format}`: `pivot` is the pivot
+    value a column shows, or nil, and `pivot_type` its type; `cell` is the field's own cell
+    (App.Report.Field), and `format` how it draws (App.Report.Formats), nil for one way
   - `rows`: a list of values per row, in the columns' order. A record is its id; a date
     a `DateTime`; hours are minutes; a list is its titles.
   - `totals`: the total row, nil without `totals`; a column that does not add up is nil

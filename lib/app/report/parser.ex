@@ -4,7 +4,7 @@ defmodule App.Report.Parser do
   names against them is App.Report.Compiler's.
 
   The clauses come in this order: select, from, where, group by, pivot, order by, limit,
-  offset, label, totals. The page's clauses follow (#784): search, then each switch and
+  offset, label, format, totals. The page's clauses follow (#784): search, then each switch and
   filter with its options, then sort, then page. Keywords, functions, and date ranges
   ignore case.
   """
@@ -13,7 +13,7 @@ defmodule App.Report.Parser do
   alias App.Report.Lexer
   alias App.Report.Query
 
-  @clauses ~w(select from where group pivot order limit offset label totals)
+  @clauses ~w(select from where group pivot order limit offset label format totals)
   @page_clauses ~w(search switch filter sort page)
   # Names a filter can't take: the URL's own words. A sort's name is only the sort's
   # value in the URL, so `sort id` is fine.
@@ -105,7 +105,7 @@ defmodule App.Report.Parser do
 
   defp clause_list,
     do:
-      "where, group by, pivot, order by, limit, offset, label, totals, search, switch, filter, sort, or page"
+      "where, group by, pivot, order by, limit, offset, label, format, totals, search, switch, filter, sort, or page"
 
   defp clause_name("group"), do: "group by"
   defp clause_name("order"), do: "order by"
@@ -147,6 +147,11 @@ defmodule App.Report.Parser do
   defp clause("label", query, tokens) do
     {items, rest} = list(tokens, &label_item/1)
     {%{query | labels: items}, rest}
+  end
+
+  defp clause("format", query, tokens) do
+    {items, rest} = list(tokens, &format_item/1)
+    {%{query | formats: items}, rest}
   end
 
   defp clause("totals", query, tokens), do: {%{query | totals: true}, tokens}
@@ -485,6 +490,25 @@ defmodule App.Report.Parser do
       {expr, rest} -> fail(rest, "Write the label in quotes after #{Query.text(expr)}.")
     end
   end
+
+  # `started_at as date_time` (#804).
+  defp format_item(tokens) do
+    case expr(tokens) do
+      {expr, [{:word, as, _}, {:word, name, _} | rest]} ->
+        if String.downcase(as) != "as", do: format_fail(expr)
+        {{expr, String.downcase(name)}, rest}
+
+      {expr, _rest} ->
+        format_fail(expr)
+    end
+  end
+
+  defp format_fail(expr),
+    do:
+      fail_line(
+        Query.line(expr),
+        "Write as and a format after #{Query.text(expr)}, such as format started_at as month."
+      )
 
   defp list(tokens, item) do
     {first, rest} = item.(tokens)
