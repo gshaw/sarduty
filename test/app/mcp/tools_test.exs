@@ -33,11 +33,11 @@ defmodule App.MCP.ToolsTest do
   end
 
   test "the call log keeps only declared arguments, cut short" do
-    args = %{"query" => String.duplicate("x", 500), "email" => "a@b.c"}
+    args = %{"query" => String.duplicate("x", 5_000), "email" => "a@b.c"}
     logged = Tools.loggable_arguments(CheckReport, args)
 
     assert Map.keys(logged) == ["query"]
-    assert String.length(logged["query"]) == 100
+    assert String.length(logged["query"]) == 2_000
   end
 
   test "an argument that isn't a plain value is not logged as is" do

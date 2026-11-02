@@ -3,11 +3,13 @@ defmodule Web.Settings.MCPLive do
 
   import Web.Components.TeamSettingsTabs
 
+  alias App.Model.MCPCall
   alias App.Model.MCPToken
   alias App.Model.Team
   alias App.Operation.RevokeMCPToken
 
-  # The team's MCP tokens (#28), /teams/:subdomain/settings/mcp. A SAR Duty admin turns
+  # The team's MCP tokens (#28), /teams/:subdomain/settings/mcp: what agents are for
+  # (#816), the tokens, and the reports agents checked or tried. A SAR Duty admin turns
   # MCP on and off (App.Operation.SetTeamMCP). It isn't offered to teams, so while it is
   # off this page is not found.
   def mount(_params, _session, socket) do
@@ -20,6 +22,7 @@ defmodule Web.Settings.MCPLive do
       socket
       |> assign(page_title: "Team settings · MCP tokens", can_create: can_create)
       |> assign(endpoint_url: url(~p"/teams/#{team}/mcp"))
+      |> assign(queries: MCPCall.get_report_queries(team, 50))
       |> assign_tokens()
 
     {:ok, socket}
@@ -50,19 +53,30 @@ defmodule Web.Settings.MCPLive do
     ~H"""
     <.team_settings_tabs team={@current_team} current={:mcp} />
     <div class="measure">
-      <p>
-        An MCP token lets your AI agent, such as Claude Code, read {@current_team.name}'s data
-        in SAR Duty. It can read members, groups, activities and their attendance, hours,
-        chores, qualifications, and change history.
+      <p id="agents-intro">
+        An AI agent, such as Claude or ChatGPT, can help you write reports. You open each
+        report in SAR Duty, and it runs here, on your records.
       </p>
-      <p>
-        Agents only read: they cannot change anything in SAR Duty or {@service}. They never see
-        email, phone numbers, or addresses. SAR Duty logs every request, and SAR Duty site admins can read the log.
-      </p>
-      <p id="no-training" class="font-semibold">
-        Use a token only with an AI service set not to train on your data. Personal
-        accounts, free or paid, often train on your chats unless you turn it off. The token
-        gives it your team members' names, hours, and history.
+      <div id="agents-lists" class="grid gap-6 sm:grid-cols-2">
+        <div>
+          <h2 class="heading">Agents work from</h2>
+          <ul class="list-disc pl-6">
+            <li>The report language</li>
+            <li>Your saved reports</li>
+            <li>Your names for groups, qualifications, tags, and custom fields</li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="heading">Stays in SAR Duty</h2>
+          <ul class="list-disc pl-6">
+            <li>Your members and activities</li>
+            <li>Your equipment</li>
+            <li>Every report's rows</li>
+          </ul>
+        </div>
+      </div>
+      <p class="action">
+        <.a id="agents-how" navigate={~p"/agents"}>How agents work with SAR Duty</.a>
       </p>
       <p>
         Each token is yours. It stops working when you revoke it, or when you lose Owner or
@@ -119,9 +133,42 @@ defmodule Web.Settings.MCPLive do
           <li>Transport: Streamable HTTP</li>
         </ul>
         <p class="mt-4">The claude.ai and ChatGPT connectors cannot send a header yet.</p>
+
+        <h2 class="heading mt-8">Reports agents wrote</h2>
+        <.empty_state :if={@queries == []} id="no-agent-reports" title="No reports yet">
+          Each report an agent checks or tries shows here.
+        </.empty_state>
+        <.table
+          :if={@queries != []}
+          id="agent-reports"
+          rows={@queries}
+          row_id={&"agent-report-#{&1.id}"}
+        >
+          <:col :let={call} label="When" class="whitespace-nowrap">
+            {Service.Format.minutes_ago(call.called_at, DateTime.utc_now(), @current_team.timezone)}
+          </:col>
+          <:col :let={call} label="Agent">{call.mcp_token && call.mcp_token.name}</:col>
+          <:col :let={call} label="Report">
+            <code class="line-clamp-2">{call.arguments["query"]}</code>
+          </:col>
+          <:col :let={call} label="">
+            <span :if={call.error} class="hint">Needed a fix: {call.error}</span>
+            <.a :if={!call.error} href={open_path(@current_team, call)}>Open</.a>
+          </:col>
+        </.table>
       </div>
     </div>
     """
+  end
+
+  # New report with the query the agent checked, as its own link opened it.
+  defp open_path(team, call) do
+    params = %{
+      "query" => call.arguments["query"],
+      "agent" => call.mcp_token && call.mcp_token.name
+    }
+
+    ~p"/teams/#{team}/reports/new?#{Map.reject(params, fn {_k, v} -> is_nil(v) end)}"
   end
 
   defp last_used(%MCPToken{last_used_at: nil}, _timezone), do: "Never"

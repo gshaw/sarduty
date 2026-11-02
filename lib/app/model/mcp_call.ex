@@ -8,8 +8,8 @@ defmodule App.Model.MCPCall do
   alias App.Repo
 
   # Every MCP tool call (#28), to watch the trial from /admin/mcp. Generic per tool: the
-  # tool's name, the arguments the agent sent, and how many rows it got back. Arguments
-  # are dates, tags, and ids, never contact details. Kept 90 days, like login events.
+  # tool's name, the arguments the agent sent, and how many items it got back. Arguments
+  # are report queries and ids, never contact details. Kept 90 days, like login events.
   @retention_days 90
 
   schema "mcp_calls" do
@@ -51,6 +51,19 @@ defmodule App.Model.MCPCall do
     |> order_by([c], desc: c.called_at, desc: c.id)
     |> limit(^limit)
     |> preload([:team, :user, :mcp_token])
+    |> Repo.all()
+  end
+
+  @doc """
+  The queries agents checked or tried for `team` (#816), newest first, with the token
+  that sent each: what the Agents tab lists as reports agents wrote.
+  """
+  def get_report_queries(%Team{} = team, limit) do
+    MCPCall
+    |> where([c], c.team_id == ^team.id and c.tool in ["check_report", "try_report"])
+    |> order_by([c], desc: c.called_at, desc: c.id)
+    |> limit(^limit)
+    |> preload(:mcp_token)
     |> Repo.all()
   end
 
