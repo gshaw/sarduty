@@ -6,7 +6,13 @@ defmodule Web.PrivacyLive do
   @contact "privacy@sarduty.com"
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Privacy", contact: @contact)}
+    {:ok,
+     assign(socket,
+       page_title: "Privacy",
+       page_description:
+         "What SAR Duty keeps about your team and its members, who sees it, and where it is stored.",
+       contact: @contact
+     )}
   end
 
   def render(assigns) do
@@ -14,7 +20,7 @@ defmodule Web.PrivacyLive do
     <article id="privacy" class="container mx-auto px-2 pt-8">
       <div class="max-w-prose">
         <h1 class="title">Privacy</h1>
-        <p class="hint">Last changed October 24, 2026.</p>
+        <p class="hint">Last changed November 2, 2026.</p>
         <p>
           SAR Duty copies your team's data from D4H to run its tools for your team. Your team decides what is in D4H.
         </p>
@@ -43,7 +49,13 @@ defmodule Web.PrivacyLive do
           Gerry Shaw, a volunteer member of South Fraser Search and Rescue, runs SAR Duty. SAR Duty is an independent project. South Fraser Search and Rescue and the other teams that use it do not run, own, or endorse it.
         </p>
         <p id="privacy-access">
-          SAR Duty's admins can see every team's data in SAR Duty. There are 2 today: Gerry Shaw and Andrew Wallwork. They look at team data only to run, fix, support, secure, or improve SAR Duty, or to look into a security problem, misuse, or failure. They share it only when the law requires it. SAR Duty does not use team data for anything else.
+          SAR Duty site admins can see every team's data in SAR Duty. There are 2 today: Gerry Shaw and Andrew Wallwork. They look at team data only to run, fix, support, secure, or improve SAR Duty, or to look into a security problem, misuse, or failure. They share it only when the law requires it. SAR Duty does not use team data for anything else.
+        </p>
+        <p id="privacy-agents">
+          A team admin can connect an AI agent, such as Claude or ChatGPT. The agent's company gets the team's names for groups, qualifications, tags, and custom fields, and its saved reports. It never gets members or their records.
+        </p>
+        <p class="action">
+          <.a id="privacy-agents-link" navigate={~p"/agents"}>How agents work with SAR Duty</.a>
         </p>
         <p id="privacy-organizations">
           When a team belongs to an organization, its organization admins, such as an association's staff, see each of its teams' totals, never members' names or contact details.
@@ -53,6 +65,9 @@ defmodule Web.PrivacyLive do
             id="privacy-contact"
             href={"mailto:" <> @contact}
           >{@contact}</.a>.
+        </p>
+        <p class="action">
+          <.a id="privacy-terms" navigate={~p"/terms"}>Terms</.a>
         </p>
       </div>
     </article>

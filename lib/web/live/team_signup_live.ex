@@ -14,7 +14,15 @@ defmodule Web.TeamSignupLive do
       )
 
     changeset = TeamSignupViewModel.build_new_changeset(%{api_host: D4H.default_region()})
-    {:ok, socket |> assign(page_title: "Sign up a team", done: nil) |> assign_form(changeset)}
+
+    {:ok,
+     socket
+     |> assign(
+       page_title: "Sign up a team",
+       page_description: "Sign up your search and rescue team for SAR Duty.",
+       done: nil
+     )
+     |> assign_form(changeset)}
   end
 
   def render(assigns) do
@@ -35,9 +43,9 @@ defmodule Web.TeamSignupLive do
     <div :if={!@done}>
       <h1 class="heading">Sign up a team</h1>
       <p id="signup-d4h">
-        SAR Duty works from your team's D4H data. You need a D4H access key from a D4H member
-        with Owner or Editor access. Best is a member named "SAR Duty", so changes show as SAR
-        Duty in D4H. You must also be an Owner or Editor on the team in D4H.
+        SAR Duty works from your team's D4H data. You need an access key from a member with
+        Owner or Editor access. Best is a member named "SAR Duty", so its changes show under
+        that name. You must be an Owner or Editor on the team too.
       </p>
       <p class="action">
         <.a external={true} href="https://help.d4h.com/article/377-obtaining-an-api-access-key">How to create a D4H access key</.a>
@@ -55,15 +63,20 @@ defmodule Web.TeamSignupLive do
         <.input
           field={@form[:api_host]}
           type="select"
-          label="D4H region"
+          label="Region"
           options={D4H.services()}
         />
         <.input
           field={@form[:access_key]}
           type="password"
-          label={D4H.key_name(@api_host)}
+          label="Access key"
           autocomplete="off"
         />
+        <p id="signup-terms" class="hint">
+          By signing up, you agree to the <.a navigate={~p"/terms"}>Terms</.a>
+          on behalf of your team. <.a navigate={~p"/privacy"}>Privacy</.a>
+          says what SAR Duty keeps and who sees it.
+        </p>
         <.form_actions>
           <.button
             variant={:success}

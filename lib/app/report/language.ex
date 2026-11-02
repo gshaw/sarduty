@@ -173,7 +173,7 @@ defmodule App.Report.Language do
 
     A report is a query on one team's records: which fields to show, which rows to keep, \
     and how to sort them. Team admins write one on Reports, with New report. An agent can \
-    read this page as text at `/agents/reports.md`.
+    read this page as text at [/agents/reports.md](/agents/reports.md).
 
     The language is Google Sheets' QUERY language, plus `from`, a dot to a parent's \
     fields, date ranges, and values picked when the report runs. Keywords, functions, and \

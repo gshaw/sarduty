@@ -19,6 +19,8 @@ defmodule Web.HomePageLive do
     {:ok,
      assign(socket,
        page_title: "Less paperwork for search and rescue teams",
+       page_description:
+         "Tax credit letters, ID cards on members' phones, attendance at the door, and reports, for search and rescue teams.",
        teams: teams,
        members: socket.assigns[:member_logins] || []
      )}
@@ -137,7 +139,8 @@ defmodule Web.HomePageLive do
        "Driving distances from each member's home to an activity, worked out for you."},
       {"Your membership",
        "Each member sees their year: their hours, their qualifications, their ID card, and what they signed up for."},
-      {"Change history", "SAR Duty keeps a history of every change to a member or an activity."}
+      {"Reports",
+       "Answer what the lists can't, such as who gave the most rope hours. An AI agent can help write one."}
     ]
   end
 

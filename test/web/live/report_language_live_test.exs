@@ -9,6 +9,17 @@ defmodule Web.ReportLanguageLiveTest do
 
     assert has_element?(lv, "#report-language h1", "How to write a report")
     assert has_element?(lv, "#report-language h3", "activities")
+    assert has_element?(lv, ~s(#report-language .breadcrumbs a[href="/agents"]), "Agents")
+    assert has_element?(lv, ~s(#report-language a[href="/agents/reports.md"]))
+  end
+
+  test "it lists its sections, and the Markdown does not", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/agents/reports")
+
+    assert has_element?(lv, ~s(#report-language-contents a[href="#the-query"]), "The query")
+    assert has_element?(lv, "#the-query")
+    markdown = conn |> get(~p"/agents/reports.md") |> response(200)
+    refute markdown =~ "On this page"
   end
 
   test "agents read it as Markdown", %{conn: conn} do

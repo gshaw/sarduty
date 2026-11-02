@@ -104,6 +104,8 @@
   .prose :is(p, ul, ol) { margin-block: var(--sp-3); }
   .prose li { margin-block: 0; }
   .prose > :first-child { margin-top: 0; }
+  /* A Markdown page's h1 is its title, so it matches .title on the pages beside it. */
+  .prose h1 { font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 700; margin-bottom: var(--sp-4); }
   .prose > :last-child { margin-bottom: 0; }
   /* Code reads as code by its font: no backticks around it. */
   .prose :where(code)::before, .prose :where(code)::after { content: none; }

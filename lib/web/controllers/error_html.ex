@@ -41,7 +41,7 @@ defmodule Web.ErrorHTML do
     <html lang="en">
       <head>
         <meta charset="utf-8" />
-        <meta name="description" content="Helpful tools for search and rescue managers." />
+        <meta name="description" content="Less paperwork for search and rescue teams." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
         <.live_title suffix=" · SAR Duty">
