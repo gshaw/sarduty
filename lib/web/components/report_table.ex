@@ -26,7 +26,8 @@ defmodule Web.Components.ReportTable do
     assigns =
       assign(assigns,
         rows: rows(assigns.result),
-        columns: Enum.with_index(assigns.result.columns)
+        columns: Enum.with_index(assigns.result.columns),
+        kind?: Enum.any?(assigns.result.columns, &(&1[:cell] == :activity_kind))
       )
 
     ~H"""
@@ -53,6 +54,7 @@ defmodule Web.Components.ReportTable do
           records={@records}
           team={@team}
           now={@now}
+          kind_column={@kind?}
         />
       </:col>
     </.table>
@@ -90,6 +92,7 @@ defmodule Web.Components.ReportTable do
   attr :records, :map, required: true
   attr :team, :any, required: true
   attr :now, :any, required: true
+  attr :kind_column, :boolean, required: true, doc: "whether a column shows the activity's kind"
 
   defp report_cell(%{total: true, first: true, value: nil} = assigns),
     do: ~H"<strong>Total</strong>"
@@ -110,9 +113,15 @@ defmodule Web.Components.ReportTable do
       records={@records}
       team={@team}
       now={@now}
+      kind_column={@kind_column}
     />
     """
   end
+
+  defp report_cell(%{column: %{cell: :activity_kind}} = assigns),
+    do: ~H"""
+    <span class={["marker", "marker-#{@value}"]}>{value_text(@value, @column, @team)}</span>
+    """
 
   defp report_cell(%{column: %{type: :date}} = assigns),
     do: ~H"<.date_cell value={@value} timezone={@team.timezone} />"
@@ -125,13 +134,14 @@ defmodule Web.Components.ReportTable do
   attr :records, :map, required: true
   attr :team, :any, required: true
   attr :now, :any, required: true
+  attr :kind_column, :boolean, required: true
 
   defp record_cell(%{kind: :member} = assigns),
     do:
       ~H"<.member_cell member={@record} team={@team} standing={@records.standings[@record.id]} />"
 
   defp record_cell(%{kind: :activity} = assigns),
-    do: ~H"<.activity_cell activity={@record} team={@team} now={@now} />"
+    do: ~H"<.activity_cell activity={@record} team={@team} now={@now} kind={!@kind_column} />"
 
   defp record_cell(%{kind: :item} = assigns), do: ~H"<.item_cell item={@record} team={@team} />"
 

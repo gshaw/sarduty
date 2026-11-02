@@ -191,16 +191,6 @@ defmodule Web.ReportFormLive do
     end
   end
 
-  def handle_event("delete", _params, socket) do
-    SaveReport.delete(socket.assigns.saved)
-    team = socket.assigns.current_team
-
-    {:noreply,
-     socket
-     |> put_flash(:info, "Report deleted.")
-     |> push_navigate(to: ~p"/teams/#{team}/reports")}
-  end
-
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
@@ -293,20 +283,6 @@ defmodule Web.ReportFormLive do
         </.form>
       </div>
     </div>
-
-    <section :if={@saved} id="report-delete" class="mt-8 measure">
-      <h2 class="heading">Delete the report</h2>
-      <p>Its query goes for good. The records it reads stay.</p>
-      <.button
-        id="report-delete-button"
-        type="button"
-        variant={:danger}
-        phx-click="delete"
-        data-confirm="Delete this report? Its query goes for good."
-      >
-        Delete report
-      </.button>
-    </section>
     """
   end
 

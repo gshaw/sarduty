@@ -23,11 +23,17 @@
   /* The arrow floats, so a space before the link text in a template starts the line and
      drops, rather than showing underlined after the arrow. A float is never underlined. */
   .action > a { display: inline-block; }
-  .action-list a::before, .action > a::before { content: var(--list-style-type-arrow); float: left; white-space: pre; color: var(--text); }
+  .action-list a::before, .action > a::before, .page-actions-list a::before { content: var(--list-style-type-arrow); float: left; white-space: pre; color: var(--text); }
   /* An action with its own icon, such as Add to calendar, puts it in the arrow's place:
      black like the arrow, never underlined, floated so a long label wraps under its
      words (<.a icon="…">). */
-  .action-list a.has-mark::before, .action > a.has-mark::before { content: none; }
+  .action-list a.has-mark::before, .action > a.has-mark::before, .page-actions-list a.has-mark::before { content: none; }
+  /* A page's own actions with no sidebar (page_actions.ex): the same arrow links, side by
+     side under the title and lead, wrapping on a phone. See /styles/page-actions. */
+  .page-actions { margin-bottom: var(--sp-6); }
+  .page-actions > .hint { margin-bottom: var(--sp-1); }
+  .page-actions-list { display: flex; flex-wrap: wrap; column-gap: var(--sp-6); row-gap: var(--sp-1); }
+  @media (pointer: coarse) { .page-actions-list a { display: inline-block; padding-block: calc((44px - var(--lh-md)) / 2); } }
   .link-mark { float: left; color: var(--text); margin-top: calc((var(--lh-md) - 16px) / 2); margin-right: 0.375em; }
 
   .link { color: var(--link); text-decoration: underline; text-underline-offset: 0.15em; text-decoration-thickness: 1px; }

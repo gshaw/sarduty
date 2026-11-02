@@ -5,6 +5,8 @@ defmodule Web.ReportLive do
   filters, sortable headers, and pages (#784). Every pick rides in the URL, so two team
   admins can run it for different years; what the URL leaves out, a team's own report
   takes from the values saved with it. Download CSV gives the same rows, every page.
+  Its actions are a line of links under its description (`<.page_actions>`); Delete report
+  is one of them, for a team's own report.
   """
   use Web, :live_view_app_layout
 
@@ -12,6 +14,8 @@ defmodule Web.ReportLive do
   import Web.Components.ReportTable
 
   alias App.Adapter.D4H
+  alias App.Model.SavedReport
+  alias App.Operation.SaveReport
   alias App.Report
   alias App.Report.BuiltIn
   alias App.Report.Compiler
@@ -77,6 +81,16 @@ defmodule Web.ReportLive do
     {:noreply, push_patch(socket, to: path, replace: true)}
   end
 
+  def handle_event("delete", _params, socket) do
+    %{current_team: team, report: %{saved: %SavedReport{} = saved}} = socket.assigns
+    SaveReport.delete(saved)
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Deleted the #{saved.name} report.")
+     |> push_navigate(to: ~p"/teams/#{team}/reports")}
+  end
+
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
@@ -84,27 +98,38 @@ defmodule Web.ReportLive do
       <:item label={@report.name} />
     </.breadcrumbs>
 
-    <.heading_row>
-      <h1 class="title">{@report.name}</h1>
-      <:action>
-        <.button
-          :if={@report.saved}
-          id="report-change"
-          navigate={~p"/teams/#{@current_team}/reports/#{@report.id}/edit"}
-        >
-          Change report
-        </.button>
-        <.button
-          :if={!@report.saved}
+    <h1 class="title">{@report.name}</h1>
+    <p :if={@report.about} class="lead">{@report.about}</p>
+    <.page_actions id="report-actions">
+      <:byline :if={@report.saved}>
+        Saved by {@report.made_by || "a team admin"} on {Format.date_short(
+          @report.made_on,
+          @current_team.timezone
+        )}.
+      </:byline>
+      <:byline :if={!@report.saved}>Built in, part of SAR Duty.</:byline>
+      <:action :if={@report.saved}>
+        <.a id="report-change" navigate={~p"/teams/#{@current_team}/reports/#{@report.id}/edit"}>Change report</.a>
+      </:action>
+      <:action :if={!@report.saved}>
+        <.a
           id="report-copy"
           navigate={~p"/teams/#{@current_team}/reports/new?#{[from: @report.id]}"}
-        >
-          Copy and change
-        </.button>
-        <.button :if={@csv_path} id="report-csv" href={@csv_path}>Download CSV</.button>
+        >Copy report</.a>
       </:action>
-    </.heading_row>
-    <p :if={@report.about} class="lead">{@report.about}</p>
+      <:action :if={@csv_path}>
+        <.a id="report-csv" href={@csv_path}>Download CSV</.a>
+      </:action>
+      <:action :if={@report.saved}>
+        <.a
+          id="report-delete"
+          href="#"
+          phx-click="delete"
+          phx-disable-with="Deleting…"
+          {Web.DeleteConfirm.report(@report.saved)}
+        >Delete report</.a>
+      </:action>
+    </.page_actions>
     <p :if={@fix} id="report-fix" class="hint">{@fix}</p>
 
     <.filter_form :if={@values != []} for={@form} id="report-values">
@@ -140,18 +165,6 @@ defmodule Web.ReportLive do
           else: "Pick other values above."}
       </.empty_state>
     </div>
-
-    <details id="report-query" class="mt-8">
-      <summary class="heading">Query</summary>
-      <p :if={!@report.saved} class="hint">Built in, part of SAR Duty. Copy it to make your own.</p>
-      <p :if={@report.saved} class="hint">
-        Made by {@report.made_by || "a team admin"} on {Format.date_short(
-          @report.made_on,
-          @current_team.timezone
-        )}.
-      </p>
-      <pre class="code-block"><code>{@report.query}</code></pre>
-    </details>
     """
   end
 end

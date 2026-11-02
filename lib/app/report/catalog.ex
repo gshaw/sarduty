@@ -223,7 +223,8 @@ defmodule App.Report.Catalog do
         label: "Kind",
         type: :choice,
         column: :kind,
-        choices: fn _ -> activity_kinds() end
+        choices: fn _ -> activity_kinds() end,
+        cell: :activity_kind
       },
       date(:started_at, "Started"),
       date(:finished_at, "Finished"),

@@ -118,6 +118,7 @@ defmodule Web do
       import Web.Components.Email
       import Web.Components.HeadingRow
       import Web.Components.Markdown
+      import Web.Components.PageActions
       import Web.Components.Pagination
       import Web.Components.RowLink
       import Web.Components.Table

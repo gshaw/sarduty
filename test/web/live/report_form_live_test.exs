@@ -70,7 +70,7 @@ defmodule Web.ReportFormLiveTest do
     assert has_element?(lv, "#report-errors", "activities has no field hour_tags")
   end
 
-  test "Copy and change starts from a built-in report", %{conn: conn} do
+  test "Copy report starts from a built-in report", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     conn = log_in_user(conn, user)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/hours-by-member")
@@ -98,17 +98,43 @@ defmodule Web.ReportFormLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}")
     assert has_element?(lv, "#report-change")
-    assert has_element?(lv, "#report-query", "Made by")
+    assert has_element?(lv, "#report-actions", "Saved by")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
     lv |> form("#report-form", report: %{name: "Group list"}) |> render_submit()
     assert_redirect(lv, ~p"/teams/#{team}/reports/#{report.id}")
     assert SavedReport.get(team, report.id).name == "Group list"
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
-    lv |> element("#report-delete-button") |> render_click()
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}")
+    lv |> element("#report-delete") |> render_click()
     assert_redirect(lv, ~p"/teams/#{team}/reports")
     assert SavedReport.get(team, report.id) == nil
+  end
+
+  test "a Kind column draws the kind's marker, and the Activity cell leaves its own out",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity_fixture(team, %{title: "Overdue kayaker", activity_kind: "incident"})
+    conn = log_in_user(conn, user)
+
+    {:ok, with_kind} =
+      SaveReport.call(team, user, nil, %{
+        "name" => "With kind",
+        "query" => "select title, kind from activities"
+      })
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{with_kind.id}")
+    assert has_element?(lv, "td[data-label=Kind] .marker-incident", "Incident")
+    refute has_element?(lv, "td[data-label=Activity] .marker")
+
+    {:ok, title_only} =
+      SaveReport.call(team, user, nil, %{
+        "name" => "Title",
+        "query" => "select title from activities"
+      })
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{title_only.id}")
+    assert has_element?(lv, "td[data-label=Activity] .marker-incident")
   end
 
   test "a built-in report cannot be changed", %{conn: conn} do

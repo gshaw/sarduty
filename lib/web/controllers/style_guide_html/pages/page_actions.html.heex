@@ -1,0 +1,58 @@
+<.shell current={:page_actions}>
+  <h1>Page actions</h1>
+  <p class="lead">A page's own actions, when it has no sidebar to hold them.</p>
+
+  <div class="demo">
+    <h1 class="title">Incident hours</h1>
+    <p class="lead">Incidents since a date, most hours first.</p>
+    <.page_actions id="demo-page-actions">
+      <:byline>Saved by Alex Chen on Nov 1, 2026.</:byline>
+      <:action><.a href="#">Change report</.a></:action>
+      <:action><.a href="#">Download CSV</.a></:action>
+      <:action><.a href="#">Delete report</.a></:action>
+    </.page_actions>
+  </div>
+
+  <h2>When to use</h2>
+  <ul>
+    <li>
+      A page about one thing with no sidebar, such as a report: changing it, downloading it, deleting it.
+    </li>
+  </ul>
+
+  <h2>When not to use</h2>
+  <ul>
+    <li>
+      A record page with a sidebar. Its actions go in the Actions list in its <a href={
+        page_path(:detail_list)
+      }>details</a>.
+    </li>
+    <li>
+      Making something, such as Add activity. That's a button in a <a href={
+        page_path(:heading_row)
+      }>heading row</a>.
+    </li>
+  </ul>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>It goes under the title and its lead, before the page's content.</li>
+    <li>A byline first when the page has one: who made it, and when.</li>
+    <li>
+      Then the actions, side by side, each an arrow link. They wrap on a phone, and each takes
+      a 44px row on a touch screen.
+    </li>
+    <li>The order is the Actions list's: change, send, reports, Open in D4H, Delete.</li>
+    <li>
+      Delete opens the <a href={page_path(:confirm_dialog)}>confirm dialog</a>, as it does in a sidebar.
+    </li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.page_actions id="…"&gt;</code>
+    with a <code>&lt;:byline&gt;</code>
+    slot and one <code>&lt;:action&gt;</code>
+    slot per link.
+  </p>
+</.shell>
