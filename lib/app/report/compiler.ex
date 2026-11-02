@@ -135,7 +135,15 @@ defmodule App.Report.Compiler do
        when type in [:year, :month, :quarter, :text, :number] do
     {sql, params} = Expr.id_sql(e)
 
-    query = SQL.join([{["SELECT DISTINCT ", sql], params}, from_sql(st.subject, [e], st.context)])
+    # GROUP BY, not DISTINCT: with DISTINCT, SQLite scans a parent's rows once per row
+    # (Hours by member's Year menu took 1.3 s on South Fraser's 37,000 attendances).
+    query =
+      SQL.join([
+        {["SELECT ", sql], params},
+        from_sql(st.subject, [e], st.context),
+        {" GROUP BY 1", []}
+      ])
+
     {:sql, query, type}
   end
 
