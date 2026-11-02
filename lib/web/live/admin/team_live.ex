@@ -4,7 +4,7 @@ defmodule Web.Admin.TeamLive do
   import Web.Components.TeamRefresh
 
   alias App.Adapter.D4H
-  alias App.Model.MCPToken
+  alias App.Model.AgentConnection
   alias App.Model.Team
   alias App.Model.TeamLoginGrant
   alias App.Operation.SetTeamIdCards
@@ -14,7 +14,7 @@ defmodule Web.Admin.TeamLive do
   alias App.Worker.RefreshTeamDataWorker
 
   # One team's SAR Duty admin page (#513): its refresh, who reaches it as a team admin,
-  # and its ID cards and MCP switches.
+  # and its ID cards and Agents switches.
   def mount(%{"id" => id}, _session, socket) do
     team =
       with {id, ""} <- Integer.parse(id), %Team{} = team <- Team.get(id) do
@@ -37,7 +37,7 @@ defmodule Web.Admin.TeamLive do
       now: now,
       team_admins: TeamSummary.team_admin_rows(team, now),
       cards: Map.get(TeamSummary.card_counts(), team.id, 0),
-      tokens: Map.get(MCPToken.count_live_by_team(), team.id, 0)
+      agents: Map.get(AgentConnection.count_connected_by_team(), team.id, 0)
     )
     |> assign_new(:grant_form, fn ->
       grant_form(TeamLoginGrant.build_changeset(%TeamLoginGrant{}))
@@ -258,15 +258,15 @@ defmodule Web.Admin.TeamLive do
         </section>
 
         <section id="team-mcp" class="max-w-3xl">
-          <h2 class="heading">MCP</h2>
+          <h2 class="heading">Agents</h2>
           <p id="team-mcp-state">
             <span :if={@team.mcp_enabled} class="text-success-text">On</span>
             <span :if={!@team.mcp_enabled} class="text-text-muted">Off</span>
-            · {Service.Format.count(@tokens, one: "%d token", many: "%d tokens")}
+            · {Service.Format.count(@agents, one: "%d agent", many: "%d agents")} connected
           </p>
           <p>
-            Team admins create MCP tokens once it is on. Turning it off revokes every token on
-            the team. See <code>docs/mcp.md</code>.
+            Team admins connect AI agents once it is on. Turning it off disconnects every agent
+            on the team. See <code>docs/mcp.md</code>.
           </p>
           <.button
             :if={!@team.mcp_enabled}
@@ -275,7 +275,7 @@ defmodule Web.Admin.TeamLive do
             phx-click="mcp"
             phx-value-enabled="true"
           >
-            Turn on MCP
+            Turn on Agents
           </.button>
           <.button
             :if={@team.mcp_enabled}
@@ -284,9 +284,9 @@ defmodule Web.Admin.TeamLive do
             variant={:danger}
             phx-click="mcp"
             phx-value-enabled="false"
-            data-confirm={"Turn off MCP for #{@team.name}? This revokes its #{Service.Format.count(@tokens, one: "%d token", many: "%d tokens")}."}
+            data-confirm={"Turn off Agents for #{@team.name}? This disconnects #{Service.Format.count(@agents, one: "%d agent", many: "%d agents")}."}
           >
-            Turn off MCP
+            Turn off Agents
           </.button>
         </section>
       </main>
@@ -388,8 +388,8 @@ defmodule Web.Admin.TeamLive do
 
     message =
       if team.mcp_enabled,
-        do: "MCP turned on for #{team.name}.",
-        else: "MCP turned off for #{team.name}. Its tokens are revoked."
+        do: "Agents turned on for #{team.name}.",
+        else: "Agents turned off for #{team.name}. Its agents are disconnected."
 
     {:noreply,
      socket |> assign_team(Repo.preload(team, :organization)) |> put_flash(:info, message)}

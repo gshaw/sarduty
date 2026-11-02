@@ -2,11 +2,14 @@ defmodule App.Worker.PruneEventsWorker do
   @moduledoc """
   Deletes events past their kind's retention, D4H changes past theirs, MCP calls past
   theirs, and snoozes a day after they end, once a night (App.Model.Event,
-  App.Model.D4HChange, App.Model.MCPCall, App.Model.AttentionSnooze).
+  App.Model.D4HChange, App.Model.MCPCall, App.Model.AttentionSnooze). Also agent
+  registrations and Allows that never connected (#761).
   """
 
   use Oban.Worker, queue: :default, max_attempts: 3
 
+  alias App.Model.AgentClient
+  alias App.Model.AgentConnection
   alias App.Model.AttentionSnooze
   alias App.Model.D4HChange
   alias App.Model.Event
@@ -25,6 +28,10 @@ defmodule App.Worker.PruneEventsWorker do
     if calls > 0, do: Logger.info("Pruned #{calls} MCP calls")
     snoozes = AttentionSnooze.prune(now)
     if snoozes > 0, do: Logger.info("Pruned #{snoozes} attention snoozes")
+    pending = AgentConnection.prune_pending(now)
+    if pending > 0, do: Logger.info("Pruned #{pending} agent Allows never connected")
+    clients = AgentClient.prune(now)
+    if clients > 0, do: Logger.info("Pruned #{clients} agent registrations")
     :ok
   end
 end

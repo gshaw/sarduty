@@ -2,8 +2,8 @@ defmodule App.Model.MCPCall do
   use App, :model
 
   alias App.Accounts.User
+  alias App.Model.AgentConnection
   alias App.Model.MCPCall
-  alias App.Model.MCPToken
   alias App.Model.Team
   alias App.Repo
 
@@ -15,7 +15,7 @@ defmodule App.Model.MCPCall do
   schema "mcp_calls" do
     belongs_to :team, Team
     belongs_to :user, User
-    belongs_to :mcp_token, MCPToken
+    belongs_to :agent_connection, AgentConnection
     field :tool, :string
     field :arguments, :map, default: %{}
     field :row_count, :integer
@@ -25,17 +25,17 @@ defmodule App.Model.MCPCall do
   end
 
   @doc """
-  Records a call. `attrs` takes `token` (with `team_id` and `user_id`), `tool`,
+  Records a call. `attrs` takes `connection` (with `team_id` and `user_id`), `tool`,
   `arguments`, `row_count`, `error`, `duration_ms`, and `called_at`.
   """
   def record!(attrs) do
     attrs = Map.new(attrs)
-    token = attrs.token
+    connection = attrs.connection
 
     Repo.insert!(%MCPCall{
-      team_id: token.team_id,
-      user_id: token.user_id,
-      mcp_token_id: token.id,
+      team_id: connection.team_id,
+      user_id: connection.user_id,
+      agent_connection_id: connection.id,
       tool: String.slice(attrs.tool, 0, 100),
       arguments: attrs[:arguments] || %{},
       row_count: attrs[:row_count],
@@ -45,12 +45,12 @@ defmodule App.Model.MCPCall do
     })
   end
 
-  @doc "The newest calls, newest first, with team, user, and token."
+  @doc "The newest calls, newest first, with team, user, and agent connection."
   def get_recent(limit) do
     MCPCall
     |> order_by([c], desc: c.called_at, desc: c.id)
     |> limit(^limit)
-    |> preload([:team, :user, :mcp_token])
+    |> preload([:team, :user, :agent_connection])
     |> Repo.all()
   end
 
