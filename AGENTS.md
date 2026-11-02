@@ -148,6 +148,10 @@ fi
   environment — there is no release command.
 - For agent-driven work, keep progress, decisions, and outcomes on the related GitHub
   issue or PR (prefer the PR when one exists).
+- **A PR a team will notice adds a line to [CHANGELOG.md](CHANGELOG.md)**, under this
+  week's heading (Monday to Sunday, `## Oct 26–Nov 1`); start the heading if it isn't
+  there. One short line in Gerry's voice, with ⭐ only for a big feature. Leave out
+  refactors, tests, experiments, and anything a team won't see. The file is public.
 - **Bug issues** open with the three sections in
   [.github/ISSUE_TEMPLATE/bug_report.md](.github/ISSUE_TEMPLATE/bug_report.md) — **Steps
   to reproduce**, **Expected**, **Actual** — before any diagnosis. State the observable
