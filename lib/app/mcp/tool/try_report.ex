@@ -3,12 +3,16 @@ defmodule App.MCP.Tool.TryReport do
   Runs a query on Coast Range SAR, the made-up team (#816), and gives back its rows, so
   an agent catches a wrong answer, such as no rows or a double count, before the team
   admin sees it. Never the team's own records: App.Report.run_sample/3 reads only
-  App.SampleRepo.
+  App.SampleRepo. Its output names Coast Range SAR's groups, qualifications, and tags, so
+  an agent tries with those and gives check_report the team's own.
   """
   @behaviour App.MCP.Tool
 
+  alias App.Model.Group
+  alias App.Model.Qualification
   alias App.Model.Team
   alias App.Report
+  alias App.Report.Catalog
   alias App.Report.Error
   alias App.ViewData.ReportRecords
   alias Web.ReportCSV
@@ -24,7 +28,8 @@ defmodule App.MCP.Tool.TryReport do
       "and get its rows back as text. They are not this team's records: use them to " <>
       "catch a wrong answer, such as no rows, a double count, or the wrong column, " <>
       "before check_report. Give values for what the query picks, such as {\"year\": " <>
-      "\"2026\"}. Coast Range SAR's names for groups and tags may differ from this team's."
+      "\"2026\"}. Coast Range SAR names its groups, qualifications, and tags its own way, " <>
+      "and the output lists them: try with its names, then give check_report this team's."
   end
 
   @impl App.MCP.Tool
@@ -43,7 +48,7 @@ defmodule App.MCP.Tool.TryReport do
   end
 
   @impl App.MCP.Tool
-  def fields, do: ~w(team made_up columns rows more)
+  def fields, do: ~w(team made_up columns rows more names groups qualifications tags)
 
   @impl App.MCP.Tool
   def call(%Team{}, args, now, _agent) do
@@ -55,7 +60,7 @@ defmodule App.MCP.Tool.TryReport do
       sample = App.SampleRepo.team()
       records = ReportRecords.names(result, sample, App.SampleRepo)
       [columns | rows] = ReportCSV.table(result, records, sample.timezone)
-      {:ok, build(columns, rows), min(length(rows), @max_rows)}
+      {:ok, build(columns, rows, names(sample)), min(length(rows), @max_rows)}
     end
   end
 
@@ -70,6 +75,16 @@ defmodule App.MCP.Tool.TryReport do
 
   defp values(_values), do: %{}
 
+  # Coast Range SAR's names for things, which a query must use to find its rows.
+  defp names(sample) do
+    %{
+      "groups" => sample.id |> Group.get_all(App.SampleRepo) |> Enum.map(& &1.title),
+      "qualifications" =>
+        sample.id |> Qualification.get_all(App.SampleRepo) |> Enum.map(& &1.title),
+      "tags" => sample |> Catalog.read_tag_titles(App.SampleRepo) |> Enum.map(&elem(&1, 0))
+    }
+  end
+
   defp check_query(query) when is_binary(query) and query != "", do: :ok
   defp check_query(_query), do: {:error, "Give query as the report's text."}
 
@@ -80,11 +95,15 @@ defmodule App.MCP.Tool.TryReport do
     end
   end
 
-  @doc "The output: the column headers and the first #{@max_rows} rows, as text."
-  def build(columns, rows) do
+  @doc """
+  The output: the column headers, the first #{@max_rows} rows as text, and Coast Range
+  SAR's names for things.
+  """
+  def build(columns, rows, names) do
     %{
       "team" => "Coast Range SAR",
       "made_up" => true,
+      "names" => names,
       "columns" => columns,
       "rows" => Enum.take(rows, @max_rows),
       "more" => length(rows) > @max_rows

@@ -73,7 +73,10 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
 - `try_report`: runs a query on Coast Range SAR, the made-up team in `App.SampleRepo`
   (`App.Report.run_sample/3`), and gives back the first 50 rows as text, as the CSV
   writes them, marked `made_up`. The agent catches a wrong answer, such as no rows or a
-  double count, before the team admin sees it. It never reads the token's team.
+  double count, before the team admin sees it. It never reads the token's team. Its
+  output lists Coast Range SAR's groups, qualifications, and tags: a query that names
+  the team's own, such as Wilderness First Aid for First aid, finds nothing there, so
+  the agent tries with Coast Range's names and gives check_report the team's.
 
 - **No records** (#816). No tool returns a member, an activity's title, a row, or a
   count from the team's records. `Web.MCPControllerTest` seeds them, with contact
@@ -97,9 +100,10 @@ days. Creating and revoking tokens and the switch are events, kept two years.
 
 The team's MCP tokens tab lists the last 50 queries its agents checked, as Reports
 agents wrote (#816): when, the token's name, the query, and Open, the link check_report
-gave the agent, or the mistake it needed fixed. Tries on Coast Range SAR aren't listed. The tab opens with what agents are
-for and what stays in SAR Duty, and links to `/agents`, a public page that says the same
-for teams and organizations deciding about agents.
+gave the agent, or the mistake it needed fixed. Tries on Coast Range SAR aren't listed.
+The tab opens with what agents are for and what stays in SAR Duty, and links to
+`/agents`, a public page that says the same for teams and organizations deciding about
+agents.
 
 ## Connecting
 

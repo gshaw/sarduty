@@ -257,6 +257,9 @@ defmodule Web.MCPControllerTest do
       assert output["made_up"]
       assert output["columns"] == ["Member", "Standing"]
       assert [["Cameron Ruiz", _standing]] = output["rows"]
+      assert "Search manager" in output["names"]["qualifications"]
+      assert "Rope team" in output["names"]["groups"]
+      assert "Swiftwater" in output["names"]["tags"]
       refute text =~ "Pat Example"
 
       # A year sent as a JSON number picks that year, not this one.
