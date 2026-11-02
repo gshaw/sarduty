@@ -23,6 +23,19 @@ defmodule App.MCP.ToolsTest do
     end
   end
 
+  # The one rule of a live draft (#834): a reply never depends on running the query, or
+  # an agent could ask yes-or-no questions about the team, one per call. Only the made-up
+  # team runs here.
+  test "no tool runs a query on the team's records" do
+    for path <- Path.wildcard("lib/app/mcp/**/*.ex") do
+      source = File.read!(path)
+      refute source =~ ~r/Report\.run\(/, "#{path} runs a report"
+      refute source =~ "Report.page", "#{path} runs a report's page"
+      refute source =~ "Report.ids", "#{path} runs a report for its ids"
+      refute source =~ "Runner", "#{path} mentions the runner"
+    end
+  end
+
   test "an integer argument must be a whole number" do
     query = %{"query" => "select name from members"}
     assert Tools.check_arguments(CheckReport, query) == :ok

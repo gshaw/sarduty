@@ -39,7 +39,7 @@ defmodule App.MCP.Tool.ReportFields do
          other custom_fields title on)
 
   @impl App.MCP.Tool
-  def call(%Team{} = team, _args, _now, _agent) do
+  def call(%Team{} = team, _args, _now, _connection) do
     names = %{
       groups: titles(Group.get_all(team.id)),
       qualifications: titles(Qualification.get_all(team.id)),

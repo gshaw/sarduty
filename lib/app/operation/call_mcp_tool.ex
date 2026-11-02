@@ -30,7 +30,7 @@ defmodule App.Operation.CallMCPTool do
 
     try do
       with :ok <- Tools.check_arguments(tool, args),
-           do: tool.call(connection.team, args, now, connection.name)
+           do: tool.call(connection.team, args, now, connection)
     rescue
       exception ->
         record!(connection, name, logged_args, started, error: "Crashed")

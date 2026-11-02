@@ -29,7 +29,7 @@ defmodule App.MCP.Tool.ListReports do
   def fields, do: ~w(reports kind id name description query)
 
   @impl App.MCP.Tool
-  def call(%Team{} = team, _args, _now, _agent) do
+  def call(%Team{} = team, _args, _now, _connection) do
     output = build(BuiltIn.all(team), SavedReport.get_all(team), Lists.all())
     {:ok, output, length(output["reports"])}
   end

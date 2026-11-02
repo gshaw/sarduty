@@ -51,7 +51,7 @@ defmodule App.MCP.Tool.TryReport do
   def fields, do: ~w(team made_up columns rows more names groups qualifications tags)
 
   @impl App.MCP.Tool
-  def call(%Team{}, args, now, _agent) do
+  def call(%Team{}, args, now, _connection) do
     query = args["query"]
     values = values(args["values"])
 

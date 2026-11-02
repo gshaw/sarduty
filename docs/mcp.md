@@ -73,6 +73,15 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
   report, or Change report with `report_id`, with the query, name, and description in
   the URL and `agent=` the connection's name. Saving from that link fills `reports.agent`.
   A mistake comes back as the editor shows it, with its line.
+- **Live drafts** (#834). `check_report`'s first call makes a draft id (`draft=` in the
+  link and the reply), and the agent passes it back. Each call broadcasts the query on a
+  topic for the team, the connection's user, and the draft (`App.Report.Draft`), and the
+  editor that user has open with that draft fills its form and reruns its rows, at most
+  once a second. Once the admin has typed, a new query waits in a toast. Nothing is
+  stored, and only the admin saves. The reply never depends on running the query or on
+  an open editor, or an agent could ask yes-or-no questions about the team, one per call:
+  `App.MCP.ToolsTest` fails on a tool that names `Report.run`, `Report.page`,
+  `Report.ids`, or the runner.
 - `try_report`: runs a query on Coast Range SAR, the made-up team in `App.SampleRepo`
   (`App.Report.run_sample/3`), and gives back the first 50 rows as text, as the CSV
   writes them, marked `made_up`. The agent catches a wrong answer, such as no rows or a
