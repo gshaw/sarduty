@@ -135,8 +135,8 @@ does the rest, as the MCP spec says:
    characters. Only the name changes from one agent to the next. Allow writes an
    `agent_connections` row with a code, records `agent_connected`, and sends the admin
    back. The page says the agent helps write reports and links to `/agents`; no warning,
-   since the agent never reads the team's records (#816). A `resource`, when sent, must be the
-   team's MCP URL.
+   since the agent never reads the team's records (#816). A `resource`, when sent, must
+   be the team's MCP URL.
 5. **Tokens**, `POST /teams/:subdomain/oauth/token`
    ([ExchangeAgentToken](../lib/app/operation/exchange_agent_token.ex)). A code lasts 10
    minutes, works once, and needs its PKCE verifier. It trades for an access token,

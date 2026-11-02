@@ -7,7 +7,7 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 - How to write a report: one page on the report language, linked from the editor. Point
   your AI assistant at it and it has what it needs to write one.
 - ⭐ Connect Claude or ChatGPT from its own settings: paste your team's address, log in,
-  and choose Allow. No token to copy.
+  and choose Allow.
 - AI agents now help you write reports and nothing else. They work from your report
   language, saved reports, and names for groups and tags, never your members or
   activities. You open the report in SAR Duty, where it runs. How it works is at

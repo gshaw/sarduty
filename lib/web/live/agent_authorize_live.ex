@@ -66,8 +66,8 @@ defmodule Web.AgentAuthorizeLive do
     <p id="agent-asks">
       <strong id="agent-name">{@request.name}</strong>
       asks to help you write reports for {@team.name}. It works from the report language,
-      your saved reports, and your names for groups, qualifications, and tags. Your members
-      and activities stay in SAR Duty, where each report runs.
+      your saved reports, and your names for groups, qualifications, tags, and custom
+      fields. Your members and activities stay in SAR Duty, where each report runs.
     </p>
     <p class="action">
       <.a id="agent-how" navigate={~p"/agents"}>How agents work with SAR Duty</.a>
