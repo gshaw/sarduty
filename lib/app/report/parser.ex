@@ -24,6 +24,15 @@ defmodule App.Report.Parser do
   @ranges ~w(NOW TODAY THIS_MONTH LAST_MONTH THIS_YEAR LAST_YEAR)
   @ranges_with_n ~w(LAST_N_DAYS NEXT_N_DAYS LAST_N_MONTHS)
 
+  @doc "The query's clauses, in order, by their first word: `group` is group by."
+  def clauses, do: @clauses
+
+  @doc "The page's clauses (#784), in order. `option` and `each` sit under a switch or filter."
+  def page_clauses, do: @page_clauses
+
+  @doc "The most rows `page` can show at a time."
+  def max_page, do: @max_page
+
   @doc "The functions a query can call."
   def functions, do: @functions
 

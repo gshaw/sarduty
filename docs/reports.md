@@ -19,6 +19,17 @@ order by member.name
 totals
 ```
 
+## How to write a report
+
+`/reports/language` is the language for people, and `/reports/language.md` the same
+text for agents (#803). No login. `App.Report.Language` builds it from the parser's
+clauses, functions, and ranges, the catalog's subjects and fields, and the compiler's
+limits. A new clause, function, range, subject, or field argument fails
+`App.Report.LanguageTest` until it has an entry there, and the test checks every
+example on the page. A field says it's for team admins, or for teams with custom fields, from its
+`shown`; a choice lists its values only when they're the same for every team. The
+editor links to it as How to write a report.
+
 ## How a query runs
 
 1. `App.Report.Parser` reads the text into an `App.Report.Query`. It knows no fields.

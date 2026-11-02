@@ -42,8 +42,10 @@ enforces the top-level list and the held URLs.
   organization with that name. That's why sign-up is `/signup`, not `/teams/new`.
 - **Top-level paths are a short list**: `teams`, `orgs`, `admin`, `account`, `signup`,
   `login`, `logout`, `replies`, `reminders`, `wallet`, `styles`, `terms`, `privacy`,
-  `changelog`, `maps`, and `dev` in development. A new one is added to the router test on
-  purpose.
+  `changelog`, `reports`, `maps`, and `dev` in development. A new one is added to the
+  router test on purpose. `reports` holds only the public How to write a report,
+  `/reports/language` and `/reports/language.md` (#803); a team's reports are under its
+  team.
 - **Anything printed on a card goes through the verify site**, so it stays short and never
   depends on a team page's path.
 - **Build paths one way**: `~p"/teams/#{team}/members"`. `App.Model.Team` derives
