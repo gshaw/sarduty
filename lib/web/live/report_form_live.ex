@@ -248,8 +248,8 @@ defmodule Web.ReportFormLive do
           >
             <:col :let={field} label="Field">
               <.button type="button" size={:sm} data-field={field_text(field)}>{field_text(field)}</.button>
+              <span class="hint block mt-1">{field.about || field.label}</span>
             </:col>
-            <:col :let={field} label="Holds">{field.about || field.label}</:col>
           </.table>
         </div>
         <p class="hint mt-4">
