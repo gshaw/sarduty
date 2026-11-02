@@ -440,7 +440,10 @@ defmodule App.CoastRange do
   # exercise in two weeks, and a chore activity for each of the last three months, in
   # the order they started: ref ids count up from 01400 in that order.
   defp activities(now, today) do
-    [night_exercise(today) | trainings(today) ++ incidents(today) ++ events(today)]
+    [
+      night_exercise(today)
+      | training_places(trainings(today)) ++ incidents(today) ++ events(today)
+    ]
     |> Enum.concat(chore_activities(today))
     |> Enum.sort_by(& &1.started_at, DateTime)
     |> Enum.with_index()
@@ -489,7 +492,9 @@ defmodule App.CoastRange do
         started_at: start,
         finished_at: DateTime.add(start, hours, :hour),
         tags: incident_tags(title),
-        custom_values: incident_values(days, n)
+        custom_values: incident_values(days, n),
+        coordinate: incident_place(n),
+        address: "Cedar Creek forest road, spur #{rem(n * 4, 9) + 1}"
       }
     end
   end
@@ -504,9 +509,34 @@ defmodule App.CoastRange do
         description: "#{title} for the public.",
         started_at: start,
         finished_at: DateTime.add(start, hours, :hour),
-        tags: event_tags(title)
+        tags: event_tags(title),
+        coordinate: "49.25000,-123.10000",
+        address: "Coast Range SAR hall, 100 Example Road"
       }
     end
+  end
+
+  # Experiment (places): made-up places, for reports and maps. Weekly training takes
+  # turns between the two grounds.
+  defp training_places(trainings) do
+    grounds = [
+      {"49.37000,-123.02000", "Cedar Creek training ground"},
+      {"49.33000,-122.86000", "Hall training yard"}
+    ]
+
+    trainings
+    |> Enum.with_index()
+    |> Enum.map(fn {training, week} ->
+      {coordinate, address} = Enum.at(grounds, rem(week, 2))
+      %{training | coordinate: coordinate, address: address}
+    end)
+  end
+
+  # Experiment (places): spread over the mountains north of the base, the same every run.
+  defp incident_place(n) do
+    lat = 49.3 + rem(n * 37, 40) / 100
+    lng = -123.35 + rem(n * 53, 90) / 100
+    :io_lib.format("~.5f,~.5f", [lat, lng]) |> IO.iodata_to_binary()
   end
 
   defp event_tags("Annual general meeting"), do: ["Secondary Hours"]
@@ -521,7 +551,9 @@ defmodule App.CoastRange do
       description: "A mock search after dark, with a subject to find.",
       started_at: start,
       finished_at: DateTime.add(start, 5, :hour),
-      tags: ["Primary Hours", "Training"]
+      tags: ["Primary Hours", "Training"],
+      coordinate: "49.45000,-122.95000",
+      address: "Cedar Creek forest road, km 12"
     }
   end
 

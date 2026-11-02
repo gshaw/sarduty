@@ -36,7 +36,7 @@ defmodule App.ReportTest do
           assert is_binary(field.label) and field.label != "",
                  "#{subject.name}.#{field.name} has no label"
 
-          assert field.type in [:text, :number, :hours, :km, :date, :bool, :list, :choice] or
+          assert field.type in [:text, :number, :hours, :km, :date, :bool, :list, :choice, :place] or
                    match?(
                      {:record, kind}
                      when kind in [:member, :activity, :item, :qualification, :group],
@@ -83,14 +83,21 @@ defmodule App.ReportTest do
       assert IO.iodata_to_binary(plan.sql) =~ "attendances"
     end
 
-    test "reports leave out contact details" do
+    # Experiment (places): contact details are team admins' fields; emergency contacts
+    # stay out.
+    test "reports leave out emergency contacts, and contact details are for team admins" do
       team = team_fixture()
 
-      assert error("select email from members", team) ==
-               "Line 1: Reports leave out contact details. members has no field email."
+      assert error("select emergency_contact from members", team) ==
+               "Line 1: Reports leave out emergency contacts. members has no field emergency_contact."
 
-      assert error("select member.phone from attendance", team) =~
-               "Reports leave out contact details."
+      assert error("select member.phone from attendance", team) =~ "Use mobile."
+      assert {:ok, _plan} = Report.check("select name, email, mobile, address from members", team)
+
+      assert {:error, error} =
+               Report.page("select name, email from members", team, %{}, @now, team_admin?: false)
+
+      assert Error.text(error) =~ "members has no field email"
     end
   end
 

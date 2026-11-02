@@ -19,6 +19,10 @@ marked `Experiment (charts)`:
   `now`. `App.Report.run/5` and `run_with/3` take them.
 - `Web.Components.ReportChart` draws the chart above a report's rows, on its page and in
   the editor's preview. Built-in reports gain the Dashboard's charts.
+- Places and contact details (`Experiment (places)`): activities' `address` and `place`
+  for everyone who reads activities, members' `email`, `mobile`, and `address` for team
+  admins only, and `chart map`, which draws the Dashboard's map from a report's places.
+  Coast Range SAR gets made-up places.
 
 ```sh
 mkdir -p /tmp/chart-exp && sqlite3 db/sarduty_dev.db ".backup /tmp/chart-exp/dev.db"
@@ -27,14 +31,16 @@ mise exec -- mix run --no-start tools/chart-reports-experiment/dashboard.exs
 mise exec -- mix run --no-start tools/chart-reports-experiment/member_year.exs
 mise exec -- mix run --no-start tools/chart-reports-experiment/timing.exs
 mise exec -- mix run --no-start tools/chart-reports-experiment/new_charts.exs
+mise exec -- mix run --no-start tools/chart-reports-experiment/map.exs
 ```
 
 Run on 2026-11-02 against a copy of the sanitized dev database (7 teams):
 
-| Script            | What it compares                                          | Checks         |
-| ----------------- | --------------------------------------------------------- | -------------- |
-| `dashboard.exs`   | Every stat, line, and chart but the map, 7 teams, 6 times | 620 of 630     |
-| `member_year.exs` | A member's year page, 15 members a team, 2024 to 2026     | 1,500 of 1,500 |
+| Script            | What it compares                                            | Checks         |
+| ----------------- | ----------------------------------------------------------- | -------------- |
+| `dashboard.exs`   | Every stat, line, and chart but the map, 7 teams, 6 times   | 620 of 630     |
+| `member_year.exs` | A member's year page, 15 members a team, 2024 to 2026       | 1,500 of 1,500 |
+| `map.exs`         | The Dashboard's map on the same 12 months, 7 teams, 6 times | 42 of 42       |
 
 The 10 Dashboard differences are the Dashboard's, not the reports': on Dec 31 after a
 leap year it loads 730 days and misses Jan 1 of last year (6 checks), and it counts a

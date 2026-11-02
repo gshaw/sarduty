@@ -322,6 +322,7 @@ defmodule Web.ReportFormLive do
               run={@chart.run}
               records={@chart.records}
               team={@current_team}
+              now={@now}
             />
             <.report_page
               id="report-preview"

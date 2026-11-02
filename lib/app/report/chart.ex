@@ -29,6 +29,7 @@ defmodule App.Report.Chart do
   alias App.Report.Range
   alias App.Report.Runner
   alias App.Report.Value
+  alias App.ViewData.TeamDashboardCharts
   alias Service.Format
 
   defstruct [:name, :text, :kind, compare: nil, cumulative: false]
@@ -39,7 +40,8 @@ defmodule App.Report.Chart do
     "lines" => :lines,
     "bars" => :bars,
     "calendar" => :calendar,
-    "week" => :week
+    "week" => :week,
+    "map" => :map
   }
 
   # A pivot on an activity's kind keeps the kinds' colours (tokens.css).
@@ -210,6 +212,20 @@ defmodule App.Report.Chart do
     %{rows: for(day <- 1..7, do: for(hour <- 0..23, do: Map.get(counts, {day, hour}, 0)))}
   end
 
+  # Experiment (places): each row's activity and its place, a dot each.
+  def shape(%{kind: :map}, result, _context, _given) do
+    activity = Enum.find_index(result.columns, &(&1.type == {:record, :activity}))
+    place = Enum.find_index(result.columns, &(&1.type == :place))
+
+    unless activity && place,
+      do: raise("a map takes an activity, such as title, and its place")
+
+    places =
+      for row <- result.rows, id = Enum.at(row, activity), at = Enum.at(row, place), do: {id, at}
+
+    %{places: places}
+  end
+
   def shape(%{kind: :bars}, result, _context, _given) do
     [label_column | _] = result.columns
     value_index = Enum.find_index(result.columns, &(&1.type in [:number, :hours, :km]))
@@ -234,6 +250,26 @@ defmodule App.Report.Chart do
     values = for s <- series, into: %{}, do: {s.key, column_value(Enum.at(s.values, i), s.type)}
     %{label: short_label(bucket, axis), values: values, tip: tip(bucket, axis, series, i)}
   end
+
+  @doc """
+  Experiment (places): a map's dots from its places and the rows' activities, by the
+  Dashboard's rules: places over 150 km from the team's base are left off, and the last
+  30 days are large (App.ViewData.TeamDashboardCharts.map_points/3).
+  """
+  def map_points(%{places: places}, records, team, now) do
+    activities = Map.get(records, :activity, %{})
+
+    places
+    |> Enum.flat_map(fn {id, place} ->
+      case activities[id] do
+        nil -> []
+        a -> [%{title: a.title, started_at: a.started_at, coordinate: place, kind: kind(a)}]
+      end
+    end)
+    |> TeamDashboardCharts.map_points(team, now)
+  end
+
+  defp kind(activity), do: TeamDashboardCharts.kind(activity.activity_kind)
 
   ## The axis
 

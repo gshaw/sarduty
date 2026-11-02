@@ -392,6 +392,7 @@ defmodule App.Report.Language do
   defp type_text(:bool), do: "true or false"
   defp type_text(:list), do: "list"
   defp type_text(:choice), do: "choice"
+  defp type_text(:place), do: "a place"
   defp type_text({:record, kind}), do: "#{kind}, a link"
 
   defp holds(subject, field) do

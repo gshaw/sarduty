@@ -7,12 +7,14 @@ defmodule Web.Components.ReportTable do
   """
   use Web, :function_component
 
+  import Web.Components.A
   import Web.Components.Columns
   import Web.Components.Table
 
   alias App.Report.Runner
   alias App.Report.Value
   alias Service.Format
+  alias Web.Components.OpenInMaps
 
   attr :id, :string, required: true
   attr :result, App.Report.Result, required: true
@@ -137,6 +139,15 @@ defmodule Web.Components.ReportTable do
   defp report_cell(%{column: %{type: :date, format: "days_ago"}} = assigns),
     do: ~H"{Format.days_ago(@value, @now, @team.timezone)}"
 
+  # Experiment (places): a place opens in Google Maps, as on the activity page.
+  defp report_cell(%{column: %{type: :place}} = assigns) do
+    assigns = assign(assigns, url: OpenInMaps.url("google", assigns.value, nil, nil))
+
+    ~H"""
+    <.a href={@url} external={true}>{value_text(@value, @column, @team)}</.a>
+    """
+  end
+
   defp report_cell(assigns), do: ~H"{value_text(@value, @column, @team)}"
 
   attr :kind, :atom, required: true
@@ -230,6 +241,8 @@ defmodule Web.Components.ReportTable do
 
   def value_text(value, %{type: :month}, _team), do: Runner.month_name(value)
   def value_text(value, %{type: :quarter}, _team), do: "Q#{value}"
+  # Experiment (places): latitude and longitude, as the activity page writes them.
+  def value_text(value, %{type: :place}, _team), do: String.replace(value, ",", ", ")
   # Experiment (charts)
   def value_text(value, %{type: :day}, _team), do: Format.date_short(value)
   def value_text(value, %{type: :weekday}, _team), do: Runner.weekday_name(value)

@@ -170,6 +170,7 @@ defmodule Web.ReportLive do
       run={@chart.run}
       records={@chart.records}
       team={@current_team}
+      now={@now}
     />
 
     <div :if={@view}>

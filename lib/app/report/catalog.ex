@@ -241,7 +241,21 @@ defmodule App.Report.Catalog do
       ),
       number(:attended_count, "Attended", "How many members attended."),
       %Field{name: "attended_hours", label: "Hours", type: :hours, column: :attended_hours}
-    ] ++ activity_rule_fields()
+    ] ++ activity_place_fields() ++ activity_rule_fields()
+  end
+
+  # Experiment (places): where an activity is, as its page shows everyone who reads it.
+  defp activity_place_fields do
+    [
+      text(:address, "Address", "Where it is."),
+      %Field{
+        name: "place",
+        label: "Place",
+        type: :place,
+        column: :place,
+        about: "Its latitude and longitude, for chart map. Null when it has none."
+      }
+    ]
   end
 
   # What Activities searches, sorts, and filters by (#784).
@@ -357,8 +371,12 @@ defmodule App.Report.Catalog do
   end
 
   # Team admins' own records, which a member's Members has never filtered by (#440).
+  # Experiment (places): their contact details too, which members never see.
   defp team_admin_fields do
     [
+      text(:email, "Email", "The email they log in with."),
+      %Field{name: "mobile", label: "Mobile number", type: :text, column: :mobile},
+      text(:address, "Address", "Their mailing address."),
       rule(
         "details_missing",
         "Details missing",
@@ -592,6 +610,12 @@ defmodule App.Report.Catalog do
         attended_hours: dynamic([attended: t], coalesce(t.minutes, 0)),
         tracking_number: dynamic([a], a.tracking_number),
         description: dynamic([a], a.description),
+        address: dynamic([a], a.address),
+        place:
+          dynamic(
+            [a],
+            fragment("NULLIF(NULLIF(?, ''), ?)", a.coordinate, ^Activity.null_island())
+          ),
         duration: Activity.duration_dynamic(),
         chore: dynamic([chores: c], not is_nil(c.d4h_activity_id))
       }
@@ -669,7 +693,10 @@ defmodule App.Report.Catalog do
         qualifications: dynamic([awards: q], q.titles),
         last_attended: dynamic([last: l], l.last_attended_at),
         left_at: dynamic([m], m.left_at),
-        current: Member.current_dynamic(now)
+        current: Member.current_dynamic(now),
+        email: dynamic([m], m.email),
+        mobile: dynamic([m], m.phone),
+        address: dynamic([m], m.address)
       }
     }
   end

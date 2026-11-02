@@ -7,10 +7,12 @@ defmodule Web.Components.ReportChart do
   """
   use Web, :function_component
 
+  import Web.Components.ActivityMap
   import Web.Components.Chart
 
   alias App.Report.Chart
   alias Service.Format
+  alias Web.Components.ActivityMap
 
   attr :id, :string, required: true
   attr :chart, Chart, required: true
@@ -18,6 +20,7 @@ defmodule Web.Components.ReportChart do
   attr :records, :map, required: true, doc: "from App.ViewData.ReportRecords.load/3"
   attr :team, :any, required: true
   attr :label, :string, default: nil, doc: "a stat's label, when not its column's"
+  attr :now, :any, default: nil, doc: "for a map's recent dots"
 
   def report_chart(%{chart: %{kind: :stat}} = assigns) do
     assigns = assign(assigns, data: assigns.run.data, delta: delta(assigns.run))
@@ -68,6 +71,26 @@ defmodule Web.Components.ReportChart do
     ~H"""
     <section id={@id} class="card report-chart">
       <.bar_list id={"#{@id}-bars"} rows={@rows} />
+    </section>
+    """
+  end
+
+  # Experiment (places): the Dashboard's map, from the report's places.
+  def report_chart(%{chart: %{kind: :map}} = assigns) do
+    points = Chart.map_points(assigns.run.data, assigns.records, assigns.team, assigns.now)
+    assigns = assign(assigns, map: ActivityMap.build(points, {960, 480}, padding: 24))
+
+    ~H"""
+    <section id={@id} class="card report-chart">
+      <p class="chart-caption">Large dots are the last 30 days.</p>
+      <.activity_map
+        :if={@map}
+        id={"#{@id}-map"}
+        map={@map}
+        label={"Map of #{@chart.name}"}
+        overlay={false}
+      />
+      <p :if={!@map} class="chart-caption">No activity with a place.</p>
     </section>
     """
   end
