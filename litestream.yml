@@ -4,6 +4,15 @@
 # Fly's Grafana and its metrics API (#416).
 addr: ":9090"
 
+# Fewer R2 lists (#810). The L0 retention check lists L1 and L0 each time it runs; at its
+# 15 s default that was most of R2's Class A operations. Syncs stay every second. A
+# levels list replaces the defaults (30s, 5m, 1h), so all three are here.
+l0-retention-check-interval: 5m
+levels:
+  - interval: 5m
+  - interval: 15m
+  - interval: 1h
+
 dbs:
   - path: ${DATABASE_PATH}
     replica:
