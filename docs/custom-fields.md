@@ -64,7 +64,7 @@ D4H won't publish an incident until its required fields are filled in. So a requ
 field left empty is flagged only on a draft incident (`Activity.flag_missing_fields?/1`,
 decided 2026-10-28): the activity's Fields tab marks it Missing for team admins, and Needs
 attention lists finished drafts with one, "2 draft activities are missing required
-fields", linking to Activities with Required fields: Missing
+fields", linking to the built-in report Activities missing required fields
 (`Activity.missing_required_fields/1`, the same rule as a query). A published incident
 got past D4H, so whatever is empty there is optional in practice, and flagging it is
 noise. Exercises and events aren't flagged: D4H's check is tested only on incidents.

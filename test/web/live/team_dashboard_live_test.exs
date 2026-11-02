@@ -481,12 +481,13 @@ defmodule Web.TeamDashboardLiveTest do
     {:ok, list, _html} =
       lv |> element("#attention-untagged a") |> render_click() |> follow_redirect(conn)
 
-    assert has_element?(list, "#activity_collection", "Untagged")
-    assert has_element?(list, "#activity_collection", "No tags")
-    assert has_element?(list, "#activity-#{no_tags.id}-tags-locked a", "Change activity")
-    refute has_element?(list, "#activity_collection", "Primary")
-    refute has_element?(list, "#activity_collection", "BBQ")
-    refute has_element?(list, "#activity_collection", "Draft")
+    # The built-in report, for the item's year (#784 feedback).
+    assert has_element?(list, "#report-rows", "Untagged")
+    assert has_element?(list, "#report-rows", "No tags")
+    assert has_element?(list, "a[href='/teams/#{team.subdomain}/activities/#{no_tags.id}']")
+    refute has_element?(list, "#report-rows", "Primary")
+    refute has_element?(list, "#report-rows", "BBQ")
+    refute has_element?(list, "#report-rows", "Draft")
   end
 
   test "activities with two hours tags need attention, and the link lists them (#763)",
@@ -532,10 +533,10 @@ defmodule Web.TeamDashboardLiveTest do
     {:ok, list, _html} =
       lv |> element("#attention-two_hours_tags a") |> render_click() |> follow_redirect(conn)
 
-    assert has_element?(list, "#activity_collection", "Both")
-    assert has_element?(list, "#activity_collection", "Draft both")
-    assert has_element?(list, "#activity-#{both.id}-tags-locked", "change its tags")
-    refute has_element?(list, "#activity_collection", "One tag")
+    assert has_element?(list, "#report-rows", "Both")
+    assert has_element?(list, "#report-rows", "Draft both")
+    assert has_element?(list, "a[href='/teams/#{team.subdomain}/activities/#{both.id}']")
+    refute has_element?(list, "#report-rows", "One tag")
   end
 
   test "a team that does not use the hours tags is not told about them", %{conn: conn} do

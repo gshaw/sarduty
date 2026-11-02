@@ -85,7 +85,6 @@ defmodule Web.ActivityCollectionLive do
           sort={@view.sort}
           path_fn={@path_fn}
           team={@current_team}
-          hours={picked(@view, "hours")}
           counts={@counts}
         />
       </:table>
@@ -120,8 +119,6 @@ defmodule Web.ActivityCollectionLive do
   # Each kind's tile has its marker, as the rows show it.
   defp marker("all"), do: nil
   defp marker(kind), do: kind
-
-  defp picked(view, name), do: Enum.find_value(view.filters, &(&1.name == name && &1.picked))
 
   # The counts for the badges after a title (#447), for activities with Enough at or Full at.
   defp need_counts(team, activities) do

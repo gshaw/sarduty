@@ -32,11 +32,6 @@ defmodule App.Report.Lists do
       filter status 'Status'
         option draft 'Draft' where published = false
         option published 'Published' where published = true
-      filter hours 'Hours tag'
-        option untagged 'No hours tag' where hours_tag_count = 0
-        option two 'Two hours tags' where hours_tag_count >= 2
-      filter fields 'Required fields'
-        option missing 'Missing' where missing_required_fields = true
       sort id 'Activity' ref_id
       sort date 'Date' started_at
       sort hours 'Duration' duration desc

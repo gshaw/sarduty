@@ -142,7 +142,7 @@ cells, not the list's own. Lists are not on the Reports page.
 
 A field can say which teams, and which viewers, may read it (`shown` in
 `App.Report.Field`). To one that may not, it's no field, and an option, sort, or search
-that reads it drops out of the page, as Records teams have no Required fields filter. A
+that reads it drops out of the page. A
 choice can hide some of its values from a viewer too (`hidden_choices`), and an option
 that compares with one drops out. The text has no rule of its own for who sees what.
 
@@ -178,6 +178,8 @@ but not changed; a test opens every one. A team's own reports are rows in `repor
 is checked again on every run, so a field that goes fails with a message on the
 report's page. `App.ViewData.Reports` treats both the same, by `id` in the URL: a team's
 own report by its row's id, a number, and a built-in one by its slug, never a number.
+A built-in with `teams: :d4h` reads what only a D4H team has, such as required fields,
+so a Records team doesn't see it.
 
 ## Limits
 

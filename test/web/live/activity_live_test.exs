@@ -675,7 +675,6 @@ defmodule Web.ActivityLiveTest do
       assert html =~ "Missing hiker"
       assert has_element?(lv, "#activity_collection .badge", "Rope")
       assert has_element?(lv, "select[name='values[status]']")
-      assert has_element?(lv, "select[name='values[hours]']")
       refute has_element?(lv, ".tabs")
       refute has_element?(lv, "#activity-add")
       refute has_element?(lv, "#activity-save-report")

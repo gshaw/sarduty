@@ -98,7 +98,7 @@ defmodule App.Report do
   end
 
   # The page without the options, sorts, and search fields that read a field the team may
-  # not read, and a filter left with no choices, as Records teams have no Required fields.
+  # not read, and a filter left with no choices.
   defp visible(%Query{from: from} = query, context) do
     case Catalog.subject(from) do
       nil -> query

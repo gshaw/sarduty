@@ -74,29 +74,10 @@ defmodule App.Report.ListsTest do
     end
   end
 
-  test "Activities' Required fields: Missing keeps those with a required field left empty (#681)" do
-    team = team_fixture()
-    custom_field_fixture(team, %{d4h_custom_field_id: 454, required: true})
-
-    activity_fixture(team, %{title: "Missing file", activity_kind: "incident", custom_values: %{}})
-
-    activity_fixture(team, %{
-      title: "Filled",
-      activity_kind: "incident",
-      custom_values: %{"454" => "1"}
-    })
-
-    assert titles(team, %{"fields" => "missing"}) == ["Missing file"]
-    assert team |> titles(%{}) |> Enum.sort() == ["Filled", "Missing file"]
-    # A value that isn't an option is no pick.
-    assert team |> titles(%{"fields" => "nope"}) |> Enum.sort() == ["Filled", "Missing file"]
-  end
-
-  test "a Records team has no Required fields filter: the field is not the team's to read" do
-    team = team_fixture(%{d4h_api_host: D4H.records_host()})
-
-    refute Enum.any?(page!(team, %{}).filters, &(&1.name == "fields"))
-    assert Enum.any?(page!(team_fixture(), %{}).filters, &(&1.name == "fields"))
+  # Hours tag and Required fields are built-in reports now (#784 feedback).
+  test "Activities has no Hours tag or Required fields filter" do
+    names = Enum.map(page!(team_fixture(), %{}).filters, & &1.name)
+    assert names == ~w(when status)
   end
 
   test "Activities' When options pick the sort that suits them" do

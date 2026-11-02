@@ -350,13 +350,4 @@ defmodule Web.ActivityCollectionLiveTest do
       assert has_element?(lv, "#report-preview", "Rope night")
     end
   end
-
-  test "a Records team has no Required fields filter", %{conn: conn} do
-    %{user: user, team: team} = records_team_with_user_fixture()
-
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
-
-    assert has_element?(lv, "#activity-filters", "Hours tag")
-    refute has_element?(lv, "#activity-filters", "Required fields")
-  end
 end

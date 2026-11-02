@@ -537,11 +537,11 @@ defmodule Web.TeamDashboardLive do
   defp attention_path(team, %{key: :key_rejected}), do: ~p"/teams/#{team}/settings/access-key"
 
   defp attention_path(team, %{key: key, year: year}) when key in [:untagged, :untagged_last_year],
-    do: ~p"/teams/#{team}/activities?hours=untagged&status=published&when=#{year}&sort=date-"
+    do: ~p"/teams/#{team}/reports/activities-with-no-hours-tag?#{[year: year]}"
 
   defp attention_path(team, %{key: key, year: year})
        when key in [:two_hours_tags, :two_hours_tags_last_year],
-       do: ~p"/teams/#{team}/activities?hours=two&when=#{year}&sort=date-"
+       do: ~p"/teams/#{team}/reports/activities-with-two-hours-tags?#{[year: year]}"
 
   defp attention_path(team, %{key: :team_contacts}),
     do: ~p"/teams/#{team}/settings/team-admins#team-contacts"
@@ -550,7 +550,7 @@ defmodule Web.TeamDashboardLive do
     do: ~p"/teams/#{team}/activities?status=draft&when=recent&sort=date-"
 
   defp attention_path(team, %{key: :missing_fields}),
-    do: ~p"/teams/#{team}/activities?status=draft&fields=missing&when=past&sort=date-"
+    do: ~p"/teams/#{team}/reports/activities-missing-required-fields"
 
   defp attention_path(team, %{key: :expiring}),
     do: ~p"/teams/#{team}/qualifications?view=expiring"
