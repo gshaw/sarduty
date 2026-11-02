@@ -113,6 +113,7 @@ defmodule Web.Router do
       live "/terms", TermsLive
       live "/privacy", PrivacyLive
       live "/changelog", ChangelogLive
+      live "/reports/language", ReportLanguageLive
       live "/signup", TeamSignupLive
       # A reminder email's links (#444): replying, and turning reminders off. No login.
       live "/replies/:token", ReplyLinkLive
@@ -123,6 +124,9 @@ defmodule Web.Router do
     post "/replies/:token", ReplyLinkController, :create
     # Add to calendar on the reply page: the reply link's activity as an .ics file.
     get "/replies/:token/calendar", ActivityCalendarController, :reply
+
+    # How to write a report as text, for agents (#803).
+    get "/reports/language.md", ReportLanguageController, :show
 
     get "/styles", StyleGuideController, :index
     get "/styles/:page", StyleGuideController, :show

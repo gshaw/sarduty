@@ -2,6 +2,11 @@
 
 What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
+## Nov 2–8
+
+- How to write a report: one page on the report language, linked from the editor. Point
+  your AI assistant at it and it has what it needs to write one.
+
 ## Oct 26–Nov 1
 
 ⭐ **Reports.** Every team has questions the lists don't answer: who did the most rope
