@@ -92,10 +92,11 @@
   [lib/app/adapter/cloudflare_email.ex](lib/app/adapter/cloudflare_email.ex): mail in
   production. Dev uses the local mailbox at `/dev/mailbox`.
 - **Litestream to Cloudflare R2**: continuous SQLite backup.
-- **MCP**: at `/teams/:subdomain/mcp` (#28, #595). A team admin turns it on in team
-  settings, and creates personal bearer tokens there. The tools in
-  [lib/app/mcp/tool/](lib/app/mcp/tool) help an agent write reports and nothing else
-  (#816): the language, the fields, the team's names for things, and its reports'
+- **MCP**: at `/teams/:subdomain/mcp` (#28, #595). A SAR Duty admin turns Agents on for
+  a team, and a team admin connects an AI agent with OAuth (#761): the agent registers,
+  the admin chooses Allow, and the agent gets tokens, all under `/teams/:subdomain`. The
+  tools in [lib/app/mcp/tool/](lib/app/mcp/tool) help an agent write reports and nothing
+  else (#816): the language, the fields, the team's names for things, and its reports'
   queries. Never a member, an activity, a row, or a count from the records, and a test
   checks it. They only read (#627): no change sets, no writes.
   See [docs/mcp.md](docs/mcp.md).

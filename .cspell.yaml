@@ -17,6 +17,7 @@ ignorePaths:
   - "erl_crash.dump"
   - "priv/static/assets/*"
 words:
+  - PKCE # OAuth's proof key for code exchange (RFC 7636), in agent connections (#761)
   - oxipng # the lossless PNG optimizer the mockup kit runs, pinned in .mise.toml
   - Lucide # the icon set, copied into assets/icons; its name heads each icon file
   - mdex # the Hex package name of MDEx, the Markdown renderer, in mix.exs and config.exs
