@@ -3,7 +3,6 @@ defmodule App.Report.ListsTest do
 
   import App.DataFixtures
 
-  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Team
   alias App.Report
