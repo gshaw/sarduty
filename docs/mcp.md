@@ -1,11 +1,18 @@
 # MCP endpoint
 
-A team's team admins can connect their own AI agent to SAR Duty, which reads
-allowlisted views of the team's data (#28). It only reads (#627). A SAR Duty admin turns
-it on for a team. The first use case was a quarterly check of each member's hours
-by activity tag against the team's attendance policy; #595 widened the tools to general
-work, such as sign-in sheets, hours tags before letter season, and chores. A policy lives
-in the agent's prompt, not in SAR Duty.
+A team's team admins can connect their own AI agent to SAR Duty, and the agent helps
+them write reports (#816). That is all it does. It works from how the team is
+organized: the report language, the fields, the team's names for groups, qualifications,
+tags, and custom fields, and its reports' queries. It never sees who is on the team or
+what they did. The team admin opens the agent's link and runs the report in SAR Duty,
+where the rows are. SAR data is sensitive, and this guard rail is what lets a team or an
+organization say yes to agents. It only reads (#627). A SAR Duty admin turns it on for
+a team.
+
+Until #816 the agent read the records themselves: eleven tools for members, activities,
+attendance, hours, chores, and history (#28, #595). They went, with no replacement that
+reads records. A team admin who wants an agent to work on rows, for a newsletter say,
+downloads a report's CSV and gives it to the agent.
 
 ## Who gets in
 
@@ -55,41 +62,30 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
 [App.MCP.Tools](../lib/app/mcp/tools.ex). Adding a tool is a module with the
 [App.MCP.Tool](../lib/app/mcp/tool.ex) behaviour and a line in that list.
 
+- `report_fields`: the language page's text (`App.Report.Language`, #803), and the
+  team's names for things: groups, qualifications, tags, hours tags, and custom fields
+  with what they're on.
+- `list_reports`: the built-in reports, the team's own, and the lists that run on
+  reports, each with its name, description, query, and saved values.
+- `check_report`: checks a query against the team's fields with `App.Report.check/4`,
+  which compiles it and never runs it. It gives the columns' labels and a link: New
+  report, or Change report with `report_id`, with the query, name, and description in
+  the URL and `agent=` the token's name. Saving from that link fills `reports.agent`.
+  A mistake comes back as the editor shows it, with its line.
+- `try_report` (next): runs a query on Coast Range SAR, the made-up team, so the agent
+  can catch a wrong answer before the team admin sees it.
+
+- **No records** (#816). No tool returns a member, an activity's title, a row, or a
+  count from the team's records. `Web.MCPControllerTest` seeds them, with contact
+  details and letter text, and checks every tool's output for each. A saved report's
+  values can hold what a team admin typed, such as a member's ID; agents see those, as
+  decided in #768.
 - **Read-only** (#627). Every tool's `readOnlyHint` is true, and a test fails if anything
   in `lib/app/mcp/` mentions `ChangeSet`, a `Repo` write, the D4H adapter, `SendChores`,
-  or `SaveChore`. Until 2026-10-26, three `propose_` tools saved change sets that waited
-  for a team admin under Proposed changes (#216, #595). They came out: each kind needed
-  its own wording, checks, and failures, chores needed a second approval, and with more
-  kinds the queue would be approved without being read. Writes, if they come back, start
-  from a real case and a page that does the job, which an agent can link to pre-filled;
-  a person does the write there.
-- **History.** `member_history` and `activity_history` return the same entries as the
-  history pages ([change-history.md](change-history.md)), without the account email of
-  whoever sent a change, and without standing changes: an away period's reason and dates
-  are personal (#366). A changed custom field is named by its title, never its value
-  (#681).
-- **General tools, not one per job** (#595). An agent combines them: `get_team` first,
-  then lists of members, activities, an activity's attendance (`list_attendance`), and
-  hours. Statuses use the glossary's words, which change when the activity starts:
-  `no_reply`, `signed_up`, `cant_make_it` before, `attended` and `absent` after. A chore
-  activity's kind is `chores`, as on the Activities page. `list_activities` gives
-  `enough_at` and `full_at` beside `signed_up` (#447), SAR Duty's own numbers, null when
-  unset. `list_members` gives each
-  member's standing, never an away period's reason or dates (#366).
-- **Hours, chores, and what is waiting.** `tax_credit_hours` counts with
-  `CountTaxCreditHours`, as the letter does, so it can be lower than
-  `attendance_summary`, which adds rows up. `list_chores` gives what a member wrote they
-  did as `what_they_did`, never a decline's reason. `needs_attention` gives every item the
-  team home lists for a team admin, without the page's limit.
-- **Allowlisted fields.** Each tool builds explicit maps and lists every key it may
-  return in `fields/0`; a test fails on any other key. Never email, phone, an address,
-  an emergency contact, coordinates, an activity's description, letter text, or a key.
-- **Scoped.** Every query filters by the token's team, joins included.
-- **Pure core.** `call/3` loads rows and hands them to a pure `build` or `summarize`,
-  which the tests call directly.
-
-Times are ISO 8601 in the team's time zone. Date ranges are `from` and `to`, both
-included, in that zone.
+  or `SaveChore`. The agent never saves a report: the team admin does, from its link.
+- **Allowlisted keys.** Each tool builds explicit maps and lists every key it may
+  return in `fields/0`; a test fails on any other key.
+- **Scoped.** Every query filters by the token's team.
 
 ## The call log
 

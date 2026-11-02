@@ -93,10 +93,11 @@
   production. Dev uses the local mailbox at `/dev/mailbox`.
 - **Litestream to Cloudflare R2**: continuous SQLite backup.
 - **MCP**: at `/teams/:subdomain/mcp` (#28, #595). A team admin turns it on in team
-  settings, and creates personal bearer tokens there. Tools in
-  [lib/app/mcp/tool/](lib/app/mcp/tool) are scoped to the token's team and build output
-  from an explicit field allowlist: never contact details, addresses, coordinates, letter
-  text, or keys. They only read (#627): no change sets, no writes.
+  settings, and creates personal bearer tokens there. The tools in
+  [lib/app/mcp/tool/](lib/app/mcp/tool) help an agent write reports and nothing else
+  (#816): the language, the fields, the team's names for things, and its reports'
+  queries. Never a member, an activity, a row, or a count from the records, and a test
+  checks it. They only read (#627): no change sets, no writes.
   See [docs/mcp.md](docs/mcp.md).
 
 Every boundary, its credentials, and what breaks without it:

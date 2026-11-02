@@ -12,18 +12,32 @@ defmodule App.Operation.SaveReport do
   alias App.Report.Error
   alias Ecto.Changeset
 
-  @doc "`{:ok, report}`, or `{:error, changeset}` with what to fix."
-  def call(%Team{} = team, %User{} = user, report, params, now \\ DateTime.utc_now()) do
+  @doc """
+  `{:ok, report}`, or `{:error, changeset}` with what to fix. `agent` names the agent
+  whose link the query came from (#816), or nil when a team admin wrote it.
+  """
+  def call(
+        %Team{} = team,
+        %User{} = user,
+        report,
+        params,
+        now \\ DateTime.utc_now(),
+        agent \\ nil
+      ) do
     report = report || %SavedReport{team_id: team.id, created_by_user_id: user.id}
 
     report
     |> SavedReport.changeset(params)
+    |> agent(agent)
     |> check_query(team, now)
     |> Repo.insert_or_update()
   end
 
   @doc "Deletes the report. Its rows were never kept, so nothing else goes."
   def delete(%SavedReport{} = report), do: Repo.delete!(report)
+
+  defp agent(changeset, nil), do: changeset
+  defp agent(changeset, agent), do: Changeset.force_change(changeset, :agent, agent)
 
   defp check_query(%Changeset{valid?: false} = changeset, _team, _now), do: changeset
 

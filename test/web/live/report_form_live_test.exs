@@ -39,6 +39,36 @@ defmodule Web.ReportFormLiveTest do
     assert_redirect(lv, ~p"/teams/#{team}/reports/#{report.id}")
   end
 
+  test "an agent's link fills the form, and saving names the agent (#816)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member_fixture(team, %{name: "Avery Chen"})
+    params = %{query: "select name from members", name: "Everyone", agent: "Claude"}
+    conn = log_in_user(conn, user)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/new?#{params}")
+
+    assert has_element?(lv, "#report-preview td", "Avery Chen")
+    lv |> form("#report-form") |> render_submit()
+
+    report = App.Repo.get_by!(SavedReport, team_id: team.id, name: "Everyone")
+    assert report.query == "select name from members"
+    assert report.agent == "Claude"
+
+    {:ok, lv, _html} =
+      live(
+        conn,
+        ~p"/teams/#{team}/reports/#{report.id}/edit?#{%{query: "select name, position from members", agent: "Codex"}}"
+      )
+
+    lv |> form("#report-form") |> render_submit()
+    report = App.Repo.reload!(report)
+    assert report.query == "select name, position from members"
+    assert report.agent == "Codex"
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
+    lv |> form("#report-form", report: %{name: "All of us"}) |> render_submit()
+    assert App.Repo.reload!(report).agent == "Codex"
+  end
+
   test "format draws a column another way (#804)", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture(%{team: %{timezone: "America/Vancouver"}})
     member = member_fixture(team, %{name: "Avery Chen"})
