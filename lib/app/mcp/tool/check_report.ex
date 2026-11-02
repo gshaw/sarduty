@@ -46,6 +46,11 @@ defmodule App.MCP.Tool.CheckReport do
           "type" => "integer",
           "description" => "The id of a saved report to change, from list_reports"
         },
+        "change" => %{
+          "type" => "string",
+          "description" =>
+            "With report_id: one line on what changed, 100 characters at most, for the report's History"
+        },
         "draft" => %{
           "type" => "string",
           "description" => "The draft id an earlier check_report gave, for the same report"
@@ -79,6 +84,7 @@ defmodule App.MCP.Tool.CheckReport do
       query: args["query"],
       name: text(args["name"]),
       about: text(args["description"]),
+      change: saved && text(args["change"]),
       report_id: saved && saved.id,
       agent: connection.name,
       at: now
@@ -126,6 +132,7 @@ defmodule App.MCP.Tool.CheckReport do
       "query" => args["query"],
       "name" => args["name"],
       "about" => args["description"],
+      "change" => saved && args["change"],
       "agent" => agent,
       "draft" => draft
     }

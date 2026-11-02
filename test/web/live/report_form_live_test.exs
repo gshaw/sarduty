@@ -4,6 +4,7 @@ defmodule Web.ReportFormLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.ReportVersion
   alias App.Model.SavedReport
   alias App.Operation.SaveReport
   alias App.Report.Draft
@@ -257,11 +258,101 @@ defmodule Web.ReportFormLiveTest do
         team,
         user.id,
         "draft-one-id",
-        draft("select name from members", %{report_id: report.id})
+        draft("select name from members", %{report_id: report.id, change: "Members, not groups"})
       )
 
       assert has_element?(lv, "#report_query", "select name from members")
       assert has_element?(lv, "#report_name[value='Groups']")
+      assert has_element?(lv, "#report_change[value='Members, not groups']")
+    end
+  end
+
+  describe "History and Recently deleted (#834)" do
+    test "History lists every save, and Restore saves a new version", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+
+      {:ok, report} =
+        SaveReport.call(
+          team,
+          user,
+          nil,
+          %{"name" => "Groups", "query" => "select title from groups"},
+          DateTime.utc_now(),
+          "Claude"
+        )
+
+      {:ok, report} =
+        SaveReport.call(team, user, report, %{
+          "query" => "select title from groups order by title",
+          "change" => "Adds about"
+        })
+
+      conn = log_in_user(conn, user)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}")
+      assert has_element?(lv, "#report-history")
+      refute has_element?(lv, "#report-actions", "draft")
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/history")
+      [latest, first] = ReportVersion.get_all(report)
+      assert has_element?(lv, "#version-#{latest.id}", "Adds about")
+      assert has_element?(lv, "#version-#{first.id}", "from Claude's draft")
+      refute has_element?(lv, "#version-restore-#{latest.id}")
+
+      {:ok, lv, _html} =
+        lv |> element("#version-restore-#{first.id}") |> render_click() |> follow_redirect(conn)
+
+      assert has_element?(lv, "#report_query", "select title from groups")
+      lv |> form("#report-form", report: %{change: "Back to titles"}) |> render_submit()
+
+      assert SavedReport.get(team, report.id).query == "select title from groups"
+      assert [%{change: "Back to titles"}, _, _] = ReportVersion.get_all(report)
+    end
+
+    test "the byline names the agent whose draft the last save came from", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+
+      {:ok, report} =
+        SaveReport.call(
+          team,
+          user,
+          nil,
+          %{"name" => "Groups", "query" => "select title from groups"},
+          DateTime.utc_now(),
+          "Claude"
+        )
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/#{report.id}")
+
+      assert has_element?(lv, "#report-actions", "from Claude's draft.")
+    end
+
+    test "a deleted report waits under Recently deleted, and Restore brings it back",
+         %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, report} =
+        SaveReport.call(team, user, nil, %{
+          "name" => "Groups",
+          "query" => "select title from groups"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports")
+      refute has_element?(lv, "#report-view-deleted")
+
+      SaveReport.delete(report)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports")
+      refute has_element?(lv, "#report-#{report.id}")
+      assert has_element?(lv, "#report-view-deleted", "Recently deleted")
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports?show=deleted")
+      assert has_element?(lv, "#report-#{report.id}", "Groups")
+      lv |> element("#report-restore-#{report.id}") |> render_click()
+
+      assert SavedReport.get(team, report.id)
+      refute has_element?(lv, "#report-view-deleted")
+      assert render(lv) =~ "Restored the Groups report."
     end
   end
 

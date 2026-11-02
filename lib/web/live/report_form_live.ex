@@ -15,12 +15,17 @@ defmodule Web.ReportFormLive do
   checks fills the form and reruns the rows, at most one run a second. Once the team
   admin has typed since the agent's last query, a new one waits in a toast instead of
   overwriting their typing. Nothing is saved until they save.
+
+  Changing a saved report asks What changed, kept in its History (#834); an agent's draft
+  can fill it. `?version=<id>` is Restore from History: that version's name,
+  description, and query, saved as a new version.
   """
   use Web, :live_view_app_layout
 
   import Web.Components.ReportPage
   import Web.Components.ReportTable
 
+  alias App.Model.ReportVersion
   alias App.Model.SavedReport
   alias App.Operation.SaveReport
   alias App.Report
@@ -96,7 +101,7 @@ defmodule Web.ReportFormLive do
 
   defp start(:edit, %{"id" => id} = params, team, now) do
     case Reports.find(team, id, now) do
-      %{saved: %SavedReport{} = saved} -> {saved, Map.take(params, ["query", "name", "about"])}
+      %{saved: %SavedReport{} = saved} -> {saved, edit_start(saved, params)}
       _built_in_or_none -> raise Web.Status.NotFound
     end
   end
@@ -125,6 +130,18 @@ defmodule Web.ReportFormLive do
   end
 
   defp start(:new, _params, _team, _now), do: {nil, %{"query" => @first_query}}
+
+  # Restore from History, or an agent's link: what it changes over the saved report.
+  defp edit_start(saved, %{"version" => version_id}) do
+    with {id, ""} <- Integer.parse(version_id),
+         %ReportVersion{} = version <- ReportVersion.get(saved, id) do
+      %{"name" => version.name, "about" => version.about, "query" => version.query}
+    else
+      _not_found -> raise Web.Status.NotFound
+    end
+  end
+
+  defp edit_start(_saved, params), do: Map.take(params, ["query", "name", "about", "change"])
 
   # Who wrote the query, from an agent's link: a name, cut short.
   defp agent(%{"agent" => agent, "query" => _query}) when is_binary(agent) and agent != "",
@@ -242,7 +259,7 @@ defmodule Web.ReportFormLive do
      |> assign(draft: nil, draft_waiting: nil, draft_next: nil, draft_timer: nil)
      |> put_flash(
        :info,
-       "Stopped following #{possessive(agent)} draft. The form keeps what's in it."
+       "Stopped following #{Reports.possessive(agent)} draft. The form keeps what's in it."
      )}
   end
 
@@ -312,7 +329,12 @@ defmodule Web.ReportFormLive do
   # and description stay unless the agent sent new ones.
   defp apply_draft(socket, %Draft{} = draft) do
     sent =
-      %{"query" => draft.query, "name" => draft.name, "about" => draft.about}
+      %{
+        "query" => draft.query,
+        "name" => draft.name,
+        "about" => draft.about,
+        "change" => draft.change
+      }
       |> Map.reject(fn {_key, value} -> is_nil(value) end)
 
     params =
@@ -331,10 +353,6 @@ defmodule Web.ReportFormLive do
 
   defp fields_params(form),
     do: form |> draft_fields() |> Map.new(fn {key, value} -> {Atom.to_string(key), value} end)
-
-  # "Claude's", or "an AI agent's" for an agent that gave no name.
-  defp possessive("An AI agent"), do: "an AI agent's"
-  defp possessive(name), do: "#{name}'s"
 
   def render(assigns) do
     ~H"""
@@ -404,7 +422,7 @@ defmodule Web.ReportFormLive do
         <.banner
           :if={@draft}
           id="report-draft-following"
-          title={"Following #{possessive(@agent)} draft"}
+          title={"Following #{Reports.possessive(@agent)} draft"}
           class="mb-6"
         >
           <p>
@@ -417,6 +435,15 @@ defmodule Web.ReportFormLive do
           <.input field={@form[:name]} type="text" label="Name" maxlength="80" />
           <.input field={@form[:about]} type="text" label="Description" maxlength="200">
             One line under the name on Reports.
+          </.input>
+          <.input
+            :if={@saved}
+            field={@form[:change]}
+            type="text"
+            label="What changed (optional)"
+            maxlength={SavedReport.max_change()}
+          >
+            One line in the report's History.
           </.input>
 
           <p class="action report-help-toggle">

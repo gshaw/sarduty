@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Every save of a report is kept: History shows who changed it and why, and Restore
+  brings back an older version. A deleted report waits 30 days under Recently deleted.
 - Your AI agent's report now shows up in the report you have open: each try reruns the
   rows on your records, and you save once. Start from the first link it gives you.
 - [How to write a report](https://sarduty.com/agents/reports): one page on the report

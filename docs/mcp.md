@@ -78,7 +78,8 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
   topic for the team, the connection's user, and the draft (`App.Report.Draft`), and the
   editor that user has open with that draft fills its form and reruns its rows, at most
   once a second. Once the admin has typed, a new query waits in a toast. Nothing is
-  stored, and only the admin saves. The reply never depends on running the query or on
+  stored, and only the admin saves. With `report_id`, `change` fills What changed, the
+  line the report's History keeps; agents never read History back. The reply never depends on running the query or on
   an open editor, or an agent could ask yes-or-no questions about the team, one per call:
   `App.MCP.ToolsTest` fails on a tool that names `Report.run`, `Report.page`,
   `Report.ids`, or the runner.

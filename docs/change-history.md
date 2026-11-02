@@ -25,6 +25,14 @@ One rule (#651): history shows what changed in D4H, from change sets and what th
 refresh saw, and changes to a member's standing. SAR Duty-only records that are cheap to
 make again get none.
 
+- **A team's own report keeps a version per save** (#834), because a report people rely
+  on isn't cheap to make again. `report_versions` holds each save's name, description,
+  query, who saved it, the agent whose draft it came from, and an optional What changed
+  line; rows never change. Picked values stay out, since they can hold a member's ID.
+  Restore opens the editor with a version, and saving it adds a new one. A deleted
+  report waits 30 days under Recently deleted with its versions, then the nightly
+  `PruneEventsWorker` deletes both. Agents never read versions.
+
 - **A deleted group keeps a snapshot.** Its delete row's `old_value` holds its members'
   names and its rules as words, and `ChangeHistory.describe_row/2` prints "Deleted MIT
   2026: 14 members; rules: In MIT Applicants, Not in LOA". A mistaken delete can be
@@ -38,8 +46,9 @@ make again get none.
   in SAR Duty".
 - **Group rule edits aren't logged.** The snapshot covers the delete that loses work.
 - **A no-show's Remove is a plain delete**, with no entry (#650).
-- **No undo, no trash, no delayed delete.** D4H can't restore what it deletes, so none of
-  these could bring the record back. A delete that takes other things with it asks for a
+- **No undo, no trash, no delayed delete** for what lives in D4H. D4H can't restore what
+  it deletes, so none of these could bring the record back. Reports, which live only in
+  SAR Duty, are the exception above. A delete that takes other things with it asks for a
   ticked box instead: the confirm dialog at `/styles/confirm-dialog`.
 
 ## How changes are recorded
