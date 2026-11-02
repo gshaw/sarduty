@@ -5,6 +5,7 @@ defmodule Web.Settings.MCPLive do
   import Web.Components.TeamSettingsTabs
 
   alias App.Model.AgentConnection
+  alias App.Model.Member
   alias App.Operation.DisconnectAgent
 
   # The team's AI agents (#28, #761), /teams/:subdomain/settings/mcp: what agents are for
@@ -18,7 +19,7 @@ defmodule Web.Settings.MCPLive do
 
     socket =
       socket
-      |> assign(page_title: "Team settings · Agents")
+      |> assign(page_title: "Team settings · Agents", now: DateTime.utc_now())
       |> assign(endpoint_url: Web.OAuthController.mcp_url(socket.host_uri.host, team.subdomain))
       |> assign_connections()
 
@@ -121,9 +122,11 @@ defmodule Web.Settings.MCPLive do
         row_id={&"agent-#{&1.id}"}
       >
         <:col :let={connection} label="Agent">{connection.name}</:col>
-        <:col :let={connection} label="Connected by">{connection.user.email}</:col>
+        <:col :let={connection} label="Connected by">
+          {Member.name_for_user(@current_team, connection.user, @now)}
+        </:col>
         <:col :let={connection} label="Connected" class="whitespace-nowrap">
-          {Service.Format.date_long(connection.connected_at, @current_team.timezone)}
+          {Service.Format.date_short(connection.connected_at, @current_team.timezone)}
         </:col>
         <:col :let={connection} label="Last used" class="whitespace-nowrap">
           {last_used(connection, @current_team.timezone)}
