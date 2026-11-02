@@ -138,17 +138,14 @@ defmodule Web.TeamSignupLiveTest do
     assert D4H.records?(team)
   end
 
-  test "the page leads with D4H, and choosing Records changes only the key's label",
+  test "the page leads with D4H, offers Records, and links the Terms and Privacy",
        %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/signup")
     assert has_element?(lv, "#signup-d4h")
     assert has_element?(lv, "#signup-records", "experimental")
-    assert has_element?(lv, "label", "D4H access key")
-
-    lv |> form("#signup_form", form: %{api_host: "records.sarduty.com"}) |> render_change()
-
-    assert has_element?(lv, "label", "Records access key")
-    assert has_element?(lv, "#signup-d4h")
+    assert has_element?(lv, "label", "Access key")
+    assert has_element?(lv, ~s(#signup-terms a[href="/terms"]))
+    assert has_element?(lv, ~s(#signup-terms a[href="/privacy"]))
   end
 
   test "a host off the list is refused", %{conn: conn} do
@@ -158,7 +155,7 @@ defmodule Web.TeamSignupLiveTest do
     |> form("#signup_form", form: %{email: "pat@example.com", access_key: "team-token"})
     |> render_submit(%{form: %{api_host: "evil.example.com"}})
 
-    assert has_element?(lv, "#signup_form", "Select a D4H region.")
+    assert has_element?(lv, "#signup_form", "Select a region.")
   end
 
   test "a Member can't sign the team up", %{conn: conn} do

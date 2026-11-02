@@ -14,7 +14,6 @@ defmodule Web.ServiceNameTest do
     "lib/app/mcp/tool/" => "tool descriptions are for agents, shared by every team",
     "lib/app/operation/sign_up_team.ex" => "signup's D4H path",
     "lib/app/view_model/event_filter_view_model.ex" => "event labels on /admin/events",
-    "lib/app/view_model/team_signup_view_model.ex" => "signup's D4H region",
     "lib/web/components/home_mockups.ex" => "design mockups, not the app",
     "lib/web/controllers/style_guide_html/pages/colour.html.heex" =>
       "the activity colours are D4H's own, and the page says so",
