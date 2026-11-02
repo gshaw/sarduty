@@ -6,6 +6,7 @@ defmodule App.Report.LanguageTest do
 
   alias App.Report
   alias App.Report.Catalog
+  alias App.Report.Formats
   alias App.Report.Language
   alias App.Report.Parser
 
@@ -19,6 +20,14 @@ defmodule App.Report.LanguageTest do
              Language.function_entries() |> Map.keys() |> Enum.sort()
 
     assert Enum.sort(Parser.ranges()) == Language.range_entries() |> Map.keys() |> Enum.sort()
+  end
+
+  test "every format is on the page" do
+    text = Language.markdown()
+
+    for {_type, formats} <- Formats.by_type(),
+        {name, _shows} <- formats,
+        do: assert(text =~ "| `#{name}` |")
   end
 
   test "every subject has a sentence" do

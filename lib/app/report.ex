@@ -84,7 +84,7 @@ defmodule App.Report do
 
   defp ids_plain(query, picks) do
     id = {:field, ["id"], [], query.from_line}
-    %{Picks.plain(query, picks) | select: [id], order_by: [{id, :asc}], labels: []}
+    %{Picks.plain(query, picks) | select: [id], order_by: [{id, :asc}], labels: [], formats: []}
   end
 
   @doc """

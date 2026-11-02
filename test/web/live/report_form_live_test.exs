@@ -39,6 +39,27 @@ defmodule Web.ReportFormLiveTest do
     assert_redirect(lv, ~p"/teams/#{team}/reports/#{report.id}")
   end
 
+  test "format draws a column another way (#804)", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture(%{team: %{timezone: "America/Vancouver"}})
+    member = member_fixture(team, %{name: "Avery Chen"})
+    activity = activity_fixture(team, %{started_at: ~U[2026-03-04 02:30:00Z]})
+    attendance_fixture(activity, member, %{duration_in_minutes: 150})
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+
+    query = """
+    select member, activity.started_at, hours
+    from attendance
+    format member as text, activity.started_at as date_time, hours as hours
+    """
+
+    lv |> form("#report-form", report: %{query: query}) |> render_change()
+
+    assert has_element?(lv, "#report-preview td", "Avery Chen")
+    refute has_element?(lv, "#report-preview td a", "Avery Chen")
+    assert has_element?(lv, "#report-preview td", "Mar 3, 2026, 18:30")
+    assert has_element?(lv, "#report-preview td", "2.5")
+  end
+
   # A new member after the rows ran shows only if typing the name ran the query again.
   test "typing the name leaves the rows as they ran", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()

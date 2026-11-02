@@ -261,6 +261,49 @@ defmodule App.ReportTest do
     assert run!("select days_since(started_at) from activities", team).rows == [[166]]
   end
 
+  describe "format (#804)" do
+    test "each field draws its own cell, and format picks another" do
+      team = team_fixture()
+      activity_fixture(team)
+
+      columns =
+        run!("select title, kind, started_at, attended_hours from activities", team).columns
+
+      assert Enum.map(columns, & &1.format) == ["link", "marker", "date", "duration"]
+
+      text = """
+      select title, kind, started_at, attended_hours, attended_count
+      from activities
+      format title as text, kind as text, started_at as month, attended_hours as hours
+      """
+
+      assert Enum.map(run!(text, team).columns, & &1.format) ==
+               ["text", "text", "month", "hours", nil]
+    end
+
+    test "a count of a record is a number, with no format of its own" do
+      team = team_fixture()
+      text = "select activity.kind, count(member) from attendance group by activity.kind"
+      assert Enum.map(run!(text, team).columns, & &1.format) == ["marker", nil]
+    end
+
+    test "says which formats a column takes" do
+      team = team_fixture()
+
+      assert error("select started_at from activities format started_at as week", team) =~
+               "Show started_at as date, date_long, date_time, month, time, or days_ago."
+
+      assert error("select ref_id from activities format ref_id as text", team) =~
+               "Take out the format: ref_id shows one way."
+
+      assert error("select title from activities format started_at as month", team) =~
+               "Add started_at to select, or take its format out."
+
+      assert error("select title from activities format title text", team) =~
+               "Write as and a format after title"
+    end
+  end
+
   # Toronto keeps daylight saving time, so one fixed offset would get one of these wrong.
   test "local dates follow daylight saving time" do
     team = team_fixture(%{timezone: "America/Toronto"})

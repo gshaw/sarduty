@@ -79,6 +79,16 @@ Adding a field:
    labels (docs/writing.md): a query compares by the label or the value, and a cell shows
    the label.
 
+## How a column looks
+
+Each field draws its own cell (#804): a date as a date, an activity's kind as its
+coloured square, a record as a link to its page. `format started_at as month` picks
+another look, from `App.Report.Formats`: a date as `date_long`, `date_time`, `month`,
+`time`, or `days_ago`, hours as `hours` (212.5), and a record or a kind as `text`. Other
+types show one way, and the compiler says so. The format rides on the result's column,
+and `<.report_table>` draws by it; Download CSV keeps the values as they are. A chart
+will be a format for a whole report.
+
 ## The page's clauses
 
 Clauses after the query draw the page around its rows (#784): a search box, tiles with

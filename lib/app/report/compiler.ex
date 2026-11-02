@@ -18,6 +18,7 @@ defmodule App.Report.Compiler do
   alias App.Report.Context
   alias App.Report.Error
   alias App.Report.Expr
+  alias App.Report.Formats
   alias App.Report.Plan
   alias App.Report.Query
   alias App.Report.Source
@@ -186,6 +187,7 @@ defmodule App.Report.Compiler do
     if grouped?(query, parts), do: check_group(query, parts)
     check_limit(query.limit)
     labels(query)
+    formats(query, parts)
   end
 
   defp grouped?(query, parts),
@@ -281,6 +283,35 @@ defmodule App.Report.Compiler do
     end)
   end
 
+  # Each `format field as name` (#804): a column the select shows, and a format its type has.
+  defp formats(query, parts) do
+    columns = Enum.zip(query.select, parts.select)
+    Enum.map(query.formats, &format(&1, columns))
+  end
+
+  defp format({ast, name}, columns) do
+    case Enum.find(columns, fn {select, _e} -> Query.same?(select, ast) end) do
+      nil -> fail(Query.line(ast), "Add #{Query.text(ast)} to select, or take its format out.")
+      {_select, e} -> {Query.strip(ast), checked_format(ast, e, name)}
+    end
+  end
+
+  defp checked_format(ast, e, name) do
+    column = %{type: e.type, cell: cell(e)}
+
+    case {Formats.find(column, name), Formats.all(column)} do
+      {nil, []} ->
+        fail(Query.line(ast), "Take out the format: #{Query.text(ast)} shows one way.")
+
+      {nil, formats} ->
+        names = formats |> Enum.map(&elem(&1, 0)) |> Format.or_list()
+        fail(Query.line(ast), "Show #{Query.text(ast)} as #{names}.")
+
+      {found, _formats} ->
+        found
+    end
+  end
+
   # The plan
 
   defp build(query, parts, st) do
@@ -288,12 +319,16 @@ defmodule App.Report.Compiler do
     used = used(parts)
     {sql, params} = sql(query, parts, st, used)
     labels = labels(query)
+    formats = formats(query, parts)
 
     %Plan{
       subject: st.subject,
       sql: sql,
       params: params,
-      columns: query.select |> Enum.zip(parts.select) |> Enum.map(&column(&1, labels, st)),
+      columns:
+        query.select
+        |> Enum.zip(parts.select)
+        |> Enum.map(&column(&1, labels, formats, st)),
       values: used |> Enum.flat_map(& &1.values) |> Enum.uniq_by(& &1.name),
       totals: query.totals,
       max_rows: if(query.limit && !pivot?, do: nil, else: @max_rows)
@@ -335,9 +370,12 @@ defmodule App.Report.Compiler do
     }
   end
 
-  defp column({ast, e}, labels, st) do
+  defp column({ast, e}, labels, formats, st) do
     key = Query.strip(ast)
     label = Enum.find_value(labels, e.label, fn {k, text} -> if k == key, do: text end)
+    cell = cell(e)
+    own = Formats.default(%{type: e.type, cell: cell})
+    format = Enum.find_value(formats, own, fn {k, name} -> if k == key, do: name end)
 
     %{
       label: label,
@@ -345,7 +383,8 @@ defmodule App.Report.Compiler do
       agg: e.agg,
       total: total(e),
       choices: choices(e, st),
-      cell: cell(e)
+      cell: cell,
+      format: format
     }
   end
 
