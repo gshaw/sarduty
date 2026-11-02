@@ -126,7 +126,7 @@ defmodule Web.Settings.MCPLive do
           {Member.name_for_user(@current_team, connection.user, @now)}
         </:col>
         <:col :let={connection} label="Connected" class="whitespace-nowrap">
-          {Service.Format.date_short(connection.connected_at, @current_team.timezone)}
+          <.date_cell value={connection.connected_at} timezone={@current_team.timezone} />
         </:col>
         <:col :let={connection} label="Last used" class="whitespace-nowrap">
           {last_used(connection, @current_team.timezone)}
