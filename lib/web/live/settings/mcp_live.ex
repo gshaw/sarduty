@@ -57,7 +57,7 @@ defmodule Web.Settings.MCPLive do
         An AI agent, such as Claude or ChatGPT, can help you write reports. You open each
         report in SAR Duty, and it runs here, on your records.
       </p>
-      <div id="agents-lists" class="grid gap-6 sm:grid-cols-2">
+      <div id="agents-lists">
         <div>
           <h2 class="heading">Agents work from</h2>
           <ul class="list-disc pl-6">
