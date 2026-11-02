@@ -1,0 +1,7 @@
+select year(started_at), month(started_at), count(id)
+from activities
+where months_since(started_at) < 12 and started_at <= NOW
+group by year(started_at), month(started_at)
+pivot kind
+order by year(started_at), month(started_at)
+chart columns

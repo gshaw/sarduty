@@ -2,6 +2,7 @@ defmodule Web.ReportController do
   use Web, :controller
 
   alias App.Report
+  alias App.Report.Chart
   alias App.Report.Error
   alias App.Report.Lists
   alias App.ViewData.ReportRecords
@@ -18,21 +19,23 @@ defmodule Web.ReportController do
     # The URL's picks, over the ones saved with the report, as its page runs it.
     given = Map.merge(report.values, Map.drop(params, ["subdomain", "id"]))
 
-    case Report.run(report.query, team, given, now) do
-      {:ok, result} ->
-        csv = Web.ReportCSV.build(result, ReportRecords.load(result, team, now), team.timezone)
-
-        conn
-        |> put_resp_content_type("text/csv")
-        |> put_resp_header(
-          "content-disposition",
-          ~s(attachment; filename="#{team.subdomain}-report-#{report.id}.csv")
-        )
-        |> send_resp(200, csv)
-
-      {:error, %Error{} = error} ->
-        send_resp(conn, 422, Error.text(error))
+    # Experiment (charts): the CSV is the rows above a chart line.
+    case report.query |> Chart.query_text() |> Report.run(team, given, now) do
+      {:ok, result} -> send_csv(conn, team, report, result, now)
+      {:error, %Error{} = error} -> send_resp(conn, 422, Error.text(error))
     end
+  end
+
+  defp send_csv(conn, team, report, result, now) do
+    csv = Web.ReportCSV.build(result, ReportRecords.load(result, team, now), team.timezone)
+
+    conn
+    |> put_resp_content_type("text/csv")
+    |> put_resp_header(
+      "content-disposition",
+      ~s(attachment; filename="#{team.subdomain}-report-#{report.id}.csv")
+    )
+    |> send_resp(200, csv)
   end
 
   defp list(slug) do

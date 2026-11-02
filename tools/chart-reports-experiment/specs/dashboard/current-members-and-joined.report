@@ -1,0 +1,5 @@
+select count(id), sum(joined_at = THIS_YEAR)
+from members
+where current = true and counted = true
+label count(id) 'Current members', sum(joined_at = THIS_YEAR) 'Joined this year'
+chart stat

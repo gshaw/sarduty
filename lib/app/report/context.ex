@@ -28,6 +28,10 @@ defmodule App.Report.Context do
     :years,
     :tags,
     :groups,
+    # Experiment (charts): the moment the query's own dates read, a year back for
+    # `compare year`. Fields' rules, such as status and standing, read `now`.
+    :dates_now,
+    :dates_today,
     repo: App.Repo,
     team_admin?: true
   ]
@@ -37,9 +41,13 @@ defmodule App.Report.Context do
     repo = Keyword.get(opts, :repo, App.Repo)
     activities = where(Activity, [a], a.team_id == ^team.id and is_nil(a.deleted_at))
 
+    dates_now = DateTime.shift(now, year: -Keyword.get(opts, :dates_back, 0))
+
     %__MODULE__{
       team: team,
       now: now,
+      dates_now: dates_now,
+      dates_today: Service.Period.today(dates_now, team.timezone),
       timezone: team.timezone,
       today: Service.Period.today(now, team.timezone),
       hours_tags: Activity.hours_tags(team, repo),

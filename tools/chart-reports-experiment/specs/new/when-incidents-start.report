@@ -1,0 +1,6 @@
+select day_of_week(started_at), hour(started_at), count(id)
+from activities
+where kind = 'Incident' and started_at = LAST_N_DAYS:1095
+group by day_of_week(started_at), hour(started_at)
+label count(id) 'Incidents'
+chart week

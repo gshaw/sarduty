@@ -1,0 +1,7 @@
+select date(started_at), count(id)
+from activities
+where started_at = LAST_N_DAYS:364 and started_at <= NOW
+group by date(started_at)
+order by date(started_at)
+label count(id) 'Activities'
+chart calendar

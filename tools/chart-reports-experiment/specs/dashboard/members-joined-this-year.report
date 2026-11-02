@@ -1,0 +1,5 @@
+select count(id)
+from members
+where current = true and counted = true and joined_at = THIS_YEAR
+label count(id) 'Joined'
+chart stat

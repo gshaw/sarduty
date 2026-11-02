@@ -230,5 +230,9 @@ defmodule Web.Components.ReportTable do
 
   def value_text(value, %{type: :month}, _team), do: Runner.month_name(value)
   def value_text(value, %{type: :quarter}, _team), do: "Q#{value}"
+  # Experiment (charts)
+  def value_text(value, %{type: :day}, _team), do: Format.date_short(value)
+  def value_text(value, %{type: :weekday}, _team), do: Runner.weekday_name(value)
+  def value_text(value, %{type: :hour}, _team), do: Runner.hour_text(value)
   def value_text(value, _column, _team), do: to_string(value)
 end

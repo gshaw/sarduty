@@ -1,0 +1,8 @@
+select month(started_at), count(distinct activity)
+from attendance
+where member.id = :member and status = 'Attended' and activity.kind = 'Incident'
+  and year(started_at) = :year and started_at <= NOW
+group by month(started_at)
+order by month(started_at)
+label count(distinct activity) 'Incidents'
+chart stat compare year

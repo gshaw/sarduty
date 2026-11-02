@@ -1,0 +1,7 @@
+select month(started_at), sum(hours)
+from attendance
+where member.id = :member and status = 'Attended' and year(started_at) = :year
+group by month(started_at)
+pivot activity.kind
+order by month(started_at)
+chart columns

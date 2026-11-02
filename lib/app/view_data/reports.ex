@@ -12,6 +12,7 @@ defmodule App.ViewData.Reports do
   alias App.Model.Team
   alias App.Report.BuiltIn
   alias App.Report.Catalog
+  alias App.Report.Chart
   alias App.Report.Parser
 
   @doc "`%{saved: reports, built_in: reports}`."
@@ -54,7 +55,7 @@ defmodule App.ViewData.Reports do
   # What a report lists, from the subject after its `from`; nil when the query no longer
   # reads.
   defp shows(query) do
-    with {:ok, %{from: from}} <- Parser.parse(query),
+    with {:ok, %{from: from}} <- query |> Chart.query_text() |> Parser.parse(),
          %{label: label} <- Catalog.subject(from) do
       label
     else

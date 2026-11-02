@@ -19,7 +19,9 @@ defmodule App.Report.Parser do
   # value in the URL, so `sort id` is fine.
   @reserved ~w(q sort page id subdomain all)
   @max_page 500
-  @functions ~w(count sum avg min max year month quarter lower upper days_since)
+  # Experiment (charts): date, months_since, day_of_week, and hour bucket times for charts.
+  @functions ~w(count sum avg min max year month quarter lower upper days_since date
+                months_since day_of_week hour)
 
   @ranges ~w(NOW TODAY THIS_MONTH LAST_MONTH THIS_YEAR LAST_YEAR)
   @ranges_with_n ~w(LAST_N_DAYS NEXT_N_DAYS LAST_N_MONTHS)

@@ -1,0 +1,7 @@
+select year(activity.started_at), month(activity.started_at), sum(hours)
+from attendance
+where status = 'Attended' and months_since(activity.started_at) < 12
+group by year(activity.started_at), month(activity.started_at)
+order by year(activity.started_at), month(activity.started_at)
+label sum(hours) 'Member hours'
+chart lines

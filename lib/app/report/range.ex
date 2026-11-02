@@ -11,12 +11,13 @@ defmodule App.Report.Range do
   alias App.Report.Context
 
   @doc "The range a date range's name and number say, on the context's day. NOW is a moment."
-  def of("NOW", _n, %Context{now: now}), do: {now, now}
+  # Experiment (charts): ranges read the query's dates' moment, a year back to compare.
+  def of("NOW", _n, %Context{dates_now: now}), do: {now, now}
 
-  def of("LAST_N_DAYS", n, %Context{now: now, timezone: timezone}),
+  def of("LAST_N_DAYS", n, %Context{dates_now: now, timezone: timezone}),
     do: Service.DayRange.last(now, timezone, n)
 
-  def of(name, n, %Context{today: today, timezone: timezone}) do
+  def of(name, n, %Context{dates_today: today, timezone: timezone}) do
     {first, last} = days(name, n, today)
     {midnight(first, timezone), midnight(Date.add(last, 1), timezone)}
   end

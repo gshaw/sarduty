@@ -9,6 +9,7 @@ defmodule App.Operation.SaveReport do
   alias App.Model.Team
   alias App.Repo
   alias App.Report
+  alias App.Report.Chart
   alias App.Report.Error
   alias Ecto.Changeset
 
@@ -45,7 +46,8 @@ defmodule App.Operation.SaveReport do
     query = Changeset.get_field(changeset, :query)
     values = Changeset.get_field(changeset, :values) || %{}
 
-    case Report.check(query, team, values, now) do
+    # Experiment (charts): the engine checks the query above a chart line.
+    case query |> Chart.query_text() |> Report.check(team, values, now) do
       {:ok, _plan} -> changeset
       {:error, error} -> Changeset.add_error(changeset, :query, Error.text(error))
     end

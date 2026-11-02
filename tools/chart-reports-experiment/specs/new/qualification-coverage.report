@@ -1,0 +1,8 @@
+select qualification, count(distinct member)
+from awards
+where current = true and member.standing = 'Active'
+group by qualification
+order by count(distinct member) desc
+limit 12
+label count(distinct member) 'Active members'
+chart bars

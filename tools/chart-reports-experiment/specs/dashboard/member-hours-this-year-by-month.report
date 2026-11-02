@@ -1,0 +1,8 @@
+select month(activity.started_at), sum(hours)
+from attendance
+where status = 'Attended' and activity.started_at = THIS_YEAR
+  and activity.started_at <= NOW
+group by month(activity.started_at)
+order by month(activity.started_at)
+label sum(hours) 'Member hours'
+chart stat compare year

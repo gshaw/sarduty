@@ -13,6 +13,7 @@ defmodule Web.ReportFormLive do
   """
   use Web, :live_view_app_layout
 
+  import Web.Components.ReportChart
   import Web.Components.ReportPage
   import Web.Components.ReportTable
 
@@ -20,6 +21,7 @@ defmodule Web.ReportFormLive do
   alias App.Operation.SaveReport
   alias App.Report
   alias App.Report.Catalog
+  alias App.Report.Chart
   alias App.Report.Context
   alias App.Report.Error
   alias App.Report.Expr
@@ -141,7 +143,12 @@ defmodule Web.ReportFormLive do
     else
       socket
       |> assign(ran: {query, values}, subject: subject(query) || socket.assigns.subject)
-      |> assign_preview(Report.page(query, team, values, socket.assigns.now))
+      |> assign_preview(
+        query
+        |> Chart.query_text()
+        |> Report.page(team, values, socket.assigns.now)
+      )
+      |> assign_chart(query, team, values)
     end
   end
 
@@ -159,8 +166,23 @@ defmodule Web.ReportFormLive do
   defp assign_preview(socket, {:error, %Error{} = error}),
     do: assign(socket, view: nil, query_error: Error.text(error))
 
+  # Experiment (charts): a chart line under the query draws its chart over the rows.
+  defp assign_chart(socket, query, team, values) do
+    now = socket.assigns.now
+
+    chart =
+      with %Chart{} = spec <- Chart.find(query),
+           {:ok, run} <- Chart.run(spec, team, values, now) do
+        %{spec: spec, run: run, records: ReportRecords.load(run.result, team, now)}
+      else
+        _none -> nil
+      end
+
+    assign(socket, chart: chart)
+  end
+
   defp subject(query) do
-    case Parser.parse(query) do
+    case query |> Chart.query_text() |> Parser.parse() do
       {:ok, %{from: from}} -> Catalog.subject(from)
       {:error, _error} -> nil
     end
@@ -293,6 +315,14 @@ defmodule Web.ReportFormLive do
           />
 
           <div :if={@view} id="report-preview">
+            <.report_chart
+              :if={@chart}
+              id="report-preview-chart"
+              chart={@chart.spec}
+              run={@chart.run}
+              records={@chart.records}
+              team={@current_team}
+            />
             <.report_page
               id="report-preview"
               view={@view}
@@ -321,7 +351,8 @@ defmodule Web.ReportFormLive do
       {"option", "One choice, and the where it adds."},
       {"each", "A choice per value, such as each year."},
       {"sort", "A column header that sorts."},
-      {"page", "Pages of that many rows."}
+      {"page", "Pages of that many rows."},
+      {"chart", "A chart over the rows: stat, columns, lines, bars, calendar, or week."}
     ]
 
   # The picks the preview's tiles and headers keep, as the form saves them.

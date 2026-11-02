@@ -10,6 +10,7 @@ defmodule Web.ReportLive do
   """
   use Web, :live_view_app_layout
 
+  import Web.Components.ReportChart
   import Web.Components.ReportPage
   import Web.Components.ReportTable
 
@@ -18,6 +19,7 @@ defmodule Web.ReportLive do
   alias App.Operation.SaveReport
   alias App.Report
   alias App.Report.BuiltIn
+  alias App.Report.Chart
   alias App.Report.Compiler
   alias App.Report.Error
   alias App.Report.Value
@@ -48,7 +50,8 @@ defmodule Web.ReportLive do
   defp run(socket, report, given, now) do
     team = socket.assigns.current_team
 
-    case Report.page(report.query, team, given, now) do
+    # Experiment (charts): the engine reads the query; a chart line under it draws above.
+    case report.query |> Chart.query_text() |> Report.page(team, given, now) do
       {:ok, view} ->
         # A pick the report was saved with is where it starts, so a URL leaves it out.
         view = %{view | defaults: Map.merge(view.defaults, report.values)}
@@ -63,11 +66,25 @@ defmodule Web.ReportLive do
           controls: ReportPage.controls_form(view),
           path_fn: &ReportPage.path(view, base, &1),
           csv_path: csv_path(team, report, view),
+          chart: chart(report, team, given, now),
           error: nil
         )
 
       {:error, %Error{} = error} ->
-        assign(socket, view: nil, values: [], error: Error.text(error), csv_path: nil)
+        assign(socket, view: nil, values: [], error: Error.text(error), csv_path: nil, chart: nil)
+    end
+  end
+
+  defp chart(report, team, given, now) do
+    with %Chart{} = spec <- Chart.find(report.query),
+         {:ok, run} <- Chart.run(%{spec | name: report.name}, team, given, now) do
+      %{
+        spec: %{spec | name: report.name},
+        run: run,
+        records: ReportRecords.load(run.result, team, now)
+      }
+    else
+      _none -> nil
     end
   end
 
@@ -145,6 +162,15 @@ defmodule Web.ReportLive do
       <p>{@error}</p>
       <p :if={@report.saved}>Change the report to fix its query.</p>
     </.banner>
+
+    <.report_chart
+      :if={@chart}
+      id="report-chart"
+      chart={@chart.spec}
+      run={@chart.run}
+      records={@chart.records}
+      team={@current_team}
+    />
 
     <div :if={@view}>
       <.report_page

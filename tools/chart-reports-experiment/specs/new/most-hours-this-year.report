@@ -1,0 +1,7 @@
+select member, sum(hours)
+from attendance
+where status = 'Attended' and activity.started_at = THIS_YEAR and member.counted = true
+group by member
+order by sum(hours) desc
+limit 10
+chart bars

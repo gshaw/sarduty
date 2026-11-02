@@ -95,7 +95,13 @@ defmodule App.Report.Language do
     "quarter" => {"quarter(date)", "The quarter: 1 to 4."},
     "lower" => {"lower(text)", "The text in small letters."},
     "upper" => {"upper(text)", "The text in capitals."},
-    "days_since" => {"days_since(date)", "Whole days from the date to today."}
+    "days_since" => {"days_since(date)", "Whole days from the date to today."},
+    # Experiment (charts)
+    "date" => {"date(date)", "The day, in the team's time zone, for a chart by day."},
+    "months_since" =>
+      {"months_since(date)", "Whole months from the date's month to this one: 0 is this month."},
+    "day_of_week" => {"day_of_week(date)", "The day of the week: 1 is Monday, 7 is Sunday."},
+    "hour" => {"hour(date)", "The hour, 0 to 23, in the team's time zone."}
   }
 
   @ranges %{

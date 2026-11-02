@@ -1,0 +1,5 @@
+select count(id)
+from activities
+where started_at = THIS_YEAR and started_at <= NOW
+label count(id) 'Activities'
+chart stat compare year

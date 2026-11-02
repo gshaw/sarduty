@@ -21,7 +21,8 @@ defmodule App.Report.Expr do
   alias App.Report.Value
 
   @aggregates ~w(count sum avg min max)
-  @date_parts ~w(year month quarter days_since)
+  # Experiment (charts): date, months_since, day_of_week, and hour.
+  @date_parts ~w(year month quarter days_since date months_since day_of_week hour)
   @numbers [:number, :hours, :km]
   @matches [:contains, :starts_with, :ends_with, :like]
   @flip %{eq: :eq, ne: :ne, lt: :gt, gt: :lt, le: :ge, ge: :le}
@@ -407,6 +408,15 @@ defmodule App.Report.Expr do
     new(["COUNT(", inner, ")"], params, :number, line, agg: "count", label: "Count")
   end
 
+  # Experiment (charts): the sum of a condition counts the rows where it holds, such as
+  # sum(joined_at = THIS_YEAR) beside count(id), for a stat's second number.
+  defp aggregate("sum", _distinct?, %{type: :condition} = arg, line),
+    do:
+      new(["SUM(CASE WHEN ", arg.sql, " THEN 1 ELSE 0 END)"], arg.params, :number, line,
+        agg: "sum",
+        label: "Count"
+      )
+
   defp aggregate(name, _distinct?, %{type: type} = arg, line)
        when name in ["sum", "avg"] and type in [:bool | @numbers] do
     type = if type == :bool, do: :number, else: type
@@ -445,12 +455,45 @@ defmodule App.Report.Expr do
   defp date_part("days_since", time, arg, line, context) do
     new(
       ["CAST(julianday(?) - julianday(date(", time, ")) AS INTEGER)"],
-      [Date.to_iso8601(context.today)],
+      [Date.to_iso8601(context.dates_today)],
       :number,
       line,
       label: "Days since #{String.downcase(arg.label)}"
     )
   end
+
+  # Experiment (charts): the local date, a calendar's day. Decoded as a Date.
+  defp date_part("date", time, arg, line, _context),
+    do: new(["date(", time, ")"], [], :day, line, label: arg.label)
+
+  # Experiment (charts): whole months from the date's month to this one, 0 for this
+  # month, so `months_since(started_at) < 12` is this month and the 11 before it.
+  defp date_part("months_since", time, arg, line, context) do
+    new(
+      [
+        "(? - (CAST(strftime('%Y', ",
+        time,
+        ") AS INTEGER) * 12 + CAST(strftime('%m', ",
+        time,
+        ") AS INTEGER)))"
+      ],
+      [context.dates_today.year * 12 + context.dates_today.month],
+      :number,
+      line,
+      label: "Months since #{String.downcase(arg.label)}"
+    )
+  end
+
+  # Experiment (charts): 1 for Monday to 7 for Sunday, the week grid's rows.
+  defp date_part("day_of_week", time, _arg, line, _context),
+    do:
+      new(["((CAST(strftime('%w', ", time, ") AS INTEGER) + 6) % 7 + 1)"], [], :weekday, line,
+        label: "Day"
+      )
+
+  # Experiment (charts): the local hour, 0 to 23.
+  defp date_part("hour", time, _arg, line, _context),
+    do: new(["CAST(strftime('%H', ", time, ") AS INTEGER)"], [], :hour, line, label: "Hour")
 
   defp min_max_label("min", :date, label), do: "First #{String.downcase(label)}"
   defp min_max_label("max", :date, label), do: "Last #{String.downcase(label)}"

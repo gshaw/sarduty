@@ -1,0 +1,8 @@
+select year(activity.started_at), sum(hours)
+from attendance
+where status = 'Attended' and activity.started_at >= date '2020-01-01'
+group by year(activity.started_at)
+pivot activity.kind
+order by year(activity.started_at)
+label sum(hours) 'Hours'
+chart columns

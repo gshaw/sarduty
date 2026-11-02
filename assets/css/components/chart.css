@@ -152,3 +152,15 @@
   .year-grid > .card-stack > .card { grid-column: span 12; }
   .year-grid .year-letter { order: -1; }
 }
+
+/* Experiment (charts): a report's chart above its rows. */
+.report-chart { margin: 0 0 var(--sp-6); }
+.report-chart.chart-stats { max-width: 22rem; }
+/* Experiment (charts): series past the first, for a pivot that isn't an activity's kind,
+   in fixed order. Checked with --primary first on --bg in both modes: worst adjacent CVD
+   ΔE 9.1 light, 8.4 dark. Three light ones are under 3:1, so a chart keeps its table. */
+.series-c1 { --c: light-dark(#eb6834, #d95926); }
+.series-c2 { --c: light-dark(#1baf7a, #199e70); }
+.series-c3 { --c: light-dark(#eda100, #c98500); }
+.series-c4 { --c: light-dark(#e87ba4, #d55181); }
+.series-c5 { --c: light-dark(#008300, #008300); }

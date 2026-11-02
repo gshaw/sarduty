@@ -1,0 +1,8 @@
+select kind, count(id)
+from equipment
+where type = 'Equipment'
+group by kind
+pivot status
+order by count(id) desc
+limit 8
+chart columns

@@ -27,8 +27,8 @@ defmodule App.Report do
   `{:error, %App.Report.Error{}}` for a mistake, checked before anything runs. `given`
   holds picked values by name, and the page's picks: every row they keep, not a page.
   """
-  def run(text, %Team{} = team, given \\ %{}, now \\ DateTime.utc_now()),
-    do: run_in(Context.new(team, now), text, given)
+  def run(text, %Team{} = team, given \\ %{}, now \\ DateTime.utc_now(), opts \\ []),
+    do: run_in(Context.new(team, now, opts), text, given)
 
   @doc """
   Runs `text` on Coast Range SAR, the made-up team in App.SampleRepo (#816), as run/4
@@ -41,6 +41,12 @@ defmodule App.Report do
       team -> run_in(Context.new(team, now, repo: App.SampleRepo), text, given)
     end
   end
+
+  @doc """
+  Experiment (charts): run/4 on a context built once, so a page of charts reads the
+  team's tags, groups, and years once rather than once a chart.
+  """
+  def run_with(%Context{} = context, text, given \\ %{}), do: run_in(context, text, given)
 
   defp run_in(context, text, given) do
     with {:ok, query} <- parse(text, context),

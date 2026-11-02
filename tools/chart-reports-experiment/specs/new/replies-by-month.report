@@ -1,0 +1,8 @@
+select year(activity.started_at), month(activity.started_at), count(id)
+from attendance
+where months_since(activity.started_at) < 12 and activity.started_at <= NOW
+  and member.counted = true
+group by year(activity.started_at), month(activity.started_at)
+pivot status
+order by year(activity.started_at), month(activity.started_at)
+chart columns
