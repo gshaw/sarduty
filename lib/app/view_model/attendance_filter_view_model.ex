@@ -153,10 +153,13 @@ defmodule App.ViewModel.AttendanceFilterViewModel do
     |> where([at, ac], ^secondary not in ac.tags)
   end
 
-  defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.started_at)
-  defp scope(q, sort: "date"), do: order_by(q, [r], asc: r.started_at)
-  defp scope(q, sort: "hours-"), do: order_by(q, [r], desc: r.duration_in_minutes)
-  defp scope(q, sort: "hours"), do: order_by(q, [r], asc: r.duration_in_minutes)
-  defp scope(q, sort: "id-"), do: order_by(q, [r], desc: r.activity_id)
-  defp scope(q, sort: "id"), do: order_by(q, [r], asc: r.activity_id)
+  # Rows that tie on the sort come back in no fixed order, so a page could show one twice
+  # and skip another. The row's own id goes last, in the sort's direction, so flipping
+  # the sort reverses the list exactly.
+  defp scope(q, sort: "date-"), do: order_by(q, [r], desc: r.started_at, desc: r.id)
+  defp scope(q, sort: "date"), do: order_by(q, [r], asc: r.started_at, asc: r.id)
+  defp scope(q, sort: "hours-"), do: order_by(q, [r], desc: r.duration_in_minutes, desc: r.id)
+  defp scope(q, sort: "hours"), do: order_by(q, [r], asc: r.duration_in_minutes, asc: r.id)
+  defp scope(q, sort: "id-"), do: order_by(q, [r], desc: r.activity_id, desc: r.id)
+  defp scope(q, sort: "id"), do: order_by(q, [r], asc: r.activity_id, asc: r.id)
 end
