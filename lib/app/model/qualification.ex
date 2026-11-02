@@ -40,11 +40,11 @@ defmodule App.Model.Qualification do
 
   def scope(q, team_id: team_id), do: where(q, team_id: ^team_id)
 
-  def get_all(team_id) do
+  def get_all(team_id, repo \\ Repo) do
     Qualification
     |> where([r], r.team_id == ^team_id)
     |> order_by([r], asc: r.title)
-    |> Repo.all()
+    |> repo.all()
   end
 
   def get_by(params), do: Repo.get_by(Qualification, params)

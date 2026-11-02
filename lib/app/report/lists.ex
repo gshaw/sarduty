@@ -77,6 +77,9 @@ defmodule App.Report.Lists do
     }
   ]
 
+  @doc "Every list."
+  def all, do: @lists
+
   @doc "The list with `slug`, or nil."
   def get(slug), do: Enum.find(@lists, &(&1.slug == slug))
 

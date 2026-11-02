@@ -76,14 +76,6 @@ defmodule Web.Settings.MCPTokenFormLive do
       <.input field={@form[:name]} label="Name">
         Where you use the token, like "Claude Code on my laptop".
       </.input>
-      <.input
-        field={@form[:no_training]}
-        type="checkbox"
-        label="I'll use this token only with an AI service set not to train on my data"
-      >
-        In Claude, turn off "Help improve Claude". In ChatGPT, turn off "Improve the model
-        for everyone". Work and API accounts often do not train by default. Check yours.
-      </.input>
       <.form_actions>
         <.button variant={:success} phx-disable-with="Creating…">Create token</.button>
         <.button id="token-cancel" navigate={~p"/teams/#{@current_team}/settings/mcp"}>

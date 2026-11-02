@@ -1,9 +1,7 @@
 defmodule App.MCP.ToolsTest do
   use ExUnit.Case, async: true
 
-  alias App.MCP.Tool.ActivityHistory
-  alias App.MCP.Tool.ListActivities
-  alias App.MCP.Tool.ListChores
+  alias App.MCP.Tool.CheckReport
   alias App.MCP.Tools
 
   test "every tool has a unique name" do
@@ -25,34 +23,28 @@ defmodule App.MCP.ToolsTest do
     end
   end
 
-  test "an integer argument must be a whole number, and there when required" do
-    assert Tools.check_arguments(ActivityHistory, %{"activity_id" => 29_841}) == :ok
-    assert Tools.check_arguments(ListChores, %{"from" => "2026-01-01"}) == :ok
+  test "an integer argument must be a whole number" do
+    query = %{"query" => "select name from members"}
+    assert Tools.check_arguments(CheckReport, query) == :ok
+    assert Tools.check_arguments(CheckReport, Map.put(query, "report_id", 3)) == :ok
 
-    message =
-      "Give activity_id as a number. SAR Duty's activity id, from list_activities."
-
-    for args <- [%{"activity_id" => "02241"}, %{"activity" => 29_841}, %{}] do
-      assert Tools.check_arguments(ActivityHistory, args) == {:error, message}
-    end
-
-    assert {:error, "Give member_id as a number." <> _} =
-             Tools.check_arguments(ListChores, %{"member_id" => "1"})
+    assert {:error, "Give report_id as a number." <> _} =
+             Tools.check_arguments(CheckReport, Map.put(query, "report_id", "3"))
   end
 
   test "the call log keeps only declared arguments, cut short" do
-    args = %{"from" => "2026-01-01", "tag" => String.duplicate("x", 500), "email" => "a@b.c"}
-    logged = Tools.loggable_arguments(ListActivities, args)
+    args = %{"query" => String.duplicate("x", 5_000), "email" => "a@b.c"}
+    logged = Tools.loggable_arguments(CheckReport, args)
 
-    assert Map.keys(logged) == ["from", "tag"]
-    assert String.length(logged["tag"]) == 100
+    assert Map.keys(logged) == ["query"]
+    assert String.length(logged["query"]) == 2_000
   end
 
   test "an argument that isn't a plain value is not logged as is" do
-    assert Tools.loggable_arguments(ListActivities, %{"tag" => %{"a" => 1}}) == %{
-             "tag" => "(not shown)"
+    assert Tools.loggable_arguments(CheckReport, %{"query" => %{"a" => 1}}) == %{
+             "query" => "(not shown)"
            }
 
-    assert Tools.loggable_arguments(ListActivities, "nope") == %{}
+    assert Tools.loggable_arguments(CheckReport, "nope") == %{}
   end
 end

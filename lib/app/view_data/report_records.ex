@@ -30,13 +30,20 @@ defmodule App.ViewData.ReportRecords do
   member's standing by id.
   """
   def load(%Result{} = result, %Team{} = team, now) do
-    records =
-      result
-      |> ids()
-      |> Map.new(fn {kind, ids} -> {kind, by_id(Map.fetch!(@schemas, kind), team, ids)} end)
-
+    records = names(result, team, Repo)
     members = records |> Map.get(:member, %{}) |> Map.values()
     Map.put(records, :standings, Standing.by_member(team, members, now))
+  end
+
+  @doc """
+  `%{kind => %{id => record}}` for every record the result names, read from `repo`, with
+  no standings: what a row needs as text, as the CSV writes it. try_report reads Coast
+  Range SAR's from App.SampleRepo (#816).
+  """
+  def names(%Result{} = result, %Team{} = team, repo) do
+    result
+    |> ids()
+    |> Map.new(fn {kind, ids} -> {kind, by_id(Map.fetch!(@schemas, kind), team, ids, repo)} end)
   end
 
   defp ids(result) do
@@ -56,12 +63,12 @@ defmodule App.ViewData.ReportRecords do
 
   defp column_ids(_column, _rows), do: []
 
-  defp by_id(_schema, _team, []), do: %{}
+  defp by_id(_schema, _team, [], _repo), do: %{}
 
-  defp by_id(schema, team, ids) do
+  defp by_id(schema, team, ids, repo) do
     schema
     |> where([r], r.team_id == ^team.id and r.id in ^ids)
-    |> Repo.all()
+    |> repo.all()
     |> Map.new(&{&1.id, &1})
   end
 end

@@ -19,7 +19,7 @@ defmodule Web.Settings.MCPTokenFormLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp/new")
 
     lv
-    |> form("#new-token-form", token: %{name: "Laptop", no_training: "true"})
+    |> form("#new-token-form", token: %{name: "Laptop"})
     |> render_submit()
 
     [record] = MCPToken.get_live_for_team(team)
@@ -50,18 +50,6 @@ defmodule Web.Settings.MCPTokenFormLiveTest do
 
     html = lv |> form("#new-token-form", token: %{name: " "}) |> render_submit()
     assert html =~ "Enter a name for the token"
-    assert MCPToken.get_live_for_team(team) == []
-  end
-
-  test "a token needs the promise not to train", %{conn: conn, team: team} do
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp/new")
-
-    html =
-      lv
-      |> form("#new-token-form", token: %{name: "Laptop", no_training: "false"})
-      |> render_submit()
-
-    assert html =~ "then check this box"
     assert MCPToken.get_live_for_team(team) == []
   end
 

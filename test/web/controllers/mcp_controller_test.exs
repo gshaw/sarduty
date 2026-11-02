@@ -6,7 +6,6 @@ defmodule Web.MCPControllerTest do
 
   alias App.AccountsFixtures
   alias App.MCP.Tools
-  alias App.Model.D4HChange
   alias App.Model.MCPCall
   alias App.Model.MCPToken
   alias App.Model.Member
@@ -21,7 +20,7 @@ defmodule Web.MCPControllerTest do
     {:ok, team} = SetTeamMCP.call(team, true, admin)
 
     {:ok, token, record} =
-      CreateMCPToken.call(team, user, %{"name" => "Laptop", "no_training" => "true"})
+      CreateMCPToken.call(team, user, %{"name" => "Laptop"})
 
     %{admin: admin, user: user, team: team, token: token, record: record}
   end
@@ -46,37 +45,36 @@ defmodule Web.MCPControllerTest do
 
   describe "who gets in" do
     test "a live token reads its own team", %{conn: conn, team: team, token: token} do
-      {result, text} = call_tool(conn, token, team, "get_team")
+      {result, text} = call_tool(conn, token, team, "report_fields")
       refute result["isError"]
-      assert Jason.decode!(text)["name"] == team.name
-      assert Jason.decode!(text)["primary_hours_tag"] == "Primary Hours"
+      assert Jason.decode!(text)["team"] == team.name
+      assert Jason.decode!(text)["hours_tags"]["primary"] == "Primary Hours"
     end
 
     test "a token for team A gets nothing from team B", ctx do
       other = team_fixture()
-      member_fixture(other, %{name: "Other Team Member"})
+      group_fixture(other, %{title: "Other Team Group"})
 
       for method <- ["initialize", "tools/list", "tools/call"] do
-        conn = rpc(build_conn(), ctx.token, other.subdomain, method, %{"name" => "list_members"})
+        conn = rpc(build_conn(), ctx.token, other.subdomain, method, %{"name" => "report_fields"})
         assert json_response(conn, 404)
-        refute conn.resp_body =~ "Other Team Member"
+        refute conn.resp_body =~ "Other Team Group"
       end
     end
 
-    test "a token never reads another team's rows, even through joins", ctx do
+    test "a token never reads another team's names or reports", ctx do
       %{conn: conn, team: team, token: token} = ctx
       other = team_fixture()
-      theirs = member_fixture(other, %{name: "Other Team Member"})
-      group_member_fixture(group_fixture(team), theirs)
-      activity = activity_fixture(team, %{started_at: ~U[2026-03-01 17:00:00Z]})
-      attendance_fixture(activity, theirs, %{started_at: ~U[2026-03-01 17:00:00Z]})
-      qualification_award_fixture(qualification_fixture(team), theirs)
-      activity_fixture(other, %{title: "Their Activity", started_at: ~U[2026-03-01 17:00:00Z]})
+      group_fixture(other, %{title: "Their Group"})
+      qualification_fixture(other, %{title: "Their Qualification"})
+      tag_fixture(other, "Their Tag")
+      saved_report_fixture(other, "Their Report")
 
       for {name, args} <- tool_calls() do
         {_result, text} = call_tool(conn, token, team, name, args)
-        refute text =~ "Other Team Member", name
-        refute text =~ "Their Activity", name
+
+        for theirs <- ["Their Group", "Their Qualification", "Their Tag", "Their Report"],
+            do: refute(text =~ theirs, "#{name} returned #{theirs}")
       end
     end
 
@@ -145,26 +143,32 @@ defmodule Web.MCPControllerTest do
   end
 
   describe "what tools return" do
-    test "no tool response holds a field outside its allowlist, or contact details", ctx do
+    # The guard rail that lets a team say yes to agents (#816): no tool returns a member,
+    # an activity, a row, or a count from the team's records.
+    test "no tool response holds a record, a count, or a field outside its allowlist", ctx do
       %{conn: conn, team: team, token: token} = ctx
 
       member =
         member_fixture(team, %{
           name: "Pat Example",
+          ref_id: "4471",
           email: "pat.secret@example.com",
           phone: "604-555-0199",
           address: "42 Hidden Road"
         })
 
-      group_member_fixture(group_fixture(team, %{title: "MIT"}), member)
+      group_member_fixture(group_fixture(team, %{title: "Callout"}), member)
+      qualification_award_fixture(qualification_fixture(team, %{title: "First Aid"}), member)
 
       activity =
         activity_fixture(team, %{
+          title: "Search for the lost hiker",
           started_at: ~U[2026-03-01 17:00:00Z],
           finished_at: ~U[2026-03-01 20:00:00Z],
           address: "99 Trailhead Way",
           coordinate: "49.31234,-123.04567",
-          description: "Meet at the gate"
+          description: "Meet at the gate",
+          tracking_number: "PROS-2026-99881"
         })
 
       attendance_fixture(activity, member, %{
@@ -172,51 +176,26 @@ defmodule Web.MCPControllerTest do
         finished_at: ~U[2026-03-01 20:00:00Z]
       })
 
-      qualification_award_fixture(qualification_fixture(team, %{title: "First Aid"}), member)
       tax_credit_letter_fixture(member, %{letter_content: "Dear Pat, private letter text"})
+      # A list saved while searching for a member keeps the search in its values.
+      saved_report_fixture(team, "Callout list", %{"q" => "4471"})
 
       secrets = [
+        "Pat Example",
+        "4471",
         "pat.secret@example.com",
         "604-555-0199",
         "42 Hidden Road",
+        "Search for the lost hiker",
         "99 Trailhead Way",
         "49.31234",
         "Meet at the gate",
+        "PROS-2026-99881",
         "private letter text",
-        team.mailing_address,
-        "Notes kept inside the team"
+        team.mailing_address
       ]
 
-      D4HChange.insert!(%D4HChange{
-        team_id: team.id,
-        member_id: member.id,
-        record_kind: :member,
-        action: :changed,
-        fields: ["email", "phone"],
-        old_value: %{},
-        new_value: %{},
-        seen_at: ~U[2026-03-02 17:00:00.000000Z]
-      })
-
-      # A custom field's value, kept by title in history (#681).
-      D4HChange.insert!(%D4HChange{
-        team_id: team.id,
-        activity_id: activity.id,
-        record_kind: :activity,
-        action: :changed,
-        fields: ["custom_values"],
-        old_value: %{"custom_values" => %{"Team notes" => nil}},
-        new_value: %{"custom_values" => %{"Team notes" => "Notes kept inside the team"}},
-        seen_at: ~U[2026-03-02 17:00:00.000000Z]
-      })
-
-      history_calls = [
-        {"member_history", %{"member_id" => member.id}},
-        {"activity_history", %{"activity_id" => activity.id}},
-        {"list_attendance", %{"activity_id" => activity.id}}
-      ]
-
-      for {name, args} <- tool_calls() ++ history_calls do
+      for {name, args} <- tool_calls() do
         {result, text} = call_tool(conn, token, team, name, args)
         refute result["isError"], name
         output = Jason.decode!(text)
@@ -226,87 +205,118 @@ defmodule Web.MCPControllerTest do
           assert key in allowed, "#{name} returned #{key}, which is not in its fields/0"
         end
 
-        for key <- ~w(email phone address coordinate lat lng description letter_content),
-            do: refute(key in keys(output), "#{name} returned #{key}")
-
         for secret <- secrets, do: refute(text =~ secret, "#{name} returned #{secret}")
       end
+
+      {_result, text} = call_tool(conn, token, team, "report_fields")
+      names = Jason.decode!(text)
+      assert names["groups"] == ["Callout"]
+      assert names["qualifications"] == ["First Aid"]
+
+      {_result, text} = call_tool(conn, token, team, "list_reports")
+      assert Enum.any?(Jason.decode!(text)["reports"], &(&1["name"] == "Callout list"))
     end
 
-    test "attendance_summary gives hours per tag and kind", ctx do
+    test "check_report checks without running, and links to New report", ctx do
       %{conn: conn, team: team, token: token} = ctx
-      member = member_fixture(team, %{name: "Pat Example"})
+      member_fixture(team, %{name: "Pat Example"})
 
-      activity =
-        activity_fixture(team, %{
-          started_at: ~U[2026-03-01 17:00:00Z],
-          finished_at: ~U[2026-03-01 20:00:00Z],
-          tags: ["Primary Hours", "Rope"]
+      {result, text} =
+        call_tool(conn, token, team, "check_report", %{
+          "query" => "select name, last_attended from members",
+          "name" => "Last seen"
         })
 
-      attendance_fixture(activity, member, %{
-        started_at: ~U[2026-03-01 17:00:00Z],
-        finished_at: ~U[2026-03-01 19:30:00Z]
-      })
+      refute result["isError"]
+      output = Jason.decode!(text)
+      assert output["columns"] == ["Member", "Last attended"]
+      refute text =~ "Pat Example"
+
+      %URI{path: path, query: query} = URI.parse(output["link"])
+      assert path == "/teams/#{team.subdomain}/reports/new"
+
+      assert URI.decode_query(query) == %{
+               "query" => "select name, last_attended from members",
+               "name" => "Last seen",
+               "agent" => "Laptop"
+             }
+    end
+
+    test "try_report runs on Coast Range SAR, never the team's records", ctx do
+      %{conn: conn, team: team, token: token} = ctx
+      member_fixture(team, %{name: "Pat Example"})
+
+      {result, text} =
+        call_tool(conn, token, team, "try_report", %{
+          "query" => "select name, standing from members where name = 'Cameron Ruiz'"
+        })
+
+      refute result["isError"]
+      output = Jason.decode!(text)
+      assert output["team"] == "Coast Range SAR"
+      assert output["made_up"]
+      assert output["columns"] == ["Member", "Standing"]
+      assert [["Cameron Ruiz", _standing]] = output["rows"]
+      assert "Search manager" in output["names"]["qualifications"]
+      assert "Rope team" in output["names"]["groups"]
+      assert "Swiftwater" in output["names"]["tags"]
+      refute text =~ "Pat Example"
+
+      # A year sent as a JSON number picks that year, not this one.
+      {_result, text} =
+        call_tool(conn, token, team, "try_report", %{
+          "query" => "select title from activities where year(started_at) = :year",
+          "values" => %{"year" => 1999}
+        })
+
+      assert Jason.decode!(text)["rows"] == []
+
+      {result, text} =
+        call_tool(conn, token, team, "try_report", %{"query" => "select nme from members"})
+
+      assert result["isError"]
+      assert text =~ "members has no field nme"
+    end
+
+    test "check_report links a saved report to Change report", ctx do
+      %{conn: conn, team: team, token: token} = ctx
+      saved = saved_report_fixture(team, "Callout list")
 
       {_result, text} =
-        call_tool(conn, token, team, "attendance_summary", %{
-          "from" => "2026-01-01",
-          "to" => "2026-03-31"
+        call_tool(conn, token, team, "check_report", %{
+          "query" => "select name from members",
+          "report_id" => saved.id
         })
 
-      pat = Enum.find(Jason.decode!(text)["members"], &(&1["name"] == "Pat Example"))
-      assert pat["total_hours"] == 2.5
-      assert pat["activities"] == 1
-
-      assert pat["by_tag"] == [
-               %{
-                 "tag" => "Primary Hours",
-                 "activity_kind" => "exercise",
-                 "hours" => 2.5,
-                 "activities" => 1
-               },
-               %{
-                 "tag" => "Rope",
-                 "activity_kind" => "exercise",
-                 "hours" => 2.5,
-                 "activities" => 1
-               }
-             ]
+      assert URI.parse(Jason.decode!(text)["link"]).path ==
+               "/teams/#{team.subdomain}/reports/#{saved.id}/edit"
     end
 
-    test "a tool given bad arguments says what to fix", %{conn: conn, team: team} = ctx do
-      {result, text} = call_tool(conn, ctx.token, team, "list_activities", %{"from" => "soon"})
-      assert result["isError"]
-      assert text =~ "Give from as a date"
-    end
-
-    # Production, 2026-10-28: an agent sent `activity: "02241"` and got a 500.
-    test "a tool given a wrong or missing id says what to fix", %{conn: conn, team: team} = ctx do
-      for {tool, args} <- [
-            {"activity_history", %{"activity" => "02241"}},
-            {"activity_history", %{"activity_id" => "29841"}},
-            {"list_attendance", %{}},
-            {"member_history", %{"member" => 1}},
-            {"list_chores", %{"from" => "2026-01-01", "to" => "2026-01-31", "member_id" => "1"}},
-            {"tax_credit_hours", %{"year" => 2026, "member_id" => "1"}}
+    test "check_report says what to fix", %{conn: conn, team: team} = ctx do
+      for {args, message} <- [
+            {%{"query" => "select nme from members"}, "members has no field nme"},
+            {%{}, "Give query as the report's text."},
+            {%{"query" => "select name from members", "report_id" => "1"},
+             "Give report_id as a number."},
+            {%{"query" => "select name from members", "report_id" => 999_999},
+             "There is no saved report 999999."}
           ] do
-        {result, text} = call_tool(conn, ctx.token, team, tool, args)
-        assert result["isError"], tool
-        assert text =~ ~r/Give \w+_id as a number\. SAR Duty's \w+ id, from list_/, tool
+        {result, text} = call_tool(conn, ctx.token, team, "check_report", args)
+        assert result["isError"], inspect(args)
+        assert text =~ message
       end
     end
 
-    test "every call is logged with its tool, arguments, and rows", ctx do
+    test "every call is logged with its tool, arguments, and items", ctx do
       %{conn: conn, team: team, token: token, user: user} = ctx
-      args = %{"from" => "2026-01-01", "to" => "2026-01-31", "tag" => "Rope", "junk" => "x"}
-      call_tool(conn, token, team, "list_activities", args)
+      args = %{"query" => "select name from members", "junk" => "x"}
+      call_tool(conn, token, team, "check_report", args)
 
       [call] = Repo.all(MCPCall)
       assert call.team_id == team.id
       assert call.user_id == user.id
-      assert call.tool == "list_activities"
-      assert call.arguments == %{"from" => "2026-01-01", "to" => "2026-01-31", "tag" => "Rope"}
+      assert call.tool == "check_report"
+      assert call.arguments == %{"query" => "select name from members"}
       assert call.row_count == 0
     end
   end
@@ -333,9 +343,7 @@ defmodule Web.MCPControllerTest do
       tools = json_response(conn, 200)["result"]["tools"]
 
       assert Enum.map(tools, & &1["name"]) ==
-               ~w(get_team needs_attention list_members attendance_summary tax_credit_hours
-                  list_activities list_attendance list_qualifications list_chores member_history
-                  activity_history)
+               ~w(report_fields list_reports try_report check_report)
 
       assert Enum.all?(tools, & &1["annotations"]["readOnlyHint"])
     end
@@ -395,19 +403,31 @@ defmodule Web.MCPControllerTest do
     refute MCPToken |> Repo.all() |> Enum.any?(&(&1.token_hash == token))
   end
 
+  # A query that reads members' names, activities' titles, and contact-free fields:
+  # checking it must give back none of them.
   defp tool_calls do
-    range = %{"from" => "2026-01-01", "to" => "2026-12-31"}
+    query = """
+    select member, activity, activity.tracking_number, hours
+    from attendance
+    where status = 'Attended'
+    """
 
     [
-      {"get_team", %{}},
-      {"needs_attention", %{}},
-      {"list_members", %{}},
-      {"attendance_summary", range},
-      {"tax_credit_hours", %{"year" => 2026}},
-      {"list_activities", range},
-      {"list_qualifications", %{}},
-      {"list_chores", range}
+      {"report_fields", %{}},
+      {"list_reports", %{}},
+      {"try_report", %{"query" => query}},
+      {"check_report", %{"query" => query, "name" => "Who went"}}
     ]
+  end
+
+  defp saved_report_fixture(team, name, values \\ %{}) do
+    Repo.insert!(%App.Model.SavedReport{
+      team_id: team.id,
+      name: name,
+      values: values,
+      about: "Members of Callout",
+      query: "select name from members where groups includes ('Callout')"
+    })
   end
 
   # Every map key at any depth.

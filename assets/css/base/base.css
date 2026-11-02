@@ -12,6 +12,8 @@
   }
 
   code, kbd, samp, pre { font-family: var(--mono); }
+  /* A long URL or field name breaks rather than pushing a phone's page sideways. */
+  code { overflow-wrap: anywhere; }
 
   /* GOV.UK focus: yellow, the same in both modes, on everything you can tab to. */
   a:focus-visible {

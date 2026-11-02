@@ -125,9 +125,10 @@ defmodule Web.MCPController do
        "capabilities" => %{"tools" => %{"listChanged" => false}},
        "serverInfo" => %{"name" => "sarduty", "title" => "SAR Duty", "version" => "1.0.0"},
        "instructions" =>
-         "Data for #{team.name}, copied from #{service} by SAR Duty, up to 10 minutes " <>
-           "behind. Times are in #{team.timezone}. Start with get_team. Tools only read: " <>
-           "nothing here changes SAR Duty or #{service}."
+         "Help a team admin of #{team.name} write SAR Duty reports. Start with " <>
+           "report_fields. You work from how the team is organized, never its members or " <>
+           "records: the team admin runs the report in SAR Duty. Tools only read: nothing " <>
+           "here changes SAR Duty or #{service}."
      }}
   end
 

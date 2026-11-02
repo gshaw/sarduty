@@ -7,7 +7,9 @@ defmodule Web.ReportFormLive do
   clauses and the fields of the subject after `from`; a click puts a field in the query
   where the cursor is. `?from=<id>` starts from a copy of another report, such as a
   built-in one. `?list=<slug>` is Save as report on a list such as Activities (#784): the
-  list's text, with the list's picks as the values and in the name.
+  list's text, with the list's picks as the values and in the name. `?query=` is an
+  agent's link from check_report (#816): its query, name, and description fill the form,
+  and `agent` names who wrote it, saved with the report.
   """
   use Web, :live_view_app_layout
 
@@ -50,19 +52,23 @@ defmodule Web.ReportFormLive do
       now: now,
       context: Context.new(team, now),
       subject: Catalog.subject("members"),
-      params: start
+      params: start,
+      agent: agent(params)
     )
     |> assign_form(SavedReport.changeset(saved || %SavedReport{}, start))
     |> preview(start)
     |> then(&{:ok, &1})
   end
 
-  defp start(:edit, %{"id" => id}, team, now) do
+  defp start(:edit, %{"id" => id} = params, team, now) do
     case Reports.find(team, id, now) do
-      %{saved: %SavedReport{} = saved} -> {saved, %{}}
+      %{saved: %SavedReport{} = saved} -> {saved, Map.take(params, ["query"])}
       _built_in_or_none -> raise Web.Status.NotFound
     end
   end
+
+  defp start(:new, %{"query" => query} = params, _team, _now) when is_binary(query),
+    do: {nil, params |> Map.take(["query", "name", "about"]) |> Map.put("values", %{})}
 
   defp start(:new, %{"from" => id}, team, now) do
     report = Reports.find(team, id, now) || raise Web.Status.NotFound
@@ -85,6 +91,12 @@ defmodule Web.ReportFormLive do
   end
 
   defp start(:new, _params, _team, _now), do: {nil, %{"query" => @first_query}}
+
+  # Who wrote the query, from an agent's link: a name, cut short.
+  defp agent(%{"agent" => agent, "query" => _query}) when is_binary(agent) and agent != "",
+    do: String.slice(agent, 0, 80)
+
+  defp agent(_params), do: nil
 
   # Named for the picks: "Activities: Exercises, 2026, rope".
   defp list_name(list, values, team, now) do
@@ -182,7 +194,7 @@ defmodule Web.ReportFormLive do
   def handle_event("save", %{"report" => params}, socket) do
     %{current_team: team, current_user: user, saved: saved} = socket.assigns
 
-    case SaveReport.call(team, user, saved, params, socket.assigns.now) do
+    case SaveReport.call(team, user, saved, params, socket.assigns.now, socket.assigns.agent) do
       {:ok, report} ->
         {:noreply, push_navigate(socket, to: ~p"/teams/#{team}/reports/#{report.id}")}
 

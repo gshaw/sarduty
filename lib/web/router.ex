@@ -114,6 +114,7 @@ defmodule Web.Router do
       live "/privacy", PrivacyLive
       live "/changelog", ChangelogLive
       live "/reports/language", ReportLanguageLive
+      live "/agents", AgentsLive
       live "/signup", TeamSignupLive
       # A reminder email's links (#444): replying, and turning reminders off. No login.
       live "/replies/:token", ReplyLinkLive
