@@ -43,11 +43,13 @@ defmodule Web.ActivitySendRemindersLiveTest do
     attendance_fixture(activity, quinn, %{status: "absent"})
 
     # Cameron was emailed 2 days ago.
+    reminded_at = DateTime.add(DateTime.utc_now(), -2, :day)
+
     Repo.insert!(%Reminder{
       team_id: team.id,
       activity_id: activity.id,
       member_id: cameron.id,
-      sent_at: DateTime.add(DateTime.utc_now(), -2, :day),
+      sent_at: reminded_at,
       status: :sent
     })
 
@@ -57,7 +59,8 @@ defmodule Web.ActivitySendRemindersLiveTest do
       team: team,
       activity: activity,
       cameron: cameron,
-      jordan: jordan
+      jordan: jordan,
+      reminded: Service.Format.month_day(reminded_at, team.timezone)
     }
   end
 
@@ -67,8 +70,8 @@ defmodule Web.ActivitySendRemindersLiveTest do
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
 
     assert has_element?(lv, "h1", "Send reminders")
-    assert has_element?(lv, "#email-to-#{ctx.cameron.id} td", "Oct ")
-    refute has_element?(lv, "#email-to-#{ctx.jordan.id} td", "Oct ")
+    assert has_element?(lv, "#email-to-#{ctx.cameron.id} td", ctx.reminded)
+    refute has_element?(lv, "#email-to-#{ctx.jordan.id} td", ctx.reminded)
     assert has_element?(lv, "#email-select-#{ctx.jordan.id}[checked]")
     assert has_element?(lv, "#email-send", "Send 2 emails")
     assert has_element?(lv, ~s(#email-send[data-confirm^="Email 2 members about"]))
