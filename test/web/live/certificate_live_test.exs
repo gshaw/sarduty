@@ -110,7 +110,9 @@ defmodule Web.CertificateLiveTest do
     |> Ecto.Changeset.change(d4h_api_host: App.Adapter.D4H.records_host())
     |> Repo.update!()
 
-    ctx.certificate |> Ecto.Changeset.change(status: :accepted, d4h_award_id: 300) |> Repo.update!()
+    ctx.certificate
+    |> Ecto.Changeset.change(status: :accepted, d4h_award_id: 300)
+    |> Repo.update!()
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}")
     qualifications = ~p"/teams/#{ctx.team}/members/#{ctx.member}/qualifications"
