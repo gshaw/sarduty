@@ -26,6 +26,12 @@ Mileage report's place on the activity, in its Actions.
   until it's checked or the activity is published. Either answer sets `checked_at`; a
   team admin setting the row again clears it, except on the admin's own rows. Travel
   marks checked rows, and Change activity counts the members who haven't.
+- **Email members to check** is a button on Travel, never sent on its own. It reaches
+  each member with an unchecked trip, an email, and a login (member logins on, not
+  retiring). Each is an `activity_updates` row of kind `:travel_check`, sent by
+  `SendActivityUpdateWorker` like an update, so a refusal is retried, and a member who
+  checks first, or an activity published first, gets nothing. Travel says when it last
+  went. A team without member logins gets no button: its members can't log in to check.
 - **Publishing locks travel**, as it does attendance. To change it, a team admin
   unpublishes first. Change activity says how many rows aren't set, beside the Published
   box: a note, never a block.

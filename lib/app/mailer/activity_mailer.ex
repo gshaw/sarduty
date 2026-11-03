@@ -5,11 +5,13 @@ defmodule App.Mailer.ActivityMailer do
   alias App.Model.Activity
   alias App.Model.Member
   alias App.Model.Team
+  alias App.ViewData.ActivityTravel
   alias Service.Format
   alias Web.ReplyLinks
 
   # The emails a team admin sends about an activity: a reminder to reply (#444), an
-  # update (#609), and the message to a signed up member they removed (#704). Each comes
+  # update (#609), the message to a signed up member they removed (#704), and an ask
+  # to check the travel they set (#230). Each comes
   # from the team, with replies going to the team admin who sent it: Cloudflare takes
   # Reply-To as its API's `reply_to` field, not a header.
   # `sender` is `%{name:, email:}`, and `message` the team admin's own words, or nil.
@@ -73,6 +75,68 @@ defmodule App.Mailer.ActivityMailer do
     |> email(team, sender, removal_subject(activity))
     |> bodies(activity, team, sender, message, :removed, nowhere(nil))
     |> Mailer.deliver()
+  end
+
+  @doc """
+  Asks a member to check the travel a team admin set for them (#230): each trip, who set
+  it, and a button to the activity's page, where they say it's right or change it. It
+  goes only when a team admin selects Email members to check on Travel. `trips` are
+  `{started_at, trip}`, the attendance row's start for each, so two are told apart by
+  day.
+  """
+  def deliver_travel_check(
+        %Member{} = member,
+        %Activity{} = activity,
+        %Team{} = team,
+        sender,
+        trips
+      ) do
+    lines = Enum.map(trips, &travel_line(&1, team, length(trips) > 1))
+    url = url("/teams/#{team.subdomain}/activities/#{activity.id}")
+
+    member
+    |> email(team, sender, "Check your travel for #{activity.title}")
+    |> text_body(travel_text(activity, team, from_name(sender), lines, url))
+    |> html_body(travel_html(activity, team, from_name(sender), lines, url))
+    |> Mailer.deliver()
+  end
+
+  defp travel_line({started_at, trip}, team, days?) do
+    setter = Member.name_for_user(team, trip.set_by_user, DateTime.utc_now()) || "A team admin"
+    day = if days?, do: "#{Format.month_day(started_at, team.timezone)}: "
+    "#{day}#{setter} set your travel: #{ActivityTravel.trip_text(trip)}."
+  end
+
+  @travel_ask "If that's wrong, change it before the activity is published."
+
+  defp travel_text(activity, team, from_name, lines, url) do
+    """
+    #{team.name}
+
+    #{activity.title}
+    #{Enum.join(facts(activity, team), "\n")}
+
+    #{Enum.join(lines, "\n")}
+    #{@travel_ask}
+
+    Check your travel (log in):
+    #{url}
+
+    #{footer(from_name)}
+    """
+  end
+
+  defp travel_html(activity, team, from_name, lines, url) do
+    """
+    <p style="font-size:14px;margin:0 0 4px">#{escape(team.name)}</p>
+    <h1 style="font-size:24px;margin:0 0 8px">#{escape(activity.title)}</h1>
+    #{Enum.map_join(facts(activity, team), "\n", &"<p style=\"margin:0\">#{escape(&1)}</p>")}
+    #{Enum.map_join(lines, "\n", &"<p style=\"margin:24px 0 0\">#{escape(&1)}</p>")}
+    <p style="margin:8px 0 16px">#{escape(@travel_ask)}</p>
+    <p style="margin:0"><a href="#{escape(url)}" style="#{@yes}">Check your travel</a> (log in)</p>
+    <hr style="border:0;border-top:1px solid #b1b4b6;margin:32px 0 16px">
+    <p style="font-size:14px;margin:0 0 8px">#{escape(footer(from_name))}</p>
+    """
   end
 
   @doc """

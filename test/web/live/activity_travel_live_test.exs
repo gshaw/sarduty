@@ -3,10 +3,13 @@ defmodule Web.ActivityTravelLiveTest do
 
   import App.DataFixtures
   import Phoenix.LiveViewTest
+  import Swoosh.TestAssertions
 
+  alias App.Model.ActivityUpdate
   alias App.Model.Attendance
   alias App.Model.HomeCoordinate
   alias App.Model.Trip
+  alias App.Operation.SendActivityUpdate
   alias App.Repo
 
   test "redirects when not authenticated" do
@@ -37,6 +40,7 @@ defmodule Web.ActivityTravelLiveTest do
 
     %{
       conn: log_in_user(conn, user),
+      user: user,
       team: team,
       activity: activity,
       ann: ann,
@@ -238,6 +242,75 @@ defmodule Web.ActivityTravelLiveTest do
       Repo.update_all(Attendance, set: [status: "absent"])
       lv = open(ctx)
       assert has_element?(lv, "#travel-nobody")
+    end
+  end
+
+  # Email members to check (#230): Ann's travel is set, and Bob's isn't.
+  describe "Email members to check" do
+    setup ctx do
+      team = ctx.team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
+
+      trip =
+        Repo.insert!(%Trip{
+          team_id: team.id,
+          activity_id: ctx.activity.id,
+          member_id: ctx.ann.id,
+          d4h_attendance_id: ctx.ann_row.d4h_attendance_id,
+          travel: "icp",
+          km: 62,
+          set_by_user_id: ctx.user.id
+        })
+
+      %{team: team, trip: trip}
+    end
+
+    test "it says who has checked, and emails each member with travel to check", ctx do
+      lv = open(ctx)
+      assert lv |> element("#travel-checked") |> render() =~ "0 of 1 member have checked."
+
+      lv |> element("#travel-ask") |> render_click()
+
+      assert render(lv) =~ "Emailed 1 member to check their travel."
+      assert has_element?(lv, "#travel-last-asked")
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Check your travel for Missing hiker"
+        assert email.to == [{"Ann Smith", ctx.ann.email}]
+
+        assert email.text_body =~
+                 "set your travel: drove to the ICP, 62 km there and back from home."
+
+        assert email.text_body =~ "/teams/#{ctx.team.subdomain}/activities/#{ctx.activity.id}"
+      end)
+    end
+
+    test "a team without member logins gets no button: members can't check", ctx do
+      ctx.team |> Ecto.Changeset.change(member_logins: false) |> Repo.update!()
+      lv = open(ctx)
+
+      assert has_element?(lv, "#travel-no-logins")
+      refute has_element?(lv, "#travel-ask")
+    end
+
+    test "a member who checked before it went gets nothing", ctx do
+      update =
+        Repo.insert!(%ActivityUpdate{
+          team_id: ctx.team.id,
+          activity_id: ctx.activity.id,
+          member_id: ctx.ann.id,
+          sent_by_user_id: ctx.user.id,
+          message: "",
+          sent_at: DateTime.utc_now(),
+          status: :queued,
+          kind: :travel_check
+        })
+
+      Trip.check!(ctx.trip, DateTime.utc_now())
+
+      assert {:cancel, "the member checked their travel"} =
+               SendActivityUpdate.deliver(update.id, false, DateTime.utc_now())
+
+      refute_email_sent()
     end
   end
 end

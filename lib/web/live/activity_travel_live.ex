@@ -5,6 +5,7 @@ defmodule Web.ActivityTravelLive do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Operation.AskTravelCheck
   alias App.Operation.SetTravel
   alias App.ViewData.ActivityTravel
   alias Service.Format
@@ -39,10 +40,34 @@ defmodule Web.ActivityTravelLive do
 
   defp load(socket) do
     %{current_team: team, activity: activity} = socket.assigns
+    socket = assign_asking(socket)
 
     assign_async(socket, :travel, fn ->
       {:ok, %{travel: ActivityTravel.load(team, activity, DateTime.utc_now())}}
     end)
+  end
+
+  # Who Email members to check would reach, and when it last went.
+  defp assign_asking(socket) do
+    activity = socket.assigns.activity
+
+    assign(socket,
+      recipients: length(AskTravelCheck.recipients(activity)),
+      last_asked: AskTravelCheck.last_asked(activity)
+    )
+  end
+
+  def handle_event("ask", _params, socket) do
+    %{current_team: team, current_user: user, activity: activity} = socket.assigns
+
+    case AskTravelCheck.call(team, activity, user, DateTime.utc_now()) do
+      {:ok, members} ->
+        {:noreply,
+         socket |> put_flash(:info, AskTravelCheck.result_text(members)) |> assign_asking()}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, AskTravelCheck.error_text(team, reason))}
+    end
   end
 
   def handle_event("change", params, socket) do
@@ -83,6 +108,9 @@ defmodule Web.ActivityTravelLive do
         {:noreply, put_flash(socket, :error, SetTravel.error_text(team, reason))}
     end
   end
+
+  # Swoosh's test adapter tells each process an email came from, this one included.
+  def handle_info({:email, _email}, socket), do: {:noreply, socket}
 
   # Ids come from the browser; SetTravel sets only rows the page shows.
   defp selected_ids(params) do
@@ -205,6 +233,26 @@ defmodule Web.ActivityTravelLive do
         </.form_actions>
       </.form>
 
+      <section :if={travel.set != []} id="travel-check" class="mt-8 measure">
+        <h2 class="heading">Members check</h2>
+        <p id="travel-checked">{checked_text(travel.set)}</p>
+        <p :if={@last_asked} id="travel-last-asked" class="hint">
+          Emailed {Format.month_day_time(@last_asked, @current_team.timezone)}.
+        </p>
+        <p :if={!@current_team.member_logins} id="travel-no-logins" class="hint">
+          Members can't log in to this team, so they can't check theirs. Turn on member logins in Team settings, Features.
+        </p>
+        <.button
+          :if={@current_team.member_logins and @recipients > 0 and !@locked?}
+          id="travel-ask"
+          phx-click="ask"
+          phx-disable-with="Emailing…"
+          {send_confirm(@recipients, "Email #{members_text(@recipients)} to check their travel?", ["Each gets what was set for them, and a link to the activity."])}
+        >
+          Email {members_text(@recipients)} to check
+        </.button>
+      </section>
+
       <details
         :if={travel.set != [] and !D4H.records?(@current_team)}
         id="travel-d4h"
@@ -265,6 +313,16 @@ defmodule Web.ActivityTravelLive do
   defp home_text(:no_address, service), do: "No home address in #{service}. Type their km."
   defp home_text(:not_found, _service), do: "Mapbox couldn't find their address. Type their km."
   defp home_text(:unknown, _service), do: "Mapbox didn't answer. Reload the page to try again."
+
+  # "3 of 7 members have checked." A member with two rows has checked when both are.
+  defp checked_text(set) do
+    by_member = Enum.group_by(set, & &1.member.id)
+    checked = Enum.count(by_member, fn {_id, rows} -> Enum.all?(rows, & &1.trip.checked_at) end)
+
+    "#{checked} of #{members_text(map_size(by_member))} #{if checked == 1, do: "has", else: "have"} checked."
+  end
+
+  defp members_text(count), do: Format.count(count, one: "%d member", many: "%d members")
 
   defp set_text(0, to), do: "Set to #{to}"
   defp set_text(count, to), do: "Set #{count} to #{to}"

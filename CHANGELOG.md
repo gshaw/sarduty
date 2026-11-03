@@ -10,7 +10,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
   Andrew at South Fraser for the idea and the first version. Distances come from SAR Duty's
   own copy and are looked up once, so the page opens at once.
 - Members check their own travel: it's on the activity's page and their Dashboard, with
-  That's right or Change, until the activity is published.
+  That's right or Change, until the activity is published. Travel can email them to
+  check, and says who has.
 - The Dashboard's numbers and charts open the reports that draw them, so you can see how
   each is counted and copy one. Its numbers' lines now cover this year.
 - ⭐ Reports draw charts: end one with `chart columns`, `lines`, `stat`, `bars`,

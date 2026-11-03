@@ -70,6 +70,16 @@ defmodule App.ViewData.ActivityTravel do
   def travel_text("passenger"), do: "Passenger"
   def travel_text("other"), do: "Other"
 
+  @doc ~s(A trip in a sentence: "drove to the ICP, 62 km there and back from home".)
+  def trip_text(%{travel: "icp", km: km}),
+    do: "drove to the ICP, #{Format.km(km)} there and back from home"
+
+  def trip_text(%{travel: "yard", km: km}),
+    do: "drove to the yard, #{Format.km(km)} there and back from home"
+
+  def trip_text(%{travel: "passenger"}), do: "a passenger, #{Format.km(0)}"
+  def trip_text(%{travel: "other", km: km}), do: "#{Format.km(km)} there and back"
+
   @doc """
   What to paste into a browser agent with D4H's mileage page open: the activity by its
   reference and link, how to fill each km box without saving, then one line per row set

@@ -228,6 +228,14 @@ defmodule App.Model.Attendance do
     )
   end
 
+  @doc "The member's rows on an activity, oldest first, whatever their status."
+  def for_member_on(%Activity{} = activity, %Member{} = member) do
+    Attendance
+    |> where([r], r.activity_id == ^activity.id and r.member_id == ^member.id)
+    |> order_by([r], asc: r.started_at, asc: r.id)
+    |> Repo.all()
+  end
+
   @doc "How many members attended the activity by `now`."
   def attended_count(%Activity{} = activity, %DateTime{} = now) do
     Attendance

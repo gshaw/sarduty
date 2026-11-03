@@ -9,7 +9,8 @@ defmodule App.Operation.SendActivityUpdate do
   plan/1 says who can get one, pure. call/6 records a queued row per update with its
   job, in one transaction. App.Worker.SendActivityUpdateWorker then sends each with
   deliver/3, retrying a refusal. Remove members (#704) queues its message to a signed up
-  member here too, as a `:removal`.
+  member here too, as a `:removal`, and Travel (#230) its ask to check, as a
+  `:travel_check`.
   """
   alias App.Accounts.User
   alias App.Mailer.ActivityMailer
@@ -18,6 +19,7 @@ defmodule App.Operation.SendActivityUpdate do
   alias App.Model.Attendance
   alias App.Model.Member
   alias App.Model.Team
+  alias App.Model.Trip
   alias App.Operation.SendReminders
   alias App.Repo
   alias App.Validate.Message
@@ -113,7 +115,7 @@ defmodule App.Operation.SendActivityUpdate do
   row and its job commit together, or neither does.
   """
   def queue(%Activity{} = activity, %Member{} = member, %User{} = user, message, now, kind)
-      when kind in [:update, :removal] do
+      when kind in [:update, :removal, :travel_check] do
     {:ok, update} =
       Repo.transaction(fn ->
         update =
@@ -159,6 +161,23 @@ defmodule App.Operation.SendActivityUpdate do
     end
   end
 
+  defp deliver_queued(%ActivityUpdate{kind: :travel_check} = update, last?, now) do
+    unchecked = unchecked_trips(update.activity, update.member)
+
+    cond do
+      Activity.locked?(update.activity) or update.activity.deleted_at ->
+        ActivityUpdate.fail!(update, "The activity was published before it went.")
+        {:cancel, "the activity was published"}
+
+      unchecked == [] ->
+        ActivityUpdate.fail!(update, "The member checked their travel before it went.")
+        {:cancel, "the member checked their travel"}
+
+      true ->
+        send_email(update, {:travel_check, unchecked}, last?, now)
+    end
+  end
+
   defp deliver_queued(%ActivityUpdate{activity: activity, member: member} = update, last?, now) do
     invitation = Attendance.invitation(activity, member)
 
@@ -175,6 +194,19 @@ defmodule App.Operation.SendActivityUpdate do
         send_email(update, ActivityMailer.update_ending(invitation.status, member), last?, now)
     end
   end
+
+  # The member's unchecked trips on attended rows, each with its row's start, oldest first.
+  defp unchecked_trips(activity, member) do
+    trips = Trip.for_member(activity, member)
+
+    for row <- Attendance.for_member_on(activity, member),
+        trip = trips[row.d4h_attendance_id],
+        trip && !trip.checked_at,
+        do: {row.started_at, trip}
+  end
+
+  defp deliver_email(update, team, sender, {:travel_check, trips}),
+    do: ActivityMailer.deliver_travel_check(update.member, update.activity, team, sender, trips)
 
   defp deliver_email(update, team, sender, :removed),
     do:

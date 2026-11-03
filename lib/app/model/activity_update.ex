@@ -23,7 +23,7 @@ defmodule App.Model.ActivityUpdate do
     field :message, :string, redact: true
     field :sent_at, :utc_datetime_usec
     field :status, Ecto.Enum, values: [:queued, :sent, :failed]
-    field :kind, Ecto.Enum, values: [:update, :removal], default: :update
+    field :kind, Ecto.Enum, values: [:update, :removal, :travel_check], default: :update
     field :error, :string
     timestamps(type: :utc_datetime_usec)
   end
