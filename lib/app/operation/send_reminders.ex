@@ -19,6 +19,7 @@ defmodule App.Operation.SendReminders do
   alias App.Mailer.ActivityMailer
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.DemoTeam
   alias App.Model.Member
   alias App.Model.Reminder
   alias App.Model.Standing
@@ -108,9 +109,14 @@ defmodule App.Operation.SendReminders do
     retiring = Standing.retiring_ids(team)
     %{send: emails} = plan(invited_rows(activity), Reminder.for_activity(activity), retiring)
 
-    for email <- emails,
-        MapSet.member?(ids, email.member.id),
-        do: queue(activity, email.member, user, message, now)
+    picked = for email <- emails, MapSet.member?(ids, email.member.id), do: email.member
+    {go, demo_copies} = DemoTeam.one_copy(team, picked)
+
+    Enum.map(go, &queue(activity, &1, user, message, now)) ++
+      Enum.map(
+        demo_copies,
+        &(activity |> row(&1, user, message, now) |> Repo.insert!() |> Reminder.sent!())
+      )
   end
 
   @doc """

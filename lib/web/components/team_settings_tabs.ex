@@ -4,7 +4,9 @@ defmodule Web.Components.TeamSettingsTabs do
   # Team settings is one link in the side navigation (#406); its pages are tabs under one
   # title, a topic each: the team and what it has turned on, then its members, its
   # letters, and its activities. Access key is last: it's rarely needed (#727).
-  # Chore categories shows with chores on, and Agents with Agents on.
+  # Chore categories shows with chores on, and Agents with Agents on. A Try a demo team
+  # has no Access key tab: its key is SAR Duty's, and a real key pasted there would make
+  # it a real team (#857).
 
   attr :team, :map, required: true
 
@@ -65,7 +67,11 @@ defmodule Web.Components.TeamSettingsTabs do
       >
         Agents
       </:tab>
-      <:tab navigate={~p"/teams/#{@team}/settings/access-key"} current={@current == :access_key}>
+      <:tab
+        :if={!App.Model.DemoTeam.demo?(@team)}
+        navigate={~p"/teams/#{@team}/settings/access-key"}
+        current={@current == :access_key}
+      >
         Access key
       </:tab>
     </.tabs>

@@ -3,6 +3,7 @@ defmodule Web.VerifyLetterLive do
 
   import Web.Components.Verify
 
+  alias App.Model.DemoTeam
   alias App.Model.TaxCreditLetter
   alias Service.Format
   alias Web.VerifyLimit
@@ -83,6 +84,8 @@ defmodule Web.VerifyLetterLive do
       ref_id: letter.ref_id,
       member: letter.member,
       team: letter.member.team,
+      # A Try a demo team's letter: a visitor made it (#857).
+      sample: DemoTeam.demo?(letter.member.team_id),
       year: letter.year,
       certified_at: letter.inserted_at,
       primary_minutes: letter.primary_minutes,
@@ -178,6 +181,9 @@ defmodule Web.VerifyLetterLive do
   defp result(assigns) do
     ~H"""
     <div id="result-issued">
+      <.band :if={@result.sample} id="result-sample" kind={:info} title="Sample letter" class="mb-4">
+        Made up for demos. It is not a real member's, so never accept it.
+      </.band>
       <.band kind={:success} title="Issued by the team">
         Verified just now
       </.band>

@@ -6,7 +6,7 @@ defmodule App.Mailer.TaxCreditLetterMailer do
 
   require Logger
 
-  defp deliver_with_attachment(recipient, subject, body, attachment) do
+  defp deliver_with_attachment(letter, recipient, subject, body, attachment) do
     email =
       new()
       |> to(recipient)
@@ -20,6 +20,7 @@ defmodule App.Mailer.TaxCreditLetterMailer do
           content_type: attachment.content_type
         )
       )
+      |> Mailer.for_team(letter.member.team, letter.member.name)
 
     case Mailer.deliver(email) do
       {:ok, metadata} ->
@@ -37,7 +38,7 @@ defmodule App.Mailer.TaxCreditLetterMailer do
     attachment = BuildTaxCreditLetterAttachment.call(letter)
     subject = attachment.title
 
-    deliver_with_attachment(email, subject, body(letter), attachment)
+    deliver_with_attachment(letter, email, subject, body(letter), attachment)
   end
 
   @doc "The email's text: what the letter is for, and who answers questions about it."

@@ -17,6 +17,7 @@ defmodule App.Operation.SendActivityUpdate do
   alias App.Model.Activity
   alias App.Model.ActivityUpdate
   alias App.Model.Attendance
+  alias App.Model.DemoTeam
   alias App.Model.Member
   alias App.Model.Team
   alias App.Operation.SendReminders
@@ -97,17 +98,30 @@ defmodule App.Operation.SendActivityUpdate do
       message == nil -> {:error, :no_message}
       not Message.fits?(message) -> {:error, :message_too_long}
       MapSet.size(ids) == 0 -> {:error, :none_selected}
-      true -> {:ok, queue_picked(activity, user, ids, message, now)}
+      true -> {:ok, queue_picked(team, activity, user, ids, message, now)}
     end
   end
 
-  defp queue_picked(activity, user, ids, message, now) do
+  # A demo team's send is one email to its visitor; the rest are marked sent (#857).
+  defp queue_picked(team, activity, user, ids, message, now) do
     %{groups: groups} = activity |> ActivityMembers.load() |> plan()
 
-    for {_status, rows} <- groups,
-        row <- rows,
-        MapSet.member?(ids, row.member.id),
-        do: queue(activity, row.member, user, message, now, :update)
+    picked =
+      for {_status, rows} <- groups,
+          row <- rows,
+          MapSet.member?(ids, row.member.id),
+          do: row.member
+
+    {go, demo_copies} = DemoTeam.one_copy(team, picked)
+
+    Enum.map(go, &queue(activity, &1, user, message, now, :update)) ++
+      Enum.map(
+        demo_copies,
+        &(activity
+          |> update_row(&1, user, message, now, :update)
+          |> Repo.insert!()
+          |> ActivityUpdate.sent!())
+      )
   end
 
   @doc "What a call/6 error says."
@@ -124,23 +138,26 @@ defmodule App.Operation.SendActivityUpdate do
       when kind in [:update, :removal] do
     {:ok, update} =
       Repo.transaction(fn ->
-        update =
-          Repo.insert!(%ActivityUpdate{
-            team_id: activity.team_id,
-            activity_id: activity.id,
-            member_id: member.id,
-            sent_by_user_id: user.id,
-            message: message,
-            sent_at: now,
-            status: :queued,
-            kind: kind
-          })
+        update = activity |> update_row(member, user, message, now, kind) |> Repo.insert!()
 
         SendActivityUpdateWorker.enqueue(update)
         update
       end)
 
     update
+  end
+
+  defp update_row(activity, member, user, message, now, kind) do
+    %ActivityUpdate{
+      team_id: activity.team_id,
+      activity_id: activity.id,
+      member_id: member.id,
+      sent_by_user_id: user.id,
+      message: message,
+      sent_at: now,
+      status: :queued,
+      kind: kind
+    }
   end
 
   @doc """

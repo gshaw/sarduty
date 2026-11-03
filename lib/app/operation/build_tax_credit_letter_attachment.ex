@@ -1,4 +1,5 @@
 defmodule App.Operation.BuildTaxCreditLetterAttachment do
+  alias App.Model.DemoTeam
   alias App.Model.Organization
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
@@ -17,7 +18,8 @@ defmodule App.Operation.BuildTaxCreditLetterAttachment do
         creator: "SARDuty.com",
         logos: logos(team),
         content: tax_credit_letter.letter_content,
-        qr_url: qr_url(tax_credit_letter)
+        qr_url: qr_url(tax_credit_letter),
+        sample: DemoTeam.demo?(team)
       }
       |> Map.merge(signature_parts(tax_credit_letter))
       |> PDFLetter.build()

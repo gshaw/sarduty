@@ -1,4 +1,5 @@
 defmodule App.Operation.BuildApplePass do
+  alias App.Model.DemoTeam
   alias App.Model.MemberCard
   alias App.Operation.BuildCardQualifications
   alias App.Operation.LoadImage
@@ -58,6 +59,8 @@ defmodule App.Operation.BuildApplePass do
   def pass_json(%MemberCard{member: member} = card, qualifications, config, now) do
     team = member.team
     code = MemberCard.format_code(card.code)
+    # A Try a demo card says so, front and centre (#857).
+    sample? = DemoTeam.demo?(team)
 
     %{
       formatVersion: 1,
@@ -68,7 +71,7 @@ defmodule App.Operation.BuildApplePass do
       serialNumber: MemberCard.serial_number(card),
       organizationName: team.name,
       description: "#{team.name} member ID card",
-      logoText: team.name,
+      logoText: if(sample?, do: "Sample card", else: team.name),
       backgroundColor: @background_color,
       foregroundColor: @foreground_color,
       labelColor: @label_color,
@@ -79,7 +82,7 @@ defmodule App.Operation.BuildApplePass do
         # No header fields: they share the top row with the team name, which Wallet
         # then cuts short.
         primaryFields: [
-          %{key: "name", label: name_label(card, now), value: member.name}
+          %{key: "name", label: name_label(card, sample?, now), value: member.name}
         ],
         secondaryFields: secondary_fields(card, now),
         backFields: back_fields(card, code, qualifications)
@@ -191,7 +194,14 @@ defmodule App.Operation.BuildApplePass do
     ])
   end
 
-  defp name_label(card, now) do
+  defp name_label(card, true = _sample?, now) do
+    case MemberCard.status(card, now) do
+      :active -> "Sample, not real ID"
+      _other -> name_label(card, false, now)
+    end
+  end
+
+  defp name_label(card, false, now) do
     case MemberCard.status(card, now) do
       :active -> "Member"
       :inactive -> "Not an active member"

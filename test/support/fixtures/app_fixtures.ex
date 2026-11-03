@@ -215,6 +215,16 @@ defmodule App.DataFixtures do
     %{user: user, team: team}
   end
 
+  @doc "Makes `team` a visitor's Try a demo copy (#857), with the visitor's name and email."
+  def demo_team_fixture(%Team{} = team, attrs \\ %{}) do
+    Repo.insert!(%App.Model.DemoTeam{
+      team_id: team.id,
+      name: Map.get(attrs, :name, "Morgan Visitor"),
+      email: Map.get(attrs, :email, "morgan#{System.unique_integer([:positive])}@example.com"),
+      expires_at: DateTime.utc_now(:second) |> DateTime.add(7, :day)
+    })
+  end
+
   @doc "A PKCE verifier and its S256 challenge (RFC 7636)."
   def pkce_fixture do
     verifier = "verifier-" <> String.duplicate("a", 43)

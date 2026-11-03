@@ -2,6 +2,7 @@ defmodule App.Model.Member do
   use App, :model
 
   alias App.Model.Attendance
+  alias App.Model.DemoTeam
   alias App.Model.GroupMember
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
@@ -443,9 +444,12 @@ defmodule App.Model.Member do
     |> Enum.uniq()
   end
 
+  # A demo team's numbers are whatever a visitor typed, so text login never texts one
+  # (#857).
   defp current_phones_and_emails(now) do
     Member
     |> where([m], not is_nil(m.phone) and not is_nil(m.email))
+    |> where([m], m.team_id not in subquery(DemoTeam.team_ids_query()))
     |> current_query(now)
     |> select([m], {m.phone, m.email})
   end

@@ -1,4 +1,5 @@
 defmodule App.Operation.CheckMemberCard do
+  alias App.Model.DemoTeam
   alias App.Model.MemberCard
   alias App.Operation.BuildCardQualifications
 
@@ -7,7 +8,8 @@ defmodule App.Operation.CheckMemberCard do
   check (Web.CardApiController) both ask here. `%{status: :not_found, sample:, code:}` when
   no card has it, else `%{status:, card:, sample:, qualifications:}`, with qualifications
   only for an active card. A sample card's code (#854) is looked up in Coast Range SAR's
-  own database, never the real one.
+  own database, never the real one. A Try a demo team's card is a sample too: a visitor
+  made it (#857).
   """
   def call(code, now \\ DateTime.utc_now()) do
     sample? = MemberCard.sample_code?(code)
@@ -20,7 +22,7 @@ defmodule App.Operation.CheckMemberCard do
         %{
           status: status,
           card: card,
-          sample: sample?,
+          sample: sample? or DemoTeam.demo?(card.member.team_id),
           qualifications: qualifications(status, card, now, repo)
         }
 

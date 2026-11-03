@@ -2,6 +2,7 @@ defmodule App.Operation.BuildGooglePass do
   use Web, :verified_routes
 
   alias App.Adapter.GoogleWallet
+  alias App.Model.DemoTeam
   alias App.Model.MemberCard
   alias App.Operation.BuildCardQualifications
   alias App.Repo
@@ -103,6 +104,8 @@ defmodule App.Operation.BuildGooglePass do
   def pass_object(%MemberCard{member: member} = card, qualifications, config, now) do
     team = member.team
     status = MemberCard.status(card, now)
+    # A Try a demo card says so, front and centre (#857).
+    sample? = DemoTeam.demo?(team)
 
     %{
       id: object_id(card, config),
@@ -110,8 +113,8 @@ defmodule App.Operation.BuildGooglePass do
       # An expired pass moves to "Expired passes" in Wallet.
       state: if(status == :revoked, do: "EXPIRED", else: "ACTIVE"),
       hexBackgroundColor: @background_color,
-      cardTitle: localized(team.name),
-      subheader: localized(name_label(status)),
+      cardTitle: localized(if(sample?, do: "Sample card", else: team.name)),
+      subheader: localized(name_label(status, sample?)),
       header: localized(member.name),
       textModulesData: texts(card, qualifications, status)
     }
@@ -234,9 +237,10 @@ defmodule App.Operation.BuildGooglePass do
 
   defp localized(value), do: %{defaultValue: %{language: "en", value: value}}
 
-  defp name_label(:active), do: "Member"
-  defp name_label(:inactive), do: "Not an active member"
-  defp name_label(:revoked), do: "Card cancelled"
+  defp name_label(:active, true = _sample?), do: "Sample, not real ID"
+  defp name_label(:active, _sample?), do: "Member"
+  defp name_label(:inactive, _sample?), do: "Not an active member"
+  defp name_label(:revoked, _sample?), do: "Card cancelled"
 
   defp status_text(:active), do: "Active"
   defp status_text(:inactive), do: "Not active"
