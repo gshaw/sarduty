@@ -100,12 +100,21 @@ defmodule App.Report do
   `team_admin?: false` it's a member's page: the catalog's fields and values for members,
   and only the controls that read them.
   """
-  def page(text, %Team{} = team, given \\ %{}, now \\ DateTime.utc_now(), opts \\ []) do
-    context = Context.new(team, now, opts)
+  def page(text, %Team{} = team, given \\ %{}, now \\ DateTime.utc_now(), opts \\ []),
+    do: page_in(Context.new(team, now, opts), text, given)
 
+  @doc """
+  page/5 on a context built once (#826), so a page of chart reports, such as the
+  Dashboard, reads the team's tags, groups, and years once.
+  """
+  def page_in(%Context{} = context, text, given \\ %{}) do
     with {:ok, query} <- parse(text, context),
          :ok <- check_page(query, context, given),
-         {:ok, menus} <- menus(query, context),
+         do: view(query, context, given)
+  end
+
+  defp view(query, context, given) do
+    with {:ok, menus} <- menus(query, context),
          {:ok, starts} <- starts(query, given, menus, context) do
       picks = Picks.resolve(query, given, context.today, menus)
       build_view(query, picks, menus, starts, context)

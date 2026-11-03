@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- The Dashboard's numbers and charts open the reports that draw them, so you can see how
+  each is counted and copy one. Its numbers' lines now cover this year.
 - ⭐ Reports draw charts: end one with `chart columns`, `lines`, `stat`, `bars`,
   `calendar`, `week`, or `map`. Activities by month, the Dashboard's numbers, Every day out,
   When incidents start, and Where the team went are built-in chart reports to copy.

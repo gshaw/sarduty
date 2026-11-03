@@ -569,6 +569,19 @@ defmodule Web.TeamDashboardLiveTest do
     assert render_async(lv) =~ "Activities by month"
     assert has_element?(lv, "#stat-incidents", "1")
     assert has_element?(lv, "#activity-calendar")
+
+    # Each opens its built-in report (#826).
+    assert has_element?(
+             lv,
+             ~s{#stat-incidents a[href="/teams/#{team.subdomain}/reports/incidents-this-year"]}
+           )
+
+    assert has_element?(
+             lv,
+             ~s{#chart-title-activities-by-month[href="/teams/#{team.subdomain}/reports/activities-by-month"]}
+           )
+
+    assert has_element?(lv, ~s{#chart-title-where-the-team-went})
   end
 
   describe "for a member" do
@@ -605,7 +618,9 @@ defmodule Web.TeamDashboardLiveTest do
       assert has_element?(lv, "#to-do-empty")
       assert has_element?(lv, "#side-nav-dashboard[aria-current=page]")
       refute has_element?(lv, "#side-nav-groups")
+      render_async(lv)
       assert has_element?(lv, ~s{#stat-members a[href="/teams/#{team.subdomain}/members"]})
+      refute has_element?(lv, "#chart-title-activities-by-month")
     end
 
     test "Coming up links to each activity's page from its title", %{conn: conn, team: team} do
