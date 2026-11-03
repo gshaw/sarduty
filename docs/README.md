@@ -134,6 +134,7 @@ have decided since the page loaded, stays in `call`.
 - [mcp.md](mcp.md) — the MCP endpoint: connecting agents with OAuth, the report tools, and the call log.
 - [reports.md](reports.md) — reports: the query language, the catalog of fields, how a query runs, and Coast Range SAR, the made-up team agents try them on.
 - [taking-attendance.md](taking-attendance.md) — Take attendance: who scans ID cards at an activity and when, the times they record, and sending them to D4H.
+- [travel.md](travel.md) — Travel: how each member got to an activity, the km it counts, and copying it into D4H.
 - [sar-command-assist.md](sar-command-assist.md) — SAR Command Assist, the incident tool many teams run beside SAR Duty, and where the two meet.
 - [organizations.md](organizations.md) — parent organizations like BCSARA, their branding, and giving one its own verify host.
 - [jobs.md](jobs.md) — background jobs: when work is a job, how one is shaped, and how it reports a failure.

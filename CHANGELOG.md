@@ -4,9 +4,11 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
-- The mileage report opens at once from SAR Duty's copy, with a row for each day a member
-  came. Each home and route is looked up once, and one route Mapbox can't find no longer
-  breaks the report. It shows km only now, not driving hours.
+- ⭐ Travel replaces the mileage report. After an activity, check members and set how they
+  got there: drove to the ICP or the yard, a passenger, or km you type. SAR Duty saves it,
+  and a browser agent such as Claude in Chrome can copy the km into D4H for you. Thanks to
+  Andrew at South Fraser for the idea and the first version. Distances come from SAR Duty's
+  own copy and are looked up once, so the page opens at once.
 - The Dashboard's numbers and charts open the reports that draw them, so you can see how
   each is counted and copy one. Its numbers' lines now cover this year.
 - ⭐ Reports draw charts: end one with `chart columns`, `lines`, `stat`, `bars`,

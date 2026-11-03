@@ -70,7 +70,7 @@ defmodule Web.MemberFormLive do
       </.input>
       <.input field={@form[:phone]} type="tel" label="Mobile phone (optional)" />
       <.input field={@form[:address]} type="textarea" rows="3" label="Address (optional)">
-        For the mileage report and tax credit letters.
+        For travel and tax credit letters.
       </.input>
       <%!-- Side by side only where a date fits in half the width. --%>
       <div class="grid md:grid-cols-2 gap-x-6">
