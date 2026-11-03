@@ -26,6 +26,8 @@
 
 .chart { position: relative; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .chart-title { font-size: var(--fs-md); line-height: var(--lh-md); font-weight: 700; color: var(--text); margin: 0; }
+/* A title that opens its report is blue, like a stat's label. */
+.chart-title a { color: var(--link); }
 .chart-caption { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); margin: 0 0 var(--sp-3); }
 
 .chart-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); margin: 0 0 var(--sp-3); padding: 0; list-style: none; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text); }
