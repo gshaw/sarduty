@@ -16,6 +16,10 @@ defmodule Web.ReportFormLive do
   admin has typed since the agent's last query, a new one waits in a toast instead of
   overwriting their typing. Nothing is saved until they save.
 
+  The name is the page's title and the description the line under it (#834); Rename shows
+  their fields, as does a save they stop. While following a draft the query folds to one
+  line, since the agent writes it; Show query opens it, as does stopping or a mistake in it.
+
   Changing a saved report asks What changed, kept in its History (#834); an agent's draft
   can fill it. `?version=<id>` is Restore from History: that version's name,
   description, and query, saved as a new version.
@@ -65,7 +69,9 @@ defmodule Web.ReportFormLive do
       context: Context.new(team, now),
       subject: Catalog.subject("members"),
       params: start,
-      agent: agent(params)
+      agent: agent(params),
+      renaming: false,
+      query_open: draft(params) == nil
     )
     |> assign_form(SavedReport.changeset(saved || %SavedReport{}, start))
     |> preview(start)
@@ -242,6 +248,11 @@ defmodule Web.ReportFormLive do
     {:noreply, assign_form(socket, changeset)}
   end
 
+  def handle_event("rename", _params, socket), do: {:noreply, assign(socket, renaming: true)}
+
+  def handle_event("show_query", _params, socket),
+    do: {:noreply, assign(socket, query_open: true)}
+
   def handle_event("load_draft", _params, socket) do
     case socket.assigns.draft_waiting do
       nil -> {:noreply, socket}
@@ -256,7 +267,13 @@ defmodule Web.ReportFormLive do
 
     {:noreply,
      socket
-     |> assign(draft: nil, draft_waiting: nil, draft_next: nil, draft_timer: nil)
+     |> assign(
+       draft: nil,
+       draft_waiting: nil,
+       draft_next: nil,
+       draft_timer: nil,
+       query_open: true
+     )
      |> put_flash(
        :info,
        "Stopped following #{Reports.possessive(agent)} draft. The form keeps what's in it."
@@ -271,7 +288,14 @@ defmodule Web.ReportFormLive do
         {:noreply, push_navigate(socket, to: ~p"/teams/#{team}/reports/#{report.id}")}
 
       {:error, changeset} ->
-        {:noreply, socket |> assign_form(changeset) |> preview(params)}
+        renaming =
+          Keyword.has_key?(changeset.errors, :name) or Keyword.has_key?(changeset.errors, :about)
+
+        {:noreply,
+         socket
+         |> assign(renaming: socket.assigns.renaming or renaming)
+         |> assign_form(changeset)
+         |> preview(params)}
     end
   end
 
@@ -376,7 +400,7 @@ defmodule Web.ReportFormLive do
       <:item label={@page_title} />
     </.breadcrumbs>
     <.heading_row>
-      <h1 class="title">{@page_title}</h1>
+      <h1 id="report-title" class="title">{title(@form, @page_title)}</h1>
       <:action>
         <.button id="report-save" form="report-form" variant={:success} phx-disable-with="Saving…">
           Save report
@@ -384,6 +408,10 @@ defmodule Web.ReportFormLive do
         <.button id="report-cancel" navigate={cancel_path(@current_team, @saved)}>Cancel</.button>
       </:action>
     </.heading_row>
+    <p :if={about(@form) || !@renaming} id="report-about" class="lead">
+      {about(@form)}
+      <.a :if={!@renaming} id="report-rename" href="#" phx-click="rename">Rename</.a>
+    </p>
 
     <div id="report-editor" class="content-wrapper report-editor" phx-hook="HelpToggle">
       <aside id="report-fields" class="content-1/3 report-help">
@@ -455,10 +483,12 @@ defmodule Web.ReportFormLive do
         </.banner>
         <.form for={@form} id="report-form" phx-change="change" phx-submit="save">
           <.error_summary form={@form} />
-          <.input field={@form[:name]} type="text" label="Name" maxlength="80" />
-          <.input field={@form[:about]} type="text" label="Description" maxlength="200">
-            One line under the name on Reports.
-          </.input>
+          <div :if={@renaming} id="report-names" phx-mounted={JS.focus(to: "#report_name")}>
+            <.name_fields form={@form} />
+          </div>
+          <div :if={!@renaming} id="report-names-hidden" hidden>
+            <.name_fields form={@form} />
+          </div>
           <.input
             :if={@saved}
             field={@form[:change]}
@@ -473,8 +503,14 @@ defmodule Web.ReportFormLive do
             <.a id="report-hide-help" href="#" data-help="hide">Hide help</.a>
             <.a id="report-show-help" href="#" data-help="show">Show help</.a>
           </p>
+          <p :if={!query_shown?(assigns)} id="report-query-folded" class="mb-6">
+            <strong>Query</strong>
+            <span class="hint">{query_summary(@form, @subject)}</span>
+            <.a id="report-show-query" href="#" phx-click="show_query">Show query</.a>
+          </p>
           <.input
             field={@form[:query]}
+            field_class={!query_shown?(assigns) && "hidden"}
             type="textarea"
             label="Query"
             rows="9"
@@ -513,6 +549,36 @@ defmodule Web.ReportFormLive do
       </div>
     </div>
     """
+  end
+
+  attr :form, :map, required: true
+
+  defp name_fields(assigns) do
+    ~H"""
+    <.input field={@form[:name]} type="text" label="Name" maxlength="80" />
+    <.input field={@form[:about]} type="text" label="Description" maxlength="200">
+      One line under the name on Reports.
+    </.input>
+    """
+  end
+
+  # The name as it stands is the page's title; until there is one, New report.
+  defp title(form, page_title), do: blank_or(form[:name].value, page_title)
+  defp about(form), do: blank_or(form[:about].value, nil)
+
+  defp blank_or(value, default) do
+    case String.trim(value || "") do
+      "" -> default
+      text -> text
+    end
+  end
+
+  # The agent writes the query while the page follows its draft; a mistake shows it.
+  defp query_shown?(assigns), do: assigns.query_open or assigns.query_error != nil
+
+  defp query_summary(form, subject) do
+    lines = (form[:query].value || "") |> String.trim() |> String.split("\n") |> length()
+    Format.count(lines, one: "%d line", many: "%d lines") <> ", from " <> subject.name
   end
 
   defp field_text(field), do: Expr.example(field)

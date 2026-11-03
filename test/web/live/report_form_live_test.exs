@@ -163,6 +163,35 @@ defmodule Web.ReportFormLiveTest do
     assert has_element?(lv, "#report-errors", "activities has no field hour_tags")
   end
 
+  test "the name is the title, and Rename shows its fields", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    params = %{query: "select name from members", name: "Everyone", about: "All of us"}
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new?#{params}")
+
+    assert has_element?(lv, "h1#report-title", "Everyone")
+    assert has_element?(lv, "#report-about.lead", "All of us")
+    assert has_element?(lv, "#report-names-hidden[hidden] #report_name")
+
+    lv |> form("#report-form", report: %{name: "Members"}) |> render_change()
+    assert has_element?(lv, "h1#report-title", "Members")
+
+    lv |> element("#report-rename") |> render_click()
+    assert has_element?(lv, "#report-names:not([hidden]) #report_name")
+    refute has_element?(lv, "#report-rename")
+  end
+
+  test "a new report is New report until named, and Save asks for a name", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+
+    assert has_element?(lv, "h1#report-title", "New report")
+    refute has_element?(lv, "#report-query-folded")
+
+    lv |> form("#report-form") |> render_submit()
+    assert has_element?(lv, "#report-names #report_name")
+    assert has_element?(lv, "#report-form", "Enter a name for the report")
+  end
+
   test "the name and description come first, Save is at the top, and help can hide",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
@@ -270,6 +299,30 @@ defmodule Web.ReportFormLiveTest do
 
       Draft.broadcast(team, user.id, "draft-one-id", draft("select name from members"))
       assert has_element?(lv, "#report_query", "select title from groups")
+    end
+
+    test "the query folds to a line while following, and opens on Show query or Stop",
+         %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      params = %{query: "select title\nfrom groups", agent: "Claude", draft: "draft-one-id"}
+      {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
+
+      assert has_element?(lv, "#report-query-folded", "2 lines, from groups")
+      assert has_element?(lv, ".hidden #report_query")
+
+      lv |> element("#report-show-query") |> render_click()
+      refute has_element?(lv, "#report-query-folded")
+      refute has_element?(lv, ".hidden #report_query")
+
+      {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
+      lv |> element("#report-draft-stop") |> render_click()
+      refute has_element?(lv, "#report-query-folded")
+
+      # A mistake in the agent's query shows the query, with the mistake on it.
+      {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
+      Draft.broadcast(team, user.id, "draft-one-id", draft("select nme from members"))
+      assert has_element?(lv, "#report-form", "members has no field nme")
+      refute has_element?(lv, "#report-query-folded")
     end
 
     test "names an agent that gave no name as an AI agent", %{conn: conn} do
