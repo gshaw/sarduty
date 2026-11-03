@@ -3,22 +3,38 @@ defmodule App.ViewData.Reports do
   The reports a team admin can run (#768): the team's own, then the built-in ones. Each
   is a map, so a page treats both the same: `id`, `name`, `about`, `query`, `values`,
   `shows` (the subject's label), and for the team's own, `saved`, `made_by`, and
-  `made_on`. A team's own report's `id` is its row's, a number; a built-in one's is its
+  `made_on`. Deleted reports are apart, under Recently deleted (#834). A team's own report's `id` is its row's, a number; a built-in one's is its
   slug, so the two never meet in a URL.
   """
 
   alias App.Model.Member
+  alias App.Model.ReportVersion
   alias App.Model.SavedReport
   alias App.Model.Team
   alias App.Report.BuiltIn
   alias App.Report.Catalog
   alias App.Report.Parser
 
-  @doc "`%{saved: reports, built_in: reports}`."
+  @doc "`%{saved: reports, built_in: reports, deleted: reports}`."
   def list(%Team{} = team, now) do
     %{
       saved: team |> SavedReport.get_all() |> Enum.map(&from_saved(&1, team, now)),
-      built_in: team |> BuiltIn.all() |> Enum.map(&from_built_in/1)
+      built_in: team |> BuiltIn.all() |> Enum.map(&from_built_in/1),
+      deleted: team |> SavedReport.get_deleted() |> Enum.map(&from_saved(&1, team, now))
+    }
+  end
+
+  @doc """
+  Who saved the report last and when, and the agent whose draft it came from:
+  `%{by: name, on: datetime, agent: name or nil}`, from its latest version.
+  """
+  def last_saved(%Team{} = team, %SavedReport{} = report, now) do
+    version = ReportVersion.latest(report)
+
+    %{
+      by: Member.name_for_user(team, version.user, now),
+      on: version.inserted_at,
+      agent: version.agent
     }
   end
 
@@ -29,6 +45,13 @@ defmodule App.ViewData.Reports do
       _slug -> team |> BuiltIn.get(id) |> then(&(&1 && from_built_in(&1)))
     end
   end
+
+  @doc """
+  An agent's name to own something: "Claude's", or "an AI agent's" for one that gave no
+  name, as AgentClient.display_name/2 calls it.
+  """
+  def possessive("An AI agent"), do: "an AI agent's"
+  def possessive(name), do: "#{name}'s"
 
   defp from_saved(report, team, now) do
     %{

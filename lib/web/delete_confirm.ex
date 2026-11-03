@@ -11,6 +11,7 @@ defmodule Web.DeleteConfirm do
   alias App.Model.Attendance
   alias App.Model.GroupRule
   alias App.Model.MemberQualificationAward
+  alias App.Model.SavedReport
   alias App.Model.Template
   alias App.Repo
   alias Service.Format
@@ -68,7 +69,7 @@ defmodule Web.DeleteConfirm do
   @doc "A saved report is only its query: the records it reads stay."
   def report(report) do
     simple(
-      "Delete the #{report.name} report? Its query goes for good. The records it reads stay.",
+      "Delete the #{report.name} report? It stays under Recently deleted on Reports for #{Format.days(SavedReport.deleted_days())}, then goes for good.",
       "Delete report"
     )
   end

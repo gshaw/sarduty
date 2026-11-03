@@ -80,6 +80,7 @@ defmodule Web.TeamScopingTest do
     # A team's own report (#768). A built-in one's id is its slug, the same on every team.
     "/teams/:subdomain/reports/:id",
     "/teams/:subdomain/reports/:id/edit",
+    "/teams/:subdomain/reports/:id/history",
     "/teams/:subdomain/reports/:id/csv"
   ]
 

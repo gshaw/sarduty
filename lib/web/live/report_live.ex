@@ -5,8 +5,8 @@ defmodule Web.ReportLive do
   filters, sortable headers, and pages (#784). Every pick rides in the URL, so two team
   admins can run it for different years; what the URL leaves out, a team's own report
   takes from the values saved with it. Download CSV gives the same rows, every page.
-  Its actions are a line of links under its description (`<.page_actions>`); Delete report
-  is one of them, for a team's own report.
+  Its actions are a line of links under its description (`<.page_actions>`); History and
+  Delete report are two of them, for a team's own report (#834).
   """
   use Web, :live_view_app_layout
 
@@ -36,6 +36,7 @@ defmodule Web.ReportLive do
     socket =
       socket
       |> assign(page_title: report.name, report: report, now: now)
+      |> assign(last_saved: report.saved && Reports.last_saved(team, report.saved, now))
       |> assign(fix: BuiltIn.fix(report.id, D4H.service(team)))
       |> run(report, given(params, report), now)
 
@@ -87,7 +88,10 @@ defmodule Web.ReportLive do
 
     {:noreply,
      socket
-     |> put_flash(:info, "Deleted the #{saved.name} report.")
+     |> put_flash(
+       :info,
+       "Deleted the #{saved.name} report. It stays under Recently deleted for #{Format.days(SavedReport.deleted_days())}."
+     )
      |> push_navigate(to: ~p"/teams/#{team}/reports")}
   end
 
@@ -101,11 +105,11 @@ defmodule Web.ReportLive do
     <h1 class="title">{@report.name}</h1>
     <p :if={@report.about} class="lead">{@report.about}</p>
     <.page_actions id="report-actions">
-      <:byline :if={@report.saved}>
-        Saved by {@report.made_by || "a team admin"} on {Format.date_short(
-          @report.made_on,
+      <:byline :if={@last_saved}>
+        Saved by {@last_saved.by || "a team admin"} on {Format.date_short(
+          @last_saved.on,
           @current_team.timezone
-        )}.
+        )}{from_draft(@last_saved.agent)}.
       </:byline>
       <:byline :if={!@report.saved}>Built in, part of SAR Duty.</:byline>
       <:action :if={@report.saved}>
@@ -119,6 +123,9 @@ defmodule Web.ReportLive do
       </:action>
       <:action :if={@csv_path}>
         <.a id="report-csv" href={@csv_path}>Download CSV</.a>
+      </:action>
+      <:action :if={@report.saved}>
+        <.a id="report-history" navigate={~p"/teams/#{@current_team}/reports/#{@report.id}/history"}>History</.a>
       </:action>
       <:action :if={@report.saved}>
         <.a
@@ -167,4 +174,7 @@ defmodule Web.ReportLive do
     </div>
     """
   end
+
+  defp from_draft(nil), do: nil
+  defp from_draft(agent), do: ", from #{Reports.possessive(agent)} draft"
 end

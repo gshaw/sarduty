@@ -14,7 +14,7 @@ defmodule App.Report.Draft do
 
   @id_bytes 12
 
-  defstruct [:query, :name, :about, :report_id, :agent, :at]
+  defstruct [:query, :name, :about, :change, :report_id, :agent, :at]
 
   @type t :: %__MODULE__{}
 
