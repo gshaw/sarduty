@@ -317,6 +317,39 @@ defmodule App.ReportTest do
     assert run!("select days_since(started_at) from activities", team).rows == [[166]]
   end
 
+  # A Saturday evening in Vancouver is a Sunday in UTC: each part reads the local time.
+  test "date, months_since, day_of_week, and hour read the team's day (#826)" do
+    team = team_fixture()
+    activity_fixture(team, %{started_at: ~U[2026-05-03 02:30:00Z]})
+
+    query =
+      "select date(started_at), months_since(started_at), day_of_week(started_at), hour(started_at) from activities"
+
+    assert run!(query, team).rows == [[~D[2026-05-02], 1, 6, 19]]
+    assert run!("select id from activities where months_since(started_at) < 1", team).rows == []
+
+    assert [[_id]] =
+             run!("select id from activities where months_since(started_at) < 2", team).rows
+
+    result =
+      run!(
+        "select day_of_week(started_at), count(id) from activities group by day_of_week(started_at)",
+        team
+      )
+
+    assert [%{type: :weekday}, _] = result.columns
+  end
+
+  test "sum of a condition counts the rows it holds for (#826)" do
+    team = team_fixture()
+    member_fixture(team, %{joined_at: ~U[2026-02-01 12:00:00Z]})
+    member_fixture(team, %{joined_at: ~U[2020-02-01 12:00:00Z]})
+
+    assert run!("select count(id), sum(joined_at = THIS_YEAR) from members", team).rows == [
+             [2, 1]
+           ]
+  end
+
   describe "format (#804)" do
     test "each field draws its own cell, and format picks another" do
       team = team_fixture()

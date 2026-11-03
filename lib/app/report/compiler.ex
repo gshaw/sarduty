@@ -132,7 +132,7 @@ defmodule App.Report.Compiler do
   defp each_values(%{type: :bool}, _expr, _st), do: {:choices, [{"Yes", "true"}, {"No", "false"}]}
 
   defp each_values(%{type: type} = e, _expr, st)
-       when type in [:year, :month, :quarter, :text, :number] do
+       when type in [:year, :month, :quarter, :weekday, :hour, :text, :number] do
     {sql, params} = Expr.id_sql(e)
 
     # GROUP BY, not DISTINCT: with DISTINCT, SQLite scans a parent's rows once per row
