@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Your AI agent's report now shows up in the report you have open: each try reruns the
+  rows on your records, and you save once. Start from the first link it gives you.
 - [How to write a report](https://sarduty.com/agents/reports): one page on the report
   language, linked from the editor. Point your AI agent at it and it has what it needs to
   write one.

@@ -13,6 +13,7 @@ defmodule Web.MCPControllerTest do
   alias App.Operation.DisconnectAgent
   alias App.Operation.SetTeamMCP
   alias App.Repo
+  alias App.Report.Draft
 
   setup do
     admin = make_admin(AccountsFixtures.user_fixture())
@@ -258,11 +259,45 @@ defmodule Web.MCPControllerTest do
       %URI{path: path, query: query} = URI.parse(output["link"])
       assert path == "/teams/#{team.subdomain}/reports/new"
 
+      draft = output["draft"]
+      assert Draft.id?(draft)
+
       assert URI.decode_query(query) == %{
                "query" => "select name, last_attended from members",
                "name" => "Last seen",
-               "agent" => "Laptop agent"
+               "agent" => "Laptop agent",
+               "draft" => draft
              }
+    end
+
+    test "check_report sends each query to the draft's editor, never to another admin", ctx do
+      %{conn: conn, team: team, token: token, user: user} = ctx
+      Draft.subscribe(team, user.id, "draft-one-id")
+      Draft.subscribe(team, user.id + 1, "draft-one-id")
+      Draft.subscribe(team, user.id, "draft-two-id")
+
+      {_result, text} =
+        call_tool(conn, token, team, "check_report", %{
+          "query" => "select name from members",
+          "draft" => "draft-one-id"
+        })
+
+      assert Jason.decode!(text)["draft"] == "draft-one-id"
+      assert_received {:report_draft, %Draft{} = draft}
+      assert draft.query == "select name from members"
+      assert draft.agent == "Laptop agent"
+      refute_received {:report_draft, _draft}
+    end
+
+    test "check_report's reply is the same whether or not an editor is open", ctx do
+      %{conn: conn, team: team, token: token, user: user} = ctx
+      args = %{"query" => "select name from members", "draft" => "draft-one-id"}
+
+      {_result, closed} = call_tool(conn, token, team, "check_report", args)
+      Draft.subscribe(team, user.id, "draft-one-id")
+      {_result, open} = call_tool(conn, token, team, "check_report", args)
+
+      assert closed == open
     end
 
     test "try_report runs on Coast Range SAR, never the team's records", ctx do
