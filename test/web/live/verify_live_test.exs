@@ -50,6 +50,29 @@ defmodule Web.VerifyLiveTest do
     assert has_element?(lv, "#result-active")
   end
 
+  test "after a scan, Verify another card opens the camera again", %{conn: conn, member: member} do
+    card = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/")
+    refute has_element?(lv, "#scanner[data-autostart]")
+
+    lv |> element("#scanner") |> render_hook("scanned", %{code: card.code})
+    assert has_element?(lv, ~s(#check-another[href="/?scan=1"]))
+
+    {:ok, lv, _html} = live(conn, ~p"/?scan=1")
+    assert has_element?(lv, "#scanner[data-autostart]")
+  end
+
+  test "after a typed code, Verify another card doesn't open the camera", %{
+    conn: conn,
+    member: member
+  } do
+    card = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/")
+
+    lv |> form("#check-form", check: %{code: card.code}) |> render_submit()
+    assert has_element?(lv, ~s(#check-another[href="/"]))
+  end
+
   test "a card's QR link opens straight to the check", %{conn: conn, member: member} do
     card = member_card_fixture(member)
 

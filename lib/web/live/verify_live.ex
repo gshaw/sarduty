@@ -25,15 +25,18 @@ defmodule Web.VerifyLive do
        page_title: "Verify a search and rescue ID card",
        scan_failed: false,
        sound_next: false,
+       scanned: false,
        client_ip: session["client_ip"]
      )}
   end
 
-  def handle_params(%{"slug" => slug}, _uri, socket) do
+  # ?scan=1 opens the camera: Verify another card after a scan comes back scanning.
+  def handle_params(%{"slug" => slug} = params, _uri, socket) do
     case Organization.get_by_slug(slug) do
       %Organization{} = organization ->
         socket =
           socket
+          |> assign(:autostart, params["scan"] == "1")
           |> assign(:form, to_form(%{"code" => ""}, as: "check"))
           |> assign(result: nil, organization: organization, start_path: ~p"/orgs/#{slug}")
 
@@ -52,7 +55,7 @@ defmodule Web.VerifyLive do
     socket =
       socket
       |> assign(:form, to_form(%{"code" => input}, as: "check"))
-      |> assign(result: result, organization: nil)
+      |> assign(result: result, organization: nil, autostart: params["scan"] == "1")
       |> assign(:start_path, if(organization, do: ~p"/orgs/#{organization}", else: ~p"/"))
       |> scan_sound(result)
 
@@ -60,10 +63,14 @@ defmodule Web.VerifyLive do
   end
 
   def handle_event("check", %{"check" => %{"code" => input}}, socket),
-    do: {:noreply, socket |> assign(sound_next: true) |> push_patch(to: path_for(input))}
+    do:
+      {:noreply,
+       socket |> assign(sound_next: true, scanned: false) |> push_patch(to: path_for(input))}
 
   def handle_event("scanned", %{"code" => input}, socket),
-    do: {:noreply, socket |> assign(sound_next: true) |> push_patch(to: path_for(input))}
+    do:
+      {:noreply,
+       socket |> assign(sound_next: true, scanned: true) |> push_patch(to: path_for(input))}
 
   def handle_event("scan_failed", _params, socket) do
     {:noreply, assign(socket, :scan_failed, true)}
@@ -147,7 +154,7 @@ defmodule Web.VerifyLive do
         member of their team, with their photo.
       </p>
 
-      <.qr_scanner label="Scan a card" class="mb-6" />
+      <.qr_scanner label="Scan a card" class="mb-6" data-autostart={@autostart} />
       <p :if={@scan_failed} id="scan-failed" class="text-danger-text">
         The camera did not start. Allow camera access, or type the code.
       </p>
@@ -196,12 +203,21 @@ defmodule Web.VerifyLive do
     </.band>
     <.result result={@result} />
     <div class="mt-6">
-      <.button id="check-another" navigate={@start_path} size={:lg} class="w-full">
+      <.button
+        id="check-another"
+        navigate={another_path(@start_path, @scanned)}
+        size={:lg}
+        class="w-full"
+      >
         Verify another card
       </.button>
     </div>
     """
   end
+
+  # After a scan, the camera opens again for the next card.
+  defp another_path(start_path, true = _scanned), do: start_path <> "?scan=1"
+  defp another_path(start_path, false), do: start_path
 
   defp result(%{result: %{status: :limited}} = assigns) do
     ~H"""

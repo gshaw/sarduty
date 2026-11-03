@@ -27,8 +27,9 @@ defmodule Web.Components.Scanner do
   attr :class, :any, default: nil
 
   attr :rest, :global,
-    include: ~w(data-continuous data-override-input),
-    doc: "data-continuous keeps scanning after a read; data-override-input names a time box"
+    include: ~w(data-autostart data-continuous data-override-input),
+    doc:
+      "data-autostart opens the camera on load; data-continuous keeps scanning after a read; data-override-input names a time box"
 
   slot :result, doc: "what the last read did, drawn over the picture" do
     attr :kind, :atom, required: true, values: [:success, :info, :danger]
