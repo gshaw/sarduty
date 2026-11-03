@@ -21,7 +21,7 @@ defmodule App.Report.Parser do
   @reserved ~w(q sort page id subdomain all)
   @max_page 500
   @functions ~w(count sum avg min max year month quarter lower upper days_since date months_since
-                day_of_week hour)
+                day_of_week hour number digits)
 
   @ranges ~w(NOW TODAY THIS_MONTH LAST_MONTH THIS_YEAR LAST_YEAR)
   @ranges_with_n ~w(LAST_N_DAYS NEXT_N_DAYS LAST_N_MONTHS)

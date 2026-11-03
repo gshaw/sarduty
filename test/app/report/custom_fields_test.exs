@@ -235,6 +235,41 @@ defmodule App.Report.CustomFieldsTest do
     assert error("select `Task Type` from activities", team) =~ "no field `Task Type`"
   end
 
+  # BCSARA keeps counts and file numbers in text fields.
+  test "number() reads the number in text, and blank, never 0, when it holds none", ctx do
+    count = custom_field_fixture(ctx.team, %{title: "How many helped?"})
+    incident(ctx.team, %{id(count) => "4"})
+    incident(ctx.team, %{id(count) => "2.5"})
+    incident(ctx.team, %{id(count) => "N/A"})
+    incident(ctx.team, %{})
+
+    assert [[6.5, 2]] =
+             run!(
+               "select sum(number(`How many helped?`)), count(number(`How many helped?`)) from activities",
+               ctx.team
+             )
+
+    assert error("select number(`People helped`) from activities", ctx.team) =~
+             "number reads a number from text. `People helped` is a number."
+  end
+
+  test "digits() keeps only the digits, so one file written two ways counts once", ctx do
+    file = custom_field_fixture(ctx.team, %{title: "Agency File #"})
+    incident(ctx.team, %{id(file) => "PROS#2025-123456"})
+    incident(ctx.team, %{id(file) => "2025-123456"})
+    incident(ctx.team, %{id(file) => "2025-7"})
+    incident(ctx.team, %{id(file) => "N/A"})
+
+    assert [[2]] =
+             run!("select count(distinct digits(`Agency File #`)) from activities", ctx.team)
+
+    assert [["2025123456"], ["2025123456"], ["20257"]] =
+             run!(
+               "select digits(`Agency File #`) from activities where digits(`Agency File #`) is not null order by digits(`Agency File #`)",
+               ctx.team
+             )
+  end
+
   test "a backtick is closed and holds a title", %{team: team} do
     assert error("select `Task Type from activities", team) =~ "Close the backtick"
     assert error("select `` from activities", team) =~ "Write a field's title"
