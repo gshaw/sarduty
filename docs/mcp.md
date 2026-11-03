@@ -64,8 +64,11 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
 [App.MCP.Tool](../lib/app/mcp/tool.ex) behaviour and a line in that list.
 
 - `report_fields`: the language page's text (`App.Report.Language`, #803), and the
-  team's names for things: groups, qualifications, tags, hours tags, and custom fields
-  with what they're on.
+  team's names for things: groups, qualifications, tags, hours tags, and custom fields.
+  The custom fields are exactly the ones a report reads (`App.Report.CustomFields`,
+  #840), each as a query writes it, `` `Task type` ``, with its subject, type, and a
+  choice's options: every live activity field, the member fields the team copies, and
+  items' fields. Never an answer.
 - `list_reports`: the built-in reports, the team's own, and the lists that run on
   reports, each with its name, description, and query. Never a saved report's values.
 - `check_report`: checks a query against the team's fields with `App.Report.check/4`,
@@ -87,7 +90,8 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
   (`App.Report.run_sample/3`), and gives back the first 50 rows as text, as the CSV
   writes them, marked `made_up`. The agent catches a wrong answer, such as no rows or a
   double count, before the team admin sees it. It never reads the connection's team. Its
-  output lists Coast Range SAR's groups, qualifications, and tags: a query that names
+  output lists Coast Range SAR's groups, qualifications, tags, and custom fields, one
+  of every type (Task type, People helped, Event leader on two kinds): a query that names
   the team's own, such as Wilderness First Aid for First aid, finds nothing there, so
   the agent tries with Coast Range's names and gives check_report the team's.
 

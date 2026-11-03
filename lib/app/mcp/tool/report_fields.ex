@@ -9,14 +9,12 @@ defmodule App.MCP.Tool.ReportFields do
   use Web, :verified_routes
 
   alias App.Model.Activity
-  alias App.Model.CustomField
   alias App.Model.Group
   alias App.Model.Qualification
   alias App.Model.Team
   alias App.Report.Catalog
+  alias App.Report.CustomFields
   alias App.Report.Language
-
-  @targets [{"activity", "activities"}, {"member", "members"}, {"equipment", "equipment"}]
 
   @impl App.MCP.Tool
   def name, do: "report_fields"
@@ -36,7 +34,7 @@ defmodule App.MCP.Tool.ReportFields do
   @impl App.MCP.Tool
   def fields,
     do: ~w(team language language_url groups qualifications tags hours_tags primary secondary
-         other custom_fields title on)
+         other custom_fields title write on type choices)
 
   @impl App.MCP.Tool
   def call(%Team{} = team, _args, _now, _connection) do
@@ -53,10 +51,20 @@ defmodule App.MCP.Tool.ReportFields do
 
   defp titles(records), do: Enum.map(records, & &1.title)
 
+  # Exactly the fields a report can read (App.Report.CustomFields), as a query writes them:
+  # an activity's for every kind, and a member's only when the team copies it.
   defp custom_fields(team) do
-    for {target, on} <- @targets,
-        field <- CustomField.get_all(team.id, target),
-        do: {field.title, on}
+    for {on, defs} when is_binary(on) <- CustomFields.read(team, App.Repo), d <- defs do
+      %{
+        "title" => d.title,
+        "write" => "`#{d.title}`",
+        "on" => on,
+        "type" => Atom.to_string(d.type),
+        "choices" =>
+          if(d.type in [:choice, :list], do: d.options |> Enum.map(&elem(&1, 1)) |> Enum.uniq())
+      }
+      |> Map.reject(fn {_key, value} -> is_nil(value) end)
+    end
   end
 
   @doc "The output, from the team's names for things."
@@ -73,8 +81,7 @@ defmodule App.MCP.Tool.ReportFields do
         "secondary" => names.hours_tags.secondary,
         "other" => names.hours_tags[:other]
       },
-      "custom_fields" =>
-        Enum.map(names.custom_fields, fn {title, on} -> %{"title" => title, "on" => on} end)
+      "custom_fields" => names.custom_fields
     }
   end
 end

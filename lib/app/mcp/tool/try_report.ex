@@ -13,6 +13,7 @@ defmodule App.MCP.Tool.TryReport do
   alias App.Model.Team
   alias App.Report
   alias App.Report.Catalog
+  alias App.Report.CustomFields
   alias App.Report.Error
   alias App.ViewData.ReportRecords
   alias Web.ReportCSV
@@ -48,7 +49,8 @@ defmodule App.MCP.Tool.TryReport do
   end
 
   @impl App.MCP.Tool
-  def fields, do: ~w(team made_up columns rows more names groups qualifications tags)
+  def fields,
+    do: ~w(team made_up columns rows more names groups qualifications tags custom_fields write on)
 
   @impl App.MCP.Tool
   def call(%Team{}, args, now, _connection) do
@@ -81,7 +83,13 @@ defmodule App.MCP.Tool.TryReport do
       "groups" => sample.id |> Group.get_all(App.SampleRepo) |> Enum.map(& &1.title),
       "qualifications" =>
         sample.id |> Qualification.get_all(App.SampleRepo) |> Enum.map(& &1.title),
-      "tags" => sample |> Catalog.read_tag_titles(App.SampleRepo) |> Enum.map(&elem(&1, 0))
+      "tags" => sample |> Catalog.read_tag_titles(App.SampleRepo) |> Enum.map(&elem(&1, 0)),
+      "custom_fields" =>
+        for(
+          {on, defs} when is_binary(on) <- CustomFields.read(sample, App.SampleRepo),
+          d <- defs,
+          do: %{"write" => "`#{d.title}`", "on" => on}
+        )
     }
   end
 
