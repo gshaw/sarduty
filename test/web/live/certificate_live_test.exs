@@ -4,6 +4,7 @@ defmodule Web.CertificateLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Adapter.D4H
   alias App.Model.Certificate
   alias App.Model.CertificateFile
   alias App.Model.MemberQualificationAward
@@ -107,7 +108,7 @@ defmodule Web.CertificateLiveTest do
   # Records has no pages for a team, so the fix is on the member's Qualifications tab.
   test "on a Records team, an accepted certificate links to Qualifications", ctx do
     ctx.team
-    |> Ecto.Changeset.change(d4h_api_host: App.Adapter.D4H.records_host())
+    |> Ecto.Changeset.change(d4h_api_host: D4H.records_host())
     |> Repo.update!()
 
     ctx.certificate
