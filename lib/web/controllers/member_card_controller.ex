@@ -7,7 +7,8 @@ defmodule Web.MemberCardController do
 
   # The photo on the verify site. Public, so it answers only for an active member's card:
   # not for a cancelled card, nor for a retired member (#176). Its 404s count
-  # toward the verify site's limit.
+  # toward the verify site's limit. A sample card (#854) gets the placeholder photo and
+  # never counts.
   def photo(conn, %{"code" => input}), do: send_limited_photo(conn, input, :square)
 
   # The photo centered in the Google pass's hero banner. Counts misses like the photo, so
@@ -16,26 +17,45 @@ defmodule Web.MemberCardController do
 
   defp send_limited_photo(conn, input, shape) do
     ip = VerifyLimit.client_ip(conn)
+    code = MemberCard.normalize_code(input)
 
-    if VerifyLimit.limited?(ip) do
-      send_resp(conn, :too_many_requests, "")
-    else
-      conn = send_photo(conn, input, shape)
-      if conn.status == 404, do: VerifyLimit.miss(ip)
-      conn
+    cond do
+      is_binary(code) and MemberCard.sample_code?(code) ->
+        send_sample_photo(conn, code, shape)
+
+      VerifyLimit.limited?(ip) ->
+        send_resp(conn, :too_many_requests, "")
+
+      true ->
+        conn = send_photo(conn, code, shape)
+        if conn.status == 404, do: VerifyLimit.miss(ip)
+        conn
     end
   end
 
-  defp send_photo(conn, input, shape) do
-    with code when is_binary(code) <- MemberCard.normalize_code(input),
+  defp send_photo(conn, code, shape) do
+    with code when is_binary(code) <- code,
          %MemberCard{} = card <- MemberCard.find_by_code(code),
          :active <- MemberCard.status(card, DateTime.utc_now()) do
-      conn
-      |> put_resp_header("cache-control", "private, max-age=300")
-      |> put_resp_content_type("image/png", nil)
-      |> send_resp(200, LoadImage.photo(card.member, shape))
+      send_png(conn, LoadImage.photo(card.member, shape))
     else
       _ -> send_resp(conn, :not_found, "")
     end
+  end
+
+  defp send_sample_photo(conn, code, shape) do
+    with %MemberCard{} = card <- MemberCard.find_by_code(code, App.SampleRepo),
+         :active <- MemberCard.status(card, DateTime.utc_now()) do
+      send_png(conn, LoadImage.placeholder_photo(shape))
+    else
+      _ -> send_resp(conn, :not_found, "")
+    end
+  end
+
+  defp send_png(conn, png) do
+    conn
+    |> put_resp_header("cache-control", "private, max-age=300")
+    |> put_resp_content_type("image/png", nil)
+    |> send_resp(200, png)
   end
 end

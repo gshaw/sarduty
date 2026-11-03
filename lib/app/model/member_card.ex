@@ -41,8 +41,17 @@ defmodule App.Model.MemberCard do
   @alphabet ~c"23456789ABCDEFGHJKMNPQRSTVWXYZ"
   @code_length 8
 
-  @doc "A new random code, stored without the dash: `K7Q4M2XA`."
-  def generate_code, do: random_chars(@code_length, "")
+  # Coast Range SAR's sample cards (App.CoastRange, #854) start with it, and no real card does.
+  @sample_prefix "SAMP"
+
+  @doc "A new random code, stored without the dash: `K7Q4M2XA`. Never a sample's."
+  def generate_code do
+    code = random_chars(@code_length, "")
+    if sample_code?(code), do: generate_code(), else: code
+  end
+
+  @doc "Whether a stored code is one of Coast Range SAR's sample cards, made up for demos."
+  def sample_code?(code), do: String.starts_with?(code, @sample_prefix)
 
   defp random_chars(0, acc), do: acc
 
@@ -160,11 +169,11 @@ defmodule App.Model.MemberCard do
     |> DateTime.shift_zone!("Etc/UTC")
   end
 
-  def find_by_code(code) do
+  def find_by_code(code, repo \\ Repo) do
     MemberCard
     |> where([c], c.code == ^code)
     |> preload(member: [team: :organization])
-    |> Repo.one()
+    |> repo.one()
   end
 
   def find_current(%Team{} = team, %Member{} = member) do

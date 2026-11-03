@@ -78,13 +78,13 @@ defmodule App.Model.Endorsement do
     do: Endorsement |> where([e], e.team_id == ^team_id and e.on_card) |> Repo.exists?()
 
   @doc "The team's endorsements with their qualifications, in name order."
-  def get_all(team_id) do
+  def get_all(team_id, repo \\ Repo) do
     Endorsement
     |> where([e], e.team_id == ^team_id)
     |> preload(endorsement_qualifications: [])
     |> order_by([e], asc: e.name)
-    |> Repo.all()
-    |> expand(team_id)
+    |> repo.all()
+    |> expand(team_id, repo)
   end
 
   @doc "Every qualification that earns it, following includes once a loader has."
@@ -96,11 +96,12 @@ defmodule App.Model.Endorsement do
     do: Enum.map(eqs, & &1.d4h_qualification_id)
 
   # Fills `included_ids` and `earned_by_ids` from the team's includes and qualifications.
-  defp expand([], _team_id), do: []
+  defp expand(endorsements, team_id, repo \\ Repo)
+  defp expand([], _team_id, _repo), do: []
 
-  defp expand(endorsements, team_id) do
-    includes = EndorsementInclude.included_ids_by_endorsement(team_id)
-    own = own_ids_by_endorsement(team_id)
+  defp expand(endorsements, team_id, repo) do
+    includes = EndorsementInclude.included_ids_by_endorsement(team_id, repo)
+    own = own_ids_by_endorsement(team_id, repo)
 
     Enum.map(endorsements, fn endorsement ->
       %{
@@ -111,13 +112,13 @@ defmodule App.Model.Endorsement do
     end)
   end
 
-  defp own_ids_by_endorsement(team_id) do
+  defp own_ids_by_endorsement(team_id, repo) do
     EndorsementQualification
     |> join(:inner, [eq], e in assoc(eq, :endorsement))
     |> where([eq, e], e.team_id == ^team_id)
     |> order_by([eq], asc: eq.id)
     |> select([eq], {eq.endorsement_id, eq.d4h_qualification_id})
-    |> Repo.all()
+    |> repo.all()
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 

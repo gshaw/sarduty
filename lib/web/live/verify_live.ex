@@ -25,15 +25,18 @@ defmodule Web.VerifyLive do
        page_title: "Verify a search and rescue ID card",
        scan_failed: false,
        sound_next: false,
+       scanned: false,
        client_ip: session["client_ip"]
      )}
   end
 
-  def handle_params(%{"slug" => slug}, _uri, socket) do
+  # ?scan=1 opens the camera: Verify another card after a scan comes back scanning.
+  def handle_params(%{"slug" => slug} = params, _uri, socket) do
     case Organization.get_by_slug(slug) do
       %Organization{} = organization ->
         socket =
           socket
+          |> assign(:autostart, params["scan"] == "1")
           |> assign(:form, to_form(%{"code" => ""}, as: "check"))
           |> assign(result: nil, organization: organization, start_path: ~p"/orgs/#{slug}")
 
@@ -52,7 +55,7 @@ defmodule Web.VerifyLive do
     socket =
       socket
       |> assign(:form, to_form(%{"code" => input}, as: "check"))
-      |> assign(result: result, organization: nil)
+      |> assign(result: result, organization: nil, autostart: params["scan"] == "1")
       |> assign(:start_path, if(organization, do: ~p"/orgs/#{organization}", else: ~p"/"))
       |> scan_sound(result)
 
@@ -60,10 +63,14 @@ defmodule Web.VerifyLive do
   end
 
   def handle_event("check", %{"check" => %{"code" => input}}, socket),
-    do: {:noreply, socket |> assign(sound_next: true) |> push_patch(to: path_for(input))}
+    do:
+      {:noreply,
+       socket |> assign(sound_next: true, scanned: false) |> push_patch(to: path_for(input))}
 
   def handle_event("scanned", %{"code" => input}, socket),
-    do: {:noreply, socket |> assign(sound_next: true) |> push_patch(to: path_for(input))}
+    do:
+      {:noreply,
+       socket |> assign(sound_next: true, scanned: true) |> push_patch(to: path_for(input))}
 
   def handle_event("scan_failed", _params, socket) do
     {:noreply, assign(socket, :scan_failed, true)}
@@ -93,31 +100,48 @@ defmodule Web.VerifyLive do
       %{status: :limited}
     else
       result = look_up(input)
-      if result.status == :not_found, do: VerifyLimit.miss(ip)
+      if result.status == :not_found and not result.sample, do: VerifyLimit.miss(ip)
       result
     end
   end
 
+  # A sample card's code (#854) is looked up in Coast Range SAR's own database, never the
+  # real one, and the result says it's a sample.
   defp look_up(input) do
-    with code when is_binary(code) <-
-           MemberCard.code_from_scan(input, Web.VerifyHost.trusted_hosts()),
-         %MemberCard{} = card <- MemberCard.find_by_code(code) do
-      now = DateTime.utc_now()
-      status = MemberCard.status(card, now)
-      %{status: status, card: card, qualifications: qualifications(status, card, now)}
-    else
-      {:other_site, host} -> %{status: :other_site, host: host}
-      _ -> %{status: :not_found}
+    case MemberCard.code_from_scan(input, Web.VerifyHost.trusted_hosts()) do
+      {:other_site, host} -> %{status: :other_site, host: host, sample: false}
+      nil -> %{status: :not_found, sample: false}
+      code -> look_up_code(code, MemberCard.sample_code?(code))
+    end
+  end
+
+  defp look_up_code(code, sample?) do
+    repo = if sample?, do: App.SampleRepo, else: App.Repo
+
+    case MemberCard.find_by_code(code, repo) do
+      %MemberCard{} = card ->
+        now = DateTime.utc_now()
+        status = MemberCard.status(card, now)
+
+        %{
+          status: status,
+          card: card,
+          sample: sample?,
+          qualifications: qualifications(status, card, now, repo)
+        }
+
+      nil ->
+        %{status: :not_found, sample: sample?}
     end
   end
 
   defp result_organization(%{card: %MemberCard{member: %{team: team}}}), do: team.organization
   defp result_organization(_result), do: nil
 
-  defp qualifications(:active, %MemberCard{member: member}, now),
-    do: BuildCardQualifications.call(member.team, member, now)
+  defp qualifications(:active, %MemberCard{member: member}, now, repo),
+    do: BuildCardQualifications.call(member.team, member, now, repo)
 
-  defp qualifications(_status, _card, _now), do: []
+  defp qualifications(_status, _card, _now, _repo), do: []
 
   def render(%{result: nil} = assigns) do
     ~H"""
@@ -130,7 +154,7 @@ defmodule Web.VerifyLive do
         member of their team, with their photo.
       </p>
 
-      <.qr_scanner label="Scan a card" class="mb-6" />
+      <.qr_scanner label="Scan a card" class="mb-6" data-autostart={@autostart} />
       <p :if={@scan_failed} id="scan-failed" class="text-danger-text">
         The camera did not start. Allow camera access, or type the code.
       </p>
@@ -158,6 +182,9 @@ defmodule Web.VerifyLive do
           A real card's QR code always opens <b class="text-text">{Web.VerifyHost.host()}</b>. Add this page
           to your home screen if you verify ID cards often.
         </p>
+        <p class="action">
+          <.a id="samples-link" navigate={~p"/samples"}>Try a sample card</.a>
+        </p>
       </section>
     </div>
     """
@@ -165,14 +192,32 @@ defmodule Web.VerifyLive do
 
   def render(assigns) do
     ~H"""
+    <.band
+      :if={@result[:sample]}
+      id="result-sample"
+      kind={:info}
+      title="Sample card"
+      class="mb-4"
+    >
+      Made up for demos. It is not a real member, so never accept it as ID.
+    </.band>
     <.result result={@result} />
     <div class="mt-6">
-      <.button id="check-another" navigate={@start_path} size={:lg} class="w-full">
+      <.button
+        id="check-another"
+        navigate={another_path(@start_path, @scanned)}
+        size={:lg}
+        class="w-full"
+      >
         Verify another card
       </.button>
     </div>
     """
   end
+
+  # After a scan, the camera opens again for the next card.
+  defp another_path(start_path, true = _scanned), do: start_path <> "?scan=1"
+  defp another_path(start_path, false), do: start_path
 
   defp result(%{result: %{status: :limited}} = assigns) do
     ~H"""
@@ -254,7 +299,7 @@ defmodule Web.VerifyLive do
 
         <div class="card-section media">
           <img
-            src={"#{Web.Endpoint.url()}/teams/#{@team.subdomain}/logo?shape=square"}
+            src={logo_src(@team, @result.sample)}
             alt=""
             class="logo-md"
           />
@@ -306,6 +351,12 @@ defmodule Web.VerifyLive do
     </div>
     """
   end
+
+  # Coast Range SAR is only in the sample database, so the app has no logo for it.
+  defp logo_src(_team, true = _sample), do: ~p"/images/sarduty-logo-square.png"
+
+  defp logo_src(team, false),
+    do: "#{Web.Endpoint.url()}/teams/#{team.subdomain}/logo?shape=square"
 
   defp expiry_text(%{ends_at: nil}, _timezone), do: "No expiry"
 

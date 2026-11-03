@@ -9,7 +9,7 @@ defmodule Web.RouterTest do
   # /teams/ or /orgs/ would block a team or organization with that name.
   @main_top_level ~w(teams orgs admin account signup login logout replies reminders wallet styles
                      terms privacy agents changelog changelog.md maps .well-known)
-  @verify_top_level ["orgs", "letters", ":code", "*path"]
+  @verify_top_level ["orgs", "letters", "samples", ":code", "*path"]
 
   test "the main site's top-level paths are the allowed ones" do
     allowed = MapSet.new(["" | @main_top_level] ++ if(dev_routes?(), do: ["dev"], else: []))
@@ -160,6 +160,10 @@ defmodule Web.RouterTest do
   # Routes in the verify site's scope: its LiveView, card images, and the catch-all.
   defp verify_route?(%{metadata: %{phoenix_live_view: {Web.VerifyLive, _, _, _}}}), do: true
   defp verify_route?(%{metadata: %{phoenix_live_view: {Web.VerifyLetterLive, _, _, _}}}), do: true
+
+  defp verify_route?(%{metadata: %{phoenix_live_view: {Web.VerifySamplesLive, _, _, _}}}),
+    do: true
+
   defp verify_route?(%{plug: Web.VerifyController}), do: true
 
   defp verify_route?(%{plug: Web.MemberCardController, plug_opts: action}),

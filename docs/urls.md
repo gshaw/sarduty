@@ -71,8 +71,8 @@ Devices, Google, Apple, and shared links hold these. They don't move.
   `/.well-known/oauth-…/teams/:subdomain…` metadata addresses: agents keep them from
   their first connection (#761).
 - On the verify site: `/:code` (the QR code), `/:code/photo`, `/:code/banner` (the Google
-  Wallet banner), `/orgs/:slug`, and `/letters/:ref` (the QR code on every tax credit
-  letter since #207).
+  Wallet banner), `/orgs/:slug`, `/letters/:ref` (the QR code on every tax credit
+  letter since #207), and `/samples`, the sample ID cards (#854).
 
 Card images always use SAR Duty's verify host, even for an organization with its own,
 since Google Wallet objects hold the banner URL.

@@ -29,6 +29,13 @@ defmodule Web.MemberCardControllerTest do
     assert image_size(response(conn, 200)) == {480, 480}
   end
 
+  test "the active sample card gets the placeholder, without asking D4H (#854)", %{verify: conn} do
+    {width, height} = conn |> get(~p"/SAMP-ACTV/photo") |> response(200) |> image_size()
+    assert width == height
+
+    assert build_conn() |> verify_conn() |> get(~p"/SAMP-RTRD/photo") |> response(404)
+  end
+
   test "sends a square placeholder when D4H's photo won't decode", %{verify: conn, member: member} do
     card = member_card_fixture(member)
     Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, "not an image"))

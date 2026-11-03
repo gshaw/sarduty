@@ -50,6 +50,29 @@ defmodule Web.VerifyLiveTest do
     assert has_element?(lv, "#result-active")
   end
 
+  test "after a scan, Verify another card opens the camera again", %{conn: conn, member: member} do
+    card = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/")
+    refute has_element?(lv, "#scanner[data-autostart]")
+
+    lv |> element("#scanner") |> render_hook("scanned", %{code: card.code})
+    assert has_element?(lv, ~s(#check-another[href="/?scan=1"]))
+
+    {:ok, lv, _html} = live(conn, ~p"/?scan=1")
+    assert has_element?(lv, "#scanner[data-autostart]")
+  end
+
+  test "after a typed code, Verify another card doesn't open the camera", %{
+    conn: conn,
+    member: member
+  } do
+    card = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/")
+
+    lv |> form("#check-form", check: %{code: card.code}) |> render_submit()
+    assert has_element?(lv, ~s(#check-another[href="/"]))
+  end
+
   test "a card's QR link opens straight to the check", %{conn: conn, member: member} do
     card = member_card_fixture(member)
 
@@ -204,6 +227,55 @@ defmodule Web.VerifyLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/ZZZZ-ZZZZ")
       assert has_element?(lv, "#result-limited")
+    end
+  end
+
+  # Coast Range SAR's sample cards (#854), in App.SampleRepo, seeded at boot.
+  describe "sample cards" do
+    test "the active sample shows Cameron as active, marked as a sample", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/SAMP-ACTV")
+
+      assert has_element?(lv, "#result-sample", "never accept it as ID")
+      assert has_element?(lv, "#result-active")
+      assert has_element?(lv, "#result-name", "Cameron Ruiz")
+      assert has_element?(lv, "#result-team", "Coast Range SAR")
+      assert has_element?(lv, "#result-qualifications", "First aid")
+      assert has_element?(lv, "#result-qualifications", "Ground search and rescue")
+    end
+
+    test "the retired and cancelled samples", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/SAMP-RTRD")
+      assert has_element?(lv, "#result-sample")
+      assert has_element?(lv, "#result-inactive")
+      assert has_element?(lv, "#result-name", "Robin Tse")
+
+      check(lv, "SAMP-CNCD")
+      assert has_element?(lv, "#result-sample")
+      assert has_element?(lv, "#result-revoked")
+    end
+
+    test "the not-found sample never counts toward the limit", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/")
+
+      for _ <- 1..25, do: check(lv, "SAMP-NCRD")
+      assert has_element?(lv, "#result-sample")
+      assert has_element?(lv, "#result-not-found")
+
+      check(lv, "ZZZZ-ZZZZ")
+      assert has_element?(lv, "#result-not-found")
+    end
+
+    test "a real card's code never reads as a sample", %{conn: conn, member: member} do
+      card = member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/#{card.code}")
+
+      assert has_element?(lv, "#result-active")
+      refute has_element?(lv, "#result-sample")
+    end
+
+    test "the start page links to the samples", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/")
+      assert lv |> element("#samples-link") |> render_click() |> follow_redirect(conn)
     end
   end
 

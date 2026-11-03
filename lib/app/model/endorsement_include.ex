@@ -29,12 +29,12 @@ defmodule App.Model.EndorsementInclude do
   end
 
   @doc "Each of the team's endorsement ids with the ids it includes directly."
-  def included_ids_by_endorsement(team_id) do
+  def included_ids_by_endorsement(team_id, repo \\ Repo) do
     EndorsementInclude
     |> join(:inner, [ei], e in assoc(ei, :endorsement))
     |> where([ei, e], e.team_id == ^team_id)
     |> select([ei], {ei.endorsement_id, ei.included_endorsement_id})
-    |> Repo.all()
+    |> repo.all()
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 end

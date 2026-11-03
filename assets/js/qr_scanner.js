@@ -6,6 +6,9 @@
 // and skips the same card for a few seconds, so one card held up isn't recorded twice.
 // With data-override-input, each read also sends that input's value, so the time box on
 // Take attendance counts even if the phone never sent a change for it.
+// With data-autostart, the camera opens as the page loads, as /verify does after
+// Verify another card when the last card was scanned. The page already has the camera's
+// permission then, so no tap is needed.
 // The scanning flag goes on the [data-scan-state] element inside the hook. LiveView
 // patches the data attributes of a phx-update="ignore" container, so a flag on the
 // container itself is wiped by the next render while the camera keeps running.
@@ -59,6 +62,7 @@ export const QRScanner = {
     this.flip.querySelector("button").addEventListener("click", () => this.switchCamera())
     this.onVisibility = () => document.hidden && this.stop()
     document.addEventListener("visibilitychange", this.onVisibility)
+    if ("autostart" in this.el.dataset) this.start()
   },
 
   destroyed() {

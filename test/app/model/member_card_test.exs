@@ -7,6 +7,17 @@ defmodule App.Model.MemberCardTest do
 
   @now ~U[2026-09-30 12:00:00Z]
 
+  test "only Coast Range SAR's sample cards start with SAMP (#854)" do
+    assert Enum.all?(App.CoastRange.sample_cards(), &MemberCard.sample_code?(&1.code))
+
+    assert Enum.all?(
+             App.CoastRange.sample_cards(),
+             &(MemberCard.normalize_code(&1.code) == &1.code)
+           )
+
+    refute MemberCard.sample_code?("K7Q4M2XA")
+  end
+
   test "generate_code makes 8 characters that normalize to themselves" do
     for _ <- 1..200 do
       code = MemberCard.generate_code()
