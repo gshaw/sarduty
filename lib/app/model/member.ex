@@ -542,6 +542,15 @@ defmodule App.Model.Member do
     end
   end
 
+  @doc "The team's first member with this name, or nil. For a made-up team's cast (#857)."
+  def find_by_name(%Team{} = team, name) when is_binary(name) do
+    Member
+    |> where([m], m.team_id == ^team.id and m.name == ^name)
+    |> order_by(:id)
+    |> limit(1)
+    |> Repo.one()
+  end
+
   @doc """
   The team's current member with this email, or nil when there is none or two share it.
   A team admin replies to invitations as this member (#444), on a team with member

@@ -6,6 +6,7 @@ defmodule Web.UserAuth do
 
   alias App.Accounts
   alias App.Adapter.D4H
+  alias App.Model.DemoTeam
   alias App.Model.Member
   alias App.Model.Organization
   alias App.Model.OrganizationAdmin
@@ -309,10 +310,22 @@ defmodule Web.UserAuth do
     socket =
       socket
       |> Phoenix.Component.assign(Map.put(access, :service, service))
+      |> Phoenix.Component.assign(:demo, demo_banner(access))
       |> guard_events(page_access, access)
 
     {:cont, socket}
   end
+
+  # A Try a demo team's banner (#857), for its team admins: the demo, and the member
+  # View as opens, Cameron Ruiz. Nil on a real team.
+  defp demo_banner(%{team_admin?: true, current_team: team}) do
+    case DemoTeam.for_team(team) do
+      nil -> nil
+      demo -> %{demo: demo, member: Member.find_by_name(team, "Cameron Ruiz")}
+    end
+  end
+
+  defp demo_banner(_access), do: nil
 
   # Who sends which events (#440). A team admin sends every event on the pages they open,
   # and a member every event on their own pages. Otherwise only some reach the page's

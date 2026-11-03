@@ -2,6 +2,7 @@ defmodule Web.HomePageLive do
   use Web, :live_view_marketing_layout
 
   alias App.Model.Team
+  alias App.Operation.RequestDemo
   alias Web.Components.HomeMockups
 
   # The page has 3 readers: a team admin deciding whether to sign up, someone verifying a
@@ -22,7 +23,9 @@ defmodule Web.HomePageLive do
        page_description:
          "Tax credit letters, ID cards on members' phones, attendance at the door, and reports, for search and rescue teams.",
        teams: teams,
-       members: socket.assigns[:member_logins] || []
+       members: socket.assigns[:member_logins] || [],
+       # Try a demo (#857) shows once Records' demo key is set.
+       demo?: RequestDemo.on?()
      )}
   end
 
@@ -37,7 +40,13 @@ defmodule Web.HomePageLive do
               SAR Duty builds on your team's D4H records with tools made for volunteer teams: tax
               credit letters, ID cards on members' phones, attendance at the door, and more.
             </p>
-            <.start id="start-top" current_user={@current_user} teams={@teams} members={@members} />
+            <.start
+              id="start-top"
+              current_user={@current_user}
+              teams={@teams}
+              members={@members}
+              demo?={@demo?}
+            />
           </div>
           <figure class="home-hero-art">
             <HomeMockups.team_home />
@@ -113,7 +122,13 @@ defmodule Web.HomePageLive do
 
       <section class="home-section is-alt">
         <div class="home-wrap home-end">
-          <.start id="start-end" current_user={@current_user} teams={@teams} members={@members} />
+          <.start
+            id="start-end"
+            current_user={@current_user}
+            teams={@teams}
+            members={@members}
+            demo?={@demo?}
+          />
         </div>
       </section>
     </div>
@@ -148,6 +163,7 @@ defmodule Web.HomePageLive do
   attr :current_user, :map, default: nil
   attr :teams, :list, required: true
   attr :members, :list, required: true
+  attr :demo?, :boolean, default: false
 
   # The page's one call to action, the same box in the same places for everyone: sign up or
   # log in for a visitor, your teams once logged in, your own ID card for a member, or why
@@ -160,9 +176,11 @@ defmodule Web.HomePageLive do
           <p class="home-start-title">Start with your team</p>
           <p>
             Sign up with your team's D4H access key. You need Owner or Editor access in D4H.
+            <span :if={@demo?}>Or try it first on a made-up team of your own.</span>
           </p>
           <div class="home-cta">
             <.button navigate={~p"/signup"} variant={:primary}>Sign up a team</.button>
+            <.button :if={@demo?} id={"#{@id}-demo"} navigate={~p"/demo"}>Try a demo</.button>
             <.button navigate={~p"/login"}>Log in</.button>
           </div>
         <% @teams != [] -> %>

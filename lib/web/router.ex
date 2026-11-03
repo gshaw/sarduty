@@ -184,6 +184,8 @@ defmodule Web.Router do
       live "/agents/id-cards", CardApiLive
       live "/agents", AgentsLive
       live "/signup", TeamSignupLive
+      # Try a demo (#857): a name and an email, then the code from the email.
+      live "/demo", DemoLive
     end
 
     # The same pages as Markdown, for agents.
@@ -223,6 +225,10 @@ defmodule Web.Router do
       live "/reminders/:token", InvitationRemindersLive
     end
 
+    # The demo email's link, and its code typed on /demo: log in, then build (#857).
+    get "/demo/open/:id", DemoController, :open
+    post "/demo/open", DemoController, :open
+
     # Send reply on a reminder's reply page (#488).
     post "/replies/:token", ReplyLinkController, :create
     # Add to calendar on the reply page: the reply link's activity as an .ics file.
@@ -249,6 +255,8 @@ defmodule Web.Router do
     live_session :require_authenticated_user_session,
       on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :ensure_authenticated}] do
       live "/account", AccountLive
+      # Builds a visitor's demo the first time its link logs them in (#857).
+      live "/demo/building", DemoBuildLive
       # Allowing an AI agent (#761). Anyone logged in reaches it; the page says who may
       # allow, so a member who tries learns why not.
       live "/teams/:subdomain/oauth/authorize", AgentAuthorizeLive
@@ -440,6 +448,8 @@ defmodule Web.Router do
       get "/reports/:id/csv", ReportController, :csv
       post "/members/:id/view-as", ViewAsController, :create
       delete "/view-as", ViewAsController, :delete
+      # Delete this demo, on a Try a demo team's banner (#857).
+      delete "/demo", DemoController, :delete
     end
   end
 end

@@ -8,6 +8,36 @@ A copy is a SAR Duty Records team ([records.md](records.md)), so the sync, the e
 and every page work as for any Records team. `App.Model.DemoTeam` is the visitor's row,
 and a team is a demo when one points at it (`DemoTeam.demo?/1`).
 
+## A demo's week
+
+1. **The form.** `/demo` (`Web.DemoLive`) takes a name and an email, and
+   `App.Operation.RequestDemo` saves the row and emails a link with a six-digit code. The
+   email holds no name: anyone can type any address, so it says nothing they chose. One
+   demo per email; asking again sends a new code to the same demo. Limits: 5 requests an
+   hour per IP, 200 live demos in all. Without Records' demo key (`RECORDS_DEMO_KEY`),
+   Try a demo is off and the home page has no button.
+2. **The link.** `/demo/open/:id?code=…` (`Web.DemoController`), or the code typed on
+   `/demo`, logs the visitor in. The code works for 24 hours and dies after 5 misses. It
+   works more than once, since a mail app that opens links to check them would use up a
+   single-use one.
+3. **The build.** `/demo/building` (`Web.DemoBuildLive`) runs
+   `App.Operation.BuildDemoTeam` once, behind a spinner, in about a second. Records makes
+   the team from the cast (`App.DemoCast`) and picks its ids. SAR Duty adds the team, marked
+   as the demo in the same transaction, refreshes it like any team, and adds what only it
+   keeps (endorsements, ID cards with real codes, away periods, chores), matched through
+   Records' ids. A failure removes everything, in Records too, and the page offers Try
+   again. The 7 days count from here.
+4. **The banner.** Every page of a demo team has it, for team admins, where View as puts
+   its own: when it goes, View as Cameron Ruiz, Sign up your team, and Delete this demo.
+5. **The end.** `App.Operation.DeleteDemo` deletes the team in SAR Duty and Records, the
+   row with the name and email, and the visitor's user unless they are on a real team.
+   Delete this demo does it at once and logs out; `App.Worker.DemoTeamsWorker`, every
+   hour, emails the day before and deletes on day 7, built or never opened.
+
+Demo teams sync like any team, so edits come back, but stay out of the nightly refresh,
+the sync's team count for Healthchecks, and the admin team list (`Team.get_all_real/0`).
+Custom fields stay out of the cast: Records has none.
+
 ## What a demo sends
 
 - **Everything goes to the visitor, once.** A team's email goes through

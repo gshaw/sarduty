@@ -5,6 +5,7 @@ defmodule App.Model.Team do
   alias App.Field.TrimmedString
   alias App.Model.Activity
   alias App.Model.D4HAccess
+  alias App.Model.DemoTeam
   alias App.Model.Member
   alias App.Model.Organization
   alias App.Model.Team
@@ -309,6 +310,18 @@ defmodule App.Model.Team do
 
   def get_all do
     Team
+    |> order_by([t], desc: t.id)
+    |> preload(:organization)
+    |> Repo.all()
+  end
+
+  @doc """
+  Every team but Try a demo copies (#857), for the admin team list and the nightly runs:
+  they come and go by the day, each for one visitor.
+  """
+  def get_all_real do
+    Team
+    |> where([t], t.id not in subquery(DemoTeam.team_ids_query()))
     |> order_by([t], desc: t.id)
     |> preload(:organization)
     |> Repo.all()

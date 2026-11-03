@@ -114,7 +114,9 @@ config :sarduty, Oban,
       # The sync every 10 minutes (#163). The nightly full refresh is its safety net.
       {"*/10 * * * *", App.Worker.ScheduleTeamSyncsWorker},
       {"30 5 * * *", App.Worker.PruneEventsWorker},
-      {"15 8 * * *", App.Worker.ReseedSampleWorker}
+      {"15 8 * * *", App.Worker.ReseedSampleWorker},
+      # Try a demo (#857): the day-before email, and the delete on day 7.
+      {"5 * * * *", App.Worker.DemoTeamsWorker}
     ]
   ]
 

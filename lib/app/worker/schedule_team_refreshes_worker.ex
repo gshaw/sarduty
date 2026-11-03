@@ -12,7 +12,8 @@ defmodule App.Worker.ScheduleTeamRefreshesWorker do
   def perform(%Oban.Job{}) do
     now = DateTime.utc_now()
 
-    teams = Enum.filter(Team.get_all(), & &1.d4h_team_id)
+    # A demo needs no nightly refresh: its sync keeps it, and it lives 7 days (#857).
+    teams = Enum.filter(Team.get_all_real(), & &1.d4h_team_id)
     Enum.each(teams, &RefreshTeamDataWorker.enqueue/1)
     FinishRunWorker.start("refresh", length(teams), now)
     :ok

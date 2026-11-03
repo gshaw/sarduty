@@ -94,6 +94,11 @@ defmodule Web.Layouts do
             team={@current_team}
             team_admin?={@team_admin?}
           />
+          <.demo_banner
+            :if={assigns[:demo] && !assigns[:viewing_as]}
+            demo={@demo}
+            team={@current_team}
+          />
           <.flash_group flash={@flash} static_changed_url={assigns[:static_changed_url]} />
           {@inner_content}
         </main>
@@ -106,6 +111,7 @@ defmodule Web.Layouts do
           team={@current_team}
           team_admin?={@team_admin?}
         />
+        <.demo_banner :if={assigns[:demo] && !assigns[:viewing_as]} demo={@demo} team={@current_team} />
         <.flash_group flash={@flash} static_changed_url={assigns[:static_changed_url]} />
         {@inner_content}
       </main>
@@ -132,6 +138,42 @@ defmodule Web.Layouts do
         </p>
         <.button id="view-as-stop" href={~p"/teams/#{@team}/view-as"} method="delete">
           Stop viewing
+        </.button>
+      </div>
+    </.banner>
+    """
+  end
+
+  attr :demo, :map, required: true
+  attr :team, :map, required: true
+
+  # On every page of a Try a demo team (#857), where View as puts its own: whose it is,
+  # when it goes, and the ways on. Delete this demo asks first.
+  defp demo_banner(assigns) do
+    ~H"""
+    <.banner kind={:info} title="Your demo" id="demo-banner" class="mb-6">
+      <p>
+        {@team.name} is made up, and this copy is yours alone. Its emails come to you. It is
+        deleted on {Service.Format.date_long(@demo.demo.expires_at, @team.timezone)}.
+      </p>
+      <div class="flex flex-wrap items-center gap-2">
+        <.button
+          :if={@demo.member}
+          id="demo-view-as"
+          href={~p"/teams/#{@team}/members/#{@demo.member}/view-as"}
+          method="post"
+        >
+          View as {@demo.member.name}
+        </.button>
+        <.button id="demo-signup" navigate={~p"/signup"}>Sign up your team</.button>
+        <.button
+          id="demo-delete"
+          variant={:danger}
+          href={~p"/teams/#{@team}/demo"}
+          method="delete"
+          data-confirm="Delete this demo? It goes at once, with your name and email, and you are logged out."
+        >
+          Delete this demo
         </.button>
       </div>
     </.banner>
