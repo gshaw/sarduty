@@ -12,7 +12,9 @@ defmodule Web.ActivityFormLive do
   alias App.Operation.ApplyTemplate
   alias App.Operation.SaveActivity
   alias App.Operation.SaveCustomFields
+  alias App.ViewData.ActivityTravel
   alias App.ViewModel.ActivityFormViewModel
+  alias Service.Format
   alias Web.Components.PlaceBox
 
   # Adding and changing activities (docs/records.md, #585). Delete is on the activity's
@@ -32,7 +34,7 @@ defmodule Web.ActivityFormLive do
       |> assign(page_title: page_title(activity, socket.assigns.live_action))
       |> assign(activity: activity, form_data: form)
       |> assign(params: %{})
-      |> assign(fields: activity && fields(team, activity))
+      |> assign_sections(team, activity)
       |> assign(
         description_locked?: ActivityFormViewModel.description_locked?(activity),
         published_locked?: activity != nil and Activity.locked?(activity)
@@ -221,6 +223,19 @@ defmodule Web.ActivityFormLive do
       action="Start over"
     />
 
+    <section :if={@live_action == :edit && @travel} id="activity-travel" class="mt-8 measure">
+      <h2 class="heading">Travel</h2>
+      <p id="activity-travel-count">
+        {travel_text(@travel)} Travel can't be changed once the activity is published.
+      </p>
+      <p class="action">
+        <.a
+          id="activity-travel-set"
+          navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}/travel"}
+        >Set travel</.a>
+      </p>
+    </section>
+
     <section :if={@live_action == :edit && @fields} id="activity-fields" class="mt-8 measure">
       <h2 class="heading">Fields</h2>
       <p :if={@fields.missing} id="activity-fields-missing-count">
@@ -235,6 +250,29 @@ defmodule Web.ActivityFormLive do
     </section>
     """
   end
+
+  # Fields and Travel under the form, on Change activity.
+  defp assign_sections(socket, _team, nil), do: assign(socket, fields: nil, travel: nil)
+
+  defp assign_sections(socket, team, activity),
+    do:
+      assign(socket, fields: fields(team, activity), travel: travel(activity, DateTime.utc_now()))
+
+  # How many attended rows have no trip yet (#230), beside the Published box: a note,
+  # never a block. Only after the start and before publishing, and only with someone
+  # attended.
+  defp travel(activity, now) do
+    if !Activity.locked?(activity) and Activity.started?(activity, now) do
+      counts = ActivityTravel.counts(activity, now)
+      if counts.rows > 0, do: counts
+    end
+  end
+
+  defp travel_text(%{not_set: 0}), do: "Every attendance row is set."
+
+  defp travel_text(%{not_set: not_set, rows: rows}),
+    do:
+      "#{not_set} of #{Format.count(rows, one: "%d attendance row", many: "%d attendance rows")} #{if not_set == 1, do: "isn't", else: "aren't"} set."
 
   attr :form, :any, required: true, doc: "a form with `enough_at` and `full_at`"
 

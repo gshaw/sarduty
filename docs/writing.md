@@ -225,7 +225,7 @@ and must not be used for it.
 | item                                | asset, piece, unit                             | One piece of equipment in D4H. A truck is an item, and so is a drawer in it.                         |
 | template                            | kit, preset, bundle, set                       | SAR Duty's named set of items, tags, and groups whose members it adds, applied to an activity.       |
 | saved place                         | favourite, location, pin                       | A place a team named, with its address and pin. A D4H team's are its D4H location bookmarks.         |
-| mileage report                      | distance report, travel claim, kilometres      | Driving distances to an activity, in km.                                                             |
+| travel                              | mileage report, travel claim, trip log         | How each attended row got to an activity, and the km it counts. The activity's Travel page.          |
 | ID card                             | member card, pass, badge, ID                   | A member's card in Apple Wallet or Google Wallet. Say "Wallet" only when naming where it lives.      |
 | verify                              | check, validate, scan                          | Confirming an ID card or a tax credit letter is real.                                                |
 | access key                          | token, API key                                 | The D4H access key or Records access key. Alone when the page does not need to say which.            |
