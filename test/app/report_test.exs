@@ -494,12 +494,12 @@ defmodule App.ReportTest do
     defp ids(text, team, given \\ %{}),
       do: text |> run!(team, given) |> Map.fetch!(:rows) |> Enum.map(&hd/1) |> Enum.sort()
 
-    test "Activities' Current, Last 30 days, Missing fields, and chores" do
+    test "Activities' Last 30 days, Missing fields, and chores" do
       team = team_fixture()
       now = @now
       two_days_ago = DateTime.add(now, -2, :day)
 
-      current =
+      this_week =
         activity_fixture(team, %{
           started_at: two_days_ago,
           finished_at: DateTime.add(two_days_ago, 3600)
@@ -534,16 +534,17 @@ defmodule App.ReportTest do
           finished_at: long_ago
         })
 
-      assert ids("select id from activities where current = true", team) == [current.id]
-
       assert ids("select id from activities where recent = true", team) ==
-               Enum.sort([current.id, recent.id])
+               Enum.sort([this_week.id, recent.id])
 
       assert ids("select id from activities where missing_required_fields", team) == [missing.id]
       assert ids("select id from activities where chore = true", team) == [chore.id]
 
       assert run!("select duration from activities where chore = true", team).rows == [[75]]
-      assert run!("select duration from activities where id = #{current.id}", team).rows == [[60]]
+
+      assert run!("select duration from activities where id = #{this_week.id}", team).rows == [
+               [60]
+             ]
     end
 
     test "Members' Period, totals by period and tag, and the members list's filters" do

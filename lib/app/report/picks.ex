@@ -131,7 +131,7 @@ defmodule App.Report.Picks do
     if Enum.any?(query.sorts, &(&1.value == key)), do: value
   end
 
-  # The first picked option that picks a sort: Future sorts oldest first.
+  # The first picked option that picks a sort: Upcoming sorts soonest first.
   defp option_sort(query, filters),
     do: Enum.find_value(query.filters, &picked_sort(query, filters[&1.name]))
 

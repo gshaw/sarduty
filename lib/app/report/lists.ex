@@ -23,11 +23,10 @@ defmodule App.Report.Lists do
         option exercise 'Exercises' where kind = 'exercise' and chore = false
         option event 'Events' where kind = 'event' and chore = false
         option chores 'Chores' where chore = true
-      filter when 'When'
-        option current 'Current' where current = true sort date
+      filter when 'When' default upcoming
+        option upcoming 'Upcoming' where finished_at >= TODAY sort date
+        option past 'Past' where finished_at < TODAY sort date desc
         option recent 'Last 30 days' where recent = true sort date desc
-        option past 'Past' where started_at <= NOW sort date desc
-        option future 'Future' where started_at >= NOW sort date
         each year(started_at) where year(started_at) = :when
       filter status 'Status'
         option draft 'Draft' where published = false

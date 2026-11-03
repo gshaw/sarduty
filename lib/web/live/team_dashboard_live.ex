@@ -389,7 +389,7 @@ defmodule Web.TeamDashboardLive do
         </li>
       </ul>
       <footer class="action">
-        <.a navigate={~p"/teams/#{@team}/activities?when=future&sort=date"}>All future activities</.a>
+        <.a navigate={~p"/teams/#{@team}/activities"}>All upcoming activities</.a>
       </footer>
     </section>
     """

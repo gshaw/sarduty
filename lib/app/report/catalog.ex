@@ -8,9 +8,9 @@ defmodule App.Report.Catalog do
   A field is a rule's existing home, never a copy: `status` is
   `Attendance.status_word_dynamic/1`, `standing` is `Standing.dynamic/1`, `counted` is
   `Member.counted_dynamic/0`, and `not_seen(days)` is `Member.not_seen_query/4`. A field
-  with a `query` is that rule's own query of ids (#784), such as `current`, which is
-  `Activity.overlapping/3` over Current. Each subject's `source` scopes its rows to the
-  team before a query's `where` runs.
+  with a `query` is that rule's own query of ids (#784), such as `recent`, which is
+  `Activity.finished_recently/3`. Each subject's `source` scopes its rows to the team
+  before a query's `where` runs.
   """
 
   import Ecto.Query
@@ -281,7 +281,6 @@ defmodule App.Report.Catalog do
         about: "How long it ran: a chore activity's, its members' chores."
       },
       bool(:chore, "Chore", "One of the team's chore activities."),
-      rule("current", "Current", "Within 7 days of today, as Activities' Current.", &current/2),
       rule(
         "recent",
         "Recent",
@@ -869,11 +868,6 @@ defmodule App.Report.Catalog do
     do: Activity |> where([a], a.team_id == ^team.id) |> select([a], a.id)
 
   defp team_members(team), do: Member |> where([m], m.team_id == ^team.id) |> select([m], m.id)
-
-  defp current(%Context{team: team, now: now, timezone: timezone}, []) do
-    {start, finish} = Service.Period.current(now, timezone)
-    team |> team_activities() |> Activity.overlapping(start, finish)
-  end
 
   defp recent(%Context{team: team, now: now, timezone: timezone}, []),
     do: team |> team_activities() |> Activity.finished_recently(now, timezone)
