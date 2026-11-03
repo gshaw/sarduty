@@ -22,8 +22,12 @@ defmodule App.Operation.BuildMileageReport do
   alias App.Model.Team
   alias App.Repo
 
-  def call(%Team{} = team, %Activity{} = activity, %DateTime{} = now) do
-    rows = attended_rows(activity, now)
+  @doc """
+  The report for the activity's attended rows, or only one member's with `member:` (a
+  member checking their own travel).
+  """
+  def call(%Team{} = team, %Activity{} = activity, %DateTime{} = now, opts \\ []) do
+    rows = activity |> attended_rows(now) |> only_member(opts[:member])
     activity_at = point(Coordinate.build(activity.coordinate))
     yard_at = point(Coordinate.build(team.lat, team.lng))
     mapbox = Mapbox.build_context()
@@ -46,6 +50,9 @@ defmodule App.Operation.BuildMileageReport do
     |> preload([member: m], member: m)
     |> Repo.all()
   end
+
+  defp only_member(rows, nil), do: rows
+  defp only_member(rows, %Member{id: id}), do: Enum.filter(rows, &(&1.member_id == id))
 
   # ---- Homes ---------------------------------------------------------------------
 

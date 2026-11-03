@@ -16,10 +16,12 @@ defmodule Web.TeamDashboardLive do
   alias App.Model.MemberCard
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
+  alias App.Model.Trip
   alias App.Model.WhiteboardNote
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
   alias App.Operation.SnoozeAttentionItem
+  alias App.ViewData.ActivityTravel
   alias App.ViewData.MemberRecords
   alias App.ViewData.MemberToDo
   alias App.ViewData.TeamAttention
@@ -134,8 +136,9 @@ defmodule Web.TeamDashboardLive do
           qualifications,
           now,
           member.team.timezone,
-          chores,
-          certificates
+          chores: chores,
+          certificates: certificates,
+          trips: Trip.unchecked_for_member(member)
         )
     )
   end
@@ -738,6 +741,18 @@ defmodule Web.TeamDashboardLive do
     """
   end
 
+  defp to_do_item(%{item: %{key: :travel}} = assigns) do
+    ~H"""
+    <li id={"to-do-travel-#{@item.activity.id}"} class="py-3">
+      <.a
+        navigate={~p"/teams/#{@team}/activities/#{@item.activity.id}"}
+        class="font-semibold"
+      >Check your travel for {@item.activity.title}</.a>
+      <span class="hint block">{travel_hint(@item.trips)}</span>
+    </li>
+    """
+  end
+
   defp to_do_item(%{item: %{key: :letter}} = assigns) do
     ~H"""
     <li id="to-do-letter" class="flex flex-wrap items-center gap-3 py-3">
@@ -754,6 +769,14 @@ defmodule Web.TeamDashboardLive do
     </li>
     """
   end
+
+  defp travel_hint([trip]),
+    do:
+      "#{ActivityTravel.travel_text(trip.travel)}, #{Format.km(trip.km)}. Change it before the activity is published."
+
+  defp travel_hint(trips),
+    do:
+      "#{Format.count(length(trips), one: "%d trip", many: "%d trips")}. Change them before the activity is published."
 
   defp declined_hint([chore]),
     do:

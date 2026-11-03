@@ -11,19 +11,36 @@ defmodule App.ViewData.MemberToDo do
     waits on Your membership.
   - `:declined_chores`: their declined chores (#341), until they delete them.
   - `:declined_certificates`: their declined certificates (#493), until they delete them.
+  - `:travel`: each activity whose travel a team admin set for them (#230), until they
+    check it or the activity is published.
   """
 
   @doc """
   Items in that order. `card` is the member's current card or nil, `letters` their tax
-  credit letters, `rows` their qualifications from `MemberRecords.qualification_rows/2`,
-  `chores` their chores, and `certificates` the certificates they sent and haven't
-  deleted.
+  credit letters, and `rows` their qualifications from `MemberRecords.qualification_rows/2`.
+  `extras` may hold `chores:` their chores, `certificates:` the certificates they sent and
+  haven't deleted, and `trips:` their unchecked trips on open activities, each with its
+  activity (`Trip.unchecked_for_member/1`).
   """
-  def items(card, in_wallet?, letters, rows, now, timezone, chores \\ [], certificates \\ []) do
+  def items(card, in_wallet?, letters, rows, now, timezone, extras \\ []) do
+    chores = Keyword.get(extras, :chores, [])
+    certificates = Keyword.get(extras, :certificates, [])
+    trips = Keyword.get(extras, :trips, [])
+
     card_items(card, in_wallet?) ++
       qualification_items(rows, certificates) ++
       declined_items(chores) ++
-      declined_certificate_items(certificates) ++ letter_items(letters, now, timezone)
+      declined_certificate_items(certificates) ++
+      travel_items(trips) ++ letter_items(letters, now, timezone)
+  end
+
+  # One per activity, in the order the trips come.
+  defp travel_items(trips) do
+    trips
+    |> Enum.chunk_by(& &1.activity_id)
+    |> Enum.map(fn [trip | _] = trips ->
+      %{key: :travel, activity: trip.activity, trips: trips}
+    end)
   end
 
   defp declined_certificate_items(certificates) do

@@ -30,6 +30,7 @@ defmodule Web.ActivityLive do
   alias Web.Components.ActivityMap
   alias Web.Components.Reply
   alias Web.Components.ReplyControl
+  alias Web.Components.TravelCheck
 
   # A reminder's job tells the page when it's sent or failed.
   def mount(_params, _session, socket) do
@@ -194,6 +195,9 @@ defmodule Web.ActivityLive do
 
   def handle_info({:reply_failed, text}, socket), do: {:noreply, put_flash(socket, :error, text)}
 
+  def handle_info({:travel_checked, text}, socket), do: {:noreply, put_flash(socket, :info, text)}
+  def handle_info({:travel_failed, text}, socket), do: {:noreply, put_flash(socket, :error, text)}
+
   # Swoosh's test adapter tells each process a reminder came from, this one included.
   def handle_info({:email, _email}, socket), do: {:noreply, socket}
 
@@ -292,6 +296,17 @@ defmodule Web.ActivityLive do
         />
       </:reply>
     </.activity_panel>
+    <.live_component
+      :if={@replier && !@coming? && !@activity.deleted_at}
+      module={TravelCheck}
+      id="activity-your-travel"
+      team={@current_team}
+      activity={@activity}
+      member={@replier}
+      user={@current_user}
+      viewing_as={@viewing_as}
+      now={@now}
+    />
     <%!-- A phone shows the facts, then the story and people, then fields and Actions. --%>
     <div class="activity-columns">
       <aside id="activity-facts" class="activity-columns-facts">
