@@ -2,12 +2,13 @@ defmodule Web.Components.TravelCheck do
   @moduledoc """
   Your travel on an activity's page (#230): the trip a team admin set for each of the
   member's attended rows, with That's right and Change until the activity is published.
+  A row with nothing set has Set travel, until then; once published it's left out.
 
   Assigns: `team`, `activity`, `member` (from `Reply.replier/2`), `user`, `viewing_as`
   (nil unless a team admin is viewing as the member), and `now`. Like ReplyControl, its
   events skip the team pages' hook (#440), so it refuses a team admin viewing as the
   member itself. It sends `{:travel_checked, text}` or `{:travel_failed, text}` to the
-  page for its flash. It renders nothing when no trip is set.
+  page for its flash. It renders nothing when there's no row to show.
   """
   use Web, :live_component
 
@@ -33,28 +34,25 @@ defmodule Web.Components.TravelCheck do
      |> load()}
   end
 
-  # The member's attended rows that have a trip, with the trip and who set it.
+  # The member's attended rows, each with its trip and who set it, or nil when nothing
+  # is set. Once published, a row with nothing set can't be, so it's left out.
   defp load(socket) do
     %{activity: activity, member: member, now: now} = socket.assigns
-    trips = if member, do: Trip.for_member(activity, member), else: %{}
-
-    rows = if trips == %{}, do: [], else: with_trips(activity, member, now, trips)
-
-    assign(socket, rows: rows, locked?: Activity.locked?(activity))
+    locked? = Activity.locked?(activity)
+    rows = if member, do: rows(activity, member, now, locked?), else: []
+    assign(socket, rows: rows, locked?: locked?)
   end
 
-  defp with_trips(activity, member, now, trips) do
+  defp rows(activity, member, now, locked?) do
+    trips = Trip.for_member(activity, member)
+
     Attendance
     |> Attendance.attended(now)
     |> where([r], r.activity_id == ^activity.id and r.member_id == ^member.id)
     |> order_by([r], asc: r.started_at)
     |> Repo.all()
-    |> Enum.flat_map(fn row ->
-      case trips[row.d4h_attendance_id] do
-        nil -> []
-        trip -> [%{attendance: row, trip: trip}]
-      end
-    end)
+    |> Enum.map(&%{id: &1.d4h_attendance_id, attendance: &1, trip: trips[&1.d4h_attendance_id]})
+    |> Enum.reject(&(locked? and is_nil(&1.trip)))
   end
 
   def handle_event(_event, _params, %{assigns: %{viewing_as: %Member{} = viewing_as}} = socket) do
@@ -119,8 +117,8 @@ defmodule Web.Components.TravelCheck do
     <section id={@id}>
       <%= if @rows != [] do %>
         <strong class="block mb-1">Your travel</strong>
-        <div :for={row <- @rows} id={"#{@id}-#{row.trip.d4h_attendance_id}"} class="mb-4">
-          <%= if @changing == to_string(row.trip.d4h_attendance_id) do %>
+        <div :for={row <- @rows} id={"#{@id}-#{row.id}"} class="mb-4">
+          <%= if @changing == to_string(row.id) do %>
             <.form
               for={%{}}
               id={"#{@id}-form"}
@@ -128,7 +126,7 @@ defmodule Web.Components.TravelCheck do
               phx-submit="save"
               phx-target={@myself}
             >
-              <input type="hidden" name="row" value={row.trip.d4h_attendance_id} />
+              <input type="hidden" name="row" value={row.id} />
               <fieldset>
                 <legend>{day(row, @rows, @team)}How did you get there?</legend>
                 <label :for={{travel, text, km} <- @choices} class="choice">
@@ -136,7 +134,7 @@ defmodule Web.Components.TravelCheck do
                     type="radio"
                     name="travel"
                     value={travel}
-                    checked={row.trip.travel == travel}
+                    checked={travel(row) == travel}
                     disabled={is_nil(km)}
                   />
                   {text}, {if km, do: Format.km(km), else: "no route"}
@@ -146,7 +144,7 @@ defmodule Web.Components.TravelCheck do
                     type="radio"
                     name="travel"
                     value="other"
-                    checked={row.trip.travel == "other"}
+                    checked={travel(row) == "other"}
                   /> Other
                   <input
                     type="number"
@@ -154,7 +152,7 @@ defmodule Web.Components.TravelCheck do
                     min="0"
                     step="1"
                     class="w-16"
-                    value={if row.trip.travel == "other", do: row.trip.km}
+                    value={if travel(row) == "other", do: row.trip.km}
                     aria-label="km"
                   /> km
                 </label>
@@ -173,24 +171,25 @@ defmodule Web.Components.TravelCheck do
             <p :if={@locked?} class="hint">Published, so travel can't be changed.</p>
             <div :if={!@locked?} class="flex flex-wrap gap-2">
               <.button
-                :if={!row.trip.checked_at}
-                id={"#{@id}-right-#{row.trip.d4h_attendance_id}"}
+                :if={row.trip && !row.trip.checked_at}
+                id={"#{@id}-right-#{row.id}"}
                 variant={:success}
                 phx-click="right"
                 phx-disable-with="Saving…"
-                phx-value-id={row.trip.d4h_attendance_id}
+                phx-value-id={row.id}
                 phx-target={@myself}
               >
                 That's right
               </.button>
               <.button
-                id={"#{@id}-change-#{row.trip.d4h_attendance_id}"}
+                id={"#{@id}-change-#{row.id}"}
+                variant={if row.trip, do: :default, else: :primary}
                 phx-click="change"
                 phx-disable-with="Working out km…"
-                phx-value-id={row.trip.d4h_attendance_id}
+                phx-value-id={row.id}
                 phx-target={@myself}
               >
-                Change
+                {if row.trip, do: "Change", else: "Set travel"}
               </.button>
             </div>
           <% end %>
@@ -205,6 +204,11 @@ defmodule Web.Components.TravelCheck do
 
   defp day(row, _rows, team),
     do: "#{Format.month_day(row.attendance.started_at, team.timezone)}: "
+
+  defp travel(%{trip: nil}), do: nil
+  defp travel(%{trip: trip}), do: trip.travel
+
+  defp sentence(%{trip: nil}, _team, _now), do: "Not set yet. How did you get there?"
 
   defp sentence(%{trip: %{checked_at: nil} = trip}, team, now),
     do: "#{setter(trip, team, now)} set it: #{how(trip)}."

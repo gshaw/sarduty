@@ -2,7 +2,7 @@ defmodule App.Operation.CheckTravel do
   @moduledoc """
   A member checks the travel a team admin set for one of their attended rows (#230):
   That's right marks it checked, or they set it themselves, the same four ways as on
-  Travel. Either way it counts as checked. Like the team admin's sets, it can't change
+  Travel, which is also how they set a row nobody has. Either way it counts as checked. Like the team admin's sets, it can't change
   once the activity is published.
   """
 
@@ -14,7 +14,7 @@ defmodule App.Operation.CheckTravel do
 
   @doc """
   `choice` is "right", or a travel with `km_text` for "other". Returns `{:ok, trip_or_plan}`
-  or `{:error, reason}`: :published, :deleted, :not_set (no trip for the row), :no_route,
+  or `{:error, reason}`: :published, :deleted, :not_set (That's right with no trip), :no_route,
   or SetTravel's :bad_km and :bad_travel.
   """
   def call(
@@ -36,7 +36,7 @@ defmodule App.Operation.CheckTravel do
 
   defp check(team, activity, member, user, d4h_attendance_id, choice, km_text, now) do
     case Trip.for_member(activity, member)[d4h_attendance_id] do
-      nil -> {:error, :not_set}
+      nil when choice == "right" -> {:error, :not_set}
       trip when choice == "right" -> {:ok, Trip.check!(trip, now)}
       _trip -> change(team, activity, member, user, d4h_attendance_id, choice, km_text, now)
     end

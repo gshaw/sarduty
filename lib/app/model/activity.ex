@@ -262,6 +262,18 @@ defmodule App.Model.Activity do
   def finished_draft?(%{is_published: published?, finished_at: finished_at}, %DateTime{} = now),
     do: published? == false and not DateTime.after?(finished_at, now)
 
+  @doc """
+  Where the activity is in its life at `now`: `:coming` before the start, `:under_way`
+  until the finish, then `:finished`. Published is apart: `is_published`. Pure.
+  """
+  def state(%{started_at: started_at, finished_at: finished_at}, %DateTime{} = now) do
+    cond do
+      DateTime.before?(now, started_at) -> :coming
+      DateTime.before?(now, finished_at) -> :under_way
+      true -> :finished
+    end
+  end
+
   @doc "Whether the activity has started by `now`. Pure."
   def started?(%{started_at: started_at}, %DateTime{} = now),
     do: not DateTime.before?(now, started_at)

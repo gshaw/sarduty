@@ -2,7 +2,6 @@ defmodule Web.ActivityLive do
   use Web, {:live_view_app_layout, access: :team}
 
   import Web.Components.ActivityMap
-  import Web.Components.ReportChart, only: [report_chart: 1]
   import Web.Components.ChangeHistory
   import Web.Components.CopyButton
   import Web.Components.CustomFields
@@ -24,7 +23,6 @@ defmodule Web.ActivityLive do
   alias App.Operation.SendReminders
   alias App.Repo
   alias App.ViewData.ActivityMembers
-  alias App.ViewData.ActivityOverview
   alias App.ViewData.ActivityReminders
   alias App.ViewData.ActivityTravel
   alias App.ViewData.ChangeHistory
@@ -46,7 +44,7 @@ defmodule Web.ActivityLive do
   # Members open it too (#406): the same activity, facts, and people a team admin sees.
   # Under the title, everyone gets the counts, and a member it invites gets their reply
   # until the start (#444). Then tabs, above both columns: Overview has the tags, map,
-  # description, and charts; Members lists who is invited and how they replied; Travel
+  # and description; Members lists who is invited and how they replied; Travel
   # (#230), for team admins from the start, next to Members since it's the next job;
   # Equipment what was used; Fields its D4H custom fields, when it has any or a team
   # admin can fill one in, with Change fields (#705); and History, for team admins. The
@@ -107,21 +105,12 @@ defmodule Web.ActivityLive do
       attendances: attendances,
       counts: ActivityMembers.counts(members),
       invitation: replier && Attendance.invitation(activity, replier),
-      your_travel?: your_travel?(activity, replier, socket.assigns.coming?)
+      your_travel?: your_travel?(activity, replier, socket.assigns.coming?, attendances)
     )
     |> assign_reminders(members)
     |> assign_delete()
     |> assign_travel()
-    |> assign_overview()
   end
-
-  # Overview's charts, only on its tab: they run reports.
-  defp assign_overview(%{assigns: %{tab: :overview}} = socket) do
-    %{activity: activity, current_team: team, team_admin?: team_admin?, now: now} = socket.assigns
-    assign(socket, overview_charts: ActivityOverview.charts(team, activity, now, team_admin?))
-  end
-
-  defp assign_overview(socket), do: assign(socket, overview_charts: [])
 
   # The Travel tab's badge counts the attended rows with no trip (#230), from the finish,
   # when members are home, until it's published and travel can't change.
@@ -134,12 +123,18 @@ defmodule Web.ActivityLive do
     )
   end
 
-  # Whether the panel shows the member's travel: after the start, once a team admin set
-  # some for them (#230).
-  defp your_travel?(_activity, nil, _coming?), do: false
-  defp your_travel?(_activity, _member, true), do: false
-  defp your_travel?(%Activity{deleted_at: %DateTime{}}, _member, _coming?), do: false
-  defp your_travel?(activity, member, _coming?), do: Trip.for_member(activity, member) != %{}
+  # Whether the panel shows the member's travel (#230): after the start, once a team
+  # admin set some for them, or while it's open to them to set. TravelCheck shows which.
+  defp your_travel?(_activity, nil, _coming?, _attendances), do: false
+  defp your_travel?(_activity, _member, true, _attendances), do: false
+
+  defp your_travel?(%Activity{deleted_at: %DateTime{}}, _member, _coming?, _attendances),
+    do: false
+
+  defp your_travel?(activity, member, _coming?, attendances) do
+    attended? = Enum.any?(attendances, &(&1.member.id == member.id))
+    (attended? and not Activity.locked?(activity)) or Trip.for_member(activity, member) != %{}
+  end
 
   # Delete is an Actions link that opens the confirm dialog (docs/urls.md), for a Records
   # team's admins: D4H does not let SAR Duty delete activities.
@@ -294,6 +289,7 @@ defmodule Web.ActivityLive do
       team={@activity.team}
       now={@now}
       counts={@counts}
+      state?={!@activity.deleted_at}
       take_attendance?={Activity.take_attendance?(@activity, @team_admin?, @now)}
     >
       <:reply :if={Reply.open?(@invitation, @activity, @now)}>
@@ -385,7 +381,6 @@ defmodule Web.ActivityLive do
           activity={@activity}
           hours_tags={@hours_tags}
           map={@map}
-          charts={@overview_charts}
         />
         <.live_component
           :if={@tab == :travel and !@coming? and !@activity.deleted_at}
@@ -652,9 +647,8 @@ defmodule Web.ActivityLive do
   attr :activity, :map, required: true
   attr :hours_tags, :map, required: true
   attr :map, :map, default: nil
-  attr :charts, :list, default: [], doc: "ActivityOverview.charts/4's"
 
-  # Overview: the tags, the map, the description, then the charts with something to draw.
+  # Overview: the tags, the map, and the description.
   def main_content(assigns) do
     ~H"""
     <div>
@@ -667,19 +661,6 @@ defmodule Web.ActivityLive do
       <div class="mb-4">
         <.markdown content={@activity.description} />
       </div>
-
-      <section :for={chart <- @charts} id={chart.id} class="card mt-6">
-        <header>
-          <h2 class="chart-title">{chart.title}</h2>
-        </header>
-        <p class="chart-caption">{chart.caption}</p>
-        <.report_chart
-          id={"#{chart.id}-chart"}
-          chart={chart.chart}
-          records={chart.records}
-          team={@activity.team}
-        />
-      </section>
     </div>
     """
   end

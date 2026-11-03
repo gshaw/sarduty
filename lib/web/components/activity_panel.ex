@@ -17,6 +17,7 @@ defmodule Web.Components.ActivityPanel do
   attr :team, :map, required: true, doc: "for the time zone, and Take attendance's link"
   attr :now, :any, required: true
   attr :label, :string, default: nil, doc: ~s(a word over the day, such as "Next up")
+  attr :state?, :boolean, default: false, doc: "adds the state line: `state_text/3`"
   attr :counts, :map, default: nil, doc: "`Attendance.reply_counts/2`'s, for the counts line"
 
   attr :take_attendance?, :boolean,
@@ -40,6 +41,9 @@ defmodule Web.Components.ActivityPanel do
       </div>
       <div class="min-w-0">
         {render_slot(@inner_block)}
+        <p :if={@state?} id={"#{@id}-state"} class="activity-panel-state">
+          {state_text(@activity, @now, @team.timezone)}
+        </p>
         <p :if={@counts} id={"#{@id}-counts"} class="activity-panel-counts">
           <span class="with-badge">
             {Reply.counts_text(@counts, Activity.started?(@activity, @now))}
@@ -59,6 +63,58 @@ defmodule Web.Components.ActivityPanel do
     </section>
     """
   end
+
+  @doc """
+  Where the activity is, for its page: "Starts in 3 hours", "Starts tomorrow", "Starts in
+  4 days"; "Under way · finishes 19:00" (with the day when that's not today); then
+  "Finished 3 days ago · not published" or "· published". What happens on the page
+  follows it: replies become attendance at the start, travel opens at the finish, and
+  publishing locks it all.
+  """
+  def state_text(activity, now, timezone) do
+    case Activity.state(activity, now) do
+      :coming ->
+        "Starts " <> starts(activity.started_at, now, timezone)
+
+      :under_way ->
+        "Under way · finishes " <> finishes(activity.finished_at, now, timezone)
+
+      :finished ->
+        "Finished #{finished(activity.finished_at, now, timezone)} · #{published(activity)}"
+    end
+  end
+
+  defp starts(started_at, now, timezone) do
+    days = Date.diff(local_date(started_at, timezone), local_date(now, timezone))
+
+    cond do
+      DateTime.diff(started_at, now) < 24 * 60 * 60 -> Format.starts_in(started_at, now)
+      days == 1 -> "tomorrow"
+      true -> "in #{days} days"
+    end
+  end
+
+  defp finishes(finished_at, now, timezone) do
+    time = Format.time_short(finished_at, timezone)
+
+    if local_date(finished_at, timezone) == local_date(now, timezone),
+      do: time,
+      else: "#{Format.day_coming_up(finished_at, now, timezone)}, #{time}"
+  end
+
+  defp finished(finished_at, now, timezone) do
+    case Format.time_ago(finished_at, now, timezone) do
+      "Today" -> "today"
+      "Yesterday" -> "yesterday"
+      ago -> ago
+    end
+  end
+
+  defp published(%{is_published: true}), do: "published"
+  defp published(_activity), do: "not published"
+
+  defp local_date(datetime, timezone),
+    do: datetime |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
 
   attr :id, :string, default: nil
   attr :activity, :map, required: true, doc: "an Activity, with Enough at and Full at"

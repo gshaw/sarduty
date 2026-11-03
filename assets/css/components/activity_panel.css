@@ -7,6 +7,7 @@
 .activity-panel-day { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; color: var(--text); }
 .activity-panel-time { font-size: var(--fs-2xl); line-height: var(--lh-2xl); font-weight: 700; color: var(--text); }
 .activity-panel-title { font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 700; margin: var(--sp-1) 0; }
+.activity-panel-state { margin: 0; color: var(--text-muted); }
 .activity-panel-counts { margin: 0; }
 .activity-panel-reply { margin-top: var(--sp-3); }
 

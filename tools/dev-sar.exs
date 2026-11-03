@@ -142,7 +142,26 @@ latest = fn title ->
   activities |> Enum.filter(&(&1.title == title)) |> Enum.max_by(& &1.started_at, DateTime)
 end
 
-hiker = latest.("Missing hiker")
+# A long description in D4H's HTML, like a real team's callout write-up.
+hiker_description = """
+<p>Coast Range SAR was requested by Ridgeview RCMP at 18:40 to search for a 58-year-old male hiker overdue from a day hike on the Cedar Flats loop. He left the Upper Cedar trailhead at about 09:00 and told his wife he would be home by 16:00. His car is still in the trailhead lot.</p>
+<p><strong>Subject:</strong> 5'10", heavy build, grey beard. Last seen wearing a red rain shell, tan hiking pants, and a black toque. Carrying a small blue daypack, one litre of water, and a phone that has gone straight to voicemail since 14:15. Type 2 diabetic; his wife says he carries glucose tablets but no extra insulin. Experienced on local trails but has not hiked the north loop before.</p>
+<p><strong>ICP:</strong> Upper Cedar trailhead parking lot, end of Cedar Flats Road. Report to the command post trailer, sign in with the Planning section, and wait for a briefing before deploying. Parking is tight: park along the road shoulder past the gate and leave the lot clear for the RCMP and the ambulance.</p>
+<p><strong>Operational period 1 (18:40 to 02:00):</strong></p>
+<ul>
+<li>Team 1 (hasty): Cedar Flats loop clockwise from the trailhead to the falls viewpoint.</li>
+<li>Team 2 (hasty): north loop counter-clockwise, including the washed-out bridge at Mile 3.</li>
+<li>Team 3: attraction at the junctions with lights and whistles, every 15 minutes on the hour.</li>
+<li>Team 4 (rope): standby at the falls viewpoint; the slope below the railing is steep and loose.</li>
+<li>Drone team: thermal sweep of the creek drainage once it is dark enough.</li>
+</ul>
+<p><strong>Bring:</strong> 24-hour pack, headlamp and spare batteries, rain gear, warm layers, radio (channel plan in the briefing), and food for the night. Temperatures are expected to drop to 2&deg;C with rain after midnight.</p>
+<p><strong>Update 23:15:</strong> Team 2 found fresh boot prints and a glucose tablet wrapper at the bridge washout. Search focus moved to the creek below. Mutual aid requested from Valley SAR for operational period 2.</p>
+<p><strong>Update 01:40:</strong> Subject found by Team 2 about 400 m downstream of the bridge, cold and wet with a sprained ankle but conscious and talking. Packaged and carried out by Team 4 with a wheeled litter; handed to the ambulance at the trailhead at 03:05. All teams back at the ICP and signed out by 03:30. Stood down by RCMP at 03:35.</p>
+<p>Thanks to everyone who came out on short notice. Please enter your hours and travel in SAR Duty, and get any gear that needs cleaning or repair back to the hall by Sunday. Debrief at the hall on Tuesday at 19:00.</p>
+"""
+
+hiker = latest.("Missing hiker") |> Ecto.Changeset.change(description: hiker_description) |> Repo.update!()
 
 training =
   activities

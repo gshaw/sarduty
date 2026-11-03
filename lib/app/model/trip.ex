@@ -70,6 +70,32 @@ defmodule App.Model.Trip do
     Repo.all(query)
   end
 
+  @unset_days 30
+
+  @doc """
+  The member's attended rows with no trip, on drafts that finished in the last 30 days:
+  travel they can set themselves. Older drafts are left out, so a team that rarely
+  publishes doesn't fill the list. Each row with its activity, oldest activity first.
+  """
+  def unset_for_member(%Member{} = member, %DateTime{} = now) do
+    since = DateTime.add(now, -@unset_days, :day)
+
+    App.Model.Attendance
+    |> App.Model.Attendance.attended(now)
+    |> join(:left, [r, activity: a], t in Trip,
+      as: :trip,
+      on: t.activity_id == a.id and t.d4h_attendance_id == r.d4h_attendance_id
+    )
+    |> where(
+      [r, activity: a, trip: t],
+      r.member_id == ^member.id and a.team_id == ^member.team_id and a.is_published == false and
+        a.finished_at <= ^now and a.finished_at >= ^since and is_nil(t.id)
+    )
+    |> order_by([r, activity: a], asc: a.started_at, asc: r.started_at)
+    |> preload([activity: a], activity: a)
+    |> Repo.all()
+  end
+
   @doc "Each way a row can be set: icp, yard, passenger, other."
   def travels, do: @travels
 

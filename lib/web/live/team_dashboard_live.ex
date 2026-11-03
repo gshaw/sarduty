@@ -138,7 +138,8 @@ defmodule Web.TeamDashboardLive do
           member.team.timezone,
           chores: chores,
           certificates: certificates,
-          trips: Trip.unchecked_for_member(member)
+          trips: Trip.unchecked_for_member(member),
+          unset: Trip.unset_for_member(member, now)
         )
     )
   end
@@ -747,8 +748,8 @@ defmodule Web.TeamDashboardLive do
       <.a
         navigate={~p"/teams/#{@team}/activities/#{@item.activity.id}"}
         class="font-semibold"
-      >Check your travel for {@item.activity.title}</.a>
-      <span class="hint block">{travel_hint(@item.trips)}</span>
+      >{if @item.trips == [], do: "Set", else: "Check"} your travel for {@item.activity.title}</.a>
+      <span class="hint block">{travel_hint(@item)}</span>
     </li>
     """
   end
@@ -770,13 +771,16 @@ defmodule Web.TeamDashboardLive do
     """
   end
 
-  defp travel_hint([trip]),
+  defp travel_hint(%{trips: [], unset: _rows}),
+    do: "Not set yet. Set it before the activity is published."
+
+  defp travel_hint(%{trips: [trip], unset: []}),
     do:
       "#{ActivityTravel.travel_text(trip.travel)}, #{Format.km(trip.km)}. Change it before the activity is published."
 
-  defp travel_hint(trips),
+  defp travel_hint(%{trips: trips, unset: unset}),
     do:
-      "#{Format.count(length(trips), one: "%d trip", many: "%d trips")}. Change them before the activity is published."
+      "#{Format.count(length(trips) + length(unset), one: "%d trip", many: "%d trips")}. Change them before the activity is published."
 
   defp declined_hint([chore]),
     do:

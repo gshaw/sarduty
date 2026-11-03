@@ -123,6 +123,54 @@ defmodule Web.Components.TravelCheckTest do
     refute has_element?(lv, "#to-do-travel-#{ctx.activity.id}")
   end
 
+  test "with nothing set, the member sets it, and the Dashboard asks until then", ctx do
+    Repo.delete!(ctx.trip)
+    id = ctx.trip.d4h_attendance_id
+    finished = DateTime.utc_now() |> DateTime.add(-1, :hour) |> DateTime.truncate(:second)
+    ctx.activity |> Ecto.Changeset.change(finished_at: finished) |> Repo.update!()
+
+    {:ok, dashboard, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
+
+    assert dashboard |> element("#to-do-travel-#{ctx.activity.id}") |> render() =~
+             "Set your travel for Missing hiker"
+
+    lv = open(ctx)
+    assert lv |> element("#activity-your-travel") |> render() =~ "Not set yet."
+    refute has_element?(lv, "#activity-your-travel-right-#{id}")
+
+    lv |> element("#activity-your-travel-change-#{id}", "Set travel") |> render_click()
+    lv |> form("#activity-your-travel-form", %{"travel" => "yard"}) |> render_submit()
+
+    assert %Trip{travel: "yard", km: 30, checked_at: %DateTime{}} = trip()
+
+    {:ok, dashboard, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
+    refute has_element?(dashboard, "#to-do-travel-#{ctx.activity.id}")
+  end
+
+  test "with nothing set and published, there's nothing to show or ask", ctx do
+    Repo.delete!(ctx.trip)
+    ctx.activity |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
+
+    refute has_element?(open(ctx), "#activity-your-travel-#{ctx.trip.d4h_attendance_id}")
+
+    {:ok, dashboard, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
+    refute has_element?(dashboard, "#to-do-travel-#{ctx.activity.id}")
+  end
+
+  test "the Dashboard leaves out drafts that finished over 30 days ago", ctx do
+    Repo.delete!(ctx.trip)
+    long_ago = DateTime.utc_now() |> DateTime.add(-40, :day) |> DateTime.truncate(:second)
+
+    ctx.activity
+    |> Ecto.Changeset.change(started_at: long_ago, finished_at: DateTime.add(long_ago, 1, :hour))
+    |> Repo.update!()
+
+    Repo.update_all(Attendance, set: [started_at: long_ago])
+
+    {:ok, dashboard, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
+    refute has_element?(dashboard, "#to-do-travel-#{ctx.activity.id}")
+  end
+
   test "a team admin viewing as the member saves nothing", ctx do
     conn =
       build_conn()
