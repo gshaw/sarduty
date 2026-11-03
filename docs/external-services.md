@@ -28,7 +28,9 @@ D4H doesn't have. See [records.md](records.md).
 ## Mapbox
 
 [lib/app/adapter/mapbox.ex](../lib/app/adapter/mapbox.ex). Geocodes member addresses and
-gets driving distances for the mileage report, and draws the static maps on the team home
+gets driving distances for the mileage report, saved so each is asked once (#230): a home
+in `home_coordinates`, looked up again when the member's address changes, and a one-way
+route in `route_distances`. It also draws the static maps on the team home
 and activity pages. The activity form's place lists the team's own past places first,
 from our database, then places from the Search Box API once an admin types 3 characters,
 through the server (#610, [App.Operation.FindPlace](../lib/app/operation/find_place.ex)).

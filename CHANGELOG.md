@@ -4,6 +4,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- The mileage report opens at once from SAR Duty's copy, with a row for each day a member
+  came. Each home and route is looked up once, and one route Mapbox can't find no longer
+  breaks the report. It shows km only now, not driving hours.
 - The Dashboard's numbers and charts open the reports that draw them, so you can see how
   each is counted and copy one. Its numbers' lines now cover this year.
 - ⭐ Reports draw charts: end one with `chart columns`, `lines`, `stat`, `bars`,

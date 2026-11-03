@@ -67,7 +67,8 @@ data?
 - Records edits: `SaveMember.plan/3` and `SaveActivity.plan/4` name only what changed,
   pure, and the form LiveView tests run each edit against a stubbed Records.
 - Mileage round trips: `test/app/operation/build_mileage_report_test.exs`, pure, with
-  distances worked out by hand.
+  distances worked out by hand. `activity_mileage_live_test.exs` checks against a stubbed
+  Mapbox that each lookup is asked once and saved, and a changed address is asked again.
 - The team dashboard (#205): which activity is NextUp and what Coming up holds
   (`test/app/view_data/team_dashboard_view_data_test.exs`), which "Needs attention" items
   show and in what order (`team_attention_test.exs`), and the year's stats and charts

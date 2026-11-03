@@ -97,17 +97,18 @@ defmodule App.Adapter.Mapbox do
       # types: "address"
     ]
 
-    response = Req.get!(context, url: url, params: params)
-
-    if response.status == 200 do
-      try do
-        %{"features" => [%{"center" => [lng, lat]} | _]} = response.body
+    case Req.get(context, url: url, params: params, retry: false) do
+      {:ok, %{status: 200, body: %{"features" => [%{"center" => [lng, lat]} | _]}}} ->
         {:ok, {lat, lng}}
-      rescue
-        _ in MatchError -> {:error, "unknown", response}
-      end
-    else
-      {:error, "Unknown (#{response.status})", response}
+
+      {:ok, %{status: 200}} ->
+        {:error, :not_found}
+
+      {:ok, %{status: status}} ->
+        {:error, status}
+
+      {:error, _exception} ->
+        {:error, :unreachable}
     end
   end
 
@@ -176,15 +177,26 @@ defmodule App.Adapter.Mapbox do
     }
   end
 
+  @doc """
+  The drive from one `{lat, lng}` to another: `{:ok, metres, seconds}`, or `{:error,
+  reason}`, `:no_route` when Mapbox found none (#230).
+  """
   def fetch_driving_info(context, {from_lat, from_lng}, {to_lat, to_lng}) do
     url = "directions/v5/mapbox/driving/#{from_lng},#{from_lat};#{to_lng},#{to_lat}"
-    response = Req.get!(context, url: url, params: [language: "en"])
 
-    if response.status == 200 do
-      %{"routes" => [%{"distance" => distance, "duration" => duration} | _]} = response.body
-      {:ok, distance, duration}
-    else
-      {:error, response}
+    case Req.get(context, url: url, params: [language: "en"], retry: false) do
+      {:ok,
+       %{status: 200, body: %{"routes" => [%{"distance" => metres, "duration" => seconds} | _]}}} ->
+        {:ok, metres, seconds}
+
+      {:ok, %{status: 200}} ->
+        {:error, :no_route}
+
+      {:ok, %{status: status}} ->
+        {:error, status}
+
+      {:error, _exception} ->
+        {:error, :unreachable}
     end
   end
 

@@ -296,8 +296,8 @@ none and is never asked. See [custom-fields.md](custom-fields.md).
 
 ## Pages that skip the copy
 
-Some pages call D4H live instead of reading the database: activity attendance, the
-mileage report, team settings refresh, and member photos. They use the team's key too.
+Some pages call D4H live instead of reading the database: activity attendance, team
+settings refresh, and member photos. They use the team's key too.
 Every write is a change set: see [change-sets.md](change-sets.md).
 
 The sync also stores each member's D4H access level (`d4h_permission`) and status. That

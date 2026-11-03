@@ -35,14 +35,14 @@ defmodule Web.StandardColumnsTest do
     {"lib/web/live/certificate_collection_live.ex", "Qualification"} =>
       "the certificate, named by the qualification it asks for, links its own page",
     {"lib/web/live/endorsement_form_live.ex", "Qualification"} =>
-      "a qualification D4H deleted shows by its D4H id, with no page to link",
-    {"lib/web/live/activity_mileage_live.ex", "Hours"} =>
-      "Mapbox's driving time in tenths of an hour, for the mileage claim"
+      "a qualification D4H deleted shows by its D4H id, with no page to link"
   }
 
   @formatted_by_hand %{
     {"lib/web/live/member_standing_live.ex", ""} =>
-      "the Delete button's confirm names the check-in's day in a sentence"
+      "the Delete button's confirm names the check-in's day in a sentence",
+    {"lib/web/live/activity_mileage_live.ex", "Member"} =>
+      "a member on two days has a row for each, told apart by the day under the name"
   }
 
   # Where people pick an activity by when it runs.
