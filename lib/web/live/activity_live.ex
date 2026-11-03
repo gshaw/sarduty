@@ -2,6 +2,8 @@ defmodule Web.ActivityLive do
   use Web, {:live_view_app_layout, access: :team}
 
   import Web.Components.ActivityMap
+  import Web.Components.Chart, only: [stat: 1]
+  import Web.Components.ReportChart, only: [report_chart: 1]
   import Web.Components.ChangeHistory
   import Web.Components.CopyButton
   import Web.Components.CustomFields
@@ -19,10 +21,12 @@ defmodule Web.ActivityLive do
   alias App.Model.Member
   alias App.Model.Reminder
   alias App.Model.Standing
+  alias App.Model.Trip
   alias App.Operation.DeleteActivity
   alias App.Operation.SendReminders
   alias App.Repo
   alias App.ViewData.ActivityMembers
+  alias App.ViewData.ActivityOverview
   alias App.ViewData.ActivityReminders
   alias App.ViewData.ActivityTravel
   alias App.ViewData.ChangeHistory
@@ -31,6 +35,7 @@ defmodule Web.ActivityLive do
   alias Web.Components.Reply
   alias Web.Components.ReplyControl
   alias Web.Components.TravelCheck
+  alias Web.Components.TravelTab
 
   # A reminder's job tells the page when it's sent or failed.
   def mount(_params, _session, socket) do
@@ -42,12 +47,14 @@ defmodule Web.ActivityLive do
 
   # Members open it too (#406): the same activity, facts, and people a team admin sees.
   # Under the title, everyone gets the counts, and a member it invites gets their reply
-  # until the start (#444). Under the description, tabs: Members lists who is invited
-  # and how they replied, filtered by `?view=`; Equipment what was used; Fields its D4H
-  # custom fields, when it has any or a team admin can fill one in, with Change fields
-  # (#705); and History, for team admins. Team admins also get Take attendance, Actions,
-  # and the links to member and equipment pages. A member never gets an activity D4H has
-  # deleted; a team admin sees it under a banner.
+  # until the start (#444). Then tabs: Overview has the tags, map, and description;
+  # Members lists who is invited and how they replied, filtered by `?view=`; Travel
+  # (#230), for team admins from the start, next to Members since it's the next job;
+  # Equipment what was used; Fields its D4H custom fields, when it has any or a team
+  # admin can fill one in, with Change fields (#705); and History, for team admins.
+  # Team admins also get Take attendance, Actions, and the links to member and equipment
+  # pages. A member never gets an activity D4H has deleted; a team admin sees it under a
+  # banner.
   def handle_params(params, _uri, socket) do
     %{current_team: team, team_admin?: team_admin?} = socket.assigns
     activity = fetch_activity(team, params["id"])
@@ -79,7 +86,9 @@ defmodule Web.ActivityLive do
     {:noreply, socket}
   end
 
-  defp page_title(activity, :members), do: activity.title
+  defp page_title(activity, :overview), do: activity.title
+  defp page_title(activity, :members), do: "#{activity.title} · Members"
+  defp page_title(activity, :travel), do: "#{activity.title} · Travel"
   defp page_title(activity, :equipment), do: "#{activity.title} · Equipment"
   defp page_title(activity, :fields), do: "#{activity.title} · Fields"
   defp page_title(activity, :history), do: "#{activity.title} · History"
@@ -99,14 +108,36 @@ defmodule Web.ActivityLive do
       attendances: attendances,
       attendance_count: length(attendances),
       counts: ActivityMembers.counts(members),
-      invitation: replier && Attendance.invitation(activity, replier)
+      invitation: replier && Attendance.invitation(activity, replier),
+      your_travel?: your_travel?(activity, replier, socket.assigns.coming?)
     )
     |> assign_reminders(members)
     |> assign_delete()
     |> assign_travel()
+    |> assign_overview()
   end
 
-  # Travel's Actions link counts the attended rows with no trip (#230), until it's
+  # Overview's stats and charts, only on its tab: the charts run reports.
+  defp assign_overview(%{assigns: %{tab: :overview}} = socket) do
+    %{activity: activity, current_team: team, team_admin?: team_admin?, now: now} = socket.assigns
+
+    stats =
+      ActivityOverview.stats(%{
+        coming?: socket.assigns.coming?,
+        counts: socket.assigns.counts,
+        attendances: socket.assigns.attendances,
+        km: ActivityOverview.km(activity)
+      })
+
+    assign(socket,
+      overview_stats: stats,
+      overview_charts: ActivityOverview.charts(team, activity, now, team_admin?)
+    )
+  end
+
+  defp assign_overview(socket), do: assign(socket, overview_stats: [], overview_charts: [])
+
+  # The Travel tab's badge counts the attended rows with no trip (#230), until it's
   # published and travel can't change.
   defp assign_travel(socket) do
     %{activity: activity, team_admin?: team_admin?, now: now} = socket.assigns
@@ -116,6 +147,13 @@ defmodule Web.ActivityLive do
       travel_not_set: if(count?, do: ActivityTravel.counts(activity, now).not_set, else: 0)
     )
   end
+
+  # Whether the panel shows the member's travel: after the start, once a team admin set
+  # some for them (#230).
+  defp your_travel?(_activity, nil, _coming?), do: false
+  defp your_travel?(_activity, _member, true), do: false
+  defp your_travel?(%Activity{deleted_at: %DateTime{}}, _member, _coming?), do: false
+  defp your_travel?(activity, member, _coming?), do: Trip.for_member(activity, member) != %{}
 
   # Delete is an Actions link that opens the confirm dialog (docs/urls.md), for a Records
   # team's admins: D4H does not let SAR Duty delete activities.
@@ -195,6 +233,10 @@ defmodule Web.ActivityLive do
 
   def handle_info({:reply_failed, text}, socket), do: {:noreply, put_flash(socket, :error, text)}
 
+  # The Travel tab changed something, so its badge counts again.
+  def handle_info({:travel_flash, kind, text}, socket),
+    do: {:noreply, socket |> put_flash(kind, text) |> assign_travel()}
+
   def handle_info({:travel_checked, text}, socket), do: {:noreply, put_flash(socket, :info, text)}
   def handle_info({:travel_failed, text}, socket), do: {:noreply, put_flash(socket, :error, text)}
 
@@ -215,7 +257,7 @@ defmodule Web.ActivityLive do
           tip: activity.title
         }
 
-        ActivityMap.build([point], {640, 480}, max_zoom: 10.0)
+        ActivityMap.build([point], {960, 540}, max_zoom: 10.0)
 
       _none ->
         nil
@@ -295,18 +337,20 @@ defmodule Web.ActivityLive do
           viewing_as={@viewing_as}
         />
       </:reply>
+      <%!-- After the start, the member's own part is their travel, where their reply was. --%>
+      <:reply :if={@your_travel?}>
+        <.live_component
+          module={TravelCheck}
+          id="activity-your-travel"
+          team={@current_team}
+          activity={@activity}
+          member={@replier}
+          user={@current_user}
+          viewing_as={@viewing_as}
+          now={@now}
+        />
+      </:reply>
     </.activity_panel>
-    <.live_component
-      :if={@replier && !@coming? && !@activity.deleted_at}
-      module={TravelCheck}
-      id="activity-your-travel"
-      team={@current_team}
-      activity={@activity}
-      member={@replier}
-      user={@current_user}
-      viewing_as={@viewing_as}
-      now={@now}
-    />
     <%!-- A phone shows the facts, then the story and people, then fields and Actions. --%>
     <div class="activity-columns">
       <aside id="activity-facts" class="activity-columns-facts">
@@ -319,14 +363,25 @@ defmodule Web.ActivityLive do
         />
       </aside>
       <main class="activity-columns-main">
-        <.main_content activity={@activity} hours_tags={@hours_tags} map={@map} />
-        <%!-- Under the description, so the activity stays on screen on every tab. --%>
         <.tabs label="Activity">
           <:tab
             navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}"}
+            current={@tab == :overview}
+          >
+            Overview
+          </:tab>
+          <:tab
+            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/members"}
             current={@tab == :members}
           >
             Members
+          </:tab>
+          <:tab
+            :if={@team_admin? and (!@coming? or @tab == :travel) and !@activity.deleted_at}
+            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/travel"}
+            current={@tab == :travel}
+          >
+            Travel<.badge :if={@travel_not_set > 0} kind={:warning}>{@travel_not_set}</.badge>
           </:tab>
           <:tab
             navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/equipment"}
@@ -351,6 +406,26 @@ defmodule Web.ActivityLive do
             History
           </:tab>
         </.tabs>
+        <.main_content
+          :if={@tab == :overview}
+          activity={@activity}
+          hours_tags={@hours_tags}
+          map={@map}
+          stats={@overview_stats}
+          charts={@overview_charts}
+        />
+        <.live_component
+          :if={@tab == :travel and !@coming? and !@activity.deleted_at}
+          module={TravelTab}
+          id="activity-travel-tab"
+          team={@current_team}
+          activity={@activity}
+          user={@current_user}
+          service={@service}
+        />
+        <p :if={@tab == :travel and @coming?} id="travel-not-started" class="hint">
+          Travel opens when the activity starts.
+        </p>
         <.members_section
           :if={@tab == :members}
           activity={@activity}
@@ -399,7 +474,6 @@ defmodule Web.ActivityLive do
           send_reminders?={@send_reminders?}
           send_update?={@send_update?}
           delete_confirm={@delete_confirm}
-          travel_not_set={@travel_not_set}
         />
       </aside>
     </div>
@@ -514,7 +588,6 @@ defmodule Web.ActivityLive do
   attr :send_reminders?, :boolean, default: false, doc: "whether anyone has no reply yet"
   attr :send_update?, :boolean, default: false, doc: "whether anyone is on the activity"
   attr :delete_confirm, :any, default: false, doc: "Delete's confirm dialog, or false for none"
-  attr :travel_not_set, :integer, default: 0, doc: "attended rows with no trip, before publishing"
 
   # Every record's sidebar ends the same way: Actions. Custom fields are a tab (#705).
   def sidebar_end(assigns) do
@@ -579,15 +652,6 @@ defmodule Web.ActivityLive do
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/attendance"}
             >Send attendance</.a>
           </li>
-          <li :if={@admin_actions?}>
-            <.a
-              id="activity-travel"
-              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/travel"}
-            >Travel</.a>
-            <span :if={@travel_not_set > 0} id="activity-travel-not-set" class="hint block">
-              {Format.count(@travel_not_set, one: "%d not set", many: "%d not set")}
-            </span>
-          </li>
           <li :if={@d4h?}>
             <.a
               id="activity-d4h"
@@ -613,19 +677,39 @@ defmodule Web.ActivityLive do
   attr :activity, :map, required: true
   attr :hours_tags, :map, required: true
   attr :map, :map, default: nil
+  attr :stats, :list, default: [], doc: "ActivityOverview.stats/1's"
+  attr :charts, :list, default: [], doc: "ActivityOverview.charts/4's"
 
+  # Overview: the tags, the map, the stats, the description, then the charts with
+  # something to draw.
   def main_content(assigns) do
     ~H"""
     <div>
       <div class="mb-4"><.activity_tags activity={@activity} hours_tags={@hours_tags} /></div>
 
-      <div :if={@map} class="measure mb-4">
+      <div :if={@map} class="mb-4">
         <.activity_map id="activity-map" map={@map} label="Map of activity" />
       </div>
 
+      <div :if={@stats != []} id="activity-stats" class="chart-stats">
+        <.stat :for={stat <- @stats} id={stat.id} value={stat.value} label={stat.label} />
+      </div>
       <div class="mb-4">
         <.markdown content={@activity.description} />
       </div>
+
+      <section :for={chart <- @charts} id={chart.id} class="card mt-6">
+        <header>
+          <h2 class="chart-title">{chart.title}</h2>
+        </header>
+        <p class="chart-caption">{chart.caption}</p>
+        <.report_chart
+          id={"#{chart.id}-chart"}
+          chart={chart.chart}
+          records={chart.records}
+          team={@activity.team}
+        />
+      </section>
     </div>
     """
   end
@@ -821,7 +905,7 @@ defmodule Web.ActivityLive do
   defp members_path(activity, nil), do: ~p"/teams/#{activity.team}/activities/#{activity.id}"
 
   defp members_path(activity, view),
-    do: ~p"/teams/#{activity.team}/activities/#{activity.id}?#{[view: view]}"
+    do: ~p"/teams/#{activity.team}/activities/#{activity.id}/members?#{[view: view]}"
 
   # A member's own times once it starts; the start's date only when it isn't the
   # activity's day. Blank for anyone who didn't attend.

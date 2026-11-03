@@ -83,6 +83,21 @@ defmodule App.Model.Trip do
     |> Map.new(&{&1.d4h_attendance_id, &1})
   end
 
+  @doc "Takes these rows' trips away, by D4H attendance id: back to not set."
+  def delete_all!(%Activity{}, []), do: :ok
+
+  def delete_all!(%Activity{} = activity, d4h_attendance_ids) do
+    query =
+      from(t in Trip,
+        where:
+          t.team_id == ^activity.team_id and t.activity_id == ^activity.id and
+            t.d4h_attendance_id in ^d4h_attendance_ids
+      )
+
+    Repo.delete_all(query)
+    :ok
+  end
+
   @doc """
   Saves each `%{attendance: row, travel: travel, km: km}`, replacing a row's trip if it
   has one. One insert. `checked_member_id` is the member whose rows count as checked:

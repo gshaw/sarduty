@@ -54,7 +54,9 @@ defmodule Web.ActivityAddMembersLive do
 
     socket
     |> put_flash(:error, text)
-    |> push_navigate(to: ~p"/teams/#{socket.assigns.current_team}/activities/#{activity.id}")
+    |> push_navigate(
+      to: ~p"/teams/#{socket.assigns.current_team}/activities/#{activity.id}/members"
+    )
   end
 
   # Who the name picker offers: current members SAR Duty counts, A to Z.
@@ -177,7 +179,7 @@ defmodule Web.ActivityAddMembersLive do
               </.button>
               <.button
                 id="members-cancel"
-                navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
+                navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}/members"}
               >
                 Cancel
               </.button>
@@ -224,7 +226,7 @@ defmodule Web.ActivityAddMembersLive do
         {:noreply,
          socket
          |> put_flash(flash_kind(result.rows), result_text(result))
-         |> push_navigate(to: ~p"/teams/#{team}/activities/#{activity.id}")}
+         |> push_navigate(to: ~p"/teams/#{team}/activities/#{activity.id}/members")}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, InviteMembers.error_text(team, reason))}

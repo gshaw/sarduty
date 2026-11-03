@@ -37,6 +37,7 @@ defmodule Web.ActivityTravelLiveTest do
 
     %{
       conn: log_in_user(conn, user),
+      user: user,
       team: team,
       activity: activity,
       ann: ann,
@@ -143,6 +144,7 @@ defmodule Web.ActivityTravelLiveTest do
       set(lv, [ctx.ann_row], "icp")
 
       assert render(lv) =~ "1 row set to ICP."
+      assert lv |> element(".tabs a", "Travel") |> render() =~ ~r/badge[^>]*>\s*1\s*</
       assert lv |> element("#travel-set") |> render() =~ "Drove to the ICP"
       assert lv |> element("#travel-set") |> render() =~ "50 km"
 
@@ -168,13 +170,18 @@ defmodule Web.ActivityTravelLiveTest do
                Repo.get_by!(Trip, d4h_attendance_id: ctx.bob_row.d4h_attendance_id)
     end
 
-    test "the buttons count the checked rows", ctx do
+    test "the count of checked rows sits above buttons that keep their words", ctx do
       lv = open(ctx)
+      assert lv |> element("#travel-selection") |> render() =~ "Check rows"
+      assert has_element?(lv, "#travel-set-icp[disabled]", "ICP")
+
       ids = [to_string(ctx.ann_row.id), to_string(ctx.bob_row.id)]
       lv |> form("#travel-form", %{"row_ids" => ids, "km" => "90"}) |> render_change()
 
-      assert lv |> element("#travel-set-icp") |> render() =~ "Set 2 to ICP"
-      assert lv |> element("#travel-set-other") |> render() =~ "Set 2 to 90 km"
+      assert lv |> element("#travel-selection") |> render() =~ "2 rows checked. Set them to:"
+      refute has_element?(lv, "#travel-set-icp[disabled]")
+      assert has_element?(lv, "#travel-set-other", "Set km")
+      assert has_element?(lv, "#travel-clear[disabled]")
     end
 
     test "the copy for D4H is folded away, names the activity, and lists the rows set", ctx do
@@ -189,6 +196,22 @@ defmodule Web.ActivityTravelLiveTest do
       assert prompt =~ "Ann Smith | "
       assert prompt =~ " | 0\n"
       assert prompt =~ "Leave the Mileage km box alone on these rows:\nBob Jones | "
+    end
+
+    test "Clear takes the checked rows' travel away, back to not set", ctx do
+      lv = open(ctx)
+      set(lv, [ctx.ann_row, ctx.bob_row], "passenger")
+      ids = [to_string(ctx.ann_row.id)]
+      lv |> form("#travel-form", %{"row_ids" => ids}) |> render_change()
+
+      refute has_element?(lv, "#travel-clear[disabled]")
+
+      set(lv, [ctx.ann_row], "clear")
+
+      assert render(lv) =~ "1 row cleared."
+      assert lv |> element("#travel-not-set") |> render() =~ "Ann Smith"
+      assert [%Trip{member_id: bob_id}] = Repo.all(Trip)
+      assert bob_id == ctx.bob_row.member_id
     end
 
     test "a published activity's travel can't change", ctx do
@@ -209,9 +232,41 @@ defmodule Web.ActivityTravelLiveTest do
   end
 
   describe "elsewhere" do
-    test "the activity's Travel link counts the rows not set", ctx do
+    test "Overview has the tags, map, and description; Members is its own tab", ctx do
       {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
-      assert lv |> element("#activity-travel-not-set") |> render() =~ "2 not set"
+      assert has_element?(lv, ~s{.tabs a[aria-current="page"]}, "Overview")
+      assert has_element?(lv, "#activity-map")
+      refute has_element?(lv, "#members-table")
+
+      {:ok, lv, _html} =
+        live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members")
+
+      assert has_element?(lv, ~s{.tabs a[aria-current="page"]}, "Members")
+      assert has_element?(lv, "#members-table", "Ann Smith")
+      refute has_element?(lv, "#activity-map")
+    end
+
+    test "Overview's stats sit under the map", ctx do
+      Repo.insert!(%Trip{
+        team_id: ctx.team.id,
+        activity_id: ctx.activity.id,
+        member_id: ctx.ann_row.member_id,
+        d4h_attendance_id: ctx.ann_row.d4h_attendance_id,
+        travel: "icp",
+        km: 50
+      })
+
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
+
+      assert has_element?(lv, "#stat-attended", "2")
+      assert has_element?(lv, "#stat-hours", "Member hours")
+      assert has_element?(lv, "#stat-km", "50")
+      refute has_element?(lv, "#chart-hours-by-member")
+    end
+
+    test "the activity's Travel tab counts the rows not set", ctx do
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
+      assert lv |> element(".tabs a", "Travel") |> render() =~ "2"
 
       Repo.insert!(%Trip{
         team_id: ctx.team.id,
@@ -223,7 +278,7 @@ defmodule Web.ActivityTravelLiveTest do
       })
 
       {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
-      assert lv |> element("#activity-travel-not-set") |> render() =~ "1 not set"
+      assert lv |> element(".tabs a", "Travel") |> render() =~ "1"
     end
 
     test "Change activity says how many rows aren't set", ctx do
@@ -238,6 +293,42 @@ defmodule Web.ActivityTravelLiveTest do
       Repo.update_all(Attendance, set: [status: "absent"])
       lv = open(ctx)
       assert has_element?(lv, "#travel-nobody")
+    end
+  end
+
+  # Members check (#230): Ann's travel is set, and Bob's isn't.
+  describe "Members check" do
+    setup ctx do
+      team = ctx.team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
+
+      trip =
+        Repo.insert!(%Trip{
+          team_id: team.id,
+          activity_id: ctx.activity.id,
+          member_id: ctx.ann.id,
+          d4h_attendance_id: ctx.ann_row.d4h_attendance_id,
+          travel: "icp",
+          km: 62,
+          set_by_user_id: ctx.user.id
+        })
+
+      %{team: team, trip: trip}
+    end
+
+    test "it says who has checked, and that it's up to them", ctx do
+      lv = open(ctx)
+      text = lv |> element("#travel-checked") |> render()
+
+      assert text =~ "Members can check theirs before you publish"
+      assert text =~ "0 of 1 member have checked."
+      refute has_element?(lv, "#travel-ask")
+    end
+
+    test "a team without member logins says its members can't check", ctx do
+      ctx.team |> Ecto.Changeset.change(member_logins: false) |> Repo.update!()
+      lv = open(ctx)
+
+      assert has_element?(lv, "#travel-no-logins")
     end
   end
 end

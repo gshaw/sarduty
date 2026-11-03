@@ -242,9 +242,10 @@ defmodule Web.Router do
       # Teams print a QR code of this one (#475), so it can't move: docs/urls.md.
       live "/teams/:subdomain/take-attendance", TakeAttendanceLive
       live "/teams/:subdomain/activities/new", ActivityFormLive, :new
-      live "/teams/:subdomain/activities/:id", ActivityLive, :members
+      live "/teams/:subdomain/activities/:id", ActivityLive, :overview
+      live "/teams/:subdomain/activities/:id/members", ActivityLive, :members
       live "/teams/:subdomain/activities/:id/edit", ActivityFormLive, :edit
-      live "/teams/:subdomain/activities/:id/travel", ActivityTravelLive
+      live "/teams/:subdomain/activities/:id/travel", ActivityTravelLive, :travel
       live "/teams/:subdomain/activities/:id/history", ActivityHistoryLive, :history
       live "/teams/:subdomain/activities/:id/attendance", ActivityAttendanceLive
       live "/teams/:subdomain/activities/:id/take-attendance", ActivityTakeAttendanceLive

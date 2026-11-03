@@ -60,7 +60,9 @@ defmodule Web.ActivityRemoveMembersLiveTest do
   end
 
   test "the activity's Members tab links here", ctx do
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
+    {:ok, lv, _html} =
+      live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members")
+
     assert has_element?(lv, ~s|#members-remove[href="#{path(ctx)}"]|, "Remove members")
   end
 
@@ -139,7 +141,7 @@ defmodule Web.ActivityRemoveMembersLiveTest do
     lv |> form("#remove-form", params) |> render_submit()
 
     {to, flash} = assert_redirect(lv)
-    assert to == ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}"
+    assert to == ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members"
     assert flash["info"] == "3 members removed. Drew Patel gets your email."
 
     assert Attendance |> Repo.all() |> Enum.map(& &1.member_id) == [ctx.riley.id]

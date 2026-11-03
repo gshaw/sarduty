@@ -34,7 +34,7 @@ defmodule Web.ActivityLiveTest do
     conn = log_in_user(conn, user)
     tabs = ~s{nav[aria-label="Activity"] a}
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
     assert has_element?(lv, ~s{#{tabs}[aria-current="page"]}, "Members")
     assert has_element?(lv, "#activity-members")
     refute has_element?(lv, "#activity-equipment")
@@ -69,7 +69,7 @@ defmodule Web.ActivityLiveTest do
     pinned = activity_fixture(team, %{title: "Rope practice"})
     unpinned = activity_fixture(team, %{coordinate: Activity.null_island()})
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{pinned.id}")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{pinned.id}/members")
 
     assert has_element?(
              lv,
@@ -80,7 +80,7 @@ defmodule Web.ActivityLiveTest do
     assert has_element?(lv, ~s|#activity-copy-coordinate[value="49.1,-123.1"]|)
     assert has_element?(lv, ~s|#activity-copy-address[value="123 Main St"]|)
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{unpinned.id}")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{unpinned.id}/members")
     assert has_element?(lv, ~s|#activity-maps[href$="query=123+Main+St"]|)
     refute has_element?(lv, "#activity-copy-coordinate")
   end
@@ -162,7 +162,7 @@ defmodule Web.ActivityLiveTest do
 
     test "Send reminders opens its own page, and the batch note shows what went (#608)",
          %{conn: conn, team: team, activity: activity, cameron: cameron, wren: wren} do
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(
                lv,
@@ -188,7 +188,9 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "#members-batch", "2 sent")
       assert has_element?(lv, "#members-batch", "by Alex Chen · 0 replied since")
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=no-reply")
+      {:ok, lv, _html} =
+        live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members?view=no-reply")
+
       assert has_element?(lv, "#activity-members th", "Replied")
       assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminded ")
       refute has_element?(lv, "#member-reminded-#{wren.id}")
@@ -206,7 +208,9 @@ defmodule Web.ActivityLiveTest do
           status: :queued
         })
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=no-reply")
+      {:ok, lv, _html} =
+        live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members?view=no-reply")
+
       assert has_element?(lv, "#members-batch", "1 sending")
       assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminder sending")
 
@@ -226,7 +230,7 @@ defmodule Web.ActivityLiveTest do
 
     test "beside Members before the start, with nobody on it yet", %{conn: conn, team: team} do
       activity = activity_fixture(team, %{started_at: hours_from_now(48)})
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(
                lv,
@@ -239,14 +243,14 @@ defmodule Web.ActivityLiveTest do
 
     test "gone once the activity starts", %{conn: conn, team: team} do
       activity = activity_fixture(team, %{started_at: hours_from_now(-1)})
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
       refute has_element?(lv, "#members-add")
       refute has_element?(lv, "#members-published")
     end
 
     test "a published activity says why instead", %{conn: conn, team: team} do
       activity = activity_fixture(team, %{started_at: hours_from_now(48), is_published: true})
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       refute has_element?(lv, "#members-add")
 
@@ -312,7 +316,7 @@ defmodule Web.ActivityLiveTest do
     end
 
     test "says so and offers no actions", %{conn: conn, team: team, activity: activity} do
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "#deleted-in-d4h", "Deleted")
       refute has_element?(lv, "#activity-edit")
@@ -323,7 +327,7 @@ defmodule Web.ActivityLiveTest do
     test "sends its D4H pages back to the activity", %{conn: conn, team: team, activity: activity} do
       activity_path = ~p"/teams/#{team}/activities/#{activity.id}"
 
-      for page <- ["take-attendance", "attendance", "travel"] do
+      for page <- ["take-attendance", "attendance"] do
         assert {:error, {:live_redirect, %{to: ^activity_path}}} =
                  live(conn, "#{activity_path}/#{page}")
       end
@@ -351,7 +355,7 @@ defmodule Web.ActivityLiveTest do
       other = member_fixture(team, %{name: "Casey Dhillon"})
       attendance_fixture(activity, other, %{started_at: started, duration_in_minutes: 90})
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "h1", "Rope practice")
       assert has_element?(lv, "#members-view-attended", "2")
@@ -365,9 +369,12 @@ defmodule Web.ActivityLiveTest do
                ~s{#member-row-#{other.id} a[href^="/teams/#{team.subdomain}/members/#{other.id}"]}
              )
 
-      assert has_element?(lv, "#activity-map circle")
-      assert has_element?(lv, ".badge", "Rope")
       assert has_element?(lv, "dt", "Tax credit hours")
+
+      # The tags and the map are on Overview.
+      {:ok, overview, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      assert has_element?(overview, "#activity-map circle")
+      assert has_element?(overview, ".badge", "Rope")
       # Members and Equipment tabs; History is for team admins.
       assert has_element?(lv, ~s{nav[aria-label="Activity"] a}, "Equipment")
       refute has_element?(lv, ~s{nav[aria-label="Activity"] a}, "History")
@@ -390,13 +397,13 @@ defmodule Web.ActivityLiveTest do
       later =
         activity_fixture(team, %{started_at: hours_from_now(3), finished_at: hours_from_now(4)})
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{later.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{later.id}/members")
       refute has_element?(lv, "#activity-panel-take-attendance")
 
       soon =
         activity_fixture(team, %{started_at: hours_from_now(1), finished_at: hours_from_now(2)})
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{soon.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{soon.id}/members")
       assert has_element?(lv, "#activity-panel-take-attendance")
     end
 
@@ -405,7 +412,7 @@ defmodule Web.ActivityLiveTest do
       activity = activity_fixture(team, %{started_at: starts})
       attendance_fixture(activity, member, %{started_at: starts})
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
       assert has_element?(lv, "#member-row-#{member.id}", "Signed up")
       refute has_element?(lv, "#members-add")
     end
@@ -422,7 +429,7 @@ defmodule Web.ActivityLiveTest do
       attendance_fixture(activity, member_fixture(team), %{status: "absent"})
       AttendanceStub.stub([row])
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(
                lv,
@@ -468,7 +475,7 @@ defmodule Web.ActivityLiveTest do
         status: :failed
       })
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "#members-batch", "0 sent")
       assert has_element?(lv, "#member-reminded-#{other.id}", "Reminder failed")
@@ -479,7 +486,7 @@ defmodule Web.ActivityLiveTest do
       activity = activity_fixture(team, %{started_at: hours_from_now(48)})
       attendance_fixture(activity, member_fixture(team), %{status: "requested"})
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "#activity-panel-counts", "0 signed up · 1 no reply")
       refute has_element?(lv, "#activity-reply")
@@ -492,7 +499,7 @@ defmodule Web.ActivityLiveTest do
       attendance_fixture(activity, member, %{status: "requested", started_at: started})
       attendance_fixture(activity, member_fixture(team), %{started_at: started})
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "#activity-panel-counts", "1 attended · 1 no reply")
       refute has_element?(lv, "#activity-reply")
@@ -525,7 +532,7 @@ defmodule Web.ActivityLiveTest do
       # D4H allows a second row for one member; the one with a reply shows (#519).
       attendance_fixture(activity, member, %{status: "requested"})
 
-      {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert row_ids(html) == Enum.map([avery, member, quinn, wren], &"member-row-#{&1.id}")
       assert has_element?(lv, "#members-view-all", "4")
@@ -537,13 +544,17 @@ defmodule Web.ActivityLiveTest do
       refute has_element?(lv, "#member-row-#{member.id} .badge", "New")
       refute has_element?(lv, "#members-heading", "·")
 
-      {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=signed-up")
+      {:ok, lv, html} =
+        live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members?view=signed-up")
+
       assert row_ids(html) == Enum.map([avery, member], &"member-row-#{&1.id}")
       assert has_element?(lv, "#members-view-signed-up[aria-current=page]")
       assert has_element?(lv, "#activity-members th", "Reply")
       assert has_element?(lv, "#activity-members th", "Replied")
 
-      {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=no-reply")
+      {:ok, lv, html} =
+        live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members?view=no-reply")
+
       assert row_ids(html) == ["member-row-#{wren.id}"]
       refute has_element?(lv, "#activity-members th", "Replied")
     end
@@ -558,7 +569,7 @@ defmodule Web.ActivityLiveTest do
       attendance_fixture(activity, kiosk, %{status: "absent"})
       attendance_fixture(activity, away, %{status: "attending"})
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "#members-view-cant-make-it", "1")
       assert has_element?(lv, "#activity-members th", "Member")
@@ -589,7 +600,7 @@ defmodule Web.ActivityLiveTest do
       attendance_fixture(activity, late, %{started_at: DateTime.add(started, 1, :day)})
       attendance_fixture(activity, away, %{status: "absent"})
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "#members-view-attended", "2")
       assert has_element?(lv, "#members-view-absent", "Absent")
@@ -612,7 +623,9 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "#activity-members th", "Hours")
       refute has_element?(lv, "#member-row-#{away.id} td", "false")
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}?view=absent")
+      {:ok, lv, _html} =
+        live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members?view=absent")
+
       refute has_element?(lv, "#activity-members th", "Start")
       assert has_element?(lv, "#member-row-#{away.id}")
     end
@@ -628,13 +641,13 @@ defmodule Web.ActivityLiveTest do
           started_at: started
         })
 
-      {:ok, _lv, html} = live(conn, ~p"/teams/#{team}/activities/#{incident.id}")
+      {:ok, _lv, html} = live(conn, ~p"/teams/#{team}/activities/#{incident.id}/members")
       assert html =~ "Missing hiker"
 
       deleted = activity_fixture(team, %{deleted_at: started})
 
       assert_raise Web.Status.NotFound, fn ->
-        live(conn, ~p"/teams/#{team}/activities/#{deleted.id}")
+        live(conn, ~p"/teams/#{team}/activities/#{deleted.id}/members")
       end
 
       assert_error_sent 404, fn ->
@@ -716,7 +729,7 @@ defmodule Web.ActivityLiveTest do
       conn = log_in_user(conn, user)
 
       # Not in the sidebar (#705): a tab, counting the missing one.
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
       refute has_element?(lv, "#activity-fields")
       assert has_element?(lv, "nav.tabs a[href$='/fields'] .badge", "1")
       assert has_element?(lv, "#activity-actions-change-fields[href$='/fields/edit']")
@@ -783,7 +796,7 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "#activity-fields-change")
 
       # No exercise fields at all.
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{exercise.id}")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{exercise.id}/members")
       assert has_element?(lv, "nav.tabs", "Equipment")
       refute has_element?(lv, "nav.tabs a[href$='/fields']")
     end

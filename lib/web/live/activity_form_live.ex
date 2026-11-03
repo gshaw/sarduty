@@ -226,7 +226,7 @@ defmodule Web.ActivityFormLive do
     <section :if={@live_action == :edit && @travel} id="activity-travel" class="mt-8 measure">
       <h2 class="heading">Travel</h2>
       <p id="activity-travel-count">
-        {travel_text(@travel)}{unchecked_text(@travel)} Travel can't be changed once the activity is published.
+        {travel_text(@travel)} Travel can't be changed once the activity is published.
       </p>
       <p class="action">
         <.a
@@ -267,12 +267,6 @@ defmodule Web.ActivityFormLive do
       if counts.rows > 0, do: counts
     end
   end
-
-  defp unchecked_text(%{unchecked: 0}), do: nil
-
-  defp unchecked_text(%{unchecked: count}),
-    do:
-      " #{Format.count(count, one: "%d member hasn't", many: "%d members haven't")} checked theirs."
 
   defp travel_text(%{not_set: 0}), do: "Every attendance row is set."
 

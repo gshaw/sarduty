@@ -109,7 +109,7 @@ defmodule Web.ActivitySendUpdateLiveTest do
     |> form("#update-form")
     |> render_submit(%{"member_ids" => ["#{ctx.quinn.id}"], "message" => "Meet at the pullout."})
 
-    assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
+    assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members")
     assert_received {:email, %{to: [{"Quinn Laval", _}], subject: "Update: Swiftwater training"}}
     refute_received {:email, _}
     assert [%ActivityUpdate{status: :sent}] = Repo.all(ActivityUpdate)

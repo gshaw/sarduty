@@ -34,9 +34,8 @@ defmodule App.ViewData.ActivityTravel do
   end
 
   @doc """
-  The activity's attended rows, how many have no trip yet, and how many members haven't
-  checked a trip set for them, for its Actions link and Change activity: `%{rows: 10,
-  not_set: 2, unchecked: 3}`. Reads no Mapbox.
+  The activity's attended rows, and how many have no trip yet, for its Travel tab's badge
+  and Change activity: `%{rows: 10, not_set: 2}`. Reads no Mapbox.
   """
   def counts(%Activity{} = activity, now) do
     Attendance
@@ -50,16 +49,7 @@ defmodule App.ViewData.ActivityTravel do
     )
     |> select([r, trip: t], %{
       rows: count(r.id),
-      not_set: count(r.id) - count(t.id),
-      unchecked:
-        count(
-          fragment(
-            "DISTINCT CASE WHEN ? IS NOT NULL AND ? IS NULL THEN ? END",
-            t.id,
-            t.checked_at,
-            r.member_id
-          )
-        )
+      not_set: count(r.id) - count(t.id)
     })
     |> Repo.one()
   end
@@ -69,6 +59,16 @@ defmodule App.ViewData.ActivityTravel do
   def travel_text("yard"), do: "Drove to the yard"
   def travel_text("passenger"), do: "Passenger"
   def travel_text("other"), do: "Other"
+
+  @doc ~s(A trip in a sentence: "drove to the ICP, 62 km there and back from home".)
+  def trip_text(%{travel: "icp", km: km}),
+    do: "drove to the ICP, #{Format.km(km)} there and back from home"
+
+  def trip_text(%{travel: "yard", km: km}),
+    do: "drove to the yard, #{Format.km(km)} there and back from home"
+
+  def trip_text(%{travel: "passenger"}), do: "a passenger, #{Format.km(0)}"
+  def trip_text(%{travel: "other", km: km}), do: "#{Format.km(km)} there and back"
 
   @doc """
   What to paste into a browser agent with D4H's mileage page open: the activity by its

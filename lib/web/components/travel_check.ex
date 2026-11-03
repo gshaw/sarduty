@@ -20,6 +20,7 @@ defmodule Web.Components.TravelCheck do
   alias App.Operation.BuildMileageReport
   alias App.Operation.CheckTravel
   alias App.Repo
+  alias App.ViewData.ActivityTravel
   alias Service.Format
   alias Web.UserAuth
 
@@ -115,9 +116,9 @@ defmodule Web.Components.TravelCheck do
 
   def render(assigns) do
     ~H"""
-    <section id={@id} class="mt-6 measure">
+    <section id={@id}>
       <%= if @rows != [] do %>
-        <h2 class="heading">Your travel</h2>
+        <strong class="block mb-1">Your travel</strong>
         <div :for={row <- @rows} id={"#{@id}-#{row.trip.d4h_attendance_id}"} class="mb-4">
           <%= if @changing == to_string(row.trip.d4h_attendance_id) do %>
             <.form
@@ -199,7 +200,7 @@ defmodule Web.Components.TravelCheck do
     """
   end
 
-  # "Fri Oct 30: " when the member has two rows.
+  # "Oct 30: " when the member has two rows.
   defp day(_row, [_one], _team), do: nil
 
   defp day(row, _rows, team),
@@ -215,12 +216,5 @@ defmodule Web.Components.TravelCheck do
   defp setter(trip, team, now),
     do: Member.name_for_user(team, trip.set_by_user, now) || "A team admin"
 
-  defp how(%{travel: "icp", km: km}),
-    do: "drove to the ICP, #{Format.km(km)} there and back from home"
-
-  defp how(%{travel: "yard", km: km}),
-    do: "drove to the yard, #{Format.km(km)} there and back from home"
-
-  defp how(%{travel: "passenger"}), do: "a passenger, #{Format.km(0)}"
-  defp how(%{travel: "other", km: km}), do: "#{Format.km(km)} there and back"
+  defp how(trip), do: ActivityTravel.trip_text(trip)
 end
