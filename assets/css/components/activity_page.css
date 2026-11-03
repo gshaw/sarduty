@@ -1,8 +1,13 @@
-/* The activity page (activity_live.ex): its sidebar in two parts. A phone shows the
-   facts, then the main column, then Actions. Wider, both parts stack on the right as one
-   sidebar. */
+/* The activity page (activity_live.ex): its tabs above both columns, then its sidebar in
+   two parts. Wider, both parts stack on the right as one sidebar, beside every tab. A
+   phone shows them on Overview only (.is-overview): the facts, then the main column, then
+   Actions. Its other tabs start with their own content. */
 @layer components {
   .activity-columns { display: grid; grid-template-columns: minmax(0, 1fr); }
+  @media (width < 48rem) {
+    .activity-columns:not(.is-overview) > .activity-columns-facts,
+    .activity-columns:not(.is-overview) > .activity-columns-end { display: none; }
+  }
   /* On a phone Actions follow the main column, so they need a section's space. */
   .activity-columns-end { margin-top: var(--sp-8); }
   @media (width >= 48rem) {
@@ -16,4 +21,10 @@
     .activity-columns-facts { grid-area: facts; }
     .activity-columns-end { grid-area: end; margin-top: 0; }
   }
+}
+
+/* Travel's Other choice: its km box sits on the label's line (travel_tab.ex). */
+@layer components {
+  .travel-other-km { display: inline-flex; align-items: center; gap: var(--sp-2); margin-left: var(--sp-3); vertical-align: middle; }
+  .travel-other-km input { width: 5rem; }
 }

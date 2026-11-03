@@ -28,7 +28,7 @@ defmodule Web.ActivityLiveTest do
     assert has_element?(lv, "#activity-calendar.has-mark .link-mark.icon-calendar-plus")
   end
 
-  test "tabs under the description: Members, Equipment, and History", %{conn: conn} do
+  test "tabs above both columns: Members, Equipment, and History", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity = activity_fixture(team)
     conn = log_in_user(conn, user)
@@ -44,12 +44,17 @@ defmodule Web.ActivityLiveTest do
     assert has_element?(lv, "#activity-equipment")
     refute has_element?(lv, "#activity-members")
 
-    # The activity stays on screen on every tab.
+    # The activity stays on screen on every tab; a phone shows the facts and Actions on
+    # Overview only, by the columns' is-overview class.
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/history")
     assert has_element?(lv, ~s{#{tabs}[aria-current="page"]}, "History")
     assert has_element?(lv, "#activity-history-empty")
     assert has_element?(lv, "#activity-panel")
-    assert has_element?(lv, "#activity-facts")
+    assert has_element?(lv, ".activity-columns:not(.is-overview) #activity-facts")
+    refute has_element?(lv, ".activity-columns-main nav.tabs")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+    assert has_element?(lv, ".activity-columns.is-overview #activity-facts")
   end
 
   test "a chore activity's kind is Chores (#575)", %{conn: conn} do
@@ -189,7 +194,7 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "#members-batch", "by Alex Chen · 0 replied since")
 
       {:ok, lv, _html} =
-        live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members?view=no-reply")
+        live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "#activity-members th", "Replied")
       assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminded ")
@@ -209,7 +214,7 @@ defmodule Web.ActivityLiveTest do
         })
 
       {:ok, lv, _html} =
-        live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members?view=no-reply")
+        live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "#members-batch", "1 sending")
       assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminder sending")
@@ -358,7 +363,8 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "h1", "Rope practice")
-      assert has_element?(lv, "#members-view-attended", "2")
+      assert has_element?(lv, "#activity-panel-counts", "2 attended")
+      assert has_element?(lv, "#activity-attendance", "2 members · 2h 30m in total")
       assert has_element?(lv, "#members-table", "Casey Dhillon")
       assert has_element?(lv, "#members-table", "1h 30m")
       refute has_element?(lv, "#members-table th", "ID")
@@ -505,7 +511,7 @@ defmodule Web.ActivityLiveTest do
       refute has_element?(lv, "#activity-reply")
     end
 
-    test "Members: counts that filter one table, by reply then name",
+    test "Members: one table, by reply then name; the counts are the panel's",
          %{conn: conn, team: team, member: member} do
       activity = activity_fixture(team, %{started_at: hours_from_now(48)})
       now = DateTime.utc_now() |> DateTime.truncate(:second)
@@ -535,28 +541,21 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert row_ids(html) == Enum.map([avery, member, quinn, wren], &"member-row-#{&1.id}")
-      assert has_element?(lv, "#members-view-all", "4")
-      assert has_element?(lv, "#members-view-signed-up", "2")
-      assert has_element?(lv, "#members-view-cant-make-it .marker-cant-make-it", "Can't make it")
+      refute has_element?(lv, "#members-switch")
+
+      assert has_element?(
+               lv,
+               "#activity-panel-counts",
+               "2 signed up · 1 can't make it · 1 no reply"
+             )
+
+      assert has_element?(lv, "#member-row-#{quinn.id} .marker-cant-make-it", "Can't make it")
       assert has_element?(lv, "#member-row-#{wren.id} .marker-no-reply", "No reply")
       assert has_element?(lv, "#activity-members th", "Reply")
       assert has_element?(lv, "#member-row-#{avery.id} .badge-primary", "New")
       refute has_element?(lv, "#member-row-#{member.id} .badge", "New")
       refute has_element?(lv, "#members-heading", "·")
-
-      {:ok, lv, html} =
-        live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members?view=signed-up")
-
-      assert row_ids(html) == Enum.map([avery, member], &"member-row-#{&1.id}")
-      assert has_element?(lv, "#members-view-signed-up[aria-current=page]")
-      assert has_element?(lv, "#activity-members th", "Reply")
       assert has_element?(lv, "#activity-members th", "Replied")
-
-      {:ok, lv, html} =
-        live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members?view=no-reply")
-
-      assert row_ids(html) == ["member-row-#{wren.id}"]
-      refute has_element?(lv, "#activity-members th", "Replied")
     end
 
     test "Members: a not-a-person member keeps its row and count, with its badge (#740)",
@@ -571,7 +570,7 @@ defmodule Web.ActivityLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
-      assert has_element?(lv, "#members-view-cant-make-it", "1")
+      assert has_element?(lv, "#member-row-#{kiosk.id}", "Can't make it")
       assert has_element?(lv, "#activity-members th", "Member")
 
       assert has_element?(
@@ -602,8 +601,8 @@ defmodule Web.ActivityLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
-      assert has_element?(lv, "#members-view-attended", "2")
-      assert has_element?(lv, "#members-view-absent", "Absent")
+      assert has_element?(lv, "#activity-panel-counts", "2 attended · 1 absent")
+      assert has_element?(lv, "#member-row-#{away.id} .marker-cant-make-it", "Absent")
       assert has_element?(lv, "#activity-members th", "Attendance")
       refute has_element?(lv, "#activity-members th", "Replied")
       assert has_element?(lv, "#member-row-#{member.id} .marker-signed-up", "Attended")
@@ -622,12 +621,6 @@ defmodule Web.ActivityLiveTest do
       # An absent member's Hours cell is blank, never "false".
       assert has_element?(lv, "#activity-members th", "Hours")
       refute has_element?(lv, "#member-row-#{away.id} td", "false")
-
-      {:ok, lv, _html} =
-        live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members?view=absent")
-
-      refute has_element?(lv, "#activity-members th", "Start")
-      assert has_element?(lv, "#member-row-#{away.id}")
     end
 
     test "every activity D4H has, incidents too; a deleted one is a 404",
@@ -728,9 +721,16 @@ defmodule Web.ActivityLiveTest do
       {activity, _cause, _notes, _weather} = incident_with_fields(team)
       conn = log_in_user(conn, user)
 
-      # Not in the sidebar (#705): a tab, counting the missing one.
+      # Not in the sidebar (#705): a tab, counting the missing one from the finish.
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
       refute has_element?(lv, "#activity-fields")
+      refute has_element?(lv, "nav.tabs a[href$='/fields'] .badge")
+
+      activity
+      |> Ecto.Changeset.change(started_at: hours_from_now(-5), finished_at: hours_from_now(-1))
+      |> Repo.update!()
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
       assert has_element?(lv, "nav.tabs a[href$='/fields'] .badge", "1")
       assert has_element?(lv, "#activity-actions-change-fields[href$='/fields/edit']")
 

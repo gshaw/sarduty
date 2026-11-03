@@ -29,11 +29,4 @@ defmodule App.ViewData.ActivityOverviewTest do
 
     assert ActivityOverview.charts(team, activity, DateTime.utc_now(), true) == []
   end
-
-  test "before the start the stats are the replies" do
-    counts = %{attending: 4, absent: 2, requested: 7}
-
-    assert [%{value: "4", label: "Signed up"}, %{value: "2"}, %{value: "7", label: "No reply"}] =
-             ActivityOverview.stats(%{coming?: true, counts: counts})
-  end
 end

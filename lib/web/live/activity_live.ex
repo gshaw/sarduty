@@ -2,14 +2,12 @@ defmodule Web.ActivityLive do
   use Web, {:live_view_app_layout, access: :team}
 
   import Web.Components.ActivityMap
-  import Web.Components.Chart, only: [stat: 1]
   import Web.Components.ReportChart, only: [report_chart: 1]
   import Web.Components.ChangeHistory
   import Web.Components.CopyButton
   import Web.Components.CustomFields
   import Web.Components.ActivityPanel
   import Web.Components.OpenInMaps
-  import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
   alias App.Model.Activity
@@ -47,14 +45,15 @@ defmodule Web.ActivityLive do
 
   # Members open it too (#406): the same activity, facts, and people a team admin sees.
   # Under the title, everyone gets the counts, and a member it invites gets their reply
-  # until the start (#444). Then tabs: Overview has the tags, map, and description;
-  # Members lists who is invited and how they replied, filtered by `?view=`; Travel
+  # until the start (#444). Then tabs, above both columns: Overview has the tags, map,
+  # description, and charts; Members lists who is invited and how they replied; Travel
   # (#230), for team admins from the start, next to Members since it's the next job;
   # Equipment what was used; Fields its D4H custom fields, when it has any or a team
-  # admin can fill one in, with Change fields (#705); and History, for team admins.
-  # Team admins also get Take attendance, Actions, and the links to member and equipment
-  # pages. A member never gets an activity D4H has deleted; a team admin sees it under a
-  # banner.
+  # admin can fill one in, with Change fields (#705); and History, for team admins. The
+  # facts and Actions sit beside every tab, but a phone shows them on Overview only, so
+  # the other tabs start with their own content. Team admins also get Take attendance,
+  # Actions, and the links to member and equipment pages. A member never gets an
+  # activity D4H has deleted; a team admin sees it under a banner.
   def handle_params(params, _uri, socket) do
     %{current_team: team, team_admin?: team_admin?} = socket.assigns
     activity = fetch_activity(team, params["id"])
@@ -78,7 +77,7 @@ defmodule Web.ActivityLive do
         usages: EquipmentUsage.for_activity(activity),
         map: build_map(activity),
         replier: Reply.replier(socket.assigns, now),
-        members_view: view_status(params["view"])
+        travel_view: if(params["view"] == "not-set", do: :not_set, else: :all)
       )
       |> assign_fields()
       |> assign_people()
@@ -106,7 +105,6 @@ defmodule Web.ActivityLive do
       standings:
         Standing.visible_by_member(team, Enum.map(members, & &1.member), now, team_admin?),
       attendances: attendances,
-      attendance_count: length(attendances),
       counts: ActivityMembers.counts(members),
       invitation: replier && Attendance.invitation(activity, replier),
       your_travel?: your_travel?(activity, replier, socket.assigns.coming?)
@@ -117,31 +115,19 @@ defmodule Web.ActivityLive do
     |> assign_overview()
   end
 
-  # Overview's stats and charts, only on its tab: the charts run reports.
+  # Overview's charts, only on its tab: they run reports.
   defp assign_overview(%{assigns: %{tab: :overview}} = socket) do
     %{activity: activity, current_team: team, team_admin?: team_admin?, now: now} = socket.assigns
-
-    stats =
-      ActivityOverview.stats(%{
-        coming?: socket.assigns.coming?,
-        counts: socket.assigns.counts,
-        attendances: socket.assigns.attendances,
-        km: ActivityOverview.km(activity)
-      })
-
-    assign(socket,
-      overview_stats: stats,
-      overview_charts: ActivityOverview.charts(team, activity, now, team_admin?)
-    )
+    assign(socket, overview_charts: ActivityOverview.charts(team, activity, now, team_admin?))
   end
 
-  defp assign_overview(socket), do: assign(socket, overview_stats: [], overview_charts: [])
+  defp assign_overview(socket), do: assign(socket, overview_charts: [])
 
-  # The Travel tab's badge counts the attended rows with no trip (#230), until it's
-  # published and travel can't change.
+  # The Travel tab's badge counts the attended rows with no trip (#230), from the finish,
+  # when members are home, until it's published and travel can't change.
   defp assign_travel(socket) do
     %{activity: activity, team_admin?: team_admin?, now: now} = socket.assigns
-    count? = team_admin? and !Activity.locked?(activity) and Activity.started?(activity, now)
+    count? = team_admin? and Activity.finished_draft?(activity, now)
 
     assign(socket,
       travel_not_set: if(count?, do: ActivityTravel.counts(activity, now).not_set, else: 0)
@@ -203,23 +189,6 @@ defmodule Web.ActivityLive do
       send_update?: socket.assigns.team_admin? && coming? && !activity.deleted_at && members != []
     )
   end
-
-  # The view's word in the URL, the same before and after the start, as a D4H status.
-  @views %{
-    "signed-up" => "attending",
-    "attended" => "attending",
-    "cant-make-it" => "absent",
-    "absent" => "absent",
-    "no-reply" => "requested"
-  }
-
-  defp view_status(param), do: Map.get(@views, param)
-
-  defp view_param("attending", false = _started?), do: "signed-up"
-  defp view_param("attending", true), do: "attended"
-  defp view_param("absent", false), do: "cant-make-it"
-  defp view_param("absent", true), do: "absent"
-  defp view_param("requested", _started?), do: "no-reply"
 
   def handle_info({:replied, _attendance}, socket), do: {:noreply, assign_people(socket)}
 
@@ -288,9 +257,11 @@ defmodule Web.ActivityLive do
     )
   end
 
-  # The required fields left empty, for the Fields tab's count, or nil when there are none.
-  defp missing_count(rows) do
-    case Enum.count(rows, & &1.missing?) do
+  # The required fields left empty, for the Fields tab's count, from the finish until it's
+  # published, as Travel's; or nil when there are none.
+  defp missing_count(rows, activity, now) do
+    case Activity.finished_draft?(activity, now) and Enum.count(rows, & &1.missing?) do
+      false -> nil
       0 -> nil
       count -> count
     end
@@ -351,67 +322,69 @@ defmodule Web.ActivityLive do
         />
       </:reply>
     </.activity_panel>
-    <%!-- A phone shows the facts, then the story and people, then fields and Actions. --%>
-    <div class="activity-columns">
+    <%!-- Tabs above both columns. A phone shows the facts and Actions on Overview only:
+         the facts, then the story, then Actions. --%>
+    <.tabs label="Activity">
+      <:tab
+        navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}"}
+        current={@tab == :overview}
+      >
+        Overview
+      </:tab>
+      <:tab
+        navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/members"}
+        current={@tab == :members}
+      >
+        Members
+      </:tab>
+      <:tab
+        :if={@team_admin? and (!@coming? or @tab == :travel) and !@activity.deleted_at}
+        navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/travel"}
+        current={@tab == :travel}
+      >
+        Travel<.badge :if={@travel_not_set > 0} kind={:warning}>{@travel_not_set}</.badge>
+      </:tab>
+      <:tab
+        navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/equipment"}
+        current={@tab == :equipment}
+      >
+        Equipment
+      </:tab>
+      <:tab
+        :if={@field_rows != [] or @tab == :fields or @change_fields?}
+        navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/fields"}
+        current={@tab == :fields}
+      >
+        Fields<.badge
+          :if={missing = missing_count(@field_rows, @activity, @now)}
+          kind={:warning}
+        >
+          {missing}
+        </.badge>
+      </:tab>
+      <:tab
+        :if={@team_admin?}
+        navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/history"}
+        current={@tab == :history}
+      >
+        History
+      </:tab>
+    </.tabs>
+    <div class={["activity-columns", @tab == :overview && "is-overview"]}>
       <aside id="activity-facts" class="activity-columns-facts">
         <.facts
           activity={@activity}
           maps_app={@current_user.maps_app}
           hours_tags={@hours_tags}
-          attendances={@attendances}
-          attendance_count={@attendance_count}
+          attendances={if @coming?, do: [], else: @attendances}
         />
       </aside>
       <main class="activity-columns-main">
-        <.tabs label="Activity">
-          <:tab
-            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}"}
-            current={@tab == :overview}
-          >
-            Overview
-          </:tab>
-          <:tab
-            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/members"}
-            current={@tab == :members}
-          >
-            Members
-          </:tab>
-          <:tab
-            :if={@team_admin? and (!@coming? or @tab == :travel) and !@activity.deleted_at}
-            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/travel"}
-            current={@tab == :travel}
-          >
-            Travel<.badge :if={@travel_not_set > 0} kind={:warning}>{@travel_not_set}</.badge>
-          </:tab>
-          <:tab
-            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/equipment"}
-            current={@tab == :equipment}
-          >
-            Equipment
-          </:tab>
-          <:tab
-            :if={@field_rows != [] or @tab == :fields or @change_fields?}
-            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/fields"}
-            current={@tab == :fields}
-          >
-            Fields<.badge :if={missing = missing_count(@field_rows)} kind={:warning}>
-              {missing}
-            </.badge>
-          </:tab>
-          <:tab
-            :if={@team_admin?}
-            navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/history"}
-            current={@tab == :history}
-          >
-            History
-          </:tab>
-        </.tabs>
         <.main_content
           :if={@tab == :overview}
           activity={@activity}
           hours_tags={@hours_tags}
           map={@map}
-          stats={@overview_stats}
           charts={@overview_charts}
         />
         <.live_component
@@ -422,6 +395,7 @@ defmodule Web.ActivityLive do
           activity={@activity}
           user={@current_user}
           service={@service}
+          view={@travel_view}
         />
         <p :if={@tab == :travel and @coming?} id="travel-not-started" class="hint">
           Travel opens when the activity starts.
@@ -431,8 +405,6 @@ defmodule Web.ActivityLive do
           activity={@activity}
           members={@members}
           standings={@standings}
-          counts={@counts}
-          view={@members_view}
           started?={!@coming?}
           now={@now}
           team_admin?={@team_admin?}
@@ -527,20 +499,23 @@ defmodule Web.ActivityLive do
   attr :activity, :map, required: true
   attr :maps_app, :string, required: true
   attr :hours_tags, :map, required: true
-  attr :attendances, :list, required: true
-  attr :attendance_count, :integer, required: true
 
+  attr :attendances, :list,
+    required: true,
+    doc: "the attended rows, none before the start: sign-ups aren't attendance"
+
+  # Attendance's hours are exact, as Service.Format.duration/1 writes the minutes.
   def facts(assigns) do
     ~H"""
     <dl>
       <dt>Kind</dt>
       <dd><.activity_badges activity={@activity} /></dd>
 
-      <div :if={@attendance_count > 0}>
+      <div :if={@attendances != []}>
         <dt>Attendance</dt>
-        <dd>
-          {Service.Format.count(@attendance_count, one: "%d member", many: "%d members")} · {format_total_effort(
-            @attendances
+        <dd id="activity-attendance">
+          {Service.Format.count(length(@attendances), one: "%d member", many: "%d members")} · {Service.Format.duration(
+            Enum.sum_by(@attendances, & &1.duration_in_minutes)
           )} in total
         </dd>
       </div>
@@ -677,11 +652,9 @@ defmodule Web.ActivityLive do
   attr :activity, :map, required: true
   attr :hours_tags, :map, required: true
   attr :map, :map, default: nil
-  attr :stats, :list, default: [], doc: "ActivityOverview.stats/1's"
   attr :charts, :list, default: [], doc: "ActivityOverview.charts/4's"
 
-  # Overview: the tags, the map, the stats, the description, then the charts with
-  # something to draw.
+  # Overview: the tags, the map, the description, then the charts with something to draw.
   def main_content(assigns) do
     ~H"""
     <div>
@@ -691,9 +664,6 @@ defmodule Web.ActivityLive do
         <.activity_map id="activity-map" map={@map} label="Map of activity" />
       </div>
 
-      <div :if={@stats != []} id="activity-stats" class="chart-stats">
-        <.stat :for={stat <- @stats} id={stat.id} value={stat.value} label={stat.label} />
-      </div>
       <div class="mb-4">
         <.markdown content={@activity.description} />
       </div>
@@ -717,8 +687,6 @@ defmodule Web.ActivityLive do
   attr :activity, :map, required: true
   attr :members, :list, required: true
   attr :standings, :map, required: true, doc: "each member's standing, by id"
-  attr :counts, :map, required: true
-  attr :view, :string, default: nil, doc: "the D4H status showing, nil for All"
   attr :started?, :boolean, required: true
   attr :now, :any, required: true
   attr :team_admin?, :boolean, default: false
@@ -727,20 +695,11 @@ defmodule Web.ActivityLive do
   attr :batch_sender, :string, default: nil
   attr :adding, :atom, default: nil, doc: "Activity.adding/3: :open, :published, or nil"
 
-  # Who the activity invites, as counts that filter one table (#444). Before the start:
-  # how each replied and when, New for the last 24 hours. From the start: D4H's
-  # attendance, with each member's times. A part keeps the columns, but drops times and
-  # reply dates that no row in it has.
+  # Who the activity invites, in one table by reply, then name (#444). The counts are the
+  # panel's line, on every tab. Before the start: how each replied and when, New for the
+  # last 24 hours. From the start: D4H's attendance, with each member's times.
   def members_section(assigns) do
-    rows = ActivityMembers.only(assigns.members, assigns.view)
-
-    assigns =
-      assign(assigns,
-        rows: rows,
-        timezone: assigns.activity.team.timezone,
-        reminded_shown?:
-          Enum.any?(rows, &(&1.status == "requested" and assigns.reminded[&1.member_id]))
-      )
+    assigns = assign(assigns, timezone: assigns.activity.team.timezone)
 
     ~H"""
     <section id="activity-members">
@@ -766,34 +725,10 @@ defmodule Web.ActivityLive do
           navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/members/remove"}
         >Remove members</.a>
       </p>
-      <.stat_switch
-        :if={@members != []}
-        id="members-switch"
-        label={if @started?, do: "Attendance", else: "Replies"}
-      >
-        <:view
-          id="members-view-all"
-          patch={members_path(@activity, nil)}
-          current={@view == nil}
-          count={length(@members)}
-        >
-          All
-        </:view>
-        <:view
-          :for={status <- ActivityMembers.statuses()}
-          id={"members-view-#{view_param(status, @started?)}"}
-          patch={members_path(@activity, view_param(status, @started?))}
-          current={@view == status}
-          count={@counts[String.to_existing_atom(status)]}
-          marker={Reply.marker(status)}
-        >
-          {Reply.status_text(status, @started?)}
-        </:view>
-      </.stat_switch>
       <.table
-        :if={@rows != []}
+        :if={@members != []}
         id="members-table"
-        rows={@rows}
+        rows={@members}
         row_id={&"member-row-#{&1.member.id}"}
         class="table-striped w-fit"
       >
@@ -819,7 +754,7 @@ defmodule Web.ActivityLive do
         </:col>
         <:col
           :let={row}
-          :if={!@started? and (@view != "requested" or @reminded_shown?)}
+          :if={!@started?}
           label="Replied"
           class="whitespace-nowrap"
         >
@@ -841,7 +776,7 @@ defmodule Web.ActivityLive do
         </:col>
         <:col
           :let={row}
-          :if={@started? and @view in [nil, "attending"]}
+          :if={@started?}
           label="Start"
           align="right"
           class="whitespace-nowrap"
@@ -850,7 +785,7 @@ defmodule Web.ActivityLive do
         </:col>
         <:col
           :let={row}
-          :if={@started? and @view in [nil, "attending"]}
+          :if={@started?}
           label="Finish"
           align="right"
           class="whitespace-nowrap"
@@ -859,7 +794,7 @@ defmodule Web.ActivityLive do
         </:col>
         <:col
           :let={row}
-          :if={@started? and @view in [nil, "attending"]}
+          :if={@started?}
           label="Hours"
           align="right"
           class="w-px whitespace-nowrap"
@@ -901,11 +836,6 @@ defmodule Web.ActivityLive do
 
   defp reminded_text(%Reminder{sent_at: sent_at}, timezone),
     do: "Reminded " <> Format.month_day(sent_at, timezone)
-
-  defp members_path(activity, nil), do: ~p"/teams/#{activity.team}/activities/#{activity.id}"
-
-  defp members_path(activity, view),
-    do: ~p"/teams/#{activity.team}/activities/#{activity.id}/members?#{[view: view]}"
 
   # A member's own times once it starts; the start's date only when it isn't the
   # activity's day. Blank for anyone who didn't attend.
@@ -974,17 +904,5 @@ defmodule Web.ActivityLive do
     activity.started_at
     |> Service.Convert.duration_to_minutes(activity.finished_at)
     |> Service.Format.duration()
-  end
-
-  defp format_total_effort(attendances) do
-    total_minutes =
-      attendances
-      |> Enum.map(& &1.duration_in_minutes)
-      |> Enum.sum()
-
-    rounded_minutes =
-      if total_minutes > 300, do: round(total_minutes / 60) * 60, else: total_minutes
-
-    Service.Format.duration(rounded_minutes)
   end
 end
