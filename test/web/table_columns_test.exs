@@ -19,6 +19,8 @@ defmodule Web.TableColumnsTest do
       "the no email hint: only a signed up member is emailed",
     {"lib/web/live/activity_live.ex", ~s|@started? and @view in [nil, "attending"]|} =>
       "Start, Finish, and Duration: only rows that attended have times",
+    {"lib/web/live/activity_travel_live.ex", "!@locked?"} =>
+      "the checkboxes set travel, and a published activity's travel can't change",
     {"lib/web/live/chore_collection_live.ex", "@selected"} =>
       "the checkboxes accept chores, and only Waiting has them",
     {"lib/web/live/chore_collection_live.ex", "@category"} =>

@@ -24,6 +24,7 @@ defmodule Web.ActivityLive do
   alias App.Repo
   alias App.ViewData.ActivityMembers
   alias App.ViewData.ActivityReminders
+  alias App.ViewData.ActivityTravel
   alias App.ViewData.ChangeHistory
   alias Service.Format
   alias Web.Components.ActivityMap
@@ -101,6 +102,18 @@ defmodule Web.ActivityLive do
     )
     |> assign_reminders(members)
     |> assign_delete()
+    |> assign_travel()
+  end
+
+  # Travel's Actions link counts the attended rows with no trip (#230), until it's
+  # published and travel can't change.
+  defp assign_travel(socket) do
+    %{activity: activity, team_admin?: team_admin?, now: now} = socket.assigns
+    count? = team_admin? and !Activity.locked?(activity) and Activity.started?(activity, now)
+
+    assign(socket,
+      travel_not_set: if(count?, do: ActivityTravel.counts(activity, now).not_set, else: 0)
+    )
   end
 
   # Delete is an Actions link that opens the confirm dialog (docs/urls.md), for a Records
@@ -371,6 +384,7 @@ defmodule Web.ActivityLive do
           send_reminders?={@send_reminders?}
           send_update?={@send_update?}
           delete_confirm={@delete_confirm}
+          travel_not_set={@travel_not_set}
         />
       </aside>
     </div>
@@ -485,6 +499,7 @@ defmodule Web.ActivityLive do
   attr :send_reminders?, :boolean, default: false, doc: "whether anyone has no reply yet"
   attr :send_update?, :boolean, default: false, doc: "whether anyone is on the activity"
   attr :delete_confirm, :any, default: false, doc: "Delete's confirm dialog, or false for none"
+  attr :travel_not_set, :integer, default: 0, doc: "attended rows with no trip, before publishing"
 
   # Every record's sidebar ends the same way: Actions. Custom fields are a tab (#705).
   def sidebar_end(assigns) do
@@ -550,7 +565,13 @@ defmodule Web.ActivityLive do
             >Send attendance</.a>
           </li>
           <li :if={@admin_actions?}>
-            <.a navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/mileage"}>Mileage report</.a>
+            <.a
+              id="activity-travel"
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/travel"}
+            >Travel</.a>
+            <span :if={@travel_not_set > 0} id="activity-travel-not-set" class="hint block">
+              {Format.count(@travel_not_set, one: "%d not set", many: "%d not set")}
+            </span>
           </li>
           <li :if={@d4h?}>
             <.a

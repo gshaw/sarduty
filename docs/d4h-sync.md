@@ -263,7 +263,7 @@ none and is never asked. See [custom-fields.md](custom-fields.md).
 - Deleted activities are left out of the activity list, its years, the dashboard count,
   and letter hours. D4H already returns no attendance for them, so the attendance stage
   deletes theirs. Their page says "Deleted" and offers no actions. Take attendance
-  and the mileage report send you back to it, a Take attendance page left open on one
+  and Travel send you back to it, a Take attendance page left open on one
   takes no scans, and `SendAttendanceToD4H` refuses it.
 - Endorsements and group rules are never deleted by the sync. A rule for a deleted group
   is left unused; an endorsement naming a deleted qualification shows a warning on the

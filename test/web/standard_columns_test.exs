@@ -40,9 +40,7 @@ defmodule Web.StandardColumnsTest do
 
   @formatted_by_hand %{
     {"lib/web/live/member_standing_live.ex", ""} =>
-      "the Delete button's confirm names the check-in's day in a sentence",
-    {"lib/web/live/activity_mileage_live.ex", "Member"} =>
-      "a member on two days has a row for each, told apart by the day under the name"
+      "the Delete button's confirm names the check-in's day in a sentence"
   }
 
   # Where people pick an activity by when it runs.
