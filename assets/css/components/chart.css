@@ -21,6 +21,7 @@
 .series-c5 { --c: var(--series-5); }
 /* A report's chart, between its filters and its rows. */
 .report-chart { margin: 0 0 var(--sp-6); }
+.report-chart.card { width: 100%; max-width: 60rem; }
 .report-chart.chart-stats { max-width: 22rem; }
 
 .chart { position: relative; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
