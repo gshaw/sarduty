@@ -57,6 +57,9 @@ with the kind.
   A member sees their own on Your membership's Contact details, only the ones D4H lets
   a member see (`member_privacy` viewable or editable). Members never see another
   member's.
+- **Reports** read the same fields as the Fields tab, by title in backticks:
+  `` `Primary Cause` `` (#840, [reports.md](reports.md#custom-fields)). Members read an
+  activity's unrestricted ones; a member's and an item's are for team admins.
 
 ## Missing required fields
 

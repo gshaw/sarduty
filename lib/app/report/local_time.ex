@@ -20,21 +20,33 @@ defmodule App.Report.LocalTime do
   def args(column, timezone), do: [column, ", ", offset_sql(column, timezone)]
 
   @doc "The offset of `column` in `timezone`, as SQLite's datetime modifier: '-25200 seconds'."
-  def offset_sql(column, timezone) do
+  def offset_sql(column, timezone, sign \\ 1) do
     case periods(timezone) do
       [{_until, offset}] ->
-        modifier(offset)
+        modifier(sign * offset)
 
       periods ->
-        tree(column, periods)
+        tree(column, periods, sign)
     end
+  end
+
+  @doc """
+  The start of a day in `timezone` as UTC text, as a stored time is: `day` is SQL for a
+  date such as '2026-01-01', and the start is that midnight's own offset. A D4H date
+  field holds a day, not a moment, so it reads as the day it says, never the day before.
+  The midnight is looked up as if it were UTC, which picks the right period while the
+  zone changes its clocks at 01:00 UTC or later, as every Canadian zone does.
+  """
+  def day_start(day, timezone) do
+    as_utc = ["(", day, " || 'T00:00:00Z')"]
+    ["strftime('%Y-%m-%dT%H:%M:%SZ', ", day, ", ", offset_sql(as_utc, timezone, -1), ")"]
   end
 
   # Halves the periods at each CASE, so a time takes 7 comparisons, not one per period
   # since 1990 (#784).
-  defp tree(_column, [{_until, offset}]), do: modifier(offset)
+  defp tree(_column, [{_until, offset}], sign), do: modifier(sign * offset)
 
-  defp tree(column, periods) do
+  defp tree(column, periods, sign) do
     {earlier, later} = Enum.split(periods, div(length(periods), 2))
     {until, _offset} = List.last(earlier)
 
@@ -44,9 +56,9 @@ defmodule App.Report.LocalTime do
       " < '",
       until,
       "' THEN ",
-      tree(column, earlier),
+      tree(column, earlier, sign),
       " ELSE ",
-      tree(column, later),
+      tree(column, later, sign),
       " END)"
     ]
   end

@@ -14,6 +14,7 @@ defmodule App.Report.Expr do
 
   alias App.Report.Catalog
   alias App.Report.Context
+  alias App.Report.CustomFields
   alias App.Report.Error
   alias App.Report.LocalTime
   alias App.Report.Query
@@ -36,7 +37,7 @@ defmodule App.Report.Expr do
 
   @doc "An expression for `ast`."
   def compile({:field, path, args, line}, st),
-    do: field(Enum.map(path, &String.downcase/1), args, line, st)
+    do: field(Enum.map(path, &lower/1), args, line, st)
 
   def compile({:literal, value, line}, _st), do: literal(value, line)
 
@@ -68,6 +69,10 @@ defmodule App.Report.Expr do
 
   def compile({kind, inner, items, line}, st) when kind in [:includes, :excludes],
     do: includes(kind, compile(inner, st), items, line, st)
+
+  # A custom field's title keeps its case, for messages; the catalog matches it in any.
+  defp lower("`" <> _ = title), do: title
+  defp lower(name), do: String.downcase(name)
 
   @doc "An expression that must be a condition, as `where` and `and` take."
   def condition(ast, st) do
@@ -162,12 +167,21 @@ defmodule App.Report.Expr do
       fail(line, "Write one dot at most, such as member.name: #{Enum.join(path, ".")} has more.")
 
   defp subject_field(subject, via, name, args, line, st) do
-    subject
-    |> Catalog.field(name, st.context)
-    |> known(subject, via, name, line, st.context)
+    field =
+      subject
+      |> Catalog.field(name, st.context)
+      |> known(subject, via, name, line, st.context)
+
+    field
     |> field_expr(subject, via, args, line, st)
-    |> Map.put(:name, if(via, do: "#{via}.#{name}", else: name))
+    |> Map.put(:name, shown_name(field, via, name))
   end
+
+  # A custom field keeps its title's case in messages.
+  defp shown_name(%{custom: custom} = field, via, _name) when custom != nil,
+    do: if(via, do: "#{via}.#{field.name}", else: field.name)
+
+  defp shown_name(_field, via, name), do: if(via, do: "#{via}.#{name}", else: name)
 
   defp known(nil, subject, _via, name, line, _context) when name in @contact,
     do: fail(line, "Reports leave out emergency contacts. #{subject.name} has no field #{name}.")
@@ -175,12 +189,45 @@ defmodule App.Report.Expr do
   defp known(nil, subject, _via, name, line, _context) when is_map_key(@renamed, name),
     do: fail(line, "#{subject.name} has no field #{name}. Use #{@renamed[name]}.")
 
+  defp known(nil, %{name: "members"} = subject, _via, "`" <> _ = name, line, context) do
+    case CustomFields.uncopied(context, name) do
+      :restricted ->
+        fail(line, "SAR Duty never copies #{name}: it is restricted.")
+
+      :uncopied ->
+        fail(line, "The team does not copy #{name}. Pick it on team settings' Members tab.")
+
+      nil ->
+        fail(line, no_field(subject, name, [], context))
+    end
+  end
+
   defp known(nil, subject, via, name, line, context) do
     others = if via, do: [], else: Map.keys(subject.parents)
     fail(line, no_field(subject, name, others, context))
   end
 
   defp known(field, _subject, _via, _name, _line, _context), do: field
+
+  defp field_expr(%{custom: custom} = field, subject, via, args, line, st) when custom != nil do
+    if args != [], do: fail(line, "#{field.name} takes nothing in brackets. Write #{field.name}.")
+
+    if custom.duplicate?,
+      do:
+        fail(
+          line,
+          "Two of #{subject.name}' fields are called #{field.name}. Rename one to report on it."
+        )
+
+    {sql, params} = CustomFields.sql(custom, SQL.table(via), st.context)
+
+    new(sql, params, field.type, line,
+      label: field.label,
+      field: field,
+      parents: List.wrap(via),
+      reads: [{via, :custom_values}]
+    )
+  end
 
   defp field_expr(%{args: [_ | _]} = field, _subject, via, args, line, st),
     do: roll_up(field, via, args, line, st)
@@ -355,8 +402,10 @@ defmodule App.Report.Expr do
   @doc "The name in `names` closest to `name`, or nil when none is close."
   # cspell:ignore jaro
   def closest(name, names) do
+    lower = String.downcase(name)
+
     names
-    |> Enum.map(&{&1, String.jaro_distance(name, &1)})
+    |> Enum.map(&{&1, String.jaro_distance(lower, String.downcase(&1))})
     |> Enum.filter(fn {_name, score} -> score >= 0.75 end)
     |> Enum.max_by(&elem(&1, 1), fn -> {nil, 0} end)
     |> elem(0)

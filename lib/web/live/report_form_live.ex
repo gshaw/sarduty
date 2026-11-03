@@ -413,7 +413,7 @@ defmodule Web.ReportFormLive do
         <div id="report-field-list" phx-hook="InsertField" data-target="report_query">
           <.table
             id="report-field-table"
-            rows={Catalog.shown_fields(@subject, @context)}
+            rows={own_fields(@subject, @context)}
             row_id={&"field-#{&1.name}"}
           >
             <:col :let={field} label="Field">
@@ -421,6 +421,20 @@ defmodule Web.ReportFormLive do
               <span class="hint block mt-1">{field.about || field.label}</span>
             </:col>
           </.table>
+          <div :if={custom_fields(@subject, @context) != []} id="report-custom-fields">
+            <h3 class="heading mt-6">Custom fields</h3>
+            <p class="hint">The team's own fields. Write one by its title in backticks.</p>
+            <.table
+              id="report-custom-field-table"
+              rows={custom_fields(@subject, @context)}
+              row_id={&"custom-field-#{Enum.join(&1.custom.ids, "-")}"}
+            >
+              <:col :let={field} label="Field">
+                <.button type="button" size={:sm} data-field={field_text(field)}>{field_text(field)}</.button>
+                <span class="hint block mt-1">{field.about}</span>
+              </:col>
+            </.table>
+          </div>
         </div>
         <p class="hint mt-4">
           Other subjects: {Enum.join(Catalog.names() -- [@subject.name], ", ")}.
@@ -502,6 +516,13 @@ defmodule Web.ReportFormLive do
   end
 
   defp field_text(field), do: Expr.example(field)
+
+  # SAR Duty's own fields, then the team's D4H custom fields under their own heading.
+  defp own_fields(subject, context),
+    do: subject |> Catalog.shown_fields(context) |> Enum.reject(& &1.custom)
+
+  defp custom_fields(subject, context),
+    do: subject |> Catalog.shown_fields(context) |> Enum.filter(& &1.custom)
 
   defp cancel_path(team, nil), do: ~p"/teams/#{team}/reports"
   defp cancel_path(team, saved), do: ~p"/teams/#{team}/reports/#{saved.id}"

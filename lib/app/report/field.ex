@@ -48,6 +48,8 @@ defmodule App.Report.Field do
     :shown,
     :hidden_choices,
     :cell,
+    # A D4H custom field's def (App.Report.CustomFields), for a field named in backticks.
+    :custom,
     args: [],
     hidden: false
   ]

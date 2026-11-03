@@ -30,6 +30,7 @@ defmodule App.Report.Catalog do
   alias App.Model.Tag
   alias App.Model.Team
   alias App.Report.Context
+  alias App.Report.CustomFields
   alias App.Report.Field
   alias App.Report.Source
   alias App.Report.Subject
@@ -405,13 +406,32 @@ defmodule App.Report.Catalog do
 
   defp team_admin?(%Context{team_admin?: team_admin?}), do: team_admin?
 
-  @doc "The field named `name` in `subject` that `context`'s team may read, or nil."
+  @doc """
+  The field named `name` in `subject` that `context`'s team may read, or nil. A name in
+  backticks is one of the team's D4H custom fields, by its title.
+  """
+  def field(%Subject{} = subject, "`" <> _ = name, %Context{} = context) do
+    field = CustomFields.find(context, subject.name, name)
+    if field && readable?(field, context), do: field
+  end
+
   def field(%Subject{fields: fields}, name, %Context{} = context),
     do: Enum.find(fields, &(&1.name == name and readable?(&1, context)))
 
-  @doc "The fields the editor lists for `subject`: all but the id, and those the team may read."
-  def shown_fields(%Subject{fields: fields}, %Context{} = context),
-    do: Enum.filter(fields, &(not &1.hidden and readable?(&1, context)))
+  @doc """
+  The fields the editor lists for `subject`: all but the id, and those the team may read,
+  then the team's custom fields.
+  """
+  def shown_fields(%Subject{} = subject, %Context{} = context),
+    do:
+      Enum.filter(
+        subject.fields ++ custom_fields(subject, context),
+        &(not &1.hidden and readable?(&1, context))
+      )
+
+  @doc "The team's custom fields in `subject`, readable or not."
+  def custom_fields(%Subject{name: name}, %Context{} = context),
+    do: CustomFields.fields(context, name)
 
   defp readable?(%Field{shown: nil}, _context), do: true
   defp readable?(%Field{shown: shown}, context), do: shown.(context)
@@ -489,6 +509,13 @@ defmodule App.Report.Catalog do
     case Map.fetch(subject.parents, parent) do
       {:ok, {subject_name, _fk}} -> hidden_field?(subject(subject_name), name, context)
       :error -> false
+    end
+  end
+
+  defp hidden_field?(subject, "`" <> _ = name, context) do
+    case CustomFields.find(context, subject.name, name) do
+      nil -> false
+      field -> not readable?(field, context)
     end
   end
 
@@ -619,7 +646,8 @@ defmodule App.Report.Catalog do
             fragment("NULLIF(NULLIF(?, ''), ?)", a.coordinate, ^Activity.null_island())
           ),
         duration: Activity.duration_dynamic(),
-        chore: dynamic([chores: c], not is_nil(c.d4h_activity_id))
+        chore: dynamic([chores: c], not is_nil(c.d4h_activity_id)),
+        custom_values: dynamic([a], a.custom_values)
       }
     }
   end
@@ -698,7 +726,8 @@ defmodule App.Report.Catalog do
         current: Member.current_dynamic(now),
         email: dynamic([m], m.email),
         mobile: dynamic([m], m.phone),
-        address: dynamic([m], m.address)
+        address: dynamic([m], m.address),
+        custom_values: dynamic([m], m.custom_values)
       }
     }
   end
@@ -776,7 +805,8 @@ defmodule App.Report.Catalog do
         serial: e.serial,
         location: e.location_title,
         expires_at: e.expires_at,
-        member_id: e.member_id
+        member_id: e.member_id,
+        custom_values: e.custom_values
       }
     )
   end

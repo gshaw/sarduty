@@ -153,6 +153,7 @@ defmodule App.Report.Language do
         dates(),
         values(),
         subjects(),
+        custom_fields(),
         limits(),
         cannot()
       ],
@@ -359,6 +360,43 @@ defmodule App.Report.Language do
     fields with one dot: `member.name`, `activity.started_at`.
 
     #{sections}\
+    """
+  end
+
+  defp custom_fields do
+    """
+    ## Custom fields
+
+    A team's custom fields are fields too, on activities, members, and equipment. \
+    Write one by its title in backticks, as the Fields tab shows it, whatever its case: \
+    `` `Primary Cause` ``, or from a parent with a dot: `` activity.`Task Type` ``. The \
+    editor lists each team's own.
+
+    ```sql
+    select `Task type`, count(id)
+    from activities
+    where kind = 'Incident' and started_at = THIS_YEAR
+    group by `Task type`
+    order by count(id) desc
+    ```
+
+    | Its type | Reads as | Compare it with |
+    | ---------- | -------- | --------------- |
+    | Text, text area, time | text | `contains`, `=`, `starts with` |
+    | Number | number | `<`, `>`, `sum()`; blank when it holds no number |
+    | Date | date, a day | ranges, `year()`; the day it says, never the day before |
+    | Date and time | date | ranges, `year()`, in the team's time zone |
+    | Single choice | choice | its options' labels: `` `Task type` = 'Search' `` |
+    | Multiple choice | list | `includes`, `excludes`, as tags |
+
+    - An activity's field is its kind's. Fields with one title on two kinds, such as \
+    an event's and an exercise's Event Leader, are one field: each activity has one of \
+    them.
+    - A member's fields are the ones the team copies, on team settings' Members tab, and \
+    only team admins read them. So do an item's.
+    - A restricted field is for team admins only.
+    - A renamed field takes its new title: a report that named the old one says \
+    so, with the closest title.\
     """
   end
 

@@ -109,7 +109,13 @@ defmodule App.Report.Query do
   @doc "Whether two expressions are the same, whatever their lines."
   def same?(a, b), do: strip(a) == strip(b)
 
-  @doc "An expression with its lines taken out, to compare or use as a key."
+  @doc """
+  An expression with its lines taken out, to compare or use as a key. A field's name
+  matches in any case, as `` `Task type` `` and `` `task type` `` are one field.
+  """
+  def strip({:field, path, args, _line}),
+    do: {:field, Enum.map(path, &String.downcase/1), strip(args)}
+
   def strip(expr) when is_tuple(expr) do
     expr
     |> Tuple.delete_at(tuple_size(expr) - 1)

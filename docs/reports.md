@@ -85,6 +85,33 @@ Adding a field:
    labels (docs/writing.md): a query compares by the label or the value, and a cell shows
    the label.
 
+## Custom fields
+
+A team's D4H custom fields are fields too (#840), written by title in backticks:
+`` `Primary Cause` ``, or `` activity.`Task Type` `` from a parent. Sheets' QUERY quotes a
+name with spaces the same way. The lexer keeps a backticked title as one word, and
+`Catalog.field/3` finds it among the team's fields, so `shown`, menus, search, sorts,
+and Did you mean work as for SAR Duty's own. A title matches in any case.
+
+`App.Report.CustomFields` reads the team's definitions once per `Context`. A report
+reads what a record's Fields tab shows ([custom-fields.md](custom-fields.md#where-they-show)):
+
+- **Activities:** every live field of every kind. One title on two kinds is one field,
+  read from whichever the activity's kind has; if their types differ it reads as text.
+  Two fields with one title on one kind can't be told apart, so naming them fails.
+- **Members:** only the fields the team copies, never a RESTRICTED one. Naming one it
+  doesn't copy says so, and where to pick it.
+- **Equipment:** every live field.
+- RESTRICTED activity fields, and every member and item field, are for team admins
+  only. Archived fields aren't fields. Records teams have none.
+
+The SQL reads `custom_values` with `json_extract`, and a source selects `custom_values`
+only when a query names a custom field. Field ids come from the copy of D4H's
+definitions, never from a query, so they're written inline; option labels are
+parameters. A choice is a CASE from option id to label, a multiple choice a JSON list
+of labels (so `includes` and `excludes` work as for tags), and a number is the number
+D4H's text holds, or blank, never 0, for one like N/A.
+
 ## How a column looks
 
 Each field draws its own cell (#804): a date as a date, an activity's kind as its
@@ -224,6 +251,10 @@ same rows and reads 3,559 activities in a quarter of the time (#784).
 `LAST_N_DAYS:n` is today and the n days before it, whole days in the team's time zone:
 `Service.DayRange.last/3`, the app's one rule for "the last n days" (#784). Activities'
 Last 30 days, Members' Period, and the attendance check mean the same.
+
+A D4H date field holds a day, not a moment. `LocalTime.day_start/2` reads it as the
+start of that day in the team's zone, with that midnight's own offset, so Jan 1 never
+slips back to Dec 31. A date and time field is a moment, as `started_at` is.
 
 ## Built-in and saved reports
 
