@@ -11,6 +11,7 @@ defmodule App.Operation.SetTravel do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.Member
   alias App.Model.Trip
   alias App.ViewData.ActivityTravel
   alias Service.Format
@@ -26,8 +27,11 @@ defmodule App.Operation.SetTravel do
   defp set(team, activity, user, ids, travel, km_text, now) do
     view = ActivityTravel.load(team, activity, now)
 
+    # A team admin's own rows count as checked: they set them.
+    own = user && Member.find_by_email(team, user.email, now)
+
     with {:ok, plan} <- plan(view.rows, ids, travel, km_text) do
-      Trip.save_all!(activity, user, plan.sets, now)
+      Trip.save_all!(activity, user, plan.sets, now, own && own.id)
       {:ok, plan}
     end
   end

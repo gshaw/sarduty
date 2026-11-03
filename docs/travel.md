@@ -20,6 +20,12 @@ Mileage report's place on the activity, in its Actions.
   row with no route to where it drove is skipped, and the toast says to type its km.
 - **Trips are keyed by D4H's attendance id**, which outlives the local row, so a row the
   refresh deletes and copies back keeps its trip.
+- **Members check theirs** before the copy into D4H. A trip a team admin set shows on
+  the activity's page as Your travel, with who set it, That's right, and Change (the
+  same four ways). The Dashboard's For you to do lists each activity with one unchecked,
+  until it's checked or the activity is published. Either answer sets `checked_at`; a
+  team admin setting the row again clears it, except on the admin's own rows. Travel
+  marks checked rows, and Change activity counts the members who haven't.
 - **Publishing locks travel**, as it does attendance. To change it, a team admin
   unpublishes first. Change activity says how many rows aren't set, beside the Published
   box: a note, never a block.
