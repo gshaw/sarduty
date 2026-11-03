@@ -74,8 +74,7 @@ defmodule Web.ActivityLive do
         hours_tags: Activity.hours_tags(team),
         usages: EquipmentUsage.for_activity(activity),
         map: build_map(activity),
-        replier: Reply.replier(socket.assigns, now),
-        travel_view: if(params["view"] == "not-set", do: :not_set, else: :all)
+        replier: Reply.replier(socket.assigns, now)
       )
       |> assign_fields()
       |> assign_people()
@@ -102,7 +101,6 @@ defmodule Web.ActivityLive do
       members: members,
       standings:
         Standing.visible_by_member(team, Enum.map(members, & &1.member), now, team_admin?),
-      attendances: attendances,
       counts: ActivityMembers.counts(members),
       invitation: replier && Attendance.invitation(activity, replier),
       your_travel?: your_travel?(activity, replier, socket.assigns.coming?, attendances)
@@ -197,11 +195,22 @@ defmodule Web.ActivityLive do
 
   def handle_info({:reply_failed, text}, socket), do: {:noreply, put_flash(socket, :error, text)}
 
-  # The Travel tab changed something, so its badge counts again.
-  def handle_info({:travel_flash, kind, text}, socket),
-    do: {:noreply, socket |> put_flash(kind, text) |> assign_travel()}
+  # The Travel tab and Your travel show the same rows, so a save in one reloads the other,
+  # and the tab's badge counts again.
+  def handle_info({:travel_flash, kind, text}, socket) do
+    if socket.assigns.your_travel?,
+      do: send_update(TravelCheck, id: "activity-your-travel")
 
-  def handle_info({:travel_checked, text}, socket), do: {:noreply, put_flash(socket, :info, text)}
+    {:noreply, socket |> put_flash(kind, text) |> assign_travel()}
+  end
+
+  def handle_info({:travel_checked, text}, socket) do
+    if socket.assigns.tab == :travel,
+      do: send_update(TravelTab, id: "activity-travel-tab", reload: true)
+
+    {:noreply, socket |> put_flash(:info, text) |> assign_travel()}
+  end
+
   def handle_info({:travel_failed, text}, socket), do: {:noreply, put_flash(socket, :error, text)}
 
   # Swoosh's test adapter tells each process a reminder came from, this one included.
@@ -372,7 +381,6 @@ defmodule Web.ActivityLive do
           activity={@activity}
           maps_app={@current_user.maps_app}
           hours_tags={@hours_tags}
-          attendances={if @coming?, do: [], else: @attendances}
         />
       </aside>
       <main class="activity-columns-main">
@@ -390,7 +398,6 @@ defmodule Web.ActivityLive do
           activity={@activity}
           user={@current_user}
           service={@service}
-          view={@travel_view}
         />
         <p :if={@tab == :travel and @coming?} id="travel-not-started" class="hint">
           Travel opens when the activity starts.
@@ -495,25 +502,11 @@ defmodule Web.ActivityLive do
   attr :maps_app, :string, required: true
   attr :hours_tags, :map, required: true
 
-  attr :attendances, :list,
-    required: true,
-    doc: "the attended rows, none before the start: sign-ups aren't attendance"
-
-  # Attendance's hours are exact, as Service.Format.duration/1 writes the minutes.
   def facts(assigns) do
     ~H"""
     <dl>
       <dt>Kind</dt>
       <dd><.activity_badges activity={@activity} /></dd>
-
-      <div :if={@attendances != []}>
-        <dt>Attendance</dt>
-        <dd id="activity-attendance">
-          {Service.Format.count(length(@attendances), one: "%d member", many: "%d members")} · {Service.Format.duration(
-            Enum.sum_by(@attendances, & &1.duration_in_minutes)
-          )} in total
-        </dd>
-      </div>
 
       <dt>Start</dt>
       <dd>
@@ -783,9 +776,19 @@ defmodule Web.ActivityLive do
           <.hours_cell minutes={if row.status == "attending", do: row.duration_in_minutes} />
         </:col>
       </.table>
+      <%!-- The Hours column's sum, exact as Service.Format.duration/1 writes the minutes. --%>
+      <p :if={@started? and attended_minutes(@members) > 0} id="members-hours" class="hint mt-2">
+        {Format.duration(attended_minutes(@members))} in total
+      </p>
     </section>
     """
   end
+
+  defp attended_minutes(members),
+    do:
+      members
+      |> Enum.filter(&(&1.status == "attending"))
+      |> Enum.sum_by(&(&1.duration_in_minutes || 0))
 
   # "4 sent Oct 26, 18:02 by Alex Chen · 2 replied since"
   # While none has gone yet: "4 sending Oct 26, 18:02 by Alex Chen".

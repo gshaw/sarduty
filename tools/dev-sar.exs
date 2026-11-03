@@ -161,7 +161,25 @@ hiker_description = """
 <p>Thanks to everyone who came out on short notice. Please enter your hours and travel in SAR Duty, and get any gear that needs cleaning or repair back to the hall by Sunday. Debrief at the hall on Tuesday at 19:00.</p>
 """
 
-hiker = latest.("Missing hiker") |> Ecto.Changeset.change(description: hiker_description) |> Repo.update!()
+# More tags than the cast gives it, to see a full row on Overview.
+hiker_tags = ["Ground search", "Rope", "Drone", "Mutual aid", "Night operations", "Medical"]
+
+for {title, i} <- Enum.with_index(hiker_tags) do
+  Repo.insert!(%App.Model.Tag{
+    team_id: team.id,
+    d4h_tag_id: 9_700_020 + i,
+    title: title,
+    owner_type: "Team",
+    owner_id: team.d4h_team_id
+  })
+end
+
+hiker = latest.("Missing hiker")
+
+hiker =
+  hiker
+  |> Ecto.Changeset.change(description: hiker_description, tags: hiker.tags ++ hiker_tags)
+  |> Repo.update!()
 
 training =
   activities

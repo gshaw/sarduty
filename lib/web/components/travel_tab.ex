@@ -1,15 +1,15 @@
 defmodule Web.Components.TravelTab do
   @moduledoc """
   An activity's Travel tab (#230), for team admins from the start: how each attended
-  row got there, and its km. Two counts split the rows: All, with the km set, and Not
-  set (`view: :not_set`), the rows left. Laid out like Remove members (#704): a table for
-  rows set, then one for rows not set, each with select all, and nothing checked. Under
+  row got there, and its km. Laid out like Remove members (#704): a table for rows set,
+  with their km in total, then one for rows not set, each with select all, and nothing
+  checked. The tab's badge counts the rows not set. Under
   them, one list of how they got there and one button set the checked rows; Not set
   takes theirs away. Round trips come from the saved Mapbox lookups, so only a first
   visit waits for Mapbox. Once the activity is published, nothing changes, as with its
   attendance.
 
-  Assigns: `team`, `activity`, `user`, `service`, and `view` (:all or :not_set). Members check theirs on the
+  Assigns: `team`, `activity`, `user`, and `service`. Members check theirs on the
   activity's page (Web.Components.TravelCheck); nothing waits on them. It sends
   `{:travel_flash, kind, text}` to the page for its toast.
   """
@@ -17,7 +17,6 @@ defmodule Web.Components.TravelTab do
 
   import Web.Components.Columns, only: [member_cell: 1]
   import Web.Components.CopyButton, only: [copy_code_block: 1]
-  import Web.Components.StatSwitch, only: [stat_switch: 1]
   import Web.Components.Table, only: [table: 1]
 
   alias App.Adapter.D4H
@@ -26,10 +25,11 @@ defmodule Web.Components.TravelTab do
   alias App.ViewData.ActivityTravel
   alias Service.Format
 
+  # The page asks again after Your travel saves the same rows.
+  def update(%{reload: true}, socket), do: {:ok, load(socket)}
+
   def update(assigns, socket) do
     first? = !Map.has_key?(socket.assigns, :travel)
-    # A new view shows other rows, so nothing stays checked from the last.
-    new_view? = socket.assigns[:view] != assigns[:view]
 
     socket =
       socket
@@ -37,7 +37,7 @@ defmodule Web.Components.TravelTab do
       |> assign(locked?: Activity.locked?(assigns.activity))
       |> assign_new(:km, fn -> "" end)
       |> assign_new(:choice, fn -> nil end)
-      |> then(&if(new_view?, do: assign(&1, selected: MapSet.new()), else: &1))
+      |> assign_new(:selected, fn -> MapSet.new() end)
 
     {:ok, if(first?, do: load(socket), else: socket)}
   end
@@ -107,30 +107,6 @@ defmodule Web.Components.TravelTab do
           <p id="travel-error">Travel did not load. Reload the page to try again.</p>
         </:failed>
 
-        <.stat_switch :if={travel.rows != []} id="travel-switch" label="Travel">
-          <:view
-            id="travel-view-all"
-            patch={travel_path(@activity, nil)}
-            current={@view == :all}
-            count={length(travel.rows)}
-            detail={Format.km(Enum.sum_by(travel.set, & &1.trip.km))}
-          >
-            All
-          </:view>
-          <:view
-            id="travel-view-not-set"
-            patch={travel_path(@activity, "not-set")}
-            current={@view == :not_set}
-            count={length(travel.not_set)}
-            detail={if travel.not_set != [], do: "No km yet"}
-          >
-            Not set
-          </:view>
-        </.stat_switch>
-
-        <p id="travel-intro" class="measure">
-          Round trips by car from each member's home, worked out once. A passenger counts 0 km.
-        </p>
         <p :if={@locked?} id="travel-locked" class="hint measure">
           Published, so travel can't be changed. {D4H.unpublish_text(@team)}
         </p>
@@ -148,7 +124,7 @@ defmodule Web.Components.TravelTab do
           phx-submit="set"
           phx-target={@myself}
         >
-          <div :if={@view == :all and travel.set != []} class="measure mb-6">
+          <div :if={travel.set != []} class="measure mb-6">
             <.table
               id="travel-set"
               rows={travel.set}
@@ -166,6 +142,9 @@ defmodule Web.Components.TravelTab do
               </:col>
               <:col :let={row} align="right" label="km">{Format.km(row.trip.km)}</:col>
             </.table>
+            <p id="travel-total" class="hint mt-2">
+              {Format.km(Enum.sum_by(travel.set, & &1.trip.km))} in total
+            </p>
           </div>
 
           <%!-- Not set sits last, next to the choices that set it. --%>
@@ -283,12 +262,6 @@ defmodule Web.Components.TravelTab do
 
   defp set_text(0), do: "Set rows"
   defp set_text(count), do: Format.count(count, one: "Set 1 row", many: "Set %d rows")
-
-  defp travel_path(activity, nil),
-    do: ~p"/teams/#{activity.team}/activities/#{activity.id}/travel"
-
-  defp travel_path(activity, view),
-    do: ~p"/teams/#{activity.team}/activities/#{activity.id}/travel?#{[view: view]}"
 
   attr :row, :map, required: true
   attr :selected, :any, required: true

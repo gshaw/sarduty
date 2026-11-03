@@ -200,26 +200,17 @@ defmodule Web.ActivityTravelLiveTest do
       refute has_element?(lv, "#travel-set-rows[disabled]")
     end
 
-    test "All and Not set split the rows; Set comes first, Not set next to the choices",
-         ctx do
+    test "Set comes first with its km in total, then Not set next to the choices", ctx do
       lv = open(ctx)
       set(lv, [ctx.ann_row], "icp")
 
-      assert has_element?(lv, "#travel-view-all[aria-current=page]", "2")
-      assert lv |> element("#travel-view-all") |> render() =~ "50 km"
-      assert has_element?(lv, "#travel-view-not-set", "1")
-      assert lv |> element("#travel-view-not-set") |> render() =~ "No km yet"
+      assert lv |> element("#travel-total") |> render() =~ "50 km in total"
 
       html = lv |> element("#travel-form") |> render()
       {set_at, _} = :binary.match(html, ~s(id="travel-set"))
       {not_set_at, _} = :binary.match(html, ~s(id="travel-not-set"))
       {how_at, _} = :binary.match(html, ~s(id="travel-how"))
       assert set_at < not_set_at and not_set_at < how_at
-
-      lv |> element("#travel-view-not-set") |> render_click()
-      assert_patch(lv, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/travel?view=not-set")
-      assert has_element?(lv, "#travel-not-set", "Bob Jones")
-      refute has_element?(lv, "#travel-set")
     end
 
     test "the copy for D4H is folded away, names the activity, and lists the rows set", ctx do
@@ -269,6 +260,36 @@ defmodule Web.ActivityTravelLiveTest do
     end
   end
 
+  describe "the team admin's own row" do
+    setup ctx do
+      me = Repo.get_by!(App.Model.Member, team_id: ctx.team.id, email: ctx.user.email)
+      %{my_row: attendance_fixture(ctx.activity, me)}
+    end
+
+    test "Your travel's save shows in the table", ctx do
+      lv = open(ctx)
+      id = ctx.my_row.d4h_attendance_id
+
+      lv |> element("#activity-your-travel-change-#{id}", "Set travel") |> render_click()
+
+      lv
+      |> form("#activity-your-travel-form", %{"travel" => "other", "km" => "12"})
+      |> render_submit()
+
+      render_async(lv)
+      assert lv |> element("#travel-set #travel-row-#{ctx.my_row.id}") |> render() =~ "12 km"
+    end
+
+    test "the table's save shows in Your travel", ctx do
+      lv = open(ctx)
+      assert lv |> element("#activity-your-travel") |> render() =~ "Not set yet."
+
+      set(lv, [ctx.my_row], "other", "12")
+
+      assert lv |> element("#activity-your-travel") |> render() =~ "12 km there and back"
+    end
+  end
+
   describe "elsewhere" do
     test "Overview has the tags, map, and description; Members is its own tab", ctx do
       {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
@@ -297,7 +318,6 @@ defmodule Web.ActivityTravelLiveTest do
       {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
 
       refute has_element?(lv, "#activity-stats")
-      assert has_element?(lv, "#activity-attendance", "2 members · 2 hours in total")
       refute has_element?(lv, "#chart-hours-by-member")
     end
 

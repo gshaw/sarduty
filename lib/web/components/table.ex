@@ -149,6 +149,8 @@ defmodule Web.Components.Table do
   attr :select_all, :string, default: nil, doc: "the id of the column's select all checkbox"
 
   # Starts checked, as review lists start with every row checked, until the hook syncs it.
+  # After that only the hook sets it: phx-update="ignore" stops a patch, such as a save's,
+  # putting the starting check back while the rows below are unchecked.
   def table_header(%{select_all: id} = assigns) when is_binary(id) do
     ~H"""
     <th class={@class}>
@@ -156,6 +158,7 @@ defmodule Web.Components.Table do
         type="checkbox"
         id={@select_all}
         phx-hook="SelectAll"
+        phx-update="ignore"
         aria-label="Select all"
         checked
       />
