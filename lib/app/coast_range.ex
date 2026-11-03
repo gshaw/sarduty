@@ -8,8 +8,9 @@ defmodule App.CoastRange do
   It fills every field a report reads: a year of activities of each kind with tags,
   hours tags, tracking numbers, drafts, and a missing required field; attendance
   attended, absent, and signed up for the coming week; groups, with a Retiring one;
-  qualifications and awards, some expiring; equipment and its use; chores; an away
-  member, a retired one, and one that isn't a person.
+  qualifications and awards, some expiring, and the endorsements ID cards list;
+  equipment and its use; chores; an away member, a retired one, and one that isn't a
+  person; and the sample ID cards the verify site's /samples page shows (#854).
 
   Pure: build/1 is rows, and App.Operation.SeedCoastRange inserts them.
 
@@ -59,12 +60,15 @@ defmodule App.CoastRange do
   alias App.Model.ChoreCategoryTag
   alias App.Model.ChoreEvent
   alias App.Model.CustomField
+  alias App.Model.Endorsement
+  alias App.Model.EndorsementQualification
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
+  alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Model.Tag
@@ -274,6 +278,8 @@ defmodule App.CoastRange do
       members(now),
       groups(),
       qualifications(today),
+      endorsements(),
+      member_cards(now),
       Enum.map(activities, &{:activity, &1.d4h_activity_id, &1, []}),
       attendances(activities, now, today),
       equipment(today),
@@ -497,6 +503,54 @@ defmodule App.CoastRange do
     {:award, {d4h_id, name}, row,
      member_id: {:member, name}, qualification_id: {:qualification, d4h_id}}
   end
+
+  # The endorsements ID cards list, each earned by one qualification.
+  @endorsements [{"First aid", 9_600_002}, {"Ground search and rescue", 9_600_001}]
+
+  defp endorsements do
+    for {name, d4h_qualification_id} <- @endorsements do
+      [
+        {:endorsement, name, %Endorsement{name: name, on_card: true}, []},
+        {:endorsement_qualification, name,
+         %EndorsementQualification{d4h_qualification_id: d4h_qualification_id},
+         endorsement_id: {:endorsement, name}}
+      ]
+    end
+    |> List.flatten()
+  end
+
+  @doc """
+  The sample ID cards (#854): what each shows on the verify site, its stored code, and
+  whose it is. `SAMPNCRD` matches no card, for "No card has this code". Codes start with
+  `SAMP`, which MemberCard.generate_code/0 never makes, and the verify site looks them up
+  in App.SampleRepo only.
+  """
+  def sample_cards do
+    [
+      %{status: :active, code: "SAMPACTV", member: "Cameron Ruiz"},
+      %{status: :inactive, code: "SAMPRTRD", member: "Robin Tse"},
+      %{status: :revoked, code: "SAMPCNCD", member: "Cameron Ruiz"},
+      %{status: :not_found, code: "SAMPNCRD", member: nil}
+    ]
+  end
+
+  # The cancelled card is Cameron's last one, replaced a month ago, so it goes first.
+  defp member_cards(now) do
+    revoked_at = now |> DateTime.add(-30, :day) |> usec()
+
+    for %{member: name} = sample <- Enum.sort_by(sample_cards(), &(&1.status != :revoked)),
+        name != nil do
+      card = %MemberCard{
+        code: sample.code,
+        serial_number: "coastrange-#{ref_id(name)}",
+        revoked_at: if(sample.status == :revoked, do: revoked_at)
+      }
+
+      {:member_card, sample.code, card, member_id: {:member, name}}
+    end
+  end
+
+  defp ref_id(name), do: name |> person() |> elem(1)
 
   # D4H's whole-day dates, at noon UTC so they read as the same day in Vancouver.
   defp noon(date), do: DateTime.new!(date, ~T[12:00:00], "Etc/UTC")

@@ -8,10 +8,12 @@ defmodule App.Operation.BuildCardQualifications do
   alias App.Repo
 
   @doc """
-  The endorsements the team lists on ID cards that one member holds now.
+  The endorsements the team lists on ID cards that one member holds now. `repo` is
+  App.SampleRepo for Coast Range SAR's sample cards.
   """
-  def call(%Team{} = team, %Member{team_id: team_id} = member, now) when team_id == team.id do
-    endorsements = team.id |> Endorsement.get_all() |> Enum.filter(& &1.on_card)
+  def call(%Team{} = team, %Member{team_id: team_id} = member, now, repo \\ Repo)
+      when team_id == team.id do
+    endorsements = team.id |> Endorsement.get_all(repo) |> Enum.filter(& &1.on_card)
 
     awards =
       MemberQualificationAward
@@ -22,7 +24,7 @@ defmodule App.Operation.BuildCardQualifications do
         starts_at: a.starts_at,
         ends_at: a.ends_at
       })
-      |> Repo.all()
+      |> repo.all()
 
     summarize(endorsements, awards, now)
   end

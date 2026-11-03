@@ -60,6 +60,23 @@ organization gets its branding: see [organizations.md](organizations.md).
   for a change D4H doesn't mark ([d4h-sync.md](d4h-sync.md#where-the-copy-drifts)). The result says
   when the team last refreshed.
 
+## Sample cards
+
+`verify.sarduty.com/samples` ([VerifySamplesLive](../lib/web/live/verify_samples_live.ex))
+has a QR code for each answer the check gives, for demos and docs (#854). The cards are
+Coast Range SAR's, the made-up team ([App.CoastRange](../lib/app/coast_range.ex)), and
+their codes never change: `SAMP-ACTV` (Cameron Ruiz, active), `SAMP-RTRD` (Robin Tse,
+retired), `SAMP-CNCD` (cancelled), and `SAMP-NCRD`, which no card has. A fifth QR code links to
+`verify.sarduty.example`, a domain nobody can register, for "Not a SAR Duty card".
+
+- **A sample is looked up in App.SampleRepo only**, never the real database, and every
+  sample result opens with a "Sample card" band saying never to accept it as ID. Without
+  it, anyone could print `SAMP-ACTV` on a fake card and get a green Active member.
+- **No real code starts with `SAMP`.** `MemberCard.generate_code/0` rolls again.
+- **Samples never count toward the miss limit**, so a demo of "No card has this code"
+  never locks anyone out. The active sample's photo is the placeholder, since Coast Range
+  SAR has no D4H, and its logo is SAR Duty's.
+
 ## Apple Wallet
 
 A member adds their card from Your membership, `/teams/:subdomain/me`. The team admin's

@@ -7,6 +7,8 @@
   /* A QR code to scan from a screen, on white in dark mode too, so a camera reads it. */
   .qr-code { width: 160px; padding: var(--sp-2); background: var(--paper); border-radius: var(--radius); }
   .qr-code svg { display: block; width: 100%; height: auto; }
+  /* Beside its words, on the verify site's sample cards. */
+  .qr-code-sm { width: 112px; flex: none; }
 
   /* A picture beside its words: a photo and a name, a logo and a team. */
   .media { display: flex; align-items: center; gap: var(--sp-3); }

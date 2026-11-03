@@ -207,6 +207,55 @@ defmodule Web.VerifyLiveTest do
     end
   end
 
+  # Coast Range SAR's sample cards (#854), in App.SampleRepo, seeded at boot.
+  describe "sample cards" do
+    test "the active sample shows Cameron as active, marked as a sample", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/SAMP-ACTV")
+
+      assert has_element?(lv, "#result-sample", "never accept it as ID")
+      assert has_element?(lv, "#result-active")
+      assert has_element?(lv, "#result-name", "Cameron Ruiz")
+      assert has_element?(lv, "#result-team", "Coast Range SAR")
+      assert has_element?(lv, "#result-qualifications", "First aid")
+      assert has_element?(lv, "#result-qualifications", "Ground search and rescue")
+    end
+
+    test "the retired and cancelled samples", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/SAMP-RTRD")
+      assert has_element?(lv, "#result-sample")
+      assert has_element?(lv, "#result-inactive")
+      assert has_element?(lv, "#result-name", "Robin Tse")
+
+      check(lv, "SAMP-CNCD")
+      assert has_element?(lv, "#result-sample")
+      assert has_element?(lv, "#result-revoked")
+    end
+
+    test "the not-found sample never counts toward the limit", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/")
+
+      for _ <- 1..25, do: check(lv, "SAMP-NCRD")
+      assert has_element?(lv, "#result-sample")
+      assert has_element?(lv, "#result-not-found")
+
+      check(lv, "ZZZZ-ZZZZ")
+      assert has_element?(lv, "#result-not-found")
+    end
+
+    test "a real card's code never reads as a sample", %{conn: conn, member: member} do
+      card = member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/#{card.code}")
+
+      assert has_element?(lv, "#result-active")
+      refute has_element?(lv, "#result-sample")
+    end
+
+    test "the start page links to the samples", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/")
+      assert lv |> element("#samples-link") |> render_click() |> follow_redirect(conn)
+    end
+  end
+
   describe "on the app's host" do
     setup %{conn: conn}, do: %{conn: %{conn | host: Web.Endpoint.host()}}
 

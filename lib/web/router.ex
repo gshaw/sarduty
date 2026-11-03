@@ -44,6 +44,8 @@ defmodule Web.Router do
       # Tax credit letters (#207). "letters" has an L, which card codes never do.
       live "/letters", VerifyLetterLive
       live "/letters/:ref", VerifyLetterLive
+      # Sample cards for demos (#854). "samples" has an L too.
+      live "/samples", VerifySamplesLive
       live "/:code", VerifyLive
     end
 

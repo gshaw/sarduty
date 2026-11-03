@@ -36,6 +36,9 @@ defmodule App.Operation.LoadImage do
     shape_or_default(bytes, &shape_photo(&1, shape), default_photo())
   end
 
+  @doc "The placeholder photo, shaped as `photo/3` shapes one. For the sample ID cards (#854)."
+  def placeholder_photo(shape), do: shape!(default_photo(), &shape_photo(&1, shape))
+
   @doc """
   The member's photo for a page header, square, or nil when D4H has none or it won't
   decode, so the page shows their initials instead of the placeholder.
