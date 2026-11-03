@@ -338,6 +338,16 @@ defmodule Web.ReportFormLive do
 
   def render(assigns) do
     ~H"""
+    <div :if={@draft_waiting} class="toasts" id="report-draft-toasts">
+      <.flash
+        id={"report-draft-waiting-#{@draft_seq}"}
+        kind={:info}
+        title={"New query from #{@draft_waiting.agent}"}
+      >
+        You changed the query since.
+        <.a id="report-draft-load" href="#" phx-click="load_draft">Load it</.a>
+      </.flash>
+    </div>
     <.breadcrumbs>
       <:item label="Reports" path={~p"/teams/#{@current_team}/reports"} />
       <:item
@@ -402,16 +412,6 @@ defmodule Web.ReportFormLive do
             <.a id="report-draft-stop" href="#" phx-click="stop_following">Stop following</.a>
           </p>
         </.banner>
-        <div :if={@draft_waiting} class="toasts" id="report-draft-toasts">
-          <.flash
-            id={"report-draft-waiting-#{@draft_seq}"}
-            kind={:info}
-            title={"New query from #{@draft_waiting.agent}"}
-          >
-            You changed the query since.
-            <.a id="report-draft-load" href="#" phx-click="load_draft">Load it</.a>
-          </.flash>
-        </div>
         <.form for={@form} id="report-form" phx-change="change" phx-submit="save">
           <.error_summary form={@form} />
           <.input field={@form[:name]} type="text" label="Name" maxlength="80" />
