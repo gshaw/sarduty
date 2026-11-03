@@ -15,7 +15,7 @@ defmodule App.Report.Parser do
 
   @clauses ~w(select from where group pivot order limit offset label format totals)
   @page_clauses ~w(search switch filter sort page chart)
-  @chart_kinds ~w(stat columns lines bars calendar week)
+  @chart_kinds ~w(stat columns lines bars calendar week map)
   # Names a filter can't take: the URL's own words. A sort's name is only the sort's
   # value in the URL, so `sort id` is fine.
   @reserved ~w(q sort page id subdomain all)

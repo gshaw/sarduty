@@ -153,6 +153,19 @@ defmodule App.Report.BuiltIn do
       """
     },
     %{
+      slug: "where-the-team-went",
+      name: "Where the team went",
+      about: "Activities with a place in the last 12 months, near the team's base.",
+      query: """
+      select title, started_at, kind, place
+      from activities
+      where place is not null and months_since(started_at) < 12 and started_at <= NOW
+      order by started_at desc
+      search title
+      chart map
+      """
+    },
+    %{
       slug: "every-day-out",
       name: "Every day out",
       about: "How many activities started on each day of the last year.",

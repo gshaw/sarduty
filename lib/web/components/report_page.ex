@@ -128,6 +128,7 @@ defmodule Web.Components.ReportPage do
       chart={@view.chart}
       records={@records}
       team={@team}
+      now={@now}
     />
 
     <p :if={!@bar? or !@path_fn} id={"#{@id}-count"} class="hint">{@count || count(@view)}</p>

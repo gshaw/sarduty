@@ -32,7 +32,7 @@ defmodule App.Report.Query do
   - `sorts`: `%{value, label, order, line}`, with `order` like `order_by`
   - `page`: how many rows a page shows, or nil
   - `chart`: the last clause (#826), nil or `%{kind, compare_year, cumulative, line}`,
-    `kind` one of `:stat :columns :lines :bars :calendar :week`
+    `kind` one of `:stat :columns :lines :bars :calendar :week :map`
   """
 
   defstruct select: [],

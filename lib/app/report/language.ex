@@ -82,7 +82,8 @@ defmodule App.Report.Language do
     {"page", "page n",
      "Shows n rows at a time, from 1 to #{Parser.max_page()}, with buttons for the rest.",
      "select title, started_at\nfrom activities\norder by started_at desc\npage 50"},
-    {"chart", "chart stat | columns | lines | bars | calendar | week [compare year] [cumulative]",
+    {"chart",
+     "chart stat | columns | lines | bars | calendar | week | map [compare year] [cumulative]",
      "Draws the rows above the table, the last clause. The first column is the axis: year and month, date, day of the week, or hour fill in every bucket the where allows. compare year draws last year's beside this year's; cumulative adds up as it goes.",
      "select year(started_at), month(started_at), count(id)\nfrom activities\nwhere months_since(started_at) < 12\ngroup by year(started_at), month(started_at)\npivot kind\norder by year(started_at), month(started_at)\nchart columns"}
   ]

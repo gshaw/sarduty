@@ -1,7 +1,7 @@
 defmodule App.Report.Chart do
   @moduledoc """
   A report's chart (#826): the last clause, `chart stat | columns | lines | bars |
-  calendar | week`, then `compare year` or `cumulative`. It draws the rows the report
+  calendar | week | map`, then `compare year` or `cumulative`. It draws the rows the report
   already shows, as the app's own charts (Web.Components.Chart) draw them. Pure but for
   running the query: no field, no SQL of its own beyond a stat's total.
 
@@ -33,9 +33,10 @@ defmodule App.Report.Chart do
   @series_keys [:primary, :c1, :c2, :c3, :c4, :c5]
   @max_series length(@series_keys)
   @max %{columns: 36, lines: 60, calendar: 366}
+  @max_dots 500
 
   @doc "The most of each a chart draws: columns, line points, calendar days, and series."
-  def limits, do: Map.put(@max, :series, @max_series)
+  def limits, do: Map.merge(@max, %{series: @max_series, map: @max_dots})
 
   @doc """
   `:ok` when the report's columns fit its chart, or `{:error, error}` naming what each
@@ -69,6 +70,13 @@ defmodule App.Report.Chart do
   defp check_columns(:week, [%{type: :weekday}, %{type: :hour}, %{type: type} | _])
        when type in @numbers,
        do: :ok
+
+  defp check_columns(:map, columns) do
+    if Enum.any?(columns, &(&1.type == {:record, :activity})) and
+         Enum.any?(columns, &(&1.type == :place)),
+       do: :ok,
+       else: {:error, "A map takes an activity, such as title, and its place."}
+  end
 
   defp check_columns(:week, _columns),
     do: {:error, "A week takes day_of_week(started_at), then hour(started_at), then a count."}
@@ -215,6 +223,20 @@ defmodule App.Report.Chart do
   defp shape(%{kind: :week}, result, _plain, _context, _given) do
     counts = Map.new(result.rows, fn [day, hour, n | _] -> {{day, hour}, n || 0} end)
     {:ok, %{rows: for(day <- 1..7, do: for(hour <- 0..23, do: Map.get(counts, {day, hour}, 0)))}}
+  end
+
+  # Each row's activity and its place, the first @max_dots of them.
+  defp shape(%{kind: :map}, result, _plain, _context, _given) do
+    activity = Enum.find_index(result.columns, &(&1.type == {:record, :activity}))
+    place = Enum.find_index(result.columns, &(&1.type == :place))
+
+    places =
+      for row <- result.rows,
+          id = Enum.at(row, activity),
+          at = Enum.at(row, place),
+          do: {id, at}
+
+    {:ok, %{places: Enum.take(places, @max_dots), more: max(length(places) - @max_dots, 0)}}
   end
 
   defp shape(%{kind: :bars}, result, _plain, _context, _given) do
