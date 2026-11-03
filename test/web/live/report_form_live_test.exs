@@ -397,6 +397,14 @@ defmodule Web.ReportFormLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/activities-this-year")
     assert has_element?(lv, "#report-chart-stat", "Activities")
 
+    activity_fixture(team, %{
+      coordinate: "49.30000,-123.10000",
+      started_at: DateTime.add(DateTime.utc_now(), -2, :day)
+    })
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/where-the-team-went")
+    assert has_element?(lv, "#report-chart-map circle.is-recent")
+
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/new")
     assert has_element?(lv, "#chart-calendar")
 

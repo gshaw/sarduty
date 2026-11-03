@@ -127,10 +127,11 @@ defmodule App.ViewData.TeamDashboardCharts do
 
   @doc """
   The map's dots for activities with a place near the team's base, each with `:kind` as
-  `kind/1` gives it. Large dots are the last 30 days. The year page uses it too.
+  `kind/1` gives it. Large dots are the last 30 days, `LAST_N_DAYS:30` (#792). The year
+  page and a report's `chart map` (#826) use it too.
   """
   def map_points(activities, team, now) do
-    a_month_ago = DateTime.add(now, -30, :day)
+    {a_month_ago, _tomorrow} = Service.DayRange.last(now, team.timezone, 30)
 
     for activity <- activities,
         {lat, lng} <- [Coordinate.build(activity.coordinate)],
@@ -140,7 +141,7 @@ defmodule App.ViewData.TeamDashboardCharts do
         lat: lat,
         lng: lng,
         kind: activity.kind,
-        recent: DateTime.after?(activity.started_at, a_month_ago),
+        recent: not DateTime.before?(activity.started_at, a_month_ago),
         tip: "#{activity.title}\n#{Format.date_long(activity.started_at, team.timezone)}"
       }
     end

@@ -526,7 +526,8 @@ defmodule Web.ReportFormLive do
       {"lines", "A time first, then counts. compare year adds last year."},
       {"bars", "A name first, then a count, longest first."},
       {"calendar", "date(started_at), then a count."},
-      {"week", "day_of_week(started_at), hour(started_at), then a count."}
+      {"week", "day_of_week(started_at), hour(started_at), then a count."},
+      {"map", "An activity and its place: a dot each, near the team's base."}
     ]
 
   # The picks the preview's tiles and headers keep, as the form saves them.

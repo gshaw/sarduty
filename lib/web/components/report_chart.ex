@@ -7,9 +7,13 @@ defmodule Web.Components.ReportChart do
   """
   use Web, :function_component
 
+  import Web.Components.ActivityMap
   import Web.Components.Chart
 
+  alias App.Report.Chart
+  alias App.ViewData.TeamDashboardCharts
   alias Service.Format
+  alias Web.Components.ActivityMap
   alias Web.Components.ReportTable
 
   @max_bars 15
@@ -19,6 +23,7 @@ defmodule Web.Components.ReportChart do
   attr :records, :map, required: true, doc: "from App.ViewData.ReportRecords.load/3"
   attr :team, :any, required: true
   attr :href, :string, default: nil, doc: "where a stat's label goes, such as its report"
+  attr :now, :any, default: nil, doc: "for a map's large dots, the last 30 days"
 
   def report_chart(%{chart: %{kind: :stat}} = assigns) do
     assigns = assign(assigns, data: assigns.chart.data, delta: delta(assigns.chart))
@@ -73,6 +78,35 @@ defmodule Web.Components.ReportChart do
     <section id={@id} class="card report-chart">
       <.bar_list id={"#{@id}-bars"} rows={@rows} />
       <p :if={@more?} class="hint mt-2">The first {@max} rows. The table has them all.</p>
+    </section>
+    """
+  end
+
+  # The Dashboard's map, from the report's places, by its rules: nothing over 150 km from
+  # the team's base, and large dots for the last 30 days.
+  def report_chart(%{chart: %{kind: :map}} = assigns) do
+    points = map_points(assigns.chart.data.places, assigns.records, assigns.team, assigns.now)
+
+    assigns =
+      assign(assigns,
+        map: ActivityMap.build(points, {960, 480}, padding: 24),
+        max: Chart.limits().map
+      )
+
+    ~H"""
+    <section id={@id} class="card report-chart">
+      <p class="chart-caption">Large dots are the last 30 days.</p>
+      <.activity_map
+        :if={@map}
+        id={"#{@id}-map"}
+        map={@map}
+        label="Map of the report's places"
+        overlay={false}
+      />
+      <p :if={!@map} class="chart-caption">No activity with a place.</p>
+      <p :if={@chart.data.more > 0} class="hint mt-2">
+        The first {Format.number(@max)} places. Narrow the where for the rest.
+      </p>
     </section>
     """
   end
@@ -154,6 +188,28 @@ defmodule Web.Components.ReportChart do
         else: ReportTable.value_text(row.label, row.label_column, team)
 
     %{label: label, value: row.value, text: row.text, href: nil}
+  end
+
+  defp map_points(places, records, team, now) do
+    activities = Map.get(records, :activity, %{})
+
+    places
+    |> Enum.flat_map(fn {id, place} ->
+      case activities[id] do
+        nil -> []
+        activity -> [map_activity(activity, place)]
+      end
+    end)
+    |> TeamDashboardCharts.map_points(team, now || DateTime.utc_now())
+  end
+
+  defp map_activity(activity, place) do
+    %{
+      title: activity.title,
+      started_at: activity.started_at,
+      coordinate: place,
+      kind: TeamDashboardCharts.kind(activity.activity_kind)
+    }
   end
 
   defp record_name(%{name: name}), do: name

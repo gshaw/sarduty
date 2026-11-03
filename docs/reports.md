@@ -155,7 +155,7 @@ keeps the picks as the report's values.
 ## Charts
 
 A report's last clause can draw its rows (#826): `chart stat`, `columns`, `lines`, `bars`,
-`calendar`, or `week`, then `compare year` or `cumulative`. `App.Report.Chart` shapes the
+`calendar`, `week`, or `map`, then `compare year` or `cumulative`. `App.Report.Chart` shapes the
 rows the report already shows into what `Web.Components.Chart` draws, so a chart report
 looks like the Dashboard's, and `<.report_chart>` draws it between the filters and the
 rows. It adds no field and reads nothing the table doesn't.
@@ -173,6 +173,10 @@ rows. It adds no field and reads nothing the table doesn't.
   Attended and Not retired, stay as of now, as the Dashboard counts.
 - **Limits**: 36 columns, 60 points on a line, 366 calendar days, and 6 series. Past
   one, the chart says how to narrow the `where`.
+- **`chart map`** takes a row's activity and its `place` (#827) and draws the
+  Dashboard's map by its rules (`TeamDashboardCharts.map_points/3`): nothing over 150 km
+  from the team's base, kind colours, and large dots for `LAST_N_DAYS:30`. At most 500
+  dots.
 - The chart reads every row the picks keep, not one page; Download CSV leaves it out.
 
 ## Lists drawn by a report

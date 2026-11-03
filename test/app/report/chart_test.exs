@@ -140,7 +140,7 @@ defmodule App.Report.ChartTest do
              "compare year works with chart stat or chart lines."
 
     assert error(team, "select title from activities\nchart pie") =~
-             "Write one of stat, columns, lines, bars, calendar, week after chart."
+             "Write one of stat, columns, lines, bars, calendar, week, map after chart."
   end
 
   test "a chart draws at most its limit, and says how to narrow it" do
@@ -155,5 +155,24 @@ defmodule App.Report.ChartTest do
       )
 
     assert Error.text(error) =~ "chart calendar draws at most 366"
+  end
+
+  test "a map takes each row's activity and its place" do
+    team = team_fixture()
+
+    near =
+      activity_fixture(team, %{
+        started_at: ~U[2026-06-01 18:00:00Z],
+        coordinate: "49.30000,-123.10000"
+      })
+
+    activity_fixture(team, %{started_at: ~U[2026-06-02 18:00:00Z], coordinate: ""})
+
+    chart = chart(team, BuiltIn.get("where-the-team-went").query)
+    assert chart.data.places == [{near.id, "49.30000,-123.10000"}]
+    assert chart.data.more == 0
+
+    assert error(team, "select started_at, place from activities\nchart map") ==
+             "Line 2: A map takes an activity, such as title, and its place."
   end
 end
