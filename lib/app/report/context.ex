@@ -18,6 +18,7 @@ defmodule App.Report.Context do
   alias App.Model.Group
   alias App.Model.Team
   alias App.Report.Catalog
+  alias App.Report.CustomFields
 
   defstruct [
     :team,
@@ -32,6 +33,7 @@ defmodule App.Report.Context do
     # Fields' rules, such as Attended and Not retired, read `now` either way.
     :dates_now,
     :dates_today,
+    custom_fields: %{},
     repo: App.Repo,
     team_admin?: true
   ]
@@ -52,6 +54,7 @@ defmodule App.Report.Context do
       years: Activity.years(activities, team.timezone, repo),
       tags: Catalog.read_tag_titles(team, repo),
       groups: Group.kinds(team, repo),
+      custom_fields: CustomFields.read(team, repo),
       repo: repo,
       team_admin?: Keyword.get(opts, :team_admin?, true)
     }

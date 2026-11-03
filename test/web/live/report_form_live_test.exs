@@ -41,6 +41,46 @@ defmodule Web.ReportFormLiveTest do
     assert_redirect(lv, ~p"/teams/#{team}/reports/#{report.id}")
   end
 
+  test "the field list has the team's custom fields, and a report reads them (#840)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    task =
+      custom_field_fixture(team, %{
+        title: "Task type",
+        field_type: "single_choice",
+        options: [%{"id" => 1, "label" => "Search"}, %{"id" => 2, "label" => "Rescue"}]
+      })
+
+    activity_fixture(team, %{
+      activity_kind: "incident",
+      custom_values: %{"#{task.d4h_custom_field_id}" => [2]}
+    })
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+
+    lv
+    |> form("#report-form", report: %{query: "select title from activities"})
+    |> render_change()
+
+    assert has_element?(
+             lv,
+             "#report-custom-fields button[data-field='`Task type`']",
+             "`Task type`"
+           )
+
+    assert has_element?(lv, "#report-custom-fields", "One of 'Search' or 'Rescue'.")
+    refute has_element?(lv, "#report-field-table", "Task type")
+
+    lv
+    |> form("#report-form",
+      report: %{query: "select `Task type`, count(id) from activities group by `Task type`"}
+    )
+    |> render_change()
+
+    assert has_element?(lv, "#report-preview", "Rescue")
+  end
+
   test "an agent's link fills the form, and saving names the agent (#816)", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member_fixture(team, %{name: "Avery Chen"})

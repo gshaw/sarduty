@@ -27,6 +27,22 @@ defmodule App.Report.Lexer do
     end
   end
 
+  # A custom field's title in backticks, as Sheets' QUERY quotes a name with spaces: a
+  # word that keeps its backticks, so the compiler knows it's a title.
+  defp scan(<<?`, rest::binary>>, line, acc) do
+    case string(rest, ?`, []) do
+      {:ok, "", _rest} ->
+        {:error, Error.new(line, "Write a field's title between the backticks.")}
+
+      {:ok, title, rest} ->
+        scan(rest, line, [{:word, "`#{String.trim(title)}`", line} | acc])
+
+      :error ->
+        {:error,
+         Error.new(line, "Close the backtick: a field's title starts with ` and has no end.")}
+    end
+  end
+
   defp scan(<<quote, rest::binary>>, line, acc) when quote in [?', ?"] do
     case string(rest, quote, []) do
       {:ok, text, rest} ->
