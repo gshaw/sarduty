@@ -8,7 +8,6 @@ defmodule App.ViewData.TeamDashboardViewData do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
-  alias App.Model.Attendance
   alias App.Model.AttendanceScan
   alias App.Model.AttentionSnooze
   alias App.Model.Certificate
@@ -27,7 +26,10 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Operation.SyncD4HChanges
   alias App.Repo
   alias App.Report
+  alias App.Report.BuiltIn
+  alias App.Report.Context
   alias App.Report.Lists
+  alias App.ViewData.ReportRecords
   alias App.ViewData.TeamAttention
   alias App.ViewModel.TaxCreditLetterFilterViewModel
 
@@ -454,59 +456,25 @@ defmodule App.ViewData.TeamDashboardViewData do
     end
   end
 
+  @chart_reports ~w(activities-this-year incidents-this-year member-hours-this-year
+                    current-members activities-by-month where-the-team-went every-day-out)
+
   @doc """
-  The rows the dashboard's stats, charts, and map are drawn from, as of `now`:
-  activities in the last 2 years, attendance since January 1 last year, and current
-  members. `TeamDashboardCharts.shape/2` turns them into chart data.
+  The Dashboard's lower half (#826): its built-in chart reports, run on one Context, by
+  slug, each `%{report, chart, records}`. A member's run as a member, as Activities and
+  Members are. Records are the rows' own, for the map's dots.
   """
-  def chart_rows(%Team{} = team, now \\ DateTime.utc_now()) do
-    this_year = Service.YearRange.year_in(now, team.timezone)
-    {last_year_start, _} = Service.YearRange.bounds(this_year - 1, team.timezone)
+  def chart_reports(%Team{} = team, now, team_admin?) do
+    context = Context.new(team, now, team_admin?: team_admin?)
 
-    %{
-      now: now,
-      year: this_year,
-      activities: recent_activities(team, DateTime.add(now, -730, :day), now),
-      attendance: attendance_rows(team, last_year_start, now),
-      members: current_members(team, now)
-    }
-  end
+    Map.new(@chart_reports, fn slug ->
+      report = BuiltIn.get(slug)
+      {:ok, view} = Report.page_in(context, report.query)
 
-  defp recent_activities(team, since, now) do
-    Activity
-    |> where([a], a.team_id == ^team.id)
-    |> Activity.not_deleted()
-    |> where([a], a.started_at >= ^since)
-    |> where([a], a.started_at <= ^now)
-    |> select([a], %{
-      id: a.id,
-      title: a.title,
-      kind: a.activity_kind,
-      started_at: a.started_at,
-      coordinate: a.coordinate
-    })
-    |> Repo.all()
-  end
+      records =
+        if view.chart.kind == :map, do: ReportRecords.load(view.result, team, now), else: %{}
 
-  defp attendance_rows(team, since, now) do
-    now
-    |> Attendance.attended()
-    |> join(:inner, [at], m in assoc(at, :member))
-    |> where([activity: a], a.team_id == ^team.id and a.started_at >= ^since)
-    |> where([at, ..., m], m.team_id == ^team.id)
-    |> select([at, activity: a], %{
-      started_at: a.started_at,
-      minutes: coalesce(at.duration_in_minutes, 0)
-    })
-    |> Repo.all()
-  end
-
-  defp current_members(team, now) do
-    Member
-    |> where([m], m.team_id == ^team.id)
-    |> Member.current_query(now)
-    |> Member.counted_query()
-    |> select([m], %{id: m.id, joined_at: m.joined_at})
-    |> Repo.all()
+      {slug, %{report: report, chart: view.chart, records: records}}
+    end)
   end
 end

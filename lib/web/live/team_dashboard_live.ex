@@ -6,6 +6,7 @@ defmodule Web.TeamDashboardLive do
   import Web.Components.ActivityPanel
   import Web.Components.OpenInMaps
   import Web.Components.PersonHead
+  import Web.Components.ReportChart, only: [report_stat: 1]
 
   alias App.Adapter.D4H
   alias App.Model.Activity
@@ -22,14 +23,13 @@ defmodule Web.TeamDashboardLive do
   alias App.ViewData.MemberRecords
   alias App.ViewData.MemberToDo
   alias App.ViewData.TeamAttention
-  alias App.ViewData.TeamDashboardCharts
   alias App.ViewData.TeamDashboardViewData
   alias App.Worker.RefreshTeamDataWorker
   alias App.Worker.SyncTeamChangesWorker
   alias Service.Format
-  alias Web.Components.ActivityMap
   alias Web.Components.Reply
   alias Web.Components.ReplyControl
+  alias Web.Components.ReportChart
   alias Web.WhiteboardText
 
   # The top half is what needs doing: what's next, and what needs a team admin. The lower
@@ -140,13 +140,25 @@ defmodule Web.TeamDashboardLive do
     )
   end
 
+  # The lower half: the built-in chart reports (#826), on one Context, after the top.
   defp assign_pulse(socket, team) do
-    assign_async(socket, :pulse, fn -> {:ok, %{pulse: build_pulse(team)}} end, reset: false)
+    team_admin? = socket.assigns.team_admin?
+
+    assign_async(socket, :pulse, fn -> {:ok, %{pulse: build_pulse(team, team_admin?)}} end,
+      reset: false
+    )
   end
 
-  defp build_pulse(team) do
-    charts = team |> TeamDashboardViewData.chart_rows() |> TeamDashboardCharts.shape(team)
-    %{charts: charts, map: ActivityMap.build(charts.map_points, {520, 380}, padding: 24)}
+  defp build_pulse(team, team_admin?) do
+    now = DateTime.utc_now()
+    charts = TeamDashboardViewData.chart_reports(team, now, team_admin?)
+    map = charts["where-the-team-went"]
+
+    %{
+      charts: charts,
+      now: now,
+      map: ReportChart.map(map.chart, map.records, team, now, {520, 380})
+    }
   end
 
   def render(assigns) do
@@ -223,12 +235,7 @@ defmodule Web.TeamDashboardLive do
           The charts cannot load. Reload the page.
         </p>
       </:failed>
-      <.pulse
-        team={@current_team}
-        charts={pulse.charts}
-        map={pulse.map}
-        team_admin?={@team_admin?}
-      />
+      <.pulse team={@current_team} charts={pulse.charts} map={pulse.map} team_admin?={@team_admin?} />
     </.async_result>
     """
   end
@@ -769,65 +776,69 @@ defmodule Web.TeamDashboardLive do
   defp letter_hours(_letter), do: "Give it to the CRA with your tax return."
 
   attr :team, :map, required: true
-  attr :charts, :map, required: true
+  attr :charts, :map, required: true, doc: "TeamDashboardViewData.chart_reports/3's"
   attr :map, :map, default: nil
   attr :team_admin?, :boolean, required: true
 
+  # Each stat and chart opens its built-in report for team admins; members keep links to
+  # the lists, since reports are for team admins.
   defp pulse(assigns) do
     ~H"""
     <div id="team-pulse">
       <div class="chart-stats">
-        <.stat
+        <.report_stat
           id="stat-activities"
-          value={Format.number(@charts.activities_ytd)}
-          label={"Activities in #{@charts.year}"}
-          href={~p"/teams/#{@team}/activities?when=past&sort=date-"}
-          delta={versus(@charts.activities_ytd, @charts.activities_last_ytd)}
-        >
-          <.sparkline values={@charts.monthly_activities} />
-        </.stat>
-        <.stat
+          chart={@charts["activities-this-year"].chart}
+          label={@charts["activities-this-year"].report.name}
+          href={
+            report_path(@team, "activities-this-year", @team_admin?) ||
+              ~p"/teams/#{@team}/activities?when=past&sort=date-"
+          }
+        />
+        <.report_stat
           id="stat-incidents"
           series={:incident}
-          value={Format.number(@charts.incidents_ytd)}
-          label={"Incidents in #{@charts.year}"}
-          delta={versus(@charts.incidents_ytd, @charts.incidents_last_ytd)}
-        >
-          <.sparkline values={@charts.monthly_incidents} series={:incident} />
-        </.stat>
-        <.stat
+          chart={@charts["incidents-this-year"].chart}
+          label={@charts["incidents-this-year"].report.name}
+          href={report_path(@team, "incidents-this-year", @team_admin?)}
+        />
+        <.report_stat
           id="stat-hours"
-          value={Format.hours(@charts.minutes_ytd)}
-          label={"Member hours in #{@charts.year}"}
-          delta={versus(div(@charts.minutes_ytd, 60), div(@charts.minutes_last_ytd, 60))}
-        >
-          <.sparkline values={@charts.monthly_hours} />
-        </.stat>
-        <.stat
+          chart={@charts["member-hours-this-year"].chart}
+          label={@charts["member-hours-this-year"].report.name}
+          href={report_path(@team, "member-hours-this-year", @team_admin?)}
+        />
+        <.report_stat
           id="stat-members"
-          value={Format.number(@charts.members)}
-          label="Current members"
-          href={~p"/teams/#{@team}/members"}
-          delta={"#{@charts.members_joined} joined in #{@charts.year}"}
+          chart={@charts["current-members"].chart}
+          href={report_path(@team, "current-members", @team_admin?) || ~p"/teams/#{@team}/members"}
         />
       </div>
       <div class="card-grid">
         <section class="card span-7">
           <header>
-            <h2 class="chart-title">Activities by month</h2>
+            <h2 class="chart-title">
+              <.chart_title team={@team} slug="activities-by-month" team_admin?={@team_admin?}>
+                Activities by month
+              </.chart_title>
+            </h2>
             <.a navigate={~p"/teams/#{@team}/activities?when=past&sort=date-"}>All activities</.a>
           </header>
           <p class="chart-caption">The last 12 months</p>
           <.column_chart
             id="activities-by-month"
-            columns={@charts.activity_columns}
-            series={TeamDashboardCharts.series()}
+            columns={@charts["activities-by-month"].chart.data.columns}
+            series={@charts["activities-by-month"].chart.data.series}
             caption="Activities by month"
           />
         </section>
         <section class="card span-5">
           <header>
-            <h2 class="chart-title">Where the team went</h2>
+            <h2 class="chart-title">
+              <.chart_title team={@team} slug="where-the-team-went" team_admin?={@team_admin?}>
+                Where the team went
+              </.chart_title>
+            </h2>
           </header>
           <p :if={@map} class="chart-caption">
             The last 12 months. Large dots are the last 30 days.
@@ -845,24 +856,37 @@ defmodule Web.TeamDashboardLive do
         </section>
         <section class="card">
           <header>
-            <h2 class="chart-title">Every day out</h2>
+            <h2 class="chart-title">
+              <.chart_title team={@team} slug="every-day-out" team_admin?={@team_admin?}>
+                Every day out
+              </.chart_title>
+            </h2>
           </header>
           <p class="chart-caption">The last 12 months</p>
-          <.calendar id="activity-calendar" days={@charts.calendar_days} />
+          <.calendar id="activity-calendar" days={@charts["every-day-out"].chart.data.days} />
         </section>
       </div>
     </div>
     """
   end
 
-  # Against the same days of last year: "12 more than this time last year".
-  defp versus(now, before) do
-    cond do
-      now > before -> "#{Format.number(now - before)} more than this time last year"
-      now < before -> "#{Format.number(before - now)} fewer than this time last year"
-      true -> "Same as this time last year"
-    end
+  attr :team, :map, required: true
+  attr :slug, :string, required: true
+  attr :team_admin?, :boolean, required: true
+  slot :inner_block, required: true
+
+  defp chart_title(assigns) do
+    ~H"""
+    <.link
+      :if={@team_admin?}
+      id={"chart-title-#{@slug}"}
+      navigate={~p"/teams/#{@team}/reports/#{@slug}"}
+    >{render_slot(@inner_block)}</.link><span :if={!@team_admin?}>{render_slot(@inner_block)}</span>
+    """
   end
+
+  defp report_path(team, slug, true), do: ~p"/teams/#{team}/reports/#{slug}"
+  defp report_path(_team, _slug, false), do: nil
 
   # The refresh's own progress, such as "Members: 120/480 (25%)", after the slow thing.
   defp refreshing_text("Refreshing"), do: "Refreshing…"

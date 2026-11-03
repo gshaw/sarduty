@@ -26,19 +26,9 @@ defmodule Web.Components.ReportChart do
   attr :now, :any, default: nil, doc: "for a map's large dots, the last 30 days"
 
   def report_chart(%{chart: %{kind: :stat}} = assigns) do
-    assigns = assign(assigns, data: assigns.chart.data, delta: delta(assigns.chart))
-
     ~H"""
     <div id={@id} class="chart-stats report-chart">
-      <.stat
-        id={"#{@id}-stat"}
-        value={number_text(@data.value, @chart)}
-        label={@chart.label || ""}
-        href={@href}
-        delta={@delta}
-      >
-        <.sparkline :if={@data.spark} values={spark(@data.spark, @chart)} />
-      </.stat>
+      <.report_stat id={"#{@id}-stat"} chart={@chart} href={@href} />
     </div>
     """
   end
@@ -85,11 +75,9 @@ defmodule Web.Components.ReportChart do
   # The Dashboard's map, from the report's places, by its rules: nothing over 150 km from
   # the team's base, and large dots for the last 30 days.
   def report_chart(%{chart: %{kind: :map}} = assigns) do
-    points = map_points(assigns.chart.data.places, assigns.records, assigns.team, assigns.now)
-
     assigns =
       assign(assigns,
-        map: ActivityMap.build(points, {960, 480}, padding: 24),
+        map: map(assigns.chart, assigns.records, assigns.team, assigns.now, {960, 480}),
         max: Chart.limits().map
       )
 
@@ -125,6 +113,40 @@ defmodule Web.Components.ReportChart do
       <.week_grid id={"#{@id}-week"} rows={@chart.data.rows} />
     </section>
     """
+  end
+
+  attr :id, :string, required: true
+  attr :chart, :map, required: true, doc: "a `chart stat`'s chart"
+  attr :label, :string, default: nil, doc: "in place of its column's label"
+  attr :href, :string, default: nil
+  attr :series, :atom, default: :primary
+
+  @doc "A `chart stat` as one stat, for a row of them such as the Dashboard's."
+  def report_stat(assigns) do
+    assigns = assign(assigns, data: assigns.chart.data, delta: delta(assigns.chart))
+
+    ~H"""
+    <.stat
+      id={@id}
+      value={number_text(@data.value, @chart)}
+      label={@label || @chart.label || ""}
+      href={@href}
+      delta={@delta}
+      series={@series}
+    >
+      <.sparkline :if={@data.spark} values={spark(@data.spark, @chart)} series={@series} />
+    </.stat>
+    """
+  end
+
+  @doc """
+  A `chart map`'s map at `size`, from its places and the rows' activities, or nil when
+  none is near the team's base.
+  """
+  def map(chart, records, team, now, size) do
+    chart.data.places
+    |> map_points(records, team, now)
+    |> ActivityMap.build(size, padding: 24)
   end
 
   # With compare year, this year's line beside last year's in grey. Hours in whole hours,
