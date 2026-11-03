@@ -104,6 +104,21 @@ defmodule Web.CertificateLiveTest do
     assert has_element?(lv, "#certificate-fix", "Fix the award in D4H.")
   end
 
+  # Records has no pages for a team, so the fix is on the member's Qualifications tab.
+  test "on a Records team, an accepted certificate links to Qualifications", ctx do
+    ctx.team
+    |> Ecto.Changeset.change(d4h_api_host: App.Adapter.D4H.records_host())
+    |> Repo.update!()
+
+    ctx.certificate |> Ecto.Changeset.change(status: :accepted, d4h_award_id: 300) |> Repo.update!()
+
+    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates/#{ctx.certificate.id}")
+    qualifications = ~p"/teams/#{ctx.team}/members/#{ctx.member}/qualifications"
+    assert has_element?(lv, ~s{#certificate-fix a[href="#{qualifications}"]}, "Qualifications")
+    assert has_element?(lv, "#certificate-fix", "Remove the award on Qualifications")
+    refute has_element?(lv, "#certificate-fix", "Open member in")
+  end
+
   test "with no qualification picked, the team admin picks one and checks it", ctx do
     wfa =
       qualification_fixture(ctx.team, %{title: "Wilderness First Aid", expires_months_default: 36})
