@@ -3,7 +3,8 @@ defmodule App.Report.Expr do
   One expression of a query, checked against App.Report.Catalog and written as SQL.
 
   An expression is a map: `sql` and `params`; its `type`, a field type
-  (App.Report.Field) or `:condition`, `:year`, `:month`, `:quarter`, or a literal's;
+  (App.Report.Field) or `:condition`, `:year`, `:month`, `:quarter`, `:day` (a local
+  date), `:weekday` (1 for Monday), `:hour`, or a literal's;
   `agg`, the aggregate it is or holds, or false; for a record, `id`, its id, and `text`,
   the SQL it sorts and compares by; `name` and `label`; the `field` it reads; the
   `parents` and `values` it uses; and `reads`, the source columns it reads as
@@ -21,7 +22,7 @@ defmodule App.Report.Expr do
   alias App.Report.Value
 
   @aggregates ~w(count sum avg min max)
-  @date_parts ~w(year month quarter days_since)
+  @date_parts ~w(year month quarter days_since date months_since day_of_week hour)
   @numbers [:number, :hours, :km]
   @matches [:contains, :starts_with, :ends_with, :like]
   @flip %{eq: :eq, ne: :ne, lt: :gt, gt: :lt, le: :ge, ge: :le}
@@ -411,6 +412,15 @@ defmodule App.Report.Expr do
     new(["COUNT(", inner, ")"], params, :number, line, agg: "count", label: "Count")
   end
 
+  # The sum of a condition counts the rows it holds for (#826), such as
+  # sum(joined_at = THIS_YEAR) beside count(id), a stat's second number.
+  defp aggregate("sum", _distinct?, %{type: :condition} = arg, line),
+    do:
+      new(["SUM(CASE WHEN ", arg.sql, " THEN 1 ELSE 0 END)"], arg.params, :number, line,
+        agg: "sum",
+        label: "Count"
+      )
+
   defp aggregate(name, _distinct?, %{type: type} = arg, line)
        when name in ["sum", "avg"] and type in [:bool | @numbers] do
     type = if type == :bool, do: :number, else: type
@@ -419,7 +429,8 @@ defmodule App.Report.Expr do
   end
 
   defp aggregate(name, _distinct?, %{type: type} = arg, line)
-       when name in ["min", "max"] and type in [:date, :text, :year, :month | @numbers] do
+       when name in ["min", "max"] and
+              type in [:date, :text, :year, :month, :day, :weekday, :hour | @numbers] do
     new([String.upcase(name), "(", arg.sql, ")"], arg.params, type, line,
       agg: name,
       label: min_max_label(name, type, arg.label)
@@ -455,6 +466,39 @@ defmodule App.Report.Expr do
       label: "Days since #{String.downcase(arg.label)}"
     )
   end
+
+  # The local date, a calendar's day (#826).
+  defp date_part("date", time, arg, line, _context),
+    do: new(["date(", time, ")"], [], :day, line, label: arg.label)
+
+  # Whole months from the date's month to this one, 0 for this month (#826), so
+  # `months_since(started_at) < 12` is this month and the 11 before it.
+  defp date_part("months_since", time, arg, line, context) do
+    new(
+      [
+        "(? - (CAST(strftime('%Y', ",
+        time,
+        ") AS INTEGER) * 12 + CAST(strftime('%m', ",
+        time,
+        ") AS INTEGER)))"
+      ],
+      [context.today.year * 12 + context.today.month],
+      :number,
+      line,
+      label: "Months since #{String.downcase(arg.label)}"
+    )
+  end
+
+  # 1 for Monday to 7 for Sunday, a week grid's rows (#826).
+  defp date_part("day_of_week", time, _arg, line, _context),
+    do:
+      new(["((CAST(strftime('%w', ", time, ") AS INTEGER) + 6) % 7 + 1)"], [], :weekday, line,
+        label: "Day"
+      )
+
+  # The local hour, 0 to 23 (#826).
+  defp date_part("hour", time, _arg, line, _context),
+    do: new(["CAST(strftime('%H', ", time, ") AS INTEGER)"], [], :hour, line, label: "Hour")
 
   defp min_max_label("min", :date, label), do: "First #{String.downcase(label)}"
   defp min_max_label("max", :date, label), do: "Last #{String.downcase(label)}"
@@ -562,7 +606,7 @@ defmodule App.Report.Expr do
     do: {"?", [n * 60]}
 
   defp right_param(%{type: type} = l, %{type: :text_literal}, line, _st)
-       when type in [:year, :month, :quarter, :bool, :date | @numbers],
+       when type in [:year, :month, :quarter, :weekday, :hour, :bool, :date | @numbers],
        do: fail(line, "Compare #{l.name || "it"} with #{example_value(type)}, not text.")
 
   defp right_param(%{type: :list} = l, _r, line, _st),
@@ -749,8 +793,9 @@ defmodule App.Report.Expr do
   defp value_kind(%{type: :date}, _context), do: {:date, []}
   defp value_kind(%{type: :bool}, _context), do: {:choice, [{"Yes", "true"}, {"No", "false"}]}
 
-  defp value_kind(%{type: type}, _context) when type in [:month, :quarter | @numbers],
-    do: {:number, []}
+  defp value_kind(%{type: type}, _context)
+       when type in [:month, :quarter, :weekday, :hour | @numbers],
+       do: {:number, []}
 
   defp value_kind(%{type: type, field: field}, context) when type in [:choice, :list],
     do: {:choice, field.choices.(context)}

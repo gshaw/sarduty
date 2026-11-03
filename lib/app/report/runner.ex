@@ -233,6 +233,9 @@ defmodule App.Report.Runner do
   defp pivot_label(value, %{type: :month}, _timezone), do: month_name(value)
   defp pivot_label(value, %{type: :quarter}, _timezone), do: "Q#{value}"
   defp pivot_label(value, %{type: :year}, _timezone), do: Integer.to_string(value)
+  defp pivot_label(value, %{type: :day}, _timezone), do: Format.date_short(value)
+  defp pivot_label(value, %{type: :weekday}, _timezone), do: weekday_name(value)
+  defp pivot_label(value, %{type: :hour}, _timezone), do: hour_text(value)
   defp pivot_label(value, %{type: :date}, timezone), do: Format.date_short(value, timezone)
   defp pivot_label(_value, %{type: {:record, _}}, _timezone), do: nil
 
@@ -254,6 +257,16 @@ defmodule App.Report.Runner do
     do: 2000 |> Date.new!(n, 1) |> Calendar.strftime("%B")
 
   def month_name(_n), do: ""
+
+  @doc "A day of the week's name from its number: 1 is Monday."
+  def weekday_name(n) when is_integer(n) and n in 1..7,
+    do: Enum.at(~w(Monday Tuesday Wednesday Thursday Friday Saturday Sunday), n - 1)
+
+  def weekday_name(_n), do: ""
+
+  @doc "An hour as the clock writes it: 9 is 09:00."
+  def hour_text(n) when is_integer(n), do: n |> Time.new!(0, 0) |> Format.time_short()
+  def hour_text(_n), do: ""
 
   defp result(plan, columns, rows, more?) do
     %Result{
@@ -299,6 +312,7 @@ defmodule App.Report.Runner do
   defp decode(nil, _type), do: nil
   defp decode(value, :bool), do: value in [1, true]
   defp decode(value, :date) when is_binary(value), do: datetime(value)
+  defp decode(value, :day) when is_binary(value), do: Date.from_iso8601!(value)
 
   defp decode(value, :list) when is_binary(value),
     do: value |> Jason.decode!() |> Enum.reject(&is_nil/1) |> Enum.sort_by(&String.downcase/1)

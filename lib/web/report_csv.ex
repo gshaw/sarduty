@@ -62,6 +62,9 @@ defmodule Web.ReportCSV do
     do: choices |> List.wrap() |> Runner.choice_label(value) |> safe()
 
   defp text(value, %{type: :month}, _records, _timezone), do: Runner.month_name(value)
+  defp text(value, %{type: :day}, _records, _timezone), do: Date.to_iso8601(value)
+  defp text(value, %{type: :weekday}, _records, _timezone), do: Runner.weekday_name(value)
+  defp text(value, %{type: :hour}, _records, _timezone), do: Runner.hour_text(value)
   defp text(value, _column, _records, _timezone) when is_binary(value), do: safe(value)
   defp text(value, _column, _records, _timezone), do: to_string(value)
 
