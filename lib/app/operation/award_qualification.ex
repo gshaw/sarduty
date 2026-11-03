@@ -3,10 +3,12 @@ defmodule App.Operation.AwardQualification do
   A team admin awards a qualification to a member of a team on SAR Duty Records, or
   removes an award (docs/records.md). Each is one change set row applied through
   App.Operation.ApplyEdit, so it shows in the member's history. An award can take a
-  certificate (#493): a second row, once the award is in, uploads it.
+  certificate (#493): a second row, once the award is in, uploads it. Removing an award
+  deletes its certificate.
   """
 
   alias App.Accounts.User
+  alias App.Model.Certificate
   alias App.Model.ChangeSetRow
   alias App.Model.Member
   alias App.Model.MemberQualificationAward
@@ -73,7 +75,8 @@ defmodule App.Operation.AwardQualification do
       new_value: %{}
     }
 
-    with {:ok, _id} <- ApplyEdit.call(team, user, row, now), do: :ok
+    with {:ok, _id} <- ApplyEdit.call(team, user, row, now),
+         do: Certificate.delete_for_award!(award.member_id, award.d4h_award_id)
   end
 
   def plan(member, qualification, values, timezone) do

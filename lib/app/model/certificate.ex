@@ -167,6 +167,18 @@ defmodule App.Model.Certificate do
   def dates_locked?(%Certificate{d4h_award_id: award_id}), do: not is_nil(award_id)
 
   @doc """
+  Deletes the certificates for an award a team admin removed, with any file one kept. The
+  award was all an accepted certificate pointed at, so it would only mislead.
+  """
+  def delete_for_award!(member_id, d4h_award_id) when is_integer(d4h_award_id) do
+    Certificate
+    |> where([c], c.member_id == ^member_id and c.d4h_award_id == ^d4h_award_id)
+    |> Repo.delete_all()
+
+    :ok
+  end
+
+  @doc """
   The member's certificates for Your membership: waiting ones and declined ones they
   haven't deleted, newest first.
   """

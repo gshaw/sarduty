@@ -81,6 +81,35 @@ defmodule Web.MemberQualificationsLiveTest do
     assert has_element?(lv, "#member-qualifications-award-#{old.id} #remove-award-#{old.id}")
   end
 
+  # The certificate pointed only at the award, so it goes too: it would stay Accepted.
+  test "removing an award on a Records team deletes its certificate", %{conn: conn} do
+    %{user: user, team: team} = records_team_with_user_fixture(%{d4h_access_key: "sdr_key"})
+    member = Repo.get_by!(App.Model.Member, team_id: team.id, email: user.email)
+    %{first_aid: first_aid, latest: latest} = awards(team, member)
+
+    certificate =
+      certificate_fixture(member, first_aid, %{
+        status: :accepted,
+        d4h_award_id: latest.d4h_award_id
+      })
+
+    other = certificate_fixture(member, first_aid, %{status: :waiting})
+
+    Req.Test.stub(D4H, fn conn ->
+      case {conn.method, String.replace(conn.request_path, ~r{^/v3/team/\d+}, "")} do
+        {"DELETE", "/member-qualification-awards/" <> _id} -> Plug.Conn.send_resp(conn, 204, "")
+      end
+    end)
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/qualifications")
+
+    render_click(lv, "remove-award", %{"id" => "#{latest.id}"})
+
+    refute Repo.get(App.Model.Certificate, certificate.id)
+    assert Repo.get(App.Model.Certificate, other.id)
+  end
+
   test "says when the member has none", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)

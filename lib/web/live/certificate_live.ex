@@ -242,7 +242,7 @@ defmodule Web.CertificateLive do
             <.a navigate={~p"/teams/#{@current_team}/members/#{@certificate.member}/qualifications"}>Qualifications</.a>
           </p>
           <p class="hint">
-            Wrong qualification or dates? Remove the award on Qualifications and award it again.
+            Wrong qualification or dates? Remove the award on Qualifications, which deletes this certificate, and award it again.
           </p>
         </div>
         <div
