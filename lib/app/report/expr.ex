@@ -442,6 +442,47 @@ defmodule App.Report.Expr do
     uses(new([String.upcase(name), "(", sql, ")"], params, :text, line, label: arg.label), arg)
   end
 
+  # A number from text, as BCSARA's "How many people received assistance from SAR?" is
+  # text: blank when it holds none, so "N/A" isn't counted as 0.
+  defp call("number", false, args, line, st) do
+    arg = one_arg(args, line, "number takes one text field, such as number(`People helped`).", st)
+
+    unless arg.type == :text,
+      do: fail(line, "number reads a number from text. #{arg.name} is #{type_text(arg.type)}.")
+
+    params = Enum.concat([arg.params, arg.params, arg.params])
+    uses(new(CustomFields.number_sql(arg.sql), params, :number, line, label: arg.label), arg)
+  end
+
+  # Only the digits, so PROS#2025-123456 and 2025-123456 are one file number (#363).
+  defp call("digits", false, args, line, st) do
+    arg =
+      one_arg(
+        args,
+        line,
+        "digits takes one text field, such as digits(`Agency file number`).",
+        st
+      )
+
+    unless arg.type == :text,
+      do: fail(line, "digits keeps the digits of text. #{arg.name} is #{type_text(arg.type)}.")
+
+    t = ["(", arg.sql, ")"]
+
+    sql = [
+      "(WITH RECURSIVE d(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM d WHERE i < length(",
+      t,
+      ")) SELECT NULLIF(group_concat(substr(",
+      t,
+      ", i, 1), '' ORDER BY i), '') FROM d WHERE substr(",
+      t,
+      ", i, 1) BETWEEN '0' AND '9')"
+    ]
+
+    params = Enum.concat([arg.params, arg.params, arg.params])
+    uses(new(sql, params, :text, line, label: arg.label), arg)
+  end
+
   defp call(name, true, _args, line, _st),
     do:
       fail(
@@ -557,6 +598,7 @@ defmodule App.Report.Expr do
   defp type_text(type) when type in [:text, :choice], do: "text"
   defp type_text(:list), do: "a list"
   defp type_text(:date), do: "a date"
+  defp type_text(type) when type in [:number, :hours, :km], do: "a number"
   defp type_text({:record, kind}) when kind in [:activity, :item], do: "an #{kind}"
   defp type_text({:record, kind}), do: "a #{kind}"
   defp type_text(_type), do: "not a number"

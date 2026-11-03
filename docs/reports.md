@@ -112,6 +112,12 @@ parameters. A choice is a CASE from option id to label, a multiple choice a JSON
 of labels (so `includes` and `excludes` work as for tags), and a number is the number
 D4H's text holds, or blank, never 0, for one like N/A.
 
+Teams keep some counts and ids in text fields, as BCSARA's How many people received
+assistance from SAR? and Agency File # are. `number(text)` reads such a field the way a
+number field reads, and `digits(text)` keeps only the digits, so PROS#2025-123456 and
+2025-123456 count as one police file (#363). Neither guesses: 999 for unknown is a
+number, and a team leaves it out with its own `where`.
+
 ## How a column looks
 
 Each field draws its own cell (#804): a date as a date, an activity's kind as its

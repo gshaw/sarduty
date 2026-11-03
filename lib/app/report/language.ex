@@ -106,7 +106,9 @@ defmodule App.Report.Language do
     "months_since" =>
       {"months_since(date)", "Whole months from the date's month to this one: 0 is this month."},
     "day_of_week" => {"day_of_week(date)", "The day of the week: 1 is Monday, 7 is Sunday."},
-    "hour" => {"hour(date)", "The hour, 0 to 23, in the team's time zone."}
+    "hour" => {"hour(date)", "The hour, 0 to 23, in the team's time zone."},
+    "number" => {"number(text)", "The number the text holds, or blank when it holds none."},
+    "digits" => {"digits(text)", "Only the text's digits: PROS#2025-123456 is 2025123456."}
   }
 
   @ranges %{
