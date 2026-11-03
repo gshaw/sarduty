@@ -233,7 +233,22 @@ defmodule Web.CertificateLive do
           </div>
         </dl>
 
-        <div :if={@certificate.status == :accepted} id="certificate-fix">
+        <%!-- Records has no pages for a team: its awards are removed on Qualifications. --%>
+        <div
+          :if={@certificate.status == :accepted and D4H.records?(@current_team)}
+          id="certificate-fix"
+        >
+          <p class="action">
+            <.a navigate={~p"/teams/#{@current_team}/members/#{@certificate.member}/qualifications"}>Qualifications</.a>
+          </p>
+          <p class="hint">
+            Wrong qualification or dates? Remove the award on Qualifications, which deletes this certificate, and award it again.
+          </p>
+        </div>
+        <div
+          :if={@certificate.status == :accepted and !D4H.records?(@current_team)}
+          id="certificate-fix"
+        >
           <p class="action">
             <.a external={true} href={D4H.member_url(%{@certificate.member | team: @current_team})}>Open member in {@service}</.a>
           </p>
