@@ -19,7 +19,9 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
 2. **The link.** `/demo/open/:id?code=…` (`Web.DemoController`), or the code typed on
    `/demo`, logs the visitor in. The code works for 24 hours and dies after 5 misses. It
    works more than once, since a mail app that opens links to check them would use up a
-   single-use one.
+   single-use one. `/demo` checks a typed code itself, so a blank or wrong one stays on the
+   code step, and keeps that step in the URL (a signed `sent` token) so a refresh keeps it
+   too. The login is remembered, like a login code's Remember me, as the demo lasts 7 days.
 3. **The build.** `/demo/building` (`Web.DemoBuildLive`) runs
    `App.Operation.BuildDemoTeam` once, behind a spinner, in about a second. Records makes
    the team from the cast (`App.DemoCast`) and picks its ids. SAR Duty adds the team, marked

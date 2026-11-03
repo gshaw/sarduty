@@ -9,7 +9,8 @@ defmodule Web.DemoController do
   alias Web.UserAuth
 
   # Try a demo (#857). Opening the emailed link, or entering its code, logs the visitor in
-  # and sends them to the page that builds their copy the first time.
+  # and sends them to the page that builds their copy the first time. The login lasts
+  # past closing the browser, as the demo lasts 7 days; deleting the demo ends it.
   def open(conn, %{"id" => id, "code" => code}), do: open_demo(conn, id, code)
   def open(conn, %{"demo" => %{"id" => id, "code" => code}}), do: open_demo(conn, id, code)
   def open(conn, _params), do: redirect(conn, to: ~p"/demo?#{[error: "code"]}")
@@ -22,7 +23,7 @@ defmodule Web.DemoController do
 
       conn
       |> put_session(:user_return_to, ~p"/demo/building")
-      |> UserAuth.log_in_user(user)
+      |> UserAuth.log_in_user(user, remember: true)
     else
       _no -> redirect(conn, to: ~p"/demo?#{[error: "code"]}")
     end

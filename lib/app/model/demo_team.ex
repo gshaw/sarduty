@@ -66,22 +66,33 @@ defmodule App.Model.DemoTeam do
   #{@code_max_misses} misses. It works again until then, so a mail app that opens links
   to check them can't use it up. A miss counts against it.
   """
-  def code_ok?(%DemoTeam{code_hash: hash} = demo, code, now) when is_binary(hash) do
+  def code_ok?(demo, code, now), do: check_code(demo, code, now) == :ok
+
+  @doc """
+  code_ok?/3 with the reason: `:ok`, `:blank` (no miss counted), `:wrong`, or `:expired`
+  once the code is past its hours or misses, when only a new code helps.
+  """
+  def check_code(%DemoTeam{code_hash: hash} = demo, code, now) when is_binary(hash) do
+    code = (code || "") |> to_string() |> String.replace(~r/\s/, "")
+
     live? =
       demo.code_misses < @code_max_misses and
         DateTime.diff(now, demo.code_sent_at, :hour) < @code_hours
 
-    code = (code || "") |> to_string() |> String.replace(~r/\s/, "")
+    cond do
+      code == "" ->
+        :blank
 
-    if live? and demo |> hash(code) |> Plug.Crypto.secure_compare(hash) do
-      true
-    else
-      DemoTeam |> where(id: ^demo.id) |> Repo.update_all(inc: [code_misses: 1])
-      false
+      live? and demo |> hash(code) |> Plug.Crypto.secure_compare(hash) ->
+        :ok
+
+      true ->
+        DemoTeam |> where(id: ^demo.id) |> Repo.update_all(inc: [code_misses: 1])
+        if live? and demo.code_misses + 1 < @code_max_misses, do: :wrong, else: :expired
     end
   end
 
-  def code_ok?(%DemoTeam{}, _code, _now), do: false
+  def check_code(%DemoTeam{}, _code, _now), do: :expired
 
   # cspell:ignore hmac -- the :crypto.mac/4 algorithm name
   defp hash(demo, code) do

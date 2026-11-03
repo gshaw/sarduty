@@ -141,6 +141,56 @@ defmodule Web.DemoFlowTest do
     assert redirected_to(conn) == ~p"/demo?#{[error: "code"]}"
   end
 
+  test "the code step: blank and wrong codes stay on it, and a refresh keeps it", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/demo")
+
+    lv
+    |> form("#demo-form", demo_request_view_model: %{name: "Morgan", email: "morgan@example.com"})
+    |> render_submit()
+
+    assert_received {:email, sent}
+    code = code_from(sent)
+    path = assert_patch(lv)
+    assert path =~ ~r"^/demo\?sent="
+
+    lv |> form("#code-form", demo: %{code: ""}) |> render_submit()
+    assert has_element?(lv, "#code-form", "Enter the 6-digit code")
+
+    lv |> form("#code-form", demo: %{code: "000000"}) |> render_submit()
+    assert has_element?(lv, "#code-form", "That code is not right")
+
+    {:ok, lv, _html} = live(conn, path)
+    assert has_element?(lv, "#demo-sent", "morgan@example.com")
+
+    demo = DemoTeam.get_by_email("morgan@example.com")
+    form = form(lv, "#code-form", demo: %{id: demo.id, code: code})
+    render_submit(form)
+    conn = follow_trigger_action(form, conn)
+    assert redirected_to(conn) == ~p"/demo/building"
+  end
+
+  test "5 wrong codes on the code step ask for a new one, which works", %{conn: conn} do
+    {demo, _code, _sent} = request!()
+
+    {:ok, lv, _html} =
+      live(conn, "/demo?sent=" <> Phoenix.Token.sign(Web.Endpoint, "demo sent", demo.id))
+
+    for _ <- 1..4, do: lv |> form("#code-form", demo: %{code: "000000"}) |> render_submit()
+    assert has_element?(lv, "#code-form", "That code is not right")
+    lv |> form("#code-form", demo: %{code: "000000"}) |> render_submit()
+    assert has_element?(lv, "#code-form", "That code has expired")
+
+    lv |> element("#demo-resend") |> render_click()
+    assert_received {:email, sent}
+    assert demo |> Repo.reload!() |> DemoTeam.code_ok?(code_from(sent), DateTime.utc_now(:second))
+  end
+
+  test "a forged or old code step goes back to the form", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/demo?#{[sent: "forged"]}")
+    refute has_element?(lv, "#demo-sent")
+    assert has_element?(lv, "#demo-form")
+  end
+
   test "a built demo opens its Dashboard, with the banner", %{conn: conn} do
     %{user: user, team: team} = built_demo()
     conn = log_in_user(conn, user)
