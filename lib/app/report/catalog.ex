@@ -243,6 +243,13 @@ defmodule App.Report.Catalog do
         "Whether a team admin sent its attendance from SAR Duty."
       ),
       number(:attended_count, "Attended", "How many members attended."),
+      number(
+        :signed_up_count,
+        "Signed up",
+        "How many members replied I'll be there, as its Enough at and Full at badges count."
+      ),
+      number(:enough_at, "Enough at", "How many people it needs. Empty when not set."),
+      number(:full_at, "Full at", "How many people fill it. Empty when not set."),
       %Field{name: "attended_hours", label: "Hours", type: :hours, column: :attended_hours}
     ] ++ activity_place_fields() ++ activity_rule_fields()
   end
@@ -620,6 +627,7 @@ defmodule App.Report.Catalog do
       joins: activity_joins(context),
       needs: %{
         attended_count: [:attended],
+        signed_up_count: [:attending],
         attended_hours: [:attended],
         duration: [:chores],
         chore: [:chores]
@@ -637,6 +645,9 @@ defmodule App.Report.Catalog do
         attendance_sent: dynamic([a], not is_nil(a.attendance_sent_at)),
         attended_count: dynamic([attended: t], coalesce(t.count, 0)),
         attended_hours: dynamic([attended: t], coalesce(t.minutes, 0)),
+        signed_up_count: dynamic([attending: t], coalesce(t.count, 0)),
+        enough_at: dynamic([a], a.enough_at),
+        full_at: dynamic([a], a.full_at),
         tracking_number: dynamic([a], a.tracking_number),
         description: dynamic([a], a.description),
         address: dynamic([a], a.address),
@@ -667,6 +678,11 @@ defmodule App.Report.Catalog do
     %{
       attended:
         &join(&1, :left, [a], t in subquery(attended), as: :attended, on: t.activity_id == a.id),
+      attending:
+        &join(&1, :left, [a], t in subquery(Attendance.attending_counts(team)),
+          as: :attending,
+          on: t.activity_id == a.id
+        ),
       chores:
         &join(&1, :left, [a], c in subquery(ChoreEvent.totals(team.id)),
           as: :chores,

@@ -256,6 +256,40 @@ defmodule App.ReportTest do
     assert [%{name: "year", kind: :year, value: 2026}] = result.values
   end
 
+  test "activities report Enough at, Full at, and sign-ups as the badges count them" do
+    team = team_fixture()
+
+    [avery, blake, casey] =
+      for name <- ~w(Avery Blake Casey), do: member_fixture(team, %{name: name})
+
+    stranger = member_fixture(team_fixture())
+
+    short =
+      team
+      |> activity_fixture(%{title: "Short", started_at: ~U[2026-07-01 18:00:00Z]})
+      |> Ecto.Changeset.change(enough_at: 3, full_at: 5)
+      |> Repo.update!()
+
+    open = activity_fixture(team, %{title: "Open", started_at: ~U[2026-07-02 18:00:00Z]})
+
+    attendance_fixture(short, avery)
+    attendance_fixture(short, avery, %{status: "requested"})
+    attendance_fixture(short, blake)
+    attendance_fixture(short, casey, %{status: "absent"})
+    attendance_fixture(short, stranger)
+
+    result =
+      run!(
+        "select title, signed_up_count, enough_at, full_at from activities order by title",
+        team
+      )
+
+    assert result.rows == [[open.id, 0, nil, nil], [short.id, 2, 3, 5]]
+
+    assert run!("select title from activities where signed_up_count < enough_at", team).rows ==
+             [[short.id]]
+  end
+
   # cspell:ignore Atended
   test "status says the glossary's words, and compares by them" do
     team = team_fixture()

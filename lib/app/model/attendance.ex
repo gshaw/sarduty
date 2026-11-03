@@ -127,6 +127,19 @@ defmodule App.Model.Attendance do
     |> count_replies(activity_ids)
   end
 
+  @doc """
+  The `attending` count of `reply_counts/2` in SQL, as `%{activity_id:, count:}` per
+  activity with any, for Reports' `signed_up_count` (#447). A member with an attending
+  row counts once: `one_per_member/1` ranks attending first.
+  """
+  def attending_counts(%Team{} = team) do
+    Attendance
+    |> join(:inner, [r], m in assoc(r, :member))
+    |> where([r, m], r.status == "attending" and m.team_id == ^team.id)
+    |> group_by([r], r.activity_id)
+    |> select([r], %{activity_id: r.activity_id, count: count(r.member_id, :distinct)})
+  end
+
   @doc "`reply_counts/2` from the activities' rows: each member once, by status."
   def count_replies(rows, activity_ids) do
     zero = %{attending: 0, absent: 0, requested: 0}
