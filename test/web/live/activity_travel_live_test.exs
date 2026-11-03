@@ -27,7 +27,12 @@ defmodule Web.ActivityTravelLiveTest do
     started_at = DateTime.utc_now() |> DateTime.add(-3, :day) |> DateTime.truncate(:second)
 
     activity =
-      activity_fixture(team, %{title: "Missing hiker", ref_id: "01472", started_at: started_at})
+      activity_fixture(team, %{
+        title: "Missing hiker",
+        ref_id: "01472",
+        started_at: started_at,
+        finished_at: DateTime.add(started_at, 5, :hour)
+      })
 
     ann = member_fixture(team, %{name: "Ann Smith", address: "1 Home Rd"})
     bob = member_fixture(team, %{name: "Bob Jones", address: nil})
@@ -170,18 +175,51 @@ defmodule Web.ActivityTravelLiveTest do
                Repo.get_by!(Trip, d4h_attendance_id: ctx.bob_row.d4h_attendance_id)
     end
 
-    test "the count of checked rows sits above buttons that keep their words", ctx do
+    test "one list of how they got there, and one button that counts the checked rows",
+         ctx do
       lv = open(ctx)
-      assert lv |> element("#travel-selection") |> render() =~ "Check rows"
-      assert has_element?(lv, "#travel-set-icp[disabled]", "ICP")
+      assert has_element?(lv, "#travel-set-rows[disabled]", "Set rows")
+      assert has_element?(lv, "#travel-choice-icp", "Drove to the ICP")
+      assert has_element?(lv, "#travel-choice-clear", "Not set")
 
       ids = [to_string(ctx.ann_row.id), to_string(ctx.bob_row.id)]
-      lv |> form("#travel-form", %{"row_ids" => ids, "km" => "90"}) |> render_change()
+      lv |> form("#travel-form", %{"row_ids" => ids}) |> render_change()
+      assert has_element?(lv, "#travel-set-rows[disabled]", "Set 2 rows")
 
-      assert lv |> element("#travel-selection") |> render() =~ "2 rows checked. Set them to:"
-      refute has_element?(lv, "#travel-set-icp[disabled]")
-      assert has_element?(lv, "#travel-set-other", "Set km")
-      assert has_element?(lv, "#travel-clear[disabled]")
+      lv |> form("#travel-form", %{"row_ids" => ids, "travel" => "icp"}) |> render_change()
+      refute has_element?(lv, "#travel-set-rows[disabled]")
+
+      # Other waits for its km.
+      lv |> form("#travel-form", %{"row_ids" => ids, "travel" => "other"}) |> render_change()
+      assert has_element?(lv, "#travel-set-rows[disabled]")
+
+      lv
+      |> form("#travel-form", %{"row_ids" => ids, "travel" => "other", "km" => "90"})
+      |> render_change()
+
+      refute has_element?(lv, "#travel-set-rows[disabled]")
+    end
+
+    test "All and Not set split the rows; Set comes first, Not set next to the choices",
+         ctx do
+      lv = open(ctx)
+      set(lv, [ctx.ann_row], "icp")
+
+      assert has_element?(lv, "#travel-view-all[aria-current=page]", "2")
+      assert lv |> element("#travel-view-all") |> render() =~ "50 km"
+      assert has_element?(lv, "#travel-view-not-set", "1")
+      assert lv |> element("#travel-view-not-set") |> render() =~ "No km yet"
+
+      html = lv |> element("#travel-form") |> render()
+      {set_at, _} = :binary.match(html, ~s(id="travel-set"))
+      {not_set_at, _} = :binary.match(html, ~s(id="travel-not-set"))
+      {how_at, _} = :binary.match(html, ~s(id="travel-how"))
+      assert set_at < not_set_at and not_set_at < how_at
+
+      lv |> element("#travel-view-not-set") |> render_click()
+      assert_patch(lv, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/travel?view=not-set")
+      assert has_element?(lv, "#travel-not-set", "Bob Jones")
+      refute has_element?(lv, "#travel-set")
     end
 
     test "the copy for D4H is folded away, names the activity, and lists the rows set", ctx do
@@ -202,9 +240,9 @@ defmodule Web.ActivityTravelLiveTest do
       lv = open(ctx)
       set(lv, [ctx.ann_row, ctx.bob_row], "passenger")
       ids = [to_string(ctx.ann_row.id)]
-      lv |> form("#travel-form", %{"row_ids" => ids}) |> render_change()
+      lv |> form("#travel-form", %{"row_ids" => ids, "travel" => "clear"}) |> render_change()
 
-      refute has_element?(lv, "#travel-clear[disabled]")
+      refute has_element?(lv, "#travel-set-rows[disabled]")
 
       set(lv, [ctx.ann_row], "clear")
 
@@ -219,7 +257,7 @@ defmodule Web.ActivityTravelLiveTest do
       lv = open(ctx)
 
       assert has_element?(lv, "#travel-locked")
-      refute has_element?(lv, "#travel-set-icp")
+      refute has_element?(lv, "#travel-how")
       refute has_element?(lv, "#travel-select-#{ctx.ann_row.id}")
 
       lv
@@ -246,7 +284,7 @@ defmodule Web.ActivityTravelLiveTest do
       refute has_element?(lv, "#activity-map")
     end
 
-    test "Overview's stats sit under the map", ctx do
+    test "Overview has no stat boxes; Attendance in the details has the exact hours", ctx do
       Repo.insert!(%Trip{
         team_id: ctx.team.id,
         activity_id: ctx.activity.id,
@@ -258,15 +296,27 @@ defmodule Web.ActivityTravelLiveTest do
 
       {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
 
-      assert has_element?(lv, "#stat-attended", "2")
-      assert has_element?(lv, "#stat-hours", "Member hours")
-      assert has_element?(lv, "#stat-km", "50")
+      refute has_element?(lv, "#activity-stats")
+      assert has_element?(lv, "#activity-attendance", "2 members · 2 hours in total")
       refute has_element?(lv, "#chart-hours-by-member")
     end
 
-    test "the activity's Travel tab counts the rows not set", ctx do
+    test "the activity's Travel tab counts the rows not set, from the finish", ctx do
       {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
       assert lv |> element(".tabs a", "Travel") |> render() =~ "2"
+
+      # Before the finish, members are still out: the tab is there, without a count.
+      later =
+        ctx.activity
+        |> Ecto.Changeset.change(
+          finished_at: DateTime.utc_now() |> DateTime.add(1, :hour) |> DateTime.truncate(:second)
+        )
+        |> Repo.update!()
+
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
+      refute lv |> element(".tabs a", "Travel") |> render() =~ "badge"
+
+      later |> Ecto.Changeset.change(finished_at: ctx.activity.finished_at) |> Repo.update!()
 
       Repo.insert!(%Trip{
         team_id: ctx.team.id,

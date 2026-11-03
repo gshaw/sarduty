@@ -1,57 +1,13 @@
 defmodule App.ViewData.ActivityOverview do
   @moduledoc """
-  An activity's Overview tab: stat boxes under the map, and charts under the
-  description, drawn by chart reports (#826) run on this one activity.
-
-  Before the start the stats are the replies; from it, who came, their hours, and the km
-  their travel counts (#230). A chart with nothing to draw is left out, so a new
-  activity shows none.
+  An activity's Overview tab: charts under the description, drawn by chart reports (#826)
+  run on this one activity. A chart with nothing to draw is left out, so a new activity
+  shows none. Its counts are the panel's line, on every tab.
   """
-  import Ecto.Query
-
   alias App.Model.Activity
-  alias App.Model.Trip
-  alias App.Repo
   alias App.Report
   alias App.Report.Context
   alias App.ViewData.ReportRecords
-  alias Service.Format
-
-  @doc """
-  The stat boxes, as `%{id:, value:, label:}`. `counts` is ActivityMembers.counts/1's,
-  `attendances` the attended rows, and `km` the km of the activity's trips.
-  """
-  def stats(%{coming?: true, counts: counts}) do
-    [
-      stat("stat-signed-up", Format.number(counts.attending), "Signed up"),
-      stat("stat-cant-make-it", Format.number(counts.absent), "Can't make it"),
-      stat("stat-no-reply", Format.number(counts.requested), "No reply")
-    ]
-  end
-
-  def stats(%{attendances: attendances, km: km}) do
-    minutes = attendances |> Enum.map(& &1.duration_in_minutes) |> Enum.sum()
-    members = attendances |> Enum.map(& &1.member_id) |> Enum.uniq() |> length()
-
-    [
-      stat("stat-attended", Format.number(members), "Members attended"),
-      stat("stat-hours", Format.hours(minutes), "Member hours"),
-      stat("stat-km", Format.number(km), "Km driven")
-    ]
-  end
-
-  defp stat(id, value, label), do: %{id: id, value: value, label: label}
-
-  @doc "The km of the activity's trips, set on Travel."
-  def km(%Activity{} = activity) do
-    query =
-      from(t in Trip,
-        where: t.team_id == ^activity.team_id and t.activity_id == ^activity.id,
-        select: coalesce(sum(t.km), 0)
-      )
-
-    Repo.one(query)
-  end
 
   @doc """
   The charts with something to draw, each `%{id:, title:, caption:, chart:, records:}`,

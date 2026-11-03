@@ -10,15 +10,14 @@ defmodule Web.TableColumnsTest do
       "checkboxes add members to a group, for team admins on a team with groups to add to",
     {"lib/web/components/equipment.ex", "@where?"} =>
       "nothing the member holds is inside a kit, so every Where is blank",
-    {"lib/web/live/activity_live.ex",
-     ~s|!@started? and (@view != "requested" or @reminded_shown?)|} =>
-      "Replied: before the start only, and No reply has no reply dates",
+    {"lib/web/live/activity_live.ex", "!@started?"} =>
+      "Replied: replies close at the start, when the table becomes attendance",
     {"lib/web/live/activity_remove_members_live.ex", ~s|status != "requested"|} =>
       "Replied: a table per reply, and No reply has no reply dates",
     {"lib/web/live/activity_remove_members_live.ex", ~s|status == "attending"|} =>
       "the no email hint: only a signed up member is emailed",
-    {"lib/web/live/activity_live.ex", ~s|@started? and @view in [nil, "attending"]|} =>
-      "Start, Finish, and Duration: only rows that attended have times",
+    {"lib/web/live/activity_live.ex", "@started?"} =>
+      "Start, Finish, and Hours: only an activity that started has times",
     {"lib/web/components/travel_tab.ex", "!@locked?"} =>
       "the checkboxes set travel, and a published activity's travel can't change",
     {"lib/web/live/chore_collection_live.ex", "@selected"} =>

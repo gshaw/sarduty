@@ -23,6 +23,7 @@
 
   .stat-switch-value { font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 700; font-variant-numeric: tabular-nums; }
   .stat-switch-label { font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+  .stat-switch-detail { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-muted); white-space: nowrap; }
   .stat-switch a:hover { background: var(--border-subtle); }
   .stat-switch a[aria-current="page"] { background: var(--shade-1); box-shadow: inset 0 -3px var(--current); }
   .stat-switch a[aria-current="page"] .stat-switch-label { color: var(--text); }
