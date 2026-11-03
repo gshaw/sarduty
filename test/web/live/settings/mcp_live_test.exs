@@ -6,6 +6,7 @@ defmodule Web.Settings.MCPLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.AccountsFixtures
+  alias App.Model.Member
   alias App.Operation.SetTeamMCP
   alias App.Repo
 
@@ -48,11 +49,29 @@ defmodule Web.Settings.MCPLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp")
     assert has_element?(lv, "#agent-#{connection.id}", "Laptop agent")
-    assert has_element?(lv, "#agent-#{connection.id}", user.email)
+    name = Member.name_for_user(team, user, DateTime.utc_now())
+    assert has_element?(lv, "#agent-#{connection.id}", name)
+    refute has_element?(lv, "#agent-#{connection.id}", user.email)
+
+    assert has_element?(
+             lv,
+             "#agent-#{connection.id}",
+             Service.Format.date_short(connection.connected_at, team.timezone)
+           )
 
     lv |> element("#disconnect-agent-#{connection.id}") |> render_click()
     assert Repo.reload!(connection).revoked_at
     refute has_element?(lv, "#agent-#{connection.id}")
+  end
+
+  test "names a login with no member by its email", %{admin: admin} = ctx do
+    team = turn_on(ctx.team, admin)
+    %{connection: connection} = agent_connection_fixture(team, ctx.user)
+    Repo.update_all(Member, set: [email: "someone-else@example.com"])
+    conn = log_in_user(build_conn(), admin)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/mcp")
+    assert has_element?(lv, "#agent-#{connection.id}", ctx.user.email)
   end
 
   test "lists no agent that never traded its code", %{admin: admin} = ctx do
