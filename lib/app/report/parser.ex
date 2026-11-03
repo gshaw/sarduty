@@ -16,6 +16,8 @@ defmodule App.Report.Parser do
   @clauses ~w(select from where group pivot order limit offset label format totals)
   @page_clauses ~w(search switch filter sort page chart)
   @chart_kinds ~w(stat columns lines bars calendar week map)
+  # Each kind's atom, written out: to_existing_atom fails until some module loads `:bars`.
+  @chart_atoms Map.new(@chart_kinds, &{&1, String.to_atom(&1)})
   # Names a filter can't take: the URL's own words. A sort's name is only the sort's
   # value in the URL, so `sort id` is fine.
   @reserved ~w(q sort page id subdomain all)
@@ -273,7 +275,7 @@ defmodule App.Report.Parser do
           do: fail_line(line, "Write one of #{Enum.join(@chart_kinds, ", ")} after chart.")
 
         {options, rest} = chart_options(rest, %{compare_year: false, cumulative: false}, line)
-        chart = Map.merge(options, %{kind: String.to_existing_atom(kind), line: line})
+        chart = Map.merge(options, %{kind: Map.fetch!(@chart_atoms, kind), line: line})
         {%{query | chart: chart}, rest}
 
       _other ->
