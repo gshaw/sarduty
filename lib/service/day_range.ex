@@ -6,18 +6,6 @@ defmodule Service.DayRange do
   """
 
   @doc """
-  The UTC `{start, finish}` of the `days` days before `now`'s day in
-  `timezone`, that day, and the `days` days after it: start is inclusive,
-  finish exclusive.
-  """
-  def around(%DateTime{} = now, timezone, days) do
-    today = Service.Period.today(now, timezone)
-
-    {start_of_day(Date.add(today, -days), timezone),
-     start_of_day(Date.add(today, days + 1), timezone)}
-  end
-
-  @doc """
   The UTC `{start, finish}` of the last `days` days (#784): today in `timezone` and the
   `days` days before it, whole days. SAR Duty's one rule for "last 30 days", the same
   as a report's `LAST_N_DAYS:30`.

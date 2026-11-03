@@ -68,10 +68,9 @@ gets an SQL twin on its model, with a test that the two agree, before a field re
 
 A field with a `query` is a rule's own query of ids (#784): it's true for the rows the
 rule keeps, `id IN (that query)`, so a rule that's already a query needs no twin.
-`current` is `Activity.overlapping/3` over Current, `recent` is
-`Activity.finished_recently/3`, and `on_team(period)` is `Member.on_team_query/4`. A
-field's arguments are a number of days, a period (`'all'`, a year, or `'90d'`), a tag's
-title, or a group's title; a period, a tag, or a group can be a picked value, as in
+`recent` is `Activity.finished_recently/3`, and `on_team(period)` is
+`Member.on_team_query/4`. A field's arguments are a number of days, a period (`'all'`, a
+year, or `'90d'`), a tag's title, or a group's title; a period, a tag, or a group can be a picked value, as in
 `activity_count(:when, :tag)`, and its menu lists All, then the choices. A picked group
 is its id, as Members' Group filter has always linked (`in_group(:group)`).
 
@@ -143,8 +142,8 @@ switch activity 'Kind'
   option incident 'Incidents' where kind = 'incident'
   option exercise 'Exercises' where kind = 'exercise'
 filter when 'When'
-  option past 'Past' where started_at <= NOW
-  option future 'Future' where started_at >= NOW sort date
+  option upcoming 'Upcoming' where finished_at >= TODAY sort date
+  option past 'Past' where finished_at < TODAY sort date desc
   each year(started_at) where year(started_at) = :when
 filter status 'Status' more
   option draft 'Draft' where published = false

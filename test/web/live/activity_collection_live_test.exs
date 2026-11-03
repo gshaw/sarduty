@@ -34,7 +34,7 @@ defmodule Web.ActivityCollectionLiveTest do
     activity_fixture(team, %{title: "Board meeting", activity_kind: "event"})
     chore_activity_fixture(team, [90, 30])
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?when=all")
 
     assert has_element?(lv, "#activity-tile-event", "1")
     assert has_element?(lv, "#activity-tile-all", "2")
@@ -127,69 +127,46 @@ defmodule Web.ActivityCollectionLiveTest do
     refute has_element?(lv, "#activity-tile-chores")
   end
 
-  test "Current shows a week either side of today, oldest first", %{conn: conn} do
+  test "opens on Upcoming, soonest first, and Past lists the rest newest first (#835)",
+       %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     now = DateTime.utc_now() |> DateTime.truncate(:second)
     days = fn n -> DateTime.add(now, n * 86_400, :second) end
 
-    activity_fixture(team, %{
-      title: "Rope rescue night",
-      started_at: days.(-3),
-      finished_at: days.(-3)
-    })
+    for {title, start, finish} <- [
+          {"Next year", 300, 300},
+          {"Board meeting", 4, 4},
+          {"Rope tech weekend", -20, 1},
+          {"Rope rescue night", -3, -3},
+          {"Old search", -30, -30}
+        ] do
+      activity_fixture(team, %{title: title, started_at: days.(start), finished_at: days.(finish)})
+    end
 
-    activity_fixture(team, %{title: "Board meeting", started_at: days.(4), finished_at: days.(4)})
-
-    activity_fixture(team, %{
-      title: "Rope tech weekend",
-      started_at: days.(-10),
-      finished_at: days.(1)
-    })
-
-    activity_fixture(team, %{title: "Old search", started_at: days.(-30), finished_at: days.(-30)})
-
-    activity_fixture(team, %{title: "Next year", started_at: days.(300), finished_at: days.(300)})
-
-    conn = log_in_user(conn, user)
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities")
-
-    lv |> form("#activity-filters", values: %{when: "current"}) |> render_change()
-
-    assert has_element?(lv, "#activity_collection", "Rope rescue night")
-    assert has_element?(lv, "#activity_collection", "Board meeting")
-    assert has_element?(lv, "#activity_collection", "Rope tech weekend")
-    refute has_element?(lv, "#activity_collection", "Old search")
-    refute has_element?(lv, "#activity_collection", "Next year")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities")
 
     html = lv |> element("#activity_collection") |> render()
-    assert :binary.match(html, "Rope rescue night") < :binary.match(html, "Board meeting")
-  end
+    refute html =~ "Rope rescue night"
+    refute html =~ "Old search"
 
-  test "picking Future from the menu sorts it oldest first", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-    days = fn n -> DateTime.add(now, n * 86_400, :second) end
-    activity_fixture(team, %{title: "Next week", started_at: days.(7), finished_at: days.(7)})
-    activity_fixture(team, %{title: "Next year", started_at: days.(300), finished_at: days.(300)})
+    assert :binary.match(html, "Rope tech weekend") < :binary.match(html, "Board meeting")
+    assert :binary.match(html, "Board meeting") < :binary.match(html, "Next year")
 
-    {:ok, lv, _html} =
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?when=past&sort=date-")
+    lv |> form("#activity-filters", values: %{when: "past"}) |> render_change()
 
-    lv |> form("#activity-filters", values: %{when: "future"}) |> render_change()
-
-    assert has_element?(lv, ~s|#activity-filters input[name="values[sort]"][value="date"]|)
     html = lv |> element("#activity_collection") |> render()
-    assert :binary.match(html, "Next week") < :binary.match(html, "Next year")
+    refute html =~ "Rope tech weekend"
+    assert :binary.match(html, "Rope rescue night") < :binary.match(html, "Old search")
   end
 
   test "the sorted column header says which way it sorts", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team)
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?sort=date")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?sort=date-")
 
-    assert has_element?(lv, ~s|th[aria-sort="ascending"]|, "Date")
-    # Newest first is where the list starts, so its link leaves the sort out.
+    assert has_element?(lv, ~s|th[aria-sort="descending"]|, "Date")
+    # Upcoming starts soonest first, so its link leaves the sort out.
     assert has_element?(lv, ~s|th[aria-sort] a[href="/teams/#{team.subdomain}/activities"]|)
   end
 

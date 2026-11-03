@@ -79,20 +79,52 @@ defmodule App.Report.ListsTest do
     assert names == ~w(when status)
   end
 
+  test "Activities opens on Upcoming, soonest first; Past splits on when it finished (#835)" do
+    team = team_fixture()
+
+    # @now is noon on June 15 in Vancouver, 07:00 UTC its midnight.
+    for {title, started_at, finished_at} <- [
+          {"AGM", ~U[2027-03-02 02:00:00Z], ~U[2027-03-02 04:00:00Z]},
+          {"Board meeting", ~U[2026-06-19 02:00:00Z], ~U[2026-06-19 04:00:00Z]},
+          {"Rope tech weekend", ~U[2026-05-25 16:00:00Z], ~U[2026-06-16 18:00:00Z]},
+          {"Morning drill", ~U[2026-06-15 14:00:00Z], ~U[2026-06-15 15:00:00Z]},
+          {"Last night's drill", ~U[2026-06-15 03:00:00Z], ~U[2026-06-15 05:00:00Z]},
+          {"Rope rescue night", ~U[2026-06-12 02:00:00Z], ~U[2026-06-12 04:00:00Z]},
+          {"Old search", ~U[2026-05-10 16:00:00Z], ~U[2026-05-10 22:00:00Z]}
+        ] do
+      activity_fixture(team, %{title: title, started_at: started_at, finished_at: finished_at})
+    end
+
+    view = page!(team, %{})
+    assert hd(view.filters).picked == "upcoming"
+    assert view.sort == "date"
+    assert view.params == %{}
+
+    assert titles(team, %{}) == ["Rope tech weekend", "Morning drill", "Board meeting", "AGM"]
+
+    assert titles(team, %{"when" => "past"}) ==
+             ["Last night's drill", "Rope rescue night", "Old search"]
+
+    assert length(titles(team, %{"when" => "all"})) == 7
+
+    # Bookmarks from before #835 open on Upcoming.
+    assert hd(page!(team, %{"when" => "current"}).filters).picked == "upcoming"
+    assert hd(page!(team, %{"when" => "future"}).filters).picked == "upcoming"
+  end
+
   test "Activities' When options pick the sort that suits them" do
     team = team_fixture()
 
     for {when_, sort} <- [
           {"all", "date-"},
-          {"current", "date"},
+          {"upcoming", "date"},
           {"recent", "date-"},
-          {"past", "date-"},
-          {"future", "date"}
+          {"past", "date-"}
         ] do
       assert page!(team, %{"when" => when_}).sort == sort, "when=#{when_}"
     end
 
-    assert page!(team, %{"when" => "future", "sort" => "id-"}).sort == "id-"
+    assert page!(team, %{"when" => "upcoming", "sort" => "id-"}).sort == "id-"
   end
 
   describe "Members (#784)" do

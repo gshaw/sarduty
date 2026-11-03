@@ -3,7 +3,9 @@ defmodule Service.Period do
   The spans of time SAR Duty means by its words for when, defined once so every page and
   job agrees. All take `now` and the team's time zone.
 
-  - **Current**: 7 days either side of today. The activity list's "Current".
+  - **Upcoming** and **Past**: an activity not finished before today, and one that was.
+    Every activity is in one; today's stays Upcoming until midnight (#835). They are
+    the activity list's `finished_at >= TODAY` and `finished_at < TODAY`.
   - **Recent**: the last 30 days. The activity list's "Last 30 days" and the drafts count.
   - **The last n days**: today and the n days before it, whole days in the team's time
     zone (`Service.DayRange.last/3`). Recent, a filter's rolling period, the attendance
@@ -15,8 +17,6 @@ defmodule Service.Period do
     `"90d"`. The members list and a member's activities offer the same.
   """
 
-  # A busy team runs about six activities a week, so this fits on one screen.
-  @current_days 7
   @recent_days 30
   @letter_months 1..4
   @rolling_days [30, 60, 90, 180, 365]
@@ -24,13 +24,6 @@ defmodule Service.Period do
   @doc "Today's date in `timezone`."
   def today(%DateTime{} = now, timezone),
     do: now |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
-
-  @doc "Days either side of today that Current shows."
-  def current_days, do: @current_days
-
-  @doc "The UTC `{start, finish}` of Current, as `Service.DayRange` bounds."
-  def current(%DateTime{} = now, timezone),
-    do: Service.DayRange.around(now, timezone, @current_days)
 
   @doc "Days back that Recent reaches."
   def recent_days, do: @recent_days
