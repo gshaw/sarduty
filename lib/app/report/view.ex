@@ -15,12 +15,15 @@ defmodule App.Report.View do
   - `values`: the query's other `:name` values (App.Report.Value), each a menu of its own
   - `params`: the picks as the URL writes them, and `defaults`, what each control starts
     on, so a URL leaves them out
+  - `chart`: what the query's `chart` draws from every row (App.Report.Chart.build/4),
+    or nil
   """
 
   defstruct [
     :result,
     :page,
     :sort,
+    :chart,
     total: 0,
     search?: false,
     q: "",

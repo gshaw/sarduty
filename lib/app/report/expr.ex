@@ -460,7 +460,7 @@ defmodule App.Report.Expr do
   defp date_part("days_since", time, arg, line, context) do
     new(
       ["CAST(julianday(?) - julianday(date(", time, ")) AS INTEGER)"],
-      [Date.to_iso8601(context.today)],
+      [Date.to_iso8601(context.dates_today)],
       :number,
       line,
       label: "Days since #{String.downcase(arg.label)}"
@@ -482,7 +482,7 @@ defmodule App.Report.Expr do
         time,
         ") AS INTEGER)))"
       ],
-      [context.today.year * 12 + context.today.month],
+      [context.dates_today.year * 12 + context.dates_today.month],
       :number,
       line,
       label: "Months since #{String.downcase(arg.label)}"

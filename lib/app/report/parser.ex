@@ -5,8 +5,8 @@ defmodule App.Report.Parser do
 
   The clauses come in this order: select, from, where, group by, pivot, order by, limit,
   offset, label, format, totals. The page's clauses follow (#784): search, then each switch and
-  filter with its options, then sort, then page. Keywords, functions, and date ranges
-  ignore case.
+  filter with its options, then sort, then page, then chart (#826). Keywords, functions,
+  and date ranges ignore case.
   """
 
   alias App.Report.Error
@@ -14,7 +14,8 @@ defmodule App.Report.Parser do
   alias App.Report.Query
 
   @clauses ~w(select from where group pivot order limit offset label format totals)
-  @page_clauses ~w(search switch filter sort page)
+  @page_clauses ~w(search switch filter sort page chart)
+  @chart_kinds ~w(stat columns lines bars calendar week)
   # Names a filter can't take: the URL's own words. A sort's name is only the sort's
   # value in the URL, so `sort id` is fine.
   @reserved ~w(q sort page id subdomain all)
@@ -33,6 +34,9 @@ defmodule App.Report.Parser do
 
   @doc "The most rows `page` can show at a time."
   def max_page, do: @max_page
+
+  @doc "The words `chart` takes, one for each kind of chart."
+  def chart_kinds, do: @chart_kinds
 
   @doc "The functions a query can call."
   def functions, do: @functions
@@ -197,7 +201,7 @@ defmodule App.Report.Parser do
   defp page_clauses(_query, tokens, _last),
     do: fail(tokens, "Start a page clause here: #{page_clause_list()}.")
 
-  defp page_clause_list, do: "search, switch, filter, sort, or page"
+  defp page_clause_list, do: "search, switch, filter, sort, page, or chart"
 
   defp misplaced(clause, _word, _tokens, line) when clause in ["option", "each"],
     do: fail_line(line, "Write #{clause} under a switch or filter.")
@@ -210,9 +214,14 @@ defmodule App.Report.Parser do
 
   defp check_order(clause, last, line) do
     cond do
-      page_order(clause) < page_order(last) -> fail_line(line, "Move #{clause} before #{last}.")
-      clause in ["search", "page"] and clause == last -> fail_line(line, "Write #{clause} once.")
-      true -> :ok
+      page_order(clause) < page_order(last) ->
+        fail_line(line, "Move #{clause} before #{last}.")
+
+      clause in ["search", "page", "chart"] and clause == last ->
+        fail_line(line, "Write #{clause} once.")
+
+      true ->
+        :ok
     end
   end
 
@@ -221,6 +230,7 @@ defmodule App.Report.Parser do
   defp page_order(kind) when kind in ["switch", "filter"], do: 1
   defp page_order("sort"), do: 2
   defp page_order("page"), do: 3
+  defp page_order("chart"), do: 4
 
   defp page_clause("search", query, tokens, line) do
     {fields, rest} = list(tokens, &expr/1)
@@ -253,6 +263,24 @@ defmodule App.Report.Parser do
         "Write how many rows a page shows after page, from 1 to #{@max_page}: page 50."
       )
 
+  # The last clause: `chart columns`, then `compare year` or `cumulative` (#826).
+  defp page_clause("chart", query, tokens, line) do
+    case tokens do
+      [{:word, word, _} | rest] ->
+        kind = String.downcase(word)
+
+        if kind not in @chart_kinds,
+          do: fail_line(line, "Write one of #{Enum.join(@chart_kinds, ", ")} after chart.")
+
+        {options, rest} = chart_options(rest, %{compare_year: false, cumulative: false}, line)
+        chart = Map.merge(options, %{kind: String.to_existing_atom(kind), line: line})
+        {%{query | chart: chart}, rest}
+
+      _other ->
+        fail_line(line, "Write one of #{Enum.join(@chart_kinds, ", ")} after chart.")
+    end
+  end
+
   # A name for the URL and a label in quotes: `switch activity 'Kind'`.
   defp name_label([{:word, name, _}, {:string, label, _} | rest], kind, line) do
     name = String.downcase(name)
@@ -269,6 +297,22 @@ defmodule App.Report.Parser do
         line,
         "Write a name and a label in quotes after #{kind}, such as #{kind} when 'When'."
       )
+
+  defp chart_options(tokens, options, line) do
+    case lower_words(tokens, 2) do
+      ["compare", "year"] ->
+        chart_options(Enum.drop(tokens, 2), %{options | compare_year: true}, line)
+
+      ["compare" | _] ->
+        fail_line(line, "Write compare year.")
+
+      ["cumulative" | _] ->
+        chart_options(tl(tokens), %{options | cumulative: true}, line)
+
+      _other ->
+        {options, tokens}
+    end
+  end
 
   defp flags([{:word, word, line} | rest] = tokens, kind, flags) do
     case String.downcase(word) do

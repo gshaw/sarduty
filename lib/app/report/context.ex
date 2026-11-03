@@ -28,6 +28,10 @@ defmodule App.Report.Context do
     :years,
     :tags,
     :groups,
+    # The moment the query's own dates read (#826): now, or a year back for compare year.
+    # Fields' rules, such as Attended and Not retired, read `now` either way.
+    :dates_now,
+    :dates_today,
     repo: App.Repo,
     team_admin?: true
   ]
@@ -40,6 +44,8 @@ defmodule App.Report.Context do
     %__MODULE__{
       team: team,
       now: now,
+      dates_now: now,
+      dates_today: Service.Period.today(now, team.timezone),
       timezone: team.timezone,
       today: Service.Period.today(now, team.timezone),
       hours_tags: Activity.hours_tags(team, repo),
@@ -48,6 +54,17 @@ defmodule App.Report.Context do
       groups: Group.kinds(team, repo),
       repo: repo,
       team_admin?: Keyword.get(opts, :team_admin?, true)
+    }
+  end
+
+  @doc "The same context with the query's own dates a year back, for compare year (#826)."
+  def year_back(%__MODULE__{} = context) do
+    dates_now = DateTime.shift(context.now, year: -1)
+
+    %{
+      context
+      | dates_now: dates_now,
+        dates_today: Service.Period.today(dates_now, context.timezone)
     }
   end
 end

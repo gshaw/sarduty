@@ -15,6 +15,7 @@ defmodule Web.Components.ReportPage do
   import Web.Components.FilterBar
   import Web.Components.PageActions
   import Web.Components.Pagination
+  import Web.Components.ReportChart
   import Web.Components.ReportTable
   import Web.Components.StatSwitch
 
@@ -120,6 +121,14 @@ defmodule Web.Components.ReportPage do
         options={Enum.map(filter.options, fn {label, value} -> {label, value} end)}
       />
     </div>
+
+    <.report_chart
+      :if={@view.chart}
+      id={"#{@id}-chart"}
+      chart={@view.chart}
+      records={@records}
+      team={@team}
+    />
 
     <p :if={!@bar? or !@path_fn} id={"#{@id}-count"} class="hint">{@count || count(@view)}</p>
 

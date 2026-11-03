@@ -4,6 +4,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- ⭐ Reports draw charts: end one with `chart columns`, `lines`, `stat`, `bars`,
+  `calendar`, or `week`. Activities by month, the Dashboard's numbers, Every day out,
+  and When incidents start are built-in chart reports to copy.
 - Reports read members' email, mobile number, and address (team admins only), and an
   activity's address and place. A callout contact list or a map of incidents is now one
   report; Download CSV gives places as latitude and longitude.

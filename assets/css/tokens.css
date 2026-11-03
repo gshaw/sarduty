@@ -73,6 +73,11 @@
   --shade-3: light-dark(#5b8fd1, #3474c8); /* Heat cells: a lot */
   --shade-4: light-dark(#1d4f91, #7ab8f5); /* Heat cells: the busiest */
   --compare: light-dark(#8c9297, #66717d); /* Last year's line, beside this year's */
+  --series-1: light-dark(#eb6834, #d95926); /* A report chart's second series (#826) */
+  --series-2: light-dark(#1baf7a, #199e70); /* Third series */
+  --series-3: light-dark(#eda100, #c98500); /* Fourth series */
+  --series-4: light-dark(#e87ba4, #d55181); /* Fifth series */
+  --series-5: light-dark(#008300, #008300); /* Sixth series */
 
   --on-fill: #ffffff;
   --on-warning: #0b0c0c;

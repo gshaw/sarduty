@@ -80,16 +80,104 @@ defmodule App.Report.BuiltIn do
     %{
       slug: "activities-by-month",
       name: "Activities by month",
-      about: "Incidents, exercises, and events in each month of a year.",
+      about: "Incidents, exercises, and events in each month: the last 12 months, or a year.",
+      query: """
+      select year(started_at), month(started_at), count(id)
+      from activities
+      where started_at <= NOW
+      group by year(started_at), month(started_at)
+      pivot kind
+      order by year(started_at), month(started_at)
+      totals
+      filter when 'When' required
+        option last12 'The last 12 months' where months_since(started_at) < 12
+        each year(started_at) where year(started_at) = :when
+      chart columns
+      """
+    },
+    # The Dashboard's charts as reports (#826), each ending in its chart line.
+    %{
+      slug: "activities-this-year",
+      name: "Activities this year",
+      about: "Activities so far this year, by month, against the same days last year.",
       query: """
       select month(started_at), count(id)
       from activities
-      where year(started_at) = :year
+      where started_at = THIS_YEAR and started_at <= NOW
       group by month(started_at)
-      pivot kind
-      totals
-      filter year 'Year' required
-        each year(started_at)
+      order by month(started_at)
+      label count(id) 'Activities'
+      chart stat compare year
+      """
+    },
+    %{
+      slug: "incidents-this-year",
+      name: "Incidents this year",
+      about: "Incidents so far this year, by month, against the same days last year.",
+      query: """
+      select month(started_at), count(id)
+      from activities
+      where kind = 'Incident' and started_at = THIS_YEAR and started_at <= NOW
+      group by month(started_at)
+      order by month(started_at)
+      label count(id) 'Incidents'
+      chart stat compare year
+      """
+    },
+    %{
+      slug: "member-hours-this-year",
+      name: "Member hours this year",
+      about:
+        "Hours members attended so far this year, by month, against the same days last year. Tax credit letters count hours their own way.",
+      query: """
+      select month(activity.started_at), sum(hours)
+      from attendance
+      where status = 'Attended' and activity.started_at = THIS_YEAR
+        and activity.started_at <= NOW
+      group by month(activity.started_at)
+      order by month(activity.started_at)
+      label sum(hours) 'Member hours'
+      chart stat compare year
+      """
+    },
+    %{
+      slug: "current-members",
+      name: "Current members",
+      about: "Members on the team now, people only, not retiring, and how many joined this year.",
+      query: """
+      select count(id), sum(joined_at = THIS_YEAR)
+      from members
+      where current = true and counted = true
+      label count(id) 'Current members', sum(joined_at = THIS_YEAR) 'Joined this year'
+      chart stat
+      """
+    },
+    %{
+      slug: "every-day-out",
+      name: "Every day out",
+      about: "How many activities started on each day of the last year.",
+      query: """
+      select date(started_at), count(id)
+      from activities
+      where started_at = LAST_N_DAYS:364 and started_at <= NOW
+      group by date(started_at)
+      order by date(started_at) desc
+      label count(id) 'Activities'
+      chart calendar
+      """
+    },
+    %{
+      slug: "when-incidents-start",
+      name: "When incidents start",
+      about: "Incidents in the last 3 years, by day of the week and hour.",
+      query: """
+      select day_of_week(started_at), hour(started_at), count(id)
+      from activities
+      where kind = 'Incident' and started_at = LAST_N_DAYS:1095
+      group by day_of_week(started_at), hour(started_at)
+      order by count(id) desc
+      label count(id) 'Incidents'
+      chart week
       """
     },
     %{
@@ -291,6 +379,7 @@ defmodule App.Report.BuiltIn do
       group by qualification
       order by count(distinct member) desc
       label count(distinct member) 'Active members'
+      chart bars
       """
     },
     %{
