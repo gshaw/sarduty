@@ -4,42 +4,38 @@ defmodule Web.ActivityMileageLive do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Coordinate
-
   alias App.Operation.BuildMileageReport
+  alias Service.Format
 
-  def mount(_params, _session, socket) do
-    {:ok, socket}
-  end
+  # Each attended row's round trip from home to the activity and to the yard (#230), from
+  # SAR Duty's copy. The Mapbox lookups are saved, so only the first visit, or one after
+  # an address or a location changes, waits for Mapbox.
+  def mount(_params, _session, socket), do: {:ok, socket}
 
   def handle_params(params, _uri, socket) do
-    activity = Activity.find!(socket.assigns.current_team, params["id"])
+    team = socket.assigns.current_team
+    activity = Activity.find!(team, params["id"])
 
     if Activity.deleted?(activity),
       do: {:noreply, Web.ActivityLive.leave_deleted(socket, activity)},
-      else: load(socket, activity)
+      else: {:noreply, load(socket, team, activity)}
   end
 
-  defp load(socket, activity) do
-    current_team = socket.assigns.current_team
-    d4h = D4H.build_context_from_team(current_team)
-
-    {team, load_error} =
-      case D4H.fetch_team(d4h) do
-        {:ok, team} -> {team, nil}
-        {:error, error} -> {nil, D4H.error_text(current_team, error)}
-      end
-
+  defp load(socket, team, activity) do
     socket =
-      assign(
-        socket,
+      assign(socket,
         page_title: "#{activity.title} · Mileage report",
-        mileage_report: nil,
-        team: team,
-        load_error: load_error,
-        activity: activity
+        activity: activity,
+        yard: Coordinate.build(team.lat, team.lng)
       )
 
-    {:noreply, socket}
+    if activity.coordinate do
+      assign_async(socket, :mileage_report, fn ->
+        {:ok, %{mileage_report: BuildMileageReport.call(team, activity, DateTime.utc_now())}}
+      end)
+    else
+      assign(socket, mileage_report: nil)
+    end
   end
 
   def render(assigns) do
@@ -54,110 +50,81 @@ defmodule Web.ActivityMileageLive do
     </.breadcrumbs>
 
     <h1 class="title">{@activity.title}</h1>
-    <.banner :if={@load_error} kind={:danger} title="Mileage report not available" id="load-error">
-      <p>{@load_error}</p>
-    </.banner>
-    <%= if @team && @activity.coordinate do %>
+    <%= if @activity.coordinate do %>
       <dl>
         <dt>Activity latitude and longitude</dt>
-        <dd>{Service.Format.coordinate(Coordinate.build(@activity.coordinate), 5)}</dd>
+        <dd>{Format.coordinate(Coordinate.build(@activity.coordinate), 5)}</dd>
         <dt>Yard latitude and longitude</dt>
-        <dd>{Service.Format.coordinate(@team.coordinate, 5)}</dd>
+        <dd :if={@yard}>{Format.coordinate(@yard, 5)}</dd>
+        <dd :if={!@yard} id="no-yard">None. Refresh the team in Team settings.</dd>
       </dl>
-      <p :if={@mileage_report == nil || @mileage_report.loading == nil}>
-        <.button phx-click="generate-report" variant={:success}>Generate mileage report</.button>
-      </p>
-    <% end %>
-    <%= if @team && !@activity.coordinate do %>
+    <% else %>
       <%!-- A Records team's activity form takes an address, not a location, so a Records
            team has nowhere to add one. --%>
-      <p>
+      <p id="no-location">
         The mileage report is not available. The activity has no latitude and longitude.
         <span :if={!D4H.records?(@current_team)}>Add its location in {@service}.</span>
       </p>
     <% end %>
 
-    <%= if @mileage_report do %>
-      <.async_result :let={report} assign={@mileage_report}>
-        <:loading>
-          <.spinner>Calculating driving distances…</.spinner>
-        </:loading>
-        <:failed :let={reason}>
-          <p id="report-error">{failed_text(@current_team, reason)}</p>
-        </:failed>
+    <.async_result :let={report} :if={@mileage_report} assign={@mileage_report}>
+      <:loading>
+        <.spinner>Working out driving distances…</.spinner>
+      </:loading>
+      <:failed>
+        <p id="report-error">The mileage report did not load. Reload the page to try again.</p>
+      </:failed>
 
-        <p :if={report.yard_to_activity_km}>
-          Yard to activity round trip: {Service.Format.km(report.yard_to_activity_km)}, {Service.Format.duration(
-            report.yard_to_activity_hours * 60
-          )}
-        </p>
-        <p :if={!report.yard_to_activity_km}>Mapbox found no route from the yard to the activity.</p>
+      <p :if={report.yard_to_activity_km} id="yard-to-activity">
+        Yard to activity round trip: {Format.km(report.yard_to_activity_km)}
+      </p>
+      <p :if={report.rows == []} id="mileage-nobody">Nobody attended.</p>
 
-        <.table id="mileage_report" rows={report.attendees} class="table-striped">
-          <:header_row>
-            <th></th>
-            <th colspan="2">To activity</th>
-            <th colspan="2">To yard</th>
-            <th colspan="2"></th>
-          </:header_row>
-          <:col :let={record} label="Name">{record.name}</:col>
-          <:col :let={record} align="right" label="km">
-            {record.activity_km && Service.Format.number(record.activity_km)}
-          </:col>
-          <:col :let={record} align="right" label="Hours">
-            {record.activity_hours && Service.Format.tenths(record.activity_hours)}
-          </:col>
-          <:col :let={record} align="right" label="km">
-            {record.yard_km && Service.Format.number(record.yard_km)}
-          </:col>
-          <:col :let={record} align="right" label="Hours">
-            {record.yard_hours && Service.Format.tenths(record.yard_hours)}
-          </:col>
-          <:col :let={record} label="Home address">{record.address}</:col>
-          <:col :let={record} label="Latitude and longitude">
-            {Service.Format.coordinate(record.coordinate, 3)}
-          </:col>
-        </.table>
-        <p class="mt-4">
-          Distances and times are round trips by car, from each member's home to the activity
-          and to the yard.
-        </p>
-        <p>
-          <.a
-            external={true}
-            href="https://docs.mapbox.com/playground/geocoding/"
-            phx-no-format
-          >Mapbox Geocoder</.a> finds each home's latitude and longitude. <.a
-            external={true}
-            href="https://docs.mapbox.com/playground/directions/"
-            phx-no-format
-          >Mapbox Directions</.a> calculates the distances and durations.
-        </p>
-      </.async_result>
-    <% end %>
+      <.table
+        :if={report.rows != []}
+        id="mileage_report"
+        rows={report.rows}
+        row_id={&"mileage-row-#{&1.attendance.id}"}
+        class="table-striped"
+      >
+        <:col :let={row} label="Member">
+          <.member_cell member={row.member} team={@current_team} />
+          <span :if={row.two_rows?} class="hint block">
+            {Format.month_day(row.attendance.started_at, @current_team.timezone)}
+          </span>
+        </:col>
+        <:col :let={row} align="right" label="To activity">
+          {row.activity_km && Format.km(row.activity_km)}
+        </:col>
+        <:col :let={row} align="right" label="To yard">
+          {row.yard_km && Format.km(row.yard_km)}
+        </:col>
+        <:col :let={row} label="Home address">
+          {row.member.address}
+          <span :if={is_atom(row.home)} class="hint block">{home_text(row.home, @service)}</span>
+        </:col>
+      </.table>
+      <p class="mt-4">
+        Distances are round trips by car, from each member's home to the activity and to
+        the yard. A member on two days has a row for each.
+      </p>
+      <p>
+        <.a
+          external={true}
+          href="https://docs.mapbox.com/playground/geocoding/"
+          phx-no-format
+        >Mapbox Geocoder</.a> finds each home. <.a
+          external={true}
+          href="https://docs.mapbox.com/playground/directions/"
+          phx-no-format
+        >Mapbox Directions</.a> works out the distances. Both are saved, so a changed address is
+        looked up again.
+      </p>
+    </.async_result>
     """
   end
 
-  def handle_event("generate-report", _params, socket) do
-    current_team = socket.assigns.current_team
-    d4h_activity_id = socket.assigns.activity.d4h_activity_id
-    activity_kind = socket.assigns.activity.activity_kind
-
-    socket =
-      socket
-      |> assign(mileage_report: nil)
-      |> assign_async(:mileage_report, fn ->
-        d4h = D4H.build_context_from_team(current_team)
-
-        case BuildMileageReport.call(d4h, d4h_activity_id, activity_kind) do
-          {:ok, report} -> {:ok, %{mileage_report: report}}
-          {:error, error} -> {:error, D4H.error_text(current_team, error)}
-        end
-      end)
-
-    {:noreply, socket}
-  end
-
-  defp failed_text(_team, {:error, text}) when is_binary(text), do: text
-  defp failed_text(_team, _reason), do: "The mileage report did not load. Generate it again."
+  defp home_text(:no_address, service), do: "No home address in #{service}."
+  defp home_text(:not_found, _service), do: "Mapbox couldn't find this address."
+  defp home_text(:unknown, _service), do: "Mapbox didn't answer. Reload the page to try again."
 end
