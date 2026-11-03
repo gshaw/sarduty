@@ -258,6 +258,7 @@ defmodule Web.ActivityTravelLive do
     <span :if={is_atom(@row.home) and !@row.trip} class="hint block">
       {home_text(@row.home, @service)}
     </span>
+    <span :if={@row.trip && @row.trip.checked_at} class="hint block">Checked</span>
     """
   end
 

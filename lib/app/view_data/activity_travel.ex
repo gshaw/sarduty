@@ -34,8 +34,9 @@ defmodule App.ViewData.ActivityTravel do
   end
 
   @doc """
-  The activity's attended rows, and how many have no trip yet, for its Actions link and
-  Change activity: `%{rows: 10, not_set: 2}`. Reads no Mapbox.
+  The activity's attended rows, how many have no trip yet, and how many members haven't
+  checked a trip set for them, for its Actions link and Change activity: `%{rows: 10,
+  not_set: 2, unchecked: 3}`. Reads no Mapbox.
   """
   def counts(%Activity{} = activity, now) do
     Attendance
@@ -47,7 +48,19 @@ defmodule App.ViewData.ActivityTravel do
       on: t.activity_id == r.activity_id and t.d4h_attendance_id == r.d4h_attendance_id,
       as: :trip
     )
-    |> select([r, trip: t], %{rows: count(r.id), not_set: count(r.id) - count(t.id)})
+    |> select([r, trip: t], %{
+      rows: count(r.id),
+      not_set: count(r.id) - count(t.id),
+      unchecked:
+        count(
+          fragment(
+            "DISTINCT CASE WHEN ? IS NOT NULL AND ? IS NULL THEN ? END",
+            t.id,
+            t.checked_at,
+            r.member_id
+          )
+        )
+    })
     |> Repo.one()
   end
 

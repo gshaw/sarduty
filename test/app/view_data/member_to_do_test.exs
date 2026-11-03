@@ -61,9 +61,10 @@ defmodule App.ViewData.MemberToDoTest do
     ]
 
     assert [%{key: :declined_chores, chores: [%{id: 1}, %{id: 3}]}] =
-             MemberToDo.items(nil, false, [], [], @now, @tz, chores)
+             MemberToDo.items(nil, false, [], [], @now, @tz, chores: chores)
 
-    assert MemberToDo.items(nil, false, [], [], @now, @tz, [%{status: :waiting, id: 4}]) == []
+    assert MemberToDo.items(nil, false, [], [], @now, @tz, chores: [%{status: :waiting, id: 4}]) ==
+             []
   end
 
   test "a waiting certificate takes its qualification off; a declined one is an item (#493)" do
@@ -78,7 +79,7 @@ defmodule App.ViewData.MemberToDoTest do
     ]
 
     assert [%{key: :qualification, award: %{qualification_id: 8}}, item] =
-             MemberToDo.items(nil, false, [], rows, @now, @tz, [], certificates)
+             MemberToDo.items(nil, false, [], rows, @now, @tz, certificates: certificates)
 
     assert %{key: :declined_certificates, certificates: [%{id: 2}]} = item
   end
