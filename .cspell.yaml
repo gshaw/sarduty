@@ -17,6 +17,9 @@ ignorePaths:
   - "erl_crash.dump"
   - "priv/static/assets/*"
 words:
+  - devsar # Dev SAR, the dev team (tools/dev-sar.exs)
+  - DSAR # Dev SAR's abbreviated name
+  - nohup
   - SAMP # the prefix of Coast Range SAR's sample ID card codes (#854)
   - ACTV # sample card code SAMP-ACTV, the active member (#854)
   - RTRD # sample card code SAMP-RTRD, the retired member (#854)
