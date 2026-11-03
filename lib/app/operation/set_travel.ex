@@ -3,7 +3,7 @@ defmodule App.Operation.SetTravel do
   Sets how the checked attended rows got to an activity (#230), from its Travel page:
   drove to the ICP or the yard, at the saved round trip; a passenger, at 0 km; or km a
   team admin typed. A row with no route to where it drove is skipped, so the admin types
-  its km. A published activity's travel can't change, like its attendance.
+  its km. Clear takes a row's trip away, back to not set. A published activity's travel can't change, like its attendance.
 
   plan/4 is pure; call/7 checks the activity, plans against the rows as saved now, and
   saves.
@@ -32,14 +32,16 @@ defmodule App.Operation.SetTravel do
 
     with {:ok, plan} <- plan(view.rows, ids, travel, km_text) do
       Trip.save_all!(activity, user, plan.sets, now, own && own.id)
+      Trip.delete_all!(activity, Enum.map(plan.cleared, & &1.attendance.d4h_attendance_id))
       {:ok, plan}
     end
   end
 
   @doc """
   Which checked rows (local attendance ids) to set, and to what: `{:ok, %{travel:,
-  sets: [%{attendance:, member:, travel:, km:}], skipped: [row]}}`, where a skipped row
-  has no route to where it drove. Or `{:error, reason}`: :nothing_checked, :bad_km, or
+  sets: [%{attendance:, member:, travel:, km:}], skipped: [row], cleared: [row]}}`,
+  where a skipped row has no route to where it drove. "clear" fills `cleared` with the
+  checked rows that have a trip. Or `{:error, reason}`: :nothing_checked, :bad_km, or
   :bad_travel. Ids the page didn't show are ignored.
   """
   def plan(rows, ids, travel, km_text) do
@@ -47,9 +49,17 @@ defmodule App.Operation.SetTravel do
     checked = Enum.filter(rows, &MapSet.member?(ids, &1.attendance.id))
 
     cond do
-      travel not in Trip.travels() -> {:error, :bad_travel}
+      travel not in ["clear" | Trip.travels()] -> {:error, :bad_travel}
       checked == [] -> {:error, :nothing_checked}
+      travel == "clear" -> plan_clear(checked)
       true -> plan_km(checked, travel, km_text)
+    end
+  end
+
+  defp plan_clear(checked) do
+    case Enum.filter(checked, & &1[:trip]) do
+      [] -> {:error, :nothing_checked}
+      cleared -> {:ok, %{result("clear", [], []) | cleared: cleared}}
     end
   end
 
@@ -79,7 +89,8 @@ defmodule App.Operation.SetTravel do
   defp set(row, travel, km),
     do: %{attendance: row.attendance, member: row.member, travel: travel, km: km}
 
-  defp result(travel, sets, skipped), do: %{travel: travel, sets: sets, skipped: skipped}
+  defp result(travel, sets, skipped),
+    do: %{travel: travel, sets: sets, skipped: skipped, cleared: []}
 
   @doc "Typed km: `{:ok, km}` for a whole number from 0, or :error."
   def parse_km(text) do
@@ -89,7 +100,10 @@ defmodule App.Operation.SetTravel do
     end
   end
 
-  @doc ~s(The toast: "3 rows set to ICP." and who was skipped.)
+  @doc ~s(The toast: "3 rows set to ICP." and who was skipped, or "2 rows cleared.")
+  def result_text(%{travel: "clear", cleared: cleared}),
+    do: "#{rows_text(length(cleared))} cleared."
+
   def result_text(%{sets: sets, skipped: skipped, travel: travel}) do
     done =
       if sets == [], do: nil, else: "#{rows_text(length(sets))} set to #{to_text(travel, sets)}."

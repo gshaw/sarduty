@@ -59,7 +59,7 @@ defmodule Web.ActivityAddMembersLiveTest do
 
     assert has_element?(
              lv,
-             ~s|#members-cancel[href="#{~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}"}"]|
+             ~s|#members-cancel[href="#{~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members"}"]|
            )
 
     assert has_element?(
@@ -91,7 +91,7 @@ defmodule Web.ActivityAddMembersLiveTest do
     lv |> form("#members-add-form") |> render_submit()
 
     {path, flash} = assert_redirect(lv)
-    assert path == ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}"
+    assert path == ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members"
     assert flash["info"] == "3 members added. Nobody was emailed."
 
     for _ <- 1..3, do: assert_received({:d4h_write, :create, %{"status" => "REQUESTED"}})
@@ -101,7 +101,9 @@ defmodule Web.ActivityAddMembersLiveTest do
     assert Enum.sort(added) == Enum.sort([ctx.eli.id, ctx.wren.id, ctx.gerry.id, ctx.dana.id])
     assert %ChangeSet{source: :invite} = Repo.get_by!(ChangeSet, activity_id: ctx.activity.id)
 
-    {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
+    {:ok, lv, _html} =
+      live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members")
+
     assert has_element?(lv, "#member-row-#{ctx.eli.id}", "No reply")
     assert has_element?(lv, "#activity-send-reminders", "Send reminders")
   end
@@ -110,7 +112,7 @@ defmodule Web.ActivityAddMembersLiveTest do
     ctx.activity |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
 
     assert {:error, {:live_redirect, %{to: to, flash: flash}}} = live(ctx.conn, path(ctx))
-    assert to == ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}"
+    assert to == ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members"
 
     assert flash["error"] ==
              "Published, so nobody can be added. Unpublish it with Change activity first."

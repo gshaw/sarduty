@@ -152,7 +152,7 @@ defmodule Web.ActivitySendUpdateLive do
   end
 
   defp activity_path(socket, activity),
-    do: ~p"/teams/#{socket.assigns.current_team}/activities/#{activity.id}"
+    do: ~p"/teams/#{socket.assigns.current_team}/activities/#{activity.id}/members"
 
   def render(assigns) do
     ~H"""
@@ -279,7 +279,10 @@ defmodule Web.ActivitySendUpdateLive do
         >
           {Format.count(MapSet.size(@selected), one: "Send 1 email", many: "Send %d emails")}
         </.button>
-        <.button id="update-cancel" navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}"}>
+        <.button
+          id="update-cancel"
+          navigate={~p"/teams/#{@current_team}/activities/#{@activity.id}/members"}
+        >
           Cancel
         </.button>
       </.form_actions>

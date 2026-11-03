@@ -117,7 +117,7 @@ another pair. So a feature gets one home, picked by these rules in order.
 
 1. **About one activity, item, or member? A part of that page.** It adds no link to the
    side navigation. Travel and home safe (#261) go on the activity: Travel (#230)
-   took the Mileage report's place. Off call (#646) goes in the header of Your membership and in a filter
+   is a tab, in the Mileage report's place. Off call (#646) goes in the header of Your membership and in a filter
    on Members. A check (#407) runs from the item's page, which its sticker opens.
 2. **A list people open on their own? One link and one URL, for everyone.** Members open
    it on Yours, their own rows, with their button. Team admins also get the team's views.

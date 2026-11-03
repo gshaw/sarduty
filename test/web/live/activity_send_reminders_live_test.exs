@@ -135,7 +135,7 @@ defmodule Web.ActivitySendRemindersLiveTest do
     |> form("#email-form")
     |> render_submit(%{"member_ids" => ["#{ctx.cameron.id}"]})
 
-    assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
+    assert_redirect(lv, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members")
     assert_received {:email, %{to: [{"Cameron Ruiz", _}]}}
     refute_received {:email, _}
 
@@ -167,7 +167,7 @@ defmodule Web.ActivitySendRemindersLiveTest do
     |> Repo.update!()
 
     assert {:error, {:live_redirect, %{to: to, flash: flash}}} = live(ctx.conn, path(ctx))
-    assert to == ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}"
+    assert to == ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members"
     assert flash["error"] == "Reminders closed when the activity started."
   end
 
