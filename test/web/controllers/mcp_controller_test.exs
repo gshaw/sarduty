@@ -318,6 +318,7 @@ defmodule Web.MCPControllerTest do
       assert "Search manager" in output["names"]["qualifications"]
       assert "Rope team" in output["names"]["groups"]
       assert "Swiftwater" in output["names"]["tags"]
+      assert %{"write" => "`Task type`", "on" => "activities"} in output["names"]["custom_fields"]
       refute text =~ "Pat Example"
 
       # A year sent as a JSON number picks that year, not this one.
@@ -334,6 +335,55 @@ defmodule Web.MCPControllerTest do
 
       assert result["isError"]
       assert text =~ "members has no field nme"
+    end
+
+    # report_fields lists what reports read (#840): it asked for fields on "activity",
+    # a kind no field has, so agents got no activity fields and every member field.
+    test "report_fields lists the custom fields a report reads, as a query writes them", ctx do
+      %{conn: conn, team: team, token: token} = ctx
+
+      custom_field_fixture(team, %{
+        target: "incident",
+        title: "Task type",
+        field_type: "single_choice",
+        options: [%{"id" => 1, "label" => "Search"}, %{"id" => 2, "label" => "Rescue"}]
+      })
+
+      custom_field_fixture(team, %{target: "event", title: "Event leader"})
+      custom_field_fixture(team, %{target: "exercise", title: "Event leader"})
+      custom_field_fixture(team, %{target: "member", title: "Call sign", copy_values: true})
+      custom_field_fixture(team, %{target: "member", title: "Allergies"})
+      custom_field_fixture(team, %{target: "member", title: "Heritage", restricted: true})
+
+      custom_field_fixture(team, %{
+        target: "incident",
+        title: "Old cause",
+        archived_at: ~U[2026-01-01 00:00:00Z]
+      })
+
+      {_result, text} = call_tool(conn, token, team, "report_fields")
+
+      assert Jason.decode!(text)["custom_fields"] == [
+               %{
+                 "title" => "Task type",
+                 "write" => "`Task type`",
+                 "on" => "activities",
+                 "type" => "choice",
+                 "choices" => ["Search", "Rescue"]
+               },
+               %{
+                 "title" => "Event leader",
+                 "write" => "`Event leader`",
+                 "on" => "activities",
+                 "type" => "text"
+               },
+               %{
+                 "title" => "Call sign",
+                 "write" => "`Call sign`",
+                 "on" => "members",
+                 "type" => "text"
+               }
+             ]
     end
 
     test "check_report links a saved report to Change report", ctx do

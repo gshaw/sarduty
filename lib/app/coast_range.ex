@@ -215,6 +215,41 @@ defmodule App.CoastRange do
   @file_number 9_400_002
   @call_sign 9_400_003
   @serviced 9_400_004
+  @task_type 9_400_005
+  @people_helped 9_400_006
+  @team_notes 9_400_007
+  @exercise_leader 9_400_008
+  @event_leader 9_400_009
+  @areas 9_400_010
+
+  # Each incident's task type, people helped, and a team admin's notes (RESTRICTED).
+  @task_types ["Search", "Rescue", "Evidence search"]
+  @rescues [
+    "Injured mountain biker",
+    "Stranded skiers",
+    "Fallen climber",
+    "Vehicle over the bank",
+    "Injured hiker, carry-out",
+    "Swiftwater rescue"
+  ]
+  @helped %{
+    "Overdue kayakers" => 2,
+    "Stranded skiers" => 3,
+    "Overdue snowshoers" => 2,
+    "Evidence search" => 0
+  }
+  @notes %{
+    "Missing hunter" => "Debrief: radios had a dead spot at the north gate.",
+    "Fallen climber" => "Debrief: the second rope kit was still at the hall."
+  }
+  @areas_options ["Fundraising", "Training", "Public education", "Vehicle care"]
+  @member_areas %{
+    "Cameron Ruiz" => ["Fundraising", "Public education"],
+    "Priya Nair" => ["Training", "Vehicle care"],
+    "Noor Aziz" => ["Vehicle care"],
+    "Casey Dhillon" => ["Fundraising"]
+  }
+  @leaders ["Alex Chen", "Harper Nguyen", "Avery Chen"]
 
   @doc "Coast Range SAR's time zone."
   def timezone, do: @timezone
@@ -295,9 +330,32 @@ defmodule App.CoastRange do
         member_privacy: "viewable",
         copy_values: true
       ),
-      custom_field(@serviced, "equipment", "Last serviced", "date", [])
+      custom_field(@serviced, "equipment", "Last serviced", "date", []),
+      custom_field(@task_type, "incident", "Task type", "single_choice",
+        required: true,
+        options: options(@task_types, &task_option/1)
+      ),
+      custom_field(@people_helped, "incident", "People helped", "number", []),
+      custom_field(@team_notes, "incident", "Team notes", "text_area", restricted: true),
+      # The same title on two kinds: a report reads it as one field.
+      custom_field(@exercise_leader, "exercise", "Event leader", "text", []),
+      custom_field(@event_leader, "event", "Event leader", "text", []),
+      custom_field(@areas, "member", "Areas of assistance", "multiple_choice",
+        member_privacy: "editable",
+        copy_values: true,
+        options: options(@areas_options, &area_option/1)
+      )
     ]
   end
+
+  defp options(labels, id) do
+    for {label, i} <- Enum.with_index(labels) do
+      %{"id" => id.(label), "label" => label, "ordering" => i, "archived" => false}
+    end
+  end
+
+  defp task_option(label), do: 9_400_201 + Enum.find_index(@task_types, &(&1 == label))
+  defp area_option(label), do: 9_400_301 + Enum.find_index(@areas_options, &(&1 == label))
 
   defp custom_field(id, target, title, type, attrs) do
     field =
@@ -323,7 +381,6 @@ defmodule App.CoastRange do
   defp members(now), do: Enum.map(@people, &member(&1, now))
 
   defp member({name, ref_id, phone, days, position, marks}, now) do
-    slug = name |> String.downcase() |> String.replace(" ", ".")
     person? = :not_a_person not in marks
     retired? = :retired in marks
 
@@ -331,7 +388,7 @@ defmodule App.CoastRange do
       d4h_member_id: 9_110_000 + String.to_integer(ref_id),
       ref_id: ref_id,
       name: name,
-      email: if(person?, do: "#{slug}@example.com"),
+      email: if(person?, do: email(name)),
       phone: phone,
       address: if(person? and :no_address not in marks, do: "#{ref_id} Example Road"),
       position: position,
@@ -340,13 +397,24 @@ defmodule App.CoastRange do
       d4h_status: if(retired?, do: "RETIRED", else: "OPERATIONAL"),
       left_at: if(retired?, do: left_at(now)),
       not_a_person: not person?,
-      custom_values: %{"#{@call_sign}" => "CR #{ref_id}"}
+      custom_values: member_values(name, ref_id)
     }
 
     {:member, name, member, []}
   end
 
+  defp email(name), do: "#{name |> String.downcase() |> String.replace(" ", ".")}@example.com"
+
   defp left_at(now), do: DateTime.add(now, -120, :day)
+
+  defp member_values(name, ref_id) do
+    values = %{"#{@call_sign}" => "CR #{ref_id}"}
+
+    case @member_areas[name] do
+      nil -> values
+      areas -> Map.put(values, "#{@areas}", Enum.map(areas, &area_option/1))
+    end
+  end
 
   # D4H's access levels: 0 Owner, 3 Member plus, 4 No access.
   defp permission(marks) do
@@ -460,8 +528,7 @@ defmodule App.CoastRange do
   end
 
   defp trainings(today) do
-    tomorrow = Date.add(today, 1)
-    tuesday = Date.add(tomorrow, rem(2 - Date.day_of_week(tomorrow) + 7, 7))
+    tuesday = next_tuesday(today)
 
     for week <- 0..51 do
       {title, tags} = Enum.at(@trainings, rem(week, length(@trainings)))
@@ -471,6 +538,7 @@ defmodule App.CoastRange do
         activity_kind: "exercise",
         title: title,
         description: "Weekly training: #{String.downcase(title)}.",
+        custom_values: exercise_values(week),
         started_at: start,
         finished_at: DateTime.add(start, 150, :minute),
         tags: ["Primary Hours", "Training" | tags],
@@ -479,6 +547,14 @@ defmodule App.CoastRange do
       }
     end
   end
+
+  # The first Tuesday from tomorrow on.
+  defp next_tuesday(today) do
+    tomorrow = Date.add(today, 1)
+    Date.add(tomorrow, rem(2 - Date.day_of_week(tomorrow) + 7, 7))
+  end
+
+  defp exercise_values(week), do: %{"#{@exercise_leader}" => Enum.at(@leaders, rem(week, 3))}
 
   defp incidents(today) do
     for {{days, hour, hours, title, description}, n} <- Enum.with_index(@incidents) do
@@ -492,7 +568,7 @@ defmodule App.CoastRange do
         started_at: start,
         finished_at: DateTime.add(start, hours, :hour),
         tags: incident_tags(title),
-        custom_values: incident_values(days, n),
+        custom_values: incident_values(title, days, n),
         coordinate: incident_place(n),
         address: "Cedar Creek forest road, spur #{rem(n * 4, 9) + 1}"
       }
@@ -507,6 +583,7 @@ defmodule App.CoastRange do
         activity_kind: "event",
         title: title,
         description: "#{title} for the public.",
+        custom_values: %{"#{@event_leader}" => "Priya Nair"},
         started_at: start,
         finished_at: DateTime.add(start, hours, :hour),
         tags: event_tags(title),
@@ -578,14 +655,25 @@ defmodule App.CoastRange do
   defp incident_tags(_title), do: ["Primary Hours"]
 
   # The newest incident, still a draft, has no file number yet: Required fields finds it.
-  defp incident_values(days, n) do
+  defp incident_values(title, days, n) do
     agency = Enum.at(["Police", "Ambulance", "Fire"], rem(n, 3))
-    values = %{"#{@agency}" => [agency_option(agency)]}
+
+    values = %{
+      "#{@agency}" => [agency_option(agency)],
+      "#{@task_type}" => [title |> task_type() |> task_option()],
+      "#{@people_helped}" => @helped |> Map.get(title, 1) |> Integer.to_string()
+    }
+
+    values = if @notes[title], do: Map.put(values, "#{@team_notes}", @notes[title]), else: values
 
     if days == 3,
       do: values,
       else: Map.put(values, "#{@file_number}", "#{26 - div(days, 365)}-#{7310 - n * 37}")
   end
+
+  defp task_type("Evidence search"), do: "Evidence search"
+  defp task_type(title) when title in @rescues, do: "Rescue"
+  defp task_type(_title), do: "Search"
 
   # A chore activity lasts no time: it starts and ends at midnight on the 1st (#575).
   defp chore_activities(today) do
