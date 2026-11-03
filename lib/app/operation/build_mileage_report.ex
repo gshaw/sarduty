@@ -41,6 +41,7 @@ defmodule App.Operation.BuildMileageReport do
     |> Attendance.attended(now)
     |> where([r], r.activity_id == ^activity.id)
     |> join(:inner, [r], m in assoc(r, :member), as: :member)
+    |> where([member: m], m.team_id == ^activity.team_id)
     |> order_by([r, member: m], asc: m.name, asc: r.started_at)
     |> preload([member: m], member: m)
     |> Repo.all()
