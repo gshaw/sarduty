@@ -642,7 +642,8 @@ defmodule App.CoastRange do
         finished_at: DateTime.add(start, hours, :hour),
         tags: event_tags(title),
         coordinate: "49.25000,-123.10000",
-        address: "Coast Range SAR hall, 100 Example Road"
+        address: "Coast Range SAR hall, 100 Example Road",
+        enough_at: 4
       }
     end
   end
@@ -684,7 +685,9 @@ defmodule App.CoastRange do
       finished_at: DateTime.add(start, 5, :hour),
       tags: ["Primary Hours", "Training"],
       coordinate: "49.45000,-122.95000",
-      address: "Cedar Creek forest road, km 12"
+      address: "Cedar Creek forest road, km 12",
+      enough_at: 8,
+      full_at: 14
     }
   end
 
