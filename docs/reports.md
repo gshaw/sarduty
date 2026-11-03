@@ -51,8 +51,14 @@ its nine queries, and Activities took 274 ms where the old page took 10.
 
 ## The catalog is an allowlist
 
-Like the MCP tools, the fields leave out contact details, addresses, coordinates, letter
-text, and keys. `select email from members` answers "Reports leave out contact details."
+The fields leave out emergency contacts, letter text, and keys: `select emergency_contact
+from members` answers "Reports leave out emergency contacts." A member's `email`,
+`mobile`, and `address` are team admins' fields, as the member's page shows them, and an
+activity's `address` and `place` are everyone's who reads activities (#827). The rule
+that left them out protected agents' answers, and agents no longer read records (#816).
+`phone` and `coordinate` answer "Use mobile." and "Use place." A `place` compares only
+with `is null`; its cell opens the viewer's maps app, and Download CSV writes it as
+Latitude and Longitude columns.
 
 **A field is a rule's existing home, never a copy.** `status` is
 `Attendance.status_word_dynamic/1`, `standing` is `Standing.dynamic/1`, `counted` is

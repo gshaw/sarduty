@@ -4,6 +4,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Reports read members' email, mobile number, and address (team admins only), and an
+  activity's address and place. A callout contact list or a map of incidents is now one
+  report; Download CSV gives places as latitude and longitude.
 - Every save of a report is kept: History shows who changed it and why, and Restore
   brings back an older version. A deleted report waits 30 days under Recently deleted.
 - Your AI agent's report now shows up in the report you have open: each try reruns the

@@ -36,7 +36,7 @@ defmodule App.ReportTest do
           assert is_binary(field.label) and field.label != "",
                  "#{subject.name}.#{field.name} has no label"
 
-          assert field.type in [:text, :number, :hours, :km, :date, :bool, :list, :choice] or
+          assert field.type in [:text, :number, :hours, :km, :date, :bool, :list, :choice, :place] or
                    match?(
                      {:record, kind}
                      when kind in [:member, :activity, :item, :qualification, :group],
@@ -83,14 +83,70 @@ defmodule App.ReportTest do
       assert IO.iodata_to_binary(plan.sql) =~ "attendances"
     end
 
-    test "reports leave out contact details" do
+    test "reports leave out emergency contacts, and contact details are team admins'" do
       team = team_fixture()
 
-      assert error("select email from members", team) ==
-               "Line 1: Reports leave out contact details. members has no field email."
+      assert error("select emergency_contact from members", team) ==
+               "Line 1: Reports leave out emergency contacts. members has no field emergency_contact."
 
-      assert error("select member.phone from attendance", team) =~
-               "Reports leave out contact details."
+      assert error("select member.phone from attendance", team) =~ "Use mobile."
+      assert error("select coordinate from activities", team) =~ "Use place."
+      assert {:ok, _plan} = Report.check("select name, email, mobile, address from members", team)
+
+      assert {:error, error} =
+               Report.page("select name, email from members", team, %{}, @now, team_admin?: false)
+
+      assert Error.text(error) =~ "members has no field email"
+    end
+
+    test "a place compares only with is null" do
+      team = team_fixture()
+
+      assert {:ok, _plan} =
+               Report.check("select title, place from activities where place is not null", team)
+
+      assert error("select title from activities where place = '49,-123'", team) ==
+               "Line 1: Compare place only with is null or is not null."
+    end
+
+    test "contact details and places read their columns, a blank or 0,0 place as null" do
+      team = team_fixture()
+
+      member_fixture(team, %{
+        name: "Avery Chen",
+        email: "avery@example.com",
+        phone: "604-555-0101",
+        address: "1 Example Road"
+      })
+
+      activity_fixture(team, %{
+        title: "Night search",
+        coordinate: "49.30000,-123.10000",
+        address: "Cedar Creek"
+      })
+
+      activity_fixture(team, %{title: "Hall night", coordinate: Activity.null_island()})
+
+      {:ok, result} =
+        Report.run("select name, email, mobile, address from members", team, %{}, @now)
+
+      assert [[_id, "avery@example.com", "604-555-0101", "1 Example Road"]] = result.rows
+
+      {:ok, result} =
+        Report.run("select title, address, place from activities order by title", team, %{}, @now)
+
+      assert Enum.map(result.rows, fn [_id, address, place] -> {address, place} end) ==
+               [{"123 Main St", nil}, {"Cedar Creek", "49.30000,-123.10000"}]
+    end
+  end
+
+  # A report's rows are plain lists, with no redact: true, so they hold contact details
+  # in the clear (#827). Only SQLite's message reaches the log.
+  test "nothing in the report code logs rows" do
+    for path <- ["lib/app/report.ex" | Path.wildcard("lib/app/report/**/*.ex")],
+        line <- path |> File.read!() |> String.split("\n"),
+        line =~ "Logger." do
+      assert line =~ "Exception.message(reason)", "#{path} logs: #{String.trim(line)}"
     end
   end
 

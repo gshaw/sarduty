@@ -1,7 +1,9 @@
 defmodule App.Report.Catalog do
   @moduledoc """
-  The subjects and fields a report can read (#768): an allowlist, like the MCP tools.
-  Never contact details, addresses, coordinates, letter text, or keys.
+  The subjects and fields a report can read (#768): an allowlist. Never emergency
+  contacts, letter text, or keys. A member's email, mobile number, and address are team
+  admins' fields, as their page shows them (#827); an activity's address and place are
+  for everyone who reads activities, as its page shows them.
 
   A field is a rule's existing home, never a copy: `status` is
   `Attendance.status_word_dynamic/1`, `standing` is `Standing.dynamic/1`, `counted` is
@@ -241,7 +243,21 @@ defmodule App.Report.Catalog do
       ),
       number(:attended_count, "Attended", "How many members attended."),
       %Field{name: "attended_hours", label: "Hours", type: :hours, column: :attended_hours}
-    ] ++ activity_rule_fields()
+    ] ++ activity_place_fields() ++ activity_rule_fields()
+  end
+
+  # Where an activity is, as its page shows everyone who reads it (#827).
+  defp activity_place_fields do
+    [
+      %{text(:address, "Address", "Where it is.") | cell: :address},
+      %Field{
+        name: "place",
+        label: "Place",
+        type: :place,
+        column: :place,
+        about: "Its latitude and longitude. Compare it only with is null or is not null."
+      }
+    ]
   end
 
   # What Activities searches, sorts, and filters by (#784).
@@ -356,9 +372,13 @@ defmodule App.Report.Catalog do
     ] ++ for(field <- team_admin_fields(), do: %{field | shown: &team_admin?/1})
   end
 
-  # Team admins' own records, which a member's Members has never filtered by (#440).
+  # Team admins' own records, which a member's Members has never filtered by (#440), and
+  # contact details, which members never see of each other (#827).
   defp team_admin_fields do
     [
+      %{text(:email, "Email", "The email they log in with.") | cell: :email},
+      %Field{name: "mobile", label: "Mobile number", type: :text, column: :mobile, cell: :phone},
+      %{text(:address, "Address", "Their mailing address.") | cell: :address},
       rule(
         "details_missing",
         "Details missing",
@@ -592,6 +612,12 @@ defmodule App.Report.Catalog do
         attended_hours: dynamic([attended: t], coalesce(t.minutes, 0)),
         tracking_number: dynamic([a], a.tracking_number),
         description: dynamic([a], a.description),
+        address: dynamic([a], a.address),
+        place:
+          dynamic(
+            [a],
+            fragment("NULLIF(NULLIF(?, ''), ?)", a.coordinate, ^Activity.null_island())
+          ),
         duration: Activity.duration_dynamic(),
         chore: dynamic([chores: c], not is_nil(c.d4h_activity_id))
       }
@@ -669,7 +695,10 @@ defmodule App.Report.Catalog do
         qualifications: dynamic([awards: q], q.titles),
         last_attended: dynamic([last: l], l.last_attended_at),
         left_at: dynamic([m], m.left_at),
-        current: Member.current_dynamic(now)
+        current: Member.current_dynamic(now),
+        email: dynamic([m], m.email),
+        mobile: dynamic([m], m.phone),
+        address: dynamic([m], m.address)
       }
     }
   end

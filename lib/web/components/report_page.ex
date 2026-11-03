@@ -28,6 +28,7 @@ defmodule Web.Components.ReportPage do
   attr :records, :map, required: true, doc: "from App.ViewData.ReportRecords.load/3"
   attr :team, :any, required: true
   attr :now, :any, required: true
+  attr :maps_app, :string, default: "google", doc: "the viewer's maps_app, for a place"
 
   attr :path_fn, :any,
     default: nil,
@@ -131,6 +132,7 @@ defmodule Web.Components.ReportPage do
       records={@records}
       team={@team}
       now={@now}
+      maps_app={@maps_app}
       sorts={@view.sorts}
       sort={@view.sort}
       path_fn={@path_fn || (&sort_click/1)}

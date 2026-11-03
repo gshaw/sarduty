@@ -160,6 +160,7 @@ defmodule Web.ReportLive do
         records={@records}
         team={@current_team}
         now={@now}
+        maps_app={@current_user.maps_app}
         path_fn={@path_fn}
         form={@controls}
       />
