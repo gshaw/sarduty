@@ -386,6 +386,7 @@ defmodule App.Report.Language do
   defp type_text(:bool), do: "true or false"
   defp type_text(:list), do: "list"
   defp type_text(:choice), do: "choice"
+  defp type_text(:place), do: "place: latitude and longitude"
   defp type_text({:record, kind}), do: "#{kind}, a link"
 
   defp holds(subject, field) do
@@ -480,8 +481,11 @@ defmodule App.Report.Language do
     """
     ## What a report cannot do
 
-    - Read contact details, addresses, coordinates, letter text, or keys. They are not \
-    fields.
+    - Read emergency contacts, letter text, or keys. They are not fields. A member's \
+    `email`, `mobile`, and `address` are for team admins only.
+    - Compare a `place` with anything but `is null` or `is not null`.
+    - Keep a name or an address in the query's text: `where address contains :town` \
+    picks it each time it runs, and an agent never sees it.
     - Change records. A report only reads.
     - Read another team's records.
     - Show every field with `select *`. Name each one.

@@ -2,7 +2,8 @@ defmodule Web.ReportCSV do
   @moduledoc """
   A report's rows as CSV (#768): the same rows and columns as its page, unformatted, for a
   spreadsheet or an agent. A record is its name, a date the team's day as 2026-03-01,
-  hours a decimal, a choice its label, and a list its titles split by semicolons.
+  hours a decimal, a choice its label, and a list its titles split by semicolons. A place
+  is two columns, Latitude and Longitude, which mapping apps read (#827).
   """
 
   alias App.Report.Result
@@ -15,11 +16,14 @@ defmodule Web.ReportCSV do
 
   @doc "The header row, then each row, then a Total row when it has one, each cell as text."
   def table(%Result{} = result, records, timezone) do
-    header = Enum.map(result.columns, &safe(ReportTable.label(&1, records) || ""))
+    header = Enum.flat_map(result.columns, &header(&1, records))
     rows = Enum.map(result.rows, &row(&1, result.columns, records, timezone))
     totals = if result.totals, do: [total_row(result, records, timezone)], else: []
     [header | rows] ++ totals
   end
+
+  defp header(%{type: :place}, _records), do: ["Latitude", "Longitude"]
+  defp header(column, records), do: [safe(ReportTable.label(column, records) || "")]
 
   defp total_row(result, records, timezone) do
     [first | rest] = row(result.totals, result.columns, records, timezone)
@@ -29,8 +33,16 @@ defmodule Web.ReportCSV do
   defp row(cells, columns, records, timezone) do
     cells
     |> Enum.zip(columns)
-    |> Enum.map(fn {value, column} -> text(value, column, records, timezone) end)
+    |> Enum.flat_map(fn {value, column} -> cells(value, column, records, timezone) end)
   end
+
+  # Numbers as stored, never quoted as a formula: a longitude starts with a minus.
+  defp cells(nil, %{type: :place}, _records, _timezone), do: ["", ""]
+
+  defp cells(value, %{type: :place}, _records, _timezone),
+    do: value |> String.split(",", parts: 2) |> Enum.map(&String.trim/1)
+
+  defp cells(value, column, records, timezone), do: [text(value, column, records, timezone)]
 
   defp text(nil, _column, _records, _timezone), do: ""
 

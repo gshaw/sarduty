@@ -482,6 +482,7 @@ defmodule Web.ReportFormLive do
               records={@records}
               team={@current_team}
               now={@now}
+              maps_app={@current_user.maps_app}
               count={preview_count(@view, draft_line(assigns))}
             />
           </div>

@@ -26,8 +26,9 @@ defmodule App.Report.Expr do
   @matches [:contains, :starts_with, :ends_with, :like]
   @flip %{eq: :eq, ne: :ne, lt: :gt, gt: :lt, le: :ge, ge: :le}
 
-  @contact ~w(email phone address emergency_contact primary_emergency_contact
-              secondary_emergency_contact coordinate)
+  # Emergency contacts stay out (#827); phone and coordinate have fields by other names.
+  @contact ~w(emergency_contact primary_emergency_contact secondary_emergency_contact)
+  @renamed %{"phone" => "mobile", "coordinate" => "place"}
 
   @doc "The aggregate functions."
   def aggregates, do: @aggregates
@@ -168,7 +169,10 @@ defmodule App.Report.Expr do
   end
 
   defp known(nil, subject, _via, name, line, _context) when name in @contact,
-    do: fail(line, "Reports leave out contact details. #{subject.name} has no field #{name}.")
+    do: fail(line, "Reports leave out emergency contacts. #{subject.name} has no field #{name}.")
+
+  defp known(nil, subject, _via, name, line, _context) when is_map_key(@renamed, name),
+    do: fail(line, "#{subject.name} has no field #{name}. Use #{@renamed[name]}.")
 
   defp known(nil, subject, via, name, line, context) do
     others = if via, do: [], else: Map.keys(subject.parents)
@@ -477,6 +481,10 @@ defmodule App.Report.Expr do
   defp compare(op, left, right, line, st) do
     l = compile(left, st)
     if l.type == :condition, do: fail(line, "Write and or or between conditions.")
+
+    if l.type == :place,
+      do: fail(line, "Compare #{l.name} only with is null or is not null.")
+
     compare_right(op, l, right, line, st)
   end
 

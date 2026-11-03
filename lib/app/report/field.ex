@@ -5,7 +5,8 @@ defmodule App.Report.Field do
   - `type`: `:text`, `:number`, `:hours` (minutes, shown as hours), `:km`, `:date` (a
     UTC time shown as the team's date), `:bool`, `:list` (titles), `:choice` (one of
     `choices`), or `{:record, kind}` for a record the cell links to: `:member`,
-    `:activity`, `:item`, `:qualification`, or `:group`.
+    `:activity`, `:item`, `:qualification`, or `:group`. `:place` is a latitude and
+    longitude, "49.3,-123.1" (#827), compared only with is null.
   - `column`: its column in the subject's rows. A record field's `column` is the text it
     sorts and compares by, and `id_column` the record's id.
   - `parent`: for a field that names a parent record, such as attendance's `member`, the
@@ -27,7 +28,9 @@ defmodule App.Report.Field do
     not see, which `choices` leaves out for them. An option that compares with one drops
     out of the page, as Away does for members (#784).
   - `cell`: how its column draws, when not as its type: `:activity_kind` is the kind's
-    coloured marker, and the Activity cell beside it leaves its own out (#784).
+    coloured marker, and the Activity cell beside it leaves its own out (#784); `:email`,
+    `:phone`, and `:address` draw as a member's page does, with Copy, Call and Text, and
+    Open in maps (#827).
   """
 
   @enforce_keys [:name, :label, :type]

@@ -7,12 +7,17 @@ defmodule Web.Components.ReportTable do
   """
   use Web, :function_component
 
+  import Web.Components.A
   import Web.Components.Columns
+  import Web.Components.CopyButton
+  import Web.Components.Email
+  import Web.Components.Phone
   import Web.Components.Table
 
   alias App.Report.Runner
   alias App.Report.Value
   alias Service.Format
+  alias Web.Components.OpenInMaps
 
   attr :id, :string, required: true
   attr :result, App.Report.Result, required: true
@@ -22,6 +27,7 @@ defmodule Web.Components.ReportTable do
   attr :sorts, :map, default: %{}, doc: "each sortable column's sorts by index (App.Report.View)"
   attr :sort, :string, default: nil, doc: "the rows' sort"
   attr :path_fn, :any, default: nil, doc: "for a sortable header, as `<.table>` takes it"
+  attr :maps_app, :string, default: "google", doc: "the viewer's maps_app, for a place"
 
   def report_table(assigns) do
     assigns =
@@ -48,6 +54,8 @@ defmodule Web.Components.ReportTable do
         sorts={@sorts[i]}
       >
         <.report_cell
+          id={"#{@id}-#{row.key}-#{i}"}
+          maps_app={@maps_app}
           value={Enum.at(row.cells, i)}
           column={column}
           total={row.total}
@@ -86,6 +94,8 @@ defmodule Web.Components.ReportTable do
   defp align(%{type: type}) when type in [:number, :hours, :km], do: "right"
   defp align(_column), do: nil
 
+  attr :id, :string, required: true
+  attr :maps_app, :string, required: true
   attr :value, :any, required: true
   attr :column, :map, required: true
   attr :total, :boolean, required: true
@@ -136,6 +146,33 @@ defmodule Web.Components.ReportTable do
 
   defp report_cell(%{column: %{type: :date, format: "days_ago"}} = assigns),
     do: ~H"{Format.days_ago(@value, @now, @team.timezone)}"
+
+  # Contact details draw as on a member's page (#827).
+  defp report_cell(%{column: %{cell: :email}} = assigns),
+    do: ~H"<.email id={@id} email={@value} />"
+
+  defp report_cell(%{column: %{cell: :phone}} = assigns),
+    do: ~H"<.phone id={@id} phone={@value} call_and_text />"
+
+  defp report_cell(%{column: %{cell: :address}} = assigns) do
+    ~H"""
+    <.copy_button
+      text={@value}
+      id={@id}
+      value={OpenInMaps.one_line(@value)}
+      label="Copy address"
+    />
+    """
+  end
+
+  # A place opens in the viewer's maps app, as on the activity's page.
+  defp report_cell(%{column: %{type: :place}} = assigns) do
+    assigns = assign(assigns, url: OpenInMaps.url(assigns.maps_app, assigns.value, nil, nil))
+
+    ~H"""
+    <.a id={@id} href={@url} external>{value_text(@value, @column, @team)}</.a>
+    """
+  end
 
   defp report_cell(assigns), do: ~H"{value_text(@value, @column, @team)}"
 
@@ -230,5 +267,6 @@ defmodule Web.Components.ReportTable do
 
   def value_text(value, %{type: :month}, _team), do: Runner.month_name(value)
   def value_text(value, %{type: :quarter}, _team), do: "Q#{value}"
+  def value_text(value, %{type: :place}, _team), do: String.replace(value, ",", ", ")
   def value_text(value, _column, _team), do: to_string(value)
 end

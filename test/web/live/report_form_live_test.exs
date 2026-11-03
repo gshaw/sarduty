@@ -356,6 +356,34 @@ defmodule Web.ReportFormLiveTest do
     end
   end
 
+  test "contact details draw as a member's page does, and a place opens in maps (#827)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member_fixture(team, %{name: "Avery Chen", phone: "604-555-0101", email: "avery@example.com"})
+    activity_fixture(team, %{title: "Night search", coordinate: "49.30000,-123.10000"})
+
+    {:ok, report} =
+      SaveReport.call(team, user, nil, %{
+        "name" => "Contacts",
+        "query" => "select name, mobile, email from members where name = 'Avery Chen'"
+      })
+
+    {:ok, places} =
+      SaveReport.call(team, user, nil, %{
+        "name" => "Places",
+        "query" => "select title, place from activities where place is not null"
+      })
+
+    conn = log_in_user(conn, user)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}")
+    assert has_element?(lv, "#report-rows-0-1-call")
+    assert has_element?(lv, "#report-rows-0", "avery@example.com")
+    assert has_element?(lv, "#report-rows-0-2")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{places.id}")
+    assert has_element?(lv, ~s(#report-rows-0-1[href*="google.com/maps"]), "49.30000, -123.10000")
+  end
+
   test "Copy report starts from a built-in report", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     conn = log_in_user(conn, user)

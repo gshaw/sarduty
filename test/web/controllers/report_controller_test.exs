@@ -3,6 +3,10 @@ defmodule Web.ReportControllerTest do
 
   import App.DataFixtures
 
+  alias App.Report
+  alias App.ViewData.ReportRecords
+  alias Web.ReportCSV
+
   test "Download CSV gives the page's rows, unformatted", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team, %{name: "Chen, Avery"})
@@ -29,6 +33,22 @@ defmodule Web.ReportControllerTest do
              "Member,Incident,Exercise,Total\r\n" <>
                "\"Chen, Avery\",1.00,2.50,3.50\r\n" <>
                "Total,1.00,2.50,3.50\r\n"
+  end
+
+  test "a place is two columns, Latitude and Longitude, never quoted as a formula" do
+    team = team_fixture()
+    activity_fixture(team, %{title: "Night search", coordinate: "49.30000,-123.10000"})
+    activity_fixture(team, %{title: "No place", coordinate: ""})
+
+    {:ok, result} = Report.run("select title, place from activities order by title", team)
+    records = ReportRecords.load(result, team, DateTime.utc_now())
+
+    assert [
+             ["Activity", "Latitude", "Longitude"],
+             ["Night search", "49.30000", "-123.10000"],
+             ["No place", "", ""]
+           ] =
+             ReportCSV.table(result, records, team.timezone)
   end
 
   # A header can be a label or a pivot value someone typed, or blank for a plain value.
