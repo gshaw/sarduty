@@ -152,6 +152,29 @@ and the URL leaves out what a control starts on; a team's own report starts on t
 saved with it. In the editor, a tile, a menu, or a header changes the preview, and Save
 keeps the picks as the report's values.
 
+## Charts
+
+A report's last clause can draw its rows (#826): `chart stat`, `columns`, `lines`, `bars`,
+`calendar`, or `week`, then `compare year` or `cumulative`. `App.Report.Chart` shapes the
+rows the report already shows into what `Web.Components.Chart` draws, so a chart report
+looks like the Dashboard's, and `<.report_chart>` draws it between the filters and the
+rows. It adds no field and reads nothing the table doesn't.
+
+- **The axis** is the first column, or the first two when they're `year()` and
+  `month()`. A time axis gets every bucket the `where` allows, 0 for none:
+  `field = RANGE`, `field <= NOW`, `months_since(field) < n`, and `year(field) = n`
+  bound it, with a filter's pick added as its `where`.
+- **Series** are the pivot's columns, or the number columns after the axis. A pivot on
+  kind keeps the kinds' colours; others take primary, then `--series-1` to `--series-5`.
+- **A stat's number is the query's own total**, run once more without its axis, so a
+  distinct count isn't the sum of its months.
+- **`compare year`** runs the query again with `Context.year_back/1`: ranges, `NOW`,
+  `days_since`, `months_since`, and each year value a year back. Fields' rules, such as
+  Attended and Not retired, stay as of now, as the Dashboard counts.
+- **Limits**: 36 columns, 60 points on a line, 366 calendar days, and 6 series. Past
+  one, the chart says how to narrow the `where`.
+- The chart reads every row the picks keep, not one page; Download CSV leaves it out.
+
 ## Lists drawn by a report
 
 Activities and Members are drawn by their reports (#784): `App.Report.Lists` holds each

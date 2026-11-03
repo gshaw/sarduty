@@ -12,6 +12,7 @@ defmodule App.Report do
 
   alias App.Model.Team
   alias App.Report.Catalog
+  alias App.Report.Chart
   alias App.Report.Compiler
   alias App.Report.Context
   alias App.Report.Error
@@ -47,7 +48,8 @@ defmodule App.Report do
          :ok <- check_page(query, context, given) do
       picks = Picks.resolve(query, given, context.today)
 
-      with {:ok, plan} <- query |> Picks.plain(picks) |> Compiler.compile(context, picks.given) do
+      with {:ok, plan} <- query |> Picks.plain(picks) |> Compiler.compile(context, picks.given),
+           :ok <- Chart.check(query.chart, plan.columns) do
         Runner.run(plan, context.timezone, context.repo)
       end
     end
@@ -60,7 +62,11 @@ defmodule App.Report do
     with {:ok, query} <- parse(text, context),
          :ok <- check_page(query, context, given) do
       picks = Picks.resolve(query, given, context.today)
-      query |> Picks.plain(picks) |> Compiler.compile(context, picks.given)
+
+      with {:ok, plan} <- query |> Picks.plain(picks) |> Compiler.compile(context, picks.given),
+           :ok <- Chart.check(query.chart, plan.columns) do
+        {:ok, plan}
+      end
     end
   end
 
@@ -174,17 +180,43 @@ defmodule App.Report do
   defp build_view(query, picks, menus, starts, context) do
     with {:ok, switch} <- switch(query, picks, context),
          {:ok, total, page} <- total(query, picks, switch, context),
-         {:ok, plan} <- rows_plan(query, picks, page, context),
-         {:ok, result} <- Runner.run(plan, context.timezone, context.repo) do
+         {:ok, result, chart} <- rows(query, picks, page, context) do
       view = %View{
         result: result,
         total: total || length(result.rows),
         page: page,
-        switch: switch
+        switch: switch,
+        chart: chart
       }
 
       {:ok, controls(view, query, picks, menus, starts, context)}
     end
+  end
+
+  defp rows(query, picks, page, context) do
+    with {:ok, plan} <- rows_plan(query, picks, page, context),
+         :ok <- Chart.check(query.chart, plan.columns),
+         {:ok, result} <- Runner.run(plan, context.timezone, context.repo),
+         {:ok, chart} <- chart(query, picks, page, result, context) do
+      {:ok, result, chart}
+    end
+  end
+
+  # The chart draws every row the picks keep, not one page of them (#826).
+  defp chart(%Query{chart: nil}, _picks, _page, _result, _context), do: {:ok, nil}
+
+  defp chart(query, picks, page, result, context) do
+    plain = Picks.plain(query, picks)
+
+    with {:ok, result} <- all_rows(plain, page, result, picks, context),
+         do: Chart.build(plain, result, context, picks.given)
+  end
+
+  defp all_rows(_plain, nil, result, _picks, _context), do: {:ok, result}
+
+  defp all_rows(plain, _page, _result, picks, context) do
+    with {:ok, plan} <- Compiler.compile(plain, context, picks.given),
+         do: Runner.run(plan, context.timezone, context.repo)
   end
 
   defp controls(view, query, picks, menus, starts, context) do

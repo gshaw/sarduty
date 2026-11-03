@@ -384,6 +384,34 @@ defmodule Web.ReportFormLiveTest do
     assert has_element?(lv, ~s(#report-rows-0-1[href*="google.com/maps"]), "49.30000, -123.10000")
   end
 
+  test "a chart report draws its chart above its rows, and the editor as you type (#826)",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    activity_fixture(team, %{started_at: DateTime.add(DateTime.utc_now(), -3, :day)})
+    conn = log_in_user(conn, user)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/activities-by-month")
+    assert has_element?(lv, "#report-chart-columns")
+    assert has_element?(lv, "#report-rows")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/activities-this-year")
+    assert has_element?(lv, "#report-chart-stat", "Activities")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/new")
+    assert has_element?(lv, "#chart-calendar")
+
+    lv
+    |> form("#report-form",
+      report: %{
+        query:
+          "select date(started_at), count(id)\nfrom activities\nwhere started_at = LAST_N_DAYS:30\ngroup by date(started_at)\nchart calendar"
+      }
+    )
+    |> render_change()
+
+    assert has_element?(lv, "#report-preview-chart-calendar")
+  end
+
   test "Copy report starts from a built-in report", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     conn = log_in_user(conn, user)

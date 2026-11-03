@@ -10,6 +10,19 @@
 .series-event { --c: var(--event); }
 .series-primary { --c: var(--primary); }
 .series-compare { --c: var(--compare); }
+/* A report chart's series after primary, for a pivot that isn't an activity's kind
+   (#826). Checked with primary first on the page's background in both modes: worst
+   neighbours' colour-blind ΔE 9.1 light, 8.4 dark. Three light ones are under 3:1, so a
+   chart report always keeps its table. */
+.series-c1 { --c: var(--series-1); }
+.series-c2 { --c: var(--series-2); }
+.series-c3 { --c: var(--series-3); }
+.series-c4 { --c: var(--series-4); }
+.series-c5 { --c: var(--series-5); }
+/* A report's chart, between its filters and its rows. */
+.report-chart { margin: 0 0 var(--sp-6); }
+.report-chart.card { width: 100%; max-width: 60rem; }
+.report-chart.chart-stats { max-width: 22rem; }
 
 .chart { position: relative; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .chart-title { font-size: var(--fs-md); line-height: var(--lh-md); font-weight: 700; color: var(--text); margin: 0; }

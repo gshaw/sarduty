@@ -399,6 +399,15 @@ defmodule Web.ReportFormLive do
           <:col :let={{_clause, draws}} label="Draws">{draws}</:col>
         </.table>
 
+        <h2 class="heading mt-8">Charts</h2>
+        <p class="hint">The last line, such as chart columns. The rows decide the rest.</p>
+        <.table id="report-chart-table" rows={charts()} row_id={&"chart-#{elem(&1, 0)}"}>
+          <:col :let={{kind, _takes}} label="Chart" class="whitespace-nowrap">
+            <code>chart {kind}</code>
+          </:col>
+          <:col :let={{_kind, takes}} label="Takes">{takes}</:col>
+        </.table>
+
         <h2 class="heading mt-8">Fields in {@subject.name}</h2>
         <p class="hint">Click a field to add it where the cursor is.</p>
         <div id="report-field-list" phx-hook="InsertField" data-target="report_query">
@@ -505,7 +514,19 @@ defmodule Web.ReportFormLive do
       {"option", "One choice, and the where it adds."},
       {"each", "A choice per value, such as each year."},
       {"sort", "A column header that sorts."},
-      {"page", "Pages of that many rows."}
+      {"page", "Pages of that many rows."},
+      {"chart", "A chart of the rows, the last line."}
+    ]
+
+  # What each chart takes (#826), for the help column.
+  defp charts,
+    do: [
+      {"stat", "A number, and a line of it when the first column is a month."},
+      {"columns", "A time or a name first, then counts. A pivot stacks them."},
+      {"lines", "A time first, then counts. compare year adds last year."},
+      {"bars", "A name first, then a count, longest first."},
+      {"calendar", "date(started_at), then a count."},
+      {"week", "day_of_week(started_at), hour(started_at), then a count."}
     ]
 
   # The picks the preview's tiles and headers keep, as the form saves them.
