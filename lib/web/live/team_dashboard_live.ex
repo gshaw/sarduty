@@ -748,7 +748,7 @@ defmodule Web.TeamDashboardLive do
       <.a
         navigate={~p"/teams/#{@team}/activities/#{@item.activity.id}"}
         class="font-semibold"
-      >{if @item.trips == [], do: "Set", else: "Check"} your travel for {@item.activity.title}</.a>
+      >{if @item.trips == [], do: "Set", else: "Confirm"} your travel for {@item.activity.title}</.a>
       <span class="hint block">{travel_hint(@item)}</span>
     </li>
     """
@@ -775,8 +775,7 @@ defmodule Web.TeamDashboardLive do
     do: "Not set yet. Set it before the activity is published."
 
   defp travel_hint(%{trips: [trip], unset: []}),
-    do:
-      "#{ActivityTravel.travel_text(trip.travel)}, #{Format.km(trip.km)}. Change it before the activity is published."
+    do: "#{ActivityTravel.trip_sentence(trip)}. Change it before the activity is published."
 
   defp travel_hint(%{trips: trips, unset: unset}),
     do:

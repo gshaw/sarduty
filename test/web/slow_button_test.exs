@@ -25,6 +25,12 @@ defmodule Web.SlowButtonTest do
   # The macros expand to Phoenix.LiveView.Async.
   @async [{Phoenix.LiveView.Async, :assign_async}, {Phoenix.LiveView.Async, :start_async}]
 
+  # Slow events a confirm dialog sends as it closes (AskDialog), where its own action
+  # button, not a LiveView one, is what the person pressed.
+  @dialog_events %{
+    {Web.Components.TravelTab, "save_travel"} => "Change's travel dialog"
+  }
+
   # Slow events sent by something other than a button in the same file.
   @not_buttons %{
     # Sent by the reply buttons in Web.Components.Reply, which this test reads too.
@@ -39,6 +45,7 @@ defmodule Web.SlowButtonTest do
 
     missing =
       for {module, event, why} <- slow_events(slow),
+          not Map.has_key?(@dialog_events, {module, event}),
           problem <- problems(module, event),
           do: "#{problem}\n  #{event}: #{why}"
 

@@ -15,20 +15,24 @@ admins from the start, with how many rows aren't set as its badge.
 - **One trip per attendance row, not per member.** A member on two days of a search drove
   twice, so each row gets its own km in D4H. In South Fraser's copy, 34 of the 38 incident
   cases of a member with two attended rows are on different days.
-- **A team admin sets them** on Travel, laid out like Remove members: check rows, then
-  Set to ICP, yard, or passenger (0 km), or type km. `App.Operation.SetTravel` saves a
-  `trips` row with the km as it was then, so a later address change never moves it. A
-  row with no route to where it drove is skipped, and the toast says to type its km.
-  Clear takes the checked rows' trips away, back to not set.
+- **A team admin sets them** on Travel: Change on a row, or check rows and Change N
+  members on the bar under the tables. Both open one dialog: drove to the ICP or the yard,
+  passenger (0 km), Other with typed km, or Not set (`Web.Components.TravelChoices`, the
+  same choices as Your travel). `App.Operation.SetTravel` saves a `trips` row with the km
+  as it was then, so a later address change never moves it. A row with no route to where
+  it drove is skipped, and the toast says to choose Other. A row that has that travel and
+  km already isn't saved again, so a member's confirm stands. Not set takes the rows'
+  trips away.
 - **Trips are keyed by D4H's attendance id**, which outlives the local row, so a row the
   refresh deletes and copies back keeps its trip.
-- **Members can check theirs** before the copy into D4H, and nothing waits on them. A trip a team admin set shows on
-  the activity's page as Your travel, with who set it, That's right, and Change (the
-  same four ways). The Dashboard's For you to do lists each activity with one unchecked,
-  until it's checked or the activity is published. Either answer sets `checked_at`; a
-  team admin setting the row again clears it, except on the admin's own rows. Travel
-  marks checked rows and says how many members have checked. An email asking them to
-  check is held for now (branch `230-check-email`, #863).
+- **Members can confirm theirs** before the copy into D4H, and nothing waits on them. A
+  trip a team admin set shows on the activity's page as Your travel, with who set it,
+  That's right, and Change (the same choices). The Dashboard's For you to do lists each
+  activity with one not confirmed, until it is or the activity is published. Either
+  answer sets `checked_at`; a team admin changing the row clears it, except on the
+  admin's own rows. Travel marks confirmed rows and says how many members have
+  confirmed. An email asking them to confirm is held for now (branch `230-check-email`,
+  #863).
 - **Publishing locks travel**, as it does attendance. To change it, a team admin
   unpublishes first. Change activity says how many rows aren't set, beside the Published
   box: a note, never a block.

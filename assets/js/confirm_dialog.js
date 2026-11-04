@@ -46,7 +46,9 @@ export const AskDialog = {
       const confirmed = this.el.returnValue === "confirm"
       const event = confirmed ? confirmEvent : cancelEvent
       const values = confirmed ? Object.fromEntries(new FormData(this.el.querySelector("form"))) : {}
-      if (event) this.pushEvent(event, values)
+      // pushEventTo the dialog itself reaches the LiveView or component it's in; a hook's
+      // pushEvent always reaches the LiveView, whatever its phx-target says.
+      if (event) this.pushEventTo(this.el, event, values)
     })
     this.el.showModal()
     const field = this.el.querySelector("[data-part=fields] input:not([type=hidden])")

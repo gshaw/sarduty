@@ -457,41 +457,44 @@ defmodule Web.ActivityLive do
   attr :activity, :map, required: true
   attr :maps_app, :string, required: true
 
-  # The address and the latitude and longitude, each with a copy button. The map link goes
-  # on the latitude and longitude, which pin the exact spot.
+  # Place: the address, then the latitude and longitude, each on its line with a copy
+  # button, and one map link: to the latitude and longitude when there are some, since they
+  # pin the exact spot, otherwise to the address.
   defp place(assigns) do
+    assigns = assign(assigns, pin: Activity.pin(assigns.activity))
+
     ~H"""
-    <div :if={@activity.address}>
-      <dt>Address</dt>
+    <div :if={@activity.address || @pin}>
+      <dt>Place</dt>
       <dd>
-        <.copy_button
-          text={@activity.address}
-          id="activity-copy-address"
-          value={@activity.address}
-          label="Copy address"
+        <span :if={@activity.address} class="block">
+          <.copy_button
+            text={@activity.address}
+            id="activity-copy-address"
+            value={@activity.address}
+            label="Copy address"
+          />
+        </span>
+        <span :if={@pin} class="block">
+          <.copy_button
+            text={@activity.coordinate}
+            id="activity-copy-coordinate"
+            value={@activity.coordinate}
+            label="Copy latitude and longitude"
+          />
+        </span>
+        <.open_in_maps
+          :if={@pin}
+          id="activity-maps"
+          app={@maps_app}
+          coordinate={@pin}
+          label={@activity.title}
         />
         <.open_in_maps
-          :if={!Activity.pin(@activity)}
+          :if={!@pin}
           id="activity-maps"
           app={@maps_app}
           address={@activity.address}
-        />
-      </dd>
-    </div>
-    <div :if={Activity.pin(@activity)}>
-      <dt>Latitude and longitude</dt>
-      <dd>
-        <.copy_button
-          text={@activity.coordinate}
-          id="activity-copy-coordinate"
-          value={@activity.coordinate}
-          label="Copy latitude and longitude"
-        />
-        <.open_in_maps
-          id="activity-maps"
-          app={@maps_app}
-          coordinate={Activity.pin(@activity)}
-          label={@activity.title}
         />
       </dd>
     </div>

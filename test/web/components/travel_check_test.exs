@@ -69,7 +69,7 @@ defmodule Web.Components.TravelCheckTest do
     lv = open(ctx)
 
     assert lv |> element("#activity-your-travel") |> render() =~
-             "Alex Chen set it: drove to the ICP, 62 km there and back from home."
+             "Alex Chen set it: drove to the ICP, 62 km round trip."
 
     lv |> element("#activity-your-travel-right-#{ctx.trip.d4h_attendance_id}") |> render_click()
 
@@ -77,7 +77,7 @@ defmodule Web.Components.TravelCheckTest do
     assert trip().checked_at
 
     assert lv |> element("#activity-your-travel") |> render() =~
-             "Drove to the ICP, 62 km there and back from home. Checked."
+             "Drove to the ICP, 62 km round trip. Confirmed."
   end
 
   test "Change offers the four choices with the member's own km, and saves theirs", ctx do
@@ -96,14 +96,14 @@ defmodule Web.Components.TravelCheckTest do
     assert %Trip{travel: "other", km: 140, checked_at: %DateTime{}} = trip()
   end
 
-  test "the Dashboard asks until it's checked", ctx do
+  test "the Dashboard asks until it's confirmed", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
 
     assert lv |> element("#to-do-travel-#{ctx.activity.id}") |> render() =~
-             "Check your travel for Missing hiker"
+             "Confirm your travel for Missing hiker"
 
     assert lv |> element("#to-do-travel-#{ctx.activity.id}") |> render() =~
-             "Drove to the ICP, 62 km."
+             "Drove to the ICP, 62 km round trip."
 
     Trip.check!(trip(), DateTime.utc_now())
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
@@ -115,7 +115,7 @@ defmodule Web.Components.TravelCheckTest do
     lv = open(ctx)
 
     assert lv |> element("#activity-your-travel") |> render() =~
-             "Published, so travel can&#39;t be changed."
+             "Published, so travel cannot be changed."
 
     refute has_element?(lv, "#activity-your-travel-right-#{ctx.trip.d4h_attendance_id}")
 

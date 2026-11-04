@@ -85,12 +85,12 @@ defmodule Web.Components.ActivityPanel do
   end
 
   defp starts(started_at, now, timezone) do
-    days = Date.diff(local_date(started_at, timezone), local_date(now, timezone))
+    days = started_at |> local_date(timezone) |> Date.diff(local_date(now, timezone))
 
     cond do
       DateTime.diff(started_at, now) < 24 * 60 * 60 -> Format.starts_in(started_at, now)
       days == 1 -> "tomorrow"
-      true -> "in #{days} days"
+      true -> Format.count(days, one: "in %d day", many: "in %d days")
     end
   end
 

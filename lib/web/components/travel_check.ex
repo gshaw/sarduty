@@ -12,6 +12,8 @@ defmodule Web.Components.TravelCheck do
   """
   use Web, :live_component
 
+  import Web.Components.TravelChoices, only: [travel_choices: 1]
+
   import Ecto.Query
 
   alias App.Model.Activity
@@ -30,7 +32,7 @@ defmodule Web.Components.TravelCheck do
      socket
      |> assign(assigns)
      |> assign_new(:changing, fn -> nil end)
-     |> assign_new(:choices, fn -> [] end)
+     |> assign_new(:routes, fn -> nil end)
      |> load()}
   end
 
@@ -66,7 +68,7 @@ defmodule Web.Components.TravelCheck do
     %{team: team, activity: activity, member: member} = socket.assigns
     report = BuildMileageReport.call(team, activity, DateTime.utc_now(), member: member)
     row = Enum.find(report.rows, &(to_string(&1.attendance.d4h_attendance_id) == id))
-    {:noreply, assign(socket, changing: id, choices: choices(row))}
+    {:noreply, assign(socket, changing: id, routes: row || %{activity_km: nil, yard_km: nil})}
   end
 
   def handle_event("cancel", _params, socket), do: {:noreply, assign(socket, changing: nil)}
@@ -101,17 +103,6 @@ defmodule Web.Components.TravelCheck do
     end
   end
 
-  # The four choices, each with its km: nil for a route Mapbox found none for.
-  defp choices(nil), do: []
-
-  defp choices(row) do
-    [
-      {"icp", "Drove to the ICP", row.activity_km},
-      {"yard", "Drove to the yard", row.yard_km},
-      {"passenger", "Passenger", 0}
-    ]
-  end
-
   def render(assigns) do
     ~H"""
     <section id={@id}>
@@ -127,36 +118,14 @@ defmodule Web.Components.TravelCheck do
               phx-target={@myself}
             >
               <input type="hidden" name="row" value={row.id} />
-              <fieldset>
-                <legend>{day(row, @rows, @team)}How did you get there?</legend>
-                <label :for={{travel, text, km} <- @choices} class="choice">
-                  <input
-                    type="radio"
-                    name="travel"
-                    value={travel}
-                    checked={travel(row) == travel}
-                    disabled={is_nil(km)}
-                  />
-                  {text}, {if km, do: Format.km(km), else: "no route"}
-                </label>
-                <label class="choice">
-                  <input
-                    type="radio"
-                    name="travel"
-                    value="other"
-                    checked={travel(row) == "other"}
-                  /> Other
-                  <input
-                    type="number"
-                    name="km"
-                    min="0"
-                    step="1"
-                    class="w-16"
-                    value={if travel(row) == "other", do: row.trip.km}
-                    aria-label="km"
-                  /> km
-                </label>
-              </fieldset>
+              <.travel_choices
+                id={"#{@id}-#{row.id}"}
+                legend={"#{day(row, @rows, @team)}How did you get there?"}
+                hint="Round trips from home."
+                routes={@routes}
+                current={travel(row)}
+                km={row.trip && row.trip.km}
+              />
               <.form_actions>
                 <.button id={"#{@id}-save"} variant={:primary} phx-disable-with="Saving…">
                   Save travel
@@ -168,7 +137,7 @@ defmodule Web.Components.TravelCheck do
             </.form>
           <% else %>
             <p class="mb-2">{day(row, @rows, @team)}{sentence(row, @team, @now)}</p>
-            <p :if={@locked?} class="hint">Published, so travel can't be changed.</p>
+            <p :if={@locked?} class="hint">Published, so travel cannot be changed.</p>
             <div :if={!@locked?} class="flex flex-wrap gap-2">
               <.button
                 :if={row.trip && !row.trip.checked_at}
@@ -214,8 +183,7 @@ defmodule Web.Components.TravelCheck do
     do: "#{setter(trip, team, now)} set it: #{how(trip)}."
 
   defp sentence(%{trip: trip}, _team, _now),
-    do:
-      "#{String.capitalize(String.first(how(trip)))}#{String.slice(how(trip), 1..-1//1)}. Checked."
+    do: "#{ActivityTravel.trip_sentence(trip)}. Confirmed."
 
   defp setter(trip, team, now),
     do: Member.name_for_user(team, trip.set_by_user, now) || "A team admin"

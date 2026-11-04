@@ -226,7 +226,7 @@ defmodule Web.ActivityFormLive do
     <section :if={@live_action == :edit && @travel} id="activity-travel" class="mt-8 measure">
       <h2 class="heading">Travel</h2>
       <p id="activity-travel-count">
-        {travel_text(@travel)} Travel can't be changed once the activity is published.
+        {travel_text(@travel)} Travel cannot be changed once the activity is published.
       </p>
       <p class="action">
         <.a

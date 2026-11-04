@@ -19,7 +19,7 @@ defmodule Web.TableColumnsTest do
     {"lib/web/live/activity_live.ex", "@started?"} =>
       "Start, Finish, and Hours: only an activity that started has times",
     {"lib/web/components/travel_tab.ex", "!@locked?"} =>
-      "the checkboxes set travel, and a published activity's travel can't change",
+      "the checkboxes set travel, and a published activity's travel cannot change",
     {"lib/web/live/chore_collection_live.ex", "@selected"} =>
       "the checkboxes accept chores, and only Waiting has them",
     {"lib/web/live/chore_collection_live.ex", "@category"} =>

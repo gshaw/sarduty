@@ -86,15 +86,35 @@ defmodule Web.ActivityTravelLiveTest do
     end
   end
 
-  defp set(lv, row_ids, travel, km \\ "") do
-    ids = Enum.map(row_ids, &to_string(&1.id))
-    lv |> form("#travel-form", %{"row_ids" => ids, "km" => km}) |> render_change()
-
+  # Picks a radio on each row, as a click does, then saves.
+  defp check(lv, rows) do
+    lv |> form("#travel-form", %{"row_ids" => ids(rows)}) |> render_change()
     lv
-    |> form("#travel-form", %{"row_ids" => ids, "km" => km})
-    |> render_submit(%{"travel" => travel})
+  end
 
+  defp ids(rows), do: Enum.map(rows, &to_string(&1.id))
+
+  # A row's Change, then the dialog's Save travel with `values`.
+  defp edit(lv, row, values) do
+    lv |> element("#travel-change-#{row.id}") |> render_click()
+    lv |> element("#travel-edit-dialog-#{row.id}") |> render_hook("save_travel", values)
     render_async(lv)
+    lv
+  end
+
+  # Checks the rows, presses the bar's Change, then the dialog's Save travel.
+  defp set(lv, rows, travel, km \\ "") do
+    check(lv, rows)
+    lv |> element("#travel-change-checked") |> render_click()
+
+    dialog =
+      if match?([_], rows),
+        do: "#travel-edit-dialog-#{hd(rows).id}",
+        else: "#travel-edit-dialog-checked"
+
+    lv |> element(dialog) |> render_hook("save_travel", %{"travel" => travel, "km" => km})
+    render_async(lv)
+    lv
   end
 
   describe "round trips (#230)" do
@@ -106,7 +126,7 @@ defmodule Web.ActivityTravelLiveTest do
       assert html =~ "Ann Smith"
       assert html =~ "50 km"
       assert html =~ "80 km"
-      assert html =~ "No home address in D4H. Type their km."
+      assert html =~ "No home address in D4H, so choose Other."
     end
 
     test "Mapbox is asked once: the next visit reads what was saved", ctx do
@@ -138,8 +158,8 @@ defmodule Web.ActivityTravelLiveTest do
 
       lv = open(ctx)
 
-      assert has_element?(lv, "#travel-not-set")
-      refute lv |> element("#travel-not-set") |> render() =~ ~r/\d km/
+      refute lv |> element("#travel-row-#{ctx.ann_row.id}") |> render() =~ ~r/\d km/
+      assert has_element?(lv, "#travel-row-#{ctx.ann_row.id}", "No route")
     end
   end
 
@@ -148,69 +168,157 @@ defmodule Web.ActivityTravelLiveTest do
       lv = open(ctx)
       set(lv, [ctx.ann_row], "icp")
 
-      assert render(lv) =~ "1 row set to ICP."
+      assert render(lv) =~ "Saved Ann Smith&#39;s travel."
       assert lv |> element(".tabs a", "Travel") |> render() =~ ~r/badge[^>]*>\s*1\s*</
-      assert lv |> element("#travel-set") |> render() =~ "Drove to the ICP"
-      assert lv |> element("#travel-set") |> render() =~ "50 km"
+      row = lv |> element("#travel-set #travel-row-#{ctx.ann_row.id}") |> render()
+      assert row =~ "Drove to the ICP"
+      assert row =~ "50 km"
+
+      html = lv |> element("#travel-form") |> render()
+      {set_at, _} = :binary.match(html, ~s(id="travel-set"))
+      {not_set_at, _} = :binary.match(html, ~s(id="travel-not-set"))
+      {bar_at, _} = :binary.match(html, ~s(id="travel-bar"))
+      assert set_at < not_set_at and not_set_at < bar_at
+      assert lv |> element("#travel-total") |> render() =~ "50 km in total"
+      assert has_element?(lv, "#travel-change-checked", "Change members")
 
       assert %Trip{travel: "icp", km: 50} =
                Repo.get_by!(Trip, d4h_attendance_id: ctx.ann_row.d4h_attendance_id)
     end
 
-    test "a row with no route is skipped, then typed km sets it", ctx do
+    test "Set comes first with its km in total, then Not set with the round trips", ctx do
+      lv = open(ctx)
+      ann = lv |> element("#travel-row-#{ctx.ann_row.id}") |> render()
+      assert has_element?(lv, "#travel-not-set #travel-row-#{ctx.ann_row.id}")
+      refute has_element?(lv, "#travel-set")
+      assert ann =~ "50 km"
+      assert ann =~ "80 km"
+      assert lv |> element("#travel-row-#{ctx.bob_row.id}") |> render() =~ "No route"
+    end
+
+    test "the bar's Change counts the checked members, and says to check some first", ctx do
+      lv = open(ctx)
+      lv |> element("#travel-change-checked") |> render_click()
+      assert render(lv) =~ "Check the members to change first."
+
+      check(lv, [ctx.ann_row, ctx.bob_row])
+      assert has_element?(lv, "#travel-change-checked", "Change 2 members")
+      lv |> element("#travel-change-checked") |> render_click()
+
+      dialog = lv |> element("#travel-edit-dialog-checked") |> render()
+      assert dialog =~ "2 members&#39; travel"
+      assert dialog =~ "Each member&#39;s own round trip from home."
+      assert dialog =~ ~s(value="clear")
+      assert Repo.all(Trip) == []
+    end
+
+    test "a row with no route is skipped, then Other sets it", ctx do
       lv = open(ctx)
       set(lv, [ctx.ann_row, ctx.bob_row], "yard")
 
       # The toast's first sentence is its title.
-      assert render(lv) =~ "1 row set to yard."
-      assert render(lv) =~ "No route from Bob Jones&#39;s home to the yard, so type their km."
-      assert lv |> element("#travel-not-set") |> render() =~ "Bob Jones"
+      assert render(lv) =~ "Saved Ann Smith&#39;s travel."
+      assert render(lv) =~ "No route to the yard for Bob Jones, so nothing changed for them."
+      refute has_element?(lv, ".toast-error", "Saved Ann Smith")
 
       set(lv, [ctx.bob_row], "other", "140")
 
-      assert render(lv) =~ "1 row set to 140 km."
-      refute has_element?(lv, "#travel-not-set")
+      assert render(lv) =~ "Saved Bob Jones&#39;s travel."
 
       assert %Trip{travel: "other", km: 140} =
                Repo.get_by!(Trip, d4h_attendance_id: ctx.bob_row.d4h_attendance_id)
     end
 
-    test "one list of how they got there, and one button that counts the checked rows",
-         ctx do
+    test "Cancel keeps the rows checked, and one checked row is its own dialog", ctx do
       lv = open(ctx)
-      assert has_element?(lv, "#travel-set-rows[disabled]", "Set rows")
-      assert has_element?(lv, "#travel-choice-icp", "Drove to the ICP")
-      assert has_element?(lv, "#travel-choice-clear", "Not set")
+      check(lv, [ctx.ann_row, ctx.bob_row])
+      lv |> element("#travel-change-checked") |> render_click()
+      lv |> element("#travel-edit-dialog-checked") |> render_hook("cancel_edit", %{})
+      refute has_element?(lv, "#travel-edit-dialog-checked")
+      assert has_element?(lv, "#travel-change-checked", "Change 2 members")
 
-      ids = [to_string(ctx.ann_row.id), to_string(ctx.bob_row.id)]
-      lv |> form("#travel-form", %{"row_ids" => ids}) |> render_change()
-      assert has_element?(lv, "#travel-set-rows[disabled]", "Set 2 rows")
-
-      lv |> form("#travel-form", %{"row_ids" => ids, "travel" => "icp"}) |> render_change()
-      refute has_element?(lv, "#travel-set-rows[disabled]")
-
-      # Other waits for its km.
-      lv |> form("#travel-form", %{"row_ids" => ids, "travel" => "other"}) |> render_change()
-      assert has_element?(lv, "#travel-set-rows[disabled]")
-
-      lv
-      |> form("#travel-form", %{"row_ids" => ids, "travel" => "other", "km" => "90"})
-      |> render_change()
-
-      refute has_element?(lv, "#travel-set-rows[disabled]")
+      check(lv, [ctx.ann_row])
+      lv |> element("#travel-change-checked") |> render_click()
+      assert lv |> element("#travel-edit-dialog-#{ctx.ann_row.id}") |> render() =~ "Not set"
     end
 
-    test "Set comes first with its km in total, then Not set next to the choices", ctx do
+    test "a bad km from the dialog is refused, and the toast says so", ctx do
       lv = open(ctx)
-      set(lv, [ctx.ann_row], "icp")
+      set(lv, [ctx.ann_row], "other", "-2")
 
-      assert lv |> element("#travel-total") |> render() =~ "50 km in total"
+      assert render(lv) =~ "Type the km as a whole number, such as 140."
+      assert Repo.all(Trip) == []
+    end
 
-      html = lv |> element("#travel-form") |> render()
-      {set_at, _} = :binary.match(html, ~s(id="travel-set"))
-      {not_set_at, _} = :binary.match(html, ~s(id="travel-not-set"))
-      {how_at, _} = :binary.match(html, ~s(id="travel-how"))
-      assert set_at < not_set_at and not_set_at < how_at
+    test "Not set clears one row from its Change, or every checked row together", ctx do
+      lv = open(ctx)
+      set(lv, [ctx.ann_row, ctx.bob_row], "passenger")
+      edit(lv, ctx.ann_row, %{"travel" => "clear"})
+
+      assert render(lv) =~ "Cleared Ann Smith&#39;s travel."
+      assert has_element?(lv, "#travel-not-set #travel-row-#{ctx.ann_row.id}")
+      assert [%Trip{member_id: bob_id}] = Repo.all(Trip)
+      assert bob_id == ctx.bob_row.member_id
+
+      set(lv, [ctx.ann_row, ctx.bob_row], "clear")
+      assert render(lv) =~ "Cleared Bob Jones&#39;s travel."
+      assert Repo.all(Trip) == []
+    end
+
+    test "saving what's there already changes nothing, so a confirm stands", ctx do
+      lv = open(ctx)
+      set(lv, [ctx.ann_row, ctx.bob_row], "passenger")
+      Repo.update_all(Trip, set: [checked_at: DateTime.utc_now() |> DateTime.truncate(:second)])
+
+      set(lv, [ctx.ann_row, ctx.bob_row], "passenger")
+      assert render(lv) =~ "Nothing changed."
+      trips = Repo.all(Trip)
+      assert Enum.all?(trips, & &1.checked_at)
+
+      set(lv, [ctx.ann_row, ctx.bob_row], "other", "30")
+      assert render(lv) =~ "Saved 2 members&#39; travel."
+      trips = Repo.all(Trip)
+      assert Enum.all?(trips, &(&1.km == 30 and is_nil(&1.checked_at)))
+    end
+
+    test "a row's Change offers every way, starts on what's saved, and saves one row", ctx do
+      lv = open(ctx)
+      set(lv, [ctx.ann_row], "passenger")
+      lv |> element("#travel-change-#{ctx.ann_row.id}") |> render_click()
+
+      dialog = lv |> element("#travel-edit-dialog-#{ctx.ann_row.id}") |> render()
+      assert dialog =~ "Ann Smith&#39;s travel"
+      assert dialog =~ "Drove to the ICP, 50 km"
+      assert dialog =~ "Drove to the yard, 80 km"
+      assert dialog =~ "Not set"
+
+      assert has_element?(
+               lv,
+               ~s(#travel-edit-dialog-#{ctx.ann_row.id} input[value="passenger"][checked])
+             )
+
+      lv
+      |> element("#travel-edit-dialog-#{ctx.ann_row.id}")
+      |> render_hook("save_travel", %{"travel" => "other", "km" => "75"})
+
+      render_async(lv)
+      assert render(lv) =~ "Saved Ann Smith&#39;s travel."
+      assert %Trip{travel: "other", km: 75} = Repo.one!(Trip)
+      refute has_element?(lv, "#travel-edit-dialog-#{ctx.ann_row.id}")
+    end
+
+    test "a row's Change turns off the ways with no route, and an unchanged save does nothing",
+         ctx do
+      lv = open(ctx)
+      lv |> element("#travel-change-#{ctx.bob_row.id}") |> render_click()
+      dialog = "#travel-edit-dialog-#{ctx.bob_row.id}"
+      assert has_element?(lv, ~s(#{dialog} input[value="icp"][disabled]))
+      assert lv |> element(dialog) |> render() =~ "Drove to the yard, no route"
+
+      lv |> element(dialog) |> render_hook("save_travel", %{"travel" => "clear"})
+      render_async(lv)
+      assert Repo.all(Trip) == []
+      assert render(lv) =~ "Nothing changed."
     end
 
     test "the copy for D4H is folded away, names the activity, and lists the rows set", ctx do
@@ -227,35 +335,19 @@ defmodule Web.ActivityTravelLiveTest do
       assert prompt =~ "Leave the Mileage km box alone on these rows:\nBob Jones | "
     end
 
-    test "Clear takes the checked rows' travel away, back to not set", ctx do
-      lv = open(ctx)
-      set(lv, [ctx.ann_row, ctx.bob_row], "passenger")
-      ids = [to_string(ctx.ann_row.id)]
-      lv |> form("#travel-form", %{"row_ids" => ids, "travel" => "clear"}) |> render_change()
-
-      refute has_element?(lv, "#travel-set-rows[disabled]")
-
-      set(lv, [ctx.ann_row], "clear")
-
-      assert render(lv) =~ "1 row cleared."
-      assert lv |> element("#travel-not-set") |> render() =~ "Ann Smith"
-      assert [%Trip{member_id: bob_id}] = Repo.all(Trip)
-      assert bob_id == ctx.bob_row.member_id
-    end
-
     test "a published activity's travel can't change", ctx do
       ctx.activity |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
       lv = open(ctx)
 
       assert has_element?(lv, "#travel-locked")
-      refute has_element?(lv, "#travel-how")
+      refute has_element?(lv, "#travel-bar")
       refute has_element?(lv, "#travel-select-#{ctx.ann_row.id}")
 
       lv
       |> form("#travel-form")
       |> render_submit(%{"travel" => "icp", "row_ids" => [to_string(ctx.ann_row.id)]})
 
-      assert render(lv) =~ "Published, so travel can&#39;t be changed."
+      assert render(lv) =~ "Published, so travel cannot be changed."
       assert Repo.all(Trip) == []
     end
   end
@@ -277,7 +369,9 @@ defmodule Web.ActivityTravelLiveTest do
       |> render_submit()
 
       render_async(lv)
-      assert lv |> element("#travel-set #travel-row-#{ctx.my_row.id}") |> render() =~ "12 km"
+      row = lv |> element("#travel-row-#{ctx.my_row.id}") |> render()
+      assert row =~ "Other"
+      assert row =~ "12 km"
     end
 
     test "the table's save shows in Your travel", ctx do
@@ -286,7 +380,7 @@ defmodule Web.ActivityTravelLiveTest do
 
       set(lv, [ctx.my_row], "other", "12")
 
-      assert lv |> element("#activity-your-travel") |> render() =~ "12 km there and back"
+      assert lv |> element("#activity-your-travel") |> render() =~ "12 km round trip"
     end
   end
 
@@ -356,7 +450,7 @@ defmodule Web.ActivityTravelLiveTest do
 
       text = lv |> element("#activity-travel-count") |> render()
       assert text =~ "2 of 2 attendance rows"
-      assert text =~ "Travel can&#39;t be changed once the activity is published."
+      assert text =~ "Travel cannot be changed once the activity is published."
     end
 
     test "an absent row has no travel", ctx do
@@ -366,8 +460,8 @@ defmodule Web.ActivityTravelLiveTest do
     end
   end
 
-  # Members check (#230): Ann's travel is set, and Bob's isn't.
-  describe "Members check" do
+  # Members confirm (#230): Ann's travel is set, and Bob's isn't.
+  describe "Members confirm" do
     setup ctx do
       team = ctx.team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
 
@@ -389,8 +483,8 @@ defmodule Web.ActivityTravelLiveTest do
       lv = open(ctx)
       text = lv |> element("#travel-checked") |> render()
 
-      assert text =~ "Members can check theirs before you publish"
-      assert text =~ "0 of 1 member have checked."
+      assert text =~ "Members can confirm theirs before you publish"
+      assert text =~ "0 of 1 member have confirmed."
       refute has_element?(lv, "#travel-ask")
     end
 

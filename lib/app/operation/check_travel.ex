@@ -1,9 +1,10 @@
 defmodule App.Operation.CheckTravel do
   @moduledoc """
-  A member checks the travel a team admin set for one of their attended rows (#230):
-  That's right marks it checked, or they set it themselves, the same four ways as on
-  Travel, which is also how they set a row nobody has. Either way it counts as checked. Like the team admin's sets, it can't change
-  once the activity is published.
+  A member confirms the travel a team admin set for one of their attended rows (#230):
+  That's right marks it confirmed (`checked_at`), or they set it themselves, the same
+  four ways as on Travel, which is also how they set a row nobody has. Either way it
+  counts as confirmed. Like the team admin's sets, it can't change once the activity is
+  published.
   """
 
   alias App.Model.Activity
@@ -47,6 +48,8 @@ defmodule App.Operation.CheckTravel do
     rows = Enum.filter(report.rows, &(&1.attendance.d4h_attendance_id == d4h_attendance_id))
     ids = Enum.map(rows, & &1.attendance.id)
 
+    # The report's rows carry no trip, so none is unchanged: saving the same travel again
+    # still confirms it. No sets means no route.
     case SetTravel.plan(rows, ids, travel, km_text) do
       {:ok, %{sets: []}} ->
         {:error, :no_route}

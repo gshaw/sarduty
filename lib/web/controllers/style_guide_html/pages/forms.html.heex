@@ -154,6 +154,16 @@
         {"Board work", "2", "Meetings, minutes, and the AGM"}
       ]}
     />
+    <fieldset>
+      <legend>How they got there</legend>
+      <label class="choice">
+        <input type="radio" name="e-way" value="icp" checked /> Drove to the ICP, 54 km
+      </label>
+      <label class="choice">
+        <input type="radio" name="e-way" value="yard" disabled /> Drove to the yard, no route
+      </label>
+      <label class="choice"><input type="radio" name="e-way" value="passenger" /> Passenger, 0 km</label>
+    </fieldset>
   </div>
 
   <p class="spec">
@@ -161,7 +171,7 @@
     with <code>options</code>
     as <code>&lbrace;label, value&rbrace;</code>, or
     <code>&lbrace;label, value, hint&rbrace;</code>
-    for a line saying what a choice covers. One answer, every choice in view. Its error shows after a failed save even when nothing is picked, since a form sends nothing for radios none of which is checked. Log a chore's categories use it.
+    for a line saying what a choice covers. One answer, every choice in view. Its error shows after a failed save even when nothing is picked, since a form sends nothing for radios none of which is checked. Log a chore's categories use it. A choice that can't be picked stays in the list, greyed with its label, and the label says why, such as "no route": hiding it would leave people wondering where it went.
   </p>
 
   <h2 id="below">Under the box</h2>
