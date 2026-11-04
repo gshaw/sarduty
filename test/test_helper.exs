@@ -1,6 +1,8 @@
 # Code under test logs warnings on purpose (failed syncs, rate limits). Keep them for
-# the failure report instead of between the dots.
-ExUnit.start(capture_log: true)
+# the failure report instead of between the dots. CI prints a line per test module so
+# GitHub's log shows progress; locally it's dots.
+formatter = if System.get_env("CI"), do: App.LineFormatter, else: ExUnit.CLIFormatter
+ExUnit.start(capture_log: true, formatters: [formatter])
 Ecto.Adapters.SQL.Sandbox.mode(App.Repo, :manual)
 
 # Team logos go to a scratch directory, never the developer's own.
