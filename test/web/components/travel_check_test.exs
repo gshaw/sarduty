@@ -20,7 +20,14 @@ defmodule Web.Components.TravelCheckTest do
     alex = manager_fixture(team, %{name: "Alex Chen"})
     alex_user = AccountsFixtures.user_fixture(%{email: alex.email})
     started_at = DateTime.utc_now() |> DateTime.add(-3, :day) |> DateTime.truncate(:second)
-    activity = activity_fixture(team, %{title: "Missing hiker", started_at: started_at})
+
+    activity =
+      activity_fixture(team, %{
+        title: "Missing hiker",
+        activity_kind: "incident",
+        started_at: started_at
+      })
+
     row = attendance_fixture(activity, cameron)
 
     trip =
@@ -69,7 +76,7 @@ defmodule Web.Components.TravelCheckTest do
     lv = open(ctx)
 
     assert lv |> element("#activity-your-travel") |> render() =~
-             "Alex Chen set it: drove to the ICP, 62 km there and back from home."
+             "Alex Chen set it: drove to the ICP, 62 km round trip."
 
     lv |> element("#activity-your-travel-right-#{ctx.trip.d4h_attendance_id}") |> render_click()
 
@@ -77,7 +84,7 @@ defmodule Web.Components.TravelCheckTest do
     assert trip().checked_at
 
     assert lv |> element("#activity-your-travel") |> render() =~
-             "Drove to the ICP, 62 km there and back from home. Checked."
+             "Drove to the ICP, 62 km round trip. Confirmed."
   end
 
   test "Change offers the four choices with the member's own km, and saves theirs", ctx do
@@ -96,14 +103,14 @@ defmodule Web.Components.TravelCheckTest do
     assert %Trip{travel: "other", km: 140, checked_at: %DateTime{}} = trip()
   end
 
-  test "the Dashboard asks until it's checked", ctx do
+  test "the Dashboard asks until it's confirmed", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
 
     assert lv |> element("#to-do-travel-#{ctx.activity.id}") |> render() =~
-             "Check your travel for Missing hiker"
+             "Confirm your travel for Missing hiker"
 
     assert lv |> element("#to-do-travel-#{ctx.activity.id}") |> render() =~
-             "Drove to the ICP, 62 km."
+             "Drove to the ICP, 62 km round trip."
 
     Trip.check!(trip(), DateTime.utc_now())
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
@@ -115,12 +122,73 @@ defmodule Web.Components.TravelCheckTest do
     lv = open(ctx)
 
     assert lv |> element("#activity-your-travel") |> render() =~
-             "Published, so travel can&#39;t be changed."
+             "Published, so travel cannot be changed."
 
     refute has_element?(lv, "#activity-your-travel-right-#{ctx.trip.d4h_attendance_id}")
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
     refute has_element?(lv, "#to-do-travel-#{ctx.activity.id}")
+  end
+
+  test "with nothing set, the member sets it, and the Dashboard asks until then", ctx do
+    Repo.delete!(ctx.trip)
+    id = ctx.trip.d4h_attendance_id
+    finished = DateTime.utc_now() |> DateTime.add(-1, :hour) |> DateTime.truncate(:second)
+    ctx.activity |> Ecto.Changeset.change(finished_at: finished) |> Repo.update!()
+
+    {:ok, dashboard, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
+
+    assert dashboard |> element("#to-do-travel-#{ctx.activity.id}") |> render() =~
+             "Set your travel for Missing hiker"
+
+    lv = open(ctx)
+    assert lv |> element("#activity-your-travel") |> render() =~ "Not set yet."
+    refute has_element?(lv, "#activity-your-travel-right-#{id}")
+
+    lv |> element("#activity-your-travel-change-#{id}", "Set travel") |> render_click()
+    lv |> form("#activity-your-travel-form", %{"travel" => "yard"}) |> render_submit()
+
+    assert %Trip{travel: "yard", km: 30, checked_at: %DateTime{}} = trip()
+
+    {:ok, dashboard, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
+    refute has_element?(dashboard, "#to-do-travel-#{ctx.activity.id}")
+  end
+
+  test "with nothing set and published, there's nothing to show or ask", ctx do
+    Repo.delete!(ctx.trip)
+    ctx.activity |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
+
+    refute has_element?(open(ctx), "#activity-your-travel-#{ctx.trip.d4h_attendance_id}")
+
+    {:ok, dashboard, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
+    refute has_element?(dashboard, "#to-do-travel-#{ctx.activity.id}")
+  end
+
+  test "an exercise, or a team with Travel off, has no Your travel and no to-do", ctx do
+    ctx.activity |> Ecto.Changeset.change(activity_kind: "exercise") |> Repo.update!()
+    refute has_element?(open(ctx), "#activity-your-travel")
+    {:ok, dashboard, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
+    refute has_element?(dashboard, "#to-do-travel-#{ctx.activity.id}")
+
+    ctx.activity |> Ecto.Changeset.change(activity_kind: "incident") |> Repo.update!()
+    ctx.team |> Ecto.Changeset.change(travel_enabled: false) |> Repo.update!()
+    refute has_element?(open(ctx), "#activity-your-travel")
+    {:ok, dashboard, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
+    refute has_element?(dashboard, "#to-do-travel-#{ctx.activity.id}")
+  end
+
+  test "the Dashboard leaves out drafts that finished over 30 days ago", ctx do
+    Repo.delete!(ctx.trip)
+    long_ago = DateTime.utc_now() |> DateTime.add(-40, :day) |> DateTime.truncate(:second)
+
+    ctx.activity
+    |> Ecto.Changeset.change(started_at: long_ago, finished_at: DateTime.add(long_ago, 1, :hour))
+    |> Repo.update!()
+
+    Repo.update_all(Attendance, set: [started_at: long_ago])
+
+    {:ok, dashboard, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
+    refute has_element?(dashboard, "#to-do-travel-#{ctx.activity.id}")
   end
 
   test "a team admin viewing as the member saves nothing", ctx do

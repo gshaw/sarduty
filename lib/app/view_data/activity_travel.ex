@@ -1,7 +1,7 @@
 defmodule App.ViewData.ActivityTravel do
   @moduledoc """
   An activity's Travel page (#230): each attended row's round trips from the mileage
-  report, with the trip a team admin set for it, if any. Rows not set come first.
+  report, with the trip set for it, if any, split into the rows set and not set.
 
   d4h_prompt/3 writes the text a browser agent such as Claude in Chrome reads to type
   the km into D4H's mileage page, from what's saved: D4H's API has no mileage.
@@ -60,15 +60,17 @@ defmodule App.ViewData.ActivityTravel do
   def travel_text("passenger"), do: "Passenger"
   def travel_text("other"), do: "Other"
 
-  @doc ~s(A trip in a sentence: "drove to the ICP, 62 km there and back from home".)
-  def trip_text(%{travel: "icp", km: km}),
-    do: "drove to the ICP, #{Format.km(km)} there and back from home"
-
-  def trip_text(%{travel: "yard", km: km}),
-    do: "drove to the yard, #{Format.km(km)} there and back from home"
-
+  @doc ~s(A trip in a sentence: "drove to the ICP, 62 km round trip".)
+  def trip_text(%{travel: "icp", km: km}), do: "drove to the ICP, #{Format.km(km)} round trip"
+  def trip_text(%{travel: "yard", km: km}), do: "drove to the yard, #{Format.km(km)} round trip"
   def trip_text(%{travel: "passenger"}), do: "a passenger, #{Format.km(0)}"
-  def trip_text(%{travel: "other", km: km}), do: "#{Format.km(km)} there and back"
+  def trip_text(%{travel: "other", km: km}), do: "#{Format.km(km)} round trip"
+
+  @doc ~s(trip_text/1 starting a sentence: "Drove to the ICP, 62 km round trip".)
+  def trip_sentence(trip) do
+    {first, rest} = trip |> trip_text() |> String.split_at(1)
+    String.upcase(first) <> rest
+  end
 
   @doc """
   What to paste into a browser agent with D4H's mileage page open: the activity by its

@@ -43,6 +43,7 @@ defmodule App.DataFixtures do
     # On, like a team that uses them; each is off on a new team.
     {id_cards_enabled, attrs} = Map.pop(attrs, :id_cards_enabled, true)
     {whiteboard_enabled, attrs} = Map.pop(attrs, :whiteboard_enabled, true)
+    {travel_enabled, attrs} = Map.pop(attrs, :travel_enabled, true)
 
     name = Map.get(attrs, :name, "Team #{unique}")
 
@@ -67,7 +68,8 @@ defmodule App.DataFixtures do
     |> Team.insert!()
     |> Ecto.Changeset.change(
       id_cards_enabled: id_cards_enabled,
-      whiteboard_enabled: whiteboard_enabled
+      whiteboard_enabled: whiteboard_enabled,
+      travel_enabled: travel_enabled
     )
     |> Repo.update!()
   end

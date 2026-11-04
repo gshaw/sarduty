@@ -254,7 +254,8 @@ defmodule Web.Components.Messages do
             {@alt}
           </.button>
           <.button variant={@variant} value="confirm" disabled={@locked}>{@action}</.button>
-          <.button value="cancel">Cancel</.button>
+          <%!-- formnovalidate: Cancel closes even while a field the answer needs is empty. --%>
+          <.button value="cancel" formnovalidate>Cancel</.button>
         </div>
       </form>
     </dialog>

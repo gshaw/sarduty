@@ -21,6 +21,10 @@ Then `mise run server` and open <https://sarduty.test>.
 ## Tasks
 
 - `mise run server` starts the dev server; `iex -S mix phx.server` starts it inside IEx.
+  `tools/dev-server.sh` serves a worktree the same way, on the main checkout's database.
+- `mix run --no-start tools/dev-sar.exs` adds Dev SAR, the made-up Coast Range cast with
+  the site admins as team admins, to try a branch on without touching a real team's data.
+  `--reset` seeds it again with today's dates.
 - `mise run check` formats, compiles, lints, and spell-checks.
 - `mise run test` runs the tests; `mise run ci` runs checks and tests. Run it before
   pushing.

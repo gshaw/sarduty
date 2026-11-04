@@ -99,7 +99,7 @@ defmodule Web.TeamScopingTest do
     endorsement = endorsement_fixture(other_team)
 
     other = %{
-      activity: activity_fixture(other_team),
+      activity: activity_fixture(other_team, %{activity_kind: "incident"}),
       member: member,
       group: group,
       rule: group_rule_fixture(group, endorsement),

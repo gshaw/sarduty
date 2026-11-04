@@ -306,6 +306,7 @@ defmodule App.CoastRange do
       certificates_enabled: true,
       id_cards_enabled: true,
       whiteboard_enabled: true,
+      travel_enabled: true,
       retiring_d4h_group_id: 9_500_005,
       d4h_synced_at: usec(now),
       d4h_refreshed_at: usec(now)
@@ -665,11 +666,18 @@ defmodule App.CoastRange do
   end
 
   # spread over the mountains north of the base, the same every run.
-  defp incident_place(n) do
-    lat = 49.3 + rem(n * 37, 40) / 100
-    lng = -123.35 + rem(n * 53, 90) / 100
-    :io_lib.format("~.5f,~.5f", [lat, lng]) |> IO.iodata_to_binary()
-  end
+  # Trail country on land, never water: Grouse, Lynn Headwaters, Mount Seymour, Cypress,
+  # Burnaby Mountain, and Burke Mountain. The newest incident, Missing hiker, is Grouse.
+  @incident_places [
+    "49.38000,-123.08000",
+    "49.38500,-123.02500",
+    "49.36600,-122.94800",
+    "49.39500,-123.20000",
+    "49.27800,-122.91700",
+    "49.32000,-122.73000"
+  ]
+
+  defp incident_place(n), do: Enum.at(@incident_places, rem(n, length(@incident_places)))
 
   defp event_tags("Annual general meeting"), do: ["Secondary Hours"]
   defp event_tags(_title), do: ["Secondary Hours", "Public education"]

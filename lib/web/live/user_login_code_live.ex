@@ -103,9 +103,6 @@ defmodule Web.UserLoginCodeLive do
           No email after a few minutes? Check your spam folder. Codes go only to team admins,
           and to members when their team turns on member logins, at the email D4H has for them.
         </p>
-        <p :if={Web.Layouts.dev_mailbox?()} id="login-dev-mailbox">
-          In development the email is in the <.a href="/dev/mailbox" external={true}>local mailbox</.a>.
-        </p>
         <p class="action">
           <.a id="login-again" navigate={~p"/login"}>Use a different email</.a>
         </p>

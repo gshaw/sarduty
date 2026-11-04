@@ -54,6 +54,10 @@ defmodule Web.StandardColumnsTest do
       "a table per reply, each headed by the reply",
     {"lib/web/live/activity_remove_members_live.ex", "{Reply.status_text(status, false)}"} =>
       "a table per reply, each headed by the reply",
+    {"lib/web/components/travel_tab.ex", "Set"} =>
+      "Travel's two tables, each headed by whether its rows are set",
+    {"lib/web/components/travel_tab.ex", "Not set"} =>
+      "Travel's two tables, each headed by whether its rows are set",
     {"lib/web/controllers/style_guide_html/pages/table.html.heex", "Looks like"} =>
       "the style guide's list of the standard columns, one of each"
   }

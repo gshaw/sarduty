@@ -10,6 +10,9 @@
   .choice { display: flex; align-items: baseline; gap: var(--sp-2); margin-block: var(--sp-1); cursor: pointer; }
   .choice > input { align-self: flex-start; margin-top: calc((1lh - 24px) / 2); }
   td .choice > input[type="checkbox"] { margin-top: calc((1lh - 16px) / 2); }
+  /* A choice that can't be picked greys its label as well as its box, so the reason in
+     the label reads as why. */
+  .choice:has(> input:disabled) { color: var(--text-muted); cursor: not-allowed; }
 
   @media (pointer: coarse) {
     td .choice > input[type="checkbox"] { margin-top: calc((1lh - 24px) / 2); }

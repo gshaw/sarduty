@@ -12,34 +12,48 @@ defmodule App.ViewData.MemberToDo do
   - `:declined_chores`: their declined chores (#341), until they delete them.
   - `:declined_certificates`: their declined certificates (#493), until they delete them.
   - `:travel`: each activity whose travel a team admin set for them (#230), until they
-    check it or the activity is published.
+    check it, or that they attended with no travel set, until they set it. Either way
+    only until the activity is published.
   """
 
   @doc """
   Items in that order. `card` is the member's current card or nil, `letters` their tax
   credit letters, and `rows` their qualifications from `MemberRecords.qualification_rows/2`.
   `extras` may hold `chores:` their chores, `certificates:` the certificates they sent and
-  haven't deleted, and `trips:` their unchecked trips on open activities, each with its
-  activity (`Trip.unchecked_for_member/1`).
+  haven't deleted, `trips:` their unchecked trips on open activities, each with its
+  activity (`Trip.unchecked_for_member/1`), and `unset:` their attended rows with no trip
+  (`Trip.unset_for_member/2`).
   """
   def items(card, in_wallet?, letters, rows, now, timezone, extras \\ []) do
     chores = Keyword.get(extras, :chores, [])
     certificates = Keyword.get(extras, :certificates, [])
     trips = Keyword.get(extras, :trips, [])
+    unset = Keyword.get(extras, :unset, [])
 
     card_items(card, in_wallet?) ++
       qualification_items(rows, certificates) ++
       declined_items(chores) ++
       declined_certificate_items(certificates) ++
-      travel_items(trips) ++ letter_items(letters, now, timezone)
+      travel_items(trips, unset) ++ letter_items(letters, now, timezone)
   end
 
-  # One per activity, in the order the trips come.
-  defp travel_items(trips) do
-    trips
-    |> Enum.chunk_by(& &1.activity_id)
-    |> Enum.map(fn [trip | _] = trips ->
-      %{key: :travel, activity: trip.activity, trips: trips}
+  # One per activity, oldest first: `trips` a team admin set to check, and `unset` rows
+  # with nothing set.
+  defp travel_items(trips, unset) do
+    trips = Enum.group_by(trips, & &1.activity_id)
+    unset = Enum.group_by(unset, & &1.activity_id)
+
+    (Map.values(trips) ++ Map.values(unset))
+    |> Enum.map(&hd(&1).activity)
+    |> Enum.uniq_by(& &1.id)
+    |> Enum.sort_by(& &1.started_at, DateTime)
+    |> Enum.map(fn activity ->
+      %{
+        key: :travel,
+        activity: activity,
+        trips: Map.get(trips, activity.id, []),
+        unset: Map.get(unset, activity.id, [])
+      }
     end)
   end
 

@@ -364,7 +364,7 @@ defmodule Web.ActivityLiveTest do
 
       assert has_element?(lv, "h1", "Rope practice")
       assert has_element?(lv, "#activity-panel-counts", "2 attended")
-      assert has_element?(lv, "#activity-attendance", "2 members · 2h 30m in total")
+      assert has_element?(lv, "#members-hours", "2h 30m in total")
       assert has_element?(lv, "#members-table", "Casey Dhillon")
       assert has_element?(lv, "#members-table", "1h 30m")
       refute has_element?(lv, "#members-table th", "ID")

@@ -136,11 +136,21 @@ defmodule Web.TeamDashboardLive do
           qualifications,
           now,
           member.team.timezone,
-          chores: chores,
-          certificates: certificates,
-          trips: Trip.unchecked_for_member(member)
+          [chores: chores, certificates: certificates] ++ travel(member, now)
         )
     )
+  end
+
+  # Travel to confirm or set, only on the activities that have travel (#230).
+  defp travel(%{team: %Team{travel_enabled: false}}, _now), do: []
+
+  defp travel(member, now) do
+    travel? = &Activity.travel?(member.team, &1.activity)
+
+    [
+      trips: member |> Trip.unchecked_for_member() |> Enum.filter(travel?),
+      unset: member |> Trip.unset_for_member(now) |> Enum.filter(travel?)
+    ]
   end
 
   # The lower half: the built-in chart reports (#826), on one Context, after the top.
@@ -747,8 +757,8 @@ defmodule Web.TeamDashboardLive do
       <.a
         navigate={~p"/teams/#{@team}/activities/#{@item.activity.id}"}
         class="font-semibold"
-      >Check your travel for {@item.activity.title}</.a>
-      <span class="hint block">{travel_hint(@item.trips)}</span>
+      >{if @item.trips == [], do: "Set", else: "Confirm"} your travel for {@item.activity.title}</.a>
+      <span class="hint block">{travel_hint(@item)}</span>
     </li>
     """
   end
@@ -770,13 +780,15 @@ defmodule Web.TeamDashboardLive do
     """
   end
 
-  defp travel_hint([trip]),
-    do:
-      "#{ActivityTravel.travel_text(trip.travel)}, #{Format.km(trip.km)}. Change it before the activity is published."
+  defp travel_hint(%{trips: [], unset: _rows}),
+    do: "Not set yet. Set it before the activity is published."
 
-  defp travel_hint(trips),
+  defp travel_hint(%{trips: [trip], unset: []}),
+    do: "#{ActivityTravel.trip_sentence(trip)}. Change it before the activity is published."
+
+  defp travel_hint(%{trips: trips, unset: unset}),
     do:
-      "#{Format.count(length(trips), one: "%d trip", many: "%d trips")}. Change them before the activity is published."
+      "#{Format.count(length(trips) + length(unset), one: "%d trip", many: "%d trips")}. Change them before the activity is published."
 
   defp declined_hint([chore]),
     do:

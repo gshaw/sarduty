@@ -3,6 +3,7 @@ defmodule App.Model.Trip do
 
   alias App.Accounts.User
   alias App.Model.Activity
+  alias App.Model.Attendance
   alias App.Model.Member
   alias App.Model.Team
   alias App.Model.Trip
@@ -68,6 +69,41 @@ defmodule App.Model.Trip do
       )
 
     Repo.all(query)
+  end
+
+  @unset_days 30
+
+  @doc """
+  The member's attended rows with no trip, on drafts that finished in the last 30 days:
+  travel they can set themselves. Older drafts are left out, so a team that rarely
+  publishes doesn't fill the list. Each row with its activity, oldest activity first.
+  """
+  def unset_for_member(%Member{} = member, %DateTime{} = now) do
+    Attendance
+    |> Attendance.attended(now)
+    |> where([r, activity: a], r.member_id == ^member.id and a.team_id == ^member.team_id)
+    |> recent_drafts(now, DateTime.add(now, -@unset_days, :day))
+    |> without_trip()
+    |> order_by([r, activity: a], asc: a.started_at, asc: r.started_at)
+    |> preload([activity: a], activity: a)
+    |> Repo.all()
+  end
+
+  defp recent_drafts(query, now, since) do
+    where(
+      query,
+      [activity: a],
+      a.is_published == false and a.finished_at <= ^now and a.finished_at >= ^since
+    )
+  end
+
+  defp without_trip(query) do
+    query
+    |> join(:left, [r, activity: a], t in Trip,
+      as: :trip,
+      on: t.activity_id == a.id and t.d4h_attendance_id == r.d4h_attendance_id
+    )
+    |> where([trip: t], is_nil(t.id))
   end
 
   @doc "Each way a row can be set: icp, yard, passenger, other."

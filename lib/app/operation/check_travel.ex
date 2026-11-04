@@ -1,9 +1,10 @@
 defmodule App.Operation.CheckTravel do
   @moduledoc """
-  A member checks the travel a team admin set for one of their attended rows (#230):
-  That's right marks it checked, or they set it themselves, the same four ways as on
-  Travel. Either way it counts as checked. Like the team admin's sets, it can't change
-  once the activity is published.
+  A member confirms the travel a team admin set for one of their attended rows (#230):
+  That's right marks it confirmed (`checked_at`), or they set it themselves, the same
+  four ways as on Travel, which is also how they set a row nobody has. Either way it
+  counts as confirmed. Like the team admin's sets, it can't change once the activity is
+  published.
   """
 
   alias App.Model.Activity
@@ -14,7 +15,7 @@ defmodule App.Operation.CheckTravel do
 
   @doc """
   `choice` is "right", or a travel with `km_text` for "other". Returns `{:ok, trip_or_plan}`
-  or `{:error, reason}`: :published, :deleted, :not_set (no trip for the row), :no_route,
+  or `{:error, reason}`: :no_travel, :published, :deleted, :not_set (That's right with no trip), :no_route,
   or SetTravel's :bad_km and :bad_travel.
   """
   def call(
@@ -29,6 +30,7 @@ defmodule App.Operation.CheckTravel do
       ) do
     cond do
       activity.deleted_at -> {:error, :deleted}
+      !Activity.travel?(team, activity) -> {:error, :no_travel}
       Activity.locked?(activity) -> {:error, :published}
       true -> check(team, activity, member, user, d4h_attendance_id, choice, km_text, now)
     end
@@ -36,7 +38,7 @@ defmodule App.Operation.CheckTravel do
 
   defp check(team, activity, member, user, d4h_attendance_id, choice, km_text, now) do
     case Trip.for_member(activity, member)[d4h_attendance_id] do
-      nil -> {:error, :not_set}
+      nil when choice == "right" -> {:error, :not_set}
       trip when choice == "right" -> {:ok, Trip.check!(trip, now)}
       _trip -> change(team, activity, member, user, d4h_attendance_id, choice, km_text, now)
     end
@@ -47,6 +49,8 @@ defmodule App.Operation.CheckTravel do
     rows = Enum.filter(report.rows, &(&1.attendance.d4h_attendance_id == d4h_attendance_id))
     ids = Enum.map(rows, & &1.attendance.id)
 
+    # The report's rows carry no trip, so none is unchanged: saving the same travel again
+    # still confirms it. No sets means no route.
     case SetTravel.plan(rows, ids, travel, km_text) do
       {:ok, %{sets: []}} ->
         {:error, :no_route}

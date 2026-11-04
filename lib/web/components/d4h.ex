@@ -60,15 +60,14 @@ defmodule Web.Components.D4H do
 
   attr :activity, :map, required: true
 
-  # The kind on its own, as on an activity's page: a solid tag in D4H's colour, "Draft" when
-  # it isn't published, and the tracking number as text.
+  # The kind on its own, as on an activity's page: a solid tag in D4H's colour and the
+  # tracking number as text. Whether it's published is the panel's state line.
   def activity_badges(assigns) do
     ~H"""
     <span class="badges">
       <.badge kind={activity_kind_badge(Activity.shown_kind(@activity))} title="Activity kind">
         {String.capitalize(Activity.shown_kind(@activity))}
       </.badge>
-      <.badge :if={!@activity.is_published}>Draft</.badge>
       <.badge :if={@activity.deleted_at} kind={:danger}>Deleted</.badge>
     </span>
     <span :if={@activity.tracking_number} class="mono ml-1" title="Tracking number">
