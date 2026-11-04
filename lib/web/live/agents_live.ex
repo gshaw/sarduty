@@ -71,7 +71,7 @@ defmodule Web.AgentsLive do
         id: "agents-page-id-cards",
         title: "How to check an ID card",
         text:
-          "The verify site's check as JSON, for apps that sign members in with their ID card.",
+          "The verify site's public card check as JSON, for apps that sign members in by scanning their ID card. It answers only what anyone holding the card can see.",
         path: ~p"/agents/id-cards",
         markdown: ~p"/agents/id-cards.md"
       }

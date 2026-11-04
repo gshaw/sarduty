@@ -222,6 +222,16 @@ defmodule Web.VerifyLiveTest do
       assert has_element?(lv, "#result-not-found")
     end
 
+    test "input that can't be a code never counts", %{conn: conn, member: member} do
+      card = member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/")
+
+      for _ <- 1..25, do: check(lv, "hello")
+      check(lv, card.code)
+
+      assert has_element?(lv, "#result-active")
+    end
+
     test "a bad link opened directly counts", %{conn: conn} do
       for _ <- 1..10, do: {:ok, _lv, _html} = live(conn, ~p"/ZZZZ-ZZZZ")
 

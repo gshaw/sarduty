@@ -1,8 +1,10 @@
 defmodule Web.VerifyLimit do
   @moduledoc """
   Caps failed card checks per client IP on the verify site, as a backstop: codes
-  are too many to guess. Only misses count, so checking many real cards never trips it.
-  The page and the photo route share one counter.
+  are too many to guess. Only misses count, so checking many real cards never trips it,
+  and only for input that could be a code: anything else can't guess one. That matters
+  at a command post, where everyone shares one IP and an app sees every barcode (#299).
+  The pages, the photo routes, and the JSON check share one counter.
   """
 
   alias App.Model.Event
@@ -16,8 +18,17 @@ defmodule Web.VerifyLimit do
   @doc "Whether this IP has used up its misses for now."
   def limited?(ip), do: ip |> key() |> RateLimit.get(@scale) >= @limit
 
-  @doc "Counts a code that matched no card, and logs and records when the IP reaches the limit."
-  def miss(ip) do
+  @doc "How long a limited IP waits at most, in seconds, for the 429's Retry-After."
+  def retry_after, do: div(@scale, 1000)
+
+  @doc """
+  Counts a miss: a code or letter reference that matched nothing. `code` is the input as
+  parsed, nil when it can't be one, which never counts. Logs and records when the IP
+  reaches the limit.
+  """
+  def miss(_ip, nil), do: :ok
+
+  def miss(ip, _code) do
     if ip |> key() |> RateLimit.inc(@scale) == @limit do
       Logger.warning("Verify limit reached: #{@limit} failed checks from #{ip}")
       Event.record!(:verify_limit_reached, ip: ip)

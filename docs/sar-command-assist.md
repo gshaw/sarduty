@@ -2,8 +2,9 @@
 
 SAR Command Assist (SCA, [sarassist.ca](https://www.sarassist.ca)) is the incident tool
 many BC teams run at callouts. It is free, distributed by BCSARA, and written by Dylan
-Baker, a Campbell River SAR manager. "SCA" in issue comments means this. SAR Duty doesn't call it and it doesn't call SAR
-Duty; both read the same D4H. Notes from its site and our issues, 2026-10-22.
+Baker, a Campbell River SAR manager. "SCA" in issue comments means this. Both read the
+same D4H, and SAR Duty never calls SCA; SCA can ask SAR Duty to check an ID card (below).
+Notes from its site and our issues, 2026-10-22.
 
 ## What it does
 
@@ -36,9 +37,14 @@ incident attendance, SAR Duty removed its attendance import (#212, #424); Take a
 
 ## Where they meet
 
-- **ID card QR codes** (#299): sign a member into SCA with their SAR Duty card. The verify
-  endpoint could return the D4H member ID, never contact details or emergency contacts.
-  Open.
+- **ID card QR codes** (#299): sign a member into SCA with their SAR Duty card. SCA takes
+  the code from the scan and asks `verify.sarduty.com/api/v1/cards/<code>`, which answers
+  the verify check as JSON with the D4H team and member IDs, never contact details or
+  emergency contacts ([member-cards.md](member-cards.md#the-check-as-json)). SCA matches
+  the IDs to the members its D4H sync pulled. It needs internet; offline matching for a
+  team's own members is #299's option 2, SAR Duty writing the card code into a D4H custom
+  field for SCA's sync. Opt-in per member was left out: the answer is what the card
+  already shows anyone holding it.
 - **Group membership** (above): SAR Duty writes it to D4H, so SCA reading D4H groups is
   the clean way to get it there.
 

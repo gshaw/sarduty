@@ -48,8 +48,6 @@ enforces the top-level list and the held URLs.
   write a report at `/agents/reports` and `/agents/reports.md` (#803), How to check an ID
   card at `/agents/id-cards` and `/agents/id-cards.md`, and pages next. A
   team's reports are under its team. `/changelog.md` is the changelog as text.
-- **The verify site's `/api/cards/:code`** is the card check as JSON. Apps that scan cards
-  hold it, so it doesn't move. `api` has an I, which card codes never do.
 - **Anything printed on a card goes through the verify site**, so it stays short and never
   depends on a team page's path.
 - **Build paths one way**: `~p"/teams/#{team}/members"`. `App.Model.Team` derives
@@ -76,7 +74,9 @@ Devices, Google, Apple, and shared links hold these. They don't move.
   their first connection (#761).
 - On the verify site: `/:code` (the QR code), `/:code/photo`, `/:code/banner` (the Google
   Wallet banner), `/orgs/:slug`, `/letters/:ref` (the QR code on every tax credit
-  letter since #207), and `/samples`, the sample ID cards (#854).
+  letter since #207), `/samples`, the sample ID cards (#854), and `/api/v1/cards/:code`,
+  the card check as JSON that apps scanning cards call (#299). A change that breaks those
+  apps goes in `/api/v2`.
 
 Card images always use SAR Duty's verify host, even for an organization with its own,
 since Google Wallet objects hold the banner URL.

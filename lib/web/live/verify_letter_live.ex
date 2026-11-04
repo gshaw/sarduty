@@ -25,7 +25,7 @@ defmodule Web.VerifyLetterLive do
     result =
       case TaxCreditLetter.parse_ref_id(input) do
         {:old, ref_id} -> %{status: :needs_last_name, ref_id: ref_id}
-        parsed -> check(socket.assigns.client_ip, fn -> look_up(parsed) end)
+        parsed -> check(socket.assigns.client_ip, parsed, fn -> look_up(parsed) end)
       end
 
     {:noreply, assign_result(socket, result, input)}
@@ -39,14 +39,14 @@ defmodule Web.VerifyLetterLive do
         {:noreply, push_patch(socket, to: ~p"/letters/#{ref_id}")}
 
       nil ->
-        result = check(socket.assigns.client_ip, fn -> %{status: :not_found} end)
+        result = check(socket.assigns.client_ip, nil, fn -> %{status: :not_found} end)
         {:noreply, assign_result(socket, result, input)}
     end
   end
 
   def handle_event("check_name", %{"check" => %{"last_name" => last_name}}, socket) do
     parsed = {:old, socket.assigns.result.ref_id}
-    result = check(socket.assigns.client_ip, fn -> look_up(parsed, last_name) end)
+    result = check(socket.assigns.client_ip, parsed, fn -> look_up(parsed, last_name) end)
     {:noreply, assign(socket, :result, result)}
   end
 
@@ -56,12 +56,13 @@ defmodule Web.VerifyLetterLive do
     |> assign(:form, to_form(%{"ref" => input, "last_name" => ""}, as: "check"))
   end
 
-  defp check(ip, look_up) do
+  # `parsed` is the reference, or nil when the input can't be one, which never counts.
+  defp check(ip, parsed, look_up) do
     if VerifyLimit.limited?(ip) do
       %{status: :limited}
     else
       result = look_up.()
-      if result.status == :not_found, do: VerifyLimit.miss(ip)
+      if result.status == :not_found, do: VerifyLimit.miss(ip, parsed)
       result
     end
   end

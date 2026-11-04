@@ -34,12 +34,13 @@ defmodule Web.Router do
   end
 
   # The check as JSON, for apps that scan cards (/agents/id-cards). No session or CSRF
-  # token: it only reads. "api" has an I, which card codes never do.
+  # token: it only reads. "api" has an I, which card codes never do. Apps hold v1, so a
+  # change that breaks them goes in /api/v2 beside it.
   pipeline :verify_api do
     plug :accepts, ["json"]
   end
 
-  scope "/api", Web, host: "verify." do
+  scope "/api/v1", Web, host: "verify." do
     pipe_through :verify_api
 
     get "/cards/:code", CardApiController, :show

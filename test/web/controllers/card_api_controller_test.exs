@@ -18,9 +18,9 @@ defmodule Web.CardApiControllerTest do
     |> put_req_header("fly-client-ip", "10.3.#{System.unique_integer([:positive])}")
   end
 
-  defp check(conn, code), do: get(conn, "/api/cards/#{code}")
+  defp check(conn, code), do: get(conn, "/api/v1/cards/#{code}")
 
-  test "an active card gives the member, team, qualifications, and D4H IDs", %{
+  test "an active card gives the member, team, qualifications, and where the records live", %{
     conn: conn,
     team: team,
     member: member
@@ -41,19 +41,31 @@ defmodule Web.CardApiControllerTest do
     assert body["member"]["photo_url"] == Web.VerifyHost.url() <> "/#{code}/photo"
     assert [%{"name" => "First Aid"}] = body["member"]["qualifications"]
     assert body["team"]["name"] == team.name
-    assert body["records"]["service"] == "d4h"
-    assert body["records"]["api_url"] == "https://" <> team.d4h_api_host
-    assert body["records"]["team_id"] == team.d4h_team_id
-    assert body["records"]["member_id"] == member.d4h_member_id
+
+    assert body["records"] == %{
+             "service" => "d4h",
+             "api_url" => "https://" <> team.d4h_api_host,
+             "team_id" => team.d4h_team_id,
+             "member_id" => member.d4h_member_id
+           }
   end
 
-  test "a SAR Duty Records team points at Records' API", %{conn: conn} do
+  test "times are whole seconds", %{conn: conn} do
+    team = team_fixture(%{d4h_refreshed_at: ~U[2026-11-03 19:50:12.345678Z]})
+    card = member_card_fixture(member_fixture(team))
+
+    body = conn |> check(card.code) |> json_response(200)
+
+    assert body["team"]["refreshed_at"] == "2026-11-03T19:50:12Z"
+  end
+
+  test "a SAR Duty Records team says so in the API's own name", %{conn: conn} do
     team = team_fixture(%{d4h_api_host: D4H.records_host()})
     card = member_card_fixture(member_fixture(team))
 
     records = conn |> check(card.code) |> json_response(200) |> Map.fetch!("records")
 
-    assert records["service"] == "records"
+    assert records["service"] == "sar_duty_records"
     assert records["api_url"] == "https://" <> D4H.records_host()
   end
 
@@ -62,10 +74,8 @@ defmodule Web.CardApiControllerTest do
     assert conn |> check(String.downcase(card.code)) |> json_response(200)
   end
 
-  test "a former member's card gives the name and no photo or qualifications", %{
-    conn: conn,
-    team: team
-  } do
+  test "a former member's card gives the name and team, and no photo, qualifications, or IDs",
+       %{conn: conn, team: team} do
     member = member_fixture(team, %{left_at: ~U[2026-01-01 00:00:00Z]})
     card = member_card_fixture(member)
 
@@ -73,7 +83,9 @@ defmodule Web.CardApiControllerTest do
 
     assert body["status"] == "inactive"
     assert body["member"] == %{"name" => member.name, "left_at" => "2026-01-01T00:00:00Z"}
+    assert body["team"]["name"] == team.name
     assert body["team"]["valid_until"] == nil
+    refute Map.has_key?(body, "records")
   end
 
   test "a cancelled card says nothing about the member", %{conn: conn, member: member} do
@@ -99,9 +111,24 @@ defmodule Web.CardApiControllerTest do
     assert body["sample"] == true
   end
 
-  test "misses share the page's limit", %{conn: conn} do
+  test "misses share the page's limit, and the 429 says when to try again", %{
+    conn: conn,
+    member: member
+  } do
+    card = member_card_fixture(member)
     for _ <- 1..20, do: check(conn, "ZZZZ-ZZZZ")
 
-    assert conn |> check("ZZZZ-ZZZZ") |> json_response(429) == %{"status" => "limited"}
+    conn = check(conn, card.code)
+
+    assert json_response(conn, 429) == %{"status" => "limited"}
+    assert get_resp_header(conn, "retry-after") == ["600"]
+  end
+
+  # A command post shares one IP, and an app sees every barcode there (#299).
+  test "a scan that can't be a code never counts", %{conn: conn, member: member} do
+    card = member_card_fixture(member)
+    for _ <- 1..25, do: assert(conn |> check("SCA-PROFILE-1234") |> json_response(404))
+
+    assert conn |> check(card.code) |> json_response(200)
   end
 end

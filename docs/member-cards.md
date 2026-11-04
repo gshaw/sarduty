@@ -42,10 +42,12 @@ organization gets its branding: see [organizations.md](organizations.md).
 - **Codes are random.** They come from `:crypto`, 8 characters from a 30-character
   alphabet ([MemberCard](../lib/app/model/member_card.ex)). Never derive one from the D4H
   member number or the local id: a guessable code would let anyone walk the roster.
-- **Misses are capped per IP.** 20 codes that match no card in 10 minutes, on the page
-  or the photo and banner routes, and that IP gets "Too many tries" with no lookup
-  ([Web.VerifyLimit](../lib/web/verify_limit.ex)). Real codes never count, so checking a
-  crowd of cards at a callout can't trip it. The counts live in memory (Hammer's ETS
+- **Misses are capped per IP.** 20 codes that match no card in 10 minutes, on the page,
+  the photo and banner routes, or the JSON check, and that IP gets "Too many tries" with
+  no lookup ([Web.VerifyLimit](../lib/web/verify_limit.ex)). Real codes never count, so
+  checking a crowd of cards at a callout can't trip it. Nor does input that can't be a
+  code, since it can't guess one: at a command post everyone shares one IP, and an app
+  that sends every barcode it reads would otherwise lock the post out (#299). The counts live in memory (Hammer's ETS
   backend), which is enough on one machine and resets on deploy. The IP is Fly's
   `Fly-Client-IP`, read on the HTTP request and carried into the LiveView's session,
   since a websocket can't see that header.
@@ -62,20 +64,24 @@ organization gets its branding: see [organizations.md](organizations.md).
 
 ## The check as JSON
 
-`verify.sarduty.com/api/cards/K7Q4-M2XA`
+`verify.sarduty.com/api/v1/cards/K7Q4-M2XA`
 ([CardApiController](../lib/web/controllers/card_api_controller.ex)) answers the same
-check for apps that sign members in by scanning their card, SAR Command Assist first.
+check for apps that sign members in by scanning their card, SAR Command Assist first
+(#299, [sar-command-assist.md](sar-command-assist.md)).
 [How to check an ID card](../lib/web/card_api_doc.ex), at `/agents/id-cards`, is its
 public documentation. The page and the JSON share
 [CheckMemberCard](../lib/app/operation/check_member_card.ex), so they never disagree.
 
-- **It says what the page says**, plus where the team's records live: `service` (`d4h` or
-  `records`), the API's URL, and the D4H team and member IDs. Those open nothing without
-  the team's own access key, and they let an app match a card to a member it already has,
-  where a team's own ID number repeats across teams.
+- **It says what the page says**, plus where an active member's records live: `service`
+  (`d4h` or `sar_duty_records`, the API's own names, not `D4H.service/1`'s atoms), the
+  API's URL, and the team and member IDs there. Those open nothing without the team's own
+  access key, and they let an app match a card to a member it already has, where a team's
+  own ID number repeats across teams.
 - **Same rules as the page.** A cancelled card gives its status only; a former member's
-  gives the name and when they left, with no photo. Misses count toward the same
-  per-IP limit, and a limited IP gets `429`.
+  gives the name, the team, and when they left, with no photo and no IDs (#176). Misses
+  count toward the same per-IP limit, and a limited IP gets `429` with `Retry-After`.
+- **Apps hold v1.** Add fields freely; renaming or removing one, or changing what a status
+  means, is `/api/v2` beside it. The doc tells apps to ignore fields they don't know.
 - **No key, no CORS header.** It reads only what a card's holder already shows anyone.
   Desktop and phone apps don't need CORS; add it only when a web app asks.
 

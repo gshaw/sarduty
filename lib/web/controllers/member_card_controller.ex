@@ -28,7 +28,7 @@ defmodule Web.MemberCardController do
 
       true ->
         conn = send_photo(conn, code, shape)
-        if conn.status == 404, do: VerifyLimit.miss(ip)
+        if conn.status == 404, do: VerifyLimit.miss(ip, code)
         conn
     end
   end

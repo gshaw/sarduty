@@ -4,8 +4,8 @@ defmodule App.Operation.CheckMemberCard do
 
   @doc """
   The verify site's answer for one stored code: the page (Web.VerifyLive) and the JSON
-  check (Web.CardApiController) both ask here. `%{status: :not_found, sample:}` when no
-  card has it, else `%{status:, card:, sample:, qualifications:}`, with qualifications
+  check (Web.CardApiController) both ask here. `%{status: :not_found, sample:, code:}` when
+  no card has it, else `%{status:, card:, sample:, qualifications:}`, with qualifications
   only for an active card. A sample card's code (#854) is looked up in Coast Range SAR's
   own database, never the real one.
   """
@@ -25,7 +25,7 @@ defmodule App.Operation.CheckMemberCard do
         }
 
       nil ->
-        %{status: :not_found, sample: sample?}
+        %{status: :not_found, sample: sample?, code: code}
     end
   end
 

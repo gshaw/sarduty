@@ -100,7 +100,10 @@ defmodule Web.VerifyLive do
       %{status: :limited}
     else
       result = look_up(input)
-      if result.status == :not_found and not result.sample, do: VerifyLimit.miss(ip)
+
+      if result.status == :not_found and not result.sample,
+        do: VerifyLimit.miss(ip, result[:code])
+
       result
     end
   end

@@ -7,10 +7,13 @@ defmodule Web.CardApiController do
   alias Web.VerifyLimit
 
   # The verify site's check as JSON, for apps that sign members in by scanning their card
-  # (SAR Command Assist first). /agents/id-cards documents it; keep the two in step.
-  # It says what the page says and no more, plus where the team's records live: D4H or SAR
-  # Duty Records, which serve the same API. The IDs open nothing without the team's own
-  # access key. Misses count toward the page's limit (Web.VerifyLimit).
+  # (#299). /agents/id-cards documents it (Web.CardApiDoc); keep the two in step. Apps
+  # hold the URL and the field names, so add fields but never rename or remove one: a
+  # change that breaks them is /api/v2.
+  #
+  # It says what the page says, plus where an active member's records live and their IDs
+  # there, which open nothing without the team's own access key. Misses count toward the
+  # page's limit (Web.VerifyLimit).
   def show(conn, %{"code" => input}) do
     ip = VerifyLimit.client_ip(conn)
     code = MemberCard.normalize_code(input)
@@ -21,15 +24,17 @@ defmodule Web.CardApiController do
         answer(conn, CheckMemberCard.call(code))
 
       VerifyLimit.limited?(ip) ->
-        conn |> put_status(:too_many_requests) |> json(%{status: "limited"})
+        conn
+        |> put_resp_header("retry-after", Integer.to_string(VerifyLimit.retry_after()))
+        |> put_status(:too_many_requests)
+        |> json(%{status: "limited"})
 
       is_nil(code) ->
-        VerifyLimit.miss(ip)
         not_found(conn)
 
       true ->
         result = CheckMemberCard.call(code)
-        if result.status == :not_found, do: VerifyLimit.miss(ip)
+        if result.status == :not_found, do: VerifyLimit.miss(ip, code)
         answer(conn, result)
     end
   end
@@ -40,24 +45,39 @@ defmodule Web.CardApiController do
     json(conn, %{code: MemberCard.format_code(card.code), status: "revoked", sample: sample})
   end
 
-  defp answer(conn, %{status: status, card: card} = result) do
+  # A former member's card gives the name, the team, and when they left, as the page does,
+  # and no photo, qualifications, or IDs (#176).
+  defp answer(conn, %{status: :inactive, card: card, sample: sample}) do
+    member = card.member
+
+    json(conn, %{
+      code: MemberCard.format_code(card.code),
+      status: "inactive",
+      sample: sample,
+      member: %{name: member.name, left_at: time(member.left_at)},
+      team: team_json(member.team, nil)
+    })
+  end
+
+  defp answer(conn, %{status: :active, card: card} = result) do
     member = card.member
     team = member.team
     code = MemberCard.format_code(card.code)
 
     json(conn, %{
       code: code,
-      status: Atom.to_string(status),
+      status: "active",
       sample: result.sample,
-      member: member_json(status, member, code, result.qualifications),
-      team: %{
-        name: team.name,
-        organization: team.organization && team.organization.name,
-        refreshed_at: team.d4h_refreshed_at,
-        valid_until: if(status == :active, do: MemberCard.valid_until(team))
+      member: %{
+        name: member.name,
+        joined_at: time(member.joined_at),
+        photo_url: Web.VerifyHost.url() <> "/" <> code <> "/photo",
+        qualifications:
+          Enum.map(result.qualifications, &%{name: &1.name, ends_at: time(&1.ends_at)})
       },
+      team: team_json(team, MemberCard.valid_until(team)),
       records: %{
-        service: team |> D4H.service() |> Atom.to_string(),
+        service: service(team),
         api_url: team.d4h_api_host && "https://" <> team.d4h_api_host,
         team_id: team.d4h_team_id,
         member_id: member.d4h_member_id
@@ -65,19 +85,26 @@ defmodule Web.CardApiController do
     })
   end
 
-  # A former member's card gives the name and when they left, as the page does (#176).
-  defp member_json(:active, member, code, qualifications) do
+  defp team_json(team, valid_until) do
     %{
-      name: member.name,
-      joined_at: member.joined_at,
-      photo_url: Web.VerifyHost.url() <> "/" <> code <> "/photo",
-      qualifications: Enum.map(qualifications, &Map.take(&1, [:name, :ends_at]))
+      name: team.name,
+      organization: team.organization && team.organization.name,
+      refreshed_at: time(team.d4h_refreshed_at),
+      valid_until: time(valid_until)
     }
   end
 
-  defp member_json(:inactive, member, _code, _qualifications) do
-    %{name: member.name, left_at: member.left_at}
+  # The API's own names, so renaming D4H.service/1's atoms never breaks an app.
+  defp service(team) do
+    case D4H.service(team) do
+      :d4h -> "d4h"
+      :records -> "sar_duty_records"
+    end
   end
+
+  # Every time in whole seconds, so each one reads the same way.
+  defp time(nil), do: nil
+  defp time(%DateTime{} = time), do: DateTime.truncate(time, :second)
 
   defp not_found(conn), do: conn |> put_status(:not_found) |> json(%{status: "not_found"})
 end
