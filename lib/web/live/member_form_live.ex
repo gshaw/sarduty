@@ -111,7 +111,7 @@ defmodule Web.MemberFormLive do
           class="photo"
           src={~p"/teams/#{@current_team}/members/#{@member.id}/image?#{[v: @photo_version]}"}
           alt={"#{@member.name}'s photo"}
-          onerror="this.remove()"
+          data-hide-on-error
         />
       </p>
       <form id="photo-form" phx-change="validate-photo" phx-submit="save-photo">

@@ -8,21 +8,8 @@
     <%!-- The bar's navy, as in the app, so iOS fills the area under the clock with it. --%>
     <meta name="theme-color" content="#13243a" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a111b" media="(prefers-color-scheme: dark)" />
-    <script>
-      // Before first paint, so a saved theme doesn't flash. A chosen theme also sets the
-      // browser's colour, which otherwise follows the system's.
-      (function () {
-        var navy = { light: "#13243a", dark: "#0a111b" };
-        window.setThemeColor = function (theme) {
-          document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) {
-            var system = meta.media.indexOf("dark") >= 0 ? "dark" : "light";
-            meta.content = navy[theme || system];
-          });
-        };
-        var theme = localStorage.getItem("styles-theme");
-        if (theme) document.documentElement.dataset.theme = theme;
-        window.setThemeColor(theme);
-      })();
+    <%!-- Before first paint, so a saved theme doesn't flash. --%>
+    <script src={~p"/assets/js/styles_theme.js"}>
     </script>
     <Web.Layouts.favicon_links />
     <%!-- The app's stylesheet, so every example looks as it does in the app. --%>
@@ -54,45 +41,5 @@
     </Web.Layouts.main_nav_bar>
     {@inner_content}
     <Web.Components.Messages.confirm_dialog />
-    <script>
-      // iOS Safari only applies :active, the pressed look, when a touch listener exists.
-      document.addEventListener("touchstart", function () {}, { passive: true });
-
-      (function () {
-        var buttons = document.querySelectorAll("[data-theme-choice]");
-        function show() {
-          var current = document.documentElement.dataset.theme || "";
-          buttons.forEach(function (b) {
-            b.setAttribute("aria-pressed", b.dataset.themeChoice === current);
-          });
-        }
-        buttons.forEach(function (b) {
-          b.addEventListener("click", function () {
-            var theme = b.dataset.themeChoice;
-            if (theme) {
-              document.documentElement.dataset.theme = theme;
-              localStorage.setItem("styles-theme", theme);
-            } else {
-              delete document.documentElement.dataset.theme;
-              localStorage.removeItem("styles-theme");
-            }
-            window.setThemeColor(theme);
-            show();
-          });
-        });
-        show();
-      })();
-
-      // The phone's Menu opens at the page you're on, not 30 pages above it.
-      (function () {
-        var menu = document.getElementById("phone-menu");
-        if (!menu) return;
-        menu.addEventListener("toggle", function () {
-          var panel = menu.querySelector(".site-bar-phone-panel");
-          var current = panel.querySelector('[aria-current="page"]');
-          if (menu.open && current) panel.scrollTop = current.offsetTop - panel.clientHeight / 2;
-        });
-      })();
-    </script>
   </body>
 </html>

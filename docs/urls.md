@@ -44,7 +44,7 @@ enforces the top-level list and the held URLs.
 - **Top-level paths are a short list**: `teams`, `orgs`, `admin`, `account`, `signup`,
   `login`, `logout`, `replies`, `reminders`, `wallet`, `styles`, `terms`, `privacy`,
   `agents`, `agents.md`, `changelog`, `changelog.md`, `maps`, `.well-known`,
-  `security.txt`, `llms.txt`, `letters`, and `dev` in development. A
+  `security.txt`, `llms.txt`, `letters`, `csp-reports` (Web.CSP), and `dev` in development. A
   new one is added to the router test on purpose. `agents` holds what agents read: `/agents`
   and `/agents.md`, the lander, How to
   write a report at `/agents/reports` and `/agents/reports.md` (#803), How to check an ID

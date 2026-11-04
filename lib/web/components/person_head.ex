@@ -26,7 +26,7 @@ defmodule Web.Components.PersonHead do
       {render_slot(@picture)}
       <span :if={@picture == []} id={"#{@id}-avatar"} class="avatar avatar-lg" phx-update="ignore">
         {Web.Navigation.initials(@name)}
-        <img id={"#{@id}-photo"} src={@photo} alt="" onerror="this.remove()" />
+        <img id={"#{@id}-photo"} src={@photo} alt="" data-hide-on-error />
       </span>
       <div class="min-w-0">
         <div class="person-head-title">

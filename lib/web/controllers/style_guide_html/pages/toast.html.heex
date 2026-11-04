@@ -32,18 +32,6 @@
       Enter who authorizes tax letters in team settings.
     </.flash>
   </template>
-  <script>
-    document.querySelectorAll("[data-toast]").forEach(function (button) {
-      button.addEventListener("click", function () {
-        var kind = button.dataset.toast;
-        var toast = document.getElementById("toast-" + kind).content.firstElementChild.cloneNode(true);
-        toast.removeAttribute("id");
-        document.getElementById("toasts").appendChild(toast);
-        toast.addEventListener("click", function () { toast.remove(); });
-        if (kind !== "error") setTimeout(function () { toast.remove(); }, 6000);
-      });
-    });
-  </script>
 
   <h2>When to use</h2>
   <ul>

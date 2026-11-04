@@ -2,7 +2,7 @@
   <h1>Fix form errors</h1>
   <p class="lead">Team settings' Tax credit letters tab after a failed save.</p>
 
-  <.form :let={f} for={settings_form()} class="example measure" onsubmit="return false">
+  <.form :let={f} for={settings_form()} class="example measure" data-example-form>
     <.error_summary form={f} />
     <.input field={f[:mailing_address]} label="Mailing address" type="textarea" rows="3" />
     <.input
