@@ -36,8 +36,12 @@ defmodule App.Operation.BuildDemoTeam do
     :chores_enabled,
     :certificates_enabled,
     :id_cards_enabled,
-    :whiteboard_enabled
+    :whiteboard_enabled,
+    :travel_enabled
   ]
+
+  @doc "The settings a demo copies from Coast Range SAR."
+  def settings, do: @settings
 
   @doc "The topic a demo's build tells, as `{:demo_built, demo_id, result}`."
   def topic(%DemoTeam{id: id}), do: "demo:#{id}"

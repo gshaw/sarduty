@@ -1,12 +1,26 @@
 defmodule App.DemoCastTest do
   use ExUnit.Case, async: true
 
+  alias App.CoastRange
   alias App.DemoCast
+  alias App.Operation.BuildDemoTeam
 
   @now ~U[2026-11-03 19:00:00Z]
   @visitor %{name: "Morgan Visitor", email: "morgan@example.com"}
 
   defp rows, do: DemoCast.cast(@now, @visitor)["rows"]
+
+  test "a demo copies every feature Coast Range SAR turns on" do
+    [{:team, :coastrange, team, []} | _rows] = CoastRange.build(@now)
+
+    switches =
+      for {key, true} <- Map.from_struct(team),
+          name = to_string(key),
+          name == "member_logins" or String.ends_with?(name, "_enabled"),
+          do: key
+
+    assert switches -- BuildDemoTeam.settings() == []
+  end
 
   test "every row points only at rows before it, or at the hours tags Records has" do
     Enum.reduce(rows(), MapSet.new(["tag:Primary Hours", "tag:Secondary Hours"]), fn row, keys ->
