@@ -11,7 +11,10 @@ config :bcrypt_elixir, :log_rounds, 1
 config :sarduty, App.Repo,
   database: Path.expand("../db/sarduty_test.db", Path.dirname(__ENV__.file)),
   pool_size: 5,
-  pool: Ecto.Adapters.SQL.Sandbox
+  pool: Ecto.Adapters.SQL.Sandbox,
+  # `mix test` migrates first, and the :warning level below isn't applied until the app
+  # starts, so each migration query would print at :debug.
+  log: false
 
 # No sandbox: seeded once at boot, and tests only read it.
 config :sarduty, App.SampleRepo,
