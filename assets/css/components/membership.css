@@ -2,7 +2,7 @@
    boxes. On a phone one column: ID card and letter, then the main column, then contact
    details and milestones. */
 @layer components {
-  .membership { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--sp-8); align-items: start; }
+  .membership { display: grid; grid-template-columns: minmax(0, 1fr) min(calc((100% - var(--sp-8)) / 3), var(--sidebar-max)); gap: var(--sp-8); align-items: start; }
   .membership-aside, .membership-aside-top, .membership-aside-bottom { display: grid; gap: var(--sp-8); }
   @media (width < 64rem) {
     .membership { display: flex; flex-direction: column; align-items: stretch; gap: var(--sp-8); }
