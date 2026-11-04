@@ -74,7 +74,7 @@ defmodule Web.Settings.FeaturesLive do
     ~H"""
     <.team_settings_tabs team={@current_team} current={:features} />
     <div class="measure">
-      <p class="lead">Turn on what your team uses. Each switch saves right away.</p>
+      <p class="lead">Turn on what your team uses.</p>
 
       <div id="features" class="flex flex-col gap-6">
         <.set_by_sar_duty
