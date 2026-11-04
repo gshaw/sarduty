@@ -23,7 +23,7 @@ defmodule Web.CardApiDoc do
 
     ## Get the code from a scan
 
-    The QR code holds a link like `HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA`, in capitals. The code is the last part of the link. Don't open the link: send the code to the address below, whatever site the link names. A forged card can't send your app anywhere else that way.
+    The QR code holds a link like `HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA`, in capitals. The code is the last part of the link. Do not open the link. Send the code to SAR Duty's check, whatever site the link names. A forged card can't send your app anywhere else that way.
 
     Codes are 8 letters and numbers, printed under the QR code with a dash in the middle. The check takes them with or without the dash, in either case.
 
@@ -114,7 +114,7 @@ defmodule Web.CardApiDoc do
 
     ## Matching members you already have
 
-    Match on `api_url`, `team_id`, and `member_id` together: a member ID alone can repeat between D4H and SAR Duty Records. Don't match on the name or the team's own ID number, which two teams can share. A member keeps their IDs when their card is replaced, but the card's code changes, so don't store the code as the member's ID.
+    Match on `api_url`, `team_id`, and `member_id` together: a member ID alone can repeat between D4H and SAR Duty Records. Do not match on the name or the team's own ID number, which two teams can share. A member keeps their IDs when their card is replaced, but the card's code changes, so do not store the code as the member's ID.
     """
   end
 
