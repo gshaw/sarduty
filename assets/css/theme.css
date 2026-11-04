@@ -76,10 +76,11 @@
   --list-style-type-arrow: '→ ';
 
   /* Breakpoints */
-  --breakpoint-*: initial; /* remove all breakpoints to only define md, lg & xl */
+  --breakpoint-*: initial; /* remove all breakpoints to only define md, lg, xl & 2xl */
   --breakpoint-md: 40rem; /* 640px */
   --breakpoint-lg: 60rem; /* 960px */
   --breakpoint-xl: 80rem; /* 1280px, so team pages use a wide monitor */
+  --breakpoint-2xl: 96rem; /* 1536px, so tables use a big monitor */
 }
 
 @media print {

@@ -12,7 +12,7 @@
   .activity-columns-end { margin-top: var(--sp-8); }
   @media (width >= 48rem) {
     .activity-columns {
-      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) min(calc((100% - var(--sp-4)) / 3), var(--sidebar-max));
       grid-template-rows: auto 1fr;
       grid-template-areas: "main facts" "main end";
       column-gap: var(--sp-4);

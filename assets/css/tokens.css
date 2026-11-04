@@ -109,6 +109,8 @@
   --radius: 3px;
   --radius-btn: 6px;
   --border-width: 2px;
+  /* A page's sidebar of facts and actions stops here; the main column takes the rest. */
+  --sidebar-max: 20rem;
   --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
