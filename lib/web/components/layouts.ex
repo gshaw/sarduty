@@ -10,12 +10,13 @@ defmodule Web.Layouts do
       <head>
         <meta charset="utf-8" />
         <%!-- A public page sets its own, for search results and link previews. --%>
-        <meta
-          name="description"
-          content={
-            assigns[:page_description] || "Less paperwork for search and rescue teams that use D4H."
-          }
-        />
+        <meta name="description" content={page_description(assigns)} />
+        <%!-- Small link previews (#824): no og:image, the app icon is enough. --%>
+        <meta property="og:title" content={assigns[:page_title] || "SAR Duty"} />
+        <meta property="og:description" content={page_description(assigns)} />
+        <meta property="og:site_name" content="SAR Duty" />
+        <%!-- A saved home screen icon's label, not the page title. --%>
+        <meta name="apple-mobile-web-app-title" content="SAR Duty" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
         <meta name="theme-color" content="#13243a" media="(prefers-color-scheme: light)" />
@@ -24,6 +25,7 @@ defmodule Web.Layouts do
           {assigns[:page_title] || "Untitled page"}
         </.live_title>
         <.favicon_links />
+        <link rel="manifest" href="/manifest.webmanifest" />
         <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
         <script phx-track-static type="module" src={~p"/assets/js/app.js"}>
         </script>
@@ -35,6 +37,9 @@ defmodule Web.Layouts do
     </html>
     """
   end
+
+  defp page_description(assigns),
+    do: assigns[:page_description] || "Less paperwork for search and rescue teams that use D4H."
 
   # Public pages run edge to edge under the bar, so the home page's bands can; a page sets
   # its own width.

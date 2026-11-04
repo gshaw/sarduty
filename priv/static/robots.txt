@@ -1,5 +1,5 @@
-# See https://www.robotstxt.org/robotstxt.html for documentation on how to use the robots.txt file
-#
-# To ban all spiders from the entire site uncomment the next two lines:
-# User-agent: *
-# Disallow: /
+# Everything is open to crawlers and agents, AI ones included (#824). Pages kept out of
+# search send an X-Robots-Tag: noindex header instead. Never Disallow: a blocked page is
+# never fetched, so its noindex is never seen.
+User-agent: *
+Allow: /

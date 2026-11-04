@@ -18,6 +18,7 @@ defmodule Web.Endpoint do
 
   # Fly's check, before anything that logs, reads the session, or checks the host.
   plug Web.Health
+  plug Web.FlyHostRedirect
 
   # Serve at "/" the static files from "priv/static" directory.
   #
