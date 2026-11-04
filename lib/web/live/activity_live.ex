@@ -57,6 +57,9 @@ defmodule Web.ActivityLive do
     activity = fetch_activity(team, params["id"])
 
     if activity.deleted_at && !team_admin?, do: raise(Web.Status.NotFound)
+    travel? = Activity.travel?(team, activity)
+    # Travel is a feature, on incidents only.
+    if socket.assigns.live_action == :travel && !travel?, do: raise(Web.Status.NotFound)
     # The History tab is Web.ActivityHistoryLive's route, for team admins only.
     tab = socket.assigns.live_action
 
@@ -67,6 +70,7 @@ defmodule Web.ActivityLive do
       |> assign(
         page_title: page_title(activity, tab),
         activity: activity,
+        travel?: travel?,
         tab: tab,
         entries: if(tab == :history, do: ChangeHistory.for_activity(team, activity), else: []),
         now: now,
@@ -103,7 +107,9 @@ defmodule Web.ActivityLive do
         Standing.visible_by_member(team, Enum.map(members, & &1.member), now, team_admin?),
       counts: ActivityMembers.counts(members),
       invitation: replier && Attendance.invitation(activity, replier),
-      your_travel?: your_travel?(activity, replier, socket.assigns.coming?, attendances)
+      your_travel?:
+        socket.assigns.travel? and
+          your_travel?(activity, replier, socket.assigns.coming?, attendances)
     )
     |> assign_reminders(members)
     |> assign_delete()
@@ -114,7 +120,7 @@ defmodule Web.ActivityLive do
   # when members are home, until it's published and travel can't change.
   defp assign_travel(socket) do
     %{activity: activity, team_admin?: team_admin?, now: now} = socket.assigns
-    count? = team_admin? and Activity.finished_draft?(activity, now)
+    count? = socket.assigns.travel? and team_admin? and Activity.finished_draft?(activity, now)
 
     assign(socket,
       travel_not_set: if(count?, do: ActivityTravel.counts(activity, now).not_set, else: 0)
@@ -343,7 +349,7 @@ defmodule Web.ActivityLive do
         Members
       </:tab>
       <:tab
-        :if={@team_admin? and (!@coming? or @tab == :travel) and !@activity.deleted_at}
+        :if={@travel? and @team_admin? and (!@coming? or @tab == :travel) and !@activity.deleted_at}
         navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/travel"}
         current={@tab == :travel}
       >

@@ -7,7 +7,8 @@ defmodule Web.Settings.FeaturesLive do
   alias App.Operation.SetTeamFeature
 
   # The team's features, /teams/:subdomain/settings/features: one switch each, saved when
-  # flipped. Chores and certificates need member logins, so they sit under it. MCP and ID
+  # flipped, A to Z. Certificates and chores need member logins, so they sit under it, A
+  # to Z too. MCP (Agents) and ID
   # cards are SAR Duty's to turn on, from /admin/teams/:id (App.Operation.SetTeamMCP,
   # App.Operation.SetTeamIdCards), so they show only as on or off. A team asks for ID
   # cards; MCP isn't offered, so it shows only once on.
@@ -54,6 +55,7 @@ defmodule Web.Settings.FeaturesLive do
   defp on?(team, :chores), do: team.chores_enabled
   defp on?(team, :certificates), do: team.certificates_enabled
   defp on?(team, :whiteboard), do: team.whiteboard_enabled
+  defp on?(team, :travel), do: team.travel_enabled
 
   defp message(%{member_logins: true}, :member_logins),
     do: "Member logins turned on. Members can log in now."
@@ -65,6 +67,8 @@ defmodule Web.Settings.FeaturesLive do
   defp message(_team, :certificates), do: "Certificates turned off."
   defp message(%{whiteboard_enabled: true}, :whiteboard), do: "Whiteboard turned on."
   defp message(_team, :whiteboard), do: "Whiteboard turned off."
+  defp message(%{travel_enabled: true}, :travel), do: "Travel turned on."
+  defp message(_team, :travel), do: "Travel turned off."
 
   def render(assigns) do
     ~H"""
@@ -73,6 +77,21 @@ defmodule Web.Settings.FeaturesLive do
       <p class="lead">Turn on what your team uses. Each switch saves right away.</p>
 
       <div id="features" class="flex flex-col gap-6">
+        <.set_by_sar_duty
+          :if={@current_team.mcp_enabled}
+          id="feature-mcp"
+          label="Agents"
+          on?={true}
+        >
+          Team admins connect an AI agent, such as Claude or ChatGPT, that helps write
+          reports. <.a navigate={~p"/teams/#{@current_team}/settings/mcp"}>Agents</.a>
+        </.set_by_sar_duty>
+
+        <.set_by_sar_duty id="feature-id-cards" label="ID cards" on?={@current_team.id_cards_enabled}>
+          Members add their ID card to Apple Wallet or Google Wallet. SAR Duty turns ID cards
+          on. Email support@sarduty.com to ask.
+        </.set_by_sar_duty>
+
         <.switch
           id="feature-member-logins"
           label="Member logins"
@@ -88,6 +107,18 @@ defmodule Web.Settings.FeaturesLive do
 
         <div class="flex flex-col gap-6 pl-8">
           <.switch
+            id="feature-certificates"
+            label="Certificates"
+            checked={@current_team.certificates_enabled}
+            disabled={!@current_team.member_logins}
+            phx-click="set"
+            phx-value-feature="certificates"
+          >
+            Members send a certificate, and a team admin checks it before recording the award.
+            <.needs_member_logins :if={!@current_team.member_logins} />
+          </.switch>
+
+          <.switch
             id="feature-chores"
             label="Chores"
             checked={@current_team.chores_enabled}
@@ -102,19 +133,18 @@ defmodule Web.Settings.FeaturesLive do
               navigate={~p"/teams/#{@current_team}/settings/chore-categories"}
             >Chore categories</.a>
           </.switch>
-
-          <.switch
-            id="feature-certificates"
-            label="Certificates"
-            checked={@current_team.certificates_enabled}
-            disabled={!@current_team.member_logins}
-            phx-click="set"
-            phx-value-feature="certificates"
-          >
-            Members send a certificate, and a team admin checks it before recording the award.
-            <.needs_member_logins :if={!@current_team.member_logins} />
-          </.switch>
         </div>
+
+        <.switch
+          id="feature-travel"
+          label="Travel"
+          checked={@current_team.travel_enabled}
+          phx-click="set"
+          phx-value-feature="travel"
+        >
+          How members got to each incident, and the km round trip from home, on the
+          incident's Travel tab. Members confirm theirs before you publish.
+        </.switch>
 
         <.switch
           id="feature-whiteboard"
@@ -138,21 +168,6 @@ defmodule Web.Settings.FeaturesLive do
             {@service} has the whiteboard turned off for your team. Turn it on in {@service}.
           </span>
         </.switch>
-
-        <.set_by_sar_duty
-          :if={@current_team.mcp_enabled}
-          id="feature-mcp"
-          label="Agents"
-          on?={true}
-        >
-          Team admins connect an AI agent, such as Claude or ChatGPT, that helps write
-          reports. <.a navigate={~p"/teams/#{@current_team}/settings/mcp"}>Agents</.a>
-        </.set_by_sar_duty>
-
-        <.set_by_sar_duty id="feature-id-cards" label="ID cards" on?={@current_team.id_cards_enabled}>
-          Members add their ID card to Apple Wallet or Google Wallet. SAR Duty turns ID cards
-          on. Email support@sarduty.com to ask.
-        </.set_by_sar_duty>
       </div>
     </div>
     """

@@ -23,6 +23,14 @@ defmodule App.Model.Activity do
   def locked?(%{is_published: published?}), do: published? == true
 
   @doc """
+  Whether the activity has travel (#230): the team turned Travel on, and it's an incident,
+  the kind BC teams are paid mileage for. The Travel tab, Your travel, the Dashboard's
+  to-do, and Change activity's note all follow it.
+  """
+  def travel?(%{travel_enabled: enabled}, %{activity_kind: kind}),
+    do: enabled == true and kind == "incident"
+
+  @doc """
   The D4H tags that say which hours an activity counts for, as `%{primary: tag,
   secondary: tag, other: tag}`. Other is for activities that count for no hours, and is
   nil when nobody names one. A team's organization names each tag (#289); a team names

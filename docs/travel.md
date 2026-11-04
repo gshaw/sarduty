@@ -4,6 +4,11 @@ How each attended row got to an activity, and the km it counts (#230). It took t
 Mileage report's place as a tab on the activity, `/activities/:id/travel`, for team
 admins from the start, with how many rows aren't set as its badge.
 
+Teams turn Travel on in team settings' Features, off by default; teams that had set
+trips were turned on. It's on incidents only, the kind BC teams are paid mileage for:
+`App.Model.Activity.travel?/2` decides the tab, Your travel, the Dashboard's to-do,
+Change activity's note, and whether SetTravel and CheckTravel save.
+
 ## How it works
 
 - **Round trips come from SAR Duty's copy.** `App.Operation.BuildMileageReport` reads the

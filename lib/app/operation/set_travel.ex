@@ -5,7 +5,7 @@ defmodule App.Operation.SetTravel do
   team admin typed. A row with no route to where it drove stays as it was. A row that
   has that travel and km already isn't saved again, so its member's confirm stands. Clear
   takes a row's trip away, back to not set. A published activity's travel can't change,
-  like its attendance.
+  like its attendance. Only an activity with travel takes it (Activity.travel?/2).
 
   plan/4 is pure; call/7 checks the activity, plans against the rows as saved now, and
   saves.
@@ -21,6 +21,7 @@ defmodule App.Operation.SetTravel do
   def call(team, %Activity{} = activity, user, ids, travel, km_text, now) do
     cond do
       activity.deleted_at -> {:error, :deleted}
+      !Activity.travel?(team, activity) -> {:error, :no_travel}
       Activity.locked?(activity) -> {:error, :published}
       true -> set(team, activity, user, ids, travel, km_text, now)
     end
@@ -162,4 +163,5 @@ defmodule App.Operation.SetTravel do
     do: "Published, so travel cannot be changed. #{D4H.unpublish_text(team)}"
 
   def error_text(_team, :deleted), do: "This activity is deleted."
+  def error_text(_team, :no_travel), do: "This activity has no travel."
 end

@@ -7,6 +7,7 @@ defmodule Web.ActivityTravelLiveTest do
   alias App.Model.Attendance
   alias App.Model.HomeCoordinate
   alias App.Model.Trip
+  alias App.Operation.SetTravel
   alias App.Repo
 
   test "redirects when not authenticated" do
@@ -30,6 +31,7 @@ defmodule Web.ActivityTravelLiveTest do
       activity_fixture(team, %{
         title: "Missing hiker",
         ref_id: "01472",
+        activity_kind: "incident",
         started_at: started_at,
         finished_at: DateTime.add(started_at, 5, :hour)
       })
@@ -381,6 +383,38 @@ defmodule Web.ActivityTravelLiveTest do
       set(lv, [ctx.my_row], "other", "12")
 
       assert lv |> element("#activity-your-travel") |> render() =~ "12 km round trip"
+    end
+  end
+
+  describe "only incidents, on a team with Travel on" do
+    test "an exercise has no Travel tab, and its page is not found", ctx do
+      activity =
+        ctx.activity |> Ecto.Changeset.change(activity_kind: "exercise") |> Repo.update!()
+
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}")
+      refute has_element?(lv, ".tabs a", "Travel")
+
+      assert_raise Web.Status.NotFound, fn ->
+        live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/travel")
+      end
+    end
+
+    test "a team with Travel off has no Travel tab, and saves nothing", ctx do
+      team = ctx.team |> Ecto.Changeset.change(travel_enabled: false) |> Repo.update!()
+
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{team}/activities/#{ctx.activity.id}")
+      refute has_element?(lv, ".tabs a", "Travel")
+
+      assert {:error, :no_travel} =
+               SetTravel.call(
+                 team,
+                 ctx.activity,
+                 ctx.user,
+                 [ctx.ann_row.id],
+                 "passenger",
+                 "",
+                 DateTime.utc_now()
+               )
     end
   end
 

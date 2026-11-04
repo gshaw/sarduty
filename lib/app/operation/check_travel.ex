@@ -15,7 +15,7 @@ defmodule App.Operation.CheckTravel do
 
   @doc """
   `choice` is "right", or a travel with `km_text` for "other". Returns `{:ok, trip_or_plan}`
-  or `{:error, reason}`: :published, :deleted, :not_set (That's right with no trip), :no_route,
+  or `{:error, reason}`: :no_travel, :published, :deleted, :not_set (That's right with no trip), :no_route,
   or SetTravel's :bad_km and :bad_travel.
   """
   def call(
@@ -30,6 +30,7 @@ defmodule App.Operation.CheckTravel do
       ) do
     cond do
       activity.deleted_at -> {:error, :deleted}
+      !Activity.travel?(team, activity) -> {:error, :no_travel}
       Activity.locked?(activity) -> {:error, :published}
       true -> check(team, activity, member, user, d4h_attendance_id, choice, km_text, now)
     end

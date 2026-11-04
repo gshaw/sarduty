@@ -256,7 +256,10 @@ defmodule Web.ActivityFormLive do
 
   defp assign_sections(socket, team, activity),
     do:
-      assign(socket, fields: fields(team, activity), travel: travel(activity, DateTime.utc_now()))
+      assign(socket,
+        fields: fields(team, activity),
+        travel: Activity.travel?(team, activity) && travel(activity, DateTime.utc_now())
+      )
 
   # How many attended rows have no trip yet (#230), beside the Published box: a note,
   # never a block. Only after the start and before publishing, and only with someone

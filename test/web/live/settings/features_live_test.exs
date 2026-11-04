@@ -63,6 +63,20 @@ defmodule Web.Settings.FeaturesLiveTest do
     refute has_element?(lv, ".tabs a", "Chore categories")
   end
 
+  test "Travel turns on and off (#230)", %{conn: conn, team: team} do
+    team = team |> Ecto.Changeset.change(travel_enabled: false) |> Repo.update!()
+    refute %Team{}.travel_enabled
+
+    {:ok, lv, _html} = open(conn, team)
+    flip(lv, "travel")
+    assert Repo.reload!(team).travel_enabled
+    assert render(lv) =~ "Travel turned on."
+    assert %{data: %{"feature" => "travel"}} = Event.get_last(:feature_turned_on)
+
+    flip(lv, "travel")
+    refute Repo.reload!(team).travel_enabled
+  end
+
   describe "the whiteboard (#515)" do
     setup %{team: team} do
       team = team |> Ecto.Changeset.change(whiteboard_enabled: false) |> Repo.update!()

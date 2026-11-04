@@ -68,6 +68,9 @@ defmodule App.Model.Team do
     # answers 403 with its module off. Set only by the whiteboard's read.
     field :whiteboard_enabled, :boolean, default: false
     field :d4h_whiteboard, :boolean, default: true
+    # Travel (#230): the Travel tab, Your travel, and the Dashboard's travel to-do, on
+    # incidents only (App.Model.Activity.travel?/2). Set by App.Operation.SetTeamFeature.
+    field :travel_enabled, :boolean, default: false
     # The hours tags the team's organization leaves blank (#323); see
     # App.Model.Activity.hours_tags/1. Set on the team's hours tags settings page.
     field :primary_hours_tag, TrimmedString

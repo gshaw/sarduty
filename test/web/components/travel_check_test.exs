@@ -20,7 +20,14 @@ defmodule Web.Components.TravelCheckTest do
     alex = manager_fixture(team, %{name: "Alex Chen"})
     alex_user = AccountsFixtures.user_fixture(%{email: alex.email})
     started_at = DateTime.utc_now() |> DateTime.add(-3, :day) |> DateTime.truncate(:second)
-    activity = activity_fixture(team, %{title: "Missing hiker", started_at: started_at})
+
+    activity =
+      activity_fixture(team, %{
+        title: "Missing hiker",
+        activity_kind: "incident",
+        started_at: started_at
+      })
+
     row = attendance_fixture(activity, cameron)
 
     trip =
@@ -153,6 +160,19 @@ defmodule Web.Components.TravelCheckTest do
 
     refute has_element?(open(ctx), "#activity-your-travel-#{ctx.trip.d4h_attendance_id}")
 
+    {:ok, dashboard, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
+    refute has_element?(dashboard, "#to-do-travel-#{ctx.activity.id}")
+  end
+
+  test "an exercise, or a team with Travel off, has no Your travel and no to-do", ctx do
+    ctx.activity |> Ecto.Changeset.change(activity_kind: "exercise") |> Repo.update!()
+    refute has_element?(open(ctx), "#activity-your-travel")
+    {:ok, dashboard, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
+    refute has_element?(dashboard, "#to-do-travel-#{ctx.activity.id}")
+
+    ctx.activity |> Ecto.Changeset.change(activity_kind: "incident") |> Repo.update!()
+    ctx.team |> Ecto.Changeset.change(travel_enabled: false) |> Repo.update!()
+    refute has_element?(open(ctx), "#activity-your-travel")
     {:ok, dashboard, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}")
     refute has_element?(dashboard, "#to-do-travel-#{ctx.activity.id}")
   end

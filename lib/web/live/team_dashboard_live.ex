@@ -136,12 +136,21 @@ defmodule Web.TeamDashboardLive do
           qualifications,
           now,
           member.team.timezone,
-          chores: chores,
-          certificates: certificates,
-          trips: Trip.unchecked_for_member(member),
-          unset: Trip.unset_for_member(member, now)
+          [chores: chores, certificates: certificates] ++ travel(member, now)
         )
     )
+  end
+
+  # Travel to confirm or set, only on the activities that have travel (#230).
+  defp travel(%{team: %Team{travel_enabled: false}}, _now), do: []
+
+  defp travel(member, now) do
+    travel? = &Activity.travel?(member.team, &1.activity)
+
+    [
+      trips: member |> Trip.unchecked_for_member() |> Enum.filter(travel?),
+      unset: member |> Trip.unset_for_member(now) |> Enum.filter(travel?)
+    ]
   end
 
   # The lower half: the built-in chart reports (#826), on one Context, after the top.

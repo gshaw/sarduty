@@ -306,6 +306,7 @@ defmodule App.CoastRange do
       certificates_enabled: true,
       id_cards_enabled: true,
       whiteboard_enabled: true,
+      travel_enabled: true,
       retiring_d4h_group_id: 9_500_005,
       d4h_synced_at: usec(now),
       d4h_refreshed_at: usec(now)
