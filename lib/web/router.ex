@@ -33,6 +33,18 @@ defmodule Web.Router do
     plug :put_secure_browser_headers
   end
 
+  # The check as JSON, for apps that scan cards (/agents/id-cards). No session or CSRF
+  # token: it only reads. "api" has an I, which card codes never do.
+  pipeline :verify_api do
+    plug :accepts, ["json"]
+  end
+
+  scope "/api", Web, host: "verify." do
+    pipe_through :verify_api
+
+    get "/cards/:code", CardApiController, :show
+  end
+
   scope "/", Web, host: "verify." do
     pipe_through :verify
 
@@ -130,6 +142,7 @@ defmodule Web.Router do
       live "/privacy", PrivacyLive
       live "/changelog", ChangelogLive
       live "/agents/reports", ReportLanguageLive
+      live "/agents/id-cards", CardApiLive
       live "/agents", AgentsLive
       live "/signup", TeamSignupLive
       # A reminder email's links (#444): replying, and turning reminders off. No login.
@@ -144,6 +157,7 @@ defmodule Web.Router do
 
     # The same pages as Markdown, for agents.
     get "/agents/reports.md", MarkdownController, :report_language
+    get "/agents/id-cards.md", MarkdownController, :id_cards
     get "/changelog.md", MarkdownController, :changelog
 
     get "/styles", StyleGuideController, :index

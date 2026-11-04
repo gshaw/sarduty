@@ -4,6 +4,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Apps can check an ID card as JSON: scan the card and get the member, their team, and
+  whether they're active. [How to check an ID card](https://sarduty.com/agents/id-cards)
+  shows how. SAR Command Assist is first to use it.
 - ⭐ Travel replaces the mileage report. After an activity, check members and set how they
   got there: drove to the ICP or the yard, a passenger, or km you type. SAR Duty saves it,
   and a browser agent such as Claude in Chrome can copy the km into D4H for you. Thanks to

@@ -3,7 +3,7 @@ defmodule Web.PageDescriptionTest do
 
   # Each public page has its own meta description, for search results and link previews.
   # App pages share the layout's, as the login code step does.
-  @public ~w(/ /terms /privacy /changelog /agents /agents/reports /signup /login)
+  @public ~w(/ /terms /privacy /changelog /agents /agents/reports /agents/id-cards /signup /login)
 
   test "each public page describes itself", %{conn: conn} do
     default = description(conn, "/login/code?email=pat@example.com")

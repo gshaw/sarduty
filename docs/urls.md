@@ -45,8 +45,11 @@ enforces the top-level list and the held URLs.
   `login`, `logout`, `replies`, `reminders`, `wallet`, `styles`, `terms`, `privacy`,
   `agents`, `changelog`, `changelog.md`, `maps`, and `dev` in development. A new one is
   added to the router test on purpose. `agents` holds what agents read: `/agents`, How to
-  write a report at `/agents/reports` and `/agents/reports.md` (#803), and pages next. A
+  write a report at `/agents/reports` and `/agents/reports.md` (#803), How to check an ID
+  card at `/agents/id-cards` and `/agents/id-cards.md`, and pages next. A
   team's reports are under its team. `/changelog.md` is the changelog as text.
+- **The verify site's `/api/cards/:code`** is the card check as JSON. Apps that scan cards
+  hold it, so it doesn't move. `api` has an I, which card codes never do.
 - **Anything printed on a card goes through the verify site**, so it stays short and never
   depends on a team page's path.
 - **Build paths one way**: `~p"/teams/#{team}/members"`. `App.Model.Team` derives

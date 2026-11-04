@@ -66,6 +66,14 @@ defmodule Web.AgentsLive do
         text: "The report language, with an example of each clause.",
         path: ~p"/agents/reports",
         markdown: ~p"/agents/reports.md"
+      },
+      %{
+        id: "agents-page-id-cards",
+        title: "How to check an ID card",
+        text:
+          "The verify site's check as JSON, for apps that sign members in with their ID card.",
+        path: ~p"/agents/id-cards",
+        markdown: ~p"/agents/id-cards.md"
       }
     ]
   end

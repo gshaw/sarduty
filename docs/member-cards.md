@@ -60,6 +60,25 @@ organization gets its branding: see [organizations.md](organizations.md).
   for a change D4H doesn't mark ([d4h-sync.md](d4h-sync.md#where-the-copy-drifts)). The result says
   when the team last refreshed.
 
+## The check as JSON
+
+`verify.sarduty.com/api/cards/K7Q4-M2XA`
+([CardApiController](../lib/web/controllers/card_api_controller.ex)) answers the same
+check for apps that sign members in by scanning their card, SAR Command Assist first.
+[How to check an ID card](../lib/web/card_api_doc.ex), at `/agents/id-cards`, is its
+public documentation. The page and the JSON share
+[CheckMemberCard](../lib/app/operation/check_member_card.ex), so they never disagree.
+
+- **It says what the page says**, plus where the team's records live: `service` (`d4h` or
+  `records`), the API's URL, and the D4H team and member IDs. Those open nothing without
+  the team's own access key, and they let an app match a card to a member it already has,
+  where a team's own ID number repeats across teams.
+- **Same rules as the page.** A cancelled card gives its status only; a former member's
+  gives the name and when they left, with no photo. Misses count toward the same
+  per-IP limit, and a limited IP gets `429`.
+- **No key, no CORS header.** It reads only what a card's holder already shows anyone.
+  Desktop and phone apps don't need CORS; add it only when a web app asks.
+
 ## Sample cards
 
 `verify.sarduty.com/samples` ([VerifySamplesLive](../lib/web/live/verify_samples_live.ex))
