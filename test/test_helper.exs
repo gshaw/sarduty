@@ -1,4 +1,6 @@
-ExUnit.start()
+# Code under test logs warnings on purpose (failed syncs, rate limits). Keep them for
+# the failure report instead of between the dots.
+ExUnit.start(capture_log: true)
 Ecto.Adapters.SQL.Sandbox.mode(App.Repo, :manual)
 
 # Team logos go to a scratch directory, never the developer's own.
