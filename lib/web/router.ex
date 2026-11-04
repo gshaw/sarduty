@@ -40,14 +40,27 @@ defmodule Web.Router do
     plug :accepts, ["json"]
   end
 
+  # Out of search, still open to agents (#824): the verify site, links that carry a
+  # token, and APIs. A header, not a meta tag, so it covers images and JSON too. Never a
+  # robots.txt Disallow: a blocked page is never fetched, so its noindex is never seen.
+  pipeline :noindex do
+    plug :put_noindex_header
+  end
+
+  defp put_noindex_header(conn, _opts), do: put_resp_header(conn, "x-robots-tag", "noindex")
+
   scope "/api/v1", Web, host: "verify." do
-    pipe_through :verify_api
+    pipe_through [:verify_api, :noindex]
 
     get "/cards/:code", CardApiController, :show
   end
 
   scope "/", Web, host: "verify." do
-    pipe_through :verify
+    pipe_through [:verify, :noindex]
+
+    # Before /:code, which would take /security.txt for a card code.
+    get "/.well-known/security.txt", VerifyController, :security_txt
+    get "/security.txt", VerifyController, :to_security_txt
 
     live_session :verify, session: {Web.VerifyLimit, :session, []} do
       live "/", VerifyLive
@@ -72,6 +85,8 @@ defmodule Web.Router do
   # Apple Wallet calls these with JSON bodies and its own auth header: no session, no
   # CSRF token, and an Accept header of its own choosing.
   scope "/wallet/v1", Web do
+    pipe_through :noindex
+
     post "/devices/:device/registrations/:pass_type/:serial", WalletController, :register
     delete "/devices/:device/registrations/:pass_type/:serial", WalletController, :unregister
     get "/devices/:device/registrations/:pass_type", WalletController, :serial_numbers
@@ -82,6 +97,8 @@ defmodule Web.Router do
   # Google Wallet's save and delete callbacks (#389), set on the pass class. Google signs
   # the body itself; no session or CSRF token.
   scope "/wallet/google", Web do
+    pipe_through :noindex
+
     post "/", GoogleWalletController, :callback
   end
 
@@ -89,6 +106,8 @@ defmodule Web.Router do
   # Accept check. The token decides the team. How an agent gets one (#761): metadata,
   # registration, and tokens, also without a session. docs/mcp.md.
   scope "/teams/:subdomain", Web do
+    pipe_through :noindex
+
     post "/mcp", MCPController, :post
     get "/mcp", MCPController, :get
     delete "/mcp", MCPController, :delete
@@ -101,6 +120,8 @@ defmodule Web.Router do
   # RFC 9728 and RFC 8414 put metadata under /.well-known/, with the resource's or the
   # issuer's path after it.
   scope "/.well-known", Web do
+    pipe_through :noindex
+
     get "/oauth-protected-resource/teams/:subdomain/mcp", OAuthController, :resource_metadata
     get "/oauth-authorization-server/teams/:subdomain", OAuthController, :server_metadata
     options "/oauth-protected-resource/teams/:subdomain/mcp", OAuthController, :preflight
@@ -110,11 +131,15 @@ defmodule Web.Router do
   # A mail app's one-click unsubscribe from a reminder (RFC 8058, #444): it posts with no
   # session or CSRF token. The signed token is the only access. Its page is the GET below.
   scope "/reminders", Web do
+    pipe_through :noindex
+
     post "/:token", InvitationRemindersController, :unsubscribe
   end
 
   # Map images (Web.MapImage). Signed keys, no session: the style guide shows one too.
   scope "/maps", Web do
+    pipe_through :noindex
+
     get "/:key", MapImageController, :show
   end
 
@@ -146,21 +171,20 @@ defmodule Web.Router do
       live "/agents/id-cards", CardApiLive
       live "/agents", AgentsLive
       live "/signup", TeamSignupLive
-      # A reminder email's links (#444): replying, and turning reminders off. No login.
-      live "/replies/:token", ReplyLinkLive
-      live "/reminders/:token", InvitationRemindersLive
     end
-
-    # Send reply on a reminder's reply page (#488).
-    post "/replies/:token", ReplyLinkController, :create
-    # Add to calendar on the reply page: the reply link's activity as an .ics file.
-    get "/replies/:token/calendar", ActivityCalendarController, :reply
 
     # The same pages as Markdown, for agents.
     get "/agents.md", MarkdownController, :agents
     get "/agents/reports.md", MarkdownController, :report_language
     get "/agents/id-cards.md", MarkdownController, :id_cards
     get "/changelog.md", MarkdownController, :changelog
+    get "/llms.txt", MarkdownController, :llms
+
+    get "/.well-known/security.txt", SiteController, :security_txt
+    get "/security.txt", SiteController, :to_security_txt
+    # Letters print the verify host's address; people type it without "verify.".
+    get "/letters", SiteController, :to_verify
+    get "/letters/:ref", SiteController, :to_verify
 
     get "/styles", StyleGuideController, :index
     get "/styles/:page", StyleGuideController, :show
@@ -172,6 +196,24 @@ defmodule Web.Router do
     post "/login/code", UserSessionController, :request_code
     post "/login", UserSessionController, :create
     delete "/logout", UserSessionController, :delete
+  end
+
+  # A reminder email's links (#444): replying, and turning reminders off. No login. The
+  # token is the key, so they stay out of search.
+  scope "/", Web do
+    pipe_through [:browser, :noindex]
+
+    live_session :token_link_session,
+      session: {Web.VerifyLimit, :session, []},
+      on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :mount_current_user}] do
+      live "/replies/:token", ReplyLinkLive
+      live "/reminders/:token", InvitationRemindersLive
+    end
+
+    # Send reply on a reminder's reply page (#488).
+    post "/replies/:token", ReplyLinkController, :create
+    # Add to calendar on the reply page: the reply link's activity as an .ics file.
+    get "/replies/:token/calendar", ActivityCalendarController, :reply
   end
 
   # Asking for a login code and entering it. Someone already logged in goes to their team

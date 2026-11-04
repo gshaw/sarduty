@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- SAR Duty saved to an iPhone home screen gets its icon and is named SAR Duty, not the
+  page. Links shared in a chat show a small preview with the page's title.
 - Other apps can check a SAR Duty ID card when they scan it: the same answer as the verify
   site, with the member's D4H ID so the app can match them.
   [How to check an ID card](https://sarduty.com/agents/id-cards) shows how.

@@ -17,7 +17,11 @@ defmodule Web do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+  # The apple-touch-icon copies sit at the root because iPhones and link previews ask
+  # there first, whatever the page links (#824).
+  def static_paths,
+    do:
+      ~w(assets fonts images favicon.ico robots.txt manifest.webmanifest apple-touch-icon.png apple-touch-icon-precomposed.png)
 
   def router do
     quote do

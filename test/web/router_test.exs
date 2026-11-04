@@ -8,8 +8,18 @@ defmodule Web.RouterTest do
   # purpose: a fixed word at the top could block a future section, and one under
   # /teams/ or /orgs/ would block a team or organization with that name.
   @main_top_level ~w(teams orgs admin account signup login logout replies reminders wallet styles
-                     terms privacy agents agents.md changelog changelog.md maps .well-known)
-  @verify_top_level ["api", "orgs", "letters", "samples", ":code", "*path"]
+                     terms privacy agents agents.md changelog changelog.md maps .well-known
+                     security.txt llms.txt letters)
+  @verify_top_level [
+    "api",
+    ".well-known",
+    "security.txt",
+    "orgs",
+    "letters",
+    "samples",
+    ":code",
+    "*path"
+  ]
 
   test "the main site's top-level paths are the allowed ones" do
     allowed = MapSet.new(["" | @main_top_level] ++ if(dev_routes?(), do: ["dev"], else: []))
@@ -160,8 +170,8 @@ defmodule Web.RouterTest do
 
   defp top_segment(path), do: path |> String.split("/", trim: true) |> List.first("")
 
-  # Routes in the verify site's scope: its LiveView, card images, the JSON check, and the
-  # catch-all.
+  # Routes in the verify site's scope: its LiveView, card images, the JSON check,
+  # security.txt, and the catch-all.
   defp verify_route?(%{metadata: %{phoenix_live_view: {Web.VerifyLive, _, _, _}}}), do: true
   defp verify_route?(%{metadata: %{phoenix_live_view: {Web.VerifyLetterLive, _, _, _}}}), do: true
 
@@ -175,6 +185,89 @@ defmodule Web.RouterTest do
     do: action in [:photo, :banner]
 
   defp verify_route?(_route), do: false
+
+  # Search vs agents (#824). Every route is hidden from search, behind a login, or public,
+  # and exactly one. Hidden routes send X-Robots-Tag: noindex through the :noindex
+  # pipeline; public ones never do. robots.txt blocks nothing either way.
+  @hidden_prefixes ~w(/wallet/ /replies/ /reminders/ /maps/ /.well-known/oauth-)
+  @hidden_team_routes ~w(/teams/:subdomain/mcp /teams/:subdomain/oauth/register
+                         /teams/:subdomain/oauth/token)
+
+  @public_routes [
+    "/",
+    "/.well-known/security.txt",
+    "/agents",
+    "/agents.md",
+    "/agents/id-cards",
+    "/agents/id-cards.md",
+    "/agents/reports",
+    "/agents/reports.md",
+    "/changelog",
+    "/changelog.md",
+    "/letters",
+    "/letters/:ref",
+    "/llms.txt",
+    "/login",
+    "/login/code",
+    "/logout",
+    "/orgs/:slug/logo",
+    "/privacy",
+    "/security.txt",
+    "/signup",
+    "/styles",
+    "/styles/:page",
+    "/teams/:subdomain/logo",
+    "/terms"
+  ]
+
+  test "every route is hidden from search, behind a login, or public" do
+    for route <- Web.Router.__routes__(), not String.starts_with?(route.path, "/dev/") do
+      groups = [hidden: hidden?(route), logged_in: logged_in?(route), public: public?(route)]
+      found = for {group, true} <- groups, do: group
+      noindex? = :noindex in pipe_through(route)
+
+      case found do
+        [:hidden] -> assert noindex?, "#{route.verb} #{route.path} must pipe through :noindex"
+        [:public] -> refute noindex?, "#{route.verb} #{route.path} is public: no :noindex"
+        [:logged_in] -> :ok
+        _ -> flunk("classify #{route.verb} #{route.path} as public or hidden (#{inspect(found)})")
+      end
+    end
+  end
+
+  test "every listed public route exists" do
+    paths = MapSet.new(Web.Router.__routes__(), & &1.path)
+    assert Enum.reject(@public_routes, &(&1 in paths)) == []
+  end
+
+  defp hidden?(route) do
+    verify_route?(route) or route.path in @hidden_team_routes or
+      Enum.any?(@hidden_prefixes, &String.starts_with?(route.path, &1))
+  end
+
+  defp logged_in?(route), do: :require_authenticated_user in pipe_through(route)
+
+  # __routes__ leaves out the pipelines, so match a path built from the route's own.
+  defp pipe_through(route) do
+    host = if verify_route?(route), do: "verify.sarduty.com", else: "sarduty.com"
+
+    path =
+      route.path
+      |> String.split("/")
+      |> Enum.map_join("/", &sample_segment/1)
+
+    verb = route.verb |> Atom.to_string() |> String.upcase()
+    %{route: matched, pipe_through: pipes} = Router.route_info(Web.Router, verb, path, host)
+    assert matched == route.path, "#{verb} #{path} on #{host} reached #{matched}"
+    pipes
+  end
+
+  defp public?(route), do: not verify_route?(route) and route.path in @public_routes
+
+  defp sample_segment(":" <> _param), do: "x"
+  # Deep enough to pass /:code and /:code/photo.
+  defp sample_segment("*" <> _glob), do: "x/y/z"
+  defp sample_segment(segment), do: segment
 
   defp dev_routes?, do: Application.get_env(:sarduty, :dev_routes, false)
 end

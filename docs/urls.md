@@ -43,12 +43,24 @@ enforces the top-level list and the held URLs.
   organization with that name. That's why sign-up is `/signup`, not `/teams/new`.
 - **Top-level paths are a short list**: `teams`, `orgs`, `admin`, `account`, `signup`,
   `login`, `logout`, `replies`, `reminders`, `wallet`, `styles`, `terms`, `privacy`,
-  `agents`, `agents.md`, `changelog`, `changelog.md`, `maps`, and `dev` in development. A
+  `agents`, `agents.md`, `changelog`, `changelog.md`, `maps`, `.well-known`,
+  `security.txt`, `llms.txt`, `letters`, and `dev` in development. A
   new one is added to the router test on purpose. `agents` holds what agents read: `/agents`
   and `/agents.md`, the lander, How to
   write a report at `/agents/reports` and `/agents/reports.md` (#803), How to check an ID
   card at `/agents/id-cards` and `/agents/id-cards.md`, and pages next. A
   team's reports are under its team. `/changelog.md` is the changelog as text.
+- **Files crawlers and agents look for** (#824): `/.well-known/security.txt` on both
+  hosts, with `/security.txt` redirecting to it; `/llms.txt`, the agents lander plus the
+  style guide; `/robots.txt`, which blocks nothing; and the root `apple-touch-icon` copies
+  and `manifest.webmanifest`. `/letters` and `/letters/:ref` on the app's host redirect
+  to the verify host, since letters print its address. `sarduty.fly.dev` redirects to
+  the app in production only (`Web.FlyHostRedirect`, exact hosts).
+- **Search vs agents** (#824): nothing is blocked. Routes kept out of search pipe
+  through `:noindex`, which sends `X-Robots-Tag: noindex`: the whole verify host,
+  `/replies/:token`, `/reminders/:token`, MCP, OAuth, wallet, and `/maps`. Public pages,
+  `/agents` and `/styles` included, stay indexable. The router test puts every route in
+  one group, hidden, logged in, or public, and fails on a new one until it's classified.
 - **Anything printed on a card goes through the verify site**, so it stays short and never
   depends on a team page's path.
 - **Build paths one way**: `~p"/teams/#{team}/members"`. `App.Model.Team` derives

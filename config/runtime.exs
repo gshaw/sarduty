@@ -80,6 +80,9 @@ if config_env() == :prod do
       "//verify.#{System.fetch_env!("PHX_HOST")}"
     ]
 
+  # Fly's own host for the app, sent to PHX_HOST (Web.FlyHostRedirect). Exact hosts only.
+  config :sarduty, :redirect_hosts, ["#{System.get_env("FLY_APP_NAME", "sarduty")}.fly.dev"]
+
   config :sarduty, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   config :sarduty, App.Repo,
