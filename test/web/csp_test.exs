@@ -113,4 +113,60 @@ defmodule Web.CSPTest do
       refute log =~ "CSP would block"
     end
   end
+
+  describe "Web.CSPReport" do
+    alias Web.CSPReport
+
+    defp report(blocked, page, directive \\ "img-src"),
+      do:
+        CSPReport.new(%{
+          "blocked-uri" => blocked,
+          "document-uri" => page,
+          "effective-directive" => directive
+        })
+
+    defp noise?(blocked), do: blocked |> report("https://sarduty.com/") |> CSPReport.noise?()
+
+    defp fingerprint(blocked, page, directive \\ "img-src"),
+      do: blocked |> report(page, directive) |> CSPReport.fingerprint()
+
+    test "browser extensions are noise, SAR Duty's own problems aren't" do
+      assert noise?("chrome-extension://abc/x.js")
+      assert noise?("moz-extension://abc/x.js")
+      refute noise?("inline")
+      refute noise?("https://tiles.example/1.png")
+    end
+
+    test "one fingerprint for one problem, whatever the team, id or token" do
+      a =
+        fingerprint(
+          "https://tiles.example/1.png",
+          "https://sarduty.com/teams/sfsar/activities/12"
+        )
+
+      b =
+        fingerprint(
+          "https://tiles.example/9.png?x=1",
+          "https://sarduty.com/teams/devsar/activities/3"
+        )
+
+      assert a == b
+      assert a == "csp img-src tiles.example /teams/:name/activities/:id"
+
+      assert fingerprint("inline", "https://sarduty.com/replies/SECRET", "script-src-elem") ==
+               "csp script-src-elem inline /replies/[FILTERED]"
+    end
+
+    test "a different directive or page is a different problem" do
+      a = fingerprint("https://tiles.example/1.png", "https://sarduty.com/styles/map")
+      refute a == fingerprint("https://tiles.example/1.png", "https://sarduty.com/styles/chart")
+
+      refute a ==
+               fingerprint(
+                 "https://tiles.example/1.png",
+                 "https://sarduty.com/styles/map",
+                 "connect-src"
+               )
+    end
+  end
 end
