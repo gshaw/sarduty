@@ -157,6 +157,7 @@ defmodule Web.Router do
     get "/replies/:token/calendar", ActivityCalendarController, :reply
 
     # The same pages as Markdown, for agents.
+    get "/agents.md", MarkdownController, :agents
     get "/agents/reports.md", MarkdownController, :report_language
     get "/agents/id-cards.md", MarkdownController, :id_cards
     get "/changelog.md", MarkdownController, :changelog

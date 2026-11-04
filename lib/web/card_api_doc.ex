@@ -19,7 +19,7 @@ defmodule Web.CardApiDoc do
 
     Every SAR Duty ID card has a QR code that opens the card's page on the verify site, such as `#{verify}/K7Q4-M2XA`. An app that signs members in, such as SAR Command Assist, can ask SAR Duty the same check as JSON: scan the card, take the code, and get back who it is, their team, and whether they are an active member.
 
-    Each answer has a sample card to try, such as [#{verify}/api/v1/cards/SAMP-ACTV](#{verify}/api/v1/cards/SAMP-ACTV): see [Sample cards](#sample-cards).
+    To try your app end to end, scan the [sample ID cards](#{verify}/samples): each has a QR code. [Sample cards](#sample-cards) shows what each one answers.
 
     ## Get the code from a scan
 
@@ -88,6 +88,8 @@ defmodule Web.CardApiDoc do
     ## Sample cards
 
     Coast Range SAR is a made-up team. Its cards answer like real ones, with `"sample": true`, and their codes never change, so you can build against them. Their dates move with today's.
+
+    Scan them from [Sample ID cards](#{verify}/samples), which shows each card's QR code. Its forged card links to another site, with the active card's code. Your app gets the active answer, since it sends the code and never opens the link: the photo is the check.
 
     #{samples(verify)}
     ## Too many misses

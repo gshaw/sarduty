@@ -39,13 +39,14 @@ defmodule Web.CardApiLiveTest do
       assert has_element?(lv, "#card-api a[href='#{Web.VerifyHost.url()}/api/v1/cards/#{code}']")
     end
 
+    assert has_element?(lv, "#card-api a[href='#{Web.VerifyHost.url()}/samples']")
     assert render(lv) =~ "&quot;status&quot;: &quot;revoked&quot;"
     assert render(lv) =~ "answers <code>404</code>"
   end
 
   test "Agents lists it", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/agents")
-    assert has_element?(lv, ~s(#agents-page-id-cards a[href="/agents/id-cards.md"]))
+    assert has_element?(lv, ~s(#agents-use-id-cards a[href="/agents/id-cards"]))
   end
 
   # A map's keys, nested; a list by its first item's.
