@@ -2,7 +2,7 @@ defmodule Web.HomePageLive do
   use Web, :live_view_marketing_layout
 
   alias App.Model.Team
-  alias App.Operation.RequestDemo
+  alias App.Operation.CreateDemo
   alias Web.Components.HomeMockups
 
   # The page has 3 readers: a team admin deciding whether to sign up, someone verifying a
@@ -25,7 +25,7 @@ defmodule Web.HomePageLive do
        teams: teams,
        members: socket.assigns[:member_logins] || [],
        # Try a demo (#857) shows once Records' demo key is set.
-       demo?: RequestDemo.on?()
+       demo?: CreateDemo.on?()
      )}
   end
 

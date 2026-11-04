@@ -1,0 +1,71 @@
+defmodule Web.OutboxLive do
+  use Web, :live_view_app_layout
+
+  import Web.Components.Outbox
+
+  alias App.Model.DemoTeam
+  alias App.Model.OutboxMessage
+
+  # A Try a demo team's Outbox (#857, docs/outbox.md): every email the demo would have
+  # sent, kept here instead, newest first. The banner links it. A real team has none.
+
+  def mount(_params, _session, socket) do
+    team = socket.assigns.current_team
+    if !DemoTeam.demo?(team), do: raise(Web.Status.NotFound)
+    if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, OutboxMessage.topic())
+    {:ok, assign(socket, page_title: "Outbox")}
+  end
+
+  def handle_params(%{"id" => id}, _uri, socket) do
+    team = socket.assigns.current_team
+
+    case OutboxMessage.get(team, id) do
+      nil ->
+        raise Web.Status.NotFound
+
+      message ->
+        {:noreply, assign(socket, message: message, messages: nil, page_title: "Outbox · #{id}")}
+    end
+  end
+
+  def handle_params(_params, _uri, socket),
+    do: {:noreply, assign(socket, message: nil, messages: list(socket))}
+
+  defp list(socket), do: OutboxMessage.list(socket.assigns.current_team)
+
+  def render(assigns) do
+    ~H"""
+    <%= if @message do %>
+      <.breadcrumbs>
+        <:item label="Outbox" path={~p"/teams/#{@current_team}/outbox"} />
+        <:item label="Message" />
+      </.breadcrumbs>
+      <.outbox_message
+        message={@message}
+        html_path={~p"/teams/#{@current_team}/outbox/#{@message.id}/html"}
+        timezone={@current_team.timezone}
+      />
+    <% else %>
+      <h1 class="title">Outbox</h1>
+      <p class="lead max-w-3xl">
+        A demo sends nothing. Every email it would send is kept here instead, so you can
+        read it and follow its links as the member would.
+      </p>
+      <.outbox_list
+        id="outbox"
+        messages={@messages}
+        path={&~p"/teams/#{@current_team}/outbox/#{&1.id}"}
+        timezone={@current_team.timezone}
+      />
+    <% end %>
+    """
+  end
+
+  def handle_info({:outbox_message, team_id}, %{assigns: %{message: nil}} = socket) do
+    if team_id == socket.assigns.current_team.id,
+      do: {:noreply, assign(socket, messages: list(socket))},
+      else: {:noreply, socket}
+  end
+
+  def handle_info({:outbox_message, _team_id}, socket), do: {:noreply, socket}
+end

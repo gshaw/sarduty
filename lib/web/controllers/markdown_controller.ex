@@ -16,6 +16,8 @@ defmodule Web.MarkdownController do
 
   def id_cards(conn, _params), do: markdown(conn, Web.CardApiDoc.markdown())
 
+  def demo(conn, _params), do: markdown(conn, Web.DemoAgentsDoc.markdown())
+
   def changelog(conn, _params), do: markdown(conn, @changelog)
 
   # /llms.txt (#824): the agents lander, plus the style guide for agents that build

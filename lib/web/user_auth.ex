@@ -10,6 +10,7 @@ defmodule Web.UserAuth do
   alias App.Model.Member
   alias App.Model.Organization
   alias App.Model.OrganizationAdmin
+  alias App.Model.OutboxMessage
   alias App.Model.Team
   alias App.Operation.RecordUserSeen
 
@@ -316,12 +317,23 @@ defmodule Web.UserAuth do
     {:cont, socket}
   end
 
-  # A Try a demo team's banner (#857), for its team admins: the demo, and the member
-  # View as opens, Cameron Ruiz. Nil on a real team.
+  # A Try a demo team's banner (#857), for its team admins: the demo, its link, its
+  # Outbox's count, and the member View as opens, Cameron Ruiz. Nil on a real team.
+  # Opening a page marks the demo in use, so it syncs.
   defp demo_banner(%{team_admin?: true, current_team: team}) do
     case DemoTeam.for_team(team) do
-      nil -> nil
-      demo -> %{demo: demo, member: Member.find_by_name(team, "Cameron Ruiz")}
+      nil ->
+        nil
+
+      demo ->
+        DemoTeam.seen!(demo, DateTime.utc_now())
+
+        %{
+          demo: demo,
+          link: url(~p"/demo/open/#{DemoTeam.link_token(demo)}"),
+          outbox: OutboxMessage.count(team),
+          member: Member.find_by_name(team, "Cameron Ruiz")
+        }
     end
   end
 

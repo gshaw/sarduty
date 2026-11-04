@@ -79,7 +79,7 @@ defmodule App.Accounts.UserNotifier do
 
       If you did not make this change, tell one of your team admins.
       """)
-      |> Mailer.for_team(team, "This member")
+      |> Mailer.for_team(team)
 
     with {:ok, _metadata} <- Mailer.deliver(email) do
       {:ok, email}

@@ -39,9 +39,10 @@ config :sarduty, App.Vault,
 # calls Req itself. Its default client needs hackney, which we don't have.
 config :swoosh, api_client: false
 
-# Configure mailer for dev and test
-config :swoosh, local: true
-config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Local
+# Email is kept in the Outbox (docs/outbox.md) unless a real adapter is set: dev sends
+# nothing, test uses Swoosh's test adapter, and prod sets Cloudflare's in runtime.exs.
+config :swoosh, local: false
+config :sarduty, App.Mailer, adapter: App.Adapter.Outbox
 
 # Configure Timezone database: https://github.com/lau/tzdata
 config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase

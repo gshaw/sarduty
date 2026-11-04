@@ -41,7 +41,7 @@ defmodule App.Mailer.ActivityMailer do
     |> header("List-Unsubscribe", "<#{reminders_url}>")
     |> header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click")
     |> bodies(activity, team, sender, message, :ask, links)
-    |> Mailer.for_team(team, {:replies, member.name})
+    |> Mailer.for_team(team)
     |> Mailer.deliver()
   end
 
@@ -62,7 +62,7 @@ defmodule App.Mailer.ActivityMailer do
     member
     |> email(team, sender, update_subject(activity))
     |> bodies(activity, team, sender, message, ending, links)
-    |> Mailer.for_team(team, {:replies, member.name})
+    |> Mailer.for_team(team)
     |> Mailer.deliver()
   end
 
@@ -74,7 +74,7 @@ defmodule App.Mailer.ActivityMailer do
     member
     |> email(team, sender, removal_subject(activity))
     |> bodies(activity, team, sender, message, :removed, nowhere(nil))
-    |> Mailer.for_team(team, member.name)
+    |> Mailer.for_team(team)
     |> Mailer.deliver()
   end
 

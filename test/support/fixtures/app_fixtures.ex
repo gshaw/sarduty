@@ -215,13 +215,14 @@ defmodule App.DataFixtures do
     %{user: user, team: team}
   end
 
-  @doc "Makes `team` a visitor's Try a demo copy (#857), with the visitor's name and email."
+  @doc "Makes `team` a Try a demo copy (#857), a visitor's unless `kind` says :test."
   def demo_team_fixture(%Team{} = team, attrs \\ %{}) do
     Repo.insert!(%App.Model.DemoTeam{
       team_id: team.id,
+      kind: Map.get(attrs, :kind, :visitor),
       name: Map.get(attrs, :name, "Morgan Visitor"),
-      email: Map.get(attrs, :email, "morgan#{System.unique_integer([:positive])}@example.com"),
-      expires_at: DateTime.utc_now(:second) |> DateTime.add(7, :day)
+      user_id: attrs[:user_id],
+      expires_at: DateTime.utc_now(:second) |> DateTime.add(3, :day)
     })
   end
 

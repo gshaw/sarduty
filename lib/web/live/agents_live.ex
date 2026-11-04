@@ -98,6 +98,15 @@ defmodule Web.AgentsLive do
   defp uses do
     [
       %{
+        id: "agents-use-demo",
+        title: "Show someone SAR Duty",
+        text:
+          "Someone new asks an agent what SAR Duty does, or whether it has a feature. The agent starts a demo, a made-up team of their own, tries the pages that answer the question, and hands them the link.",
+        access: "Anyone can start a demo, with no key or login.",
+        link: "How to show someone SAR Duty",
+        path: ~p"/agents/demo"
+      },
+      %{
         id: "agents-use-reports",
         title: "Write reports",
         text:

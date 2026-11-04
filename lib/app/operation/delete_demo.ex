@@ -1,11 +1,10 @@
 defmodule App.Operation.DeleteDemo do
   @moduledoc """
-  Deletes a Try a demo (#857), from Delete this demo on its banner or on its seventh day:
+  Deletes a Try a demo (#857), from Delete this demo on its banner or when its time is up:
   its team in SAR Duty and Records (App.Operation.DeleteTeam), its row with the visitor's
-  name and email, and the visitor's user unless they are on a real team too.
+  name, and the user its link logged in as.
   """
 
-  alias App.Accounts
   alias App.Accounts.User
   alias App.Model.DemoTeam
   alias App.Model.Team
@@ -16,7 +15,7 @@ defmodule App.Operation.DeleteDemo do
   def call(%DemoTeam{} = demo) do
     with :ok <- delete_team(demo) do
       if Repo.reload(demo), do: Repo.delete!(demo)
-      delete_user(demo.email)
+      delete_user(demo.user_id)
       :ok
     end
   end
@@ -34,10 +33,12 @@ defmodule App.Operation.DeleteDemo do
     end
   end
 
-  # A user is only an email. One that still leads somewhere stays.
-  defp delete_user(email) do
-    case Accounts.get_user_by_email(email) do
-      %User{is_admin: false} = user -> if !Accounts.may_log_in?(email), do: Repo.delete!(user)
+  # Its own user, made for it with an example.com email, so it leads nowhere else.
+  defp delete_user(nil), do: :ok
+
+  defp delete_user(user_id) do
+    case Repo.get(User, user_id) do
+      %User{is_admin: false} = user -> Repo.delete!(user)
       _admin_or_none -> :ok
     end
 

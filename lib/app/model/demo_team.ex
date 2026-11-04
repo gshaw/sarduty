@@ -3,109 +3,87 @@ defmodule App.Model.DemoTeam do
 
   import Ecto.Query
 
+  alias App.Accounts.User
   alias App.Model.DemoTeam
   alias App.Model.Team
   alias App.Repo
 
-  # A visitor's Try a demo (#857): their own copy of Coast Range SAR for 7 days, from a
-  # name and an email. The row comes first and the team once the emailed link is opened.
-  # Everything a demo team sends goes to `email`, once (App.Mailer), its cards and
-  # letters say Sample, and it never texts. See docs/demo.md.
+  # Try a demo (#857): a copy of Coast Range SAR of its own, opened by a link. The row
+  # and its user come first, and the team the first time the link is opened. A demo
+  # sends nothing: its email goes to its Outbox (App.Mailer), and it never texts. Its
+  # cards and letters say Sample. See docs/demo.md.
+  #
+  # A visitor's demo lasts 3 days from the build. A test's, made with the test key
+  # for a script that checks SAR Duty on a live server, lasts the hours it asked for, and
+  # stays out of the cap on visitors' demos.
   schema "demo_teams" do
+    field :kind, Ecto.Enum, values: [:visitor, :test], default: :visitor
     field :name, :string, redact: true
-    field :email, :string, redact: true
+    belongs_to :user, User
     belongs_to :team, Team
     field :expires_at, :utc_datetime
-    field :warned_at, :utc_datetime
-    field :code_hash, :binary, redact: true
-    field :code_sent_at, :utc_datetime
-    field :code_misses, :integer, default: 0
+    field :seen_at, :utc_datetime
     timestamps(type: :utc_datetime)
   end
 
-  @days 7
-  @code_hours 24
-  @code_max_misses 5
+  @days 3
+  @link_salt "demo link"
+  @default_name "Taylor Brooks"
 
-  @doc "How long a demo lives, from when it's built."
+  @doc "How long a visitor's demo lives, from when it's built."
   def days, do: @days
 
-  @doc "The demo for this email, or nil."
-  def get_by_email(email) when is_binary(email),
-    do: Repo.get_by(DemoTeam, email: email |> String.trim() |> String.downcase())
-
-  @doc "How many demos are live now, built or waiting to be opened."
-  def live_count(now), do: DemoTeam |> where([d], d.expires_at > ^now) |> Repo.aggregate(:count)
-
-  @doc "The demos past their day, oldest first."
-  def expired(now),
-    do: DemoTeam |> where([d], d.expires_at <= ^now) |> order_by(:expires_at) |> Repo.all()
-
-  @doc "Built demos that go within a day and haven't been told."
-  def to_warn(now) do
-    soon = DateTime.add(now, 1, :day)
-
-    DemoTeam
-    |> where([d], not is_nil(d.team_id) and is_nil(d.warned_at))
-    |> where([d], d.expires_at > ^now and d.expires_at <= ^soon)
-    |> Repo.all()
-  end
+  @doc "The visitor's member's name: theirs, or a made-up one."
+  def visitor_name(%DemoTeam{name: name}) when name not in [nil, ""], do: name
+  def visitor_name(%DemoTeam{}), do: @default_name
 
   @doc """
-  A new six-digit code for the demo's link: `{code, changes}`. Only its hash is kept,
-  keyed with the app's secret, as a login code's is.
+  The user the link logs in as, and the email of the visitor's member on the demo team.
+  example.com never takes mail, so nothing sent to it can reach anyone.
   """
-  def new_code(%DemoTeam{} = demo, now) do
-    <<n::32>> = :crypto.strong_rand_bytes(4)
-    code = n |> rem(1_000_000) |> Integer.to_string() |> String.pad_leading(6, "0")
-    {code, %{code_hash: hash(demo, code), code_sent_at: now, code_misses: 0}}
-  end
+  def visitor_email(%DemoTeam{id: id}), do: "visitor-#{id}@example.com"
 
   @doc """
-  Whether `code` opens the demo: its live code, under #{@code_hours} hours old and under
-  #{@code_max_misses} misses. It works again until then, so a mail app that opens links
-  to check them can't use it up. A miss counts against it.
+  The link that opens the demo: anyone with it is the visitor. It is signed rather than
+  stored, so the banner can show it again, and it stops working when the demo goes.
   """
-  def code_ok?(demo, code, now), do: check_code(demo, code, now) == :ok
+  def link_token(%DemoTeam{id: id}), do: Phoenix.Token.sign(Web.Endpoint, @link_salt, id)
 
-  @doc """
-  code_ok?/3 with the reason: `:ok`, `:blank` (no miss counted), `:wrong`, or `:expired`
-  once the code is past its hours or misses, when only a new code helps.
-  """
-  def check_code(%DemoTeam{code_hash: hash} = demo, code, now) when is_binary(hash) do
-    code = (code || "") |> to_string() |> String.replace(~r/\s/, "")
+  @doc "The demo a link opens, while it lives, or nil."
+  def from_link_token(token, now) when is_binary(token) do
+    max_age = (@days + 1) * 86_400
 
-    live? =
-      demo.code_misses < @code_max_misses and
-        DateTime.diff(now, demo.code_sent_at, :hour) < @code_hours
-
-    cond do
-      code == "" ->
-        :blank
-
-      live? and demo |> hash(code) |> Plug.Crypto.secure_compare(hash) ->
-        :ok
-
-      true ->
-        DemoTeam |> where(id: ^demo.id) |> Repo.update_all(inc: [code_misses: 1])
-        if live? and demo.code_misses + 1 < @code_max_misses, do: :wrong, else: :expired
+    with {:ok, id} <- Phoenix.Token.verify(Web.Endpoint, @link_salt, token, max_age: max_age),
+         %DemoTeam{} = demo <- Repo.get(DemoTeam, id),
+         :gt <- DateTime.compare(demo.expires_at, now) do
+      demo
+    else
+      _gone -> nil
     end
   end
 
-  def check_code(%DemoTeam{}, _code, _now), do: :expired
+  def from_link_token(_token, _now), do: nil
 
-  # cspell:ignore hmac -- the :crypto.mac/4 algorithm name
-  defp hash(demo, code) do
-    secret = Application.fetch_env!(:sarduty, Web.Endpoint)[:secret_key_base]
-    :crypto.mac(:hmac, :sha256, secret, "demo:#{demo.id}:#{code}")
+  @doc "How many visitors' demos are live now, built or waiting to be opened."
+  def live_count(now) do
+    DemoTeam
+    |> where([d], d.kind == :visitor and d.expires_at > ^now)
+    |> Repo.aggregate(:count)
   end
+
+  @doc "The demos past their time, oldest first."
+  def expired(now),
+    do: DemoTeam |> where([d], d.expires_at <= ^now) |> order_by(:expires_at) |> Repo.all()
+
+  @doc "The demo a user's link opened, or nil."
+  def for_user(%User{id: id}), do: Repo.get_by(DemoTeam, user_id: id)
 
   @doc "The demo a team is, or nil for a real team."
   def for_team(%Team{id: id}), do: for_team(id)
   def for_team(nil), do: nil
   def for_team(team_id) when is_integer(team_id), do: Repo.get_by(DemoTeam, team_id: team_id)
 
-  @doc "Whether the team is a visitor's demo copy."
+  @doc "Whether the team is a demo copy."
   def demo?(%Team{id: id}), do: demo?(id)
   def demo?(nil), do: false
 
@@ -116,22 +94,26 @@ defmodule App.Model.DemoTeam do
   def team_ids_query, do: from(d in DemoTeam, where: not is_nil(d.team_id), select: d.team_id)
 
   @doc """
-  The toast after a demo team's send, saying where its one copy went, or nil on a real
-  team.
+  The ids of demo teams someone opened in the last hour: only these sync on the schedule,
+  so 200 demos left open in tabs cost nothing.
   """
-  def copy_text(team) do
-    case for_team(team) do
-      nil -> nil
-      demo -> "Your demo sent one copy, to #{demo.email}."
-    end
+  def team_ids_in_use(now) do
+    since = DateTime.add(now, -1, :hour)
+
+    DemoTeam
+    |> where([d], not is_nil(d.team_id) and d.seen_at > ^since)
+    |> select([d], d.team_id)
+    |> Repo.all()
   end
 
-  @doc """
-  Splits what a send would email into what really goes and what doesn't: on a demo team,
-  only the first of `items` goes (to the visitor, App.Mailer.for_team/3), so a send to
-  15 members is one email. A real team's all go.
-  """
-  def one_copy(team, items) do
-    if demo?(team), do: Enum.split(items, 1), else: {items, []}
+  @doc "Notes that someone has the demo open, at most every 5 minutes."
+  def seen!(%DemoTeam{seen_at: seen_at} = demo, now) do
+    if is_nil(seen_at) or DateTime.diff(now, seen_at, :minute) >= 5 do
+      DemoTeam
+      |> where(id: ^demo.id)
+      |> Repo.update_all(set: [seen_at: DateTime.truncate(now, :second)])
+    end
+
+    :ok
   end
 end

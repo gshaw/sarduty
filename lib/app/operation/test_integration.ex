@@ -293,8 +293,8 @@ defmodule App.Operation.TestIntegration do
   defp send_email(to, user, now) do
     case to |> IntegrationTestMailer.build(user.email, now) |> Mailer.deliver() do
       {:ok, _} ->
-        if dev_mailbox?(),
-          do: {:ok, "sent", "Test email in the dev mailbox. Open /dev/mailbox to see it."},
+        if outbox?(),
+          do: {:ok, "sent", "Test email kept in the outbox. Open /dev/outbox to see it."},
           else: {:ok, "sent", "Test email sent to #{to}."}
 
       {:error, reason} ->
@@ -352,7 +352,7 @@ defmodule App.Operation.TestIntegration do
       :ok ->
         if Twilio.delivers?(),
           do: {:ok, "sent", "Test text sent to #{Service.Phone.format(e164)}."},
-          else: {:ok, "sent", "Test text written to the log. This server doesn't send texts."}
+          else: {:ok, "sent", "Test text kept in the outbox. This server doesn't send texts."}
 
       {:error, %{message: message, code: code}} when is_binary(message) ->
         {:error, "failed",
@@ -363,7 +363,7 @@ defmodule App.Operation.TestIntegration do
     end
   end
 
-  defp dev_mailbox?, do: Application.get_env(:sarduty, Mailer)[:adapter] == Swoosh.Adapters.Local
+  defp outbox?, do: Application.get_env(:sarduty, Mailer)[:adapter] == App.Adapter.Outbox
 
   defp honeybadger_reports? do
     Application.get_env(:honeybadger, :environment_name) not in Application.get_env(

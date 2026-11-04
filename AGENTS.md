@@ -90,7 +90,7 @@
   on the team home and activity pages, served through `/maps/`.
 - **Cloudflare Email Sending** through Swoosh, with our own adapter in
   [lib/app/adapter/cloudflare_email.ex](lib/app/adapter/cloudflare_email.ex): mail in
-  production. Dev uses the local mailbox at `/dev/mailbox`.
+  production. Dev keeps email and texts in the Outbox at `/dev/outbox` (docs/outbox.md).
 - **Litestream to Cloudflare R2**: continuous SQLite backup.
 - **MCP**: at `/teams/:subdomain/mcp` (#28, #595). A SAR Duty admin turns Agents on for
   a team, and a team admin connects an AI agent with OAuth (#761): the agent registers,

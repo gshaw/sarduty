@@ -1,4 +1,3 @@
-alias App.Model.DemoTeam
 alias App.Model.Event
 alias App.Model.Member
 alias App.Model.TaxCreditLetter
@@ -25,12 +24,8 @@ defmodule App.Operation.CreateTaxCreditLetters do
       |> order_by([m], asc: m.name)
       |> Repo.all()
 
-    # A demo team emails its visitor one letter (#857); the rest are made and not sent.
-    {emailed, demo_copies} = DemoTeam.one_copy(team, pick(members, letter_member_ids(team, year)))
-
     results =
-      Enum.map(emailed, &create(team, &1, year, true)) ++
-        Enum.map(demo_copies, &create(team, &1, year, false))
+      for member <- pick(members, letter_member_ids(team, year)), do: create(team, member, year)
 
     summary = summarize(results, year)
     record_event(team, user_id, summary)
@@ -42,24 +37,19 @@ defmodule App.Operation.CreateTaxCreditLetters do
 
   # A letter and its email job commit together, so a retry of the whole run makes only
   # the letters still missing, and no email is lost.
-  defp create(team, member, year, email?) do
+  defp create(team, member, year) do
     {:ok, result} =
       Repo.transaction(fn ->
         letter = CreateTaxCreditLetter.call(team: team, member_id: member.id, year: year)
 
-        cond do
-          member.email in [nil, ""] ->
-            {member, :no_email}
+        if member.email in [nil, ""] do
+          {member, :no_email}
+        else
+          letter
+          |> TaxCreditLetter.set_email_status!(:sending)
+          |> EmailTaxCreditLetterWorker.enqueue()
 
-          not email? ->
-            {member, :demo_copy}
-
-          true ->
-            letter
-            |> TaxCreditLetter.set_email_status!(:sending)
-            |> EmailTaxCreditLetterWorker.enqueue()
-
-            {member, :emailing}
+          {member, :emailing}
         end
       end)
 

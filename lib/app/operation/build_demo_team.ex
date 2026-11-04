@@ -53,13 +53,22 @@ defmodule App.Operation.BuildDemoTeam do
   def call(%DemoTeam{} = demo, now) do
     result =
       with {:ok, key} <- demo_key(),
-           {:ok, records} <- D4H.create_demo_team(key, DemoCast.cast(now, demo)) do
+           {:ok, records} <- D4H.create_demo_team(key, DemoCast.cast(now, visitor(demo))) do
         build(demo, records, key, now)
       end
 
     Phoenix.PubSub.broadcast(App.PubSub, topic(demo), {:demo_built, demo.id, result})
     result
   end
+
+  defp visitor(demo),
+    do: %{name: DemoTeam.visitor_name(demo), email: DemoTeam.visitor_email(demo)}
+
+  # A visitor's days count from now, when they first see it. A test's keeps its hours.
+  defp expires_at(%DemoTeam{kind: :visitor}, now),
+    do: now |> DateTime.add(DemoTeam.days(), :day) |> DateTime.truncate(:second)
+
+  defp expires_at(%DemoTeam{expires_at: expires_at}, _now), do: expires_at
 
   defp demo_key do
     case Application.get_env(:sarduty, :records_demo_key) do
@@ -128,9 +137,10 @@ defmodule App.Operation.BuildDemoTeam do
           |> Ecto.Changeset.change(retiring_d4h_group_id: retiring)
           |> Repo.update!()
 
-        # Its 7 days count from now, when the visitor first sees it.
-        expires_at = now |> DateTime.add(DemoTeam.days(), :day) |> DateTime.truncate(:second)
-        demo |> Ecto.Changeset.change(team_id: team.id, expires_at: expires_at) |> Repo.update!()
+        demo
+        |> Ecto.Changeset.change(team_id: team.id, expires_at: expires_at(demo, now))
+        |> Repo.update!()
+
         team
       end)
 

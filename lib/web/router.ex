@@ -40,6 +40,11 @@ defmodule Web.Router do
     plug :accepts, ["json"]
   end
 
+  # JSON in and out, with no session: Try a demo's API (#857).
+  pipeline :api do
+    plug :accepts, ["json"]
+  end
+
   # Out of search, still open to agents (#824): the verify site, links that carry a
   # token, and APIs. A header, not a meta tag, so it covers images and JSON too. Never a
   # robots.txt Disallow: a blocked page is never fetched, so its noindex is never seen.
@@ -156,12 +161,27 @@ defmodule Web.Router do
     get "/:key", MapImageController, :show
   end
 
-  # The Swoosh mailbox preview, in development only.
+  # Try a demo for agents and scripts (#857, /agents.md): start one, or delete it by its
+  # link. No session or CSRF token.
+  scope "/api", Web do
+    pipe_through [:api, :noindex]
+
+    post "/demos", DemoApiController, :create
+    delete "/demos/:token", DemoApiController, :delete
+  end
+
+  # The Outbox (docs/outbox.md): every email and text a dev server kept instead of
+  # sending, login codes among them. Development only.
   if Application.compile_env(:sarduty, :dev_routes) do
-    scope "/dev" do
+    scope "/dev", Web do
       pipe_through :browser
 
-      forward "/mailbox", Plug.Swoosh.MailboxPreview
+      live_session :dev_outbox do
+        live "/outbox", DevOutboxLive
+        live "/outbox/:id", DevOutboxLive
+      end
+
+      get "/outbox/:id/html", OutboxController, :dev_html
     end
   end
 
@@ -182,9 +202,10 @@ defmodule Web.Router do
       live "/changelog", ChangelogLive
       live "/agents/reports", ReportLanguageLive
       live "/agents/id-cards", CardApiLive
+      live "/agents/demo", DemoAgentsLive
       live "/agents", AgentsLive
       live "/signup", TeamSignupLive
-      # Try a demo (#857): a name and an email, then the code from the email.
+      # Try a demo (#857): one button, and a name if they like.
       live "/demo", DemoLive
     end
 
@@ -192,6 +213,7 @@ defmodule Web.Router do
     get "/agents.md", MarkdownController, :agents
     get "/agents/reports.md", MarkdownController, :report_language
     get "/agents/id-cards.md", MarkdownController, :id_cards
+    get "/agents/demo.md", MarkdownController, :demo
     get "/changelog.md", MarkdownController, :changelog
     get "/llms.txt", MarkdownController, :llms
 
@@ -225,9 +247,8 @@ defmodule Web.Router do
       live "/reminders/:token", InvitationRemindersLive
     end
 
-    # The demo email's link, and its code typed on /demo: log in, then build (#857).
-    get "/demo/open/:id", DemoController, :open
-    post "/demo/open", DemoController, :open
+    # A demo's link (#857): logs in as its visitor, then builds it the first time.
+    get "/demo/open/:token", DemoController, :open
 
     # Send reply on a reminder's reply page (#488).
     post "/replies/:token", ReplyLinkController, :create
@@ -416,6 +437,9 @@ defmodule Web.Router do
 
       live "/teams/:subdomain/settings/mcp", Settings.MCPLive
       live "/teams/:subdomain/help", HelpLive
+      # A Try a demo team's Outbox (#857): the email it kept instead of sending.
+      live "/teams/:subdomain/outbox", OutboxLive
+      live "/teams/:subdomain/outbox/:id", OutboxLive
       live "/teams/:subdomain/me", MeLive
       live "/teams/:subdomain/me/activities", MeActivitiesLive
       live "/teams/:subdomain/me/details", MeDetailsLive
@@ -448,8 +472,9 @@ defmodule Web.Router do
       get "/reports/:id/csv", ReportController, :csv
       post "/members/:id/view-as", ViewAsController, :create
       delete "/view-as", ViewAsController, :delete
-      # Delete this demo, on a Try a demo team's banner (#857).
+      # Delete this demo, on a Try a demo team's banner (#857), and its Outbox's HTML.
       delete "/demo", DemoController, :delete
+      get "/outbox/:id/html", OutboxController, :team_html
     end
   end
 end

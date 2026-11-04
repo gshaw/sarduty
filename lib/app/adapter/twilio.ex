@@ -1,9 +1,12 @@
 defmodule App.Adapter.Twilio do
   @moduledoc """
   Twilio, for texting login codes. Optional: with any of the four TWILIO_* settings
-  missing, SAR Duty offers no text login. Dev logs a text instead of sending it unless
-  DEV_SEND_SMS is set, because a dev database can hold real members' numbers.
+  missing, SAR Duty offers no text login. Dev keeps a text in the Outbox (/dev/outbox,
+  docs/outbox.md) instead of sending it unless DEV_SEND_SMS is set, because a dev
+  database can hold real members' numbers.
   """
+
+  alias App.Model.OutboxMessage
 
   require Logger
 
@@ -39,7 +42,7 @@ defmodule App.Adapter.Twilio do
     if delivers?() do
       post_message(config(), to, body)
     else
-      Logger.info("Text to #{to}, not sent (DEV_SEND_SMS is off):\n#{body}")
+      OutboxMessage.add_text!(to, body)
       :ok
     end
   end

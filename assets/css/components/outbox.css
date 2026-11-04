@@ -1,0 +1,3 @@
+/* An Outbox email's HTML (docs/outbox.md), in its sandboxed frame. White under it, as a
+   mail app shows mail, since the email's own colours assume a light page. */
+.outbox-frame { width: 100%; height: 70vh; border: 1px solid var(--border); border-radius: var(--radius); background: #ffffff; margin-bottom: var(--sp-6); }

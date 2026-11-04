@@ -1,41 +1,59 @@
 defmodule Web.DemoFlowTest do
-  # Try a demo (#857), from the home page to the delete. The build itself runs against a
-  # throwaway Records in sarduty-records' bin/check-sarduty; here Records is stubbed.
+  # Try a demo (#857), from the button or the API to the delete. The build itself runs
+  # against a throwaway Records in sarduty-records' bin/check-sarduty; here Records is
+  # stubbed.
   use Web.ConnCase
+  use Oban.Testing, repo: App.Repo, engine: Oban.Engines.Lite
 
   import App.DataFixtures
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
 
   alias App.Accounts
+  alias App.Accounts.User
   alias App.Model.DemoTeam
+  alias App.Model.OutboxMessage
   alias App.Model.Team
-  alias App.Operation.RequestDemo
+  alias App.Operation.CreateDemo
   alias App.RecordsStub
   alias App.Repo
   alias App.Worker.DemoTeamsWorker
+  alias App.Worker.ScheduleTeamSyncsWorker
+  alias App.Worker.SyncTeamChangesWorker
 
   setup do
     Application.put_env(:sarduty, :records_demo_key, "demo-key")
-    on_exit(fn -> Application.delete_env(:sarduty, :records_demo_key) end)
+    Application.put_env(:sarduty, :demo_test_key, "test-key")
+
+    on_exit(fn ->
+      Application.delete_env(:sarduty, :records_demo_key)
+      Application.delete_env(:sarduty, :demo_test_key)
+    end)
+
     :ok
   end
 
-  defp code_from(email) do
-    [code] = Regex.run(~r/\d{6}$/, email.subject)
-    code
+  defp ip, do: "10.7.#{System.unique_integer([:positive])}"
+
+  defp start!(params \\ %{"name" => "Morgan Visitor"}) do
+    {:ok, demo} = CreateDemo.call(params, ip: ip())
+    demo
   end
 
-  defp request!(email \\ "morgan@example.com", ip \\ "10.7.#{System.unique_integer([:positive])}") do
-    {:ok, demo} = RequestDemo.call(%{"name" => "Morgan Visitor", "email" => email}, ip)
-    assert_received {:email, sent}
-    {demo, code_from(sent), sent}
-  end
+  defp link(demo), do: ~p"/demo/open/#{DemoTeam.link_token(demo)}"
 
-  defp built_demo do
-    %{user: user, team: team} = user_with_team_fixture()
-    demo = demo_team_fixture(team, %{email: user.email})
+  defp built_demo(attrs \\ %{}) do
+    team = team_fixture()
+    demo = start!()
+    user = Repo.get!(User, demo.user_id)
+    manager_fixture(team, %{email: user.email})
     member_fixture(team, %{name: "Cameron Ruiz"})
+
+    demo =
+      demo
+      |> Ecto.Changeset.change(Map.merge(%{team_id: team.id}, attrs))
+      |> Repo.update!()
+
     %{user: user, team: team, demo: demo}
   end
 
@@ -48,80 +66,38 @@ defmodule Web.DemoFlowTest do
     refute has_element?(lv, "#start-top-demo")
   end
 
-  test "the form emails a link and a code, with no name in it", %{conn: conn} do
+  test "the button starts a demo and opens its link, with no email", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/demo")
 
-    lv
-    |> form("#demo-form",
-      demo_request_view_model: %{name: "Morgan <b>Visitor</b>", email: "Morgan@Example.com"}
-    )
-    |> render_submit()
+    assert {:error, {:redirect, %{to: "/demo/open/" <> _token = to}}} =
+             lv
+             |> form("#demo-form", demo_start_view_model: %{name: "Morgan Visitor"})
+             |> render_submit()
 
-    assert has_element?(lv, "#demo-sent", "morgan@example.com")
-    assert has_element?(lv, "#code-form")
+    refute_email_sent()
 
-    assert_email_sent(fn email ->
-      assert email.to == [{"", "morgan@example.com"}]
-      assert email.text_body =~ ~r"/demo/open/\d+\?code=\d{6}"
-      refute email.text_body =~ "Morgan"
-      refute email.html_body =~ "Morgan"
-      true
-    end)
+    demo = Repo.one!(DemoTeam)
+    assert %DemoTeam{kind: :visitor, name: "Morgan Visitor", team_id: nil} = demo
+    assert Repo.get!(User, demo.user_id).email == "visitor-#{demo.id}@example.com"
 
-    assert %DemoTeam{name: "Morgan <b>Visitor</b>", team_id: nil} =
-             DemoTeam.get_by_email("morgan@example.com")
+    conn = get(conn, to)
+    assert redirected_to(conn) == ~p"/demo/building"
   end
 
-  test "one demo per email: asking again sends a new code for the same demo" do
-    {demo, first, _sent} = request!()
-    {again, second, _sent} = request!()
-
-    assert again.id == demo.id
-
-    now = DateTime.utc_now(:second)
-    if first != second, do: refute(demo |> Repo.reload!() |> DemoTeam.code_ok?(first, now))
-    assert demo |> Repo.reload!() |> DemoTeam.code_ok?(second, now)
-  end
-
-  test "5 requests an hour per IP" do
-    ip = "10.8.#{System.unique_integer([:positive])}"
-    for n <- 1..5, do: request!("visitor#{n}@example.com", ip)
-
-    assert RequestDemo.call(%{"name" => "Sixth", "email" => "six@example.com"}, ip) ==
-             {:error, :limited}
-  end
-
-  test "200 live demos in all" do
-    now = DateTime.utc_now(:second)
-    expires = DateTime.add(now, 1, :day)
-
-    Repo.insert_all(
-      DemoTeam,
-      for(
-        n <- 1..200,
-        do: %{
-          name: "V",
-          email: "v#{n}@example.com",
-          expires_at: expires,
-          inserted_at: now,
-          updated_at: now
-        }
-      )
-    )
-
-    assert RequestDemo.call(%{"name" => "Late", "email" => "late@example.com"}, "10.9.9.9") ==
-             {:error, :full}
+  test "the name is optional, and a blank one gives the member a made-up name" do
+    demo = start!(%{"name" => ""})
+    assert DemoTeam.visitor_name(demo) == "Taylor Brooks"
   end
 
   test "the link logs in and builds; a failed build keeps nothing and offers Try again", %{
     conn: conn
   } do
-    {demo, code, _sent} = request!()
+    demo = start!()
     RecordsStub.stub(fn _method, _path, _body -> {500, %{"title" => "Down"}} end)
 
-    conn = get(conn, ~p"/demo/open/#{demo.id}?#{[code: code]}")
+    conn = get(conn, link(demo))
     assert redirected_to(conn) == ~p"/demo/building"
-    assert Accounts.get_user_by_email("morgan@example.com")
+    assert conn.resp_cookies["_sarduty_remember_me"]
 
     {:ok, lv, _html} = conn |> recycle() |> live(~p"/demo/building")
     assert render(lv) =~ "did not build"
@@ -129,70 +105,95 @@ defmodule Web.DemoFlowTest do
     assert Repo.reload!(demo).team_id == nil
   end
 
-  test "a wrong code goes back to the form, and 5 misses kill it", %{conn: conn} do
-    {demo, code, _sent} = request!()
+  test "a forged, expired, or deleted demo's link goes back to /demo", %{conn: conn} do
+    demo = start!()
+    past = DateTime.utc_now(:second) |> DateTime.add(-1, :minute)
 
-    for _ <- 1..5 do
-      conn = get(conn, ~p"/demo/open/#{demo.id}?#{[code: "000000"]}")
-      assert redirected_to(conn) == ~p"/demo?#{[error: "code"]}"
+    for path <- [~p"/demo/open/forged", link(demo)] do
+      demo |> Ecto.Changeset.change(expires_at: past) |> Repo.update!()
+      conn = get(conn, path)
+      assert redirected_to(conn) == ~p"/demo"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "ended or was deleted"
+    end
+  end
+
+  test "5 demos an hour per IP" do
+    ip = ip()
+    for _n <- 1..5, do: assert({:ok, _demo} = CreateDemo.call(%{}, ip: ip))
+    assert CreateDemo.call(%{}, ip: ip) == {:error, :limited}
+  end
+
+  test "200 live visitors' demos in all; test demos don't count" do
+    now = DateTime.utc_now(:second)
+    expires = DateTime.add(now, 1, :day)
+
+    Repo.insert_all(
+      DemoTeam,
+      for(
+        _n <- 1..200,
+        do: %{kind: :visitor, expires_at: expires, inserted_at: now, updated_at: now}
+      )
+    )
+
+    assert CreateDemo.call(%{}, ip: ip()) == {:error, :full}
+    assert {:ok, %DemoTeam{kind: :test}} = CreateDemo.call(%{}, kind: :test)
+  end
+
+  describe "the API" do
+    test "POST /api/demos answers the link", %{conn: conn} do
+      conn = post(conn, ~p"/api/demos", %{name: "Morgan Visitor"})
+
+      assert %{"url" => url, "kind" => "visitor", "expires_at" => _} = json_response(conn, 201)
+      assert url =~ ~r"/demo/open/[\w.-]+$"
+      assert Repo.one!(DemoTeam).name == "Morgan Visitor"
     end
 
-    conn = get(conn, ~p"/demo/open/#{demo.id}?#{[code: code]}")
-    assert redirected_to(conn) == ~p"/demo?#{[error: "code"]}"
+    test "the test key makes a test demo for the hours asked, 24 at most", %{conn: conn} do
+      for {hours, expect} <- [{nil, 2}, {"6", 6}, {"100", 24}] do
+        conn =
+          conn
+          |> put_req_header("authorization", "Bearer test-key")
+          |> post(~p"/api/demos", %{hours: hours})
+
+        assert %{"kind" => "test", "expires_at" => expires_at} = json_response(conn, 201)
+        {:ok, expires_at, 0} = DateTime.from_iso8601(expires_at)
+        assert_in_delta DateTime.diff(expires_at, DateTime.utc_now(), :hour), expect, 1
+      end
+    end
+
+    test "a wrong key makes a visitor's demo", %{conn: conn} do
+      conn = conn |> put_req_header("authorization", "Bearer nope") |> post(~p"/api/demos")
+      assert %{"kind" => "visitor"} = json_response(conn, 201)
+    end
+
+    test "the limits answer 429 and 503", %{conn: conn} do
+      conn = put_req_header(conn, "fly-client-ip", ip())
+      for _n <- 1..5, do: post(conn, ~p"/api/demos")
+
+      assert %{"error" => "Too many demos" <> _} =
+               conn |> post(~p"/api/demos") |> json_response(429)
+
+      Application.delete_env(:sarduty, :records_demo_key)
+
+      assert %{"error" => "Try a demo is off" <> _} =
+               build_conn() |> post(~p"/api/demos") |> json_response(503)
+    end
+
+    test "DELETE /api/demos/:token deletes the demo", %{conn: conn} do
+      demo = start!()
+      token = DemoTeam.link_token(demo)
+
+      assert conn |> delete(~p"/api/demos/#{token}") |> response(204)
+      refute Repo.reload(demo)
+      refute Repo.get(User, demo.user_id)
+      assert conn |> delete(~p"/api/demos/#{token}") |> json_response(404)
+    end
   end
 
-  test "the code step: blank and wrong codes stay on it, and a refresh keeps it", %{conn: conn} do
-    {:ok, lv, _html} = live(conn, ~p"/demo")
-
-    lv
-    |> form("#demo-form", demo_request_view_model: %{name: "Morgan", email: "morgan@example.com"})
-    |> render_submit()
-
-    assert_received {:email, sent}
-    code = code_from(sent)
-    path = assert_patch(lv)
-    assert path =~ ~r"^/demo\?sent="
-
-    lv |> form("#code-form", demo: %{code: ""}) |> render_submit()
-    assert has_element?(lv, "#code-form", "Enter the 6-digit code")
-
-    lv |> form("#code-form", demo: %{code: "000000"}) |> render_submit()
-    assert has_element?(lv, "#code-form", "That code is not right")
-
-    {:ok, lv, _html} = live(conn, path)
-    assert has_element?(lv, "#demo-sent", "morgan@example.com")
-
-    demo = DemoTeam.get_by_email("morgan@example.com")
-    form = form(lv, "#code-form", demo: %{id: demo.id, code: code})
-    render_submit(form)
-    conn = follow_trigger_action(form, conn)
-    assert redirected_to(conn) == ~p"/demo/building"
-  end
-
-  test "5 wrong codes on the code step ask for a new one, which works", %{conn: conn} do
-    {demo, _code, _sent} = request!()
-
-    {:ok, lv, _html} =
-      live(conn, "/demo?sent=" <> Phoenix.Token.sign(Web.Endpoint, "demo sent", demo.id))
-
-    for _ <- 1..4, do: lv |> form("#code-form", demo: %{code: "000000"}) |> render_submit()
-    assert has_element?(lv, "#code-form", "That code is not right")
-    lv |> form("#code-form", demo: %{code: "000000"}) |> render_submit()
-    assert has_element?(lv, "#code-form", "That code has expired")
-
-    lv |> element("#demo-resend") |> render_click()
-    assert_received {:email, sent}
-    assert demo |> Repo.reload!() |> DemoTeam.code_ok?(code_from(sent), DateTime.utc_now(:second))
-  end
-
-  test "a forged or old code step goes back to the form", %{conn: conn} do
-    {:ok, lv, _html} = live(conn, ~p"/demo?#{[sent: "forged"]}")
-    refute has_element?(lv, "#demo-sent")
-    assert has_element?(lv, "#demo-form")
-  end
-
-  test "a built demo opens its Dashboard, with the banner", %{conn: conn} do
-    %{user: user, team: team} = built_demo()
+  test "a built demo opens its Dashboard, with the banner, its link, and its Outbox", %{
+    conn: conn
+  } do
+    %{user: user, team: team, demo: demo} = built_demo()
     conn = log_in_user(conn, user)
 
     assert {:error, {:live_redirect, %{to: to}}} = live(conn, ~p"/demo/building")
@@ -200,17 +201,67 @@ defmodule Web.DemoFlowTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
     assert has_element?(lv, "#demo-banner")
+    assert has_element?(lv, "#demo-link", "/demo/open/")
+    assert has_element?(lv, "#demo-outbox", "Outbox (0)")
     assert has_element?(lv, "#demo-view-as", "View as Cameron Ruiz")
     assert has_element?(lv, "#demo-delete[data-confirm]")
+    assert Repo.reload!(demo).seen_at
   end
 
-  test "a real team has no demo banner", %{conn: conn} do
+  test "the Outbox lists a demo's email, shows it, and serves its HTML sandboxed", %{
+    conn: conn
+  } do
+    %{user: user, team: team} = built_demo()
+    conn = log_in_user(conn, user)
+
+    message =
+      [
+        to: {"Cameron Ruiz", "cameron@example.com"},
+        subject: "Will you be there? Training night",
+        text_body: "Reply: https://sarduty.com/replies/abc",
+        html_body: "<p>Reply</p>"
+      ]
+      |> Swoosh.Email.new()
+      |> OutboxMessage.add_email!(team.id)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/outbox")
+    assert has_element?(lv, "#outbox-message-#{message.id}", "Training night")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/outbox/#{message.id}")
+    assert has_element?(lv, "#outbox-to", "Cameron Ruiz")
+    assert has_element?(lv, ~s|#outbox-body a[href="https://sarduty.com/replies/abc"]|)
+    assert has_element?(lv, "iframe#outbox-html[sandbox]")
+
+    conn = get(conn, ~p"/teams/#{team}/outbox/#{message.id}/html")
+    assert html_response(conn, 200) == "<p>Reply</p>"
+    assert [policy] = get_resp_header(conn, "content-security-policy")
+    assert policy =~ "sandbox"
+  end
+
+  test "another demo's message 404s in this demo's Outbox", %{conn: conn} do
+    %{user: user, team: team} = built_demo()
+    %{team: other} = built_demo()
+
+    theirs =
+      [to: "a@example.com", html_body: "<p>x</p>"]
+      |> Swoosh.Email.new()
+      |> OutboxMessage.add_email!(other.id)
+
+    conn = log_in_user(conn, user)
+
+    assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/outbox/#{theirs.id}") end
+    assert_error_sent 404, fn -> get(conn, ~p"/teams/#{team}/outbox/#{theirs.id}/html") end
+  end
+
+  test "a real team has no demo banner and no Outbox", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}")
+    conn = log_in_user(conn, user)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
     refute has_element?(lv, "#demo-banner")
+    assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/outbox") end
   end
 
-  test "Delete this demo deletes it in SAR Duty and Records, with the user, and logs out", %{
+  test "Delete this demo deletes it in SAR Duty and Records, with its user, and logs out", %{
     conn: conn
   } do
     %{user: user, team: team, demo: demo} = built_demo()
@@ -237,28 +288,37 @@ defmodule Web.DemoFlowTest do
     assert Repo.get(Team, team.id)
   end
 
-  test "the hourly job emails the day before, once, and deletes on day 7" do
+  test "the hourly job deletes demos past their time, built or never opened" do
     %{team: team, demo: demo} = built_demo()
-    now = DateTime.utc_now(:second)
-
-    demo =
-      demo |> Ecto.Changeset.change(expires_at: DateTime.add(now, 20, :hour)) |> Repo.update!()
-
-    :ok = DemoTeamsWorker.run(now)
-    assert_email_sent(subject: "Your SAR Duty demo goes tomorrow")
-    :ok = DemoTeamsWorker.run(now)
-    refute_email_sent()
-
+    unopened = start!()
     RecordsStub.stub(fn "DELETE", _path, _body -> {200, %{}} end)
-    :ok = now |> DateTime.add(21, :hour) |> DemoTeamsWorker.run()
 
+    :ok = DateTime.utc_now(:second) |> DateTime.add(2, :day) |> DemoTeamsWorker.run()
+    assert Repo.get(Team, team.id)
+
+    :ok = DateTime.utc_now(:second) |> DateTime.add(4, :day) |> DemoTeamsWorker.run()
     refute Repo.get(Team, team.id)
     refute Repo.reload(demo)
+    refute Repo.reload(unopened)
   end
 
-  test "a demo never opened goes on day 7 too" do
-    {demo, _code, _sent} = request!()
-    :ok = DateTime.utc_now() |> DateTime.add(8, :day) |> DemoTeamsWorker.run()
-    refute Repo.reload(demo)
+  test "the 10-minute sync takes a demo only while someone has it open" do
+    now = DateTime.utc_now(:second)
+    %{team: team} = built_demo(%{seen_at: DateTime.add(now, -2, :hour)})
+    team |> Ecto.Changeset.change(d4h_team_id: 1, d4h_access_key: "key") |> Repo.update!()
+
+    synced? = fn ->
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        :ok = ScheduleTeamSyncsWorker.perform(%Oban.Job{})
+
+        [worker: SyncTeamChangesWorker]
+        |> all_enqueued()
+        |> Enum.any?(&(&1.args["team_id"] == team.id))
+      end)
+    end
+
+    refute synced?.()
+    team |> DemoTeam.for_team() |> DemoTeam.seen!(now)
+    assert synced?.()
   end
 end

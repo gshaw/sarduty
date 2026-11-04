@@ -17,9 +17,6 @@ config :sarduty, Web.Endpoint,
     exclude: [paths: ["/health"], hosts: ["localhost", "127.0.0.1"]]
   ]
 
-# Disable Swoosh Local Memory Storage
-config :swoosh, local: false
-
 # Do not print debug messages in production
 config :logger, level: :info
 

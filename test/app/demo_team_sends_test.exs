@@ -1,6 +1,6 @@
 defmodule App.DemoTeamSendsTest do
-  # What a Try a demo team sends (#857): one copy of each send, to its visitor, and no
-  # texts. Real teams are untouched.
+  # What a Try a demo team sends (#857): nothing. Its email goes to its Outbox, one per
+  # member as on a real team, and it never texts. Real teams are untouched.
   use App.DataCase, async: true
 
   import App.AccountsFixtures
@@ -10,8 +10,8 @@ defmodule App.DemoTeamSendsTest do
 
   alias App.Accounts
   alias App.Mailer
-  alias App.Model.DemoTeam
   alias App.Model.Member
+  alias App.Model.OutboxMessage
   alias App.Model.Reminder
   alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass
@@ -27,54 +27,43 @@ defmodule App.DemoTeamSendsTest do
     |> subject("Will you be there? Training night")
     |> text_body("Body")
     |> html_body("<p>Body</p>")
-    |> Mailer.for_team(team, {:replies, "Cameron Ruiz"})
+    |> Mailer.for_team(team)
   end
 
   describe "App.Mailer" do
-    test "a demo team's email goes to its visitor, marked as a demo" do
+    test "keeps a demo team's email in its Outbox" do
       team = team_fixture()
-      demo = demo_team_fixture(team, %{email: "morgan@example.com"})
+      demo_team_fixture(team)
 
-      sent = email(team, [{"Cameron Ruiz", "cameron@example.com"}, "avery@example.com"])
+      assert {:ok, %{id: id}} =
+               team
+               |> email([{"Cameron Ruiz", "cameron@example.com"}, "avery@example.com"])
+               |> Mailer.deliver()
 
-      assert sent.to == [{demo.name, "morgan@example.com"}]
-      assert sent.subject == "[Demo] Will you be there? Training night"
-      assert sent.text_body =~ ~r/^This is your demo. Cameron Ruiz would get this email/
-      assert sent.text_body =~ "Its buttons answer for Cameron"
-      assert sent.html_body =~ ~r/^<p style=.*This is your demo/
-      assert {:ok, _} = Mailer.deliver(sent)
+      refute_email_sent()
+
+      assert %OutboxMessage{
+               kind: :email,
+               to: "Cameron Ruiz <cameron@example.com>, avery@example.com",
+               subject: "Will you be there? Training night",
+               body: "Body",
+               html_body: "<p>Body</p>"
+             } = OutboxMessage.get(team, id)
     end
 
-    test "a real team's email is unchanged" do
+    test "sends a real team's email" do
       team = team_fixture()
-      sent = email(team, {"Cameron Ruiz", "cameron@example.com"})
+      {:ok, _sent} = team |> email({"Cameron Ruiz", "cameron@example.com"}) |> Mailer.deliver()
 
-      assert sent.to == [{"Cameron Ruiz", "cameron@example.com"}]
-      assert sent.subject == "Will you be there? Training night"
-      assert sent.text_body == "Body"
-    end
-
-    test "refuses a demo team's email to anyone but its visitor" do
-      team = team_fixture()
-      demo_team_fixture(team, %{email: "morgan@example.com"})
-
-      stray =
-        new()
-        |> to("someone@example.com")
-        |> Swoosh.Email.from({"SAR Duty", "noreply@sarduty.com"})
-        |> subject("Hi")
-        |> text_body("Body")
-        |> put_private(:team_id, team.id)
-
-      assert Mailer.deliver(stray) == {:error, :demo_recipient}
-      assert {:ok, _} = Mailer.deliver(%{stray | to: [{"", "Morgan@Example.com"}]})
+      assert_email_sent(subject: "Will you be there? Training night")
+      assert OutboxMessage.count(team) == 0
     end
   end
 
   describe "sends" do
     setup do
       %{user: user, team: team} = user_with_team_fixture()
-      demo = demo_team_fixture(team, %{email: user.email})
+      demo_team_fixture(team, %{user_id: user.id})
       starts = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
       activity = activity_fixture(team, %{title: "Training night", started_at: starts})
 
@@ -85,39 +74,36 @@ defmodule App.DemoTeamSendsTest do
           member
         end
 
-      %{user: user, team: team, demo: demo, activity: activity, members: members}
+      %{user: user, team: team, activity: activity, members: members}
     end
 
-    test "reminders to 3 members are one email to the visitor, and all 3 are sent", ctx do
+    test "reminders to 3 members are 3 emails in the Outbox, all sent", ctx do
       ids = Enum.map(ctx.members, & &1.id)
 
       assert {:ok, reminders} =
                SendReminders.call(ctx.team, ctx.activity, ctx.user, ids, nil, DateTime.utc_now())
 
-      assert length(reminders) == 3
       assert Enum.all?(reminders, &(Repo.reload!(&1).status == :sent))
-
-      assert_email_sent(fn email ->
-        assert email.to == [{"Morgan Visitor", ctx.user.email}]
-        assert email.subject == "[Demo] Will you be there? Training night"
-        assert email.text_body =~ "Avery Chen would get this email"
-      end)
-
-      refute_email_sent()
       assert Repo.aggregate(Reminder, :count) == 3
+      refute_email_sent()
 
-      assert DemoTeam.copy_text(ctx.team) ==
-               "Your demo sent one copy, to #{ctx.user.email}."
+      messages = OutboxMessage.list(ctx.team)
+      assert length(messages) == 3
+      assert Enum.all?(messages, &(&1.subject =~ "Training night"))
+      assert Enum.any?(messages, &(&1.to =~ "Avery Chen"))
     end
 
-    test "tax credit letters for 3 members email the visitor one", ctx do
+    test "tax credit letters for 3 members are 3 emails in the Outbox, with the PDF", ctx do
       ids = Enum.map(ctx.members, & &1.id)
       summary = CreateTaxCreditLetters.call(ctx.team, 2025, ids)
 
-      assert summary.created == 3 and summary.emailing == 1
+      assert summary.created == 3 and summary.emailing == 3
       assert Repo.aggregate(TaxCreditLetter, :count) == 3
-      assert_email_sent(fn email -> assert email.subject =~ ~r/^\[Demo\] 2025 SRVTC/ end)
       refute_email_sent()
+
+      assert [message | _rest] = OutboxMessage.list(ctx.team)
+      assert message.subject =~ ~r/^2025 SRVTC/
+      assert message.attachments =~ ".pdf"
     end
   end
 

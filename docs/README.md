@@ -127,7 +127,8 @@ have decided since the page loaded, stays in `call`.
 - [d4h-sync.md](d4h-sync.md) — how D4H data reaches the database, and what is never deleted.
 - [change-sets.md](change-sets.md) — how every write to D4H goes through one applier, and what it records.
 - [records.md](records.md) — teams without D4H: SAR Duty Records as a second service, and how a team connects.
-- [demo.md](demo.md) — Try a demo: a visitor's own copy of Coast Range SAR, what it sends, and what it shows.
+- [demo.md](demo.md) — Try a demo: a copy of Coast Range SAR opened by a link, for visitors, agents, and test scripts.
+- [outbox.md](outbox.md) — email and texts kept instead of sent: a demo's always, and everything in dev.
 - [change-history.md](change-history.md) — each member's and activity's history: SAR Duty's writes and what the refresh saw change in D4H.
 - [equipment.md](equipment.md) — equipment from D4H, and adding equipment to an activity.
 - [chores.md](chores.md) — chores: members log them, team admins accept them, and SAR Duty sends them to D4H.

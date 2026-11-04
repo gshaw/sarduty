@@ -10,7 +10,7 @@ defmodule Web.DemoBuildLive do
   # the first time, behind a spinner, then opens its Dashboard. A built one opens at once.
 
   def mount(_params, _session, socket) do
-    case DemoTeam.get_by_email(socket.assigns.current_user.email) do
+    case DemoTeam.for_user(socket.assigns.current_user) do
       nil ->
         {:ok, push_navigate(socket, to: ~p"/demo")}
 
