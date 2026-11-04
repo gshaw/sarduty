@@ -3,8 +3,12 @@ defmodule Web.CardApiDoc do
   How to check an ID card as JSON: the text of /agents/id-cards (Web.CardApiLive) and
   /agents/id-cards.md (Web.MarkdownController). Web.CardApiController is what it
   describes; keep the two in step. Web.CardApiLiveTest checks the example's fields
-  against a real answer.
+  against a real answer. The sample cards' answers are the check's own (Web.CardApiJson).
   """
+
+  alias App.CoastRange
+  alias App.Model.MemberCard
+  alias App.Operation.CheckMemberCard
 
   @doc "The page as Markdown, with this site's verify host in every example."
   def markdown do
@@ -15,7 +19,7 @@ defmodule Web.CardApiDoc do
 
     Every SAR Duty ID card has a QR code that opens the card's page on the verify site, such as `#{verify}/K7Q4-M2XA`. An app that signs members in, such as SAR Command Assist, can ask SAR Duty the same check as JSON: scan the card, take the code, and get back who it is, their team, and whether they are an active member.
 
-    Try it on a sample card, a made-up member of Coast Range SAR: [#{verify}/api/v1/cards/SAMP-ACTV](#{verify}/api/v1/cards/SAMP-ACTV).
+    Each answer has a sample card to try, such as [#{verify}/api/v1/cards/SAMP-ACTV](#{verify}/api/v1/cards/SAMP-ACTV): see [Sample cards](#sample-cards).
 
     ## Get the code from a scan
 
@@ -81,6 +85,11 @@ defmodule Web.CardApiDoc do
 
     New fields can appear in any answer, so ignore the ones you don't know. A change that would break an app gets a new address, `/api/v2`.
 
+    ## Sample cards
+
+    Coast Range SAR is a made-up team. Its cards answer like real ones, with `"sample": true`, and their codes never change, so you can build against them. Their dates move with today's.
+
+    #{samples(verify)}
     ## Too many misses
 
     20 codes that match no card in 10 minutes from one IP address, here or on the verify page, and that address gets `429` with `{"status": "limited"}` and a `Retry-After` header, for up to 10 minutes.
@@ -105,5 +114,33 @@ defmodule Web.CardApiDoc do
 
     Match on `api_url`, `team_id`, and `member_id` together: a member ID alone can repeat between D4H and SAR Duty Records. Don't match on the name or the team's own ID number, which two teams can share. A member keeps their IDs when their card is replaced, but the card's code changes, so don't store the code as the member's ID.
     """
+  end
+
+  @titles %{
+    active: "An active member",
+    inactive: "A former member",
+    revoked: "A cancelled card",
+    not_found: "No card has this code"
+  }
+
+  # Each sample card's answer, as the check sends it today.
+  defp samples(verify) do
+    Enum.map_join(CoastRange.sample_cards(), "\n", fn %{status: status, code: code} ->
+      code = MemberCard.format_code(code)
+      url = "#{verify}/api/v1/cards/#{code}"
+
+      {http_status, body} =
+        code |> MemberCard.normalize_code() |> CheckMemberCard.call() |> Web.CardApiJson.answer()
+
+      """
+      ### #{@titles[status]}
+
+      [#{url}](#{url}) answers `#{http_status}`:
+
+      ```json
+      #{Jason.encode!(body, pretty: true)}
+      ```
+      """
+    end)
   end
 end

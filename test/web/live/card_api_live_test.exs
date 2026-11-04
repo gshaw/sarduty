@@ -32,6 +32,17 @@ defmodule Web.CardApiLiveTest do
     assert fields(Jason.decode!(example)) == fields(answer)
   end
 
+  test "Sample cards links each sample and shows its answer", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/agents/id-cards")
+
+    for code <- ~w(SAMP-ACTV SAMP-RTRD SAMP-CNCD SAMP-NCRD) do
+      assert has_element?(lv, "#card-api a[href='#{Web.VerifyHost.url()}/api/v1/cards/#{code}']")
+    end
+
+    assert render(lv) =~ "&quot;status&quot;: &quot;revoked&quot;"
+    assert render(lv) =~ "answers <code>404</code>"
+  end
+
   test "Agents lists it", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/agents")
     assert has_element?(lv, ~s(#agents-page-id-cards a[href="/agents/id-cards.md"]))
