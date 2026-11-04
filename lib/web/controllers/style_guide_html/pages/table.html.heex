@@ -257,7 +257,7 @@
   <p>
     A list of changes to review, with a checkbox on each row and one button that sends the checked rows.
   </p>
-  <div class="example" onsubmit="return false">
+  <div class="example" data-example-form>
     <form>
       <.table id="sample-select-all" rows={rule_preview()} class="table-striped">
         <:col :let={{name, _why, _detail, _days}} label="" class="w-px" select_all>

@@ -38,6 +38,7 @@ import {RichText} from "./rich_text"
 import {Search} from "./search"
 import {Toast} from "./toast"
 import {listenForBarMenuKeys} from "./bar_menu_keys"
+import {hideImagesOnError} from "./hide_on_error"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
@@ -50,6 +51,9 @@ trackPointer()
 listenForConfirms()
 listenForScanSounds()
 listenForBarMenuKeys()
+
+// Photos that fail to load show the initials under them (Web.CSP: no onerror=).
+hideImagesOnError()
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})

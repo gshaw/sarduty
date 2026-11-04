@@ -1,0 +1,116 @@
+defmodule Web.CSPTest do
+  # The one Content-Security-Policy (Web.CSP): on both hosts' pages, no inline JS in any
+  # template, and the reports it sends are logged without tokens.
+  use Web.ConnCase
+
+  import ExUnit.CaptureLog
+
+  defp csp(conn), do: conn |> get_resp_header(Web.CSP.header()) |> List.first()
+
+  test "an app page sends the policy, reporting to the app's host", %{conn: conn} do
+    conn = get(conn, "/styles")
+    assert html_response(conn, 200)
+    assert csp(conn) =~ Web.CSP.policy()
+    assert csp(conn) =~ "report-uri #{Web.Endpoint.url()}/csp-reports"
+  end
+
+  test "a verify page sends the same policy", %{conn: conn} do
+    conn =
+      conn
+      |> Map.put(:host, Web.VerifyHost.host())
+      |> put_req_header("fly-client-ip", "10.5.#{System.unique_integer([:positive])}")
+      |> get("/")
+
+    assert html_response(conn, 200)
+    assert csp(conn) =~ Web.CSP.policy()
+  end
+
+  test "scripts load only from SAR Duty's own files" do
+    [scripts] = Regex.run(~r/script-src ([^;]+)/, Web.CSP.policy(), capture: :all_but_first)
+    refute scripts =~ "unsafe-inline"
+    refute scripts =~ "'unsafe-eval'"
+    refute scripts =~ "*"
+  end
+
+  # The policy refuses inline JS, so a template with any would break in the browser.
+  test "no template has an inline script or an on…= handler" do
+    files = Path.wildcard("lib/**/*.{ex,heex}") -- ["lib/web/csp.ex"]
+    inline_script = ~r/<script(?![^>]*\bsrc=)[^>]*>/
+    handler = ~r/\son[a-z]+=["{]/
+
+    offenders =
+      for file <- files,
+          {line, n} <- file |> File.read!() |> String.split("\n") |> Enum.with_index(1),
+          line =~ inline_script or line =~ handler,
+          do: "#{file}:#{n}: #{String.trim(line)}"
+
+    assert offenders == [], "Move it to assets/js (Web.CSP):\n" <> Enum.join(offenders, "\n")
+  end
+
+  describe "POST /csp-reports" do
+    test "logs an old-style report, page path only, with the token cut", %{conn: conn} do
+      report = %{
+        "csp-report" => %{
+          "document-uri" => "https://sarduty.com/replies/SECRETTOKEN?a=1",
+          "effective-directive" => "script-src-elem",
+          "blocked-uri" => "https://evil.example/x.js"
+        }
+      }
+
+      log =
+        capture_log(fn ->
+          conn =
+            conn
+            |> put_req_header("content-type", "application/csp-report")
+            |> post("/csp-reports", Jason.encode!(report))
+
+          assert response(conn, 204)
+        end)
+
+      assert log =~
+               "CSP would block https://evil.example/x.js (script-src-elem) on /replies/[FILTERED]"
+
+      refute log =~ "SECRETTOKEN"
+      refute log =~ "a=1"
+    end
+
+    test "logs Reporting API reports", %{conn: conn} do
+      reports = [
+        %{
+          "type" => "csp-violation",
+          "body" => %{
+            "documentURL" => "https://sarduty.com/styles",
+            "effectiveDirective" => "img-src",
+            "blockedURL" => "https://tiles.example/1.png"
+          }
+        }
+      ]
+
+      log =
+        capture_log(fn ->
+          conn =
+            conn
+            |> put_req_header("content-type", "application/reports+json")
+            |> post("/csp-reports", Jason.encode!(reports))
+
+          assert response(conn, 204)
+        end)
+
+      assert log =~ "CSP would block https://tiles.example/1.png (img-src) on /styles"
+    end
+
+    test "ignores anything else", %{conn: conn} do
+      log =
+        capture_log(fn ->
+          conn =
+            conn
+            |> put_req_header("content-type", "text/plain")
+            |> post("/csp-reports", "hello")
+
+          assert response(conn, 204)
+        end)
+
+      refute log =~ "CSP would block"
+    end
+  end
+end

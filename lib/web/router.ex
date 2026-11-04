@@ -17,7 +17,7 @@ defmodule Web.Router do
     plug :fetch_live_flash
     plug :put_root_layout, html: {Web.Layouts, :root}
     plug :protect_from_forgery
-    plug :put_secure_browser_headers
+    plug :put_secure_browser_headers_and_csp
     plug :assign_current_user
   end
 
@@ -30,7 +30,7 @@ defmodule Web.Router do
     plug :fetch_live_flash
     plug :put_root_layout, html: {Web.Layouts, :root}
     plug :protect_from_forgery
-    plug :put_secure_browser_headers
+    plug :put_secure_browser_headers_and_csp
   end
 
   # The check as JSON, for apps that scan cards (/agents/id-cards). No session or CSRF
@@ -48,6 +48,19 @@ defmodule Web.Router do
   end
 
   defp put_noindex_header(conn, _opts), do: put_resp_header(conn, "x-robots-tag", "noindex")
+
+  # Phoenix's secure headers plus the one Content-Security-Policy (Web.CSP), at request
+  # time: the report address names the app's host.
+  defp put_secure_browser_headers_and_csp(conn, _opts),
+    do: put_secure_browser_headers(conn, Web.CSP.headers())
+
+  # Browsers post what the Content-Security-Policy would block (Web.CSP). No session or
+  # CSRF token, and a content type of their own.
+  scope "/csp-reports", Web do
+    pipe_through :noindex
+
+    post "/", CSPReportController, :create
+  end
 
   scope "/api/v1", Web, host: "verify." do
     pipe_through [:verify_api, :noindex]

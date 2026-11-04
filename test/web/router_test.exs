@@ -9,7 +9,7 @@ defmodule Web.RouterTest do
   # /teams/ or /orgs/ would block a team or organization with that name.
   @main_top_level ~w(teams orgs admin account signup login logout replies reminders wallet styles
                      terms privacy agents agents.md changelog changelog.md maps .well-known
-                     security.txt llms.txt letters)
+                     security.txt llms.txt letters csp-reports)
   @verify_top_level [
     "api",
     ".well-known",
@@ -189,7 +189,7 @@ defmodule Web.RouterTest do
   # Search vs agents (#824). Every route is hidden from search, behind a login, or public,
   # and exactly one. Hidden routes send X-Robots-Tag: noindex through the :noindex
   # pipeline; public ones never do. robots.txt blocks nothing either way.
-  @hidden_prefixes ~w(/wallet/ /replies/ /reminders/ /maps/ /.well-known/oauth-)
+  @hidden_prefixes ~w(/wallet/ /replies/ /reminders/ /maps/ /.well-known/oauth- /csp-reports)
   @hidden_team_routes ~w(/teams/:subdomain/mcp /teams/:subdomain/oauth/register
                          /teams/:subdomain/oauth/token)
 

@@ -7,7 +7,7 @@
     Focus shows the team's 3 most used places. One within 150 m of a saved place shows its name, and where the name comes from, so people know where to change it.
   </p>
   <div class="demo">
-    <form class="measure" onsubmit="return false">
+    <form class="measure" data-example-form>
       <.place_field
         id="place-demo"
         field={place_form()[:place]}
@@ -23,7 +23,7 @@
   <h3>A place picked</h3>
   <p>The address goes in the box and its pin on a map, which Remove pin takes away.</p>
   <div class="demo">
-    <form class="measure" onsubmit="return false">
+    <form class="measure" data-example-form>
       <.place_field
         id="place-demo-picked"
         field={place_form(%{"place" => "17543 20 Ave, Surrey"})[:place]}
