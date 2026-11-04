@@ -4,6 +4,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Other apps can check a SAR Duty ID card when they scan it: the same answer as the verify
+  site, with the member's D4H ID so the app can match them.
+  [How to check an ID card](https://sarduty.com/agents/id-cards) shows how.
 - ⭐ Travel replaces the mileage report. After an activity, check members and set how they
   got there: drove to the ICP or the yard, a passenger, or km you type. SAR Duty saves it,
   and a browser agent such as Claude in Chrome can copy the km into D4H for you. Thanks to

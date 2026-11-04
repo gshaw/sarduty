@@ -43,9 +43,11 @@ enforces the top-level list and the held URLs.
   organization with that name. That's why sign-up is `/signup`, not `/teams/new`.
 - **Top-level paths are a short list**: `teams`, `orgs`, `admin`, `account`, `signup`,
   `login`, `logout`, `replies`, `reminders`, `wallet`, `styles`, `terms`, `privacy`,
-  `agents`, `changelog`, `changelog.md`, `maps`, and `dev` in development. A new one is
-  added to the router test on purpose. `agents` holds what agents read: `/agents`, How to
-  write a report at `/agents/reports` and `/agents/reports.md` (#803), and pages next. A
+  `agents`, `agents.md`, `changelog`, `changelog.md`, `maps`, and `dev` in development. A
+  new one is added to the router test on purpose. `agents` holds what agents read: `/agents`
+  and `/agents.md`, the lander, How to
+  write a report at `/agents/reports` and `/agents/reports.md` (#803), How to check an ID
+  card at `/agents/id-cards` and `/agents/id-cards.md`, and pages next. A
   team's reports are under its team. `/changelog.md` is the changelog as text.
 - **Anything printed on a card goes through the verify site**, so it stays short and never
   depends on a team page's path.
@@ -73,7 +75,9 @@ Devices, Google, Apple, and shared links hold these. They don't move.
   their first connection (#761).
 - On the verify site: `/:code` (the QR code), `/:code/photo`, `/:code/banner` (the Google
   Wallet banner), `/orgs/:slug`, `/letters/:ref` (the QR code on every tax credit
-  letter since #207), and `/samples`, the sample ID cards (#854).
+  letter since #207), `/samples`, the sample ID cards (#854), and `/api/v1/cards/:code`,
+  the card check as JSON that apps scanning cards call (#299). A change that breaks those
+  apps goes in `/api/v2`.
 
 Card images always use SAR Duty's verify host, even for an organization with its own,
 since Google Wallet objects hold the banner URL.

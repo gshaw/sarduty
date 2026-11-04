@@ -20,7 +20,7 @@ defmodule Web.PrivacyLive do
     <article id="privacy" class="container mx-auto px-2 pt-8">
       <div class="max-w-prose">
         <h1 class="title">Privacy</h1>
-        <p class="hint">Last changed November 2, 2026.</p>
+        <p class="hint">Last changed November 3, 2026.</p>
         <p>
           SAR Duty copies your team's data from D4H to run its tools for your team. Your team decides what is in D4H.
         </p>
@@ -34,7 +34,7 @@ defmodule Web.PrivacyLive do
           SAR Duty keeps a certificate a member sends only until a team admin accepts or declines it.
         </p>
         <p>
-          Anyone with a member's ID card code can see the member's name, photo, and team on the verify site.
+          Anyone with a member's ID card code can see the member's name, photo, and team on the verify site. An app that scans the card gets the same answer, with the member's ID in D4H or SAR Duty Records, which opens nothing without the team's own key.
         </p>
         <p id="privacy-members">
           On a team with member logins on, members see each other's names, photos, attendance, groups, and qualifications. Phone numbers, addresses, emails, and emergency contacts stay with team admins.

@@ -6,7 +6,7 @@ defmodule Web.VerifyLive do
 
   alias App.Model.MemberCard
   alias App.Model.Organization
-  alias App.Operation.BuildCardQualifications
+  alias App.Operation.CheckMemberCard
   alias Web.VerifyLimit
 
   # Public, on the verify site (Web.VerifyHost). A card's QR code opens /<code> here.
@@ -100,48 +100,24 @@ defmodule Web.VerifyLive do
       %{status: :limited}
     else
       result = look_up(input)
-      if result.status == :not_found and not result.sample, do: VerifyLimit.miss(ip)
+
+      if result.status == :not_found and not result.sample,
+        do: VerifyLimit.miss(ip, result[:code])
+
       result
     end
   end
 
-  # A sample card's code (#854) is looked up in Coast Range SAR's own database, never the
-  # real one, and the result says it's a sample.
   defp look_up(input) do
     case MemberCard.code_from_scan(input, Web.VerifyHost.trusted_hosts()) do
       {:other_site, host} -> %{status: :other_site, host: host, sample: false}
       nil -> %{status: :not_found, sample: false}
-      code -> look_up_code(code, MemberCard.sample_code?(code))
-    end
-  end
-
-  defp look_up_code(code, sample?) do
-    repo = if sample?, do: App.SampleRepo, else: App.Repo
-
-    case MemberCard.find_by_code(code, repo) do
-      %MemberCard{} = card ->
-        now = DateTime.utc_now()
-        status = MemberCard.status(card, now)
-
-        %{
-          status: status,
-          card: card,
-          sample: sample?,
-          qualifications: qualifications(status, card, now, repo)
-        }
-
-      nil ->
-        %{status: :not_found, sample: sample?}
+      code -> CheckMemberCard.call(code)
     end
   end
 
   defp result_organization(%{card: %MemberCard{member: %{team: team}}}), do: team.organization
   defp result_organization(_result), do: nil
-
-  defp qualifications(:active, %MemberCard{member: member}, now, repo),
-    do: BuildCardQualifications.call(member.team, member, now, repo)
-
-  defp qualifications(_status, _card, _now, _repo), do: []
 
   def render(%{result: nil} = assigns) do
     ~H"""

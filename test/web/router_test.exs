@@ -8,8 +8,8 @@ defmodule Web.RouterTest do
   # purpose: a fixed word at the top could block a future section, and one under
   # /teams/ or /orgs/ would block a team or organization with that name.
   @main_top_level ~w(teams orgs admin account signup login logout replies reminders wallet styles
-                     terms privacy agents changelog changelog.md maps .well-known)
-  @verify_top_level ["orgs", "letters", "samples", ":code", "*path"]
+                     terms privacy agents agents.md changelog changelog.md maps .well-known)
+  @verify_top_level ["api", "orgs", "letters", "samples", ":code", "*path"]
 
   test "the main site's top-level paths are the allowed ones" do
     allowed = MapSet.new(["" | @main_top_level] ++ if(dev_routes?(), do: ["dev"], else: []))
@@ -133,7 +133,9 @@ defmodule Web.RouterTest do
     {"GET", "/K7Q4-M2XA/photo", Web.MemberCardController, :photo},
     {"GET", "/K7Q4-M2XA/banner", Web.MemberCardController, :banner},
     {"GET", "/orgs/nsr", Web.VerifyLive, nil},
-    {"GET", "/letters/SRVTC-K7Q4M2XA", Web.VerifyLetterLive, nil}
+    {"GET", "/letters/SRVTC-K7Q4M2XA", Web.VerifyLetterLive, nil},
+    # Apps that scan cards hold it (#299).
+    {"GET", "/api/v1/cards/K7Q4-M2XA", Web.CardApiController, :show}
   ]
 
   test "pinned URLs on the main site still route" do
@@ -158,7 +160,8 @@ defmodule Web.RouterTest do
 
   defp top_segment(path), do: path |> String.split("/", trim: true) |> List.first("")
 
-  # Routes in the verify site's scope: its LiveView, card images, and the catch-all.
+  # Routes in the verify site's scope: its LiveView, card images, the JSON check, and the
+  # catch-all.
   defp verify_route?(%{metadata: %{phoenix_live_view: {Web.VerifyLive, _, _, _}}}), do: true
   defp verify_route?(%{metadata: %{phoenix_live_view: {Web.VerifyLetterLive, _, _, _}}}), do: true
 
@@ -166,6 +169,7 @@ defmodule Web.RouterTest do
     do: true
 
   defp verify_route?(%{plug: Web.VerifyController}), do: true
+  defp verify_route?(%{plug: Web.CardApiController}), do: true
 
   defp verify_route?(%{plug: Web.MemberCardController, plug_opts: action}),
     do: action in [:photo, :banner]

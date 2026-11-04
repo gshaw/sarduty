@@ -13,6 +13,8 @@ defmodule Web.ServiceNameTest do
     "lib/app/adapter/" => "the adapter is D4H; people read its errors through D4H.error_text/2",
     "lib/app/mcp/tool/" => "tool descriptions are for agents, shared by every team",
     "lib/app/operation/sign_up_team.ex" => "signup's D4H path",
+    "lib/web/card_api_doc.ex" =>
+      "a public page for app builders, about D4H's API and Records serving the same one",
     "lib/app/view_model/event_filter_view_model.ex" => "event labels on /admin/events",
     "lib/web/components/home_mockups.ex" => "design mockups, not the app",
     "lib/web/controllers/style_guide_html/pages/colour.html.heex" =>
