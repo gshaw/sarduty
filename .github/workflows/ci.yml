@@ -23,7 +23,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      # Takes ~25 s; a stuck apt mirror once hung it for 10 minutes.
       - name: Install libvips
+        timeout-minutes: 3
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvips-dev
 
       - name: Install mise
