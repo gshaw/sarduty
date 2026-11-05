@@ -300,7 +300,7 @@ defmodule Web.ActivityMembersLive.Update do
             {send_confirm(
               @count,
               "Email #{members_text(@count)} about #{@activity.title}?",
-              ["Each gets your message, whatever their reply."]
+              [confirm_text(@started?)]
             )}
           >
             {Format.count(@count, one: "Send 1 email", many: "Send %d emails")}
@@ -313,6 +313,9 @@ defmodule Web.ActivityMembersLive.Update do
   end
 
   defp members_text(count), do: Format.count(count, one: "%d member", many: "%d members")
+
+  defp confirm_text(true = _started?), do: "Each gets your message and a link to the activity."
+  defp confirm_text(false), do: "Each gets your message, whatever their reply."
 
   # Only before the start: from it there is one ending, so no choice.
   defp ending_title(:signed_up), do: "Signed up"

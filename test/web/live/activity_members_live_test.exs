@@ -234,6 +234,11 @@ defmodule Web.ActivityMembersLiveTest do
       assert has_element?(lv, "#email-preview", "Open activity")
       refute has_element?(lv, "#email-preview", "You")
       refute has_element?(lv, "#email-preview", "I'll be there")
+
+      assert has_element?(
+               lv,
+               ~s(#update-send[data-confirm="Email 3 members about Swiftwater training? Each gets your message and a link to the activity."])
+             )
     end
 
     test "emails each the message and Open activity, and no reply buttons", ctx do
@@ -564,7 +569,10 @@ defmodule Web.ActivityMembersLiveTest do
       assert has_element?(lv, "#update-no-email", "Eli Haddad")
       assert has_element?(lv, "#update-send", "Send 5 emails")
 
-      assert has_element?(lv, ~s(#update-send[data-confirm^="Email 5 members about"]))
+      assert has_element?(
+               lv,
+               ~s(#update-send[data-confirm="Email 5 members about Rope rescue training? Each gets your message, whatever their reply."])
+             )
 
       assert has_element?(lv, "#email-preview", "Update: Rope rescue training")
       assert has_element?(lv, "#email-preview", "You're signed up.")
