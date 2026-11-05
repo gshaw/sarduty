@@ -134,6 +134,34 @@ defmodule App.Operation.DeleteTeamTest do
     end
   end
 
+  # The copy reads the database file on its own connection, which can't see this test's
+  # sandbox rows, so this checks the schema and every table's WHERE, not the rows.
+  @tag :tmp_dir
+  test "write_copy/3 writes every table, with the team's rows only", %{tmp_dir: dir} do
+    path = Path.join(dir, "copy.db")
+    assert :ok = DeleteTeam.write_copy(path, Repo.config()[:database], 999_999)
+
+    {:ok, copy} = Exqlite.Sqlite3.open(path)
+
+    for {table, _where} <- DeleteTeam.scopes(999_999) do
+      {:ok, statement} = Exqlite.Sqlite3.prepare(copy, ~s|SELECT count(*) FROM "#{table}"|)
+      assert {:row, [0]} = Exqlite.Sqlite3.step(copy, statement)
+    end
+
+    Exqlite.Sqlite3.close(copy)
+  end
+
+  @tag :tmp_dir
+  test "a copy that fails leaves no file", %{tmp_dir: dir} do
+    path = Path.join(dir, "copy.db")
+
+    assert_raise RuntimeError, fn ->
+      DeleteTeam.write_copy(path, Path.join(dir, "none/x.db"), 1)
+    end
+
+    refute File.exists?(path)
+  end
+
   defp tables do
     %{rows: rows} =
       Repo.query!(
