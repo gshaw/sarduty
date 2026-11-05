@@ -23,10 +23,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      # Takes ~25 s; a stuck apt mirror once hung it for 10 minutes.
+      # Cached, so a slow Ubuntu mirror can't stall CI: on 2026-11-05 it served
+      # one runner at ~80 KB/s and the plain apt-get install ran past 10 minutes.
       - name: Install libvips
-        timeout-minutes: 3
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvips-dev
+        uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
+        with:
+          packages: libvips-dev
+          version: 1
 
       - name: Install mise
         uses: jdx/mise-action@v4
