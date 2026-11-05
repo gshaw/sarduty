@@ -30,7 +30,7 @@ defmodule App.Model.ChangeSet do
     # :chores sends a team admin's accepted chores as a D4H event (#341). :certificates
     # adds a member's certificate to D4H, as an award with the file on it (#493).
     # :whiteboard posts, changes, archives, or deletes a whiteboard note (#515).
-    # :remove takes members off an activity from its Remove members page (#704).
+    # :remove takes members off an activity before the start (#704).
     # :change_attendance marks members attended or absent, or removes them, from an
     # activity's Members tab after the start (#766).
     field :source, Ecto.Enum,

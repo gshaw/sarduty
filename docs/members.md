@@ -508,6 +508,18 @@ activity starts.
   setting otherwise, and carry no unsubscribe. The preview shows one ending at a time.
   Earlier updates are listed at the top with their message, sender, and count. Each is
   a row in `activity_updates`. Asking only members with no reply is Send a reminder.
+- **Remove from the activity** ([RemoveMembers](../lib/app/operation/remove_members.ex),
+  #704): before the start, on a draft, a team admin checks members on the Members tab and
+  picks Remove from the activity: Remove 3 members, red. Its step,
+  `/teams/:subdomain/activities/:id/members/remove`
+  ([RemoveBeforeStart](../lib/web/live/activity_members_live/remove_before_start.ex),
+  #895), lists who goes with no email, then the signed up members with an email, who get
+  the team admin's message. The message is required for them, up to 300 characters, and
+  History keeps it. Remove without emailing them is the exception box: no email, and the
+  message is optional. A signed up member with no email gets nothing, and the step says
+  to tell them. With nobody to email there's no message and no confirm. On send, a
+  member whose reply changed since stays on. From the start, Remove from the activity
+  changes attendance in place (#766).
 - **Members**, the activity's Members tab, lists everyone it invites
   ([ActivityMembersLive](../lib/web/live/activity_members_live.ex),
   [ActivityMembers](../lib/app/view_data/activity_members.ex)), under a Group filter
@@ -516,8 +528,8 @@ activity starts.
   reminder. From the start, a table per attendance: Attended with Start, Finish, and
   Hours, then Absent, then No reply (#766). Start shows a date only when it isn't the
   activity's day. Team admins get a tick box per row and select all per table, then one
-  list and one button for the checked members: Send a reminder and Send an update before
-  the start, and changes to attendance from it until it's published.
+  list and one button for the checked members: Send a reminder, Send an update, and
+  Remove from the activity before the start, and changes to attendance from it until it's published.
 
 ### View as member
 

@@ -8,10 +8,9 @@ defmodule Web.ActivityMembersLive do
   from it, a table for each attendance, Attended, Absent, then No reply (#766). No reply
   comes last, next to the list, as Travel puts Not set. Everyone sees them. Team admins
   check members in them and act on them under the tables: one list and one button, as on
-  Travel. Before the start the list emails them, Send a reminder and Send an update, each
-  a step; from the start until the activity is published it changes their attendance.
-  Add members has its own page, and so does Remove members before the start, until it
-  joins the list too.
+  Travel. Before the start the list emails or removes them, Send a reminder, Send an
+  update, and Remove from the activity, each a step; from the start until the activity
+  is published it changes their attendance. Add members has its own page.
 
   A filter bar over the tables, before and after the start, shows one group's members
   (#895), in the URL as `?group=`. The ticks are the rows it shows: changing it unchecks
@@ -53,10 +52,11 @@ defmodule Web.ActivityMembersLive do
   alias Web.ActivityMembersLive.Attended
   alias Web.ActivityMembersLive.Remind
   alias Web.ActivityMembersLive.Remove
+  alias Web.ActivityMembersLive.RemoveBeforeStart
   alias Web.ActivityMembersLive.Update
   alias Web.Components.Reply
 
-  @actions [Remind, Update, Attended, Absent, Remove]
+  @actions [Remind, Update, RemoveBeforeStart, Attended, Absent, Remove]
 
   @doc "Every change the tab offers, in the list's order."
   def actions, do: @actions
@@ -376,12 +376,6 @@ defmodule Web.ActivityMembersLive do
           id="members-add"
           navigate={~p"/teams/#{@team}/activities/#{@activity.id}/members/add"}
         >Add members</.a>
-      </p>
-      <p :if={@adding == :open and !@started? and @members != []} class="action">
-        <.a
-          id="members-remove"
-          navigate={~p"/teams/#{@team}/activities/#{@activity.id}/members/remove"}
-        >Remove members</.a>
       </p>
       <.filter_bar
         :if={@members != [] and @groups != []}

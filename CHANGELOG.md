@@ -27,6 +27,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 - Remind or email part of an activity's members: check them on its Members tab, a table per
   reply, then Send a reminder or Send an update. Send reminders and Send an update are gone
   from Actions.
+- Remove members before an activity joins them: check members on its Members tab, then
+  Remove from the activity. The Remove members link is gone.
 - The Dashboard's numbers and charts open the reports that draw them, so you can see how
   each is counted and copy one. Its numbers' lines now cover this year.
 - ⭐ Reports draw charts: end one with `chart columns`, `lines`, `stat`, `bars`,

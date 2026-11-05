@@ -104,7 +104,7 @@ defmodule App.Mailer.ActivityMailer do
       html: html(activity, team, from_name(sender), message, ending, nowhere(nil))
     }
 
-  @doc "A removal as Remove members shows it, like reminder_preview/4."
+  @doc "A removal as Remove from the activity shows it, like reminder_preview/4."
   def removal_preview(%Activity{} = activity, %Team{} = team, sender, message),
     do: %{
       subject: removal_subject(activity),
