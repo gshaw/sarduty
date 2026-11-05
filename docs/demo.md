@@ -18,8 +18,8 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    `POST /api/demos` (`Web.DemoApiController`) is the same for agents and scripts. Both
    call `App.Operation.CreateDemo`, which saves the row and a user for it,
    `visitor-<id>@example.com`. A visitor's demo: 5 an hour per IP, 200 live in all.
-   Without Records' demo key (`RECORDS_DEMO_KEY`), Try a demo is off and the home page
-   has no button.
+   Without SAR Duty's own Records key (`RECORDS_SARDUTY_KEY`), Try a demo is off and the
+   home page has no button.
 2. **The link.** `/demo/open/<token>` (`Web.DemoController`) logs the browser in as that
    user, remembered, and opens the demo. The token is the demo's id, signed
    (`DemoTeam.link_token/1`), not stored, so the banner can show it again; it stops
@@ -27,15 +27,18 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    one and hand the link to the person it's helping. Anyone with it is the visitor.
 3. **The build.** `/demo/building` (`Web.DemoBuildLive`) runs
    `App.Operation.BuildDemoTeam` once, behind a spinner, in about a second. Records makes
-   the team from the cast (`App.DemoCast`) and picks its ids. SAR Duty adds the team, marked
+   the team from the cast (`App.DemoCast`, `POST /v3/sarduty/demo-teams`) and picks its ids. SAR Duty adds the team, marked
    as the demo in the same transaction, refreshes it like any team, and adds what only it
    keeps (endorsements, ID cards with real codes, away periods, chores), matched through
    Records' ids. A failure removes everything, in Records too, and the page offers Try
    again. A visitor's 3 days count from here.
 4. **The banner.** Every page of a demo team has it, for team admins, where View as puts
    its own: when it goes, its link to copy, its Outbox, and Delete this demo.
-5. **The end.** `App.Operation.DeleteDemo` deletes the team in SAR Duty and Records, the
-   row with the name, and its user. Delete this demo, or `DELETE /api/demos/<token>`, does
+5. **The end.** `App.Operation.DeleteDemo` deletes the team through
+   `DeleteTeam.purge(team, reason: :demo)`, the same delete as any team's: in Records
+   first, which deletes a demo at once with no 7-day hold, then every row in SAR Duty,
+   recorded as a `demo_deleted` event, kept 90 days. Then the row with the name, and its
+   user. Delete this demo, or `DELETE /api/demos/<token>`, does
    it at once; `App.Worker.DemoTeamsWorker`, every hour, deletes each demo past its time,
    built or never opened.
 

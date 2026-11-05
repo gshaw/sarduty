@@ -1,7 +1,7 @@
 defmodule App.DemoCast do
   @moduledoc """
   Try a demo's cast (#857): Coast Range SAR (App.CoastRange) as the JSON SAR Duty
-  Records loads into a new demo team (`D4H.create_demo_team/2`), with the visitor as a
+  Records loads into a new demo team (`D4H.create_demo_team/1`), with the visitor as a
   second Owner beside Alex Chen.
 
   Pure. cast/2 is what Records keeps, in D4H's shape: members, tags, groups,

@@ -12,6 +12,7 @@ defmodule Web.DemoFlowTest do
 
   alias App.Accounts
   alias App.Accounts.User
+  alias App.Adapter.D4H
   alias App.Model.DemoTeam
   alias App.Model.OutboxMessage
   alias App.Model.Team
@@ -23,11 +24,11 @@ defmodule Web.DemoFlowTest do
   alias App.Worker.SyncTeamChangesWorker
 
   setup do
-    Application.put_env(:sarduty, :records_demo_key, "demo-key")
+    Application.put_env(:sarduty, :records_sarduty_key, "sarduty-key")
     Application.put_env(:sarduty, :demo_test_key, "test-key")
 
     on_exit(fn ->
-      Application.delete_env(:sarduty, :records_demo_key)
+      Application.delete_env(:sarduty, :records_sarduty_key)
       Application.delete_env(:sarduty, :demo_test_key)
     end)
 
@@ -43,8 +44,9 @@ defmodule Web.DemoFlowTest do
 
   defp link(demo), do: ~p"/demo/open/#{DemoTeam.link_token(demo)}"
 
+  # A demo is a Records team, so its delete goes to Records first.
   defp built_demo(attrs \\ %{}) do
-    team = team_fixture()
+    team = team_fixture(%{d4h_api_host: D4H.records_host()})
     demo = start!()
     user = Repo.get!(User, demo.user_id)
     manager_fixture(team, %{email: user.email})
@@ -58,11 +60,11 @@ defmodule Web.DemoFlowTest do
     %{user: user, team: team, demo: demo}
   end
 
-  test "the home page offers Try a demo once Records' demo key is set", %{conn: conn} do
+  test "the home page offers Try a demo once SAR Duty's Records key is set", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/")
     assert has_element?(lv, "#start-top-demo", "Try a demo")
 
-    Application.delete_env(:sarduty, :records_demo_key)
+    Application.delete_env(:sarduty, :records_sarduty_key)
     {:ok, lv, _html} = live(conn, ~p"/")
     refute has_element?(lv, "#start-top-demo")
   end
@@ -126,6 +128,7 @@ defmodule Web.DemoFlowTest do
     assert render(lv) =~ "did not build"
     assert has_element?(lv, "#demo-retry")
     assert Repo.reload!(demo).team_id == nil
+    assert_received {:records, "POST", "/v3/sarduty/demo-teams", %{"team" => _team}}
   end
 
   test "a forged, expired, or deleted demo's link goes back to /demo", %{conn: conn} do
@@ -196,7 +199,7 @@ defmodule Web.DemoFlowTest do
       assert %{"error" => "Too many demos" <> _} =
                conn |> post(~p"/api/demos") |> json_response(429)
 
-      Application.delete_env(:sarduty, :records_demo_key)
+      Application.delete_env(:sarduty, :records_sarduty_key)
 
       assert %{"error" => "Try a demo is off" <> _} =
                build_conn() |> post(~p"/api/demos") |> json_response(503)
@@ -307,7 +310,7 @@ defmodule Web.DemoFlowTest do
     refute Repo.get(Team, team.id)
     refute Repo.reload(demo)
     refute Accounts.get_user_by_email(user.email)
-    assert_received {:records, "DELETE", "/v3/demo/teams/" <> _, nil}
+    assert_received {:records, "DELETE", "/v3/sarduty/teams/" <> _, nil}
   end
 
   test "only the demo's visitor deletes it", %{conn: conn} do

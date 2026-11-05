@@ -10,6 +10,7 @@ defmodule App.Operation.CreateDemo do
   """
 
   alias App.Accounts
+  alias App.Adapter.D4H
   alias App.Model.DemoTeam
   alias App.RateLimit
   alias App.Repo
@@ -22,7 +23,7 @@ defmodule App.Operation.CreateDemo do
 
   @doc """
   `{:ok, demo}`, `{:error, changeset}` for the name, or `{:error, reason}`: `:limited`,
-  `:full`, or `:no_demo_key` when Try a demo is off. `opts`: `ip`, `kind` (`:visitor`
+  `:full`, or `:off` when Try a demo is off. `opts`: `ip`, `kind` (`:visitor`
   or `:test`), `hours` for a test, `now`.
   """
   def call(params, opts \\ []) do
@@ -36,8 +37,8 @@ defmodule App.Operation.CreateDemo do
     end
   end
 
-  @doc "Whether Try a demo is on: Records' demo key is set."
-  def on?, do: Application.get_env(:sarduty, :records_demo_key) not in [nil, ""]
+  @doc "Whether Try a demo is on: SAR Duty's own Records key (RECORDS_SARDUTY_KEY) is set."
+  def on?, do: D4H.records_sarduty_key?()
 
   @doc "Whether `key` is the test key, which makes test demos."
   def test_key?(key) do
@@ -50,10 +51,10 @@ defmodule App.Operation.CreateDemo do
   @doc "What call/2's errors say."
   def error_text(:limited), do: "Too many demos from this connection. Try again in an hour."
   def error_text(:full), do: "Try a demo is full right now. Try again tomorrow."
-  def error_text(:no_demo_key), do: "Try a demo is off right now. Sign up your team instead."
+  def error_text(:off), do: "Try a demo is off right now. Sign up your team instead."
   def error_text(_reason), do: "The demo did not start. Try again in a few minutes."
 
-  defp check_on, do: if(on?(), do: :ok, else: {:error, :no_demo_key})
+  defp check_on, do: if(on?(), do: :ok, else: {:error, :off})
 
   defp check_limits(:test, _ip, _now), do: :ok
 

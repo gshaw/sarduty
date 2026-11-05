@@ -24,7 +24,7 @@ defmodule Web.HomePageLive do
          "Tax credit letters, ID cards on members' phones, attendance at the door, and reports, for search and rescue teams.",
        teams: teams,
        members: socket.assigns[:member_logins] || [],
-       # Try a demo (#857) shows once Records' demo key is set.
+       # Try a demo (#857) shows once SAR Duty's own Records key is set.
        demo?: CreateDemo.on?()
      )}
   end

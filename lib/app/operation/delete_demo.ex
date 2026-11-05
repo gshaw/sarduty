@@ -1,7 +1,7 @@
 defmodule App.Operation.DeleteDemo do
   @moduledoc """
   Deletes a Try a demo (#857), from Delete this demo on its banner or when its time is up:
-  its team in SAR Duty and Records (App.Operation.DeleteTeam), its row with the visitor's
+  its team in SAR Duty and Records (App.Operation.DeleteTeam.purge/2), its row with the visitor's
   name, and the user its link logged in as.
   """
 
@@ -29,7 +29,7 @@ defmodule App.Operation.DeleteDemo do
         :ok
 
       team ->
-        with {:ok, _team} <- DeleteTeam.call(team, records: :delete_demo), do: :ok
+        with {:ok, _result} <- DeleteTeam.purge(team, reason: :demo), do: :ok
     end
   end
 

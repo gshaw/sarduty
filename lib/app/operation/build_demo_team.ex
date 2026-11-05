@@ -52,9 +52,8 @@ defmodule App.Operation.BuildDemoTeam do
 
   def call(%DemoTeam{} = demo, now) do
     result =
-      with {:ok, key} <- demo_key(),
-           {:ok, records} <- D4H.create_demo_team(key, DemoCast.cast(now, visitor(demo))) do
-        build(demo, records, key, now)
+      with {:ok, records} <- now |> DemoCast.cast(visitor(demo)) |> D4H.create_demo_team() do
+        build(demo, records, now)
       end
 
     Phoenix.PubSub.broadcast(App.PubSub, topic(demo), {:demo_built, demo.id, result})
@@ -70,14 +69,7 @@ defmodule App.Operation.BuildDemoTeam do
 
   defp expires_at(%DemoTeam{expires_at: expires_at}, _now), do: expires_at
 
-  defp demo_key do
-    case Application.get_env(:sarduty, :records_demo_key) do
-      key when is_binary(key) and key != "" -> {:ok, key}
-      _none -> {:error, :no_demo_key}
-    end
-  end
-
-  defp build(demo, records, key, now) do
+  defp build(demo, records, now) do
     team = insert_team(demo, records, now)
     {:ok, team} = team |> RefreshD4HData.call() |> refreshed(team)
     add_local_rows(team, records.ids, now)
@@ -85,7 +77,7 @@ defmodule App.Operation.BuildDemoTeam do
   rescue
     error ->
       Logger.error("Try a demo build failed: " <> Exception.message(error))
-      clean_up(demo, records, key)
+      clean_up(demo, records)
       {:error, :build_failed}
   end
 
@@ -95,15 +87,16 @@ defmodule App.Operation.BuildDemoTeam do
 
   defp refreshed(other, _team), do: raise("refresh: #{inspect(other)}")
 
-  defp clean_up(demo, records, key) do
+  # DeleteTeam.purge/2 deletes the team in Records too. Records deletes a demo at once.
+  defp clean_up(demo, records) do
     case Repo.reload(demo) do
       %DemoTeam{team_id: team_id} when is_integer(team_id) ->
         team = Team.get!(team_id)
         DemoTeam |> where(id: ^demo.id) |> Repo.update_all(set: [team_id: nil])
-        DeleteTeam.call(team, records: :delete_demo)
+        DeleteTeam.purge(team, reason: :demo)
 
       _unbuilt ->
-        D4H.delete_demo_team(key, records.d4h_team_id)
+        D4H.delete_records_team(%Team{d4h_team_id: records.d4h_team_id})
     end
   end
 
