@@ -1,6 +1,7 @@
 defmodule App.Operation.RemoveMembers do
   @moduledoc """
-  Takes members off an activity (#704), from its Remove members page: every row each
+  Takes members off an activity (#704), from Remove from the activity, a step of its
+  Members tab (#895): every row each
   checked member has, as one change set of `:delete_attendance` rows of source
   `:remove`, applied at once. Only before the start, and never on a published activity.
 

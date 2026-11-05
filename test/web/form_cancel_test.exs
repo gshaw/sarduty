@@ -13,6 +13,8 @@ defmodule Web.FormCancelTest do
       "the review step's Cancel returns to the list on the same page",
     "lib/web/live/activity_members_live/remind.ex" =>
       "a step of the Members tab: Back patches to the tab and keeps the ticks",
+    "lib/web/live/activity_members_live/remove_before_start.ex" =>
+      "a step of the Members tab: Back patches to the tab and keeps the ticks",
     "lib/web/live/activity_members_live/update.ex" =>
       "a step of the Members tab: Back patches to the tab and keeps the ticks",
     "lib/web/live/agent_authorize_live.ex" =>

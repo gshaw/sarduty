@@ -66,7 +66,7 @@ new kind of write is a new row action there, not a new call from a page or an op
 - **Removing members from an activity is a set** (source `remove`, #704): one
   `delete_attendance` row for each row a checked member has, since D4H allows two
   (#520), applied at once by [RemoveMembers](../lib/app/operation/remove_members.ex)
-  from the activity's Remove members page. Each row keeps its own status from the copy,
+  from Remove from the activity, a step of its Members tab. Each row keeps its own status from the copy,
   and the applier skips one D4H has changed since; a row D4H has deleted already is
   done. Before the start, on a draft only. The copy loses the rows D4H deleted, and a
   signed up member with an email and no row left gets the team admin's message, which is

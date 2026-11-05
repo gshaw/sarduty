@@ -266,7 +266,8 @@ defmodule Web.SlowButtonTest do
         do: {start, tag}
   end
 
-  defp submit?(tag), do: not (tag =~ ~s(type="button")) and not (tag =~ ~r/\b(navigate|href)=/)
+  defp submit?(tag),
+    do: not (tag =~ ~s(type="button")) and not (tag =~ ~r/\b(navigate|patch|href)=/)
 
   defp squash(tag), do: tag |> String.replace(~r/\s+/, " ") |> String.slice(0, 160)
 end

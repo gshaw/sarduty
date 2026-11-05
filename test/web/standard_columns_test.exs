@@ -54,8 +54,8 @@ defmodule Web.StandardColumnsTest do
       "a table per reply, each headed by the reply",
     {"lib/web/live/activity_members_live/remind.ex", "Gets a reminder"} =>
       "the members a reminder goes to, headed by what they get",
-    {"lib/web/live/activity_remove_members_live.ex", "{Reply.status_text(status, false)}"} =>
-      "a table per reply, each headed by the reply",
+    {"lib/web/live/activity_members_live/remove_before_start.ex", "{@label}"} =>
+      "who a removal takes, headed by whether they get an email",
     {"lib/web/live/activity_members_live.ex", "{Reply.status_text(status, @started?)}"} =>
       "a table per reply, or per attendance from the start, each headed by it",
     {"lib/web/components/travel_tab.ex", "Set"} =>

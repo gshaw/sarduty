@@ -10,10 +10,6 @@ defmodule Web.TableColumnsTest do
       "checkboxes add members to a group, for team admins on a team with groups to add to",
     {"lib/web/components/equipment.ex", "@where?"} =>
       "nothing the member holds is inside a kit, so every Where is blank",
-    {"lib/web/live/activity_remove_members_live.ex", ~s|status != "requested"|} =>
-      "Replied: a table per reply, and No reply has no reply dates",
-    {"lib/web/live/activity_remove_members_live.ex", ~s|status == "attending"|} =>
-      "the no email hint: only a signed up member is emailed",
     {"lib/web/live/activity_members_live.ex", ~s|@started? and status == "attending"|} =>
       "Start, Finish, and Hours: a table per attendance, and only Attended has times",
     {"lib/web/live/activity_members_live.ex", "@changeable?"} =>

@@ -202,8 +202,9 @@ defmodule Web.ActivityMembersLiveTest do
     assert has_element?(lv, "#members-change", "Only members with no reply get one.")
     assert has_element?(lv, "#members-change", "Your message, whatever their reply.")
     refute has_element?(lv, "#members-change", "Attended")
+    assert has_element?(lv, "#members-change", "Members who signed up get your message.")
     assert has_element?(lv, "#members-change-send[disabled]", "Remind 0 members")
-    assert has_element?(lv, "#members-remove", "Remove members")
+    refute has_element?(lv, "#members-remove")
   end
 
   test "Send attendance is gone with no scans (A4)", ctx do
@@ -563,6 +564,213 @@ defmodule Web.ActivityMembersLiveTest do
       {:ok, lv, _html} = live(conn, tab)
       refute has_element?(lv, "#members-change-form")
       assert has_element?(lv, "#members-no-reply #member-row-#{member.id}")
+    end
+  end
+
+  # Remove from the activity before the start (#895 D, E): the #704 page, as a step. Harper
+  # hasn't replied, Riley can't make it, Drew signed up, and Sam signed up with no email.
+  describe "Remove from the activity before the start (#704, #895)" do
+    setup ctx do
+      starts = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
+
+      activity =
+        activity_fixture(ctx.team, %{
+          title: "Save-On-Foods BBQ",
+          started_at: starts,
+          finished_at: DateTime.add(starts, 3, :hour)
+        })
+
+      add = fn name, status, attrs ->
+        member = member_fixture(ctx.team, Map.put(attrs, :name, name))
+        {member, attendance_fixture(activity, member, %{status: status})}
+      end
+
+      {harper, harper_row} = add.("Harper Nguyen", "requested", %{})
+      {riley, riley_row} = add.("Riley Lam", "absent", %{})
+      {drew, drew_row} = add.("Drew Park", "attending", %{})
+      {sam, sam_row} = add.("Sam Rivera", "attending", %{email: nil})
+
+      %{
+        activity: activity,
+        harper: harper,
+        riley: riley,
+        drew: drew,
+        sam: sam,
+        rows: [harper_row, riley_row, drew_row, sam_row]
+      }
+    end
+
+    defp open_remove(ctx, members) do
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+
+      lv
+      |> form("#members-change-form", %{
+        "member_ids" => Enum.map(members, &to_string(&1.id)),
+        "change" => "remove"
+      })
+      |> render_submit()
+
+      assert_patch(lv, path(ctx) <> "/remove")
+      lv
+    end
+
+    defp type(lv, params), do: lv |> form("#remove-form") |> render_change(params)
+
+    test "the tab counts everyone checked, red, and asks nothing yet (D)", ctx do
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+      check(lv, [ctx.harper.id, ctx.riley.id, ctx.drew.id], "remove")
+
+      assert has_element?(lv, "#members-change-send.btn-danger", "Remove 3 members")
+      refute has_element?(lv, "#members-change-send[data-confirm]")
+    end
+
+    test "who goes with no email, then who gets the message, previewed (E)", ctx do
+      lv = open_remove(ctx, [ctx.harper, ctx.riley, ctx.drew])
+
+      assert has_element?(lv, "h1", "Remove from the activity")
+      assert has_element?(lv, ~s|table:has(#remove-no-email-table) th|, "Removed, no email")
+      assert has_element?(lv, "#remove-no-email-table #remove-row-#{ctx.harper.id}", "No reply")
+
+      assert has_element?(
+               lv,
+               "#remove-no-email-table #remove-row-#{ctx.riley.id}",
+               "Can't make it"
+             )
+
+      assert has_element?(
+               lv,
+               ~s|table:has(#remove-emailed-table) th|,
+               "Removed and emailed your message"
+             )
+
+      assert has_element?(lv, "#remove-emailed-table #remove-row-#{ctx.drew.id}", "Signed up")
+      assert has_element?(lv, "#remove-signed-up-warning")
+      refute has_element?(lv, "#remove-step input[name='member_ids[]']")
+
+      assert has_element?(lv, "label[for=remove-message]", "Message to Drew Park")
+      assert has_element?(lv, "#remove-preview-section", "What Drew Park gets")
+      assert has_element?(lv, "#remove-preview-section", "You're no longer on Save-On-Foods BBQ")
+
+      assert has_element?(
+               lv,
+               ~s|#remove-send[data-confirm="Remove 3 members from Save-On-Foods BBQ? Drew Park signed up, and gets your email. 2 others get no email: 1 no reply, 1 can't make it."]|,
+               "Remove 3 members"
+             )
+    end
+
+    test "with nobody signed up, no message, preview, or confirm", ctx do
+      lv = open_remove(ctx, [ctx.harper, ctx.riley])
+
+      refute has_element?(lv, "#remove-message")
+      refute has_element?(lv, "#remove-preview-section")
+      refute has_element?(lv, "#remove-emailed-table")
+      refute has_element?(lv, "#remove-send[data-confirm]")
+      assert has_element?(lv, "#remove-send", "Remove 2 members")
+    end
+
+    # Nobody gets an email, so there's no message box and no confirm.
+    test "a signed up member with no email needs no message", ctx do
+      lv = open_remove(ctx, [ctx.sam])
+
+      refute has_element?(lv, "#remove-message")
+      refute has_element?(lv, "#remove-preview-section")
+      refute has_element?(lv, "#remove-send[data-confirm]")
+
+      assert has_element?(
+               lv,
+               "#remove-no-email",
+               "Nobody gets an email. Sam Rivera has no email in D4H, so tell them yourself."
+             )
+    end
+
+    # The exception, worded as accepting your own chores is (#697). A required why would
+    # collect filler, so it's optional.
+    test "Remove without emailing them sends no email, and the why is optional", ctx do
+      AttendanceStub.stub(ctx.rows)
+      lv = open_remove(ctx, [ctx.drew])
+      refute has_element?(lv, "#remove-skip-email[checked]")
+
+      type(lv, %{"skip_email" => "true"})
+
+      assert has_element?(lv, "label[for=remove-message]", "Why you removed Drew Park (optional)")
+      assert has_element?(lv, "#remove-no-email-table #remove-row-#{ctx.drew.id}")
+      refute has_element?(lv, "#remove-preview-section")
+      refute has_element?(lv, "#remove-send[data-confirm]")
+
+      lv |> form("#remove-form") |> render_submit(%{"skip_email" => "true"})
+
+      assert_patch(lv, path(ctx))
+      assert has_element?(lv, "#flash-info", "1 member removed.")
+      refute_received {:email, _}
+    end
+
+    test "removing writes D4H and the copy, says who gets the email, and clears the ticks",
+         ctx do
+      AttendanceStub.stub(ctx.rows)
+      lv = open_remove(ctx, [ctx.harper, ctx.drew, ctx.sam])
+      type(lv, %{"message" => "Sorry, it's full."})
+
+      lv |> form("#remove-form") |> render_submit(%{"message" => "Sorry, it's full."})
+
+      assert_patch(lv, path(ctx))
+      assert has_element?(lv, "#flash-info", "3 members removed. Drew Park gets your email.")
+      refute has_element?(lv, "#member-row-#{ctx.drew.id}")
+      refute has_element?(lv, ~s|#members-change-form input[name="member_ids[]"][checked]|)
+
+      assert Attendance
+             |> where(activity_id: ^ctx.activity.id)
+             |> Repo.all()
+             |> Enum.map(& &1.member_id) ==
+               [ctx.riley.id]
+
+      assert %ChangeSet{source: :remove} = Repo.get_by!(ChangeSet, activity_id: ctx.activity.id)
+      assert_received {:email, %{to: [{"Drew Park", _}]}}
+    end
+
+    test "no message for a member who gets an email refuses, marks the box, and removes nobody",
+         ctx do
+      lv = open_remove(ctx, [ctx.drew])
+
+      lv |> form("#remove-form") |> render_submit(%{"message" => " "})
+
+      assert has_element?(lv, "#flash-error", "Enter a message for the signed up members.")
+      assert has_element?(lv, ".field-error", "Enter a message for the signed up members.")
+      assert has_element?(lv, "#remove-step")
+      assert Repo.get_by(Attendance, member_id: ctx.drew.id)
+
+      type(lv, %{"message" => "Sorry, it's full."})
+      refute has_element?(lv, ".field-error")
+    end
+
+    test "Back opens the tab with the ticks as they were", ctx do
+      lv = open_remove(ctx, [ctx.harper, ctx.drew])
+
+      lv |> element("#remove-back") |> render_click()
+      assert_patch(lv, path(ctx))
+      assert has_element?(lv, "#members-select-#{ctx.harper.id}[checked]")
+      assert has_element?(lv, "#members-select-#{ctx.drew.id}[checked]")
+      assert has_element?(lv, "#members-change-send", "Remove 2 members")
+    end
+
+    # The stale check: published since the step opened, so RemoveMembers refuses.
+    test "published since the step opened removes nobody, and the tab says why", ctx do
+      lv = open_remove(ctx, [ctx.harper])
+      ctx.activity |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
+
+      lv |> form("#remove-form") |> render_submit(%{})
+
+      assert_patch(lv, path(ctx))
+      assert has_element?(lv, "#flash-error", "Nobody was removed.")
+      assert Repo.get_by(Attendance, member_id: ctx.harper.id)
+    end
+
+    test "a published activity offers no Remove", ctx do
+      ctx.activity |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+      refute has_element?(lv, "#members-change", "Remove from the activity")
+
+      assert {:error, {:live_redirect, %{flash: flash}}} = live(ctx.conn, path(ctx) <> "/remove")
+      assert flash["error"] == "Select the members again."
     end
   end
 end
