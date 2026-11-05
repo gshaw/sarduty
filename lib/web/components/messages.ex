@@ -173,6 +173,9 @@ defmodule Web.Components.Messages do
     `phx-value-choice` to the answer, such as how long Snooze lasts (#751).
   - `data-confirm-alt` and `data-confirm-alt-href`: a link that's a better way out than
     going ahead.
+  - `data-confirm-needs`: a selector for a field the send needs, such as the message. While
+    it's blank the button asks nothing and goes straight to the server, which refuses
+    with its error, so nobody confirms a send that can't go.
 
   Cancel has the focus, so Enter by reflex does nothing. The style guide renders each
   state with `open`, in place on the page. A page that asks a question itself renders

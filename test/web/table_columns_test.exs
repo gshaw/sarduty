@@ -19,8 +19,6 @@ defmodule Web.TableColumnsTest do
     {"lib/web/live/activity_members_live.ex",
      ~s|!@started? and status == "requested" and reminded?(rows, @reminded)|} =>
       "Reminder: only No reply gets one, and only once someone in it has",
-    {"lib/web/live/activity_members_live/update.ex", "!@started?"} =>
-      "Send an update's reminders-off note: after the start nobody gets reply buttons",
     {"lib/web/components/travel_tab.ex", "!@locked?"} =>
       "the checkboxes set travel, and a published activity's travel cannot change",
     {"lib/web/live/chore_collection_live.ex", "@selected"} =>

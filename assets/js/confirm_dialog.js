@@ -15,7 +15,7 @@ export function listenForConfirms() {
     if (!message) return
     // Keeps phoenix_html's window.confirm from running.
     event.stopPropagation()
-    if (button === pending) return
+    if (button === pending || blank(button.getAttribute("data-confirm-needs"))) return
     event.preventDefault()
     ask(dialog, button, message)
   }, true)
@@ -76,6 +76,8 @@ function lock(dialog) {
 }
 
 const key = text => text.toLowerCase().replace(/\s+/g, "")
+// A field the send needs, still blank: the server refuses it with its own error.
+const blank = selector => !!selector && !document.querySelector(selector)?.value.trim()
 const part = (dialog, name) => dialog.querySelector(`[data-part=${name}]`)
 const action = dialog => dialog.querySelector("button[value=confirm]")
 

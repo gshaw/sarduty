@@ -45,7 +45,7 @@ defmodule App.Mailer.ActivityMailer do
   end
 
   @doc """
-  Emails a member an update, ending with where they stand (see update_ending/3). It has
+  Emails a member an update, ending with where they stand (see update_ending/2). It has
   no unsubscribe: it's the team admin writing to the people on their activity.
   """
   def deliver_update(
@@ -76,20 +76,15 @@ defmodule App.Mailer.ActivityMailer do
   end
 
   @doc """
-  How an update ends for a member, from their reply or attendance (a D4H status), their
-  invitation reminders, and whether the activity has `started?`. Before the start: `:ask`
-  with the reply buttons, `:open` with only the activity's link for one who turned
-  reminders off, or `:signed_up` or `:cant_make_it` with a link to change it. From the
-  start (#896) there's nothing to reply to: `:attended` or `:marked_absent`, with only
-  the activity's link, and `:open` for no reply.
+  How an update ends for a member, from their reply (a D4H status) and their invitation
+  reminders: `:ask` with the reply buttons, `:open` with only the activity's link for
+  one who turned reminders off, or `:signed_up` or `:cant_make_it` with a link to change
+  it.
   """
-  def update_ending("attending", _member, true = _started?), do: :attended
-  def update_ending("absent", _member, true), do: :marked_absent
-  def update_ending("requested", _member, true), do: :open
-  def update_ending("requested", %Member{invitation_reminders: false}, false), do: :open
-  def update_ending("requested", _member, false), do: :ask
-  def update_ending("attending", _member, false), do: :signed_up
-  def update_ending("absent", _member, false), do: :cant_make_it
+  def update_ending("requested", %Member{invitation_reminders: false}), do: :open
+  def update_ending("requested", _member), do: :ask
+  def update_ending("attending", _member), do: :signed_up
+  def update_ending("absent", _member), do: :cant_make_it
 
   @doc """
   A reminder as Send a reminder shows it (#608), from the same subject and HTML that
@@ -163,11 +158,9 @@ defmodule App.Mailer.ActivityMailer do
 
   @removed "You're no longer on this activity."
 
-  # Where the member stands, and the link that changes it: none after the start.
+  # Where the member stands, and the link that changes it.
   defp standing(:signed_up), do: {"You're signed up.", :no}
   defp standing(:cant_make_it), do: {"You said you can't make it.", :yes}
-  defp standing(:attended), do: {"You attended.", nil}
-  defp standing(:marked_absent), do: {"You were marked absent.", nil}
 
   defp text(activity, team, from_name, message, ending, links) do
     """
@@ -200,18 +193,13 @@ defmodule App.Mailer.ActivityMailer do
   defp ending_text(:removed, _links), do: @removed
 
   defp ending_text(ending, links) do
-    case standing(ending) do
-      {line, nil} -> line <> "\n"
-      {line, answer} -> change_text(line, links[answer])
-    end
-  end
+    {line, answer} = standing(ending)
 
-  defp change_text(line, link) do
     """
     #{line}
 
     Change your reply:
-    #{link}
+    #{links[answer]}
     """
   end
 
@@ -246,13 +234,9 @@ defmodule App.Mailer.ActivityMailer do
     do: ~s(<p style="margin:24px 0 0"><strong>#{@removed}</strong></p>)
 
   defp ending_html(ending, links) do
-    case standing(ending) do
-      {line, nil} ->
-        ~s(<p style="margin:24px 0 0"><strong>#{escape(line)}</strong></p>)
+    {line, answer} = standing(ending)
 
-      {line, answer} ->
-        ~s(<p style="margin:24px 0 0"><strong>#{escape(line)}</strong> <a href="#{escape(links[answer])}">Change your reply</a></p>)
-    end
+    ~s(<p style="margin:24px 0 0"><strong>#{escape(line)}</strong> <a href="#{escape(links[answer])}">Change your reply</a></p>)
   end
 
   # Plain text, escaped, its line breaks kept. Some mail apps drop white-space, so each

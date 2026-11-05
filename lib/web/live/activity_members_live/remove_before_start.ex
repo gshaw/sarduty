@@ -175,7 +175,7 @@ defmodule Web.ActivityMembersLive.RemoveBeforeStart do
     ~H"""
     <div id="remove-step">
       <p id="remove-intro" class="measure">
-        SAR Duty takes them off the activity in {@service}. To undo, add them again: they come back with No reply and answer again.
+        SAR Duty takes them off the activity. To undo, add them again: they come back with No reply and answer again.
       </p>
 
       <.form for={%{}} id="remove-form" phx-change="change" phx-submit="remove" phx-target={@myself}>
@@ -190,7 +190,7 @@ defmodule Web.ActivityMembersLive.RemoveBeforeStart do
         </div>
         <div :if={@emailed_rows != []} class="measure mt-6">
           <.warning_text id="remove-signed-up-warning" class="mb-4">
-            They told you they're coming, so each gets your message by email.
+            Each gets your message by email, because they signed up.
           </.warning_text>
           <.removed_table
             id="remove-emailed-table"
@@ -247,6 +247,7 @@ defmodule Web.ActivityMembersLive.RemoveBeforeStart do
             id="remove-send"
             variant={:danger}
             phx-disable-with="Removing…"
+            data-confirm-needs={@messaged != [] and !@skip_email and "#remove-message"}
             {confirm(@activity, @rows, @emailed)}
           >
             {button_text(length(@rows))}

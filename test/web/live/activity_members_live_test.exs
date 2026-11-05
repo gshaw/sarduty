@@ -201,8 +201,9 @@ defmodule Web.ActivityMembersLiveTest do
     refute has_element?(lv, "#activity-members input[type=checkbox]")
   end
 
-  # After the start, Send an update emails the checked by attendance (#896 H): Alex and
-  # Casey attended, Drew was absent, Cameron and Riley never replied.
+  # After the start, Send an update emails the checked the same email, whatever their
+  # attendance (#896): Alex and Casey attended, Drew was absent, Cameron and Riley never
+  # replied.
   describe "Send an update after the start (#896)" do
     defp open_update(ctx, members) do
       {:ok, lv, _html} = live(ctx.conn, path(ctx))
@@ -218,32 +219,29 @@ defmodule Web.ActivityMembersLiveTest do
       lv
     end
 
-    test "lists who gets it by attendance, and previews each ending (H)", ctx do
+    test "lists who gets it in one table, and previews the one email", ctx do
       lv = open_update(ctx, [ctx.alex, ctx.drew, ctx.riley])
 
-      assert has_element?(lv, "#update-who th", "Attended")
-      assert has_element?(lv, "#update-to-#{ctx.alex.id}")
-      assert has_element?(lv, "#update-who th", "Absent")
-      assert has_element?(lv, "#update-to-absent", "Drew Patel")
-      assert has_element?(lv, "#update-who th", "No reply")
-      refute has_element?(lv, "#update-who th", "Signed up")
+      assert has_element?(lv, "#update-who th", "Member")
+      refute has_element?(lv, "#update-who th", "Attended")
+      assert has_element?(lv, "#update-to-members #update-to-#{ctx.alex.id}", "Alex Chen")
+      assert has_element?(lv, "#update-to-members #update-to-#{ctx.drew.id}", "Drew Patel")
+      assert has_element?(lv, "#update-to-members #update-to-#{ctx.riley.id}", "Riley Okafor")
+      refute has_element?(lv, "#update-to-attending")
       refute has_element?(lv, "#update-step", "Turned off reminders")
 
-      assert has_element?(lv, "#update-preview-for label", "Attended")
-      assert has_element?(lv, "#update-preview-for label", "Absent")
-      assert has_element?(lv, "#update-preview-for label", "No reply")
-      assert has_element?(lv, "#email-preview", "You attended.")
-      refute has_element?(lv, "#email-preview", "Change your reply")
-
-      lv |> form("#update-form") |> render_change(%{"preview" => "marked_absent"})
-      assert has_element?(lv, "#email-preview", "You were marked absent.")
-
-      lv |> form("#update-form") |> render_change(%{"preview" => "open"})
+      refute has_element?(lv, "#update-preview-for")
+      assert has_element?(lv, "#email-preview", "Open activity")
       refute has_element?(lv, "#email-preview", "You")
       refute has_element?(lv, "#email-preview", "I'll be there")
+
+      assert has_element?(
+               lv,
+               ~s(#update-send[data-confirm="Email 3 members about Swiftwater training? Each gets your message and a link to the activity."])
+             )
     end
 
-    test "emails each with where they stand, and no reply buttons", ctx do
+    test "emails each the message and Open activity, and no reply buttons", ctx do
       lv = open_update(ctx, [ctx.alex, ctx.drew, ctx.riley])
       lv |> form("#update-form") |> render_submit(%{"message" => "Thanks for Tuesday."})
 
@@ -257,15 +255,13 @@ defmodule Web.ActivityMembersLiveTest do
         end
 
       assert emails["Alex Chen"].subject == "Update: Swiftwater training"
-      assert emails["Alex Chen"].text_body =~ "Thanks for Tuesday."
-      assert emails["Alex Chen"].html_body =~ "You attended."
-      assert emails["Drew Patel"].html_body =~ "You were marked absent."
-      refute emails["Riley Okafor"].html_body =~ "I'll be there"
-      refute emails["Riley Okafor"].html_body =~ "You "
 
       for {_name, email} <- emails do
-        refute email.html_body =~ "Change your reply"
+        assert email.text_body =~ "Thanks for Tuesday."
         assert email.html_body =~ "Open activity"
+        refute email.html_body =~ "You"
+        refute email.html_body =~ "I'll be there"
+        refute email.html_body =~ "Change your reply"
       end
 
       assert Repo.aggregate(ActivityUpdate, :count) == 3
@@ -572,7 +568,14 @@ defmodule Web.ActivityMembersLiveTest do
 
       assert has_element?(lv, "#update-no-email", "Eli Haddad")
       assert has_element?(lv, "#update-send", "Send 5 emails")
-      assert has_element?(lv, ~s(#update-send[data-confirm^="Email 5 members about"]))
+
+      assert has_element?(
+               lv,
+               ~s(#update-send[data-confirm="Email 5 members about Rope rescue training? Each gets your message, whatever their reply."])
+             )
+
+      # A blank message skips the confirm and goes to the server, which refuses it.
+      assert has_element?(lv, ~s(#update-send[data-confirm-needs="#update-message"]))
 
       assert has_element?(lv, "#email-preview", "Update: Rope rescue training")
       assert has_element?(lv, "#email-preview", "You're signed up.")
@@ -732,7 +735,14 @@ defmodule Web.ActivityMembersLiveTest do
              )
 
       assert has_element?(lv, "#remove-emailed-table #remove-row-#{ctx.drew.id}", "Signed up")
-      assert has_element?(lv, "#remove-signed-up-warning")
+
+      assert has_element?(
+               lv,
+               "#remove-signed-up-warning",
+               "Each gets your message by email, because they signed up."
+             )
+
+      refute has_element?(lv, "#remove-intro", "D4H")
       refute has_element?(lv, "#remove-step input[name='member_ids[]']")
 
       assert has_element?(lv, "label[for=remove-message]", "Message to Drew Park")
