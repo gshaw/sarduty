@@ -32,6 +32,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 - Send an update after an activity too, published or not: a thank-you, or "check your
   hours". The email ends with "You attended." or "You were marked absent.", with no reply
   buttons.
+- Add members lists who you find under Not added yet, checked, so it's clear nobody is on
+  the activity until you add them. The button counts who's checked: Add 5 members.
+  Uncheck anyone found by mistake, or one member of a group.
 - The Dashboard's numbers and charts open the reports that draw them, so you can see how
   each is counted and copy one. Its numbers' lines now cover this year.
 - ⭐ Reports draw charts: end one with `chart columns`, `lines`, `stat`, `bars`,

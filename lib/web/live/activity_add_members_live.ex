@@ -10,9 +10,11 @@ defmodule Web.ActivityAddMembersLive do
   alias Service.Format
 
   # Adding members to an activity (#564), by name or by group, laid out like Apply a
-  # template. Each pick joins one To add list; InviteMembers.plan/3 decides who goes and
-  # names who a group leaves out. Adding emails nobody. Until it's published, on an
-  # activity not deleted: as No reply before the start, and as attended after it (#766).
+  # template. A pick lists its members at once, checked, under Not added yet (#905);
+  # InviteMembers.plan/3 decides who is listed and names who a group leaves out. Only
+  # the checked rows are added, and only by the Add button. Adding emails nobody. Until
+  # it's published, on an activity not deleted: as No reply before the start, and as
+  # attended after it (#766).
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     activity = Web.ActivityLive.fetch_activity(team, id)
@@ -25,6 +27,7 @@ defmodule Web.ActivityAddMembersLive do
         socket =
           socket
           |> assign(page_title: "Add members", activity: activity, picks: [])
+          |> assign(unchecked: MapSet.new(), group_picks: 0)
           |> assign(
             on_activity: InviteMembers.on_activity(activity),
             away: InviteMembers.away(team, activity),
@@ -74,6 +77,8 @@ defmodule Web.ActivityAddMembersLive do
     assign(socket,
       plan: plan,
       to_add: Enum.sort_by(plan.add, &String.downcase(elem(&1, 1).name)),
+      checked:
+        Enum.count(plan.add, &(not MapSet.member?(socket.assigns.unchecked, elem(&1, 1).id))),
       member_options: member_options(socket.assigns.members, plan.add, on_activity),
       group_options: for(g <- socket.assigns.groups, do: {g.title, g.id})
     )
@@ -100,89 +105,92 @@ defmodule Web.ActivityAddMembersLive do
 
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <form id="add-member-form" phx-submit="add-member">
+        <%!-- A pick lists its members at once: no button, so nothing reads as added. --%>
+        <form id="add-member-form" phx-change="add-member" phx-submit="add-member">
           <.input
             type="combobox"
             name="member-id"
             id="member-id"
-            label="Add a member"
+            label="Find a member"
             value=""
             prompt="Select a member"
             options={@member_options}
           />
-          <.button id="add-member">Add member</.button>
         </form>
-        <form id="add-group-form" phx-submit="add-group" class="mt-6">
+        <%!-- A new id after each pick starts the combobox again, empty: its options don't
+        change, so nothing else would clear the group just picked. --%>
+        <form id="add-group-form" phx-change="add-group" phx-submit="add-group">
           <.input
             type="combobox"
             name="group-id"
-            id="group-id"
-            label="Add a group"
+            id={"group-id-#{@group_picks}"}
+            label="Find a group"
             value=""
             prompt="Select a group"
             options={@group_options}
           />
-          <.button id="add-group">Add group</.button>
         </form>
         <p class="hint mt-4">
-          A group adds its members who are not retired. Anyone away on {@day} is left out.
+          A group lists its members who are not retired. Anyone away on {@day} is left out.
         </p>
       </aside>
 
       <main class="content-2/3">
         <section id="members-to-add">
-          <h2 class="heading">To add</h2>
           <p :if={@to_add == []} id="members-nothing-to-add" class="hint">
-            Add members by name, or a group. Then add them to the activity.
+            Find a member or a group. They're listed here, checked, until you add them.
           </p>
-          <.table
+          <form
             :if={@to_add != []}
-            id="members-to-add-table"
-            rows={@to_add}
-            row_id={fn {_reason, member} -> "to-add-#{member.id}" end}
-            class="table-striped"
+            id="members-add-form"
+            phx-change="tick"
+            phx-submit="add"
           >
-            <%!-- No link: leaving the page drops the list. --%>
-            <:col :let={{reason, member}} label="Member">
-              <.member_cell
-                member={member}
-                team={@current_team}
-                standing={@standings[member.id]}
-                link={false}
-              />
-              <div class="hint">{InviteMembers.reason_text(reason)}</div>
-            </:col>
-            <:col :let={{_reason, member}} label="" class="w-px whitespace-nowrap">
-              <.button
-                id={"remove-#{member.id}"}
-                type="button"
-                size={:sm}
-                phx-click="remove"
-                phx-value-id={member.id}
-              >
-                Remove
-              </.button>
-            </:col>
-          </.table>
-          <p :if={@plan.on_activity != []} id="left-out-on-activity" class="mt-4">
-            On the activity already, so left out: {names(@plan.on_activity)}.
-          </p>
-          <p :if={@plan.away != []} id="left-out-away" class="mt-4">
-            Away on {@day}, so left out: {names(@plan.away)}. Add them by name to include them.
-          </p>
-          <form :if={@to_add != []} id="members-add-form" phx-submit="add" class="mt-4">
-            <p :if={!@started?} class="hint">
+            <.table
+              id="members-to-add-table"
+              rows={@to_add}
+              row_id={fn {_reason, member} -> "to-add-#{member.id}" end}
+              class="table-striped w-fit"
+            >
+              <:col :let={{_reason, member}} label="" class="w-px" select_all>
+                <input
+                  type="checkbox"
+                  id={"add-select-#{member.id}"}
+                  name="member_ids[]"
+                  value={member.id}
+                  checked={not MapSet.member?(@unchecked, member.id)}
+                />
+              </:col>
+              <%!-- No link: leaving the page drops the list. --%>
+              <:col :let={{reason, member}} label="Not added yet">
+                <.member_cell
+                  member={member}
+                  team={@current_team}
+                  standing={@standings[member.id]}
+                  link={false}
+                  label_for={"add-select-#{member.id}"}
+                />
+                <div class="hint">{InviteMembers.reason_text(reason)}</div>
+              </:col>
+            </.table>
+            <.left_out plan={@plan} day={@day} />
+            <p :if={!@started?} class="hint mt-4">
               They show as No reply until they answer. SAR Duty emails nobody.
             </p>
-            <p :if={@started?} id="members-add-attended" class="hint">
+            <p :if={@started?} id="members-add-attended" class="hint mt-4">
               They're added as attended, with the activity's times, {Format.time_short(
                 @activity.started_at,
                 @current_team.timezone
               )} to {Format.time_short(@activity.finished_at, @current_team.timezone)}. SAR Duty emails nobody.
             </p>
             <.form_actions>
-              <.button id="members-send" variant={:success} phx-disable-with="Adding…">
-                {Format.count(length(@to_add), one: "Add 1 member", many: "Add %d members")}
+              <.button
+                id="members-send"
+                variant={:success}
+                disabled={@checked == 0}
+                phx-disable-with="Adding…"
+              >
+                {Format.count(@checked, one: "Add 1 member", many: "Add %d members")}
               </.button>
               <.button
                 id="members-cancel"
@@ -192,9 +200,25 @@ defmodule Web.ActivityAddMembersLive do
               </.button>
             </.form_actions>
           </form>
+          <.left_out :if={@to_add == []} plan={@plan} day={@day} />
         </section>
       </main>
     </div>
+    """
+  end
+
+  attr :plan, :map, required: true
+  attr :day, :string, required: true
+
+  # Who the picks left out, under the list, or alone once nobody is listed.
+  defp left_out(assigns) do
+    ~H"""
+    <p :if={@plan.on_activity != []} id="left-out-on-activity" class="mt-4">
+      On the activity already, so left out: {names(@plan.on_activity)}.
+    </p>
+    <p :if={@plan.away != []} id="left-out-away" class="mt-4">
+      Away on {@day}, so left out: {names(@plan.away)}. Find them by name to include them.
+    </p>
     """
   end
 
@@ -214,19 +238,29 @@ defmodule Web.ActivityAddMembersLive do
 
   def handle_event("add-group", %{"group-id" => ""}, socket), do: {:noreply, socket}
 
+  # A group checks its members again, even ones unchecked before.
   def handle_event("add-group", %{"group-id" => id}, socket) do
     %{current_team: team} = socket.assigns
     group = Group.find!(team, id)
-    add_picks(socket, InviteMembers.group_picks(team, [group], DateTime.utc_now()))
+    picks = InviteMembers.group_picks(team, [group], DateTime.utc_now())
+    unchecked = MapSet.difference(socket.assigns.unchecked, MapSet.new(picks, &elem(&1, 1).id))
+
+    socket
+    |> assign(unchecked: unchecked, group_picks: socket.assigns.group_picks + 1)
+    |> add_picks(picks)
   end
 
-  def handle_event("remove", %{"id" => id}, socket) do
-    picks = Enum.reject(socket.assigns.picks, &(Integer.to_string(elem(&1, 1).id) == id))
-    {:noreply, socket |> assign(picks: picks) |> assign_plan(DateTime.utc_now())}
+  # The listed rows left unchecked, kept so a re-render never checks them again.
+  def handle_event("tick", params, socket) do
+    {:noreply,
+     socket |> assign(unchecked: unchecked(socket, params)) |> assign_plan(DateTime.utc_now())}
   end
 
-  def handle_event("add", _params, socket) do
-    %{current_team: team, current_user: user, activity: activity, picks: picks} = socket.assigns
+  # Only the checked rows' picks go; plan/3 drops a member with no pick left.
+  def handle_event("add", params, socket) do
+    unchecked = unchecked(socket, params)
+    %{current_team: team, current_user: user, activity: activity} = socket.assigns
+    picks = Enum.reject(socket.assigns.picks, &MapSet.member?(unchecked, elem(&1, 1).id))
 
     case InviteMembers.call(team, activity, picks, user, :invite, DateTime.utc_now()) do
       {:ok, result} ->
@@ -238,6 +272,13 @@ defmodule Web.ActivityAddMembersLive do
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, InviteMembers.error_text(team, reason))}
     end
+  end
+
+  # Ids come from the browser, so only the listed rows count.
+  defp unchecked(socket, params) do
+    checked = MapSet.new(params["member_ids"] || [])
+    listed = for {_reason, m} <- socket.assigns.to_add, do: m.id
+    MapSet.new(for id <- listed, not MapSet.member?(checked, Integer.to_string(id)), do: id)
   end
 
   defp add_picks(socket, new) do
