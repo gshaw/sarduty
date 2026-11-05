@@ -20,10 +20,11 @@ defmodule Web.ActivityMembersLive.Absent do
   def offered?(%{activity: activity, now: now}), do: ChangeAttendance.open?(activity, now)
 
   @impl Web.ActivityMembersLive.Action
-  def count(checked), do: Enum.count(checked, &ChangeAttendance.changes?(:absent, &1.status))
+  def count(_ctx, checked),
+    do: Enum.count(checked, &ChangeAttendance.changes?(:absent, &1.status))
 
   @impl Web.ActivityMembersLive.Action
-  def button(count), do: "Mark #{count} absent"
+  def button_text(count), do: "Mark #{count} absent"
 
   @impl Web.ActivityMembersLive.Action
   def variant, do: :primary

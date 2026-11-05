@@ -185,22 +185,17 @@ defmodule Web.ActivityLive do
     end
   end
 
-  # Reminders a team admin sends (#444): each member's latest, the last batch, and
-  # Send reminders while anyone has no reply, before the start (#608). Its page names
-  # anyone it can't email, and why.
+  # Reminders a team admin sends (#444): each member's latest and the last batch. They
+  # send them from the Members tab (#895).
   defp assign_reminders(socket, members) do
-    %{activity: activity, current_team: team, coming?: coming?, now: now} = socket.assigns
+    %{activity: activity, current_team: team, now: now} = socket.assigns
     reminders = Reminder.for_activity(activity)
     batch = ActivityReminders.last_batch(reminders, members)
 
     assign(socket,
       reminded: ActivityReminders.latest(reminders),
       batch: batch,
-      batch_sender: batch && Member.name_for_user(team, batch.sent_by_user, now),
-      send_reminders?:
-        socket.assigns.team_admin? && coming? && !activity.deleted_at &&
-          Enum.any?(members, &(&1.status == "requested")),
-      send_update?: socket.assigns.team_admin? && coming? && !activity.deleted_at && members != []
+      batch_sender: batch && Member.name_for_user(team, batch.sent_by_user, now)
     )
   end
 
@@ -438,12 +433,10 @@ defmodule Web.ActivityLive do
           adding={Activity.adding(@activity, @team_admin?, @now)}
           selected={@selected}
           choice={@choice}
-          step={@step}
+          retiring={@retiring}
           filter={@filter}
           groups={@groups}
           group_ids={@group_ids}
-          user={@current_user}
-          service={@service}
         />
         <.equipment_section
           :if={@tab == :equipment}
@@ -475,8 +468,6 @@ defmodule Web.ActivityLive do
           activity={@activity}
           team_admin?={@team_admin?}
           change_fields?={@change_fields?}
-          send_reminders?={@send_reminders?}
-          send_update?={@send_update?}
           send_attendance?={@send_attendance?}
           delete_confirm={@delete_confirm}
         />
@@ -582,8 +573,6 @@ defmodule Web.ActivityLive do
   attr :activity, :map, required: true
   attr :team_admin?, :boolean, default: false
   attr :change_fields?, :boolean, default: false, doc: "whether its kind has custom fields"
-  attr :send_reminders?, :boolean, default: false, doc: "whether anyone has no reply yet"
-  attr :send_update?, :boolean, default: false, doc: "whether anyone is on the activity"
   attr :send_attendance?, :boolean, default: false, doc: "whether anyone has scanned"
   attr :delete_confirm, :any, default: false, doc: "Delete's confirm dialog, or false for none"
 
@@ -631,18 +620,6 @@ defmodule Web.ActivityLive do
               id="activity-apply-template"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/templates"}
             >Apply a template</.a>
-          </li>
-          <li :if={@admin_actions? and @send_reminders?}>
-            <.a
-              id="activity-send-reminders"
-              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/reminders"}
-            >Send reminders</.a>
-          </li>
-          <li :if={@admin_actions? and @send_update?}>
-            <.a
-              id="activity-send-update"
-              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/updates"}
-            >Send an update</.a>
           </li>
           <%!-- It sends Take attendance's scans, so with none it has nothing to send (#766). --%>
           <li :if={@admin_actions? and @send_attendance?}>

@@ -14,10 +14,15 @@ defmodule Web.TableColumnsTest do
       "Replied: a table per reply, and No reply has no reply dates",
     {"lib/web/live/activity_remove_members_live.ex", ~s|status == "attending"|} =>
       "the no email hint: only a signed up member is emailed",
-    {"lib/web/live/activity_members_live.ex", ~s|status == "attending"|} =>
+    {"lib/web/live/activity_members_live.ex", ~s|@started? and status == "attending"|} =>
       "Start, Finish, and Hours: a table per attendance, and only Attended has times",
     {"lib/web/live/activity_members_live.ex", "@changeable?"} =>
-      "the checkboxes change attendance, for team admins from the start until it's published",
+      "the checkboxes, for team admins: emails before the start, attendance until it's published",
+    {"lib/web/live/activity_members_live.ex", ~s|!@started? and status != "requested"|} =>
+      "Replied: a table per reply before the start, and No reply has no reply dates",
+    {"lib/web/live/activity_members_live.ex",
+     ~s|!@started? and status == "requested" and reminded?(rows, @reminded)|} =>
+      "Reminder: only No reply gets one, and only once someone in it has",
     {"lib/web/components/travel_tab.ex", "!@locked?"} =>
       "the checkboxes set travel, and a published activity's travel cannot change",
     {"lib/web/live/chore_collection_live.ex", "@selected"} =>

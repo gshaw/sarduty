@@ -175,38 +175,34 @@ defmodule Web.ActivityLiveTest do
       }
     end
 
-    test "Send reminders opens its own page, and the batch note shows what went (#608)",
+    test "Send a reminder from the tab, and the batch note shows what went (#895)",
          %{conn: conn, team: team, activity: activity, cameron: cameron, wren: wren} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
+      refute has_element?(lv, "#activity-send-reminders")
+      refute has_element?(lv, "#activity-send-update")
 
-      assert has_element?(
-               lv,
-               ~s{#activity-send-reminders[href="/teams/#{team.subdomain}/activities/#{activity.id}/reminders"]},
-               "Send reminders"
-             )
+      ids = for row <- Repo.all(App.Model.Attendance), do: to_string(row.member_id)
 
-      assert has_element?(
-               lv,
-               ~s{#activity-send-update[href="/teams/#{team.subdomain}/activities/#{activity.id}/updates"]},
-               "Send an update"
-             )
+      lv
+      |> form("#members-change-form", %{"member_ids" => ids, "change" => "remind"})
+      |> render_submit()
 
-      {:ok, lv, _html} =
-        lv |> element("#activity-send-reminders") |> render_click() |> follow_redirect(conn)
-
-      {:ok, lv, _html} =
-        lv |> form("#email-form") |> render_submit() |> follow_redirect(conn)
+      assert_patch(lv, ~p"/teams/#{team}/activities/#{activity.id}/members/remind")
+      lv |> form("#remind-form") |> render_submit()
+      assert_patch(lv, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert_received {:email, %{to: [{"Cameron Ruiz", _}]}}
       assert_received {:email, %{to: [{"Frankie Moore", _}]}}
       refute_received {:email, _}
+      assert has_element?(lv, "#flash-info", "Sending 2 reminders.")
       assert has_element?(lv, "#members-batch", "2 sent")
       assert has_element?(lv, "#members-batch", "by Alex Chen · 0 replied since")
+      refute has_element?(lv, ~s|#members-change-form input[name="member_ids[]"][checked]|)
 
       {:ok, lv, _html} =
         live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
-      assert has_element?(lv, "#activity-members th", "Replied")
+      assert has_element?(lv, "#activity-members th", "Reminder")
       assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminded ")
       refute has_element?(lv, "#member-reminded-#{wren.id}")
       refute has_element?(lv, "#member-row-#{cameron.id} td", "No reply ·")
@@ -288,7 +284,7 @@ defmodule Web.ActivityLiveTest do
   defp row_ids(html) do
     html
     |> Floki.parse_document!()
-    |> Floki.find("#members-table tr")
+    |> Floki.find("#activity-members tr")
     |> Enum.flat_map(&Floki.attribute(&1, "id"))
   end
 
@@ -436,7 +432,7 @@ defmodule Web.ActivityLiveTest do
       attendance_fixture(activity, member, %{started_at: starts})
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
-      assert has_element?(lv, "#member-row-#{member.id}", "Signed up")
+      assert has_element?(lv, "#members-signed-up #member-row-#{member.id}")
       refute has_element?(lv, "#members-add")
     end
 
@@ -467,7 +463,7 @@ defmodule Web.ActivityLiveTest do
       assert_received {:d4h_write, _id, %{"status" => "ATTENDING"}}
       assert has_element?(lv, "#activity-reply-state", "Signed up")
       assert has_element?(lv, "#activity-panel-counts", "1 signed up · 1 can't make it")
-      assert has_element?(lv, "#member-row-#{member.id} .marker-signed-up", "Signed up")
+      assert has_element?(lv, "#members-signed-up #member-row-#{member.id}")
       refute has_element?(lv, "#activity-reply-yes")
 
       assert has_element?(
@@ -502,7 +498,6 @@ defmodule Web.ActivityLiveTest do
 
       assert has_element?(lv, "#members-batch", "0 sent")
       assert has_element?(lv, "#member-reminded-#{other.id}", "Reminder failed")
-      refute has_element?(lv, "#activity-send-reminders")
     end
 
     test "a member who isn't invited sees the counts alone", %{conn: conn, team: team} do
@@ -566,9 +561,9 @@ defmodule Web.ActivityLiveTest do
                "2 signed up · 1 can't make it · 1 no reply"
              )
 
-      assert has_element?(lv, "#member-row-#{quinn.id} .marker-cant-make-it", "Can't make it")
-      assert has_element?(lv, "#member-row-#{wren.id} .marker-no-reply", "No reply")
-      assert has_element?(lv, "#activity-members th", "Reply")
+      assert has_element?(lv, "#members-cant-make-it #member-row-#{quinn.id}")
+      assert has_element?(lv, "#members-no-reply #member-row-#{wren.id}")
+      assert has_element?(lv, "#activity-members th", "Can't make it")
       assert has_element?(lv, "#member-row-#{avery.id} .badge-primary", "New")
       refute has_element?(lv, "#member-row-#{member.id} .badge", "New")
       refute has_element?(lv, "#members-heading", "·")
@@ -587,8 +582,7 @@ defmodule Web.ActivityLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
-      assert has_element?(lv, "#member-row-#{kiosk.id}", "Can't make it")
-      assert has_element?(lv, "#activity-members th", "Member")
+      assert has_element?(lv, "#members-cant-make-it #member-row-#{kiosk.id}")
 
       assert has_element?(
                lv,

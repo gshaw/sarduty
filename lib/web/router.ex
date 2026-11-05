@@ -315,6 +315,8 @@ defmodule Web.Router do
       live "/teams/:subdomain/activities/new", ActivityFormLive, :new
       live "/teams/:subdomain/activities/:id", ActivityLive, :overview
       live "/teams/:subdomain/activities/:id/members", ActivityMembersLive, :members
+      live "/teams/:subdomain/activities/:id/members/remind", ActivityMembersLive, :remind
+      live "/teams/:subdomain/activities/:id/members/update", ActivityMembersLive, :update
       live "/teams/:subdomain/activities/:id/edit", ActivityFormLive, :edit
       live "/teams/:subdomain/activities/:id/travel", ActivityTravelLive, :travel
       live "/teams/:subdomain/activities/:id/history", ActivityHistoryLive, :history
@@ -327,8 +329,6 @@ defmodule Web.Router do
       live "/teams/:subdomain/activities/:id/templates", ActivityTemplateLive
       live "/teams/:subdomain/activities/:id/members/add", ActivityAddMembersLive
       live "/teams/:subdomain/activities/:id/members/remove", ActivityRemoveMembersLive
-      live "/teams/:subdomain/activities/:id/reminders", ActivitySendRemindersLive
-      live "/teams/:subdomain/activities/:id/updates", ActivitySendUpdateLive
       live "/teams/:subdomain/activities/:id/tags", ActivityTagsLive
       live "/teams/:subdomain/templates", TemplateCollectionLive
       live "/teams/:subdomain/templates/new", TemplateFormLive, :new

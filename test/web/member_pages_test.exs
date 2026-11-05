@@ -96,11 +96,19 @@ defmodule Web.MemberPagesTest do
     }
   end
 
+  # The Members tab's steps (#895) are its own LiveView's routes, but offer a member
+  # nothing: they land on the tab. Web.ActivityMembersLiveTest opens one as a member.
+  @not_swept [
+    "/teams/:subdomain/activities/:id/members/remind",
+    "/teams/:subdomain/activities/:id/members/update"
+  ]
+
   test "the sweep opens every LiveView a member reaches", %{pages: pages} do
     swept = MapSet.new(pages, &route(&1).route)
 
     live_views =
       for path <- Web.RouterTest.member_route_paths(),
+          path not in @not_swept,
           %{metadata: %{phoenix_live_view: _}} <- [route_template(path)],
           into: MapSet.new(),
           do: path

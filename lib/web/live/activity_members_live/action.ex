@@ -9,14 +9,16 @@ defmodule Web.ActivityMembersLive.Action do
   (`run/0` answers `{:in_place, change}`). Or it opens a step (`{:step, live_action}`):
   the module is then a LiveComponent too, drawn in the tab's place on a `live_action`
   route of the same LiveView, such as `/members/remind`, so the ticks never leave the
-  page. See Web.ActivityMembersLive for the step's rules.
+  page. See Web.ActivityMembersLive for the step's rules. A step gets `team`, `activity`,
+  `user`, `checked`, `standings`, `counts` (the panel's), `service`, and `back`, the
+  tab's path, and draws everything under the page's title.
 
-  `ctx` is `%{activity:, team:, now:}`. `checked` are the checked members' rows, one per
+  `ctx` is `%{activity:, team:, now:, retiring:}`, with the team's retiring member ids. `checked` are the checked members' rows, one per
   member as the tab shows them (App.ViewData.ActivityMembers), each with its `member`,
   `status`, and `duration_in_minutes`.
   """
 
-  @type ctx :: %{activity: map(), team: map(), now: DateTime.t()}
+  @type ctx :: %{activity: map(), team: map(), now: DateTime.t(), retiring: MapSet.t()}
 
   @doc ~s(The list's value, also in ids: "absent".)
   @callback value() :: String.t()
@@ -31,10 +33,10 @@ defmodule Web.ActivityMembersLive.Action do
   @callback offered?(ctx()) :: boolean()
 
   @doc "How many of the checked members it changes, for the button."
-  @callback count(checked :: [map()]) :: non_neg_integer()
+  @callback count(ctx(), checked :: [map()]) :: non_neg_integer()
 
-  @doc ~s(The button for `count` members, 1 or more: "Mark 3 absent".)
-  @callback button(count :: pos_integer()) :: String.t()
+  @doc ~s(The button for `count` members: "Mark 3 absent".)
+  @callback button_text(count :: non_neg_integer()) :: String.t()
 
   @doc "The button's variant: red for a change that takes something away."
   @callback variant() :: :primary | :danger
