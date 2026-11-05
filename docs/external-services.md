@@ -24,6 +24,8 @@ like a D4H team's. The same adapter calls it, and a Records team's edits are wri
 D4H doesn't have. See [records.md](records.md).
 
 - `RECORDS_HOST` — dev only, optional: points SAR Duty at a local Records.
+- `RECORDS_SARDUTY_KEY` — SAR Duty's own key for deleting a team in Records (#889), the
+  same value as Records' `SARDUTY_KEY`. Unset, deleting a Records team is refused.
 
 ## Mapbox
 

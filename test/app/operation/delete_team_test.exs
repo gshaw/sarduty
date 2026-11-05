@@ -5,9 +5,11 @@ defmodule App.Operation.DeleteTeamTest do
   import App.DataFixtures
   import Swoosh.TestAssertions
 
+  alias App.Adapter.D4H
   alias App.Model.Event
   alias App.Model.Team
   alias App.Operation.DeleteTeam
+  alias App.RecordsStub
   alias App.Repo
   alias App.Worker.SyncTeamChangesWorker
 
@@ -94,6 +96,42 @@ defmodule App.Operation.DeleteTeamTest do
 
     assert [%{args: %{"team_id" => other_id}}] = Repo.all(Oban.Job)
     assert other_id == other.id
+  end
+
+  describe "a team on SAR Duty Records" do
+    setup do
+      %{records_team: team_fixture(%{name: "Fjord SAR", d4h_api_host: D4H.records_host()})}
+    end
+
+    test "goes from Records first, held there 7 days", %{admin: admin, records_team: team} do
+      RecordsStub.stub(fn "DELETE", _path, _body -> {200, %{"deletesOn" => "2026-11-12"}} end)
+
+      assert {:ok, _deleted} = DeleteTeam.call(team, "Fjord SAR", admin)
+
+      path = "/v3/sarduty/teams/#{team.d4h_team_id}"
+      assert_received {:records, "DELETE", ^path, nil}
+      refute Repo.get(Team, team.id)
+      assert %Event{data: %{"records" => true}} = Repo.get_by!(Event, kind: :team_deleted)
+
+      assert_email_sent(fn email ->
+        assert email.text_body =~ "Its SAR Duty Records team is switched off, and goes in 7 days."
+      end)
+    end
+
+    test "a team Records doesn't have goes", %{records_team: team} do
+      RecordsStub.stub(fn "DELETE", _path, _body -> {404, %{"title" => "Not Found"}} end)
+      assert {:ok, _deleted} = DeleteTeam.purge(team, reason: :admin)
+      refute Repo.get(Team, team.id)
+    end
+
+    test "a refusal deletes nothing", %{admin: admin, records_team: team} do
+      RecordsStub.stub(fn "DELETE", _path, _body -> {500, %{"title" => "Down"}} end)
+
+      assert {:error, %D4H.Error{}} = DeleteTeam.call(team, "Fjord SAR", admin)
+      assert Repo.get(Team, team.id)
+      refute Repo.get_by(Event, kind: :team_deleted)
+      assert_no_email_sent()
+    end
   end
 
   defp tables do

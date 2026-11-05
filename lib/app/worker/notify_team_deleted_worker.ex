@@ -13,12 +13,13 @@ defmodule App.Worker.NotifyTeamDeletedWorker do
   alias App.Adapter.D4H
   alias App.Model.Team
 
-  @doc "Queues the notice. Call it in the transaction that deletes the team."
+  @doc "Queues the notice, once the team is deleted."
   def enqueue(%Team{} = team, %User{email: email}, snapshot) do
     %{
       name: team.name,
       subdomain: team.subdomain,
       service: D4H.service_name(team),
+      records: D4H.records?(team),
       deleted_by: email,
       snapshot: snapshot
     }

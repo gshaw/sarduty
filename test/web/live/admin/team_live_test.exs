@@ -5,8 +5,11 @@ defmodule Web.Admin.TeamLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Adapter.D4H
   alias App.Model.Event
+  alias App.Model.Team
   alias App.Model.TeamLoginGrant
+  alias App.RecordsStub
   alias App.Repo
 
   setup %{conn: conn} do
@@ -143,7 +146,20 @@ defmodule Web.Admin.TeamLiveTest do
 
       lv |> form("#delete-form", delete: %{name: "coast range sar"}) |> render_submit()
       assert_redirect(lv, ~p"/admin")
-      refute Repo.get(App.Model.Team, team.id)
+      refute Repo.get(Team, team.id)
+    end
+
+    test "a team on SAR Duty Records says it goes there too, and a refusal keeps it",
+         %{conn: conn} do
+      team = team_fixture(%{name: "Fjord SAR", d4h_api_host: D4H.records_host()})
+      RecordsStub.stub(fn "DELETE", _path, _body -> {500, %{"title" => "Down"}} end)
+
+      {:ok, lv, html} = live(conn, ~p"/admin/teams/#{team.id}")
+      assert html =~ "Its SAR Duty Records team is switched off now and goes in 7 days."
+
+      lv |> form("#delete-form", delete: %{name: "Fjord SAR"}) |> render_submit()
+      assert render(lv) =~ "SAR Duty Records refused, so nothing was deleted"
+      assert Repo.get(Team, team.id)
     end
   end
 end

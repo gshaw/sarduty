@@ -133,12 +133,18 @@ defmodule App.Accounts.UserNotifier do
     #{args["name"]} (#{args["subdomain"]}) was deleted from SAR Duty, with all its data.
 
     Deleted by: #{args["deleted_by"]}
-    Nothing in #{args["service"]} changed.
+    #{service_line(args)}
 
     #{undo}
     """)
     |> Mailer.deliver()
   end
+
+  defp service_line(%{"records" => true}),
+    do:
+      "Its SAR Duty Records team is switched off, and goes in 7 days. Switch it on in Records' admin to keep it."
+
+  defp service_line(args), do: "Nothing in #{args["service"]} changed."
 
   # cspell:ignore Segoe -- Windows' system font, in the email's font stack
   # The logo is a PNG at 2x, since Gmail won't show SVG (see /styles/logo).

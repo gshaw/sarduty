@@ -309,7 +309,15 @@ defmodule Web.Admin.TeamLive do
               Enum.sum(Map.values(@delete_counts)),
               one: "%d row",
               many: "%d rows"
-            )}. Nothing in {D4H.service_name(@team)} changes, and the team can sign up again.
+            )}.
+            <span :if={D4H.records?(@team)}>
+              Its {D4H.service_name(@team)} team is switched off now and goes in {Service.Format.days(
+                DeleteTeam.snapshot_days()
+              )}.
+            </span>
+            <span :if={!D4H.records?(@team)}>
+              Nothing in {D4H.service_name(@team)} changes, and the team can sign up again.
+            </span>
           </p>
           <p>
             The server keeps a copy of the team's data for {Service.Format.days(
@@ -438,6 +446,10 @@ defmodule Web.Admin.TeamLive do
          socket
          |> assign_delete_form(typed)
          |> put_flash(:error, "Type #{team.name} to delete it.")}
+
+      {:error, %D4H.Error{message: message}} ->
+        {:noreply,
+         put_flash(socket, :error, "SAR Duty Records refused, so nothing was deleted: #{message}")}
     end
   end
 

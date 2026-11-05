@@ -27,6 +27,12 @@ if config_env() == :dev and System.get_env("RECORDS_HOST") do
   config :sarduty, :records_host, System.get_env("RECORDS_HOST")
 end
 
+# SAR Duty's own key for deleting a team in Records (App.Adapter.D4H.delete_records_team/1,
+# #889): Records' SARDUTY_KEY. Unset, deleting a Records team is refused.
+if key = System.get_env("RECORDS_SARDUTY_KEY") do
+  config :sarduty, :records_sarduty_key, key
+end
+
 config :sarduty, :healthchecks_url, System.get_env("HEALTHCHECKS_URL")
 # Its own Healthchecks check, with a 10-minute period, for the D4H sync (#163).
 config :sarduty, :healthchecks_sync_url, System.get_env("HEALTHCHECKS_SYNC_URL")

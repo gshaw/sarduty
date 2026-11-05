@@ -10,7 +10,9 @@ defmodule App.Operation.DeleteTeam do
   rolls the whole delete back.
 
   Users stay: a user is only an email and may be on another team (#890 prunes logins
-  that reach no team). Nothing in D4H or Records changes.
+  that reach no team). Nothing in D4H changes. A team on SAR Duty Records goes from
+  Records too: Records switches it off at once and deletes it 7 days on, so a Records
+  admin can switch it back on until then (App.Adapter.D4H.delete_records_team/1).
 
   `snapshot: true` first copies the team's rows to a file beside the database, so
   App.Operation.RestoreTeam can undo a mistake for 7 days. The file has every table, and
@@ -18,6 +20,7 @@ defmodule App.Operation.DeleteTeam do
   """
 
   alias App.Accounts.User
+  alias App.Adapter.D4H
   alias App.Model.Event
   alias App.Model.Team
   alias App.Repo
@@ -73,16 +76,16 @@ defmodule App.Operation.DeleteTeam do
 
   @doc """
   A SAR Duty admin's delete: when `typed` matches the team's name, deletes it with a
-  snapshot and emails every SAR Duty admin. `{:ok, result}` as `purge/2` gives it, or
-  `{:error, :name_mismatch}`.
+  snapshot and emails every SAR Duty admin. `{:ok, result}` as `purge/2` gives it,
+  `{:error, :name_mismatch}`, or `purge/2`'s error with nothing deleted.
   """
   def call(%Team{} = team, typed, %User{is_admin: true} = admin) do
     if Team.name_matches?(team, typed) do
-      {:ok, %{snapshot: snapshot}} =
-        result = purge(team, reason: :admin, by: admin, snapshot: true)
-
-      NotifyTeamDeletedWorker.enqueue(team, admin, snapshot)
-      result
+      with {:ok, %{snapshot: snapshot}} = result <-
+             purge(team, reason: :admin, by: admin, snapshot: true) do
+        NotifyTeamDeletedWorker.enqueue(team, admin, snapshot)
+        result
+      end
     else
       {:error, :name_mismatch}
     end
@@ -90,19 +93,37 @@ defmodule App.Operation.DeleteTeam do
 
   @doc """
   Deletes the team and every row SAR Duty holds for it, cancels its waiting jobs, and
-  records a `team_deleted` event, in one transaction; then removes its logo.
+  records a `team_deleted` event, in one transaction; then removes its logo. A team on
+  SAR Duty Records is deleted there first, after the snapshot, so a refusal deletes
+  nothing.
 
   - `reason:` why, kept in the event: `:admin`
   - `by:` the user who deleted it, or nil
   - `snapshot:` true copies the team's rows first (nil when no directory is set, as in
     tests)
 
-  Returns `{:ok, %{rows: count, snapshot: path_or_nil}}`. Each caller tells its own people.
+  Returns `{:ok, %{rows: count, snapshot: path_or_nil}}`, or `{:error, %D4H.Error{}}`
+  when Records refused. Each caller tells its own people.
   """
   def purge(%Team{} = team, opts) do
+    snapshot = if Keyword.get(opts, :snapshot, false), do: take_snapshot(team)
+
+    case delete_in_records(team) do
+      :ok ->
+        delete(team, snapshot, opts)
+
+      {:error, _error} = error ->
+        if snapshot, do: File.rm(snapshot)
+        error
+    end
+  end
+
+  defp delete_in_records(team),
+    do: if(D4H.records?(team), do: D4H.delete_records_team(team), else: :ok)
+
+  defp delete(team, snapshot, opts) do
     reason = Keyword.fetch!(opts, :reason)
     by = Keyword.get(opts, :by)
-    snapshot = if Keyword.get(opts, :snapshot, false), do: take_snapshot(team)
     rows = team |> row_counts() |> Map.values() |> Enum.sum()
 
     # A table missing from the lists fails the commit, and nothing is deleted.
@@ -118,6 +139,7 @@ defmodule App.Operation.DeleteTeam do
             team_id: team.id,
             d4h_team_id: team.d4h_team_id,
             subdomain: team.subdomain,
+            records: D4H.records?(team),
             rows: rows
           }
         )

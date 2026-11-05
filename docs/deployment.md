@@ -114,7 +114,8 @@ through the sync's ping every 10 minutes, still alerts when the app or Oban is d
   team's id is in the `team_deleted` event. To put the team back, with every row's own id:
   `bin/sarduty eval "Application.ensure_all_started(:sarduty); App.Operation.RestoreTeam.call(\"<file>\", <team id>) |> IO.inspect()"`.
   It refuses when the team signed up again since. Tried on a copy of South Fraser: every
-  row came back the same.
+  row came back the same. A Records team is held in Records for the same 7 days: switch
+  it on in Records' admin first, then restore.
 - **A dev copy** from a snapshot: `AGE_IDENTITY=<identity file> mise run sanitize
 backups/<snapshot>` writes `db/sarduty_dev.db` with every name, email, phone, address,
   incident, and credential replaced by stable fakes. Admins and their member rows stay

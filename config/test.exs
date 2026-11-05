@@ -42,6 +42,7 @@ config :phoenix, :plug_init_mode, :runtime
 # Every D4H request goes to Req.Test. A test that doesn't stub D4H fails instead of
 # calling the real API.
 config :sarduty, App.Adapter.D4H, plug: {Req.Test, App.Adapter.D4H}
+config :sarduty, :records_sarduty_key, "sarduty-test-key"
 
 # Mapbox too: map images and the mileage report's lookups.
 config :sarduty, App.Adapter.Mapbox, plug: {Req.Test, App.Adapter.Mapbox}

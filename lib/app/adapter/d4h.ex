@@ -224,6 +224,27 @@ defmodule App.Adapter.D4H do
     |> report_rate_limits()
   end
 
+  @doc """
+  Tells SAR Duty Records a team was deleted in SAR Duty (#889). Records switches it off
+  now and deletes it 7 days on; until then a Records admin can switch it back on. Takes
+  SAR Duty's own key, never the team's. `:ok`, also when Records has no such team, or
+  `{:error, error}`.
+  """
+  def delete_records_team(%Team{d4h_team_id: d4h_team_id}) do
+    case Application.get_env(:sarduty, :records_sarduty_key) do
+      key when is_binary(key) and key != "" ->
+        context = whoami_context(key, records_host())
+
+        case Req.delete(context, url: "/sarduty/teams/#{d4h_team_id}", retry: false) do
+          {:ok, %{status: status}} when status in [200, 404] -> :ok
+          result -> {:error, write_error(result)}
+        end
+
+      _none ->
+        {:error, D4H.Error.exception("SAR Duty has no key for deleting a Records team.")}
+    end
+  end
+
   # The account's /whoami has no rights; the team's /team/{id}/whoami sends them in
   # `context.permissions` (#727). Records sends none, and a key for another team has
   # none to read here.
