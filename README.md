@@ -13,7 +13,7 @@ SAR Duty builds on a team's D4H records with tools made for volunteer teams. It 
 - **Everything a team admin keeps track of**: activities and replies, members, groups,
   qualifications, equipment, chores, travel, and reports.
 
-![The team dashboard for Coast Range SAR, a made-up team](README-SCREENSHOT-URL)
+<img src="README-SCREENSHOT-URL" width="600" alt="A sample team's dashboard in SAR Duty">
 
 ## Setup
 
