@@ -50,8 +50,8 @@ defmodule Web.StandardColumnsTest do
   ]
 
   @cell_labelled_otherwise %{
-    {"lib/web/live/activity_members_live/update.ex", "{status_title(status)}"} =>
-      "a table per reply, each headed by the reply",
+    {"lib/web/live/activity_members_live/update.ex", "{Reply.status_text(status, @started?)}"} =>
+      "a table per reply, or per attendance from the start, each headed by it",
     {"lib/web/live/activity_members_live/remind.ex", "Gets a reminder"} =>
       "the members a reminder goes to, headed by what they get",
     {"lib/web/live/activity_members_live/remove_before_start.ex", "{@label}"} =>

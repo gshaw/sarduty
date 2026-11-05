@@ -189,7 +189,10 @@ defmodule App.Operation.SendActivityUpdateTest do
 
     test "an update to a deleted activity goes to nobody", ctx do
       update = queued(ctx, ctx.avery)
-      ctx.activity |> Ecto.Changeset.change(deleted_at: DateTime.truncate(now(), :second)) |> Repo.update!()
+
+      ctx.activity
+      |> Ecto.Changeset.change(deleted_at: DateTime.truncate(now(), :second))
+      |> Repo.update!()
 
       assert {:cancel, _} = SendActivityUpdate.deliver(update.id, false, now())
       assert Repo.reload!(update).status == :failed
