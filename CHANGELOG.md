@@ -29,6 +29,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
   from Actions.
 - Remove members before an activity joins them: check members on its Members tab, then
   Remove from the activity. The Remove members link is gone.
+- Send an update after an activity too, published or not: a thank-you, or "check your
+  hours". The email ends with "You attended." or "You were marked absent.", with no reply
+  buttons.
 - The Dashboard's numbers and charts open the reports that draw them, so you can see how
   each is counted and copy one. Its numbers' lines now cover this year.
 - ⭐ Reports draw charts: end one with `chart columns`, `lines`, `stat`, `bars`,

@@ -169,7 +169,7 @@ member who signed up "attending".
 - **Adding and emailing.** A team admin adds members to an activity; adding sends nothing.
   Send a reminder lists who gets an email and why the rest do not; it emails only
   members with no reply. Send an update emails the members checked the team admin's
-  message, whatever their reply. A message is the team admin's own words, plain
+  message, whatever their reply, before or after the start. A message is the team admin's own words, plain
   text, up to 300 characters.
 
 ## Glossary

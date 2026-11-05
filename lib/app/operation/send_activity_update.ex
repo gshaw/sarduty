@@ -1,10 +1,13 @@
 defmodule App.Operation.SendActivityUpdate do
   @moduledoc """
-  A team admin emails an update to members on an activity (#609), before it starts: their
-  own message, to the members they check on its Members tab (#895), whatever their
-  reply. Each email ends with where the member stands (ActivityMailer.update_ending/2):
-  reply buttons for a member with no reply, unless they turned invitation reminders off,
-  and a link to change the reply for the rest. Asking only members with no reply is Send a reminder.
+  A team admin emails an update to members on an activity (#609): their own message, to
+  the members they check on its Members tab (#895), whatever their reply. It changes
+  nothing on the activity, so it stays open after the start, published or not (#896),
+  until the activity is deleted. Each email ends with where the member stands
+  (ActivityMailer.update_ending/3). Before the start: reply buttons for a member with no
+  reply, unless they turned invitation reminders off, and a link to change the reply for
+  the rest. From the start: their attendance, with no reply buttons. Asking only members
+  with no reply is Send a reminder.
 
   plan/1 says who can get one, pure. call/6 records a queued row per update with its
   job, in one transaction. App.Worker.SendActivityUpdateWorker then sends each with
@@ -67,8 +70,8 @@ defmodule App.Operation.SendActivityUpdate do
   @doc """
   Queues an update with `message` for each member in `member_ids` that plan/1 has, from
   `user`. Ids the plan doesn't have are ignored. `{:ok, updates}`, each queued, or
-  `{:error, reason}`: `:no_message`, `:message_too_long`, `:none_selected`, `:deleted`,
-  or `:started`.
+  `{:error, reason}`: `:no_message`, `:message_too_long`, `:none_selected`, or
+  `:deleted`.
   """
   def call(
         %Team{} = team,
@@ -84,7 +87,6 @@ defmodule App.Operation.SendActivityUpdate do
 
     cond do
       activity.deleted_at -> {:error, :deleted}
-      Activity.started?(activity, now) -> {:error, :started}
       message == nil -> {:error, :no_message}
       not Message.fits?(message) -> {:error, :message_too_long}
       MapSet.size(ids) == 0 -> {:error, :none_selected}
@@ -106,7 +108,6 @@ defmodule App.Operation.SendActivityUpdate do
   def error_text(:message_too_long), do: Message.error_text()
   def error_text(:none_selected), do: "Select at least 1 member to email."
   def error_text(:deleted), do: "This activity is deleted. Nothing can be sent to it."
-  def error_text(:started), do: "Updates closed when the activity started."
 
   @doc """
   Records a queued `kind` email of `message` to `member` from `user`, with its job. The
@@ -139,8 +140,9 @@ defmodule App.Operation.SendActivityUpdate do
   Emails one queued update and marks it sent, for its job, ending with the member's reply
   as it is now. A refusal is `{:error, reason}`, so the job tries again; on the `last?`
   attempt the update is marked failed first. One no longer queued is `{:cancel,
-  reason}`, and so is one whose activity started or was deleted, or whose member is no
-  longer on it, before it went, which is marked failed. A removal goes whenever its job
+  reason}`, and so is one whose activity was deleted, or whose member is no longer on
+  it, before it went, which is marked failed. It ends with where the member stands at
+  `now`, before or after the start. A removal goes whenever its job
   runs, unless the member is back on the activity by then.
   """
   def deliver(update_id, last?, now) do
@@ -163,16 +165,18 @@ defmodule App.Operation.SendActivityUpdate do
     invitation = Attendance.invitation(activity, member)
 
     cond do
-      not Activity.open?(activity, now) ->
-        ActivityUpdate.fail!(update, "The activity started before it went.")
-        {:cancel, "the activity started"}
+      Activity.deleted?(activity) ->
+        ActivityUpdate.fail!(update, "The activity was deleted before it went.")
+        {:cancel, "the activity was deleted"}
 
       invitation == nil or invitation.status not in ActivityMembers.statuses() ->
         ActivityUpdate.fail!(update, "The member left the activity before it went.")
         {:cancel, "the member left the activity"}
 
       true ->
-        send_email(update, ActivityMailer.update_ending(invitation.status, member), last?, now)
+        started? = Activity.started?(activity, now)
+        ending = ActivityMailer.update_ending(invitation.status, member, started?)
+        send_email(update, ending, last?, now)
     end
   end
 

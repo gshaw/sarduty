@@ -494,18 +494,23 @@ activity starts.
   Oct 26", or "Reminder failed". Beside the Members heading, the last batch: "4 sent Oct
   26, 18:02 by Alex Chen · 2 replied since".
 - **Updates** ([SendActivityUpdate](../lib/app/operation/send_activity_update.ex), #609):
-  before the start, a team admin checks members on the Members tab and picks Send an
-  update, to tell them something whatever their reply, such as a new meeting place. The
+  a team admin checks members on the Members tab and picks Send an update, to tell them
+  something whatever their reply, such as a new meeting place. It changes nothing on the
+  activity, so it stays after the start, published or not, until the activity is
+  deleted (#896): a thank-you, or "check your hours". The
   button counts the checked members with an email: Email 3 members. Its step,
   `/teams/:subdomain/activities/:id/members/update`
   ([Update](../lib/web/live/activity_members_live/update.ex), #895), lists them in a table
-  per reply (Signed up, Can't make it, No reply), and who has no email. The message is
+  per reply (Signed up, Can't make it, No reply), or per attendance after the start
+  (Attended, Absent, No reply), and who has no email. The message is
   required, up to 300 characters. Each email ends
   with where the member stands, read when it goes: "You're signed up." or "You said you
   can't make it." with Change your reply, or the reply buttons for a member with no
   reply. A member with no reply who turned invitation reminders off gets no buttons,
   only Open activity, so it stays an update and not an invitation. Updates ignore that
-  setting otherwise, and carry no unsubscribe. The preview shows one ending at a time.
+  setting otherwise, and carry no unsubscribe. After the start there's nothing to reply
+  to: "You attended." or "You were marked absent.", with only Open activity, and No
+  reply gets only Open activity. The preview shows one ending at a time.
   Earlier updates are listed at the top with their message, sender, and count. Each is
   a row in `activity_updates`. Asking only members with no reply is Send a reminder.
 - **Remove from the activity** ([RemoveMembers](../lib/app/operation/remove_members.ex),
@@ -529,7 +534,8 @@ activity starts.
   Hours, then Absent, then No reply (#766). Start shows a date only when it isn't the
   activity's day. Team admins get a tick box per row and select all per table, then one
   list and one button for the checked members: Send a reminder, Send an update, and
-  Remove from the activity before the start, and changes to attendance from it until it's published.
+  Remove from the activity before the start, and changes to attendance from it until it's
+  published, then Send an update.
 
 ### View as member
 
