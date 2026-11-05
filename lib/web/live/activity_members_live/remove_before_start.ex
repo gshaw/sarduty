@@ -247,6 +247,7 @@ defmodule Web.ActivityMembersLive.RemoveBeforeStart do
             id="remove-send"
             variant={:danger}
             phx-disable-with="Removing…"
+            data-confirm-needs={@messaged != [] and !@skip_email and "#remove-message"}
             {confirm(@activity, @rows, @emailed)}
           >
             {button_text(length(@rows))}

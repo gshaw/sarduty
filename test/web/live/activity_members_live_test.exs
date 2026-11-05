@@ -574,6 +574,9 @@ defmodule Web.ActivityMembersLiveTest do
                ~s(#update-send[data-confirm="Email 5 members about Rope rescue training? Each gets your message, whatever their reply."])
              )
 
+      # A blank message skips the confirm and goes to the server, which refuses it.
+      assert has_element?(lv, ~s(#update-send[data-confirm-needs="#update-message"]))
+
       assert has_element?(lv, "#email-preview", "Update: Rope rescue training")
       assert has_element?(lv, "#email-preview", "You're signed up.")
 

@@ -297,6 +297,7 @@ defmodule Web.ActivityMembersLive.Update do
             id="update-send"
             variant={:primary}
             phx-disable-with="Sending…"
+            data-confirm-needs="#update-message"
             {send_confirm(
               @count,
               "Email #{members_text(@count)} about #{@activity.title}?",
