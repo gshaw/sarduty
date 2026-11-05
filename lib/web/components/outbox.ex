@@ -38,31 +38,38 @@ defmodule Web.Components.Outbox do
   end
 
   attr :message, OutboxMessage, required: true
-  attr :html_path, :string, required: true
   attr :timezone, :string, required: true
 
+  # Like the email previews (Web.Components.EmailPreview), with the header a mail app
+  # shows. The HTML is SAR Duty's own mailers', which escape what people typed, as the
+  # previews show it; here its links work, so a reply link answers as the member.
   def outbox_message(assigns) do
     ~H"""
     <article id={"outbox-message-#{@message.id}"}>
       <h1 class="title">{title(@message)}</h1>
-      <dl class="mb-6">
-        <dt>{if @message.kind == :text, do: "Text to", else: "To"}</dt>
-        <dd id="outbox-to">{@message.to}</dd>
-        <dt>Sent</dt>
-        <dd>{Service.Format.month_day_time_seconds(@message.inserted_at, @timezone)}</dd>
-        <dt :if={@message.attachments}>Attached</dt>
-        <dd :if={@message.attachments}>{@message.attachments}</dd>
-      </dl>
-      <iframe
-        :if={@message.html_body}
-        id="outbox-html"
-        src={@html_path}
-        title={title(@message)}
-        sandbox="allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
-        class="outbox-frame"
-      ></iframe>
-      <div :if={@message.body} id="outbox-body" class="whitespace-pre-wrap break-words max-w-3xl">
-        <.linked_text text={@message.body} />
+      <div class="email-preview outbox-message">
+        <dl class="outbox-head">
+          <dt>From</dt>
+          <dd id="outbox-from">{@message.from || "SAR Duty"}</dd>
+          <dt>To</dt>
+          <dd id="outbox-to">{@message.to}</dd>
+          <dt :if={@message.kind == :email}>Subject</dt>
+          <dd :if={@message.kind == :email}>{@message.subject}</dd>
+          <dt>Date</dt>
+          <dd>{Service.Format.month_day_time_seconds(@message.inserted_at, @timezone)}</dd>
+          <dt :if={@message.attachments}>Attached</dt>
+          <dd :if={@message.attachments}>{@message.attachments}</dd>
+        </dl>
+        <div :if={@message.html_body} id="outbox-html" class="email-preview-body">
+          {Phoenix.HTML.raw(@message.html_body)}
+        </div>
+        <div
+          :if={!@message.html_body && @message.body}
+          id="outbox-body"
+          class="email-preview-body whitespace-pre-wrap break-words"
+        >
+          <.linked_text text={@message.body} />
+        </div>
       </div>
     </article>
     """
@@ -94,19 +101,5 @@ defmodule Web.Components.Outbox do
     @link
     |> Regex.split(text, include_captures: true, trim: true)
     |> Enum.map(&if(Regex.match?(~r{\Ahttps?://}, &1), do: {:link, &1}, else: {:text, &1}))
-  end
-
-  @doc """
-  The HTML version's own response: no script, no forms, styles and images only. The
-  page shows it in a sandboxed frame, so an email's HTML never runs as SAR Duty.
-  """
-  def send_html(conn, %OutboxMessage{html_body: html}) when is_binary(html) do
-    conn
-    |> Plug.Conn.put_resp_header(
-      "content-security-policy",
-      "sandbox allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation; default-src 'none'; style-src 'unsafe-inline'; img-src https: data:"
-    )
-    |> Plug.Conn.delete_resp_header(Web.CSP.header())
-    |> Phoenix.Controller.html(html)
   end
 end

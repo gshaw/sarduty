@@ -180,8 +180,6 @@ defmodule Web.Router do
         live "/outbox", DevOutboxLive
         live "/outbox/:id", DevOutboxLive
       end
-
-      get "/outbox/:id/html", OutboxController, :dev_html
     end
   end
 
@@ -472,9 +470,8 @@ defmodule Web.Router do
       get "/reports/:id/csv", ReportController, :csv
       post "/members/:id/view-as", ViewAsController, :create
       delete "/view-as", ViewAsController, :delete
-      # Delete this demo, on a Try a demo team's banner (#857), and its Outbox's HTML.
+      # Delete this demo, on a Try a demo team's banner (#857).
       delete "/demo", DemoController, :delete
-      get "/outbox/:id/html", OutboxController, :team_html
     end
   end
 end

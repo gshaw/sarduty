@@ -7,6 +7,7 @@ defmodule App.Repo.Migrations.CreateOutboxMessages do
     create table(:outbox_messages) do
       add :team_id, references(:teams, on_delete: :delete_all)
       add :kind, :string, null: false
+      add :from, :string
       add :to, :string, null: false
       add :subject, :string
       add :body, :text

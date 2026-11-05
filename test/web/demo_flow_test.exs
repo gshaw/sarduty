@@ -263,13 +263,14 @@ defmodule Web.DemoFlowTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/outbox/#{message.id}")
     assert has_element?(lv, "#outbox-to", "Cameron Ruiz")
-    assert has_element?(lv, ~s|#outbox-body a[href="https://sarduty.com/replies/abc"]|)
-    assert has_element?(lv, "iframe#outbox-html[sandbox]")
+    assert has_element?(lv, "#outbox-html p", "Reply")
 
-    conn = get(conn, ~p"/teams/#{team}/outbox/#{message.id}/html")
-    assert html_response(conn, 200) == "<p>Reply</p>"
-    assert [policy] = get_resp_header(conn, "content-security-policy")
-    assert policy =~ "sandbox"
+    text =
+      OutboxMessage.add_text!("+16045550199", "Reply: https://sarduty.com/replies/abc", team.id)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/outbox/#{text.id}")
+    assert has_element?(lv, "#outbox-from", "SAR Duty")
+    assert has_element?(lv, ~s|#outbox-body a[href="https://sarduty.com/replies/abc"]|)
   end
 
   test "another demo's message 404s in this demo's Outbox", %{conn: conn} do
@@ -284,7 +285,6 @@ defmodule Web.DemoFlowTest do
     conn = log_in_user(conn, user)
 
     assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/outbox/#{theirs.id}") end
-    assert_error_sent 404, fn -> get(conn, ~p"/teams/#{team}/outbox/#{theirs.id}/html") end
   end
 
   test "a real team has no demo banner and no Outbox", %{conn: conn} do

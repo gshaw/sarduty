@@ -13,6 +13,7 @@ defmodule App.Model.OutboxMessage do
   schema "outbox_messages" do
     belongs_to :team, Team
     field :kind, Ecto.Enum, values: [:email, :text]
+    field :from, :string
     field :to, :string
     field :subject, :string
     field :body, :string
@@ -28,6 +29,7 @@ defmodule App.Model.OutboxMessage do
     insert!(%OutboxMessage{
       team_id: team_id,
       kind: :email,
+      from: email.from && address(email.from),
       to:
         email.to
         |> Enum.concat(email.cc)

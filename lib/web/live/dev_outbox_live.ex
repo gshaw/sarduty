@@ -28,11 +28,7 @@ defmodule Web.DevOutboxLive do
     <div class="container mx-auto px-2 py-6">
       <%= if @message do %>
         <p class="mb-4"><.a patch={~p"/dev/outbox"}>Outbox</.a></p>
-        <.outbox_message
-          message={@message}
-          html_path={~p"/dev/outbox/#{@message.id}/html"}
-          timezone={@timezone}
-        />
+        <.outbox_message message={@message} timezone={@timezone} />
       <% else %>
         <h1 class="title">Outbox</h1>
         <p class="lead">

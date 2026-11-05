@@ -86,8 +86,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/reports/:id/csv",
     # Only a demo team has an Outbox, and this team isn't one. Web.DemoFlowTest covers
     # another demo's message.
-    "/teams/:subdomain/outbox/:id",
-    "/teams/:subdomain/outbox/:id/html"
+    "/teams/:subdomain/outbox/:id"
   ]
 
   setup %{conn: conn} do

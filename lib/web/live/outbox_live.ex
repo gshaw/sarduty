@@ -46,7 +46,6 @@ defmodule Web.OutboxLive do
       </.breadcrumbs>
       <.outbox_message
         message={@message}
-        html_path={~p"/teams/#{@current_team}/outbox/#{@message.id}/html"}
         timezone={@current_team.timezone}
       />
     <% else %>

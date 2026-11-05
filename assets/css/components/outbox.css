@@ -1,3 +1,5 @@
-/* An Outbox email's HTML (docs/outbox.md), in its sandboxed frame. White under it, as a
-   mail app shows mail, since the email's own colours assume a light page. */
-.outbox-frame { width: 100%; height: 70vh; border: 1px solid var(--border); border-radius: var(--radius); background: #ffffff; margin-bottom: var(--sp-6); }
+/* An Outbox message (docs/outbox.md): an email preview, wider, with a mail app's header. */
+.outbox-message { max-width: 40rem; }
+.outbox-head { display: grid; grid-template-columns: auto 1fr; gap: var(--sp-1) var(--sp-3); margin: 0; padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border-subtle); background: var(--surface-alt); }
+.outbox-head dt { color: var(--text-muted); }
+.outbox-head dd { margin: 0; overflow-wrap: anywhere; }
