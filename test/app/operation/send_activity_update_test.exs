@@ -47,14 +47,24 @@ defmodule App.Operation.SendActivityUpdateTest do
     end
   end
 
-  test "update_ending/2: buttons for no reply unless reminders are off, else where they stand" do
+  test "update_ending/3: buttons for no reply unless reminders are off, else where they stand" do
     on = member(1, "On")
     off = member(2, "Off", %{invitation_reminders: false})
 
-    assert ActivityMailer.update_ending("requested", on) == :ask
-    assert ActivityMailer.update_ending("requested", off) == :open
-    assert ActivityMailer.update_ending("attending", off) == :signed_up
-    assert ActivityMailer.update_ending("absent", on) == :cant_make_it
+    assert ActivityMailer.update_ending("requested", on, false) == :ask
+    assert ActivityMailer.update_ending("requested", off, false) == :open
+    assert ActivityMailer.update_ending("attending", off, false) == :signed_up
+    assert ActivityMailer.update_ending("absent", on, false) == :cant_make_it
+  end
+
+  test "update_ending/3: after the start, their attendance and no buttons (#896)" do
+    on = member(1, "On")
+    off = member(2, "Off", %{invitation_reminders: false})
+
+    assert ActivityMailer.update_ending("attending", on, true) == :attended
+    assert ActivityMailer.update_ending("absent", off, true) == :marked_absent
+    assert ActivityMailer.update_ending("requested", on, true) == :open
+    assert ActivityMailer.update_ending("requested", off, true) == :open
   end
 
   test "sent_before/1: a batch per send, newest first, with its failures" do
@@ -141,6 +151,51 @@ defmodule App.Operation.SendActivityUpdateTest do
       assert dana.html_body =~ "Open activity"
     end
 
+    defp queued(ctx, member),
+      do:
+        Repo.insert!(%ActivityUpdate{
+          team_id: ctx.team.id,
+          activity_id: ctx.activity.id,
+          member_id: member.id,
+          sent_by_user_id: ctx.user.id,
+          message: "Thanks for Tuesday.",
+          sent_at: now(),
+          status: :queued
+        })
+
+    # Queued before the start, sent after it: the ending is read when it goes (#896).
+    test "after the start, each ends with their attendance and no reply buttons", ctx do
+      later = DateTime.add(ctx.activity.started_at, 1, :day)
+
+      for {member, line} <- [
+            {ctx.avery, "You attended."},
+            {ctx.quinn, "You were marked absent."}
+          ] do
+        update = queued(ctx, member)
+        assert SendActivityUpdate.deliver(update.id, false, later) == :ok
+        assert Repo.reload!(update).status == :sent
+        assert_received {:email, email}
+        assert email.text_body =~ ~r{#{line}\n\nOpen activity \(log in\):}
+        assert email.html_body =~ "<strong>#{line}</strong></p>"
+        refute email.html_body =~ "Change your reply"
+      end
+
+      update = queued(ctx, ctx.cameron)
+      assert SendActivityUpdate.deliver(update.id, false, later) == :ok
+      assert_received {:email, email}
+      refute email.html_body =~ "I'll be there"
+      assert email.html_body =~ "Open activity"
+    end
+
+    test "an update to a deleted activity goes to nobody", ctx do
+      update = queued(ctx, ctx.avery)
+      ctx.activity |> Ecto.Changeset.change(deleted_at: DateTime.truncate(now(), :second)) |> Repo.update!()
+
+      assert {:cancel, _} = SendActivityUpdate.deliver(update.id, false, now())
+      assert Repo.reload!(update).status == :failed
+      refute_email_sent()
+    end
+
     test "a member who left the activity before it went gets none", ctx do
       update =
         Repo.insert!(%ActivityUpdate{
@@ -206,7 +261,7 @@ defmodule App.Operation.SendActivityUpdateTest do
       refute_email_sent()
     end
 
-    test "refuses no message, a long one, nobody, and a started activity", ctx do
+    test "refuses no message, a long one, nobody, and a deleted activity", ctx do
       assert send_update(ctx, [ctx.avery.id], " \n ") == {:error, :no_message}
 
       assert send_update(ctx, [ctx.avery.id], String.duplicate("a", 301)) ==
@@ -214,17 +269,10 @@ defmodule App.Operation.SendActivityUpdateTest do
 
       assert send_update(ctx, []) == {:error, :none_selected}
 
-      started = DateTime.add(ctx.activity.started_at, 1, :hour)
+      deleted = %{ctx.activity | deleted_at: now()}
 
-      assert SendActivityUpdate.call(
-               ctx.team,
-               ctx.activity,
-               ctx.user,
-               [ctx.avery.id],
-               "Hi",
-               started
-             ) ==
-               {:error, :started}
+      assert SendActivityUpdate.call(ctx.team, deleted, ctx.user, [ctx.avery.id], "Hi", now()) ==
+               {:error, :deleted}
 
       assert SendActivityUpdate.error_text(:no_message) == "Enter a message."
       refute_email_sent()

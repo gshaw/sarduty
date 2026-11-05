@@ -77,6 +77,13 @@ defmodule Web.ActivityMembersLiveTest do
     assert has_element?(lv, "#members-change", "The activity's times, 19:00 to 21:30.")
     assert has_element?(lv, "#members-change", "They stay on the activity, with no hours.")
     assert has_element?(lv, "#members-change", "Add members puts them back, as attended.")
+
+    assert has_element?(
+             lv,
+             "#members-change",
+             "Your message, by email. Nothing on the activity changes."
+           )
+
     assert has_element?(lv, "#members-change-send[disabled]", "Change members")
     assert has_element?(lv, "#members-add", "Add members")
     refute has_element?(lv, "#members-remove")
@@ -168,7 +175,7 @@ defmodule Web.ActivityMembersLiveTest do
     assert has_element?(lv, "#flash-error", "Riley Okafor was not changed")
   end
 
-  test "once it's published, a hint and no checkboxes (Z)", ctx do
+  test "once it's published, a hint, and Send an update is the only change (Z, #896 G)", ctx do
     ctx.activity |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
 
@@ -178,10 +185,91 @@ defmodule Web.ActivityMembersLiveTest do
              "Published, so attendance cannot be changed. Unpublish it with Change activity first."
            )
 
+    assert has_element?(lv, "#members-change", "Send an update")
+    refute has_element?(lv, "#members-change", "The activity's times")
+    refute has_element?(lv, "#members-change", "Remove from the activity")
+    refute has_element?(lv, "#members-add")
+
+    check(lv, [ctx.alex.id, ctx.drew.id], "update")
+    assert has_element?(lv, "#members-change-send", "Email 2 members")
+  end
+
+  test "a deleted activity offers no change", ctx do
+    ctx.activity |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+    {:ok, lv, _html} = live(ctx.conn, path(ctx))
     refute has_element?(lv, "#members-change-form")
     refute has_element?(lv, "#activity-members input[type=checkbox]")
-    assert has_element?(lv, ~s|#member-row-#{ctx.alex.id} a[href^="/teams/"]|, "Alex Chen")
-    refute has_element?(lv, "#members-add")
+  end
+
+  # After the start, Send an update emails the checked by attendance (#896 H): Alex and
+  # Casey attended, Drew was absent, Cameron and Riley never replied.
+  describe "Send an update after the start (#896)" do
+    defp open_update(ctx, members) do
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+
+      lv
+      |> form("#members-change-form", %{
+        "member_ids" => Enum.map(members, &to_string(&1.id)),
+        "change" => "update"
+      })
+      |> render_submit()
+
+      assert_patch(lv, path(ctx) <> "/update")
+      lv
+    end
+
+    test "lists who gets it by attendance, and previews each ending (H)", ctx do
+      lv = open_update(ctx, [ctx.alex, ctx.drew, ctx.riley])
+
+      assert has_element?(lv, "#update-who th", "Attended")
+      assert has_element?(lv, "#update-to-#{ctx.alex.id}")
+      assert has_element?(lv, "#update-who th", "Absent")
+      assert has_element?(lv, "#update-to-absent", "Drew Patel")
+      assert has_element?(lv, "#update-who th", "No reply")
+      refute has_element?(lv, "#update-who th", "Signed up")
+      refute has_element?(lv, "#update-step", "Turned off reminders")
+
+      assert has_element?(lv, "#update-preview-for label", "Attended")
+      assert has_element?(lv, "#update-preview-for label", "Absent")
+      assert has_element?(lv, "#update-preview-for label", "No reply")
+      assert has_element?(lv, "#email-preview", "You attended.")
+      refute has_element?(lv, "#email-preview", "Change your reply")
+
+      lv |> form("#update-form") |> render_change(%{"preview" => "marked_absent"})
+      assert has_element?(lv, "#email-preview", "You were marked absent.")
+
+      lv |> form("#update-form") |> render_change(%{"preview" => "open"})
+      refute has_element?(lv, "#email-preview", "You")
+      refute has_element?(lv, "#email-preview", "I'll be there")
+    end
+
+    test "emails each with where they stand, and no reply buttons", ctx do
+      lv = open_update(ctx, [ctx.alex, ctx.drew, ctx.riley])
+      lv |> form("#update-form") |> render_submit(%{"message" => "Thanks for Tuesday."})
+
+      assert_patch(lv, path(ctx))
+      assert has_element?(lv, "#flash-info", "Sending 3 updates.")
+
+      emails =
+        for _ <- 1..3, into: %{} do
+          assert_received {:email, %{to: [{name, _}]} = email}
+          {name, email}
+        end
+
+      assert emails["Alex Chen"].subject == "Update: Swiftwater training"
+      assert emails["Alex Chen"].text_body =~ "Thanks for Tuesday."
+      assert emails["Alex Chen"].html_body =~ "You attended."
+      assert emails["Drew Patel"].html_body =~ "You were marked absent."
+      refute emails["Riley Okafor"].html_body =~ "I'll be there"
+      refute emails["Riley Okafor"].html_body =~ "You "
+
+      for {_name, email} <- emails do
+        refute email.html_body =~ "Change your reply"
+        assert email.html_body =~ "Open activity"
+      end
+
+      assert Repo.aggregate(ActivityUpdate, :count) == 3
+    end
   end
 
   test "before the start, a table per reply, then the list (#895 A)", ctx do

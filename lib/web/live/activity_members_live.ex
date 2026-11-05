@@ -10,7 +10,8 @@ defmodule Web.ActivityMembersLive do
   check members in them and act on them under the tables: one list and one button, as on
   Travel. Before the start the list emails or removes them, Send a reminder, Send an
   update, and Remove from the activity, each a step; from the start until the activity
-  is published it changes their attendance. Add members has its own page.
+  is published it changes their attendance, and Send an update stays after those three
+  changes, published or not (#896). Add members has its own page.
 
   A filter bar over the tables, before and after the start, shows one group's members
   (#895), in the URL as `?group=`. The ticks are the rows it shows: changing it unchecks
@@ -56,10 +57,13 @@ defmodule Web.ActivityMembersLive do
   alias Web.ActivityMembersLive.Update
   alias Web.Components.Reply
 
-  @actions [Remind, Update, RemoveBeforeStart, Attended, Absent, Remove]
+  # Send an update is in both lists: before the start after Send a reminder, and from it
+  # after the three changes to attendance (#896).
+  @before_start [Remind, Update, RemoveBeforeStart]
+  @from_start [Attended, Absent, Remove, Update]
 
-  @doc "Every change the tab offers, in the list's order."
-  def actions, do: @actions
+  @doc "Every change the tab offers, before the start and then from it."
+  def actions, do: Enum.uniq(@before_start ++ @from_start)
 
   def mount(params, session, socket) do
     {:ok, socket} = ActivityLive.mount(params, session, socket)
@@ -136,8 +140,10 @@ defmodule Web.ActivityMembersLive do
     }
 
   # The changes the list offers now: none for a member, or on a deleted activity.
-  defp offered(%{team_admin?: true, activity: %Activity{deleted_at: nil}} = assigns),
-    do: Enum.filter(@actions, & &1.offered?(ctx(assigns)))
+  defp offered(%{team_admin?: true, activity: %Activity{deleted_at: nil} = activity} = assigns) do
+    actions = if Activity.started?(activity, assigns.now), do: @from_start, else: @before_start
+    Enum.filter(actions, & &1.offered?(ctx(assigns)))
+  end
 
   defp offered(_assigns), do: []
 

@@ -1,9 +1,10 @@
 defmodule Web.ActivityMembersLive.Update do
   @moduledoc """
-  Send an update (#895), a step before the start: the team admin's own message to the
-  checked members, whatever their reply (#609). Who gets it is a table per reply,
-  without tick boxes: they were picked on the Members tab. Each email ends with where
-  the member stands, so the preview shows one ending at a time. Earlier updates are
+  Send an update (#895), a step before and after the start (#896): the team admin's own
+  message to the checked members, whatever their reply (#609). Who gets it is a table
+  per reply, or per attendance after the start, without tick boxes: they were picked on
+  the Members tab. Each email ends with where the member stands, so the preview shows
+  one ending at a time. Earlier updates are
   listed first, so nobody sends the same one twice. SendActivityUpdate.plan/1 decides
   who gets one, and its call/6 checks again on send.
   """
@@ -23,6 +24,7 @@ defmodule Web.ActivityMembersLive.Update do
   alias App.Validate.Message
   alias Service.Format
   alias Web.ActivityMembersLive.Action
+  alias Web.Components.Reply
 
   @impl Action
   def value, do: "update"
@@ -31,10 +33,15 @@ defmodule Web.ActivityMembersLive.Update do
   def label, do: "Send an update"
 
   @impl Action
-  def hint(_ctx), do: "Your message, whatever their reply."
+  def hint(%{activity: activity, now: now}) do
+    if Activity.started?(activity, now),
+      do: "Your message, by email. Nothing on the activity changes.",
+      else: "Your message, whatever their reply."
+  end
 
+  # It changes nothing on the activity, so only a deleted one stops it.
   @impl Action
-  def offered?(%{activity: activity, now: now}), do: Activity.open?(activity, now)
+  def offered?(%{activity: activity}), do: !Activity.deleted?(activity)
 
   # The checked members with an email.
   @impl Action
@@ -66,11 +73,13 @@ defmodule Web.ActivityMembersLive.Update do
     %{team: team, activity: activity, user: user, checked: checked} = socket.assigns
     now = DateTime.utc_now()
     plan = SendActivityUpdate.plan(checked)
-    endings = endings(plan)
+    started? = Activity.started?(activity, now)
+    endings = endings(plan, started?)
 
     socket
     |> assign(
       plan: plan,
+      started?: started?,
       endings: endings,
       ending: List.first(endings, :signed_up),
       sent_before: sent_before(team, activity, now),
@@ -97,11 +106,11 @@ defmodule Web.ActivityMembersLive.Update do
   end
 
   # The endings the plan's members get, in its order, for the preview's choices.
-  defp endings(plan) do
+  defp endings(plan, started?) do
     for {status, rows} <- plan.groups,
         row <- rows,
         uniq: true,
-        do: ActivityMailer.update_ending(status, row.member)
+        do: ActivityMailer.update_ending(status, row.member, started?)
   end
 
   defp assign_preview(socket) do
@@ -203,15 +212,18 @@ defmodule Web.ActivityMembersLive.Update do
               row_id={&"update-to-#{&1.member.id}"}
               class="table-striped"
             >
-              <:col :let={row} label={status_title(status)}>
+              <:col :let={row} label={Reply.status_text(status, @started?)}>
                 <.member_cell
                   member={row.member}
                   team={@team}
                   standing={@standings[row.member.id]}
                 />
               </:col>
-              <:col :let={row} label="">
-                <span :if={ActivityMailer.update_ending(status, row.member) == :open} class="hint">
+              <:col :let={row} :if={!@started?} label="">
+                <span
+                  :if={ActivityMailer.update_ending(status, row.member, false) == :open}
+                  class="hint"
+                >
                   Turned off reminders, so no reply buttons
                 </span>
               </:col>
@@ -252,7 +264,7 @@ defmodule Web.ActivityMembersLive.Update do
                 value={ending}
                 checked={ending == @ending}
               />
-              {ending_title(ending)}
+              {ending_title(ending, @started?)}
             </label>
           </fieldset>
           <.email_preview subject={@preview.subject} html={@preview.html} />
@@ -281,14 +293,13 @@ defmodule Web.ActivityMembersLive.Update do
 
   defp members_text(count), do: Format.count(count, one: "%d member", many: "%d members")
 
-  defp status_title("attending"), do: "Signed up"
-  defp status_title("absent"), do: "Can't make it"
-  defp status_title("requested"), do: "No reply"
-
-  defp ending_title(:signed_up), do: "Signed up"
-  defp ending_title(:cant_make_it), do: "Can't make it"
-  defp ending_title(:ask), do: "No reply"
-  defp ending_title(:open), do: "No reply, reminders off"
+  defp ending_title(:signed_up, _started?), do: "Signed up"
+  defp ending_title(:cant_make_it, _started?), do: "Can't make it"
+  defp ending_title(:attended, _started?), do: "Attended"
+  defp ending_title(:marked_absent, _started?), do: "Absent"
+  defp ending_title(:ask, _started?), do: "No reply"
+  defp ending_title(:open, true), do: "No reply"
+  defp ending_title(:open, false), do: "No reply, reminders off"
 
   # "Oct 26, 18:02 by Alex Chen to 7 members", with any that failed.
   defp batch_text(batch, timezone) do
