@@ -233,6 +233,15 @@ defmodule Web.DemoFlowTest do
     assert Repo.reload!(demo).seen_at
   end
 
+  test "the banner's Outbox count goes up as a message lands", %{conn: conn} do
+    %{user: user, team: team} = built_demo()
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}")
+    assert has_element?(lv, "#demo-outbox", "Outbox (0)")
+
+    OutboxMessage.add_text!("+16045550199", "A text", team.id)
+    assert has_element?(lv, "#demo-outbox", "Outbox (1)")
+  end
+
   test "the Outbox lists a demo's email, shows it, and serves its HTML sandboxed", %{
     conn: conn
   } do

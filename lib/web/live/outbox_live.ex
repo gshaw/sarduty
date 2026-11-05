@@ -12,7 +12,11 @@ defmodule Web.OutboxLive do
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
     if !DemoTeam.demo?(team), do: raise(Web.Status.NotFound)
-    if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, OutboxMessage.topic())
+    # The demo banner's hook subscribes for its team admins (Web.UserAuth); anyone else here
+    # is a site admin, who subscribes for themselves.
+    if connected?(socket) and is_nil(socket.assigns[:demo]),
+      do: Phoenix.PubSub.subscribe(App.PubSub, OutboxMessage.topic())
+
     {:ok, assign(socket, page_title: "Outbox")}
   end
 
