@@ -1,6 +1,19 @@
-# SAR Duty
+# <img src="priv/static/images/sarduty-logo.svg" width="36" alt=""> SAR Duty
 
 Less paperwork for search and rescue teams.
+
+SAR Duty builds on a team's D4H records with tools made for volunteer teams. It runs at
+[sarduty.com](https://sarduty.com).
+
+- **Tax credit letters** from the hours each member gave, emailed to them. Anyone can
+  verify a letter online.
+- **ID cards** on members' phones, in Apple Wallet or Google Wallet, with a QR code to
+  verify.
+- **Attendance at the door**: scan members in and out on a phone or an iPad.
+- **Everything a team admin keeps track of**: activities and replies, members, groups,
+  qualifications, equipment, chores, travel, and reports.
+
+![The team dashboard for Coast Range SAR, a made-up team](README-SCREENSHOT-URL)
 
 ## Setup
 

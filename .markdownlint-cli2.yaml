@@ -7,3 +7,5 @@ ignores:
 config:
   default: true
   MD013: false # line length
+  MD033:
+    allowed_elements: [img] # a sized image: the README logo
