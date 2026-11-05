@@ -15,6 +15,7 @@ defmodule App.Operation.ChangeOwnPhone do
   alias App.Accounts.UserToken
   alias App.Model.ChangeSet
   alias App.Model.ChangeSetRow
+  alias App.Model.DemoTeam
   alias App.Model.Member
   alias App.Operation.ApplyChangeSet
   alias App.Repo
@@ -75,7 +76,8 @@ defmodule App.Operation.ChangeOwnPhone do
 
   defp check(member, e164) do
     cond do
-      not Accounts.text_login?() ->
+      # A demo's code goes to its Outbox (#857), so it needs no Twilio.
+      not Accounts.text_login?() and not DemoTeam.demo?(member.team_id) ->
         {:error, "SAR Duty cannot send texts right now. Ask a team admin to change it."}
 
       e164 == Service.Phone.normalize(member.phone) ->
