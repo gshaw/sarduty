@@ -150,7 +150,7 @@ defmodule Web.Layouts do
   attr :team, :map, required: true
 
   # On every page of a Try a demo team (#857), where View as puts its own: whose it is,
-  # when it goes, its link, and the ways on. Delete this demo asks first.
+  # when it goes, its link, its Outbox. Delete this demo asks first.
   defp demo_banner(assigns) do
     ~H"""
     <.banner kind={:info} title="Your demo" id="demo-banner" class="mb-6">
@@ -162,28 +162,17 @@ defmodule Web.Layouts do
         )}.
       </p>
       <p id="demo-link">
-        Its link opens it on any device:
         <.copy_button
           id="demo-link-copy"
           value={@demo.link}
           label="Copy the demo's link"
-          text={@demo.link}
-          href={@demo.link}
+          text="Copy its link to open it on another device."
         />
       </p>
       <div class="flex flex-wrap items-center gap-2">
         <.button id="demo-outbox" navigate={~p"/teams/#{@team}/outbox"}>
           Outbox ({@demo.outbox})
         </.button>
-        <.button
-          :if={@demo.member}
-          id="demo-view-as"
-          href={~p"/teams/#{@team}/members/#{@demo.member}/view-as"}
-          method="post"
-        >
-          View as {@demo.member.name}
-        </.button>
-        <.button id="demo-signup" navigate={~p"/signup"}>Sign up your team</.button>
         <.button
           id="demo-delete"
           variant={:danger}

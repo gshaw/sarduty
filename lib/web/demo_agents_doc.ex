@@ -48,7 +48,7 @@ defmodule Web.DemoAgentsDoc do
 
     ## Find your way around
 
-    Every page of a demo has a banner with its link, its Outbox, **View as Cameron Ruiz** to see SAR Duty as a member does, and **Delete this demo**. The side navigation has the rest. The team has a year of activities, members with qualifications and ID cards, equipment, and chores.
+    Every page of a demo has a banner with its link, its Outbox, and **Delete this demo**. To see SAR Duty as a member does, open a member and choose **View as member**. The side navigation has the rest. The team has a year of activities, members with qualifications and ID cards, equipment, and chores.
 
     For what a page is for, read its heading and the one-line description under it. SAR Duty's own [Agents](#{url}/agents.md) page lists what else agents can do.
 

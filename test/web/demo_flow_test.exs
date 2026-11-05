@@ -224,9 +224,11 @@ defmodule Web.DemoFlowTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
     assert has_element?(lv, "#demo-banner")
-    assert has_element?(lv, "#demo-link", "/demo/open/")
+    assert has_element?(lv, "#demo-link-copy[value*='/demo/open/']")
+    refute has_element?(lv, "#demo-link a")
     assert has_element?(lv, "#demo-outbox", "Outbox (0)")
-    assert has_element?(lv, "#demo-view-as", "View as Cameron Ruiz")
+    refute has_element?(lv, "#demo-view-as")
+    refute has_element?(lv, "#demo-signup")
     assert has_element?(lv, "#demo-delete[data-confirm]")
     assert Repo.reload!(demo).seen_at
   end

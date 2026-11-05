@@ -33,8 +33,7 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    Records' ids. A failure removes everything, in Records too, and the page offers Try
    again. A visitor's 3 days count from here.
 4. **The banner.** Every page of a demo team has it, for team admins, where View as puts
-   its own: when it goes, its link to copy, its Outbox, View as Cameron Ruiz, Sign up your
-   team, and Delete this demo.
+   its own: when it goes, its link to copy, its Outbox, and Delete this demo.
 5. **The end.** `App.Operation.DeleteDemo` deletes the team in SAR Duty and Records, the
    row with the name, and its user. Delete this demo, or `DELETE /api/demos/<token>`, does
    it at once; `App.Worker.DemoTeamsWorker`, every hour, deletes each demo past its time,
