@@ -25,7 +25,7 @@ still lists the area's pages.
 - **SAR Duty admin**, `/admin/…`, for SAR Duty admins: Teams and Organizations, then
   Admins, Events, and MCP calls. The Style guide is in the team switcher. Each team has
   its own page, `/admin/teams/:id`, under Teams, with its refresh, team admins and login
-  grants, and its ID cards and Agents switches (#513). Every admin page is a 404 for anyone else.
+  grants, its ID cards and Agents switches (#513), and Delete team. Every admin page is a 404 for anyone else.
 - **The footer** (Verify an ID card, Terms, Privacy, Agents, Changelog, Support SAR Duty,
   GitHub) is only on the public pages in the marketing layout: home, terms, privacy,
   changelog, and the agents pages. Sign up and Log in are narrow pages, with none. In an

@@ -93,7 +93,9 @@ have decided since the page loaded, stays in `call`.
   `lib/app/model/` with `use App, :model`. Use `App.Field.TrimmedString` for user-entered
   text, `App.Field.EncryptedString` for credentials, and the `App.Validate` helpers in
   the changeset. Add a fixture to `test/support/fixtures/app_fixtures.ex` when a test
-  needs the row.
+  needs the row. A table with a `team_id`, or one hanging off such a table, goes in
+  [App.Operation.DeleteTeam](../lib/app/operation/delete_team.ex)'s lists, so deleting a
+  team leaves nothing behind; `DeleteTeamTest` fails until it does.
 - **New D4H data** → a struct in `lib/app/adapter/d4h/` with `build/1`, a fetch function
   in `lib/app/adapter/d4h.ex`, and — if it is stored — an upsert stage in
   `lib/app/operation/refresh_d4h_data/`. See [d4h-sync.md](d4h-sync.md).

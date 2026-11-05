@@ -1,0 +1,177 @@
+defmodule App.Operation.DeleteTeamTest do
+  use App.DataCase, async: true
+
+  import App.AccountsFixtures
+  import App.DataFixtures
+  import Swoosh.TestAssertions
+
+  alias App.Adapter.D4H
+  alias App.Model.Event
+  alias App.Model.Team
+  alias App.Operation.DeleteTeam
+  alias App.RecordsStub
+  alias App.Repo
+  alias App.Worker.SyncTeamChangesWorker
+
+  # A team with a row in most kinds of table, reached through team_id and through
+  # parents that have none (attendances, group members, awards, letters, certificates).
+  defp full_team(name) do
+    team = team_fixture(%{name: name})
+    member = member_fixture(team)
+    activity = activity_fixture(team)
+    attendance_fixture(activity, member)
+    qualification = qualification_fixture(team)
+    qualification_award_fixture(qualification, member)
+    certificate_fixture(member, qualification)
+    group = group_fixture(team)
+    group_member_fixture(group, member)
+    endorsement = endorsement_fixture(team)
+    endorsement_qualification_fixture(endorsement, qualification)
+    group_rule_fixture(group, endorsement)
+    member_card_fixture(member)
+    tax_credit_letter_fixture(member)
+    item = equipment_item_fixture(team)
+    equipment_usage_fixture(activity, item)
+    template_fixture(team, "Truck 1", [item])
+    chore_fixture(member, chore_category_fixture(team))
+    away_period_fixture(member, ~D[2026-01-01], ~D[2026-01-31])
+    team
+  end
+
+  setup do
+    %{admin: make_admin(user_fixture()), team: full_team("Coast Range SAR")}
+  end
+
+  test "deletes every row the team has, and leaves other teams alone", %{
+    admin: admin,
+    team: team
+  } do
+    other = full_team("Valley SAR")
+    other_counts = DeleteTeam.row_counts(other)
+    assert map_size(DeleteTeam.row_counts(team)) > 15
+
+    assert {:ok, %{rows: rows, snapshot: nil}} = DeleteTeam.call(team, "coast range sar ", admin)
+    assert rows > 15
+
+    refute Repo.get(Team, team.id)
+    assert DeleteTeam.row_counts(team) == %{}
+    assert DeleteTeam.row_counts(other) == other_counts
+    # The sandbox never commits, so check the keys the commit would.
+    assert %{rows: []} = Repo.query!("PRAGMA foreign_key_check")
+  end
+
+  test "refuses a name that doesn't match", %{admin: admin, team: team} do
+    assert {:error, :name_mismatch} = DeleteTeam.call(team, "Coast Range", admin)
+    assert Repo.get(Team, team.id)
+  end
+
+  test "records the delete and emails the admins", %{admin: admin, team: team} do
+    {:ok, _deleted} = DeleteTeam.call(team, team.name, admin)
+
+    assert %Event{user_id: user_id, data: %{"subdomain" => subdomain, "reason" => "admin"}} =
+             Repo.get_by!(Event, kind: :team_deleted)
+
+    assert user_id == admin.id
+    assert subdomain == team.subdomain
+    assert_email_sent(subject: "Team deleted from SAR Duty: Coast Range SAR")
+  end
+
+  test "purge/2 with no user records the reason and emails nobody", %{team: team} do
+    assert {:ok, %{snapshot: nil}} = DeleteTeam.purge(team, reason: :admin)
+
+    assert %Event{user_id: nil, data: %{"reason" => "admin"}} =
+             Repo.get_by!(Event, kind: :team_deleted)
+
+    assert_no_email_sent()
+  end
+
+  test "deletes the team's waiting jobs and leaves another team's", %{team: team} do
+    other = team_fixture()
+
+    # Inserted as they wait, since tests run jobs inline.
+    %{"team_id" => team.id} |> SyncTeamChangesWorker.new() |> Repo.insert!()
+    %{"team_id" => other.id} |> SyncTeamChangesWorker.new() |> Repo.insert!()
+
+    {:ok, _deleted} = DeleteTeam.purge(team, reason: :admin)
+
+    assert [%{args: %{"team_id" => other_id}}] = Repo.all(Oban.Job)
+    assert other_id == other.id
+  end
+
+  describe "a team on SAR Duty Records" do
+    setup do
+      %{records_team: team_fixture(%{name: "Fjord SAR", d4h_api_host: D4H.records_host()})}
+    end
+
+    test "goes from Records first, held there 7 days", %{admin: admin, records_team: team} do
+      RecordsStub.stub(fn "DELETE", _path, _body -> {200, %{"deletesOn" => "2026-11-12"}} end)
+
+      assert {:ok, _deleted} = DeleteTeam.call(team, "Fjord SAR", admin)
+
+      path = "/v3/sarduty/teams/#{team.d4h_team_id}"
+      assert_received {:records, "DELETE", ^path, nil}
+      refute Repo.get(Team, team.id)
+      assert %Event{data: %{"records" => true}} = Repo.get_by!(Event, kind: :team_deleted)
+
+      assert_email_sent(fn email ->
+        assert email.text_body =~ "Its SAR Duty Records team is switched off, and goes in 7 days."
+      end)
+    end
+
+    test "a team Records doesn't have goes", %{records_team: team} do
+      RecordsStub.stub(fn "DELETE", _path, _body -> {404, %{"title" => "Not Found"}} end)
+      assert {:ok, _deleted} = DeleteTeam.purge(team, reason: :admin)
+      refute Repo.get(Team, team.id)
+    end
+
+    test "a refusal deletes nothing", %{admin: admin, records_team: team} do
+      RecordsStub.stub(fn "DELETE", _path, _body -> {500, %{"title" => "Down"}} end)
+
+      assert {:error, %D4H.Error{}} = DeleteTeam.call(team, "Fjord SAR", admin)
+      assert Repo.get(Team, team.id)
+      refute Repo.get_by(Event, kind: :team_deleted)
+      assert_no_email_sent()
+    end
+  end
+
+  defp tables do
+    %{rows: rows} =
+      Repo.query!(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('schema_migrations', 'teams')"
+      )
+
+    List.flatten(rows)
+  end
+
+  defp columns(table) do
+    %{rows: rows} = Repo.query!(~s{SELECT name FROM pragma_table_info('#{table}')})
+    List.flatten(rows)
+  end
+
+  defp keys(table) do
+    %{rows: rows} =
+      Repo.query!(~s{SELECT "from", "table" FROM pragma_foreign_key_list('#{table}')})
+
+    Enum.map(rows, &List.to_tuple/1)
+  end
+
+  # A new table with a team_id belongs in @team_tables. Don't skip this: a team deleted
+  # without it leaves rows behind, or fails the delete at commit.
+  test "every table with a team_id is deleted" do
+    with_team_id = tables() |> Enum.filter(&("team_id" in columns(&1))) |> Enum.sort()
+    assert Enum.sort(DeleteTeam.team_tables()) == with_team_id
+  end
+
+  test "every row hanging off a team's rows without a team_id is deleted" do
+    team_tables = DeleteTeam.team_tables()
+
+    hanging =
+      for table <- tables(),
+          "team_id" not in columns(table),
+          {key, parent} <- keys(table),
+          parent in team_tables,
+          do: {table, key, parent}
+
+    assert Enum.sort(DeleteTeam.child_tables()) == Enum.sort(hanging)
+  end
+end

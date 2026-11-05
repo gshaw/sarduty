@@ -4,7 +4,7 @@ defmodule App.Worker.PruneEventsWorker do
   theirs, and snoozes a day after they end, once a night (App.Model.Event,
   App.Model.D4HChange, App.Model.MCPCall, App.Model.AttentionSnooze). Also agent
   registrations and Allows that never connected (#761), and reports deleted 30 days ago
-  with their versions (#834).
+  with their versions (#834), and database copies a team delete took 7 days ago.
   """
 
   use Oban.Worker, queue: :default, max_attempts: 3
@@ -16,6 +16,7 @@ defmodule App.Worker.PruneEventsWorker do
   alias App.Model.Event
   alias App.Model.MCPCall
   alias App.Model.SavedReport
+  alias App.Operation.DeleteTeam
 
   require Logger
 
@@ -36,6 +37,8 @@ defmodule App.Worker.PruneEventsWorker do
     if clients > 0, do: Logger.info("Pruned #{clients} agent registrations")
     reports = SavedReport.prune_deleted(now)
     if reports > 0, do: Logger.info("Pruned #{reports} deleted reports")
+    snapshots = DeleteTeam.prune_snapshots(now)
+    if snapshots > 0, do: Logger.info("Pruned #{snapshots} team delete snapshots")
     :ok
   end
 end

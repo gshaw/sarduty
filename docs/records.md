@@ -37,6 +37,10 @@ like a D4H key. Existing D4H teams need no change.
   Everywhere else the words are true on both services ([writing.md](writing.md), rule 16).
 - `D4H.records_host/0` is `records.sarduty.com`. In dev, `RECORDS_HOST` points it at a
   local copy.
+- Deleting a Records team in SAR Duty (#889) deletes it in Records too, first, with
+  SAR Duty's own key (`RECORDS_SARDUTY_KEY`), never the team's. Records switches it off
+  at once and deletes it 7 days on; until then Switch on in Records' admin keeps it. A
+  refusal deletes nothing in SAR Duty.
 
 ## Editing records
 

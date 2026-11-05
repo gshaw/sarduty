@@ -7,6 +7,7 @@ defmodule Web.Admin.TeamLive do
   alias App.Model.AgentConnection
   alias App.Model.Team
   alias App.Model.TeamLoginGrant
+  alias App.Operation.DeleteTeam
   alias App.Operation.SetTeamIdCards
   alias App.Operation.SetTeamMCP
   alias App.Repo
@@ -14,7 +15,7 @@ defmodule Web.Admin.TeamLive do
   alias App.Worker.RefreshTeamDataWorker
 
   # One team's SAR Duty admin page (#513): its refresh, who reaches it as a team admin,
-  # and its ID cards and Agents switches.
+  # its ID cards and Agents switches, and Delete team.
   def mount(%{"id" => id}, _session, socket) do
     team =
       with {id, ""} <- Integer.parse(id), %Team{} = team <- Team.get(id) do
@@ -25,7 +26,11 @@ defmodule Web.Admin.TeamLive do
 
     if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
 
-    {:ok, socket |> assign(page_title: team.name) |> assign_team(team)}
+    {:ok,
+     socket
+     |> assign(page_title: team.name, delete_counts: DeleteTeam.row_counts(team))
+     |> assign_delete_form("")
+     |> assign_team(team)}
   end
 
   defp assign_team(socket, team) do
@@ -45,6 +50,13 @@ defmodule Web.Admin.TeamLive do
   end
 
   defp grant_form(changeset), do: to_form(changeset, as: "grant")
+
+  defp assign_delete_form(socket, typed) do
+    assign(socket,
+      delete_form: to_form(%{"name" => typed}, as: "delete"),
+      delete_ready: Team.name_matches?(socket.assigns[:team], typed)
+    )
+  end
 
   def handle_info(
         {:team_refreshed, %Team{id: id} = updated},
@@ -289,6 +301,55 @@ defmodule Web.Admin.TeamLive do
             Turn off Agents
           </.button>
         </section>
+
+        <section id="team-delete" class="mt-8 max-w-3xl">
+          <h2 class="heading">Delete team</h2>
+          <p>
+            Deletes everything SAR Duty holds for {@team.name}: {Service.Format.count(
+              Enum.sum(Map.values(@delete_counts)),
+              one: "%d row",
+              many: "%d rows"
+            )}.
+            <span :if={D4H.records?(@team)}>
+              Its {D4H.service_name(@team)} team is switched off now and goes in {Service.Format.days(
+                DeleteTeam.snapshot_days()
+              )}.
+            </span>
+            <span :if={!D4H.records?(@team)}>
+              Nothing in {D4H.service_name(@team)} changes, and the team can sign up again.
+            </span>
+          </p>
+          <p>
+            The server keeps a copy of the team's data for {Service.Format.days(
+              DeleteTeam.snapshot_days()
+            )}, in case it was a mistake. Every SAR Duty admin gets an email.
+          </p>
+          <details id="team-delete-rows" class="mb-4">
+            <summary class="link cursor-pointer">What goes</summary>
+            <.table
+              id="team-delete-table"
+              rows={delete_rows(@delete_counts)}
+              row_id={&"delete-#{elem(&1, 0)}"}
+            >
+              <:col :let={{table, _count}} label="Table"><code>{table}</code></:col>
+              <:col :let={{_table, count}} label="Rows" class="text-right">
+                {Service.Format.number(count)}
+              </:col>
+            </.table>
+          </details>
+          <.form for={@delete_form} id="delete-form" phx-change="validate_delete" phx-submit="delete">
+            <.input
+              field={@delete_form[:name]}
+              label={"Type #{@team.name} to confirm"}
+              autocomplete="off"
+            />
+            <.form_actions>
+              <.button variant={:danger} disabled={!@delete_ready} phx-disable-with="Deleting…">
+                Delete team
+              </.button>
+            </.form_actions>
+          </.form>
+        </section>
       </main>
     </div>
     """
@@ -310,6 +371,9 @@ defmodule Web.Admin.TeamLive do
     </span>
     """
   end
+
+  # Biggest first, so what matters is at the top.
+  defp delete_rows(counts), do: Enum.sort_by(counts, fn {table, count} -> {-count, table} end)
 
   defp on_off(true), do: "On"
   defp on_off(_off), do: "Off"
@@ -362,6 +426,31 @@ defmodule Web.Admin.TeamLive do
       end
 
     {:noreply, assign_team(socket, team)}
+  end
+
+  def handle_event("validate_delete", %{"delete" => %{"name" => typed}}, socket),
+    do: {:noreply, assign_delete_form(socket, typed)}
+
+  def handle_event("delete", %{"delete" => %{"name" => typed}}, socket) do
+    %{team: team, current_user: admin} = socket.assigns
+
+    case DeleteTeam.call(team, typed, admin) do
+      {:ok, _deleted} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Deleted #{team.name}.")
+         |> push_navigate(to: ~p"/admin")}
+
+      {:error, :name_mismatch} ->
+        {:noreply,
+         socket
+         |> assign_delete_form(typed)
+         |> put_flash(:error, "Type #{team.name} to delete it.")}
+
+      {:error, %D4H.Error{message: message}} ->
+        {:noreply,
+         put_flash(socket, :error, "SAR Duty Records refused, so nothing was deleted: #{message}")}
+    end
   end
 
   def handle_event("refresh", _params, socket) do

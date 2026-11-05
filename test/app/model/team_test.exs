@@ -65,4 +65,12 @@ defmodule App.Model.TeamTest do
     assert {"This subdomain is reserved. Use another.", _opts} = changeset.errors[:subdomain]
     refute Team.build_changeset(%Team{}, %{subdomain: "newton"}).errors[:subdomain]
   end
+
+  test "name_matches? ignores case and spaces at either end" do
+    team = %Team{name: "Coast Range SAR"}
+    assert Team.name_matches?(team, "  COAST RANGE SAR")
+    refute Team.name_matches?(team, "Coast  Range SAR")
+    refute Team.name_matches?(team, nil)
+    refute Team.name_matches?(nil, "Coast Range SAR")
+  end
 end

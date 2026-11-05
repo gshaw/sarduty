@@ -27,6 +27,12 @@ if config_env() == :dev and System.get_env("RECORDS_HOST") do
   config :sarduty, :records_host, System.get_env("RECORDS_HOST")
 end
 
+# SAR Duty's own key for deleting a team in Records (App.Adapter.D4H.delete_records_team/1,
+# #889): Records' SARDUTY_KEY. Unset, deleting a Records team is refused.
+if key = System.get_env("RECORDS_SARDUTY_KEY") do
+  config :sarduty, :records_sarduty_key, key
+end
+
 config :sarduty, :healthchecks_url, System.get_env("HEALTHCHECKS_URL")
 # Its own Healthchecks check, with a 10-minute period, for the D4H sync (#163).
 config :sarduty, :healthchecks_sync_url, System.get_env("HEALTHCHECKS_SYNC_URL")
@@ -93,6 +99,11 @@ if config_env() == :prod do
   # litestream.yml: it is rebuilt at every boot.
   config :sarduty, App.SampleRepo,
     database: Path.join(Path.dirname(System.fetch_env!("DATABASE_PATH")), "sarduty_sample.db")
+
+  # Copies of a team's rows that a team delete takes first, on the volume for 7 days. Not in
+  # litestream.yml, which replicates only the database.
+  config :sarduty, App.Operation.DeleteTeam,
+    snapshot_dir: Path.join(Path.dirname(System.fetch_env!("DATABASE_PATH")), "deleted-teams")
 
   # Beside the database on the volume, so it outlives a deploy (#416).
   config :sarduty, App.Repo.SlowLog,
