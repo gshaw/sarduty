@@ -4,7 +4,6 @@ defmodule App.Operation.SendActivityUpdateTest do
   import App.DataFixtures
   import Swoosh.TestAssertions
 
-  alias App.Mailer.ActivityMailer
   alias App.Model.ActivityUpdate
   alias App.Model.Attendance
   alias App.Model.Member
@@ -47,24 +46,23 @@ defmodule App.Operation.SendActivityUpdateTest do
     end
   end
 
-  test "update_ending/3: buttons for no reply unless reminders are off, else where they stand" do
+  test "ending/3: before the start, buttons for no reply unless reminders are off, else where they stand" do
     on = member(1, "On")
     off = member(2, "Off", %{invitation_reminders: false})
 
-    assert ActivityMailer.update_ending("requested", on, false) == :ask
-    assert ActivityMailer.update_ending("requested", off, false) == :open
-    assert ActivityMailer.update_ending("attending", off, false) == :signed_up
-    assert ActivityMailer.update_ending("absent", on, false) == :cant_make_it
+    assert SendActivityUpdate.ending("requested", on, false) == :ask
+    assert SendActivityUpdate.ending("requested", off, false) == :open
+    assert SendActivityUpdate.ending("attending", off, false) == :signed_up
+    assert SendActivityUpdate.ending("absent", on, false) == :cant_make_it
   end
 
-  test "update_ending/3: after the start, their attendance and no buttons (#896)" do
+  test "ending/3: from the start, only Open activity, for everyone (#896)" do
     on = member(1, "On")
     off = member(2, "Off", %{invitation_reminders: false})
 
-    assert ActivityMailer.update_ending("attending", on, true) == :attended
-    assert ActivityMailer.update_ending("absent", off, true) == :marked_absent
-    assert ActivityMailer.update_ending("requested", on, true) == :open
-    assert ActivityMailer.update_ending("requested", off, true) == :open
+    for status <- ["attending", "absent", "requested"], member <- [on, off] do
+      assert SendActivityUpdate.ending(status, member, true) == :open
+    end
   end
 
   test "sent_before/1: a batch per send, newest first, with its failures" do
@@ -164,27 +162,28 @@ defmodule App.Operation.SendActivityUpdateTest do
         })
 
     # Queued before the start, sent after it: the ending is read when it goes (#896).
-    test "after the start, each ends with their attendance and no reply buttons", ctx do
+    test "after the start, everyone gets the message and Open activity, the same email", ctx do
       later = DateTime.add(ctx.activity.started_at, 1, :day)
 
-      for {member, line} <- [
-            {ctx.avery, "You attended."},
-            {ctx.quinn, "You were marked absent."}
-          ] do
-        update = queued(ctx, member)
-        assert SendActivityUpdate.deliver(update.id, false, later) == :ok
-        assert Repo.reload!(update).status == :sent
-        assert_received {:email, email}
-        assert email.text_body =~ ~r{#{line}\n\nOpen activity \(log in\):}
-        assert email.html_body =~ "<strong>#{line}</strong></p>"
+      emails =
+        for member <- [ctx.avery, ctx.quinn, ctx.cameron] do
+          update = queued(ctx, member)
+          assert SendActivityUpdate.deliver(update.id, false, later) == :ok
+          assert Repo.reload!(update).status == :sent
+          assert_received {:email, email}
+          email
+        end
+
+      for email <- emails do
+        assert email.text_body =~ "Thanks for Tuesday."
+        assert email.text_body =~ "Open activity (log in):"
+        assert email.html_body =~ "Open activity"
+        refute email.html_body =~ "You"
+        refute email.html_body =~ "I'll be there"
         refute email.html_body =~ "Change your reply"
       end
 
-      update = queued(ctx, ctx.cameron)
-      assert SendActivityUpdate.deliver(update.id, false, later) == :ok
-      assert_received {:email, email}
-      refute email.html_body =~ "I'll be there"
-      assert email.html_body =~ "Open activity"
+      assert emails |> Enum.map(& &1.html_body) |> Enum.uniq() |> length() == 1
     end
 
     test "an update to a deleted activity goes to nobody", ctx do

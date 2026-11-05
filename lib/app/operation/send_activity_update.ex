@@ -3,11 +3,9 @@ defmodule App.Operation.SendActivityUpdate do
   A team admin emails an update to members on an activity (#609): their own message, to
   the members they check on its Members tab (#895), whatever their reply. It changes
   nothing on the activity, so it stays open after the start, published or not (#896),
-  until the activity is deleted. Each email ends with where the member stands
-  (ActivityMailer.update_ending/3). Before the start: reply buttons for a member with no
-  reply, unless they turned invitation reminders off, and a link to change the reply for
-  the rest. From the start: their attendance, with no reply buttons. Asking only members
-  with no reply is Send a reminder.
+  until the activity is deleted. How each email ends is ending/3: before the start, where
+  the member stands; from the start, only Open activity, the same for everyone. Asking
+  only members with no reply is Send a reminder.
 
   plan/1 says who can get one, pure. call/6 records a queued row per update with its
   job, in one transaction. App.Worker.SendActivityUpdateWorker then sends each with
@@ -46,6 +44,15 @@ defmodule App.Operation.SendActivityUpdate do
 
     %{groups: groups, no_email: Enum.map(no_email, & &1.member)}
   end
+
+  @doc """
+  How an update to `member` ends, from their D4H `status`, read when it goes. Before the
+  start, where they stand (ActivityMailer.update_ending/2). From the start (#896) an
+  update is only an update: the message and Open activity, with no reply to give or
+  change, for everyone.
+  """
+  def ending(_status, _member, true = _started?), do: :open
+  def ending(status, member, false), do: ActivityMailer.update_ending(status, member)
 
   @doc """
   The activity's earlier sends, newest first, as `%{sent_at:, sent_by_user:, message:,
@@ -137,13 +144,12 @@ defmodule App.Operation.SendActivityUpdate do
   end
 
   @doc """
-  Emails one queued update and marks it sent, for its job, ending with the member's reply
-  as it is now. A refusal is `{:error, reason}`, so the job tries again; on the `last?`
+  Emails one queued update and marks it sent, for its job, ending as ending/3 says at
+  `now`. A refusal is `{:error, reason}`, so the job tries again; on the `last?`
   attempt the update is marked failed first. One no longer queued is `{:cancel,
   reason}`, and so is one whose activity was deleted, or whose member is no longer on
-  it, before it went, which is marked failed. It ends with where the member stands at
-  `now`, before or after the start. A removal goes whenever its job
-  runs, unless the member is back on the activity by then.
+  it, before it went, which is marked failed. A removal goes whenever its job runs,
+  unless the member is back on the activity by then.
   """
   def deliver(update_id, last?, now) do
     case ActivityUpdate.get_queued(update_id) do
@@ -174,8 +180,7 @@ defmodule App.Operation.SendActivityUpdate do
         {:cancel, "the member left the activity"}
 
       true ->
-        started? = Activity.started?(activity, now)
-        ending = ActivityMailer.update_ending(invitation.status, member, started?)
+        ending = ending(invitation.status, member, Activity.started?(activity, now))
         send_email(update, ending, last?, now)
     end
   end

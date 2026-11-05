@@ -503,16 +503,17 @@ activity starts.
   button counts the checked members with an email: Email 3 members. Its step,
   `/teams/:subdomain/activities/:id/members/update`
   ([Update](../lib/web/live/activity_members_live/update.ex), #895), lists them in a table
-  per reply (Signed up, Can't make it, No reply), or per attendance after the start
-  (Attended, Absent, No reply), and who has no email. The message is
-  required, up to 300 characters. Each email ends
+  per reply (Signed up, Can't make it, No reply), and who has no email; after the start,
+  in one table, since everyone gets the same email. The message is
+  required, up to 300 characters. Before the start, each email ends
   with where the member stands, read when it goes: "You're signed up." or "You said you
   can't make it." with Change your reply, or the reply buttons for a member with no
   reply. A member with no reply who turned invitation reminders off gets no buttons,
   only Open activity, so it stays an update and not an invitation. Updates ignore that
-  setting otherwise, and carry no unsubscribe. After the start there's nothing to reply
-  to: "You attended." or "You were marked absent.", with only Open activity, and No
-  reply gets only Open activity. The preview shows one ending at a time.
+  setting otherwise, and carry no unsubscribe. The preview shows one ending at a time.
+  From the start an update is only an update (Gerry, 2026-11-05): the message and Open
+  activity for everyone, with no line on where they stand and no reply buttons, so the
+  preview is one email.
   Earlier updates are listed at the top with their message, sender, and count. Each is
   a row in `activity_updates`. Asking only members with no reply is Send a reminder.
 - **Remove from the activity** ([RemoveMembers](../lib/app/operation/remove_members.ex),

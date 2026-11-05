@@ -30,8 +30,7 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 - Remove members before an activity joins them: check members on its Members tab, then
   Remove from the activity. The Remove members link is gone.
 - Send an update after an activity too, published or not: a thank-you, or "check your
-  hours". The email ends with "You attended." or "You were marked absent.", with no reply
-  buttons.
+  hours". After the start everyone gets the same email: your message and Open activity.
 - Add members lists who you find under Not added yet, checked, so it's clear nobody is on
   the activity until you add them. The button counts who's checked: Add 5 members.
   Uncheck anyone found by mistake, or one member of a group.
