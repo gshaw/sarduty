@@ -11,6 +11,8 @@ defmodule Web.TransferFormLive do
   # Transfer to another team (#892), for team admins only: a retiring member's page has it
   # too. The member's latest award of each qualification, expired ones unchecked. Make
   # transfer code copies the checked ones from the team's D4H now, then opens the code.
+  # While the member has a code that still works, the page links to it instead: one at a
+  # time.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     member = team |> Member.find!(id) |> Repo.preload(:team)
@@ -55,8 +57,12 @@ defmodule Web.TransferFormLive do
          |> put_flash(:info, "Transfer code made.")
          |> push_navigate(to: ~p"/teams/#{team}/members/#{member.id}/transfers/#{transfer.id}")}
 
+      # Another team admin may have made one meanwhile; the page then links to it.
       {:error, text} ->
-        {:noreply, put_flash(socket, :error, text)}
+        {:noreply,
+         socket
+         |> put_flash(:error, text)
+         |> assign(:open, Transfer.open_for_member(member, DateTime.utc_now()))}
     end
   end
 
@@ -74,20 +80,27 @@ defmodule Web.TransferFormLive do
       Make a code for a team admin at {@first_name}'s new team. They add the awards you select, with their certificates, to {@first_name}'s record there.
     </p>
 
-    <ul :if={@open != []} id="transfer-open" class="measure mb-6">
-      <li :for={transfer <- @open}>
-        {@first_name} has a code that still works: <.a
-          id={"transfer-open-#{transfer.id}"}
-          navigate={~p"/teams/#{@current_team}/members/#{@member.id}/transfers/#{transfer.id}"}
-        >{Transfer.format_code(transfer)}</.a>.
-      </li>
-    </ul>
+    <section :if={@open} id="transfer-open" class="measure">
+      <p>
+        {@first_name} has a transfer code that still works: <.a
+          id={"transfer-open-#{@open.id}"}
+          navigate={~p"/teams/#{@current_team}/members/#{@member.id}/transfers/#{@open.id}"}
+        >{Transfer.format_code(@open)}</.a>.
+      </p>
+      <p class="hint">A member has one code at a time. Cancel it to make another.</p>
+    </section>
 
-    <p :if={@rows == []} id="transfer-no-awards">
+    <p :if={!@open and @rows == []} id="transfer-no-awards">
       {@member.name} has no qualifications to transfer.
     </p>
 
-    <.form :if={@rows != []} for={%{}} id="transfer-form" phx-change="change" phx-submit="make">
+    <.form
+      :if={!@open and @rows != []}
+      for={%{}}
+      id="transfer-form"
+      phx-change="change"
+      phx-submit="make"
+    >
       <%!-- Sent with nothing checked, so unchecking the last one clears the selection. --%>
       <input type="hidden" name="award_ids[]" value="" />
       <.table id="transfer-awards" rows={@rows} row_id={&"transfer-award-#{&1.award.id}"}>

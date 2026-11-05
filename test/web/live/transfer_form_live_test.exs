@@ -8,6 +8,7 @@ defmodule Web.TransferFormLiveTest do
   alias App.Model.Transfer
   alias App.Model.TransferAward
   alias App.Model.TransferAwardFile
+  alias App.Operation.MakeTransfer
   alias App.Repo
 
   setup %{conn: conn} do
@@ -39,6 +40,7 @@ defmodule Web.TransferFormLiveTest do
 
     %{
       conn: log_in_user(conn, user),
+      user: user,
       team: team,
       member: member,
       first_aid: first_aid,
@@ -184,14 +186,77 @@ defmodule Web.TransferFormLiveTest do
     assert has_element?(lv, "#transfer-make[disabled]")
   end
 
-  test "an open code is linked", ctx do
+  test "while a code works, the page links to it and makes no other", ctx do
+    transfer = transfer_fixture(ctx.member)
+    {:ok, lv, _html} = live(ctx.conn, path(ctx))
+
+    assert has_element?(lv, "#transfer-open-#{transfer.id}", Transfer.format_code(transfer))
+    assert has_element?(lv, "#transfer-open", "Cancel it to make another.")
+    refute has_element?(lv, "#transfer-form")
+  end
+
+  test "a code another team admin made meanwhile stops this one", ctx do
     stub_d4h(ctx, [ctx.first_aid, ctx.gsar])
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
+    theirs = transfer_fixture(ctx.member)
+
     lv |> form("#transfer-form") |> render_submit()
-    transfer = Repo.one!(Transfer)
+
+    assert has_element?(lv, "#flash-error", "Sam Rivera has a transfer code that still works.")
+    assert [%{id: id}] = Repo.all(Transfer)
+    assert id == theirs.id
+    assert has_element?(lv, "#transfer-open-#{theirs.id}")
+    refute has_element?(lv, "#transfer-form")
+  end
+
+  test "the operation refuses a second code before reading D4H", ctx do
+    transfer_fixture(ctx.member)
+    # No stub: a D4H call would fail the test.
+    assert {:error, text} =
+             MakeTransfer.call(
+               ctx.team,
+               ctx.member,
+               [ctx.first_aid.id],
+               ctx.user,
+               DateTime.utc_now()
+             )
+
+    assert text =~ "has a transfer code that still works"
+  end
+
+  test "a code made while D4H was read stops this one as it is saved", ctx do
+    # Another team admin's code lands between the first check and the save. The stub runs
+    # in this process, as MakeTransfer.call does.
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      unless Process.get(:rival), do: Process.put(:rival, transfer_fixture(ctx.member))
+      results = if conn.request_path =~ "/documents", do: [], else: [d4h_award(ctx.gsar)]
+      Req.Test.json(conn, %{"results" => results, "totalSize" => length(results)})
+    end)
+
+    assert {:error, text} =
+             MakeTransfer.call(ctx.team, ctx.member, [ctx.gsar.id], ctx.user, DateTime.utc_now())
+
+    assert text =~ "has a transfer code that still works"
+    assert [%{id: id}] = Repo.all(Transfer)
+    assert id == Process.get(:rival).id
+  end
+
+  test "once the code is cancelled, used, or expired, another can be made", ctx do
+    now = DateTime.utc_now()
+    later = DateTime.add(now, -1, :second)
+
+    for change <- [
+          [cancelled_at: later],
+          [used_at: later],
+          [expires_at: later]
+        ] do
+      ctx.member |> transfer_fixture() |> Ecto.Changeset.change(change) |> Repo.update!()
+    end
 
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
-    assert has_element?(lv, "#transfer-open-#{transfer.id}", Transfer.format_code(transfer))
+
+    refute has_element?(lv, "#transfer-open")
+    assert has_element?(lv, "#transfer-form")
   end
 
   test "a member cannot open it" do

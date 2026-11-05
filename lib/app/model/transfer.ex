@@ -81,12 +81,16 @@ defmodule App.Model.Transfer do
     |> Repo.one!()
   end
 
-  @doc "The member's codes that still work at `now`, newest first."
+  @doc """
+  The member's code that still works at `now`, or nil. A member has at most one: making
+  another waits until it is used, cancelled, or expired (MakeTransfer).
+  """
   def open_for_member(%Member{} = member, now) do
     Transfer
     |> where([t], t.team_id == ^member.team_id and t.member_id == ^member.id)
     |> where([t], is_nil(t.used_at) and is_nil(t.cancelled_at) and t.expires_at > ^now)
     |> order_by([t], desc: t.inserted_at, desc: t.id)
-    |> Repo.all()
+    |> limit(1)
+    |> Repo.one()
   end
 end

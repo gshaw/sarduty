@@ -30,13 +30,18 @@ defmodule App.Operation.MakeTransfer do
 
   @doc """
   `{:ok, transfer}` with its awards, or `{:error, text}` for the team admin. `award_ids`
-  are local ids from `offered/2`; any other id is ignored.
+  are local ids from `offered/2`; any other id is ignored. A member has one open code at
+  a time: checked before D4H is read, and again as the code is saved, so two team admins
+  can't both make one.
   """
   def call(%Team{} = team, %Member{team_id: team_id} = member, award_ids, %User{} = user, now)
       when team_id == team.id do
     picked = picked(offered(member, now), award_ids)
 
     cond do
+      Transfer.open_for_member(member, now) ->
+        {:error, open_text(member)}
+
       picked == [] ->
         {:error, "Select at least 1 award."}
 
@@ -134,23 +139,33 @@ defmodule App.Operation.MakeTransfer do
   defp insert(member, planned, user, now) do
     code = Transfer.generate_code()
 
+    # An immediate transaction, so a second team admin's waits and then sees this one.
     Repo.transact(fn ->
-      transfer =
-        Repo.insert!(%Transfer{
-          team_id: member.team_id,
-          member_id: member.id,
-          made_by_user_id: user.id,
-          code: code,
-          code_hash: Transfer.code_hash(code),
-          member_name: member.name,
-          member_email: member.email,
-          expires_at: Transfer.expires_at(now)
-        })
-
-      Enum.each(planned, &insert_award(transfer, &1))
-      {:ok, Repo.preload(transfer, :awards)}
+      if Transfer.open_for_member(member, now),
+        do: {:error, open_text(member)},
+        else: insert_transfer(member, planned, user, code, now)
     end)
   end
+
+  defp insert_transfer(member, planned, user, code, now) do
+    transfer =
+      Repo.insert!(%Transfer{
+        team_id: member.team_id,
+        member_id: member.id,
+        made_by_user_id: user.id,
+        code: code,
+        code_hash: Transfer.code_hash(code),
+        member_name: member.name,
+        member_email: member.email,
+        expires_at: Transfer.expires_at(now)
+      })
+
+    Enum.each(planned, &insert_award(transfer, &1))
+    {:ok, Repo.preload(transfer, :awards)}
+  end
+
+  defp open_text(member),
+    do: "#{member.name} has a transfer code that still works. Cancel it to make another."
 
   defp insert_award(transfer, %{position: position, award: award, d4h: d4h, file: file}) do
     record =
