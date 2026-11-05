@@ -113,6 +113,14 @@ have decided since the page loaded, stays in `call`.
 - **New MCP tool** → a module in `lib/app/mcp/tool/` with the `App.MCP.Tool` behaviour,
   listed in `App.MCP.Tools`. See [mcp.md](mcp.md).
 - **New displayed value** → a function in `Service.Format`, not arithmetic in a template.
+- **New thing to do with members a team admin checks** → pick them on the tab, then act
+  in place or on a step of the same LiveView, never a page of its own that picks them
+  again. An activity's Members tab ([Web.ActivityMembersLive](../lib/web/live/activity_members_live.ex),
+  #766) lists each change as a module in its `@actions`: label, hint, when it's offered,
+  how it counts the button, and in place or a step. In place calls the operation and
+  the tables update. A step is a LiveComponent on a `live_action` route of the same
+  LiveView, such as `/members/remind`, so the ticks stay: Back keeps them, and a refresh
+  lands on the tab with a toast.
 
 ## The docs
 

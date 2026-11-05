@@ -9,10 +9,10 @@ defmodule Web.ActivityAddMembersLive do
   alias App.Operation.InviteMembers
   alias Service.Format
 
-  # Adding members to an activity as No reply (#564), by name or by group, laid out like
-  # Apply a template. Each pick joins one To add list; InviteMembers.plan/3 decides who
-  # goes and names who a group leaves out. Adding emails nobody. Only before the start,
-  # on an activity neither deleted nor published.
+  # Adding members to an activity (#564), by name or by group, laid out like Apply a
+  # template. Each pick joins one To add list; InviteMembers.plan/3 decides who goes and
+  # names who a group leaves out. Adding emails nobody. Until it's published, on an
+  # activity not deleted: as No reply before the start, and as attended after it (#766).
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     activity = Web.ActivityLive.fetch_activity(team, id)
@@ -31,7 +31,8 @@ defmodule Web.ActivityAddMembersLive do
             members: members,
             standings: Standing.by_member(team, members, now),
             groups: Group.get_all(team.id),
-            day: Format.month_day(activity.started_at, team.timezone)
+            day: Format.month_day(activity.started_at, team.timezone),
+            started?: Activity.started?(activity, now)
           )
           |> assign_plan(now)
 
@@ -46,14 +47,12 @@ defmodule Web.ActivityAddMembersLive do
   defp leave(socket, %Activity{deleted_at: %DateTime{}} = activity, _now),
     do: Web.ActivityLive.leave_deleted(socket, activity)
 
-  defp leave(socket, activity, now) do
-    text =
-      if Activity.started?(activity, now),
-        do: "The activity has started, so nobody can be added.",
-        else: "Published, so nobody can be added. #{D4H.unpublish_text(activity.team)}"
-
+  defp leave(socket, activity, _now) do
     socket
-    |> put_flash(:error, text)
+    |> put_flash(
+      :error,
+      "Published, so nobody can be added. #{D4H.unpublish_text(activity.team)}"
+    )
     |> push_navigate(
       to: ~p"/teams/#{socket.assigns.current_team}/activities/#{activity.id}/members"
     )
@@ -172,7 +171,15 @@ defmodule Web.ActivityAddMembersLive do
             Away on {@day}, so left out: {names(@plan.away)}. Add them by name to include them.
           </p>
           <form :if={@to_add != []} id="members-add-form" phx-submit="add" class="mt-4">
-            <p class="hint">They show as No reply until they answer. SAR Duty emails nobody.</p>
+            <p :if={!@started?} class="hint">
+              They show as No reply until they answer. SAR Duty emails nobody.
+            </p>
+            <p :if={@started?} id="members-add-attended" class="hint">
+              They're added as attended, with the activity's times, {Format.time_short(
+                @activity.started_at,
+                @current_team.timezone
+              )} to {Format.time_short(@activity.finished_at, @current_team.timezone)}. SAR Duty emails nobody.
+            </p>
             <.form_actions>
               <.button id="members-send" variant={:success} phx-disable-with="Adding…">
                 {Format.count(length(@to_add), one: "Add 1 member", many: "Add %d members")}

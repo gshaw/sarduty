@@ -6,6 +6,7 @@ defmodule Web.ActivityLiveTest do
 
   alias App.AttendanceStub
   alias App.Model.Activity
+  alias App.Model.AttendanceScan
   alias App.Operation.SetMapsApp
   alias App.Repo
 
@@ -109,6 +110,15 @@ defmodule Web.ActivityLiveTest do
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity = activity_fixture(team)
+
+    AttendanceScan.insert!(%AttendanceScan{
+      team_id: team.id,
+      activity_id: activity.id,
+      member_id: member_fixture(team).id,
+      kind: "arrived",
+      method: "name",
+      scanned_at: DateTime.utc_now()
+    })
 
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
@@ -246,8 +256,13 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "#members-empty", "Nobody has signed up yet.")
     end
 
-    test "gone once the activity starts", %{conn: conn, team: team} do
+    test "after the start too, until it's published (#766)", %{conn: conn, team: team} do
       activity = activity_fixture(team, %{started_at: hours_from_now(-1)})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
+      assert has_element?(lv, "#members-add", "Add members")
+      refute has_element?(lv, "#members-published")
+
+      activity |> Ecto.Changeset.change(is_published: true) |> App.Repo.update!()
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
       refute has_element?(lv, "#members-add")
       refute has_element?(lv, "#members-published")
@@ -365,10 +380,12 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "h1", "Rope practice")
       assert has_element?(lv, "#activity-panel-counts", "2 attended")
       assert has_element?(lv, "#members-hours", "2h 30m in total")
-      assert has_element?(lv, "#members-table", "Casey Dhillon")
-      assert has_element?(lv, "#members-table", "1h 30m")
-      refute has_element?(lv, "#members-table th", "ID")
-      refute has_element?(lv, "#members-table", other.ref_id)
+      assert has_element?(lv, "#members-attended", "Casey Dhillon")
+      assert has_element?(lv, "#members-attended", "1h 30m")
+      refute has_element?(lv, "#activity-members th", "ID")
+      refute has_element?(lv, "#members-attended", other.ref_id)
+      refute has_element?(lv, "#members-change-form")
+      refute has_element?(lv, "#activity-members input[type=checkbox]")
 
       assert has_element?(
                lv,
@@ -601,11 +618,14 @@ defmodule Web.ActivityLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
+      # A table for each attendance (#766), with no checkboxes for a member.
       assert has_element?(lv, "#activity-panel-counts", "2 attended · 1 absent")
-      assert has_element?(lv, "#member-row-#{away.id} .marker-cant-make-it", "Absent")
-      assert has_element?(lv, "#activity-members th", "Attendance")
+      assert has_element?(lv, "#activity-members th", "Absent")
+      assert has_element?(lv, "#members-absent #member-row-#{away.id}")
       refute has_element?(lv, "#activity-members th", "Replied")
-      assert has_element?(lv, "#member-row-#{member.id} .marker-signed-up", "Attended")
+      assert has_element?(lv, "#activity-members th", "Attended")
+      assert has_element?(lv, "#members-attended #member-row-#{member.id}")
+      refute has_element?(lv, "#activity-members input[type=checkbox]")
 
       start = Service.Format.time_short(started, team.timezone)
       assert has_element?(lv, "#member-row-#{member.id} td", start)
@@ -618,7 +638,6 @@ defmodule Web.ActivityLiveTest do
                Service.Format.month_day_time(next_day, team.timezone)
              )
 
-      # An absent member's Hours cell is blank, never "false".
       assert has_element?(lv, "#activity-members th", "Hours")
       refute has_element?(lv, "#member-row-#{away.id} td", "false")
     end

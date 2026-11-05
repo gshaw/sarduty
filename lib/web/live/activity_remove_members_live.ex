@@ -27,7 +27,8 @@ defmodule Web.ActivityRemoveMembersLive do
     activity = Web.ActivityLive.fetch_activity(team, id)
     now = DateTime.utc_now()
 
-    case Activity.adding(activity, true, now) do
+    # From the start, the Members tab changes attendance itself (#766).
+    case Activity.started?(activity, now) or Activity.adding(activity, true, now) do
       :open ->
         {:ok,
          socket

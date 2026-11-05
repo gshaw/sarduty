@@ -31,6 +31,8 @@ defmodule App.Model.ChangeSet do
     # adds a member's certificate to D4H, as an award with the file on it (#493).
     # :whiteboard posts, changes, archives, or deletes a whiteboard note (#515).
     # :remove takes members off an activity from its Remove members page (#704).
+    # :change_attendance marks members attended or absent, or removes them, from an
+    # activity's Members tab after the start (#766).
     field :source, Ecto.Enum,
       values: [
         :door,
@@ -46,7 +48,8 @@ defmodule App.Model.ChangeSet do
         :chores,
         :certificates,
         :whiteboard,
-        :remove
+        :remove,
+        :change_attendance
       ]
 
     field :summary, :string

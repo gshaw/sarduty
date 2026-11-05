@@ -61,6 +61,16 @@ defmodule App.Model.AttendanceScan do
     |> Repo.all()
   end
 
+  @doc """
+  Whether anyone has scanned at the activity, so Send attendance has something to send
+  (#766). The same scans Needs attention's Attendance to send counts.
+  """
+  def any?(%Activity{} = activity) do
+    AttendanceScan
+    |> where([s], s.activity_id == ^activity.id and s.team_id == ^activity.team_id)
+    |> Repo.exists?()
+  end
+
   @doc "The topic a page listens on to hear about an activity's scans."
   def topic(activity_id), do: "attendance_scans:#{activity_id}"
 

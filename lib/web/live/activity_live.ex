@@ -11,6 +11,7 @@ defmodule Web.ActivityLive do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.AttendanceScan
   alias App.Model.ChoreEvent
   alias App.Model.Coordinate
   alias App.Model.CustomField
@@ -26,7 +27,6 @@ defmodule Web.ActivityLive do
   alias App.ViewData.ActivityReminders
   alias App.ViewData.ActivityTravel
   alias App.ViewData.ChangeHistory
-  alias Service.Format
   alias Web.Components.ActivityMap
   alias Web.Components.Reply
   alias Web.Components.ReplyControl
@@ -44,7 +44,8 @@ defmodule Web.ActivityLive do
   # Members open it too (#406): the same activity, facts, and people a team admin sees.
   # Under the title, everyone gets the counts, and a member it invites gets their reply
   # until the start (#444). Then tabs, above both columns: Overview has the tags, map,
-  # and description; Members lists who is invited and how they replied; Travel
+  # and description; Members, Web.ActivityMembersLive's, lists who is invited and how
+  # they replied, and their attendance from the start (#766); Travel
   # (#230), for team admins from the start, next to Members since it's the next job;
   # Equipment what was used; Fields its D4H custom fields, when it has any or a team
   # admin can fill one in, with Change fields (#705); and History, for team admins. The
@@ -61,7 +62,7 @@ defmodule Web.ActivityLive do
     # Travel is a feature, on incidents only.
     if socket.assigns.live_action == :travel && !travel?, do: raise(Web.Status.NotFound)
     # The History tab is Web.ActivityHistoryLive's route, for team admins only.
-    tab = socket.assigns.live_action
+    tab = tab(socket.assigns.live_action)
 
     now = DateTime.utc_now()
 
@@ -86,6 +87,12 @@ defmodule Web.ActivityLive do
     {:noreply, socket}
   end
 
+  @tabs [:overview, :members, :travel, :equipment, :fields, :history]
+
+  # Any other live action is a step of the Members tab (Web.ActivityMembersLive).
+  defp tab(action) when action in @tabs, do: action
+  defp tab(_step), do: :members
+
   defp page_title(activity, :overview), do: activity.title
   defp page_title(activity, :members), do: "#{activity.title} · Members"
   defp page_title(activity, :travel), do: "#{activity.title} · Travel"
@@ -93,8 +100,11 @@ defmodule Web.ActivityLive do
   defp page_title(activity, :fields), do: "#{activity.title} · Fields"
   defp page_title(activity, :history), do: "#{activity.title} · History"
 
-  # Who is invited and how they replied, again after a reply.
-  defp assign_people(socket) do
+  @doc """
+  Who is invited and how they replied, with the counts, reminders, and Travel's badge:
+  again after a reply, or a change on the Members tab.
+  """
+  def assign_people(socket) do
     %{activity: activity, replier: replier, current_team: team, now: now} = socket.assigns
     members = ActivityMembers.load(activity)
     team_admin? = socket.assigns.team_admin?
@@ -112,7 +122,7 @@ defmodule Web.ActivityLive do
           your_travel?(activity, replier, socket.assigns.coming?, attendances)
     )
     |> assign_reminders(members)
-    |> assign_delete()
+    |> assign_actions()
     |> assign_travel()
   end
 
@@ -141,13 +151,18 @@ defmodule Web.ActivityLive do
   end
 
   # Delete is an Actions link that opens the confirm dialog (docs/urls.md), for a Records
-  # team's admins: D4H does not let SAR Duty delete activities.
-  defp assign_delete(socket) do
+  # team's admins: D4H does not let SAR Duty delete activities. Send attendance shows once
+  # someone has scanned (#766).
+  defp assign_actions(socket) do
     %{activity: activity, current_team: team, team_admin?: team_admin?, now: now} =
       socket.assigns
 
     delete? = team_admin? and D4H.records?(team) and !activity.deleted_at
-    assign(socket, delete_confirm: delete? && Web.DeleteConfirm.activity(team, activity, now))
+
+    assign(socket,
+      delete_confirm: delete? && Web.DeleteConfirm.activity(team, activity, now),
+      send_attendance?: team_admin? and AttendanceScan.any?(activity)
+    )
   end
 
   def handle_event("delete", _params, %{assigns: %{delete_confirm: false}} = socket),
@@ -408,9 +423,10 @@ defmodule Web.ActivityLive do
         <p :if={@tab == :travel and @coming?} id="travel-not-started" class="hint">
           Travel opens when the activity starts.
         </p>
-        <.members_section
+        <Web.ActivityMembersLive.members_tab
           :if={@tab == :members}
           activity={@activity}
+          team={@current_team}
           members={@members}
           standings={@standings}
           started?={!@coming?}
@@ -420,6 +436,11 @@ defmodule Web.ActivityLive do
           batch={@batch}
           batch_sender={@batch_sender}
           adding={Activity.adding(@activity, @team_admin?, @now)}
+          selected={@selected}
+          choice={@choice}
+          step={@step}
+          user={@current_user}
+          service={@service}
         />
         <.equipment_section
           :if={@tab == :equipment}
@@ -453,6 +474,7 @@ defmodule Web.ActivityLive do
           change_fields?={@change_fields?}
           send_reminders?={@send_reminders?}
           send_update?={@send_update?}
+          send_attendance?={@send_attendance?}
           delete_confirm={@delete_confirm}
         />
       </aside>
@@ -559,6 +581,7 @@ defmodule Web.ActivityLive do
   attr :change_fields?, :boolean, default: false, doc: "whether its kind has custom fields"
   attr :send_reminders?, :boolean, default: false, doc: "whether anyone has no reply yet"
   attr :send_update?, :boolean, default: false, doc: "whether anyone is on the activity"
+  attr :send_attendance?, :boolean, default: false, doc: "whether anyone has scanned"
   attr :delete_confirm, :any, default: false, doc: "Delete's confirm dialog, or false for none"
 
   # Every record's sidebar ends the same way: Actions. Custom fields are a tab (#705).
@@ -618,7 +641,8 @@ defmodule Web.ActivityLive do
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/updates"}
             >Send an update</.a>
           </li>
-          <li :if={@admin_actions?}>
+          <%!-- It sends Take attendance's scans, so with none it has nothing to send (#766). --%>
+          <li :if={@admin_actions? and @send_attendance?}>
             <.a
               id="activity-send-attendance"
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/attendance"}
@@ -666,182 +690,6 @@ defmodule Web.ActivityLive do
     </div>
     """
   end
-
-  attr :activity, :map, required: true
-  attr :members, :list, required: true
-  attr :standings, :map, required: true, doc: "each member's standing, by id"
-  attr :started?, :boolean, required: true
-  attr :now, :any, required: true
-  attr :team_admin?, :boolean, default: false
-  attr :reminded, :map, default: %{}, doc: "each member's latest reminder, by member id"
-  attr :batch, :map, default: nil, doc: "the last reminders sent"
-  attr :batch_sender, :string, default: nil
-  attr :adding, :atom, default: nil, doc: "Activity.adding/3: :open, :published, or nil"
-
-  # Who the activity invites, in one table by reply, then name (#444). The counts are the
-  # panel's line, on every tab. Before the start: how each replied and when, New for the
-  # last 24 hours. From the start: D4H's attendance, with each member's times.
-  def members_section(assigns) do
-    assigns = assign(assigns, timezone: assigns.activity.team.timezone)
-
-    ~H"""
-    <section id="activity-members">
-      <p :if={@batch} id="members-batch" class="hint">
-        {batch_text(@batch, @batch_sender, @timezone)}
-      </p>
-      <%!-- From the copy, which can be 10 minutes old; the send refuses it too. --%>
-      <p :if={@adding == :published} id="members-published" class="hint mb-4">
-        Published, so nobody can be added. {D4H.unpublish_text(@activity.team)}
-      </p>
-      <p :if={@members == [] and @adding != :published} id="members-empty" class="hint">
-        {if @started?, do: "Nobody attended.", else: "Nobody has signed up yet."}
-      </p>
-      <p :if={@adding == :open} class="action">
-        <.a
-          id="members-add"
-          navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/members/add"}
-        >Add members</.a>
-      </p>
-      <p :if={@adding == :open and @members != []} class="action">
-        <.a
-          id="members-remove"
-          navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/members/remove"}
-        >Remove members</.a>
-      </p>
-      <.table
-        :if={@members != []}
-        id="members-table"
-        rows={@members}
-        row_id={&"member-row-#{&1.member.id}"}
-        class="table-striped w-fit"
-      >
-        <:col :let={row} label="Member">
-          <.member_cell
-            id={"member-standing-#{row.member.id}"}
-            member={row.member}
-            team={@activity.team}
-            standing={@standings[row.member.id]}
-            path={
-              ~p"/teams/#{@activity.team}/members/#{row.member.id}?when=#{Calendar.strftime(@activity.started_at, "%Y")}"
-            }
-          />
-        </:col>
-        <:col
-          :let={row}
-          label={if @started?, do: "Attendance", else: "Reply"}
-          class="whitespace-nowrap"
-        >
-          <span class={["marker", "marker-#{Reply.marker(row.status)}"]}>
-            {Reply.status_text(row.status, @started?)}
-          </span>
-        </:col>
-        <:col
-          :let={row}
-          :if={!@started?}
-          label="Replied"
-          class="whitespace-nowrap"
-        >
-          {Format.month_day_time(row.replied_at, @timezone)}
-          <span
-            :if={row.status == "requested" and @reminded[row.member_id]}
-            id={"member-reminded-#{row.member.id}"}
-            class="hint"
-          >
-            {reminded_text(@reminded[row.member_id], @timezone)}
-          </span>
-          <.badge
-            :if={ActivityMembers.new?(row, @now)}
-            kind={:primary}
-            title="Replied in the last 24 hours"
-          >
-            New
-          </.badge>
-        </:col>
-        <:col
-          :let={row}
-          :if={@started?}
-          label="Start"
-          align="right"
-          class="whitespace-nowrap"
-        >
-          {attended_time(row, :start, @activity, @timezone)}
-        </:col>
-        <:col
-          :let={row}
-          :if={@started?}
-          label="Finish"
-          align="right"
-          class="whitespace-nowrap"
-        >
-          {attended_time(row, :finish, @activity, @timezone)}
-        </:col>
-        <:col
-          :let={row}
-          :if={@started?}
-          label="Hours"
-          align="right"
-          class="w-px whitespace-nowrap"
-        >
-          <.hours_cell minutes={if row.status == "attending", do: row.duration_in_minutes} />
-        </:col>
-      </.table>
-      <%!-- The Hours column's sum, exact as Service.Format.duration/1 writes the minutes. --%>
-      <p :if={@started? and attended_minutes(@members) > 0} id="members-hours" class="hint mt-2">
-        {Format.duration(attended_minutes(@members))} in total
-      </p>
-    </section>
-    """
-  end
-
-  defp attended_minutes(members),
-    do:
-      members
-      |> Enum.filter(&(&1.status == "attending"))
-      |> Enum.sum_by(&(&1.duration_in_minutes || 0))
-
-  # "4 sent Oct 26, 18:02 by Alex Chen · 2 replied since"
-  # While none has gone yet: "4 sending Oct 26, 18:02 by Alex Chen".
-  defp batch_text(batch, sender, timezone) do
-    all_sending? = batch.sent == 0 and batch.sending > 0
-
-    sent =
-      if(all_sending?,
-        do: Format.count(batch.sending, one: "%d sending", many: "%d sending"),
-        else: Format.count(batch.sent, one: "%d sent", many: "%d sent")
-      ) <>
-        " " <>
-        Format.month_day_time(batch.sent_at, timezone) <>
-        if(sender, do: " by #{sender}", else: "")
-
-    [
-      sent,
-      batch.sending > 0 && !all_sending? &&
-        Format.count(batch.sending, one: "%d sending", many: "%d sending"),
-      batch.failed > 0 && Format.count(batch.failed, one: "%d failed", many: "%d failed"),
-      Format.count(batch.replied_since, one: "%d replied since", many: "%d replied since")
-    ]
-    |> Enum.filter(& &1)
-    |> Enum.join(" · ")
-  end
-
-  defp reminded_text(%Reminder{status: :failed}, _timezone), do: "Reminder failed"
-  defp reminded_text(%Reminder{status: :queued}, _timezone), do: "Reminder sending"
-
-  defp reminded_text(%Reminder{sent_at: sent_at}, timezone),
-    do: "Reminded " <> Format.month_day(sent_at, timezone)
-
-  # A member's own times once it starts; the start's date only when it isn't the
-  # activity's day. Blank for anyone who didn't attend.
-  defp attended_time(%{status: "attending"} = row, :start, activity, timezone) do
-    if ActivityMembers.same_day?(row.started_at, activity.started_at, timezone),
-      do: Format.time_short(row.started_at, timezone),
-      else: Format.month_day_time(row.started_at, timezone)
-  end
-
-  defp attended_time(%{status: "attending"} = row, :finish, _activity, timezone),
-    do: Format.time_short(row.finished_at, timezone)
-
-  defp attended_time(_row, _time, _activity, _timezone), do: nil
 
   attr :activity, :map, required: true
   attr :usages, :list, required: true

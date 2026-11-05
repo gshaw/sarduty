@@ -132,8 +132,11 @@ defmodule App.Operation.RemoveMembers do
     end
   end
 
-  # Each member again from the team's own, never a struct from a page.
-  defp scope(team, checked) do
+  @doc """
+  Each checked `{member_id, status}` as `{%Member{}, status}`, the member again from the
+  team's own, never a struct from a page. ChangeAttendance shares it.
+  """
+  def scope(team, checked) do
     members =
       Member
       |> where([m], m.team_id == ^team.id and m.id in ^Enum.map(checked, &elem(&1, 0)))
@@ -143,7 +146,8 @@ defmodule App.Operation.RemoveMembers do
     for {id, status} <- checked, member = members[id], do: {member, status}
   end
 
-  defp copy_rows(activity) do
+  @doc "The copy's rows on the activity, in any status, of the team's members."
+  def copy_rows(activity) do
     Attendance
     |> join(:inner, [a], m in assoc(a, :member))
     |> where([a, m], a.activity_id == ^activity.id and m.team_id == ^activity.team_id)
@@ -201,8 +205,12 @@ defmodule App.Operation.RemoveMembers do
     end)
   end
 
-  # The applier skips a row D4H changed since the copy, and that is the member's reply.
-  defp kept_reason(entry, by_id) do
+  @doc """
+  Why a member with a row left keeps it, from plan entry `entry` and the applied rows by
+  D4H id: `:changed` when the applier skipped a row D4H changed since the copy, or D4H's
+  refusal. ChangeAttendance shares it.
+  """
+  def kept_reason(entry, by_id) do
     row =
       entry.rows
       |> Enum.map(&by_id[&1.d4h_attendance_id])

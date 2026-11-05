@@ -20,7 +20,8 @@ enforces the top-level list and the held URLs.
   `/equipment`, `/fields`, and `/history` (Members moved off `/activities/:id` on 2026-11-03,
   with no redirect), a member's and an equipment item's custom fields are `/fields` too;
   adding goes under the tab it adds to, `/equipment/add` and `/members/add`, and
-  changing too, `/fields/edit`.
+  changing too, `/fields/edit`. A step of the Members tab, on its own LiveView, is under
+  it too, such as `/members/remind` (#766, #895).
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
   (`/teams/:subdomain/settings`, `/settings/team-admins`). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.

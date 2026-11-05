@@ -341,16 +341,21 @@ defmodule App.ViewData.ChangeHistory do
     if keys != [] and Enum.all?(keys, &(&1 in @activity_row_keys)) do
       old = row.old_value || %{}
 
-      @activity_boxes
-      |> Enum.filter(fn {_label, box_keys} -> Enum.any?(box_keys, &Map.has_key?(new, &1)) end)
-      |> Enum.map(fn {label, _keys} -> activity_box(label, old, new, tz) end)
-      |> sentences()
+      old |> activity_boxes(new, tz) |> sentences()
     else
       describe_row(row, page)
     end
   end
 
   def describe_row(%ChangeSetRow{} = row, page, _tz), do: describe_row(row, page)
+
+  # A sentence for each box the row changed, leaving out a box that changed nothing.
+  defp activity_boxes(old, new, tz) do
+    @activity_boxes
+    |> Enum.filter(fn {_label, box_keys} -> Enum.any?(box_keys, &Map.has_key?(new, &1)) end)
+    |> Enum.map(fn {label, _keys} -> activity_box(label, old, new, tz) end)
+    |> Enum.reject(&is_nil/1)
+  end
 
   defp activity_box("Title", old, new, _tz),
     do: "Title changed from #{blank(old["title"])} to #{blank(new["title"])}"
@@ -376,8 +381,12 @@ defmodule App.ViewData.ChangeHistory do
 
   defp activity_box("Tax credit hours", _old, _new, _tz), do: "Tax credit hours changed"
 
-  defp activity_box("Tracking number", old, new, _tz),
-    do: number_line("Tracking number", old["tracking_number"], new["tracking_number"])
+  # A publish sends "" for none, which D4H needs (#766): no change a person made.
+  defp activity_box("Tracking number", old, new, _tz) do
+    if blank_to_nil(old["tracking_number"]) == blank_to_nil(new["tracking_number"]),
+      do: nil,
+      else: number_line("Tracking number", old["tracking_number"], new["tracking_number"])
+  end
 
   defp activity_box("Description", _old, _new, _tz), do: "Description changed"
 
@@ -573,6 +582,7 @@ defmodule App.ViewData.ChangeHistory do
   def source_label(:template), do: "template"
   def source_label(:invite), do: "Add members"
   def source_label(:remove), do: "Remove members"
+  def source_label(:change_attendance), do: "Change attendance"
   def source_label(:tags), do: "tags"
   def source_label(:chores), do: "chores"
   def source_label(:certificates), do: "certificates"

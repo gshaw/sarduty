@@ -30,7 +30,7 @@ defmodule App.Operation.InviteMembersTest do
   test "each member goes as requested, for the activity's times" do
     plan = InviteMembers.plan(activity(), [{@boats, member(1)}], known())
 
-    assert [row] = InviteMembers.rows(activity(), plan.add)
+    assert [row] = InviteMembers.rows(activity(), plan.add, @now)
     assert row.action == :create_attendance
     assert row.member_id == 1
     assert row.reason == "In the Boat Operators group"
@@ -44,13 +44,22 @@ defmodule App.Operation.InviteMembersTest do
            }
   end
 
+  test "from the start, each goes as attended, with the activity's times (#766)" do
+    plan = InviteMembers.plan(activity(), [{:name, member(1)}], known())
+
+    assert [row] = InviteMembers.rows(activity(), plan.add, @starts)
+    assert row.new_value["status"] == "ATTENDING"
+    assert row.new_value["starts_at"] == "2026-10-20T18:00:00Z"
+    assert row.new_value["ends_at"] == "2026-10-20T21:00:00Z"
+  end
+
   test "by name, by group, and both" do
     picks = [{:name, member(1)}, {@boats, member(2)}, {@boats, member(3)}]
     plan = InviteMembers.plan(activity(), picks, known())
 
     assert added(plan) == [{1, :name}, {2, @boats}, {3, @boats}]
 
-    rows = InviteMembers.rows(activity(), plan.add)
+    rows = InviteMembers.rows(activity(), plan.add, @now)
 
     assert Enum.map(rows, & &1.reason) == [
              "Added by name",
@@ -177,14 +186,32 @@ defmodule App.Operation.InviteMembersTest do
       assert [%ChangeSet{source: :invite}] = Repo.all(ChangeSet)
     end
 
-    test "refuses an activity that has started, is deleted, or is published", ctx do
+    test "after the start, adds as attended, and the copy shows them attended (#766)", ctx do
+      stub_d4h(ctx)
+      later = DateTime.add(ctx.now, 4, :day)
+
+      assert {:ok, %{rows: [%{status: :applied}]}} =
+               InviteMembers.call(
+                 ctx.team,
+                 ctx.activity,
+                 [{:name, ctx.eli}],
+                 ctx.user,
+                 :invite,
+                 later
+               )
+
+      assert_received {:d4h_write, :create, %{"status" => "ATTENDING"}}
+      assert [%Attendance{status: "attending", duration_in_minutes: 180}] = Repo.all(Attendance)
+    end
+
+    test "refuses a template after the start, and an activity deleted or published", ctx do
       picks = [{:name, ctx.eli}]
       later = DateTime.add(ctx.activity.started_at, 1, :minute)
       deleted = %{ctx.activity | deleted_at: ctx.now}
       published = %{ctx.activity | is_published: true}
 
       assert {:error, :started} =
-               InviteMembers.call(ctx.team, ctx.activity, picks, ctx.user, :invite, later)
+               InviteMembers.call(ctx.team, ctx.activity, picks, ctx.user, :template, later)
 
       assert {:error, :deleted} =
                InviteMembers.call(ctx.team, deleted, picks, ctx.user, :invite, ctx.now)

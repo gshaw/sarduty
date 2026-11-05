@@ -1,13 +1,16 @@
 defmodule App.Operation.InviteMembers do
   @moduledoc """
-  Adds members to an activity as No reply (#564), by name or by group: each gets an
-  attendance row in D4H as "REQUESTED", for the activity's times, and answers it
-  themselves. SAR Duty emails nobody. A change set applied at once, of source `:invite`
-  from the Add members page or `:template` for a template's groups (#162).
+  Adds members to an activity, by name or by group, for the activity's times. Before the
+  start each gets an attendance row in D4H as "REQUESTED", No reply (#564), and answers
+  it themselves. From the start, until it's published, the row is "ATTENDING" (#766), as
+  Take attendance adds a walk-in: a member removed by mistake comes back, and so does
+  someone who came without an invite on a night nobody scanned. SAR Duty emails nobody.
+  A change set applied at once, of source `:invite` from the Add members page or
+  `:template` for a template's groups (#162), which only adds before the start.
 
-  Only before the start, and never on a published activity. A group leaves out its
-  members away on the activity's day; a name never does. The copy gets each row D4H
-  took, so the activity's page and its email button show them at once.
+  Never on a published activity. A group leaves out its members away on the activity's
+  day; a name never does. The copy gets each row D4H took, so the activity's page and
+  its email button show them at once.
 
   plan/3 decides who goes, pure; call/6 reads and writes.
   """
@@ -73,8 +76,13 @@ defmodule App.Operation.InviteMembers do
     |> Enum.sort_by(&String.downcase(&1.name))
   end
 
-  @doc "The rows that add `add`, plan/3's picks, to the activity."
-  def rows(%Activity{} = activity, add) do
+  @doc """
+  The rows that add `add`, plan/3's picks, to the activity: No reply before the start at
+  `now`, and attended from it.
+  """
+  def rows(%Activity{} = activity, add, %DateTime{} = now) do
+    status = if Activity.started?(activity, now), do: "ATTENDING", else: "REQUESTED"
+
     for {reason, member} <- add do
       %ChangeSetRow{
         action: :create_attendance,
@@ -83,7 +91,7 @@ defmodule App.Operation.InviteMembers do
         new_value: %{
           "d4h_activity_id" => activity.d4h_activity_id,
           "d4h_member_id" => member.d4h_member_id,
-          "status" => "REQUESTED",
+          "status" => status,
           "starts_at" => ApplyChangeSet.iso(activity.started_at),
           "ends_at" => ApplyChangeSet.iso(activity.finished_at)
         }
@@ -98,9 +106,9 @@ defmodule App.Operation.InviteMembers do
   @doc """
   Adds the picks from `user`. `{:ok, %{rows: rows, on_activity: members, away:
   members}}`, with each row as D4H answered, or none when plan/3 left everyone out.
-  `{:error, reason}` for an activity that is deleted (`:deleted`), has started
-  (`:started`), or is published (`:published`), or when D4H refuses; error_text/2 words
-  it.
+  `{:error, reason}` for an activity that is deleted (`:deleted`), has started for a
+  template (`:started`), or is published (`:published`), or when D4H refuses;
+  error_text/2 words it.
   """
   def call(
         %Team{} = team,
@@ -113,7 +121,7 @@ defmodule App.Operation.InviteMembers do
       when team_id == team.id and source in [:invite, :template] do
     cond do
       activity.deleted_at -> {:error, :deleted}
-      Activity.started?(activity, now) -> {:error, :started}
+      source == :template and Activity.started?(activity, now) -> {:error, :started}
       activity.is_published -> {:error, :published}
       true -> add(team, activity, scope(team, picks), user, source, now)
     end
@@ -128,7 +136,9 @@ defmodule App.Operation.InviteMembers do
         {:ok, %{plan_result(plan) | rows: []}}
 
       add ->
-        with {:ok, rows} <- apply_rows(team, activity, rows(activity, add), user, source, now) do
+        rows = rows(activity, add, now)
+
+        with {:ok, rows} <- apply_rows(team, activity, rows, user, source, now) do
           write_copy(activity, rows)
           {:ok, %{plan_result(plan) | rows: rows}}
         end
@@ -220,7 +230,7 @@ defmodule App.Operation.InviteMembers do
           Service.Convert.duration_to_minutes(activity.started_at, activity.finished_at),
         started_at: activity.started_at,
         finished_at: activity.finished_at,
-        status: "requested"
+        status: String.downcase(row.new_value["status"])
       })
     end
   end

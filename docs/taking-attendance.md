@@ -179,6 +179,11 @@ checkboxes. Sending reads D4H again, plans again, and sends the kept changes as 
   own note and its own change set reason, "No reply, did not arrive". `REQUESTED` means
   invited: D4H gives every invited member that row until they reply. They never said
   they'd come, so they are not no-shows.
+- **A change by hand stays.** A member changed on the Members tab (#766), or added
+  after the start, is left out of the review until they scan again, so it never offers
+  to undo it, such as a member marked attended with no scan showing as a no-show.
+- **Send attendance shows once someone has scanned** (#766). It only sends the scans,
+  so with none it has nothing to send; the Members tab changes attendance by hand.
 - **A published activity is refused.** D4H's published flag is read live, not from the
   copy, and the page says to unpublish it with Change activity first.
 - **A 400 or 404 says the activity may be gone.** D4H answers that way when the activity
