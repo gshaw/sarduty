@@ -62,7 +62,7 @@ defmodule Web.ActivityAddMembersLiveTest do
 
   test "by group and by name, listed checked, naming who the group left out", ctx do
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
-    assert has_element?(lv, "#members-nothing-to-add")
+    assert has_element?(lv, "#members-nothing-to-add", "They stay under Not added yet, checked")
     refute has_element?(lv, "#add-member")
     refute has_element?(lv, "#add-group")
 

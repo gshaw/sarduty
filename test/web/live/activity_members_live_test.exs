@@ -732,7 +732,14 @@ defmodule Web.ActivityMembersLiveTest do
              )
 
       assert has_element?(lv, "#remove-emailed-table #remove-row-#{ctx.drew.id}", "Signed up")
-      assert has_element?(lv, "#remove-signed-up-warning")
+
+      assert has_element?(
+               lv,
+               "#remove-signed-up-warning",
+               "Each gets your message by email, because they signed up."
+             )
+
+      refute has_element?(lv, "#remove-intro", "D4H")
       refute has_element?(lv, "#remove-step input[name='member_ids[]']")
 
       assert has_element?(lv, "label[for=remove-message]", "Message to Drew Park")

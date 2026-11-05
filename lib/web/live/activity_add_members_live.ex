@@ -138,7 +138,7 @@ defmodule Web.ActivityAddMembersLive do
       <main class="content-2/3">
         <section id="members-to-add">
           <p :if={@to_add == []} id="members-nothing-to-add" class="hint">
-            Find a member or a group. They're listed here, checked, until you add them.
+            Find a member or a group. They stay under Not added yet, checked, until you add them.
           </p>
           <form
             :if={@to_add != []}
