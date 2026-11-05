@@ -22,6 +22,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
   them attended or absent, or remove them, with one button. Add members works until it's
   published, adding them as attended once it has started. Send attendance shows only
   once someone has scanned at Take attendance.
+- An activity's Members tab filters by group, before and after the start: pick Team
+  leaders to see how many signed up. The link keeps the filter.
 - The Dashboard's numbers and charts open the reports that draw them, so you can see how
   each is counted and copy one. Its numbers' lines now cover this year.
 - ⭐ Reports draw charts: end one with `chart columns`, `lines`, `stat`, `bars`,

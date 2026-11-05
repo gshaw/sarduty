@@ -215,4 +215,92 @@ defmodule Web.ActivityMembersLiveTest do
     render_hook(lv, "apply", %{"member_ids" => [to_string(other.id)], "change" => "absent"})
     assert Repo.all(ChangeSet) == []
   end
+
+  describe "the Group filter (#895)" do
+    setup ctx do
+      leaders = group_fixture(ctx.team, %{title: "Team leaders"})
+      group_member_fixture(leaders, ctx.casey)
+      group_member_fixture(leaders, ctx.riley)
+      %{leaders: leaders}
+    end
+
+    defp filter(lv, group),
+      do: lv |> form("#members-filter", %{"form" => %{"group" => group}}) |> render_change()
+
+    test "shows only the group's members, with the count, in the URL", ctx do
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+      assert has_element?(lv, "#members-filter-summary", "5 members")
+
+      filter(lv, ctx.leaders.id)
+      assert_patch(lv, path(ctx) <> "?group=#{ctx.leaders.id}")
+      assert has_element?(lv, "#members-filter-summary", "2 of 5 members, in Team leaders")
+      assert has_element?(lv, "#members-attended #member-row-#{ctx.casey.id}")
+      assert has_element?(lv, "#members-no-reply #member-row-#{ctx.riley.id}")
+      refute has_element?(lv, "#member-row-#{ctx.alex.id}")
+      refute has_element?(lv, "#members-absent")
+      assert has_element?(lv, "#activity-panel-counts", "2 attended · 1 absent · 2 no reply")
+
+      {:ok, lv, _html} = live(ctx.conn, path(ctx) <> "?group=#{ctx.leaders.id}")
+      refute has_element?(lv, "#member-row-#{ctx.alex.id}")
+    end
+
+    test "changing the filter unchecks the rows it hides", ctx do
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+      check(lv, [ctx.casey.id, ctx.cameron.id, ctx.riley.id], "absent")
+      assert has_element?(lv, "#members-change-send", "Mark 3 absent")
+
+      filter(lv, ctx.leaders.id)
+      assert has_element?(lv, "#members-change-send", "Mark 2 absent")
+      assert has_element?(lv, "#members-select-#{ctx.casey.id}[checked]")
+
+      filter(lv, "")
+      assert_patch(lv, path(ctx))
+      assert has_element?(lv, "#members-change-send", "Mark 2 absent")
+      refute has_element?(lv, "#members-select-#{ctx.cameron.id}[checked]")
+    end
+
+    test "a group nobody on the activity is in, or not the team's", ctx do
+      empty = group_fixture(ctx.team, %{title: "Drivers"})
+      {:ok, lv, _html} = live(ctx.conn, path(ctx) <> "?group=#{empty.id}")
+      assert has_element?(lv, "#members-none-shown", "No members match")
+      refute has_element?(lv, "#members-change-form")
+
+      other = group_fixture(team_fixture(), %{title: "Elsewhere"})
+      {:ok, lv, _html} = live(ctx.conn, path(ctx) <> "?group=#{other.id}")
+      assert has_element?(lv, "#members-filter-summary", "5 members")
+      assert has_element?(lv, "#member-row-#{ctx.alex.id}")
+    end
+
+    test "before the start, it filters the reply table", ctx do
+      starts = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+
+      ctx.activity
+      |> Ecto.Changeset.change(started_at: starts, finished_at: DateTime.add(starts, 2, :hour))
+      |> Repo.update!()
+
+      {:ok, lv, _html} = live(ctx.conn, path(ctx) <> "?group=#{ctx.leaders.id}")
+      assert has_element?(lv, "#members-table #member-row-#{ctx.riley.id}")
+      refute has_element?(lv, "#members-table #member-row-#{ctx.cameron.id}")
+    end
+
+    test "a member filters too" do
+      %{user: user, member: member, team: team} = member_with_login_fixture()
+      activity = activity_fixture(team, %{started_at: ~U[2026-10-28 02:00:00Z]})
+      attendance_fixture(activity, member)
+      other = member_fixture(team)
+      attendance_fixture(activity, other, %{status: "requested"})
+      group = group_fixture(team, %{title: "Team leaders"})
+      group_member_fixture(group, other)
+
+      {:ok, lv, _html} =
+        live(
+          log_in_user(build_conn(), user),
+          ~p"/teams/#{team}/activities/#{activity.id}/members"
+        )
+
+      filter(lv, group.id)
+      refute has_element?(lv, "#member-row-#{member.id}")
+      assert has_element?(lv, "#member-row-#{other.id}")
+    end
+  end
 end

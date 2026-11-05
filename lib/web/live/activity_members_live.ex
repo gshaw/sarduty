@@ -11,6 +11,11 @@ defmodule Web.ActivityMembersLive do
   start until the activity is published, and change them under the tables: one list and
   one button, as on Travel.
 
+  A filter bar over the tables, before and after the start, shows one group's members
+  (#895), in the URL as `?group=`. The ticks are the rows it shows: changing it unchecks
+  the rows it hides, so a button never reaches someone off the screen. The tab's and the
+  steps' paths keep it, so Back opens the tab as it was.
+
   Each change is a module in `@actions`, with Web.ActivityMembersLive.Action: its label,
   its hint, when it's offered, how it counts the button, and whether it applies in place
   or opens a step. A change in place calls its operation, and the tables, the panel's
@@ -25,15 +30,20 @@ defmodule Web.ActivityMembersLive do
   - The step sends `{:step_done, kind, text}` once it's done: the tab reloads, clears
     the ticks, and shows the toast.
   """
-  use Web, {:live_view_app_layout, access: :team}
+  # Everyone filters the tables: "change" is the filter bar's.
+  use Web, {:live_view_app_layout, access: :team, view_events: ["change"]}
 
   import Web.Components.Columns, only: [member_cell: 1, hours_cell: 1]
+  import Web.Components.FilterBar
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.Group
+  alias App.Model.GroupMember
   alias App.Model.Reminder
   alias App.Operation.ChangeAttendance
   alias App.ViewData.ActivityMembers
+  alias App.ViewModel.ActivityMembersFilterViewModel
   alias Service.Format
   alias Web.ActivityLive
   alias Web.ActivityMembersLive.Absent
@@ -48,19 +58,42 @@ defmodule Web.ActivityMembersLive do
 
   def mount(params, session, socket) do
     {:ok, socket} = ActivityLive.mount(params, session, socket)
-    {:ok, assign(socket, selected: MapSet.new(), choice: nil, step: nil)}
+
+    {:ok,
+     assign(socket,
+       selected: MapSet.new(),
+       choice: nil,
+       step: nil,
+       groups: Group.kinds(socket.assigns.current_team)
+     )}
   end
 
   def handle_params(params, uri, socket) do
     {:noreply, socket} = ActivityLive.handle_params(params, uri, socket)
-    {:noreply, socket |> keep_ticks() |> open_step(socket.assigns.live_action)}
+
+    {:noreply,
+     socket |> assign_filter(params) |> keep_ticks() |> open_step(socket.assigns.live_action)}
   end
 
-  # Ticks only for members still on the tab, such as after a refresh saw one go.
+  # The filter bar's Group (#895), in the URL as `?group=`: the tables show only its members.
+  defp assign_filter(socket, params) do
+    %{current_team: team, groups: groups} = socket.assigns
+    filter = ActivityMembersFilterViewModel.validate(params, groups)
+    assign(socket, filter: filter, group_ids: GroupMember.member_ids(team.id, filter.group))
+  end
+
+  # Ticks only for the rows the tab shows: a member who went, or one the filter hides, so
+  # the button never reaches someone off the screen.
   defp keep_ticks(socket) do
-    ids = MapSet.new(socket.assigns.members, & &1.member.id)
+    ids = socket.assigns |> shown() |> MapSet.new(& &1.member.id)
     assign(socket, selected: MapSet.intersection(socket.assigns.selected, ids))
   end
+
+  # The rows the filter shows.
+  defp shown(%{members: members, group_ids: nil}), do: members
+
+  defp shown(%{members: members, group_ids: ids}),
+    do: Enum.filter(members, &MapSet.member?(ids, &1.member.id))
 
   defp open_step(socket, :members), do: assign(socket, step: nil)
 
@@ -88,14 +121,22 @@ defmodule Web.ActivityMembersLive do
 
   defp offered(_assigns), do: []
 
-  defp checked(%{members: members, selected: selected}),
-    do: Enum.filter(members, &MapSet.member?(selected, &1.member.id))
+  defp checked(%{selected: selected} = assigns),
+    do: assigns |> shown() |> Enum.filter(&MapSet.member?(selected, &1.member.id))
 
   defp chosen(%{choice: choice} = assigns),
     do: assigns |> offered() |> Enum.find(&(&1.value() == choice))
 
+  # The filter bar: the tab again with the group in the URL, and keep_ticks unchecks the
+  # rows it hides.
+  def handle_event("change", %{"form" => form}, socket) do
+    filter = ActivityMembersFilterViewModel.validate(form, socket.assigns.groups)
+    %{current_team: team, activity: activity} = socket.assigns
+    {:noreply, push_patch(socket, to: members_path(team, activity, filter))}
+  end
+
   # The checked members and the change, kept so a re-render never unchecks them.
-  def handle_event("change", params, socket) do
+  def handle_event("tick", params, socket) do
     {:noreply,
      assign(socket,
        selected: params |> selected_ids() |> MapSet.new(),
@@ -157,13 +198,19 @@ defmodule Web.ActivityMembersLive do
 
   defdelegate render(assigns), to: ActivityLive
 
-  defp tab_path(%{current_team: team, activity: activity}),
-    do: ~p"/teams/#{team}/activities/#{activity.id}/members"
+  # The tab, and a step, keep the filter, so Back opens the tab as it was.
+  defp tab_path(%{current_team: team, activity: activity, filter: filter}),
+    do: members_path(team, activity, filter)
 
-  defp step_path(assigns, action) do
+  defp members_path(team, activity, filter),
+    do:
+      ~p"/teams/#{team}/activities/#{activity.id}/members?#{ActivityMembersFilterViewModel.query_params(filter)}"
+
+  defp step_path(%{current_team: team, activity: activity, filter: filter}, action) do
     {:step, live_action} = action.run()
     segment = live_action |> Atom.to_string() |> String.replace("_", "-")
-    tab_path(assigns) <> "/" <> segment
+
+    ~p"/teams/#{team}/activities/#{activity.id}/members/#{segment}?#{ActivityMembersFilterViewModel.query_params(filter)}"
   end
 
   # Ids come from the browser; only members the tab shows are changed.
@@ -194,6 +241,9 @@ defmodule Web.ActivityMembersLive do
   attr :step, :atom, default: nil, doc: "the open step's action, or nil for the tab"
   attr :user, :any, required: true
   attr :service, :string, required: true
+  attr :filter, ActivityMembersFilterViewModel, required: true, doc: "the filter bar's choices"
+  attr :groups, :list, required: true, doc: "the team's groups as `{title, id}`"
+  attr :group_ids, :any, required: true, doc: "the group's member ids, or nil for no filter"
 
   @doc """
   The tab, drawn by Web.ActivityLive's page. The counts are the panel's line, on every
@@ -214,9 +264,13 @@ defmodule Web.ActivityMembersLive do
 
     checked = checked(assigns)
     action = Enum.find(actions, &(&1.value() == assigns.choice))
+    shown = shown(assigns)
 
     assigns =
       assign(assigns,
+        shown: shown,
+        filter_form: to_form(%{"group" => assigns.filter.group}, as: "form"),
+        filter_count: filter_count(shown, assigns),
         timezone: assigns.team.timezone,
         ctx: ctx,
         actions: actions,
@@ -244,7 +298,7 @@ defmodule Web.ActivityMembersLive do
         activity={@activity}
         user={@user}
         checked={@checked}
-        back={~p"/teams/#{@team}/activities/#{@activity.id}/members"}
+        back={members_path(@team, @activity, @filter)}
       />
       <div :if={!@step}>
         <p :if={@batch} id="members-batch" class="hint">
@@ -272,26 +326,55 @@ defmodule Web.ActivityMembersLive do
             navigate={~p"/teams/#{@team}/activities/#{@activity.id}/members/remove"}
           >Remove members</.a>
         </p>
+        <.filter_bar
+          :if={@members != [] and @groups != []}
+          for={@filter_form}
+          id="members-filter"
+          count={@filter_count}
+          clear={members_path(@team, @activity, %ActivityMembersFilterViewModel{})}
+          path_fn={
+            &members_path(
+              @team,
+              @activity,
+              ActivityMembersFilterViewModel.validate(Map.new(&1), @groups)
+            )
+          }
+        >
+          <:filter
+            field={@filter_form[:group]}
+            label="Group"
+            type="combobox"
+            options={@groups}
+            default=""
+          />
+        </.filter_bar>
+        <.empty_state
+          :if={@members != [] and @shown == []}
+          id="members-none-shown"
+          title="No members match"
+        >
+          Change the group.
+        </.empty_state>
         <.reply_table
-          :if={!@started? and @members != []}
+          :if={!@started? and @shown != []}
           activity={@activity}
           team={@team}
-          members={@members}
+          members={@shown}
           standings={@standings}
           now={@now}
           reminded={@reminded}
         />
         <.form
-          :if={@changeable? and @members != []}
+          :if={@changeable? and @shown != []}
           for={%{}}
           id="members-change-form"
-          phx-change="change"
+          phx-change="tick"
           phx-submit="apply"
         >
           <.attendance_tables
             activity={@activity}
             team={@team}
-            members={@members}
+            members={@shown}
             standings={@standings}
             selected={@selected}
             changeable?={true}
@@ -319,10 +402,10 @@ defmodule Web.ActivityMembersLive do
           </div>
         </.form>
         <.attendance_tables
-          :if={@started? and !@changeable? and @members != []}
+          :if={@started? and !@changeable? and @shown != []}
           activity={@activity}
           team={@team}
-          members={@members}
+          members={@shown}
           standings={@standings}
           selected={@selected}
           changeable?={false}
@@ -473,6 +556,16 @@ defmodule Web.ActivityMembersLive do
       </p>
     </div>
     """
+  end
+
+  # "13 members", or with a group "3 of 13 members, in Team leaders".
+  defp filter_count(shown, %{members: members, filter: filter, groups: groups}) do
+    all = members |> length() |> Format.count(one: "%d member", many: "%d members")
+
+    case Enum.find(groups, fn {_title, id} -> id == filter.group end) do
+      nil -> all
+      {title, _id} -> "#{shown |> length() |> Format.number()} of #{all}, in #{title}"
+    end
   end
 
   defp table_id("attending"), do: "attended"
