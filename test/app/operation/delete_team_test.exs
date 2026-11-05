@@ -9,6 +9,7 @@ defmodule App.Operation.DeleteTeamTest do
   alias App.Model.Team
   alias App.Operation.DeleteTeam
   alias App.Repo
+  alias App.Worker.SyncTeamChangesWorker
 
   # A team with a row in most kinds of table, reached through team_id and through
   # parents that have none (attendances, group members, awards, letters, certificates).
@@ -47,7 +48,8 @@ defmodule App.Operation.DeleteTeamTest do
     other_counts = DeleteTeam.row_counts(other)
     assert map_size(DeleteTeam.row_counts(team)) > 15
 
-    assert {:ok, nil} = DeleteTeam.call(team, "coast range sar ", admin)
+    assert {:ok, %{rows: rows, snapshot: nil}} = DeleteTeam.call(team, "coast range sar ", admin)
+    assert rows > 15
 
     refute Repo.get(Team, team.id)
     assert DeleteTeam.row_counts(team) == %{}
@@ -62,9 +64,9 @@ defmodule App.Operation.DeleteTeamTest do
   end
 
   test "records the delete and emails the admins", %{admin: admin, team: team} do
-    {:ok, _snapshot} = DeleteTeam.call(team, team.name, admin)
+    {:ok, _deleted} = DeleteTeam.call(team, team.name, admin)
 
-    assert %Event{user_id: user_id, data: %{"subdomain" => subdomain}} =
+    assert %Event{user_id: user_id, data: %{"subdomain" => subdomain, "reason" => "admin"}} =
              Repo.get_by!(Event, kind: :team_deleted)
 
     assert user_id == admin.id
@@ -72,22 +74,66 @@ defmodule App.Operation.DeleteTeamTest do
     assert_email_sent(subject: "Team deleted from SAR Duty: Coast Range SAR")
   end
 
-  test "name_matches? ignores case and spaces at either end", %{team: team} do
-    assert DeleteTeam.name_matches?(team, "  COAST RANGE SAR")
-    refute DeleteTeam.name_matches?(team, "Coast  Range SAR")
-    refute DeleteTeam.name_matches?(team, nil)
+  test "purge/2 with no user records the reason and emails nobody", %{team: team} do
+    assert {:ok, %{snapshot: nil}} = DeleteTeam.purge(team, reason: :admin)
+
+    assert %Event{user_id: nil, data: %{"reason" => "admin"}} =
+             Repo.get_by!(Event, kind: :team_deleted)
+
+    assert_no_email_sent()
   end
 
-  # Every table that holds team rows is found, so a new one can't be missed.
-  test "every table with a team_id is in the delete" do
+  test "deletes the team's waiting jobs and leaves another team's", %{team: team} do
+    other = team_fixture()
+
+    # Inserted as they wait, since tests run jobs inline.
+    %{"team_id" => team.id} |> SyncTeamChangesWorker.new() |> Repo.insert!()
+    %{"team_id" => other.id} |> SyncTeamChangesWorker.new() |> Repo.insert!()
+
+    {:ok, _deleted} = DeleteTeam.purge(team, reason: :admin)
+
+    assert [%{args: %{"team_id" => other_id}}] = Repo.all(Oban.Job)
+    assert other_id == other.id
+  end
+
+  defp tables do
     %{rows: rows} =
       Repo.query!(
-        "SELECT m.name FROM sqlite_master m, pragma_table_info(m.name) c WHERE m.type = 'table' AND c.name = 'team_id'"
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('schema_migrations', 'teams')"
       )
 
-    scoped = 1 |> DeleteTeam.scopes() |> Enum.map(&elem(&1, 0))
+    List.flatten(rows)
+  end
 
-    for [table] <- rows, do: assert(table in scoped, "#{table} isn't deleted with its team")
-    assert List.last(scoped) == "teams"
+  defp columns(table) do
+    %{rows: rows} = Repo.query!(~s{SELECT name FROM pragma_table_info('#{table}')})
+    List.flatten(rows)
+  end
+
+  defp keys(table) do
+    %{rows: rows} =
+      Repo.query!(~s{SELECT "from", "table" FROM pragma_foreign_key_list('#{table}')})
+
+    Enum.map(rows, &List.to_tuple/1)
+  end
+
+  # A new table with a team_id belongs in @team_tables. Don't skip this: a team deleted
+  # without it leaves rows behind, or fails the delete at commit.
+  test "every table with a team_id is deleted" do
+    with_team_id = tables() |> Enum.filter(&("team_id" in columns(&1))) |> Enum.sort()
+    assert Enum.sort(DeleteTeam.team_tables()) == with_team_id
+  end
+
+  test "every row hanging off a team's rows without a team_id is deleted" do
+    team_tables = DeleteTeam.team_tables()
+
+    hanging =
+      for table <- tables(),
+          "team_id" not in columns(table),
+          {key, parent} <- keys(table),
+          parent in team_tables,
+          do: {table, key, parent}
+
+    assert Enum.sort(DeleteTeam.child_tables()) == Enum.sort(hanging)
   end
 end

@@ -420,6 +420,17 @@ defmodule App.Model.Team do
   def d4h_can?(%Team{d4h_permissions: permissions}, feature),
     do: D4HAccess.can?(permissions, feature)
 
+  @doc """
+  Whether `typed` is the team's name, ignoring case and spaces at either end: the
+  confirmation for deleting a team (App.Operation.DeleteTeam).
+  """
+  def name_matches?(%Team{name: name}, typed) when is_binary(typed),
+    do: comparable_name(typed) == comparable_name(name)
+
+  def name_matches?(_team, _typed), do: false
+
+  defp comparable_name(name), do: name |> String.trim() |> String.downcase()
+
   def logo_path(team_subdomain) do
     logo_path = System.fetch_env!("TEAM_LOGO_PATH")
     Path.join(logo_path, "#{team_subdomain}.png")

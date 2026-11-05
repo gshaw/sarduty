@@ -54,7 +54,7 @@ defmodule Web.Admin.TeamLive do
   defp assign_delete_form(socket, typed) do
     assign(socket,
       delete_form: to_form(%{"name" => typed}, as: "delete"),
-      delete_ready: DeleteTeam.name_matches?(socket.assigns[:team] || %{}, typed)
+      delete_ready: Team.name_matches?(socket.assigns[:team], typed)
     )
   end
 
@@ -427,7 +427,7 @@ defmodule Web.Admin.TeamLive do
     %{team: team, current_user: admin} = socket.assigns
 
     case DeleteTeam.call(team, typed, admin) do
-      {:ok, _snapshot} ->
+      {:ok, _deleted} ->
         {:noreply,
          socket
          |> put_flash(:info, "Deleted #{team.name}.")

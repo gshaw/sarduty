@@ -66,7 +66,7 @@ defmodule App.Operation.RestoreTeam do
             [team_id, d4h_team_id, subdomain]
           )
 
-        if live == 0, do: :ok, else: {:error, "a team with its id, D4H id, or subdomain is live"}
+        if live == 0, do: :ok, else: {:error, "the team signed up again since"}
     end
   end
 

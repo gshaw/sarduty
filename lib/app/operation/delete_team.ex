@@ -1,15 +1,18 @@
 defmodule App.Operation.DeleteTeam do
   @moduledoc """
-  Deletes a team and every row SAR Duty holds for it, from a SAR Duty admin's team page.
-  Nothing in D4H or Records changes. The admin types the team's name to confirm.
+  The one place a team's rows are deleted. A SAR Duty admin's Delete team (`call/3`)
+  uses it now; Try a demo (#857) and a team closing its own account call `purge/2` too.
 
-  Which rows go is read from the database's foreign keys, not a list kept by hand: a row
-  goes when it has the team's `team_id`, or a key that points at a row that goes. Keys
-  that set null on delete, such as a user's last team, don't count. Foreign keys are
-  checked at commit, so a table the walk misses fails the delete instead of leaving rows
-  behind.
+  Every table with a `team_id` is in @team_tables, and every table whose rows hang off
+  one of those without a `team_id` of its own is in @child_tables. DeleteTeamTest fails
+  when a migration adds a table to neither, so a new table can't leave rows behind. It
+  runs in one transaction with foreign keys checked at commit, so a row missed still
+  rolls the whole delete back.
 
-  Before deleting, it copies the team's rows to a file beside the database, so
+  Users stay: a user is only an email and may be on another team (#890 prunes logins
+  that reach no team). Nothing in D4H or Records changes.
+
+  `snapshot: true` first copies the team's rows to a file beside the database, so
   App.Operation.RestoreTeam can undo a mistake for 7 days. The file has every table, and
   in them only this team's rows. App.Worker.PruneEventsWorker deletes older copies.
   """
@@ -24,50 +27,105 @@ defmodule App.Operation.DeleteTeam do
 
   @snapshot_days 7
 
+  @team_tables ~w(activities activity_updates agent_connections attendance_scans
+                  attention_snoozes certificates change_set_rows change_sets chore_categories
+                  chore_events chores custom_fields d4h_changes endorsements equipment_items
+                  equipment_usages events group_membership_changes group_rules groups
+                  home_coordinates location_bookmarks mcp_calls member_away_periods member_cards
+                  member_check_ins member_standing_changes members no_shows qualifications
+                  reminders reports route_distances tags team_login_grants templates trips
+                  whiteboard_notes)
+
+  # Table, its key, and the team table that key points at.
+  @child_tables [
+    {"attendances", "activity_id", "activities"},
+    {"attendances", "member_id", "members"},
+    {"group_members", "group_id", "groups"},
+    {"group_members", "member_id", "members"},
+    {"member_qualification_awards", "member_id", "members"},
+    {"member_qualification_awards", "qualification_id", "qualifications"},
+    {"tax_credit_letters", "member_id", "members"},
+    {"endorsement_includes", "endorsement_id", "endorsements"},
+    {"endorsement_includes", "included_endorsement_id", "endorsements"},
+    {"endorsement_qualifications", "endorsement_id", "endorsements"},
+    {"group_rule_references", "endorsement_id", "endorsements"},
+    {"group_rule_references", "group_rule_id", "group_rules"},
+    {"chore_category_tags", "chore_category_id", "chore_categories"},
+    {"chore_category_tags", "tag_id", "tags"},
+    {"template_groups", "group_id", "groups"},
+    {"template_groups", "template_id", "templates"},
+    {"template_items", "equipment_item_id", "equipment_items"},
+    {"template_items", "template_id", "templates"},
+    {"template_tags", "tag_id", "tags"},
+    {"template_tags", "template_id", "templates"},
+    {"certificate_files", "certificate_id", "certificates"},
+    {"pass_registrations", "member_card_id", "member_cards"},
+    {"report_versions", "report_id", "reports"}
+  ]
+
+  @doc false
+  def team_tables, do: @team_tables
+
+  @doc false
+  def child_tables, do: @child_tables
+
   def snapshot_days, do: @snapshot_days
 
-  @doc "Whether `typed` is the team's name, ignoring case and spaces at either end."
-  def name_matches?(%Team{name: name}, typed) when is_binary(typed),
-    do: comparable(typed) == comparable(name)
-
-  def name_matches?(_team, _typed), do: false
-
-  defp comparable(name), do: name |> String.trim() |> String.downcase()
-
   @doc """
-  Deletes the team when `typed` matches its name. Returns `{:ok, snapshot_path}`, nil
-  when snapshots are off (tests), or `{:error, :name_mismatch}`.
+  A SAR Duty admin's delete: when `typed` matches the team's name, deletes it with a
+  snapshot and emails every SAR Duty admin. `{:ok, result}` as `purge/2` gives it, or
+  `{:error, :name_mismatch}`.
   """
   def call(%Team{} = team, typed, %User{is_admin: true} = admin) do
-    if name_matches?(team, typed) do
-      snapshot = take_snapshot(team)
-      counts = row_counts(team)
+    if Team.name_matches?(team, typed) do
+      {:ok, %{snapshot: snapshot}} =
+        result = purge(team, reason: :admin, by: admin, snapshot: true)
 
-      # A key the walk missed fails the commit, and nothing is deleted.
-      {:ok, _job} =
-        Repo.transaction(fn ->
-          delete_rows(team)
-          cancel_jobs(team)
-
-          Event.record!(:team_deleted,
-            user_id: admin.id,
-            data: %{
-              team_id: team.id,
-              d4h_team_id: team.d4h_team_id,
-              subdomain: team.subdomain,
-              rows: Enum.sum(Map.values(counts))
-            }
-          )
-
-          NotifyTeamDeletedWorker.enqueue(team, admin, snapshot)
-        end)
-
-      remove_logo(team)
-      Logger.info("Deleted team #{team.id} (#{team.subdomain}); snapshot #{snapshot}")
-      {:ok, snapshot}
+      NotifyTeamDeletedWorker.enqueue(team, admin, snapshot)
+      result
     else
       {:error, :name_mismatch}
     end
+  end
+
+  @doc """
+  Deletes the team and every row SAR Duty holds for it, cancels its waiting jobs, and
+  records a `team_deleted` event, in one transaction; then removes its logo.
+
+  - `reason:` why, kept in the event: `:admin`
+  - `by:` the user who deleted it, or nil
+  - `snapshot:` true copies the team's rows first (nil when no directory is set, as in
+    tests)
+
+  Returns `{:ok, %{rows: count, snapshot: path_or_nil}}`. Each caller tells its own people.
+  """
+  def purge(%Team{} = team, opts) do
+    reason = Keyword.fetch!(opts, :reason)
+    by = Keyword.get(opts, :by)
+    snapshot = if Keyword.get(opts, :snapshot, false), do: take_snapshot(team)
+    rows = team |> row_counts() |> Map.values() |> Enum.sum()
+
+    # A table missing from the lists fails the commit, and nothing is deleted.
+    {:ok, _event} =
+      Repo.transaction(fn ->
+        delete_rows(team)
+        cancel_jobs(team)
+
+        Event.record!(:team_deleted,
+          user_id: by && by.id,
+          data: %{
+            reason: reason,
+            team_id: team.id,
+            d4h_team_id: team.d4h_team_id,
+            subdomain: team.subdomain,
+            rows: rows
+          }
+        )
+      end)
+
+    remove_logo(team)
+    Logger.info("Deleted team #{team.id} (#{team.subdomain}), #{reason}; snapshot #{snapshot}")
+    {:ok, %{rows: rows, snapshot: snapshot}}
   end
 
   @doc "Rows that go with the team, per table, leaving out tables with none."
@@ -79,7 +137,28 @@ defmodule App.Operation.DeleteTeam do
     |> Map.reject(fn {_table, count} -> count == 0 end)
   end
 
-  # Children before parents, so each table's WHERE still finds its parents' rows.
+  @doc """
+  Each table that holds the team's rows, with the WHERE that finds them: child tables
+  first, so their WHERE still finds the parents, then team tables, and `teams` last.
+  The WHERE reads parents in `schema`: "main", or an attached copy for
+  App.Operation.RestoreTeam and the snapshot.
+  """
+  def scopes(team_id, schema \\ "main") when is_integer(team_id) do
+    children =
+      @child_tables
+      |> Enum.group_by(&elem(&1, 0), fn {_table, key, parent} ->
+        ~s|"#{key}" IN (SELECT id FROM "#{schema}"."#{parent}" WHERE team_id = #{team_id})|
+      end)
+      |> Enum.sort()
+      |> Enum.map(fn {table, clauses} -> {table, Enum.join(clauses, " OR ")} end)
+
+    Enum.concat([
+      children,
+      Enum.map(@team_tables, &{&1, "team_id = #{team_id}"}),
+      [{"teams", "id = #{team_id}"}]
+    ])
+  end
+
   # defer_foreign_keys holds the checks to commit, when every row is gone.
   defp delete_rows(%Team{id: team_id}) do
     Repo.query!("PRAGMA defer_foreign_keys = ON")
@@ -96,111 +175,6 @@ defmodule App.Operation.DeleteTeam do
       [team_id]
     )
   end
-
-  @doc """
-  Each table that holds the team's rows, with the WHERE that finds them, children first
-  and `teams` last. The WHERE reads the tables in `schema`: "main", or an attached copy
-  for App.Operation.RestoreTeam. The tables come from this database's keys.
-  """
-  def scopes(team_id, schema \\ "main") when is_integer(team_id) do
-    keys = foreign_keys()
-    with_team_id = keys |> Map.keys() |> Enum.filter(&team_id_column?/1) |> MapSet.new()
-    in_scope = keys |> reach(MapSet.new(["teams"])) |> MapSet.union(with_team_id)
-
-    for table <- order(in_scope, keys, with_team_id),
-        do: {table, where(table, {team_id, schema}, keys, with_team_id, in_scope, MapSet.new())}
-  end
-
-  # Every table, with its foreign keys that delete with or block their parent.
-  defp foreign_keys do
-    %{rows: rows} =
-      Repo.query!(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
-      )
-
-    for [table] <- rows, into: %{} do
-      %{rows: fks} =
-        Repo.query!(~s|SELECT "table", "from", "to", on_delete FROM pragma_foreign_key_list(?)|, [
-          table
-        ])
-
-      {table,
-       for(
-         [parent, column, to, on_delete] <- fks,
-         on_delete != "SET NULL",
-         do: {column, parent, to}
-       )}
-    end
-  end
-
-  defp team_id_column?(table) do
-    %{rows: rows} =
-      Repo.query!("SELECT count(*) FROM pragma_table_info(?) WHERE name = 'team_id'", [table])
-
-    rows == [[1]]
-  end
-
-  # Tables whose keys lead, step by step, to `teams`.
-  defp reach(keys, found) do
-    more =
-      for {table, fks} <- keys,
-          table not in found,
-          Enum.any?(fks, fn {_column, parent, _to} -> parent in found end),
-          into: found,
-          do: table
-
-    if MapSet.size(more) == MapSet.size(found), do: found, else: reach(keys, more)
-  end
-
-  defp where("teams", {team_id, _schema}, _keys, _with_team_id, _in_scope, _seen),
-    do: "id = #{team_id}"
-
-  defp where(table, {team_id, schema} = team, keys, with_team_id, in_scope, seen) do
-    if table in with_team_id do
-      "team_id = #{team_id}"
-    else
-      seen = MapSet.put(seen, table)
-
-      keys
-      |> Map.fetch!(table)
-      |> Enum.filter(fn {_column, parent, _to} -> parent in in_scope and parent not in seen end)
-      |> Enum.map(fn {column, parent, to} ->
-        parent_where = where(parent, team, keys, with_team_id, in_scope, seen)
-        ~s|"#{column}" IN (SELECT "#{to}" FROM "#{schema}"."#{parent}" WHERE #{parent_where})|
-      end)
-      |> or_clauses()
-    end
-  end
-
-  defp or_clauses([]), do: "0"
-  defp or_clauses(clauses), do: Enum.join(clauses, " OR ")
-
-  # Tables found through a parent go first, deepest first: their WHERE reads the parent.
-  # Tables with team_id read nothing else, and `teams` goes last.
-  defp order(in_scope, keys, with_team_id) do
-    through_parent = in_scope |> MapSet.delete("teams") |> MapSet.difference(with_team_id)
-    direct = in_scope |> MapSet.delete("teams") |> MapSet.intersection(with_team_id)
-
-    Enum.concat([
-      children_first(Enum.sort(through_parent), keys, []),
-      Enum.sort(direct),
-      ["teams"]
-    ])
-  end
-
-  defp children_first([], _keys, done), do: Enum.reverse(done)
-
-  defp children_first(left, keys, done) do
-    # A table is ready when no table still left reads it.
-    ready =
-      Enum.reject(left, fn table -> Enum.any?(left -- [table], &reads?(keys, &1, table)) end)
-
-    # A cycle: take the rest in name order, and leave it to the commit's check.
-    ready = if ready == [], do: left, else: ready
-    children_first(left -- ready, keys, Enum.reverse(ready) ++ done)
-  end
-
-  defp reads?(keys, child, parent), do: Enum.any?(keys[child], &(elem(&1, 1) == parent))
 
   # The team's rows, before anything is deleted. VACUUM INTO can't run in a
   # transaction, so tests, which run in one, set no directory.
