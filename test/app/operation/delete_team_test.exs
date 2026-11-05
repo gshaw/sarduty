@@ -85,6 +85,15 @@ defmodule App.Operation.DeleteTeamTest do
     assert_no_email_sent()
   end
 
+  test "a demo's delete records demo_deleted, not team_deleted (#857)", %{
+    team: team
+  } do
+    assert {:ok, _result} = DeleteTeam.purge(team, reason: :demo)
+
+    assert %Event{data: %{"reason" => "demo"}} = Repo.get_by!(Event, kind: :demo_deleted)
+    refute Repo.get_by(Event, kind: :team_deleted)
+  end
+
   test "deletes the team's waiting jobs and leaves another team's", %{team: team} do
     other = team_fixture()
 
