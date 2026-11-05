@@ -122,9 +122,8 @@ defmodule App.Accounts.UserNotifier do
   def deliver_team_deleted(admin_emails, args) do
     undo =
       if args["snapshot"],
-        do:
-          "A copy of the database from just before is on the server for 7 days:\n#{args["snapshot"]}",
-        else: "No copy of the database was taken."
+        do: "A copy of the team's data is on the server for 7 days:\n#{args["snapshot"]}",
+        else: "No copy of the team's data was taken."
 
     new()
     |> to(admin_emails)

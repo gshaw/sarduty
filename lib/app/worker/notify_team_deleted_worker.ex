@@ -1,7 +1,7 @@
 defmodule App.Worker.NotifyTeamDeletedWorker do
   @moduledoc """
   Tells the SAR Duty admins a team was deleted (App.Operation.DeleteTeam), who did it,
-  and where the database copy from just before is. The team is gone by the time it runs,
+  and where the copy of its data is. The team is gone by the time it runs,
   so the job carries what the email names.
   """
 

@@ -1,6 +1,6 @@
 defmodule App.Operation.RestoreTeam do
   @moduledoc """
-  Puts a deleted team back from the database copy App.Operation.DeleteTeam took first.
+  Puts a deleted team back from the copy of its rows App.Operation.DeleteTeam took first.
   Run by hand on the machine (docs/deployment.md); there is no page for it.
 
   It copies the team's rows, as DeleteTeam.scopes/2 finds them in the copy, back into

@@ -108,8 +108,9 @@ through the sync's ping every 10 minutes, still alerts when the app or Oban is d
   consistent copy with `VACUUM INTO`, then tars it and the logos over `fly ssh` into
   `backups/` (gitignored), encrypted with age and stamped to the minute.
 - **Deleting a team** (a SAR Duty admin's team page, `App.Operation.DeleteTeam`) first
-  copies the whole database with `VACUUM INTO` to `/mnt/sarduty/deleted-teams/`, kept 7
-  days. If the copy fails, nothing is deleted. The admins' email names the file and the
+  copies the team's rows to `/mnt/sarduty/deleted-teams/`, kept 7 days: `VACUUM INTO`,
+  then every other row deleted and the file vacuumed, so no other team's data is left
+  in it, logins included. If the copy fails, nothing is deleted. The admins' email names the file and the
   team's id is in the `team_deleted` event. To put the team back, with every row's own id:
   `bin/sarduty eval "Application.ensure_all_started(:sarduty); App.Operation.RestoreTeam.call(\"<file>\", <team id>) |> IO.inspect()"`.
   It refuses when the team signed up again since. Tried on a copy of South Fraser: every

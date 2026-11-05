@@ -312,7 +312,7 @@ defmodule Web.Admin.TeamLive do
             )}. Nothing in {D4H.service_name(@team)} changes, and the team can sign up again.
           </p>
           <p>
-            The server keeps a copy of the whole database from just before for {Service.Format.days(
+            The server keeps a copy of the team's data for {Service.Format.days(
               DeleteTeam.snapshot_days()
             )}, in case it was a mistake. Every SAR Duty admin gets an email.
           </p>

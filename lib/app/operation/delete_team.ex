@@ -9,8 +9,9 @@ defmodule App.Operation.DeleteTeam do
   checked at commit, so a table the walk misses fails the delete instead of leaving rows
   behind.
 
-  Before deleting, it copies the whole database beside it with `VACUUM INTO`, so a
-  mistake can be undone for 7 days. App.Worker.PruneEventsWorker deletes older copies.
+  Before deleting, it copies the team's rows to a file beside the database, so
+  App.Operation.RestoreTeam can undo a mistake for 7 days. The file has every table, and
+  in them only this team's rows. App.Worker.PruneEventsWorker deletes older copies.
   """
 
   alias App.Accounts.User
@@ -201,8 +202,8 @@ defmodule App.Operation.DeleteTeam do
 
   defp reads?(keys, child, parent), do: Enum.any?(keys[child], &(elem(&1, 1) == parent))
 
-  # A copy of the whole database, beside it, before anything is deleted. VACUUM INTO
-  # can't run in a transaction, so tests, which run in one, set no directory.
+  # The team's rows, before anything is deleted. VACUUM INTO can't run in a
+  # transaction, so tests, which run in one, set no directory.
   defp take_snapshot(%Team{} = team) do
     case snapshot_dir() do
       nil ->
@@ -213,8 +214,56 @@ defmodule App.Operation.DeleteTeam do
         stamp = Calendar.strftime(DateTime.utc_now(), "%Y%m%d-%H%M%S")
         path = Path.join(dir, "#{team.subdomain}-#{stamp}.db")
         Repo.query!("VACUUM INTO ?", [path])
+        keep_only_team(path, team.id)
         path
     end
+  end
+
+  @doc """
+  Empties every table in the database file at `path` but for team `team_id`'s rows, then
+  vacuums it, so no other team's data is left even in its free pages. Public for the
+  check that a copy holds only its team.
+  """
+  def keep_only_team(path, team_id) do
+    scopes = scopes(team_id, "copy")
+
+    # coalesce: a NULL team_id or key makes the WHERE NULL, and NOT NULL keeps the row.
+    # Keys are off on this connection while it works: a team's row may name a login the
+    # copy no longer has, and RestoreTeam puts it back beside the live one.
+    Repo.checkout(fn ->
+      Repo.query!("PRAGMA foreign_keys = OFF")
+      Repo.query!("ATTACH DATABASE ? AS copy", [path])
+
+      try do
+        {:ok, _done} =
+          Repo.transaction(fn ->
+            for table <- copy_tables() do
+              case List.keyfind(scopes, table, 0) do
+                {^table, where} ->
+                  Repo.query!(~s|DELETE FROM copy."#{table}" WHERE NOT coalesce(#{where}, 0)|)
+
+                nil ->
+                  Repo.query!(~s|DELETE FROM copy."#{table}"|)
+              end
+            end
+          end)
+
+        Repo.query!("VACUUM copy")
+      after
+        Repo.query!("DETACH DATABASE copy")
+        Repo.query!("PRAGMA foreign_keys = ON")
+      end
+    end)
+  end
+
+  # sqlite_sequence keeps only each table's last id, which a restore doesn't read.
+  defp copy_tables do
+    %{rows: rows} =
+      Repo.query!(
+        "SELECT name FROM copy.sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+      )
+
+    Enum.map(rows, &hd/1)
   end
 
   defp snapshot_dir, do: Application.get_env(:sarduty, __MODULE__, [])[:snapshot_dir]
