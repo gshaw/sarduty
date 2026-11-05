@@ -59,9 +59,10 @@ end it.
   ([outbox.md](outbox.md)) instead: reminders, updates, removals, tax credit letters, and
   the team admin notices, one per member as on a real team. Its links work, so the
   visitor can answer a reminder as the member and see the reply land.
-- **Never a text.** Text login skips every member of a demo team
-  (`Member.current_emails_with_phone/2`), and a demo team's member cannot add a mobile
-  number (`ChangeOwnPhone`), so no text goes to a number a visitor typed.
+- **No real texts.** A demo team's texts go to its Outbox too: the code that confirms a
+  new mobile number (`ChangeOwnPhone`, through `Twilio.send_sms/3` with the team's id).
+  Text login skips every member of a demo team (`Member.current_emails_with_phone/2`), so
+  no text goes to a number a visitor typed.
 
 ## What a demo shows
 

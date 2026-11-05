@@ -41,7 +41,8 @@ defmodule App.Model.OutboxMessage do
   end
 
   @doc "Keeps a text to an E.164 number."
-  def add_text!(to, body), do: insert!(%OutboxMessage{kind: :text, to: to, body: body})
+  def add_text!(to, body, team_id \\ nil),
+    do: insert!(%OutboxMessage{team_id: team_id, kind: :text, to: to, body: body})
 
   # An open Outbox page shows a new message at once, so an agent waiting for an email
   # needn't reload.

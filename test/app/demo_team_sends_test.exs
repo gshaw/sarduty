@@ -119,13 +119,22 @@ defmodule App.DemoTeamSendsTest do
       refute_received {:text, _, _}
     end
 
-    test "a demo team's member cannot add a mobile number" do
+    test "a demo team's phone code goes to its Outbox, not the number" do
       %{user: user, team: team} = user_with_team_fixture()
       demo_team_fixture(team)
       member = Repo.get_by!(Member, team_id: team.id, email: user.email)
 
-      assert {:error, "A demo cannot add a mobile number." <> _} =
-               ChangeOwnPhone.request(member, user, "604-555-0199")
+      assert {:ok, "+16045550199"} = ChangeOwnPhone.request(member, user, "604-555-0199")
+      refute_received {:text, _, _}
+
+      assert [
+               %OutboxMessage{
+                 kind: :text,
+                 to: "+16045550199",
+                 body: "Your SAR Duty confirmation code" <> _
+               }
+             ] =
+               OutboxMessage.list(team)
     end
   end
 

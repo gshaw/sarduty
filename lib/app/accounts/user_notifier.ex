@@ -53,15 +53,19 @@ defmodule App.Accounts.UserNotifier do
 
   # The login text. The last line is the one-time code format iOS and Android read to
   # offer the code on the login page, bound to this site's domain.
-  @doc "A code that proves a member gets texts at a new number (#156)."
-  def deliver_confirm_text(phone, code) do
-    Twilio.send_sms(phone, """
-    Your SAR Duty confirmation code: #{code}
+  @doc "A code that proves a member gets texts at a new number (#156), from `team_id`."
+  def deliver_confirm_text(phone, code, team_id) do
+    Twilio.send_sms(
+      phone,
+      """
+      Your SAR Duty confirmation code: #{code}
 
-    It works once, for 15 minutes.
+      It works once, for 15 minutes.
 
-    @#{Web.Endpoint.host()} ##{code}\
-    """)
+      @#{Web.Endpoint.host()} ##{code}\
+      """,
+      team_id
+    )
   end
 
   @doc "Tells a member, at their email, that their mobile number changed (#156)."

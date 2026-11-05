@@ -6,6 +6,7 @@ defmodule App.Adapter.Twilio do
   database can hold real members' numbers.
   """
 
+  alias App.Model.DemoTeam
   alias App.Model.OutboxMessage
 
   require Logger
@@ -25,8 +26,22 @@ defmodule App.Adapter.Twilio do
   @doc "Whether a text really goes to Twilio. False in dev unless DEV_SEND_SMS is set."
   def delivers?, do: config()[:deliver] == true
 
-  @doc "Texts `body` to an E.164 number. `:ok`, or `{:error, status}`."
-  def send_sms(to, body) do
+  @doc """
+  Texts `body` to an E.164 number. `:ok`, or `{:error, status}`. A text for a Try a
+  demo team (#857), given its id, goes to the team's Outbox instead, like its email.
+  """
+  def send_sms(to, body, team_id \\ nil)
+
+  def send_sms(to, body, team_id) when is_integer(team_id) do
+    if DemoTeam.demo?(team_id) do
+      OutboxMessage.add_text!(to, body, team_id)
+      :ok
+    else
+      send_sms(to, body, nil)
+    end
+  end
+
+  def send_sms(to, body, nil) do
     case send_sms_with_reason(to, body) do
       {:error, %{status: status}} -> {:error, status}
       result -> result

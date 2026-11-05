@@ -10,7 +10,7 @@ defmodule App.Model.DemoTeam do
 
   # Try a demo (#857): a copy of Coast Range SAR of its own, opened by a link. The row
   # and its user come first, and the team the first time the link is opened. A demo
-  # sends nothing: its email goes to its Outbox (App.Mailer), and it never texts. Its
+  # sends nothing: its email and texts go to its Outbox (App.Mailer, Twilio). Its
   # cards and letters say Sample. See docs/demo.md.
   #
   # A visitor's demo lasts 3 days from the build. A test's, made with the test key
