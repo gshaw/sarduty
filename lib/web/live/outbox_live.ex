@@ -48,8 +48,13 @@ defmodule Web.OutboxLive do
     <% else %>
       <h1 class="title">Outbox</h1>
       <p class="lead max-w-3xl">
-        A demo sends nothing. Every email it would send is kept here instead, so you can
-        read it and follow its links as the member would.
+        Every email and text this demo would have sent, newest first. On a real team these
+        go to members' inboxes and phones; a demo keeps them here, so nothing reaches anyone.
+      </p>
+      <p class="max-w-3xl mb-6">
+        Send a reminder or an update from an activity, remove a member, or email a tax credit
+        letter or an ID card, and the message shows up here at once, one for each member.
+        Its links work: open a reminder's reply link to answer as that member.
       </p>
       <.outbox_list
         id="outbox"

@@ -155,8 +155,8 @@ defmodule Web.Layouts do
     ~H"""
     <.banner kind={:info} title="Your demo" id="demo-banner" class="mb-6">
       <p>
-        {@team.name} is made up, and this copy is yours alone. It sends nothing: its emails
-        wait in its Outbox. It is deleted on {Service.Format.date_long(
+        {@team.name} is made up, and this copy is yours alone. It sends nothing: every
+        email and text it would send goes to its Outbox. It is deleted on {Service.Format.date_long(
           @demo.demo.expires_at,
           @team.timezone
         )}.
