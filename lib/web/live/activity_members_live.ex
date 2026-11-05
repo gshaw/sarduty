@@ -111,7 +111,7 @@ defmodule Web.ActivityMembersLive do
       )
 
     case chosen(socket.assigns) do
-      nil -> {:noreply, put_flash(socket, :error, "Choose a change for the checked members.")}
+      nil -> {:noreply, put_flash(socket, :error, "Select a change for the checked members.")}
       action -> run(socket, action, action.run())
     end
   end
@@ -255,7 +255,7 @@ defmodule Web.ActivityMembersLive do
           Published, so nobody can be added. {D4H.unpublish_text(@team)}
         </p>
         <p :if={@locked?} id="members-locked" class="hint mb-4">
-          Published, so attendance can't be changed. {D4H.unpublish_text(@team)}
+          Published, so attendance cannot be changed. {D4H.unpublish_text(@team)}
         </p>
         <p :if={@members == [] and @adding != :published} id="members-empty" class="hint">
           {if @started?, do: "Nobody attended.", else: "Nobody has signed up yet."}

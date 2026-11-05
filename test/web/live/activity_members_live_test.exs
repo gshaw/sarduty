@@ -172,7 +172,7 @@ defmodule Web.ActivityMembersLiveTest do
     assert has_element?(
              lv,
              "#members-locked",
-             "Published, so attendance can't be changed. Unpublish it with Change activity first."
+             "Published, so attendance cannot be changed. Unpublish it with Change activity first."
            )
 
     refute has_element?(lv, "#members-change-form")
