@@ -10,10 +10,14 @@ SAR Duty builds on a team's D4H records with tools made for volunteer teams. It 
 - **ID cards** on members' phones, in Apple Wallet or Google Wallet, with a QR code to
   verify.
 - **Attendance at the door**: scan members in and out on a phone or an iPad.
+- **Reports and charts**: ask a question of the team's records, such as who gave the most
+  rope hours, and draw the answer as columns, lines, bars, a calendar, or a map. An AI
+  agent can write the query without ever seeing a member or a record.
 - **Everything a team admin keeps track of**: activities and replies, members, groups,
-  qualifications, equipment, chores, travel, and reports.
+  qualifications, equipment, chores, and travel.
 
-<img src="README-SCREENSHOT-URL" width="600" alt="A sample team's dashboard in SAR Duty">
+<img src="README-DASHBOARD-URL" width="420" alt="A sample team's dashboard in SAR Duty">
+<img src="README-REPORT-URL" width="420" alt="A sample report in SAR Duty: rope rescue hours by month, against last year">
 
 ## Setup
 
