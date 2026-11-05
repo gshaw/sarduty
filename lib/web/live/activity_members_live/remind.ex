@@ -224,7 +224,7 @@ defmodule Web.ActivityMembersLive.Remind do
 
     ~H"""
     <section :if={@replied != [] or @reasons != %{}} id="remind-left-out" class="mt-8">
-      <h2 class="subheading">Who doesn't get it</h2>
+      <h2 class="subheading">Who does not get it</h2>
       <ul class="list-disc pl-6 space-y-1">
         <li :if={@replied != []} id="left-out-replied">
           Replied already, so no email: {replied_text(@replied)}.

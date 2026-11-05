@@ -502,14 +502,23 @@ defmodule Web.ActivityMembersLiveTest do
       refute has_element?(lv, "#email-preview", "I'll be there")
     end
 
+    test "Send an update with no message refuses, marks the box, and sends nothing", ctx do
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+      open_step(lv, [ctx.drew, ctx.riley], "update")
+
+      lv |> form("#update-form") |> render_submit(%{"message" => " \n "})
+      assert has_element?(lv, "#flash-error", "Enter a message.")
+      assert has_element?(lv, "#update-step .field-error", "Enter a message.")
+      refute_received {:email, _}
+      assert Repo.all(ActivityUpdate) == []
+
+      lv |> form("#update-form") |> render_change(%{"message" => "Meet at the pullout."})
+      refute has_element?(lv, "#update-step .field-error")
+    end
+
     test "Send an update emails the checked, then lists the send (C)", ctx do
       {:ok, lv, _html} = live(ctx.conn, path(ctx))
       open_step(lv, [ctx.drew], "update")
-
-      lv |> form("#update-form") |> render_submit(%{"message" => ""})
-      assert has_element?(lv, "#flash-error", "Enter a message.")
-      assert has_element?(lv, "#update-step")
-      refute_received {:email, _}
 
       lv |> form("#update-form") |> render_submit(%{"message" => "Meet at the pullout."})
       assert_patch(lv, path(ctx))

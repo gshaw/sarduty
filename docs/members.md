@@ -155,12 +155,12 @@ refuses to retire a member who does. It can last weeks. Decided 2026-10-27 (#514
 contacts, invites, or lets members in skips them (Andrew, 2026-10-28). Only the pages a
 team admin uses to finish retiring them still show them.
 
-| Skips retiring members                                                                                                               | Through                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
-| Logging in as a team admin, Agents, Team admins, the last team admin check, and team admin email                                     | `Member.managers_query/2`                             |
-| Logging in as a member                                                                                                               | `Member.counted_query/1` in `Member.get_logins/2`     |
-| Dashboard counts and charts, Missing details, Add members, a template's groups, Take attendance, and an organization's member totals | `Member.counted_query/1`                              |
-| Reminders                                                                                                                            | Send a reminder names them under "Who doesn't get it" |
+| Skips retiring members                                                                                                               | Through                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| Logging in as a team admin, Agents, Team admins, the last team admin check, and team admin email                                     | `Member.managers_query/2`                              |
+| Logging in as a member                                                                                                               | `Member.counted_query/1` in `Member.get_logins/2`      |
+| Dashboard counts and charts, Missing details, Add members, a template's groups, Take attendance, and an organization's member totals | `Member.counted_query/1`                               |
+| Reminders                                                                                                                            | Send a reminder names them under "Who does not get it" |
 
 Still shown: the Members list (the Retiring tile, and Not retired, its default), their
 member page and history, Equipment's With retiring members, and Needs attention. Group

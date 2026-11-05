@@ -75,7 +75,8 @@ defmodule Web.ActivityMembersLive.Update do
       ending: List.first(endings, :signed_up),
       sent_before: sent_before(team, activity, now),
       sender: SendReminders.sender(team, user, now),
-      message: ""
+      message: "",
+      message_error: nil
     )
     |> assign_preview()
   end
@@ -113,14 +114,19 @@ defmodule Web.ActivityMembersLive.Update do
     assign(socket, preview: preview)
   end
 
+  # The message box keeps its error until the team admin types in it.
   @impl Phoenix.LiveComponent
   def handle_event("change", params, socket) do
-    %{endings: endings, ending: ending} = socket.assigns
+    %{endings: endings, ending: ending, message: message, message_error: message_error} =
+      socket.assigns
+
+    new_message = Map.get(params, "message", message)
 
     {:noreply,
      socket
      |> assign(
-       message: Map.get(params, "message", ""),
+       message: new_message,
+       message_error: if(new_message == message, do: message_error),
        ending: pick_ending(params["preview"], endings, ending)
      )
      |> assign_preview()}
@@ -140,10 +146,13 @@ defmodule Web.ActivityMembersLive.Update do
       |> outcome()
 
     send(self(), outcome)
-    {:noreply, socket |> assign(message: message) |> assign_preview()}
+
+    {:noreply,
+     socket |> assign(message: message, message_error: message_error(outcome)) |> assign_preview()}
   end
 
-  # The tab with a toast, or the step again with the error for the message.
+  # The tab with a toast, or the step again with the toast and the error on the message
+  # box.
   defp outcome({:ok, []}), do: {:step_done, :error, "Nobody was emailed."}
 
   defp outcome({:ok, updates}),
@@ -156,6 +165,9 @@ defmodule Web.ActivityMembersLive.Update do
 
   defp outcome({:error, reason}),
     do: {:step_done, :error, SendActivityUpdate.error_text(reason)}
+
+  defp message_error({:step_flash, :error, text}), do: text
+  defp message_error(_outcome), do: nil
 
   # Only an ending the step offers; anything else from the browser keeps the one shown.
   defp pick_ending(param, endings, current),
@@ -218,6 +230,7 @@ defmodule Web.ActivityMembersLive.Update do
               type="textarea"
               label="Message"
               value={@message}
+              errors={List.wrap(@message_error)}
               rows="4"
               maxlength={Message.max_length()}
               phx-debounce="300"
