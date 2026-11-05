@@ -1,6 +1,6 @@
 # SAR Duty
 
-Helpful tools for search and rescue managers, on top of D4H.
+Less paperwork for search and rescue teams.
 
 ## Setup
 
@@ -31,11 +31,13 @@ Then `mise run server` and open <https://sarduty.test>.
 - `git push` first runs CI's static checks, all but the compile, through
   `bin/git-hooks/pre-push`, once `core.hooksPath` is set as in Setup.
   `git push --no-verify` skips them.
-- `fly deploy` deploys `main` — see [docs/deployment.md](docs/deployment.md).
+- `mise run deploy` deploys `origin/main` — see [docs/deployment.md](docs/deployment.md).
 
 How the app is built: [docs/README.md](docs/README.md). Working in this repo as an agent:
 [AGENTS.md](AGENTS.md).
 
-## Troubleshooting
+## License and name
 
-Restarting the Mac fixed puma-dev not serving the app.
+The code is MIT licensed: use it, change it, run your own copy. The name is not part of
+the license. Please don't use "SAR Duty" or its logo in the name of your own app, fork,
+or service, so people don't mistake it for this one. "Works with SAR Duty" is fine.
