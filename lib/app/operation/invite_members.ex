@@ -99,8 +99,8 @@ defmodule App.Operation.InviteMembers do
     end
   end
 
-  @doc ~s(Why a member is in the list: "Added by name" or "In the Boat Operators group".)
-  def reason_text(:name), do: "Added by name"
+  @doc ~s(Why a member is in the list: "By name" or "In the Boat Operators group".)
+  def reason_text(:name), do: "By name"
   def reason_text(%Group{title: title}), do: "In the #{title} group"
 
   @doc """

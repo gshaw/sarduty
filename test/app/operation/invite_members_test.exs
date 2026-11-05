@@ -62,7 +62,7 @@ defmodule App.Operation.InviteMembersTest do
     rows = InviteMembers.rows(activity(), plan.add, @now)
 
     assert Enum.map(rows, & &1.reason) == [
-             "Added by name",
+             "By name",
              "In the Boat Operators group",
              "In the Boat Operators group"
            ]

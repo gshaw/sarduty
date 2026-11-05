@@ -47,15 +47,32 @@ defmodule Web.ActivityAddMembersLiveTest do
 
   defp path(ctx), do: ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members/add"
 
-  test "by group and by name, naming who the group left out", ctx do
+  # A pick lists its members at once, checked (#905): no Add member or Add group button.
+  defp pick(lv, :group, id),
+    do: lv |> element("#add-group-form") |> render_change(%{"group-id" => to_string(id)})
+
+  defp pick(lv, :member, id),
+    do: lv |> element("#add-member-form") |> render_change(%{"member-id" => to_string(id)})
+
+  defp tick(lv, members),
+    do:
+      lv
+      |> form("#members-add-form")
+      |> render_change(%{"member_ids" => Enum.map(members, &to_string(&1.id))})
+
+  test "by group and by name, listed checked, naming who the group left out", ctx do
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
     assert has_element?(lv, "#members-nothing-to-add")
+    refute has_element?(lv, "#add-member")
+    refute has_element?(lv, "#add-group")
 
-    lv |> form("#add-group-form", %{"group-id" => ctx.boats.id}) |> render_submit()
-    lv |> form("#add-member-form", %{"member-id" => ctx.gerry.id}) |> render_submit()
+    pick(lv, :group, ctx.boats.id)
+    pick(lv, :member, ctx.gerry.id)
 
     assert has_element?(lv, "#to-add-#{ctx.eli.id}", "In the Boat Operators group")
-    assert has_element?(lv, "#to-add-#{ctx.gerry.id}", "Added by name")
+    assert has_element?(lv, "#to-add-#{ctx.gerry.id}", "By name")
+    assert has_element?(lv, "#members-to-add-table-select-all")
+    assert has_element?(lv, "#add-select-#{ctx.wren.id}[checked]")
 
     assert has_element?(
              lv,
@@ -68,25 +85,52 @@ defmodule Web.ActivityAddMembersLiveTest do
              "On the activity already, so left out: Dana Clark."
            )
 
-    assert has_element?(lv, "#left-out-away", "so left out: Jo Park. Add them by name")
+    assert has_element?(lv, "#left-out-away", "so left out: Jo Park. Find them by name")
     refute has_element?(lv, "#to-add-#{ctx.jo.id}")
     assert has_element?(lv, "#members-send", "Add 3 members")
 
-    lv |> element("#remove-#{ctx.wren.id}") |> render_click()
-    refute has_element?(lv, "#to-add-#{ctx.wren.id}")
+    # Unchecking keeps the row and leaves it out of the count.
+    tick(lv, [ctx.eli, ctx.gerry])
+    assert has_element?(lv, "#to-add-#{ctx.wren.id}")
+    refute has_element?(lv, "#add-select-#{ctx.wren.id}[checked]")
     assert has_element?(lv, "#members-send", "Add 2 members")
 
+    # Picking the group again checks its members again.
+    pick(lv, :group, ctx.boats.id)
+    assert has_element?(lv, "#add-select-#{ctx.wren.id}[checked]")
+    assert has_element?(lv, "#members-send", "Add 3 members")
+
+    # With nothing checked, the button counts 0 and adds nobody.
+    tick(lv, [])
+    assert has_element?(lv, "#members-send[disabled]", "Add 0 members")
+
     # By name, someone away goes after all.
-    lv |> form("#add-member-form", %{"member-id" => ctx.jo.id}) |> render_submit()
-    assert has_element?(lv, "#to-add-#{ctx.jo.id}", "Added by name")
+    pick(lv, :member, ctx.jo.id)
+    assert has_element?(lv, "#to-add-#{ctx.jo.id}", "By name")
     refute has_element?(lv, "#left-out-away")
+  end
+
+  test "only the checked members are added", ctx do
+    AttendanceStub.stub([])
+    {:ok, lv, _html} = live(ctx.conn, path(ctx))
+    pick(lv, :group, ctx.boats.id)
+    pick(lv, :member, ctx.gerry.id)
+
+    lv
+    |> form("#members-add-form")
+    |> render_submit(%{"member_ids" => [to_string(ctx.eli.id), to_string(ctx.gerry.id)]})
+
+    {_path, flash} = assert_redirect(lv)
+    assert flash["info"] == "2 members added. Nobody was emailed."
+    added = for a <- Repo.all(Attendance), a.member_id != ctx.dana.id, do: a.member_id
+    assert Enum.sort(added) == Enum.sort([ctx.eli.id, ctx.gerry.id])
   end
 
   test "adding writes D4H and the copy, and says nobody was emailed", ctx do
     AttendanceStub.stub([])
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
-    lv |> form("#add-group-form", %{"group-id" => ctx.boats.id}) |> render_submit()
-    lv |> form("#add-member-form", %{"member-id" => ctx.gerry.id}) |> render_submit()
+    pick(lv, :group, ctx.boats.id)
+    pick(lv, :member, ctx.gerry.id)
 
     lv |> form("#members-add-form") |> render_submit()
 
@@ -126,7 +170,7 @@ defmodule Web.ActivityAddMembersLiveTest do
 
     AttendanceStub.stub([])
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
-    lv |> form("#add-member-form", %{"member-id" => ctx.gerry.id}) |> render_submit()
+    pick(lv, :member, ctx.gerry.id)
 
     assert has_element?(
              lv,

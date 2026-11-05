@@ -58,6 +58,8 @@ defmodule Web.StandardColumnsTest do
       "who a removal takes, headed by whether they get an email",
     {"lib/web/live/activity_members_live.ex", "{Reply.status_text(status, @started?)}"} =>
       "a table per reply, or per attendance from the start, each headed by it",
+    {"lib/web/live/activity_add_members_live.ex", "Not added yet"} =>
+      "the members found, headed so nobody reads them as added yet (#905)",
     {"lib/web/components/travel_tab.ex", "Set"} =>
       "Travel's two tables, each headed by whether its rows are set",
     {"lib/web/components/travel_tab.ex", "Not set"} =>

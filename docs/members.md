@@ -470,7 +470,9 @@ activity starts.
 - **Add members** (#564,
   [ActivityAddMembersLive](../lib/web/live/activity_add_members_live.ex)): before the
   start, a team admin adds members by name or by group from
-  `/teams/:subdomain/activities/:id/members/add`, an arrow link on the Members tab. They show as
+  `/teams/:subdomain/activities/:id/members/add`, an arrow link on the Members tab. Find a
+  member or Find a group lists them at once, checked, under Not added yet (#905); only
+  the checked rows are added, and only by the Add button. They show as
   No reply, and adding emails nobody. A group leaves out members away on the activity's
   day, and the page names them; adding one by name includes them. A published activity
   says so in place of the link. D4H's own weekly briefing may still tell them.
