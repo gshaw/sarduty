@@ -16,7 +16,7 @@ defmodule App.Operation.DeleteTeam do
 
   `snapshot: true` first copies the team's rows to a file beside the database, so
   App.Operation.RestoreTeam can undo a mistake for 7 days. The file has every table, and
-  in them only this team's rows. App.Worker.PruneEventsWorker deletes older copies.
+  in them only this team's rows (`write_copy/3`). App.Worker.PruneEventsWorker deletes older copies.
   """
 
   alias App.Accounts.User
@@ -25,6 +25,7 @@ defmodule App.Operation.DeleteTeam do
   alias App.Model.Team
   alias App.Repo
   alias App.Worker.NotifyTeamDeletedWorker
+  alias Exqlite.Sqlite3
 
   require Logger
 
@@ -198,8 +199,8 @@ defmodule App.Operation.DeleteTeam do
     )
   end
 
-  # The team's rows, before anything is deleted. VACUUM INTO can't run in a
-  # transaction, so tests, which run in one, set no directory.
+  # The team's rows, before anything is deleted. Tests set no directory: the copy reads
+  # the database file on its own connection, which can't see a test's sandbox rows.
   defp take_snapshot(%Team{} = team) do
     case snapshot_dir() do
       nil ->
@@ -209,57 +210,71 @@ defmodule App.Operation.DeleteTeam do
         File.mkdir_p!(dir)
         stamp = Calendar.strftime(DateTime.utc_now(), "%Y%m%d-%H%M%S")
         path = Path.join(dir, "#{team.subdomain}-#{stamp}.db")
-        Repo.query!("VACUUM INTO ?", [path])
-        keep_only_team(path, team.id)
+        write_copy(path, Repo.config()[:database], team.id)
         path
     end
   end
 
   @doc """
-  Empties every table in the database file at `path` but for team `team_id`'s rows, then
-  vacuums it, so no other team's data is left even in its free pages. Public for the
-  check that a copy holds only its team.
+  Writes team `team_id`'s rows from the database file at `source` to a new file at
+  `path`: every table, and in them only this team's rows, as `scopes/2` finds them.
+
+  It works on a connection of its own, not the Repo's, so it takes none of the app's
+  connections and holds no write lock: one read transaction over the live file, and
+  writes only to the new one. It reads only the team's rows, so a small team's copy is
+  quick however big the database is, and no other team's data is ever written. Keys
+  are off on this connection: a row may name a login the copy has no table rows for.
+  A failure removes the file and raises.
   """
-  def keep_only_team(path, team_id) do
-    scopes = scopes(team_id, "copy")
+  def write_copy(path, source, team_id) when is_integer(team_id) do
+    {:ok, db} = Sqlite3.open(path)
 
-    # coalesce: a NULL team_id or key makes the WHERE NULL, and NOT NULL keeps the row.
-    # Keys are off on this connection while it works: a team's row may name a login the
-    # copy no longer has, and RestoreTeam puts it back beside the live one.
-    Repo.checkout(fn ->
-      Repo.query!("PRAGMA foreign_keys = OFF")
-      Repo.query!("ATTACH DATABASE ? AS copy", [path])
-
-      try do
-        {:ok, _done} =
-          Repo.transaction(fn ->
-            for table <- copy_tables() do
-              case List.keyfind(scopes, table, 0) do
-                {^table, where} ->
-                  Repo.query!(~s|DELETE FROM copy."#{table}" WHERE NOT coalesce(#{where}, 0)|)
-
-                nil ->
-                  Repo.query!(~s|DELETE FROM copy."#{table}"|)
-              end
-            end
-          end)
-
-        Repo.query!("VACUUM copy")
-      after
-        Repo.query!("DETACH DATABASE copy")
-        Repo.query!("PRAGMA foreign_keys = ON")
-      end
-    end)
+    try do
+      copy_rows(db, source, team_id)
+      :ok = Sqlite3.close(db)
+    rescue
+      error ->
+        Sqlite3.close(db)
+        File.rm(path)
+        reraise error, __STACKTRACE__
+    end
   end
 
-  # sqlite_sequence keeps only each table's last id, which a restore doesn't read.
-  defp copy_tables do
-    %{rows: rows} =
-      Repo.query!(
-        "SELECT name FROM copy.sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+  # One read transaction over the live file, so every table is read as of one moment.
+  defp copy_rows(db, source, team_id) do
+    exec!(db, "PRAGMA busy_timeout = 30000")
+    exec!(db, "ATTACH DATABASE '#{String.replace(source, "'", "''")}' AS live")
+    exec!(db, "BEGIN")
+
+    for sql <- table_sql(db), do: exec!(db, sql)
+
+    for {table, where} <- scopes(team_id, "live") do
+      exec!(db, ~s|INSERT INTO main."#{table}" SELECT * FROM live."#{table}" WHERE #{where}|)
+    end
+
+    exec!(db, "COMMIT")
+    exec!(db, "DETACH DATABASE live")
+  end
+
+  # Every table's CREATE statement in the live database. sqlite_sequence comes with the
+  # first AUTOINCREMENT table.
+  defp table_sql(db) do
+    {:ok, statement} =
+      Sqlite3.prepare(
+        db,
+        "SELECT sql FROM live.sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
       )
 
+    {:ok, rows} = Sqlite3.fetch_all(db, statement)
+    :ok = Sqlite3.release(db, statement)
     Enum.map(rows, &hd/1)
+  end
+
+  defp exec!(db, sql) do
+    case Sqlite3.execute(db, sql) do
+      :ok -> :ok
+      {:error, reason} -> raise "Copying the team failed: #{reason}\n#{sql}"
+    end
   end
 
   defp snapshot_dir, do: Application.get_env(:sarduty, __MODULE__, [])[:snapshot_dir]
