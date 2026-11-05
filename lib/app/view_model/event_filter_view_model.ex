@@ -29,6 +29,7 @@ defmodule App.ViewModel.EventFilterViewModel do
   def label(:team_signup_failed), do: "Sign-up failed"
   def label(:integration_tested), do: "Integration test"
   def label(:team_signed_up), do: "Team signed up"
+  def label(:team_deleted), do: "Team deleted"
   def label(:team_key_changed), do: "D4H access key changed"
   def label(:login_grant_added), do: "Login grant added"
   def label(:login_grant_removed), do: "Login grant removed"

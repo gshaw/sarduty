@@ -107,6 +107,11 @@ through the sync's ping every 10 minutes, still alerts when the app or Oban is d
 - **Snapshots** by hand: [backups/backup.sh](../backups/backup.sh) has the app write a
   consistent copy with `VACUUM INTO`, then tars it and the logos over `fly ssh` into
   `backups/` (gitignored), encrypted with age and stamped to the minute.
+- **Deleting a team** (a SAR Duty admin's team page, `App.Operation.DeleteTeam`) first
+  copies the whole database with `VACUUM INTO` to `/mnt/sarduty/deleted-teams/`, kept 7
+  days. If the copy fails, nothing is deleted. To undo, attach the copy and insert the
+  team's rows back: `DeleteTeam.scopes/1` gives each table's WHERE, run parents first
+  (its order reversed). Swapping the whole file in loses every other team's writes since.
 - **A dev copy** from a snapshot: `AGE_IDENTITY=<identity file> mise run sanitize
 backups/<snapshot>` writes `db/sarduty_dev.db` with every name, email, phone, address,
   incident, and credential replaced by stable fakes. Admins and their member rows stay

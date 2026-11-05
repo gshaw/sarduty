@@ -116,6 +116,31 @@ defmodule App.Accounts.UserNotifier do
     |> Mailer.deliver()
   end
 
+  @doc "Tells the admins a team was deleted. Sends nothing when there are none."
+  def deliver_team_deleted([], _args), do: {:ok, nil}
+
+  def deliver_team_deleted(admin_emails, args) do
+    undo =
+      if args["snapshot"],
+        do:
+          "A copy of the database from just before is on the server for 7 days:\n#{args["snapshot"]}",
+        else: "No copy of the database was taken."
+
+    new()
+    |> to(admin_emails)
+    |> from({"SAR Duty", "noreply@sarduty.com"})
+    |> subject("Team deleted from SAR Duty: #{args["name"]}")
+    |> text_body("""
+    #{args["name"]} (#{args["subdomain"]}) was deleted from SAR Duty, with all its data.
+
+    Deleted by: #{args["deleted_by"]}
+    Nothing in #{args["service"]} changed.
+
+    #{undo}
+    """)
+    |> Mailer.deliver()
+  end
+
   # cspell:ignore Segoe -- Windows' system font, in the email's font stack
   # The logo is a PNG at 2x, since Gmail won't show SVG (see /styles/logo).
   # The domain line is hidden: it's for Mail, not people.

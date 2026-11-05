@@ -102,3 +102,7 @@ if System.get_env("DEV_SEND_EMAIL") == "true" and System.get_env("CLOUDFLARE_EMA
     account_id: System.fetch_env!("CLOUDFLARE_ACCOUNT_ID"),
     api_token: System.fetch_env!("CLOUDFLARE_EMAIL_TOKEN")
 end
+
+# A team delete copies the database here first (App.Operation.DeleteTeam).
+config :sarduty, App.Operation.DeleteTeam,
+  snapshot_dir: Path.expand("../db/deleted-teams", Path.dirname(__ENV__.file))

@@ -128,4 +128,22 @@ defmodule Web.Admin.TeamLiveTest do
     assert_error_sent 404, fn -> get(conn, "/admin/teams/999999") end
     assert_error_sent 404, fn -> get(conn, "/admin/teams/abc") end
   end
+
+  describe "Delete team" do
+    test "stays off until the name is typed, then deletes the team",
+         %{conn: conn, team: team} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/teams/#{team.id}")
+      assert has_element?(lv, "#delete-form button[disabled]")
+
+      lv |> form("#delete-form", delete: %{name: "Coast Range"}) |> render_change()
+      assert has_element?(lv, "#delete-form button[disabled]")
+
+      lv |> form("#delete-form", delete: %{name: "coast range sar"}) |> render_change()
+      refute has_element?(lv, "#delete-form button[disabled]")
+
+      lv |> form("#delete-form", delete: %{name: "coast range sar"}) |> render_submit()
+      assert_redirect(lv, ~p"/admin")
+      refute Repo.get(App.Model.Team, team.id)
+    end
+  end
 end

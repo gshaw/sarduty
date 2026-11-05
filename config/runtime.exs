@@ -94,6 +94,11 @@ if config_env() == :prod do
   config :sarduty, App.SampleRepo,
     database: Path.join(Path.dirname(System.fetch_env!("DATABASE_PATH")), "sarduty_sample.db")
 
+  # Copies of the database a team delete takes first, on the volume for 7 days. Not in
+  # litestream.yml, which replicates only the database.
+  config :sarduty, App.Operation.DeleteTeam,
+    snapshot_dir: Path.join(Path.dirname(System.fetch_env!("DATABASE_PATH")), "deleted-teams")
+
   # Beside the database on the volume, so it outlives a deploy (#416).
   config :sarduty, App.Repo.SlowLog,
     file: Path.join(Path.dirname(System.fetch_env!("DATABASE_PATH")), "repo_slow.log")
