@@ -29,6 +29,9 @@ defmodule App.DataFixtures do
   alias App.Model.TemplateGroup
   alias App.Model.TemplateItem
   alias App.Model.TemplateTag
+  alias App.Model.Transfer
+  alias App.Model.TransferAward
+  alias App.Model.TransferAwardFile
   alias App.Operation.AuthorizeAgent
   alias App.Operation.ExchangeAgentToken
   alias App.Operation.RegisterAgentClient
@@ -669,5 +672,42 @@ defmodule App.DataFixtures do
 
     if certificate.status == :waiting, do: CertificateFile.put!(certificate, "%PDF-1.7\n")
     certificate
+  end
+
+  @doc """
+  A transfer code for the member (#892), open for 30 days from now, with one award: First
+  aid, Jul 30, 2026 to Jul 30, 2029, and a small PDF as its certificate.
+  """
+  def transfer_fixture(%Member{} = member, made_by_user \\ nil, now \\ DateTime.utc_now()) do
+    code = Transfer.generate_code()
+
+    transfer =
+      Repo.insert!(%Transfer{
+        team_id: member.team_id,
+        member_id: member.id,
+        made_by_user_id: made_by_user && made_by_user.id,
+        code: code,
+        code_hash: Transfer.code_hash(code),
+        member_name: member.name,
+        member_email: member.email,
+        expires_at: Transfer.expires_at(now)
+      })
+
+    award =
+      Repo.insert!(%TransferAward{
+        team_id: member.team_id,
+        transfer_id: transfer.id,
+        position: 1,
+        qualification_title: "First aid",
+        d4h_qualification_id: 1,
+        starts_at: ~U[2026-07-30 12:00:00Z],
+        ends_at: ~U[2029-07-30 12:00:00Z],
+        file_name: "First aid.pdf",
+        content_type: "application/pdf",
+        file_size: 9
+      })
+
+    Repo.insert!(%TransferAwardFile{transfer_award_id: award.id, bytes: "%PDF-1.7\n"})
+    Repo.preload(transfer, :awards)
   end
 end

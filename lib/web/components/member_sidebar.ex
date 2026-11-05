@@ -129,7 +129,7 @@ defmodule Web.Components.MemberSidebar do
   attr :fields?, :boolean, required: true
 
   # Details change here on every team, and custom fields on every team that has them
-  # (#705). A team on SAR Duty Records has no D4H to open.
+  # (#705). Transfer to another team on every team (#892). A team on SAR Duty Records has no D4H to open.
   defp member_actions(assigns) do
     ~H"""
     <dt>Actions</dt>
@@ -143,6 +143,12 @@ defmodule Web.Components.MemberSidebar do
             id="member-actions-change-fields"
             navigate={~p"/teams/#{@member.team}/members/#{@member.id}/fields/edit"}
           >Change fields</.a>
+        </li>
+        <li>
+          <.a
+            id="member-actions-transfer"
+            navigate={~p"/teams/#{@member.team}/members/#{@member.id}/transfers/new"}
+          >Transfer to another team</.a>
         </li>
         <li :if={!D4H.records?(@member.team)}>
           <.a external={true} href={D4H.member_url(@member)}>Open in {D4H.service_name(@member.team)}</.a>

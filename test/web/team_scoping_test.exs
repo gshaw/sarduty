@@ -63,6 +63,9 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/members/:id/standing",
     "/teams/:subdomain/members/:id/image",
     "/teams/:subdomain/members/:id/certificates/:award_id",
+    # Transfer to another team (#892), and its code.
+    "/teams/:subdomain/members/:id/transfers/new",
+    "/teams/:subdomain/members/:id/transfers/:transfer_id",
     # View as member (#425), a POST.
     "/teams/:subdomain/members/:id/view-as",
     "/teams/:subdomain/groups/:id",
@@ -114,6 +117,7 @@ defmodule Web.TeamScopingTest do
       letter: tax_credit_letter_fixture(member),
       award: certificate_award_fixture(other_team, member),
       certificate: certificate_fixture(member, qualification_fixture(other_team)),
+      transfer: transfer_fixture(member),
       report:
         Repo.insert!(%App.Model.SavedReport{
           team_id: other_team.id,
@@ -321,6 +325,12 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/members/:id/card", s, o),
     do: ~p"/teams/#{s}/members/#{o.member.id}/card"
+
+  defp path_for("/teams/:subdomain/members/:id/transfers/new", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/transfers/new"
+
+  defp path_for("/teams/:subdomain/members/:id/transfers/:transfer_id", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/transfers/#{o.transfer.id}"
 
   defp path_for("/teams/:subdomain/members/:id/history", s, o),
     do: ~p"/teams/#{s}/members/#{o.member.id}/history"

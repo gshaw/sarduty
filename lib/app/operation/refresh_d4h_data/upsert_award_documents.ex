@@ -24,14 +24,21 @@ defmodule App.Operation.RefreshD4HData.UpsertAwardDocuments do
   newest, the one with the highest id.
   """
   def changes(awards, documents) do
-    newest =
-      documents
-      |> Enum.group_by(& &1.d4h_target_id, & &1.d4h_document_id)
-      |> Map.new(fn {award_id, ids} -> {award_id, Enum.max(ids)} end)
+    newest = newest(documents)
 
     Enum.flat_map(awards, fn {id, d4h_award_id, current} ->
       wanted = Map.get(newest, d4h_award_id)
       if wanted == current, do: [], else: [{id, wanted}]
     end)
+  end
+
+  @doc """
+  Each award's certificate, `%{d4h_award_id => d4h_document_id}`: of several documents
+  on one award, the newest, with the highest id. A transfer takes the same one (#892).
+  """
+  def newest(documents) do
+    documents
+    |> Enum.group_by(& &1.d4h_target_id, & &1.d4h_document_id)
+    |> Map.new(fn {award_id, ids} -> {award_id, Enum.max(ids)} end)
   end
 end

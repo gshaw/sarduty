@@ -20,7 +20,7 @@ defmodule App.Operation.LoadCertificate do
   def call(%Team{} = team, %MemberQualificationAward{} = award) do
     case team |> D4H.build_context_from_team() |> D4H.fetch_document(award.d4h_document_id) do
       {:ok, body, content_type} ->
-        type = content_type |> String.split(";") |> hd() |> String.trim() |> String.downcase()
+        type = media_type(content_type)
 
         {:ok,
          %{
@@ -34,6 +34,10 @@ defmodule App.Operation.LoadCertificate do
         :error
     end
   end
+
+  @doc ~s(The media type alone, from a Content-Type header: "application/pdf".)
+  def media_type(content_type),
+    do: content_type |> String.split(";") |> hd() |> String.trim() |> String.downcase()
 
   @doc ~s(The file's name: "Standard First Aid.pdf", from the title and the type.)
   def filename(title, content_type) do
