@@ -98,15 +98,16 @@ defmodule App.Operation.DeleteTeam do
 
   @doc """
   Each table that holds the team's rows, with the WHERE that finds them, children first
-  and `teams` last. Public for the test that checks nothing is left behind.
+  and `teams` last. The WHERE reads the tables in `schema`: "main", or an attached copy
+  for App.Operation.RestoreTeam. The tables come from this database's keys.
   """
-  def scopes(team_id) when is_integer(team_id) do
+  def scopes(team_id, schema \\ "main") when is_integer(team_id) do
     keys = foreign_keys()
     with_team_id = keys |> Map.keys() |> Enum.filter(&team_id_column?/1) |> MapSet.new()
     in_scope = keys |> reach(MapSet.new(["teams"])) |> MapSet.union(with_team_id)
 
     for table <- order(in_scope, keys, with_team_id),
-        do: {table, where(table, team_id, keys, with_team_id, in_scope, MapSet.new())}
+        do: {table, where(table, {team_id, schema}, keys, with_team_id, in_scope, MapSet.new())}
   end
 
   # Every table, with its foreign keys that delete with or block their parent.
@@ -150,9 +151,10 @@ defmodule App.Operation.DeleteTeam do
     if MapSet.size(more) == MapSet.size(found), do: found, else: reach(keys, more)
   end
 
-  defp where("teams", team_id, _keys, _with_team_id, _in_scope, _seen), do: "id = #{team_id}"
+  defp where("teams", {team_id, _schema}, _keys, _with_team_id, _in_scope, _seen),
+    do: "id = #{team_id}"
 
-  defp where(table, team_id, keys, with_team_id, in_scope, seen) do
+  defp where(table, {team_id, schema} = team, keys, with_team_id, in_scope, seen) do
     if table in with_team_id do
       "team_id = #{team_id}"
     else
@@ -162,8 +164,8 @@ defmodule App.Operation.DeleteTeam do
       |> Map.fetch!(table)
       |> Enum.filter(fn {_column, parent, _to} -> parent in in_scope and parent not in seen end)
       |> Enum.map(fn {column, parent, to} ->
-        parent_where = where(parent, team_id, keys, with_team_id, in_scope, seen)
-        ~s|"#{column}" IN (SELECT "#{to}" FROM "#{parent}" WHERE #{parent_where})|
+        parent_where = where(parent, team, keys, with_team_id, in_scope, seen)
+        ~s|"#{column}" IN (SELECT "#{to}" FROM "#{schema}"."#{parent}" WHERE #{parent_where})|
       end)
       |> or_clauses()
     end
