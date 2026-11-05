@@ -167,7 +167,7 @@ defmodule Web.HomePageLive do
 
   # The page's one call to action, the same box in the same places for everyone: sign up or
   # log in for a visitor, your teams once logged in, your own ID card for a member, or why
-  # you have none.
+  # you have none. Try a demo is in every one; /demo warns a logged-in user first.
   defp start(assigns) do
     ~H"""
     <div id={@id} class="home-start">
@@ -189,6 +189,9 @@ defmodule Web.HomePageLive do
             <li :for={team <- @teams}>
               <.button navigate={~p"/teams/#{team}"} variant={:primary}>{team.name}</.button>
             </li>
+            <li :if={@demo?}>
+              <.button id={"#{@id}-demo"} navigate={~p"/demo"}>Try a demo</.button>
+            </li>
           </ul>
         <% @members != [] -> %>
           <p class="home-start-title">Your ID card</p>
@@ -197,6 +200,9 @@ defmodule Web.HomePageLive do
               <.button navigate={~p"/teams/#{member.team}/me"} variant={:primary}>
                 {member.team.name}
               </.button>
+            </li>
+            <li :if={@demo?}>
+              <.button id={"#{@id}-demo"} navigate={~p"/demo"}>Try a demo</.button>
             </li>
           </ul>
         <% true -> %>
@@ -207,6 +213,7 @@ defmodule Web.HomePageLive do
           </p>
           <div class="home-cta">
             <.button navigate={~p"/signup"} variant={:primary}>Sign up a team</.button>
+            <.button :if={@demo?} id={"#{@id}-demo"} navigate={~p"/demo"}>Try a demo</.button>
           </div>
       <% end %>
     </div>

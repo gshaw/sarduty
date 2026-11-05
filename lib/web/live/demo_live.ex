@@ -11,6 +11,7 @@ defmodule Web.DemoLive do
 
   def mount(_params, session, socket) do
     user = socket.assigns[:current_user]
+    own_demo? = user != nil and DemoTeam.for_user(user) != nil
 
     {:ok,
      socket
@@ -18,7 +19,9 @@ defmodule Web.DemoLive do
        page_title: "Try SAR Duty",
        page_description: "Try SAR Duty on a made-up search and rescue team of your own.",
        client_ip: session["client_ip"],
-       own_demo?: user != nil and DemoTeam.for_user(user) != nil
+       own_demo?: own_demo?,
+       # Opening a demo logs this browser in as its visitor, so warn whoever is logged in.
+       logged_in_email: if(user && !own_demo?, do: user.email)
      )
      |> assign_form(DemoStartViewModel.build_new_changeset())}
   end
@@ -30,6 +33,12 @@ defmodule Web.DemoLive do
     <p :if={@own_demo?} id="demo-own">
       You have a demo open. <.a href={~p"/demo/building"}>Go to your demo</.a>
     </p>
+    <div :if={@logged_in_email} id="demo-logged-in" class="callout mb-6">
+      <p>
+        You're logged in as <strong>{@logged_in_email}</strong>. Starting a demo logs you out
+        in this browser. To keep both, open this page in a private window or another browser.
+      </p>
+    </div>
     <.form for={@form} id="demo-form" phx-submit="start" phx-change="validate">
       <.input field={@form[:name]} label="Your name (optional)" autocomplete="name">
         You join the team as a team admin, beside Alex Chen.
@@ -41,7 +50,7 @@ defmodule Web.DemoLive do
       </ul>
       <.form_actions>
         <.button id="demo-start" variant={:success} phx-disable-with="Starting…">
-          Start a demo
+          {if @logged_in_email, do: "Log out and start a demo", else: "Start a demo"}
         </.button>
       </.form_actions>
       <p class="hint">

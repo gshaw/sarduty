@@ -5,6 +5,7 @@ defmodule Web.DemoFlowTest do
   use Web.ConnCase
   use Oban.Testing, repo: App.Repo, engine: Oban.Engines.Lite
 
+  import App.AccountsFixtures
   import App.DataFixtures
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
@@ -64,6 +65,28 @@ defmodule Web.DemoFlowTest do
     Application.delete_env(:sarduty, :records_demo_key)
     {:ok, lv, _html} = live(conn, ~p"/")
     refute has_element?(lv, "#start-top-demo")
+  end
+
+  test "the home page offers Try a demo when logged in too", %{conn: conn} do
+    user = user_fixture()
+    team = team_fixture()
+    manager_fixture(team, %{email: user.email})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/")
+    assert has_element?(lv, "#start-top a", team.name)
+    assert has_element?(lv, "#start-top-demo", "Try a demo")
+  end
+
+  test "/demo warns a logged-in user that a demo logs them out", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/demo")
+    refute has_element?(lv, "#demo-logged-in")
+    assert has_element?(lv, "#demo-start", "Start a demo")
+
+    user = user_fixture()
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/demo")
+    assert has_element?(lv, "#demo-logged-in", user.email)
+    assert has_element?(lv, "#demo-logged-in", "private window")
+    assert has_element?(lv, "#demo-start", "Log out and start a demo")
   end
 
   test "the button starts a demo and opens its link, with no email", %{conn: conn} do
