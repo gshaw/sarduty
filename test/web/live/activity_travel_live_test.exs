@@ -423,13 +423,13 @@ defmodule Web.ActivityTravelLiveTest do
       {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
       assert has_element?(lv, ~s{.tabs a[aria-current="page"]}, "Overview")
       assert has_element?(lv, "#activity-map")
-      refute has_element?(lv, "#members-table")
+      refute has_element?(lv, "#activity-members")
 
       {:ok, lv, _html} =
         live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members")
 
       assert has_element?(lv, ~s{.tabs a[aria-current="page"]}, "Members")
-      assert has_element?(lv, "#members-table", "Ann Smith")
+      assert has_element?(lv, "#activity-members", "Ann Smith")
       refute has_element?(lv, "#activity-map")
     end
 

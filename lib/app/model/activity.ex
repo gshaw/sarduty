@@ -372,13 +372,14 @@ defmodule App.Model.Activity do
   def take_attendance?(%Activity{} = activity, false, now), do: attendance_window?(activity, now)
 
   @doc """
-  Whether a team admin can add members to the activity now (#564): `:open` before the
-  start on one neither deleted nor published, `:published` for a published one, and nil
-  otherwise. Read from the copy, so InviteMembers checks again when it sends.
+  Whether a team admin can add members to the activity now (#564): `:open` on one
+  neither deleted nor published, before the start as No reply and after it as attended
+  (#766); `:published` for a published one; and nil otherwise. Read from the copy, so
+  InviteMembers checks again when it sends.
   """
-  def adding(%Activity{} = activity, team_admin?, %DateTime{} = now) do
+  def adding(%Activity{} = activity, team_admin?, %DateTime{} = _now) do
     cond do
-      !team_admin? or not open?(activity, now) ->
+      !team_admin? or deleted?(activity) ->
         nil
 
       activity.is_published ->

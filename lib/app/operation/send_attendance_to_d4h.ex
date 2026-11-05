@@ -1,4 +1,6 @@
 defmodule App.Operation.SendAttendanceToD4H do
+  import Ecto.Query
+
   alias App.Accounts.User
   alias App.Adapter.D4H
   alias App.Model.Activity
@@ -10,6 +12,7 @@ defmodule App.Operation.SendAttendanceToD4H do
   alias App.Model.Team
   alias App.Operation.ApplyChangeSet
   alias App.Operation.BuildAttendanceTimes
+  alias App.Repo
 
   # Sends the door's attendance to D4H. `preview` reads the activity's D4H attendance
   # and plans the changes for a team admin to review; `call` reads it again, plans
@@ -34,10 +37,59 @@ defmodule App.Operation.SendAttendanceToD4H do
     offered.
   - `:unchanged`: D4H already has these times.
   - `:blocked`: the times can't be sent until they're fixed at the door.
-  """
-  def plan([], _rows, _members), do: []
 
-  def plan(times, rows, members) do
+  `left_out` are the ids of members a team admin changed by hand since their last scan
+  (left_out/2): the review never offers to undo that (#766).
+  """
+  def plan(times, rows, members, left_out \\ MapSet.new())
+
+  def plan([], _rows, _members, _left_out), do: []
+
+  def plan(times, rows, members, left_out) do
+    times
+    |> plan_times(rows, members)
+    |> Enum.reject(&MapSet.member?(left_out, &1.member.id))
+  end
+
+  @doc """
+  The members the review leaves out (#766): changed on the Members tab, or added after
+  the start, with no scan since. `changed` maps a member's id to their latest change by
+  hand, and `scans` are the activity's scans. Pure.
+  """
+  def left_out(changed, scans) do
+    last_scan =
+      scans
+      |> Enum.group_by(& &1.member_id, & &1.scanned_at)
+      |> Map.new(fn {id, at} -> {id, Enum.max(at, DateTime)} end)
+
+    for {member_id, changed_at} <- changed,
+        not scanned_since?(last_scan[member_id], changed_at),
+        into: MapSet.new(),
+        do: member_id
+  end
+
+  defp scanned_since?(nil, _changed_at), do: false
+  defp scanned_since?(scanned_at, changed_at), do: DateTime.after?(scanned_at, changed_at)
+
+  @doc """
+  Each member's latest change by hand on the activity, `%{member_id => applied_at}`: a
+  change on the Members tab, or an add after the start, which is attended (#766).
+  """
+  def changed_by_hand(%Activity{} = activity) do
+    ChangeSetRow
+    |> join(:inner, [r], c in assoc(r, :change_set))
+    |> where([r, c], c.activity_id == ^activity.id and c.team_id == ^activity.team_id)
+    |> where([r, c], r.status == :applied and c.source in [:change_attendance, :invite])
+    |> select([r, c], {r.member_id, r.new_value, r.applied_at, c.source})
+    |> Repo.all()
+    |> Enum.filter(fn {_id, new, _at, source} ->
+      source == :change_attendance or new["status"] == "ATTENDING"
+    end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 2))
+    |> Map.new(fn {id, at} -> {id, Enum.max(at, DateTime)} end)
+  end
+
+  defp plan_times(times, rows, members) do
     rows_by_d4h_member_id = rows |> Enum.reverse() |> Map.new(&{&1.d4h_member_id, &1})
 
     scanned = Enum.map(times, &plan_scanned(&1, row_for(rows_by_d4h_member_id, &1.member)))
@@ -146,8 +198,11 @@ defmodule App.Operation.SendAttendanceToD4H do
     with {:ok, published} <-
            D4H.fetch_activity_published(d4h, activity.d4h_activity_id, activity.activity_kind),
          {:ok, rows} <- D4H.fetch_attendance_infos(d4h, activity.d4h_activity_id) do
-      times = BuildAttendanceTimes.call(activity, AttendanceScan.get_all(activity))
-      {:ok, %{published: published, changes: plan(times, rows, Member.get_all(team.id))}}
+      scans = AttendanceScan.get_all(activity)
+      times = BuildAttendanceTimes.call(activity, scans)
+      left_out = left_out(changed_by_hand(activity), scans)
+      changes = plan(times, rows, Member.get_all(team.id), left_out)
+      {:ok, %{published: published, changes: changes}}
     end
   end
 

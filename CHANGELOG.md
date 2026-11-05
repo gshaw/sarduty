@@ -18,6 +18,10 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
   Fields, and History are tabs beside it.
 - Members check their own travel: it's on the activity's page and their Dashboard, with
   That's right or Change, until the activity is published. Travel says who has.
+- ⭐ Change attendance after an activity, on its Members tab: check members, then mark
+  them attended or absent, or remove them, with one button. Add members works until it's
+  published, adding them as attended once it has started. Send attendance shows only
+  once someone has scanned at Take attendance.
 - The Dashboard's numbers and charts open the reports that draw them, so you can see how
   each is counted and copy one. Its numbers' lines now cover this year.
 - ⭐ Reports draw charts: end one with `chart columns`, `lines`, `stat`, `bars`,

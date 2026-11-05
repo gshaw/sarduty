@@ -231,6 +231,17 @@ defmodule App.Operation.SaveActivityTest do
       assert row.new_value == %{"title" => "Nav"}
     end
 
+    test ~s[a publish sends a tracking number, "" when the copy has none (#766)] do
+      form = ActivityFormViewModel.from_activity(activity(), @team)
+      row = SaveActivity.plan(activity(), %{form | published: true}, @tag_ids, @team)
+      assert row.new_value == %{"published" => true, "tracking_number" => ""}
+
+      numbered = %{activity() | tracking_number: "CR-4113"}
+      form = ActivityFormViewModel.from_activity(numbered, @team)
+      row = SaveActivity.plan(numbered, %{form | published: true}, @tag_ids, @team)
+      assert row.new_value == %{"published" => true}
+    end
+
     test "a published activity changes only its published flag" do
       activity = %{activity() | is_published: true}
       form = ActivityFormViewModel.from_activity(activity, @team)

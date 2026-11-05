@@ -47,6 +47,29 @@ defmodule App.Operation.SendAttendanceToD4HTest do
     assert change.selected
   end
 
+  test "a member changed by hand is left out, so the review never undoes it (#766)" do
+    [mei, riley] = [member(1, "Mei"), member(2, "Riley")]
+    rows = [row(mei, "attending"), row(riley, "attending")]
+
+    # Riley was marked attended on the Members tab, with no scan: never offered as absent.
+    changes = SendAttendanceToD4H.plan([time(mei)], rows, [mei, riley], MapSet.new([riley.id]))
+    assert Enum.map(changes, & &1.member.name) == ["Mei"]
+  end
+
+  test "left_out/2: changed by hand with no scan since" do
+    changed_at = ~U[2026-10-10 18:00:00Z]
+    changed = %{1 => changed_at, 2 => changed_at, 3 => changed_at}
+
+    scans = [
+      %{member_id: 2, scanned_at: ~U[2026-10-10 17:00:00Z]},
+      %{member_id: 3, scanned_at: ~U[2026-10-10 17:00:00Z]},
+      %{member_id: 3, scanned_at: ~U[2026-10-10 18:30:00Z]}
+    ]
+
+    # Member 3 scanned after the change, so the review offers their scans again.
+    assert SendAttendanceToD4H.left_out(changed, scans) == MapSet.new([1, 2])
+  end
+
   test "a member D4H has no row for is added, never updated" do
     lena = member(2, "Lena")
 

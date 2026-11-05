@@ -118,12 +118,28 @@ defmodule Web.ActivityAddMembersLiveTest do
              "Published, so nobody can be added. Unpublish it with Change activity first."
   end
 
-  test "a started activity sends the visitor back", ctx do
-    started = DateTime.utc_now() |> DateTime.add(-1, :hour) |> DateTime.truncate(:second)
-    ctx.activity |> Ecto.Changeset.change(started_at: started) |> Repo.update!()
+  test "after the start, members are added as attended, with the activity's times (B)", ctx do
+    started = ~U[2026-10-27 02:00:00Z]
 
-    assert {:error, {:live_redirect, %{flash: flash}}} = live(ctx.conn, path(ctx))
-    assert flash["error"] == "The activity has started, so nobody can be added."
+    ctx.activity
+    |> Ecto.Changeset.change(started_at: started, finished_at: ~U[2026-10-27 04:30:00Z])
+    |> Repo.update!()
+
+    AttendanceStub.stub([])
+    {:ok, lv, _html} = live(ctx.conn, path(ctx))
+    lv |> form("#add-member-form", %{"member-id" => ctx.gerry.id}) |> render_submit()
+
+    assert has_element?(
+             lv,
+             "#members-add-attended",
+             "They're added as attended, with the activity's times, 19:00 to 21:30. SAR Duty emails nobody."
+           )
+
+    lv |> form("#members-add-form") |> render_submit()
+    {_path, flash} = assert_redirect(lv)
+    assert flash["info"] == "1 member added. Nobody was emailed."
+    assert_received {:d4h_write, :create, %{"status" => "ATTENDING"}}
+    assert %Attendance{status: "attending"} = Repo.get_by!(Attendance, member_id: ctx.gerry.id)
   end
 
   # Team pages are for team admins, so a member sends it no event either.

@@ -58,9 +58,11 @@ new kind of write is a new row action there, not a new call from a page or an op
   member, with status `REQUESTED` rather than `ATTENDING`, applied at once by
   [InviteMembers](../lib/app/operation/invite_members.ex). Its source is `invite` from
   the activity's Add members page, which history names "Add members", and `template`
-  for a template's groups (#162). It refuses an activity that has started or that the
-  copy says is published. Then it writes the rows D4H took to the copy, as
-  `ReplyToActivity` does, so the page shows them before the next refresh.
+  for a template's groups (#162). From the start, until it's published, Add members
+  sends `ATTENDING` with the activity's times instead (#766), as Take attendance adds a
+  walk-in; a template still refuses a started activity. It refuses one the copy says is
+  published. Then it writes the rows D4H took to the copy, as `ReplyToActivity` does,
+  so the page shows them before the next refresh.
 - **Removing members from an activity is a set** (source `remove`, #704): one
   `delete_attendance` row for each row a checked member has, since D4H allows two
   (#520), applied at once by [RemoveMembers](../lib/app/operation/remove_members.ex)
@@ -70,6 +72,14 @@ new kind of write is a new row action there, not a new call from a page or an op
   signed up member with an email and no row left gets the team admin's message, which is
   also the rows' reason. A team admin who told them already can send no email, as an
   exception; the message is then optional, kept for History when there is one.
+- **Changing attendance on the Members tab is a set** (source `change_attendance`,
+  #766): one per press, applied at once by
+  [ChangeAttendance](../lib/app/operation/change_attendance.ex), from the start until
+  it's published. Attended is an `update_attendance` row for the member's row with the
+  activity's times, Absent one for each row not absent, and Remove a `delete_attendance`
+  row for each row. Each keeps its status from the copy, as the tab showed it, so the
+  applier skips one D4H has changed since. History names it "Change attendance". No
+  email.
 - **Chores are a set per event** (source `chores`, #341): a team admin's decision on a
   chore makes or rebuilds its chore category's D4H event for the month. A new event's
   set creates the activity, then its attendance: those rows say `created_in_set` and get

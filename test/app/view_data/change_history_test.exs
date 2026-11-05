@@ -260,6 +260,12 @@ defmodule App.ViewData.ChangeHistoryTest do
                "tracking_number" => nil
              }) == "Tracking number cleared"
 
+      # A publish sends "" for none (#766), which no person changed.
+      assert activity_row(:update_activity, %{"tracking_number" => nil}, %{
+               "tracking_number" => "",
+               "published" => true
+             }) == "Published"
+
       assert activity_row(:update_activity, %{}, %{"location" => nil}) == "Address changed"
       assert activity_row(:update_activity, %{}, %{"published" => false}) == "No longer published"
     end

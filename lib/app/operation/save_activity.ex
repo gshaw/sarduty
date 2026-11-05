@@ -8,7 +8,8 @@ defmodule App.Operation.SaveActivity do
   (`Activity.hours_tags/1`), or neither, keeping any other tags it has. The place goes as
   the address text and, when it has a pin, the location (#610). On every team, as
   D4H does: a published activity is locked, so only its published flag changes, and only
-  an activity that has finished is published. The description goes as HTML
+  an activity that has finished is published, with a tracking number of "" when it has
+  none, since D4H refuses a null one. The description goes as HTML
   (Service.DescriptionHTML), and only when it changed; one the editor can't hold is left
   out. On a D4H team, a new activity has `full_team` and `shared` false, as a chore event
   does (#341), so D4H adds no one's attendance. Records ignores them.
@@ -134,6 +135,7 @@ defmodule App.Operation.SaveActivity do
       |> drop_locked_description(activity)
       |> put_hours(values.hours != form.hours, activity, values, tag_ids, team)
       |> unless_locked(activity)
+      |> put_tracking_number(activity)
 
     if new == %{},
       do: :unchanged,
@@ -163,6 +165,15 @@ defmodule App.Operation.SaveActivity do
       do: Map.take(new, ["published"]),
       else: new
   end
+
+  # D4H refuses to publish an activity whose tracking number is null (409). An edit sends
+  # only what changed, and a publish alone no PATCH, so a publish sends "" when the copy
+  # has none; the copy can't tell null from "" (#766).
+  defp put_tracking_number(%{"published" => true} = new, %Activity{tracking_number: number})
+       when number in [nil, ""],
+       do: Map.put_new(new, "tracking_number", "")
+
+  defp put_tracking_number(new, _activity), do: new
 
   defp drop_locked_description(new, activity) do
     if ActivityFormViewModel.description_locked?(activity),

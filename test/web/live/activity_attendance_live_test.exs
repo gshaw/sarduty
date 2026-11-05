@@ -28,7 +28,12 @@ defmodule Web.ActivityAttendanceLiveTest do
     |> AttendanceScan.insert!()
   end
 
-  test "the activity page links here", %{conn: conn, team: team, activity: activity} do
+  test "the activity page links here once someone scanned (#766)", ctx do
+    %{conn: conn, team: team, activity: activity} = ctx
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
+    refute has_element?(lv, ~s|a[href="#{attendance_path(team, activity)}"]|)
+
+    scan!(team, activity, member_fixture(team))
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}")
     assert has_element?(lv, ~s|a[href="#{attendance_path(team, activity)}"]|, "Send attendance")
   end
