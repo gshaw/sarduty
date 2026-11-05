@@ -24,10 +24,12 @@ defmodule Web.ActivityMembersLive.Remove do
   def offered?(%{activity: activity, now: now}), do: ChangeAttendance.open?(activity, now)
 
   @impl Web.ActivityMembersLive.Action
-  def count(checked), do: Enum.count(checked, &ChangeAttendance.changes?(:remove, &1.status))
+  def count(_ctx, checked),
+    do: Enum.count(checked, &ChangeAttendance.changes?(:remove, &1.status))
 
   @impl Web.ActivityMembersLive.Action
-  def button(count), do: Format.count(count, one: "Remove 1 member", many: "Remove %d members")
+  def button_text(count),
+    do: Format.count(count, one: "Remove 1 member", many: "Remove %d members")
 
   @impl Web.ActivityMembersLive.Action
   def variant, do: :danger

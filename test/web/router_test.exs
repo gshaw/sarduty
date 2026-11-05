@@ -64,6 +64,10 @@ defmodule Web.RouterTest do
     "/teams/:subdomain/activities/:id/equipment",
     "/teams/:subdomain/activities/:id/fields",
     "/teams/:subdomain/activities/:id/members",
+    # The Members tab's steps (#895): its LiveView, so a member opening one lands on the
+    # tab, as nothing on it is offered to them.
+    "/teams/:subdomain/activities/:id/members/remind",
+    "/teams/:subdomain/activities/:id/members/update",
     "/teams/:subdomain/activities/:id/take-attendance",
     "/teams/:subdomain/certificates/:id/edit",
     "/teams/:subdomain/certificates/:id/file",

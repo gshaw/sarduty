@@ -1,10 +1,10 @@
 defmodule App.Operation.SendActivityUpdate do
   @moduledoc """
   A team admin emails an update to members on an activity (#609), before it starts: their
-  own message, to the members they leave checked, whatever their reply. Each email ends
-  with where the member stands (ActivityMailer.update_ending/2): reply buttons for a
-  member with no reply, unless they turned invitation reminders off, and a link to
-  change the reply for the rest. Asking only members with no reply is Send reminders.
+  own message, to the members they check on its Members tab (#895), whatever their
+  reply. Each email ends with where the member stands (ActivityMailer.update_ending/2):
+  reply buttons for a member with no reply, unless they turned invitation reminders off,
+  and a link to change the reply for the rest. Asking only members with no reply is Send a reminder.
 
   plan/1 says who can get one, pure. call/6 records a queued row per update with its
   job, in one transaction. App.Worker.SendActivityUpdateWorker then sends each with

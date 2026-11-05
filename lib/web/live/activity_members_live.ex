@@ -4,12 +4,14 @@ defmodule Web.ActivityMembersLive do
   attendance (#766). Web.ActivityLive draws the page around it, as it does History; this
   module owns the tab: the members checked, the change picked, and which step is open.
 
-  Before the start it's one table by reply, as #444 made it, with Add members, Remove
-  members, Send reminders, and Send an update on pages of their own. From the start it's
-  a table for each attendance, Attended, Absent, then No reply, last, next to the change,
-  as Travel puts Not set. Everyone sees them. Team admins check members in them, from the
-  start until the activity is published, and change them under the tables: one list and
-  one button, as on Travel.
+  Before the start it's a table per reply, Signed up, Can't make it, then No reply (#895);
+  from it, a table for each attendance, Attended, Absent, then No reply (#766). No reply
+  comes last, next to the list, as Travel puts Not set. Everyone sees them. Team admins
+  check members in them and act on them under the tables: one list and one button, as on
+  Travel. Before the start the list emails them, Send a reminder and Send an update, each
+  a step; from the start until the activity is published it changes their attendance.
+  Add members has its own page, and so does Remove members before the start, until it
+  joins the list too.
 
   A filter bar over the tables, before and after the start, shows one group's members
   (#895), in the URL as `?group=`. The ticks are the rows it shows: changing it unchecks
@@ -23,8 +25,8 @@ defmodule Web.ActivityMembersLive do
   LiveComponent on a `live_action` route of this LiveView, such as `/members/remind`,
   drawn in the tab's place, so the ticks never leave the page:
 
-  - The button patches to the step's route. Back patches to the tab, and the ticks are
-    still there.
+  - The button patches to the step's route, and the step takes the page under its own
+    title. Back patches to the tab, and the ticks are still there.
   - A step opened with nothing it changes, such as after a refresh, lands on the tab
     with a toast, since the ticks live only in this page.
   - The step sends `{:step_done, kind, text}` once it's done: the tab reloads, clears
@@ -41,6 +43,7 @@ defmodule Web.ActivityMembersLive do
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.Reminder
+  alias App.Model.Standing
   alias App.Operation.ChangeAttendance
   alias App.ViewData.ActivityMembers
   alias App.ViewModel.ActivityMembersFilterViewModel
@@ -48,10 +51,12 @@ defmodule Web.ActivityMembersLive do
   alias Web.ActivityLive
   alias Web.ActivityMembersLive.Absent
   alias Web.ActivityMembersLive.Attended
+  alias Web.ActivityMembersLive.Remind
   alias Web.ActivityMembersLive.Remove
+  alias Web.ActivityMembersLive.Update
   alias Web.Components.Reply
 
-  @actions [Attended, Absent, Remove]
+  @actions [Remind, Update, Attended, Absent, Remove]
 
   @doc "Every change the tab offers, in the list's order."
   def actions, do: @actions
@@ -72,7 +77,11 @@ defmodule Web.ActivityMembersLive do
     {:noreply, socket} = ActivityLive.handle_params(params, uri, socket)
 
     {:noreply,
-     socket |> assign_filter(params) |> keep_ticks() |> open_step(socket.assigns.live_action)}
+     socket
+     |> assign(retiring: Standing.retiring_ids(socket.assigns.current_team))
+     |> assign_filter(params)
+     |> keep_ticks()
+     |> open_step(socket.assigns.live_action)}
   end
 
   # The filter bar's Group (#895), in the URL as `?group=`: the tables show only its members.
@@ -101,19 +110,30 @@ defmodule Web.ActivityMembersLive do
     checked = checked(socket.assigns)
     action = socket.assigns |> offered() |> Enum.find(&(&1.run() == {:step, live_action}))
 
-    if action && action.count(checked) > 0 do
-      assign(socket, step: action, choice: action.value())
+    ctx = ctx(socket.assigns)
+
+    if action && action.count(ctx, checked) > 0 do
+      assign(socket,
+        step: action,
+        choice: action.value(),
+        page_title: "#{socket.assigns.activity.title} · #{action.label()}"
+      )
     else
       socket
       |> assign(step: nil)
-      |> put_flash(:error, "Check the members again. Reloading the page clears them.")
+      |> put_flash(:error, "Select the members again.")
       |> push_patch(to: tab_path(socket.assigns))
     end
   end
 
-  # What the actions read: the activity, its team, and now.
+  # What the actions read: the activity, its team, now, and the team's retiring members.
   defp ctx(assigns),
-    do: %{activity: assigns.activity, team: assigns.current_team, now: assigns.now}
+    do: %{
+      activity: assigns.activity,
+      team: assigns.current_team,
+      now: assigns.now,
+      retiring: assigns.retiring
+    }
 
   # The changes the list offers now: none for a member, or on a deleted activity.
   defp offered(%{team_admin?: true, activity: %Activity{deleted_at: nil}} = assigns),
@@ -176,7 +196,9 @@ defmodule Web.ActivityMembersLive do
   end
 
   defp run(socket, action, {:step, _live_action}) do
-    count = socket.assigns |> checked() |> action.count()
+    ctx = ctx(socket.assigns)
+    checked = checked(socket.assigns)
+    count = action.count(ctx, checked)
 
     if count > 0,
       do: {:noreply, push_patch(socket, to: step_path(socket.assigns, action))},
@@ -194,9 +216,46 @@ defmodule Web.ActivityMembersLive do
   def handle_info({:step_done, kind, text}, socket),
     do: {:noreply, socket |> done(kind, text) |> push_patch(to: tab_path(socket.assigns))}
 
+  # A step's error it stays open for, such as a message too long.
+  def handle_info({:step_flash, kind, text}, socket),
+    do: {:noreply, put_flash(socket, kind, text)}
+
+  # Swoosh's test adapter tells each process an email came from, this one included.
+  def handle_info({:email, _email}, socket), do: {:noreply, socket}
+
   def handle_info(message, socket), do: ActivityLive.handle_info(message, socket)
 
-  defdelegate render(assigns), to: ActivityLive
+  # A step takes the page, under its own title; the tab is Web.ActivityLive's page.
+  def render(%{step: nil} = assigns), do: ActivityLive.render(assigns)
+
+  def render(assigns) do
+    assigns = assign(assigns, back: tab_path(assigns))
+
+    ~H"""
+    <.breadcrumbs>
+      <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
+      <:item label={@activity.ref_id} path={~p"/teams/#{@current_team}/activities/#{@activity.id}"} />
+      <:item label="Members" path={@back} />
+      <:item label={@step.label()} />
+    </.breadcrumbs>
+    <h1 class="title">{@step.label()}</h1>
+    <p class="lead">
+      {@activity.title} · {Format.datetime_medium(@activity.started_at, @current_team.timezone)}
+    </p>
+    <.live_component
+      module={@step}
+      id="members-step"
+      team={@current_team}
+      activity={@activity}
+      user={@current_user}
+      checked={checked(assigns)}
+      standings={@standings}
+      counts={@counts}
+      service={@service}
+      back={@back}
+    />
+    """
+  end
 
   # The tab, and a step, keep the filter, so Back opens the tab as it was.
   defp tab_path(%{current_team: team, activity: activity, filter: filter}),
@@ -238,32 +297,41 @@ defmodule Web.ActivityMembersLive do
   attr :adding, :atom, default: nil, doc: "Activity.adding/3: :open, :published, or nil"
   attr :selected, :any, required: true, doc: "the checked members' ids"
   attr :choice, :string, default: nil, doc: "the change picked, an action's value"
-  attr :step, :atom, default: nil, doc: "the open step's action, or nil for the tab"
-  attr :user, :any, required: true
-  attr :service, :string, required: true
+  attr :retiring, :any, required: true, doc: "the team's retiring member ids"
   attr :filter, ActivityMembersFilterViewModel, required: true, doc: "the filter bar's choices"
   attr :groups, :list, required: true, doc: "the team's groups as `{title, id}`"
   attr :group_ids, :any, required: true, doc: "the group's member ids, or nil for no filter"
 
   @doc """
   The tab, drawn by Web.ActivityLive's page. The counts are the panel's line, on every
-  tab. Before the start: one table by reply, then name, with how each replied and when,
-  New for the last 24 hours. From the start: a table for each attendance, with each
-  attended member's times.
+  tab. A table per status: before the start each reply, with when each replied, New for
+  the last 24 hours, and the last reminder; from the start each attendance, with each
+  attended member's times. Before the start the list starts on its first choice, so the
+  button always says what it does.
   """
   def members_tab(assigns) do
-    ctx = %{activity: assigns.activity, team: assigns.team, now: assigns.now}
+    ctx = %{
+      activity: assigns.activity,
+      team: assigns.team,
+      now: assigns.now,
+      retiring: assigns.retiring
+    }
 
     actions =
       offered(%{
         team_admin?: assigns.team_admin?,
         activity: assigns.activity,
         current_team: assigns.team,
-        now: assigns.now
+        now: assigns.now,
+        retiring: assigns.retiring
       })
 
     checked = checked(assigns)
-    action = Enum.find(actions, &(&1.value() == assigns.choice))
+
+    action =
+      Enum.find(actions, &(&1.value() == assigns.choice)) ||
+        if(!assigns.started?, do: List.first(actions))
+
     shown = shown(assigns)
 
     assigns =
@@ -274,10 +342,10 @@ defmodule Web.ActivityMembersLive do
         timezone: assigns.team.timezone,
         ctx: ctx,
         actions: actions,
-        changeable?: assigns.started? and actions != [],
+        changeable?: actions != [],
         checked: checked,
         action: action,
-        count: if(action, do: action.count(checked), else: 0)
+        count: if(action, do: action.count(ctx, checked), else: 0)
       )
 
     assigns =
@@ -290,195 +358,145 @@ defmodule Web.ActivityMembersLive do
 
     ~H"""
     <section id="activity-members">
-      <.live_component
-        :if={@step}
-        module={@step}
-        id="members-step"
-        team={@team}
-        activity={@activity}
-        user={@user}
-        checked={@checked}
-        back={members_path(@team, @activity, @filter)}
-      />
-      <div :if={!@step}>
-        <p :if={@batch} id="members-batch" class="hint">
-          {batch_text(@batch, @batch_sender, @timezone)}
-        </p>
-        <%!-- From the copy, which can be 10 minutes old; the send refuses it too. --%>
-        <p :if={@adding == :published and !@started?} id="members-published" class="hint mb-4">
-          Published, so nobody can be added. {D4H.unpublish_text(@team)}
-        </p>
-        <p :if={@locked?} id="members-locked" class="hint mb-4">
-          Published, so attendance cannot be changed. {D4H.unpublish_text(@team)}
-        </p>
-        <p :if={@members == [] and @adding != :published} id="members-empty" class="hint">
-          {if @started?, do: "Nobody attended.", else: "Nobody has signed up yet."}
-        </p>
-        <p :if={@adding == :open} class="action">
-          <.a
-            id="members-add"
-            navigate={~p"/teams/#{@team}/activities/#{@activity.id}/members/add"}
-          >Add members</.a>
-        </p>
-        <p :if={@adding == :open and !@started? and @members != []} class="action">
-          <.a
-            id="members-remove"
-            navigate={~p"/teams/#{@team}/activities/#{@activity.id}/members/remove"}
-          >Remove members</.a>
-        </p>
-        <.filter_bar
-          :if={@members != [] and @groups != []}
-          for={@filter_form}
-          id="members-filter"
-          count={@filter_count}
-          clear={members_path(@team, @activity, %ActivityMembersFilterViewModel{})}
-          path_fn={
-            &members_path(
-              @team,
-              @activity,
-              ActivityMembersFilterViewModel.validate(Map.new(&1), @groups)
-            )
-          }
-        >
-          <:filter
-            field={@filter_form[:group]}
-            label="Group"
-            type="combobox"
-            options={@groups}
-            default=""
-          />
-        </.filter_bar>
-        <.empty_state
-          :if={@members != [] and @shown == []}
-          id="members-none-shown"
-          title="No members match"
-        >
-          Change the group.
-        </.empty_state>
-        <.reply_table
-          :if={!@started? and @shown != []}
+      <p :if={@batch} id="members-batch" class="hint">
+        {batch_text(@batch, @batch_sender, @timezone)}
+      </p>
+      <%!-- From the copy, which can be 10 minutes old; the send refuses it too. --%>
+      <p :if={@adding == :published and !@started?} id="members-published" class="hint mb-4">
+        Published, so nobody can be added. {D4H.unpublish_text(@team)}
+      </p>
+      <p :if={@locked?} id="members-locked" class="hint mb-4">
+        Published, so attendance cannot be changed. {D4H.unpublish_text(@team)}
+      </p>
+      <p :if={@members == [] and @adding != :published} id="members-empty" class="hint">
+        {if @started?, do: "Nobody attended.", else: "Nobody has signed up yet."}
+      </p>
+      <p :if={@adding == :open} class="action">
+        <.a
+          id="members-add"
+          navigate={~p"/teams/#{@team}/activities/#{@activity.id}/members/add"}
+        >Add members</.a>
+      </p>
+      <p :if={@adding == :open and !@started? and @members != []} class="action">
+        <.a
+          id="members-remove"
+          navigate={~p"/teams/#{@team}/activities/#{@activity.id}/members/remove"}
+        >Remove members</.a>
+      </p>
+      <.filter_bar
+        :if={@members != [] and @groups != []}
+        for={@filter_form}
+        id="members-filter"
+        count={@filter_count}
+        clear={members_path(@team, @activity, %ActivityMembersFilterViewModel{})}
+        path_fn={
+          &members_path(
+            @team,
+            @activity,
+            ActivityMembersFilterViewModel.validate(Map.new(&1), @groups)
+          )
+        }
+      >
+        <:filter
+          field={@filter_form[:group]}
+          label="Group"
+          type="combobox"
+          options={@groups}
+          default=""
+        />
+      </.filter_bar>
+      <.empty_state
+        :if={@members != [] and @shown == []}
+        id="members-none-shown"
+        title="No members match"
+      >
+        Change the group.
+      </.empty_state>
+      <.form
+        :if={@changeable? and @shown != []}
+        for={%{}}
+        id="members-change-form"
+        phx-change="tick"
+        phx-submit="apply"
+      >
+        <.member_tables
           activity={@activity}
           team={@team}
           members={@shown}
           standings={@standings}
+          started?={@started?}
           now={@now}
           reminded={@reminded}
-        />
-        <.form
-          :if={@changeable? and @shown != []}
-          for={%{}}
-          id="members-change-form"
-          phx-change="tick"
-          phx-submit="apply"
-        >
-          <.attendance_tables
-            activity={@activity}
-            team={@team}
-            members={@shown}
-            standings={@standings}
-            selected={@selected}
-            changeable?={true}
-          />
-          <div id="members-change" class="mt-8">
-            <.input
-              type="radios"
-              id="members-change-choice"
-              name="change"
-              label="Change the checked members"
-              value={@choice}
-              options={for a <- @actions, do: {a.label(), a.value(), a.hint(@ctx)}}
-            />
-            <.button
-              id="members-change-send"
-              variant={if @action, do: @action.variant(), else: :primary}
-              disabled={@count == 0}
-              phx-disable-with={
-                if @action && @action.variant() == :danger, do: "Removing…", else: "Saving…"
-              }
-              {@confirm}
-            >
-              {if @count > 0, do: @action.button(@count), else: "Change members"}
-            </.button>
-          </div>
-        </.form>
-        <.attendance_tables
-          :if={@started? and !@changeable? and @shown != []}
-          activity={@activity}
-          team={@team}
-          members={@shown}
-          standings={@standings}
           selected={@selected}
-          changeable?={false}
+          changeable?={true}
         />
-      </div>
+        <div id="members-change" class="mt-8">
+          <.input
+            type="radios"
+            id="members-change-choice"
+            name="change"
+            label={if @started?, do: "Change the checked members", else: "For the checked members"}
+            value={@action && @action.value()}
+            options={for a <- @actions, do: {a.label(), a.value(), a.hint(@ctx)}}
+          />
+          <.button
+            id="members-change-send"
+            variant={if @action, do: @action.variant(), else: :primary}
+            disabled={@count == 0}
+            phx-disable-with={send_waiting(@action)}
+            {@confirm}
+          >
+            {if @count > 0, do: @action.button_text(@count), else: idle_text(@action, @started?)}
+          </.button>
+        </div>
+      </.form>
+      <.member_tables
+        :if={!@changeable? and @shown != []}
+        activity={@activity}
+        team={@team}
+        members={@shown}
+        standings={@standings}
+        started?={@started?}
+        now={@now}
+        reminded={@reminded}
+        selected={@selected}
+        changeable?={false}
+      />
     </section>
     """
   end
 
-  attr :activity, :map, required: true
-  attr :team, :any, required: true
-  attr :members, :list, required: true
-  attr :standings, :map, required: true
-  attr :now, :any, required: true
-  attr :reminded, :map, required: true
+  # The button while it waits: a step opens at once, and a change in place writes.
+  defp send_waiting(nil), do: "Saving…"
 
-  # Before the start: one table, by reply and then name (#444).
-  defp reply_table(assigns) do
-    assigns = assign(assigns, timezone: assigns.team.timezone)
-
-    ~H"""
-    <.table
-      id="members-table"
-      rows={@members}
-      row_id={&"member-row-#{&1.member.id}"}
-      class="table-striped w-fit"
-    >
-      <:col :let={row} label="Member">
-        <.member_cell
-          id={"member-standing-#{row.member.id}"}
-          member={row.member}
-          team={@team}
-          standing={@standings[row.member.id]}
-          path={member_path(@team, @activity, row.member)}
-        />
-      </:col>
-      <:col :let={row} label="Reply" class="whitespace-nowrap">
-        <span class={["marker", "marker-#{Reply.marker(row.status)}"]}>
-          {Reply.status_text(row.status, false)}
-        </span>
-      </:col>
-      <:col :let={row} label="Replied" class="whitespace-nowrap">
-        {Format.month_day_time(row.replied_at, @timezone)}
-        <span
-          :if={row.status == "requested" and @reminded[row.member_id]}
-          id={"member-reminded-#{row.member.id}"}
-          class="hint"
-        >
-          {reminded_text(@reminded[row.member_id], @timezone)}
-        </span>
-        <.badge
-          :if={ActivityMembers.new?(row, @now)}
-          kind={:primary}
-          title="Replied in the last 24 hours"
-        >
-          New
-        </.badge>
-      </:col>
-    </.table>
-    """
+  defp send_waiting(action) do
+    case {action.run(), action.variant()} do
+      {{:step, _live_action}, _variant} -> "Opening…"
+      {_run, :danger} -> "Removing…"
+      _in_place -> "Saving…"
+    end
   end
 
+  # With nobody it reaches: before the start the choice's own, "Remind 0 members".
+  defp idle_text(action, false = _started?) when action != nil, do: action.button_text(0)
+  defp idle_text(_action, _started?), do: "Change members"
+
   attr :activity, :map, required: true
   attr :team, :any, required: true
   attr :members, :list, required: true
   attr :standings, :map, required: true
+  attr :started?, :boolean, required: true
+  attr :now, :any, required: true
+  attr :reminded, :map, required: true
   attr :selected, :any, required: true
   attr :changeable?, :boolean, required: true
 
-  # From the start: Attended with each member's times, then Absent, then No reply, each
-  # with select all for a team admin who can change them. A name labels its checkbox then;
-  # otherwise it links to the member's page.
-  defp attendance_tables(assigns) do
+  # A table per status, each with select all for a team admin who can act on them. Before
+  # the start: Signed up and Can't make it with Replied (#444), then No reply, with the
+  # last reminder once anyone in it has one. From the
+  # start: Attended with each member's times, then Absent, then No reply. A name labels
+  # its checkbox then; otherwise it links to the member's page.
+  defp member_tables(assigns) do
     assigns =
       assign(assigns,
         timezone: assigns.team.timezone,
@@ -494,10 +512,10 @@ defmodule Web.ActivityMembersLive do
     ~H"""
     <div :for={{status, rows} <- @groups} class="mb-6">
       <.table
-        id={"members-#{table_id(status)}"}
+        id={"members-#{table_id(status, @started?)}"}
         rows={rows}
         row_id={&"member-row-#{&1.member.id}"}
-        class="table-striped"
+        class={if @started?, do: "table-striped", else: "table-striped w-fit"}
       >
         <:col :let={row} :if={@changeable?} label="" class="w-px" select_all>
           <input
@@ -508,7 +526,7 @@ defmodule Web.ActivityMembersLive do
             checked={MapSet.member?(@selected, row.member.id)}
           />
         </:col>
-        <:col :let={row} label={Reply.status_text(status, true)}>
+        <:col :let={row} label={Reply.status_text(status, @started?)}>
           <.member_cell
             id={"member-standing-#{row.member.id}"}
             member={row.member}
@@ -520,7 +538,36 @@ defmodule Web.ActivityMembersLive do
         </:col>
         <:col
           :let={row}
-          :if={status == "attending"}
+          :if={!@started? and status != "requested"}
+          label="Replied"
+          class="whitespace-nowrap"
+        >
+          {Format.month_day_time(row.replied_at, @timezone)}
+          <.badge
+            :if={ActivityMembers.new?(row, @now)}
+            kind={:primary}
+            title="Replied in the last 24 hours"
+          >
+            New
+          </.badge>
+        </:col>
+        <:col
+          :let={row}
+          :if={!@started? and status == "requested" and reminded?(rows, @reminded)}
+          label="Reminder"
+          class="whitespace-nowrap"
+        >
+          <span
+            :if={@reminded[row.member_id]}
+            id={"member-reminded-#{row.member.id}"}
+            class="hint"
+          >
+            {reminded_text(@reminded[row.member_id], @timezone)}
+          </span>
+        </:col>
+        <:col
+          :let={row}
+          :if={@started? and status == "attending"}
           label="Start"
           align="right"
           class="whitespace-nowrap"
@@ -529,7 +576,7 @@ defmodule Web.ActivityMembersLive do
         </:col>
         <:col
           :let={row}
-          :if={status == "attending"}
+          :if={@started? and status == "attending"}
           label="Finish"
           align="right"
           class="whitespace-nowrap"
@@ -538,7 +585,7 @@ defmodule Web.ActivityMembersLive do
         </:col>
         <:col
           :let={row}
-          :if={status == "attending"}
+          :if={@started? and status == "attending"}
           label="Hours"
           align="right"
           class="w-px whitespace-nowrap"
@@ -548,7 +595,7 @@ defmodule Web.ActivityMembersLive do
       </.table>
       <%!-- The Hours column's sum, exact as Service.Format.duration/1 writes the minutes. --%>
       <p
-        :if={status == "attending" and attended_minutes(rows) > 0}
+        :if={@started? and status == "attending" and attended_minutes(rows) > 0}
         id="members-hours"
         class="hint mt-2"
       >
@@ -568,9 +615,11 @@ defmodule Web.ActivityMembersLive do
     end
   end
 
-  defp table_id("attending"), do: "attended"
-  defp table_id("absent"), do: "absent"
-  defp table_id("requested"), do: "no-reply"
+  defp table_id("attending", false), do: "signed-up"
+  defp table_id("absent", false), do: "cant-make-it"
+  defp table_id("attending", true), do: "attended"
+  defp table_id("absent", true), do: "absent"
+  defp table_id("requested", _started?), do: "no-reply"
 
   defp member_path(team, activity, member),
     do:
@@ -609,6 +658,8 @@ defmodule Web.ActivityMembersLive do
     |> Enum.filter(& &1)
     |> Enum.join(" · ")
   end
+
+  defp reminded?(rows, reminded), do: Enum.any?(rows, &reminded[&1.member_id])
 
   defp reminded_text(%Reminder{status: :failed}, _timezone), do: "Reminder failed"
   defp reminded_text(%Reminder{status: :queued}, _timezone), do: "Reminder sending"

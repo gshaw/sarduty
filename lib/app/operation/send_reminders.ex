@@ -1,10 +1,10 @@
 defmodule App.Operation.SendReminders do
   @moduledoc """
   A team admin emails reminders to members who haven't replied to an activity (#444),
-  from Send reminders (#608), before it starts. Each send goes to the members they leave
-  checked; the page shows when each was emailed before, and the team admin decides.
-  Members who replied get none, and the page says why each other member gets none
-  either.
+  from Send a reminder on its Members tab (#608, #895), before it starts. Each send goes
+  to the members they checked; the step shows when each was emailed before, and the team
+  admin decides. Members who replied get none, and the step says why each other member
+  checked gets none either.
 
   A send can carry a message, the team admin's own words at the top of the email, up to
   300 characters (#609).
@@ -114,7 +114,7 @@ defmodule App.Operation.SendReminders do
   end
 
   @doc """
-  The message Send reminders starts with (#447): "We need 4 more people." while the
+  The message Send a reminder starts with (#447): "We need 4 more people." while the
   activity is short of Enough at (`Activity.more_needed/3`), and empty otherwise. The
   team admin can change or clear it.
   """

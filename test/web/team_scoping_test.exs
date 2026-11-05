@@ -22,8 +22,8 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/activities/:id/templates",
     "/teams/:subdomain/activities/:id/members/add",
     "/teams/:subdomain/activities/:id/members/remove",
-    "/teams/:subdomain/activities/:id/reminders",
-    "/teams/:subdomain/activities/:id/updates",
+    "/teams/:subdomain/activities/:id/members/remind",
+    "/teams/:subdomain/activities/:id/members/update",
     "/teams/:subdomain/activities/:id/tags",
     "/teams/:subdomain/equipment/:id",
     "/teams/:subdomain/equipment/:id/fields",
@@ -246,11 +246,11 @@ defmodule Web.TeamScopingTest do
   defp path_for("/teams/:subdomain/activities/:id/members/remove", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/members/remove"
 
-  defp path_for("/teams/:subdomain/activities/:id/reminders", s, o),
-    do: ~p"/teams/#{s}/activities/#{o.activity.id}/reminders"
+  defp path_for("/teams/:subdomain/activities/:id/members/remind", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/members/remind"
 
-  defp path_for("/teams/:subdomain/activities/:id/updates", s, o),
-    do: ~p"/teams/#{s}/activities/#{o.activity.id}/updates"
+  defp path_for("/teams/:subdomain/activities/:id/members/update", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/members/update"
 
   defp path_for("/teams/:subdomain/activities/:id/tags", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/tags"

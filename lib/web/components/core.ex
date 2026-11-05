@@ -108,6 +108,7 @@ defmodule Web.Components.Core do
       <.button phx-click="email" phx-disable-with="Sending…">Email letter</.button>
       <.button icon="rotate-ccw-square" phx-click="rotate">Rotate left</.button>
       <.button navigate={~p"/login"}>Log in</.button>
+      <.button patch={@back}>Back</.button>
   """
   attr :type, :string, default: nil
 
@@ -117,6 +118,7 @@ defmodule Web.Components.Core do
 
   attr :size, :atom, default: :md, values: [:sm, :md, :lg]
   attr :navigate, :string, default: nil
+  attr :patch, :string, default: nil, doc: "the same LiveView at another path, such as Back"
   attr :href, :string, default: nil
   attr :class, :string, default: nil
   attr :icon, :string, default: nil, values: [nil | @icon_names]
@@ -128,10 +130,11 @@ defmodule Web.Components.Core do
     assigns =
       assign(assigns, button_class: button_class(assigns), icon_style: icon_style(assigns))
 
-    if assigns.navigate || assigns.href do
+    if assigns.navigate || assigns.patch || assigns.href do
       ~H"""
       <.link
         navigate={@navigate}
+        patch={@patch}
         href={@href}
         class={@button_class}
         style={@icon_style}

@@ -179,11 +179,11 @@ defmodule App.Model.AttendanceTest do
     "lib/web/components/reply.ex" => "a member's own reply, before the start",
     "lib/app/view_data/activity_members.ex" => "one activity's replies, sign-ups included",
     "lib/app/mailer/activity_mailer.ex" => "how an update ends, from a reply before the start",
-    "lib/web/live/activity_send_update_live.ex" => "a label",
     "lib/app/operation/remove_members.ex" => "a signed up member's reply, before the start",
     "lib/web/live/activity_remove_members_live.ex" => "a table per reply, before the start",
     "lib/web/live/activity_members_live.ex" => "one activity's table per attendance",
     "lib/web/live/activity_members_live/remove.ex" => "the hours a removal takes, from the row",
+    "lib/web/live/activity_members_live/update.ex" => "a label, a table per reply",
     "lib/app/operation/change_attendance.ex" => "a row's status, changed by hand",
     "lib/app/operation/refresh_d4h_data/upsert_attendances.ex" =>
       "a no-show's row changed to attending in D4H",

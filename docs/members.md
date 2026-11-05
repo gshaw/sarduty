@@ -155,12 +155,12 @@ refuses to retire a member who does. It can last weeks. Decided 2026-10-27 (#514
 contacts, invites, or lets members in skips them (Andrew, 2026-10-28). Only the pages a
 team admin uses to finish retiring them still show them.
 
-| Skips retiring members                                                                                                               | Through                                              |
-| ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| Logging in as a team admin, Agents, Team admins, the last team admin check, and team admin email                                     | `Member.managers_query/2`                            |
-| Logging in as a member                                                                                                               | `Member.counted_query/1` in `Member.get_logins/2`    |
-| Dashboard counts and charts, Missing details, Add members, a template's groups, Take attendance, and an organization's member totals | `Member.counted_query/1`                             |
-| Reminders                                                                                                                            | Send reminders names them under "Who doesn't get it" |
+| Skips retiring members                                                                                                               | Through                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| Logging in as a team admin, Agents, Team admins, the last team admin check, and team admin email                                     | `Member.managers_query/2`                             |
+| Logging in as a member                                                                                                               | `Member.counted_query/1` in `Member.get_logins/2`     |
+| Dashboard counts and charts, Missing details, Add members, a template's groups, Take attendance, and an organization's member totals | `Member.counted_query/1`                              |
+| Reminders                                                                                                                            | Send a reminder names them under "Who doesn't get it" |
 
 Still shown: the Members list (the Retiring tile, and Not retired, its default), their
 member page and history, Equipment's With retiring members, and Needs attention. Group
@@ -475,14 +475,14 @@ activity starts.
   day, and the page names them; adding one by name includes them. A published activity
   says so in place of the link. D4H's own weekly briefing may still tell them.
 - **Reminders** ([SendReminders](../lib/app/operation/send_reminders.ex)): before the
-  start, a team admin opens Send reminders from the activity's Actions, a page at
-  `/teams/:subdomain/activities/:id/reminders`
-  ([ActivitySendRemindersLive](../lib/web/live/activity_send_reminders_live.ex), #608). It
-  lists each member with no reply who can get an email, all checked, with the dates they
-  were emailed before. Unchecking a member leaves them out. Then who gets none and why,
-  a line each: replied already (a count of signed up and can't make it), turned off
-  invitation reminders, or no email in D4H. Then the email itself, from the mailer's own
-  HTML, and Send 3 emails. A message (optional, up to 300 characters, #609) adds the team
+  start, a team admin checks members on the Members tab, picks Send a reminder, and the
+  button counts the checked members with no reply it can email: Remind 2 members. It
+  opens a step, `/teams/:subdomain/activities/:id/members/remind`
+  ([Remind](../lib/web/live/activity_members_live/remind.ex), #608, #895). It lists who
+  gets one, with the dates they were emailed before, then everyone else checked who gets
+  none and why, a line each: replied already (a count of signed up and can't make it),
+  retiring, turned off invitation reminders, or no email in D4H. Then the email itself,
+  from the mailer's own HTML, Send 3 emails, and Back to the tab with the ticks kept. A message (optional, up to 300 characters, #609) adds the team
   admin's own words under the date and place; the preview shows it as they type, at a
   phone's width, so they see whether it pushes the buttons off the first screen. Each
   send starts with no message, so an old one never goes out again by mistake. Members who replied never get one. There is no limit per
@@ -492,33 +492,32 @@ activity starts.
   no colour, so a mail app in dark mode keeps it readable. Each is a row in `reminders`:
   who, when, by whom, the message, and sent or failed. A No reply row's Replied cell reads "Reminded
   Oct 26", or "Reminder failed". Beside the Members heading, the last batch: "4 sent Oct
-  26, 18:02 by Alex Chen · 2 replied since". The message's hint says members who
-  replied don't get it, and links to Send an update.
+  26, 18:02 by Alex Chen · 2 replied since".
 - **Updates** ([SendActivityUpdate](../lib/app/operation/send_activity_update.ex), #609):
-  before the start, a team admin opens Send an update from the activity's Actions,
-  `/teams/:subdomain/activities/:id/updates`
-  ([ActivitySendUpdateLive](../lib/web/live/activity_send_update_live.ex)), to tell
-  everyone on the activity something, such as a new meeting place. The message is
-  required, up to 300 characters. Every member with an email starts checked, in a table
-  per reply (Signed up, Can't make it, No reply), each with select all. Each email ends
+  before the start, a team admin checks members on the Members tab and picks Send an
+  update, to tell them something whatever their reply, such as a new meeting place. The
+  button counts the checked members with an email: Email 3 members. Its step,
+  `/teams/:subdomain/activities/:id/members/update`
+  ([Update](../lib/web/live/activity_members_live/update.ex), #895), lists them in a table
+  per reply (Signed up, Can't make it, No reply), and who has no email. The message is
+  required, up to 300 characters. Each email ends
   with where the member stands, read when it goes: "You're signed up." or "You said you
   can't make it." with Change your reply, or the reply buttons for a member with no
   reply. A member with no reply who turned invitation reminders off gets no buttons,
   only Open activity, so it stays an update and not an invitation. Updates ignore that
   setting otherwise, and carry no unsubscribe. The preview shows one ending at a time.
   Earlier updates are listed at the top with their message, sender, and count. Each is
-  a row in `activity_updates`. Asking only members with no reply is Send reminders,
-  which the page links to.
-- **Members**, under the map, lists everyone the activity invites
-  ([ActivityMembers](../lib/app/view_data/activity_members.ex)): a stat switch of All,
-  Signed up, Can't make it, and No reply (Attended, Absent, and No reply once it starts),
-  each count a filter, `?view=signed-up` and so on. Then one table, by reply and then
-  name: Name, Reply with its marker, Replied with New for the last 24 hours, and ID.
-  Once it starts, Attendance, Start, Finish, and Duration replace Reply and Replied.
-  Start shows a date only when it isn't the activity's day. Each part keeps the
-  columns, even Reply or Attendance, which then repeats on every row (2026-10-25).
-  Start, Finish, and Duration go when no row in the part attended, and Replied when
-  no row in it replied or was reminded.
+  a row in `activity_updates`. Asking only members with no reply is Send a reminder.
+- **Members**, the activity's Members tab, lists everyone it invites
+  ([ActivityMembersLive](../lib/web/live/activity_members_live.ex),
+  [ActivityMembers](../lib/app/view_data/activity_members.ex)), under a Group filter
+  (`?group=`). Before the start, a table per reply: Signed up, Can't make it, then No
+  reply (#895), each with Replied: when, New for the last 24 hours, and the last
+  reminder. From the start, a table per attendance: Attended with Start, Finish, and
+  Hours, then Absent, then No reply (#766). Start shows a date only when it isn't the
+  activity's day. Team admins get a tick box per row and select all per table, then one
+  list and one button for the checked members: Send a reminder and Send an update before
+  the start, and changes to attendance from it until it's published.
 
 ### View as member
 
