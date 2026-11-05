@@ -439,6 +439,9 @@ defmodule Web.ActivityLive do
           selected={@selected}
           choice={@choice}
           step={@step}
+          filter={@filter}
+          groups={@groups}
+          group_ids={@group_ids}
           user={@current_user}
           service={@service}
         />
