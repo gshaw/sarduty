@@ -1,0 +1,18 @@
+/* The bar under a long list of checked rows (action_bar.ex): its one button. It sticks to
+   the foot of the window, so the button stays in view on a long list. */
+@layer components {
+  .action-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2);
+    padding-block: var(--sp-3);
+    margin-top: var(--sp-4);
+    background: var(--bg);
+    border-top: 1px solid var(--border-subtle);
+  }
+  .action-bar > .hint { margin-right: var(--sp-2); }
+}

@@ -23,25 +23,9 @@
   }
 }
 
-/* Travel's bar under its tables (travel_tab.ex): Change for the checked members. It sticks
-   to the foot of the window, so the button stays in view on a long list. */
+/* Travel's km box (travel_choices.ex). */
 @layer components {
-  .travel-bar {
-    position: sticky;
-    bottom: 0;
-    z-index: 2;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--sp-2);
-    padding-block: var(--sp-3);
-    margin-top: var(--sp-4);
-    background: var(--bg);
-    border-top: 1px solid var(--border-subtle);
-  }
-  .travel-bar > .hint { margin-right: var(--sp-2); }
-  /* Other's choice holds its km box, taller than a line, so the radio centres on it
-     (travel_choices.ex). */
+  /* Other's choice holds its km box, taller than a line, so the radio centres on it. */
   .travel-other-choice { align-items: center; }
   .travel-other-choice > input { align-self: center; margin-top: 0; }
 }

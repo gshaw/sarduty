@@ -19,6 +19,7 @@ defmodule Web.Components.TravelTab do
   """
   use Web, :live_component
 
+  import Web.Components.ActionBar, only: [action_bar: 1]
   import Web.Components.Columns, only: [member_cell: 1]
   import Web.Components.CopyButton, only: [copy_code_block: 1]
   import Web.Components.Table, only: [table: 1]
@@ -232,8 +233,14 @@ defmodule Web.Components.TravelTab do
             </:col>
           </.table>
 
-          <%!-- Sticks to the foot of the window, so its button stays in view on a long list. --%>
-          <div :if={!@locked?} id="travel-bar" class="travel-bar">
+          <.action_bar
+            :if={!@locked?}
+            id="travel-bar"
+            hint={
+              if MapSet.size(@selected) == 0,
+                do: "Check members, then change their travel together."
+            }
+          >
             <.button
               type="button"
               id="travel-change-checked"
@@ -243,10 +250,7 @@ defmodule Web.Components.TravelTab do
             >
               {change_text(checked_members(travel, @selected))}
             </.button>
-            <span :if={MapSet.size(@selected) == 0} id="travel-bar-hint" class="hint">
-              Check members, then change their travel together.
-            </span>
-          </div>
+          </.action_bar>
         </.form>
 
         <.travel_dialog
