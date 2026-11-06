@@ -1,21 +1,25 @@
 defmodule Web.ActivityMembersLive.Action do
   @moduledoc """
   One change on an activity's Members tab (#766): a team admin checks members in the
-  tables, picks a change from one list, and presses one button. Web.ActivityMembersLive
+  table, picks a change from one list, and presses one button. Web.ActivityMembersLive
   lists every change in its `@actions`, in the list's order; each is a module with this
   behaviour.
 
   A change applies in place, through an operation, and the tables update on the tab
   (`run/1` answers `{:in_place, change}`). Or it opens a step (`{:step, live_action}`):
   the module is then a LiveComponent too, drawn in the tab's place on a `live_action`
-  route of the same LiveView, such as `/members/remind`, so the ticks never leave the
+  route of the same LiveView, such as `/members/ask`, so the ticks never leave the
   page. See Web.ActivityMembersLive for the step's rules. A step gets `team`, `activity`,
   `user`, `checked`, `standings`, `counts` (the panel's), `service`, and `back`, the
   tab's path, and draws everything under the page's title.
 
-  `ctx` is `%{activity:, team:, now:, retiring:}`, with the team's retiring member ids. `checked` are the checked members' rows, one per
-  member as the tab shows them (App.ViewData.ActivityMembers), each with its `member`,
+  `ctx` is `%{activity:, team:, now:, retiring:}`, with the team's retiring member ids.
+  `checked` are the checked members' rows, one per member as the tab shows them (App.ViewData.ActivityMembers), each with its `member`,
   `status`, and `duration_in_minutes`.
+
+  The list follows writing.md's Choices for checked rows (#920): a label that starts with
+  a verb, a hint that says what happens to the checked, with counts, and a choice that
+  reaches nobody checked greyed with the reason.
   """
 
   @type ctx :: %{activity: map(), team: map(), now: DateTime.t(), retiring: MapSet.t()}
@@ -23,11 +27,20 @@ defmodule Web.ActivityMembersLive.Action do
   @doc ~s(The list's value, also in ids: "absent".)
   @callback value() :: String.t()
 
-  @doc ~s(The list's label: "Absent".)
+  @doc ~s(The list's label: "Mark absent".)
   @callback label() :: String.t()
 
-  @doc "The line under the label: what the change does."
-  @callback hint(ctx()) :: String.t()
+  @doc """
+  The line under the label: what happens to the `checked`, with counts, and who it skips
+  or what they lose. With nothing checked, the same sentence without counts. Pure.
+  """
+  @callback hint(ctx(), checked :: [map()]) :: String.t()
+
+  @doc """
+  Nil, or why the choice reaches nobody checked, shown greyed in its hint's place:
+  "Everyone checked has replied." Nil with nothing checked. Pure.
+  """
+  @callback unavailable(ctx(), checked :: [map()]) :: String.t() | nil
 
   @doc "Whether the list offers it now."
   @callback offered?(ctx()) :: boolean()
@@ -49,4 +62,30 @@ defmodule Web.ActivityMembersLive.Action do
   checked members.
   """
   @callback run(checked :: [map()]) :: {:in_place, atom()} | {:step, atom()}
+
+  @doc """
+  The choice the list shows picked: `choice`, an action's value, while it reaches someone
+  checked; when it greys out, the next one offered after it that doesn't, then the first.
+  With no choice, the first that reaches someone when `first?`, else nil. Pure.
+  """
+  def pick(actions, choice, ctx, checked, first?) do
+    open = Enum.reject(actions, & &1.unavailable(ctx, checked))
+
+    case Enum.find_index(actions, &(&1.value() == choice)) do
+      nil ->
+        if first?, do: List.first(open)
+
+      index ->
+        {before, from} = Enum.split(actions, index)
+        Enum.find(from ++ before, &(&1 in open))
+    end
+  end
+
+  @doc ~s(The checked as a sentence's subject: "All 3 checked", or "The 1 checked".)
+  def all_checked(1), do: "The 1 checked"
+  def all_checked(count), do: "All #{count} checked"
+
+  @doc ~s(A count and its verb: "1 has", "2 have", from the two verbs.)
+  def count_verb(1, one, _many), do: "1 #{one}"
+  def count_verb(count, _one, many), do: "#{count} #{many}"
 end

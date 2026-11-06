@@ -154,16 +154,18 @@
         {"Board work", "2", "Meetings, minutes, and the AGM"}
       ]}
     />
-    <fieldset>
-      <legend>How they got there</legend>
-      <label class="choice">
-        <input type="radio" name="e-way" value="icp" checked /> Drove to the ICP, 54 km
-      </label>
-      <label class="choice">
-        <input type="radio" name="e-way" value="yard" disabled /> Drove to the yard, no route
-      </label>
-      <label class="choice"><input type="radio" name="e-way" value="passenger" /> Passenger, 0 km</label>
-    </fieldset>
+    <.input
+      type="radios"
+      id="e-way"
+      name="e-way"
+      label="How they got there"
+      value="icp"
+      options={[
+        {"Drove to the ICP, 54 km", "icp"},
+        {"Drove to the yard", "yard", "No route from their home.", disabled: true},
+        {"Passenger, 0 km", "passenger"}
+      ]}
+    />
   </div>
 
   <p class="spec">
@@ -171,7 +173,9 @@
     with <code>options</code>
     as <code>&lbrace;label, value&rbrace;</code>, or
     <code>&lbrace;label, value, hint&rbrace;</code>
-    for a line saying what a choice covers. One answer, every choice in view. Its error shows after a failed save even when nothing is picked, since a form sends nothing for radios none of which is checked. Log a chore's categories use it. A choice that can't be picked stays in the list, greyed with its label, and the label says why, such as "no route": hiding it would leave people wondering where it went.
+    for a line saying what a choice covers, and
+    <code>&lbrace;label, value, hint, disabled: true&rbrace;</code>
+    for one that can't be picked now. One answer, every choice in view. Its error shows after a failed save even when nothing is picked, since a form sends nothing for radios none of which is checked. Log a chore's categories use it. A choice that can't be picked stays in the list, greyed with its label, and its hint says why, such as "No route from their home.": hiding it would leave people wondering where it went.
   </p>
 
   <h2 id="below">Under the box</h2>

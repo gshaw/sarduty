@@ -7,12 +7,13 @@ defmodule Web.ActivityMembersLive do
   One table of the members it invites (#920): before the start by reply, Signed up,
   Can't make it, then No reply (#895); from it by attendance, Attended, Absent, then No
   reply (#766). A tile per reply over it filters it. Everyone sees them. Team admins
-  check members in it and act on them under it: one list, and one button in the action
-  bar at the foot of the window, as on Travel. Before the start the list emails or removes them, Send a reminder, Send an
-  update, and Remove from the activity, each a step, except a removal that emails
-  nobody; from the start until the activity
-  is published it changes their attendance, and Send an update stays after those three
-  changes, published or not (#896). Add members has its own page.
+  check members in it and act on them under it: one list, For the checked members, and
+  one button in the action bar at the foot of the window, as on Travel. Before the start
+  the list emails or removes them, Ask for a reply, Send an update, and Remove from the
+  activity, each a step, except a removal that emails nobody. From the start until the
+  activity is published it changes their attendance, Mark attended and Mark absent, then
+  Send an update, published or not (#896), then Remove from the activity: the Actions
+  order, changes, then sends, then Remove last (#920). Add members has its own page.
 
   The tiles, a name search, and the filter bar's Group, before and after the start, pick
   the rows shown (#895, #920), in the URL as `?status=`, `?q=`, and `?group=`. The ticks
@@ -24,7 +25,7 @@ defmodule Web.ActivityMembersLive do
   its hint, when it's offered, how it counts the button, and whether it applies in place
   or opens a step. A change in place calls its operation, and the tables, the panel's
   counts, and Travel's badge update at once; nothing stays checked. A step (#895) is a
-  LiveComponent on a `live_action` route of this LiveView, such as `/members/remind`,
+  LiveComponent on a `live_action` route of this LiveView, such as `/members/ask`,
   drawn in the tab's place, so the ticks never leave the page:
 
   - The button patches to the step's route, and the step takes the page under its own
@@ -55,17 +56,17 @@ defmodule Web.ActivityMembersLive do
   alias Service.Format
   alias Web.ActivityLive
   alias Web.ActivityMembersLive.Absent
+  alias Web.ActivityMembersLive.Action
+  alias Web.ActivityMembersLive.Ask
   alias Web.ActivityMembersLive.Attended
-  alias Web.ActivityMembersLive.Remind
   alias Web.ActivityMembersLive.Remove
   alias Web.ActivityMembersLive.RemoveBeforeStart
   alias Web.ActivityMembersLive.Update
   alias Web.Components.Reply
 
-  # Send an update is in both lists: before the start after Send a reminder, and from it
-  # after the three changes to attendance (#896).
-  @before_start [Remind, Update, RemoveBeforeStart]
-  @from_start [Attended, Absent, Remove, Update]
+  # Both lists in the Actions order (#920): changes, then sends, then Remove last.
+  @before_start [Ask, Update, RemoveBeforeStart]
+  @from_start [Attended, Absent, Update, Remove]
 
   @doc "Every change the tab offers, before the start and then from it."
   def actions, do: Enum.uniq(@before_start ++ @from_start)
@@ -161,8 +162,13 @@ defmodule Web.ActivityMembersLive do
   defp checked(%{selected: selected} = assigns),
     do: assigns |> shown() |> Enum.filter(&MapSet.member?(selected, &1.member.id))
 
-  defp chosen(%{choice: choice} = assigns),
-    do: assigns |> offered() |> Enum.find(&(&1.value() == choice))
+  # The choice the list shows picked, moved off one that greys out. Before the start the
+  # list starts on its first choice, so the button always says what it does.
+  defp chosen(%{choice: choice} = assigns) do
+    assigns
+    |> offered()
+    |> Action.pick(choice, ctx(assigns), checked(assigns), !started?(assigns))
+  end
 
   # The filter bar: the tab again with the search and group in the URL, and keep_ticks
   # unchecks the rows they hide. The tile rides along in a hidden field.
@@ -346,7 +352,7 @@ defmodule Web.ActivityMembersLive do
   @doc """
   The tab, drawn by Web.ActivityLive's page. The counts are the panel's line, on every
   tab; the tiles are this tab's filter (#920). One table: before the start each member's
-  reply, with when they replied, New for the last 24 hours, and their last reminder; from
+  reply, with when they replied, New for the last 24 hours, and when they were last asked; from
   the start their attendance, with each attended member's times. Before the start the
   list starts on its first choice, so the button always says what it does.
   """
@@ -368,10 +374,7 @@ defmodule Web.ActivityMembersLive do
       })
 
     checked = checked(assigns)
-
-    action =
-      Enum.find(actions, &(&1.value() == assigns.choice)) ||
-        if(!assigns.started?, do: List.first(actions))
+    action = Action.pick(actions, assigns.choice, ctx, checked, !assigns.started?)
 
     shown = shown(assigns)
     filter = assigns.filter
@@ -491,9 +494,9 @@ defmodule Web.ActivityMembersLive do
             type="radios"
             id="members-change-choice"
             name="change"
-            label={if @started?, do: "Change the checked members", else: "For the checked members"}
+            label="For the checked members"
             value={@action && @action.value()}
-            options={for a <- @actions, do: {a.label(), a.value(), a.hint(@ctx)}}
+            options={choices(@actions, @ctx, @checked)}
           />
         </div>
         <.action_bar
@@ -525,6 +528,16 @@ defmodule Web.ActivityMembersLive do
       />
     </section>
     """
+  end
+
+  # Each choice with its hint from the ticks, or greyed with why it reaches nobody.
+  defp choices(actions, ctx, checked) do
+    for action <- actions do
+      case action.unavailable(ctx, checked) do
+        nil -> {action.label(), action.value(), action.hint(ctx, checked)}
+        reason -> {action.label(), action.value(), reason, disabled: true}
+      end
+    end
   end
 
   # All, then a tile per status, each counting the rows in the group before the search.
@@ -563,7 +576,7 @@ defmodule Web.ActivityMembersLive do
     end
   end
 
-  # With nobody it reaches: before the start the choice's own, "Remind 0 members".
+  # With nobody it reaches: before the start the choice's own, "Ask 0 members".
   defp idle_text(action, false = _started?) when action != nil, do: action.button_text(0)
   defp idle_text(_action, _started?), do: "Change members"
 
@@ -578,8 +591,8 @@ defmodule Web.ActivityMembersLive do
   attr :changeable?, :boolean, required: true
 
   # One table (#920), with select all for a team admin who can act on the rows shown.
-  # Before the start: each reply, when it came (#444), and the last reminder on any row
-  # once the activity has one. From the start: each attendance, and an attended member's
+  # Before the start: each reply, when it came (#444), and when they were last asked, on
+  # any row once the activity has an ask. From the start: each attendance, and an attended member's
   # times. A name labels its checkbox then; otherwise it links to the member's page.
   defp members_table(assigns) do
     assigns = assign(assigns, timezone: assigns.team.timezone)
@@ -634,12 +647,12 @@ defmodule Web.ActivityMembersLive do
       <:col
         :let={row}
         :if={!@started? and @reminded != %{}}
-        label="Reminder"
+        label="Asked"
         class="whitespace-nowrap"
       >
         <span
           :if={@reminded[row.member_id]}
-          id={"member-reminded-#{row.member.id}"}
+          id={"member-asked-#{row.member.id}"}
           class="hint"
         >
           {reminded_text(@reminded[row.member_id], @timezone)}
@@ -719,9 +732,9 @@ defmodule Web.ActivityMembersLive do
     |> Enum.join(" · ")
   end
 
-  defp reminded_text(%Reminder{status: :failed}, _timezone), do: "Reminder failed"
-  defp reminded_text(%Reminder{status: :queued}, _timezone), do: "Reminder sending"
+  defp reminded_text(%Reminder{status: :failed}, _timezone), do: "Failed"
+  defp reminded_text(%Reminder{status: :queued}, _timezone), do: "Sending"
 
   defp reminded_text(%Reminder{sent_at: sent_at}, timezone),
-    do: "Reminded " <> Format.month_day(sent_at, timezone)
+    do: "Asked " <> Format.month_day(sent_at, timezone)
 end

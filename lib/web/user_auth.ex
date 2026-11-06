@@ -340,7 +340,7 @@ defmodule Web.UserAuth do
     if socket.view == Web.OutboxLive, do: {:cont, socket}, else: {:halt, socket}
   end
 
-  # The toast takes the place of the send's own, such as "Sending 4 reminders.". Its id
+  # The toast takes the place of the send's own, such as "Asking 4 members.". Its id
   # changes with each burst, so a closed one comes back for the next.
   defp outbox_info(:demo_outbox_arrived, socket) do
     %{demo: demo, current_team: team} = socket.assigns

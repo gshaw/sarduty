@@ -38,7 +38,27 @@ defmodule Web.ActivityMembersLive.RemoveBeforeStart do
   def label, do: "Remove from the activity"
 
   @impl Action
-  def hint(_ctx), do: "Members who signed up get your message."
+  def hint(_ctx, []),
+    do: "The checked come off the activity. Those who signed up get your message."
+
+  # "All 3 checked come off the activity. The 1 who signed up gets your message."
+  def hint(_ctx, checked) do
+    count = length(checked)
+    signed = Enum.count(checked, &(&1.status == "attending"))
+
+    off =
+      "#{Action.all_checked(count)} #{if count == 1, do: "comes", else: "come"} off the activity"
+
+    cond do
+      signed == 0 -> off <> ". None signed up, so nobody is emailed."
+      signed == count -> off <> " and #{if count == 1, do: "gets", else: "get"} your message."
+      signed == 1 -> off <> ". The 1 who signed up gets your message."
+      true -> off <> ". The #{signed} who signed up get your message."
+    end
+  end
+
+  @impl Action
+  def unavailable(_ctx, _checked), do: nil
 
   # Before the start, on an activity neither deleted nor published.
   @impl Action

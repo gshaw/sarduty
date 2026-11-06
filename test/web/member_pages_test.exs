@@ -99,7 +99,7 @@ defmodule Web.MemberPagesTest do
   # The Members tab's steps (#895) are its own LiveView's routes, but offer a member
   # nothing: they land on the tab. Web.ActivityMembersLiveTest opens one as a member.
   @not_swept [
-    "/teams/:subdomain/activities/:id/members/remind",
+    "/teams/:subdomain/activities/:id/members/ask",
     "/teams/:subdomain/activities/:id/members/remove",
     "/teams/:subdomain/activities/:id/members/update"
   ]

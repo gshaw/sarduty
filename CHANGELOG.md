@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Send a reminder is now Ask for a reply, and each choice for checked members says who it
+  reaches.
 - Activity Members tab: one table, with reply tiles, search by name, and a button that
   stays in view.
 - Say it before the click: Travel's Change names who loses Confirmed, Send letters counts

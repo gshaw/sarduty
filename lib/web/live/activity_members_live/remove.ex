@@ -10,31 +10,57 @@ defmodule Web.ActivityMembersLive.Remove do
 
   alias App.Operation.ChangeAttendance
   alias Service.Format
+  alias Web.ActivityMembersLive.Action
 
-  @impl Web.ActivityMembersLive.Action
+  @impl Action
   def value, do: "remove"
 
-  @impl Web.ActivityMembersLive.Action
+  @impl Action
   def label, do: "Remove from the activity"
 
-  @impl Web.ActivityMembersLive.Action
-  def hint(_ctx), do: "Add members puts them back, as attended."
+  @impl Action
+  def hint(_ctx, []),
+    do:
+      "The checked come off the activity, and lose any hours. Add members puts them back, as attended."
 
-  @impl Web.ActivityMembersLive.Action
+  # "All 3 checked come off the activity, and 2 lose their hours. Add members puts them
+  # back, as attended."
+  def hint(_ctx, checked) do
+    count = length(checked)
+    attended = Enum.count(checked, &(&1.status == "attending"))
+
+    off =
+      "#{Action.all_checked(count)} #{if count == 1, do: "comes", else: "come"} off the activity"
+
+    off =
+      cond do
+        attended == 0 -> off <> "."
+        attended == count and count == 1 -> off <> ", and loses their hours."
+        attended == count -> off <> ", and lose their hours."
+        true -> off <> ", and #{Action.count_verb(attended, "loses", "lose")} their hours."
+      end
+
+    off <> " Add members puts them back, as attended."
+  end
+
+  @impl Action
+  def unavailable(_ctx, _checked), do: nil
+
+  @impl Action
   def offered?(%{activity: activity, now: now}), do: ChangeAttendance.open?(activity, now)
 
-  @impl Web.ActivityMembersLive.Action
+  @impl Action
   def count(_ctx, checked),
     do: Enum.count(checked, &ChangeAttendance.changes?(:remove, &1.status))
 
-  @impl Web.ActivityMembersLive.Action
+  @impl Action
   def button_text(count),
     do: Format.count(count, one: "Remove 1 member", many: "Remove %d members")
 
-  @impl Web.ActivityMembersLive.Action
+  @impl Action
   def variant, do: :danger
 
-  @impl Web.ActivityMembersLive.Action
+  @impl Action
   def confirm(%{activity: activity}, checked) do
     members = checked |> length() |> Format.count(one: "1 member", many: "%d members")
 
@@ -62,6 +88,6 @@ defmodule Web.ActivityMembersLive.Remove do
     end
   end
 
-  @impl Web.ActivityMembersLive.Action
+  @impl Action
   def run(_checked), do: {:in_place, :remove}
 end

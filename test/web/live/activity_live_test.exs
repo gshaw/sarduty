@@ -175,7 +175,7 @@ defmodule Web.ActivityLiveTest do
       }
     end
 
-    test "Send a reminder from the tab, and the batch note shows what went (#895)",
+    test "Ask for a reply from the tab, and the batch note shows what went (#895)",
          %{conn: conn, team: team, activity: activity, cameron: cameron, wren: wren} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
       refute has_element?(lv, "#activity-send-reminders")
@@ -184,17 +184,17 @@ defmodule Web.ActivityLiveTest do
       ids = for row <- Repo.all(App.Model.Attendance), do: to_string(row.member_id)
 
       lv
-      |> form("#members-change-form", %{"member_ids" => ids, "change" => "remind"})
+      |> form("#members-change-form", %{"member_ids" => ids, "change" => "ask"})
       |> render_submit()
 
-      assert_patch(lv, ~p"/teams/#{team}/activities/#{activity.id}/members/remind")
-      lv |> form("#remind-form") |> render_submit()
+      assert_patch(lv, ~p"/teams/#{team}/activities/#{activity.id}/members/ask")
+      lv |> form("#ask-form") |> render_submit()
       assert_patch(lv, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert_received {:email, %{to: [{"Cameron Ruiz", _}]}}
       assert_received {:email, %{to: [{"Frankie Moore", _}]}}
       refute_received {:email, _}
-      assert has_element?(lv, "#flash-info", "Sending 2 reminders.")
+      assert has_element?(lv, "#flash-info", "Asking 2 members.")
       assert has_element?(lv, "#members-batch", "2 sent")
       assert has_element?(lv, "#members-batch", "by Alex Chen · 0 replied since")
       refute has_element?(lv, ~s|#members-change-form input[name="member_ids[]"][checked]|)
@@ -202,9 +202,9 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, _html} =
         live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
-      assert has_element?(lv, "#activity-members th", "Reminder")
-      assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminded ")
-      refute has_element?(lv, "#member-reminded-#{wren.id}")
+      assert has_element?(lv, "#activity-members th", "Asked")
+      assert has_element?(lv, "#member-asked-#{cameron.id}", "Asked ")
+      refute has_element?(lv, "#member-asked-#{wren.id}")
       refute has_element?(lv, "#member-row-#{cameron.id} td", "No reply ·")
     end
 
@@ -223,13 +223,13 @@ defmodule Web.ActivityLiveTest do
         live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "#members-batch", "1 sending")
-      assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminder sending")
+      assert has_element?(lv, "#member-asked-#{cameron.id}", "Sending")
 
       reminder |> Ecto.Changeset.change(status: :sent) |> Repo.update!()
       send(lv.pid, {:reminder_done, activity.id})
 
       assert has_element?(lv, "#members-batch", "1 sent")
-      assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminded ")
+      assert has_element?(lv, "#member-asked-#{cameron.id}", "Asked ")
     end
   end
 
@@ -497,7 +497,7 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "#members-batch", "0 sent")
-      assert has_element?(lv, "#member-reminded-#{other.id}", "Reminder failed")
+      assert has_element?(lv, "#member-asked-#{other.id}", "Failed")
     end
 
     test "a member who isn't invited sees the counts alone", %{conn: conn, team: team} do

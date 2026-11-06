@@ -112,6 +112,14 @@ thing is on the page, such as "the button on the right".
 **Hints.** One or two short sentences under the label. Give an example of the format:
 "Latitude and longitude, like 49.75533, -123.13110."
 
+**Choices for checked rows.** One list headed "For the checked members", in the Actions
+order: changes, then sends, then Remove last. Each label starts with a verb: Mark absent,
+Ask for a reply. Each hint says what happens to the checked, with counts, and names who it
+skips or what they lose: "Emails “Will you be there?” to the 2 checked with no reply. 1
+has replied." With nothing checked, the same sentence without counts. A choice that
+reaches nobody checked greys out and says why. The button counts who it reaches. See the
+[action bar](/styles/action-bar) for where the button goes.
+
 **Error messages.** Say how to fix it, starting with the verb: "Enter who authorizes tax
 letters", "Select a year", "Phone must be 10 digits". Never "invalid", "error", "failed",
 or "something went wrong" alone. The message in the error summary and on the field is the
@@ -167,9 +175,10 @@ member who signed up "attending".
 - **Members who are not invited** see nothing about invitations. Never "Not invited".
 - **On Take attendance**, members who signed up and have not arrived are "Yet to arrive".
 - **Adding and emailing.** A team admin adds members to an activity; adding sends nothing.
-  Send a reminder lists who gets an email and why the rest do not; it emails only
-  members with no reply. Send an update emails the members checked the team admin's
-  message, whatever their reply, before or after the start. A message is the team admin's own words, plain
+  Ask for a reply lists who gets an email and why the rest do not; it emails “Will you be
+  there?” only to members with no reply. Send an update emails the members checked the
+  team admin's message, whatever their reply, before or after the start. Team admins ask
+  for a reply; members get invitation reminders, and their settings and emails say so. A message is the team admin's own words, plain
   text, up to 300 characters.
 
 ## Glossary
@@ -257,6 +266,8 @@ and must not be used for it.
 | full                                | at capacity, booked                            | An activity with Full at or more signed up. A grey badge, nothing to act on.                         |
 | add (to an activity)                | invite, request                                | Putting a member on an activity, as No reply, so they can reply. SAR Duty emails nobody.             |
 | invitation                          | request                                        | What a member on an activity sees and replies to: Will you be there?                                 |
+| ask for a reply                     | remind, send a reminder, nudge, chase          | A team admin emailing “Will you be there?” to members with no reply. To the member, a reminder.      |
+| invitation reminder                 | nudge, ask, follow-up                          | The email a member gets when a team admin asks for a reply. Members turn them off.                   |
 | reply                               | RSVP, response, answer                         | A member's answer to an invitation: "I'll be there" or "Can't make it".                              |
 | can't make it                       | absent, declined, can't go, not going          | A member's no to an activity that hasn't started: Absent in D4H.                                     |
 | no reply                            | unconfirmed, pending, requested                | On an activity, with no answer yet: Requested in D4H.                                                |

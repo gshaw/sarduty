@@ -5,7 +5,7 @@ defmodule App.Operation.SendActivityUpdate do
   nothing on the activity, so it stays open after the start, published or not (#896),
   until the activity is deleted. How each email ends is ending/3: before the start, where
   the member stands; from the start, only Open activity, the same for everyone. Asking
-  only members with no reply is Send a reminder.
+  only members with no reply is Ask for a reply.
 
   plan/1 says who can get one, pure. call/6 records a queued row per update with its
   job, in one transaction. App.Worker.SendActivityUpdateWorker then sends each with

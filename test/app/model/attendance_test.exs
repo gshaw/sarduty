@@ -186,6 +186,10 @@ defmodule App.Model.AttendanceTest do
     "lib/app/view_model/activity_members_filter_view_model.ex" =>
       "the Members tab's reply tiles, each D4H's status",
     "lib/web/live/activity_members_live/remove.ex" => "the hours a removal takes, from the row",
+    "lib/web/live/activity_members_live/attended.ex" =>
+      "Mark attended's hint counts the checked who attended already, from the row",
+    "lib/web/live/activity_members_live/absent.ex" =>
+      "Mark absent's hint names the hours the attended lose, from the row",
     "lib/web/live/activity_members_live/update.ex" => "a label, a table per reply",
     "lib/app/operation/change_attendance.ex" => "a row's status, changed by hand",
     "lib/app/operation/refresh_d4h_data/upsert_attendances.ex" =>

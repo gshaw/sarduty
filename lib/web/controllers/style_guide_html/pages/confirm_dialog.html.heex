@@ -79,7 +79,7 @@
     "D4H can't bring it back." The action stays grey until the box is ticked.
   </p>
   <p>
-    And an email to 10 or more members: reminders, an update, or tax credit letters. The box
+    And an email to 10 or more members: an ask for a reply, an update, or tax credit letters. The box
     names the count, so nobody emails the whole team by reflex. Fewer than 10 get a simple
     confirm. <code>send_confirm/3</code> picks one.
   </p>
@@ -133,7 +133,7 @@
       id="confirm-example-check-send"
       open
       question="Email 73 members about Training night?"
-      list={["Each gets a reminder to reply."]}
+      list={["Each gets “Will you be there?” and the reply buttons."]}
       warning="Emails cannot be taken back."
       check="I understand 73 members get this email."
       action="Send 73 emails"
@@ -142,7 +142,7 @@
       <.button
         id="confirm-try-check-send"
         variant={:primary}
-        {send_confirm(73, "Email 73 members about Training night?", ["Each gets a reminder to reply."])}
+        {send_confirm(73, "Email 73 members about Training night?", ["Each gets “Will you be there?” and the reply buttons."])}
       >
         Send 73 emails
       </.button>
