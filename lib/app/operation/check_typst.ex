@@ -14,9 +14,6 @@ defmodule App.Operation.CheckTypst do
   @names ["Łukasz Nowak", "Tomáš Dvořák", "Nguyễn Văn An", "Renée Côté"]
   @fonts MapSet.new(~w(Arimo-Regular Arimo-Bold Arimo-Italic Arimo-BoldItalic))
 
-  @sample_mark_path Path.expand("../../../priv/pdf/sample-mark.png", __DIR__)
-  @external_resource @sample_mark_path
-
   @doc "`{:ok, message, locked_pdf}` or `{:error, message}`."
   def call do
     started = System.monotonic_time(:millisecond)
@@ -50,13 +47,14 @@ defmodule App.Operation.CheckTypst do
   # The logo goes through libvips as a team's logo does; the sample mark is a PNG with
   # transparency; the QR code is vector.
   defp files do
-    logo = :sarduty |> Application.app_dir("priv/static/images/sarduty-logo-96.png")
+    logo = app_file("priv/static/images/sarduty-logo-96.png")
 
     case logo |> File.read!() |> Service.Image.pad_square(300) do
       {:ok, logo} ->
         qr = "https://sarduty.com/verify/TEST" |> EQRCode.encode() |> EQRCode.svg()
+        mark = "priv/pdf/sample-mark.png" |> app_file() |> File.read!()
 
-        {:ok, %{"logo.png" => logo, "mark.png" => File.read!(@sample_mark_path), "qr.svg" => qr}}
+        {:ok, %{"logo.png" => logo, "mark.png" => mark, "qr.svg" => qr}}
 
       {:error, reason} ->
         {:error, "libvips couldn't make the logo: #{inspect(reason)}."}
@@ -116,4 +114,7 @@ defmodule App.Operation.CheckTypst do
   rescue
     error in ArgumentError -> {:error, "PDFLock couldn't read it: #{Exception.message(error)}."}
   end
+
+  # A release keeps priv/ under lib/sarduty-<version>/, not where the source was built.
+  defp app_file(path), do: Application.app_dir(:sarduty, path)
 end
