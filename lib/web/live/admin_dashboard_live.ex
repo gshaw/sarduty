@@ -4,19 +4,23 @@ defmodule Web.AdminDashboardLive do
   import Web.Components.StatSwitch
   import Web.Components.TeamRefresh
 
+  alias App.Model.DemoTeam
   alias App.Model.Team
   alias App.ViewData.TeamSummary
   alias App.ViewModel.TeamListViewModel
   alias App.Worker.ScheduleTeamRefreshesWorker
 
-  @views ["all", "not-refreshing", "no-team-admins", "person-key", "id-cards-on", "mcp-on"]
+  @views ["all", "needs-attention", "person-key", "demos"]
 
   # Every team, one short row each (#513). Its emails, key, and switches are on its own
-  # page, /admin/teams/:id. Refreshes update the rows live.
+  # page, /admin/teams/:id. Refreshes update the rows live. Try a demo's copies (#857)
+  # are a view of their own; every other view is real teams only.
   def mount(_params, _session, socket) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
 
-    teams = Team.get_all_real() |> Enum.sort_by(&String.downcase(&1.name))
+    demos = Map.new(DemoTeam.all_built(), &{&1.team_id, &1})
+    teams = Team.get_all() |> Enum.sort_by(&String.downcase(&1.name))
+
     now = DateTime.utc_now()
     emails = TeamSummary.team_admin_emails(teams, now)
 
@@ -24,6 +28,7 @@ defmodule Web.AdminDashboardLive do
       assign(socket,
         page_title: "Teams",
         teams: teams,
+        demos: demos,
         now: now,
         team_admins: Map.new(emails, fn {id, list} -> {id, length(list)} end),
         last_seen: TeamSummary.last_seen_from(emails),
@@ -48,25 +53,27 @@ defmodule Web.AdminDashboardLive do
   end
 
   # Each view's teams. The stat switch counts the same rows the table shows.
-  defp in_view?(_team, "all", _assigns), do: true
-  defp in_view?(team, "not-refreshing", _assigns), do: not_refreshing?(team)
+  defp in_view?(team, "demos", assigns), do: Map.has_key?(assigns.demos, team.id)
 
-  defp in_view?(team, "no-team-admins", assigns),
-    do: Map.get(assigns.team_admins, team.id, 0) == 0
+  defp in_view?(team, view, assigns),
+    do: !Map.has_key?(assigns.demos, team.id) and real?(team, view, assigns)
 
-  defp in_view?(team, "person-key", _assigns), do: match?({:person, _name}, key_kind(team))
-  defp in_view?(team, "id-cards-on", _assigns), do: team.id_cards_enabled
-  defp in_view?(team, "mcp-on", _assigns), do: team.mcp_enabled
+  defp real?(_team, "all", _assigns), do: true
+
+  # A team that needs a SAR Duty admin: its refresh fails, or nobody can log in as its
+  # team admin. Each row says which, in red.
+  defp real?(team, "needs-attention", assigns),
+    do: not_refreshing?(team) or Map.get(assigns.team_admins, team.id, 0) == 0
+
+  defp real?(team, "person-key", _assigns), do: match?({:person, _name}, key_kind(team))
 
   @doc "The views, for the stat switch: its value and label."
   def views,
     do: [
-      {"all", "All"},
-      {"not-refreshing", "Not refreshing"},
-      {"no-team-admins", "No team admins"},
+      {"all", "Teams"},
+      {"needs-attention", "Needs attention"},
       {"person-key", "Person's key"},
-      {"id-cards-on", "ID cards on"},
-      {"mcp-on", "MCP on"}
+      {"demos", "Demos"}
     ]
 
   defp view_path(view), do: ~p"/admin?#{TeamListViewModel.query_params(view, @views)}"
@@ -87,7 +94,7 @@ defmodule Web.AdminDashboardLive do
     ~H"""
     <.heading_row>
       <h1 class="title">Teams</h1>
-      <:note><span id="refresh-summary">{refresh_summary(@teams)}</span></:note>
+      <:note><span id="refresh-summary">{refresh_summary(@teams, @demos)}</span></:note>
       <:action>
         <.button type="button" variant={:warning} phx-click="refresh-all">
           Refresh all teams
@@ -121,7 +128,10 @@ defmodule Web.AdminDashboardLive do
           <div>
             <.a id={"team-#{team.id}-name"} navigate={~p"/admin/teams/#{team.id}"}>{team.name}</.a>
             <.hint>
-              {team.subdomain}<span :if={team.organization} id={"team-#{team.id}-organization"}> · {team.organization.short_name}</span>
+              {team.subdomain}<span :if={team.organization} id={"team-#{team.id}-organization"}> · {team.organization.short_name}</span><span
+                :if={@demos[team.id]}
+                id={"team-#{team.id}-demo"}
+              > · {demo_line(@demos[team.id], team)}</span>
             </.hint>
           </div>
         </div>
@@ -163,6 +173,16 @@ defmodule Web.AdminDashboardLive do
     </.table>
 
     <dl id="key-notes" class="mt-8 max-w-3xl text-sm">
+      <dt>Needs attention</dt>
+      <dd>
+        A team whose refresh fails, or with nobody who can log in as its team admin. Its row
+        says which in red.
+      </dd>
+      <dt>Demos</dt>
+      <dd>
+        Try a demo's copies of Coast Range SAR, a visitor's for 3 days or a test's for up to 24
+        hours. The other views, the nightly refresh, and the sync's count leave them out.
+      </dd>
       <dt>Last seen</dt>
       <dd>
         The last time a team admin opened one of the team's pages. Members' and SAR Duty site admins'
@@ -189,7 +209,20 @@ defmodule Web.AdminDashboardLive do
     {:noreply, put_flash(socket, :info, "Refreshes scheduled for all teams.")}
   end
 
-  defp refresh_summary(teams) do
+  # "Visitor, Morgan · goes Nov 9, 14:17" or "Test · goes Nov 6, 14:17".
+  defp demo_line(%DemoTeam{} = demo, team) do
+    who =
+      case demo do
+        %{kind: :test} -> "Test"
+        %{name: nil} -> "Visitor"
+        %{name: name} -> "Visitor, #{name}"
+      end
+
+    "#{who} · goes #{Service.Format.month_day_time(demo.expires_at, team.timezone)}"
+  end
+
+  defp refresh_summary(teams, demos) do
+    teams = Enum.reject(teams, &Map.has_key?(demos, &1.id))
     ok_count = Enum.count(teams, &(Team.refresh_state(&1.d4h_refresh_result) == :ok))
     "#{ok_count} of #{length(teams)} teams refreshed OK."
   end

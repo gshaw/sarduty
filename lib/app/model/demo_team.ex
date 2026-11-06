@@ -96,6 +96,9 @@ defmodule App.Model.DemoTeam do
   @doc "The ids of every demo team, for queries that leave them out."
   def team_ids_query, do: from(d in DemoTeam, where: not is_nil(d.team_id), select: d.team_id)
 
+  @doc "Every demo with its team built, for the admin team list's Demos view."
+  def all_built, do: DemoTeam |> where([d], not is_nil(d.team_id)) |> Repo.all()
+
   @doc """
   The ids of demo teams `email` isn't the visitor of. A member there with that email
   logs in to nothing (#857): a visitor can add anyone's email to a member, and the demo
