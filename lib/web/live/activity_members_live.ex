@@ -4,20 +4,21 @@ defmodule Web.ActivityMembersLive do
   attendance (#766). Web.ActivityLive draws the page around it, as it does History; this
   module owns the tab: the members checked, the change picked, and which step is open.
 
-  Before the start it's a table per reply, Signed up, Can't make it, then No reply (#895);
-  from it, a table for each attendance, Attended, Absent, then No reply (#766). No reply
-  comes last, next to the list, as Travel puts Not set. Everyone sees them. Team admins
-  check members in them and act on them under the tables: one list and one button, as on
-  Travel. Before the start the list emails or removes them, Send a reminder, Send an
+  One table of the members it invites (#920): before the start by reply, Signed up,
+  Can't make it, then No reply (#895); from it by attendance, Attended, Absent, then No
+  reply (#766). A tile per reply over it filters it. Everyone sees them. Team admins
+  check members in it and act on them under it: one list, and one button in the action
+  bar at the foot of the window, as on Travel. Before the start the list emails or removes them, Send a reminder, Send an
   update, and Remove from the activity, each a step, except a removal that emails
   nobody; from the start until the activity
   is published it changes their attendance, and Send an update stays after those three
   changes, published or not (#896). Add members has its own page.
 
-  A filter bar over the tables, before and after the start, shows one group's members
-  (#895), in the URL as `?group=`. The ticks are the rows it shows: changing it unchecks
-  the rows it hides, so a button never reaches someone off the screen. The tab's and the
-  steps' paths keep it, so Back opens the tab as it was.
+  The tiles, a name search, and the filter bar's Group, before and after the start, pick
+  the rows shown (#895, #920), in the URL as `?status=`, `?q=`, and `?group=`. The ticks
+  are the rows shown: changing a filter unchecks the rows it hides, so a button never
+  reaches someone off the screen. The tab's and the steps' paths keep them, so Back
+  opens the tab as it was.
 
   Each change is a module in `@actions`, with Web.ActivityMembersLive.Action: its label,
   its hint, when it's offered, how it counts the button, and whether it applies in place
@@ -36,8 +37,10 @@ defmodule Web.ActivityMembersLive do
   # Everyone filters the tables: "change" is the filter bar's.
   use Web, {:live_view_app_layout, access: :team, view_events: ["change"]}
 
+  import Web.Components.ActionBar, only: [action_bar: 1]
   import Web.Components.Columns, only: [member_cell: 1, hours_cell: 1]
   import Web.Components.FilterBar
+  import Web.Components.StatSwitch
 
   alias App.Adapter.D4H
   alias App.Model.Activity
@@ -90,12 +93,14 @@ defmodule Web.ActivityMembersLive do
      |> open_step(socket.assigns.live_action)}
   end
 
-  # The filter bar's Group (#895), in the URL as `?group=`: the tables show only its members.
+  # The tile, the search, and the filter bar's Group (#895, #920), in the URL.
   defp assign_filter(socket, params) do
     %{current_team: team, groups: groups} = socket.assigns
-    filter = ActivityMembersFilterViewModel.validate(params, groups)
+    filter = ActivityMembersFilterViewModel.validate(params, groups, started?(socket.assigns))
     assign(socket, filter: filter, group_ids: GroupMember.member_ids(team.id, filter.group))
   end
+
+  defp started?(%{activity: activity, now: now}), do: Activity.started?(activity, now)
 
   # Ticks only for the rows the tab shows: a member who went, or one the filter hides, so
   # the button never reaches someone off the screen.
@@ -104,11 +109,15 @@ defmodule Web.ActivityMembersLive do
     assign(socket, selected: MapSet.intersection(socket.assigns.selected, ids))
   end
 
-  # The rows the filter shows.
-  defp shown(%{members: members, group_ids: nil}), do: members
-
-  defp shown(%{members: members, group_ids: ids}),
-    do: Enum.filter(members, &MapSet.member?(ids, &1.member.id))
+  # The rows the filters show.
+  defp shown(%{members: members, group_ids: ids, filter: filter}),
+    do:
+      ActivityMembers.shown(
+        members,
+        ids,
+        ActivityMembersFilterViewModel.d4h_status(filter),
+        filter.q
+      )
 
   defp open_step(socket, :members), do: assign(socket, step: nil)
 
@@ -155,10 +164,16 @@ defmodule Web.ActivityMembersLive do
   defp chosen(%{choice: choice} = assigns),
     do: assigns |> offered() |> Enum.find(&(&1.value() == choice))
 
-  # The filter bar: the tab again with the group in the URL, and keep_ticks unchecks the
-  # rows it hides.
+  # The filter bar: the tab again with the search and group in the URL, and keep_ticks
+  # unchecks the rows they hide. The tile rides along in a hidden field.
   def handle_event("change", %{"form" => form}, socket) do
-    filter = ActivityMembersFilterViewModel.validate(form, socket.assigns.groups)
+    filter =
+      ActivityMembersFilterViewModel.validate(
+        form,
+        socket.assigns.groups,
+        started?(socket.assigns)
+      )
+
     %{current_team: team, activity: activity} = socket.assigns
     {:noreply, push_patch(socket, to: members_path(team, activity, filter))}
   end
@@ -324,16 +339,16 @@ defmodule Web.ActivityMembersLive do
   attr :selected, :any, required: true, doc: "the checked members' ids"
   attr :choice, :string, default: nil, doc: "the change picked, an action's value"
   attr :retiring, :any, required: true, doc: "the team's retiring member ids"
-  attr :filter, ActivityMembersFilterViewModel, required: true, doc: "the filter bar's choices"
+  attr :filter, ActivityMembersFilterViewModel, required: true, doc: "the tile, search, and group"
   attr :groups, :list, required: true, doc: "the team's groups as `{title, id}`"
   attr :group_ids, :any, required: true, doc: "the group's member ids, or nil for no filter"
 
   @doc """
   The tab, drawn by Web.ActivityLive's page. The counts are the panel's line, on every
-  tab. A table per status: before the start each reply, with when each replied, New for
-  the last 24 hours, and the last reminder; from the start each attendance, with each
-  attended member's times. Before the start the list starts on its first choice, so the
-  button always says what it does.
+  tab; the tiles are this tab's filter (#920). One table: before the start each member's
+  reply, with when they replied, New for the last 24 hours, and their last reminder; from
+  the start their attendance, with each attended member's times. Before the start the
+  list starts on its first choice, so the button always says what it does.
   """
   def members_tab(assigns) do
     ctx = %{
@@ -359,12 +374,17 @@ defmodule Web.ActivityMembersLive do
         if(!assigns.started?, do: List.first(actions))
 
     shown = shown(assigns)
+    filter = assigns.filter
 
     assigns =
       assign(assigns,
         shown: shown,
-        filter_form: to_form(%{"group" => assigns.filter.group}, as: "form"),
+        filter_form:
+          to_form(%{"group" => filter.group, "status" => filter.status, "q" => filter.q},
+            as: "form"
+          ),
         filter_count: filter_count(shown, assigns),
+        tiles: tiles(assigns),
         timezone: assigns.team.timezone,
         ctx: ctx,
         actions: actions,
@@ -403,21 +423,37 @@ defmodule Web.ActivityMembersLive do
           navigate={~p"/teams/#{@team}/activities/#{@activity.id}/members/add"}
         >Add members</.a>
       </p>
+      <.stat_switch
+        :if={@members != []}
+        id="members-switch"
+        label={if @started?, do: "Attendance", else: "Replies"}
+      >
+        <:view
+          :for={tile <- @tiles}
+          id={"members-tile-#{tile.slug || "all"}"}
+          patch={members_path(@team, @activity, %{@filter | status: tile.slug})}
+          current={@filter.status == tile.slug}
+          count={tile.count}
+          marker={tile.marker}
+        >
+          {tile.text}
+        </:view>
+      </.stat_switch>
       <.filter_bar
-        :if={@members != [] and @groups != []}
+        :if={@members != []}
         for={@filter_form}
         id="members-filter"
         count={@filter_count}
-        clear={members_path(@team, @activity, %ActivityMembersFilterViewModel{})}
-        path_fn={
-          &members_path(
-            @team,
-            @activity,
-            ActivityMembersFilterViewModel.validate(Map.new(&1), @groups)
-          )
+        repeats={!ActivityMembersFilterViewModel.narrowed?(@filter)}
+        clear={
+          members_path(@team, @activity, %ActivityMembersFilterViewModel{status: @filter.status})
         }
+        path_fn={&members_path(@team, @activity, with_filter(@filter, &1, @groups, @started?))}
+        hidden={[@filter_form[:status]]}
       >
+        <:search field={@filter_form[:q]} placeholder="Search by name" />
         <:filter
+          :if={@groups != []}
           field={@filter_form[:group]}
           label="Group"
           type="combobox"
@@ -430,7 +466,7 @@ defmodule Web.ActivityMembersLive do
         id="members-none-shown"
         title="No members match"
       >
-        Change the group.
+        Change the filters.
       </.empty_state>
       <.form
         :if={@changeable? and @shown != []}
@@ -439,7 +475,7 @@ defmodule Web.ActivityMembersLive do
         phx-change="tick"
         phx-submit="apply"
       >
-        <.member_tables
+        <.members_table
           activity={@activity}
           team={@team}
           members={@shown}
@@ -459,6 +495,11 @@ defmodule Web.ActivityMembersLive do
             value={@action && @action.value()}
             options={for a <- @actions, do: {a.label(), a.value(), a.hint(@ctx)}}
           />
+        </div>
+        <.action_bar
+          id="members-bar"
+          hint={if @checked == [], do: "Check members, then pick what to do."}
+        >
           <.button
             id="members-change-send"
             variant={if @action, do: @action.variant(), else: :primary}
@@ -468,9 +509,9 @@ defmodule Web.ActivityMembersLive do
           >
             {if @count > 0, do: @action.button_text(@count), else: idle_text(@action, @started?)}
           </.button>
-        </div>
+        </.action_bar>
       </.form>
-      <.member_tables
+      <.members_table
         :if={!@changeable? and @shown != []}
         activity={@activity}
         team={@team}
@@ -484,6 +525,31 @@ defmodule Web.ActivityMembersLive do
       />
     </section>
     """
+  end
+
+  # All, then a tile per status, each counting the rows in the group before the search.
+  defp tiles(%{members: members, group_ids: ids, started?: started?}) do
+    rows = ActivityMembers.in_group(members, ids)
+    counts = ActivityMembers.counts(rows)
+
+    [%{slug: nil, count: length(rows), marker: nil, text: "All"}] ++
+      for status <- ActivityMembers.statuses() do
+        %{
+          slug: ActivityMembersFilterViewModel.slug(status, started?),
+          count: counts[String.to_existing_atom(status)],
+          marker: Reply.marker(status),
+          text: Reply.status_text(status, started?)
+        }
+      end
+  end
+
+  # A chip's path: the filter with that one option taken off.
+  defp with_filter(filter, options, groups, started?) do
+    filter
+    |> ActivityMembersFilterViewModel.query_params()
+    |> Map.new()
+    |> Map.merge(Map.new(options))
+    |> ActivityMembersFilterViewModel.validate(groups, started?)
   end
 
   # The button while it waits: a step opens at once, and a change in place writes.
@@ -511,141 +577,115 @@ defmodule Web.ActivityMembersLive do
   attr :selected, :any, required: true
   attr :changeable?, :boolean, required: true
 
-  # A table per status, each with select all for a team admin who can act on them. Before
-  # the start: Signed up and Can't make it with Replied (#444), then No reply, with the
-  # last reminder once anyone in it has one. From the
-  # start: Attended with each member's times, then Absent, then No reply. A name labels
-  # its checkbox then; otherwise it links to the member's page.
-  defp member_tables(assigns) do
-    assigns =
-      assign(assigns,
-        timezone: assigns.team.timezone,
-        groups:
-          for(
-            status <- ActivityMembers.statuses(),
-            rows = ActivityMembers.only(assigns.members, status),
-            rows != [],
-            do: {status, rows}
-          )
-      )
+  # One table (#920), with select all for a team admin who can act on the rows shown.
+  # Before the start: each reply, when it came (#444), and the last reminder on any row
+  # once the activity has one. From the start: each attendance, and an attended member's
+  # times. A name labels its checkbox then; otherwise it links to the member's page.
+  defp members_table(assigns) do
+    assigns = assign(assigns, timezone: assigns.team.timezone)
 
     ~H"""
-    <div :for={{status, rows} <- @groups} class="mb-6">
-      <.table
-        id={"members-#{table_id(status, @started?)}"}
-        rows={rows}
-        row_id={&"member-row-#{&1.member.id}"}
-        class={if @started?, do: "table-striped", else: "table-striped w-fit"}
+    <.table
+      id="members-table"
+      rows={@members}
+      row_id={&"member-row-#{&1.member.id}"}
+      class="table-striped"
+    >
+      <:col :let={row} :if={@changeable?} label="" class="w-px" select_all>
+        <input
+          type="checkbox"
+          id={"members-select-#{row.member.id}"}
+          name="member_ids[]"
+          value={row.member.id}
+          checked={MapSet.member?(@selected, row.member.id)}
+        />
+      </:col>
+      <:col :let={row} label="Member">
+        <.member_cell
+          id={"member-standing-#{row.member.id}"}
+          member={row.member}
+          team={@team}
+          standing={@standings[row.member.id]}
+          path={member_path(@team, @activity, row.member)}
+          label_for={if @changeable?, do: "members-select-#{row.member.id}"}
+        />
+      </:col>
+      <:col
+        :let={row}
+        label={if @started?, do: "Attendance", else: "Reply"}
+        class="whitespace-nowrap"
       >
-        <:col :let={row} :if={@changeable?} label="" class="w-px" select_all>
-          <input
-            type="checkbox"
-            id={"members-select-#{row.member.id}"}
-            name="member_ids[]"
-            value={row.member.id}
-            checked={MapSet.member?(@selected, row.member.id)}
-          />
-        </:col>
-        <:col :let={row} label={Reply.status_text(status, @started?)}>
-          <.member_cell
-            id={"member-standing-#{row.member.id}"}
-            member={row.member}
-            team={@team}
-            standing={@standings[row.member.id]}
-            path={member_path(@team, @activity, row.member)}
-            label_for={if @changeable?, do: "members-select-#{row.member.id}"}
-          />
-        </:col>
-        <:col
-          :let={row}
-          :if={!@started? and status != "requested"}
-          label="Replied"
-          class="whitespace-nowrap"
-        >
+        <span class={["marker", "marker-#{Reply.marker(row.status)}"]}>
+          {Reply.status_text(row.status, @started?)}
+        </span>
+      </:col>
+      <:col :let={row} :if={!@started?} label="Replied" class="whitespace-nowrap">
+        <span :if={row.status != "requested"}>
           {Format.month_day_time(row.replied_at, @timezone)}
-          <.badge
-            :if={ActivityMembers.new?(row, @now)}
-            kind={:primary}
-            title="Replied in the last 24 hours"
-          >
-            New
-          </.badge>
-        </:col>
-        <:col
-          :let={row}
-          :if={!@started? and status == "requested" and reminded?(rows, @reminded)}
-          label="Reminder"
-          class="whitespace-nowrap"
+        </span>
+        <.badge
+          :if={row.status != "requested" and ActivityMembers.new?(row, @now)}
+          kind={:primary}
+          title="Replied in the last 24 hours"
         >
-          <span
-            :if={@reminded[row.member_id]}
-            id={"member-reminded-#{row.member.id}"}
-            class="hint"
-          >
-            {reminded_text(@reminded[row.member_id], @timezone)}
-          </span>
-        </:col>
-        <:col
-          :let={row}
-          :if={@started? and status == "attending"}
-          label="Start"
-          align="right"
-          class="whitespace-nowrap"
-        >
-          {attended_start(row, @activity, @timezone)}
-        </:col>
-        <:col
-          :let={row}
-          :if={@started? and status == "attending"}
-          label="Finish"
-          align="right"
-          class="whitespace-nowrap"
-        >
-          {Format.time_short(row.finished_at, @timezone)}
-        </:col>
-        <:col
-          :let={row}
-          :if={@started? and status == "attending"}
-          label="Hours"
-          align="right"
-          class="w-px whitespace-nowrap"
-        >
-          <.hours_cell minutes={row.duration_in_minutes} />
-        </:col>
-      </.table>
-      <%!-- The Hours column's sum, exact as Service.Format.duration/1 writes the minutes. --%>
-      <p
-        :if={@started? and status == "attending" and attended_minutes(rows) > 0}
-        id="members-hours"
-        class="hint mt-2"
+          New
+        </.badge>
+      </:col>
+      <:col
+        :let={row}
+        :if={!@started? and @reminded != %{}}
+        label="Reminder"
+        class="whitespace-nowrap"
       >
-        {Format.duration(attended_minutes(rows))} in total
-      </p>
-    </div>
+        <span
+          :if={@reminded[row.member_id]}
+          id={"member-reminded-#{row.member.id}"}
+          class="hint"
+        >
+          {reminded_text(@reminded[row.member_id], @timezone)}
+        </span>
+      </:col>
+      <:col :let={row} :if={@started?} label="Start" align="right" class="whitespace-nowrap">
+        {if row.status == "attending", do: attended_start(row, @activity, @timezone)}
+      </:col>
+      <:col :let={row} :if={@started?} label="Finish" align="right" class="whitespace-nowrap">
+        {if row.status == "attending", do: Format.time_short(row.finished_at, @timezone)}
+      </:col>
+      <:col
+        :let={row}
+        :if={@started?}
+        label="Hours"
+        align="right"
+        class="w-px whitespace-nowrap"
+      >
+        <.hours_cell :if={row.status == "attending"} minutes={row.duration_in_minutes} />
+      </:col>
+    </.table>
+    <%!-- The Hours column's sum, exact as Service.Format.duration/1 writes the minutes. --%>
+    <p :if={@started? and attended_minutes(@members) > 0} id="members-hours" class="hint mt-2">
+      {Format.duration(attended_minutes(@members))} in total
+    </p>
     """
   end
 
-  # "13 members", or with a group "3 of 13 members, in Team leaders".
+  # "13 members", or with a group or a search "3 of 13 members, in Team leaders".
   defp filter_count(shown, %{members: members, filter: filter, groups: groups}) do
     all = members |> length() |> Format.count(one: "%d member", many: "%d members")
+    group = Enum.find_value(groups, fn {title, id} -> id == filter.group && title end)
 
-    case Enum.find(groups, fn {_title, id} -> id == filter.group end) do
-      nil -> all
-      {title, _id} -> "#{shown |> length() |> Format.number()} of #{all}, in #{title}"
+    cond do
+      !ActivityMembersFilterViewModel.narrowed?(filter) -> all
+      group -> "#{shown |> length() |> Format.number()} of #{all}, in #{group}"
+      true -> "#{shown |> length() |> Format.number()} of #{all}"
     end
   end
-
-  defp table_id("attending", false), do: "signed-up"
-  defp table_id("absent", false), do: "cant-make-it"
-  defp table_id("attending", true), do: "attended"
-  defp table_id("absent", true), do: "absent"
-  defp table_id("requested", _started?), do: "no-reply"
 
   defp member_path(team, activity, member),
     do:
       ~p"/teams/#{team}/members/#{member.id}?when=#{Calendar.strftime(activity.started_at, "%Y")}"
 
-  defp attended_minutes(rows), do: Enum.sum_by(rows, &(&1.duration_in_minutes || 0))
+  defp attended_minutes(rows),
+    do: rows |> ActivityMembers.only("attending") |> Enum.sum_by(&(&1.duration_in_minutes || 0))
 
   # A member's own start; its date only when it isn't the activity's day.
   defp attended_start(row, activity, timezone) do
@@ -678,8 +718,6 @@ defmodule Web.ActivityMembersLive do
     |> Enum.filter(& &1)
     |> Enum.join(" · ")
   end
-
-  defp reminded?(rows, reminded), do: Enum.any?(rows, &reminded[&1.member_id])
 
   defp reminded_text(%Reminder{status: :failed}, _timezone), do: "Reminder failed"
   defp reminded_text(%Reminder{status: :queued}, _timezone), do: "Reminder sending"

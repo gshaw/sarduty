@@ -21,7 +21,9 @@ enforces the top-level list and the held URLs.
   with no redirect), a member's and an equipment item's custom fields are `/fields` too;
   adding goes under the tab it adds to, `/equipment/add` and `/members/add`, and
   changing too, `/fields/edit`. A step of the Members tab, on its own LiveView, is under
-  it too, such as `/members/remind` (#766, #895).
+  it too, such as `/members/remind` (#766, #895). The tab and its steps keep its filters
+  in the query, `?group=`, `?status=` (the reply tile, such as `no-reply`), and `?q=`
+  (the name search), so Back opens the tab as it was (#920).
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
   (`/teams/:subdomain/settings`, `/settings/team-admins`). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.
