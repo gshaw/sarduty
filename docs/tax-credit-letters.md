@@ -51,8 +51,17 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
   it, so a team that shortened its name fixes it by hand before letter season.
 - **The letterhead is the organization's logo, then the team's** (#290), top right. Either
   is left out when it's missing, and a team without a logo never gets SAR Duty's. Logos
-  are the current ones when the PDF is built: a letter saves its text and signature, not
-  its logos.
+  are the ones the team has when the PDF is drawn, and the saved PDF keeps them.
+- **A letter's PDF is kept as it was made** (#918), in `letter_pdfs` with the bytes in
+  `letter_pdf_files`, so lists never load them. Making or replacing a letter draws it
+  before the write transaction, which holds SQLite's one write lock
+  ([SaveTaxCreditLetterPDF](../lib/app/operation/save_tax_credit_letter_pdf.ex)).
+  Downloads and emails serve the saved file
+  ([LoadTaxCreditLetterPDF](../lib/app/operation/load_tax_credit_letter_pdf.ex)), so a
+  member gets the same file every time. Letters made before it got theirs from
+  `SaveLetterPDFsWorker`, which Oban's cron starts at boot. A letter whose text the
+  `pdf` package can't write (#917) has none, and its download and email fail, until
+  letters print with Typst.
 - **The QR code is drawn, not an image.** Vector squares from `eqrcode`'s matrix, beside
   the signer block, so it prints sharp. It holds the URL in lower case, since the
   `/letters` path is case-sensitive. Letters from before #207 get none.
