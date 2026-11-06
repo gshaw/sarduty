@@ -301,6 +301,17 @@ defmodule Web.DemoFlowTest do
     assert has_element?(lv, "#outbox-arrived-2")
   end
 
+  test "the Outbox's list gets the toast too, with no link to itself", %{conn: conn} do
+    %{user: user, team: team} = built_demo()
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/outbox")
+
+    email!(team, "Will you be there?")
+    send(lv.pid, :demo_outbox_arrived)
+
+    assert has_element?(lv, "#outbox-arrived-1", "1 email arrived in your Outbox.")
+    refute has_element?(lv, "#outbox-arrived-open")
+  end
+
   test "the Outbox lists a demo's email, shows it, and serves its HTML sandboxed", %{
     conn: conn
   } do

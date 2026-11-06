@@ -40,8 +40,9 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    Outbox button counts what arrived since the visitor last opened it
    (`DemoTeam.outbox_seen!/2`), an amber number after the label as tabs show one, and
    has none otherwise. The banner scrolls
-   away, so mail arriving also gets a toast under the top bar, on every page but the
-   Outbox: "3 emails and 1 text arrived in your Outbox." with a link to it. The
+   away, so mail arriving also gets a toast under the top bar, on every page: "3 emails
+   and 1 text arrived in your Outbox." with a link to it, but none on the Outbox's own
+   list, where a new row is easy to miss too. The
    banner's hook in `Web.UserAuth` waits a second after the first message, so a burst
    of reminders is one toast, and counts only what that burst brought.
 5. **The end.** `App.Operation.DeleteDemo` deletes the team through

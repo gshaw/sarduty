@@ -650,13 +650,20 @@ defmodule Web.Layouts do
       <.flash kind={:info} flash={@flash} />
       <.flash kind={:error} flash={@flash} />
       <.flash
-        :if={@demo && @demo.arrived}
+        :if={@demo && @demo.arrived && @demo.arrived.link?}
         id={"outbox-arrived-#{@demo.arrived.burst}"}
         kind={:info}
         title={arrived_title(@demo.arrived)}
       >
         <.a id="outbox-arrived-open" navigate={@demo.outbox_path}>Open the Outbox</.a>
         to see what members get.
+      </.flash>
+      <.flash
+        :if={@demo && @demo.arrived && !@demo.arrived.link?}
+        id={"outbox-arrived-#{@demo.arrived.burst}"}
+        kind={:info}
+      >
+        {arrived_title(@demo.arrived)}
       </.flash>
       <.flash
         :if={@static_changed_url}

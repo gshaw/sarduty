@@ -360,7 +360,12 @@ defmodule Web.UserAuth do
             demo
             | last_id: OutboxMessage.last_id(team),
               burst: burst,
-              arrived: %{emails: emails, texts: texts, burst: burst}
+              arrived: %{
+                emails: emails,
+                texts: texts,
+                burst: burst,
+                link?: !on_outbox_list?(socket)
+              }
           })
       end
 
@@ -369,10 +374,14 @@ defmodule Web.UserAuth do
 
   defp outbox_info(_message, socket), do: {:cont, socket}
 
-  # The Outbox page lists a message as it lands, so it gets no toast.
+  # The Outbox's list gets the toast too, without the link to itself: a row landing in a
+  # long table is easy to miss.
+  defp on_outbox_list?(socket),
+    do: socket.view == Web.OutboxLive and is_nil(socket.assigns[:message])
+
   defp outbox_landed(socket) do
     %{demo: demo, current_team: team} = socket.assigns
-    wait? = !demo.waiting? and socket.view != Web.OutboxLive
+    wait? = !demo.waiting?
     if wait?, do: Process.send_after(self(), :demo_outbox_arrived, @burst_ms)
 
     Phoenix.Component.assign(socket, :demo, %{
