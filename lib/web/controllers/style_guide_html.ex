@@ -1,6 +1,7 @@
 defmodule Web.StyleGuideHTML do
   use Web, :html
 
+  import Web.Components.ActionBar
   import Web.Components.ActivityMap, only: [activity_map: 1]
   import Web.Components.ActivityPanel
   import Web.Components.ActivityTable
@@ -72,6 +73,7 @@ defmodule Web.StyleGuideHTML do
        ]},
       {:components, "Components", "The parts pages are built from, one per page.",
        [
+         {:action_bar, "Action bar", "The one button for a long list of checked rows."},
          {:activity_panel, "Activity panel", "An activity's day and time, counts, and reply."},
          {:band, "Band", "The result of a check, big and in colour."},
          {:banner, "Banner", "Something true about the page until it changes."},
