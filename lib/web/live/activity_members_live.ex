@@ -162,8 +162,9 @@ defmodule Web.ActivityMembersLive do
   defp checked(%{selected: selected} = assigns),
     do: assigns |> shown() |> Enum.filter(&MapSet.member?(selected, &1.member.id))
 
-  # The choice the list shows picked, moved off one that greys out. Before the start the
-  # list starts on its first choice, so the button always says what it does.
+  # The choice the list shows picked (Action.pick/5). Before the start it moves off one
+  # that greys out and starts on the first, so the button always says what it does; from
+  # the start a greyed one leaves nothing picked.
   defp chosen(%{choice: choice} = assigns) do
     assigns
     |> offered()
@@ -705,8 +706,10 @@ defmodule Web.ActivityMembersLive do
   end
 
   defp word_fits(started?, timezone) do
-    widest = DateTime.new!(~D[2026-09-28], ~T[20:08:00], timezone)
-    replied = %{status: "attending", replied_at: widest}
+    # The 28th of every month, since which month is widest depends on the font.
+    days =
+      for month <- 1..12,
+          do: 2026 |> Date.new!(month, 28) |> DateTime.new!(~T[20:08:00], timezone)
 
     [
       fit_reply:
@@ -714,8 +717,17 @@ defmodule Web.ActivityMembersLive do
           status <- ActivityMembers.statuses(),
           do: reply_text(%{status: status, started?: started?})
         ),
-      fit_replied: [replied_text(%{row: replied, now: widest, timezone: timezone})],
-      fit_asked: ["Asked " <> Format.month_day(widest, timezone)]
+      fit_replied:
+        for(
+          day <- days,
+          do:
+            replied_text(%{
+              row: %{status: "attending", replied_at: day},
+              now: day,
+              timezone: timezone
+            })
+        ),
+      fit_asked: for(day <- days, do: "Asked " <> Format.month_day(day, timezone))
     ]
   end
 

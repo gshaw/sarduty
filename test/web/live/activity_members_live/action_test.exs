@@ -229,10 +229,15 @@ defmodule Web.ActivityMembersLive.ActionTest do
       assert Action.pick(@list, "absent", @from_start, [row(1, "attending")], false) == Absent
     end
 
-    test "moves off a greyed choice to the next one offered" do
+    test "before the start, moves off a greyed choice to the next one offered" do
+      before = [Ask, Update, RemoveBeforeStart]
+      assert Action.pick(before, "ask", @before_start, [row(1, "attending")], true) == Update
+    end
+
+    test "from the start, a greyed choice leaves nothing picked, never Mark absent" do
       attended = [row(1, "attending")]
-      assert Action.pick(@list, "attended", @from_start, attended, false) == Absent
-      assert Action.pick(@list, "absent", @from_start, [row(1, "absent")], false) == Update
+      assert Action.pick(@list, "attended", @from_start, attended, false) == nil
+      assert Action.pick(@list, "absent", @from_start, [row(1, "absent")], false) == nil
     end
 
     test "with no choice, the first that reaches someone, or none from the start" do

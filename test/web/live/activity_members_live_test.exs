@@ -129,12 +129,13 @@ defmodule Web.ActivityMembersLiveTest do
     check(lv, [ctx.casey.id, ctx.cameron.id, ctx.drew.id], "attended")
     assert has_element?(lv, "#members-change-send", "Mark 2 attended")
 
-    # Casey attended already: Mark attended greys out, and the list moves to Mark absent.
+    # Casey attended already: Mark attended greys out, and nothing is picked. Never Mark
+    # absent, which would take Casey's hours.
     check(lv, [ctx.casey.id], "attended")
     assert has_element?(lv, "#members-change-choice[disabled]")
     assert has_element?(lv, "#members-change", "Everyone checked attended already.")
-    assert has_element?(lv, "#members-change-choice_absent[checked]")
-    assert has_element?(lv, "#members-change-send", "Mark 1 absent")
+    refute has_element?(lv, "#members-change input[type=radio][checked]")
+    assert has_element?(lv, "#members-change-send[disabled]", "Change members")
   end
 
   test "Mark absent changes them in place, and nothing stays checked (X)", ctx do

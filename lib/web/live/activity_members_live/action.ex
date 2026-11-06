@@ -67,19 +67,27 @@ defmodule Web.ActivityMembersLive.Action do
 
   @doc """
   The choice the list shows picked: `choice`, an action's value, while it reaches someone
-  checked; when it greys out, the next one offered after it that doesn't, then the first.
-  With no choice, the first that reaches someone when `first?`, else nil. Pure.
+  checked. Before the start, when it greys out, the next one offered after it that
+  doesn't, then the first; with no choice, the first that reaches someone. From the start
+  a greyed choice leaves nothing picked, since the next one could be Mark absent, which
+  takes hours away: the admin picks again. Pure.
   """
-  def pick(actions, choice, ctx, checked, first?) do
+  def pick(actions, choice, ctx, checked, before_start?) do
     open = Enum.reject(actions, & &1.unavailable(ctx, checked))
+    index = Enum.find_index(actions, &(&1.value() == choice))
 
-    case Enum.find_index(actions, &(&1.value() == choice)) do
-      nil ->
-        if first?, do: List.first(open)
+    cond do
+      !before_start? ->
+        if index && Enum.at(actions, index) in open, do: Enum.at(actions, index)
 
-      index ->
-        {before, from} = Enum.split(actions, index)
-        Enum.find(from ++ before, &(&1 in open))
+      index == nil ->
+        List.first(open)
+
+      true ->
+        actions
+        |> Enum.split(index)
+        |> then(fn {before, from} -> from ++ before end)
+        |> Enum.find(&(&1 in open))
     end
   end
 
