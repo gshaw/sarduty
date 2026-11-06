@@ -93,6 +93,28 @@ defmodule App.Worker.SendMemberCardWorkerTest do
     end)
   end
 
+  # A click joins the member's waiting job (unique), so it moves that job to now (#893).
+  test "Email card moves a job already waiting, a retry or a rollout slot, to now",
+       %{team: team, member: member} do
+    member_card_fixture(member, %{email_status: :sent})
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      for state <- ["scheduled", "retryable"] do
+        Repo.delete_all(Oban.Job)
+        later = SendMemberCardWorker.enqueue(member, schedule_in: 30 * 60)
+        later |> Ecto.Changeset.change(state: state) |> Repo.update!()
+        now = DateTime.utc_now()
+
+        assert {:ok, _card} = SendMemberCard.email(team, member, now)
+
+        assert [%Oban.Job{id: id, state: ^state, scheduled_at: at}] = Repo.all(Oban.Job)
+
+        assert id == later.id
+        assert DateTime.compare(at, DateTime.add(now, 1, :second)) == :lt
+      end
+    end)
+  end
+
   test "Email card sends the current card again", %{team: team, member: member} do
     card = member_card_fixture(member, %{email_status: :sent})
 

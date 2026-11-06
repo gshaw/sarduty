@@ -258,10 +258,7 @@ defmodule Web.VerifyLive do
     ~H"""
     <div id={"result-#{@status}"}>
       <.band :if={@status == :active} kind={:success} title="Active member">Verified just now</.band>
-      <.band :if={@status == :inactive && @left} kind={:warning} title="Not an active member">
-        {@left}
-      </.band>
-      <.band :if={@status == :inactive && !@left} kind={:warning} title="Not an active member" />
+      <.band :if={@status == :inactive} kind={:warning} title="Not an active member">{@left}</.band>
 
       <.panel>
         <%!-- No photo for a retired member: "not active" needs none (#176). --%>

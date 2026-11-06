@@ -103,9 +103,17 @@ defmodule App.Operation.SendMemberCard do
     if email?(member), do: queue(card, member, now), else: card
   end
 
+  # A click sends now. A job already waiting for this member, a retry or a rollout slot,
+  # is moved to now rather than left to send later while the tab says Sending. Oban
+  # replaces only what the new job sets, so it names scheduled_at.
   defp queue(card, member, now) do
     card = MemberCard.set_email_status!(card, :sending, now)
-    SendMemberCardWorker.enqueue(member)
+
+    SendMemberCardWorker.enqueue(member,
+      scheduled_at: now,
+      replace: [scheduled: [:scheduled_at], retryable: [:scheduled_at]]
+    )
+
     card
   end
 
