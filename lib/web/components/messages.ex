@@ -287,8 +287,8 @@ defmodule Web.Components.Messages do
   @names_up_to 3
 
   @doc """
-  Whether a confirm names `items` (#{@names_up_to} or fewer) or counts them, so a wrong
-  tick shows without the dialog listing everyone (/styles/confirm-dialog#many).
+  Whether a confirm names `items` (#{@names_up_to} or fewer) or counts them, so a member
+  checked by mistake shows without the dialog listing everyone (/styles/confirm-dialog#many).
   """
   def name_them?(items), do: length(items) <= @names_up_to
 

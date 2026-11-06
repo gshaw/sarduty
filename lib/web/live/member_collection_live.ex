@@ -388,9 +388,9 @@ defmodule Web.MemberCollectionLive do
   end
 
   @doc """
-  Remove from group's `data-confirm` attributes for the ticked `selected` among `rows`
+  Remove from group's `data-confirm` attributes for the checked `selected` among `rows`
   (/styles/confirm-dialog#many): up to 3 by name, then a count, and from 10 a box. None
-  without a group and ticks: the click gets "Select a group" or "Select members"
+  without a group and checked members: the click gets "Select a group" or "Select members"
   instead. Pure.
   """
   def remove_confirm(selected, rows, group_id, groups) do

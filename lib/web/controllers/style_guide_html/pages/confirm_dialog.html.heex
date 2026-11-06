@@ -76,12 +76,16 @@
   <p>
     Only where a delete takes other things with it: a group with members, an activity with
     attendance, a qualification someone holds. The dialog lists what's lost and ends with
-    "D4H can't bring it back." The action stays grey until the box is ticked.
+    "D4H can't bring it back." The action stays grey until the box is checked.
   </p>
   <p>
     And an email to 10 or more members: an ask for a reply, an update, or tax credit letters. The box
     names the count, so nobody emails the whole team by reflex. Fewer than 10 get a simple
     confirm. <code>send_confirm/3</code> picks one.
+  </p>
+  <p>
+    And a switch that turns off something 10 or more members use, such as a team's ID cards.
+    Turning off Agents asks from 1 AI agent, since each one has to be connected again.
   </p>
   <div class="demo grid gap-6">
     <.confirm_dialog
@@ -156,7 +160,8 @@
   </p>
   <ul>
     <li>
-      <strong>Up to 3:</strong> name them, so a wrong tick shows: "Avery Chen's 4h 30m and
+      <strong>Up to 3:</strong>
+      name them, so a member checked by mistake shows: "Avery Chen's 4h 30m and
       Jordan Lee's 5 hours go."
     </li>
     <li>
