@@ -1,6 +1,7 @@
 defmodule Web.ActivityEquipmentLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.Columns, only: [item_cell: 1]
   import Web.Components.Scanner
 
   alias App.Model.EquipmentItem
@@ -62,10 +63,23 @@ defmodule Web.ActivityEquipmentLive do
             {@last.title}, {Service.Format.date_short(@last.started_at, @current_team.timezone)}
           </p>
           <ul class="mb-4">
-            <li :for={usage <- @last_usages}>{usage.equipment_item.title}</li>
+            <li :for={item <- last_items(@last_usages)} id={"last-#{item.id}"}>
+              <.item_cell item={item} link={false} />
+              <span :if={item_state(item, @lines, @used) == :used} class="hint">
+                On the activity already
+              </span>
+              <span :if={item_state(item, @lines, @used) == :listed} class="hint">
+                In the list to add
+              </span>
+            </li>
           </ul>
-          <.button id="equipment-add-last" type="button" phx-click="add-last">
-            Add {Service.Format.count(length(@last_usages), one: "%d item", many: "%d items")}
+          <.button
+            id="equipment-add-last"
+            type="button"
+            phx-click="add-last"
+            disabled={last_to_add(@last_usages, @lines, @used) == []}
+          >
+            Add {count_items(length(last_to_add(@last_usages, @lines, @used)))}
           </.button>
         </section>
 
@@ -391,6 +405,19 @@ defmodule Web.ActivityEquipmentLive do
   def no_item_text(code), do: "No item has the barcode #{String.trim(code)}."
 
   @doc """
+  Whether `item` can go in the list to add: `:add`, `:out` when lost or retired, `:used`
+  when on the activity (`used` holds their ids), or `:listed` when in `lines` already.
+  """
+  def item_state(%EquipmentItem{} = item, lines, used) do
+    cond do
+      not EquipmentItem.in_service?(item) -> :out
+      MapSet.member?(used, item.id) -> :used
+      Enum.any?(lines, &(&1.item.id == item.id)) -> :listed
+      true -> :add
+    end
+  end
+
+  @doc """
   What a scan of `item`, nil when no item has the barcode, does to the list: `:add`,
   `:already` when the item is listed or on the activity, or `:refused`. Each comes with
   the text to show. `used` holds the ids of the items on the activity.
@@ -398,19 +425,22 @@ defmodule Web.ActivityEquipmentLive do
   def scan_result(nil, code, _lines, _used), do: {:refused, no_item_text(code)}
 
   def scan_result(%EquipmentItem{} = item, _code, lines, used) do
-    cond do
-      not EquipmentItem.in_service?(item) ->
-        {:refused, "#{item.title} cannot be added. It is #{item.status}."}
-
-      MapSet.member?(used, item.id) ->
-        {:already, "#{item.title} is already on this activity."}
-
-      Enum.any?(lines, &(&1.item.id == item.id)) ->
-        {:already, "#{item.title} is already in the list to add."}
-
-      true ->
-        {:add, "Added #{item.title}."}
+    case item_state(item, lines, used) do
+      :out -> {:refused, "#{item.title} cannot be added. It is #{item.status}."}
+      :used -> {:already, "#{item.title} is already on this activity."}
+      :listed -> {:already, "#{item.title} is already in the list to add."}
+      :add -> {:add, "Added #{item.title}."}
     end
+  end
+
+  # The last activity's items, once each.
+  defp last_items(usages), do: usages |> Enum.map(& &1.equipment_item) |> Enum.uniq_by(& &1.id)
+
+  # The last activity's usages Same as last adds: the button counts them.
+  defp last_to_add(usages, lines, used) do
+    usages
+    |> Enum.uniq_by(& &1.equipment_item_id)
+    |> Enum.filter(&(item_state(&1.equipment_item, lines, used) == :add))
   end
 
   @doc """
@@ -470,10 +500,11 @@ defmodule Web.ActivityEquipmentLive do
     do: team.id |> EquipmentItem.search(q) |> Enum.reject(&MapSet.member?(skip, &1.id))
 
   def handle_event("add-last", _params, socket) do
+    %{last_usages: usages, lines: lines, used: used} = socket.assigns
+
     new =
-      for usage <- socket.assigns.last_usages, EquipmentItem.in_service?(usage.equipment_item) do
-        {usage.equipment_item, usage.minutes || default_minutes()}
-      end
+      for usage <- last_to_add(usages, lines, used),
+          do: {usage.equipment_item, usage.minutes || default_minutes()}
 
     {:noreply, add(socket, new)}
   end

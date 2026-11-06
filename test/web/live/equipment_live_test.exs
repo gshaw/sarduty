@@ -1119,6 +1119,33 @@ defmodule Web.EquipmentLiveTest do
     assert length(Repo.all(EquipmentUsage)) == 1
   end
 
+  test "same as last counts what it adds, and says why the rest stay out", ctx do
+    earlier =
+      activity_fixture(ctx.team, %{
+        started_at: ~U[2026-09-01 10:00:00Z],
+        finished_at: ~U[2026-09-01 12:00:00Z]
+      })
+
+    for item <- [ctx.phone, ctx.radio, ctx.truck], do: equipment_usage_fixture(earlier, item)
+    ctx.radio |> Ecto.Changeset.change(status: "lost") |> Repo.update!()
+    activity = activity_fixture(ctx.team)
+    equipment_usage_fixture(activity, ctx.truck)
+
+    {:ok, lv, _html} =
+      live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment/add")
+
+    assert has_element?(lv, "#equipment-add-last", "Add 1 item")
+    assert has_element?(lv, "#last-#{ctx.radio.id} .badge", "Lost")
+    assert has_element?(lv, "#last-#{ctx.truck.id}", "On the activity already")
+
+    lv |> element("#equipment-add-last") |> render_click()
+
+    assert has_element?(lv, "#hours-#{ctx.phone.id}")
+    refute has_element?(lv, "#hours-#{ctx.radio.id}")
+    assert has_element?(lv, "#last-#{ctx.phone.id}", "In the list to add")
+    assert has_element?(lv, "#equipment-add-last[disabled]", "Add 0 items")
+  end
+
   test "a D4H team cannot add or delete items here", ctx do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/equipment")
     refute has_element?(lv, "#equipment-add")

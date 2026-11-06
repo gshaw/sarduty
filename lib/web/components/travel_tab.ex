@@ -26,6 +26,7 @@ defmodule Web.Components.TravelTab do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.Member
   alias App.Operation.SetTravel
   alias App.ViewData.ActivityTravel
   alias Service.Format
@@ -42,8 +43,17 @@ defmodule Web.Components.TravelTab do
       |> assign(locked?: Activity.locked?(assigns.activity))
       |> assign_new(:selected, fn -> MapSet.new() end)
       |> assign_new(:editing, fn -> nil end)
+      |> assign_new(:own_id, fn -> own_id(assigns.team, assigns.user) end)
 
     {:ok, if(first?, do: load(socket), else: socket)}
+  end
+
+  # The team admin's own member, whose rows stay confirmed when they set them.
+  defp own_id(_team, nil), do: nil
+
+  defp own_id(team, user) do
+    member = Member.find_by_email(team, user.email, DateTime.utc_now())
+    member && member.id
   end
 
   # The first load waits for Mapbox behind a spinner. Later loads keep the table showing,
@@ -249,6 +259,7 @@ defmodule Web.Components.TravelTab do
         <.travel_dialog
           :if={@editing}
           rows={dialog_rows(travel, @editing, @selected)}
+          own_id={@own_id}
           myself={@myself}
         />
 
@@ -343,6 +354,7 @@ defmodule Web.Components.TravelTab do
   end
 
   attr :rows, :list, required: true, doc: "one row, or the checked rows"
+  attr :own_id, :any, required: true, doc: "the team admin's own member id, or nil"
   attr :myself, :any, required: true
 
   # Travel in the confirm dialog, every way at once, starting on what's saved for one row.
@@ -384,7 +396,7 @@ defmodule Web.Components.TravelTab do
         id={"travel-#{@id}"}
         class="confirm-dialog-choices mb-0"
         legend="How they got there"
-        hint={if @one, do: "Round trips from home.", else: "Each member's own round trip from home."}
+        hint={dialog_hint(@one, SetTravel.clears_confirmed(@rows, @own_id))}
         routes={@one}
         current={@current}
         km={@one && @one.trip && @one.trip.km}
@@ -392,6 +404,19 @@ defmodule Web.Components.TravelTab do
       />
     </.confirm_dialog>
     """
+  end
+
+  # A team admin's change clears a member's Confirmed, so the dialog names who loses it.
+  defp dialog_hint(one, clears) do
+    trips = if one, do: "Round trips from home.", else: "Each member's own round trip from home."
+
+    case clears do
+      [] ->
+        trips
+
+      members ->
+        "#{trips} Changing travel clears Confirmed for #{Format.and_list(Enum.map(members, & &1.name))}."
+    end
   end
 
   defp members_travel(count),

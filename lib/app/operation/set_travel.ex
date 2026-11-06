@@ -41,6 +41,18 @@ defmodule App.Operation.SetTravel do
   end
 
   @doc """
+  The members whose Confirmed a team admin clears by changing these rows: those who
+  confirmed, but for `own_id`, the team admin's own member, whose rows they set count
+  as confirmed. A row whose travel stays the same keeps it.
+  """
+  def clears_confirmed(rows, own_id) do
+    rows
+    |> Enum.filter(&(&1[:trip] && &1.trip.checked_at && &1.member.id != own_id))
+    |> Enum.map(& &1.member)
+    |> Enum.uniq_by(& &1.id)
+  end
+
+  @doc """
   Which checked rows (local attendance ids) to set, and to what: `{:ok, %{travel:, sets:
   [%{attendance:, member:, travel:, km:}], skipped: [row], unchanged: [row], cleared:
   [row]}}`. A skipped row has no route to where it drove. An unchanged row has that

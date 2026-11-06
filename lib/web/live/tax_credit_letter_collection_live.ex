@@ -54,6 +54,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
     <.send_all
       :if={!@sending && @to_send != []}
       count={length(@to_send)}
+      no_email={no_email(@to_send)}
       year={@filter_options.year}
       team={@current_team}
     />
@@ -161,7 +162,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         id="send-all-button"
         variant={:success}
         phx-click="send_all"
-        {send_all_confirm(@count, @year, @team)}
+        {send_all_confirm(@count, @no_email, @year, @team)}
       >
         Send {Service.Format.count(@count, one: "%d letter", many: "%d letters")}
       </.button>
@@ -177,14 +178,28 @@ defmodule Web.TaxCreditLetterCollectionLive do
     """
   end
 
-  defp send_all_confirm(count, year, team) do
+  # The members shown who get a letter but no email, by name.
+  defp no_email(to_send) do
+    for(record <- to_send, !CreateTaxCreditLetters.emailed?(record.member), do: record.member)
+    |> Enum.sort_by(& &1.name)
+  end
+
+  # The check counts who gets the email, so it leaves out the members with no email.
+  defp send_all_confirm(count, no_email, year, team) do
     letters = Service.Format.count(count, one: "%d letter", many: "%d letters")
     unsigned = if team.signature, do: [], else: ["They go out unsigned."]
 
+    not_emailed =
+      if no_email == [],
+        do: [],
+        else: [
+          "No email, so not emailed: #{Service.Format.and_list(Enum.map(no_email, & &1.name))}."
+        ]
+
     send_confirm(
-      count,
+      count - length(no_email),
       "Create and email #{letters} for #{year}?",
-      ["Each member shown with hours and no letter yet gets one." | unsigned]
+      ["Each member shown with hours and no letter yet gets one." | unsigned] ++ not_emailed
     )
   end
 
