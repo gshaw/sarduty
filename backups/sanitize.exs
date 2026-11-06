@@ -475,9 +475,16 @@ defmodule Sanitize do
     end
   end
 
-  # Letters are rebuilt from the fakes, keeping the hours and the certified date.
+  # Letters are rebuilt from the fakes, keeping the hours and the certified date. Their
+  # saved PDFs (#918) hold the real text and logos, so every one goes; a download in
+  # dev draws and saves a new one.
   defp sanitize_letters(conn, people, team_by_id) do
     by_id = Map.new(people, &{&1.id, &1})
+
+    if "letter_pdfs" in tables(conn) do
+      exec(conn, "DELETE FROM letter_pdf_files")
+      exec(conn, "DELETE FROM letter_pdfs")
+    end
 
     sql = """
     SELECT l.id, l.member_id, l.ref_id, l.year, l.letter_content, m.team_id
