@@ -23,7 +23,7 @@ defmodule Web.Admin.EventCollectionLive do
 
     socket =
       socket
-      |> assign(page_title: "Events", teams: Team.get_all(), now: now, limit: @limit)
+      |> assign(page_title: "Events", teams: Team.get_all_real(), now: now, limit: @limit)
       |> assign(last_round: Event.get_last(:d4h_sync_round))
       |> assign(last_run: Event.get_last(:d4h_refresh_run))
       |> assign(rate_limited: Event.count_since(:d4h_rate_limited, DateTime.add(now, -1, :day)))

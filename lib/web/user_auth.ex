@@ -322,7 +322,8 @@ defmodule Web.UserAuth do
   # sends a moment after the page. Web.OutboxLive gets the message too, to show it.
   defp watch_outbox(%{assigns: %{demo: %{}}} = socket) do
     if Phoenix.LiveView.connected?(socket),
-      do: Phoenix.PubSub.subscribe(App.PubSub, OutboxMessage.topic())
+      do:
+        Phoenix.PubSub.subscribe(App.PubSub, OutboxMessage.topic(socket.assigns.current_team.id))
 
     Phoenix.LiveView.attach_hook(socket, :demo_outbox, :handle_info, &outbox_info/2)
   end

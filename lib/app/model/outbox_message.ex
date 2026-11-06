@@ -50,12 +50,17 @@ defmodule App.Model.OutboxMessage do
   # needn't reload.
   defp insert!(message) do
     message = Repo.insert!(message)
-    Phoenix.PubSub.broadcast(App.PubSub, topic(), {:outbox_message, message.team_id})
+    event = {:outbox_message, message.team_id}
+    Phoenix.PubSub.broadcast(App.PubSub, topic(), event)
+    if message.team_id, do: Phoenix.PubSub.broadcast(App.PubSub, topic(message.team_id), event)
     message
   end
 
   @doc "The topic every new message is told on, as `{:outbox_message, team_id}`."
   def topic, do: "outbox"
+
+  @doc "The topic one team's new messages are told on, as `{:outbox_message, team_id}`."
+  def topic(team_id), do: "outbox:#{team_id}"
 
   defp address({"", email}), do: email
   defp address({nil, email}), do: email

@@ -103,7 +103,7 @@ config :sarduty, Oban,
   # One sync at a time, so two teams' syncs never hold the SQLite write lock together.
   # Bulk is for fan-out, one job per email or card, so a long send never holds up a
   # login code and its PDFs leave the one CPU for pages (docs/jobs.md).
-  queues: [default: 5, bulk: 2, refresh: 1, sync: 1],
+  queues: [default: 5, bulk: 2, refresh: 1, sync: 1, demos: 1],
   # Lifeline puts back a job left executing by a restart, so it runs again rather than
   # sitting there for good; an hour is far longer than any team's refresh. Pruner keeps a
   # week of finished jobs for looking into a run; events keep the longer history.
@@ -116,7 +116,7 @@ config :sarduty, Oban,
       {"*/10 * * * *", App.Worker.ScheduleTeamSyncsWorker},
       {"30 5 * * *", App.Worker.PruneEventsWorker},
       {"15 8 * * *", App.Worker.ReseedSampleWorker},
-      # Try a demo (#857): the day-before email, and the delete on day 7.
+      # Try a demo (#857): deletes the demos past their time.
       {"5 * * * *", App.Worker.DemoTeamsWorker}
     ]
   ]

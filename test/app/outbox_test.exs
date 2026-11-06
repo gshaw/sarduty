@@ -50,6 +50,18 @@ defmodule App.OutboxTest do
     assert_received {:outbox_message, nil}
   end
 
+  test "a team's message is told on its own topic, not another team's" do
+    team = team_fixture()
+    other = team_fixture()
+    Phoenix.PubSub.subscribe(App.PubSub, OutboxMessage.topic(team.id))
+    Phoenix.PubSub.subscribe(App.PubSub, OutboxMessage.topic(other.id))
+
+    OutboxMessage.add_text!("+16045551234", "Your code", team.id)
+
+    assert_received {:outbox_message, team_id} when team_id == team.id
+    refute_received {:outbox_message, _team_id}
+  end
+
   test "emptying takes every message" do
     OutboxMessage.add_text!("+16045551234", "One")
     OutboxMessage.add_text!("+16045551234", "Two")

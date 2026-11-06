@@ -47,8 +47,10 @@ defmodule App.Operation.BuildDemoTeam do
   def topic(%DemoTeam{id: id}), do: "demo:#{id}"
 
   @doc "`{:ok, team}`, or `{:error, reason}` with nothing left behind."
-  def call(%DemoTeam{team_id: team_id}, _now) when is_integer(team_id),
-    do: {:ok, Team.get!(team_id)}
+  # Built already, it tells the topic too: a page that subscribed after the build
+  # finished is waiting on this job.
+  def call(%DemoTeam{team_id: team_id} = demo, _now) when is_integer(team_id),
+    do: tell(demo, {:ok, Team.get!(team_id)})
 
   def call(%DemoTeam{} = demo, now) do
     result =
@@ -56,6 +58,10 @@ defmodule App.Operation.BuildDemoTeam do
         build(demo, records, now)
       end
 
+    tell(demo, result)
+  end
+
+  defp tell(demo, result) do
     Phoenix.PubSub.broadcast(App.PubSub, topic(demo), {:demo_built, demo.id, result})
     result
   end

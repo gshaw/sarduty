@@ -22,7 +22,7 @@ defmodule Web.Admin.IntegrationsLive do
 
   def mount(_params, _session, socket) do
     teams =
-      Team.get_all()
+      Team.get_all_real()
       |> Enum.filter(&(&1.d4h_access_key not in [nil, ""]))
       |> Enum.sort_by(&String.downcase(&1.name))
 

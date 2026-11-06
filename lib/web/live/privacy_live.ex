@@ -58,7 +58,9 @@ defmodule Web.PrivacyLive do
           <.a id="privacy-agents-link" navigate={~p"/agents"}>How agents work with SAR Duty</.a>
         </p>
         <p id="privacy-demo">
-          Try a demo asks for no email. A name, if you give one, is kept on your demo until it is deleted, 3 days at most. Its made-up team's records are kept in SAR Duty Records, in Canada, and deleted with it.
+          Try a demo asks for no email. A name, if you give one, is kept on your demo until it is deleted, {Service.Format.days(
+            App.Model.DemoTeam.days()
+          )} after you first open it. Its made-up team's records are kept in SAR Duty Records, in Canada, and deleted with it.
         </p>
         <p id="privacy-organizations">
           When a team belongs to an organization, its organization admins, such as an association's staff, see each of its teams' totals, never members' names or contact details.

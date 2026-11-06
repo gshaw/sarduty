@@ -51,7 +51,9 @@ defmodule App.Model.DemoTeam do
 
   @doc "The demo a link opens, while it lives, or nil."
   def from_link_token(token, now) when is_binary(token) do
-    max_age = (@days + 1) * 86_400
+    # Unopened, a demo waits up to @days; opened, it lives @days from then. expires_at
+    # decides; max_age only outlasts the longest a demo can live.
+    max_age = (2 * @days + 1) * 86_400
 
     with {:ok, id} <- Phoenix.Token.verify(Web.Endpoint, @link_salt, token, max_age: max_age),
          %DemoTeam{} = demo <- Repo.get(DemoTeam, id),

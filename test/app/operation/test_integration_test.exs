@@ -96,7 +96,7 @@ defmodule App.Operation.TestIntegrationTest do
 
   test "jobs: an empty job runs on every queue", %{user: user} do
     assert {:ok, "works", message} = TestIntegration.call("jobs", %{}, user)
-    assert message =~ "All 4 queues ran a test job"
+    assert message =~ "All 5 queues ran a test job"
     assert message =~ "The sync hasn't run yet."
   end
 
