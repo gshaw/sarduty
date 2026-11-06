@@ -274,6 +274,33 @@ defmodule Web.Components.Messages do
   def check_from, do: @check_from
 
   @doc """
+  The check box a confirm waits on once it reaches `count` records, from #{@check_from}
+  up, so nobody changes them all by reflex: `%{}` below it. `text` names the count:
+  "I understand 12 members lose their hours."
+  """
+  def confirm_check(count, text) do
+    if count >= @check_from,
+      do: %{"data-confirm-check" => text},
+      else: %{}
+  end
+
+  @names_up_to 3
+
+  @doc """
+  Whether a confirm names `items` (#{@names_up_to} or fewer) or counts them, so a wrong
+  tick shows without the dialog listing everyone (/styles/confirm-dialog#many).
+  """
+  def name_them?(items), do: length(items) <= @names_up_to
+
+  @doc """
+  `names` joined, "Avery Chen and Jordan Lee", while there are #{@names_up_to} or fewer;
+  then `counted`, such as "6 members". The rows behind the dialog show who.
+  """
+  def names_or_count(names, counted) do
+    if name_them?(names), do: Service.Format.and_list(names), else: counted
+  end
+
+  @doc """
   The `data-confirm` attributes for a button that emails `count` members: the question
   and `lines` as its body. From #{@check_from} members up, the lines are a list and the
   send waits on a check box naming the count, so nobody emails the whole team by reflex.

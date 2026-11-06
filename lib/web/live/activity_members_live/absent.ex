@@ -11,6 +11,7 @@ defmodule Web.ActivityMembersLive.Absent do
   alias App.Operation.ChangeAttendance
   alias Service.Format
   alias Web.ActivityMembersLive.Action
+  alias Web.Components.Messages
 
   @impl Action
   def value, do: "absent"
@@ -77,7 +78,7 @@ defmodule Web.ActivityMembersLive.Absent do
             "Mark #{members} absent on #{activity.title}? Their hours go, and Mark attended gives back the activity's times, not their own.",
           "data-confirm-warning" => line
         }
-        |> Map.merge(Action.check(attended, "I understand #{losing} their hours."))
+        |> Map.merge(Messages.confirm_check(attended, "I understand #{losing} their hours."))
     end
   end
 

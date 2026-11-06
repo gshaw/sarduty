@@ -99,15 +99,14 @@ defmodule Web.ActivityMembersLive.Action do
   def count_verb(1, one, _many), do: "1 #{one}"
   def count_verb(count, _one, many), do: "#{count} #{many}"
 
-  @names_up_to 3
-
   @doc """
   The confirm's line on the hours the checked who attended lose, or nil when nobody
   checked attended. Mark attended gives back the activity's times, not a member's own,
-  so a change that takes them says so. Up to #{@names_up_to} by name: "Avery Chen's
-  4h 30m and Jordan Lee's 5 hours go." More, a count and the total: "6 who attended lose
-  30 hours." The checked rows behind the dialog show who (/styles/confirm-dialog#many).
-  `too` adds "too", for a change that takes more than the hours.
+  so a change that takes them says so. Up to 3 by name (Messages.name_them?/1): "Avery
+  Chen's 4h 30m and Jordan Lee's 5 hours go." More, a count and the total: "6 who
+  attended lose 30 hours." The checked rows behind the dialog show who
+  (/styles/confirm-dialog#many). `too` adds "too", for a change that takes more than the
+  hours.
   """
   def hours_lost(checked, too \\ false) do
     attended = for row <- checked, row.status == "attending", do: row
@@ -117,7 +116,7 @@ defmodule Web.ActivityMembersLive.Action do
       attended == [] ->
         nil
 
-      length(attended) <= @names_up_to ->
+      Messages.name_them?(attended) ->
         names =
           attended
           |> Enum.sort_by(&String.downcase(&1.member.name))
@@ -133,15 +132,4 @@ defmodule Web.ActivityMembersLive.Action do
   end
 
   defp minutes(row), do: row.duration_in_minutes || 0
-
-  @doc """
-  The check box a confirm waits on once it reaches `count` members, from
-  Web.Components.Messages.check_from/0 up, so nobody changes them all by reflex: `%{}`
-  below it.
-  """
-  def check(count, text) do
-    if count >= Messages.check_from(),
-      do: %{"data-confirm-check" => text},
-      else: %{}
-  end
 end

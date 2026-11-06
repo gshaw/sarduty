@@ -11,6 +11,7 @@ defmodule Web.ActivityMembersLive.Remove do
   alias App.Operation.ChangeAttendance
   alias Service.Format
   alias Web.ActivityMembersLive.Action
+  alias Web.Components.Messages
 
   @impl Action
   def value, do: "remove"
@@ -70,7 +71,7 @@ defmodule Web.ActivityMembersLive.Remove do
         "Remove #{members} from #{activity.title}? They come off its attendance. Add members can put them back, as attended with the activity's times."
     }
     |> put_hours(checked)
-    |> Map.merge(Action.check(count, "I understand #{members} come off the activity."))
+    |> Map.merge(Messages.confirm_check(count, "I understand #{members} come off the activity."))
   end
 
   # "Casey Dhillon's 2h 30m go too.", or from 4 who attended "6 who attended lose 30 hours too."

@@ -119,6 +119,51 @@ defmodule Web.ActivityMembersLive.ActionTest do
     end
   end
 
+  describe "Remove from the activity's confirms, at 2, 6, and 12 (/styles/confirm-dialog#many)" do
+    @hike %{@before_start | activity: %{@before_start.activity | title: "Missing hiker"}}
+
+    # The in-place confirm for n checked with one reply, and the step's for n signed up
+    # and `others` with no reply.
+    defp in_place(n, status),
+      do: RemoveBeforeStart.confirm(@hike, for(id <- 1..n, do: row(id, status)))
+
+    defp step(n, others \\ 0) do
+      signed = for id <- 1..n, do: row(id, "attending")
+      rows = signed ++ for(id <- (n + 1)..(n + others)//1, do: row(id, "requested"))
+      RemoveBeforeStart.confirm(@hike.activity, rows, Enum.map(signed, & &1.member))
+    end
+
+    test "with nobody signed up, it counts, and asks for no box: nothing is lost" do
+      assert in_place(2, "requested") == %{
+               "data-confirm" =>
+                 "Remove 2 members from Missing hiker? Nobody gets an email. To undo, add them again."
+             }
+
+      twelve = in_place(12, "requested")
+      refute Map.has_key?(twelve, "data-confirm-check")
+    end
+
+    test "the step names up to 3 who get the email, then counts them" do
+      assert step(2) == %{
+               "data-confirm" =>
+                 "Remove 2 members from Missing hiker? Member 1 and Member 2 signed up, and get your email."
+             }
+
+      assert step(6, 1) == %{
+               "data-confirm" =>
+                 "Remove 7 members from Missing hiker? 6 members signed up, and get your email. 1 other gets no email: 1 no reply."
+             }
+
+      assert %{
+               "data-confirm" => "Remove 12 members from Missing hiker?",
+               "data-confirm-list" => list,
+               "data-confirm-check" => "I understand 12 members get this email."
+             } = step(12)
+
+      assert Jason.decode!(list) == ["12 members signed up, and get your email."]
+    end
+  end
+
   describe "from the start" do
     test "Mark attended gives the activity's times to who isn't attended" do
       checked = [row(1, "absent"), row(2, "attending"), row(3, "attending")]
