@@ -35,6 +35,8 @@ defmodule Web.TableColumnsTest do
       "Edit buttons, for a Records team's admins only",
     {"lib/web/live/org/admins_live.ex", "@sar_duty_admin?"} =>
       "Remove buttons, for SAR Duty admins only",
+    {"lib/web/live/activity_live.ex", "@team_admin? and !@activity.deleted_at"} =>
+      "Change links, for team admins on an activity not deleted",
     {"lib/web/live/whiteboard_live.ex", "@team_admin?"} => "note actions, for team admins only"
   }
 

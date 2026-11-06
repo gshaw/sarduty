@@ -317,6 +317,84 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#scan-failed")
   end
 
+  # D4H may hold minutes on a vehicle too; its km is what Change edits (#876).
+  test "a vehicle's use reads as its km, even with minutes", ctx do
+    usage = %EquipmentUsage{equipment_item: ctx.truck, minutes: 300, distance: 47}
+    assert Web.ActivityEquipmentLive.amount(usage) == "47 km"
+    assert Web.ActivityEquipmentLive.amount(%{usage | distance: nil}) == "5 hours"
+  end
+
+  # #876: an item's use follows the operation, sent to D4H as only the field it counts.
+  test "Change on an item on the activity sends its new hours or km to D4H", ctx do
+    activity = activity_fixture(ctx.team, %{title: "Night search"})
+    van = equipment_usage_fixture(activity, ctx.truck, %{minutes: nil, distance: 38})
+    phone = equipment_usage_fixture(activity, ctx.phone, %{minutes: 191})
+    test_pid = self()
+
+    usage_json = fn usage, item, minutes, meters ->
+      %{
+        "id" => usage.d4h_equipment_usage_id,
+        "activity" => %{"resourceType" => "Incident", "id" => activity.d4h_activity_id},
+        "equipment" => %{"id" => item.d4h_equipment_id},
+        "duration" => minutes,
+        "distance" => meters
+      }
+    end
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+
+      case conn.method do
+        "PATCH" ->
+          send(test_pid, {:d4h_write, conn.request_path, Jason.decode!(body)})
+          Req.Test.json(conn, %{})
+
+        "GET" ->
+          Req.Test.json(conn, %{
+            "results" => [
+              usage_json.(van, ctx.truck, 0, 52_000),
+              usage_json.(phone, ctx.phone, 191, nil)
+            ],
+            "totalSize" => 2
+          })
+      end
+    end)
+
+    # The Equipment tab's Change opens Add equipment with the row's box open.
+    {:ok, tab, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{activity.id}/equipment")
+
+    {:ok, lv, _html} =
+      tab
+      |> element("#activity-equipment-change-#{van.id}")
+      |> render_click()
+      |> follow_redirect(ctx.conn)
+
+    assert lv |> element("#usage-km-#{van.id}") |> render() =~ ~s(value="38")
+    refute has_element?(lv, "#usage-hours-#{van.id}")
+
+    lv |> form("#usage-change-form", %{"km" => "52"}) |> render_submit()
+
+    assert_received {:d4h_write, path, json}
+    assert String.ends_with?(path, "/equipment-usages/#{van.d4h_equipment_usage_id}")
+    assert json == %{"distance" => 52_000}
+    assert Repo.get!(EquipmentUsage, van.id).distance == 52
+    assert has_element?(lv, "#usage-#{van.id}", "52 km")
+    refute has_element?(lv, "#usage-change-form")
+
+    [set] = ChangeSet |> Repo.all() |> Repo.preload(:rows)
+    assert [%{action: :update_equipment_usage, status: :applied}] = set.rows
+
+    # Hours read as typed; a box that doesn't read sends nothing.
+    lv |> element("#usage-change-#{phone.id}") |> render_click()
+    assert lv |> element("#usage-hours-#{phone.id}") |> render() =~ ~s(value="3h 11m")
+    lv |> form("#usage-change-form", %{"hours" => "soon"}) |> render_submit()
+    refute_received {:d4h_write, _path, _json}
+    assert render(lv) =~ "Type the hours like 45m, 2h, or 2.5h."
+
+    lv |> element("#usage-cancel-#{phone.id}") |> render_click()
+    refute has_element?(lv, "#usage-change-form")
+  end
+
   test "an item's page lists what is inside it and its activities", ctx do
     activity = activity_fixture(ctx.team, %{title: "Night search"})
     equipment_usage_fixture(activity, ctx.truck)

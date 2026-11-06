@@ -130,8 +130,12 @@ blank sends none; D4H takes no hours for a vehicle. Sending is a change set of s
 ([ChangeActivityEquipment](../lib/app/operation/change_activity_equipment.ex)), one
 `create_equipment_usage` row per item. The applier reads the activity's usages first and
 skips an item D4H has on it now, since D4H would count it twice. A published activity
-still takes equipment. Removing an item is a `delete_equipment_usage` row. After either,
-the activity's usages are read back from D4H.
+still takes equipment. Change on an item on the activity sets its hours, or a vehicle's
+km, as an `update_equipment_usage` row (#876): D4H's `PATCH /equipment-usages/{id}` takes
+`duration` and `distance` on any item, so the row sends only the one the item counts.
+A supply's count can't change here, as it can't be added. Removing an item is a
+`delete_equipment_usage` row. After any of them, the activity's usages are read back from
+D4H.
 
 ## The copy
 

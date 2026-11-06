@@ -46,6 +46,7 @@ defmodule App.Model.ChangeSetRow do
         :update_group,
         :delete_group,
         :create_equipment_usage,
+        :update_equipment_usage,
         :delete_equipment_usage,
         :set_activity_tags,
         :create_equipment_item,

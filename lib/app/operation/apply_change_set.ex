@@ -271,7 +271,8 @@ defmodule App.Operation.ApplyChangeSet do
       else: :ok
   end
 
-  def check(%ChangeSetRow{action: :delete_equipment_usage} = row, current) do
+  def check(%ChangeSetRow{action: action} = row, current)
+      when action in [:update_equipment_usage, :delete_equipment_usage] do
     if Enum.any?(current, &(&1.d4h_equipment_usage_id == row.d4h_record_id)),
       do: :ok,
       else: {:skipped, "This item is off the activity already."}
@@ -373,6 +374,15 @@ defmodule App.Operation.ApplyChangeSet do
            new_value["km"]
          ) do
       {:ok, usage} -> {:applied, usage.d4h_equipment_usage_id}
+      {:error, error} -> {:failed, error}
+    end
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :update_equipment_usage} = row) do
+    %{"minutes" => minutes, "km" => km} = row.new_value
+
+    case D4H.update_equipment_usage(d4h, row.d4h_record_id, minutes, km) do
+      {:ok, _usage} -> {:applied, row.d4h_record_id}
       {:error, error} -> {:failed, error}
     end
   end

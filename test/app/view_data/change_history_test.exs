@@ -119,6 +119,29 @@ defmodule App.ViewData.ChangeHistoryTest do
     assert ChangeHistory.source_label(:remove) == "Remove members"
   end
 
+  # #876: a change says what the use was and what it is now.
+  test "an equipment change reads as the old use and the new" do
+    row = fn old, new ->
+      ChangeHistory.describe_row(
+        %ChangeSetRow{
+          action: :update_equipment_usage,
+          old_value: Map.put(old, "title", "SF07 Transit Van"),
+          new_value: Map.put(new, "title", "SF07 Transit Van")
+        },
+        :activity
+      )
+    end
+
+    assert row.(%{"minutes" => 0, "km" => 38}, %{"minutes" => nil, "km" => 52}) ==
+             "SF07 Transit Van: 38 km → 52 km"
+
+    assert row.(%{"minutes" => 0, "km" => nil}, %{"minutes" => nil, "km" => 52}) ==
+             "SF07 Transit Van: none → 52 km"
+
+    assert row.(%{"minutes" => 191, "km" => nil}, %{"minutes" => 240, "km" => nil}) ==
+             "SF07 Transit Van: #{Service.Format.duration(191)} → #{Service.Format.duration(240)}"
+  end
+
   # Sent before the start, so never "attended" (#444).
   test "a member's reply reads in the reply words" do
     reply = fn status, page ->

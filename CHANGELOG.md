@@ -5,6 +5,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 ## Nov 2–8
 
 - Travel shows the yard to the ICP and back again, for a team vehicle's mileage.
+- Change an item's hours, or a vehicle's km, after it's on an activity: Change on its
+  Equipment tab. Thanks to Andrew at South Fraser.
 - SAR Duty saved to an iPhone home screen gets its icon and is named SAR Duty, not the
   page. Links shared in a chat show a small preview with the page's title.
 - Other apps can check a SAR Duty ID card when they scan it: the same answer as the verify

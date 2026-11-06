@@ -810,6 +810,21 @@ defmodule App.Adapter.D4H do
     write(context, :post, "/equipment-usages", json, &D4H.EquipmentUsage.build/1)
   end
 
+  @doc """
+  Changes an item's use on an activity (#876): `minutes` as the usage's duration, for
+  equipment, or `km` as its distance, for a vehicle, in meters. D4H takes either on any
+  item, so send only the one the item counts.
+  """
+  def update_equipment_usage(context, d4h_equipment_usage_id, minutes, km) do
+    json =
+      %{}
+      |> then(&if(minutes, do: Map.put(&1, :duration, minutes), else: &1))
+      |> then(&if(km, do: Map.put(&1, :distance, D4H.EquipmentUsage.meters(km)), else: &1))
+
+    url = "/equipment-usages/#{d4h_equipment_usage_id}"
+    write(context, :patch, url, json, &D4H.EquipmentUsage.build/1)
+  end
+
   @doc "Removes an item from an activity's equipment. A usage D4H has already deleted counts."
   def delete_equipment_usage(context, d4h_equipment_usage_id) do
     request = [method: :delete, url: "/equipment-usages/#{d4h_equipment_usage_id}", retry: false]
