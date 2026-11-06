@@ -192,7 +192,6 @@ defmodule App.Document.Markup do
     end
   end
 
-  # cspell:ignore IHDR
   # A PNG's width and height follow its 8-byte signature and the header chunk's type.
   defp size_of(<<_signature::binary-8, _length::32, "IHDR", width::32, height::32, _::binary>>),
     do: {width, height}

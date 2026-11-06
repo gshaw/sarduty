@@ -18,14 +18,16 @@ defmodule App.Document.MarkupTest do
   }
   @png <<0x89, "PNG", 13::32, 0::32, "IHDR", 400::32, 100::32>>
 
-  defp output(places),
-    do: %{title: "2025 SRVTC Coast Range", author: "Coast Range", places: places}
+  defp typst(places, opts \\ []) do
+    %{title: "2025 SRVTC Coast Range", author: "Coast Range", places: places}
+    |> Markup.typst(opts)
+  end
 
   test "writes every value as a string, so markup in it prints as written" do
     assert Markup.string(~s|*Bold* #x "q" \\ end\nnext|) ==
              ~s|"*Bold* #x \\"q\\" \\\\ end\\nnext"|
 
-    {markup, files} = Markup.typst(output([%{@flow | value: [{:text, "Name: *Sam* #1"}]}]))
+    {markup, files} = typst([%{@flow | value: [{:text, "Name: *Sam* #1"}]}])
 
     assert markup =~ ~s|par("Name: *Sam* #1")|
     assert markup =~ ~s|#set document(title: "2025 SRVTC Coast Range", author: "Coast Range")|
@@ -34,7 +36,7 @@ defmodule App.Document.MarkupTest do
 
   test "a flow's text is a line each, and a space a blank line" do
     value = [{:text, "PO Box 1\nHope BC"}, {:space, 2}, {:text, "End"}]
-    {markup, _files} = Markup.typst(output([%{@flow | value: value}]))
+    {markup, _files} = typst([%{@flow | value: value}])
 
     lines = Regex.scan(~r/^  par\((.*)\)$/m, markup, capture: :all_but_first)
     assert lines == [[~s|"PO Box 1"|], [~s|"Hope BC"|], ["hide[x]"], ["hide[x]"], [~s|"End"|]]
@@ -42,7 +44,7 @@ defmodule App.Document.MarkupTest do
 
   test "fits a picture in its box, keeping its shape" do
     value = [{:image, @png, %{width: 216, height: 54.0, pad: 6}}]
-    {markup, files} = Markup.typst(output([%{@flow | value: value}]))
+    {markup, files} = typst([%{@flow | value: value}])
 
     # 400 by 100 fits 216 wide, 54 tall.
     assert markup =~ ~s|image("letter-0.png", width: 216.0pt, height: 54.0pt)|
@@ -60,7 +62,7 @@ defmodule App.Document.MarkupTest do
       value: {:qr, "https://verify.sarduty.com/letters/SRVTC-K7Q4M2XA"}
     }
 
-    {markup, files} = Markup.typst(output([%{@flow | value: []}, verify]))
+    {markup, files} = typst([%{@flow | value: []}, verify])
 
     assert markup =~ "dx: 468pt, dy: place_letter_top + measure(place_letter).height - 72pt"
     assert files["verify-0.svg"] =~ "<svg"
@@ -79,17 +81,17 @@ defmodule App.Document.MarkupTest do
     }
 
     {markup, files} =
-      Markup.typst(output([%{across | value: [{:image, @png, %{}}, {:image, @png, %{}}]}]))
+      typst([%{across | value: [{:image, @png, %{}}, {:image, @png, %{}}]}])
 
     assert markup =~ "#place(top + right, dx: -72pt, dy: 72pt, stack(dir: ltr, spacing: 18.0pt"
     assert Map.keys(files) == ["letterhead-0.png", "letterhead-1.png"]
 
-    assert {markup, %{}} = Markup.typst(output([%{across | value: []}]))
+    assert {markup, %{}} = typst([%{across | value: []}])
     refute markup =~ "stack"
   end
 
   test "draws the sample mark over the page" do
-    {markup, files} = Markup.typst(output([]), sample_mark: @png)
+    {markup, files} = typst([], sample_mark: @png)
 
     assert markup =~ ~s|image("sample-mark.png", width: 612pt)|
     assert files == %{"sample-mark.png" => @png}
@@ -97,7 +99,7 @@ defmodule App.Document.MarkupTest do
 
   test "the markup makes a PDF" do
     value = [{:text, "Łukasz Nowak"}, {:space, 1}, {:text, "End"}]
-    {markup, _files} = Markup.typst(output([%{@flow | value: value}]))
+    {markup, _files} = typst([%{@flow | value: value}])
 
     assert {:ok, "%PDF" <> _rest} = Service.Typst.compile(markup)
   end
