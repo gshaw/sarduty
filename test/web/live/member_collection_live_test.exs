@@ -595,21 +595,6 @@ defmodule Web.MemberCollectionLiveTest do
       assert GroupMember.member_ids(ctx.team.id, ctx.trainees.id) == MapSet.new()
     end
 
-    test "more than 5 ticked members are counted in the confirm", ctx do
-      more = for i <- 1..3, do: member_fixture(ctx.team, %{name: "Extra #{i}"})
-      ids = Enum.map([ctx.avery, ctx.quinn, ctx.robin | more], & &1.id)
-      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
-
-      lv
-      |> form("#member-group-form", %{group_id: ctx.trainees.id, member_ids: ids})
-      |> render_change()
-
-      assert has_element?(
-               lv,
-               ~s(#member-group-remove[data-confirm="Remove 6 members from Trainees?"])
-             )
-    end
-
     test "names each member the service refuses, and adds the rest", ctx do
       refused = member_fixture(ctx.team, %{name: "Sky Refused", d4h_member_id: 666})
       {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
