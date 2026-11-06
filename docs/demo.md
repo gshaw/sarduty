@@ -25,6 +25,9 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    (`DemoTeam.link_token/1`), not stored, so the banner can show it again; it stops
    working when the demo goes. It opens the demo in any browser, so an agent can start
    one and hand the link to the person it's helping. Anyone with it is the visitor.
+   It is the only way in: an email a visitor types onto a member logs in to nothing
+   there (`DemoTeam.team_ids_closed_to_query/1`), or the demo would land in that
+   person's account.
 3. **The build.** `/demo/building` (`Web.DemoBuildLive`) runs
    `App.Operation.BuildDemoTeam` once, behind a spinner, in about a second. Records makes
    the team from the cast (`App.DemoCast`, `POST /v3/sarduty/demo-teams`) and picks its ids. SAR Duty adds the team, marked
@@ -33,7 +36,15 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    Records' ids. A failure removes everything, in Records too, and the page offers Try
    again. A visitor's 3 days count from here.
 4. **The banner.** Every page of a demo team has it, for team admins, where View as puts
-   its own: when it goes, its link to copy, its Outbox, and Delete this demo.
+   its own: when it goes, its link to copy, its Outbox, and Delete this demo. The
+   Outbox button counts what arrived since the visitor last opened it
+   (`DemoTeam.outbox_seen!/2`), an amber number after the label as tabs show one, and
+   has none otherwise. The banner scrolls
+   away, so mail arriving also gets a toast under the top bar, on every page: "3 emails
+   and 1 text arrived in your Outbox." with a link to it, but none on the Outbox's own
+   list, where a new row is easy to miss too. The
+   banner's hook in `Web.UserAuth` waits a second after the first message, so a burst
+   of reminders is one toast, and counts only what that burst brought.
 5. **The end.** `App.Operation.DeleteDemo` deletes the team through
    `DeleteTeam.purge(team, reason: :demo)`, the same delete as any team's: in Records
    first, which deletes a demo at once with no 7-day hold, then every row in SAR Duty,
@@ -74,7 +85,8 @@ end it.
 - **Cards and letters say Sample.** A visitor can add a member with their own name and
   photo, so the verify site must never call a demo's card or letter real. Both get the
   Sample band from #854 on verify, wallet passes say "Sample card" and "Sample, not real
-  ID", and letter PDFs have SAMPLE across the page.
+  ID", and letter PDFs have SAMPLE from the top left corner to the bottom right, in translucent red
+  (`tools/sample-mark.py` makes the picture).
 - **No Access key tab.** Its key is SAR Duty's, and a real key pasted there would turn
   the copy into a real team. The page is a 404.
 - **Agents stay off.** Only a SAR Duty admin turns them on, from the admin team list,

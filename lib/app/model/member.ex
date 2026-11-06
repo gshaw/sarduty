@@ -405,6 +405,7 @@ defmodule App.Model.Member do
     Member
     |> join(:inner, [m], t in assoc(m, :team))
     |> where([m, t], t.member_logins and fragment("lower(?)", m.email) == ^email)
+    |> where([m], m.team_id not in subquery(DemoTeam.team_ids_closed_to_query(email)))
     |> current_query(now)
     |> not_retiring_query()
     |> preload([m, t], team: t)

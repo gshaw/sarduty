@@ -125,7 +125,10 @@ defmodule App.DemoTeamSendsTest do
 
       assert [message | _rest] = OutboxMessage.list(ctx.team)
       assert message.subject =~ ~r/^2025 SRVTC/
-      assert message.attachments =~ ".pdf"
+      message = OutboxMessage.get(ctx.team, message.id)
+      assert [%{filename: filename, content_type: "application/pdf"} = pdf] = message.attachments
+      assert filename =~ ".pdf"
+      assert "%PDF" <> _rest = OutboxMessage.get_attachment(message, pdf.id).data
     end
   end
 

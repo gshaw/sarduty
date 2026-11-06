@@ -44,20 +44,17 @@ defmodule Service.PDFLetter do
     temp_path
   end
 
-  # A Try a demo team's letter (#857) says SAMPLE across the middle of the page, in light
-  # grey over the text, so a printed copy can't pass as real. Over, since the text's
-  # lines would hide it underneath.
-  # SAMPLE's width in 96-point Helvetica Bold, measured.
-  @sample_width 440
+  # A Try a demo team's letter (#857) says SAMPLE from top left to bottom right, over all, in
+  # translucent red, so the text under it reads but no part of a printed copy can pass
+  # as real, in colour or black and white. The library can't rotate or fade text, so
+  # it's a picture with transparency, made by tools/sample-mark.py.
+  @sample_mark_path Path.expand("../../priv/pdf/sample-mark.png", __DIR__)
+  @external_resource @sample_mark_path
+  @sample_mark File.read!(@sample_mark_path)
 
   defp add_sample_mark(pdf, %{sample: true}) do
-    %{width: width, height: height} = Pdf.size(pdf)
-
-    pdf
-    |> Pdf.set_fill_color({228, 228, 228})
-    |> Pdf.set_font("Helvetica", 96, bold: true)
-    |> Pdf.text_at({(width - @sample_width) / 2, height / 2 - 32}, "SAMPLE")
-    |> Pdf.set_fill_color(:black)
+    %{width: width} = Pdf.size(pdf)
+    Pdf.add_image(pdf, {0, 0}, {:binary, @sample_mark}, width: width)
   end
 
   defp add_sample_mark(pdf, _options), do: pdf

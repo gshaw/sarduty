@@ -101,7 +101,11 @@ defmodule Web.Layouts do
             demo={@demo}
             team={@current_team}
           />
-          <.flash_group flash={@flash} static_changed_url={assigns[:static_changed_url]} />
+          <.flash_group
+            flash={@flash}
+            static_changed_url={assigns[:static_changed_url]}
+            demo={!assigns[:viewing_as] && assigns[:demo]}
+          />
           {@inner_content}
         </main>
       </div>
@@ -114,7 +118,11 @@ defmodule Web.Layouts do
           team_admin?={@team_admin?}
         />
         <.demo_banner :if={assigns[:demo] && !assigns[:viewing_as]} demo={@demo} team={@current_team} />
-        <.flash_group flash={@flash} static_changed_url={assigns[:static_changed_url]} />
+        <.flash_group
+          flash={@flash}
+          static_changed_url={assigns[:static_changed_url]}
+          demo={!assigns[:viewing_as] && assigns[:demo]}
+        />
         {@inner_content}
       </main>
     <% end %>
@@ -150,7 +158,8 @@ defmodule Web.Layouts do
   attr :team, :map, required: true
 
   # On every page of a Try a demo team (#857), where View as puts its own: whose it is,
-  # when it goes, its link, its Outbox. Delete this demo asks first.
+  # when it goes, its link, its Outbox, with a count after it of what's new, as tabs show one.
+  # Delete this demo asks first.
   defp demo_banner(assigns) do
     ~H"""
     <.banner kind={:info} title="Your demo" id="demo-banner" class="mb-6">
@@ -170,8 +179,8 @@ defmodule Web.Layouts do
         />
       </p>
       <div class="flex flex-wrap items-center gap-2">
-        <.button id="demo-outbox" navigate={~p"/teams/#{@team}/outbox"}>
-          Outbox ({@demo.outbox})
+        <.button id="demo-outbox" navigate={@demo.outbox_path}>
+          Outbox<.badge :if={@demo.new > 0} id="demo-outbox-new" kind={:warning}>{@demo.new}</.badge>
         </.button>
         <.button
           id="demo-delete"
@@ -631,11 +640,31 @@ defmodule Web.Layouts do
     default: nil,
     doc: "the page to reload when SAR Duty changed since it loaded, from Web.StaticChanged"
 
+  attr :demo, :any,
+    default: nil,
+    doc: "a Try a demo team's banner (Web.UserAuth), whose `arrived` says what just landed"
+
   def flash_group(assigns) do
     ~H"""
     <div id={@id} class="toasts">
       <.flash kind={:info} flash={@flash} />
       <.flash kind={:error} flash={@flash} />
+      <.flash
+        :if={@demo && @demo.arrived && @demo.arrived.link?}
+        id={"outbox-arrived-#{@demo.arrived.burst}"}
+        kind={:info}
+        title={arrived_title(@demo.arrived)}
+      >
+        <.a id="outbox-arrived-open" navigate={@demo.outbox_path}>Open the Outbox</.a>
+        to see what members get.
+      </.flash>
+      <.flash
+        :if={@demo && @demo.arrived && !@demo.arrived.link?}
+        id={"outbox-arrived-#{@demo.arrived.burst}"}
+        kind={:info}
+      >
+        {arrived_title(@demo.arrived)}
+      </.flash>
       <.flash
         :if={@static_changed_url}
         id="static-changed"
@@ -667,5 +696,16 @@ defmodule Web.Layouts do
       </.flash>
     </div>
     """
+  end
+
+  # "4 emails arrived in your Outbox." or "3 emails and 1 text arrived in your Outbox."
+  defp arrived_title(%{emails: emails, texts: texts}) do
+    [
+      emails > 0 && Service.Format.count(emails, one: "%d email", many: "%d emails"),
+      texts > 0 && Service.Format.count(texts, one: "%d text", many: "%d texts")
+    ]
+    |> Enum.filter(& &1)
+    |> Service.Format.and_list()
+    |> Kernel.<>(" arrived in your Outbox.")
   end
 end

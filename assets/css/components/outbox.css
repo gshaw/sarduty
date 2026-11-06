@@ -1,5 +1,0 @@
-/* An Outbox message (docs/outbox.md): an email preview, wider, with a mail app's header. */
-.outbox-message { max-width: 40rem; }
-.outbox-head { display: grid; grid-template-columns: auto 1fr; gap: var(--sp-1) var(--sp-3); margin: 0; padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border-subtle); background: var(--surface-alt); }
-.outbox-head dt { color: var(--text-muted); }
-.outbox-head dd { margin: 0; overflow-wrap: anywhere; }

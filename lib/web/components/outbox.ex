@@ -7,6 +7,7 @@ defmodule Web.Components.Outbox do
   use Web, :function_component
 
   import Web.Components.A
+  import Web.Components.EmailPreview
   import Web.Components.Table
 
   alias App.Model.OutboxMessage
@@ -15,6 +16,7 @@ defmodule Web.Components.Outbox do
   attr :messages, :list, required: true
   attr :path, :any, required: true, doc: "fn message -> its page"
   attr :timezone, :string, required: true
+  attr :new?, :any, default: nil, doc: "fn message -> whether it says New; none when nil"
 
   def outbox_list(assigns) do
     ~H"""
@@ -32,6 +34,7 @@ defmodule Web.Components.Outbox do
       <:col :let={message} label="To">{message.to}</:col>
       <:col :let={message} label="Message">
         <.a navigate={@path.(message)}>{title(message)}</.a>
+        <.badge :if={@new? && @new?.(message)} kind={:primary}>New</.badge>
       </:col>
     </.table>
     """
@@ -39,38 +42,35 @@ defmodule Web.Components.Outbox do
 
   attr :message, OutboxMessage, required: true
   attr :timezone, :string, required: true
+  attr :attachment_path, :any, required: true, doc: "fn attachment -> its file"
 
-  # Like the email previews (Web.Components.EmailPreview), with the header a mail app
-  # shows. The HTML is SAR Duty's own mailers', which escape what people typed, as the
-  # previews show it; here its links work, so a reply link answers as the member.
+  # The email preview with a mail app's header (/styles/email-preview), wide, with its
+  # links live, so a reply link answers as the member. The HTML is SAR Duty's own
+  # mailers', which escape what people typed.
   def outbox_message(assigns) do
     ~H"""
     <article id={"outbox-message-#{@message.id}"}>
       <h1 class="title">{title(@message)}</h1>
-      <div class="email-preview outbox-message">
-        <dl class="outbox-head">
-          <dt>From</dt>
-          <dd id="outbox-from">{@message.from || "SAR Duty"}</dd>
-          <dt>To</dt>
-          <dd id="outbox-to">{@message.to}</dd>
-          <dt :if={@message.kind == :email}>Subject</dt>
-          <dd :if={@message.kind == :email}>{@message.subject}</dd>
-          <dt>Date</dt>
-          <dd>{Service.Format.month_day_time_seconds(@message.inserted_at, @timezone)}</dd>
-          <dt :if={@message.attachments}>Attached</dt>
-          <dd :if={@message.attachments}>{@message.attachments}</dd>
-        </dl>
-        <div :if={@message.html_body} id="outbox-html" class="email-preview-body">
-          {Phoenix.HTML.raw(@message.html_body)}
-        </div>
-        <div
-          :if={!@message.html_body && @message.body}
-          id="outbox-body"
-          class="email-preview-body whitespace-pre-wrap break-words"
-        >
-          <.linked_text text={@message.body} />
-        </div>
-      </div>
+      <.email_preview
+        id="outbox"
+        width={:wide}
+        live
+        from={@message.from}
+        to={@message.to}
+        subject={@message.kind == :email && @message.subject}
+        date={Service.Format.month_day_time_seconds(@message.inserted_at, @timezone)}
+        html={@message.html_body}
+        text={@message.body}
+        attachments={
+          for attachment <- @message.attachments,
+              do: %{
+                id: attachment.id,
+                name: attachment.filename,
+                size: attachment.size,
+                href: @attachment_path.(attachment)
+              }
+        }
+      />
     </article>
     """
   end
@@ -80,26 +80,4 @@ defmodule Web.Components.Outbox do
 
   defp title(%OutboxMessage{kind: :text, body: body}),
     do: "Text: " <> (body |> String.split("\n", parts: 2) |> hd())
-
-  attr :text, :string, required: true
-
-  # Plain text with its web addresses as links, so a reply link can be followed.
-  defp linked_text(assigns) do
-    assigns = assign(assigns, :parts, split_links(assigns.text))
-
-    ~H"""
-    <%= for {kind, part} <- @parts do %>
-      <.a :if={kind == :link} href={part}>{part}</.a><span :if={kind == :text}>{part}</span>
-    <% end %>
-    """
-  end
-
-  @link ~r{https?://[^\s<>"]+}
-
-  @doc false
-  def split_links(text) do
-    @link
-    |> Regex.split(text, include_captures: true, trim: true)
-    |> Enum.map(&if(Regex.match?(~r{\Ahttps?://}, &1), do: {:link, &1}, else: {:text, &1}))
-  end
 end

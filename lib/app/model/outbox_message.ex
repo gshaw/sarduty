@@ -3,6 +3,7 @@ defmodule App.Model.OutboxMessage do
 
   import Ecto.Query
 
+  alias App.Model.OutboxAttachment
   alias App.Model.OutboxMessage
   alias App.Model.Team
   alias App.Repo
@@ -18,7 +19,7 @@ defmodule App.Model.OutboxMessage do
     field :subject, :string
     field :body, :string
     field :html_body, :string
-    field :attachments, :string
+    has_many :attachments, OutboxAttachment, preload_order: [asc: :position]
     timestamps(type: :utc_datetime_usec, updated_at: false)
   end
 
@@ -38,7 +39,7 @@ defmodule App.Model.OutboxMessage do
       subject: email.subject,
       body: email.text_body,
       html_body: email.html_body,
-      attachments: attachment_names(email.attachments)
+      attachments: OutboxAttachment.from_email(email)
     })
   end
 
@@ -66,9 +67,6 @@ defmodule App.Model.OutboxMessage do
   defp address({nil, email}), do: email
   defp address({name, email}), do: "#{name} <#{email}>"
 
-  defp attachment_names([]), do: nil
-  defp attachment_names(attachments), do: Enum.map_join(attachments, ", ", & &1.filename)
-
   @doc "The newest first: a team's, or with `:all` every one."
   def list(team_or_all) do
     team_or_all
@@ -81,8 +79,58 @@ defmodule App.Model.OutboxMessage do
   @doc "How many a team has."
   def count(%Team{} = team), do: team |> scope() |> Repo.aggregate(:count)
 
+  @doc "How many a team has after `since`, every one when nil: what's new since a visit."
+  def count_since(%Team{} = team, nil), do: team |> scope() |> Repo.aggregate(:count)
+
+  def count_since(%Team{} = team, since),
+    do: team |> scope() |> where([m], m.inserted_at > ^since) |> Repo.aggregate(:count)
+
+  @doc """
+  The emails and texts a team has after message `after_id`, as `{emails, texts}`, and the
+  newest id: what one burst brought.
+  """
+  def arrived_after(%Team{} = team, after_id) do
+    counts =
+      team
+      |> scope()
+      |> where([m], m.id > ^after_id)
+      |> group_by([m], m.kind)
+      |> select([m], {m.kind, count(m.id)})
+      |> Repo.all()
+      |> Map.new()
+
+    {Map.get(counts, :email, 0), Map.get(counts, :text, 0)}
+  end
+
+  @doc "The id of a team's newest message, or 0."
+  def last_id(%Team{} = team), do: team |> scope() |> Repo.aggregate(:max, :id) || 0
+
+  @doc "Whether the message arrived after `since`; with nil, before any visit, all are."
+  def new?(%OutboxMessage{}, nil), do: true
+  def new?(%OutboxMessage{inserted_at: at}, since), do: DateTime.after?(at, since)
+
   @doc "One message, a team's or with `:all` any, or nil."
-  def get(team_or_all, id), do: team_or_all |> scope() |> Repo.get(id)
+  def get(team_or_all, id),
+    do: team_or_all |> scope() |> preload(attachments: ^attachment_heads()) |> Repo.get(id)
+
+  @doc "One of a message's attachments, with its file, or nil."
+  def get_attachment(%OutboxMessage{id: id}, attachment_id),
+    do: Repo.get_by(OutboxAttachment, id: attachment_id, outbox_message_id: id)
+
+  # A message's page lists its files, so it leaves their bytes out.
+  defp attachment_heads do
+    from(a in OutboxAttachment,
+      order_by: a.position,
+      select: %OutboxAttachment{
+        id: a.id,
+        outbox_message_id: a.outbox_message_id,
+        position: a.position,
+        filename: a.filename,
+        content_type: a.content_type,
+        size: fragment("length(?)", a.data)
+      }
+    )
+  end
 
   @doc "Empties the outbox: a team's, or with `:all` every one."
   def delete_all(team_or_all) do

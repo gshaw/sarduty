@@ -229,20 +229,87 @@ defmodule Web.DemoFlowTest do
     assert has_element?(lv, "#demo-banner")
     assert has_element?(lv, "#demo-link-copy[value*='/demo/open/']")
     refute has_element?(lv, "#demo-link a")
-    assert has_element?(lv, "#demo-outbox", "Outbox (0)")
+    assert has_element?(lv, "#demo-outbox", "Outbox")
+    refute has_element?(lv, "#demo-outbox-new")
     refute has_element?(lv, "#demo-view-as")
     refute has_element?(lv, "#demo-signup")
     assert has_element?(lv, "#demo-delete[data-confirm]")
     assert Repo.reload!(demo).seen_at
   end
 
-  test "the banner's Outbox count goes up as a message lands", %{conn: conn} do
-    %{user: user, team: team} = built_demo()
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}")
-    assert has_element?(lv, "#demo-outbox", "Outbox (0)")
+  defp email!(team, subject) do
+    [to: {"Cameron Ruiz", "cameron@example.com"}, subject: subject, text_body: "Hello"]
+    |> Swoosh.Email.new()
+    |> OutboxMessage.add_email!(team.id)
+  end
 
+  test "the banner's Outbox turns blue with what's new, and opening the Outbox clears it", %{
+    conn: conn
+  } do
+    %{user: user, team: team} = built_demo()
+    conn = log_in_user(conn, user)
+    old = email!(team, "Your ID card")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/outbox")
+    assert has_element?(lv, "#outbox-message-#{old.id} .badge", "New")
+    refute has_element?(lv, "#demo-outbox-new")
+    # An open Outbox sees what lands on it, so close it, as leaving the page would.
+    GenServer.stop(lv.pid)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+    refute has_element?(lv, "#demo-outbox-new")
+
+    new = email!(team, "Will you be there? Training night")
     OutboxMessage.add_text!("+16045550199", "A text", team.id)
-    assert has_element?(lv, "#demo-outbox", "Outbox (1)")
+    assert has_element?(lv, "#demo-outbox #demo-outbox-new.badge-warning", "2")
+    refute has_element?(lv, "#demo-outbox.btn-primary")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/outbox")
+    refute has_element?(lv, "#demo-outbox-new")
+    assert has_element?(lv, "#outbox-message-#{new.id} .badge", "New")
+    refute has_element?(lv, "#outbox-message-#{old.id} .badge")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/outbox")
+    refute has_element?(lv, "#outbox-message-#{new.id} .badge")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+    assert has_element?(lv, "#demo-outbox", "Outbox")
+    refute has_element?(lv, "#demo-outbox-new")
+  end
+
+  test "a burst of mail is one toast that says what arrived, with a link to the Outbox", %{
+    conn: conn
+  } do
+    %{user: user, team: team} = built_demo()
+    email!(team, "Before the page opened")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}")
+
+    # The hook waits a second after the first message; the test doesn't.
+    for n <- 1..3, do: email!(team, "Will you be there? #{n}")
+    OutboxMessage.add_text!("+16045550199", "A text", team.id)
+    send(lv.pid, :demo_outbox_arrived)
+
+    assert has_element?(lv, "#outbox-arrived-1", "3 emails and 1 text arrived in your Outbox.")
+    assert has_element?(lv, ~s|#outbox-arrived-open[href="/teams/#{team.subdomain}/outbox"]|)
+
+    email!(team, "Removed")
+    send(lv.pid, :demo_outbox_arrived)
+    assert has_element?(lv, "#outbox-arrived-2", "1 email arrived in your Outbox.")
+    refute has_element?(lv, "#outbox-arrived-1")
+
+    send(lv.pid, :demo_outbox_arrived)
+    assert has_element?(lv, "#outbox-arrived-2")
+  end
+
+  test "the Outbox's list gets the toast too, with no link to itself", %{conn: conn} do
+    %{user: user, team: team} = built_demo()
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/outbox")
+
+    email!(team, "Will you be there?")
+    send(lv.pid, :demo_outbox_arrived)
+
+    assert has_element?(lv, "#outbox-arrived-1", "1 email arrived in your Outbox.")
+    refute has_element?(lv, "#outbox-arrived-open")
   end
 
   test "the Outbox lists a demo's email, shows it, and serves its HTML sandboxed", %{
@@ -273,7 +340,45 @@ defmodule Web.DemoFlowTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/outbox/#{text.id}")
     assert has_element?(lv, "#outbox-from", "SAR Duty")
-    assert has_element?(lv, ~s|#outbox-body a[href="https://sarduty.com/replies/abc"]|)
+    assert has_element?(lv, ~s|#outbox-text a[href="https://sarduty.com/replies/abc"]|)
+  end
+
+  test "an email's attachment opens from its Outbox page; another demo's is a 404", %{
+    conn: conn
+  } do
+    %{user: user, team: team} = built_demo()
+    conn = log_in_user(conn, user)
+
+    message =
+      [to: {"Cameron Ruiz", "cameron@example.com"}, subject: "2025 letter", text_body: "Hi"]
+      |> Swoosh.Email.new()
+      |> Swoosh.Email.attachment(
+        Swoosh.Attachment.new({:data, "%PDF-1.7"},
+          filename: "letter.pdf",
+          content_type: "application/pdf"
+        )
+      )
+      |> OutboxMessage.add_email!(team.id)
+
+    [attachment] = message.attachments
+    path = ~p"/teams/#{team}/outbox/#{message.id}/attachments/#{attachment.id}"
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/outbox/#{message.id}")
+    assert has_element?(lv, ~s|#outbox-attachment-#{attachment.id}[href="#{path}"]|, "letter.pdf")
+
+    conn = get(conn, path)
+    assert conn.resp_body == "%PDF-1.7"
+    assert get_resp_header(conn, "content-type") == ["application/pdf"]
+    assert get_resp_header(conn, "content-disposition") == [~s(inline; filename="letter.pdf")]
+
+    %{team: other} = built_demo()
+    theirs = email!(other, "Theirs")
+
+    assert_raise Web.Status.NotFound, fn ->
+      conn
+      |> recycle()
+      |> get(~p"/teams/#{team}/outbox/#{theirs.id}/attachments/#{attachment.id}")
+    end
   end
 
   test "another demo's message 404s in this demo's Outbox", %{conn: conn} do

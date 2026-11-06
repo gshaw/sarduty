@@ -350,6 +350,7 @@ defmodule App.Model.Team do
     managers =
       Member
       |> where([m], fragment("lower(?)", m.email) == ^email)
+      |> where([m], m.team_id not in subquery(DemoTeam.team_ids_closed_to_query(email)))
       |> Member.managers_query(now)
       |> select([m], m.team_id)
 

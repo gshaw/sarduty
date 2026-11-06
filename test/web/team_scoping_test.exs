@@ -86,7 +86,8 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/reports/:id/csv",
     # Only a demo team has an Outbox, and this team isn't one. Web.DemoFlowTest covers
     # another demo's message.
-    "/teams/:subdomain/outbox/:id"
+    "/teams/:subdomain/outbox/:id",
+    "/teams/:subdomain/outbox/:id/attachments/:attachment_id"
   ]
 
   setup %{conn: conn} do
@@ -364,6 +365,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/whiteboard/:id/edit", s, o),
     do: ~p"/teams/#{s}/whiteboard/#{o.whiteboard_note.id}/edit"
+
+  defp path_for("/teams/:subdomain/outbox/:id/attachments/:attachment_id", s, o),
+    do: "/teams/#{s}/outbox/#{o.outbox.id}/attachments/1"
 
   defp path_for("/teams/:subdomain/outbox/:id" <> rest, s, o),
     do: "/teams/#{s}/outbox/#{o.outbox.id}#{rest}"
