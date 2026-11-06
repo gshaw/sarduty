@@ -80,8 +80,7 @@ defmodule App.Accounts.UserNotifier do
       |> from({"SAR Duty", "noreply@sarduty.com"})
       |> subject("Your mobile number on #{team_name} changed")
       |> text_body("""
-      Your mobile number on #{team_name} is now #{new_phone}. You changed it in SAR Duty, and
-      your team's records have it too.
+      Your mobile number on #{team_name} is now #{new_phone}. You changed it in SAR Duty, and your team's records have it too.
 
       If you did not make this change, tell one of your team admins.
       """)

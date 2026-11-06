@@ -63,13 +63,13 @@ defmodule Web.Components.Outbox do
         <div :if={@message.html_body} id="outbox-html" class="email-preview-body">
           {Phoenix.HTML.raw(@message.html_body)}
         </div>
+        <%!-- pre-wrap shows every space, so the text touches the tags: no indent or gap --%>
         <div
           :if={!@message.html_body && @message.body}
           id="outbox-body"
           class="email-preview-body whitespace-pre-wrap break-words"
-        >
-          <.linked_text text={@message.body} />
-        </div>
+          phx-no-format
+        ><.linked_text text={String.trim(@message.body)} /></div>
       </div>
     </article>
     """
@@ -87,10 +87,9 @@ defmodule Web.Components.Outbox do
   defp linked_text(assigns) do
     assigns = assign(assigns, :parts, split_links(assigns.text))
 
+    # One line: the body is pre-wrap, so any space here would show.
     ~H"""
-    <%= for {kind, part} <- @parts do %>
-      <.a :if={kind == :link} href={part}>{part}</.a><span :if={kind == :text}>{part}</span>
-    <% end %>
+    <span phx-no-format><%= for {kind, part} <- @parts do %><.a :if={kind == :link} href={part}>{part}</.a><span :if={kind == :text}>{part}</span><% end %></span>
     """
   end
 
