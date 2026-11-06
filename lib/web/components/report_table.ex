@@ -154,6 +154,9 @@ defmodule Web.Components.ReportTable do
   defp report_cell(%{column: %{cell: :phone}} = assigns),
     do: ~H"<.phone id={@id} phone={@value} call_and_text />"
 
+  defp report_cell(%{column: %{cell: :link}} = assigns),
+    do: ~H"<.a id={@id} href={@value} external>{@value}</.a>"
+
   defp report_cell(%{column: %{cell: :address}} = assigns) do
     ~H"""
     <.copy_button
