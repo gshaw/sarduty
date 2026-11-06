@@ -1,6 +1,7 @@
 defmodule Web.Components.TravelTab do
   @moduledoc """
-  An activity's Travel tab (#230), for team admins from the start: a table of the rows
+  An activity's Travel tab (#230), for team admins from the start: the yard to the ICP
+  and back, for a team vehicle's mileage (#877), then a table of the rows
   set, with how each got there and its km, then one of the rows not set, with each
   member's round trips to the ICP and the yard, which show the Mapbox routes are sane.
   Change on a row, or on the bar under the tables for every checked row, opens one
@@ -148,6 +149,11 @@ defmodule Web.Components.TravelTab do
         </p>
         <p :if={!@activity.coordinate} id="travel-no-location" class="hint measure">
           The activity has no latitude and longitude, so there's no route to the ICP. Check their rows and choose Other.
+        </p>
+
+        <%!-- For a team vehicle's mileage, so it shows when nobody attended too. --%>
+        <p :if={travel.yard_to_activity_km} id="travel-yard-to-icp" class="mb-6">
+          Yard to the ICP and back: {Format.km(travel.yard_to_activity_km)}
         </p>
 
         <p :if={travel.rows == []} id="travel-nobody">Nobody attended.</p>
