@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Reports can read each member's tax credit hours by year, counted just as the letters
+  count them, and the team's own details: its legal name, mailing address, and signer.
 - Say it before the click: Travel's Change names who loses Confirmed, Send letters counts
   who gets the email and names who has none, and Same as last counts only the items it
   adds, with why the rest stay out.
