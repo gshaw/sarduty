@@ -264,29 +264,34 @@ defmodule Web.Settings.FeaturesLive do
   end
 
   # Turning on makes and emails a card for each member, so it asks first, with the
-  # counts. Turning off cancels none, so it doesn't.
+  # counts, and from 10 emails up waits on a check box (send_confirm/3). Turning off
+  # cancels none, so it doesn't.
   defp turn_on_cards_confirm(%Team{every_member_card: false}, %{cards: cards} = plan)
        when cards > 0 do
-    %{
-      "data-confirm" => cards_confirm(plan),
-      "data-confirm-button" =>
-        Service.Format.count(cards, one: "Create %d card", many: "Create %d cards")
-    }
+    plan.emails
+    |> send_confirm("Turn on Every member gets a card?", cards_confirm(plan))
+    |> Map.put(
+      "data-confirm-button",
+      Service.Format.count(cards, one: "Create %d card", many: "Create %d cards")
+    )
   end
 
   defp turn_on_cards_confirm(_team, _plan), do: %{}
 
+  # "Creates 40 cards and emails 38 members.", then "2 have no email." when some do.
   defp cards_confirm(%{cards: cards, emails: emails, no_email: no_email}) do
-    [
-      "Creates #{Service.Format.count(cards, one: "%d card", many: "%d cards")}",
-      emails > 0 &&
-        " and emails #{Service.Format.count(emails, one: "%d member", many: "%d members")}",
-      ".",
+    created = "Creates #{Service.Format.count(cards, one: "%d card", many: "%d cards")}"
+
+    emailed =
+      if emails > 0,
+        do: " and emails #{Service.Format.count(emails, one: "%d member", many: "%d members")}.",
+        else: "."
+
+    without =
       no_email > 0 &&
-        " #{Service.Format.count(no_email, one: "%d has no email.", many: "%d have no email.")}"
-    ]
-    |> Enum.filter(& &1)
-    |> Enum.join()
+        Service.Format.count(no_email, one: "%d has no email.", many: "%d have no email.")
+
+    Enum.filter([created <> emailed, without], & &1)
   end
 
   defp no_email_text(members, service) do

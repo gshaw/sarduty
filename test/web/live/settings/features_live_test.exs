@@ -149,7 +149,7 @@ defmodule Web.Settings.FeaturesLiveTest do
 
       assert has_element?(
                lv,
-               "#feature-every-member-card[data-confirm='Creates 2 cards and emails 1 member. 1 has no email.']"
+               "#feature-every-member-card[data-confirm='Turn on Every member gets a card? Creates 2 cards and emails 1 member. 1 has no email.'][data-confirm-button='Create 2 cards']"
              )
 
       assert has_element?(

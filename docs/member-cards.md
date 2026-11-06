@@ -246,7 +246,8 @@ cards (#893). It shows only as off, and can't be turned on, while ID cards are o
 [IssueEveryMemberCard](../lib/app/operation/issue_every_member_card.ex) does the work.
 
 - **Turning it on asks first, with the counts**: "Creates 40 cards and emails 38 members.
-  2 have no email." It then queues one `SendMemberCardWorker` job per member who is
+  2 have no email." From 10 emails up it waits on a check box, as every send to many
+  members does (`send_confirm/3`). It then queues one `SendMemberCardWorker` job per member who is
   counted (a person, not retiring), current, and has no live card.
 - **The jobs drip out**: job _n_ runs at (_n_ − 1) × 5 seconds, so 40 cards take about
   3 minutes and 74 about 6. Each builds an Apple pass (photo resize, signing) and a
