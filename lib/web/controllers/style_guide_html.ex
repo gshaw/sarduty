@@ -150,6 +150,16 @@ defmodule Web.StyleGuideHTML do
     end)
   end
 
+  # The Table page's Columns that stay put: one table, filtered and not.
+  def fit_rows do
+    [
+      %{name: "Avery Chen", reply: "Signed up", replied: "Nov 4, 09:20"},
+      %{name: "Drew Patel", reply: "Can't make it", replied: "Nov 3, 13:20"},
+      %{name: "Harper Nguyen", reply: "Signed up", replied: "Nov 5, 15:20"},
+      %{name: "Cameron Ruiz", reply: "No reply", replied: nil}
+    ]
+  end
+
   # A page's template is its name with _page, as embed_templates names it.
   def template(page), do: String.to_existing_atom("#{page}_page")
 

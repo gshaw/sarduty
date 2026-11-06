@@ -482,6 +482,7 @@ defmodule Web.ActivityMembersLive do
           activity={@activity}
           team={@team}
           members={@shown}
+          all={@members}
           standings={@standings}
           started?={@started?}
           now={@now}
@@ -519,6 +520,7 @@ defmodule Web.ActivityMembersLive do
         activity={@activity}
         team={@team}
         members={@shown}
+        all={@members}
         standings={@standings}
         started?={@started?}
         now={@now}
@@ -589,13 +591,17 @@ defmodule Web.ActivityMembersLive do
   attr :reminded, :map, required: true
   attr :selected, :any, required: true
   attr :changeable?, :boolean, required: true
+  attr :all, :list, required: true, doc: "every row on the tab, before the filters"
 
   # One table (#920), with select all for a team admin who can act on the rows shown.
   # Before the start: each reply, when it came (#444), and when they were last asked, on
   # any row once the activity has an ask. From the start: each attendance, and an attended member's
   # times. A name labels its checkbox then; otherwise it links to the member's page.
+  # The short columns fit their longest values, so a tile, the search, or Group never
+  # moves them (/styles/table#fit): the words and dates at their longest, and the times
+  # and hours of every row before the filters. Member takes the rest.
   defp members_table(assigns) do
-    assigns = assign(assigns, timezone: assigns.team.timezone)
+    assigns = assign(assigns, [timezone: assigns.team.timezone] ++ fits(assigns))
 
     ~H"""
     <.table
@@ -623,33 +629,13 @@ defmodule Web.ActivityMembersLive do
           label_for={if @changeable?, do: "members-select-#{row.member.id}"}
         />
       </:col>
-      <:col
-        :let={row}
-        label={if @started?, do: "Attendance", else: "Reply"}
-        class="whitespace-nowrap"
-      >
-        <span class={["marker", "marker-#{Reply.marker(row.status)}"]}>
-          {Reply.status_text(row.status, @started?)}
-        </span>
+      <:col :let={row} label={if @started?, do: "Attendance", else: "Reply"} fit={@fit_reply}>
+        <.reply_text status={row.status} started?={@started?} />
       </:col>
-      <:col :let={row} :if={!@started?} label="Replied" class="whitespace-nowrap">
-        <span :if={row.status != "requested"}>
-          {Format.month_day_time(row.replied_at, @timezone)}
-        </span>
-        <.badge
-          :if={row.status != "requested" and ActivityMembers.new?(row, @now)}
-          kind={:primary}
-          title="Replied in the last 24 hours"
-        >
-          New
-        </.badge>
+      <:col :let={row} :if={!@started?} label="Replied" fit={@fit_replied}>
+        <.replied_text row={row} now={@now} timezone={@timezone} />
       </:col>
-      <:col
-        :let={row}
-        :if={!@started? and @reminded != %{}}
-        label="Asked"
-        class="whitespace-nowrap"
-      >
+      <:col :let={row} :if={!@started? and @reminded != %{}} label="Asked" fit={@fit_asked}>
         <span
           :if={@reminded[row.member_id]}
           id={"member-asked-#{row.member.id}"}
@@ -658,19 +644,13 @@ defmodule Web.ActivityMembersLive do
           {reminded_text(@reminded[row.member_id], @timezone)}
         </span>
       </:col>
-      <:col :let={row} :if={@started?} label="Start" align="right" class="whitespace-nowrap">
+      <:col :let={row} :if={@started?} label="Start" align="right" fit={@fit_start}>
         {if row.status == "attending", do: attended_start(row, @activity, @timezone)}
       </:col>
-      <:col :let={row} :if={@started?} label="Finish" align="right" class="whitespace-nowrap">
+      <:col :let={row} :if={@started?} label="Finish" align="right" fit={@fit_finish}>
         {if row.status == "attending", do: Format.time_short(row.finished_at, @timezone)}
       </:col>
-      <:col
-        :let={row}
-        :if={@started?}
-        label="Hours"
-        align="right"
-        class="w-px whitespace-nowrap"
-      >
+      <:col :let={row} :if={@started?} label="Hours" align="right" fit={@fit_hours}>
         <.hours_cell :if={row.status == "attending"} minutes={row.duration_in_minutes} />
       </:col>
     </.table>
@@ -678,6 +658,72 @@ defmodule Web.ActivityMembersLive do
     <p :if={@started? and attended_minutes(@members) > 0} id="members-hours" class="hint mt-2">
       {Format.duration(attended_minutes(@members))} in total
     </p>
+    """
+  end
+
+  # Each short column's longest values, for its fit: the words and dates at their
+  # longest, and the times and hours of every attended row before the filters.
+  defp fits(%{team: team, all: all, activity: activity, started?: started?}) do
+    word_fits(started?, team.timezone) ++
+      attended_fits(ActivityMembers.only(all, "attending"), activity, team.timezone)
+  end
+
+  defp word_fits(started?, timezone) do
+    widest = DateTime.new!(~D[2026-09-28], ~T[20:08:00], timezone)
+    replied = %{status: "attending", replied_at: widest}
+
+    [
+      fit_reply:
+        for(
+          status <- ActivityMembers.statuses(),
+          do: reply_text(%{status: status, started?: started?})
+        ),
+      fit_replied: [replied_text(%{row: replied, now: widest, timezone: timezone})],
+      fit_asked: ["Asked " <> Format.month_day(widest, timezone)]
+    ]
+  end
+
+  defp attended_fits(attended, activity, timezone) do
+    [
+      fit_start: attended |> Enum.map(&attended_start(&1, activity, timezone)) |> Enum.uniq(),
+      fit_finish:
+        attended |> Enum.map(&Format.time_short(&1.finished_at, timezone)) |> Enum.uniq(),
+      fit_hours:
+        attended
+        |> Enum.map(&(&1.duration_in_minutes && Format.duration(&1.duration_in_minutes)))
+        |> Enum.uniq()
+    ]
+  end
+
+  attr :status, :string, required: true
+  attr :started?, :boolean, required: true
+
+  # A row's reply, or its attendance from the start, with its marker.
+  defp reply_text(assigns) do
+    ~H"""
+    <span class={["marker", "marker-#{Reply.marker(@status)}"]}>
+      {Reply.status_text(@status, @started?)}
+    </span>
+    """
+  end
+
+  attr :row, :map, required: true
+  attr :now, :any, required: true
+  attr :timezone, :string, required: true
+
+  # When a row replied, and New for the last 24 hours; nothing with no reply.
+  defp replied_text(assigns) do
+    ~H"""
+    <span :if={@row.status != "requested"}>
+      {Format.month_day_time(@row.replied_at, @timezone)}
+    </span>
+    <.badge
+      :if={@row.status != "requested" and ActivityMembers.new?(@row, @now)}
+      kind={:primary}
+      title="Replied in the last 24 hours"
+    >
+      New
+    </.badge>
     """
   end
 
