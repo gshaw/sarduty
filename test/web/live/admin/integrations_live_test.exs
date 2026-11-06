@@ -64,6 +64,13 @@ defmodule Web.Admin.IntegrationsLiveTest do
     assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Apple Wallet isn't set up"
   end
 
+  test "Download test letter sends the PDF Typst made, locked", %{conn: conn} do
+    conn = get(conn, ~p"/admin/integrations/typst-letter")
+    assert response_content_type(conn, :pdf) =~ "application/pdf"
+    assert "%PDF-" <> _ = conn.resp_body
+    assert conn.resp_body =~ "/Encrypt"
+  end
+
   test "is a 404 for anyone who isn't a SAR Duty admin" do
     %{user: user} = user_with_team_fixture()
     conn = log_in_user(build_conn(), user)

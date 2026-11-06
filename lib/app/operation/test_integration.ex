@@ -22,6 +22,7 @@ defmodule App.Operation.TestIntegration do
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
   alias App.Operation.CheckTeamKey
+  alias App.Operation.CheckTypst
   alias App.Worker.IntegrationTestWorker
 
   # How long a round trip may take before it fails: a backup write reaching R2, and a
@@ -30,7 +31,7 @@ defmodule App.Operation.TestIntegration do
   @jobs_wait_ms 30_000
   @poll_ms 500
 
-  @services ~w(website jobs backups email texts errors d4h maps health apple google)
+  @services ~w(website jobs backups typst email texts errors d4h maps health apple google)
 
   def services, do: @services
 
@@ -46,13 +47,15 @@ defmodule App.Operation.TestIntegration do
   def set_up?("health"), do: Healthchecks.configured?()
   def set_up?("apple"), do: BuildApplePass.configured?()
   def set_up?("google"), do: BuildGooglePass.configured?()
+  def set_up?("typst"), do: Service.Typst.executable() != nil
   def set_up?(service) when service in @services, do: true
 
   @doc """
   Runs one test. `params` holds what the page sent ("to", "team_id"). Returns
   `{:ok, outcome, message}` or `{:error, outcome, message}`, where `outcome` is the
   word the row shows ("sent", "works", "failed", "behind", "stuck") and `message` the
-  toast. An Apple Wallet test that works returns `{:ok, outcome, message, pkpass}`. A
+  toast. An Apple Wallet test that works returns `{:ok, outcome, message, pkpass}`, and
+  a Typst test `{:ok, outcome, message, pdf}`. A
   service that isn't set up here is not called and saves no event.
   """
   def call(service, params, %User{} = user, now \\ DateTime.utc_now())
@@ -89,6 +92,7 @@ defmodule App.Operation.TestIntegration do
   defp not_set_up("health"), do: "Nothing pinged. No Healthchecks check is set up on this server."
   defp not_set_up("apple"), do: "Test pass not made. Apple Wallet isn't set up on this server."
   defp not_set_up("google"), do: "Test pass not made. Google Wallet isn't set up on this server."
+  defp not_set_up("typst"), do: "Test letter not made. Typst isn't installed on this server."
 
   defp team_id("d4h", %{"team_id" => id}), do: parse_id(id)
   defp team_id(_service, _params), do: nil
@@ -213,6 +217,13 @@ defmodule App.Operation.TestIntegration do
     else
       {:error, reason} ->
         {:error, "failed", "Google Wallet refused the test pass. #{error_text(reason)}"}
+    end
+  end
+
+  defp run("typst", _params, _user, _now) do
+    case CheckTypst.call() do
+      {:ok, message, pdf} -> {:ok, "works", message, pdf}
+      {:error, message} -> {:error, "failed", message}
     end
   end
 

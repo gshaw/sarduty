@@ -15,8 +15,11 @@ ignorePaths:
   - "cspell.config.yml"
   - "deps/*"
   - "erl_crash.dump"
+  - "priv/fonts/*" # Arimo and its licence, as published
   - "priv/static/assets/*"
 words:
+  - typst # makes tax credit letters as PDFs (#918)
+  - Arimo # the letters' font, Helvetica's widths (#918)
   - devsar # Dev SAR, the dev team (tools/dev-sar.exs)
   - DSAR # Dev SAR's abbreviated name
   - nohup

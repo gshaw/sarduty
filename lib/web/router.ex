@@ -301,12 +301,13 @@ defmodule Web.Router do
       live "/admin/integrations", Admin.IntegrationsLive
     end
 
-    # The Wallet tests on Adminland › Integrations (#789): a download and a redirect to
-    # Google, which a LiveView can't send.
+    # The Wallet and Typst tests on Adminland › Integrations (#789): downloads and a
+    # redirect to Google, which a LiveView can't send.
     scope "/admin/integrations" do
       pipe_through :require_admin
       get "/apple-pass", Admin.IntegrationPassController, :apple_pass
       get "/google-pass", Admin.IntegrationPassController, :google_pass
+      get "/typst-letter", Admin.IntegrationPassController, :typst_letter
     end
 
     # An organization's space (#512): its organization admins and SAR Duty admins. Its
