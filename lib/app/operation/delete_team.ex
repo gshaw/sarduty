@@ -36,7 +36,7 @@ defmodule App.Operation.DeleteTeam do
                   chore_events chores custom_fields d4h_changes demo_teams endorsements equipment_items
                   equipment_usages events group_membership_changes group_rules groups
                   home_coordinates location_bookmarks mcp_calls member_away_periods member_cards
-                  member_check_ins member_standing_changes members no_shows qualifications
+                  member_check_ins member_standing_changes members no_shows outbox_messages qualifications
                   reminders reports route_distances tags team_login_grants templates trips
                   whiteboard_notes)
 

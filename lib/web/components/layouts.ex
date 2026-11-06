@@ -1,6 +1,8 @@
 defmodule Web.Layouts do
   use Web, :html
 
+  import Web.Components.CopyButton, only: [copy_button: 1]
+
   alias Web.Navigation
 
   def root(assigns) do
@@ -94,6 +96,11 @@ defmodule Web.Layouts do
             team={@current_team}
             team_admin?={@team_admin?}
           />
+          <.demo_banner
+            :if={assigns[:demo] && !assigns[:viewing_as]}
+            demo={@demo}
+            team={@current_team}
+          />
           <.flash_group flash={@flash} static_changed_url={assigns[:static_changed_url]} />
           {@inner_content}
         </main>
@@ -106,6 +113,7 @@ defmodule Web.Layouts do
           team={@current_team}
           team_admin?={@team_admin?}
         />
+        <.demo_banner :if={assigns[:demo] && !assigns[:viewing_as]} demo={@demo} team={@current_team} />
         <.flash_group flash={@flash} static_changed_url={assigns[:static_changed_url]} />
         {@inner_content}
       </main>
@@ -132,6 +140,47 @@ defmodule Web.Layouts do
         </p>
         <.button id="view-as-stop" href={~p"/teams/#{@team}/view-as"} method="delete">
           Stop viewing
+        </.button>
+      </div>
+    </.banner>
+    """
+  end
+
+  attr :demo, :map, required: true
+  attr :team, :map, required: true
+
+  # On every page of a Try a demo team (#857), where View as puts its own: whose it is,
+  # when it goes, its link, its Outbox. Delete this demo asks first.
+  defp demo_banner(assigns) do
+    ~H"""
+    <.banner kind={:info} title="Your demo" id="demo-banner" class="mb-6">
+      <p>
+        {@team.name} is made up, and this copy is yours alone. It sends nothing: every
+        email and text it would send goes to its Outbox. It is deleted on {Service.Format.date_long(
+          @demo.demo.expires_at,
+          @team.timezone
+        )}.
+      </p>
+      <p id="demo-link">
+        <.copy_button
+          id="demo-link-copy"
+          value={@demo.link}
+          label="Copy the demo's link"
+          text="Copy its link to open it on another device."
+        />
+      </p>
+      <div class="flex flex-wrap items-center gap-2">
+        <.button id="demo-outbox" navigate={~p"/teams/#{@team}/outbox"}>
+          Outbox ({@demo.outbox})
+        </.button>
+        <.button
+          id="demo-delete"
+          variant={:danger}
+          href={~p"/teams/#{@team}/demo"}
+          method="delete"
+          data-confirm="Delete this demo? It goes at once, for anyone with its link, and you are logged out."
+        >
+          Delete this demo
         </.button>
       </div>
     </.banner>
@@ -208,27 +257,27 @@ defmodule Web.Layouts do
 
   attr :size, :atom, values: ~w(wide form tool)a, default: :wide
 
-  # App and login pages have no footer, but in dev the mailbox is where login codes go.
+  # App and login pages have no footer, but in dev the Outbox is where login codes go.
   defp dev_footer(assigns) do
-    assigns = assign(assigns, mailbox?: dev_mailbox?())
+    assigns = assign(assigns, outbox?: dev_outbox?())
 
     ~H"""
     <footer
-      :if={@mailbox?}
+      :if={@outbox?}
       id="dev-footer"
       class={["m-auto px-2 mb-8 text-sm", column_width(@size)]}
     >
       <p class="pt-4 border-t border-border-subtle">
-        Development: <.a href="/dev/mailbox" external={true}>Mailbox</.a>
+        Development: <.a href="/dev/outbox" external={true}>Outbox</.a>
       </p>
     </footer>
     """
   end
 
-  @doc "Whether mail goes to the local mailbox at /dev/mailbox, as in development."
-  def dev_mailbox? do
+  @doc "Whether email is kept in the Outbox at /dev/outbox, as in development."
+  def dev_outbox? do
     Application.get_env(:sarduty, :dev_routes) == true and
-      Application.get_env(:swoosh, :local) == true
+      Application.get_env(:sarduty, App.Mailer)[:adapter] == App.Adapter.Outbox
   end
 
   # The public pages' footer. The verify site is a separate host, so its link is a full URL.
@@ -236,7 +285,7 @@ defmodule Web.Layouts do
     assigns =
       assign(assigns,
         support_url: "https://buymeacoffee.com/gshaw",
-        mailbox?: dev_mailbox?()
+        outbox?: dev_outbox?()
       )
 
     ~H"""
@@ -249,8 +298,8 @@ defmodule Web.Layouts do
         · <.a id="footer-changelog" navigate={~p"/changelog"}>Changelog</.a>
         · <.a id="footer-support" href={@support_url} external={true}>Support SAR Duty</.a>
         · <.a id="footer-github" href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
-        <%= if @mailbox? do %>
-          · <.a href="/dev/mailbox" external={true}>Mailbox</.a>
+        <%= if @outbox? do %>
+          · <.a href="/dev/outbox" external={true}>Outbox</.a>
         <% end %>
       </p>
     </footer>

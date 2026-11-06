@@ -9,7 +9,6 @@ defmodule App.Mailer.TeamAdminMailer do
 
   alias App.Mailer
   alias App.Model.Activity
-  alias App.Model.DemoTeam
   alias App.Model.Organization
   alias App.Model.Team
   alias App.ViewData.TeamSummary
@@ -103,16 +102,14 @@ defmodule App.Mailer.TeamAdminMailer do
     body = paragraphs |> Enum.map_join("\n\n", &paragraph/1)
     body = body <> "\n\nReply to this email to reach SAR Duty.\n"
 
-    {recipients, _demo_copies} = DemoTeam.one_copy(team, recipients(team, now))
-
-    for email <- recipients do
+    for email <- recipients(team, now) do
       new()
       |> to(email)
       |> from({"SAR Duty", "noreply@sarduty.com"})
       |> reply_to(App.Support.email())
       |> subject(subject)
       |> text_body(body)
-      |> Mailer.for_team(team, :team_admins)
+      |> Mailer.for_team(team)
       |> Mailer.deliver()
     end
 

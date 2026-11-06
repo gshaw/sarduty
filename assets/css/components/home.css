@@ -119,6 +119,8 @@
     .home-hero { padding: var(--sp-8) 0 var(--sp-6); }
     .home-section, .home-feature { padding: var(--sp-8) 0; }
     .home-cta .btn, .home-cta li { flex: 1; }
+    /* Sign up a team gets its own row; Try a demo and Log in share the next (#857). */
+    .home-cta > .btn-primary { flex-basis: 100%; }
     .home-cta li .btn { width: 100%; }
     .home-hero-art { display: none; }
     .home-hide-sm { display: none; }

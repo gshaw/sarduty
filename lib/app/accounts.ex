@@ -108,7 +108,8 @@ defmodule App.Accounts do
     end
   end
 
-  defp get_or_create_user(email),
+  @doc "The user with this email, made on first use. A user is only an email."
+  def get_or_create_user(email),
     do: get_user_by_email(email) || %{email: email} |> User.new_changeset() |> Repo.insert!()
 
   # The code goes to `sent_to`: the user's email, or an E.164 number for a text.

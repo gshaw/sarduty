@@ -39,9 +39,10 @@ config :sarduty, App.Vault,
 # calls Req itself. Its default client needs hackney, which we don't have.
 config :swoosh, api_client: false
 
-# Configure mailer for dev and test
-config :swoosh, local: true
-config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Local
+# Email is kept in the Outbox (docs/outbox.md) unless a real adapter is set: dev sends
+# nothing, test uses Swoosh's test adapter, and prod sets Cloudflare's in runtime.exs.
+config :swoosh, local: false
+config :sarduty, App.Mailer, adapter: App.Adapter.Outbox
 
 # Configure Timezone database: https://github.com/lau/tzdata
 config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
@@ -102,7 +103,7 @@ config :sarduty, Oban,
   # One sync at a time, so two teams' syncs never hold the SQLite write lock together.
   # Bulk is for fan-out, one job per email or card, so a long send never holds up a
   # login code and its PDFs leave the one CPU for pages (docs/jobs.md).
-  queues: [default: 5, bulk: 2, refresh: 1, sync: 1],
+  queues: [default: 5, bulk: 2, refresh: 1, sync: 1, demos: 1],
   # Lifeline puts back a job left executing by a restart, so it runs again rather than
   # sitting there for good; an hour is far longer than any team's refresh. Pruner keeps a
   # week of finished jobs for looking into a run; events keep the longer history.
@@ -114,7 +115,9 @@ config :sarduty, Oban,
       # The sync every 10 minutes (#163). The nightly full refresh is its safety net.
       {"*/10 * * * *", App.Worker.ScheduleTeamSyncsWorker},
       {"30 5 * * *", App.Worker.PruneEventsWorker},
-      {"15 8 * * *", App.Worker.ReseedSampleWorker}
+      {"15 8 * * *", App.Worker.ReseedSampleWorker},
+      # Try a demo (#857): deletes the demos past their time.
+      {"5 * * * *", App.Worker.DemoTeamsWorker}
     ]
   ]
 

@@ -225,23 +225,54 @@ defmodule App.Adapter.D4H do
   end
 
   @doc """
+  Makes a demo team in SAR Duty Records from a cast (#857): `{:ok, %{d4h_team_id:,
+  access_key:, ids:}}`, with `ids` mapping each row's key to its Records id, or
+  `{:error, %D4H.Error{}}`. Records' `/v3/sarduty` route, with SAR Duty's own key, as
+  delete_records_team/1. The cast's format is Records' `CreateDemoTeam`.
+  """
+  def create_demo_team(%{} = cast) do
+    with {:ok, key} <- sarduty_key() do
+      context = whoami_context(key, records_host())
+
+      case Req.post(context,
+             url: "/sarduty/demo-teams",
+             json: cast,
+             retry: false,
+             receive_timeout: 60_000
+           ) do
+        {:ok, %{status: 200, body: %{"id" => id, "key" => team_key, "ids" => ids}}} ->
+          {:ok, %{d4h_team_id: id, access_key: team_key, ids: ids}}
+
+        result ->
+          {:error, write_error(result)}
+      end
+    end
+  end
+
+  @doc "Whether SAR Duty has its own Records key, so it can make and delete teams there."
+  def records_sarduty_key?, do: match?({:ok, _key}, sarduty_key())
+
+  defp sarduty_key do
+    case Application.get_env(:sarduty, :records_sarduty_key) do
+      key when is_binary(key) and key != "" -> {:ok, key}
+      _none -> {:error, D4H.Error.exception("SAR Duty has no key for Records.")}
+    end
+  end
+
+  @doc """
   Tells SAR Duty Records a team was deleted in SAR Duty (#889). Records switches it off
   now and deletes it 7 days on; until then a Records admin can switch it back on. Takes
   SAR Duty's own key, never the team's. `:ok`, also when Records has no such team, or
   `{:error, error}`.
   """
   def delete_records_team(%Team{d4h_team_id: d4h_team_id}) do
-    case Application.get_env(:sarduty, :records_sarduty_key) do
-      key when is_binary(key) and key != "" ->
-        context = whoami_context(key, records_host())
+    with {:ok, key} <- sarduty_key() do
+      context = whoami_context(key, records_host())
 
-        case Req.delete(context, url: "/sarduty/teams/#{d4h_team_id}", retry: false) do
-          {:ok, %{status: status}} when status in [200, 404] -> :ok
-          result -> {:error, write_error(result)}
-        end
-
-      _none ->
-        {:error, D4H.Error.exception("SAR Duty has no key for deleting a Records team.")}
+      case Req.delete(context, url: "/sarduty/teams/#{d4h_team_id}", retry: false) do
+        {:ok, %{status: status}} when status in [200, 404] -> :ok
+        result -> {:error, write_error(result)}
+      end
     end
   end
 

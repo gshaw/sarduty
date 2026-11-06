@@ -33,6 +33,10 @@ if key = System.get_env("RECORDS_SARDUTY_KEY") do
   config :sarduty, :records_sarduty_key, key
 end
 
+# The key a script sends to make a test demo, for checking SAR Duty on a live server
+# (docs/demo.md). Without it, only visitors' demos can be made.
+config :sarduty, :demo_test_key, System.get_env("DEMO_TEST_KEY")
+
 config :sarduty, :healthchecks_url, System.get_env("HEALTHCHECKS_URL")
 # Its own Healthchecks check, with a 10-minute period, for the D4H sync (#163).
 config :sarduty, :healthchecks_sync_url, System.get_env("HEALTHCHECKS_SYNC_URL")

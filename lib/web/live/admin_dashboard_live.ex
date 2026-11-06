@@ -16,7 +16,7 @@ defmodule Web.AdminDashboardLive do
   def mount(_params, _session, socket) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
 
-    teams = Team.get_all() |> Enum.sort_by(&String.downcase(&1.name))
+    teams = Team.get_all_real() |> Enum.sort_by(&String.downcase(&1.name))
     now = DateTime.utc_now()
     emails = TeamSummary.team_admin_emails(teams, now)
 

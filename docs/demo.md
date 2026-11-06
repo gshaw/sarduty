@@ -1,29 +1,71 @@
 # Try a demo
 
-Anyone can try SAR Duty without signing up (#857). Each visitor gives a name and an
-email and gets their own copy of Coast Range SAR, the made-up team (`App.CoastRange`),
-for 7 days, as a second team admin beside Alex Chen. Nobody sees anyone else's copy.
+Anyone can try SAR Duty without signing up (#857): a person, an agent showing someone
+SAR Duty, or a script checking a live server. Each demo is a copy of Coast Range SAR,
+the made-up team (`App.CoastRange`), opened by a link. Its visitor is a team admin
+beside Alex Chen. Nobody sees another demo.
+
+No email is asked. An agent can't read one, and a form that emails any address is a
+way to send mail to strangers. The link is the login instead.
 
 A copy is a SAR Duty Records team ([records.md](records.md)), so the sync, the edits,
-and every page work as for any Records team. `App.Model.DemoTeam` is the visitor's row,
+and every page work as for any Records team. `App.Model.DemoTeam` is the demo's row,
 and a team is a demo when one points at it (`DemoTeam.demo?/1`).
+
+## A demo's life
+
+1. **The start.** `/demo` (`Web.DemoLive`) is one button and an optional name, and
+   `POST /api/demos` (`Web.DemoApiController`) is the same for agents and scripts. Both
+   call `App.Operation.CreateDemo`, which saves the row and a user for it,
+   `visitor-<id>@example.com`. A visitor's demo: 5 an hour per IP, 200 live in all.
+   Without SAR Duty's own Records key (`RECORDS_SARDUTY_KEY`), Try a demo is off and the
+   home page has no button.
+2. **The link.** `/demo/open/<token>` (`Web.DemoController`) logs the browser in as that
+   user, remembered, and opens the demo. The token is the demo's id, signed
+   (`DemoTeam.link_token/1`), not stored, so the banner can show it again; it stops
+   working when the demo goes. It opens the demo in any browser, so an agent can start
+   one and hand the link to the person it's helping. Anyone with it is the visitor.
+3. **The build.** `/demo/building` (`Web.DemoBuildLive`) runs
+   `App.Operation.BuildDemoTeam` once, behind a spinner, in about a second. Records makes
+   the team from the cast (`App.DemoCast`, `POST /v3/sarduty/demo-teams`) and picks its ids. SAR Duty adds the team, marked
+   as the demo in the same transaction, refreshes it like any team, and adds what only it
+   keeps (endorsements, ID cards with real codes, away periods, chores), matched through
+   Records' ids. A failure removes everything, in Records too, and the page offers Try
+   again. A visitor's 3 days count from here.
+4. **The banner.** Every page of a demo team has it, for team admins, where View as puts
+   its own: when it goes, its link to copy, its Outbox, and Delete this demo.
+5. **The end.** `App.Operation.DeleteDemo` deletes the team through
+   `DeleteTeam.purge(team, reason: :demo)`, the same delete as any team's: in Records
+   first, which deletes a demo at once with no 7-day hold, then every row in SAR Duty,
+   recorded as a `demo_deleted` event, kept 90 days. Then the row with the name, and its
+   user. Delete this demo, or `DELETE /api/demos/<token>`, does
+   it at once; `App.Worker.DemoTeamsWorker`, every hour, deletes each demo past its time,
+   built or never opened.
+
+**Test demos.** A script that checks a live server sends `DEMO_TEST_KEY` as a bearer
+token to `POST /api/demos`, with `hours` (2 by default, 24 at most). Its demo is a test
+one: outside the IP and live limits, and its hours count from the start. It drives the
+demo through the link like a person, reads its Outbox, and deletes it. Fake data on
+the real code path, in place of a test activity on a real team.
+
+Demo teams sync only while someone has one open: a team admin's page marks it seen
+(`DemoTeam.seen!/2`), and the 10-minute sync takes demos seen in the last hour. They stay
+out of the nightly refresh, the sync's team count for Healthchecks, and the admin team
+list (`Team.get_all_real/0`). Custom fields stay out of the cast: Records has none.
+
+/agents/demo (`Web.DemoAgentsDoc`) tells agents how to start one, find their way, and
+end it.
 
 ## What a demo sends
 
-- **Everything goes to the visitor, once.** A team's email goes through
-  `App.Mailer.for_team/3`, which sends a demo team's to the visitor alone, with
-  [Demo] before the subject and a first line saying whose copy it is. A send to 15
-  members is one email: `DemoTeam.one_copy/2` lets the first member's go and marks the
-  rest sent. That covers reminders, updates, removals, tax credit letters, and the team
-  admin notices. An activity email's buttons answer for that member, so the visitor sees
-  the reply land. The page's toast says where the copy went.
-- **The backstop.** `App.Mailer.deliver/2` refuses a demo team's email to anyone but
-  its visitor, so a mailer that forgets `for_team/3`'s redirect still sends nothing to a
-  stranger. A new team email still needs `for_team/3`, or the backstop can't tell whose
-  it is.
-- **Never a text.** Text login skips every member of a demo team
-  (`Member.current_emails_with_phone/2`), and a demo team's member cannot add a mobile
-  number (`ChangeOwnPhone`), so no text goes to a number a visitor typed.
+- **Nothing.** Every email a demo team would send goes to its Outbox
+  ([outbox.md](outbox.md)) instead: reminders, updates, removals, tax credit letters, and
+  the team admin notices, one per member as on a real team. Its links work, so the
+  visitor can answer a reminder as the member and see the reply land.
+- **No real texts.** A demo team's texts go to its Outbox too: the code that confirms a
+  new mobile number (`ChangeOwnPhone`, through `Twilio.send_sms/3` with the team's id).
+  Text login skips every member of a demo team (`Member.current_emails_with_phone/2`), so
+  no text goes to a number a visitor typed.
 
 ## What a demo shows
 

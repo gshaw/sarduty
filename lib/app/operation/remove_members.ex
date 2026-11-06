@@ -23,7 +23,6 @@ defmodule App.Operation.RemoveMembers do
   alias App.Model.Attendance
   alias App.Model.ChangeSet
   alias App.Model.ChangeSetRow
-  alias App.Model.DemoTeam
   alias App.Model.Member
   alias App.Model.Team
   alias App.Operation.ApplyChangeSet
@@ -201,9 +200,6 @@ defmodule App.Operation.RemoveMembers do
       Attendance
       |> where([a], a.activity_id == ^activity.id and a.d4h_attendance_id in ^applied)
       |> Repo.delete_all()
-
-      # A demo team emails its visitor once (#857).
-      {emailed, _demo_copies} = DemoTeam.one_copy(activity.team_id, emailed)
 
       for member <- emailed,
           do: SendActivityUpdate.queue(activity, member, user, message, now, :removal)

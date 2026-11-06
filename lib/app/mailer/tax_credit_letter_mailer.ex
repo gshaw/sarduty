@@ -20,7 +20,7 @@ defmodule App.Mailer.TaxCreditLetterMailer do
           content_type: attachment.content_type
         )
       )
-      |> Mailer.for_team(letter.member.team, letter.member.name)
+      |> Mailer.for_team(letter.member.team)
 
     case Mailer.deliver(email) do
       {:ok, metadata} ->

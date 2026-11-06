@@ -39,7 +39,8 @@ defmodule Web.Search do
       Web.TaxCreditLetterLive => "A letter holds personal text; find the member instead.",
       Web.Settings.ChoreCategoryFormLive => "A setting, found from Team settings.",
       Web.Settings.PlaceFormLive => "A setting, found from Team settings.",
-      Web.ReportLive => "Reports lists every report on one page."
+      Web.ReportLive => "Reports lists every report on one page.",
+      Web.OutboxLive => "Only a demo has an Outbox, and its banner links it."
     }
 
   @doc """

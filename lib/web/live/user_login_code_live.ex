@@ -113,7 +113,7 @@ defmodule Web.UserLoginCodeLive do
           the same number get a code by email instead.
         </p>
         <p :if={not Twilio.delivers?()} id="login-dev-text">
-          In development the text message is in the server log, not sent.
+          In development the text is kept in the <.a href="/dev/outbox" external={true}>outbox</.a>, not sent.
         </p>
         <p class="action">
           <.a id="login-again" navigate={~p"/login"}>Use a different number or an email</.a>

@@ -20,7 +20,6 @@ defmodule Web.ActivityMembersLive.Update do
   alias App.Mailer.ActivityMailer
   alias App.Model.Activity
   alias App.Model.ActivityUpdate
-  alias App.Model.DemoTeam
   alias App.Operation.SendActivityUpdate
   alias App.Operation.SendReminders
   alias App.Validate.Message
@@ -162,19 +161,12 @@ defmodule Web.ActivityMembersLive.Update do
       team
       |> SendActivityUpdate.call(activity, user, ids, message, DateTime.utc_now())
       |> outcome()
-      |> demo_copy(team)
 
     send(self(), outcome)
 
     {:noreply,
      socket |> assign(message: message, message_error: message_error(outcome)) |> assign_preview()}
   end
-
-  # A demo team's send went to its visitor alone (#857).
-  defp demo_copy({:step_done, :info, text}, team),
-    do: {:step_done, :info, DemoTeam.copy_text(team) || text}
-
-  defp demo_copy(outcome, _team), do: outcome
 
   # The tab with a toast, or the step again with the toast and the error on the message
   # box.

@@ -15,6 +15,7 @@ defmodule App.Model.RedactFieldsTest do
     {App.Model.AttentionSnooze, :key} => "which Needs attention item, like retiring",
     {App.Model.Certificate, :content_type} => "a file's MIME type",
     {App.Model.ChoreCategory, :description} => "what a team's chore category is for",
+    {App.Model.DemoTeam, :code_misses} => "how many wrong codes were tried",
     {App.Model.CustomField, :value_units} => "a D4H field's unit, like km",
     {App.Model.CustomField, :copy_values} => "a team setting",
     {App.Model.EquipmentItem, :barcode} => "the label on a piece of equipment",

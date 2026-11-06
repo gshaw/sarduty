@@ -5,6 +5,7 @@ defmodule Web.TeamScopingTest do
 
   import App.DataFixtures
 
+  alias App.Model.OutboxMessage
   alias App.Repo
 
   @templates [
@@ -82,7 +83,10 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/reports/:id",
     "/teams/:subdomain/reports/:id/edit",
     "/teams/:subdomain/reports/:id/history",
-    "/teams/:subdomain/reports/:id/csv"
+    "/teams/:subdomain/reports/:id/csv",
+    # Only a demo team has an Outbox, and this team isn't one. Web.DemoFlowTest covers
+    # another demo's message.
+    "/teams/:subdomain/outbox/:id"
   ]
 
   setup %{conn: conn} do
@@ -113,6 +117,7 @@ defmodule Web.TeamScopingTest do
       place: location_bookmark_fixture(other_team),
       letter: tax_credit_letter_fixture(member),
       award: certificate_award_fixture(other_team, member),
+      outbox: OutboxMessage.add_text!("+16045551234", "Theirs"),
       certificate: certificate_fixture(member, qualification_fixture(other_team)),
       report:
         Repo.insert!(%App.Model.SavedReport{
@@ -359,6 +364,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/whiteboard/:id/edit", s, o),
     do: ~p"/teams/#{s}/whiteboard/#{o.whiteboard_note.id}/edit"
+
+  defp path_for("/teams/:subdomain/outbox/:id" <> rest, s, o),
+    do: "/teams/#{s}/outbox/#{o.outbox.id}#{rest}"
 
   defp path_for("/teams/:subdomain/reports/:id" <> rest, s, o),
     do: "/teams/#{s}/reports/#{o.report.id}#{rest}"

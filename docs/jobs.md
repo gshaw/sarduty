@@ -58,10 +58,12 @@ discarded without a word, so a job that matters gets 2 or more, or a status.
 | `bulk`    | 2     | Fan-out, one job per email or card: reminders, letters, cancelled cards |
 | `refresh` | 1     | The full D4H refresh, nightly or from a button                          |
 | `sync`    | 1     | The 10-minute D4H sync                                                  |
+| `demos`   | 1     | Building a Try a demo copy, while its visitor waits (#857)              |
 
 `bulk` keeps a long send from holding up a login code, and leaves the one CPU for
-pages. `refresh` and `sync` take 1 so two teams' copies never hold the write lock
-together. Add a queue only when a job needs a new limit.
+pages. `refresh`, `sync`, and `demos` take 1 so two teams' copies never hold the write
+lock together; `demos` keeps a visitor from waiting behind the nightly refresh. Add a
+queue only when a job needs a new limit.
 
 ## Why
 

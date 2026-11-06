@@ -14,9 +14,9 @@ defmodule App.Mailer.HelpMailer do
   @site_admins "SAR Duty site admins"
 
   @doc """
-  The email for `message` from `sender` (`%{name:, email:}`, name may be nil) on
+  Pure. The email for `message` from `sender` (`%{name:, email:}`, name may be nil) on
   `team`, to `to`, SendHelpMessage.recipients/3: the team's `contacts` and the
-  `site_admins` ticked, each once. A demo team's goes to its visitor (App.Mailer.for_team/3). `about` has the `page` URL they came from and their `device`, either nil.
+  `site_admins` ticked, each once. `about` has the `page` URL they came from and their `device`, either nil.
   """
   def build(%Team{} = team, sender, message, to, about) do
     from_name = sender.name || sender.email
@@ -33,7 +33,7 @@ defmodule App.Mailer.HelpMailer do
     |> reply_to({sender.name || "", sender.email})
     |> subject("#{team.name}: a question from #{from_name}")
     |> text_body(text(team, from_name, message, to, about))
-    |> Mailer.for_team(team, :help)
+    |> Mailer.for_team(team)
   end
 
   @doc "Sends the email build/5 makes. `:ok` or `{:error, reason}`."

@@ -30,7 +30,7 @@ still lists the area's pages.
   GitHub) is only on the public pages in the marketing layout: home, terms, privacy,
   changelog, and the agents pages. Sign up and Log in are narrow pages, with none. In an
   area its links are noise. In dev, app pages keep a line with
-  the dashboard and the mailbox.
+  the dashboard and the Outbox.
 - **Account settings**, `/account`: one page, so no side navigation. It is about the login,
   the same on every team.
 

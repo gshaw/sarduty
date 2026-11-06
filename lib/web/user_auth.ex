@@ -6,9 +6,11 @@ defmodule Web.UserAuth do
 
   alias App.Accounts
   alias App.Adapter.D4H
+  alias App.Model.DemoTeam
   alias App.Model.Member
   alias App.Model.Organization
   alias App.Model.OrganizationAdmin
+  alias App.Model.OutboxMessage
   alias App.Model.Team
   alias App.Operation.RecordUserSeen
 
@@ -309,10 +311,58 @@ defmodule Web.UserAuth do
     socket =
       socket
       |> Phoenix.Component.assign(Map.put(access, :service, service))
+      |> Phoenix.Component.assign(:demo, demo_banner(access))
+      |> watch_outbox()
       |> guard_events(page_access, access)
 
     {:cont, socket}
   end
+
+  # The banner's Outbox count goes up as a message lands, such as a removal's email a job
+  # sends a moment after the page. Web.OutboxLive gets the message too, to show it.
+  defp watch_outbox(%{assigns: %{demo: %{}}} = socket) do
+    if Phoenix.LiveView.connected?(socket),
+      do:
+        Phoenix.PubSub.subscribe(App.PubSub, OutboxMessage.topic(socket.assigns.current_team.id))
+
+    Phoenix.LiveView.attach_hook(socket, :demo_outbox, :handle_info, &outbox_info/2)
+  end
+
+  defp watch_outbox(socket), do: socket
+
+  defp outbox_info({:outbox_message, team_id}, socket) do
+    team = socket.assigns.current_team
+
+    socket =
+      if team_id == team.id,
+        do: Phoenix.Component.update(socket, :demo, &%{&1 | outbox: OutboxMessage.count(team)}),
+        else: socket
+
+    if socket.view == Web.OutboxLive, do: {:cont, socket}, else: {:halt, socket}
+  end
+
+  defp outbox_info(_message, socket), do: {:cont, socket}
+
+  # A Try a demo team's banner (#857), for its team admins: the demo, its link, and its
+  # Outbox's count. Nil on a real team.
+  # Opening a page marks the demo in use, so it syncs.
+  defp demo_banner(%{team_admin?: true, current_team: team}) do
+    case DemoTeam.for_team(team) do
+      nil ->
+        nil
+
+      demo ->
+        DemoTeam.seen!(demo, DateTime.utc_now())
+
+        %{
+          demo: demo,
+          link: url(~p"/demo/open/#{DemoTeam.link_token(demo)}"),
+          outbox: OutboxMessage.count(team)
+        }
+    end
+  end
+
+  defp demo_banner(_access), do: nil
 
   # Who sends which events (#440). A team admin sends every event on the pages they open,
   # and a member every event on their own pages. Otherwise only some reach the page's

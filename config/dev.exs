@@ -68,7 +68,7 @@ config :sarduty, Web.Endpoint,
     ]
   ]
 
-# Enable dev routes for dashboard and mailbox
+# Enable dev routes for dashboard and the outbox
 config :sarduty, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
@@ -93,10 +93,8 @@ config :phoenix_live_view,
 config :sarduty, :style_guide_search_cache, false
 
 # Real mail only when asked for: a dev database is often a copy of production, so a test
-# could email a real member. Otherwise everything lands in /dev/mailbox.
+# could email a real member. Otherwise everything lands in the Outbox at /dev/outbox.
 if System.get_env("DEV_SEND_EMAIL") == "true" and System.get_env("CLOUDFLARE_EMAIL_TOKEN") do
-  config :swoosh, local: false
-
   config :sarduty, App.Mailer,
     adapter: App.Adapter.CloudflareEmail,
     account_id: System.fetch_env!("CLOUDFLARE_ACCOUNT_ID"),

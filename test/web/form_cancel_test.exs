@@ -23,6 +23,8 @@ defmodule Web.FormCancelTest do
     "lib/web/live/certificate_live.ex" => "accept, decline, and rotate on the certificate's page",
     "lib/web/live/chore_collection_live.ex" => "accepts the chores ticked in the list",
     "lib/web/live/chore_live.ex" => "accept and decline on the chore's page",
+    "lib/web/live/demo_build_live.ex" => "Try again rebuilds the demo on the same page",
+    "lib/web/live/demo_live.ex" => "trying a demo has no page to go back to",
     "lib/web/live/endorsement_collection_live.ex" => "ID card ticks saved on the list",
     "lib/web/live/me_details_live.ex" => "Your details tab, saved in place",
     "lib/web/live/member_card_live.ex" => "ID card actions on the member's tab",

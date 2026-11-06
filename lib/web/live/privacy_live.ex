@@ -20,7 +20,7 @@ defmodule Web.PrivacyLive do
     <article id="privacy" class="container mx-auto px-2 pt-8">
       <div class="max-w-prose">
         <h1 class="title">Privacy</h1>
-        <p class="hint">Last changed November 3, 2026.</p>
+        <p class="hint">Last changed November 4, 2026.</p>
         <p>
           SAR Duty copies your team's data from D4H to run its tools for your team. Your team decides what is in D4H.
         </p>
@@ -56,6 +56,11 @@ defmodule Web.PrivacyLive do
         </p>
         <p class="action">
           <.a id="privacy-agents-link" navigate={~p"/agents"}>How agents work with SAR Duty</.a>
+        </p>
+        <p id="privacy-demo">
+          Try a demo asks for no email. A name, if you give one, is kept on your demo until it is deleted, {Service.Format.days(
+            App.Model.DemoTeam.days()
+          )} after you first open it. Its made-up team's records are kept in SAR Duty Records, in Canada, and deleted with it.
         </p>
         <p id="privacy-organizations">
           When a team belongs to an organization, its organization admins, such as an association's staff, see each of its teams' totals, never members' names or contact details.

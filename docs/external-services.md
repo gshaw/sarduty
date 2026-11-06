@@ -54,8 +54,8 @@ mileage report and the map proxy alike.
 
 Swoosh. Production sends through Cloudflare Email Sending's REST API with
 [App.Adapter.CloudflareEmail](../lib/app/adapter/cloudflare_email.ex), since Swoosh has
-no Cloudflare adapter. Dev uses the local mailbox at `/dev/mailbox`, linked from the
-foot of every page, unless `DEV_SEND_EMAIL=true` and both variables below are set:
+no Cloudflare adapter. Dev keeps every email in the Outbox at `/dev/outbox`
+([outbox.md](outbox.md)), linked from the foot of every page, unless `DEV_SEND_EMAIL=true` and both variables below are set:
 a dev database is often a copy of production, so real mail could reach real members. Tests
 use `Swoosh.Adapters.Test`. Mail comes from
 `noreply@sarduty.com`: login codes, and tax credit letters with the PDF attached. Login
@@ -99,8 +99,8 @@ Twilio honours STOP per sender number.
 
 A number logs in only when it leads to exactly one email that may log in, from the
 phones on current members. A code texted can't be entered as one emailed, or the other
-way. `Web.LoginLimit` allows 3 texts per number per 15 minutes. Dev logs each text instead
-of sending it unless `DEV_SEND_SMS=true`, like `DEV_SEND_EMAIL`. Tests ignore the
+way. `Web.LoginLimit` allows 3 texts per number per 15 minutes. Dev keeps each text in the
+Outbox instead of sending it unless `DEV_SEND_SMS=true`, like `DEV_SEND_EMAIL`. Tests ignore the
 variables and stub Twilio with `Req.Test`.
 
 - `TWILIO_ACCOUNT_SID` — the account's `AC…` id.

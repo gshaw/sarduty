@@ -27,18 +27,10 @@ defmodule App.Operation.ChangeOwnPhone do
   though the answer is the same.
   """
   def request(%Member{} = member, %User{} = user, input, allowed? \\ fn _ -> true end) do
-    with :ok <- check_not_demo(member),
-         {:ok, e164} <- parse(input),
+    with {:ok, e164} <- parse(input),
          :ok <- check(member, e164) do
-      if allowed?.(e164), do: send_code(user, e164), else: {:ok, e164}
+      if allowed?.(e164), do: send_code(member, user, e164), else: {:ok, e164}
     end
-  end
-
-  # A demo never texts a number a visitor typed (#857).
-  defp check_not_demo(member) do
-    if DemoTeam.demo?(member.team_id),
-      do: {:error, "A demo cannot add a mobile number. Sign up your team to log in by text."},
-      else: :ok
   end
 
   @doc "The number the user's live code went to, or nil."
@@ -84,7 +76,8 @@ defmodule App.Operation.ChangeOwnPhone do
 
   defp check(member, e164) do
     cond do
-      not Accounts.text_login?() ->
+      # A demo's code goes to its Outbox (#857), so it needs no Twilio.
+      not Accounts.text_login?() and not DemoTeam.demo?(member.team_id) ->
         {:error, "SAR Duty cannot send texts right now. Ask a team admin to change it."}
 
       e164 == Service.Phone.normalize(member.phone) ->
@@ -95,12 +88,13 @@ defmodule App.Operation.ChangeOwnPhone do
     end
   end
 
-  defp send_code(user, e164) do
+  # A demo's code goes to its Outbox (#857), never to the number a visitor typed.
+  defp send_code(member, user, e164) do
     cancel(user)
     {code, token} = UserToken.build_code(user, "confirm", e164)
     Repo.insert!(token)
 
-    case UserNotifier.deliver_confirm_text(e164, code) do
+    case UserNotifier.deliver_confirm_text(e164, code, member.team_id) do
       :ok -> {:ok, e164}
       _error -> {:error, "The code did not send. Check the number and try again."}
     end
