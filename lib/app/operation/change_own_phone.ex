@@ -15,6 +15,7 @@ defmodule App.Operation.ChangeOwnPhone do
   alias App.Accounts.UserToken
   alias App.Model.ChangeSet
   alias App.Model.ChangeSetRow
+  alias App.Model.DemoTeam
   alias App.Model.Member
   alias App.Operation.ApplyChangeSet
   alias App.Repo
@@ -26,10 +27,18 @@ defmodule App.Operation.ChangeOwnPhone do
   though the answer is the same.
   """
   def request(%Member{} = member, %User{} = user, input, allowed? \\ fn _ -> true end) do
-    with {:ok, e164} <- parse(input),
+    with :ok <- check_not_demo(member),
+         {:ok, e164} <- parse(input),
          :ok <- check(member, e164) do
       if allowed?.(e164), do: send_code(user, e164), else: {:ok, e164}
     end
+  end
+
+  # A demo never texts a number a visitor typed (#857).
+  defp check_not_demo(member) do
+    if DemoTeam.demo?(member.team_id),
+      do: {:error, "A demo cannot add a mobile number. Sign up your team to log in by text."},
+      else: :ok
   end
 
   @doc "The number the user's live code went to, or nil."

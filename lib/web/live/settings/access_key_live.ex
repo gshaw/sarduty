@@ -6,6 +6,7 @@ defmodule Web.Settings.AccessKeyLive do
 
   alias App.Adapter.D4H
   alias App.Model.D4HAccess
+  alias App.Model.DemoTeam
   alias App.Model.Member
   alias App.Model.Team
   alias App.Operation.CheckTeamKey
@@ -17,6 +18,8 @@ defmodule Web.Settings.AccessKeyLive do
   # who made it, so an Editor's key can do less than an Owner's. A Records key can do
   # everything, so a Records team gets no check.
   def mount(_params, _session, socket) do
+    if DemoTeam.demo?(socket.assigns.current_team), do: raise(Web.Status.NotFound)
+
     socket =
       socket
       |> assign(page_title: "Team settings · Access key")

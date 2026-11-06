@@ -19,6 +19,7 @@ defmodule App.Mailer.MemberCardMailer do
     |> text_body(Enum.map_join(paragraphs, "\n\n", &text/1) <> "\n")
     |> html_body(Enum.map_join(paragraphs, "\n", &html/1) <> "\n")
     |> attach_pass(pkpass, team)
+    |> Mailer.for_team(team, member.name)
     |> Mailer.deliver()
   end
 

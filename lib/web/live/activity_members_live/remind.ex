@@ -18,6 +18,7 @@ defmodule Web.ActivityMembersLive.Remind do
 
   alias App.Mailer.ActivityMailer
   alias App.Model.Activity
+  alias App.Model.DemoTeam
   alias App.Model.Reminder
   alias App.Model.Standing
   alias App.Operation.SendReminders
@@ -107,10 +108,17 @@ defmodule Web.ActivityMembersLive.Remind do
       team
       |> SendReminders.call(activity, user, ids, message, DateTime.utc_now())
       |> outcome()
+      |> demo_copy(team)
 
     send(self(), outcome)
     {:noreply, assign_message(socket, message)}
   end
+
+  # A demo team's send went to its visitor alone (#857).
+  defp demo_copy({:step_done, :info, text}, team),
+    do: {:step_done, :info, DemoTeam.copy_text(team) || text}
+
+  defp demo_copy(outcome, _team), do: outcome
 
   # The tab with a toast, or the step again with the error for a message too long.
   defp outcome({:ok, []}), do: {:step_done, :error, "Nobody was emailed."}
