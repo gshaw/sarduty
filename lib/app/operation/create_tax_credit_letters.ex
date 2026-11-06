@@ -35,6 +35,9 @@ defmodule App.Operation.CreateTaxCreditLetters do
 
   def topic(team_id), do: "tax_credit_letters:#{team_id}"
 
+  @doc "Whether a member's letter is emailed: they have an email. The rest are only created."
+  def emailed?(member), do: member.email not in [nil, ""]
+
   # A letter and its email job commit together, so a retry of the whole run makes only
   # the letters still missing, and no email is lost.
   defp create(team, member, year) do
@@ -42,14 +45,14 @@ defmodule App.Operation.CreateTaxCreditLetters do
       Repo.transaction(fn ->
         letter = CreateTaxCreditLetter.call(team: team, member_id: member.id, year: year)
 
-        if member.email in [nil, ""] do
-          {member, :no_email}
-        else
+        if emailed?(member) do
           letter
           |> TaxCreditLetter.set_email_status!(:sending)
           |> EmailTaxCreditLetterWorker.enqueue()
 
           {member, :emailing}
+        else
+          {member, :no_email}
         end
       end)
 

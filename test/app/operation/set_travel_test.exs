@@ -26,6 +26,17 @@ defmodule App.Operation.SetTravelTest do
 
   defp kms({:ok, plan}), do: Enum.map(plan.sets, &{&1.member.name, &1.travel, &1.km})
 
+  test "a team admin's change clears Confirmed for each member who has it, but their own" do
+    [ann, bob] = rows()
+    confirmed = %Trip{checked_at: ~U[2026-11-01 10:00:00Z]}
+    ann = Map.put(ann, :trip, confirmed)
+    bob = Map.put(bob, :trip, %Trip{})
+
+    assert [%Member{name: "Ann"}] = SetTravel.clears_confirmed([ann, bob], nil)
+    assert SetTravel.clears_confirmed([ann, bob], 11) == []
+    assert SetTravel.clears_confirmed([Map.put(ann, :trip, nil)], nil) == []
+  end
+
   test "ICP and yard set the saved round trip" do
     assert kms(SetTravel.plan(rows(), [1], "icp", "")) == [{"Ann", "icp", 50}]
     assert kms(SetTravel.plan(rows(), [1], "yard", "")) == [{"Ann", "yard", 80}]

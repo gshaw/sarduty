@@ -4,6 +4,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Say it before the click: Travel's Change names who loses Confirmed, Send letters counts
+  who gets the email and names who has none, and Same as last counts only the items it
+  adds, with why the rest stay out.
 - Reports can list each member's ID card: its code, its verify link, and when it was
   issued. Handy for printing cards or loading codes into another app. Thanks to Andrew at
   South Fraser.

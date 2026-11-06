@@ -67,6 +67,12 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any")
 
       assert has_element?(lv, "#send-all-button", "Send 2 letters")
+
+      assert has_element?(
+               lv,
+               ~s(#send-all-button[data-confirm$="No email, so not emailed: Blake."])
+             )
+
       lv |> element("#send-all-button") |> render_click()
 
       assert has_element?(
@@ -137,6 +143,29 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
 
       assert has_element?(lv, "#member_collection", "Blake")
       refute has_element?(lv, "#member_collection", "Casey")
+    end
+
+    test "the send's check counts who gets the email, not the letters", %{conn: conn, team: team} do
+      members =
+        for n <- 1..11,
+            do:
+              member_fixture(team, %{
+                name: "Member #{n}",
+                email: if(n > 1, do: "m#{n}@example.com")
+              })
+
+      for member <- members, do: attend(team, member)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any")
+
+      assert has_element?(lv, "#send-all-button", "Send 11 letters")
+
+      assert has_element?(
+               lv,
+               ~s(#send-all-button[data-confirm-check="I understand 10 members get this email."])
+             )
+
+      assert has_element?(lv, ~s(#send-all-button[data-confirm-list*="not emailed: Member 1."]))
     end
 
     test "warns that letters go out unsigned until the team has a signature",

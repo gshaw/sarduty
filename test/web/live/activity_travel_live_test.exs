@@ -295,6 +295,26 @@ defmodule Web.ActivityTravelLiveTest do
       assert Enum.all?(trips, &(&1.km == 30 and is_nil(&1.checked_at)))
     end
 
+    test "the dialog names who loses Confirmed, and only when someone would", ctx do
+      lv = open(ctx)
+      set(lv, [ctx.ann_row, ctx.bob_row], "passenger")
+      check(lv, [ctx.ann_row, ctx.bob_row])
+      lv |> element("#travel-change-checked") |> render_click()
+      refute lv |> element("#travel-edit-dialog-checked") |> render() =~ "Changing travel"
+
+      Trip
+      |> Repo.get_by!(member_id: ctx.ann.id)
+      |> Ecto.Changeset.change(checked_at: DateTime.utc_now() |> DateTime.truncate(:second))
+      |> Repo.update!()
+
+      lv = open(ctx)
+      check(lv, [ctx.ann_row, ctx.bob_row])
+      lv |> element("#travel-change-checked") |> render_click()
+
+      assert lv |> element("#travel-edit-dialog-checked") |> render() =~
+               "Each member&#39;s own round trip from home. Changing travel clears Confirmed for Ann Smith."
+    end
+
     test "a row's Change offers every way, starts on what's saved, and saves one row", ctx do
       lv = open(ctx)
       set(lv, [ctx.ann_row], "passenger")
