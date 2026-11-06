@@ -25,6 +25,9 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    (`DemoTeam.link_token/1`), not stored, so the banner can show it again; it stops
    working when the demo goes. It opens the demo in any browser, so an agent can start
    one and hand the link to the person it's helping. Anyone with it is the visitor.
+   It is the only way in: an email a visitor types onto a member logs in to nothing
+   there (`DemoTeam.team_ids_closed_to_query/1`), or the demo would land in that
+   person's account.
 3. **The build.** `/demo/building` (`Web.DemoBuildLive`) runs
    `App.Operation.BuildDemoTeam` once, behind a spinner, in about a second. Records makes
    the team from the cast (`App.DemoCast`, `POST /v3/sarduty/demo-teams`) and picks its ids. SAR Duty adds the team, marked

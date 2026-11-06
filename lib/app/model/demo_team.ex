@@ -96,6 +96,20 @@ defmodule App.Model.DemoTeam do
   def team_ids_query, do: from(d in DemoTeam, where: not is_nil(d.team_id), select: d.team_id)
 
   @doc """
+  The ids of demo teams `email` isn't the visitor of. A member there with that email
+  logs in to nothing (#857): a visitor can add anyone's email to a member, and the demo
+  would land in that person's account.
+  """
+  def team_ids_closed_to_query(email) do
+    from(d in DemoTeam,
+      left_join: u in assoc(d, :user),
+      where: not is_nil(d.team_id),
+      where: is_nil(u.id) or fragment("lower(?)", u.email) != ^String.downcase(email),
+      select: d.team_id
+    )
+  end
+
+  @doc """
   The ids of demo teams someone opened in the last hour: only these sync on the schedule,
   so 200 demos left open in tabs cost nothing.
   """

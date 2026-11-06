@@ -46,7 +46,7 @@ defmodule Web.DemoTeamMarksTest do
 
   test "a demo team has no Access key tab, and its page is a 404", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
-    demo_team_fixture(team)
+    demo_team_fixture(team, %{user_id: user.id})
     conn = log_in_user(conn, user)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
