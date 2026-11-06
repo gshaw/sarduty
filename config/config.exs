@@ -117,7 +117,10 @@ config :sarduty, Oban,
       {"30 5 * * *", App.Worker.PruneEventsWorker},
       {"15 8 * * *", App.Worker.ReseedSampleWorker},
       # Try a demo (#857): deletes the demos past their time.
-      {"5 * * * *", App.Worker.DemoTeamsWorker}
+      {"5 * * * *", App.Worker.DemoTeamsWorker},
+      # Saves a PDF for each letter made before letters kept theirs (#918). Goes in
+      # step 4 of #918.
+      {"@reboot", App.Worker.SaveLetterPDFsWorker}
     ]
   ]
 
