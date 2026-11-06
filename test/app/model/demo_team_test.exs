@@ -16,7 +16,7 @@ defmodule App.Model.DemoTeamTest do
     end
 
     test "its visitor manages it", %{team: team, visitor: visitor} do
-      assert [%Team{id: id}] = Team.get_managed_by(String.upcase(visitor.email), now())
+      assert [%Team{id: id}] = visitor.email |> String.upcase() |> Team.get_managed_by(now())
       assert id == team.id
     end
 
