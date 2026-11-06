@@ -157,6 +157,25 @@ defmodule Web.ActivityMembersLive.ActionTest do
       assert Absent.label() == "Mark absent"
     end
 
+    test "Mark absent asks first when hours go, and names them" do
+      activity = %{@from_start.activity | title: "Missing hiker"}
+      ctx = %{@from_start | activity: activity}
+
+      checked = [
+        row(1, "attending", minutes: 270),
+        row(2, "attending", minutes: 300),
+        row(3, "absent")
+      ]
+
+      assert Absent.confirm(ctx, checked) == %{
+               "data-confirm" =>
+                 "Mark 2 members absent on Missing hiker? Their hours go, and Mark attended gives back the activity's times, not their own.",
+               "data-confirm-warning" => "Member 1's 4h 30m and Member 2's 5 hours go."
+             }
+
+      assert Absent.confirm(ctx, [row(4, "requested"), row(3, "absent")]) == %{}
+    end
+
     test "Send an update from the start is the message alone" do
       assert Update.hint(@from_start, [row(1, "attending"), row(2, "absent")]) ==
                "All 2 checked get your message."

@@ -102,7 +102,22 @@ defmodule Web.ActivityMembersLiveTest do
     check(lv, [ctx.casey.id, ctx.cameron.id])
     assert has_element?(lv, "#members-change-send[disabled]", "Change members")
 
+    # Casey attended: their hours go, so Mark absent asks first (#920).
     check(lv, [ctx.casey.id, ctx.cameron.id, ctx.drew.id], "absent")
+    assert has_element?(lv, "#members-change-send", "Mark 2 absent")
+
+    assert has_element?(
+             lv,
+             ~s|#members-change-send[data-confirm="Mark 2 members absent on Swiftwater training? Their hours go, and Mark attended gives back the activity's times, not their own."]|
+           )
+
+    assert has_element?(
+             lv,
+             ~s|#members-change-send[data-confirm-warning="Casey Dhillon's 2h 30m go."]|
+           )
+
+    # Only members with no reply: nothing is lost, so it doesn't ask.
+    check(lv, [ctx.cameron.id, ctx.riley.id], "absent")
     assert has_element?(lv, "#members-change-send", "Mark 2 absent")
     refute has_element?(lv, "#members-change-send[data-confirm]")
 

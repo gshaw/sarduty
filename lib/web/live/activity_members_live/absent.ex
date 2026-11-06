@@ -2,7 +2,9 @@ defmodule Web.ActivityMembersLive.Absent do
   @moduledoc """
   Marks the checked members absent, with no hours (#766), in place:
   App.Operation.ChangeAttendance's `:absent`. It passes over the absent, and greys out
-  when everyone checked is absent already.
+  when everyone checked is absent already. It asks first when someone checked attended:
+  their hours go, and Mark attended gives back the activity's times, not their own (#920).
+  With only members with no reply, nothing is lost, so it doesn't ask.
   """
   @behaviour Web.ActivityMembersLive.Action
 
@@ -60,7 +62,21 @@ defmodule Web.ActivityMembersLive.Absent do
   def variant, do: :primary
 
   @impl Action
-  def confirm(_ctx, _checked), do: %{}
+  def confirm(%{activity: activity} = ctx, checked) do
+    case Action.hours_text(checked) do
+      nil ->
+        %{}
+
+      hours ->
+        members = ctx |> count(checked) |> Format.count(one: "1 member", many: "%d members")
+
+        %{
+          "data-confirm" =>
+            "Mark #{members} absent on #{activity.title}? Their hours go, and Mark attended gives back the activity's times, not their own.",
+          "data-confirm-warning" => "#{hours} go."
+        }
+    end
+  end
 
   @impl Action
   def run(_checked), do: {:in_place, :absent}

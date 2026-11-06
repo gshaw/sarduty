@@ -88,4 +88,24 @@ defmodule Web.ActivityMembersLive.Action do
   @doc ~s(A count and its verb: "1 has", "2 have", from the two verbs.)
   def count_verb(1, one, _many), do: "1 #{one}"
   def count_verb(count, _one, many), do: "#{count} #{many}"
+
+  @doc """
+  The hours the checked who attended lose, by name, or nil when nobody checked attended:
+  "Avery Chen's 4h 30m and Jordan Lee's 5 hours". Mark attended gives back the
+  activity's times, not a member's own, so a change that takes them names them.
+  """
+  def hours_text(checked) do
+    case for row <- checked, row.status == "attending", do: row do
+      [] ->
+        nil
+
+      attended ->
+        attended
+        |> Enum.sort_by(&String.downcase(&1.member.name))
+        |> Enum.map(
+          &"#{&1.member.name}'s #{Service.Format.duration(&1.duration_in_minutes || 0)}"
+        )
+        |> Service.Format.and_list()
+    end
+  end
 end

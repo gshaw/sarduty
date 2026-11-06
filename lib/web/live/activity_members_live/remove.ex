@@ -73,18 +73,9 @@ defmodule Web.ActivityMembersLive.Remove do
 
   # "Casey Dhillon's 2h 30m go too." for each checked member who attended.
   defp put_hours(attrs, checked) do
-    case for row <- checked, row.status == "attending", do: row do
-      [] ->
-        attrs
-
-      attended ->
-        hours =
-          attended
-          |> Enum.sort_by(&String.downcase(&1.member.name))
-          |> Enum.map(&"#{&1.member.name}'s #{Format.duration(&1.duration_in_minutes || 0)}")
-          |> Format.and_list()
-
-        Map.put(attrs, "data-confirm-warning", "#{hours} go too.")
+    case Action.hours_text(checked) do
+      nil -> attrs
+      hours -> Map.put(attrs, "data-confirm-warning", "#{hours} go too.")
     end
   end
 
