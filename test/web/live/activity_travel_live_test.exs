@@ -131,6 +131,18 @@ defmodule Web.ActivityTravelLiveTest do
       assert html =~ "No home address in D4H, so choose Other."
     end
 
+    test "the yard to the ICP and back, for a team vehicle (#877)", ctx do
+      lv = open(ctx)
+      assert lv |> element("#travel-yard-to-icp") |> render() =~ "20 km"
+    end
+
+    test "no ICP without the activity's location", ctx do
+      ctx.activity |> Ecto.Changeset.change(coordinate: nil) |> Repo.update!()
+      lv = open(ctx)
+      assert has_element?(lv, "#travel-no-location")
+      refute has_element?(lv, "#travel-yard-to-icp")
+    end
+
     test "Mapbox is asked once: the next visit reads what was saved", ctx do
       open(ctx)
       assert length(mapbox_calls()) == 4
