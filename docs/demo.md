@@ -61,8 +61,10 @@ the real code path, in place of a test activity on a real team.
 
 Demo teams sync only while someone has one open: a team admin's page marks it seen
 (`DemoTeam.seen!/2`), and the 10-minute sync takes demos seen in the last hour. They stay
-out of the nightly refresh, the sync's team count for Healthchecks, and the admin team
-list (`Team.get_all_real/0`). Custom fields stay out of the cast: Records has none.
+out of the nightly refresh and the sync's team count for Healthchecks
+(`Team.get_all_real/0`). Adminland's team list shows them under Demos, apart from the
+real teams, with whose each is and when it goes. Custom fields stay out of the cast:
+Records has none.
 
 /agents/demo (`Web.DemoAgentsDoc`) tells agents how to start one, find their way, and
 end it.
@@ -89,5 +91,4 @@ end it.
   (`tools/sample-mark.py` makes the picture).
 - **No Access key tab.** Its key is SAR Duty's, and a real key pasted there would turn
   the copy into a real team. The page is a 404.
-- **Agents stay off.** Only a SAR Duty admin turns them on, from the admin team list,
-  which leaves demos out.
+- **Agents stay off.** Only a SAR Duty admin turns them on, from a team's admin page.

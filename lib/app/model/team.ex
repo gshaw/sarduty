@@ -316,8 +316,8 @@ defmodule App.Model.Team do
   end
 
   @doc """
-  Every team but Try a demo copies (#857), for the admin team list and the nightly runs:
-  they come and go by the day, each for one visitor.
+  Every team but Try a demo copies (#857), for the nightly runs and the sync's count: they
+  come and go by the day, each for one visitor.
   """
   def get_all_real do
     Team

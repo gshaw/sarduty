@@ -89,25 +89,55 @@ defmodule Web.AdminDashboardLiveTest do
     Team.update(team, %{d4h_refresh_result: "OK", d4h_refreshed_at: DateTime.utc_now()})
     failing = team_fixture(%{d4h_access_key: "k", d4h_access_key_owner: "Sam Rivers"})
     {:ok, _team} = Team.update(failing, %{d4h_refresh_result: "Error: 500"})
+    nobody = team_fixture(%{d4h_refresh_result: "OK"})
+    demo = team_fixture(%{name: "Coast Range SAR"})
+    demo_team_fixture(demo)
     conn = log_in_user(conn, admin)
+    all = [team.id, failing.id, nobody.id, demo.id]
 
     for {view, ids} <- [
-          {"not-refreshing", [failing.id]},
-          {"no-team-admins", [failing.id]},
+          {"all", [team.id, failing.id, nobody.id]},
+          {"needs-attention", [failing.id, nobody.id]},
           {"person-key", [failing.id]},
-          {"id-cards-on", [team.id, failing.id]},
-          {"mcp-on", []}
+          {"demos", [demo.id]}
         ] do
       {:ok, lv, _html} = live(conn, ~p"/admin?view=#{view}")
       assert has_element?(lv, "#team-view-#{view}", "#{length(ids)}")
       for id <- ids, do: assert(has_element?(lv, "#team-#{id}"))
-      for id <- [team.id, failing.id] -- ids, do: refute(has_element?(lv, "#team-#{id}"))
+      for id <- all -- ids, do: refute(has_element?(lv, "#team-#{id}"))
     end
   end
 
-  test "an unknown view falls back to All", %{conn: conn} do
+  test "a demo's row says whose it is and when it goes", %{conn: conn} do
     %{user: admin} = user_with_team_fixture()
-    {:ok, lv, _html} = conn |> log_in_user(make_admin(admin)) |> live(~p"/admin?view=nope")
+    visitor = team_fixture(%{name: "Coast Range SAR", timezone: "America/Toronto"})
+    test_demo = team_fixture(%{name: "Coast Range SAR", timezone: "America/Toronto"})
+    goes = ~U[2026-11-09 19:17:00Z]
+
+    visitor
+    |> demo_team_fixture()
+    |> Ecto.Changeset.change(expires_at: goes)
+    |> App.Repo.update!()
+
+    test_demo
+    |> demo_team_fixture(%{kind: :test, name: nil})
+    |> Ecto.Changeset.change(expires_at: goes)
+    |> App.Repo.update!()
+
+    {:ok, lv, _html} = conn |> log_in_user(make_admin(admin)) |> live(~p"/admin?view=demos")
+
+    assert has_element?(
+             lv,
+             "#team-#{visitor.id}-demo",
+             "Visitor, Morgan Visitor · goes Nov 9, 14:17"
+           )
+
+    assert has_element?(lv, "#team-#{test_demo.id}-demo", "Test · goes Nov 9, 14:17")
+  end
+
+  test "an unknown view, such as an old link, falls back to Teams", %{conn: conn} do
+    %{user: admin} = user_with_team_fixture()
+    {:ok, lv, _html} = conn |> log_in_user(make_admin(admin)) |> live(~p"/admin?view=mcp-on")
     assert has_element?(lv, "#team-view-all[aria-current=page]")
   end
 
