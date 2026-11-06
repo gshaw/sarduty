@@ -30,8 +30,11 @@ defmodule App.OutboxTest do
              kind: :email,
              to: "Cameron Ruiz <cameron@example.com>",
              subject: "Letter",
-             attachments: "letter.pdf"
-           } = OutboxMessage.get(team, id)
+             attachments: [%{id: attachment_id, filename: "letter.pdf", data: nil}]
+           } = message = OutboxMessage.get(team, id)
+
+    assert %{data: "%PDF", content_type: "application/pdf"} =
+             OutboxMessage.get_attachment(message, attachment_id)
 
     assert [%OutboxMessage{id: ^id}] = OutboxMessage.list(:all)
   end

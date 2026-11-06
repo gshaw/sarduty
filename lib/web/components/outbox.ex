@@ -41,6 +41,7 @@ defmodule Web.Components.Outbox do
 
   attr :message, OutboxMessage, required: true
   attr :timezone, :string, required: true
+  attr :attachment_path, :any, required: true, doc: "fn attachment -> its file"
 
   # Like the email previews (Web.Components.EmailPreview), with the header a mail app
   # shows. The HTML is SAR Duty's own mailers', which escape what people typed, as the
@@ -59,8 +60,16 @@ defmodule Web.Components.Outbox do
           <dd :if={@message.kind == :email}>{@message.subject}</dd>
           <dt>Date</dt>
           <dd>{Service.Format.month_day_time_seconds(@message.inserted_at, @timezone)}</dd>
-          <dt :if={@message.attachments}>Attached</dt>
-          <dd :if={@message.attachments}>{@message.attachments}</dd>
+          <dt :if={@message.attachments != []}>Attached</dt>
+          <dd :if={@message.attachments != []} id="outbox-attachments">
+            <%= for {attachment, index} <- Enum.with_index(@message.attachments) do %>
+              {if index > 0, do: ", "}<.a
+                id={"outbox-attachment-#{attachment.id}"}
+                href={@attachment_path.(attachment)}
+                external={true}
+              >{attachment.filename}</.a>
+            <% end %>
+          </dd>
         </dl>
         <div :if={@message.html_body} id="outbox-html" class="email-preview-body">
           {Phoenix.HTML.raw(@message.html_body)}

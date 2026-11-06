@@ -180,6 +180,8 @@ defmodule Web.Router do
         live "/outbox", DevOutboxLive
         live "/outbox/:id", DevOutboxLive
       end
+
+      get "/outbox/:id/attachments/:attachment_id", OutboxAttachmentController, :dev
     end
   end
 
@@ -472,6 +474,8 @@ defmodule Web.Router do
       delete "/view-as", ViewAsController, :delete
       # Delete this demo, on a Try a demo team's banner (#857).
       delete "/demo", DemoController, :delete
+      # A file an email in a demo's Outbox carried, such as a tax credit letter (#857).
+      get "/outbox/:id/attachments/:attachment_id", OutboxAttachmentController, :show
     end
   end
 end

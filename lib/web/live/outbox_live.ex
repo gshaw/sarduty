@@ -70,6 +70,7 @@ defmodule Web.OutboxLive do
       <.outbox_message
         message={@message}
         timezone={@current_team.timezone}
+        attachment_path={&~p"/teams/#{@current_team}/outbox/#{@message.id}/attachments/#{&1.id}"}
       />
     <% else %>
       <h1 class="title">Outbox</h1>

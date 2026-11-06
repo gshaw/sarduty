@@ -3,6 +3,7 @@ defmodule App.Model.OutboxMessage do
 
   import Ecto.Query
 
+  alias App.Model.OutboxAttachment
   alias App.Model.OutboxMessage
   alias App.Model.Team
   alias App.Repo
@@ -18,7 +19,7 @@ defmodule App.Model.OutboxMessage do
     field :subject, :string
     field :body, :string
     field :html_body, :string
-    field :attachments, :string
+    has_many :attachments, OutboxAttachment, preload_order: [asc: :position]
     timestamps(type: :utc_datetime_usec, updated_at: false)
   end
 
@@ -38,7 +39,7 @@ defmodule App.Model.OutboxMessage do
       subject: email.subject,
       body: email.text_body,
       html_body: email.html_body,
-      attachments: attachment_names(email.attachments)
+      attachments: OutboxAttachment.from_email(email)
     })
   end
 
@@ -65,9 +66,6 @@ defmodule App.Model.OutboxMessage do
   defp address({"", email}), do: email
   defp address({nil, email}), do: email
   defp address({name, email}), do: "#{name} <#{email}>"
-
-  defp attachment_names([]), do: nil
-  defp attachment_names(attachments), do: Enum.map_join(attachments, ", ", & &1.filename)
 
   @doc "The newest first: a team's, or with `:all` every one."
   def list(team_or_all) do
@@ -112,7 +110,20 @@ defmodule App.Model.OutboxMessage do
   def new?(%OutboxMessage{inserted_at: at}, since), do: DateTime.after?(at, since)
 
   @doc "One message, a team's or with `:all` any, or nil."
-  def get(team_or_all, id), do: team_or_all |> scope() |> Repo.get(id)
+  def get(team_or_all, id),
+    do: team_or_all |> scope() |> preload(attachments: ^attachment_heads()) |> Repo.get(id)
+
+  @doc "One of a message's attachments, with its file, or nil."
+  def get_attachment(%OutboxMessage{id: id}, attachment_id),
+    do: Repo.get_by(OutboxAttachment, id: attachment_id, outbox_message_id: id)
+
+  # A message's page lists its files, so it leaves their bytes out.
+  defp attachment_heads do
+    from(a in OutboxAttachment,
+      order_by: a.position,
+      select: struct(a, [:id, :outbox_message_id, :position, :filename, :content_type])
+    )
+  end
 
   @doc "Empties the outbox: a team's, or with `:all` every one."
   def delete_all(team_or_all) do

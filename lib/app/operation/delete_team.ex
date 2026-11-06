@@ -64,7 +64,8 @@ defmodule App.Operation.DeleteTeam do
     {"template_tags", "template_id", "templates"},
     {"certificate_files", "certificate_id", "certificates"},
     {"pass_registrations", "member_card_id", "member_cards"},
-    {"report_versions", "report_id", "reports"}
+    {"report_versions", "report_id", "reports"},
+    {"outbox_attachments", "outbox_message_id", "outbox_messages"}
   ]
 
   @doc false

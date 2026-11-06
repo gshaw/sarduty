@@ -6,7 +6,9 @@ Email and texts SAR Duty keeps instead of sending, as `App.Model.OutboxMessage` 
   keeps any email marked with a demo team (`Mailer.for_team/2`) in the team's Outbox,
   on every server. The demo's banner links it, at `/teams/:subdomain/outbox`. Each
   message shows like the email previews, with From, To, Subject and Date above it, and
-  its links live, so a reminder's reply link works as it would for the member.
+  its links live, so a reminder's reply link works as it would for the member. Its
+  attachments are kept too (`App.Model.OutboxAttachment`) and listed under Attached: a
+  tax credit letter's PDF opens in the browser, and a wallet pass downloads.
 - **Everything in dev.** Email goes through `App.Adapter.Outbox` unless
   `DEV_SEND_EMAIL=true` sets Cloudflare's adapter, and `App.Adapter.Twilio` keeps a text
   unless `DEV_SEND_SMS=true`. Login codes land there. `/dev/outbox` shows them all,

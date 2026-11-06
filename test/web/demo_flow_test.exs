@@ -331,6 +331,44 @@ defmodule Web.DemoFlowTest do
     assert has_element?(lv, ~s|#outbox-body a[href="https://sarduty.com/replies/abc"]|)
   end
 
+  test "an email's attachment opens from its Outbox page; another demo's is a 404", %{
+    conn: conn
+  } do
+    %{user: user, team: team} = built_demo()
+    conn = log_in_user(conn, user)
+
+    message =
+      [to: {"Cameron Ruiz", "cameron@example.com"}, subject: "2025 letter", text_body: "Hi"]
+      |> Swoosh.Email.new()
+      |> Swoosh.Email.attachment(
+        Swoosh.Attachment.new({:data, "%PDF-1.7"},
+          filename: "letter.pdf",
+          content_type: "application/pdf"
+        )
+      )
+      |> OutboxMessage.add_email!(team.id)
+
+    [attachment] = message.attachments
+    path = ~p"/teams/#{team}/outbox/#{message.id}/attachments/#{attachment.id}"
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/outbox/#{message.id}")
+    assert has_element?(lv, ~s|#outbox-attachment-#{attachment.id}[href="#{path}"]|, "letter.pdf")
+
+    conn = get(conn, path)
+    assert conn.resp_body == "%PDF-1.7"
+    assert get_resp_header(conn, "content-type") == ["application/pdf"]
+    assert get_resp_header(conn, "content-disposition") == [~s(inline; filename="letter.pdf")]
+
+    %{team: other} = built_demo()
+    theirs = email!(other, "Theirs")
+
+    assert_raise Web.Status.NotFound, fn ->
+      conn
+      |> recycle()
+      |> get(~p"/teams/#{team}/outbox/#{theirs.id}/attachments/#{attachment.id}")
+    end
+  end
+
   test "another demo's message 404s in this demo's Outbox", %{conn: conn} do
     %{user: user, team: team} = built_demo()
     %{team: other} = built_demo()
