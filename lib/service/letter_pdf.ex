@@ -44,7 +44,7 @@ defmodule Service.PDFLetter do
     temp_path
   end
 
-  # A Try a demo team's letter (#857) says SAMPLE corner to corner, over everything in
+  # A Try a demo team's letter (#857) says SAMPLE from top left to bottom right, over all, in
   # translucent red, so the text under it reads but no part of a printed copy can pass
   # as real, in colour or black and white. The library can't rotate or fade text, so
   # it's a picture with transparency, made by tools/sample-mark.py.

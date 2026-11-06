@@ -84,7 +84,7 @@ end it.
 - **Cards and letters say Sample.** A visitor can add a member with their own name and
   photo, so the verify site must never call a demo's card or letter real. Both get the
   Sample band from #854 on verify, wallet passes say "Sample card" and "Sample, not real
-  ID", and letter PDFs have SAMPLE corner to corner over the page, in translucent red
+  ID", and letter PDFs have SAMPLE from the top left corner to the bottom right, in translucent red
   (`tools/sample-mark.py` makes the picture).
 - **No Access key tab.** Its key is SAR Duty's, and a real key pasted there would turn
   the copy into a real team. The page is a 404.
