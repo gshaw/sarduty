@@ -27,6 +27,7 @@ defmodule App.Model.Event do
     verify_limit_reached: 90,
     team_signup_failed: 90,
     integration_tested: 90,
+    demo_deleted: 90,
     team_signed_up: 730,
     team_deleted: 730,
     team_key_changed: 730,

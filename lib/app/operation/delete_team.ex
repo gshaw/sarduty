@@ -94,11 +94,12 @@ defmodule App.Operation.DeleteTeam do
 
   @doc """
   Deletes the team and every row SAR Duty holds for it, cancels its waiting jobs, and
-  records a `team_deleted` event, in one transaction; then removes its logo. A team on
+  records a `team_deleted` event (`demo_deleted` for a Try a demo team, #857, kept 90
+  days, since there are many and they hold nothing real), in one transaction; then removes its logo. A team on
   SAR Duty Records is deleted there first, after the snapshot, so a refusal deletes
   nothing.
 
-  - `reason:` why, kept in the event: `:admin`
+  - `reason:` why, kept in the event: `:admin`, or `:demo`
   - `by:` the user who deleted it, or nil
   - `snapshot:` true copies the team's rows first (nil when no directory is set, as in
     tests)
@@ -133,7 +134,7 @@ defmodule App.Operation.DeleteTeam do
         delete_rows(team)
         cancel_jobs(team)
 
-        Event.record!(:team_deleted,
+        Event.record!(event_kind(reason),
           user_id: by && by.id,
           data: %{
             reason: reason,
@@ -150,6 +151,9 @@ defmodule App.Operation.DeleteTeam do
     Logger.info("Deleted team #{team.id} (#{team.subdomain}), #{reason}; snapshot #{snapshot}")
     {:ok, %{rows: rows, snapshot: snapshot}}
   end
+
+  defp event_kind(:demo), do: :demo_deleted
+  defp event_kind(_reason), do: :team_deleted
 
   @doc "Rows that go with the team, per table, leaving out tables with none."
   def row_counts(%Team{id: team_id}) do
