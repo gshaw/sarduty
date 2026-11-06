@@ -78,7 +78,8 @@ defmodule Service.Typst do
         env: Enum.map(without_environment(), fn {name, nil} -> {to_charlist(name), false} end)
       ])
 
-    {:os_pid, os_pid} = Port.info(port, :os_pid)
+    # nil when Typst has already exited, as `--version` can before this line.
+    os_pid = with {:os_pid, pid} <- Port.info(port, :os_pid), do: pid
     deadline = System.monotonic_time(:millisecond) + @timeout_ms
     collect(port, os_pid, deadline, [])
   end
@@ -98,7 +99,9 @@ defmodule Service.Typst do
          "Typst stopped with status #{status}: #{acc |> IO.iodata_to_binary() |> String.trim()}"}
     after
       left ->
-        System.cmd("kill", ["-9", Integer.to_string(os_pid)], env: without_environment())
+        if os_pid,
+          do: System.cmd("kill", ["-9", Integer.to_string(os_pid)], env: without_environment())
+
         if Port.info(port), do: Port.close(port)
         {:error, "Typst took longer than #{div(@timeout_ms, 1000)} seconds and was stopped"}
     end
