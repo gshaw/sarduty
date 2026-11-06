@@ -257,11 +257,12 @@ defmodule Web.DemoFlowTest do
     GenServer.stop(lv.pid)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
-    refute has_element?(lv, "#demo-outbox.btn-primary")
+    refute has_element?(lv, "#demo-outbox-new")
 
     new = email!(team, "Will you be there? Training night")
     OutboxMessage.add_text!("+16045550199", "A text", team.id)
-    assert has_element?(lv, "#demo-outbox.btn-primary #demo-outbox-new", "2 new")
+    assert has_element?(lv, "#demo-outbox #demo-outbox-new.badge-warning", "2")
+    refute has_element?(lv, "#demo-outbox.btn-primary")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/outbox")
     refute has_element?(lv, "#demo-outbox-new")

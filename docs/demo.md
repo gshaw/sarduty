@@ -37,8 +37,9 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    again. A visitor's 3 days count from here.
 4. **The banner.** Every page of a demo team has it, for team admins, where View as puts
    its own: when it goes, its link to copy, its Outbox, and Delete this demo. The
-   Outbox button turns blue with "4 new" while anything arrived since the visitor last
-   opened it (`DemoTeam.outbox_seen!/2`), and is plain otherwise. The banner scrolls
+   Outbox button counts what arrived since the visitor last opened it
+   (`DemoTeam.outbox_seen!/2`), an amber number after the label as tabs show one, and
+   has none otherwise. The banner scrolls
    away, so mail arriving also gets a toast under the top bar, on every page but the
    Outbox: "3 emails and 1 text arrived in your Outbox." with a link to it. The
    banner's hook in `Web.UserAuth` waits a second after the first message, so a burst

@@ -36,6 +36,16 @@
     <li><strong>Danger</strong>: deletes or removes. Ask first when it cannot be undone.</li>
     <li><strong>Link</strong>: a quiet action inside text or beside other buttons.</li>
   </ul>
+  <p>
+    A button that opens a list can count what waits there, as <a href={page_path(:tabs)}>tabs</a>
+    do: a <code>&lt;.badge kind=&#123;:warning&#125;&gt;</code>
+    after the label, only while there is something, such as a demo's Outbox with new mail. The
+    button keeps its own kind.
+  </p>
+
+  <div class="demo">
+    <.button>Outbox<.badge kind={:warning}>4</.badge></.button>
+  </div>
 
   <h2>When not to use</h2>
   <ul>

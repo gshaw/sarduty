@@ -158,7 +158,7 @@ defmodule Web.Layouts do
   attr :team, :map, required: true
 
   # On every page of a Try a demo team (#857), where View as puts its own: whose it is,
-  # when it goes, its link, its Outbox, blue with a count while anything in it is new.
+  # when it goes, its link, its Outbox, with a count after it of what's new, as tabs show one.
   # Delete this demo asks first.
   defp demo_banner(assigns) do
     ~H"""
@@ -179,18 +179,9 @@ defmodule Web.Layouts do
         />
       </p>
       <div class="flex flex-wrap items-center gap-2">
-        <.button
-          :if={@demo.new > 0}
-          id="demo-outbox"
-          variant={:primary}
-          navigate={@demo.outbox_path}
-        >
-          Outbox
-          <.badge id="demo-outbox-new">
-            {Service.Format.count(@demo.new, one: "%d new", many: "%d new")}
-          </.badge>
+        <.button id="demo-outbox" navigate={@demo.outbox_path}>
+          Outbox<.badge :if={@demo.new > 0} id="demo-outbox-new" kind={:warning}>{@demo.new}</.badge>
         </.button>
-        <.button :if={@demo.new == 0} id="demo-outbox" navigate={@demo.outbox_path}>Outbox</.button>
         <.button
           id="demo-delete"
           variant={:danger}
