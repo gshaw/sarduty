@@ -211,7 +211,7 @@ defmodule Web.ActivityEquipmentLive do
         id={"usage-hours-#{@usage.id}"}
         name="hours"
         value={Service.Convert.duration_text(@usage.minutes)}
-        size="7"
+        size="10"
         autocomplete="off"
         phx-mounted={JS.focus()}
         aria-label={"Hours for #{@usage.equipment_item.title}, like 45m, 2h, or 2.5h"}
