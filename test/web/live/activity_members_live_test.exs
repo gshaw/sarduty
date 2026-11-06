@@ -509,14 +509,23 @@ defmodule Web.ActivityMembersLiveTest do
       assert_patch(lv, path(ctx) <> "?status=no-reply&q=oka")
       assert has_element?(lv, "#member-row-#{ctx.riley.id}")
       refute has_element?(lv, "#member-row-#{ctx.cameron.id}")
-      assert has_element?(lv, "#members-filter-summary", "1 of 5 members")
+      # Counted against the tile: 1 of the 2 with no reply.
+      assert has_element?(lv, "#members-filter-summary", "1 of 2 members")
       assert has_element?(lv, "#members-tile-no-reply", "2")
       assert has_element?(lv, "#members-change-send", "Mark 1 absent")
 
       search(lv, "nobody")
       assert has_element?(lv, "#members-none-shown", "No members match")
-      assert has_element?(lv, "#members-none-shown", "Change the filters.")
+      assert has_element?(lv, "#members-none-shown", "Change the search or the filters.")
+      refute has_element?(lv, "#members-search-all")
       refute has_element?(lv, "#members-change-form")
+
+      # Casey attended: the empty state says where, and Search all members keeps the search.
+      search(lv, "casey")
+      assert has_element?(lv, "#members-none-shown", "Casey Dhillon is in Attended.")
+      lv |> element("#members-search-all") |> render_click()
+      assert_patch(lv, path(ctx) <> "?q=casey")
+      assert has_element?(lv, "#member-row-#{ctx.casey.id}")
     end
 
     test "select all is in the header, over only the rows shown", ctx do
@@ -587,6 +596,21 @@ defmodule Web.ActivityMembersLiveTest do
       assert has_element?(lv, "#member-asked-#{ctx.casey.id}", "Asked")
       assert has_element?(lv, "#member-row-#{ctx.casey.id} .marker-signed-up", "Signed up")
     end
+  end
+
+  test "elsewhere_text/2 names one match, and counts more" do
+    row = fn name -> %Attendance{member: %App.Model.Member{name: name}} end
+
+    by_status = [
+      {"attending", [row.("Avery Chen"), row.("Blake Morrison"), row.("Casey Dhillon")]},
+      {"absent", [row.("Drew Patel")]}
+    ]
+
+    assert Web.ActivityMembersLive.elsewhere_text(by_status, false) ==
+             "3 match in Signed up. Drew Patel is in Can't make it."
+
+    assert Web.ActivityMembersLive.elsewhere_text([{"absent", [row.("Drew Patel")]}], true) ==
+             "Drew Patel is in Absent."
   end
 
   # The list by writing.md's Choices for checked rows (#920 I): one heading, the Actions

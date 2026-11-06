@@ -387,6 +387,7 @@ defmodule Web.ActivityMembersLive do
             as: "form"
           ),
         filter_count: filter_count(shown, assigns),
+        elsewhere: elsewhere(shown, assigns),
         tiles: tiles(assigns),
         timezone: assigns.team.timezone,
         ctx: ctx,
@@ -469,7 +470,17 @@ defmodule Web.ActivityMembersLive do
         id="members-none-shown"
         title="No members match"
       >
-        Change the filters.
+        {cond do
+          @elsewhere != [] -> elsewhere_text(@elsewhere, @started?)
+          @filter.q -> "Change the search or the filters."
+          true -> "Change the filters."
+        end}
+        <:action :if={@elsewhere != []}>
+          <.a
+            id="members-search-all"
+            patch={members_path(@team, @activity, %{@filter | status: nil})}
+          >Search all members</.a>
+        </:action>
       </.empty_state>
       <.form
         :if={@changeable? and @shown != []}
@@ -556,6 +567,31 @@ defmodule Web.ActivityMembersLive do
           text: Reply.status_text(status, started?)
         }
       end
+  end
+
+  # With a tile picked and nothing shown, the search's matches in the other tiles, by
+  # tile: where to look instead. None with no search.
+  defp elsewhere([], %{filter: %{status: status, q: q}} = assigns)
+       when status != nil and q != nil do
+    assigns.members
+    |> ActivityMembers.shown(assigns.group_ids, nil, q)
+    |> Enum.group_by(& &1.status)
+    |> Enum.sort_by(fn {status, _rows} ->
+      Enum.find_index(ActivityMembers.statuses(), &(&1 == status))
+    end)
+  end
+
+  defp elsewhere(_shown, _assigns), do: []
+
+  @doc """
+  Where a search's matches are when the tile shows none, a sentence per tile: "Drew Patel
+  is in Can't make it." for one, "3 match in Signed up." for more. Pure.
+  """
+  def elsewhere_text(by_status, started?) do
+    Enum.map_join(by_status, " ", fn
+      {status, [row]} -> "#{row.member.name} is in #{Reply.status_text(status, started?)}."
+      {status, rows} -> "#{length(rows)} match in #{Reply.status_text(status, started?)}."
+    end)
   end
 
   # A chip's path: the filter with that one option taken off.
@@ -727,9 +763,15 @@ defmodule Web.ActivityMembersLive do
     """
   end
 
-  # "13 members", or with a group or a search "3 of 13 members, in Team leaders".
+  # "13 members", or with a group or a search, out of the tile's "3 of 13 members, in Team leaders".
+  # Counted against the tile, before Group and the search: "0 of 4 members" on No reply.
   defp filter_count(shown, %{members: members, filter: filter, groups: groups}) do
-    all = members |> length() |> Format.count(one: "%d member", many: "%d members")
+    all =
+      members
+      |> ActivityMembers.only(ActivityMembersFilterViewModel.d4h_status(filter))
+      |> length()
+      |> Format.count(one: "%d member", many: "%d members")
+
     group = Enum.find_value(groups, fn {title, id} -> id == filter.group && title end)
 
     cond do
