@@ -279,6 +279,9 @@ fi
 - Buttons are `<.button variant={:success} size={:sm}>`; give it `navigate` or `href` for a
   link styled as a button. Badges are `<.badge kind={:incident}>`. Both check their values
   at compile time, so never write `class="btn btn-success"` or `class="badge"` by hand.
+- **A confirm for many records follows /styles/confirm-dialog#many**: name up to 3, then
+  a count and a total, and a check box from 10. The helpers are `names_or_count/2` and
+  `confirm_check/2` in `Web.Components.Messages`.
 - Phoenix hazards that are easy to trip on:
   - HEEx interpolates with `{…}` in attributes and bodies, and `<%= … %>` only for block
     constructs (`if`, `case`, `for`). Class lists use `[…]`. There is no `else if`; use
