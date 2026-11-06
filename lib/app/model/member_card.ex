@@ -73,6 +73,24 @@ defmodule App.Model.MemberCard do
   end
 
   @doc """
+  Each member's live card on the team, for reports: `member_id`, `code` as printed (the
+  SQL twin of `format_code/1`), and `issued_at`.
+  """
+  def live_query(%Team{} = team) do
+    half = div(@code_length, 2)
+
+    from(c in MemberCard,
+      where: c.team_id == ^team.id and is_nil(c.revoked_at),
+      select: %{
+        member_id: c.member_id,
+        code:
+          fragment("substr(?, 1, ?) || '-' || substr(?, ?)", c.code, ^half, c.code, ^(half + 1)),
+        issued_at: c.inserted_at
+      }
+    )
+  end
+
+  @doc """
   What someone typed or scanned, reduced to a stored code, or nil when it can't be one.
   Case, spaces and dashes don't matter.
   """

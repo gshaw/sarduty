@@ -85,6 +85,17 @@ public documentation. The page and the JSON share
 - **No key, no CORS header.** It reads only what a card's holder already shows anyone.
   Desktop and phone apps don't need CORS; add it only when a web app asks.
 
+## In reports
+
+Team admins on a team with ID cards can add three member fields to a report (Andrew,
+2026-11-06): `id_card`, the code as printed; `id_card_link`, the card's page on the verify
+site, in lowercase (only the QR's copy is in capitals, to keep it small); and
+`id_card_issued`. Each reads the member's live card from `MemberCard.live_query/1`, and is
+blank with none, so a cancelled card never shows. It's for printing cards and loading
+codes into another app, such as SCA. A copied code goes stale when a card is replaced, and
+an app that matches it offline skips the Active check. There is no expiry field: Valid
+until is the team's, not the card's ([Valid until](#valid-until)).
+
 ## Sample cards
 
 `verify.sarduty.com/samples` ([VerifySamplesLive](../lib/web/live/verify_samples_live.ex))

@@ -24,6 +24,7 @@ defmodule App.Report.Catalog do
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.Member
+  alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
   alias App.Model.Qualification
   alias App.Model.Standing
@@ -90,7 +91,7 @@ defmodule App.Report.Catalog do
       one: "member",
       many: "members",
       source: &members/1,
-      fields: member_fields()
+      fields: member_fields() ++ id_card_fields()
     }
   end
 
@@ -378,6 +379,23 @@ defmodule App.Report.Catalog do
       }
     ] ++ for(field <- team_admin_fields(), do: %{field | shown: &team_admin?/1})
   end
+
+  # The member's live card, as their ID Card tab shows it: blank with none. For printing
+  # cards and loading codes into other apps.
+  defp id_card_fields do
+    for field <- [
+          text(:id_card, "ID card", "The code printed on their ID card, as K7Q4-M2XA."),
+          %{
+            text(:id_card_link, "ID card link", "The page their ID card's QR code opens.")
+            | cell: :link
+          },
+          %{date(:id_card_issued, "ID card issued") | about: "When their ID card was issued."}
+        ],
+        do: %{field | shown: &id_cards?/1}
+  end
+
+  defp id_cards?(%Context{team: team} = context),
+    do: team.id_cards_enabled and team_admin?(context)
 
   # Team admins' own records, which a member's Members has never filtered by (#440), and
   # contact details, which members never see of each other (#827).
@@ -723,7 +741,10 @@ defmodule App.Report.Catalog do
         standing: [:standing],
         groups: [:groups],
         qualifications: [:awards],
-        last_attended: [:last]
+        last_attended: [:last],
+        id_card: [:card],
+        id_card_link: [:card],
+        id_card_issued: [:card]
       },
       fields: %{
         id: dynamic([m], m.id),
@@ -742,6 +763,10 @@ defmodule App.Report.Catalog do
         email: dynamic([m], m.email),
         mobile: dynamic([m], m.phone),
         address: dynamic([m], m.address),
+        id_card: dynamic([card: c], c.code),
+        id_card_link:
+          dynamic([card: c], fragment("? || '/' || ?", ^Web.VerifyHost.url(), c.code)),
+        id_card_issued: dynamic([card: c], c.issued_at),
         custom_values: dynamic([m], m.custom_values)
       }
     }
@@ -778,6 +803,11 @@ defmodule App.Report.Catalog do
           on: l.member_id == m.id
         ),
       groups: &join(&1, :left, [m], g in subquery(groups), as: :groups, on: g.member_id == m.id),
+      card:
+        &join(&1, :left, [m], c in subquery(MemberCard.live_query(team)),
+          as: :card,
+          on: c.member_id == m.id
+        ),
       awards:
         &join(&1, :left, [m], q in subquery(qualifications), as: :awards, on: q.member_id == m.id)
     }
