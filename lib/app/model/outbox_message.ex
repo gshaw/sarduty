@@ -121,7 +121,14 @@ defmodule App.Model.OutboxMessage do
   defp attachment_heads do
     from(a in OutboxAttachment,
       order_by: a.position,
-      select: struct(a, [:id, :outbox_message_id, :position, :filename, :content_type])
+      select: %OutboxAttachment{
+        id: a.id,
+        outbox_message_id: a.outbox_message_id,
+        position: a.position,
+        filename: a.filename,
+        content_type: a.content_type,
+        size: fragment("length(?)", a.data)
+      }
     )
   end
 

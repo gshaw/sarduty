@@ -9,6 +9,7 @@ defmodule App.OutboxTest do
   alias App.Adapter.Twilio
   alias App.Mailer
   alias App.Model.OutboxMessage
+  alias Web.Components.EmailPreview
 
   test "the adapter keeps an email, with its team and attachments" do
     team = team_fixture()
@@ -73,10 +74,11 @@ defmodule App.OutboxTest do
   end
 
   test "a message's text keeps its links apart" do
-    assert Web.Components.Outbox.split_links("Reply: https://sarduty.com/r/abc\nThanks") == [
-             {:text, "Reply: "},
-             {:link, "https://sarduty.com/r/abc"},
-             {:text, "\nThanks"}
-           ]
+    assert EmailPreview.split_links("Reply: https://sarduty.com/r/abc\nThanks") ==
+             [
+               {:text, "Reply: "},
+               {:link, "https://sarduty.com/r/abc"},
+               {:text, "\nThanks"}
+             ]
   end
 end

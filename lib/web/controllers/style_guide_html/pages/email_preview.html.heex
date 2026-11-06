@@ -1,6 +1,6 @@
 <.shell current={:email_preview}>
   <h1>Email preview</h1>
-  <p class="lead">An email as members get it, before it's sent.</p>
+  <p class="lead">An email or text as members get it.</p>
 
   <div class="demo">
     <.email_preview
@@ -14,15 +14,44 @@
   <p>
     On a page that sends an email a team admin writes or picks, such as Send a reminder and Send an update, above the send button. It shows the email as it goes, message and all, so nobody sends what they haven't read.
   </p>
+  <p>
+    In an Outbox, for an email or text already kept: a demo's, and dev's at /dev/outbox. It gets a mail app's header, From, To, Subject and Date, is wider, and its links work, so a reminder's reply link answers as the member.
+  </p>
+
+  <div class="demo">
+    <.email_preview
+      id="email-preview-sent"
+      width={:wide}
+      from={sample_letter_email().from}
+      to={sample_letter_email().to}
+      subject={sample_letter_email().subject}
+      date={sample_letter_email().date}
+      text={sample_letter_email().text}
+      attachments={sample_letter_email().attachments}
+    />
+  </div>
+
+  <h2>Attachments</h2>
+  <p>
+    Each file is a tile at the foot of the email, with the file icon, its name, and its size, as a mail app shows one: big enough that nobody misses the letter or the wallet pass. In an Outbox a tile opens the file, a PDF in a new tab; before sending it is only shown.
+  </p>
 
   <h2>When not to use</h2>
   <p>
-    For an email SAR Duty sends by itself, such as a login code. Nobody chooses to send those.
+    For an email SAR Duty sends by itself, such as a login code, on the page that sends it. Nobody chooses to send those.
   </p>
 
   <h2>In the app</h2>
   <p>
     <code>&lt;.email_preview subject=&#123;…&#125; html=&#123;…&#125; /&gt;</code>
     takes the subject and HTML from the mailer's own preview function, such as <code>ActivityMailer.update_preview/5</code>, so it can't drift from what's sent. Its links go nowhere, and it is inert. It is a phone's width, 375px, so the sender sees whether the email's buttons fit on the first screen. Its text has no colour of its own, so it follows the page, light or dark, as a mail app does.
+  </p>
+  <p>
+    For a kept message, give it <code>from</code>, <code>to</code>, and <code>date</code>
+    for the header, <code>text</code>
+    when there is no HTML, <code>attachments</code>
+    as maps of <code>id</code>, <code>name</code>, <code>size</code>, and <code>href</code>,
+    <code>live</code>
+    for working links, and <code>width=&#123;:wide&#125;</code>. A text has no subject.
   </p>
 </.shell>

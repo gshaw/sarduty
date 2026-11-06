@@ -1,11 +1,29 @@
-/* A reminder email as members get it, on Send reminders (#608): the mailer's own HTML.
-   Its text has no colour of its own, so it follows the page, light or dark, as a mail
-   app does. It is a phone's width, with a phone mail app's margin, so a team admin sees
-   whether their message pushes the buttons below the first screen (#609). */
+/* An email as members get it (/styles/email-preview): before it's sent, on Send a
+   reminder (#608), and after, in a demo's Outbox (#857). Its text has no colour of its
+   own, so it follows the page, light or dark, as a mail app does. At a phone's width,
+   with a phone mail app's margin, a team admin sees whether their message pushes the
+   buttons below the first screen (#609); the Outbox is wider. */
 .email-preview { max-width: 375px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.email-preview-wide { max-width: 40rem; }
 .email-preview-subject { margin: 0; padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border-subtle); background: var(--surface-alt); }
 .email-preview-subject .hint { margin-right: var(--sp-2); }
+
+/* A mail app's header: From, To, Subject, Date. */
+.email-preview-head { display: grid; grid-template-columns: auto 1fr; gap: var(--sp-1) var(--sp-3); margin: 0; padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border-subtle); background: var(--surface-alt); }
+.email-preview-head dt { color: var(--text-muted); }
+.email-preview-head dd { margin: 0; overflow-wrap: anywhere; }
+
 .email-preview-body { padding: var(--sp-4); }
 .email-preview-body a { color: var(--link); text-decoration: underline; }
 /* Mail apps make a heading bold; the app's reset does not. */
 .email-preview-body h1 { font-weight: 700; line-height: 1.25; }
+
+/* Attachments at the foot, as a mail app shows them: a tile per file, big enough to see
+   and tap, with its icon, name, and size. */
+.email-preview-attachments { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin: 0; padding: var(--sp-4); border-top: 1px solid var(--border-subtle); list-style: none; }
+.email-attachment { min-width: 14rem; max-width: 100%; padding: var(--sp-3) var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-alt); color: var(--text); text-decoration: none; }
+.email-attachment > .icon { flex: none; color: var(--text-muted); }
+.email-attachment-name { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.email-attachment .hint { display: block; }
+a.email-attachment:hover { border-color: var(--link); }
+a.email-attachment:hover .email-attachment-name { color: var(--link); text-decoration: underline; }

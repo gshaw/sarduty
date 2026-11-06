@@ -11,6 +11,7 @@ defmodule App.Model.OutboxAttachment do
     field :filename, :string, redact: true
     field :content_type, :string
     field :data, :binary, redact: true
+    field :size, :integer, virtual: true
   end
 
   @doc "The attachments of a Swoosh email, in order, ready to insert with its message."

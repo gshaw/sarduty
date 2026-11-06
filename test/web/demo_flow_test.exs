@@ -328,7 +328,7 @@ defmodule Web.DemoFlowTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/outbox/#{text.id}")
     assert has_element?(lv, "#outbox-from", "SAR Duty")
-    assert has_element?(lv, ~s|#outbox-body a[href="https://sarduty.com/replies/abc"]|)
+    assert has_element?(lv, ~s|#outbox-text a[href="https://sarduty.com/replies/abc"]|)
   end
 
   test "an email's attachment opens from its Outbox page; another demo's is a 404", %{

@@ -86,7 +86,7 @@ defmodule Web.StyleGuideHTML do
          {:detail_list, "Detail list", "Key facts about one record."},
          {:duration_input, "Duration input", "How long something takes, typed as people say it."},
          {:email, "Email", "An email address to reach someone by, with a copy button."},
-         {:email_preview, "Email preview", "An email as members get it, before it's sent."},
+         {:email_preview, "Email preview", "An email or text as members get it."},
          {:empty_state, "Empty state", "Why a list is empty and what to do."},
          {:error_summary, "Error summary", "What to fix in a form after a failed save."},
          {:file_drop, "File drop", "Drop, paste, or select a file to upload."},
@@ -245,7 +245,7 @@ defmodule Web.StyleGuideHTML do
       {"search", "Search, in the top bar and a filter bar"},
       {"funnel", "Filters, on a filter bar"},
       {"upload", "Drop a file, in a file drop"},
-      {"file", "A file in a file drop that is not a photo"},
+      {"file", "A file in a file drop that is not a photo, and an email's attachment"},
       {"calendar-plus", "Add to calendar, in the arrow's place"},
       {"map-pin", "Open in Google Maps or Apple Maps, in the arrow's place"},
       {"clock", "Hours milestones"},
@@ -419,6 +419,20 @@ defmodule Web.StyleGuideHTML do
       "Bring your harness and helmet. We meet at the Murrin Park lot, not the hall.",
       :signed_up
     )
+  end
+
+  @doc "A sent tax credit letter's email, for the Outbox form of the email preview."
+  def sample_letter_email do
+    %{
+      from: "SAR Duty <noreply@sarduty.com>",
+      to: "Cameron Ruiz <cameron.ruiz@example.com>",
+      subject: "2025 SRVTC tax credit letter for Cameron Ruiz",
+      date: "Nov 6, 10:04:12",
+      text: "Hi Cameron,\n\nYour 2025 tax credit letter from Coast Range SAR is attached.",
+      attachments: [
+        %{id: 1, name: "coast-range-sar-2025-cameron-ruiz.pdf", size: 48_200, href: nil}
+      ]
+    }
   end
 
   defdelegate panel_activity(), to: SampleData
