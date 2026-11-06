@@ -59,6 +59,8 @@ defmodule App.Operation.IssueEveryMemberCard do
   def call(%Team{every_member_card: true, id_cards_enabled: true} = team, now) do
     members = waiting(team, now)
 
+    # No replace: a member already waiting keeps their slot. Only a click on the ID Card
+    # tab moves a waiting job to now (SendMemberCard).
     members
     |> schedule()
     |> Enum.each(fn {member, seconds} ->

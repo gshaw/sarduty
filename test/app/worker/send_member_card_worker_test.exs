@@ -4,7 +4,9 @@ defmodule App.Worker.SendMemberCardWorkerTest do
 
   import App.DataFixtures
 
+  alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Operation.IssueEveryMemberCard
   alias App.Operation.SendMemberCard
   alias App.Worker.SendMemberCardWorker
 
@@ -105,6 +107,38 @@ defmodule App.Worker.SendMemberCardWorkerTest do
       assert [%Oban.Job{state: "scheduled"}] =
                all_enqueued(worker: SendMemberCardWorker, args: %{member_id: member.id})
     end)
+  end
+
+  # Only a click replaces a waiting job's time. A refresh during the rollout lines the
+  # members up again, but each keeps the slot it had.
+  test "a second rollout keeps each waiting job's slot, and only adds the new member's",
+       %{team: team} do
+    member_fixture(team, %{name: "Blake Morrison"})
+    member_fixture(team, %{name: "Jordan Lee"})
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert IssueEveryMemberCard.call(team, DateTime.utc_now()) == 3
+      first = slots()
+      assert Map.keys(first) == ["Blake Morrison", "Cameron Ruiz", "Jordan Lee"]
+      gap = fn a, b -> DateTime.diff(first[b], first[a]) end
+      assert gap.("Blake Morrison", "Cameron Ruiz") == 5
+      assert gap.("Cameron Ruiz", "Jordan Lee") == 5
+
+      # Avery sorts first, so this run asks for every slot 5 seconds later than before.
+      member_fixture(team, %{name: "Avery Chen"})
+      assert IssueEveryMemberCard.call(team, DateTime.utc_now()) == 4
+
+      second = slots()
+      assert Map.take(second, Map.keys(first)) == first
+      assert Map.has_key?(second, "Avery Chen")
+    end)
+  end
+
+  # Each waiting job's scheduled_at, by member name.
+  defp slots do
+    for job <- Repo.all(Oban.Job), into: %{} do
+      {Repo.get!(Member, job.args["member_id"]).name, job.scheduled_at}
+    end
   end
 
   # A click joins the member's waiting job (unique), so it moves that job to now (#893).
