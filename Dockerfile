@@ -1,4 +1,4 @@
-# cspell:ignore rebar trixie libvips
+# cspell:ignore rebar trixie libvips musl esac
 
 # Debian rather than Alpine, to avoid DNS resolution issues in production.
 # Keep the versions in step with .mise.toml. Image tags:
@@ -12,6 +12,29 @@ ARG DEBIAN_VERSION=trixie-20261020-slim
 
 ARG BUILDER_IMAGE="docker.io/hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="docker.io/debian:${DEBIAN_VERSION}"
+
+# Typst makes tax credit letters (#918): the release's static build, checked against its
+# checksum. Keep TYPST_VERSION in step with .mise.toml and Service.Typst.
+FROM ${RUNNER_IMAGE} AS typst
+
+ARG TYPST_VERSION=0.15.1
+ARG TARGETARCH
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates curl xz-utils \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN case "${TARGETARCH:-amd64}" in \
+    amd64) arch=x86_64 sha=a6d077d0a95eed5a2eba715b2dae06be954f624ccbf85758a03f389ded33118c ;; \
+    arm64) arch=aarch64 sha=5aa8d74a3d906e60ea12a66ac2f37f8eef1b14cbad7182a745e393a10c23dcee ;; \
+    *) echo "No Typst build for ${TARGETARCH}" >&2; exit 1 ;; \
+  esac \
+  && curl -fsSL -o /tmp/typst.tar.xz \
+    "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-${arch}-unknown-linux-musl.tar.xz" \
+  && echo "${sha}  /tmp/typst.tar.xz" | sha256sum -c - \
+  && tar -xJf /tmp/typst.tar.xz -C /tmp \
+  && install -m 755 "/tmp/typst-${arch}-unknown-linux-musl/typst" /usr/local/bin/typst \
+  && typst --version
 
 FROM ${BUILDER_IMAGE} AS builder
 
@@ -76,6 +99,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=docker.io/litestream/litestream:0.5.17 /usr/local/bin/litestream /usr/local/bin/litestream
+COPY --from=typst /usr/local/bin/typst /usr/local/bin/typst
 
 # Debian's built-in UTF-8 locale; the BEAM needs UTF-8 for filenames and I/O
 ENV LANG=C.UTF-8

@@ -13,7 +13,7 @@ defmodule Web.Admin.IntegrationsLive do
   # outcome. The three that need an answer, where an email or a text goes and which
   # team's key, ask it in a dialog first. A service this server doesn't have says Not set
   # up here and offers no test. The Wallet tests are links to
-  # Web.Admin.IntegrationPassController.
+  # Web.Admin.IntegrationPassController, and so is the Typst test letter (#918).
   @asks ["email", "texts", "d4h"]
   @runs ["website", "jobs", "backups", "email", "texts", "errors", "d4h", "maps", "health"]
 
@@ -53,7 +53,9 @@ defmodule Web.Admin.IntegrationsLive do
          {"jobs", "Background jobs", "Oban, #{length(IntegrationTestWorker.queues())} queues",
           "Reminders, emails, passes, and the D4H sync and refresh"},
          {"backups", "Backups", "Litestream to R2",
-          "A copy of the database, kept up to the second"}
+          "A copy of the database, kept up to the second"},
+         {"typst", "Letters", "Typst #{Service.Typst.version()}",
+          "Tax credit letter PDFs, once #918 moves them to Typst"}
        ]},
       {"Services",
        [
@@ -197,6 +199,14 @@ defmodule Web.Admin.IntegrationsLive do
     ~H"""
     <.button id="test-apple" size={:sm} href={~p"/admin/integrations/apple-pass"}>
       Download test pass
+    </.button>
+    """
+  end
+
+  defp test_button(%{key: "typst"} = assigns) do
+    ~H"""
+    <.button id="test-typst" size={:sm} href={~p"/admin/integrations/typst-letter"}>
+      Download test letter
     </.button>
     """
   end

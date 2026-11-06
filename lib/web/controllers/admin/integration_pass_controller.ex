@@ -18,6 +18,20 @@ defmodule Web.Admin.IntegrationPassController do
     end
   end
 
+  # Step 0 of #918: the test letter Typst made, locked, to open and look at.
+  def typst_letter(conn, _params) do
+    case TestIntegration.call("typst", %{}, conn.assigns.current_user) do
+      {:ok, _outcome, _message, pdf} ->
+        send_download(conn, {:binary, pdf},
+          filename: "sarduty-typst-test.pdf",
+          content_type: "application/pdf"
+        )
+
+      {:error, _outcome, message} ->
+        conn |> put_flash(:error, message) |> redirect(to: ~p"/admin/integrations")
+    end
+  end
+
   def google_pass(conn, _params) do
     case TestIntegration.call("google", %{}, conn.assigns.current_user) do
       {:ok, _outcome, _message, url} ->
