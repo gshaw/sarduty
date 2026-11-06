@@ -237,6 +237,11 @@ defmodule Web.ActivityEquipmentLive do
     do: EquipmentItem.takes_hours?(item) or EquipmentItem.takes_km?(item)
 
   @doc "What a usage counted: hours for equipment, km for a vehicle, a count for a supply."
+  # A vehicle shows its km even when D4H holds minutes for it too, as Change edits the km.
+  def amount(%EquipmentUsage{equipment_item: %EquipmentItem{item_type: "vehicle"}, distance: km})
+      when is_integer(km) and km > 0,
+      do: Service.Format.km(km)
+
   def amount(%EquipmentUsage{minutes: minutes}) when is_integer(minutes) and minutes > 0,
     do: Service.Format.duration(minutes)
 

@@ -317,6 +317,13 @@ defmodule Web.EquipmentLiveTest do
     assert has_element?(lv, "#scan-failed")
   end
 
+  # D4H may hold minutes on a vehicle too; its km is what Change edits (#876).
+  test "a vehicle's use reads as its km, even with minutes", ctx do
+    usage = %EquipmentUsage{equipment_item: ctx.truck, minutes: 300, distance: 47}
+    assert Web.ActivityEquipmentLive.amount(usage) == "47 km"
+    assert Web.ActivityEquipmentLive.amount(%{usage | distance: nil}) == "5 hours"
+  end
+
   # #876: an item's use follows the operation, sent to D4H as only the field it counts.
   test "Change on an item on the activity sends its new hours or km to D4H", ctx do
     activity = activity_fixture(ctx.team, %{title: "Night search"})
