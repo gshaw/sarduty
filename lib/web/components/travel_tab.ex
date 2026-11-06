@@ -26,7 +26,6 @@ defmodule Web.Components.TravelTab do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
-  alias App.Model.Member
   alias App.Operation.SetTravel
   alias App.ViewData.ActivityTravel
   alias Service.Format
@@ -43,17 +42,11 @@ defmodule Web.Components.TravelTab do
       |> assign(locked?: Activity.locked?(assigns.activity))
       |> assign_new(:selected, fn -> MapSet.new() end)
       |> assign_new(:editing, fn -> nil end)
-      |> assign_new(:own_id, fn -> own_id(assigns.team, assigns.user) end)
+      |> assign_new(:own_id, fn ->
+        SetTravel.own_id(assigns.team, assigns.user, DateTime.utc_now())
+      end)
 
     {:ok, if(first?, do: load(socket), else: socket)}
-  end
-
-  # The team admin's own member, whose rows stay confirmed when they set them.
-  defp own_id(_team, nil), do: nil
-
-  defp own_id(team, user) do
-    member = Member.find_by_email(team, user.email, DateTime.utc_now())
-    member && member.id
   end
 
   # The first load waits for Mapbox behind a spinner. Later loads keep the table showing,

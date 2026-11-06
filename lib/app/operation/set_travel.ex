@@ -30,14 +30,19 @@ defmodule App.Operation.SetTravel do
   defp set(team, activity, user, ids, travel, km_text, now) do
     view = ActivityTravel.load(team, activity, now)
 
-    # A team admin's own rows count as confirmed: they set them.
-    own = user && Member.find_by_email(team, user.email, now)
-
     with {:ok, plan} <- plan(view.rows, ids, travel, km_text) do
-      Trip.save_all!(activity, user, plan.sets, now, own && own.id)
+      Trip.save_all!(activity, user, plan.sets, now, own_id(team, user, now))
       Trip.delete_all!(activity, Enum.map(plan.cleared, & &1.attendance.d4h_attendance_id))
       {:ok, plan}
     end
+  end
+
+  @doc "The team admin's own member id, or nil: rows they set for themselves count as confirmed."
+  def own_id(_team, nil, _now), do: nil
+
+  def own_id(team, user, now) do
+    member = Member.find_by_email(team, user.email, now)
+    member && member.id
   end
 
   @doc """
