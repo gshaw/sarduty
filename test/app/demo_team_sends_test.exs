@@ -169,7 +169,7 @@ defmodule App.DemoTeamSendsTest do
     card = member |> member_card_fixture() |> Repo.preload(member: [team: :organization])
     config = %{pass_type_id: "pass.test", team_id: "TEAM"}
 
-    json = BuildApplePass.pass_json(card, [], config, DateTime.utc_now())
+    json = BuildApplePass.pass_json(card, :active, [], config)
 
     assert json.logoText == "Sample card"
     assert [%{label: "Sample, not real ID"}] = json.generic.primaryFields

@@ -27,7 +27,7 @@ defmodule Web.MemberCardLiveTest do
     assert replacement.serial_number == "member-card-5"
   end
 
-  test "issues a card", %{conn: conn, team: team, member: member} do
+  test "issues a card and emails it", %{conn: conn, team: team, member: member} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
     assert has_element?(lv, "#no-card")
 
@@ -38,6 +38,30 @@ defmodule Web.MemberCardLiveTest do
 
     url = "#{Web.VerifyHost.url()}/#{MemberCard.format_code(card.code)}"
     assert has_element?(lv, ~s(#card-verify-link[href="#{url}"]))
+
+    assert_email_sent(&(&1.text_body =~ MemberCard.format_code(card.code)))
+    assert has_element?(lv, "#card-emailed", "to #{member.email}")
+  end
+
+  test "replaces a card: a new code, the old one stops working, and the new card is emailed",
+       %{conn: conn, team: team, member: member} do
+    old = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+    refute has_element?(lv, "#revoke")
+
+    lv |> element("#replace") |> render_click()
+
+    assert Repo.reload!(old).revoked_at
+    card = MemberCard.find_current(team, member)
+    assert has_element?(lv, "#card-code", MemberCard.format_code(card.code))
+    assert_email_sent(&(&1.text_body =~ MemberCard.format_code(card.code)))
+  end
+
+  test "says when the card's email did not send", %{conn: conn, team: team, member: member} do
+    member_card_fixture(member, %{email_status: :failed})
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+
+    assert has_element?(lv, "#card-emailed", "Did not send")
   end
 
   test "a retired member gets no card, and an old one shows not active",
@@ -53,8 +77,24 @@ defmodule Web.MemberCardLiveTest do
     member_card_fixture(member)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
     assert has_element?(lv, "#card-status", "Not active")
-    assert has_element?(lv, "#revoke")
+    refute has_element?(lv, "#replace")
     refute has_element?(lv, "#email-pass")
+  end
+
+  test "a retiring member gets no card, and an old one shows not active (#893)",
+       %{conn: conn, team: team, member: member} do
+    leavers = group_fixture(team)
+    team |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id) |> Repo.update!()
+    group_member_fixture(leavers, member)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+    assert has_element?(lv, "#no-card", "is retiring")
+    refute has_element?(lv, "#issue")
+
+    member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+    assert has_element?(lv, "#card-status", "Not active: #{member.name} is retiring")
+    refute has_element?(lv, "#replace")
   end
 
   test "endorsements: a link to pick them until the team shows some, then the member's",
@@ -95,17 +135,6 @@ defmodule Web.MemberCardLiveTest do
     refute has_element?(lv, "#google-pass")
   end
 
-  test "cancels a card", %{conn: conn, team: team, member: member} do
-    card = member_card_fixture(member)
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
-
-    lv |> element("#revoke") |> render_click()
-
-    assert Repo.reload!(card).revoked_at
-    assert has_element?(lv, "#no-card")
-    refute render(lv) =~ "Cancelled"
-  end
-
   describe "with Apple Wallet set up" do
     setup do
       App.ApplePassCredentials.configure()
@@ -129,7 +158,8 @@ defmodule Web.MemberCardLiveTest do
         assert filename =~ ".pkpass"
       end)
 
-      assert render(lv) =~ "Emailed the ID card to #{member.email}"
+      assert render(lv) =~ "Sending the ID card to #{member.email}"
+      assert has_element?(lv, "#card-emailed", "to #{member.email}")
     end
 
     test "offers no email button when D4H has no email", %{conn: conn, team: team} do

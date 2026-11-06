@@ -43,6 +43,10 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 - Travel shows the yard to the ICP and back again, for a team vehicle's mileage.
 - Change an item's hours, or a vehicle's km, after it's on an activity: Change on its
   Equipment tab. Thanks to Andrew at South Fraser.
+- ID cards follow standing. A member marked Retiring or retired keeps their card, and it
+  reads Not active at once. Take them out of Retiring and it's active again. Replace ID
+  card, for a lost phone, gives a new code and emails it; Cancel ID card is gone. The ID
+  Card tab says when the card was last emailed.
 - SAR Duty saved to an iPhone home screen gets its icon and is named SAR Duty, not the
   page. Links shared in a chat show a small preview with the page's title.
 - Other apps can check a SAR Duty ID card when they scan it: the same answer as the verify

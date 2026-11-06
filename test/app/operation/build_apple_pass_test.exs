@@ -24,7 +24,7 @@ defmodule App.Operation.BuildApplePassTest do
   end
 
   test "shows the member, their status, and how long the card is good for" do
-    json = BuildApplePass.pass_json(card(), [], @config, @now)
+    json = BuildApplePass.pass_json(card(), :active, [], @config)
 
     assert json.passTypeIdentifier == "pass.com.sarduty.member-card"
     assert json.teamIdentifier == "TEAM123"
@@ -46,31 +46,34 @@ defmodule App.Operation.BuildApplePassTest do
   test "leaves out Member since when D4H has no start date (#421)" do
     card = card()
     card = put_in(card.member.joined_at, nil)
-    json = BuildApplePass.pass_json(card, [], @config, @now)
+    json = BuildApplePass.pass_json(card, :active, [], @config)
 
     assert [%{label: "Status"}, %{label: "Valid until"}] = json.generic.secondaryFields
   end
 
-  test "an inactive card doesn't say how long it's good for, but still expires" do
-    card = card()
-    card = put_in(card.member.left_at, ~U[2026-01-01 00:00:00Z])
-    json = BuildApplePass.pass_json(card, [], @config, @now)
+  test "an inactive card doesn't say how long it's good for, and stops rolling its expiry (#893)" do
+    card = card(expires_at: ~U[2026-11-01 06:59:59Z])
+    json = BuildApplePass.pass_json(card, :inactive, [], @config)
 
     refute Enum.any?(json.generic.secondaryFields, &(&1.key == "valid-until"))
+    assert json.expirationDate == "2026-11-01T06:59:59Z"
+
+    # Back to active, it rolls with the team's refresh again.
+    json = BuildApplePass.pass_json(card, :active, [], @config)
     assert json.expirationDate == "2027-01-01T06:59:59Z"
   end
 
   test "a team that has never refreshed sets no expiry" do
     card = card()
     card = put_in(card.member.team.d4h_refreshed_at, nil)
-    json = BuildApplePass.pass_json(card, [], @config, @now)
+    json = BuildApplePass.pass_json(card, :active, [], @config)
 
     refute Map.has_key?(json, :expirationDate)
     refute Enum.any?(json.generic.secondaryFields, &(&1.key == "valid-until"))
   end
 
   test "the QR code opens the card's page on the verify site, with only the code printed under it" do
-    [barcode] = BuildApplePass.pass_json(card(), [], @config, @now).barcodes
+    [barcode] = BuildApplePass.pass_json(card(), :active, [], @config).barcodes
 
     assert barcode.format == "PKBarcodeFormatQR"
     assert barcode.message =~ ~r{^HTTPS?://VERIFY\.[A-Z0-9.:]+/K7Q4-M2XA$}
@@ -78,23 +81,20 @@ defmodule App.Operation.BuildApplePassTest do
   end
 
   test "keeps to Apple's limit of four secondary and auxiliary fields with a square code" do
-    generic = BuildApplePass.pass_json(card(), [], @config, @now).generic
+    generic = BuildApplePass.pass_json(card(), :active, [], @config).generic
 
     refute Map.has_key?(generic, :auxiliaryFields)
     assert length(generic.secondaryFields) <= 4
   end
 
   test "a cancelled card is voided" do
-    json = [revoked_at: @now] |> card() |> BuildApplePass.pass_json([], @config, @now)
+    json = [revoked_at: @now] |> card() |> BuildApplePass.pass_json(:revoked, [], @config)
     assert json.voided == true
   end
 
-  test "a member who left shows as not active" do
-    card = card()
-    card = put_in(card.member.left_at, ~U[2026-01-01 00:00:00Z])
-
+  test "a card that is not active says so" do
     assert [%{value: "Not active"} | _] =
-             BuildApplePass.pass_json(card, [], @config, @now).generic.secondaryFields
+             BuildApplePass.pass_json(card(), :inactive, [], @config).generic.secondaryFields
   end
 
   test "lists the team's picked qualifications on the back, and leaves them off when none" do
@@ -103,14 +103,14 @@ defmodule App.Operation.BuildApplePassTest do
       %{name: "Rope", ends_at: nil}
     ]
 
-    back = BuildApplePass.pass_json(card(), qualifications, @config, @now).generic.backFields
+    back = BuildApplePass.pass_json(card(), :active, qualifications, @config).generic.backFields
 
     assert [
              %{label: "First Aid", value: "Nov 2026", changeMessage: "First Aid: %@"},
              %{label: "Rope", value: ""}
            ] = Enum.filter(back, &String.starts_with?(&1.key, "qualification-"))
 
-    back = BuildApplePass.pass_json(card(), [], @config, @now).generic.backFields
+    back = BuildApplePass.pass_json(card(), :active, [], @config).generic.backFields
     refute Enum.any?(back, &String.starts_with?(&1.key, "qualification-"))
   end
 
@@ -118,25 +118,25 @@ defmodule App.Operation.BuildApplePassTest do
     json =
       [authentication_token: "token-0123456789abcdef"]
       |> card()
-      |> BuildApplePass.pass_json([], @config, @now)
+      |> BuildApplePass.pass_json(:active, [], @config)
 
     assert json.webServiceURL =~ "/wallet"
     assert json.authenticationToken == "token-0123456789abcdef"
 
-    refute card() |> BuildApplePass.pass_json([], @config, @now) |> Map.has_key?(:webServiceURL)
+    refute card()
+           |> BuildApplePass.pass_json(:active, [], @config)
+           |> Map.has_key?(:webServiceURL)
   end
 
   test "a cancelled card says so and shows no QR code" do
-    json = [revoked_at: @now] |> card() |> BuildApplePass.pass_json([], @config, @now)
+    json = [revoked_at: @now] |> card() |> BuildApplePass.pass_json(:revoked, [], @config)
     assert [%{value: "Cancelled"} | _] = json.generic.secondaryFields
     assert [%{label: "Card cancelled", value: "Alex Example"}] = json.generic.primaryFields
     refute Map.has_key?(json, :barcodes)
   end
 
-  test "a member who left gets no QR code either" do
-    card = card()
-    card = put_in(card.member.left_at, ~U[2026-01-01 00:00:00Z])
-    json = BuildApplePass.pass_json(card, [], @config, @now)
+  test "a card that is not active gets no QR code either" do
+    json = BuildApplePass.pass_json(card(), :inactive, [], @config)
 
     assert [%{label: "Not an active member"}] = json.generic.primaryFields
     refute Map.has_key?(json, :barcodes)
@@ -146,21 +146,20 @@ defmodule App.Operation.BuildApplePassTest do
     base = card()
     later = put_in(base.member.team.d4h_refreshed_at, ~U[2026-10-01 05:00:00Z])
     next_month = put_in(base.member.team.d4h_refreshed_at, ~U[2026-10-01 13:00:00Z])
-    left = put_in(base.member.left_at, ~U[2026-01-01 00:00:00Z])
 
     fingerprint =
-      &(&1 |> BuildApplePass.pass_json([], @config, @now) |> BuildApplePass.fingerprint())
+      &(&1 |> BuildApplePass.pass_json(&2, [], @config) |> BuildApplePass.fingerprint())
 
-    assert fingerprint.(base) == fingerprint.(later)
-    refute fingerprint.(base) == fingerprint.(next_month)
-    refute fingerprint.(base) == fingerprint.(left)
+    assert fingerprint.(base, :active) == fingerprint.(later, :active)
+    refute fingerprint.(base, :active) == fingerprint.(next_month, :active)
+    refute fingerprint.(base, :active) == fingerprint.(base, :inactive)
   end
 
   test "a team in an organization names it as issuer, and SAR Duty nowhere" do
     card = card(authentication_token: "token-0123456789abcdef")
     organization = %Organization{name: "BC Search and Rescue Association"}
     card = put_in(card.member.team.organization, organization)
-    json = BuildApplePass.pass_json(card, [], @config, @now)
+    json = BuildApplePass.pass_json(card, :active, [], @config)
 
     issuer = Enum.find(json.generic.backFields, &(&1.key == "issuer"))
 

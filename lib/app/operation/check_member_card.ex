@@ -17,7 +17,7 @@ defmodule App.Operation.CheckMemberCard do
 
     case MemberCard.find_by_code(code, repo) do
       %MemberCard{} = card ->
-        status = MemberCard.status(card, now)
+        status = MemberCard.status(card, now, repo)
 
         %{
           status: status,

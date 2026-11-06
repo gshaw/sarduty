@@ -7,17 +7,21 @@ defmodule App.Operation.IssueMemberCard do
 
   @doc """
   Gives the member a new card with a new code and token, under their existing Wallet
-  serial number. Any card they had stops working, and a job per card tells phones
-  holding its pass to fetch the voided one. Adding the new pass replaces the old one in Apple Wallet; in
-  Google Wallet the old one expires.
+  serial number: Issue, or Replace for a lost phone. Any card they had stops working,
+  and a job per card tells phones holding its pass to fetch the voided one. Adding the
+  new pass replaces the old one in Apple Wallet; in Google Wallet the old one expires.
+  SendMemberCard emails it.
 
   `{:error, :id_cards_off}` unless a SAR Duty admin turned ID cards on for the team, and
-  `{:error, :retired}` for a retired member, whose card would only verify as not active.
+  `{:error, :not_active}` for a member not in good standing (retired or retiring), whose
+  card would only verify as not active.
   """
   def call(%Team{id_cards_enabled: false}, %Member{}, _now), do: {:error, :id_cards_off}
 
   def call(%Team{} = team, %Member{team_id: team_id} = member, now) when team_id == team.id do
-    if Member.current?(member, now), do: issue(team, member, now), else: {:error, :retired}
+    if Member.good_standing?(member, now),
+      do: issue(team, member, now),
+      else: {:error, :not_active}
   end
 
   defp issue(team, member, now) do

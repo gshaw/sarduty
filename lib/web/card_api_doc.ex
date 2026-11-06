@@ -70,14 +70,14 @@ defmodule Web.CardApiDoc do
     }
     ```
 
-    - `status` is `active`, `inactive` (the member left the team), or `revoked` (the team cancelled or replaced the card). All three answer `200`, so read `status`, not the HTTP code. Sign in only an `active` card.
+    - `status` is `active`, `inactive` (the member left the team, or is leaving it), or `revoked` (the team cancelled or replaced the card). All three answer `200`, so read `status`, not the HTTP code. Sign in only an `active` card.
     - `sample` is true for Coast Range SAR's made-up cards. Never accept one as ID.
     - `photo_url` is the member's photo, a square PNG. Show it, and compare it with the person: the photo is what a copied code can't fake.
     - `qualifications` are the ones the team lists on its cards. `ends_at` is null when one doesn't expire.
     - `refreshed_at` is when SAR Duty last copied the team's records, so a status can be that far behind.
     - Times are ISO 8601, in UTC, to the second. `joined_at` and `organization` can be null.
 
-    A former member's card gives `member.name`, `member.left_at`, and `team`: no photo, no qualifications, and no `records`. `left_at` is null when the team marked them retired without a date.
+    A former member's card gives `member.name`, `member.left_at`, and `team`: no photo, no qualifications, and no `records`. `left_at` is null when the team marked them retired without a date, or they are leaving but have not left yet. A member who comes back keeps the same card, and it answers `active` again.
 
     A revoked card gives only `code`, `status`, and `sample`.
 

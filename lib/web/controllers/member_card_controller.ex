@@ -45,7 +45,7 @@ defmodule Web.MemberCardController do
 
   defp send_sample_photo(conn, code, shape) do
     with %MemberCard{} = card <- MemberCard.find_by_code(code, App.SampleRepo),
-         :active <- MemberCard.status(card, DateTime.utc_now()) do
+         :active <- MemberCard.status(card, DateTime.utc_now(), App.SampleRepo) do
       send_png(conn, LoadImage.placeholder_photo(shape))
     else
       _ -> send_resp(conn, :not_found, "")

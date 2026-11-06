@@ -3,7 +3,7 @@ defmodule App.Worker.UpdateCancelledCardWorkerTest do
 
   import App.DataFixtures
 
-  alias App.Operation.RevokeMemberCard
+  alias App.Operation.IssueMemberCard
   alias App.Worker.UpdateCancelledCardWorker
 
   setup do
@@ -34,8 +34,8 @@ defmodule App.Worker.UpdateCancelledCardWorkerTest do
       end
     end)
 
-    # Its job runs inline with the cancel, and fails.
-    RevokeMemberCard.call(ctx.team, ctx.member, DateTime.utc_now())
+    # Its job runs inline with the replacement, and fails.
+    {:ok, _card} = IssueMemberCard.call(ctx.team, ctx.member, DateTime.utc_now())
     assert_received :object_refused
     assert Repo.reload!(ctx.card).google_pass_fingerprint == "old"
 

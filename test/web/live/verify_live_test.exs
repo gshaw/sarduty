@@ -5,6 +5,7 @@ defmodule Web.VerifyLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.MemberCard
+  alias App.Repo
 
   # The verify site is matched by host, like verify.sarduty.com in production. Each test
   # gets its own client IP, since the limit's counters outlive a test.
@@ -115,6 +116,21 @@ defmodule Web.VerifyLiveTest do
     assert has_element?(lv, "#result-inactive", "Retired Dec 2025")
     assert has_element?(lv, "#result-facts", "Not active")
     assert has_element?(lv, "#result-name", member.name)
+    refute has_element?(lv, "#result-photo")
+  end
+
+  test "a retiring member shows as not active, with no photo and no date (#893)",
+       %{conn: conn, team: team, member: member} do
+    leavers = group_fixture(team)
+    team |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id) |> Repo.update!()
+    group_member_fixture(leavers, member)
+    card = member_card_fixture(member)
+
+    {:ok, lv, _html} = live(conn, ~p"/?#{[code: card.code]}")
+
+    assert has_element?(lv, "#result-inactive", "Not an active member")
+    refute has_element?(lv, "#result-inactive", "Retired")
+    assert has_element?(lv, "#result-facts", "Not active")
     refute has_element?(lv, "#result-photo")
   end
 

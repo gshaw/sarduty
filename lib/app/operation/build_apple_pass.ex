@@ -31,10 +31,12 @@ defmodule App.Operation.BuildApplePass do
       card = Repo.preload(card, member: [team: :organization])
       config = :sarduty |> Application.get_env(:apple_pass) |> Map.new()
       card = MemberCard.ensure_authentication_token!(card)
+      status = MemberCard.status(card, now)
+      card = MemberCard.record_expires_at!(card, status)
       member = card.member
       qualifications = BuildCardQualifications.call(member.team, member, now)
 
-      json = pass_json(card, qualifications, config, now)
+      json = pass_json(card, status, qualifications, config)
       fingerprint = fingerprint(json)
       MemberCard.record_pass!(card, fingerprint, now)
       if fingerprint != card.pass_fingerprint, do: PushPassUpdates.push_cards([card])
@@ -53,10 +55,10 @@ defmodule App.Operation.BuildApplePass do
   end
 
   @doc """
-  The pass's `pass.json` as a map. `qualifications` comes from
-  `BuildCardQualifications.summarize/3`.
+  The pass's `pass.json` as a map, for the card's `status` (MemberCard.status/3).
+  `qualifications` comes from `BuildCardQualifications.summarize/3`.
   """
-  def pass_json(%MemberCard{member: member} = card, qualifications, config, now) do
+  def pass_json(%MemberCard{member: member} = card, status, qualifications, config) do
     team = member.team
     code = MemberCard.format_code(card.code)
     # A Try a demo card says so, front and centre (#857).
@@ -76,19 +78,19 @@ defmodule App.Operation.BuildApplePass do
       foregroundColor: @foreground_color,
       labelColor: @label_color,
       sharingProhibited: true,
-      voided: MemberCard.status(card, now) == :revoked,
-      barcodes: barcodes(card, code, now),
+      voided: status == :revoked,
+      barcodes: barcodes(card, code, status),
       generic: %{
         # No header fields: they share the top row with the team name, which Wallet
         # then cuts short.
         primaryFields: [
-          %{key: "name", label: name_label(card, sample?, now), value: member.name}
+          %{key: "name", label: name_label(status, sample?), value: member.name}
         ],
-        secondaryFields: secondary_fields(card, now),
+        secondaryFields: secondary_fields(card, status),
         backFields: back_fields(card, code, qualifications)
       }
     }
-    |> put_expiration(team)
+    |> put_expiration(MemberCard.expires_at(card, status))
     |> drop_web_service(card.authentication_token)
     |> Map.reject(fn {key, value} -> key == :barcodes and value == [] end)
   end
@@ -123,8 +125,8 @@ defmodule App.Operation.BuildApplePass do
 
   # Only an active card shows its QR code. Wallet dims a voided pass's code, which still
   # looks usable, so a card that can't pass a check shows none, and says why up top.
-  defp barcodes(card, code, now) do
-    if MemberCard.status(card, now) == :active do
+  defp barcodes(card, code, status) do
+    if status == :active do
       [
         %{
           format: "PKBarcodeFormatQR",
@@ -140,12 +142,12 @@ defmodule App.Operation.BuildApplePass do
     end
   end
 
-  defp secondary_fields(%MemberCard{member: member} = card, now) do
+  defp secondary_fields(%MemberCard{member: member}, status) do
     [
       %{
         key: "status",
         label: "Status",
-        value: status_text(card, now),
+        value: status_text(status),
         changeMessage: "Your card is now %@."
       },
       member.joined_at &&
@@ -154,32 +156,31 @@ defmodule App.Operation.BuildApplePass do
           label: "Member since",
           value: Service.Format.month_year(member.joined_at, member.team.timezone)
         },
-      valid_until_field(card, now)
+      valid_until_field(member.team, status)
     ]
     |> Enum.reject(&is_nil/1)
   end
 
   # Only an active card says how long it's good for. No changeMessage: it moves once a
   # month, and that update is silent.
-  defp valid_until_field(%MemberCard{member: member} = card, now) do
-    valid_until = MemberCard.valid_until(member.team)
-
-    if valid_until && MemberCard.status(card, now) == :active do
+  defp valid_until_field(team, :active) do
+    if valid_until = MemberCard.valid_until(team) do
       %{
         key: "valid-until",
         label: "Valid until",
-        value: Service.Format.month_year(valid_until, member.team.timezone)
+        value: Service.Format.month_year(valid_until, team.timezone)
       }
     end
   end
 
-  # Wallet marks the pass expired once this passes, which happens only if refreshes stop.
-  defp put_expiration(json, team) do
-    case MemberCard.valid_until(team) do
-      nil -> json
-      valid_until -> Map.put(json, :expirationDate, DateTime.to_iso8601(valid_until))
-    end
-  end
+  defp valid_until_field(_team, _status), do: nil
+
+  # Wallet marks the pass expired once this passes: when refreshes stop, or within three
+  # months of the card going inactive (MemberCard.expires_at/2).
+  defp put_expiration(json, nil), do: json
+
+  defp put_expiration(json, expires_at),
+    do: Map.put(json, :expirationDate, DateTime.to_iso8601(expires_at))
 
   defp back_fields(%MemberCard{member: %{team: team}}, code, qualifications) do
     List.flatten([
@@ -194,23 +195,18 @@ defmodule App.Operation.BuildApplePass do
     ])
   end
 
-  defp name_label(card, true = _sample?, now) do
-    case MemberCard.status(card, now) do
-      :active -> "Sample, not real ID"
-      _other -> name_label(card, false, now)
-    end
-  end
+  defp name_label(:active, true = _sample?), do: "Sample, not real ID"
 
-  defp name_label(card, false, now) do
-    case MemberCard.status(card, now) do
+  defp name_label(status, _sample?) do
+    case status do
       :active -> "Member"
       :inactive -> "Not an active member"
       :revoked -> "Card cancelled"
     end
   end
 
-  defp status_text(card, now) do
-    case MemberCard.status(card, now) do
+  defp status_text(status) do
+    case status do
       :active -> "Active"
       :inactive -> "Not active"
       :revoked -> "Cancelled"

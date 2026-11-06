@@ -2,7 +2,8 @@
 
 A team manager issues a member an ID card from the member's **ID Card** tab, once a SAR
 Duty admin has turned ID cards on for the team on its admin page, `/admin/teams/:id`, or its organization
-admins have, on its page in the organization (#512). A member sees the
+admins have, on its page in the organization (#512). The card is emailed to the member
+([Issuing and emailing](#issuing-and-emailing)). A member sees the
 card on their own page ([members.md](members.md)). Anyone can
 check a card by scanning its QR code with a phone's camera, which opens its page on the
 verify site, `verify.sarduty.com/K7Q4-M2XA`
@@ -52,11 +53,13 @@ organization gets its branding: see [organizations.md](organizations.md).
   `Fly-Client-IP`, read on the HTTP request and carried into the LiveView's session,
   since a websocket can't see that header.
 - **A cancelled card shows nothing about the member.** The verify site says it was cancelled,
-  and its photo route 404s.
-- **A former member's card shows no photo.** The page gives the name, the team, and "Not
-  active", and the photo and banner routes 404, as for a cancelled card (#176). "Not
-  active" is the whole answer a checker needs.
-- **One live card per member.** Issuing a card revokes the one before it, and a code is
+  and its photo route 404s. Cards are cancelled only by Replace ID card and by the team's
+  ID cards switch turning off.
+- **A card that is not active shows no photo.** The page gives the name, the team, and
+  "Not active", and the photo and banner routes 404, as for a cancelled card (#176). "Not
+  active" is the whole answer a checker needs. A retired member's page says when they
+  left; a retiring member's says no more.
+- **One live card per member.** Replacing a card revokes the one before it, and a code is
   never reused.
 - **Status comes from the local copy of D4H**, so it can be 10 minutes behind, or a day
   for a change D4H doesn't mark ([d4h-sync.md](d4h-sync.md#where-the-copy-drifts)). The result says
@@ -115,10 +118,10 @@ retired), `SAMP-CNCD` (cancelled), and `SAMP-NCRD`, which no card has. A fifth Q
 
 ## Apple Wallet
 
-A member adds their card from Your membership, `/teams/:subdomain/me`. The team admin's
-ID Card tab emails the current card's pass to the member's D4H address as an attachment,
-when Apple Wallet is set up (see [external-services.md](external-services.md)). It has
-no Wallet buttons: they would put the member's card on the team admin's phone.
+A member adds their card from Your membership, `/teams/:subdomain/me`. The card's email
+([Issuing and emailing](#issuing-and-emailing)) attaches its pass when Apple Wallet is set
+up (see [external-services.md](external-services.md)). The ID Card tab has no Wallet
+buttons: they would put the member's card on the team admin's phone.
 
 Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
 `authentication_token`. Wallet registers the phone with
@@ -131,8 +134,9 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
 - **When a pass is built** for an email, a download, or a phone, and its fingerprint
   changed, it pushes too. Building records the fingerprint, so the next refresh would
   otherwise see nothing new and the phones would keep the old pass.
-- **On cancel or replace** a job per card (`UpdateCancelledCardWorker`, queued with the
-  cancel) pushes, and Wallet fetches a voided pass that says "Cancelled".
+- **On replace, or the ID cards switch turning off,** a job per card
+  (`UpdateCancelledCardWorker`, queued with the cancel) pushes, and Wallet fetches a
+  voided pass that says "Cancelled".
 - A phone that APNs says dropped the pass, or whose token is bad, is deleted.
 - **A member keeps one Wallet serial number** across replacements, so a replacement pass
   lands on the existing pass instead of beside it. Each card has its own token, and a
@@ -174,7 +178,7 @@ pass again, and every saved copy changes:
 - **After every team refresh**, for cards whose pass changed. The fingerprint leaves out
   the "last checked" date, as for Apple. A card with no `google_pass_fingerprint` has no
   pass at Google and is skipped.
-- **On cancel or replace** the same job sends the old pass as `EXPIRED`, with no QR code
+- **On replace, or the switch turning off,** the same job sends the old pass as `EXPIRED`, with no QR code
   or photo, and Wallet moves it to "Expired passes". A refusal is tried again: the
   refresh only sends live cards, so nothing else would.
 - **A replacement is a new pass.** Each card has its own Wallet object, because Google
@@ -205,6 +209,31 @@ reach a dev server, so dev passes have none. In production:
   `/:code/banner` on the verify site, always SAR Duty's verify host: the square photo centered on the pass's navy. Google has no
   picture spot beside the name, so this is the only place on the front for both.
 
+## Issuing and emailing
+
+The ID Card tab has three buttons, and each queues one job
+([SendMemberCardWorker](../lib/app/worker/send_member_card_worker.ex), on `bulk`) that
+emails the card: the Apple pass attached and the Google link, whichever are set up, and
+the code.
+
+- **Issue ID card**, before the member has one, makes the card.
+- **Replace ID card**, for a lost phone, makes a new card with a new code. The old one
+  stops working and its passes void, as above.
+- **Email ID card** sends the current card again. No limit.
+
+Issue and Replace make the card when clicked, mark it `email_status: :sending`, and queue
+the job in the same transaction, so the tab shows the new card at once
+([SendMemberCard](../lib/app/operation/send_member_card.ex)). The job makes the card when
+the member has none, then emails it only while it is marked sending, so a retry, or a
+second job for the same card, sends one email. That lets a rollout queue the same job for
+every member, spread out with `enqueue(member, schedule_in: seconds)`. A member with no
+email still gets a card, with no email. The job is unique per member while it waits.
+
+The card keeps how its email went, `email_status` and `emailed_at`, like
+`TaxCreditLetter.email_status`, and the tab's Emailed row shows it: when it went and to
+whom, Sending, or that it did not send. A refusal is tried again over about 2 hours; the
+last one marks it failed ([jobs.md](jobs.md)).
+
 ## Why the QR holds a link
 
 Until 2026-10-01 the QR held only the code, so a forged card's QR couldn't open a
@@ -234,19 +263,32 @@ expired once it passes.
   and that shouldn't extend a card without a D4H check.
 - **When refreshes stop, the pass expires** within three months: a broken D4H key, a
   team that leaves, a member who turns off updates.
-- Only an active card shows the date. An inactive card still gets the expiry, so a
-  member who comes back still gets updates.
+- **It stops rolling once a card is not active** (#893). The card keeps the expiry its
+  pass last had while active (`member_cards.expires_at`, `MemberCard.expires_at/2`), so a
+  retired or retiring member's pass shows expired within three months. A member who
+  comes back gets the same card back, active, and the date rolls again. A card first
+  built after it went inactive starts from the refresh, once.
+- Only an active card shows the date.
 - Google sends the class only when a pass is added, so `UpdateGooglePasses` sends it
   again before any update. That's how a front-row change reaches passes already out.
 
 ## Active and qualifications
 
-A card is active while the member is current, not retired
-(`Member.current?/2`).
-Qualifications don't change that. They're listed, not required. A retired member gets no
-new card ([IssueMemberCard](../lib/app/operation/issue_member_card.ex) refuses), and the
-ID Card tab's Status row says their old one is not active, as the verify site does. There
-is no Replace: Cancel ID card, then Issue ID card, gives the member a new code.
+A card follows the member's standing (#893). It is active while the member is in good
+standing: current, and not in the team's Retiring group, the same rule as logins (#514,
+`Member.good_standing?/3` and `good_standing_query/2`). `MemberCard.status/3` asks it,
+and the verify page, the JSON check, the door's scanner, and both passes read that.
+Away and not a person don't change it.
+
+- **Retired and retiring members keep their card.** It verifies as Not active at once,
+  and its pass stops rolling Valid until. Nobody cancels one card by hand: a bad apple is
+  marked Retiring, which also stops their login.
+- **A member who comes back gets the same card back,** active, with no email.
+- **A member not in good standing gets no new card**
+  ([IssueMemberCard](../lib/app/operation/issue_member_card.ex) refuses), and the ID Card
+  tab's Status row says why the old one is not active.
+
+Qualifications don't change Active. They're listed, not required.
 
 A team picks what to list on the **Endorsements** page (#320). For each endorsement the
 member holds, the back of the pass, the verify site,

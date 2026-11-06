@@ -5,7 +5,6 @@ defmodule App.Operation.UpdateGooglePassesTest do
 
   alias App.Operation.BuildGooglePass
   alias App.Operation.IssueMemberCard
-  alias App.Operation.RevokeMemberCard
   alias App.Operation.UpdateGooglePasses
 
   @now ~U[2026-09-30 12:00:00.000000Z]
@@ -54,21 +53,13 @@ defmodule App.Operation.UpdateGooglePassesTest do
     refute_received {:google, _, _, _}
   end
 
-  test "cancelling a card expires its pass", %{team: team, member: member} do
-    card_on_google(member)
-
-    RevokeMemberCard.call(team, member, @now)
-
-    assert_received {:google, "PUT", _path, %{"state" => "EXPIRED"} = object}
-    refute Map.has_key?(object, "barcode")
-  end
-
   test "replacing a card expires the old pass", %{team: team, member: member} do
     card_on_google(member)
 
     {:ok, _card} = IssueMemberCard.call(team, member, @now)
 
-    assert_received {:google, "PUT", _path, %{"state" => "EXPIRED"}}
+    assert_received {:google, "PUT", _path, %{"state" => "EXPIRED"} = object}
+    refute Map.has_key?(object, "barcode")
   end
 
   test "does nothing when Google Wallet isn't set up", %{team: team, member: member} do

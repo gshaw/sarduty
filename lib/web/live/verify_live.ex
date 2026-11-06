@@ -4,6 +4,7 @@ defmodule Web.VerifyLive do
   import Web.Components.Scanner
   import Web.Components.Verify
 
+  alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.Organization
   alias App.Operation.CheckMemberCard
@@ -250,15 +251,17 @@ defmodule Web.VerifyLive do
         member: member,
         team: member.team,
         status: status,
-        valid_until: MemberCard.valid_until(member.team)
+        valid_until: MemberCard.valid_until(member.team),
+        left: left_text(member, DateTime.utc_now())
       )
 
     ~H"""
     <div id={"result-#{@status}"}>
       <.band :if={@status == :active} kind={:success} title="Active member">Verified just now</.band>
-      <.band :if={@status == :inactive} kind={:warning} title="Not an active member">
-        {left_text(@member)}
+      <.band :if={@status == :inactive && @left} kind={:warning} title="Not an active member">
+        {@left}
       </.band>
+      <.band :if={@status == :inactive && !@left} kind={:warning} title="Not an active member" />
 
       <.panel>
         <%!-- No photo for a retired member: "not active" needs none (#176). --%>
@@ -339,10 +342,19 @@ defmodule Web.VerifyLive do
   defp expiry_text(%{ends_at: ends_at}, timezone),
     do: "Expires #{Service.Format.month_year(ends_at, timezone)}"
 
-  defp left_text(%{left_at: nil}), do: "Retired"
+  # A member on their way out (Retiring) is still on the team, so the band says no more.
+  defp left_text(member, now) do
+    cond do
+      Member.current?(member, now) ->
+        nil
 
-  defp left_text(member),
-    do: "Retired #{Service.Format.month_year(member.left_at, member.team.timezone)}"
+      member.left_at ->
+        "Retired #{Service.Format.month_year(member.left_at, member.team.timezone)}"
+
+      true ->
+        "Retired"
+    end
+  end
 
   defp last_checked(%{d4h_refreshed_at: nil}), do: "never"
 

@@ -22,6 +22,7 @@ defmodule App.Model.RedactFieldsTest do
     {App.Model.EquipmentItem, :barcode} => "the label on a piece of equipment",
     {App.Model.EquipmentItem, :custom_values} => "equipment's own fields",
     {App.Model.GroupMembershipChange, :reason} => "the group rule that made the change",
+    {App.Model.MemberCard, :email_status} => "whether an ID card's email was sent",
     {App.Model.LocationBookmark, :address} => "a team's saved place, like a hall",
     {App.Model.Team, :d4h_access_key_owner} => "the key owner's member name, like any name",
     {App.Model.Team, :mailing_address} => "the team's own address on its letters",
