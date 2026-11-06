@@ -81,6 +81,36 @@ defmodule App.Model.OutboxMessage do
   @doc "How many a team has."
   def count(%Team{} = team), do: team |> scope() |> Repo.aggregate(:count)
 
+  @doc "How many a team has after `since`, every one when nil: what's new since a visit."
+  def count_since(%Team{} = team, nil), do: team |> scope() |> Repo.aggregate(:count)
+
+  def count_since(%Team{} = team, since),
+    do: team |> scope() |> where([m], m.inserted_at > ^since) |> Repo.aggregate(:count)
+
+  @doc """
+  The emails and texts a team has after message `after_id`, as `{emails, texts}`, and the
+  newest id: what one burst brought.
+  """
+  def arrived_after(%Team{} = team, after_id) do
+    counts =
+      team
+      |> scope()
+      |> where([m], m.id > ^after_id)
+      |> group_by([m], m.kind)
+      |> select([m], {m.kind, count(m.id)})
+      |> Repo.all()
+      |> Map.new()
+
+    {Map.get(counts, :email, 0), Map.get(counts, :text, 0)}
+  end
+
+  @doc "The id of a team's newest message, or 0."
+  def last_id(%Team{} = team), do: team |> scope() |> Repo.aggregate(:max, :id) || 0
+
+  @doc "Whether the message arrived after `since`; with nil, before any visit, all are."
+  def new?(%OutboxMessage{}, nil), do: true
+  def new?(%OutboxMessage{inserted_at: at}, since), do: DateTime.after?(at, since)
+
   @doc "One message, a team's or with `:all` any, or nil."
   def get(team_or_all, id), do: team_or_all |> scope() |> Repo.get(id)
 

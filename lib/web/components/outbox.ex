@@ -15,6 +15,7 @@ defmodule Web.Components.Outbox do
   attr :messages, :list, required: true
   attr :path, :any, required: true, doc: "fn message -> its page"
   attr :timezone, :string, required: true
+  attr :new?, :any, default: nil, doc: "fn message -> whether it says New; none when nil"
 
   def outbox_list(assigns) do
     ~H"""
@@ -32,6 +33,7 @@ defmodule Web.Components.Outbox do
       <:col :let={message} label="To">{message.to}</:col>
       <:col :let={message} label="Message">
         <.a navigate={@path.(message)}>{title(message)}</.a>
+        <.badge :if={@new? && @new?.(message)} kind={:primary}>New</.badge>
       </:col>
     </.table>
     """

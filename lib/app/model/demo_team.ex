@@ -23,6 +23,7 @@ defmodule App.Model.DemoTeam do
     belongs_to :team, Team
     field :expires_at, :utc_datetime
     field :seen_at, :utc_datetime
+    field :outbox_seen_at, :utc_datetime_usec
     timestamps(type: :utc_datetime)
   end
 
@@ -131,5 +132,17 @@ defmodule App.Model.DemoTeam do
     end
 
     :ok
+  end
+
+  @doc """
+  Notes that the visitor opened the Outbox list now: what arrives after this is new.
+  The demo as it was, so the list can mark what was new before this visit.
+  """
+  def outbox_seen!(%DemoTeam{} = demo, now) do
+    DemoTeam
+    |> where(id: ^demo.id)
+    |> Repo.update_all(set: [outbox_seen_at: now])
+
+    %{demo | outbox_seen_at: now}
   end
 end

@@ -22,5 +22,7 @@ new team's notice), and `Mailer.deliver/2` raises on one with neither.
 there. `Twilio.send_sms/3` takes a team id or `:no_team`, with no default. The mark
 stops a forgotten one, not a wrong one: a team's email marked `for_no_team` is sent.
 
-An open Outbox page shows a new message at once (`OutboxMessage.topic/0`). The rows go
-with the team (`App.Operation.DeleteTeam`); dev's stay until emptied.
+An open Outbox page shows a new message at once (`OutboxMessage.topic/0`). A demo's list
+marks New what arrived since its last visit (`demo_teams.outbox_seen_at`), and the
+banner says so too ([demo.md](demo.md)); dev's has no New. The rows go with the team
+(`App.Operation.DeleteTeam`); dev's stay until emptied.

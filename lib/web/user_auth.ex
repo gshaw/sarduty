@@ -318,8 +318,9 @@ defmodule Web.UserAuth do
     {:cont, socket}
   end
 
-  # The banner's Outbox count goes up as a message lands, such as a removal's email a job
-  # sends a moment after the page. Web.OutboxLive gets the message too, to show it.
+  # What lands in the Outbox, such as a removal's email a job sends a moment after the
+  # page, turns the banner's button New and, a second after the first message so a burst
+  # is one toast, says what arrived (#857). Web.OutboxLive gets the message too, to show it.
   defp watch_outbox(%{assigns: %{demo: %{}}} = socket) do
     if Phoenix.LiveView.connected?(socket),
       do:
@@ -330,22 +331,60 @@ defmodule Web.UserAuth do
 
   defp watch_outbox(socket), do: socket
 
-  defp outbox_info({:outbox_message, team_id}, socket) do
-    team = socket.assigns.current_team
+  @burst_ms 1_000
 
+  defp outbox_info({:outbox_message, team_id}, socket) do
     socket =
-      if team_id == team.id,
-        do: Phoenix.Component.update(socket, :demo, &%{&1 | outbox: OutboxMessage.count(team)}),
-        else: socket
+      if team_id == socket.assigns.current_team.id, do: outbox_landed(socket), else: socket
 
     if socket.view == Web.OutboxLive, do: {:cont, socket}, else: {:halt, socket}
   end
 
+  # The toast takes the place of the send's own, such as "Sending 4 reminders.". Its id
+  # changes with each burst, so a closed one comes back for the next.
+  defp outbox_info(:demo_outbox_arrived, socket) do
+    %{demo: demo, current_team: team} = socket.assigns
+    demo = %{demo | waiting?: false}
+
+    socket =
+      case OutboxMessage.arrived_after(team, demo.last_id) do
+        {0, 0} ->
+          Phoenix.Component.assign(socket, :demo, demo)
+
+        {emails, texts} ->
+          burst = demo.burst + 1
+
+          socket
+          |> Phoenix.LiveView.clear_flash(:info)
+          |> Phoenix.Component.assign(:demo, %{
+            demo
+            | last_id: OutboxMessage.last_id(team),
+              burst: burst,
+              arrived: %{emails: emails, texts: texts, burst: burst}
+          })
+      end
+
+    {:halt, socket}
+  end
+
   defp outbox_info(_message, socket), do: {:cont, socket}
 
-  # A Try a demo team's banner (#857), for its team admins: the demo, its link, and its
-  # Outbox's count. Nil on a real team.
-  # Opening a page marks the demo in use, so it syncs.
+  # The Outbox page lists a message as it lands, so it gets no toast.
+  defp outbox_landed(socket) do
+    %{demo: demo, current_team: team} = socket.assigns
+    wait? = !demo.waiting? and socket.view != Web.OutboxLive
+    if wait?, do: Process.send_after(self(), :demo_outbox_arrived, @burst_ms)
+
+    Phoenix.Component.assign(socket, :demo, %{
+      demo
+      | new: OutboxMessage.count_since(team, demo.demo.outbox_seen_at),
+        waiting?: demo.waiting? or wait?
+    })
+  end
+
+  # A Try a demo team's banner (#857), for its team admins: the demo, its link, how many
+  # messages are new in its Outbox, and the toast for what just arrived. Nil on a real
+  # team. Opening a page marks the demo in use, so it syncs.
   defp demo_banner(%{team_admin?: true, current_team: team}) do
     case DemoTeam.for_team(team) do
       nil ->
@@ -357,7 +396,12 @@ defmodule Web.UserAuth do
         %{
           demo: demo,
           link: url(~p"/demo/open/#{DemoTeam.link_token(demo)}"),
-          outbox: OutboxMessage.count(team)
+          outbox_path: ~p"/teams/#{team}/outbox",
+          new: OutboxMessage.count_since(team, demo.outbox_seen_at),
+          last_id: OutboxMessage.last_id(team),
+          waiting?: false,
+          burst: 0,
+          arrived: nil
         }
     end
   end

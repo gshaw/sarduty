@@ -36,7 +36,13 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    Records' ids. A failure removes everything, in Records too, and the page offers Try
    again. A visitor's 3 days count from here.
 4. **The banner.** Every page of a demo team has it, for team admins, where View as puts
-   its own: when it goes, its link to copy, its Outbox, and Delete this demo.
+   its own: when it goes, its link to copy, its Outbox, and Delete this demo. The
+   Outbox button turns blue with "4 new" while anything arrived since the visitor last
+   opened it (`DemoTeam.outbox_seen!/2`), and is plain otherwise. The banner scrolls
+   away, so mail arriving also gets a toast under the top bar, on every page but the
+   Outbox: "3 emails and 1 text arrived in your Outbox." with a link to it. The
+   banner's hook in `Web.UserAuth` waits a second after the first message, so a burst
+   of reminders is one toast, and counts only what that burst brought.
 5. **The end.** `App.Operation.DeleteDemo` deletes the team through
    `DeleteTeam.purge(team, reason: :demo)`, the same delete as any team's: in Records
    first, which deletes a demo at once with no 7-day hold, then every row in SAR Duty,
