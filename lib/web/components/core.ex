@@ -338,7 +338,8 @@ defmodule Web.Components.Core do
       options. See `combobox/1`
 
     * `type="radios"` is one answer from a few choices, all in view, with `options` as
-      `{label, value}` or `{label, value, hint}`
+      `{label, value}` or `{label, value, hint}`, and `{label, value, hint, disabled: true}`
+      for a choice that can't be picked now, its hint saying why
 
     * `type="checkbox"` is used exclusively to render boolean values
 
@@ -372,7 +373,7 @@ defmodule Web.Components.Core do
 
   attr :options, :list,
     doc:
-      "a select's options for options_for_select/2; radios' {label, value} or {label, value, hint}"
+      "a select's options for options_for_select/2; radios' {label, value}, {label, value, hint}, or {label, value, hint, disabled: true}"
 
   attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
 
@@ -456,13 +457,17 @@ defmodule Web.Components.Core do
       <legend class="label mb-1">{@label}</legend>
       <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
       <.error :for={msg <- @errors}>{msg}</.error>
-      <label :for={{label, value, hint, i} <- @choices} class={["choice", hint && "mb-3"]}>
+      <label
+        :for={{label, value, hint, disabled?, i} <- @choices}
+        class={["choice", hint && "mb-3"]}
+      >
         <input
           type="radio"
           id={if i == 0, do: @id, else: "#{@id}_#{value}"}
           name={@name}
           value={value}
-          checked={to_string(@value) == to_string(value)}
+          checked={!disabled? and to_string(@value) == to_string(value)}
+          disabled={disabled?}
           {@rest}
         />
         <span>
@@ -630,8 +635,11 @@ defmodule Web.Components.Core do
     """
   end
 
-  defp radio_choice({label, value}, i), do: {label, value, nil, i}
-  defp radio_choice({label, value, hint}, i), do: {label, value, hint, i}
+  defp radio_choice({label, value}, i), do: {label, value, nil, false, i}
+  defp radio_choice({label, value, hint}, i), do: {label, value, hint, false, i}
+
+  defp radio_choice({label, value, hint, opts}, i),
+    do: {label, value, hint, Keyword.get(opts, :disabled, false), i}
 
   # A changeset form after a failed save: its action is :insert or :update, not :validate.
   defp saved?(%Phoenix.HTML.Form{source: %Ecto.Changeset{action: action}}),

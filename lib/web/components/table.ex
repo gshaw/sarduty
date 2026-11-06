@@ -47,6 +47,14 @@ defmodule Web.Components.Table do
 
     attr :select_all, :boolean,
       doc: "a header checkbox that checks or unchecks every checkbox in the column"
+
+    attr :fit, :list,
+      doc: """
+      the column's longest values, as text or as its own cells rendered, for a short
+      column, such as a reply or a date. The column is always as wide as the longest, and
+      the rest of the width goes to the columns without one, so a filter that changes the
+      rows never moves a column. See /styles/table#fit.
+      """
   end
 
   slot :header_row
@@ -74,6 +82,7 @@ defmodule Web.Components.Table do
               sort={@sort}
               path_fn={@path_fn}
               select_all={col[:select_all] && "#{@id}-select-all"}
+              fit={col[:fit]}
             />
           </tr>
         </thead>
@@ -123,6 +132,7 @@ defmodule Web.Components.Table do
         data-label={col[:label]}
         class={[
           Map.get(col, :class),
+          col[:fit] && "col-fit",
           if(Map.get(col, :align) == "right", do: "text-right", else: nil)
         ]}
       >
@@ -147,6 +157,7 @@ defmodule Web.Components.Table do
     doc: "the list's path with the sort changed, or a `JS` command a click runs, as a form does"
 
   attr :select_all, :string, default: nil, doc: "the id of the column's select all checkbox"
+  attr :fit, :list, default: nil, doc: "the column's longest values, unseen, which set its width"
 
   # Starts checked, as review lists start with every row checked, until the hook syncs it.
   # After that only the hook sets it: phx-update="ignore" stops a patch, such as a save's,
@@ -168,7 +179,9 @@ defmodule Web.Components.Table do
 
   def table_header(%{sorts: nil} = assigns) do
     ~H"""
-    <th class={[@class, @align == "right" && "text-right"]}>{@label}</th>
+    <th class={[@class, @fit && "col-fit", @align == "right" && "text-right"]}>
+      {@label}<.fit_sizer fit={@fit} />
+    </th>
     """
   end
 
@@ -178,7 +191,10 @@ defmodule Web.Components.Table do
     assigns = assign(assigns, header: header, target: target)
 
     ~H"""
-    <th class={[@class, @align == "right" && "text-right"]} aria-sort={@header.aria_sort}>
+    <th
+      class={[@class, @fit && "col-fit", @align == "right" && "text-right"]}
+      aria-sort={@header.aria_sort}
+    >
       <.a
         :if={is_binary(@target)}
         kind={:custom}
@@ -191,7 +207,18 @@ defmodule Web.Components.Table do
         phx-click={@target}
       ><.sort_header_content label={@label} header={@header} align={@align} /></.link>
       <.sort_header_content :if={!@header.link?} label={@label} header={@header} align={@align} />
+      <.fit_sizer fit={@fit} />
     </th>
+    """
+  end
+
+  attr :fit, :list, default: nil
+
+  # A fitted column's longest values, each a line with no height and nothing to see or
+  # read, so the column is as wide as the widest of them.
+  defp fit_sizer(assigns) do
+    ~H"""
+    <span :for={value <- @fit || []} class="col-fit-sizer" aria-hidden="true">{value}</span>
     """
   end
 

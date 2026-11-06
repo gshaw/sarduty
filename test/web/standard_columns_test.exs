@@ -52,8 +52,6 @@ defmodule Web.StandardColumnsTest do
   @cell_labelled_otherwise %{
     {"lib/web/live/activity_members_live/update.ex", "{Reply.status_text(status, false)}"} =>
       "before the start, a table per reply, each headed by it: each reply gets its own ending",
-    {"lib/web/live/activity_members_live/remind.ex", "Gets a reminder"} =>
-      "the members a reminder goes to, headed by what they get",
     {"lib/web/live/activity_members_live/remove_before_start.ex", "{@label}"} =>
       "who a removal takes, headed by whether they get an email",
     {"lib/web/live/activity_add_members_live.ex", "Not added yet"} =>

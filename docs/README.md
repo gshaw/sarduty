@@ -119,7 +119,7 @@ have decided since the page loaded, stays in `call`.
   #766) lists each change as a module in its `@actions`: label, hint, when it's offered,
   how it counts the button, and in place or a step. In place calls the operation and
   the tables update. A step is a LiveComponent on a `live_action` route of the same
-  LiveView, such as `/members/remind`, so the ticks stay: Back keeps them, and a refresh
+  LiveView, such as `/members/ask`, so the ticks stay: Back keeps them, and a refresh
   lands on the tab with a toast.
 
 ## The docs

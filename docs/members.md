@@ -160,7 +160,7 @@ team admin uses to finish retiring them still show them.
 | Logging in as a team admin, Agents, Team admins, the last team admin check, and team admin email                                     | `Member.managers_query/2`                              |
 | Logging in as a member                                                                                                               | `Member.counted_query/1` in `Member.get_logins/2`      |
 | Dashboard counts and charts, Missing details, Add members, a template's groups, Take attendance, and an organization's member totals | `Member.counted_query/1`                               |
-| Reminders                                                                                                                            | Send a reminder names them under "Who does not get it" |
+| Reminders                                                                                                                            | Ask for a reply names them under "Who does not get it" |
 
 Still shown: the Members list (the Retiring tile, and Not retired, its default), their
 member page and history, Equipment's With retiring members, and Needs attention. Group
@@ -477,10 +477,10 @@ activity starts.
   day, and the page names them; adding one by name includes them. A published activity
   says so in place of the link. D4H's own weekly briefing may still tell them.
 - **Reminders** ([SendReminders](../lib/app/operation/send_reminders.ex)): before the
-  start, a team admin checks members on the Members tab, picks Send a reminder, and the
-  button counts the checked members with no reply it can email: Remind 2 members. It
-  opens a step, `/teams/:subdomain/activities/:id/members/remind`
-  ([Remind](../lib/web/live/activity_members_live/remind.ex), #608, #895). It lists who
+  start, a team admin checks members on the Members tab, picks Ask for a reply (#920),
+  and the button counts the checked members with no reply it can email: Ask 2 members.
+  It opens a step, `/teams/:subdomain/activities/:id/members/ask`
+  ([Ask](../lib/web/live/activity_members_live/ask.ex), #608, #895). It lists who
   gets one, with the dates they were emailed before, then everyone else checked who gets
   none and why, a line each: replied already (a count of signed up and can't make it),
   retiring, turned off invitation reminders, or no email in D4H. Then the email itself,
@@ -492,9 +492,11 @@ activity starts.
   had a cap of 2, a day apart). Each goes at once, from the team's name, with replies to
   the team admin ([ActivityMailer](../lib/app/mailer/activity_mailer.ex)). Its text sets
   no colour, so a mail app in dark mode keeps it readable. Each is a row in `reminders`:
-  who, when, by whom, the message, and sent or failed. A No reply row's Replied cell reads "Reminded
-  Oct 26", or "Reminder failed". Beside the Members heading, the last batch: "4 sent Oct
-  26, 18:02 by Alex Chen · 2 replied since".
+  who, when, by whom, the message, and sent or failed. The table's Asked cell reads "Asked
+  Oct 26", "Sending", or "Failed", on any row that has one. Above the table, the last
+  batch: "4 sent Oct 26, 18:02 by Alex Chen · 2 replied since". Team admins ask for a
+  reply; to the member the email is an invitation reminder, and their settings, the
+  email's "Turn off invitation reminders", and `/reminders/:token` say so.
 - **Updates** ([SendActivityUpdate](../lib/app/operation/send_activity_update.ex), #609):
   a team admin checks members on the Members tab and picks Send an update, to tell them
   something whatever their reply, such as a new meeting place. It changes nothing on the
@@ -515,7 +517,7 @@ activity starts.
   activity for everyone, with no line on where they stand and no reply buttons, so the
   preview is one email.
   Earlier updates are listed at the top with their message, sender, and count. Each is
-  a row in `activity_updates`. Asking only members with no reply is Send a reminder.
+  a row in `activity_updates`. Asking only members with no reply is Ask for a reply.
 - **Remove from the activity** ([RemoveMembers](../lib/app/operation/remove_members.ex),
   #704): before the start, on a draft, a team admin checks members on the Members tab and
   picks Remove from the activity: Remove 3 members, red. Its step,
@@ -534,14 +536,16 @@ activity starts.
   [ActivityMembers](../lib/app/view_data/activity_members.ex)), in one table (#920)
   under a tile per reply (`?status=`), a name search (`?q=`), and a Group filter
   (`?group=`). Before the start the table's Reply is Signed up, Can't make it, then No
-  reply (#895), with Replied: when, New for the last 24 hours, and the last reminder on
-  any row once the activity has one. From the start its Attendance is Attended, Absent,
+  reply (#895), with Replied: when, New for the last 24 hours, and Asked on any row once
+  the activity has an ask. From the start its Attendance is Attended, Absent,
   then No reply (#766), with Start, Finish, and Hours on attended rows. Start shows a
   date only when it isn't the activity's day. Team admins get a tick box per row and one
-  select all for the rows shown, then one list for the checked members, and the button
-  in an action bar at the foot of the window: Send a reminder, Send an update, and
-  Remove from the activity before the start, and changes to attendance from it until it's
-  published, then Send an update.
+  select all for the rows shown, then one list, For the checked members, and the button
+  in an action bar at the foot of the window. Before the start: Ask for a reply, Send an
+  update, and Remove from the activity. From it: Mark attended and Mark absent until it's
+  published, Send an update, then Remove from the activity. Each hint counts the checked
+  rows, and a choice that reaches nobody checked greys out and says why (writing.md's
+  Choices for checked rows).
 
 ### View as member
 

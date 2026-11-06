@@ -77,6 +77,11 @@
   table.table :is(tbody, tr).is-muted td { color: var(--text-muted); }
   table.table tbody:not(:last-child) tr:last-child :is(td, th) { border-bottom: 1px solid var(--border-subtle); }
 
+  /* A fitted column (table.ex `fit`): as wide as its longest values, which its header
+     carries unseen, so a filter never moves it. The columns without one take the rest. */
+  table.table :is(th, td).col-fit { width: 1px; white-space: nowrap; }
+  table.table th .col-fit-sizer { display: block; height: 0; overflow: hidden; visibility: hidden; font-size: var(--fs-sm); font-weight: 400; text-transform: none; letter-spacing: normal; }
+
   /* A sortable header's arrow, faded until the table sorts by that column. */
   table.table thead .sort-suffix { color: var(--border); }
   table.table thead .sort-suffix.is-current { color: inherit; }

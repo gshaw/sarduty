@@ -90,7 +90,7 @@ defmodule App.Mailer.ActivityMailer do
   def update_ending("absent", _member), do: :cant_make_it
 
   @doc """
-  A reminder as Send a reminder shows it (#608), from the same subject and HTML that
+  A reminder as Ask for a reply shows it (#608), from the same subject and HTML that
   deliver_reminder/5 sends, as `%{subject:, html:}`. Its links go nowhere: each real one
   is signed for its member.
   """

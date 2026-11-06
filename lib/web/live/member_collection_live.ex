@@ -186,7 +186,7 @@ defmodule Web.MemberCollectionLive do
             name="do"
             value="remove"
             phx-disable-with="Removing…"
-            data-confirm={remove_confirm(@selected, @rows, @group_id, @groups)}
+            {remove_confirm(@selected, @rows, @group_id, @groups)}
           >
             Remove from group
           </.button>
@@ -387,16 +387,24 @@ defmodule Web.MemberCollectionLive do
     end
   end
 
-  # No confirm without a group and ticks: the click gets "Select a group" or "Select
-  # members" instead.
-  defp remove_confirm(selected, rows, group_id, groups) do
+  @doc """
+  Remove from group's `data-confirm` attributes for the checked `selected` among `rows`
+  (/styles/confirm-dialog#many): up to 3 by name, then a count, and from 10 a box. None
+  without a group and checked members: the click gets "Select a group" or "Select members"
+  instead. Pure.
+  """
+  def remove_confirm(selected, rows, group_id, groups) do
     group = Enum.find_value(groups, fn {label, id} -> id == group_id && label end)
     names = for %{member: m} <- rows, MapSet.member?(selected, m.id), do: m.name
+    members = count_members(length(names))
 
-    cond do
-      is_nil(group) or names == [] -> nil
-      length(names) <= 5 -> "Remove #{Service.Format.and_list(names)} from #{group}?"
-      true -> "Remove #{count_members(length(names))} from #{group}?"
+    if is_nil(group) or names == [] do
+      %{}
+    else
+      Map.merge(
+        %{"data-confirm" => "Remove #{names_or_count(names, members)} from #{group}?"},
+        confirm_check(length(names), "I understand #{members} leave #{group}.")
+      )
     end
   end
 

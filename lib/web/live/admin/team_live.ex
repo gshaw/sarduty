@@ -263,7 +263,7 @@ defmodule Web.Admin.TeamLive do
             variant={:danger}
             phx-click="id_cards"
             phx-value-enabled="false"
-            data-confirm={"Turn off ID cards for #{@team.name}? This cancels its #{Service.Format.count(@cards, one: "%d card", many: "%d cards")}, and its team admins get an email."}
+            {Web.TeamSwitchConfirm.id_cards_off(@team, @cards)}
           >
             Turn off ID cards
           </.button>
@@ -296,7 +296,7 @@ defmodule Web.Admin.TeamLive do
             variant={:danger}
             phx-click="mcp"
             phx-value-enabled="false"
-            data-confirm={"Turn off Agents for #{@team.name}? This disconnects #{Service.Format.count(@agents, one: "%d agent", many: "%d agents")}."}
+            {Web.TeamSwitchConfirm.agents_off(@team, @agents)}
           >
             Turn off Agents
           </.button>
