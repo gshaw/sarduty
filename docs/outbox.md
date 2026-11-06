@@ -15,9 +15,12 @@ Email and texts SAR Duty keeps instead of sending, as `App.Model.OutboxMessage` 
 Tests use `Swoosh.Adapters.Test` for real teams' email; a demo team's lands in the
 Outbox in tests too. Twilio is stubbed with `Req.Test`.
 
-A team's email that skips `Mailer.for_team/2` isn't known as the demo's, so it would be
-sent. A demo's members all have example.com addresses, which take no mail, so it
-reaches nobody; still, every mailer for a team's email calls `for_team/2`.
+Every email and text says whose it is, so none skips a demo's Outbox by mistake. An
+email is piped through `Mailer.for_team/2` or `Mailer.for_no_team/1` (a login code, a
+new team's notice), and `Mailer.deliver/2` raises on one with neither.
+`App.TeamMarkTest` checks that each function calling `Mailer.deliver` marks its email
+there. `Twilio.send_sms/3` takes a team id or `:no_team`, with no default. The mark
+stops a forgotten one, not a wrong one: a team's email marked `for_no_team` is sent.
 
 An open Outbox page shows a new message at once (`OutboxMessage.topic/0`). The rows go
 with the team (`App.Operation.DeleteTeam`); dev's stay until emptied.

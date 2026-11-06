@@ -28,6 +28,7 @@ defmodule App.Accounts.UserNotifier do
       @#{host} ##{code}
       """)
       |> html_body(login_html(code, host))
+      |> Mailer.for_no_team()
 
     with {:ok, _metadata} <- Mailer.deliver(email) do
       {:ok, email}
@@ -48,11 +49,12 @@ defmodule App.Accounts.UserNotifier do
     A browser you've logged in with before still can. If this was not you, nothing else is
     needed: the codes were wrong, and they only work for 15 minutes.
     """)
+    |> Mailer.for_no_team()
     |> Mailer.deliver()
   end
 
-  # The login text. The last line is the one-time code format iOS and Android read to
-  # offer the code on the login page, bound to this site's domain.
+  # The last line of a code text is the one-time code format iOS and Android read to
+  # offer the code on the page, bound to this site's domain.
   @doc "A code that proves a member gets texts at a new number (#156), from `team_id`."
   def deliver_confirm_text(phone, code, team_id) do
     Twilio.send_sms(
@@ -90,14 +92,20 @@ defmodule App.Accounts.UserNotifier do
     end
   end
 
+  # A login is no team's. Text login never reaches a demo team's member, whose number a
+  # visitor typed: Member.current_emails_with_phone/2 leaves them out.
   def deliver_login_text(phone, code) do
-    Twilio.send_sms(phone, """
-    Your SAR Duty login code: #{code}
+    Twilio.send_sms(
+      phone,
+      """
+      Your SAR Duty login code: #{code}
 
-    It works once, for 15 minutes.
+      It works once, for 15 minutes.
 
-    @#{Web.Endpoint.host()} ##{code}\
-    """)
+      @#{Web.Endpoint.host()} ##{code}\
+      """,
+      :no_team
+    )
   end
 
   @doc "Tells the admins a team signed itself up. Sends nothing when there are none."
@@ -118,6 +126,7 @@ defmodule App.Accounts.UserNotifier do
 
     Its first refresh has started. Review it on #{Web.Endpoint.url()}/admin.
     """)
+    |> Mailer.for_no_team()
     |> Mailer.deliver()
   end
 
@@ -142,6 +151,7 @@ defmodule App.Accounts.UserNotifier do
 
     #{undo}
     """)
+    |> Mailer.for_no_team()
     |> Mailer.deliver()
   end
 

@@ -291,7 +291,9 @@ defmodule App.Operation.TestIntegration do
   end
 
   defp send_email(to, user, now) do
-    case to |> IntegrationTestMailer.build(user.email, now) |> Mailer.deliver() do
+    email = to |> IntegrationTestMailer.build(user.email, now) |> Mailer.for_no_team()
+
+    case Mailer.deliver(email) do
       {:ok, _} ->
         if outbox?(),
           do: {:ok, "sent", "Test email kept in the outbox. Open /dev/outbox to see it."},
@@ -348,7 +350,7 @@ defmodule App.Operation.TestIntegration do
   defp text(e164) do
     body = "SAR Duty test text, sent from Adminland. If you got it, texts work."
 
-    case Twilio.send_sms_with_reason(e164, body) do
+    case Twilio.send_sms_with_reason(e164, body, :no_team) do
       :ok ->
         if Twilio.delivers?(),
           do: {:ok, "sent", "Test text sent to #{Service.Phone.format(e164)}."},
