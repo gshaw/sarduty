@@ -292,8 +292,9 @@ defmodule App.ViewData.ChangeHistory do
   defp row_kind(action) when action in [:add_group_member, :remove_group_member],
     do: :group_membership
 
-  defp row_kind(action) when action in [:create_equipment_usage, :delete_equipment_usage],
-    do: :equipment
+  defp row_kind(action)
+       when action in [:create_equipment_usage, :update_equipment_usage, :delete_equipment_usage],
+       do: :equipment
 
   defp row_kind(_action), do: :record
 
@@ -474,6 +475,12 @@ defmodule App.ViewData.ChangeHistory do
   def describe_row(%ChangeSetRow{action: :create_equipment_usage} = row, _page),
     do: "#{row.new_value["title"] || "An item"} added to equipment"
 
+  def describe_row(%ChangeSetRow{action: :update_equipment_usage} = row, _page) do
+    key = if row.new_value["km"], do: "km", else: "minutes"
+    from = usage_amount(key, row.old_value[key])
+    "#{row.new_value["title"] || "An item"}: #{from} → #{usage_amount(key, row.new_value[key])}"
+  end
+
   def describe_row(%ChangeSetRow{action: :delete_equipment_usage} = row, _page),
     do: "#{row.old_value["title"] || "An item"} removed from equipment"
 
@@ -639,4 +646,12 @@ defmodule App.ViewData.ChangeHistory do
   defp updated_part(key) when key in ~w(email phone address), do: "Contact details"
   defp updated_part("custom_values"), do: "Fields"
   defp updated_part(_key), do: "Details"
+
+  # A usage row's km or minutes, as its Used column shows them.
+  defp usage_amount("km", km) when is_integer(km) and km > 0, do: Service.Format.km(km)
+
+  defp usage_amount("minutes", minutes) when is_integer(minutes) and minutes > 0,
+    do: Service.Format.duration(minutes)
+
+  defp usage_amount(_key, _value), do: "none"
 end

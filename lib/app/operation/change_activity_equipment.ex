@@ -1,12 +1,12 @@
 defmodule App.Operation.ChangeActivityEquipment do
   @moduledoc """
-  Adds equipment and a template's tags to an activity, or removes one item, in D4H (#271,
-  #162). Each is a change set of source `:equipment`, applied at once, with one row per
+  Adds equipment and a template's tags to an activity, changes one item's hours or km, or
+  removes one item, in D4H (#271, #162, #876). Each is a change set of source `:equipment`, applied at once, with one row per
   item and one for the tags. Then the activity's usages are read back from D4H, and its
   added tags copied, so its page shows them before the next sync.
 
-  plan_adds/3 decides which items to add and plan_tags/3 which tags; add/6 and remove/5
-  write; flash_kind/1 and result_text/2 say what the written rows did.
+  plan_adds/3 decides which items to add, plan_tags/3 which tags, and plan_change/3 what a
+  change sends; add/6, change/7, and remove/5 write; flash_kind/1 and result_text/2 say what the written rows did.
   """
 
   alias App.Accounts.User
@@ -105,6 +105,59 @@ defmodule App.Operation.ChangeActivityEquipment do
     end
   end
 
+  @doc """
+  The row that changes `usage` (its item preloaded) to `minutes` for equipment or `km` for
+  a vehicle, or nil when the item counts neither or the value is the same. Only the one
+  the item counts is sent: D4H would take the other and keep it.
+  """
+  def plan_change(%EquipmentUsage{equipment_item: item} = usage, minutes, km) do
+    if new = new_use(usage, minutes, km) do
+      %ChangeSetRow{
+        action: :update_equipment_usage,
+        d4h_record_id: usage.d4h_equipment_usage_id,
+        old_value: %{"title" => item.title, "minutes" => usage.minutes, "km" => usage.distance},
+        new_value:
+          Map.merge(new, %{"title" => item.title, "d4h_equipment_id" => item.d4h_equipment_id})
+      }
+    end
+  end
+
+  # The minutes or km to send, or nil when the item counts neither or nothing changed.
+  defp new_use(%EquipmentUsage{equipment_item: item} = usage, minutes, km) do
+    minutes = max(minutes || 0, 0)
+
+    cond do
+      EquipmentItem.takes_hours?(item) ->
+        if minutes != usage.minutes, do: %{"minutes" => minutes, "km" => nil}
+
+      EquipmentItem.takes_km?(item) and is_integer(km) ->
+        if km != usage.distance, do: %{"minutes" => nil, "km" => max(km, 0)}
+
+      true ->
+        nil
+    end
+  end
+
+  @doc """
+  Changes one usage's minutes or km. `{:ok, rows}`, or `{:error, text}` to show, and
+  `{:ok, []}` when nothing changed.
+  """
+  def change(
+        %Team{} = team,
+        %Activity{} = activity,
+        %EquipmentUsage{} = usage,
+        minutes,
+        km,
+        user,
+        now
+      )
+      when usage.activity_id == activity.id do
+    case plan_change(usage, minutes, km) do
+      nil -> {:ok, []}
+      row -> apply_rows(team, activity, [row], user, now)
+    end
+  end
+
   @doc "Removes one usage from the activity. `{:ok, rows}`, or `{:error, text}` to show."
   def remove(%Team{} = team, %Activity{} = activity, %EquipmentUsage{} = usage, user, now)
       when usage.activity_id == activity.id do
@@ -114,7 +167,8 @@ defmodule App.Operation.ChangeActivityEquipment do
       old_value: %{
         "d4h_equipment_id" => usage.equipment_item.d4h_equipment_id,
         "title" => usage.equipment_item.title,
-        "minutes" => usage.minutes
+        "minutes" => usage.minutes,
+        "km" => usage.distance
       }
     }
 
@@ -175,8 +229,8 @@ defmodule App.Operation.ChangeActivityEquipment do
 
   @doc """
   What the written `rows` did, as one message: "3 items added.", "2 tags added." when a
-  template's tags went, and then each row that didn't go, with why. `verb` is "added" or
-  "removed".
+  template's tags went, and then each row that didn't go, with why. `verb` is "added",
+  "changed", or "removed".
   """
   def result_text(rows, verb) do
     {tag_rows, item_rows} = Enum.split_with(rows, &(&1.action == :set_activity_tags))

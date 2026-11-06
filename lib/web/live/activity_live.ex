@@ -698,6 +698,20 @@ defmodule Web.ActivityLive do
         <:col :let={usage} label="Used" align="right" class="whitespace-nowrap">
           {Web.ActivityEquipmentLive.amount(usage)}
         </:col>
+        <:col
+          :let={usage}
+          :if={@team_admin? and !@activity.deleted_at}
+          label=""
+          class="w-px whitespace-nowrap"
+        >
+          <.a
+            :if={Web.ActivityEquipmentLive.changeable?(usage)}
+            id={"activity-equipment-change-#{usage.id}"}
+            navigate={
+              ~p"/teams/#{@activity.team}/activities/#{@activity.id}/equipment/add?change=#{usage.id}"
+            }
+          >Change</.a>
+        </:col>
       </.table>
       <p :if={@usages == []} class="hint">No equipment on this activity.</p>
     </section>

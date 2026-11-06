@@ -90,11 +90,13 @@ defmodule App.Operation.ApplyChangeSetTest do
     assert {:skipped, _} = ApplyChangeSet.check(row, [%EquipmentUsage{d4h_equipment_id: 7}])
   end
 
-  test "an equipment remove is skipped when D4H has dropped the usage already" do
-    row = %ChangeSetRow{action: :delete_equipment_usage, d4h_record_id: 40}
+  test "an equipment change or remove is skipped when D4H has dropped the usage already" do
+    for action <- [:update_equipment_usage, :delete_equipment_usage] do
+      row = %ChangeSetRow{action: action, d4h_record_id: 40}
 
-    assert ApplyChangeSet.check(row, [%EquipmentUsage{d4h_equipment_usage_id: 40}]) == :ok
-    assert {:skipped, _} = ApplyChangeSet.check(row, [])
+      assert ApplyChangeSet.check(row, [%EquipmentUsage{d4h_equipment_usage_id: 40}]) == :ok
+      assert {:skipped, _} = ApplyChangeSet.check(row, [])
+    end
   end
 
   @writes ~w(add_group_member remove_group_membership set_attendance create_attendance
@@ -102,7 +104,8 @@ defmodule App.Operation.ApplyChangeSetTest do
              remove_member_photo create_activity
              update_activity delete_activity create_qualification update_qualification
              delete_qualification award_qualification remove_award create_group update_group
-             delete_group create_equipment_usage delete_equipment_usage set_activity_tags
+             delete_group create_equipment_usage update_equipment_usage delete_equipment_usage
+             set_activity_tags
              create_equipment_item
              update_equipment_item delete_equipment_item delete_attendance publish_activity
              upload_document create_whiteboard_note update_whiteboard_note

@@ -11,7 +11,7 @@ defmodule Web.ActivityEquipmentLive do
   # kind, from a search, or from a phone's camera scanning barcodes, into a list with hours
   # to check. Sending the list writes them to D4H as equipment usages. Templates are
   # applied on their own page, ActivityTemplateLive (#162).
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     team = socket.assigns.current_team
     activity = Web.ActivityLive.fetch_activity(team, id)
 
@@ -24,11 +24,11 @@ defmodule Web.ActivityEquipmentLive do
         socket
         |> assign(page_title: "Add equipment", activity: activity, lines: [])
         |> assign(q: "", results: [], last: last)
-        |> assign(scan_message: nil, scan_failed: false)
+        |> assign(scan_message: nil, scan_failed: false, changing: nil)
         |> assign(last_usages: if(last, do: EquipmentUsage.for_activity(last), else: []))
         |> load_usages()
 
-      {:ok, socket}
+      {:ok, assign(socket, changing: changing(socket.assigns.usages, params["change"]))}
     end
   end
 
@@ -135,21 +135,55 @@ defmodule Web.ActivityEquipmentLive do
               <.item_cell item={usage.equipment_item} team={@current_team} />
             </:col>
             <:col :let={usage} label="Used" align="right" class="w-px whitespace-nowrap">
-              {amount(usage)}
+              <.change_usage_form :if={@changing == usage.id} usage={usage} />
+              <span :if={@changing != usage.id}>{amount(usage)}</span>
             </:col>
             <:col :let={usage} label="" class="w-px whitespace-nowrap">
-              <.button
-                id={"usage-remove-#{usage.id}"}
-                type="button"
-                size={:sm}
-                variant={:danger}
-                phx-click="remove-usage"
-                phx-disable-with="Removing…"
-                phx-value-id={usage.id}
-                data-confirm={"Remove #{usage.equipment_item.title} from this activity?"}
-              >
-                Remove
-              </.button>
+              <span :if={@changing == usage.id} class="flex gap-2">
+                <.button
+                  id={"usage-save-#{usage.id}"}
+                  form="usage-change-form"
+                  size={:sm}
+                  variant={:success}
+                  phx-disable-with="Saving…"
+                >
+                  Save
+                </.button>
+                <.button
+                  id={"usage-cancel-#{usage.id}"}
+                  type="button"
+                  size={:sm}
+                  variant={:secondary}
+                  phx-click="cancel-change"
+                >
+                  Cancel
+                </.button>
+              </span>
+              <span :if={@changing != usage.id} class="flex gap-2">
+                <.button
+                  :if={changeable?(usage)}
+                  id={"usage-change-#{usage.id}"}
+                  type="button"
+                  size={:sm}
+                  variant={:secondary}
+                  phx-click="change-usage"
+                  phx-value-id={usage.id}
+                >
+                  Change
+                </.button>
+                <.button
+                  id={"usage-remove-#{usage.id}"}
+                  type="button"
+                  size={:sm}
+                  variant={:danger}
+                  phx-click="remove-usage"
+                  phx-disable-with="Removing…"
+                  phx-value-id={usage.id}
+                  data-confirm={"Remove #{usage.equipment_item.title} from this activity?"}
+                >
+                  Remove
+                </.button>
+              </span>
             </:col>
           </.table>
           <p :if={@usages == []} class="hint">No equipment on this activity yet.</p>
@@ -158,6 +192,49 @@ defmodule Web.ActivityEquipmentLive do
     </div>
     """
   end
+
+  attr :usage, EquipmentUsage, required: true
+
+  # One row's box for its hours or km (#876), saved by the row's Save button.
+  defp change_usage_form(assigns) do
+    ~H"""
+    <.form
+      for={%{}}
+      id="usage-change-form"
+      phx-submit="save-usage"
+      class="flex items-center justify-end gap-2"
+    >
+      <input type="hidden" name="usage_id" value={@usage.id} />
+      <input
+        :if={EquipmentItem.takes_hours?(@usage.equipment_item)}
+        type="text"
+        id={"usage-hours-#{@usage.id}"}
+        name="hours"
+        value={Service.Convert.duration_text(@usage.minutes)}
+        size="7"
+        autocomplete="off"
+        phx-mounted={JS.focus()}
+        aria-label={"Hours for #{@usage.equipment_item.title}, like 45m, 2h, or 2.5h"}
+      />
+      <input
+        :if={EquipmentItem.takes_km?(@usage.equipment_item)}
+        type="number"
+        id={"usage-km-#{@usage.id}"}
+        name="km"
+        value={@usage.distance}
+        min="0"
+        step="1"
+        class="w-16"
+        phx-mounted={JS.focus()}
+        aria-label={"Km for #{@usage.equipment_item.title}"}
+      /> <span :if={EquipmentItem.takes_km?(@usage.equipment_item)} class="hint">km</span>
+    </.form>
+    """
+  end
+
+  @doc "Whether a usage's use can change here: hours for equipment, km for a vehicle."
+  def changeable?(%EquipmentUsage{equipment_item: item}),
+    do: EquipmentItem.takes_hours?(item) or EquipmentItem.takes_km?(item)
 
   @doc "What a usage counted: hours for equipment, km for a vehicle, a count for a supply."
   def amount(%EquipmentUsage{minutes: minutes}) when is_integer(minutes) and minutes > 0,
@@ -454,6 +531,36 @@ defmodule Web.ActivityEquipmentLive do
     end
   end
 
+  def handle_event("change-usage", %{"id" => id}, socket),
+    do: {:noreply, assign(socket, changing: String.to_integer(id))}
+
+  def handle_event("cancel-change", _params, socket),
+    do: {:noreply, assign(socket, changing: nil)}
+
+  def handle_event("save-usage", %{"usage_id" => id} = params, socket) do
+    %{current_team: team, current_user: user, activity: activity} = socket.assigns
+    usage = Enum.find(socket.assigns.usages, &(Integer.to_string(&1.id) == id))
+
+    case typed_use(usage, params) do
+      {:ok, minutes, km} ->
+        result =
+          ChangeActivityEquipment.change(
+            team,
+            activity,
+            usage,
+            minutes,
+            km,
+            user,
+            DateTime.utc_now()
+          )
+
+        {:noreply, changed(socket, result)}
+
+      {:error, text} ->
+        {:noreply, put_flash(socket, :error, text)}
+    end
+  end
+
   def handle_event("remove-usage", %{"id" => id}, socket) do
     %{current_team: team, current_user: user, activity: activity} = socket.assigns
 
@@ -477,6 +584,43 @@ defmodule Web.ActivityEquipmentLive do
         end
     end
   end
+
+  # The usage the Equipment tab's Change opened, when it's still on the activity (#876).
+  defp changing(usages, id) do
+    usage = Enum.find(usages, &(Integer.to_string(&1.id) == id))
+    if usage && changeable?(usage), do: usage.id
+  end
+
+  # The minutes or km typed into a row's box.
+  defp typed_use(nil, _params), do: {:error, "This item is off the activity already."}
+
+  defp typed_use(_usage, %{"hours" => text}) do
+    case Service.Convert.parse_duration(text) do
+      nil -> {:error, "Type the hours like 45m, 2h, or 2.5h."}
+      minutes -> {:ok, minutes, nil}
+    end
+  end
+
+  defp typed_use(_usage, %{"km" => text}) do
+    case parse_km(text) do
+      nil -> {:error, "Type the km as a whole number."}
+      km -> {:ok, nil, km}
+    end
+  end
+
+  defp changed(socket, {:ok, []}), do: assign(socket, changing: nil)
+
+  defp changed(socket, {:ok, rows}) do
+    socket
+    |> put_flash(
+      ChangeActivityEquipment.flash_kind(rows),
+      ChangeActivityEquipment.result_text(rows, "changed")
+    )
+    |> assign(changing: nil)
+    |> load_usages()
+  end
+
+  defp changed(socket, {:error, text}), do: put_flash(socket, :error, text)
 
   defp add(socket, new) do
     lines = add_lines(socket.assigns.lines, new, socket.assigns.used)

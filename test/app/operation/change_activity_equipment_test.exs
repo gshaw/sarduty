@@ -3,6 +3,7 @@ defmodule App.Operation.ChangeActivityEquipmentTest do
 
   alias App.Model.Activity
   alias App.Model.EquipmentItem
+  alias App.Model.EquipmentUsage
   alias App.Model.Tag
   alias App.Operation.ChangeActivityEquipment
 
@@ -44,6 +45,46 @@ defmodule App.Operation.ChangeActivityEquipmentTest do
     rows = ChangeActivityEquipment.plan_adds(@activity, lines, [1])
     assert Enum.map(rows, & &1.new_value["d4h_equipment_id"]) == [2]
     assert hd(rows).new_value["minutes"] == 60
+  end
+
+  # An item's usage, with the item preloaded as the page has it.
+  defp usage(d4h_id, type, attrs) do
+    item = item(d4h_id, type)
+    struct(%EquipmentUsage{d4h_equipment_usage_id: 55, equipment_item: item}, attrs)
+  end
+
+  # #876: plans change as an operation runs, so an item's use changes after it's added.
+  test "a change sends equipment's minutes or a vehicle's km, never the other" do
+    phone = usage(1, "equipment", minutes: 191)
+    row = ChangeActivityEquipment.plan_change(phone, 240, 9)
+
+    assert row.action == :update_equipment_usage
+    assert row.d4h_record_id == 55
+
+    assert row.new_value == %{
+             "title" => "Item 1",
+             "d4h_equipment_id" => 1,
+             "minutes" => 240,
+             "km" => nil
+           }
+
+    assert row.old_value == %{"title" => "Item 1", "minutes" => 191, "km" => nil}
+
+    van = usage(2, "vehicle", minutes: 0, distance: 38)
+    row = ChangeActivityEquipment.plan_change(van, 60, 52)
+    assert {row.new_value["minutes"], row.new_value["km"]} == {nil, 52}
+    assert row.old_value["km"] == 38
+  end
+
+  test "no change row for the same value, a blank km, or a supply" do
+    phone = usage(1, "equipment", minutes: 120)
+    van = usage(2, "vehicle", distance: 38)
+    flares = usage(3, "supply", used: 4)
+
+    assert ChangeActivityEquipment.plan_change(phone, 120, nil) == nil
+    assert ChangeActivityEquipment.plan_change(van, nil, 38) == nil
+    assert ChangeActivityEquipment.plan_change(van, nil, nil) == nil
+    assert ChangeActivityEquipment.plan_change(flares, 60, 5) == nil
   end
 
   defp tag(d4h_id, title), do: %Tag{d4h_tag_id: d4h_id, title: title}
