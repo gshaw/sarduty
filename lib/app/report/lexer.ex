@@ -61,7 +61,7 @@ defmodule App.Report.Lexer do
   end
 
   defp scan(<<c, _::binary>> = text, line, acc) when c in ?0..?9 do
-    [digits] = Regex.run(~r/^\d+(\.\d+)?/, text)
+    [digits | _] = Regex.run(~r/^\d+(\.\d+)?/, text)
     rest = binary_part(text, byte_size(digits), byte_size(text) - byte_size(digits))
 
     number =

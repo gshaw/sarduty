@@ -1,0 +1,97 @@
+# Documents
+
+A document is a PDF SAR Duty prints from a text file in `priv/documents/` (#918). The
+file holds what the document reads, what it says, where each part sits on the page, and
+worked examples CI checks. The tax credit letter,
+[tax_credit_letter.txt](../priv/documents/tax_credit_letter.txt), is the first. In code
+it's `App.Document`: "template" is taken by kit templates.
+
+The language is the report language's ([reports.md](reports.md)): the same lexer, the
+same parser for each report and every value, and the same catalog. There is no second
+parser. `App.Document` is pure: it parses, checks against the catalog, and works out
+what each place holds from values it's given. It never runs a query, loads a picture,
+or calls Typst. Printing is step 4 of #918.
+
+## The clauses
+
+They come in this order. `report` and `expect` can repeat; the rest come once.
+
+| Clause                              | What it says                                                                                      |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `document 'Tax credit letter'`      | Its name.                                                                                         |
+| `about '…'`                         | One line on what it's for.                                                                        |
+| `for member, year`                  | What it starts from, read as `:member` and `:year`.                                               |
+| `report hours` and a query under it | A report, read as `hours.total`: its first row's columns. Select fields only, so each has a name. |
+| `title '…' by …`                    | The PDF's title and author.                                                                       |
+| `lock print`                        | The PDF can only be printed (`Service.PDFLock`).                                                  |
+| `keep hours.primary, …`             | Values saved with the PDF. Only what a report reads.                                              |
+| `places`                            | Where each value goes.                                                                            |
+| `fill`                              | What goes in each place.                                                                          |
+| `expect with … : …`                 | A worked example: values given, and a condition that must hold.                                   |
+
+A clause starts at the left edge, and the lines indented under it are its own. `--`
+starts a comment.
+
+## Values
+
+A value is a report expression: a name, a literal, a comparison, `and`, `or`, `not`,
+`is null`, `in`, `contains`, `starts with`, and `ends with`. A document adds:
+
+- `'text {value}'` puts a value in text. `{value as format}` formats it.
+- `value as format`, with Service.Format's formatters: `date_long`, `date_short`,
+  `time`, `duration`, `hours`, `number`, and `km`. Dates show in the team's time zone.
+- `value if condition` is blank when the condition is false.
+- `if condition then value else value` picks one.
+- `coalesce(a, b)` is the first that isn't blank, and `qr(link)` a QR code of a link.
+
+Blank is nil or empty text: `is null` holds for it, `coalesce` skips it, and a flow
+leaves it out. Text compares exactly, case and all, since an expect checks what prints.
+
+## Names
+
+| Name                                               | What it is                                                               |
+| -------------------------------------------------- | ------------------------------------------------------------------------ |
+| `hours.total`                                      | A report's column. A record, such as a member, prints its name.          |
+| `team.legal_name`, `organization.name`             | The `team` and `organization` subjects' fields, with no report to write. |
+| `:member`, `:year`                                 | What the document starts from.                                           |
+| `today`                                            | The team's date today.                                                   |
+| `team.logo`, `organization.logo`, `team.signature` | Pictures only printing reads.                                            |
+| `pdf.reference`, `pdf.verify_link`                 | The PDF's reference number and verify link.                              |
+
+The pictures and the PDF's values print only. No report reads them, and `keep` refuses
+them, so the signature never reaches a report (#918).
+
+## Places
+
+```sql
+places
+  letterhead flow across, top 1in, right 1in, height 1in, gap 0.25in
+  letter     flow down, top 1in, left 1in, right 1in, size 12pt, leading 14.4pt
+  verify     image right 1in, width 1in, height 1in, level with letter
+```
+
+A place is `text`, `image`, or `flow`, and lengths are in `in`, `pt`, or `mm` from the
+page's edges. A flow stacks values in order, down the page or across it, and leaves out
+the blank ones. Down, each item is text, `space` (a blank line, or `space 4`), or
+`image value width 3in height 0.75in pad 6pt`, which fits a picture in that box. Any
+item can end with `if condition`. Across, each item is a picture. `level with letter`
+puts a place's bottom edge level with a flow's last line.
+
+## Checks
+
+`App.Document.check/2` checks each report with `App.Report.Compiler.select_columns/3`,
+which checks a query as a report's is checked but writes no SQL. It reads the `team` and
+`organization` fields a document names as a report of their own, so the catalog checks
+those too. Then every name, format, place, and fill: each place filled once, a picture
+only where a picture goes, a format only on a value it shows.
+
+`App.DocumentTest` checks every file in `priv/documents/` and runs its `expect` lines.
+It also prints the tax credit letter's text from the same values `CreateTaxCreditLetter`
+reads, and compares the two line for line.
+
+## Printing it
+
+A caller runs `App.Document.queries/1` with `:member` and `:year`, adds each first row
+with `App.Document.put_row/5` (records from `App.ViewData.ReportRecords.names/3`), adds
+the pictures and the PDF's values, and calls `App.Document.evaluate/3`. That gives the
+title, the author, the lock, the kept values, and each place's value, for Typst to draw.

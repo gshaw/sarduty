@@ -1,0 +1,111 @@
+-- The tax credit letter (#918): what it reads, what it says, and where each part sits.
+-- It says what CreateTaxCreditLetter's letter says, word for word.
+-- cspell:ignore Łukasz Dvořák Nguyễn
+
+document 'Tax credit letter'
+about 'A member''s volunteer hours for a year, for the search and rescue volunteer tax credit.'
+for member, year
+
+report member
+  select name, address
+  from members
+  where id = :member
+
+report hours
+  select primary, secondary, total
+  from tax_credit_hours
+  where member.id = :member and year = :year
+
+title '{:year} SRVTC {team.legal_name}' by team.legal_name
+lock print
+keep hours.primary, hours.secondary
+
+-- Letter paper. Lengths are from the page's edges.
+places
+  letterhead flow across, top 1in, right 1in, height 1in, gap 0.25in
+  letter     flow down, top 1in, left 1in, right 1in, size 12pt, leading 14.4pt
+  verify     image right 1in, width 1in, height 1in, level with letter
+
+fill
+  -- The organization's logo, then the team's, the last in the top right corner. A
+  -- missing logo is left out.
+  letterhead = organization.logo, team.logo
+
+  -- The QR code's bottom edge is level with the letter's last line.
+  verify = qr(pdf.verify_link)
+
+  -- A blank line drops out. `space` is a blank line, and `space 2` two.
+  letter =
+    team.mailing_address
+    space 2
+    'To whom it may concern:'
+    space
+    'Name: {member.name}'
+    'Address: {member.address}' if member.address is not null
+    space
+    '{member.name} volunteered with {team.legal_name} in {:year}. {team.legal_name} is an eligible search and rescue organization under subsection 118.07(1) of the Income Tax Act.'
+    space
+    'Primary Hours: {coalesce(hours.primary, 0) as duration}'
+    'Secondary Hours: {coalesce(hours.secondary, 0) as duration}'
+    'Total Hours: {coalesce(hours.total, 0) as duration}'
+    space
+    "These hours come from {team.legal_name}'s attendance records."
+    space
+    if team.signer_phone is null and team.signer_email is null
+      then 'If you have questions, contact {team.legal_name}.'
+      else 'If you have questions, contact me using the details below.'
+    space
+    'Certified on {today as date_long}.'
+    -- The signature fits in 3 by 3/4 inches, with 6 points above and below. Without
+    -- one, four blank lines leave room to sign.
+    image team.signature width 3in height 0.75in pad 6pt
+    space 4 if team.signature is null
+    coalesce(team.signer, team.legal_name)
+    team.signer_title
+    team.signer_phone
+    team.signer_email
+    space
+    'Reference: {pdf.reference}'
+    'Verify this letter at verify.sarduty.com/letters'
+
+expect with :year = 2025, team.legal_name = 'Coast Range Search and Rescue Society':
+  title = '2025 SRVTC Coast Range Search and Rescue Society'
+
+-- Hours print as the letter list shows them.
+expect with hours.primary = 210, hours.secondary = 60, hours.total = 270:
+  letter contains 'Primary Hours: 3h 30m'
+  and letter contains 'Secondary Hours: 1 hour'
+  and letter contains 'Total Hours: 4h 30m'
+
+expect with hours.primary = 45, hours.secondary = 1204, hours.total = 1249:
+  letter contains 'Primary Hours: 45 min'
+  and letter contains 'Secondary Hours: 20h 4m'
+  and letter contains 'Total Hours: 20h 49m'
+
+-- A member with no hours that year gets a letter that says 0 hours.
+expect with :year = 2025:
+  letter contains 'Total Hours: 0 hours'
+
+expect with member.name = 'Łukasz Dvořák', member.address = '1 Elm St, Hope BC':
+  letter contains 'Name: Łukasz Dvořák' and letter contains 'Address: 1 Elm St, Hope BC'
+
+expect with member.name = 'Nguyễn Thị Lan', member.address = null:
+  letter contains 'Name: Nguyễn Thị Lan' and letter not contains 'Address:'
+
+expect with team.legal_name = 'Coast Range Search and Rescue Society', :year = 2024,
+    member.name = 'Avery Chen':
+  letter contains 'Avery Chen volunteered with Coast Range Search and Rescue Society in 2024.'
+  and letter contains 'from Coast Range Search and Rescue Society''s attendance records.'
+
+expect with team.legal_name = 'Coast Range Search and Rescue Society':
+  letter contains 'If you have questions, contact Coast Range Search and Rescue Society.'
+
+expect with team.signer_email = 'president@example.com':
+  letter contains 'If you have questions, contact me using the details below.'
+
+expect with today = date '2026-01-15':
+  letter contains 'Certified on January 15, 2026.'
+
+expect with pdf.reference = 'SRVTC-7KQ2M9XD':
+  letter contains 'Reference: SRVTC-7KQ2M9XD'
+  and letter ends with 'Verify this letter at verify.sarduty.com/letters'
