@@ -44,6 +44,31 @@ defmodule App.ViewData.ActivityMembers do
     end)
   end
 
+  @doc """
+  The rows the Members tab shows (#920): those in the group, by its member ids (nil for
+  no group), then with the tile's D4H `status` (nil for All), then whose name has `q`.
+  In the table's order, as `rows` are.
+  """
+  def shown(rows, group_ids, status, q) do
+    rows
+    |> in_group(group_ids)
+    |> only(status)
+    |> Enum.filter(&name_has?(&1, q))
+  end
+
+  @doc "The rows in a group, by its member ids, or all of them for nil: what the tiles count."
+  def in_group(rows, nil), do: rows
+  def in_group(rows, ids), do: Enum.filter(rows, &MapSet.member?(ids, &1.member.id))
+
+  @doc ~s(Whether the member's name has `q` anywhere, case aside: "oka" finds Riley Okafor.)
+  def name_has?(_row, nil), do: true
+
+  def name_has?(row, q),
+    do:
+      row.member.name
+      |> String.downcase()
+      |> String.contains?(q |> String.trim() |> String.downcase())
+
   @doc "The rows with `status`, or all of them for nil."
   def only(rows, nil), do: rows
   def only(rows, status), do: Enum.filter(rows, &(&1.status == status))

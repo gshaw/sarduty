@@ -376,10 +376,10 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "h1", "Rope practice")
       assert has_element?(lv, "#activity-panel-counts", "2 attended")
       assert has_element?(lv, "#members-hours", "2h 30m in total")
-      assert has_element?(lv, "#members-attended", "Casey Dhillon")
-      assert has_element?(lv, "#members-attended", "1h 30m")
+      assert has_element?(lv, "#members-table", "Casey Dhillon")
+      assert has_element?(lv, "#members-table", "1h 30m")
       refute has_element?(lv, "#activity-members th", "ID")
-      refute has_element?(lv, "#members-attended", other.ref_id)
+      refute has_element?(lv, "#members-table", other.ref_id)
       refute has_element?(lv, "#members-change-form")
       refute has_element?(lv, "#activity-members input[type=checkbox]")
 
@@ -432,7 +432,7 @@ defmodule Web.ActivityLiveTest do
       attendance_fixture(activity, member, %{started_at: starts})
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
-      assert has_element?(lv, "#members-signed-up #member-row-#{member.id}")
+      assert has_element?(lv, "#members-table #member-row-#{member.id}")
       refute has_element?(lv, "#members-add")
     end
 
@@ -463,7 +463,7 @@ defmodule Web.ActivityLiveTest do
       assert_received {:d4h_write, _id, %{"status" => "ATTENDING"}}
       assert has_element?(lv, "#activity-reply-state", "Signed up")
       assert has_element?(lv, "#activity-panel-counts", "1 signed up · 1 can't make it")
-      assert has_element?(lv, "#members-signed-up #member-row-#{member.id}")
+      assert has_element?(lv, "#members-table #member-row-#{member.id}")
       refute has_element?(lv, "#activity-reply-yes")
 
       assert has_element?(
@@ -553,7 +553,8 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert row_ids(html) == Enum.map([avery, member, quinn, wren], &"member-row-#{&1.id}")
-      refute has_element?(lv, "#members-switch")
+      # A tile per reply filters the table (#920); the panel's line stays.
+      assert has_element?(lv, "#members-tile-signed-up", "2")
 
       assert has_element?(
                lv,
@@ -561,9 +562,9 @@ defmodule Web.ActivityLiveTest do
                "2 signed up · 1 can't make it · 1 no reply"
              )
 
-      assert has_element?(lv, "#members-cant-make-it #member-row-#{quinn.id}")
-      assert has_element?(lv, "#members-no-reply #member-row-#{wren.id}")
-      assert has_element?(lv, "#activity-members th", "Can't make it")
+      assert has_element?(lv, "#members-table #member-row-#{quinn.id}")
+      assert has_element?(lv, "#members-table #member-row-#{wren.id}")
+      assert has_element?(lv, "#member-row-#{quinn.id} .marker-cant-make-it", "Can't make it")
       assert has_element?(lv, "#member-row-#{avery.id} .badge-primary", "New")
       refute has_element?(lv, "#member-row-#{member.id} .badge", "New")
       refute has_element?(lv, "#members-heading", "·")
@@ -582,7 +583,7 @@ defmodule Web.ActivityLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
-      assert has_element?(lv, "#members-cant-make-it #member-row-#{kiosk.id}")
+      assert has_element?(lv, "#members-table #member-row-#{kiosk.id}")
 
       assert has_element?(
                lv,
@@ -612,13 +613,14 @@ defmodule Web.ActivityLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
-      # A table for each attendance (#766), with no checkboxes for a member.
+      # One table by attendance (#766, #920), with no checkboxes for a member.
       assert has_element?(lv, "#activity-panel-counts", "2 attended · 1 absent")
-      assert has_element?(lv, "#activity-members th", "Absent")
-      assert has_element?(lv, "#members-absent #member-row-#{away.id}")
+      assert has_element?(lv, "#activity-members th", "Attendance")
+      assert has_element?(lv, "#member-row-#{away.id} .marker-cant-make-it", "Absent")
+      assert has_element?(lv, "#members-table #member-row-#{away.id}")
       refute has_element?(lv, "#activity-members th", "Replied")
-      assert has_element?(lv, "#activity-members th", "Attended")
-      assert has_element?(lv, "#members-attended #member-row-#{member.id}")
+      assert has_element?(lv, "#member-row-#{member.id} .marker-signed-up", "Attended")
+      assert has_element?(lv, "#members-table #member-row-#{member.id}")
       refute has_element?(lv, "#activity-members input[type=checkbox]")
 
       start = Service.Format.time_short(started, team.timezone)

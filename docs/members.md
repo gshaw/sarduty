@@ -531,13 +531,15 @@ activity starts.
   changes attendance in place (#766).
 - **Members**, the activity's Members tab, lists everyone it invites
   ([ActivityMembersLive](../lib/web/live/activity_members_live.ex),
-  [ActivityMembers](../lib/app/view_data/activity_members.ex)), under a Group filter
-  (`?group=`). Before the start, a table per reply: Signed up, Can't make it, then No
-  reply (#895), each with Replied: when, New for the last 24 hours, and the last
-  reminder. From the start, a table per attendance: Attended with Start, Finish, and
-  Hours, then Absent, then No reply (#766). Start shows a date only when it isn't the
-  activity's day. Team admins get a tick box per row and select all per table, then one
-  list and one button for the checked members: Send a reminder, Send an update, and
+  [ActivityMembers](../lib/app/view_data/activity_members.ex)), in one table (#920)
+  under a tile per reply (`?status=`), a name search (`?q=`), and a Group filter
+  (`?group=`). Before the start the table's Reply is Signed up, Can't make it, then No
+  reply (#895), with Replied: when, New for the last 24 hours, and the last reminder on
+  any row once the activity has one. From the start its Attendance is Attended, Absent,
+  then No reply (#766), with Start, Finish, and Hours on attended rows. Start shows a
+  date only when it isn't the activity's day. Team admins get a tick box per row and one
+  select all for the rows shown, then one list for the checked members, and the button
+  in an action bar at the foot of the window: Send a reminder, Send an update, and
   Remove from the activity before the start, and changes to attendance from it until it's
   published, then Send an update.
 

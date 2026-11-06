@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Activity Members tab: one table, with reply tiles, search by name, and a button that
+  stays in view.
 - Say it before the click: Travel's Change names who loses Confirmed, Send letters counts
   who gets the email and names who has none, and Same as last counts only the items it
   adds, with why the rest stay out.
