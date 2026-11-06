@@ -36,5 +36,5 @@ defmodule Web.ActivityMembersLive.Attended do
   def confirm(_ctx, _checked), do: %{}
 
   @impl Web.ActivityMembersLive.Action
-  def run, do: {:in_place, :attended}
+  def run(_checked), do: {:in_place, :attended}
 end

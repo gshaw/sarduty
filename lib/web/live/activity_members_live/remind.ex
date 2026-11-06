@@ -55,7 +55,7 @@ defmodule Web.ActivityMembersLive.Remind do
   def confirm(_ctx, _checked), do: %{}
 
   @impl Action
-  def run, do: {:step, :remind}
+  def run(_checked), do: {:step, :remind}
 
   # The plan is the checked members as the step opened; later renders keep it.
   @impl Phoenix.LiveComponent

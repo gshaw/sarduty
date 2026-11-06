@@ -6,7 +6,7 @@ defmodule Web.ActivityMembersLive.Action do
   behaviour.
 
   A change applies in place, through an operation, and the tables update on the tab
-  (`run/0` answers `{:in_place, change}`). Or it opens a step (`{:step, live_action}`):
+  (`run/1` answers `{:in_place, change}`). Or it opens a step (`{:step, live_action}`):
   the module is then a LiveComponent too, drawn in the tab's place on a `live_action`
   route of the same LiveView, such as `/members/remind`, so the ticks never leave the
   page. See Web.ActivityMembersLive for the step's rules. A step gets `team`, `activity`,
@@ -44,6 +44,9 @@ defmodule Web.ActivityMembersLive.Action do
   @doc "The button's `data-confirm` attributes, or `%{}` when it doesn't ask."
   @callback confirm(ctx(), checked :: [map()]) :: map()
 
-  @doc "Whether it applies in place, as the operation's change, or opens a step."
-  @callback run() :: {:in_place, atom()} | {:step, atom()}
+  @doc """
+  Whether it applies in place, as the operation's change, or opens a step, for the
+  checked members.
+  """
+  @callback run(checked :: [map()]) :: {:in_place, atom()} | {:step, atom()}
 end

@@ -63,5 +63,5 @@ defmodule Web.ActivityMembersLive.Remove do
   end
 
   @impl Web.ActivityMembersLive.Action
-  def run, do: {:in_place, :remove}
+  def run(_checked), do: {:in_place, :remove}
 end
