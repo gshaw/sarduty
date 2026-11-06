@@ -188,6 +188,8 @@ defmodule App.Model.AttendanceTest do
     "lib/web/live/activity_members_live/remove.ex" => "the hours a removal takes, from the row",
     "lib/web/live/activity_members_live/attended.ex" =>
       "Mark attended's hint counts the checked who attended already, from the row",
+    "lib/web/live/activity_members_live/action.ex" =>
+      "the hours a confirm says the checked who attended lose, from the row",
     "lib/web/live/activity_members_live/absent.ex" =>
       "Mark absent's hint names the hours the attended lose, from the row",
     "lib/web/live/activity_members_live/update.ex" => "a label, a table per reply",

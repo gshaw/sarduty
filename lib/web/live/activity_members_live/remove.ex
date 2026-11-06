@@ -62,20 +62,22 @@ defmodule Web.ActivityMembersLive.Remove do
 
   @impl Action
   def confirm(%{activity: activity}, checked) do
-    members = checked |> length() |> Format.count(one: "1 member", many: "%d members")
+    count = length(checked)
+    members = Format.count(count, one: "1 member", many: "%d members")
 
     %{
       "data-confirm" =>
         "Remove #{members} from #{activity.title}? They come off its attendance. Add members can put them back, as attended with the activity's times."
     }
     |> put_hours(checked)
+    |> Map.merge(Action.check(count, "I understand #{members} come off the activity."))
   end
 
-  # "Casey Dhillon's 2h 30m go too." for each checked member who attended.
+  # "Casey Dhillon's 2h 30m go too.", or from 4 who attended "6 who attended lose 30 hours too."
   defp put_hours(attrs, checked) do
-    case Action.hours_text(checked) do
+    case Action.hours_lost(checked, true) do
       nil -> attrs
-      hours -> Map.put(attrs, "data-confirm-warning", "#{hours} go too.")
+      line -> Map.put(attrs, "data-confirm-warning", line)
     end
   end
 

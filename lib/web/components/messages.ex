@@ -268,6 +268,12 @@ defmodule Web.Components.Messages do
   @check_from 10
 
   @doc """
+  How many members a confirm reaches before it waits on a check box naming the count
+  (/styles/confirm-dialog#many).
+  """
+  def check_from, do: @check_from
+
+  @doc """
   The `data-confirm` attributes for a button that emails `count` members: the question
   and `lines` as its body. From #{@check_from} members up, the lines are a list and the
   send waits on a check box naming the count, so nobody emails the whole team by reflex.

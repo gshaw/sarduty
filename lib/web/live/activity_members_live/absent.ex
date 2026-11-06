@@ -63,18 +63,21 @@ defmodule Web.ActivityMembersLive.Absent do
 
   @impl Action
   def confirm(%{activity: activity} = ctx, checked) do
-    case Action.hours_text(checked) do
+    case Action.hours_lost(checked) do
       nil ->
         %{}
 
-      hours ->
+      line ->
         members = ctx |> count(checked) |> Format.count(one: "1 member", many: "%d members")
+        attended = Enum.count(checked, &(&1.status == "attending"))
+        losing = Format.count(attended, one: "1 member loses", many: "%d members lose")
 
         %{
           "data-confirm" =>
             "Mark #{members} absent on #{activity.title}? Their hours go, and Mark attended gives back the activity's times, not their own.",
-          "data-confirm-warning" => "#{hours} go."
+          "data-confirm-warning" => line
         }
+        |> Map.merge(Action.check(attended, "I understand #{losing} their hours."))
     end
   end
 

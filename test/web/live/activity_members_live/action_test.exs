@@ -176,6 +176,33 @@ defmodule Web.ActivityMembersLive.ActionTest do
       assert Absent.confirm(ctx, [row(4, "requested"), row(3, "absent")]) == %{}
     end
 
+    test "from 4 who attended, the confirm counts and totals, and from 10 waits on a box" do
+      ctx = %{@from_start | activity: %{@from_start.activity | title: "Missing hiker"}}
+      six = for id <- 1..6, do: row(id, "attending", minutes: 300)
+
+      assert %{"data-confirm-warning" => "6 who attended lose 30 hours."} =
+               confirm = Absent.confirm(ctx, six)
+
+      refute Map.has_key?(confirm, "data-confirm-check")
+
+      twelve = for id <- 1..12, do: row(id, "attending", minutes: 300)
+
+      assert %{
+               "data-confirm-warning" => "12 who attended lose 60 hours.",
+               "data-confirm-check" => "I understand 12 members lose their hours."
+             } = Absent.confirm(ctx, twelve)
+
+      assert %{
+               "data-confirm-warning" => "12 who attended lose 60 hours too.",
+               "data-confirm-check" => "I understand 12 members come off the activity."
+             } = Remove.confirm(ctx, twelve)
+
+      three = for id <- 1..3, do: row(id, "attending", minutes: 300)
+
+      assert Remove.confirm(ctx, three)["data-confirm-warning"] ==
+               "Member 1's 5 hours, Member 2's 5 hours, and Member 3's 5 hours go too."
+    end
+
     test "Send an update from the start is the message alone" do
       assert Update.hint(@from_start, [row(1, "attending"), row(2, "absent")]) ==
                "All 2 checked get your message."

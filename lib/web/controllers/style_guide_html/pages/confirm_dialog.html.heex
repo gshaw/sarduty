@@ -149,6 +149,50 @@
     </div>
   </div>
 
+  <h2 id="many">Many at once</h2>
+  <p>
+    A change to checked rows can reach 2 members or 50. The dialog says how much is lost; the
+    checked rows behind it show who. It never lists everyone.
+  </p>
+  <ul>
+    <li>
+      <strong>Up to 3:</strong> name them, so a wrong tick shows: "Avery Chen's 4h 30m and
+      Jordan Lee's 5 hours go."
+    </li>
+    <li>
+      <strong>4 or more:</strong> a count and a total: "6 who attended lose 30 hours."
+    </li>
+    <li>
+      <strong>10 or more:</strong>
+      the <a href="#check-box">check box</a>
+      too, naming the count: "I understand 12 members lose their hours."
+    </li>
+    <li>
+      <strong>When who matters more than how many</strong>, such as who gets an email and
+      why the rest don't, use a step: a page that lists them all, as Ask for a reply does.
+      Not a dialog.
+    </li>
+  </ul>
+  <div class="demo grid gap-6">
+    <.confirm_dialog
+      id="confirm-example-many"
+      open
+      question="Mark 6 members absent on Missing hiker?"
+      body="Their hours go, and Mark attended gives back the activity's times, not their own."
+      warning="6 who attended lose 30 hours."
+      action="Mark 6 absent"
+    />
+    <.confirm_dialog
+      id="confirm-example-many-check"
+      open
+      question="Mark 12 members absent on Missing hiker?"
+      body="Their hours go, and Mark attended gives back the activity's times, not their own."
+      warning="12 who attended lose 60 hours."
+      check="I understand 12 members lose their hours."
+      action="Mark 12 absent"
+    />
+  </div>
+
   <h2 id="type-to-confirm">Type to confirm</h2>
   <p>
     Built, and used nowhere yet. Only for something that wipes a team's data. The action

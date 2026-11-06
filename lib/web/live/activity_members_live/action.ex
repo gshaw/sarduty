@@ -22,6 +22,8 @@ defmodule Web.ActivityMembersLive.Action do
   reaches nobody checked greyed with the reason.
   """
 
+  alias Web.Components.Messages
+
   @type ctx :: %{activity: map(), team: map(), now: DateTime.t(), retiring: MapSet.t()}
 
   @doc ~s(The list's value, also in ids: "absent".)
@@ -89,23 +91,49 @@ defmodule Web.ActivityMembersLive.Action do
   def count_verb(1, one, _many), do: "1 #{one}"
   def count_verb(count, _one, many), do: "#{count} #{many}"
 
+  @names_up_to 3
+
   @doc """
-  The hours the checked who attended lose, by name, or nil when nobody checked attended:
-  "Avery Chen's 4h 30m and Jordan Lee's 5 hours". Mark attended gives back the
-  activity's times, not a member's own, so a change that takes them names them.
+  The confirm's line on the hours the checked who attended lose, or nil when nobody
+  checked attended. Mark attended gives back the activity's times, not a member's own,
+  so a change that takes them says so. Up to #{@names_up_to} by name: "Avery Chen's
+  4h 30m and Jordan Lee's 5 hours go." More, a count and the total: "6 who attended lose
+  30 hours." The checked rows behind the dialog show who (/styles/confirm-dialog#many).
+  `too` adds "too", for a change that takes more than the hours.
   """
-  def hours_text(checked) do
-    case for row <- checked, row.status == "attending", do: row do
-      [] ->
+  def hours_lost(checked, too \\ false) do
+    attended = for row <- checked, row.status == "attending", do: row
+    too = if too, do: " too", else: ""
+
+    cond do
+      attended == [] ->
         nil
 
-      attended ->
-        attended
-        |> Enum.sort_by(&String.downcase(&1.member.name))
-        |> Enum.map(
-          &"#{&1.member.name}'s #{Service.Format.duration(&1.duration_in_minutes || 0)}"
-        )
-        |> Service.Format.and_list()
+      length(attended) <= @names_up_to ->
+        names =
+          attended
+          |> Enum.sort_by(&String.downcase(&1.member.name))
+          |> Enum.map(&"#{&1.member.name}'s #{Service.Format.duration(minutes(&1))}")
+          |> Service.Format.and_list()
+
+        "#{names} go#{too}."
+
+      true ->
+        total = attended |> Enum.sum_by(&minutes/1) |> Service.Format.duration()
+        "#{length(attended)} who attended lose #{total}#{too}."
     end
+  end
+
+  defp minutes(row), do: row.duration_in_minutes || 0
+
+  @doc """
+  The check box a confirm waits on once it reaches `count` members, from
+  Web.Components.Messages.check_from/0 up, so nobody changes them all by reflex: `%{}`
+  below it.
+  """
+  def check(count, text) do
+    if count >= Messages.check_from(),
+      do: %{"data-confirm-check" => text},
+      else: %{}
   end
 end
