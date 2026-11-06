@@ -1,6 +1,5 @@
 alias App.Model.TaxCreditLetter
-alias App.Operation.CountTaxCreditHours
-alias App.Operation.CreateTaxCreditLetter
+alias App.Operation.PrintTaxCreditLetter
 alias App.Operation.SaveTaxCreditLetterPDF
 alias App.Repo
 
@@ -12,9 +11,8 @@ defmodule App.Operation.ReplaceTaxCreditLetter do
   `TaxCreditLetter.find!/2`, so it is the team's.
   """
   def call(team, %TaxCreditLetter{} = letter, now \\ DateTime.utc_now()) do
-    rows = CountTaxCreditHours.load_rows(team, letter.year, [letter.member_id])
-    ref_id = TaxCreditLetter.generate_ref_id()
-    fields = CreateTaxCreditLetter.plan(team, letter.member, rows, letter.year, ref_id, now)
+    read = PrintTaxCreditLetter.read(team, letter.member_id, letter.year, now)
+    fields = PrintTaxCreditLetter.fields(read, team, TaxCreditLetter.generate_ref_id())
 
     changeset =
       letter
@@ -22,8 +20,8 @@ defmodule App.Operation.ReplaceTaxCreditLetter do
       # The letter page's "Created" matches the date the new text is certified on.
       |> Ecto.Changeset.put_change(:inserted_at, DateTime.add(now, 0, :microsecond))
 
-    # Drawn before the transaction, which holds the write lock.
-    pdf = changeset |> Ecto.Changeset.apply_changes() |> SaveTaxCreditLetterPDF.draw()
+    # Printed before the transaction, which holds the write lock.
+    pdf = changeset |> Ecto.Changeset.apply_changes() |> SaveTaxCreditLetterPDF.draw(read)
 
     {:ok, letter} =
       Repo.transaction(fn ->

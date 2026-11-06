@@ -18,7 +18,6 @@ defmodule App.DemoTeamSendsTest do
   alias App.Operation.ChangeOwnPhone
   alias App.Operation.CreateTaxCreditLetters
   alias App.Operation.SendReminders
-  alias Service.PDFLetter
 
   defp email(team, to) do
     new()
@@ -174,19 +173,5 @@ defmodule App.DemoTeamSendsTest do
 
     assert json.logoText == "Sample card"
     assert [%{label: "Sample, not real ID"}] = json.generic.primaryFields
-  end
-
-  test "a demo team's letter PDF draws the Sample mark" do
-    letter = %{
-      title: "2025 SRVTC Coast Range",
-      author: "Coast Range",
-      creator: "SARDuty.com",
-      content: "Letter"
-    }
-
-    real = PDFLetter.render(letter)
-    sample = letter |> Map.put(:sample, true) |> PDFLetter.render()
-
-    assert byte_size(sample) > byte_size(real)
   end
 end

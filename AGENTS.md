@@ -54,7 +54,7 @@
 - **Fields and validators**: [lib/app/field/](lib/app/field) (`EncryptedString`,
   `TrimmedString`) and [lib/app/validate/](lib/app/validate).
 - **Service**: [lib/service/](lib/service) are stateless helpers — `Service.Format`,
-  `Service.Convert`, `Service.PDFLetter`. No database, no HTTP.
+  `Service.Convert`, `Service.PDFLock`. No database, no HTTP.
 - **Accounts**: [lib/app/accounts/](lib/app/accounts) is users who log in with a code,
   emailed or texted (no passwords), with `phx.gen.auth`-style sessions (`current_user` and
   `current_team`, not `current_scope`) and an admin flag. Access comes from D4H: a user
