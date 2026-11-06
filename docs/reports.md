@@ -51,7 +51,7 @@ its nine queries, and Activities took 274 ms where the old page took 10.
 
 ## The catalog is an allowlist
 
-The fields leave out emergency contacts, letter text, and keys: `select emergency_contact
+The fields leave out emergency contacts, letter text, keys, and the signer's signature: `select emergency_contact
 from members` answers "Reports leave out emergency contacts." A member's `email`,
 `mobile`, and `address` are team admins' fields, as the member's page shows them, and an
 activity's `address` and `place` are everyone's who reads activities (#827). The rule
@@ -65,6 +65,18 @@ Latitude and Longitude columns.
 `Member.counted_dynamic/0`, `hours_tag_count` is `Activity.hours_tag_count_dynamic/1`,
 and `not_seen(days)` is `Member.not_seen_query/4`. A rule that has only a pure function
 gets an SQL twin on its model, with a test that the two agree, before a field reads it.
+
+A subject can be a rule's own answer instead. `tax_credit_hours` is
+`CountTaxCreditHours.by_year/3` (#918), the count the letters print: time on one timeline
+counts once and primary wins, which an SQL twin would copy line by line. Its source counts
+in Elixir and hands the rows to SQL as one JSON parameter read with `json_each`, so a
+query filters, groups, and joins `member` as with any subject. It counts every year on
+each compile, about 240 ms on South Fraser's 37,000 attendances, outside the 2-second
+limit, which only times SQL.
+
+`team` and `organization` are one row each (#918): the team, and what its letters print
+about it, and its organization, or none. They never read the signer's signature or a
+logo, which only a letter prints.
 
 A field with a `query` is a rule's own query of ids (#784): it's true for the rows the
 rule keeps, `id IN (that query)`, so a rule that's already a query needs no twin.

@@ -6,6 +6,7 @@ defmodule App.ReportTest do
 
   alias App.Model.Activity
   alias App.Model.Member
+  alias App.Operation.CountTaxCreditHours
   alias App.Report
   alias App.Report.Catalog
   alias App.Report.Compiler
@@ -50,8 +51,10 @@ defmodule App.ReportTest do
           |> Enum.filter(&(&1.args == []))
           |> Enum.map_join(", ", & &1.name)
 
-        assert {:ok, %{rows: []}} =
+        assert {:ok, %{rows: rows}} =
                  Report.run("select #{names} from #{subject.name}", team, %{}, @now)
+
+        assert length(rows) == if(subject.name == "team", do: 1, else: 0)
       end
     end
 
@@ -61,9 +64,11 @@ defmodule App.ReportTest do
       team = team_fixture()
 
       for subject <- Catalog.subjects(), field <- subject.fields, field.args == [] do
-        assert {:ok, %{rows: []}} =
+        assert {:ok, %{rows: rows}} =
                  Report.run("select #{field.name} from #{subject.name}", team, %{}, @now),
                "#{subject.name}.#{field.name} does not run alone"
+
+        assert length(rows) == if(subject.name == "team", do: 1, else: 0)
       end
     end
 
@@ -646,6 +651,119 @@ defmodule App.ReportTest do
       assert error("select activity_count('2026') from members", team) ==
                "Line 1: Write activity_count('2026', 'all'): it takes a period: 'all', a year, or '90d' and a tag's title, or 'all'."
     end
+  end
+
+  # The letter list's counts, so a report and a letter never disagree (#918).
+  test "tax_credit_hours is CountTaxCreditHours, each year as its letter counts it" do
+    team = team_fixture()
+    avery = member_fixture(team, %{name: "Avery Chen"})
+    blake = member_fixture(team, %{name: "Blake Diaz"})
+
+    # Avery's two overlapping rows count once, and primary wins the overlap.
+    primary =
+      activity_fixture(team, %{
+        started_at: ~U[2025-03-01 17:00:00Z],
+        finished_at: ~U[2025-03-01 20:00:00Z]
+      })
+
+    secondary =
+      activity_fixture(team, %{
+        tags: ["Secondary Hours"],
+        started_at: ~U[2025-03-01 19:00:00Z],
+        finished_at: ~U[2025-03-01 21:00:00Z]
+      })
+
+    # New Year's Eve in Vancouver is 2025's, though it's 2026 in UTC.
+    eve =
+      activity_fixture(team, %{
+        started_at: ~U[2026-01-01 05:00:00Z],
+        finished_at: ~U[2026-01-01 07:00:00Z]
+      })
+
+    this_year =
+      activity_fixture(team, %{
+        started_at: ~U[2026-02-01 17:00:00Z],
+        finished_at: ~U[2026-02-01 18:30:00Z]
+      })
+
+    untagged = activity_fixture(team, %{tags: ["Rope"], started_at: ~U[2026-02-02 17:00:00Z]})
+
+    for activity <- [primary, secondary, eve, this_year, untagged],
+        do: attendance_fixture(activity, avery)
+
+    attendance_fixture(this_year, blake)
+
+    text =
+      "select member, year, primary, secondary, total from tax_credit_hours order by year desc"
+
+    rows = run!(text <> ", member.name", team).rows
+
+    expected =
+      for year <- [2026, 2025],
+          {member_id, hours} <-
+            team |> CountTaxCreditHours.call(year, nil, @now) |> Enum.sort_by(&elem(&1, 0)) do
+        [member_id, year, hours.primary_minutes, hours.secondary_minutes, hours.total_minutes]
+      end
+
+    assert rows == expected
+
+    assert rows == [
+             [avery.id, 2026, 90, 0, 90],
+             [blake.id, 2026, 90, 0, 90],
+             [avery.id, 2025, 300, 60, 360]
+           ]
+
+    assert run!(
+             "select member, sum(total) from tax_credit_hours group by member order by member",
+             team
+           ).rows ==
+             [[avery.id, 450], [blake.id, 90]]
+  end
+
+  # cspell:ignore Łukasz Tomáš Dvořák
+  test "team is the team's one row, and organization its organization's" do
+    team =
+      %{legal_name: "Łukasz Valley Search and Rescue Society"}
+      |> team_fixture()
+      |> Ecto.Changeset.change(
+        authorized_by_name: "Tomáš Dvořák",
+        authorized_by_title: "President"
+      )
+      |> Repo.update!()
+
+    text = "select name, legal_name, mailing_address, signer, signer_title from team"
+
+    assert run!(text, team).rows == [
+             [
+               team.name,
+               "Łukasz Valley Search and Rescue Society",
+               "123 Main St",
+               "Tomáš Dvořák",
+               "President"
+             ]
+           ]
+
+    assert run!("select name from organization", team).rows == []
+
+    organization = organization_fixture([team], %{website: "https://example.org"})
+    other = team_fixture()
+    organization_fixture([other])
+
+    assert run!("select name, short_name, website from organization", team).rows == [
+             [organization.name, "EXA", "https://example.org"]
+           ]
+  end
+
+  test "reports never read the signer's signature or an organization's logo" do
+    team = team_fixture()
+
+    for {subject, field} <- [{"team", "signature"}, {"organization", "logo"}] do
+      assert {:error, _error} = Report.check("select #{field} from #{subject}", team)
+    end
+
+    columns = for subject <- Catalog.subjects(), field <- subject.fields, do: field.column
+    refute :signature in columns
+    refute :logo in columns
   end
 
   test "hours_tag_count is the count the hours tag checks use" do

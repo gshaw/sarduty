@@ -140,7 +140,11 @@ defmodule App.Report.Language do
     "qualifications" => "Each row is one of the team's qualifications.",
     "equipment" => "Each row is an item: equipment, a vehicle, or a supply.",
     "equipment_use" => "Each row is an item used on an activity.",
-    "groups" => "Each row is one of the team's groups."
+    "groups" => "Each row is one of the team's groups.",
+    "tax_credit_hours" =>
+      "Each row is one member's hours in one year, counted as their tax credit letter counts them. A member with no hours that year has no row.",
+    "team" => "One row: the team, and what its tax credit letters print about it.",
+    "organization" => "One row: the organization the team belongs to, or none."
   }
 
   @doc "The page's text, as Markdown."
