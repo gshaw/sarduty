@@ -138,8 +138,8 @@ defmodule Web.ActivityEquipmentLive do
               <.change_usage_form :if={@changing == usage.id} usage={usage} />
               <span :if={@changing != usage.id}>{amount(usage)}</span>
             </:col>
-            <:col :let={usage} label="" class="w-px whitespace-nowrap">
-              <span :if={@changing == usage.id} class="flex gap-2">
+            <:col :let={usage} label="" align="right" class="w-px whitespace-nowrap">
+              <span :if={@changing == usage.id} class="flex justify-end gap-2">
                 <.button
                   id={"usage-save-#{usage.id}"}
                   form="usage-change-form"
@@ -159,7 +159,7 @@ defmodule Web.ActivityEquipmentLive do
                   Cancel
                 </.button>
               </span>
-              <span :if={@changing != usage.id} class="flex gap-2">
+              <span :if={@changing != usage.id} class="flex justify-end gap-2">
                 <.button
                   :if={changeable?(usage)}
                   id={"usage-change-#{usage.id}"}
@@ -211,7 +211,8 @@ defmodule Web.ActivityEquipmentLive do
         id={"usage-hours-#{@usage.id}"}
         name="hours"
         value={Service.Convert.duration_text(@usage.minutes)}
-        size="10"
+        size="9"
+        class="w-auto"
         autocomplete="off"
         phx-mounted={JS.focus()}
         aria-label={"Hours for #{@usage.equipment_item.title}, like 45m, 2h, or 2.5h"}
