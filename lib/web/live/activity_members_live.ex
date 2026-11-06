@@ -502,7 +502,7 @@ defmodule Web.ActivityMembersLive do
         </div>
         <.action_bar
           id="members-bar"
-          hint={if @checked == [], do: "Check members, then pick what to do."}
+          hint={if @checked == [], do: "Check members, then select what to do."}
         >
           <.button
             id="members-change-send"

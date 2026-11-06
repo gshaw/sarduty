@@ -279,6 +279,7 @@ and must not be used for it.
 | latitude, longitude                 | lat, lng, long, coordinates                    | Spelled out in labels.                                                                               |
 | km                                  | KMs, kms, kilometres                           | Distances, after a number with a space: "42 km".                                                     |
 | select                              | click, tap, press, choose, pick                | What the reader does to a button, link, or option.                                                   |
+| check, uncheck                      | tick, select, mark                             | What the reader does to a check box: "Check members". The rows are then "the checked".               |
 
 ## Words to avoid
 

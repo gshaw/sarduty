@@ -205,7 +205,7 @@ defmodule Web.ActivityMembersLive.ActionTest do
 
     test "Send an update from the start is the message alone" do
       assert Update.hint(@from_start, [row(1, "attending"), row(2, "absent")]) ==
-               "All 2 checked get your message."
+               "All 2 checked get your message and a link to the activity."
     end
 
     test "Remove from the activity counts who loses hours" do

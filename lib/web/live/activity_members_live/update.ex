@@ -34,11 +34,12 @@ defmodule Web.ActivityMembersLive.Update do
   def label, do: "Send an update"
 
   @impl Action
-  # Before the start each email ends with where the member stands; from it, Open activity.
+  # Before the start each email ends with where the member stands; from it, a link to the
+  # activity, as the step's confirm says.
   def hint(%{activity: activity, now: now}, checked) do
     what =
       if Activity.started?(activity, now),
-        do: "your message.",
+        do: "your message and a link to the activity.",
         else: "your message and where they stand."
 
     count = length(checked)

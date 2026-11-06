@@ -83,7 +83,12 @@ defmodule Web.ActivityMembersLiveTest do
            )
 
     assert has_element?(lv, "#members-change", "The checked who attended lose their hours.")
-    assert has_element?(lv, "#members-change", "The checked get your message.")
+
+    assert has_element?(
+             lv,
+             "#members-change",
+             "The checked get your message and a link to the activity."
+           )
 
     assert has_element?(
              lv,
@@ -472,7 +477,7 @@ defmodule Web.ActivityMembersLiveTest do
       assert has_element?(lv, "#members-hours", "3h 30m in total")
 
       assert has_element?(lv, "#members-bar #members-change-send[disabled]")
-      assert has_element?(lv, "#members-bar-hint", "Check members, then pick what to do.")
+      assert has_element?(lv, "#members-bar-hint", "Check members, then select what to do.")
       check(lv, [ctx.casey.id], "absent")
       refute has_element?(lv, "#members-bar-hint")
     end
