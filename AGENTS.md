@@ -262,6 +262,10 @@ fi
   `/styles/table` shows
   them, and `Web.StandardColumnsTest` fails on one built by hand. A column that recurs
   on a second page becomes the next one.
+- **A table that filters keeps its columns put** (/styles/table#fit). One column takes
+  the rest; every other column fits its longest values (`fit`, with `date_fit/2` and
+  the other fits in `Web.Components.Columns`) or takes a set share, such as `w-1/3`.
+  `Web.TableFitTest` fails on one that doesn't.
 - **Reach for a component or a class before utilities.** Banners, warning text, empty
   states, the error summary, and the result band are components; `.hint`,
   `.lead`, `.action`, `.card`, `.media`, `.heading-row`, `.code-block`, and `.small-print` are
