@@ -9,7 +9,7 @@ defmodule App.Worker.SendMemberCardWorkerTest do
   alias App.Worker.SendMemberCardWorker
 
   setup do
-    team = team_fixture()
+    team = team_fixture(%{every_member_card: true})
     member = member_fixture(team, %{name: "Cameron Ruiz", email: "cameron@example.com"})
     %{team: team, member: member}
   end
@@ -80,6 +80,20 @@ defmodule App.Worker.SendMemberCardWorkerTest do
     assert MemberCard.find_current(team, member) == nil
     assert MemberCard.find_current(team, other) == nil
     refute_received {:email, _}
+  end
+
+  test "makes no card once Every member gets a card is off: a waiting job stops",
+       %{team: team, member: member} do
+    team = team |> Ecto.Changeset.change(every_member_card: false) |> Repo.update!()
+
+    assert {:cancel, :every_member_card_off} = perform(member)
+    assert MemberCard.find_current(team, member) == nil
+    refute_received {:email, _}
+
+    # A card made by Issue still gets its email.
+    {:ok, card} = SendMemberCard.issue(team, member, DateTime.utc_now())
+    assert_received {:email, _}
+    assert Repo.reload!(card).email_status == :sent
   end
 
   test "one job per member while it waits, and a rollout can schedule it later",

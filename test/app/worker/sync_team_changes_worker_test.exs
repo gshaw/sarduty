@@ -7,8 +7,10 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
   alias App.Model.Attendance
   alias App.Model.Event
   alias App.Model.LocationBookmark
+  alias App.Model.MemberCard
   alias App.Model.Team
   alias App.Model.WhiteboardNote
+  alias App.Operation.IssueEveryMemberCard
   alias App.Operation.SyncD4HChanges
   alias App.Worker.SyncTeamChangesWorker
 
@@ -400,5 +402,28 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
 
       assert b.coordinate == "49.10000,-122.80000"
     end
+  end
+
+  test "while Every member gets a card is on, a sync that changed something gives new members theirs (#893)" do
+    team = synced_team(%{every_member_card: true})
+    riley = member_fixture(team, %{name: "Riley Okafor", email: "riley@example.com"})
+    leaving = member_fixture(team, %{name: "Lee Retiring"})
+    leavers = group_fixture(team)
+    team |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id) |> Repo.update!()
+    group_member_fixture(leavers, leaving)
+
+    # Only the whiteboard moved.
+    stub_whiteboard(&Req.Test.json(&1, %{"results" => [], "totalSize" => 0}))
+    assert perform(Repo.reload!(team)) == :ok
+
+    assert %MemberCard{email_status: :sent} = MemberCard.find_current(team, riley)
+    assert_received {:email, %{to: [{"Riley Okafor", "riley@example.com"}]}}
+    assert MemberCard.find_current(team, leaving) == nil
+
+    # The next finds nobody new, and with the switch off nobody gets one.
+    assert team |> Repo.reload!() |> IssueEveryMemberCard.call(DateTime.utc_now()) == 0
+    off = team |> Ecto.Changeset.change(every_member_card: false) |> Repo.update!()
+    member_fixture(team)
+    assert IssueEveryMemberCard.call(off, DateTime.utc_now()) == 0
   end
 end

@@ -93,7 +93,8 @@ is left out, and so is its divider.
   with four topics.
 - **Features is where a team turns things on** (2026-10-28): member logins, with chores
   and certificates under them, and the whiteboard, one switch each that saves when
-  flipped. ID cards show as on or off; SAR Duty turns them on when a team asks. Agents
+  flipped. ID cards show as on or off; SAR Duty turns them on when a team asks. Every
+  member gets a card sits under ID cards, a team admin's switch (#893). Agents
   isn't offered: it shows only once a SAR Duty admin turns it on. A feature's own
   settings are a tab that shows only while it is on: Chore categories, Agents. A new feature a
   team can go without gets a switch here, off on a new team.

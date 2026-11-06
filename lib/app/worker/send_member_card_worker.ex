@@ -1,8 +1,9 @@
 defmodule App.Worker.SendMemberCardWorker do
   @moduledoc """
   Gives one member their ID card (App.Operation.SendMemberCard.deliver/4): makes the
-  card if they have none, then emails it if it waits for its email. Issue, Replace, and
-  Email card on the ID Card tab each queue one (#893). A retry finds the card and only
+  card if they have none and Every member gets a card is on, then emails it if it waits
+  for its email. Issue, Replace, and Email card on the ID Card tab each queue one (#893),
+  and the switch queues one per member (App.Operation.IssueEveryMemberCard). A retry finds the card and only
   sends the email again; the last refusal marks the card's email failed, which the tab
   shows.
 

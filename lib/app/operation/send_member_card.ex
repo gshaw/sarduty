@@ -3,7 +3,8 @@ defmodule App.Operation.SendMemberCard do
   Gets a member their ID card by email (#893). Issue and Replace on the ID Card tab make
   a new card here and queue its email; Email card queues the current card's again. Each
   is one App.Worker.SendMemberCardWorker job, which also makes the card when the member
-  has none, so a rollout can queue the same job for every member.
+  has none, so Every member gets a card queues the same job for every member
+  (App.Operation.IssueEveryMemberCard).
 
   The card's `email_status` says whether its email went: `:sending` while the job waits,
   then `:sent` or `:failed`. The job sends only a card marked sending, so a job that runs
@@ -50,10 +51,11 @@ defmodule App.Operation.SendMemberCard do
   end
 
   @doc """
-  The job's work: the member's current card, made now if they have none, then its email
-  if it waits for one. `last?` is the job's last attempt, when a refusal marks the email
-  failed. `{:cancel, reason}` when only a person can fix it: ID cards off, a member not
-  in good standing, or no email.
+  The job's work: the member's current card, made now if they have none and the team's
+  Every member gets a card is on (App.Operation.IssueEveryMemberCard), then its email if
+  it waits for one. `last?` is the job's last attempt, when a refusal marks the email
+  failed. `{:cancel, reason}` when only a person can fix it: ID cards off, the switch
+  turned off before the job ran, a member not in good standing, or no email.
   """
   def deliver(team_id, member_id, last?, now) do
     with %Team{} = team <- Team.get(team_id),
@@ -66,9 +68,12 @@ defmodule App.Operation.SendMemberCard do
     end
   end
 
+  # Issue and Replace make the card before queueing the job, so only the rollout's jobs
+  # make one here. Turning the switch off stops those that still wait.
   defp current_or_new(team, member, now) do
     case MemberCard.find_current(team, member) do
-      nil -> new_card(team, member, now)
+      nil when team.every_member_card -> new_card(team, member, now)
+      nil -> {:error, :every_member_card_off}
       card -> {:ok, card}
     end
   end

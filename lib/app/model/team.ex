@@ -64,6 +64,10 @@ defmodule App.Model.Team do
     # checks who acts: a card verifies on SAR Duty's verify site, and anyone can sign up a
     # team on SAR Duty Records.
     field :id_cards_enabled, :boolean, default: false
+    # Every member gets a card (#893): while on, each member in good standing without a
+    # card gets one, at once and then at each refresh. Set only by
+    # App.Operation.IssueEveryMemberCard; turning ID cards off turns it off too.
+    field :every_member_card, :boolean, default: false
     # The whiteboard (#515): whether the team turned it on, set by
     # App.Operation.SetTeamFeature, and whether D4H answers for it, false while D4H
     # answers 403 with its module off. Set only by the whiteboard's read.

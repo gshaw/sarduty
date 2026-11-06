@@ -4,6 +4,7 @@ defmodule Web.Settings.FeaturesLive do
   import Web.Components.TeamSettingsTabs
 
   alias App.Model.Team
+  alias App.Operation.IssueEveryMemberCard
   alias App.Operation.SetTeamFeature
 
   # The team's features, /teams/:subdomain/settings/features: one switch each, saved when
@@ -11,9 +12,43 @@ defmodule Web.Settings.FeaturesLive do
   # to Z too. MCP (Agents) and ID
   # cards are SAR Duty's to turn on, from /admin/teams/:id (App.Operation.SetTeamMCP,
   # App.Operation.SetTeamIdCards), so they show only as on or off. A team asks for ID
-  # cards; MCP isn't offered, so it shows only once on.
+  # cards; MCP isn't offered, so it shows only once on. Every member gets a card (#893)
+  # sits under ID cards, for a team admin.
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Team settings · Features", reading_whiteboard?: false)}
+    socket
+    |> assign(page_title: "Team settings · Features", reading_whiteboard?: false)
+    |> assign_cards()
+    |> then(&{:ok, &1})
+  end
+
+  # What turning on Every member gets a card would do, and who gets no email.
+  defp assign_cards(%{assigns: %{current_team: %Team{id_cards_enabled: true} = team}} = socket) do
+    now = DateTime.utc_now()
+
+    assign(socket,
+      card_plan: IssueEveryMemberCard.preview(team, now),
+      without_email: IssueEveryMemberCard.without_email(team, now)
+    )
+  end
+
+  defp assign_cards(socket), do: assign(socket, card_plan: nil, without_email: [])
+
+  def handle_event("set", %{"feature" => "every_member_card"}, socket) do
+    %{current_team: team, current_user: user} = socket.assigns
+    now = DateTime.utc_now()
+
+    case IssueEveryMemberCard.set(team, !team.every_member_card, user, now) do
+      {:ok, team, queued} ->
+        socket
+        |> assign(current_team: team)
+        |> assign_cards()
+        |> put_flash(:info, every_member_card_message(team, queued))
+        |> then(&{:noreply, &1})
+
+      {:error, :id_cards_off} ->
+        {:noreply,
+         put_flash(socket, :error, "ID cards are off. Email support@sarduty.com to ask.")}
+    end
   end
 
   def handle_event("set", %{"feature" => name}, socket) do
@@ -70,6 +105,16 @@ defmodule Web.Settings.FeaturesLive do
   defp message(%{travel_enabled: true}, :travel), do: "Travel turned on."
   defp message(_team, :travel), do: "Travel turned off."
 
+  defp every_member_card_message(%{every_member_card: false}, _queued),
+    do: "Every member gets a card turned off. Cards already made stay."
+
+  defp every_member_card_message(_team, 0), do: "Every member gets a card turned on."
+
+  defp every_member_card_message(_team, queued) do
+    "Every member gets a card turned on. Making " <>
+      Service.Format.count(queued, one: "%d card", many: "%d cards") <> " now."
+  end
+
   def render(assigns) do
     ~H"""
     <.team_settings_tabs team={@current_team} current={:features} />
@@ -91,6 +136,27 @@ defmodule Web.Settings.FeaturesLive do
           Members add their ID card to Apple Wallet or Google Wallet. SAR Duty turns ID cards
           on. Email support@sarduty.com to ask.
         </.set_by_sar_duty>
+
+        <div class="flex flex-col gap-6 pl-8">
+          <.switch
+            id="feature-every-member-card"
+            label="Every member gets a card"
+            checked={@current_team.every_member_card}
+            disabled={!@current_team.id_cards_enabled}
+            phx-click="set"
+            phx-value-feature="every_member_card"
+            {turn_on_cards_confirm(@current_team, @card_plan)}
+          >
+            Every current member gets an ID card, emailed to them. New members get theirs at
+            the next refresh.
+            <span :if={!@current_team.id_cards_enabled} class="block">
+              Works once ID cards are on.
+            </span>
+            <span :if={@without_email != []} id="every-member-card-no-email" class="block">
+              {no_email_text(@without_email, @service)}
+            </span>
+          </.switch>
+        </div>
 
         <.switch
           id="feature-member-logins"
@@ -195,6 +261,40 @@ defmodule Web.Settings.FeaturesLive do
     ~H"""
     <span class="block">Turn on member logins first.</span>
     """
+  end
+
+  # Turning on makes and emails a card for each member, so it asks first, with the
+  # counts. Turning off cancels none, so it doesn't.
+  defp turn_on_cards_confirm(%Team{every_member_card: false}, %{cards: cards} = plan)
+       when cards > 0 do
+    %{
+      "data-confirm" => cards_confirm(plan),
+      "data-confirm-button" =>
+        Service.Format.count(cards, one: "Create %d card", many: "Create %d cards")
+    }
+  end
+
+  defp turn_on_cards_confirm(_team, _plan), do: %{}
+
+  defp cards_confirm(%{cards: cards, emails: emails, no_email: no_email}) do
+    [
+      "Creates #{Service.Format.count(cards, one: "%d card", many: "%d cards")}",
+      emails > 0 &&
+        " and emails #{Service.Format.count(emails, one: "%d member", many: "%d members")}",
+      ".",
+      no_email > 0 &&
+        " #{Service.Format.count(no_email, one: "%d has no email.", many: "%d have no email.")}"
+    ]
+    |> Enum.filter(& &1)
+    |> Enum.join()
+  end
+
+  defp no_email_text(members, service) do
+    count =
+      members |> length() |> Service.Format.count(one: "%d member has", many: "%d members have")
+
+    names = members |> Enum.map(& &1.name) |> Service.Format.and_list()
+    "#{count} no email in #{service}, so they get a card but no email: #{names}."
   end
 
   # Turning off logs members out, so it asks first. Turning on doesn't.

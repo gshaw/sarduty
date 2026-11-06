@@ -6,8 +6,11 @@ defmodule Web.Settings.FeaturesLiveTest do
 
   alias App.Accounts
   alias App.Model.Event
+  alias App.Model.Member
+  alias App.Model.MemberCard
   alias App.Model.Team
   alias App.Model.WhiteboardNote
+  alias App.Operation.IssueEveryMemberCard
   alias App.Repo
 
   setup %{conn: conn} do
@@ -125,6 +128,65 @@ defmodule Web.Settings.FeaturesLiveTest do
       refute Team.whiteboard?(team)
       assert has_element?(lv, "#whiteboard-off-in-d4h")
       refute has_element?(lv, "#side-nav-whiteboard")
+    end
+  end
+
+  describe "Every member gets a card (#893)" do
+    setup %{team: team} do
+      # The team admin from the setup has a card from the pilot.
+      [admin] = Member.get_all(team.id)
+      member_card_fixture(admin)
+      cameron = member_fixture(team, %{name: "Cameron Ruiz", email: "cameron@example.com"})
+      eli = member_fixture(team, %{name: "Eli Haddad", email: nil})
+      member_fixture(team, %{name: "Old Timer", left_at: ~U[2020-01-01 00:00:00Z]})
+      member_fixture(team, %{name: "Truck", not_a_person: true})
+      %{cameron: cameron, eli: eli}
+    end
+
+    test "asks first with the counts, then makes a card for each member without one",
+         %{conn: conn, team: team, cameron: cameron, eli: eli} do
+      {:ok, lv, _html} = open(conn, team)
+
+      assert has_element?(
+               lv,
+               "#feature-every-member-card[data-confirm='Creates 2 cards and emails 1 member. 1 has no email.']"
+             )
+
+      assert has_element?(
+               lv,
+               "#every-member-card-no-email",
+               "1 member has no email in D4H, so they get a card but no email: Eli Haddad."
+             )
+
+      flip(lv, "every-member-card")
+
+      assert Repo.reload!(team).every_member_card
+      assert render(lv) =~ "Making 2 cards now."
+      assert %MemberCard{email_status: :sent} = MemberCard.find_current(team, cameron)
+      assert %MemberCard{email_status: nil} = MemberCard.find_current(team, eli)
+      assert_received {:email, %{to: [{"Cameron Ruiz", "cameron@example.com"}]}}
+      refute_received {:email, _}
+
+      assert %{data: %{"feature" => "every_member_card", "queued" => 2}} =
+               Event.get_last(:feature_turned_on)
+
+      # Off cancels none, and asks nothing.
+      refute has_element?(lv, "#feature-every-member-card[data-confirm]")
+      flip(lv, "every-member-card")
+      refute Repo.reload!(team).every_member_card
+      assert render(lv) =~ "Cards already made stay."
+      assert MemberCard.find_current(team, cameron).revoked_at == nil
+    end
+
+    test "waits on ID cards", %{conn: conn, team: team, user: user} do
+      team = team |> Ecto.Changeset.change(id_cards_enabled: false) |> Repo.update!()
+
+      {:ok, lv, _html} = open(conn, team)
+      assert has_element?(lv, "#feature-every-member-card[disabled]")
+      refute has_element?(lv, "#every-member-card-no-email")
+
+      assert IssueEveryMemberCard.set(team, true, user, DateTime.utc_now()) ==
+               {:error, :id_cards_off}
     end
   end
 
