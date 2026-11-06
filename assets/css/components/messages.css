@@ -119,6 +119,13 @@
   .banner-danger { --c: var(--danger); }
   .banner-warning { --c: var(--warning); }
   .banner-warning .banner-title { color: var(--on-warning); }
+  /* The Try a demo banner (layouts.ex): the full banner, or one row once Show less folds
+     it (demo_banner.js). */
+  .demo-banner-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); padding: var(--sp-2) var(--sp-4); }
+  .demo-banner-name { display: inline-flex; align-items: center; gap: var(--sp-2); font-weight: 600; }
+  .demo-banner-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-left: auto; }
+  #demo-banner.is-collapsed .demo-banner-full,
+  #demo-banner:not(.is-collapsed) .demo-banner-row { display: none; }
 
   /* A note set apart, such as advice beside a form field. */
   .callout { background: color-mix(in srgb, var(--warning) 22%, var(--bg)); color: var(--text); border-left: 6px solid var(--warning); padding: var(--sp-2) var(--sp-4); }

@@ -226,7 +226,12 @@ defmodule Web.DemoFlowTest do
     assert to == ~p"/teams/#{team}"
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
-    assert has_element?(lv, "#demo-banner")
+    assert has_element?(lv, "#demo-banner[phx-hook=DemoBanner]")
+    assert has_element?(lv, "#demo-banner-full #demo-banner-collapse", "Show less")
+    assert has_element?(lv, "#demo-banner-row #demo-expires", "Until")
+    assert has_element?(lv, "#demo-banner-row #demo-banner-expand", "Show more")
+    assert has_element?(lv, "#demo-banner-row #demo-row-outbox", "Outbox")
+    assert has_element?(lv, "#demo-banner-row #demo-row-delete[data-confirm]")
     assert has_element?(lv, "#demo-link-copy[value*='/demo/open/']")
     refute has_element?(lv, "#demo-link a")
     assert has_element?(lv, "#demo-outbox", "Outbox")
