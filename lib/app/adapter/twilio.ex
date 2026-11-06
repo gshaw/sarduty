@@ -27,37 +27,38 @@ defmodule App.Adapter.Twilio do
   def delivers?, do: config()[:deliver] == true
 
   @doc """
-  Texts `body` to an E.164 number. `:ok`, or `{:error, status}`. A text for a Try a
-  demo team (#857), given its id, goes to the team's Outbox instead, like its email.
+  Texts `body` to an E.164 number. `:ok`, or `{:error, status}`. Every text says whose
+  it is, as email does (App.Mailer): a team's id, or `:no_team`. A text for a Try a
+  demo team (#857) goes to the team's Outbox instead, like its email.
   """
-  def send_sms(to, body, team_id \\ nil)
-
-  def send_sms(to, body, team_id) when is_integer(team_id) do
-    if DemoTeam.demo?(team_id) do
-      OutboxMessage.add_text!(to, body, team_id)
-      :ok
-    else
-      send_sms(to, body, nil)
-    end
-  end
-
-  def send_sms(to, body, nil) do
-    case send_sms_with_reason(to, body) do
+  def send_sms(to, body, team_id) do
+    case send_sms_with_reason(to, body, team_id) do
       {:error, %{status: status}} -> {:error, status}
       result -> result
     end
   end
 
   @doc """
-  Like send_sms/2, with Twilio's own reason when it refuses: `{:error, %{status:,
+  Like send_sms/3, with Twilio's own reason when it refuses: `{:error, %{status:,
   code:, message:}}`. The message can repeat the number, so it is for the person who
   typed it (Adminland's test text, #789), never a log.
   """
-  def send_sms_with_reason(to, body) do
+  def send_sms_with_reason(to, body, team_id) when is_integer(team_id) do
+    if DemoTeam.demo?(team_id) do
+      OutboxMessage.add_text!(to, body, team_id)
+      :ok
+    else
+      deliver(to, body, team_id)
+    end
+  end
+
+  def send_sms_with_reason(to, body, :no_team), do: deliver(to, body, nil)
+
+  defp deliver(to, body, team_id) do
     if delivers?() do
       post_message(config(), to, body)
     else
-      OutboxMessage.add_text!(to, body)
+      OutboxMessage.add_text!(to, body, team_id)
       :ok
     end
   end

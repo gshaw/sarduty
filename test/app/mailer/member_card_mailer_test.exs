@@ -1,17 +1,18 @@
 defmodule App.Mailer.MemberCardMailerTest do
-  use ExUnit.Case, async: true
+  # The mailer sends, and the Mailer looks up whether its team is a demo (#857).
+  use App.DataCase, async: true
 
+  import App.DataFixtures
   import Swoosh.TestAssertions
 
   alias App.Mailer.MemberCardMailer
   alias App.Model.Member
   alias App.Model.MemberCard
-  alias App.Model.Team
 
   @google_url "https://pay.google.com/gp/v/save/header.claims.signature"
 
   defp card do
-    team = %Team{name: "Search & Rescue", subdomain: "example"}
+    team = team_fixture(%{name: "Search & Rescue", subdomain: "example"})
     member = %Member{name: "Alex <Example>", email: "alex@example.com", team: team}
     %MemberCard{code: "K7Q4M2XA", member: member}
   end

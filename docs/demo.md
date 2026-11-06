@@ -64,8 +64,10 @@ end it.
   visitor can answer a reminder as the member and see the reply land.
 - **No real texts.** A demo team's texts go to its Outbox too: the code that confirms a
   new mobile number (`ChangeOwnPhone`, through `Twilio.send_sms/3` with the team's id).
-  Text login skips every member of a demo team (`Member.current_emails_with_phone/2`), so
-  no text goes to a number a visitor typed.
+  Every email and text carries its team, or says it has none, and an unmarked email
+  raises ([outbox.md](outbox.md)). A login text is no team's, so text login skips every
+  member of a demo team (`Member.current_emails_with_phone/2`) instead, and no text goes
+  to a number a visitor typed.
 
 ## What a demo shows
 

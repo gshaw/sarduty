@@ -58,6 +58,28 @@ defmodule App.DemoTeamSendsTest do
       assert_email_sent(subject: "Will you be there? Training night")
       assert OutboxMessage.count(team) == 0
     end
+
+    test "sends an email marked for no team" do
+      new()
+      |> to("cameron@example.com")
+      |> Swoosh.Email.from({"SAR Duty", "noreply@sarduty.com"})
+      |> subject("Your SAR Duty login code: 123456")
+      |> Mailer.for_no_team()
+      |> Mailer.deliver()
+
+      assert_email_sent(subject: "Your SAR Duty login code: 123456")
+    end
+
+    test "refuses an email with no mark, so none can skip a demo's Outbox" do
+      email =
+        new()
+        |> to("cameron@example.com")
+        |> Swoosh.Email.from({"SAR Duty", "noreply@sarduty.com"})
+        |> subject("Will you be there? Training night")
+
+      assert_raise ArgumentError, ~r/no team mark/, fn -> Mailer.deliver(email) end
+      refute_email_sent()
+    end
   end
 
   describe "sends" do

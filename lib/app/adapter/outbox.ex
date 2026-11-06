@@ -5,11 +5,12 @@ defmodule App.Adapter.Outbox do
   """
   use Swoosh.Adapter
 
+  alias App.Mailer
   alias App.Model.OutboxMessage
 
   @impl Swoosh.Adapter
   def deliver(%Swoosh.Email{} = email, _config) do
-    message = OutboxMessage.add_email!(email, email.private[:team_id])
+    message = OutboxMessage.add_email!(email, Mailer.team_id(email))
     {:ok, %{id: message.id}}
   end
 end

@@ -42,7 +42,7 @@ defmodule App.OutboxTest do
     on_exit(fn -> Application.put_env(:sarduty, Twilio, config) end)
     Phoenix.PubSub.subscribe(App.PubSub, OutboxMessage.topic())
 
-    assert Twilio.send_sms("+16045551234", "Your SAR Duty login code: 123456") == :ok
+    assert Twilio.send_sms("+16045551234", "Your SAR Duty login code: 123456", :no_team) == :ok
 
     assert [%OutboxMessage{kind: :text, to: "+16045551234", body: "Your SAR Duty" <> _}] =
              OutboxMessage.list(:all)

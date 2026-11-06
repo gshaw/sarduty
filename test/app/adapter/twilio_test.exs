@@ -29,7 +29,7 @@ defmodule App.Adapter.TwilioTest do
       conn |> Plug.Conn.put_status(201) |> Req.Test.json(%{"sid" => "SM1"})
     end)
 
-    assert Twilio.send_sms("+16045551234", "Hi") == :ok
+    assert Twilio.send_sms("+16045551234", "Hi", :no_team) == :ok
   end
 
   @tag :capture_log
@@ -40,6 +40,6 @@ defmodule App.Adapter.TwilioTest do
       conn |> Plug.Conn.put_status(400) |> Req.Test.json(%{"code" => 21_211})
     end)
 
-    assert Twilio.send_sms("+16045551234", "Hi") == {:error, 400}
+    assert Twilio.send_sms("+16045551234", "Hi", :no_team) == {:error, 400}
   end
 end
