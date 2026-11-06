@@ -9,7 +9,8 @@ defmodule Web.ActivityMembersLive do
   comes last, next to the list, as Travel puts Not set. Everyone sees them. Team admins
   check members in them and act on them under the tables: one list and one button, as on
   Travel. Before the start the list emails or removes them, Send a reminder, Send an
-  update, and Remove from the activity, each a step; from the start until the activity
+  update, and Remove from the activity, each a step, except a removal that emails
+  nobody; from the start until the activity
   is published it changes their attendance, and Send an update stays after those three
   changes, published or not (#896). Add members has its own page.
 
@@ -45,6 +46,7 @@ defmodule Web.ActivityMembersLive do
   alias App.Model.Reminder
   alias App.Model.Standing
   alias App.Operation.ChangeAttendance
+  alias App.Operation.RemoveMembers
   alias App.ViewData.ActivityMembers
   alias App.ViewModel.ActivityMembersFilterViewModel
   alias Service.Format
@@ -112,7 +114,7 @@ defmodule Web.ActivityMembersLive do
 
   defp open_step(socket, live_action) do
     checked = checked(socket.assigns)
-    action = socket.assigns |> offered() |> Enum.find(&(&1.run() == {:step, live_action}))
+    action = socket.assigns |> offered() |> Enum.find(&(&1.run(checked) == {:step, live_action}))
 
     ctx = ctx(socket.assigns)
 
@@ -179,11 +181,29 @@ defmodule Web.ActivityMembersLive do
 
     case chosen(socket.assigns) do
       nil -> {:noreply, put_flash(socket, :error, "Select a change for the checked members.")}
-      action -> run(socket, action, action.run())
+      action -> run(socket, action, socket.assigns |> checked() |> action.run())
     end
   end
 
   def handle_event(event, params, socket), do: ActivityLive.handle_event(event, params, socket)
+
+  # Remove from the activity before the start, with nobody checked signed up: nobody gets
+  # an email, so there's no step. Each id with the reply the tab showed, so RemoveMembers
+  # keeps anyone whose reply changed since, on the activity as it is now.
+  defp run(socket, _action, {:in_place, :remove_before_start}) do
+    %{current_team: team, current_user: user} = socket.assigns
+    activity = ActivityLive.fetch_activity(team, socket.assigns.activity.id)
+    shown = for row <- checked(socket.assigns), do: {row.member.id, row.status}
+
+    case RemoveMembers.call(team, activity, shown, "", user, DateTime.utc_now()) do
+      {:ok, result} ->
+        kind = if result.not_removed == [], do: :info, else: :error
+        {:noreply, done(socket, kind, RemoveMembers.result_text(result))}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, RemoveMembers.error_text(team, reason))}
+    end
+  end
 
   # Each id with the status the tab showed for it, so the operation skips anyone whose
   # attendance changed since.
@@ -271,8 +291,8 @@ defmodule Web.ActivityMembersLive do
     do:
       ~p"/teams/#{team}/activities/#{activity.id}/members?#{ActivityMembersFilterViewModel.query_params(filter)}"
 
-  defp step_path(%{current_team: team, activity: activity, filter: filter}, action) do
-    {:step, live_action} = action.run()
+  defp step_path(%{current_team: team, activity: activity, filter: filter} = assigns, action) do
+    {:step, live_action} = assigns |> checked() |> action.run()
     segment = live_action |> Atom.to_string() |> String.replace("_", "-")
 
     ~p"/teams/#{team}/activities/#{activity.id}/members/#{segment}?#{ActivityMembersFilterViewModel.query_params(filter)}"
@@ -443,7 +463,7 @@ defmodule Web.ActivityMembersLive do
             id="members-change-send"
             variant={if @action, do: @action.variant(), else: :primary}
             disabled={@count == 0}
-            phx-disable-with={send_waiting(@action)}
+            phx-disable-with={send_waiting(@action, @checked)}
             {@confirm}
           >
             {if @count > 0, do: @action.button_text(@count), else: idle_text(@action, @started?)}
@@ -467,10 +487,10 @@ defmodule Web.ActivityMembersLive do
   end
 
   # The button while it waits: a step opens at once, and a change in place writes.
-  defp send_waiting(nil), do: "Saving…"
+  defp send_waiting(nil, _checked), do: "Saving…"
 
-  defp send_waiting(action) do
-    case {action.run(), action.variant()} do
+  defp send_waiting(action, checked) do
+    case {action.run(checked), action.variant()} do
       {{:step, _live_action}, _variant} -> "Opening…"
       {_run, :danger} -> "Removing…"
       _in_place -> "Saving…"

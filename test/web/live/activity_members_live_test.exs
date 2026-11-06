@@ -756,14 +756,36 @@ defmodule Web.ActivityMembersLiveTest do
              )
     end
 
-    test "with nobody signed up, no message, preview, or confirm", ctx do
-      lv = open_remove(ctx, [ctx.harper, ctx.riley])
+    # Nobody gets an email, so there's nothing for a step to ask: one confirm on the tab.
+    test "with nobody signed up, the tab asks once and removes them, with no step", ctx do
+      AttendanceStub.stub(ctx.rows)
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+      check(lv, [ctx.harper.id, ctx.riley.id], "remove")
 
-      refute has_element?(lv, "#remove-message")
-      refute has_element?(lv, "#remove-preview-section")
-      refute has_element?(lv, "#remove-emailed-table")
-      refute has_element?(lv, "#remove-send[data-confirm]")
-      assert has_element?(lv, "#remove-send", "Remove 2 members")
+      assert has_element?(
+               lv,
+               ~s|#members-change-send[data-confirm="Remove 2 members from Save-On-Foods BBQ? Nobody gets an email. To undo, add them again."]|,
+               "Remove 2 members"
+             )
+
+      lv
+      |> form("#members-change-form", %{
+        "member_ids" => [to_string(ctx.harper.id), to_string(ctx.riley.id)],
+        "change" => "remove"
+      })
+      |> render_submit()
+
+      refute has_element?(lv, "#remove-step")
+      assert has_element?(lv, "#flash-info", "2 members removed.")
+      refute has_element?(lv, "#member-row-#{ctx.harper.id}")
+      refute has_element?(lv, "#member-row-#{ctx.riley.id}")
+      refute_received {:email, _}
+
+      assert Attendance
+             |> where(activity_id: ^ctx.activity.id)
+             |> Repo.all()
+             |> Enum.map(& &1.member_id)
+             |> Enum.sort() == Enum.sort([ctx.drew.id, ctx.sam.id])
     end
 
     # Nobody gets an email, so there's no message box and no confirm.
@@ -852,14 +874,14 @@ defmodule Web.ActivityMembersLiveTest do
 
     # The stale check: published since the step opened, so RemoveMembers refuses.
     test "published since the step opened removes nobody, and the tab says why", ctx do
-      lv = open_remove(ctx, [ctx.harper])
+      lv = open_remove(ctx, [ctx.drew])
       ctx.activity |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
 
       lv |> form("#remove-form") |> render_submit(%{})
 
       assert_patch(lv, path(ctx))
       assert has_element?(lv, "#flash-error", "Nobody was removed.")
-      assert Repo.get_by(Attendance, member_id: ctx.harper.id)
+      assert Repo.get_by(Attendance, member_id: ctx.drew.id)
     end
 
     test "a published activity offers no Remove", ctx do

@@ -29,7 +29,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
   reply, then Send a reminder or Send an update. Send reminders and Send an update are gone
   from Actions.
 - Remove members before an activity joins them: check members on its Members tab, then
-  Remove from the activity. The Remove members link is gone.
+  Remove from the activity. Members who signed up get your message; with none of them
+  checked, it asks once and removes them. The Remove members link is gone.
 - Send an update after an activity too, published or not: a thank-you, or "check your
   hours". After the start everyone gets the same email: your message and Open activity.
 - Add members lists who you find under Not added yet, checked, so it's clear nobody is on

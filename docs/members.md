@@ -525,8 +525,9 @@ activity starts.
   the team admin's message. The message is required for them, up to 300 characters, and
   History keeps it. Remove without emailing them is the exception box: no email, and the
   message is optional. A signed up member with no email gets nothing, and the step says
-  to tell them. With nobody to email there's no message and no confirm. On send, a
-  member whose reply changed since stays on. From the start, Remove from the activity
+  to tell them. With nobody checked signed up, nobody gets an email, so there's no step:
+  the tab asks once and removes them. On send, a member whose reply changed since stays
+  on. From the start, Remove from the activity
   changes attendance in place (#766).
 - **Members**, the activity's Members tab, lists everyone it invites
   ([ActivityMembersLive](../lib/web/live/activity_members_live.ex),

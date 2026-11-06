@@ -2,7 +2,9 @@ defmodule Web.ActivityMembersLive.RemoveBeforeStart do
   @moduledoc """
   Remove from the activity before the start (#895 E), a step: what was the Remove
   members page (#704) without its tick tables, since the team admin picked the members
-  on the Members tab. From the start, Web.ActivityMembersLive.Remove does it in place.
+  on the Members tab. With nobody checked signed up, nobody gets an email, so there's
+  nothing to ask: the tab removes them in place, after a confirm. From the start,
+  Web.ActivityMembersLive.Remove does it in place.
 
   Two tables: who goes with no email, then who goes and gets the team admin's message.
   A checked signed up member with an email needs that message, which SAR Duty emails
@@ -53,12 +55,22 @@ defmodule Web.ActivityMembersLive.RemoveBeforeStart do
   @impl Action
   def variant, do: :danger
 
-  # The step asks, once it knows who gets an email.
+  # With someone signed up, the step asks, once it knows who gets an email.
   @impl Action
-  def confirm(_ctx, _checked), do: %{}
+  def confirm(%{activity: activity}, checked) do
+    if signed_up?(checked),
+      do: %{},
+      else: %{
+        "data-confirm" =>
+          "Remove #{members_text(length(checked))} from #{activity.title}? Nobody gets an email. To undo, add them again."
+      }
+  end
 
   @impl Action
-  def run, do: {:step, :remove}
+  def run(checked),
+    do: if(signed_up?(checked), do: {:step, :remove}, else: {:in_place, :remove_before_start})
+
+  defp signed_up?(checked), do: Enum.any?(checked, &(&1.status == "attending"))
 
   # The rows are the checked members as the step opened; later renders keep them.
   @impl Phoenix.LiveComponent

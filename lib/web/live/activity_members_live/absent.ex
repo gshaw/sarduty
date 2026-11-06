@@ -33,5 +33,5 @@ defmodule Web.ActivityMembersLive.Absent do
   def confirm(_ctx, _checked), do: %{}
 
   @impl Web.ActivityMembersLive.Action
-  def run, do: {:in_place, :absent}
+  def run(_checked), do: {:in_place, :absent}
 end

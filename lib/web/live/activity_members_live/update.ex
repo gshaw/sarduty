@@ -58,7 +58,7 @@ defmodule Web.ActivityMembersLive.Update do
   def confirm(_ctx, _checked), do: %{}
 
   @impl Action
-  def run, do: {:step, :update}
+  def run(_checked), do: {:step, :update}
 
   defp reached(plan), do: Enum.sum_by(plan.groups, fn {_status, rows} -> length(rows) end)
 
