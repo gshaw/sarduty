@@ -1,10 +1,10 @@
 defmodule App.Operation.SendMemberCard do
   @moduledoc """
   Gets a member their ID card by email (#893). Issue and Replace on the ID Card tab make
-  a new card here and queue its email; Email card queues the current card's again. Each
-  is one App.Worker.SendMemberCardWorker job, which also makes the card when the member
-  has none, so Every member gets a card queues the same job for every member
-  (App.Operation.IssueEveryMemberCard).
+  a new card here and queue its email; Email card queues the current card's again. Every
+  member gets a card makes each member's card the same way, all at once, and queues
+  their emails behind the team admin's clicks (App.Operation.IssueEveryMemberCard).
+  Each email is one App.Worker.SendMemberCardWorker job.
 
   The card's `email_status` says whether its email went: `:sending` while the job waits,
   then `:sent` or `:failed`. The job sends only a card marked sending, so a job that runs
@@ -19,6 +19,10 @@ defmodule App.Operation.SendMemberCard do
   alias App.Repo
   alias App.Worker.SendMemberCardWorker
 
+  # Oban runs the lowest number first. A rollout's emails go after a team admin's clicks
+  # and after reminders and letters, which keep the default 0.
+  @rollout_priority 3
+
   @doc """
   Issue or Replace: a new card with a new code (IssueMemberCard), and its email queued
   when the member has an address. The old card stops working. `{:ok, card}`, or
@@ -27,10 +31,21 @@ defmodule App.Operation.SendMemberCard do
   def issue(%Team{} = team, %Member{} = member, now) do
     Repo.transaction(fn ->
       case IssueMemberCard.call(team, member, now) do
-        {:ok, card} -> queue_email(card, member, now)
+        {:ok, card} -> queue_email(card, member, now, click(now))
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
+  end
+
+  @doc """
+  Every member gets a card: a new card for a member who has none, and its email queued
+  behind any click. Call it in the rollout's transaction. `{:ok, card}`, or
+  IssueMemberCard's error.
+  """
+  def issue_in_rollout(%Team{} = team, %Member{} = member, now) do
+    with {:ok, card} <- IssueMemberCard.call(team, member, now) do
+      {:ok, queue_email(card, member, now, priority: @rollout_priority)}
+    end
   end
 
   @doc """
@@ -43,7 +58,7 @@ defmodule App.Operation.SendMemberCard do
         {:error, :no_email}
 
       card = MemberCard.find_current(team, member) ->
-        Repo.transaction(fn -> queue(card, member, now) end)
+        Repo.transaction(fn -> queue(card, member, now, click(now)) end)
 
       true ->
         {:error, :no_card}
@@ -51,38 +66,18 @@ defmodule App.Operation.SendMemberCard do
   end
 
   @doc """
-  The job's work: the member's current card, made now if they have none and the team's
-  Every member gets a card is on (App.Operation.IssueEveryMemberCard), then its email if
-  it waits for one. `last?` is the job's last attempt, when a refusal marks the email
-  failed. `{:cancel, reason}` when only a person can fix it: ID cards off, the switch
-  turned off before the job ran, a member not in good standing, or no email.
+  The job's work: the member's current card's email, if it waits for one. `last?` is the
+  job's last attempt, when a refusal marks the email failed. `{:cancel, reason}` when
+  only a person can fix it: no card (ID cards turned off, or the member gone) or no
+  email.
   """
   def deliver(team_id, member_id, last?, now) do
     with %Team{} = team <- Team.get(team_id),
          %Member{} = member <- Member.find(team, member_id),
-         {:ok, card} <- current_or_new(team, member, now) do
+         %MemberCard{} = card <- MemberCard.find_current(team, member) do
       send_if_waiting(card, team, member, last?, now)
     else
-      nil -> {:cancel, "no member"}
-      {:error, reason} -> {:cancel, reason}
-    end
-  end
-
-  # Issue and Replace make the card before queueing the job, so only the rollout's jobs
-  # make one here. Turning the switch off stops those that still wait.
-  defp current_or_new(team, member, now) do
-    case MemberCard.find_current(team, member) do
-      nil when team.every_member_card -> new_card(team, member, now)
-      nil -> {:error, :every_member_card_off}
-      card -> {:ok, card}
-    end
-  end
-
-  defp new_card(team, member, now) do
-    with {:ok, card} <- IssueMemberCard.call(team, member, now) do
-      card = if email?(member), do: MemberCard.set_email_status!(card, :sending, now), else: card
-      broadcast(member)
-      {:ok, card}
+      nil -> {:cancel, "no card"}
     end
   end
 
@@ -104,22 +99,30 @@ defmodule App.Operation.SendMemberCard do
 
   defp send_if_waiting(_card, _team, _member, _last?, _now), do: :ok
 
-  defp queue_email(card, member, now) do
-    if email?(member), do: queue(card, member, now), else: card
+  defp queue_email(card, member, now, opts) do
+    if email?(member), do: queue(card, member, now, opts), else: card
   end
 
-  # A click sends now. A job already waiting for this member, a retry or a rollout slot,
-  # is moved to now rather than left to send later while the tab says Sending. Oban
-  # replaces only what the new job sets, so it names scheduled_at.
-  defp queue(card, member, now) do
+  defp queue(card, member, now, opts) do
     card = MemberCard.set_email_status!(card, :sending, now)
-
-    SendMemberCardWorker.enqueue(member,
-      scheduled_at: now,
-      replace: [scheduled: [:scheduled_at], retryable: [:scheduled_at]]
-    )
-
+    SendMemberCardWorker.enqueue(member, opts)
     card
+  end
+
+  # A click sends now, ahead of a rollout. A job already waiting for this member, a retry
+  # or their rollout email, is moved to now and to the front rather than left to send
+  # later while the tab says Sending. Oban replaces only what the new job sets, so it
+  # names both.
+  defp click(now) do
+    [
+      scheduled_at: now,
+      priority: 0,
+      replace: [
+        available: [:priority],
+        scheduled: [:scheduled_at, :priority],
+        retryable: [:scheduled_at, :priority]
+      ]
+    ]
   end
 
   defp finish(card, member, status, now) do

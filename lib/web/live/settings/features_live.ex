@@ -38,11 +38,11 @@ defmodule Web.Settings.FeaturesLive do
     now = DateTime.utc_now()
 
     case IssueEveryMemberCard.set(team, !team.every_member_card, user, now) do
-      {:ok, team, queued} ->
+      {:ok, team, made} ->
         socket
         |> assign(current_team: team)
         |> assign_cards()
-        |> put_flash(:info, every_member_card_message(team, queued))
+        |> put_flash(:info, every_member_card_message(team, made))
         |> then(&{:noreply, &1})
 
       {:error, :id_cards_off} ->
@@ -105,14 +105,15 @@ defmodule Web.Settings.FeaturesLive do
   defp message(%{travel_enabled: true}, :travel), do: "Travel turned on."
   defp message(_team, :travel), do: "Travel turned off."
 
-  defp every_member_card_message(%{every_member_card: false}, _queued),
+  defp every_member_card_message(%{every_member_card: false}, _made),
     do: "Every member gets a card turned off. Cards already made stay."
 
   defp every_member_card_message(_team, 0), do: "Every member gets a card turned on."
 
-  defp every_member_card_message(_team, queued) do
-    "Every member gets a card turned on. Making " <>
-      Service.Format.count(queued, one: "%d card", many: "%d cards") <> " now."
+  defp every_member_card_message(_team, made) do
+    "Every member gets a card turned on. " <>
+      Service.Format.count(made, one: "%d card", many: "%d cards") <>
+      " created. Emailing them now."
   end
 
   def render(assigns) do

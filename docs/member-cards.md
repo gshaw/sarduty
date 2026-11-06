@@ -225,13 +225,11 @@ the code.
 
 Issue and Replace make the card when clicked, mark it `email_status: :sending`, and queue
 the job in the same transaction, so the tab shows the new card at once
-([SendMemberCard](../lib/app/operation/send_member_card.ex)). The job makes the card when
-the member has none, then emails it only while it is marked sending, so a retry, or a
-second job for the same card, sends one email. That lets a rollout queue the same job for
-every member, spread out with `enqueue(member, schedule_in: seconds)`
-([Every member gets a card](#every-member-gets-a-card)). The job makes a card only while
-that switch is on. A member with no email still gets a card, with no email. The job is
-unique per member while it waits.
+([SendMemberCard](../lib/app/operation/send_member_card.ex)). The job emails the card only
+while it is marked sending, so a retry, or a second job for the same card, sends one
+email. A member with no email still gets a card, with no email. The job is unique per
+member while it waits, so a click joins a job already waiting and moves it to now and to
+the front of the queue.
 
 The card keeps how its email went, `email_status` and `emailed_at`, like
 `TaxCreditLetter.email_status`, and the tab's Emailed row shows it: when it went and to
@@ -247,21 +245,22 @@ cards (#893). It shows only as off, and can't be turned on, while ID cards are o
 
 - **Turning it on asks first, with the counts**: "Creates 40 cards and emails 38 members.
   2 have no email." From 10 emails up it waits on a check box, as every send to many
-  members does (`send_confirm/3`). It then queues one `SendMemberCardWorker` job per member who is
-  counted (a person, not retiring), current, and has no live card.
-- **The jobs drip out**: job _n_ runs at (_n_ − 1) × 5 seconds, so 40 cards take about
-  3 minutes and 74 about 6. Each builds an Apple pass (photo resize, signing) and a
-  Google pass (HTTP), and production is one shared CPU that throttles once its balance
-  runs out (#584). OSS Oban has no rate limit, so the stagger is the throttle.
+  members does (`send_confirm/3`). It then makes a card, in one transaction, for each
+  member who is counted (a person, not retiring), current, and has no live card, and
+  queues a `SendMemberCardWorker` job to email each one with an address.
+- **Cards at once, emails over about 2 minutes.** Making a card is database rows alone,
+  so the ID Card tab and Your membership show it straight away. Each email job builds
+  an Apple pass (photo fetch, resize, signing) and a Google pass (HTTP), and production
+  is one shared CPU that throttles once its balance runs out (#584). The `bulk` queue's
+  limit of 2 paces them: about 1–2 seconds each, so 100 emails take about 2 minutes. They
+  run at a lower priority, after any click, reminder, or letter.
 - **While it's on, new members get theirs.** Each full refresh, and each sync that
-  changed something, queues the same job for members without a card: someone new in
-  D4H, or back from Retiring or retired with no card. The job is unique per member, so a
-  refresh during the rollout adds none for members already waiting.
+  changed something, does the same for members without a card: someone new in D4H, or
+  back from Retiring or retired with no card.
 - **Members with no email still get a card.** They see it on Your membership, and the
   Features tab names them under the switch so a team admin can add an email in D4H.
-- **Off stops new cards and cancels none.** A job still waiting makes no card: only
-  the rollout's jobs make one, and they check the switch when they run. Issue, Replace,
-  and Email card on the ID Card tab work either way.
+- **Off stops new cards and cancels none.** Emails already queued still go. Issue,
+  Replace, and Email card on the ID Card tab work either way.
 - **Turning ID cards off turns it off too**, and turning ID cards back on leaves it off
   for a team admin to turn on again ([SetTeamIdCards](../lib/app/operation/set_team_id_cards.ex)).
 

@@ -1,11 +1,10 @@
 defmodule App.Worker.SendMemberCardWorker do
   @moduledoc """
-  Gives one member their ID card (App.Operation.SendMemberCard.deliver/4): makes the
-  card if they have none and Every member gets a card is on, then emails it if it waits
-  for its email. Issue, Replace, and Email card on the ID Card tab each queue one (#893),
-  and the switch queues one per member (App.Operation.IssueEveryMemberCard). A retry finds the card and only
-  sends the email again; the last refusal marks the card's email failed, which the tab
-  shows.
+  Emails one member their current ID card (App.Operation.SendMemberCard.deliver/4) if it
+  waits for its email. Issue, Replace, and Email card on the ID Card tab each queue one
+  (#893), and Every member gets a card one per member, behind the clicks
+  (App.Operation.IssueEveryMemberCard). A retry sends the email again; the last refusal
+  marks the card's email failed, which the tab shows.
 
   Unique per member while it waits, so two queued close together send one email. A job
   already running doesn't count: a Replace while it sends still emails the new card.
@@ -25,7 +24,7 @@ defmodule App.Worker.SendMemberCardWorker do
 
   @doc """
   Queues the member's card. Call it in the transaction that marks the card sending.
-  `opts` go to the job, such as `schedule_in: 30` to spread a team's cards out.
+  `opts` go to the job, such as `priority: 3` for a rollout's.
   """
   def enqueue(%Member{id: id, team_id: team_id}, opts \\ []),
     do: %{team_id: team_id, member_id: id} |> new(opts) |> Oban.insert!()

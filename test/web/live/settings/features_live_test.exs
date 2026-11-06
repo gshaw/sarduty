@@ -161,13 +161,13 @@ defmodule Web.Settings.FeaturesLiveTest do
       flip(lv, "every-member-card")
 
       assert Repo.reload!(team).every_member_card
-      assert render(lv) =~ "Making 2 cards now."
+      assert render(lv) =~ "2 cards created. Emailing them now."
       assert %MemberCard{email_status: :sent} = MemberCard.find_current(team, cameron)
       assert %MemberCard{email_status: nil} = MemberCard.find_current(team, eli)
       assert_received {:email, %{to: [{"Cameron Ruiz", "cameron@example.com"}]}}
       refute_received {:email, _}
 
-      assert %{data: %{"feature" => "every_member_card", "queued" => 2}} =
+      assert %{data: %{"feature" => "every_member_card", "made" => 2}} =
                Event.get_last(:feature_turned_on)
 
       # Off cancels none, and asks nothing.

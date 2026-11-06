@@ -4,7 +4,6 @@ defmodule App.Worker.SendMemberCardWorkerTest do
 
   import App.DataFixtures
 
-  alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Operation.IssueEveryMemberCard
   alias App.Operation.SendMemberCard
@@ -24,8 +23,8 @@ defmodule App.Worker.SendMemberCardWorkerTest do
     })
   end
 
-  test "makes a card for a member with none and emails it, once", %{team: team, member: member} do
-    assert perform(member) == :ok
+  test "a rollout makes the card and the job emails it, once", %{team: team, member: member} do
+    assert IssueEveryMemberCard.call(team, DateTime.utc_now()) == 1
 
     card = MemberCard.find_current(team, member)
     assert %MemberCard{email_status: :sent, emailed_at: %DateTime{}} = card
@@ -38,12 +37,15 @@ defmodule App.Worker.SendMemberCardWorkerTest do
     assert MemberCard.find_current(team, member).id == card.id
   end
 
-  test "a member with no email still gets a card", %{team: team} do
-    member = member_fixture(team, %{email: nil})
+  test "a member with no email still gets a card, and no job", %{team: team, member: member} do
+    member_card_fixture(member)
+    no_email = member_fixture(team, %{email: nil})
 
-    assert perform(member) == :ok
-    assert %MemberCard{email_status: nil} = MemberCard.find_current(team, member)
-    refute_received {:email, _}
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert IssueEveryMemberCard.call(team, DateTime.utc_now()) == 1
+      assert %MemberCard{email_status: nil} = MemberCard.find_current(team, no_email)
+      refute_enqueued(worker: SendMemberCardWorker)
+    end)
   end
 
   test "a refusal is tried again, and the last one marks the email failed",
@@ -67,98 +69,73 @@ defmodule App.Worker.SendMemberCardWorkerTest do
     assert Repo.reload!(card).email_status == :failed
   end
 
-  test "makes no card for a retiring member, or on a team with ID cards off",
+  test "a rollout skips a retiring member, and makes none while ID cards are off",
        %{team: team, member: member} do
     leavers = group_fixture(team)
     team |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id) |> Repo.update!()
     group_member_fixture(leavers, member)
 
-    assert {:cancel, :not_active} = perform(member)
+    assert team |> Repo.reload!() |> IssueEveryMemberCard.call(DateTime.utc_now()) == 0
 
     other = member_fixture(team)
-    team |> Ecto.Changeset.change(id_cards_enabled: false) |> Repo.update!()
-    assert {:cancel, :id_cards_off} = perform(other)
+    off = team |> Ecto.Changeset.change(id_cards_enabled: false) |> Repo.update!()
+    assert IssueEveryMemberCard.call(off, DateTime.utc_now()) == 0
 
     assert MemberCard.find_current(team, member) == nil
     assert MemberCard.find_current(team, other) == nil
     refute_received {:email, _}
   end
 
-  test "makes no card once Every member gets a card is off: a waiting job stops",
-       %{team: team, member: member} do
-    team = team |> Ecto.Changeset.change(every_member_card: false) |> Repo.update!()
+  # Turning ID cards off cancels every card, so an email still waiting has nothing to send.
+  test "a job whose card was cancelled sends nothing", %{member: member} do
+    member_card_fixture(member, %{email_status: :sending, revoked_at: DateTime.utc_now()})
 
-    assert {:cancel, :every_member_card_off} = perform(member)
-    assert MemberCard.find_current(team, member) == nil
+    assert {:cancel, "no card"} = perform(member)
     refute_received {:email, _}
-
-    # A card made by Issue still gets its email.
-    {:ok, card} = SendMemberCard.issue(team, member, DateTime.utc_now())
-    assert_received {:email, _}
-    assert Repo.reload!(card).email_status == :sent
   end
 
-  test "one job per member while it waits, and a rollout can schedule it later",
-       %{member: member} do
-    Oban.Testing.with_testing_mode(:manual, fn ->
-      SendMemberCardWorker.enqueue(member, schedule_in: 30)
-      SendMemberCardWorker.enqueue(member)
-
-      assert [%Oban.Job{state: "scheduled"}] =
-               all_enqueued(worker: SendMemberCardWorker, args: %{member_id: member.id})
-    end)
-  end
-
-  # Only a click replaces a waiting job's time. A refresh during the rollout lines the
-  # members up again, but each keeps the slot it had.
-  test "a second rollout keeps each waiting job's slot, and only adds the new member's",
+  test "a rollout makes every card at once and queues the emails behind any click",
        %{team: team} do
     member_fixture(team, %{name: "Blake Morrison"})
     member_fixture(team, %{name: "Jordan Lee"})
 
     Oban.Testing.with_testing_mode(:manual, fn ->
       assert IssueEveryMemberCard.call(team, DateTime.utc_now()) == 3
-      first = slots()
-      assert Map.keys(first) == ["Blake Morrison", "Cameron Ruiz", "Jordan Lee"]
-      gap = fn a, b -> DateTime.diff(first[b], first[a]) end
-      assert gap.("Blake Morrison", "Cameron Ruiz") == 5
-      assert gap.("Cameron Ruiz", "Jordan Lee") == 5
 
-      # Avery sorts first, so this run asks for every slot 5 seconds later than before.
-      member_fixture(team, %{name: "Avery Chen"})
-      assert IssueEveryMemberCard.call(team, DateTime.utc_now()) == 4
+      assert MemberCard |> Repo.all() |> Enum.map(& &1.email_status) ==
+               [:sending, :sending, :sending]
 
-      second = slots()
-      assert Map.take(second, Map.keys(first)) == first
-      assert Map.has_key?(second, "Avery Chen")
+      jobs = Repo.all(Oban.Job)
+      assert length(jobs) == 3
+      assert Enum.all?(jobs, &(&1.state == "available" and &1.priority == 3))
+
+      # Everyone has a card now, so a refresh during the rollout queues nothing more.
+      assert IssueEveryMemberCard.call(team, DateTime.utc_now()) == 0
+      assert length(Repo.all(Oban.Job)) == 3
     end)
   end
 
-  # Each waiting job's scheduled_at, by member name.
-  defp slots do
-    for job <- Repo.all(Oban.Job), into: %{} do
-      {Repo.get!(Member, job.args["member_id"]).name, job.scheduled_at}
-    end
-  end
-
-  # A click joins the member's waiting job (unique), so it moves that job to now (#893).
-  test "Email card moves a job already waiting, a retry or a rollout slot, to now",
+  # A click joins the member's waiting job (unique), so it moves that job to now and to
+  # the front (#893).
+  test "Email card moves a job already waiting, a retry or a rollout email, to now",
        %{team: team, member: member} do
     member_card_fixture(member, %{email_status: :sent})
 
     Oban.Testing.with_testing_mode(:manual, fn ->
-      for state <- ["scheduled", "retryable"] do
+      for state <- ["available", "scheduled", "retryable"] do
         Repo.delete_all(Oban.Job)
-        later = SendMemberCardWorker.enqueue(member, schedule_in: 30 * 60)
+        later = SendMemberCardWorker.enqueue(member, schedule_in: 30 * 60, priority: 3)
         later |> Ecto.Changeset.change(state: state) |> Repo.update!()
         now = DateTime.utc_now()
 
         assert {:ok, _card} = SendMemberCard.email(team, member, now)
 
-        assert [%Oban.Job{id: id, state: ^state, scheduled_at: at}] = Repo.all(Oban.Job)
-
+        assert [%Oban.Job{id: id, state: ^state, priority: 0} = job] = Repo.all(Oban.Job)
         assert id == later.id
-        assert DateTime.compare(at, DateTime.add(now, 1, :second)) == :lt
+
+        # An available job is due already; only a waiting one has a time to move.
+        if state != "available",
+          do: assert(DateTime.compare(job.scheduled_at, DateTime.add(now, 1, :second)) == :lt)
       end
     end)
   end
