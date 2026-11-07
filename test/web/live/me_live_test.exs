@@ -5,6 +5,7 @@ defmodule Web.MeLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.AccountsFixtures
+  alias App.Model.MemberCard
   alias App.Model.NoShow
   alias App.Operation.SetTeamFeature
   alias App.Repo
@@ -220,7 +221,7 @@ defmodule Web.MeLiveTest do
       card = member_card_fixture(member)
       lv = open(conn, ~p"/teams/#{team}/me")
       assert has_element?(lv, "#id-card", "a current member of #{team.name}")
-      code = App.Model.MemberCard.format_code(card.code)
+      code = MemberCard.format_code(card.code)
 
       assert has_element?(
                lv,
