@@ -176,6 +176,31 @@ defmodule App.Model.MemberCard do
 
   def status(%MemberCard{}, _now, _repo), do: :revoked
 
+  @doc """
+  What a card's link (#952) offers: `:active`, its passes; or why not: `:replaced`, a
+  revoked card whose member has a newer live one; `:cancelled`, a revoked card with none,
+  as when the team's ID cards were turned off; `:inactive`, a member not in good
+  standing. Expects `member: :team`.
+  """
+  def link_status(%MemberCard{} = card, now) do
+    case status(card, now) do
+      :revoked -> if find_current(card.member.team, card.member), do: :replaced, else: :cancelled
+      status -> status
+    end
+  end
+
+  @doc """
+  A card by id, with `member: [team: :organization]`, or nil. Its member is found
+  through the card's team.
+  """
+  def get_with_member(id) do
+    MemberCard
+    |> join(:inner, [c], m in assoc(c, :member), on: m.team_id == c.team_id)
+    |> where([c], c.id == ^id)
+    |> preload(member: [team: :organization])
+    |> Repo.one()
+  end
+
   @doc "A revoked card, by id, or nil. Its member is found through the card's team."
   def get_revoked(id) do
     MemberCard

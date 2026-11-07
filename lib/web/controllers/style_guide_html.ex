@@ -19,6 +19,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.MemberLetter
   import Web.Components.MilestoneList
   import Web.Components.OpenInMaps
+  import Web.Components.OpenOnDevice
   import Web.Components.PageActions
   import Web.Components.Pagination
   import Web.Components.PersonHead
@@ -100,6 +101,8 @@ defmodule Web.StyleGuideHTML do
          {:member_letter, "Member letter", "A member's tax credit letter for a year."},
          {:milestone_list, "Milestone list", "What a member reached, and the day."},
          {:open_in_maps, "Open in maps", "A place in the account's maps app."},
+         {:open_on_device, "Open on device",
+          "A QR code beside a page, to open it on a phone or iPad."},
          {:page_actions, "Page actions", "A page's own actions, when it has no sidebar."},
          {:pagination, "Pagination", "Pages under a long table."},
          {:person_head, "Person head", "A member's photo, name, standing, and facts."},

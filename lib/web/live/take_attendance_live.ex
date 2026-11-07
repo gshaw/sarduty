@@ -2,6 +2,7 @@ defmodule Web.TakeAttendanceLive do
   use Web, {:live_view_app_layout, access: :team}
 
   import Web.Components.CopyButton
+  import Web.Components.OpenOnDevice
 
   alias App.Model.Activity
   alias Service.Format
@@ -22,7 +23,7 @@ defmodule Web.TakeAttendanceLive do
 
     {:ok,
      socket
-     |> assign(page_title: "Take attendance", url: url, qr_code: qr_code(url))
+     |> assign(page_title: "Take attendance", url: url)
      |> load(DateTime.utc_now())}
   end
 
@@ -50,8 +51,6 @@ defmodule Web.TakeAttendanceLive do
 
   def path?(_path), do: false
 
-  defp qr_code(url), do: url |> EQRCode.encode(:m) |> EQRCode.svg(viewbox: true, color: "#000")
-
   defp scanner_path(team, activity),
     do: ~p"/teams/#{team}/activities/#{activity.id}/take-attendance"
 
@@ -66,9 +65,7 @@ defmodule Web.TakeAttendanceLive do
       <div class="md:w-2/3 min-w-0">
         <.lists activities={@activities} coming_up={@coming_up} team={@current_team} now={@now} />
       </div>
-      <aside id="open-on-ipad" class="md:w-1/3 mt-8 pointer-coarse:hidden">
-        <h2 class="heading">Open on the iPad</h2>
-        <div class="qr-code mb-4" aria-hidden="true">{raw(@qr_code)}</div>
+      <.open_on_device id="open-on-ipad" heading="Open on the iPad" url={@url}>
         <p>Scan the code with the iPad's camera, or open this address on it:</p>
         <p class="hint">
           <.copy_button
@@ -81,7 +78,7 @@ defmodule Web.TakeAttendanceLive do
         <p class="hint mb-0">
           Print the code for the hall. It opens this page, and the address never changes.
         </p>
-      </aside>
+      </.open_on_device>
     </div>
     """
   end
