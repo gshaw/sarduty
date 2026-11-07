@@ -5,7 +5,6 @@ defmodule Web.MeLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.AccountsFixtures
-  alias App.Model.MemberCard
   alias App.Model.NoShow
   alias App.Operation.SetTeamFeature
   alias App.Repo
@@ -210,7 +209,7 @@ defmodule Web.MeLiveTest do
       refute has_element?(lv, "#qualifications-list", "Does not expire")
     end
 
-    test "the ID card, with the Wallet badges and the verify link",
+    test "the ID card, with a link to its page to add it to Wallet",
          %{conn: conn, team: team, member: member} do
       App.ApplePassCredentials.configure()
       team = team |> Ecto.Changeset.change(id_cards_enabled: true) |> Repo.update!()
@@ -221,16 +220,21 @@ defmodule Web.MeLiveTest do
       card = member_card_fixture(member)
       lv = open(conn, ~p"/teams/#{team}/me")
       assert has_element?(lv, "#id-card", "a current member of #{team.name}")
-      assert has_element?(lv, "#card-verify-link", MemberCard.format_code(card.code))
+      refute has_element?(lv, "#card-verify-link")
 
-      assert has_element?(lv, ~s{#add-to-wallet[href^="/cards/"]}, "Add to Wallet")
+      assert has_element?(
+               lv,
+               ~s{.action #add-to-wallet[href^="/cards/"]},
+               "Add ID card to Wallet"
+             )
+
       [_, token] = Regex.run(~r{href="/cards/([^"]+)"}, render(lv))
       assert Web.CardLinks.find_card(token).id == card.id
     end
 
     # Your membership never asks whether the card is in Wallet (#952): the card's page
     # is where a member adds it, again on a new phone.
-    test "Add to Wallet stays once the card is in Wallet",
+    test "Add ID card to Wallet stays once the card is in Wallet",
          %{conn: conn, team: team, member: member} do
       App.ApplePassCredentials.configure()
       team = team |> Ecto.Changeset.change(id_cards_enabled: true) |> Repo.update!()

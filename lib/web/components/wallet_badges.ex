@@ -2,7 +2,7 @@ defmodule Web.Components.WalletBadges do
   @moduledoc """
   Apple's and Google's own Add to Wallet badges, side by side at 48px, Google's minimum
   (#952). Only the card's page has them: Your membership and the Dashboard's to-do have
-  a plain Add to Wallet button that opens it, so a member learns one page, and on a
+  a link, Add ID card to Wallet, that opens it, so a member learns one page, and on a
   computer gets its QR code. Each badge shows only when its Wallet is set up. They're
   links to a route that builds the pass on the tap, never `<.button>`s: both brands
   forbid changing the artwork. Google's is its condensed button, two lines like Apple's,
@@ -13,7 +13,7 @@ defmodule Web.Components.WalletBadges do
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
 
-  @doc "Whether either Wallet is set up, so an Add to Wallet button has somewhere to go."
+  @doc "Whether either Wallet is set up, so a link to the card's page has something to offer."
   def any?, do: BuildApplePass.configured?() or BuildGooglePass.configured?()
 
   attr :id, :string,

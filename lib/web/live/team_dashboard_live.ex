@@ -676,17 +676,15 @@ defmodule Web.TeamDashboardLive do
   defp to_do_item(%{item: %{key: :card}} = assigns) do
     ~H"""
     <li id="to-do-card" class="py-3">
-      <strong class="block">Add your ID card to Wallet</strong>
-      <span class="hint block">Show it at the door. Anyone can verify it.</span>
       <%!-- The card's page has Apple's and Google's badges, and a QR code on a computer. --%>
-      <.button
+      <.a
         :if={Web.Components.WalletBadges.any?()}
         id="to-do-add-to-wallet"
-        class="mt-2"
         href={Web.CardLinks.path(@item.card)}
-      >
-        Add to Wallet
-      </.button>
+        class="font-semibold"
+      >Add ID card to Wallet</.a>
+      <strong :if={!Web.Components.WalletBadges.any?()} class="block">Add ID card to Wallet</strong>
+      <span class="hint block">Show it at the door. Anyone can verify it.</span>
     </li>
     """
   end

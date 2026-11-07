@@ -147,11 +147,11 @@ retired), `SAMP-CNCD` (cancelled), and `SAMP-NCRD`, which no card has. A fifth Q
 ## Apple Wallet
 
 A member adds their card on the card's page ([The card's page](#the-cards-page)). Its
-email links there, and so does Add to Wallet on Your membership, `/teams/:subdomain/me`,
-and on the Dashboard's to-do. The page builds the pass when they tap, once Apple Wallet
-is set up (see [external-services.md](external-services.md)). The email carries no pass (#952). The ID
-Card tab has no Wallet buttons: they would put the member's card on the team admin's
-phone.
+email links there, and so does Add ID card to Wallet on Your membership,
+`/teams/:subdomain/me`, and on the Dashboard's to-do. The page builds the pass when they
+tap, once Apple Wallet is set up (see [external-services.md](external-services.md)). The
+email carries no pass (#952). The ID Card tab has no Wallet buttons: they would put the
+member's card on the team admin's phone.
 
 Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
 `authentication_token`. Wallet registers the phone with
@@ -197,8 +197,8 @@ goes on the pass.
 ## Google Wallet
 
 The card's page's **Add to Google Wallet** sends the card's pass to Google and opens
-Google's save page ([The card's page](#the-cards-page)). The save link is a JWT that names the pass and
-nothing else; Google holds the pass itself.
+Google's save page ([The card's page](#the-cards-page)). The save link is a JWT that names
+the pass and nothing else; Google holds the pass itself.
 
 Google keeps the pass, so there's no phone to push to.
 [UpdateGooglePasses](../lib/app/operation/update_google_passes.ex) sends Google a card's
@@ -215,8 +215,8 @@ pass again, and every saved copy changes:
 
 **In Wallet** (#389): the team's Dashboard lists "Add your ID card to Wallet" under a
 member's For you to do (#406) until SAR Duty knows the card is in one
-(`MemberCard.in_wallet?/1`). Your membership's Add to Wallet stays: it opens the card's
-page, where a member adds it again on a new phone (#952). Apple Wallet registers the
+(`MemberCard.in_wallet?/1`). Your membership's Add ID card to Wallet stays: it opens the
+card's page, where a member adds it again on a new phone (#952). Apple Wallet registers the
 phone, for the serial. Google
 posts a signed message to `/wallet/google` when the member saves or deletes the pass: the
 class's `callbackOptions`, production only, since Google can't reach a dev server.
@@ -278,16 +278,16 @@ other way to get the card.
   salt and the reminders link's 5-year age ([Web.CardLinks](../lib/web/card_links.ex)).
   No login and no table, so nothing to migrate; the page is `noindex`.
 - **The one place with the badges.** Your membership and the Dashboard's to-do have a
-  plain Add to Wallet button that opens this page, so a member learns one page, and on a
+  link, Add ID card to Wallet, that opens this page, so a member learns one page, and on a
   computer gets its QR code rather than a pass iCloud carries to the phone.
 - **Both badges on every device**, Apple's and Google's own (`<.wallet_badges>`,
-  `/styles/wallet-badges`), side by side at 48px, Google's minimum, with no guessing which phone it is. Google's is its condensed
-  button, two lines like Apple's, so the pair fits on one line on a phone. Apple has no
-  wider badge for the web. Each opens `/cards/:token/apple-wallet` or
-  `/cards/:token/google-wallet`
+  `/styles/wallet-badges`), side by side at 48px, Google's minimum, with no guessing which
+  phone it is. Google's is its condensed button, two lines like Apple's, so the pair fits
+  on one line on a phone. Apple has no wider badge for the web. Each opens
+  `/cards/:token/apple-wallet` or `/cards/:token/google-wallet`
   ([CardLinkController](../lib/web/controllers/card_link_controller.ex)), which builds the
-  pass on the tap. A mail app's link scanner or a preview only
-  loads the page, so it builds nothing.
+  pass on the tap. A mail app's link scanner or a preview only loads the page, so it
+  builds nothing.
 - **On a computer** the page is wider, with Take attendance's Open on your phone
   sidebar and the page's QR code (`<.open_on_device>`, `/styles/open-on-device`). It's
   hidden on a touch screen.
