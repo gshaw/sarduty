@@ -161,7 +161,8 @@ defmodule Web.Components.Columns do
 
   @doc """
   Date: "Mar 1, 2026" in the team's zone. Given an activity, "Oct 2026" for a chore
-  activity, which stands for its month. Left, `w-px whitespace-nowrap`.
+  activity, which stands for its month. Left, `w-px whitespace-nowrap`, or date_fit/2 in a
+  table that filters.
   """
   def date_cell(%{activity: %{} = activity} = assigns) do
     %{started_at: started_at, finished_at: finished_at} = activity
@@ -206,7 +207,7 @@ defmodule Web.Components.Columns do
   @doc """
   Expires: the date, "Expired" before it once past, and the days left within
   #{BuildGroupRulePreview.expiring_days()} days, the window group rules warn in. Left,
-  `w-px whitespace-nowrap`.
+  `w-px whitespace-nowrap`, or expires_fit/1 in a table that filters.
   """
   def expires_cell(assigns) do
     now = assigns.now || DateTime.utc_now()
@@ -222,7 +223,10 @@ defmodule Web.Components.Columns do
 
   attr :minutes, :any, required: true, doc: "nil for a blank cell"
 
-  @doc ~s(Hours: "2h 30m", from Format.duration/1. Right-aligned, `w-px whitespace-nowrap`.)
+  @doc """
+  Hours: "2h 30m", from Format.duration/1. Right-aligned, `w-px whitespace-nowrap`, or
+  hours_fit/1 in a table that filters.
+  """
   def hours_cell(assigns) do
     ~H"""
     {@minutes && Format.duration(@minutes)}
@@ -234,7 +238,10 @@ defmodule Web.Components.Columns do
   attr :timezone, :string, required: true
   attr :id, :string, default: nil
 
-  @doc ~s(Last attended: "12 days ago", or "Never", with the date on hover. Left, `w-px whitespace-nowrap`.)
+  @doc """
+  Last attended: "12 days ago", or "Never", with the date on hover. Left,
+  `w-px whitespace-nowrap`, or last_attended_fit/0 in a table that filters.
+  """
   def last_attended_cell(assigns) do
     ~H"""
     <span id={@id} title={date(@value, @timezone)}>
@@ -242,4 +249,67 @@ defmodule Web.Components.Columns do
     </span>
     """
   end
+
+  # The fits (/styles/table#fit): each value column's longest values, rendered as its cell
+  # renders them, for `<:col fit={…}>` in a table that filters. A record column has none:
+  # it takes the rest of the width.
+
+  @doc """
+  Date's fit: the 28th of every month, as date_cell/1 renders it, since which month is
+  widest depends on the font. `times: true` adds the times under it, ending the next day.
+  """
+  def date_fit(timezone, opts \\ []) do
+    times = Keyword.get(opts, :times, false)
+
+    for day <- widest_days() do
+      start = DateTime.new!(day, ~T[20:08:00], timezone)
+      finish = day |> Date.add(1) |> DateTime.new!(~T[23:59:00], timezone)
+      activity = %{activity_kind: "exercise", started_at: start, finished_at: finish}
+
+      date_cell(%{
+        __changed__: nil,
+        value: start,
+        activity: times && activity,
+        timezone: timezone,
+        times: times
+      })
+    end
+  end
+
+  @doc ~s(Expires' fit: "Expired" with a date, and a date with the most days left that has a badge.)
+  def expires_fit(timezone) do
+    for day <- widest_days(),
+        ends = DateTime.new!(day, ~T[12:00:00], timezone),
+        now <- [
+          DateTime.add(ends, 1, :day),
+          DateTime.add(ends, -BuildGroupRulePreview.expiring_days(), :day)
+        ] do
+      expires_cell(%{__changed__: nil, value: ends, now: now, timezone: timezone})
+    end
+  end
+
+  @doc """
+  Hours' fit: the longest of `minutes`, as Format.duration/1 writes them. Pass every row's
+  minutes before the tiles, the search, and the pages.
+  """
+  def hours_fit(minutes) do
+    minutes
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map(&Format.duration/1)
+    |> Enum.uniq()
+    |> Enum.sort_by(&(-String.length(&1)))
+    |> Enum.take(3)
+  end
+
+  @doc ~s(Last attended's fit: "Yesterday", "44 days ago", "18 months ago", and "Never".)
+  def last_attended_fit do
+    now = ~U[2026-09-28 12:00:00Z]
+
+    Enum.map([1, 44, 548, nil], fn
+      nil -> "Never"
+      days -> now |> DateTime.add(-days, :day) |> Format.days_ago(now, "Etc/UTC")
+    end)
+  end
+
+  defp widest_days, do: for(month <- 1..12, do: Date.new!(2026, month, 28))
 end

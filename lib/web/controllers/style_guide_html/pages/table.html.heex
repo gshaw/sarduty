@@ -119,10 +119,22 @@
     </li>
     <li>
       A value that comes from the records, such as each attended row's hours, fits every
-      row before the filters, not just the ones showing.
+      row before the tiles, the search, and the pages. A pick that changes the values
+      themselves, such as a period or a year, fits what that pick shows.
     </li>
     <li>
-      Leave the name or title column without a fit. It takes what is left and wraps.
+      One column takes the rest: the name or title, without a fit. Another text column fits
+      its values from the records when the team has a short list of them, such as roles,
+      places, or categories. One of any length, such as an activity's title, takes a set
+      share, such as <code>w-1/3</code>.
+    </li>
+    <li>
+      Tables one under the other, such as one for each place, give the same columns the
+      same fits, so their edges line up.
+    </li>
+    <li>
+      A fit makes a column as narrow as its values, so it takes the place of <code>w-px whitespace-nowrap</code>. On a phone, a stacked row lets a fitted value
+      wrap.
     </li>
   </ul>
   <p>
@@ -179,6 +191,10 @@
     </:col>
     <:col :let={c} label="Align" class="w-px">{c.align}</:col>
     <:col :let={c} label="Use for">{c.use}</:col>
+    <:col :let={c} label="Fit" class="w-px whitespace-nowrap">
+      <code :if={c.fit}>{c.fit}</code>
+      <span :if={!c.fit}>None</span>
+    </:col>
   </.table>
 
   <p>Every standing on the Member column:</p>

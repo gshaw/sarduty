@@ -130,6 +130,9 @@
     color: var(--text-muted);
   }
 
+  /* A fitted column (fit) wraps in its place in the row, as any stacked cell does. */
+  table.table-stack tbody td.col-fit { width: auto; white-space: normal; }
+
   /* A thumb-sized box. */
   table.table-stack td input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
   table.table-stack td input[type="checkbox"]::after { width: 7px; height: 13px; border-width: 0 3px 3px 0; }
