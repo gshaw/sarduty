@@ -1,16 +1,20 @@
 defmodule Web.Components.WalletBadges do
   @moduledoc """
   Apple's and Google's own Add to Wallet badges, side by side at 48px, Google's minimum
-  (#952). The one way a member adds their ID card: the card's page, Your membership, and
-  the Dashboard's to-do. Each shows only when its Wallet is set up. They're links to a
-  route that builds the pass on the tap, never `<.button>`s: both brands forbid changing
-  the artwork. Google's is its condensed button, two lines like Apple's, so the pair fits
-  on one line on a 375px phone. See /styles/wallet-badges.
+  (#952). Only the card's page has them: Your membership and the Dashboard's to-do have
+  a plain Add to Wallet button that opens it, so a member learns one page, and on a
+  computer gets its QR code. Each badge shows only when its Wallet is set up. They're
+  links to a route that builds the pass on the tap, never `<.button>`s: both brands
+  forbid changing the artwork. Google's is its condensed button, two lines like Apple's,
+  so the pair fits on one line on a 375px phone. See /styles/wallet-badges.
   """
   use Web, :function_component
 
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
+
+  @doc "Whether either Wallet is set up, so an Add to Wallet button has somewhere to go."
+  def any?, do: BuildApplePass.configured?() or BuildGooglePass.configured?()
 
   attr :id, :string,
     required: true,
@@ -27,7 +31,7 @@ defmodule Web.Components.WalletBadges do
   def wallet_badges(assigns) do
     ~H"""
     <div
-      :if={BuildApplePass.configured?() or BuildGooglePass.configured?()}
+      :if={any?()}
       id={@id}
       class={["wallet-badges", @class]}
     >

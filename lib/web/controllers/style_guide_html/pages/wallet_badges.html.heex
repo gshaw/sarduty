@@ -6,27 +6,16 @@
     <.wallet_badges id="wallet-badges-demo" apple_href="#" google_href="#" />
   </div>
 
-  <h3>Once the card is in Wallet</h3>
-  <div class="demo max-w-sm">
-    <p class="mb-2"><strong>Your ID card is in Wallet.</strong></p>
-    <details id="wallet-badges-demo-fold" class="disclosure">
-      <summary class="hint">
-        Add to another phone <.icon name="chevron-down" size={:sm} />
-      </summary>
-      <.wallet_badges id="wallet-badges-demo-again" class="mt-2" apple_href="#" google_href="#" />
-    </details>
-  </div>
-
   <h2>When to use</h2>
   <p>
-    Wherever a member adds their own ID card to a phone: the card's page from its email, Your membership, and the Dashboard's to-do. They are the only way, so a member sees the same two badges everywhere.
+    On an ID card's page, <code>/cards/:token</code>, the one page where a member adds their card. Its email links there, and so do Your membership and the Dashboard's to-do, with a plain
+    <a href={page_path(:button)}>button</a>
+    that says Add to Wallet. One page to learn, and on a computer it has the QR code to open it on the phone.
   </p>
 
   <h2>When not to use</h2>
   <p>
-    A page for team or site admins, such as Adminland's Integrations test. A pass there would land on the admin's phone, so it's a
-    <a href={page_path(:button)}>button</a>
-    that says what it tests.
+    Anywhere else. Another page links to the card's page instead, and a page for team or site admins, such as Adminland's Integrations test, uses a button that says what it tests: a pass there would land on the admin's phone.
   </p>
 
   <h2>Brand rules</h2>
@@ -40,13 +29,8 @@
     <li>No other button on the page is bigger than them, as Google asks.</li>
   </ul>
 
-  <h2>Once the card is in Wallet</h2>
-  <p>
-    The badges draw the eye, so Your membership folds them away once SAR Duty knows the card is in Wallet: a phone registered the Apple pass, or Google said it was saved. Add to another phone opens them again, for a lost phone or a second one. The card's page always shows them, and the Dashboard's to-do leaves the list.
-  </p>
-
   <h2>In the app</h2>
   <p>
-    <code>&lt;.wallet_badges id="…" apple_href=&#123;…&#125; google_href=&#123;…&#125; /&gt;</code>. Each href is a route that builds the pass when tapped. A badge shows only when its Wallet is set up. The fold is a <code>&lt;details class="disclosure"&gt;</code>, with no script.
+    <code>&lt;.wallet_badges id="…" apple_href=&#123;…&#125; google_href=&#123;…&#125; /&gt;</code>. Each href is a route that builds the pass when tapped. A badge shows only when its Wallet is set up.
   </p>
 </.shell>

@@ -223,28 +223,21 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#id-card", "a current member of #{team.name}")
       assert has_element?(lv, "#card-verify-link", MemberCard.format_code(card.code))
 
-      assert has_element?(
-               lv,
-               ~s{#card-wallets-apple[href="/teams/#{team.subdomain}/me/card/apple-wallet"] img}
-             )
-
-      refute has_element?(lv, "#card-in-wallet")
+      assert has_element?(lv, ~s{#add-to-wallet[href^="/cards/"]}, "Add to Wallet")
+      [_, token] = Regex.run(~r{href="/cards/([^"]+)"}, render(lv))
+      assert Web.CardLinks.find_card(token).id == card.id
     end
 
-    # The badges draw the eye, so once the card is in Wallet they fold away behind Add to
-    # another phone, for a lost phone or a second one (#952).
-    test "an ID card in Wallet says so, with the badges folded away",
+    # Your membership never asks whether the card is in Wallet (#952): the card's page
+    # is where a member adds it, again on a new phone.
+    test "Add to Wallet stays once the card is in Wallet",
          %{conn: conn, team: team, member: member} do
       App.ApplePassCredentials.configure()
-      App.GoogleWalletCredentials.configure()
       team = team |> Ecto.Changeset.change(id_cards_enabled: true) |> Repo.update!()
       member_card_fixture(member, %{in_wallet_at: DateTime.utc_now()})
 
       lv = open(conn, ~p"/teams/#{team}/me")
-      assert has_element?(lv, "#card-in-wallet", "Your ID card is in Wallet.")
-      assert has_element?(lv, "#card-another-phone:not([open]) summary", "Add to another phone")
-      assert has_element?(lv, "#card-another-phone #card-wallets-apple")
-      assert has_element?(lv, "#card-another-phone #card-wallets-google")
+      assert has_element?(lv, "#add-to-wallet")
     end
 
     test "the latest tax credit letter, to download", %{conn: conn, team: team, member: member} do

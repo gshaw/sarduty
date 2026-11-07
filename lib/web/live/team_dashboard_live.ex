@@ -7,7 +7,6 @@ defmodule Web.TeamDashboardLive do
   import Web.Components.OpenInMaps
   import Web.Components.PersonHead
   import Web.Components.ReportChart, only: [report_stat: 1]
-  import Web.Components.WalletBadges
 
   alias App.Adapter.D4H
   alias App.Model.Activity
@@ -518,7 +517,7 @@ defmodule Web.TeamDashboardLive do
   # again. The menu hangs from the title row, so it spans the card.
   defp snoozed(assigns) do
     ~H"""
-    <details id="attention-snoozed" class="attention-snoozed disclosure">
+    <details id="attention-snoozed" class="attention-snoozed">
       <summary class="hint">
         {Format.count(length(@items), one: "%d snoozed", many: "%d snoozed")}
         <.icon name="chevron-down" size={:sm} />
@@ -679,13 +678,15 @@ defmodule Web.TeamDashboardLive do
     <li id="to-do-card" class="py-3">
       <strong class="block">Add your ID card to Wallet</strong>
       <span class="hint block">Show it at the door. Anyone can verify it.</span>
-      <%!-- Under the text: two Wallet badges beside it squeeze it to a narrow column. --%>
-      <.wallet_badges
-        id="to-do-wallets"
+      <%!-- The card's page has Apple's and Google's badges, and a QR code on a computer. --%>
+      <.button
+        :if={Web.Components.WalletBadges.any?()}
+        id="to-do-add-to-wallet"
         class="mt-2"
-        apple_href={~p"/teams/#{@team}/me/card/apple-wallet"}
-        google_href={~p"/teams/#{@team}/me/card/google-wallet"}
-      />
+        href={Web.CardLinks.path(@item.card)}
+      >
+        Add to Wallet
+      </.button>
     </li>
     """
   end
