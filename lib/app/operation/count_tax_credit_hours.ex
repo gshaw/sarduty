@@ -62,20 +62,21 @@ defmodule App.Operation.CountTaxCreditHours do
   team's every year.
   """
   def by_year(%Team{} = team, now \\ DateTime.utc_now(), repo \\ Repo, only \\ nil) do
-    hours_tags = Activity.hours_tags(team, repo)
     {year, member_ids} = scope(only)
-
-    team
-    |> rows_query(year, member_ids, now)
-    |> repo.all()
-    |> Enum.reject(&is_nil(&1.started_at))
-    |> Enum.group_by(&local_year(&1.started_at, team.timezone))
-    |> Enum.sort_by(&elem(&1, 0), :desc)
-    |> Enum.flat_map(fn {year, rows} -> year_rows(rows, year, team.timezone, hours_tags) end)
+    rows = team |> rows_query(year, member_ids, now) |> repo.all()
+    count_years(rows, team.timezone, Activity.hours_tags(team, repo))
   end
 
   defp scope({member_id, year}), do: {year, [member_id]}
   defp scope(nil), do: {nil, nil}
+
+  defp count_years(rows, timezone, hours_tags) do
+    rows
+    |> Enum.reject(&is_nil(&1.started_at))
+    |> Enum.group_by(&local_year(&1.started_at, timezone))
+    |> Enum.sort_by(&elem(&1, 0), :desc)
+    |> Enum.flat_map(fn {year, rows} -> year_rows(rows, year, timezone, hours_tags) end)
+  end
 
   defp year_rows(rows, year, timezone, hours_tags) do
     for {member_id, hours} <- rows |> count(year, timezone, hours_tags) |> Enum.sort(),
