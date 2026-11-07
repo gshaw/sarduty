@@ -7,6 +7,7 @@ defmodule Web.MeLive do
   import Web.Components.MemberLetter
   import Web.Components.MilestoneList
   import Web.Components.PersonHead
+  import Web.Components.WalletBadges
 
   alias App.Model.Activity
   alias App.Model.Certificate
@@ -16,8 +17,6 @@ defmodule Web.MeLive do
   alias App.Model.Standing
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
-  alias App.Operation.BuildApplePass
-  alias App.Operation.BuildGooglePass
   alias App.Operation.SaveCertificate
   alias App.ViewData.EquipmentList
   alias App.ViewData.MemberChores
@@ -53,12 +52,19 @@ defmodule Web.MeLive do
       |> assign(:chores, chore_stats(member, now))
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
       |> assign(:certificates, sent_certificates(member))
-      |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
+      |> assign_card(team, member)
       |> assign(:letter, member |> TaxCreditLetter.get_all_for_member() |> List.first())
       |> assign(:milestones, MemberMilestones.for_member(member, now, attended))
       |> assign(:equipment, team |> EquipmentItem.held_by(member) |> EquipmentList.held_rows())
 
     {:ok, socket}
+  end
+
+  # The ID card, and whether SAR Duty knows it's in a Wallet: then its badges fold away
+  # behind Add to another phone (#952), for a lost phone or a second one.
+  defp assign_card(socket, team, member) do
+    card = if team.id_cards_enabled, do: MemberCard.find_current(team, member)
+    assign(socket, card: card, in_wallet?: card != nil and MemberCard.in_wallet?(card))
   end
 
   defp organization_name(team), do: Team.organization_name(team) || "Your organization"
@@ -140,7 +146,12 @@ defmodule Web.MeLive do
       </div>
       <aside class="membership-aside">
         <div :if={@team.id_cards_enabled or @letter} class="membership-aside-top">
-          <.id_card :if={@team.id_cards_enabled} team={@team} card={@card} />
+          <.id_card
+            :if={@team.id_cards_enabled}
+            team={@team}
+            card={@card}
+            in_wallet?={@in_wallet?}
+          />
           <.member_letter
             :if={@letter}
             id="letter"
@@ -375,6 +386,7 @@ defmodule Web.MeLive do
 
   attr :team, :map, required: true
   attr :card, :map, default: nil
+  attr :in_wallet?, :boolean, default: false
 
   defp id_card(%{card: nil} = assigns) do
     ~H"""
@@ -402,24 +414,25 @@ defmodule Web.MeLive do
           class="whitespace-nowrap"
         >{verify_label(@card)}</.a>.
       </p>
-      <div
-        :if={BuildApplePass.configured?() or BuildGooglePass.configured?()}
-        class="flex flex-wrap gap-2"
-      >
-        <.button
-          :if={BuildApplePass.configured?()}
-          id="apple-pass"
-          href={~p"/teams/#{@team}/me/card/apple-wallet"}
-        >
-          Add to Apple Wallet
-        </.button>
-        <.button
-          :if={BuildGooglePass.configured?()}
-          id="google-pass"
-          href={~p"/teams/#{@team}/me/card/google-wallet"}
-        >
-          Add to Google Wallet
-        </.button>
+      <.wallet_badges
+        :if={!@in_wallet?}
+        id="card-wallets"
+        apple_href={~p"/teams/#{@team}/me/card/apple-wallet"}
+        google_href={~p"/teams/#{@team}/me/card/google-wallet"}
+      />
+      <div :if={@in_wallet?} id="card-in-wallet">
+        <p class="mb-2"><strong>Your ID card is in Wallet.</strong></p>
+        <details id="card-another-phone" class="disclosure">
+          <summary class="hint">
+            Add to another phone <.icon name="chevron-down" size={:sm} />
+          </summary>
+          <.wallet_badges
+            id="card-wallets"
+            class="mt-2"
+            apple_href={~p"/teams/#{@team}/me/card/apple-wallet"}
+            google_href={~p"/teams/#{@team}/me/card/google-wallet"}
+          />
+        </details>
       </div>
     </div>
     """

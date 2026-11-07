@@ -33,6 +33,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.Scanner
   import Web.Components.StatSwitch
   import Web.Components.Table
+  import Web.Components.WalletBadges
 
   alias App.Mailer.ActivityMailer
   alias Web.StyleGuideHTML.SampleData
@@ -122,6 +123,7 @@ defmodule Web.StyleGuideHTML do
          {:tag, "Tag", "A word or two of status."},
          {:toast, "Toast", "The result of what the person did. It comes and goes."},
          {:top_bar, "Top bar", "The main sections and the account menu."},
+         {:wallet_badges, "Wallet badges", "Apple's and Google's own Add to Wallet badges."},
          {:warning_text, "Warning text", "A consequence people must know before they act."}
        ]},
       {:patterns, "Patterns", "Whole screens from the app, built from the components.",

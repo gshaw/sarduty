@@ -210,7 +210,7 @@ defmodule Web.MeLiveTest do
       refute has_element?(lv, "#qualifications-list", "Does not expire")
     end
 
-    test "the ID card, with Wallet buttons and the verify link",
+    test "the ID card, with the Wallet badges and the verify link",
          %{conn: conn, team: team, member: member} do
       App.ApplePassCredentials.configure()
       team = team |> Ecto.Changeset.change(id_cards_enabled: true) |> Repo.update!()
@@ -225,8 +225,26 @@ defmodule Web.MeLiveTest do
 
       assert has_element?(
                lv,
-               ~s{#apple-pass[href="/teams/#{team.subdomain}/me/card/apple-wallet"]}
+               ~s{#card-wallets-apple[href="/teams/#{team.subdomain}/me/card/apple-wallet"] img}
              )
+
+      refute has_element?(lv, "#card-in-wallet")
+    end
+
+    # The badges draw the eye, so once the card is in Wallet they fold away behind Add to
+    # another phone, for a lost phone or a second one (#952).
+    test "an ID card in Wallet says so, with the badges folded away",
+         %{conn: conn, team: team, member: member} do
+      App.ApplePassCredentials.configure()
+      App.GoogleWalletCredentials.configure()
+      team = team |> Ecto.Changeset.change(id_cards_enabled: true) |> Repo.update!()
+      member_card_fixture(member, %{in_wallet_at: DateTime.utc_now()})
+
+      lv = open(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#card-in-wallet", "Your ID card is in Wallet.")
+      assert has_element?(lv, "#card-another-phone:not([open]) summary", "Add to another phone")
+      assert has_element?(lv, "#card-another-phone #card-wallets-apple")
+      assert has_element?(lv, "#card-another-phone #card-wallets-google")
     end
 
     test "the latest tax credit letter, to download", %{conn: conn, team: team, member: member} do

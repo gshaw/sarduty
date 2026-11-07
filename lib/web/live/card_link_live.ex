@@ -2,10 +2,9 @@ defmodule Web.CardLinkLive do
   use Web, {:live_view_narrow_layout, size: :tool}
 
   import Web.Components.OpenOnDevice
+  import Web.Components.WalletBadges
 
   alias App.Model.MemberCard
-  alias App.Operation.BuildApplePass
-  alias App.Operation.BuildGooglePass
   alias Web.CardLinks
   alias Web.Navigation
 
@@ -75,22 +74,11 @@ defmodule Web.CardLinkLive do
       {@member.name}, your ID card shows you are a current member of {@team.name}.
       Show it at the door, or to another team on a search.
     </p>
-    <div id="card-link-wallets" class="wallet-badges">
-      <a
-        :if={BuildApplePass.configured?()}
-        id="card-link-apple"
-        href={~p"/cards/#{@token}/apple-wallet"}
-      >
-        <img src={~p"/images/add-to-apple-wallet.svg"} alt="Add to Apple Wallet" />
-      </a>
-      <a
-        :if={BuildGooglePass.configured?()}
-        id="card-link-google"
-        href={~p"/cards/#{@token}/google-wallet"}
-      >
-        <img src={~p"/images/add-to-google-wallet.svg"} alt="Add to Google Wallet" />
-      </a>
-    </div>
+    <.wallet_badges
+      id="card-link-wallets"
+      apple_href={~p"/cards/#{@token}/apple-wallet"}
+      google_href={~p"/cards/#{@token}/google-wallet"}
+    />
     <p id="card-link-lost" class="hint mt-6 mb-0">
       Lost your phone? Ask a team admin to replace your ID card. This link is yours alone.
     </p>

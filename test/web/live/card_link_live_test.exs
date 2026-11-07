@@ -26,12 +26,12 @@ defmodule Web.CardLinkLiveTest do
 
     assert has_element?(
              lv,
-             ~s{#card-link-apple[href="#{path}/apple-wallet"] img[alt="Add to Apple Wallet"]}
+             ~s{#card-link-wallets-apple[href="#{path}/apple-wallet"] img[alt="Add to Apple Wallet"]}
            )
 
     assert has_element?(
              lv,
-             ~s{#card-link-google[href="#{path}/google-wallet"] img[alt="Add to Google Wallet"]}
+             ~s{#card-link-wallets-google[href="#{path}/google-wallet"] img[alt="Add to Google Wallet"]}
            )
 
     assert has_element?(lv, "#open-on-phone .qr-code svg")
@@ -77,8 +77,8 @@ defmodule Web.CardLinkLiveTest do
 
   defp refute_offers(lv) do
     refute has_element?(lv, "#card-link-wallets")
-    refute has_element?(lv, "#card-link-apple")
-    refute has_element?(lv, "#card-link-google")
+    refute has_element?(lv, "#card-link-wallets-apple")
+    refute has_element?(lv, "#card-link-wallets-google")
     refute has_element?(lv, "#open-on-phone")
   end
 end

@@ -110,4 +110,10 @@
   /* Code reads as code by its font: no backticks around it. */
   .prose :where(code)::before, .prose :where(code)::after { content: none; }
   .prose pre { overflow-x: auto; }
+  /* A <details> whose summary is a quiet line with a chevron that turns when open, such
+     as Needs attention's "1 snoozed" and Add to another phone. */
+  .disclosure > summary { list-style: none; display: inline-flex; align-items: center; gap: var(--sp-1); white-space: nowrap; cursor: pointer; }
+  .disclosure > summary::-webkit-details-marker { display: none; }
+  @media (pointer: coarse) { .disclosure > summary { padding-block: var(--sp-3); margin-block: calc(-1 * var(--sp-3)); } }
+  .disclosure[open] > summary .icon { rotate: 180deg; }
 }

@@ -215,10 +215,13 @@ pass again, and every saved copy changes:
   has no per-phone token to say which card a phone holds. The member adds the new one.
 
 **In Wallet** (#389): the team's Dashboard lists "Add your ID card to Wallet" under a
-member's For you to do (#406) until SAR Duty knows the card is in one (`MemberCard.in_wallet?/1`). Apple
-Wallet registers the phone, for the serial. Google posts a signed message to
-`/wallet/google` when the member saves or deletes the pass: the class's
-`callbackOptions`, production only, since Google can't reach a dev server.
+member's For you to do (#406) until SAR Duty knows the card is in one
+(`MemberCard.in_wallet?/1`). Your membership then says "Your ID card is in Wallet." and
+folds its badges away behind Add to another phone, for a lost phone or a second one
+(#952): the badges draw the eye, and SAR Duty can't tell which phone is looking. The
+card's page always shows them. Apple Wallet registers the phone, for the serial. Google
+posts a signed message to `/wallet/google` when the member saves or deletes the pass: the
+class's `callbackOptions`, production only, since Google can't reach a dev server.
 [GoogleWallet.Callback](../lib/app/adapter/google_wallet/callback.ex) checks it with
 Google's `ECv2SigningOnly` protocol: a root key from `pay.google.com/gp/m/issuer/keys`
 signs an intermediate key, which signs the message for SAR Duty's issuer. A save sets the
@@ -276,14 +279,15 @@ other way to get the card.
 - **The link is the key.** A signed `Phoenix.Token` naming the card's id, with its own
   salt and the reminders link's 5-year age ([Web.CardLinks](../lib/web/card_links.ex)).
   No login and no table, so nothing to migrate; the page is `noindex`.
-- **Both badges on every device**, Apple's and Google's own, side by side at 48px,
-  Google's minimum, with no guessing which phone it is. Google's is its condensed
+- **Both badges on every device**, Apple's and Google's own (`<.wallet_badges>`,
+  `/styles/wallet-badges`, the same on Your membership and the Dashboard), side by side at
+  48px, Google's minimum, with no guessing which phone it is. Google's is its condensed
   button, two lines like Apple's, so the pair fits on one line on a phone. Apple has no
   wider badge for the web. Each opens `/cards/:token/apple-wallet` or
   `/cards/:token/google-wallet`
-  ([CardLinkController](../lib/web/controllers/card_link_controller.ex)), which builds
-  the pass on the tap as Your membership does. A mail app's link scanner or a preview
-  only loads the page, so it builds nothing.
+  ([CardLinkController](../lib/web/controllers/card_link_controller.ex)), which builds the
+  pass on the tap as Your membership does. A mail app's link scanner or a preview only
+  loads the page, so it builds nothing.
 - **On a computer** the page is wider, with Take attendance's Open on your phone
   sidebar and the page's QR code (`<.open_on_device>`, `/styles/open-on-device`). It's
   hidden on a touch screen.

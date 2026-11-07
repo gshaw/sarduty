@@ -7,6 +7,7 @@ defmodule Web.TeamDashboardLive do
   import Web.Components.OpenInMaps
   import Web.Components.PersonHead
   import Web.Components.ReportChart, only: [report_stat: 1]
+  import Web.Components.WalletBadges
 
   alias App.Adapter.D4H
   alias App.Model.Activity
@@ -18,8 +19,6 @@ defmodule Web.TeamDashboardLive do
   alias App.Model.Team
   alias App.Model.Trip
   alias App.Model.WhiteboardNote
-  alias App.Operation.BuildApplePass
-  alias App.Operation.BuildGooglePass
   alias App.Operation.SnoozeAttentionItem
   alias App.ViewData.ActivityTravel
   alias App.ViewData.MemberRecords
@@ -519,7 +518,7 @@ defmodule Web.TeamDashboardLive do
   # again. The menu hangs from the title row, so it spans the card.
   defp snoozed(assigns) do
     ~H"""
-    <details id="attention-snoozed" class="attention-snoozed">
+    <details id="attention-snoozed" class="attention-snoozed disclosure">
       <summary class="hint">
         {Format.count(length(@items), one: "%d snoozed", many: "%d snoozed")}
         <.icon name="chevron-down" size={:sm} />
@@ -681,23 +680,13 @@ defmodule Web.TeamDashboardLive do
     <li id="to-do-card" class="py-3">
       <strong class="block">Add your ID card to Wallet</strong>
       <span class="hint block">Show it at the door. Anyone can verify it.</span>
-      <%!-- Under the text: two Wallet buttons beside it squeeze it to a narrow column. --%>
-      <div class="flex flex-wrap gap-2 mt-2">
-        <.button
-          :if={BuildApplePass.configured?()}
-          id="to-do-apple-pass"
-          href={~p"/teams/#{@team}/me/card/apple-wallet"}
-        >
-          Add to Apple Wallet
-        </.button>
-        <.button
-          :if={BuildGooglePass.configured?()}
-          id="to-do-google-pass"
-          href={~p"/teams/#{@team}/me/card/google-wallet"}
-        >
-          Add to Google Wallet
-        </.button>
-      </div>
+      <%!-- Under the text: two Wallet badges beside it squeeze it to a narrow column. --%>
+      <.wallet_badges
+        id="to-do-wallets"
+        class="mt-2"
+        apple_href={~p"/teams/#{@team}/me/card/apple-wallet"}
+        google_href={~p"/teams/#{@team}/me/card/google-wallet"}
+      />
     </li>
     """
   end
