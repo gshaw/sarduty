@@ -10,7 +10,9 @@ defmodule App.CoastRange do
   attended, absent, and signed up for the coming week; groups, with a Retiring one;
   qualifications and awards, some expiring, and the endorsements ID cards list;
   equipment and its use; chores; an away member, a retired one, and one that isn't a
-  person; and the sample ID cards the verify site's /samples page shows (#854).
+  person; and the sample ID cards the verify site's /samples page shows (#854). Its
+  incidents carry BCSARA's 27 incident fields with made-up values (#950), so a BC form
+  tried here fills every line.
 
   It also stages what a demo shows off, so each feature has something to see the moment
   it opens: whiteboard notes, saved places, templates, group rules with changes to
@@ -58,7 +60,7 @@ defmodule App.CoastRange do
     in Wallet; and no reply yet to anything coming up.
 
   Activities, by title: **Missing hiker** is the newest incident, a draft missing its
-  agency file number; **Trail safety booth** is an event in 4 days; the coming Tuesday's
+  Agency File #; **Trail safety booth** is an event in 4 days; the coming Tuesday's
   training has sign-ups, can't-make-its, and no replies; **Night search exercise** is in
   12 days; **Evidence search** has no hours tag and **Missing hunter** has both.
 
@@ -105,7 +107,8 @@ defmodule App.CoastRange do
   alias App.Model.Trip
   alias App.Model.WhiteboardNote
 
-  # cspell:ignore CRSAR Kowal Noor Priya Okafor
+  # BCEHS is BC Emergency Health Services, an agency in BCSARA's Agency field.
+  # cspell:ignore BCEHS CRSAR Kowal Noor Priya Okafor
 
   @timezone "America/Vancouver"
   @d4h_team_id 9_100_000
@@ -250,26 +253,15 @@ defmodule App.CoastRange do
   ]
 
   @agency 9_400_001
-  @file_number 9_400_002
   @call_sign 9_400_003
   @serviced 9_400_004
-  @task_type 9_400_005
   @people_helped 9_400_006
   @team_notes 9_400_007
   @exercise_leader 9_400_008
   @event_leader 9_400_009
   @areas 9_400_010
 
-  # Each incident's task type, people helped, and a team admin's notes (RESTRICTED).
-  @task_types ["Search", "Rescue", "Evidence search"]
-  @rescues [
-    "Injured mountain biker",
-    "Stranded skiers",
-    "Fallen climber",
-    "Vehicle over the bank",
-    "Injured hiker, carry-out",
-    "Swiftwater rescue"
-  ]
+  # Each incident's people helped, and a team admin's notes (RESTRICTED).
   @helped %{
     "Overdue kayakers" => 2,
     "Stranded skiers" => 3,
@@ -279,6 +271,141 @@ defmodule App.CoastRange do
   @notes %{
     "Missing hunter" => "Debrief: radios had a dead spot at the north gate.",
     "Fallen climber" => "Debrief: the second rope kit was still at the hall."
+  }
+  # BCSARA's incident fields (#950), as D4H gives every BC team its organization's, so
+  # trying a BC form here fills every line. Titles, types, required, and order are
+  # BCSARA's; option lists keep only the options Coast Range SAR uses, since
+  # App.SampleRepoTest wants each one somewhere. Ids from
+  # 9_400_401 in this order, and each option's id is its field's times 100 plus its
+  # place.
+  @bcsara_owner 9_100_100
+  @severity [
+    "Category 1 - Life in Imminent Danger",
+    "Category 2 - Subject in grave or imminent danger",
+    "Category 3 - Assistance required, subject not in grave or Imminent danger or not in distress"
+  ]
+  @bcsara_fields [
+    {"What was SAR tasked to do?", "single_choice", true,
+     [
+       "Rescue - injury & medical emergency",
+       "Rescue - stuck or 'lost' subject(s)",
+       "Search - lost subject(s)",
+       "Evidence search"
+     ]},
+    {"How many people were in the group that requested help?", "number", true, []},
+    {"How many people received assistance from SAR?", "text", true, []},
+    {"Response Type", "single_choice", true, ["Call-Out", "Response"]},
+    {"Agency", "single_choice", true, ["Police", "BCEHS", "Fire"]},
+    {"Police Department", "single_choice", false, ["RCMP - Royal Canadian Mounted Police"]},
+    {"Agency File #", "text", true, []},
+    {"ASE#", "text", false, []},
+    {"Region", "single_choice", true, ["South West"]},
+    {"Area", "text", true, []},
+    {"Task Type", "single_choice", true,
+     [
+       "002 - Land SAR",
+       "003 - Inland water SAR",
+       "020 - Cliff rescue",
+       "021 - Mountain rescue"
+     ]},
+    {"Equipment Used/Lost", "text", false, []},
+    {"Task Leader's Name", "text", true, []},
+    {"Date Report Completed", "date", true, []},
+    {"Was RADeMS Discussed?", "single_choice", true, ["YES", "NO"]},
+    {"Was a Level 2 SAR Manager Activated for this Incident?", "single_choice", true,
+     ["Yes", "No"]},
+    {"SAR Severity", "single_choice", true, @severity},
+    {"Activity", "single_choice", true,
+     [
+       "L - Biking (mountain or trail; pedal powered)",
+       "L - Camping",
+       "L - Climbing (alpine)",
+       "L - Driving (car/truck)",
+       "L - Gathering/picking (fruit/plants)",
+       "L - Hiking",
+       "L - Hunting",
+       "L - Skiing (alpine or backcountry)",
+       "L - Snowshoeing",
+       "M - Boating (paddling: canoe/kayak/SUP)",
+       "M - Swimming",
+       "X - Not applicable",
+       "Z - Unknown activity"
+     ]},
+    {~s(If Activity = "Other" or "N/A" Describe:), "text", false, []},
+    {"Primary Cause", "single_choice", true,
+     [
+       "Current/High waves/Tides",
+       "Injury",
+       "Loss of Control/crash",
+       "Lost/disoriented",
+       "Onset of darkness",
+       "Other (Specify)",
+       "Separation",
+       "Severe weather",
+       "Slip or fall",
+       "Stranded",
+       "Unknown"
+     ]},
+    {"Secondary Cause", "single_choice", false,
+     ["N/A - No secondary cause)", "Fatigue/exhaustion", "Exceeded ability"]},
+    {~s(If either cause = "Other" or "N/A" Describe:), "text", false, []},
+    {"Was weather a factor in response?", "single_choice", true, ["YES", "NO"]},
+    {"Alert Type", "single_choice", true,
+     [
+       "Concerned citizen",
+       "Concerned family member",
+       "Request from other SAR authority",
+       "Telephone - cellular"
+     ]},
+    {"Mutual Aid Requested?", "single_choice", true, ["YES", "NO"]},
+    {"Evacuation notices delivered", "number", false, []},
+    {"Households evacuated", "number", false, []}
+  ]
+  # Each incident's answers to BCSARA's fields: what SAR was tasked to do, the task type,
+  # the subject's activity, the primary cause, the alert, and the severity's category.
+  @bcsara_incidents %{
+    "Missing hiker" =>
+      {"Search - lost subject(s)", "002 - Land SAR", "L - Hiking", "Lost/disoriented",
+       "Concerned family member", 3},
+    "Overdue kayakers" =>
+      {"Search - lost subject(s)", "003 - Inland water SAR",
+       "M - Boating (paddling: canoe/kayak/SUP)", "Severe weather", "Concerned family member", 2},
+    "Injured mountain biker" =>
+      {"Rescue - injury & medical emergency", "002 - Land SAR",
+       "L - Biking (mountain or trail; pedal powered)", "Injury", "Telephone - cellular", 2},
+    "Lost child, day-use area" =>
+      {"Search - lost subject(s)", "002 - Land SAR", "L - Camping", "Separation",
+       "Concerned family member", 2},
+    "Missing hunter" =>
+      {"Search - lost subject(s)", "002 - Land SAR", "L - Hunting", "Lost/disoriented",
+       "Concerned family member", 3},
+    "Stranded skiers" =>
+      {"Rescue - stuck or 'lost' subject(s)", "021 - Mountain rescue",
+       "L - Skiing (alpine or backcountry)", "Stranded", "Telephone - cellular", 3},
+    "Fallen climber" =>
+      {"Rescue - injury & medical emergency", "020 - Cliff rescue", "L - Climbing (alpine)",
+       "Slip or fall", "Telephone - cellular", 2},
+    "Missing person, river" =>
+      {"Search - lost subject(s)", "003 - Inland water SAR", "Z - Unknown activity", "Unknown",
+       "Request from other SAR authority", 2},
+    "Evidence search" =>
+      {"Evidence search", "002 - Land SAR", "X - Not applicable", "Other (Specify)",
+       "Request from other SAR authority", 3},
+    "Overdue snowshoers" =>
+      {"Search - lost subject(s)", "002 - Land SAR", "L - Snowshoeing", "Onset of darkness",
+       "Concerned family member", 3},
+    "Vehicle over the bank" =>
+      {"Rescue - injury & medical emergency", "020 - Cliff rescue", "L - Driving (car/truck)",
+       "Loss of Control/crash", "Telephone - cellular", 2},
+    "Injured hiker, carry-out" =>
+      {"Rescue - injury & medical emergency", "002 - Land SAR", "L - Hiking", "Injury",
+       "Telephone - cellular", 3},
+    "Missing berry picker" =>
+      {"Search - lost subject(s)", "002 - Land SAR", "L - Gathering/picking (fruit/plants)",
+       "Lost/disoriented", "Concerned family member", 3},
+    "Swiftwater rescue" =>
+      {"Rescue - stuck or 'lost' subject(s)", "003 - Inland water SAR", "M - Swimming",
+       "Current/High waves/Tides", "Concerned citizen", 1}
   }
   @areas_options ["Fundraising", "Training", "Public education", "Vehicle care"]
   @member_areas %{
@@ -416,16 +543,11 @@ defmodule App.CoastRange do
         required: true,
         options: agency_options
       ),
-      custom_field(@file_number, "incident", "Agency file number", "text", required: true),
       custom_field(@call_sign, "member", "Radio call sign", "text",
         member_privacy: "viewable",
         copy_values: true
       ),
       custom_field(@serviced, "equipment", "Last serviced", "date", []),
-      custom_field(@task_type, "incident", "Task type", "single_choice",
-        required: true,
-        options: options(@task_types, &task_option/1)
-      ),
       custom_field(@people_helped, "incident", "People helped", "number", []),
       custom_field(@team_notes, "incident", "Team notes", "text_area", restricted: true),
       # The same title on two kinds: a report reads it as one field.
@@ -436,7 +558,49 @@ defmodule App.CoastRange do
         copy_values: true,
         options: options(@areas_options, &area_option/1)
       )
-    ]
+    ] ++ bcsara_fields()
+  end
+
+  defp bcsara_fields do
+    for {{title, type, required, labels}, i} <- Enum.with_index(@bcsara_fields) do
+      id = bcsara_id(title)
+      options = for {label, j} <- Enum.with_index(labels), do: {label, id * 100 + j}
+
+      field =
+        custom_field(id, "incident", title, type,
+          required: required,
+          ordering: 100 + i,
+          owner_type: "Organisation",
+          owner_id: @bcsara_owner
+        )
+
+      if options == [],
+        do: field,
+        else: put_elem(field, 2, %{elem(field, 2) | options: option_maps(options)})
+    end
+  end
+
+  defp option_maps(options) do
+    for {{label, id}, i} <- Enum.with_index(options),
+        do: %{"id" => id, "label" => label, "ordering" => i, "archived" => false}
+  end
+
+  defp bcsara_id(title) do
+    case Enum.find_index(@bcsara_fields, &(elem(&1, 0) == title)) do
+      nil -> raise ArgumentError, "BCSARA has no field #{title}"
+      i -> 9_400_401 + i
+    end
+  end
+
+  # A value for BCSARA's field `title`: an option's id in a list, or the text.
+  defp bcsara_value(title, value) do
+    {^title, _type, _required, labels} = List.keyfind(@bcsara_fields, title, 0)
+
+    case Enum.find_index(labels, &(&1 == value)) do
+      nil when labels == [] -> {"#{bcsara_id(title)}", value}
+      nil -> raise ArgumentError, "BCSARA's #{title} has no option #{value}"
+      j -> {"#{bcsara_id(title)}", [bcsara_id(title) * 100 + j]}
+    end
   end
 
   defp options(labels, id) do
@@ -445,7 +609,6 @@ defmodule App.CoastRange do
     end
   end
 
-  defp task_option(label), do: 9_400_201 + Enum.find_index(@task_types, &(&1 == label))
   defp area_option(label), do: 9_400_301 + Enum.find_index(@areas_options, &(&1 == label))
 
   defp custom_field(id, target, title, type, attrs) do
@@ -753,7 +916,7 @@ defmodule App.CoastRange do
         started_at: start,
         finished_at: DateTime.add(start, hours, :hour),
         tags: incident_tags(title),
-        custom_values: incident_values(title, days, n),
+        custom_values: incident_values(title, days, n, today),
         coordinate: incident_place(n),
         address: "Cedar Creek forest road, spur #{rem(n * 4, 9) + 1}"
       }
@@ -849,26 +1012,69 @@ defmodule App.CoastRange do
   defp incident_tags("Missing person, river"), do: ["Primary Hours", "Swiftwater"]
   defp incident_tags(_title), do: ["Primary Hours"]
 
-  # The newest incident, still a draft, has no file number yet: Required fields finds it.
-  defp incident_values(title, days, n) do
+  # The newest incident, still a draft, has no Agency File # yet: Required fields finds it.
+  defp incident_values(title, days, n, today) do
     agency = Enum.at(["Police", "Ambulance", "Fire"], rem(n, 3))
+    helped = @helped |> Map.get(title, 1) |> Integer.to_string()
 
     values = %{
       "#{@agency}" => [agency_option(agency)],
-      "#{@task_type}" => [title |> task_type() |> task_option()],
-      "#{@people_helped}" => @helped |> Map.get(title, 1) |> Integer.to_string()
+      "#{@people_helped}" => helped
     }
 
     values = if @notes[title], do: Map.put(values, "#{@team_notes}", @notes[title]), else: values
+    file_number = if days != 3, do: "#{26 - div(days, 365)}-#{7310 - n * 37}"
 
-    if days == 3,
-      do: values,
-      else: Map.put(values, "#{@file_number}", "#{26 - div(days, 365)}-#{7310 - n * 37}")
+    title
+    |> bcsara_values(agency, helped, file_number, today |> Date.add(1 - days), n)
+    |> Enum.reject(fn {_title, value} -> is_nil(value) end)
+    |> Enum.into(values, fn {field, value} -> bcsara_value(field, value) end)
   end
 
-  defp task_type("Evidence search"), do: "Evidence search"
-  defp task_type(title) when title in @rescues, do: "Rescue"
-  defp task_type(_title), do: "Search"
+  defp bcsara_values(title, agency, helped, file_number, reported, n) do
+    {tasked, task_type, activity, cause, alert, severity} = Map.fetch!(@bcsara_incidents, title)
+    agency = if agency == "Ambulance", do: "BCEHS", else: agency
+    other = if activity == "X - Not applicable", do: "Line search of a field for police."
+
+    [
+      {"What was SAR tasked to do?", tasked},
+      {"How many people were in the group that requested help?", helped},
+      {"How many people received assistance from SAR?", helped},
+      {"Response Type", if(title == "Missing person, river", do: "Call-Out", else: "Response")},
+      {"Agency", agency},
+      {"Police Department", if(agency == "Police", do: "RCMP - Royal Canadian Mounted Police")},
+      {"Agency File #", file_number},
+      {"ASE#", "ASE-#{4113 - n}"},
+      {"Region", "South West"},
+      {"Area", "Cedar Creek"},
+      {"Task Type", task_type},
+      {"Equipment Used/Lost", equipment_used(task_type)},
+      {"Task Leader's Name", Enum.at(@leaders, rem(n, 3))},
+      {"Date Report Completed", Date.to_iso8601(reported)},
+      {"Was RADeMS Discussed?", if(tasked == "Evidence search", do: "NO", else: "YES")},
+      {"Was a Level 2 SAR Manager Activated for this Incident?",
+       if(title == "Missing hunter", do: "Yes", else: "No")},
+      {"SAR Severity", Enum.at(@severity, severity - 1)},
+      {"Activity", activity},
+      {~s(If Activity = "Other" or "N/A" Describe:), other},
+      {"Primary Cause", cause},
+      {"Secondary Cause", secondary_cause(title)},
+      {~s(If either cause = "Other" or "N/A" Describe:), other},
+      {"Was weather a factor in response?", if(cause == "Severe weather", do: "YES", else: "NO")},
+      {"Alert Type", alert},
+      {"Mutual Aid Requested?", if(title == "Missing person, river", do: "YES", else: "NO")},
+      {"Evacuation notices delivered", "0"},
+      {"Households evacuated", "0"}
+    ]
+  end
+
+  defp secondary_cause("Overdue snowshoers"), do: "Fatigue/exhaustion"
+  defp secondary_cause("Stranded skiers"), do: "Exceeded ability"
+  defp secondary_cause(_title), do: "N/A - No secondary cause)"
+
+  defp equipment_used("020 - Cliff rescue"), do: "Rope kit B and stretcher. Nothing lost."
+  defp equipment_used("003 - Inland water SAR"), do: "Throw bags and drysuits. Nothing lost."
+  defp equipment_used(_task_type), do: "Radios and first aid kit. Nothing lost."
 
   # A chore activity lasts no time: it starts and ends at midnight on the 1st (#575).
   defp chore_activities(today) do

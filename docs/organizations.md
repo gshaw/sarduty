@@ -40,6 +40,21 @@ types in its **organization admins'** emails on its Organization admins tab.
 - The `/orgs/:slug` pages share one `live_session` and an `:ensure_org_access` hook that
   404s anyone who is neither its organization admin nor a SAR Duty admin.
 
+## Its forms
+
+An organization hosts its agency forms for its teams (#950), such as the claim a BC team
+sends EMCR after an incident. Its Forms page, `/orgs/:slug/forms`, lists them, and each
+has its own page.
+
+- **SAR Duty admins upload and replace them**, the form's text and its page PDF. Saving
+  checks it on each of the organization's teams ([documents.md](documents.md#an-organizations-forms)).
+- **Organization admins see each one**: what it reads and asks, its page, and its text.
+  They try it on Coast Range SAR, a made-up team, and turn it on or off for every team.
+- **Once on, it shows for every team** in the organization, for team admins only. A team
+  with no organization has none.
+- **The list counts the PDFs its teams made this year**, a count only. The PDFs are the
+  teams' and never show here.
+
 ## What an organization changes today
 
 - **Its verify page**, `verify.sarduty.com/orgs/<slug>`, shows the organization's logo and

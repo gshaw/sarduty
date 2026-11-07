@@ -92,12 +92,25 @@ defmodule App.Document do
   id from activities where id = :activity and` its `where`. Run it with the activity's
   id given: no row, and the form isn't for that activity.
   """
-  def shown_on(%__MODULE__{where: where}) do
-    line = if where, do: Query.line(where), else: 1
-    id = {:field, ["id"], [], line}
+  def shown_on(%__MODULE__{where: where} = doc) do
+    %Query{select: [id], from_line: line} = query = activities_shown_on(doc)
     this = {:op, :eq, id, {:value, "activity", line}, line}
-    where = if where, do: {:op, :and, this, where, line}, else: this
-    %Query{select: [id], from: "activities", from_line: line, where: where}
+    %{query | where: if(where, do: {:op, :and, this, where, line}, else: this)}
+  end
+
+  @doc """
+  A form's query for every activity it shows on: `select id from activities where` its
+  `where`. Trying a form on Coast Range SAR lists them.
+  """
+  def activities_shown_on(%__MODULE__{where: where}) do
+    line = if where, do: Query.line(where), else: 1
+
+    %Query{
+      select: [{:field, ["id"], [], line}],
+      from: "activities",
+      from_line: line,
+      where: where
+    }
   end
 
   @doc """

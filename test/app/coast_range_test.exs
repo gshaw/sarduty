@@ -180,7 +180,8 @@ defmodule App.CoastRangeTest do
         |> Enum.max_by(& &1.started_at, DateTime)
 
       assert newest.title == "Missing hiker" and not newest.is_published
-      refute Map.has_key?(newest.custom_values, "9400002")
+      # No Agency File # yet: BCSARA's, from 9_400_401 in its order.
+      refute Map.has_key?(newest.custom_values, "9400407")
       assert by_title.("Evidence search").tags == []
       assert "Secondary Hours" in by_title.("Missing hunter").tags
       assert days_away(by_title.("Trail safety booth"), c.today) == 4
