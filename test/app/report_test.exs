@@ -37,7 +37,18 @@ defmodule App.ReportTest do
           assert is_binary(field.label) and field.label != "",
                  "#{subject.name}.#{field.name} has no label"
 
-          assert field.type in [:text, :number, :hours, :km, :date, :bool, :list, :choice, :place] or
+          assert field.type in [
+                   :text,
+                   :number,
+                   :hours,
+                   :km,
+                   :money,
+                   :date,
+                   :bool,
+                   :list,
+                   :choice,
+                   :place
+                 ] or
                    match?(
                      {:record, kind}
                      when kind in [:member, :activity, :item, :qualification, :group],

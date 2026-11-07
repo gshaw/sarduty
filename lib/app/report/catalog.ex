@@ -31,6 +31,7 @@ defmodule App.Report.Catalog do
   alias App.Model.Standing
   alias App.Model.Tag
   alias App.Model.Team
+  alias App.Model.Trip
   alias App.Operation.CountTaxCreditHours
   alias App.Report.Context
   alias App.Report.CustomFields
@@ -81,7 +82,15 @@ defmodule App.Report.Catalog do
           choices: fn _ -> statuses() end
         },
         date(:started_at, "Started"),
+        date(:finished_at, "Finished"),
         %Field{name: "hours", label: "Hours", type: :hours, column: :hours},
+        %Field{
+          name: "km",
+          label: "Distance",
+          type: :km,
+          column: :km,
+          about: "The round trip Travel counts for the row. Empty when not set."
+        },
         date(:replied_at, "Replied")
       ]
     }
@@ -175,7 +184,10 @@ defmodule App.Report.Catalog do
         text(:serial, "Serial"),
         text(:location, "Location"),
         date(:expires_at, "Expires"),
-        parent("holder", "Held by", :member)
+        parent("holder", "Held by", :member),
+        money(:cost_per_km, "Cost per km", "What it costs per km, or its kind's cost."),
+        money(:cost_per_hour, "Cost per hour", "What it costs per hour, or its kind's cost."),
+        money(:cost_per_use, "Cost per use", "What it costs per use, or its kind's cost.")
       ]
     }
   end
@@ -613,6 +625,7 @@ defmodule App.Report.Catalog do
   # A field named for its column in the subject's rows.
   defp text(column, label, about \\ nil), do: plain(column, label, :text, about: about)
   defp number(column, label, about), do: plain(column, label, :number, about: about)
+  defp money(column, label, about), do: plain(column, label, :money, about: about)
   defp date(column, label), do: plain(column, label, :date, [])
   defp hours(column, label, about), do: plain(column, label, :hours, about: about)
   defp bool(column, label, about \\ nil), do: plain(column, label, :bool, about: about)
@@ -767,6 +780,9 @@ defmodule App.Report.Catalog do
     }
   end
 
+  # `km` is the row's trip on Travel (#230), keyed by D4H's attendance id. One dynamic
+  # per column, as activities/1 has.
+  # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
   defp attendance(%Context{team: team, now: now}) do
     query =
       from(r in Attendance,
@@ -776,17 +792,30 @@ defmodule App.Report.Catalog do
         where: a.team_id == ^team.id and m.team_id == ^team.id and is_nil(a.deleted_at)
       )
 
-    select(
-      query,
-      ^%{
+    %Source{
+      query: query,
+      joins: %{trip: &join_trip(&1, team)},
+      needs: %{km: [:trip]},
+      fields: %{
         id: dynamic([r], r.id),
         member_id: dynamic([r], r.member_id),
         activity_id: dynamic([r], r.activity_id),
         status: Attendance.status_word_dynamic(now),
         started_at: dynamic([r, activity: a], coalesce(r.started_at, a.started_at)),
+        finished_at: dynamic([r, activity: a], coalesce(r.finished_at, a.finished_at)),
         hours: dynamic([r], r.duration_in_minutes),
+        km: dynamic([trip: t], t.km),
         replied_at: dynamic([r], r.replied_at)
       }
+    }
+  end
+
+  defp join_trip(query, team) do
+    join(query, :left, [r], t in Trip,
+      as: :trip,
+      on:
+        t.team_id == ^team.id and t.activity_id == r.activity_id and
+          t.d4h_attendance_id == r.d4h_attendance_id
     )
   end
 
@@ -910,7 +939,10 @@ defmodule App.Report.Catalog do
         location: e.location_title,
         expires_at: e.expires_at,
         member_id: e.member_id,
-        custom_values: e.custom_values
+        custom_values: e.custom_values,
+        cost_per_km: fragment("? / 100.0", e.cost_per_km_cents),
+        cost_per_hour: fragment("? / 100.0", e.cost_per_hour_cents),
+        cost_per_use: fragment("? / 100.0", e.cost_per_use_cents)
       }
     )
   end

@@ -437,6 +437,7 @@ defmodule App.Report.Language do
   defp type_text(:number), do: "number"
   defp type_text(:hours), do: "hours"
   defp type_text(:km), do: "km"
+  defp type_text(:money), do: "dollars"
   defp type_text(:date), do: "date"
   defp type_text(:bool), do: "true or false"
   defp type_text(:list), do: "list"

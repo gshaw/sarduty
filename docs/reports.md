@@ -47,7 +47,8 @@ A source selects only the columns the query reads. When a column needs a join of
 own, such as `attended_count` adding up the team's attendance, the source is an
 `App.Report.Source` that says which columns need which join, and the join comes only with
 them (#784). Before this, every page added up every activity's attendance for each of
-its nine queries, and Activities took 274 ms where the old page took 10.
+its nine queries, and Activities took 274 ms where the old page took 10. Attendance's
+`km` joins the row's trip on Travel the same way (#950).
 
 ## The catalog is an allowlist
 
@@ -135,7 +136,9 @@ Each field draws its own cell (#804): a date as a date, an activity's kind as it
 coloured square, a record as a link to its page. `format started_at as month` picks
 another look, from `App.Report.Formats`: a date as `date_long`, `date_time`, `month`,
 `time`, or `days_ago`, hours as `hours` (212.5), and a record or a kind as `text`. Other
-types show one way, and the compiler says so. The format rides on the result's column,
+types show one way, and the compiler says so. Money, such as an item's `cost_per_km`,
+shows as dollars and cents (`Service.Format.money/1`, $0.67): D4H keeps it in whole
+cents, and the source divides by 100 (#950). The format rides on the result's column,
 and `<.report_table>` draws by it; Download CSV keeps the values as they are. A chart
 will be a format for a whole report.
 

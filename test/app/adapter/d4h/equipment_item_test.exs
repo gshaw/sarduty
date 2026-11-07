@@ -24,7 +24,9 @@ defmodule App.Adapter.D4H.EquipmentItemTest do
     item =
       %{"resourceType" => "EquipmentLocation", "id" => 875}
       |> record()
-      |> EquipmentItem.build(%{22_763 => "Radio Kit"}, %{875 => "South Fraser SAR Yard"})
+      |> EquipmentItem.build(%{22_763 => %{"title" => "Radio Kit"}}, %{
+        875 => "South Fraser SAR Yard"
+      })
 
     assert item.title == "COMMAND RADIO DRAWER"
     assert item.item_type == "equipment"
@@ -35,6 +37,40 @@ defmodule App.Adapter.D4H.EquipmentItemTest do
     assert item.d4h_container_id == nil
     assert item.serial == nil
     assert item.expires_at == ~U[2027-03-01 00:00:00Z]
+  end
+
+  test "an item's blank cost is its kind's, in whole cents" do
+    kinds =
+      Map.new([
+        EquipmentItem.build_kind(%{
+          "id" => 22_763,
+          "title" => "Truck",
+          "costPerDistance" => 67,
+          "costPerHour" => 3000,
+          "costPerUse" => nil
+        })
+      ])
+
+    record =
+      nil
+      |> record()
+      |> Map.merge(%{"costPerDistance" => nil, "costPerHour" => 0, "costPerUse" => 2500})
+
+    item = EquipmentItem.build(record, kinds)
+
+    assert item.kind == "Truck"
+
+    assert {item.cost_per_km_cents, item.cost_per_hour_cents, item.cost_per_use_cents} ==
+             {67, 0, 2500}
+
+    # The item embeds its kind with the kind's costs.
+    embedded =
+      record(nil)
+      |> Map.put("kind", %{"id" => 1, "title" => "Radio", "costPerHour" => 1500})
+      |> EquipmentItem.build()
+
+    assert {embedded.kind, embedded.cost_per_hour_cents, embedded.cost_per_km_cents} ==
+             {"Radio", 1500, nil}
   end
 
   test "D4H nests an item in another item through its location" do

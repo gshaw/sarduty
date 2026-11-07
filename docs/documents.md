@@ -45,7 +45,8 @@ A value is a report expression: a name, a literal, a comparison, `and`, `or`, `n
 
 - `'text {value}'` puts a value in text. `{value as format}` formats it.
 - `value as format`, with Service.Format's formatters: `date_long`, `date_short`,
-  `time`, `duration`, `hours`, `number`, and `km`. Dates show in the team's time zone.
+  `time`, `duration`, `hours`, `number`, `km`, and `money`. Dates show in the team's
+  time zone.
 - `value if condition` is blank when the condition is false.
 - `if condition then value else value` picks one.
 - `coalesce(a, b)` is the first that isn't blank, and `qr(link)` a QR code of a link.
@@ -197,6 +198,10 @@ running its expects, then prints it there.
   Leader's Name, Date Report Completed), and asks 6 things: other response personnel,
   their person hours, injured, fatalities, still missing, and whether an equipment
   repair/replacement request is attached. The task leader signs it by hand.
+- **EMCR's claim**, the Expense reimbursement request and its Supplement, is still to
+  come. The fields it reads are in the catalog: attendance's `finished_at` and its
+  Travel `km`, and each item's `cost_per_km`, `cost_per_hour`, and `cost_per_use`, in
+  dollars, copied from D4H ([equipment.md](equipment.md#the-copy)).
 
 ### An organization's forms
 

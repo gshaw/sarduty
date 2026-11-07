@@ -2,7 +2,7 @@ defmodule App.Report.Field do
   @moduledoc """
   A field a report can read, from App.Report.Catalog.
 
-  - `type`: `:text`, `:number`, `:hours` (minutes, shown as hours), `:km`, `:date` (a
+  - `type`: `:text`, `:number`, `:hours` (minutes, shown as hours), `:km`, `:money` (dollars), `:date` (a
     UTC time shown as the team's date), `:bool`, `:list` (titles), `:choice` (one of
     `choices`), or `{:record, kind}` for a record the cell links to: `:member`,
     `:activity`, `:item`, `:qualification`, or `:group`. `:place` is a latitude and

@@ -40,7 +40,8 @@ defmodule App.Document.Checker do
     "duration" => [:hours, :number],
     "hours" => [:hours, :number],
     "number" => [:number, :km],
-    "km" => [:km, :number]
+    "km" => [:km, :number],
+    "money" => [:money, :number]
   }
 
   @doc "The values only printing reads, with their types."
