@@ -25,7 +25,10 @@ pages (#784): the text is `App.Report.Lists.members/0`, and
   member's path, then Not a person, which is no step on it. It was Current until 2026-10-20, which
   people mixed up with Active. It replaced Status, and old
   `status=` links are not kept (decided 2026-10-19). Its column says "Away until Mar 1"
-  and sorts by that day, with retired members last.
+  and sorts by that day, with retired members last. Retiring has no tile (2026-11-06):
+  retiring members are under Retired, not Not retired, since they no longer count as
+  members, and their badge sets them apart. So Not retired is Active, Away, and Not a
+  person, and Not retired and Retired add up to All.
 
 - **Attended** lists members whose attendance clock is older than a time frame. The
   clock counts from the latest of their last activity, the day they joined, the end of
@@ -162,9 +165,8 @@ team admin uses to finish retiring them still show them.
 | Dashboard counts and charts, Missing details, Add members, a template's groups, Take attendance, and an organization's member totals | `Member.counted_query/1`                               |
 | Reminders                                                                                                                            | Ask for a reply names them under "Who does not get it" |
 
-Still shown: the Members list (the Retiring tile, and Not retired, its default), their
-member page and history, Equipment's With retiring members, and Needs attention. Group
-rules leave them in a group unless a rule on its page says "Standing is …" (above).
+Still shown: the Members list (under Retired, with the Retiring badge), their member
+page and history, Equipment's With retiring members, and Needs attention. Group rules leave them in a group unless a rule on its page says "Standing is …" (above).
 
 **A new query that counts, contacts, invites, or lets members in skips retiring
 members.** Use `Member.counted_query/1`, or `Member.managers_query/2` for team admins.

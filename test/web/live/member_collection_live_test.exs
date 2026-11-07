@@ -651,6 +651,8 @@ defmodule Web.MemberCollectionLiveTest do
                "Mark 1 as retiring"
              )
 
+      # Quinn is retiring, so under Retired.
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members?standing=retired")
       pick(lv, [ctx.quinn.id], "remove", retiring.id)
 
       assert has_element?(
@@ -793,7 +795,7 @@ defmodule Web.MemberCollectionLiveTest do
     end)
   end
 
-  test "Retiring: a filter, a tile, and a standing, only with a Retiring group (#514)",
+  test "Retiring: under Retired, with a filter and a standing, only with a Retiring group (#514)",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     leavers = group_fixture(team, %{title: "Leavers"})
@@ -804,21 +806,34 @@ defmodule Web.MemberCollectionLiveTest do
     away_period_fixture(retiring, Date.add(today, -3), Date.add(today, 30))
     active = member_fixture(team, %{name: "Aaron Active"})
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
-    refute has_element?(lv, "#member-tile-retiring")
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=all")
+
+    refute has_element?(lv, ~s(option[value="retiring"]))
 
     team
     |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
     |> App.Repo.update!()
 
+    # No Retiring tile: they no longer count as members, so they're under Retired.
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
-    assert has_element?(lv, "#member-tile-retiring", "1")
+    refute has_element?(lv, "#member-tile-retiring")
+    # Aaron and the team admin logged in; Avery is the 1 under Retired.
+    assert has_element?(lv, "#member-tile-current", "2")
+    assert has_element?(lv, "#member-tile-retired", "1")
+    assert has_element?(lv, "#last-attended-#{active.id}")
+    refute has_element?(lv, "#last-attended-#{retiring.id}")
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=retired")
+
     assert has_element?(lv, "#standing-#{retiring.id}", "Retiring")
-    refute has_element?(lv, "#standing-#{active.id}")
+    refute has_element?(lv, "#last-attended-#{active.id}")
 
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?standing=retiring")
 
+    assert has_element?(lv, ~s(option[value="retiring"][selected]))
     assert has_element?(lv, "#last-attended-#{retiring.id}")
     refute has_element?(lv, "#last-attended-#{active.id}")
 
