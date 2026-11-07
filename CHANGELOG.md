@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- A tax credit letter's PDF is kept as it was made. Every download and email sends that
+  same file, even after the team changes its logo.
 - Removing many members at once, from a group or an activity, names up to 3 of them, and
   from 10 asks you to tick a box first.
 - Send a reminder is now Ask for a reply, and each choice for checked members says who it

@@ -2,20 +2,46 @@ alias App.Model.Activity
 alias App.Model.Member
 alias App.Model.TaxCreditLetter
 alias App.Operation.CountTaxCreditHours
+alias App.Operation.SaveTaxCreditLetterPDF
 alias App.Repo
 alias Service.Format
 
 defmodule App.Operation.CreateTaxCreditLetter do
-  def call(team: team, member_id: member_id, year: year) do
+  def call(team: team, member_id: member_id, year: year),
+    do: team |> prepare(member_id, year) |> insert!()
+
+  @doc """
+  The new letter with its PDF drawn (#918), and nothing written yet: drawing takes a
+  while, so it happens before `insert!/1` takes the write lock.
+  """
+  def prepare(team, member_id, year) do
     member = Member.get_by(id: member_id, team_id: team.id)
     rows = CountTaxCreditHours.load_rows(team, year, [member.id])
     ref_id = TaxCreditLetter.generate_ref_id()
 
-    team
-    |> plan(member, rows, year, ref_id, DateTime.utc_now())
-    |> TaxCreditLetter.build_new_changeset()
-    |> Repo.insert!()
-    |> Repo.preload(member: :team)
+    changeset =
+      team
+      |> plan(member, rows, year, ref_id, DateTime.utc_now())
+      |> TaxCreditLetter.build_new_changeset()
+
+    letter =
+      changeset
+      |> Ecto.Changeset.apply_action!(:insert)
+      |> Map.put(:member, %{member | team: team})
+
+    %{changeset: changeset, pdf: SaveTaxCreditLetterPDF.draw(letter)}
+  end
+
+  @doc "Saves a letter from `prepare/3`, with its PDF, and returns it with its member and team."
+  def insert!(%{changeset: changeset, pdf: pdf}) do
+    {:ok, letter} =
+      Repo.transaction(fn ->
+        letter = changeset |> Repo.insert!() |> Repo.preload(member: :team)
+        SaveTaxCreditLetterPDF.keep!(letter, pdf)
+        letter
+      end)
+
+    letter
   end
 
   @doc """

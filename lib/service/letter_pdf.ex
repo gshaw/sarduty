@@ -1,4 +1,5 @@
 defmodule Service.PDFLetter do
+  alias Pdf.Encoding.WinAnsi
   alias Service.Temp
 
   @one_inch 72
@@ -12,6 +13,17 @@ defmodule Service.PDFLetter do
 
   @doc "The letter's PDF, locked against edits so it can only be printed."
   def build(options), do: options |> render() |> Service.PDFLock.lock()
+
+  @doc """
+  Whether the letter's text can be drawn: the `pdf` package writes only WinAnsi, the
+  Western European letters, and raises past it, in its own process (#917).
+  """
+  def writable?(text) when is_binary(text) do
+    _encoded = WinAnsi.encode(text)
+    true
+  rescue
+    ArgumentError -> false
+  end
 
   @doc "The letter's PDF before `build/1` locks it."
   def render(options) do

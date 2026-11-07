@@ -2,7 +2,7 @@ defmodule App.Mailer.TaxCreditLetterMailer do
   import Swoosh.Email
 
   alias App.Mailer
-  alias App.Operation.BuildTaxCreditLetterAttachment
+  alias App.Operation.LoadTaxCreditLetterPDF
 
   require Logger
 
@@ -35,7 +35,7 @@ defmodule App.Mailer.TaxCreditLetterMailer do
 
   def deliver_tax_credit_letter(letter) do
     email = letter.member.email
-    attachment = BuildTaxCreditLetterAttachment.call(letter)
+    attachment = LoadTaxCreditLetterPDF.call(letter)
     subject = attachment.title
 
     deliver_with_attachment(letter, email, subject, body(letter), attachment)
