@@ -399,9 +399,11 @@ defmodule Web.MeLive do
           <.a id="add-to-wallet" href={Web.CardLinks.path(@card)}>Add ID card to Wallet</.a>
         </li>
         <li>
-          <.a id="card-verify-link" href={verify_url(@card)} external={true}>
-            Verify your ID card
-          </.a>
+          <.a
+            id="card-verify-link"
+            href={verify_url(@card)}
+            external={true}
+          >Verify your ID card</.a>
         </li>
       </ul>
     </div>
