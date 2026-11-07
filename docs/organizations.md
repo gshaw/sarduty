@@ -55,6 +55,9 @@ has its own page.
 - **The list counts the PDFs its teams made this year**, a count only. The PDFs are the
   teams' and never show here.
 
+BCSARA's first is EMCR's Task report (1.01), on EMCR's own page
+([documents.md](documents.md#preparing-a-form)).
+
 ## What an organization changes today
 
 - **Its verify page**, `verify.sarduty.com/orgs/<slug>`, shows the organization's logo and

@@ -9,7 +9,8 @@ defmodule App.Document.Markup do
   Lengths are points from the page's edges, as the places say.
 
   - A text place wraps at its width, with lines `pitch` apart when it says so, to sit
-    on a form's printed lines. With `fit` it's one line, shrunk until it fits. Its first
+    on a form's printed lines, its first line `indent` further in. With `lines` it
+    shrinks until it fits that many. With `fit` it's one line, shrunk until it fits. Its first
     baseline is three quarters of its size below its top, as a flow's is, and its text
     starts at its left edge, wherever the place is anchored.
   - A tick is an X across its box, when its condition holds.
@@ -26,6 +27,8 @@ defmodule App.Document.Markup do
 
   @letter_width 612
   @letter_height 792
+  # The smallest size a text on its `lines` shrinks to.
+  @smallest 6
 
   @doc """
   `{markup, files}`: the Typst source, and each file it reads by name. `sample_mark` is
@@ -202,18 +205,43 @@ defmodule App.Document.Markup do
     {markup, {files, Map.put(values, place.name, lines(place.value))}}
   end
 
+  defp place(%{kind: :text, lines: count} = place, {files, values}) do
+    # Its height on `count` lines: the first line's ascent, then a pitch for each after.
+    height = ascent(place) + (count - 1) * place.pitch + 0.5
+    size = pt(size(place))
+
+    markup = [
+      "#place(#{at(place)}, block(width: #{width(place)}, layout(room => {\n",
+      "  set align(left)\n",
+      "  set par(leading: #{pt(gap(place))}, spacing: #{pt(gap(place))})\n",
+      ~s|  let body = #{indent(place)}v.at("#{place.name}").join(linebreak())\n|,
+      "  let sized(s) = text(size: s, top-edge: #{pt(ascent(place))}, bottom-edge: \"baseline\", body)\n",
+      "  let s = #{size}\n",
+      "  while s > #{pt(@smallest)} and measure(sized(s), width: room.width).height > #{pt(height)} {\n",
+      "    s -= 0.25pt\n",
+      "  }\n",
+      "  sized(s)\n",
+      "})))\n"
+    ]
+
+    {markup, {files, Map.put(values, place.name, lines(place.value))}}
+  end
+
   defp place(%{kind: :text} = place, {files, values}) do
     markup = [
       "#place(#{at(place)}, block(width: #{width(place)}, {\n",
       "  set align(left)\n",
       "  set text(size: #{pt(size(place))}, top-edge: #{pt(ascent(place))}, bottom-edge: \"baseline\")\n",
       "  set par(leading: #{pt(gap(place))}, spacing: #{pt(gap(place))})\n",
-      ~s|  v.at("#{place.name}").join(linebreak())\n|,
+      ~s|  #{indent(place)}v.at("#{place.name}").join(linebreak())\n|,
       "}))\n"
     ]
 
     {markup, {files, Map.put(values, place.name, lines(place.value))}}
   end
+
+  defp indent(%{indent: indent}), do: "h(#{pt(indent)}) + "
+  defp indent(_place), do: ""
 
   # A flow down's items, each line a value of the flow's own. A blank line is hidden
   # text, so it's exactly a line's height.
