@@ -2,7 +2,10 @@ defmodule App.CoastRangeTest do
   use ExUnit.Case, async: true
 
   alias App.CoastRange
+  alias App.Model.Activity
+  alias App.Model.Coordinate
   alias App.Model.Member
+  alias App.Operation.BuildMileageReport
 
   # cspell:ignore Kowal Noor Priya
 
@@ -199,6 +202,121 @@ defmodule App.CoastRangeTest do
             do: row.status
 
       assert Enum.sort(statuses) == ["absent", "attending", "requested"]
+    end
+  end
+
+  describe "what a demo shows off" do
+    setup do
+      visitor = %{name: "Morgan Visitor", email: "morgan@example.com"}
+      %{rows: CoastRange.build(@now, visitor: visitor)}
+    end
+
+    test "only a demo has a visitor" do
+      refute @now
+             |> CoastRange.build()
+             |> Enum.any?(fn {_kind, key, _row, links} ->
+               key == :visitor or {:member, :visitor} in Keyword.values(links)
+             end)
+    end
+
+    test "the visitor has things to do the moment they open the Dashboard", c do
+      today = Service.Period.today(@now, CoastRange.timezone())
+      activities = for {:activity, id, a, _} <- c.rows, into: %{}, do: {id, a}
+
+      mine = for {:attendance, {id, :visitor}, row, _} <- c.rows, do: {activities[id], row}
+
+      assert Enum.any?(mine, fn {a, row} ->
+               a.title == "Missing hiker" and row.status == "attending"
+             end)
+
+      for {a, row} <- mine,
+          not Activity.started?(a, @now),
+          do: assert(row.status == "requested", a.title)
+
+      [first_aid] = for {:award, {9_600_002, :visitor}, award, _} <- c.rows, do: award
+      assert first_aid.ends_at |> DateTime.to_date() |> Date.diff(today) == 30
+
+      assert [%{code: nil}] = for({:member_card, :visitor, card, _} <- c.rows, do: card)
+
+      assert [%{travel: "icp", checked_at: nil}] =
+               for(
+                 {:trip, _, trip, links} <- c.rows,
+                 links[:member_id] == {:member, :visitor},
+                 activities[elem(links[:activity_id], 1)].title == "Missing hiker",
+                 do: trip
+               )
+    end
+
+    test "travel: Missing hiker part way, Overdue kayakers ready to publish", c do
+      activities = for {:activity, id, a, _} <- c.rows, into: %{}, do: {id, a}
+
+      by_title =
+        Enum.group_by(
+          for(
+            {:trip, _, trip, links} <- c.rows,
+            do: {activities[elem(links[:activity_id], 1)], trip}
+          ),
+          &elem(&1, 0).title,
+          &elem(&1, 1)
+        )
+
+      assert Enum.all?(by_title["Overdue kayakers"], & &1.checked_at)
+      assert Enum.any?(by_title["Missing hiker"], &(&1.checked_at == nil))
+
+      attended =
+        for {:attendance, {id, _}, row, _} <- c.rows,
+            activities[id].title == "Missing hiker",
+            row.status == "attending",
+            do: row
+
+      assert length(by_title["Missing hiker"]) < length(attended), "a row isn't set"
+    end
+
+    # Saved homes and routes mean the Travel tab never asks Mapbox, and the km a team
+    # admin set are the km the report works out.
+    test "each trip's km is the mileage report's", c do
+      activities = for {:activity, id, a, _} <- c.rows, into: %{}, do: {id, a}
+
+      homes =
+        for {:home_coordinate, key, home, _} <- c.rows, into: %{}, do: {key, home.coordinate}
+
+      distances =
+        for {:route_distance, pair, route, _} <- c.rows, into: %{}, do: {pair, route.metres}
+
+      point = &(&1 |> Coordinate.build() |> Coordinate.to_string(5))
+      yard = point.("49.2,-123.1")
+
+      for {:trip, _, trip, links} <- c.rows, trip.travel in ["icp", "yard"] do
+        {:member, key} = links[:member_id]
+        activity = activities[elem(links[:activity_id], 1)]
+        row = %{member_id: key, member: %{name: key}}
+
+        [report] =
+          BuildMileageReport.build([row], homes, distances, point.(activity.coordinate), yard).rows
+
+        km = if trip.travel == "icp", do: report.activity_km, else: report.yard_km
+        assert trip.km == km, inspect(key)
+      end
+    end
+
+    test "each home's address is its member's, so the report never looks it up again", c do
+      members = for {:member, key, m, _} <- c.rows, into: %{}, do: {key, m}
+
+      for {:home_coordinate, key, home, _} <- c.rows,
+          do: assert(home.address == members[key].address)
+    end
+
+    test "group rules with changes to review, templates, notes, and places", c do
+      kinds = c.rows |> Enum.map(&elem(&1, 0)) |> Enum.frequencies()
+
+      assert kinds[:group_rule] == 4
+      assert kinds[:template] == 3
+      assert kinds[:whiteboard_note] == 3
+      assert kinds[:location_bookmark] == 3
+
+      # Callout's rule takes off Dana, away; Swiftwater team's takes off Priya, expired.
+      assert {9_500_001, "Dana Kowal"} in for({:group_member, key, _, _} <- c.rows, do: key)
+      assert {9_500_003, "Priya Nair"} in for({:group_member, key, _, _} <- c.rows, do: key)
     end
   end
 

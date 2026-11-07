@@ -4,6 +4,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Try a demo opens with something to see on every page: you're a member with an ID card
+  and travel to confirm, group rules with changes to review, templates, whiteboard notes,
+  and mileage set on the two latest incidents.
 - Needs attention's links for retiring members open a list of them again, not an empty one.
 - While you search a list, its tiles count the matches, so you can see which tile they're in.
 - Members: retiring members move from Not retired to the Retired tile, with their Retiring

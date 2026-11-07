@@ -15,23 +15,33 @@ defmodule App.Operation.BuildDemoTeam do
   alias App.Adapter.D4H
   alias App.CoastRange
   alias App.DemoCast
+  alias App.Model.Activity
   alias App.Model.DemoTeam
+  alias App.Model.EquipmentItem
+  alias App.Model.Group
+  alias App.Model.GroupRule
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.Tag
   alias App.Model.Team
+  alias App.Model.Trip
   alias App.Operation.DeleteTeam
   alias App.Operation.RefreshD4HData
   alias App.Repo
 
   require Logger
 
-  # The team's settings from the cast, as a team that uses each feature has them.
+  # The team's settings from the cast, as a team that uses each feature has them, and
+  # its letters' signer, so letters print as a real team's do.
   @settings [
     :name,
     :legal_name,
     :abbreviated_name,
     :mailing_address,
+    :authorized_by_name,
+    :authorized_by_title,
+    :authorized_by_phone,
+    :authorized_by_email,
     :member_logins,
     :chores_enabled,
     :certificates_enabled,
@@ -78,8 +88,8 @@ defmodule App.Operation.BuildDemoTeam do
   defp build(demo, records, now) do
     team = insert_team(demo, records, now)
     {:ok, team} = team |> RefreshD4HData.call() |> refreshed(team)
-    add_local_rows(team, records.ids, now)
-    {:ok, team}
+    add_local_rows(team, records.ids, visitor(demo), now)
+    {:ok, put_contact(team, records.ids)}
   rescue
     error ->
       Logger.error("Try a demo build failed: " <> Exception.message(error))
@@ -154,21 +164,35 @@ defmodule App.Operation.BuildDemoTeam do
 
   # Rows only SAR Duty keeps. Their links to synced rows go through Records' ids; links
   # between them, through the rows already added.
-  defp add_local_rows(team, ids, now) do
+  defp add_local_rows(team, ids, visitor, now) do
     synced = %{
       member: by_d4h_id(Member, :d4h_member_id, team),
-      tag: by_d4h_id(Tag, :d4h_tag_id, team)
+      tag: by_d4h_id(Tag, :d4h_tag_id, team),
+      group: by_d4h_id(Group, :d4h_group_id, team),
+      activity: by_d4h_id(Activity, :d4h_activity_id, team),
+      equipment_item: by_d4h_id(EquipmentItem, :d4h_equipment_id, team)
     }
 
     _added =
       now
-      |> DemoCast.local_rows()
+      |> DemoCast.local_rows(visitor)
       |> Enum.reduce(%{}, fn {kind, key, row, links}, added ->
         row = row |> localize(team, ids) |> put_links(links, ids, synced, added)
         Map.put(added, {kind, key}, Repo.insert!(row))
       end)
 
     :ok
+  end
+
+  # Get help goes to Alex Chen, as a team that picked its contacts has it (#780).
+  defp put_contact(team, ids) do
+    alex =
+      Repo.get_by!(Member,
+        team_id: team.id,
+        d4h_member_id: ids[DemoCast.key({:member, "Alex Chen"})]
+      )
+
+    team |> Ecto.Changeset.change(first_contact_id: alex.id) |> Repo.update!()
   end
 
   defp by_d4h_id(schema, field, team) do
@@ -199,6 +223,16 @@ defmodule App.Operation.BuildDemoTeam do
       row
       | team_id: team.id,
         d4h_activity_id: ids[DemoCast.key({:activity, row.d4h_activity_id})]
+    }
+
+  defp localize(%GroupRule{} = row, team, ids),
+    do: %{row | team_id: team.id, d4h_group_id: ids[DemoCast.key({:group, row.d4h_group_id})]}
+
+  defp localize(%Trip{} = row, team, ids),
+    do: %{
+      row
+      | team_id: team.id,
+        d4h_attendance_id: ids[DemoCast.key({:attendance, row.d4h_attendance_id})]
     }
 
   defp localize(row, team, _ids),

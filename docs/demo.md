@@ -1,5 +1,7 @@
 # Try a demo
 
+<!-- cspell:ignore Priya -->
+
 Anyone can try SAR Duty without signing up (#857): a person, an agent showing someone
 SAR Duty, or a script checking a live server. Each demo is a copy of Coast Range SAR,
 the made-up team (`App.CoastRange`), opened by a link. Its visitor is a team admin
@@ -32,9 +34,10 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    `App.Operation.BuildDemoTeam` once, behind a spinner, in about a second. Records makes
    the team from the cast (`App.DemoCast`, `POST /v3/sarduty/demo-teams`) and picks its ids. SAR Duty adds the team, marked
    as the demo in the same transaction, refreshes it like any team, and adds what only it
-   keeps (endorsements, ID cards with real codes, away periods, chores), matched through
-   Records' ids. A failure removes everything, in Records too, and the page offers Try
-   again. A visitor's 3 days count from here.
+   keeps (endorsements, group rules, ID cards with real codes, away periods, chores,
+   templates, and travel), matched through Records' ids. Alex Chen is the team contact.
+   A failure removes everything, in Records too, and the page offers Try again. A
+   visitor's 3 days count from here.
 4. **The banner.** Every page of a demo team has it, for team admins, where View as puts
    its own: when it goes, its link to copy, its Outbox, and Delete this demo. The
    Outbox button counts what arrived since the visitor last opened it
@@ -68,6 +71,29 @@ Records has none.
 
 /agents/demo (`Web.DemoAgentsDoc`) tells agents how to start one, find their way, and
 end it.
+
+## What it shows off
+
+A demo is for showing SAR Duty to someone, so each feature has something to see the
+moment it opens, staged in `App.CoastRange` (its moduledoc has the cases):
+
+- **The visitor is a member too**: a team leader for 1600 days, with a year of
+  attendance, awards, and groups. Their Dashboard's For you to do has their ID card to
+  add to Wallet, first aid expiring in 30 days, and travel on Missing hiker to confirm
+  (Andrew's ask). Next up asks them to reply.
+- **Travel**: Missing hiker is part way, set, some confirmed, one row not set; Overdue
+  kayakers is set and confirmed, ready to copy into D4H. Homes and routes are saved, so
+  the Travel tab never asks Mapbox.
+- **Group rules**: Callout's review takes off Dana, away; Swiftwater team's takes off
+  Priya, whose ticket expired. Needs attention counts both.
+- **Templates**: Weekly training, Callout (the truck and a radio), and Public education
+  booth.
+- **Whiteboard notes**, one important, and **saved places** for the activity form.
+- Letters have Alex Chen as signer, so only the signature is missing.
+
+Not staged: certificates waiting for review (Records has no documents, so accepting one
+can't attach its file), an activity on now for Take attendance (a demo lasts 3 days), and
+a signature.
 
 ## What a demo sends
 

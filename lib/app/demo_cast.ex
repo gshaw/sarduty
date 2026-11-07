@@ -5,11 +5,12 @@ defmodule App.DemoCast do
   second Owner beside Alex Chen.
 
   Pure. cast/2 is what Records keeps, in D4H's shape: members, tags, groups,
-  qualifications and awards, activities and attendance, and equipment and its use. Each
-  row's key is its Coast Range kind and key, like `member:Alex Chen` or
-  `activity:9200003`, and Records answers each key's new id. local_rows/1 is what only
-  SAR Duty keeps (endorsements, ID cards, away periods, chores), for
-  App.Operation.BuildDemoTeam to add once the sync has copied the rest.
+  qualifications and awards, activities and attendance, equipment and its use, whiteboard
+  notes, and saved places. Each row's key is its Coast Range kind and key, like
+  `member:Alex Chen` or `activity:9200003`, and Records answers each key's new id.
+  local_rows/2 is what only SAR Duty keeps (endorsements, group rules, ID cards, away
+  periods, chores, templates, and travel), for App.Operation.BuildDemoTeam to add once
+  the sync has copied the rest.
 
   Custom fields stay out: Records has none (`D4H.custom_fields?/1`).
   """
@@ -27,17 +28,28 @@ defmodule App.DemoCast do
     :activity,
     :attendance,
     :equipment_item,
-    :equipment_usage
+    :equipment_usage,
+    :whiteboard_note,
+    :location_bookmark
   ]
   @local_kinds [
     :endorsement,
     :endorsement_qualification,
+    :group_rule,
+    :group_rule_reference,
     :member_card,
     :away_period,
     :chore_category,
     :chore_category_tag,
     :chore_event,
-    :chore
+    :chore,
+    :template,
+    :template_tag,
+    :template_group,
+    :template_item,
+    :home_coordinate,
+    :route_distance,
+    :trip
   ]
 
   # Every Records team has these (Records' create_team), under these keys.
@@ -49,8 +61,8 @@ defmodule App.DemoCast do
   @doc """
   The cast for a visitor `%{name:, email:}` as of `now`: `%{"team" => …, "rows" => […]}`.
   """
-  def cast(%DateTime{} = now, %{name: name, email: email}) do
-    rows = CoastRange.build(now)
+  def cast(%DateTime{} = now, %{name: _name, email: _email} = visitor) do
+    rows = CoastRange.build(now, visitor: visitor)
     {:team, :coastrange, team, []} = hd(rows)
     records = for {kind, _key, _row, _links} = row <- rows, kind in @records_kinds, do: row
     items = for {:equipment_item, _key, item, _links} <- records, do: item
@@ -66,33 +78,19 @@ defmodule App.DemoCast do
       "rows" =>
         Enum.concat([
           equipment_places(items),
-          Enum.flat_map(records, &rows/1),
-          [visitor(name, email, now)]
+          Enum.flat_map(records, &rows/1)
         ])
     }
   end
 
   @doc """
-  What only SAR Duty keeps, as App.CoastRange.build/1 gives it: `{kind, key, struct,
-  links}`, in the order they insert.
+  What only SAR Duty keeps for the visitor `%{name:, email:}`, as App.CoastRange.build/2
+  gives it: `{kind, key, struct, links}`, in the order they insert.
   """
-  def local_rows(%DateTime{} = now) do
-    for {kind, _key, _row, _links} = row <- CoastRange.build(now), kind in @local_kinds, do: row
-  end
-
-  # The visitor joins as an Owner, as a real team admin is one, and logs in by that email.
-  defp visitor(name, email, now) do
-    %{
-      "resource" => "members",
-      "key" => "member:visitor",
-      "body" => %{
-        "name" => name,
-        "email" => email,
-        "position" => "Team admin",
-        "startsAt" => iso(now),
-        "permission" => "OWNER"
-      }
-    }
+  def local_rows(%DateTime{} = now, visitor) do
+    for {kind, _key, _row, _links} = row <- CoastRange.build(now, visitor: visitor),
+        kind in @local_kinds,
+        do: row
   end
 
   defp rows({:tag, title, _tag, []}) when title in @hours_tags, do: []
@@ -116,8 +114,10 @@ defmodule App.DemoCast do
       }
       |> Map.reject(fn {_field, value} -> is_nil(value) end)
 
+    # The visitor joins as an Owner, as a real team admin is one, and logs in by their
+    # email. No sample photo: it would be a stranger's face on their own card.
     row = row("members", {:member, name}, body)
-    [if(member.not_a_person, do: row, else: Map.put(row, "photo", "sample"))]
+    [if(member.not_a_person or name == :visitor, do: row, else: Map.put(row, "photo", "sample"))]
   end
 
   defp rows({:group, id, group, []}),
@@ -185,7 +185,11 @@ defmodule App.DemoCast do
       "endsAt" => iso(attendance.finished_at)
     }
 
-    [ref_row("attendance", body, memberId: links[:member_id], activityId: links[:activity_id])]
+    # Keyed, so a trip can name the row by Records' id.
+    row =
+      ref_row("attendance", body, memberId: links[:member_id], activityId: links[:activity_id])
+
+    [Map.put(row, "key", key({:attendance, attendance.d4h_attendance_id}))]
   end
 
   defp rows({:equipment_item, id, item, links}) do
@@ -234,6 +238,28 @@ defmodule App.DemoCast do
         equipmentId: links[:equipment_item_id]
       )
     ]
+  end
+
+  defp rows({:whiteboard_note, id, note, []}) do
+    body = %{
+      "text" => note.text,
+      "url" => note.url,
+      "important" => note.important,
+      "archivedAt" => iso(note.archived_at)
+    }
+
+    [row("whiteboard", {:whiteboard_note, id}, Map.reject(body, fn {_k, v} -> is_nil(v) end))]
+  end
+
+  defp rows({:location_bookmark, title, bookmark, []}) do
+    body = %{"title" => bookmark.title, "location" => location(bookmark.coordinate)}
+
+    body =
+      if bookmark.address,
+        do: Map.put(body, "address", %{"street" => bookmark.address}),
+        else: body
+
+    [row("location-bookmarks", {:location_bookmark, title}, body)]
   end
 
   # Each kind and each place the items name, before the items.
