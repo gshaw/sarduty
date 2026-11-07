@@ -6,9 +6,12 @@ defmodule Web.MemberCardLiveTest do
   import Swoosh.TestAssertions
 
   alias App.Model.MemberCard
+  alias App.Model.MemberStandingChange
   alias App.Model.PassRegistration
+  alias App.Operation.IssueEveryMemberCard
   alias App.Operation.IssueMemberCard
   alias App.Repo
+  alias App.ViewData.ChangeHistory
 
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
@@ -95,6 +98,78 @@ defmodule Web.MemberCardLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
     assert has_element?(lv, "#card-status", "Not active: #{member.name} is retiring")
     refute has_element?(lv, "#replace")
+  end
+
+  describe "Cancel ID card (#964)" do
+    setup %{team: team, member: member} do
+      leavers = group_fixture(team)
+
+      team =
+        team
+        |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
+        |> Repo.update!()
+
+      %{team: team, leavers: leavers, member: member}
+    end
+
+    test "only for a member who isn't active: an active member's card can only be replaced",
+         %{conn: conn, team: team, member: member} do
+      card = member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+      refute has_element?(lv, "#cancel-card")
+
+      render_click(lv, "cancel", %{})
+      refute Repo.reload!(card).revoked_at
+      assert MemberStandingChange |> Repo.all() == []
+    end
+
+    test "cancels a retiring member's card, says when, and history says who",
+         %{conn: conn, user: user, team: team, leavers: leavers, member: member} do
+      group_member_fixture(leavers, member)
+      card = member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+
+      assert has_element?(lv, "#cancel-card-hint", "Cancel it if they should not have it at all")
+      button = element(lv, "#cancel-card")
+      assert render(button) =~ "Cancel #{member.name}&#39;s ID card?"
+      assert render(button) =~ "If they come back, issue them a new card."
+
+      render_click(button)
+
+      assert Repo.reload!(card).revoked_at
+      assert MemberCard.find_current(team, member) == nil
+      assert has_element?(lv, "#no-card", "is retiring, so they cannot get an ID card")
+      assert has_element?(lv, "#card-cancelled", "Their last one was cancelled on")
+      refute has_element?(lv, "#issue")
+
+      assert [entry] =
+               team |> ChangeHistory.for_member(member) |> Enum.filter(&(&1.kind == :standing))
+
+      assert entry.text == "ID card cancelled"
+      assert entry.applied_by == user.email
+    end
+
+    test "a cancelled card isn't remade while they're retired, and is when they come back",
+         %{conn: conn, team: team, member: member} do
+      team = team |> Ecto.Changeset.change(every_member_card: true) |> Repo.update!()
+      retired = member_fixture(team, %{left_at: ~U[2026-01-01 00:00:00Z]})
+      member_card_fixture(retired)
+      # Everyone active has a card.
+      IssueEveryMemberCard.call(team, DateTime.utc_now())
+      assert MemberCard.find_current(team, member)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{retired.id}/card")
+      button = element(lv, "#cancel-card")
+      assert render(button) =~ "Every member gets a card issues them a new one."
+
+      render_click(button)
+      assert IssueEveryMemberCard.call(team, DateTime.utc_now()) == 0
+      assert MemberCard.find_current(team, retired) == nil
+
+      retired |> Ecto.Changeset.change(left_at: nil) |> Repo.update!()
+      assert IssueEveryMemberCard.call(team, DateTime.utc_now()) == 1
+      assert MemberCard.find_current(team, retired)
+    end
   end
 
   test "endorsements: a link to pick them until the team shows some, then the member's",

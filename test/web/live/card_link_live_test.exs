@@ -55,15 +55,22 @@ defmodule Web.CardLinkLiveTest do
 
     # A phone registering the pass, and Google saying it was saved, each broadcast.
     PassRegistration.register!(card, "device-1", "push-token-1")
-    assert has_element?(lv, "#card-link-status", "sees your ID card in Apple Wallet on 1 device.")
+    assert has_element?(lv, "#card-link-status", "sees your ID card in Apple Wallet.")
 
     MemberCard.mark_in_wallet!(card, DateTime.utc_now())
+    assert has_element?(lv, "#card-link-status", "in Apple Wallet and in Google Wallet.")
+  end
 
-    assert has_element?(
-             lv,
-             "#card-link-status",
-             "in Apple Wallet on 1 device and in Google Wallet."
-           )
+  # iCloud carries a pass added on an iPhone to the member's iPad, which registers on its
+  # own, so a count would say 2 for 1 added. The ID Card tab keeps it.
+  test "the line never counts devices", %{conn: conn, member: member} do
+    card = member_card_fixture(member)
+    PassRegistration.register!(card, "iphone", "push-token-1")
+    PassRegistration.register!(card, "ipad", "push-token-2")
+    {:ok, lv, _html} = live(conn, CardLinks.path(card))
+
+    assert has_element?(lv, "#card-link-status", "SAR Duty sees your ID card in Apple Wallet.")
+    refute has_element?(lv, "#card-link-status", "device")
   end
 
   # The page's assigns: which Wallet a tap started a check on, and its give-up ref.
@@ -80,7 +87,7 @@ defmodule Web.CardLinkLiveTest do
     assert %{checking: :apple} = checking(lv)
 
     PassRegistration.register!(card, "device-1", "push-token-1")
-    assert has_element?(lv, "#card-link-status", "in Apple Wallet on 1 device")
+    assert has_element?(lv, "#card-link-status", "in Apple Wallet.")
     assert %{checking: nil} = checking(lv)
   end
 
@@ -98,11 +105,7 @@ defmodule Web.CardLinkLiveTest do
 
     assert %{checking: nil} = checking(lv)
 
-    assert has_element?(
-             lv,
-             "#card-link-status",
-             "in Apple Wallet on 1 device and in Google Wallet."
-           )
+    assert has_element?(lv, "#card-link-status", "in Apple Wallet and in Google Wallet.")
   end
 
   test "a replacement isn't in Wallet until a phone fetches it, though its phones held the old card",
@@ -119,7 +122,7 @@ defmodule Web.CardLinkLiveTest do
     # The phone, now holding the replacement, fetches it with its own token.
     replacement |> Repo.reload!() |> MemberCard.record_pass_fetched!(DateTime.utc_now())
 
-    assert has_element?(lv, "#card-link-status", "in Apple Wallet on 1 device")
+    assert has_element?(lv, "#card-link-status", "in Apple Wallet.")
     assert %{checking: nil} = checking(lv)
   end
 

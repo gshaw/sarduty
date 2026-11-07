@@ -7,16 +7,17 @@ defmodule App.Model.MemberStandingChange do
   alias App.Model.Team
   alias App.Repo
 
-  # What a team admin changed in a member's standing (#366), for the member's history.
-  # `details` keeps an away period's reason and dates as strings, since the period can be
-  # deleted. The reason is personal, so redacted as on the period.
+  # What a team admin changed in a member's standing (#366), for the member's history, and
+  # an ID card they cancelled (#964). `details` keeps an away period's reason and dates as
+  # strings, since the period can be deleted. The reason is personal, so redacted as on
+  # the period.
   schema "member_standing_changes" do
     belongs_to :team, Team
     belongs_to :member, Member
     belongs_to :user, User
 
     field :action, Ecto.Enum,
-      values: [:away_added, :away_ended, :away_deleted, :not_a_person, :person]
+      values: [:away_added, :away_ended, :away_deleted, :not_a_person, :person, :card_cancelled]
 
     field :details, :map, default: %{}, redact: true
     timestamps(type: :utc_datetime_usec, updated_at: false)

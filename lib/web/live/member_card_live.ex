@@ -11,6 +11,7 @@ defmodule Web.MemberCardLive do
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildCardQualifications
   alias App.Operation.BuildGooglePass
+  alias App.Operation.CancelMemberCard
   alias App.Operation.SendMemberCard
   alias App.Repo
 
@@ -54,6 +55,19 @@ defmodule Web.MemberCardLive do
     end
   end
 
+  # Cancel ID card (#964), for a retiring or retired member who shouldn't keep one.
+  def handle_event("cancel", _params, socket) do
+    %{current_team: team, current_user: user, member: member} = socket.assigns
+
+    socket =
+      case CancelMemberCard.call(team, member, user, DateTime.utc_now()) do
+        {:ok, _cards} -> put_flash(socket, :info, "#{member.name}'s ID card cancelled.")
+        {:error, _reason} -> socket
+      end
+
+    {:noreply, reload_card(socket)}
+  end
+
   def handle_event("email", _params, socket) do
     %{current_team: team, member: member} = socket.assigns
 
@@ -86,8 +100,11 @@ defmodule Web.MemberCardLive do
   end
 
   defp assign_card(socket, card) do
+    %{current_team: team, member: member} = socket.assigns
     phones = if card, do: PassRegistration.count_holding(card), else: 0
-    socket |> assign(:card, card) |> assign(:phones, phones)
+    revoked_at = if !card, do: MemberCard.last_revoked_at(team, member)
+
+    assign(socket, card: card, phones: phones, revoked_at: revoked_at)
   end
 
   defp wallet?, do: BuildApplePass.configured?() or BuildGooglePass.configured?()
@@ -123,6 +140,8 @@ defmodule Web.MemberCardLive do
         qualifications={@qualifications}
         endorsements_on_card?={@endorsements_on_card?}
         phones={@phones}
+        revoked_at={@revoked_at}
+        every_member_card?={@current_team.every_member_card}
         member_logins?={@current_team.member_logins}
         service={@service}
       />
@@ -132,14 +151,27 @@ defmodule Web.MemberCardLive do
 
   defp card_content(%{card: nil, active?: false} = assigns) do
     ~H"""
-    <p id="no-card">{@member.name} is {not_active_text(@standing)}, so they cannot get an ID card.</p>
+    <p id="no-card">
+      {@member.name} is {not_active_text(@standing)}, so they cannot get an ID card.
+      <span :if={@revoked_at} id="card-cancelled">
+        Their last one was cancelled on {Service.Format.date_short(@revoked_at, @member.team.timezone)}.
+      </span>
+    </p>
     """
   end
 
   defp card_content(%{card: nil} = assigns) do
     ~H"""
     <div id="no-card">
-      <p>{@member.name} has no ID card.</p>
+      <p>
+        {@member.name} has no ID card.
+        <span :if={@revoked_at} id="card-cancelled">
+          Their last one was cancelled on {Service.Format.date_short(
+            @revoked_at,
+            @member.team.timezone
+          )}.
+        </span>
+      </p>
       <.button id="issue" variant={:primary} phx-click="issue" phx-disable-with="Issuing…">
         Issue ID card
       </.button>
@@ -208,9 +240,36 @@ defmodule Web.MemberCardLive do
       <p :if={@active? and wallet?()} id="card-delivery" class="hint">
         {delivery_hint(assigns)}
       </p>
+      <.form_actions :if={!@active?}>
+        <.button
+          id="cancel-card"
+          variant={:danger}
+          phx-click="cancel"
+          phx-disable-with="Cancelling…"
+          data-confirm={cancel_confirm(@member)}
+          data-confirm-warning={cancel_warning(@every_member_card?)}
+        >
+          Cancel ID card
+        </.button>
+      </.form_actions>
+      <p :if={!@active?} id="cancel-card-hint" class="hint">
+        {@member.name} can still show the pass until it expires, and it says Not active.
+        Cancel it if they should not have it at all.
+      </p>
     </div>
     """
   end
+
+  defp cancel_confirm(member),
+    do:
+      "Cancel #{member.name}'s ID card? Their pass shows Cancelled at once, and " <>
+        "#{Web.VerifyHost.host()} says the card was cancelled, with nothing about them."
+
+  # Every member gets a card issues a new one to a member who comes back (#964).
+  defp cancel_warning(true),
+    do: "If they come back, Every member gets a card issues them a new one."
+
+  defp cancel_warning(false), do: "If they come back, issue them a new card."
 
   # Why a member's card is not active, or why they cannot get one.
   defp not_active_text(:retiring), do: "retiring"

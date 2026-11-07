@@ -3,7 +3,9 @@ defmodule Web.WalletText do
   What SAR Duty knows of a card's Wallets, in words: the ID Card tab's Wallet row and the
   card's page say the same (#952). `phones` is how many devices hold the Apple pass,
   where an iPhone and its paired Apple Watch count as 2
-  (`PassRegistration.count_holding/1`); Google's mark is `in_wallet_at`.
+  (`PassRegistration.count_holding/1`); Google's mark is `in_wallet_at`. Only the tab
+  gives the count: the card's page says whether, since iCloud carries the pass to a
+  member's iPad too and a member reads 2 as a mistake.
   """
   alias App.Model.MemberCard
 
@@ -27,13 +29,11 @@ defmodule Web.WalletText do
   def google(%MemberCard{}), do: "In Google Wallet"
 
   @doc """
-  What SAR Duty sees, as one sentence for the card's page: "SAR Duty sees your ID card in
-  Apple Wallet on 1 device."
+  What SAR Duty sees, as one sentence for the card's page, with no count: "SAR Duty sees
+  your ID card in Apple Wallet."
   """
   def seen(phones, %MemberCard{} = card) do
-    apple =
-      if phones > 0,
-        do: "Apple Wallet on #{Service.Format.count(phones, one: "1 device", many: "%d devices")}"
+    apple = if phones > 0, do: "Apple Wallet"
 
     google = if card.in_wallet_at, do: "Google Wallet"
 

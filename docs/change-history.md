@@ -11,9 +11,9 @@ from D4H on Oct 3". It merges these sources, newest first
 
 - **Changed by SAR Duty**: applied rows from [change sets](change-sets.md), with the source
   and the account that sent them.
-- **Standing**, on a member's page only: away periods added, ended early, or deleted, and
-  Not a person turned on or off, with the team admin who did it (#366). These are SAR
-  Duty's own data, from `member_standing_changes`.
+- **Standing**, on a member's page only: away periods added, ended early, or deleted,
+  Not a person turned on or off, and ID cards cancelled (#964), with the team admin who
+  did it (#366). These are SAR Duty's own data, from `member_standing_changes`.
 - **Seen in D4H**: `d4h_changes`, what the refresh saw change in D4H since the run
   before. D4H says neither when nor who, so the page shows the window between the 2 runs
   ("Oct 9, 10:00 to 10:10") and "Someone outside SAR Duty". D4H's API has a `createdBy` on some
