@@ -99,3 +99,19 @@ title, the author, the lock, the kept values, and each place's value.
 place out on letter paper, every value as a Typst string so it prints as written, and
 `lock print` runs `Service.PDFLock`. A QR code is an SVG from `EQRCode`, and Typst uses no
 packages. `App.Operation.PrintTaxCreditLetter` does all this for a letter.
+
+## Saved PDFs
+
+Every PDF a document makes is saved as it was made, so a download or email serves the
+same file, whatever the team's logos or the document say now (#918, #950).
+[App.Model.SavedPDF](../lib/app/model/saved_pdf.ex) is one table, `saved_pdfs`, for all
+of them, with the bytes in `saved_pdf_files`, so lists never load them. Each row has its
+team, title, filename, size, and when it was made, and belongs to one of:
+
+- **A tax credit letter**: one PDF, replaced when the letter is (`put_letter!/2`).
+- **An activity**, for a form: a new PDF each time one prints, none replaced
+  (`add_for_activity!/4`). It keeps who made it and the values it printed that `keep`
+  names. The form and its version come with the forms table (#950, step 3).
+
+Deleting a letter deletes its PDF. A team's purge deletes them all
+(App.Operation.DeleteTeam).

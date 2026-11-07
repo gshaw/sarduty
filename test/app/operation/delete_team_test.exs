@@ -7,6 +7,7 @@ defmodule App.Operation.DeleteTeamTest do
 
   alias App.Adapter.D4H
   alias App.Model.Event
+  alias App.Model.SavedPDF
   alias App.Model.Team
   alias App.Operation.DeleteTeam
   alias App.RecordsStub
@@ -14,7 +15,8 @@ defmodule App.Operation.DeleteTeamTest do
   alias App.Worker.SyncTeamChangesWorker
 
   # A team with a row in most kinds of table, reached through team_id and through
-  # parents that have none (attendances, group members, awards, letters, certificates).
+  # parents that have none (attendances, group members, awards, letters, certificates,
+  # saved PDFs).
   defp full_team(name) do
     team = team_fixture(%{name: name})
     member = member_fixture(team)
@@ -29,7 +31,10 @@ defmodule App.Operation.DeleteTeamTest do
     endorsement_qualification_fixture(endorsement, qualification)
     group_rule_fixture(group, endorsement)
     member_card_fixture(member)
-    tax_credit_letter_fixture(member)
+    letter = tax_credit_letter_fixture(member)
+    pdf = %{content: "%PDF-1.7", title: "A PDF", filename: "a.pdf"}
+    SavedPDF.put_letter!(%{letter | member: member}, pdf)
+    SavedPDF.add_for_activity!(activity, user_fixture(), pdf)
     item = equipment_item_fixture(team)
     equipment_usage_fixture(activity, item)
     template_fixture(team, "Truck 1", [item])
