@@ -24,7 +24,7 @@ defmodule App.Report.Expr do
 
   @aggregates ~w(count sum avg min max)
   @date_parts ~w(year month quarter days_since date months_since day_of_week hour)
-  @numbers [:number, :hours, :km]
+  @numbers [:number, :hours, :km, :money]
   @matches [:contains, :starts_with, :ends_with, :like]
   @flip %{eq: :eq, ne: :ne, lt: :gt, gt: :lt, le: :ge, ge: :le}
 
@@ -598,7 +598,7 @@ defmodule App.Report.Expr do
   defp type_text(type) when type in [:text, :choice], do: "text"
   defp type_text(:list), do: "a list"
   defp type_text(:date), do: "a date"
-  defp type_text(type) when type in [:number, :hours, :km], do: "a number"
+  defp type_text(type) when type in [:number, :hours, :km, :money], do: "a number"
   defp type_text({:record, kind}) when kind in [:activity, :item], do: "an #{kind}"
   defp type_text({:record, kind}), do: "a #{kind}"
   defp type_text(_type), do: "not a number"

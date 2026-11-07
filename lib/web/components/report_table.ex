@@ -91,7 +91,7 @@ defmodule Web.Components.ReportTable do
   defp record_text(%{name: name}), do: name
   defp record_text(%{title: title}), do: title
 
-  defp align(%{type: type}) when type in [:number, :hours, :km], do: "right"
+  defp align(%{type: type}) when type in [:number, :hours, :km, :money], do: "right"
   defp align(_column), do: nil
 
   attr :id, :string, required: true
@@ -246,6 +246,7 @@ defmodule Web.Components.ReportTable do
   def value_text(value, %{type: :hours, format: "hours"}, _team), do: Format.tenths(value / 60)
   def value_text(value, %{type: :hours}, _team), do: Format.duration(value)
   def value_text(value, %{type: :km}, _team), do: Format.km(value)
+  def value_text(value, %{type: :money}, _team), do: Format.money(value)
   def value_text(value, %{type: :number}, _team), do: Format.number(value)
 
   def value_text(value, %{type: :date, format: "date_long"}, team),

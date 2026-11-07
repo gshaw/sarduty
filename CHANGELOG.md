@@ -18,6 +18,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
   the devices that hold the new card.
 - BC teams: each incident has EMCR's Task report under Forms, filled in from the incident
   and BCSARA's fields on EMCR's own page, ready for the task leader to sign.
+- Reports read each attendance row's finish time and travel km, and each item's D4H costs
+  per km, hour, and use, in dollars.
 - A chore activity's page shows its chores' total under Duration, where it showed 0.
 - Try a demo opens with something to see on every page: you're a member with an ID card
   and travel to confirm, group rules with changes to review, templates, whiteboard notes,
