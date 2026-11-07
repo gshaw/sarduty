@@ -131,6 +131,8 @@ Passes also call back to `/wallet/v1/…`, so those routes must stay public.
 
 The certificate expires on 2027-10-30. Make a new one with
 `asc certificates create --certificate-type PASS_TYPE_ID`, then update the secrets.
+Gerry's copies of the certificate and key are in fnox as
+`SARDUTY_APPLE_PASS_CERTIFICATE` and `SARDUTY_APPLE_PASS_PRIVATE_KEY`.
 Passes already on phones keep working.
 
 ## Google Wallet
@@ -146,7 +148,7 @@ them SAR Duty offers no Google pass.
 
 - `GOOGLE_WALLET_ISSUER_ID` — `3388000000023212691`.
 - `GOOGLE_WALLET_SERVICE_ACCOUNT` — the service account's JSON key file, on one line.
-  Gerry's copy is in `~/.sarduty-wallet/`.
+  Gerry's copy is in fnox as `GOOGLE_WALLET_SERVICE_ACCOUNT`.
 
 Until Google grants publishing access, passes say "[TEST ONLY]" and only the console's
 users can save them. Dev and production share the issuer; ids carry the host, so they

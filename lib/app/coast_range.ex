@@ -12,7 +12,13 @@ defmodule App.CoastRange do
   equipment and its use; chores; an away member, a retired one, and one that isn't a
   person; and the sample ID cards the verify site's /samples page shows (#854).
 
-  Pure: build/1 is rows, and App.Operation.SeedCoastRange inserts them.
+  It also stages what a demo shows off, so each feature has something to see the moment
+  it opens: whiteboard notes, saved places, templates, group rules with changes to
+  review, and travel set on the two draft incidents, with homes and routes saved so
+  mileage never asks Mapbox.
+
+  Pure: build/2 is rows, and App.Operation.SeedCoastRange inserts them. Try a demo
+  (App.DemoCast) passes a visitor, who joins as a team leader with a history of their own.
 
   ## Who to use
 
@@ -46,11 +52,23 @@ defmodule App.CoastRange do
     so equipment with a retiring member.
   - **Robin Tse**: Retired, 120 days ago.
   - **Duty pager**: not a person. No email, never attends.
+  - **The visitor**, only in a demo: a team admin beside Alex, a team leader for 1600
+    days, keyed `{:member, :visitor}`. Attended Missing hiker, where a team admin set
+    their travel for them to confirm; first aid expires in 30 days; an ID card not yet
+    in Wallet; and no reply yet to anything coming up.
 
   Activities, by title: **Missing hiker** is the newest incident, a draft missing its
   agency file number; **Trail safety booth** is an event in 4 days; the coming Tuesday's
   training has sign-ups, can't-make-its, and no replies; **Night search exercise** is in
   12 days; **Evidence search** has no hours tag and **Missing hunter** has both.
+
+  Travel: on **Missing hiker** a team admin set most rows, some members confirmed, and
+  two rows aren't set; on **Overdue kayakers** every row is set and confirmed, ready to
+  copy into D4H and publish.
+
+  Group rules: **Callout** is everyone with Ground search and rescue who is active, so
+  its review takes off Dana, who is away; **Swiftwater team** is everyone holding a
+  current swiftwater ticket, so its review takes off Priya, whose ticket expired.
   """
 
   alias App.Model.Activity
@@ -59,6 +77,7 @@ defmodule App.CoastRange do
   alias App.Model.ChoreCategory
   alias App.Model.ChoreCategoryTag
   alias App.Model.ChoreEvent
+  alias App.Model.Coordinate
   alias App.Model.CustomField
   alias App.Model.Endorsement
   alias App.Model.EndorsementQualification
@@ -66,19 +85,33 @@ defmodule App.CoastRange do
   alias App.Model.EquipmentUsage
   alias App.Model.Group
   alias App.Model.GroupMember
+  alias App.Model.GroupRule
+  alias App.Model.GroupRuleReference
+  alias App.Model.HomeCoordinate
+  alias App.Model.LocationBookmark
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
   alias App.Model.Organization
   alias App.Model.Qualification
+  alias App.Model.RouteDistance
   alias App.Model.Tag
   alias App.Model.Team
+  alias App.Model.Template
+  alias App.Model.TemplateGroup
+  alias App.Model.TemplateItem
+  alias App.Model.TemplateTag
+  alias App.Model.Trip
+  alias App.Model.WhiteboardNote
 
   # cspell:ignore CRSAR Kowal Noor Priya Okafor
 
   @timezone "America/Vancouver"
   @d4h_team_id 9_100_000
+  # The team's own place, its yard for mileage.
+  @yard_lat 49.2
+  @yard_lng -123.1
 
   # Name, ref id, phone, days on the team, position, and what sets them apart. Alex Chen
   # is the team admin and Cameron Ruiz the member mockups log in as.
@@ -265,30 +298,62 @@ defmodule App.CoastRange do
   @doc """
   Pure. Coast Range SAR as of `now`: rows `{kind, key, struct, links}` in the order they
   insert. `links` names each foreign key's row as `{field, {kind, key}}`; every row but
-  the team's also gets the team's id.
+  the team's also gets the team's id. `visitor: %{name:, email:}` adds a demo's visitor
+  as a member, `{:member, :visitor}`.
   """
-  def build(%DateTime{} = now) do
+  def build(%DateTime{} = now, opts \\ []) do
     now = DateTime.truncate(now, :second)
     today = Service.Period.today(now, @timezone)
+    people = people(opts[:visitor])
     activities = activities(now, today)
+    attendances = attendances(people, activities, now, today)
 
     Enum.concat([
       [{:team, :coastrange, team(now), []}],
       tags(),
       custom_fields(),
-      members(now),
-      groups(),
-      qualifications(today),
-      endorsements(),
-      member_cards(now),
+      people_rows(people, opts[:visitor], now, today),
       Enum.map(activities, &{:activity, &1.d4h_activity_id, &1, []}),
-      attendances(activities, now, today),
+      attendances,
       equipment(today),
       equipment_usages(activities),
       away_periods(today),
-      chores(activities, today)
+      chores(activities, today),
+      staged(now),
+      travel(people, activities, attendances, now)
     ])
   end
+
+  defp people_rows(people, visitor, now, today) do
+    Enum.concat([
+      members(people, visitor, now),
+      groups(people),
+      qualifications(people, today),
+      endorsements(),
+      group_rules(),
+      member_cards(people, now)
+    ])
+  end
+
+  defp staged(now), do: whiteboard_notes(now) ++ location_bookmarks() ++ templates()
+
+  defp travel(people, activities, attendances, now) do
+    homes = homes(people)
+
+    home_coordinates(people, homes) ++
+      route_distances(homes) ++ trips(activities, attendances, homes, now)
+  end
+
+  # The cast, and a demo's visitor after them: a team leader and an Owner like Alex.
+  defp people(nil), do: @people
+
+  defp people(%{}),
+    do:
+      List.insert_at(
+        @people,
+        -1,
+        {:visitor, "146", "604-555-0136", 1600, "Team leader", [:owner, :visitor]}
+      )
 
   @doc """
   Coast Range SAR's organization, made up like the team. Only App.SampleRepo seeds it,
@@ -317,8 +382,8 @@ defmodule App.CoastRange do
       authorized_by_title: "President",
       authorized_by_phone: "604-555-0112",
       authorized_by_email: email("Alex Chen"),
-      lat: 49.2,
-      lng: -123.1,
+      lat: @yard_lat,
+      lng: @yard_lng,
       timezone: @timezone,
       member_logins: true,
       chores_enabled: true,
@@ -404,30 +469,38 @@ defmodule App.CoastRange do
   defp agency_option("Ambulance"), do: 9_400_102
   defp agency_option("Fire"), do: 9_400_103
 
-  defp members(now), do: Enum.map(@people, &member(&1, now))
+  defp members(people, visitor, now), do: Enum.map(people, &member(&1, visitor, now))
 
-  defp member({name, ref_id, phone, days, position, marks}, now) do
+  defp member({key, ref_id, phone, days, position, marks}, visitor, now) do
     person? = :not_a_person not in marks
     retired? = :retired in marks
+    {name, email} = name_and_email(key, visitor)
 
     member = %Member{
       d4h_member_id: 9_110_000 + String.to_integer(ref_id),
       ref_id: ref_id,
       name: name,
-      email: if(person?, do: email(name)),
+      email: if(person?, do: email),
       phone: phone,
-      address: if(person? and :no_address not in marks, do: "#{ref_id} Example Road"),
+      address: address(ref_id, marks),
       position: position,
       joined_at: DateTime.add(now, -days, :day),
       d4h_permission: permission(marks),
       d4h_status: if(retired?, do: "RETIRED", else: "OPERATIONAL"),
       left_at: if(retired?, do: left_at(now)),
       not_a_person: not person?,
-      custom_values: member_values(name, ref_id)
+      custom_values: member_values(key, ref_id)
     }
 
-    {:member, name, member, []}
+    {:member, key, member, []}
   end
+
+  defp address(ref_id, marks) do
+    if :not_a_person in marks or :no_address in marks, do: nil, else: "#{ref_id} Example Road"
+  end
+
+  defp name_and_email(:visitor, visitor), do: {visitor.name, visitor.email}
+  defp name_and_email(name, _visitor), do: {name, email(name)}
 
   defp email(name), do: "#{name |> String.downcase() |> String.replace(" ", ".")}@example.com"
 
@@ -451,22 +524,21 @@ defmodule App.CoastRange do
     end
   end
 
-  defp person(name), do: Enum.find(@people, &(elem(&1, 0) == name))
+  defp person(people, name), do: Enum.find(people, &(elem(&1, 0) == name))
 
   # On the team now and a person: everyone a group of all, or an award, holds.
-  defp current_people,
+  defp current_people(people),
     do:
       for(
-        {name, _, _, _, _, marks} <- @people,
+        {name, _, _, _, _, marks} <- people,
         :retired not in marks,
         :not_a_person not in marks,
         do: name
       )
 
-  defp groups do
+  defp groups(people) do
     for {d4h_id, title, names} <- @groups do
-      names =
-        if names == :all, do: current_people() -- ["Riley Okafor", "Sam Rivera"], else: names
+      names = group_names(people, title, names)
 
       group = {:group, d4h_id, %Group{d4h_group_id: d4h_id, title: title}, []}
 
@@ -483,8 +555,29 @@ defmodule App.CoastRange do
     |> List.flatten()
   end
 
-  defp qualifications(today) do
+  defp visitor?(people), do: person(people, :visitor) != nil
+
+  # The visitor's first aid expires in 30 days, so their Dashboard asks them to renew it.
+  defp visitor_awards(people, 9_600_002), do: if(visitor?(people), do: [{:visitor, 30}], else: [])
+
+  defp visitor_awards(people, 9_600_005),
+    do: if(visitor?(people), do: [{:visitor, 900}], else: [])
+
+  defp visitor_awards(_people, _d4h_id), do: []
+
+  defp group_names(people, _title, :all),
+    do: current_people(people) -- ["Riley Okafor", "Sam Rivera"]
+
+  # The visitor leads, beside Alex.
+  defp group_names(people, "Team leaders", names),
+    do: if(visitor?(people), do: List.insert_at(names, -1, :visitor), else: names)
+
+  defp group_names(_people, _title, names), do: names
+
+  defp qualifications(people, today) do
     for {d4h_id, title, months, holders} <- @qualifications do
+      holders = if is_list(holders), do: holders ++ visitor_awards(people, d4h_id), else: holders
+
       qualification =
         {:qualification, d4h_id,
          %Qualification{
@@ -493,20 +586,20 @@ defmodule App.CoastRange do
            expires_months_default: months
          }, []}
 
-      [qualification | awards(d4h_id, months, holders, today)]
+      [qualification | awards(people, d4h_id, months, holders, today)]
     end
     |> List.flatten()
   end
 
   # Ground search and rescue never expires, and comes two months after joining.
-  defp awards(d4h_id, nil, :all, today) do
-    for {name, i} <- Enum.with_index(current_people() -- ["Riley Okafor"], 1) do
-      {_, _, _, days, _, _} = person(name)
+  defp awards(people, d4h_id, nil, :all, today) do
+    for {name, i} <- Enum.with_index(current_people(people) -- ["Riley Okafor"], 1) do
+      {_, _, _, days, _, _} = person(people, name)
       award(d4h_id, name, i, Date.add(today, 60 - days), nil)
     end
   end
 
-  defp awards(d4h_id, months, holders, today) do
+  defp awards(_people, d4h_id, months, holders, today) do
     for {{name, expires_in}, i} <- Enum.with_index(holders, 1) do
       ends = Date.add(today, expires_in)
       award(d4h_id, name, i, Date.shift(ends, month: -months), ends)
@@ -524,13 +617,18 @@ defmodule App.CoastRange do
      member_id: {:member, name}, qualification_id: {:qualification, d4h_id}}
   end
 
-  # The endorsements ID cards list, each earned by one qualification.
-  @endorsements [{"First aid", 9_600_002}, {"Ground search and rescue", 9_600_001}]
+  # The endorsements ID cards list, each earned by one qualification, and Swiftwater, which
+  # only a group rule uses.
+  @endorsements [
+    {"First aid", 9_600_002, true},
+    {"Ground search and rescue", 9_600_001, true},
+    {"Swiftwater", 9_600_004, false}
+  ]
 
   defp endorsements do
-    for {name, d4h_qualification_id} <- @endorsements do
+    for {name, d4h_qualification_id, on_card} <- @endorsements do
       [
-        {:endorsement, name, %Endorsement{name: name, on_card: true}, []},
+        {:endorsement, name, %Endorsement{name: name, on_card: on_card}, []},
         {:endorsement_qualification, name,
          %EndorsementQualification{d4h_qualification_id: d4h_qualification_id},
          endorsement_id: {:endorsement, name}}
@@ -555,22 +653,35 @@ defmodule App.CoastRange do
   end
 
   # The cancelled card is Cameron's last one, replaced a month ago, so it goes first.
-  defp member_cards(now) do
+  # The visitor's card has no code: the demo gives it a real one (App.Operation.BuildDemoTeam).
+  defp member_cards(people, now) do
     revoked_at = now |> DateTime.add(-30, :day) |> usec()
 
-    for %{member: name} = sample <- Enum.sort_by(sample_cards(), &(&1.status != :revoked)),
-        name != nil do
-      card = %MemberCard{
-        code: sample.code,
-        serial_number: "coastrange-#{ref_id(name)}",
-        revoked_at: if(sample.status == :revoked, do: revoked_at)
-      }
+    samples =
+      for %{member: name} = sample <- Enum.sort_by(sample_cards(), &(&1.status != :revoked)),
+          name != nil do
+        card = %MemberCard{
+          code: sample.code,
+          serial_number: "coastrange-#{ref_id(people, name)}",
+          revoked_at: if(sample.status == :revoked, do: revoked_at)
+        }
 
-      {:member_card, sample.code, card, member_id: {:member, name}}
-    end
+        {:member_card, sample.code, card, member_id: {:member, name}}
+      end
+
+    visitor =
+      if visitor?(people),
+        do: [
+          {:member_card, :visitor,
+           %MemberCard{serial_number: "coastrange-#{ref_id(people, :visitor)}"},
+           member_id: {:member, :visitor}}
+        ],
+        else: []
+
+    samples ++ visitor
   end
 
-  defp ref_id(name), do: name |> person() |> elem(1)
+  defp ref_id(people, name), do: people |> person(name) |> elem(1)
 
   # D4H's whole-day dates, at noon UTC so they read as the same day in Vancouver.
   defp noon(date), do: DateTime.new!(date, ~T[12:00:00], "Etc/UTC")
@@ -786,10 +897,10 @@ defmodule App.CoastRange do
 
   # Each member's reply to each activity they were on the team for, in a pattern rather
   # than at random, so a run is the same every time. Most attend; incidents fewer.
-  defp attendances(activities, now, today) do
+  defp attendances(people, activities, now, today) do
     for {activity, a} <- Enum.with_index(activities),
         not chore?(activity),
-        {person, i} <- Enum.with_index(@people),
+        {person, i} <- Enum.with_index(people),
         row = attendance(activity, person, {a, i}, now, today),
         do: row
   end
@@ -815,9 +926,19 @@ defmodule App.CoastRange do
     on = local_date(activity.started_at)
 
     cond do
+      :visitor in marks -> visitor_status(activity, score, now)
       :away in marks and Date.diff(on, today) in -10..20 -> "absent"
       # Sam stopped coming before joining Retiring.
       :retiring in marks and Date.diff(today, on) < 120 -> nil
+      true -> reply(score, replies(activity, now))
+    end
+  end
+
+  # The visitor has yet to reply to what's coming, and was at the newest incident.
+  defp visitor_status(activity, score, now) do
+    cond do
+      not Activity.started?(activity, now) -> "requested"
+      activity.title == "Missing hiker" -> "attending"
       true -> reply(score, replies(activity, now))
     end
   end
@@ -1029,4 +1150,279 @@ defmodule App.CoastRange do
        member_id: {:member, name}, activity_id: {:activity, activity.d4h_activity_id}}
     ]
   end
+
+  # ---- What a demo shows off --------------------------------------------------------
+
+  # Callout takes everyone with GSAR who is active, so Dana, away, comes off it.
+  # Swiftwater team takes current swiftwater tickets, so Priya, expired, comes off it.
+  @group_rules [
+    {9_500_001, "Ground search and rescue"},
+    {9_500_003, "Swiftwater"}
+  ]
+
+  defp group_rules do
+    for {d4h_group_id, endorsement} <- @group_rules do
+      in_rule = {d4h_group_id, :in}
+      standing_rule = {d4h_group_id, :standing}
+
+      [
+        {:group_rule, in_rule, %GroupRule{d4h_group_id: d4h_group_id, kind: :in}, []},
+        {:group_rule_reference, {in_rule, endorsement}, %GroupRuleReference{},
+         group_rule_id: {:group_rule, in_rule}, endorsement_id: {:endorsement, endorsement}},
+        {:group_rule, standing_rule, %GroupRule{d4h_group_id: d4h_group_id, kind: :standing}, []},
+        {:group_rule_reference, {standing_rule, :active}, %GroupRuleReference{standing: :active},
+         group_rule_id: {:group_rule, standing_rule}}
+      ]
+    end
+    |> List.flatten()
+  end
+
+  # Text, link, important, days ago posted, and days on until it comes down.
+  @notes [
+    {"Pager test Sunday at 10:00. Reply to the page so we know yours works.", nil, true, 1, 6},
+    {"Winter tires go on Truck 1 on Saturday. Sign up for a shift at the hall.",
+     "https://example.com/tires", false, 3, 10},
+    {"Dues are due by the end of the month. Pay at the hall or online.",
+     "https://example.com/dues", false, 8, 20}
+  ]
+
+  defp whiteboard_notes(now) do
+    for {{text, url, important, posted, stays}, n} <- Enum.with_index(@notes, 1) do
+      note = %WhiteboardNote{
+        d4h_whiteboard_note_id: 9_900_000 + n,
+        text: text,
+        url: url,
+        important: important,
+        archived_at: DateTime.add(now, stays, :day),
+        d4h_created_at: DateTime.add(now, -posted, :day)
+      }
+
+      {:whiteboard_note, 9_900_000 + n, note, []}
+    end
+  end
+
+  # The places a team admin picks from when they make an activity (#614). A leading !
+  # sorts the hall first, as teams do in D4H.
+  @bookmarks [
+    {"!Hall", "100 Example Road", "49.25000,-123.10000"},
+    {"Cedar Creek training ground", nil, "49.37000,-123.02000"},
+    {"Grouse ridge trailhead", nil, "49.38000,-123.08000"}
+  ]
+
+  defp location_bookmarks do
+    for {{title, address, coordinate}, n} <- Enum.with_index(@bookmarks, 1) do
+      bookmark = %LocationBookmark{
+        d4h_location_bookmark_id: 9_910_000 + n,
+        title: title,
+        address: address,
+        coordinate: coordinate
+      }
+
+      {:location_bookmark, title, bookmark, []}
+    end
+  end
+
+  # Title, kind, its details, and the tags, groups, and equipment it brings.
+  @templates [
+    {"Weekly training", "exercise",
+     %{
+       start_time: ~T[19:00:00],
+       duration_minutes: 150,
+       enough_at: 8,
+       place: "Hall training yard",
+       coordinate: "49.33000,-122.86000",
+       description: "Weekly training."
+     }, ["Training"], [9_500_001], []},
+    {"Callout", "incident", %{description: "Called out by the police."}, [], [9_500_001],
+     [{9_800_001, 0}, {9_800_002, 0}]},
+    {"Public education booth", "event",
+     %{
+       start_time: ~T[10:00:00],
+       duration_minutes: 240,
+       enough_at: 4,
+       full_at: 6,
+       place: "Coast Range SAR hall, 100 Example Road",
+       coordinate: "49.25000,-123.10000",
+       hours: "secondary",
+       description: "A booth for the public."
+     }, ["Public education"], [9_500_004], [{9_800_008, 0}]}
+  ]
+
+  defp templates do
+    for {title, kind, details, tags, groups, items} <- @templates do
+      template =
+        struct!(%Template{title: title, activity_kind: kind, custom_values: %{}}, details)
+
+      [
+        {:template, title, template, []},
+        template_tags(title, tags),
+        template_groups(title, groups),
+        template_items(title, items)
+      ]
+    end
+    |> List.flatten()
+  end
+
+  defp template_tags(title, tags) do
+    for tag <- tags,
+        do:
+          {:template_tag, {title, tag}, %TemplateTag{},
+           template_id: {:template, title}, tag_id: {:tag, tag}}
+  end
+
+  defp template_groups(title, groups) do
+    for group <- groups,
+        do:
+          {:template_group, {title, group}, %TemplateGroup{},
+           template_id: {:template, title}, group_id: {:group, group}}
+  end
+
+  defp template_items(title, items) do
+    for {item, minutes} <- items,
+        do:
+          {:template_item, {title, item}, %TemplateItem{minutes: minutes},
+           template_id: {:template, title}, equipment_item_id: {:equipment_item, item}}
+  end
+
+  # Made-up homes on land around the base, one per member with an address, in the cast's
+  # order. The last is up the highway in Squamish, for a long drive.
+  @homes [
+    {49.32000, -123.07000},
+    {49.34000, -123.04000},
+    {49.25000, -123.00000},
+    {49.28400, -122.79300},
+    {49.28300, -122.83000},
+    {49.20600, -122.91100},
+    {49.26000, -123.07000},
+    {49.26800, -123.15500},
+    {49.32900, -123.16000},
+    {49.17000, -123.14000},
+    {49.19000, -122.85000},
+    {49.21900, -122.60000},
+    {49.22100, -122.68900},
+    {49.32900, -122.95000},
+    {49.23000, -122.97000},
+    {49.26200, -122.78100},
+    {49.70160, -123.15580}
+  ]
+
+  # Each member with an address's home, as the mileage report's "lat,lng" point.
+  defp homes(people) do
+    with_address =
+      for {key, _, _, _, _, marks} <- people,
+          :not_a_person not in marks and :no_address not in marks,
+          do: key
+
+    with_address
+    |> Enum.zip(@homes)
+    |> Map.new(fn {key, {lat, lng}} -> {key, point(lat, lng)} end)
+  end
+
+  defp point(coordinate), do: coordinate |> Coordinate.build() |> Coordinate.to_string(5)
+  defp point(lat, lng), do: lat |> Coordinate.build(lng) |> Coordinate.to_string(5)
+
+  defp yard, do: point(@yard_lat, @yard_lng)
+
+  defp home_coordinates(people, homes) do
+    for {key, ref_id, _, _, _, _} <- people, home = homes[key] do
+      row = %HomeCoordinate{address: "#{ref_id} Example Road", coordinate: home}
+      {:home_coordinate, key, row, member_id: {:member, key}}
+    end
+  end
+
+  # One way by car from each incident's place and the yard to each home, and from the
+  # yard to each incident: the pairs the mileage report asks for, saved.
+  defp route_distances(homes) do
+    places = Enum.map(@incident_places, &point/1)
+
+    pairs =
+      for(from <- [yard() | places], home <- Map.values(homes), do: {from, home}) ++
+        for place <- places, do: {yard(), place}
+
+    pairs |> Enum.uniq() |> Enum.map(&route_distance/1)
+  end
+
+  defp route_distance({from, to} = pair) do
+    route = %RouteDistance{origin: from, destination: to, metres: metres(from, to)}
+    {:route_distance, pair, route, []}
+  end
+
+  # As the crow flies, near enough over a few km, and 40% more for the road.
+  @km_per_degree 111.2
+
+  defp metres(from, to) do
+    {lat1, lng1} = Coordinate.build(from)
+    {lat2, lng2} = Coordinate.build(to)
+    across = (lng2 - lng1) * :math.cos((lat1 + lat2) / 2 * :math.pi() / 180)
+    km = :math.sqrt((lat2 - lat1) ** 2 + across ** 2) * @km_per_degree
+    round(km * 1000 * 1.4)
+  end
+
+  # Round trip, in whole km, as App.Operation.BuildMileageReport works it out.
+  defp round_trip_km(from, to), do: round(metres(from, to) / 1000 * 2)
+
+  # Travel on the two draft incidents. Missing hiker is part way: a team admin set most
+  # rows, some members confirmed, the visitor hasn't, and some rows aren't set. Overdue
+  # kayakers is done: every row set and confirmed.
+  defp trips(activities, attendances, homes, now) do
+    for title <- ["Missing hiker", "Overdue kayakers"],
+        activity = Enum.find(activities, &(&1.title == title)),
+        {attendance, j} <-
+          attendances |> Enum.filter(&attended_on?(&1, activity)) |> Enum.with_index(),
+        trip = trip(activity, attendance, j, homes, now),
+        do: trip
+  end
+
+  defp trip(activity, {:attendance, {_id, key}, row, _links}, j, homes, now) do
+    case trip_plan(activity.title, key, j) do
+      {nil, _checked?} ->
+        nil
+
+      {travel, checked?} ->
+        {travel, km} = travel_km(travel, point(activity.coordinate), homes[key])
+        checked_days = if activity.title == "Missing hiker", do: 1, else: 8
+
+        trip = %Trip{
+          d4h_attendance_id: row.d4h_attendance_id,
+          travel: travel,
+          km: km,
+          checked_at: if(checked?, do: DateTime.add(now, -checked_days, :day))
+        }
+
+        {:trip, row.d4h_attendance_id, trip,
+         activity_id: {:activity, activity.d4h_activity_id}, member_id: {:member, key}}
+    end
+  end
+
+  # With no home to drive from, a team admin types the km.
+  defp travel_km(travel, place, home) do
+    case trip_km(travel, place, home) do
+      nil -> {"other", 40}
+      km -> {travel, km}
+    end
+  end
+
+  defp attended_on?({:attendance, {id, _key}, row, _links}, activity),
+    do: id == activity.d4h_activity_id and row.status == "attending"
+
+  # How each attended row got there, and whether its member confirmed: nil for not set.
+  defp trip_plan("Missing hiker", :visitor, _j), do: {"icp", false}
+  defp trip_plan("Missing hiker", "Alex Chen", _j), do: {"icp", true}
+
+  defp trip_plan("Missing hiker", _key, j) do
+    case rem(j, 4) do
+      0 -> {"icp", true}
+      1 -> {"passenger", true}
+      2 -> {nil, false}
+      3 -> {"yard", false}
+    end
+  end
+
+  defp trip_plan("Overdue kayakers", _key, j),
+    do: if(rem(j, 5) == 2, do: {"passenger", true}, else: {"icp", true})
+
+  defp trip_km("passenger", _place, _home), do: 0
+  defp trip_km(_travel, _place, nil), do: nil
+  defp trip_km("icp", place, home), do: round_trip_km(place, home)
+  defp trip_km("yard", _place, home), do: round_trip_km(yard(), home)
 end
