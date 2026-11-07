@@ -34,11 +34,37 @@ defmodule Web.ActivityMembersLive.Update do
   def label, do: "Send an update"
 
   @impl Action
-  def hint(%{activity: activity, now: now}) do
-    if Activity.started?(activity, now),
-      do: "Your message, by email. Nothing on the activity changes.",
-      else: "Your message, whatever their reply."
+  # Before the start each email ends with where the member stands; from it, a link to the
+  # activity, as the step's confirm says.
+  def hint(%{activity: activity, now: now}, checked) do
+    what =
+      if Activity.started?(activity, now),
+        do: "your message and a link to the activity.",
+        else: "your message and where they stand."
+
+    count = length(checked)
+    reached = checked |> SendActivityUpdate.plan() |> reached()
+
+    cond do
+      checked == [] ->
+        "The checked get #{what}"
+
+      reached == count ->
+        "#{Action.all_checked(count)} #{if count == 1, do: "gets", else: "get"} #{what}"
+
+      true ->
+        "#{reached} of the #{count} checked #{if reached == 1, do: "gets", else: "get"} #{what} #{Action.count_verb(count - reached, "has", "have")} no email."
+    end
   end
+
+  @impl Action
+  def unavailable(_ctx, []), do: nil
+
+  def unavailable(_ctx, checked),
+    do:
+      if(checked |> SendActivityUpdate.plan() |> reached() == 0,
+        do: "Nobody checked has an email."
+      )
 
   # It changes nothing on the activity, so only a deleted one stops it.
   @impl Action

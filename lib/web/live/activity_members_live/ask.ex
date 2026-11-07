@@ -1,12 +1,13 @@
-defmodule Web.ActivityMembersLive.Remind do
+defmodule Web.ActivityMembersLive.Ask do
   @moduledoc """
-  Send a reminder (#895), a step before the start: email the checked members with no
-  reply, once a team admin picks them on the Members tab. It lists who gets one, with
-  when each was emailed before, then everyone else checked who gets none, and why: they
-  replied, are retiring, turned reminders off, or have no email (#608). Then the message
-  (#609), starting with how many more are needed while short (#447), the email as it
-  goes, and one send. SendReminders.plan/3 decides who gets one, and its call/6 checks
-  again on send.
+  Ask for a reply (#895, #920), a step before the start: email “Will you be there?” to
+  the checked members with no reply, once a team admin picks them on the Members tab. To
+  the member it's an invitation reminder, so the email and the operation keep that name.
+  It lists who gets one, with when each was emailed before, then everyone else checked
+  who gets none, and why: they replied, are retiring, turned reminders off, or have no
+  email (#608). Then the message (#609), starting with how many more are needed while
+  short (#447), the email as it goes, and one send. SendReminders.plan/3 decides who gets
+  one, and its call/6 checks again on send.
   """
   @behaviour Web.ActivityMembersLive.Action
 
@@ -27,13 +28,44 @@ defmodule Web.ActivityMembersLive.Remind do
   alias Web.ActivityMembersLive.Action
 
   @impl Action
-  def value, do: "remind"
+  def value, do: "ask"
 
   @impl Action
-  def label, do: "Send a reminder"
+  def label, do: "Ask for a reply"
 
   @impl Action
-  def hint(_ctx), do: "Only members with no reply get one."
+  def hint(_ctx, []), do: "Emails “Will you be there?” to the checked with no reply."
+
+  # "Emails “Will you be there?” to the 2 checked with no reply. 1 has replied." The plan
+  # leaves out the retiring, reminders off, and no email, and the step says who.
+  def hint(%{retiring: retiring}, checked) do
+    plan = SendReminders.plan(checked, [], retiring)
+    send = length(plan.send)
+    replied = length(plan.replied)
+    left_out = length(plan.left_out)
+
+    [
+      send > 0 && "Emails “Will you be there?” to the #{send} checked with no reply.",
+      left_out > 0 && "#{left_out} with no reply can't get one.",
+      replied > 0 && "#{Action.count_verb(replied, "has", "have")} replied."
+    ]
+    |> Enum.filter(& &1)
+    |> Enum.join(" ")
+  end
+
+  # Greyed when nobody checked has no reply (#920 G), or none of them can get one.
+  @impl Action
+  def unavailable(_ctx, []), do: nil
+
+  def unavailable(%{retiring: retiring}, checked) do
+    plan = SendReminders.plan(checked, [], retiring)
+
+    cond do
+      plan.send != [] -> nil
+      plan.left_out == [] -> "Everyone checked has replied."
+      true -> "Nobody checked with no reply can get one."
+    end
+  end
 
   @impl Action
   def offered?(%{activity: activity, now: now}), do: Activity.open?(activity, now)
@@ -46,7 +78,7 @@ defmodule Web.ActivityMembersLive.Remind do
 
   @impl Action
   def button_text(count),
-    do: Format.count(count, one: "Remind 1 member", many: "Remind %d members")
+    do: Format.count(count, one: "Ask 1 member", many: "Ask %d members")
 
   @impl Action
   def variant, do: :primary
@@ -55,7 +87,7 @@ defmodule Web.ActivityMembersLive.Remind do
   def confirm(_ctx, _checked), do: %{}
 
   @impl Action
-  def run(_checked), do: {:step, :remind}
+  def run(_checked), do: {:step, :ask}
 
   # The plan is the checked members as the step opened; later renders keep it.
   @impl Phoenix.LiveComponent
@@ -120,7 +152,7 @@ defmodule Web.ActivityMembersLive.Remind do
       {:step_done, :info,
        reminders
        |> length()
-       |> Format.count(one: "Sending 1 reminder.", many: "Sending %d reminders.")}
+       |> Format.count(one: "Asking 1 member.", many: "Asking %d members.")}
 
   defp outcome({:error, :message_too_long}),
     do: {:step_flash, :error, SendReminders.error_text(:message_too_long)}
@@ -132,19 +164,19 @@ defmodule Web.ActivityMembersLive.Remind do
     assigns = assign(assigns, count: length(assigns.plan.send))
 
     ~H"""
-    <div id="remind-step">
-      <.form for={%{}} id="remind-form" phx-change="change" phx-submit="send" phx-target={@myself}>
-        <section id="remind-who">
+    <div id="ask-step">
+      <.form for={%{}} id="ask-form" phx-change="change" phx-submit="send" phx-target={@myself}>
+        <section id="ask-who">
           <h2 class="subheading">Who gets it</h2>
-          <p :if={@plan.send == []} id="remind-nobody">Nobody to email now.</p>
+          <p :if={@plan.send == []} id="ask-nobody">Nobody to email now.</p>
           <.table
             :if={@plan.send != []}
-            id="remind-to"
+            id="ask-to"
             rows={@plan.send}
-            row_id={&"remind-to-#{&1.member.id}"}
+            row_id={&"ask-to-#{&1.member.id}"}
             class="table-striped w-fit"
           >
-            <:col :let={email} label="Gets a reminder">
+            <:col :let={email} label="Member">
               <.member_cell
                 member={email.member}
                 team={@team}
@@ -159,10 +191,10 @@ defmodule Web.ActivityMembersLive.Remind do
 
         <.left_out plan={@plan} service={@service} />
 
-        <section id="remind-preview-section" class="mt-8">
+        <section id="ask-preview-section" class="mt-8">
           <div class="measure">
             <.input
-              id="remind-message"
+              id="ask-message"
               name="message"
               type="textarea"
               label="Message (optional)"
@@ -184,18 +216,18 @@ defmodule Web.ActivityMembersLive.Remind do
         <.form_actions class="mt-8">
           <.button
             :if={@count > 0}
-            id="remind-send"
+            id="ask-send"
             variant={:primary}
             phx-disable-with="Sending…"
             {send_confirm(
               @count,
               "Email #{members_text(@count)} about #{@activity.title}?",
-              ["Each gets a reminder to reply."]
+              ["Each gets “Will you be there?” and the reply buttons."]
             )}
           >
             {Format.count(@count, one: "Send 1 email", many: "Send %d emails")}
           </.button>
-          <.button id="remind-back" patch={@back}>Back</.button>
+          <.button id="ask-back" patch={@back}>Back</.button>
         </.form_actions>
       </.form>
     </div>
@@ -223,7 +255,7 @@ defmodule Web.ActivityMembersLive.Remind do
       )
 
     ~H"""
-    <section :if={@replied != [] or @reasons != %{}} id="remind-left-out" class="mt-8">
+    <section :if={@replied != [] or @reasons != %{}} id="ask-left-out" class="mt-8">
       <h2 class="subheading">Who does not get it</h2>
       <ul class="list-disc pl-6 space-y-1">
         <li :if={@replied != []} id="left-out-replied">

@@ -67,21 +67,33 @@ defmodule Web.ActivityMembersLiveTest do
   test "a table for each attendance, then one list and one button (A)", ctx do
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
 
-    assert has_element?(lv, "#members-attended #member-row-#{ctx.alex.id}")
-    assert has_element?(lv, "#members-absent #member-row-#{ctx.drew.id}")
-    assert has_element?(lv, "#members-no-reply #member-row-#{ctx.riley.id}")
-    assert has_element?(lv, "#members-attended-select-all")
+    assert has_element?(lv, "#members-table #member-row-#{ctx.alex.id}")
+    assert has_element?(lv, "#members-table #member-row-#{ctx.drew.id}")
+    assert has_element?(lv, "#members-table #member-row-#{ctx.riley.id}")
+    assert has_element?(lv, "#members-table-select-all")
     assert has_element?(lv, ~s|label[for="members-select-#{ctx.casey.id}"]|, "Casey Dhillon")
 
-    assert has_element?(lv, "#members-change legend", "Change the checked members")
-    assert has_element?(lv, "#members-change", "The activity's times, 19:00 to 21:30.")
-    assert has_element?(lv, "#members-change", "They stay on the activity, with no hours.")
-    assert has_element?(lv, "#members-change", "Add members puts them back, as attended.")
+    assert has_element?(lv, "#members-change legend", "For the checked members")
+    assert has_element?(lv, "#members-change", "Mark attended")
 
     assert has_element?(
              lv,
              "#members-change",
-             "Your message, by email. Nothing on the activity changes."
+             "Gives the checked the activity's times, 19:00 to 21:30."
+           )
+
+    assert has_element?(lv, "#members-change", "The checked who attended lose their hours.")
+
+    assert has_element?(
+             lv,
+             "#members-change",
+             "The checked get your message and a link to the activity."
+           )
+
+    assert has_element?(
+             lv,
+             "#members-change",
+             "The checked come off the activity, and lose any hours."
            )
 
     assert has_element?(lv, "#members-change-send[disabled]", "Change members")
@@ -95,14 +107,34 @@ defmodule Web.ActivityMembersLiveTest do
     check(lv, [ctx.casey.id, ctx.cameron.id])
     assert has_element?(lv, "#members-change-send[disabled]", "Change members")
 
+    # Casey attended: their hours go, so Mark absent asks first (#920).
     check(lv, [ctx.casey.id, ctx.cameron.id, ctx.drew.id], "absent")
+    assert has_element?(lv, "#members-change-send", "Mark 2 absent")
+
+    assert has_element?(
+             lv,
+             ~s|#members-change-send[data-confirm="Mark 2 members absent on Swiftwater training? Their hours go, and Mark attended gives back the activity's times, not their own."]|
+           )
+
+    assert has_element?(
+             lv,
+             ~s|#members-change-send[data-confirm-warning="Casey Dhillon's 2h 30m go."]|
+           )
+
+    # Only members with no reply: nothing is lost, so it doesn't ask.
+    check(lv, [ctx.cameron.id, ctx.riley.id], "absent")
     assert has_element?(lv, "#members-change-send", "Mark 2 absent")
     refute has_element?(lv, "#members-change-send[data-confirm]")
 
     check(lv, [ctx.casey.id, ctx.cameron.id, ctx.drew.id], "attended")
     assert has_element?(lv, "#members-change-send", "Mark 2 attended")
 
+    # Casey attended already: Mark attended greys out, and nothing is picked. Never Mark
+    # absent, which would take Casey's hours.
     check(lv, [ctx.casey.id], "attended")
+    assert has_element?(lv, "#members-change-choice[disabled]")
+    assert has_element?(lv, "#members-change", "Everyone checked attended already.")
+    refute has_element?(lv, "#members-change input[type=radio][checked]")
     assert has_element?(lv, "#members-change-send[disabled]", "Change members")
   end
 
@@ -119,8 +151,8 @@ defmodule Web.ActivityMembersLiveTest do
     |> render_submit()
 
     assert render(lv) =~ "2 members marked absent."
-    assert has_element?(lv, "#members-absent #member-row-#{ctx.casey.id}")
-    assert has_element?(lv, "#members-absent #member-row-#{ctx.cameron.id}")
+    assert has_element?(lv, "#member-row-#{ctx.casey.id} .marker-cant-make-it", "Absent")
+    assert has_element?(lv, "#member-row-#{ctx.cameron.id} .marker-cant-make-it", "Absent")
     assert has_element?(lv, "#activity-panel-counts", "1 attended · 3 absent · 1 no reply")
     refute has_element?(lv, ~s|#members-change-form input[name="member_ids[]"][checked]|)
     assert [%ChangeSet{source: :change_attendance}] = Repo.all(ChangeSet)
@@ -276,18 +308,35 @@ defmodule Web.ActivityMembersLiveTest do
     |> Repo.update!()
 
     {:ok, lv, _html} = live(ctx.conn, path(ctx))
-    assert has_element?(lv, "#members-signed-up #member-row-#{ctx.casey.id}")
-    assert has_element?(lv, "#members-cant-make-it #member-row-#{ctx.drew.id}")
-    assert has_element?(lv, "#members-no-reply #member-row-#{ctx.riley.id}")
-    assert has_element?(lv, "#members-no-reply-select-all")
+    assert has_element?(lv, "#members-table #member-row-#{ctx.casey.id}")
+    assert has_element?(lv, "#members-table #member-row-#{ctx.drew.id}")
+    assert has_element?(lv, "#members-table #member-row-#{ctx.riley.id}")
+    assert has_element?(lv, "#members-table-select-all")
     assert has_element?(lv, "#activity-members th", "Replied")
 
     assert has_element?(lv, "#members-change legend", "For the checked members")
-    assert has_element?(lv, "#members-change", "Only members with no reply get one.")
-    assert has_element?(lv, "#members-change", "Your message, whatever their reply.")
-    refute has_element?(lv, "#members-change", "Attended")
-    assert has_element?(lv, "#members-change", "Members who signed up get your message.")
-    assert has_element?(lv, "#members-change-send[disabled]", "Remind 0 members")
+
+    assert has_element?(
+             lv,
+             "#members-change",
+             "Emails “Will you be there?” to the checked with no reply."
+           )
+
+    assert has_element?(
+             lv,
+             "#members-change",
+             "The checked get your message and where they stand."
+           )
+
+    refute has_element?(lv, "#members-change", "Mark attended")
+
+    assert has_element?(
+             lv,
+             "#members-change",
+             "The checked come off the activity. Those who signed up get your message."
+           )
+
+    assert has_element?(lv, "#members-change-send[disabled]", "Ask 0 members")
     refute has_element?(lv, "#members-remove")
   end
 
@@ -306,7 +355,7 @@ defmodule Web.ActivityMembersLiveTest do
     {:ok, lv, _html} =
       live(log_in_user(build_conn(), user), ~p"/teams/#{team}/activities/#{activity.id}/members")
 
-    assert has_element?(lv, "#members-attended #member-row-#{member.id}")
+    assert has_element?(lv, "#members-table #member-row-#{member.id}")
     refute has_element?(lv, "#members-change-form")
 
     render_hook(lv, "apply", %{"member_ids" => [to_string(other.id)], "change" => "absent"})
@@ -326,15 +375,18 @@ defmodule Web.ActivityMembersLiveTest do
 
     test "shows only the group's members, with the count, in the URL", ctx do
       {:ok, lv, _html} = live(ctx.conn, path(ctx))
-      assert has_element?(lv, "#members-filter-summary", "5 members")
+      assert has_element?(lv, "#members-tile-all", "5")
+      refute has_element?(lv, "#members-filter-summary")
 
       filter(lv, ctx.leaders.id)
       assert_patch(lv, path(ctx) <> "?group=#{ctx.leaders.id}")
       assert has_element?(lv, "#members-filter-summary", "2 of 5 members, in Team leaders")
-      assert has_element?(lv, "#members-attended #member-row-#{ctx.casey.id}")
-      assert has_element?(lv, "#members-no-reply #member-row-#{ctx.riley.id}")
+      assert has_element?(lv, "#members-table #member-row-#{ctx.casey.id}")
+      assert has_element?(lv, "#members-table #member-row-#{ctx.riley.id}")
       refute has_element?(lv, "#member-row-#{ctx.alex.id}")
-      refute has_element?(lv, "#members-absent")
+      refute has_element?(lv, "#member-row-#{ctx.drew.id}")
+      assert has_element?(lv, "#members-tile-all", "2")
+      assert has_element?(lv, "#members-tile-absent.is-zero", "0")
       assert has_element?(lv, "#activity-panel-counts", "2 attended · 1 absent · 2 no reply")
 
       {:ok, lv, _html} = live(ctx.conn, path(ctx) <> "?group=#{ctx.leaders.id}")
@@ -364,7 +416,7 @@ defmodule Web.ActivityMembersLiveTest do
 
       other = group_fixture(team_fixture(), %{title: "Elsewhere"})
       {:ok, lv, _html} = live(ctx.conn, path(ctx) <> "?group=#{other.id}")
-      assert has_element?(lv, "#members-filter-summary", "5 members")
+      assert has_element?(lv, "#members-tile-all", "5")
       assert has_element?(lv, "#member-row-#{ctx.alex.id}")
     end
 
@@ -376,7 +428,7 @@ defmodule Web.ActivityMembersLiveTest do
       |> Repo.update!()
 
       {:ok, lv, _html} = live(ctx.conn, path(ctx) <> "?group=#{ctx.leaders.id}")
-      assert has_element?(lv, "#members-no-reply #member-row-#{ctx.riley.id}")
+      assert has_element?(lv, "#members-table #member-row-#{ctx.riley.id}")
       refute has_element?(lv, "#member-row-#{ctx.cameron.id}")
     end
 
@@ -401,7 +453,240 @@ defmodule Web.ActivityMembersLiveTest do
     end
   end
 
-  # Before the start, the list emails the checked members: Send a reminder and Send an
+  # One table with a tile per reply and a name search (#920): Alex and Casey attended,
+  # Drew is absent, and Cameron and Riley haven't replied.
+  describe "the tiles and search (#920)" do
+    defp search(lv, q),
+      do: lv |> form("#members-filter", %{"form" => %{"q" => q}}) |> render_change()
+
+    test "one table, the tiles from the start, and the bar under the list", ctx do
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+
+      assert has_element?(lv, ~s|#members-switch[aria-label="Attendance"]|)
+      assert has_element?(lv, "#members-tile-all[aria-current]", "5")
+      assert has_element?(lv, "#members-tile-attended", "2")
+      assert has_element?(lv, "#members-tile-absent", "1")
+      assert has_element?(lv, "#members-tile-no-reply", "2")
+
+      for header <- ["Member", "Attendance", "Start", "Finish", "Hours"],
+          do: assert(has_element?(lv, "#activity-members thead th", header))
+
+      refute has_element?(lv, "#activity-members thead th", "Replied")
+      assert has_element?(lv, "#member-row-#{ctx.casey.id}", "2h 30m")
+      refute has_element?(lv, "#member-row-#{ctx.drew.id}", "1 hour")
+      # Drew is absent, so the row has no hours, and the total leaves them out.
+      assert has_element?(lv, "#members-hours", "3h 30m in total")
+
+      assert has_element?(lv, "#members-bar #members-change-send[disabled]")
+      assert has_element?(lv, "#members-bar-hint", "Check members, then select what to do.")
+      check(lv, [ctx.casey.id], "absent")
+      refute has_element?(lv, "#members-bar-hint")
+    end
+
+    test "a tile shows its rows, in the URL, and unchecks the rows it hides", ctx do
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+      check(lv, [ctx.casey.id, ctx.cameron.id, ctx.riley.id], "absent")
+      assert has_element?(lv, "#members-change-send", "Mark 3 absent")
+
+      lv |> element("#members-tile-no-reply") |> render_click()
+      assert_patch(lv, path(ctx) <> "?status=no-reply")
+      assert has_element?(lv, "#members-tile-no-reply[aria-current]")
+      assert has_element?(lv, "#member-row-#{ctx.riley.id}")
+      refute has_element?(lv, "#member-row-#{ctx.casey.id}")
+      refute has_element?(lv, "#members-filter-summary")
+      assert has_element?(lv, "#members-change-send", "Mark 2 absent")
+
+      lv |> element("#members-tile-all") |> render_click()
+      assert_patch(lv, path(ctx))
+      refute has_element?(lv, "#members-select-#{ctx.casey.id}[checked]")
+      assert has_element?(lv, "#members-select-#{ctx.cameron.id}[checked]")
+    end
+
+    test "search finds a name, keeps the tile, and unchecks the rows it hides", ctx do
+      {:ok, lv, _html} = live(ctx.conn, path(ctx) <> "?status=no-reply")
+      check(lv, [ctx.cameron.id, ctx.riley.id], "absent")
+
+      search(lv, " oka ")
+      assert_patch(lv, path(ctx) <> "?status=no-reply&q=oka")
+      assert has_element?(lv, "#member-row-#{ctx.riley.id}")
+      refute has_element?(lv, "#member-row-#{ctx.cameron.id}")
+      # Counted against the tile: 1 of the 2 with no reply.
+      assert has_element?(lv, "#members-filter-summary", "1 of 2 members")
+      assert has_element?(lv, "#members-tile-no-reply", "2")
+      assert has_element?(lv, "#members-change-send", "Mark 1 absent")
+
+      search(lv, "nobody")
+      assert has_element?(lv, "#members-none-shown", "No members match")
+      assert has_element?(lv, "#members-none-shown", "Change the search or the filters.")
+      refute has_element?(lv, "#members-search-all")
+      refute has_element?(lv, "#members-change-form")
+
+      # Casey attended: the empty state says where, and Search all members keeps the search.
+      search(lv, "casey")
+      assert has_element?(lv, "#members-none-shown", "Casey Dhillon is in Attended.")
+      lv |> element("#members-search-all") |> render_click()
+      assert_patch(lv, path(ctx) <> "?q=casey")
+      assert has_element?(lv, "#member-row-#{ctx.casey.id}")
+    end
+
+    test "select all is in the header, over only the rows shown", ctx do
+      {:ok, lv, _html} = live(ctx.conn, path(ctx) <> "?status=no-reply")
+      assert has_element?(lv, "#members-table-select-all")
+      boxes = lv |> element("#members-table") |> render()
+      assert boxes =~ ~s(id="members-select-#{ctx.cameron.id}")
+      assert boxes =~ ~s(id="members-select-#{ctx.riley.id}")
+      refute boxes =~ ~s(id="members-select-#{ctx.casey.id}")
+    end
+
+    test "a status that doesn't fit the activity shows everyone", ctx do
+      for status <- ["signed-up", "maybe"] do
+        {:ok, lv, _html} = live(ctx.conn, path(ctx) <> "?status=#{status}")
+        assert has_element?(lv, "#members-tile-all[aria-current]")
+        assert has_element?(lv, "#member-row-#{ctx.alex.id}")
+        assert has_element?(lv, "#member-row-#{ctx.riley.id}")
+      end
+    end
+
+    test "a member sees the tiles, search, and table, with no boxes or bar" do
+      %{user: user, member: member, team: team} = member_with_login_fixture()
+      activity = activity_fixture(team, %{started_at: ~U[2026-10-28 02:00:00Z]})
+      attendance_fixture(activity, member)
+      other = member_fixture(team, %{name: "Riley Okafor"})
+      attendance_fixture(activity, other, %{status: "requested"})
+      tab = ~p"/teams/#{team}/activities/#{activity.id}/members"
+
+      {:ok, lv, _html} = live(log_in_user(build_conn(), user), tab)
+      assert has_element?(lv, "#members-tile-no-reply", "1")
+      assert has_element?(lv, "#members-filter input[type=search]")
+      refute has_element?(lv, "#members-table-select-all")
+      refute has_element?(lv, "#members-bar")
+
+      lv |> element("#members-tile-no-reply") |> render_click()
+      assert has_element?(lv, "#member-row-#{other.id}")
+      refute has_element?(lv, "#member-row-#{member.id}")
+
+      search(lv, "riley")
+      assert_patch(lv, tab <> "?status=no-reply&q=riley")
+    end
+
+    test "before the start: reply tiles, and Asked on any row that has one", ctx do
+      starts = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+
+      ctx.activity
+      |> Ecto.Changeset.change(started_at: starts, finished_at: DateTime.add(starts, 2, :hour))
+      |> Repo.update!()
+
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+      assert has_element?(lv, ~s|#members-switch[aria-label="Replies"]|)
+      assert has_element?(lv, "#members-tile-signed-up", "2")
+      assert has_element?(lv, "#members-tile-cant-make-it", "1")
+      assert has_element?(lv, "#members-tile-no-reply", "2")
+      assert has_element?(lv, "#activity-members thead th", "Reply")
+      refute has_element?(lv, "#activity-members thead th", "Asked")
+
+      Repo.insert!(%Reminder{
+        team_id: ctx.team.id,
+        activity_id: ctx.activity.id,
+        member_id: ctx.casey.id,
+        sent_at: DateTime.add(DateTime.utc_now(), -1, :day),
+        status: :sent
+      })
+
+      {:ok, lv, _html} = live(ctx.conn, path(ctx) <> "?status=signed-up")
+      assert has_element?(lv, "#activity-members thead th", "Asked")
+      assert has_element?(lv, "#member-asked-#{ctx.casey.id}", "Asked")
+      assert has_element?(lv, "#member-row-#{ctx.casey.id} .marker-signed-up", "Signed up")
+    end
+  end
+
+  test "elsewhere_text/2 names one match, and counts more" do
+    row = fn name -> %Attendance{member: %App.Model.Member{name: name}} end
+
+    by_status = [
+      {"attending", [row.("Avery Chen"), row.("Blake Morrison"), row.("Casey Dhillon")]},
+      {"absent", [row.("Drew Patel")]}
+    ]
+
+    assert Web.ActivityMembersLive.elsewhere_text(by_status, false) ==
+             "3 match in Signed up. Drew Patel is in Can't make it."
+
+    assert Web.ActivityMembersLive.elsewhere_text([{"absent", [row.("Drew Patel")]}], true) ==
+             "Drew Patel is in Absent."
+  end
+
+  # The list by writing.md's Choices for checked rows (#920 I): one heading, the Actions
+  # order, hints from the ticks, and a greyed choice that says why.
+  describe "the list's words (#920)" do
+    defp labels(lv) do
+      lv
+      |> element("#members-change-choice-choices")
+      |> render()
+      |> Floki.parse_fragment!()
+      |> Floki.find("label")
+      |> Enum.map(
+        &(&1
+          |> Floki.text()
+          |> String.split("\n", trim: true)
+          |> hd()
+          |> String.trim())
+      )
+    end
+
+    test "from the start: changes, then Send an update, then Remove", ctx do
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+
+      assert labels(lv) == [
+               "Mark attended",
+               "Mark absent",
+               "Send an update",
+               "Remove from the activity"
+             ]
+
+      check(lv, [ctx.alex.id, ctx.casey.id, ctx.drew.id], "absent")
+
+      assert has_element?(
+               lv,
+               "#members-change",
+               "The 2 attended lose their hours, 3h 30m. They stay on the activity. 1 is absent already."
+             )
+
+      assert has_element?(lv, "#members-change-send", "Mark 2 absent")
+    end
+
+    test "before the start: Ask for a reply, Send an update, then Remove", ctx do
+      starts = DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.truncate(:second)
+
+      ctx.activity
+      |> Ecto.Changeset.change(started_at: starts, finished_at: DateTime.add(starts, 2, :hour))
+      |> Repo.update!()
+
+      {:ok, lv, _html} = live(ctx.conn, path(ctx))
+      assert labels(lv) == ["Ask for a reply", "Send an update", "Remove from the activity"]
+
+      check(lv, [ctx.casey.id, ctx.cameron.id, ctx.riley.id])
+
+      assert has_element?(
+               lv,
+               "#members-change",
+               "Emails “Will you be there?” to the 2 checked with no reply. 1 has replied."
+             )
+
+      assert has_element?(lv, "#members-change-send", "Ask 2 members")
+
+      # Only replied checked: Ask greys out, and the list starts on Send an update (G).
+      check(lv, [ctx.alex.id, ctx.casey.id])
+      assert has_element?(lv, "#members-change-choice[disabled]")
+      assert has_element?(lv, "#members-change", "Everyone checked has replied.")
+      assert has_element?(lv, "#members-change-choice_update[checked]")
+      assert has_element?(lv, "#members-change-send", "Email 2 members")
+    end
+
+    test "the step is /members/ask, and /members/remind is gone", ctx do
+      assert ctx.conn |> get(path(ctx) <> "/remind") |> html_response(404)
+    end
+  end
+
+  # Before the start, the list emails the checked members: Ask for a reply and Send an
   # update, each a step on its own route of this LiveView (#895 B, C). Casey signed up,
   # Drew can't make it, and Cameron, Riley, Dana, and Eli haven't replied: Dana turned
   # reminders off and Eli has no email. Cameron was reminded 2 days ago.
@@ -460,29 +745,32 @@ defmodule Web.ActivityMembersLiveTest do
       refute has_element?(lv, "#activity-send-reminders")
       refute has_element?(lv, "#activity-send-update")
 
-      check(lv, Enum.map(ctx.everyone, & &1.id), "remind")
-      assert has_element?(lv, "#members-change-send", "Remind 2 members")
+      check(lv, Enum.map(ctx.everyone, & &1.id), "ask")
+      assert has_element?(lv, "#members-change-send", "Ask 2 members")
 
       check(lv, Enum.map(ctx.everyone, & &1.id), "update")
       assert has_element?(lv, "#members-change-send", "Email 5 members")
 
-      check(lv, [ctx.casey.id, ctx.eli.id], "remind")
-      assert has_element?(lv, "#members-change-send[disabled]", "Remind 0 members")
+      # Casey signed up and Eli has no email: nobody to ask, so the list moves on.
+      check(lv, [ctx.casey.id, ctx.eli.id], "ask")
+      assert has_element?(lv, "#members-change-choice[disabled]")
+      assert has_element?(lv, "#members-change", "Nobody checked with no reply can get one.")
+      assert has_element?(lv, "#members-change-send", "Email 1 member")
     end
 
-    test "Send a reminder names who gets it, and why the rest get none (B)", ctx do
+    test "Ask for a reply names who gets it, and why the rest get none (B)", ctx do
       {:ok, lv, _html} = live(ctx.conn, path(ctx))
-      open_step(lv, ctx.everyone, "remind")
-      assert_patch(lv, path(ctx) <> "/remind")
+      open_step(lv, ctx.everyone, "ask")
+      assert_patch(lv, path(ctx) <> "/ask")
 
-      assert has_element?(lv, "h1", "Send a reminder")
+      assert has_element?(lv, "h1", "Ask for a reply")
       assert has_element?(lv, ".breadcrumbs", "Members")
-      assert has_element?(lv, "#remind-to-#{ctx.cameron.id} td", ctx.reminded)
-      assert has_element?(lv, "#remind-to-#{ctx.riley.id}")
-      refute has_element?(lv, "#remind-to-#{ctx.riley.id} td", ctx.reminded)
-      refute has_element?(lv, "#remind-step input[type=checkbox]")
-      assert has_element?(lv, "#remind-send", "Send 2 emails")
-      assert has_element?(lv, ~s(#remind-send[data-confirm^="Email 2 members about"]))
+      assert has_element?(lv, "#ask-to-#{ctx.cameron.id} td", ctx.reminded)
+      assert has_element?(lv, "#ask-to-#{ctx.riley.id}")
+      refute has_element?(lv, "#ask-to-#{ctx.riley.id} td", ctx.reminded)
+      refute has_element?(lv, "#ask-step input[type=checkbox]")
+      assert has_element?(lv, "#ask-send", "Send 2 emails")
+      assert has_element?(lv, ~s(#ask-send[data-confirm^="Email 2 members about"]))
 
       assert has_element?(lv, "#left-out-replied", "1 signed up and 1 can't make it")
       assert has_element?(lv, "#left-out-reminders_off", "Dana Clark")
@@ -493,23 +781,23 @@ defmodule Web.ActivityMembersLiveTest do
       refute render(lv) =~ "/replies/"
     end
 
-    test "Send a reminder emails only the checked, with the message (B)", ctx do
+    test "Ask for a reply emails only the checked, with the message (B)", ctx do
       {:ok, lv, _html} = live(ctx.conn, path(ctx))
-      open_step(lv, [ctx.riley, ctx.casey], "remind")
-      refute has_element?(lv, "#remind-to-#{ctx.cameron.id}")
+      open_step(lv, [ctx.riley, ctx.casey], "ask")
+      refute has_element?(lv, "#ask-to-#{ctx.cameron.id}")
       assert has_element?(lv, "#left-out-replied", "1 signed up")
 
-      lv |> form("#remind-form") |> render_change(%{"message" => "Bring your rope kit."})
+      lv |> form("#ask-form") |> render_change(%{"message" => "Bring your rope kit."})
       assert has_element?(lv, "#email-preview", "Bring your rope kit.")
-      assert has_element?(lv, "#remind-send", "Send 1 email")
+      assert has_element?(lv, "#ask-send", "Send 1 email")
 
-      lv |> form("#remind-form") |> render_submit(%{"message" => "Bring your rope kit."})
+      lv |> form("#ask-form") |> render_submit(%{"message" => "Bring your rope kit."})
       assert_patch(lv, path(ctx))
 
       assert_received {:email, %{to: [{"Riley Okafor", _}], text_body: text}}
       assert text =~ "Bring your rope kit."
       refute_received {:email, _}
-      assert has_element?(lv, "#flash-info", "Sending 1 reminder.")
+      assert has_element?(lv, "#flash-info", "Asking 1 member.")
       assert has_element?(lv, "#members-batch", "1 sent")
       refute has_element?(lv, ~s|#members-change-form input[name="member_ids[]"][checked]|)
 
@@ -520,8 +808,8 @@ defmodule Web.ActivityMembersLiveTest do
     test "the reminder's message starts with how many more are needed (#447)", ctx do
       ctx.activity |> Ecto.Changeset.change(enough_at: 5) |> Repo.update!()
       {:ok, lv, _html} = live(ctx.conn, path(ctx))
-      open_step(lv, [ctx.riley], "remind")
-      assert has_element?(lv, "#remind-message", "We need 4 more people.")
+      open_step(lv, [ctx.riley], "ask")
+      assert has_element?(lv, "#ask-message", "We need 4 more people.")
     end
 
     test "Back opens the tab with the filter and the ticks as they were", ctx do
@@ -543,7 +831,7 @@ defmodule Web.ActivityMembersLiveTest do
 
     test "a step opened with nothing checked goes to the tab", ctx do
       assert {:error, {:live_redirect, %{to: to, flash: flash}}} =
-               live(ctx.conn, path(ctx) <> "/remind")
+               live(ctx.conn, path(ctx) <> "/ask")
 
       assert to == path(ctx)
       assert flash["error"] == "Select the members again."
@@ -629,7 +917,7 @@ defmodule Web.ActivityMembersLiveTest do
 
     test "a send after the start sends nothing, and the tab says why", ctx do
       {:ok, lv, _html} = live(ctx.conn, path(ctx))
-      open_step(lv, [ctx.riley], "remind")
+      open_step(lv, [ctx.riley], "ask")
 
       ctx.activity
       |> Ecto.Changeset.change(
@@ -637,7 +925,7 @@ defmodule Web.ActivityMembersLiveTest do
       )
       |> Repo.update!()
 
-      lv |> form("#remind-form") |> render_submit(%{"message" => ""})
+      lv |> form("#ask-form") |> render_submit(%{"message" => ""})
       assert_patch(lv, path(ctx))
       assert has_element?(lv, "#flash-error", "Reminders closed when the activity started.")
       refute_received {:email, _}
@@ -654,7 +942,7 @@ defmodule Web.ActivityMembersLiveTest do
 
       {:ok, lv, _html} = live(conn, tab)
       refute has_element?(lv, "#members-change-form")
-      assert has_element?(lv, "#members-no-reply #member-row-#{member.id}")
+      assert has_element?(lv, "#members-table #member-row-#{member.id}")
     end
   end
 

@@ -79,7 +79,7 @@ defmodule Web.OutboxLive do
         go to members' inboxes and phones; a demo keeps them here, so nothing reaches anyone.
       </p>
       <p class="max-w-3xl mb-6">
-        Send a reminder or an update from an activity, remove a member, or email a tax credit
+        Ask for a reply or send an update from an activity, remove a member, or email a tax credit
         letter or an ID card, and the message shows up here at once, one for each member.
         Its links work: open a reminder's reply link to answer as that member.
       </p>

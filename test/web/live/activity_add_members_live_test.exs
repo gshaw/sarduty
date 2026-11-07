@@ -148,7 +148,7 @@ defmodule Web.ActivityAddMembersLiveTest do
     {:ok, lv, _html} =
       live(ctx.conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/members")
 
-    assert has_element?(lv, "#members-no-reply #member-row-#{ctx.eli.id}")
+    assert has_element?(lv, "#members-table #member-row-#{ctx.eli.id}")
   end
 
   test "a published activity sends the visitor back", ctx do

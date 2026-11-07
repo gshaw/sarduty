@@ -11,7 +11,7 @@ defmodule Web.FormCancelTest do
   @in_place %{
     "lib/web/live/activity_attendance_live.ex" =>
       "the review step's Cancel returns to the list on the same page",
-    "lib/web/live/activity_members_live/remind.ex" =>
+    "lib/web/live/activity_members_live/ask.ex" =>
       "a step of the Members tab: Back patches to the tab and keeps the ticks",
     "lib/web/live/activity_members_live/remove_before_start.ex" =>
       "a step of the Members tab: Back patches to the tab and keeps the ticks",

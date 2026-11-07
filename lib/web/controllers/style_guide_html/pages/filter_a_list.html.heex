@@ -41,7 +41,9 @@
     <li>The line under it has the count and Clear filters, and which rows the page shows.</li>
     <li>
       Actions on ticked rows, such as Add to group, go in a <code>.table-actions</code>
-      row under it, sized like the bar: 36px, small text, 44px on a touch screen.
+      row under it, sized like the bar: 36px, small text, 44px on a touch screen. A long list
+      with one button puts it in an <a href={page_path(:action_bar)}>action bar</a>
+      instead, which sticks to the foot of the window.
     </li>
     <li>The column headers sort the table.</li>
     <li><a href={page_path(:pagination)}>Pagination</a> goes under the table, 50 rows a page.</li>

@@ -182,8 +182,16 @@ defmodule App.Model.AttendanceTest do
     "lib/app/operation/remove_members.ex" => "a signed up member's reply, before the start",
     "lib/web/live/activity_members_live/remove_before_start.ex" =>
       "who of the checked signed up members gets the removal email",
-    "lib/web/live/activity_members_live.ex" => "one activity's table per attendance",
+    "lib/web/live/activity_members_live.ex" => "one activity's table, by reply or attendance",
+    "lib/app/view_model/activity_members_filter_view_model.ex" =>
+      "the Members tab's reply tiles, each D4H's status",
     "lib/web/live/activity_members_live/remove.ex" => "the hours a removal takes, from the row",
+    "lib/web/live/activity_members_live/attended.ex" =>
+      "Mark attended's hint counts the checked who attended already, from the row",
+    "lib/web/live/activity_members_live/action.ex" =>
+      "the hours a confirm says the checked who attended lose, from the row",
+    "lib/web/live/activity_members_live/absent.ex" =>
+      "Mark absent's hint names the hours the attended lose, from the row",
     "lib/web/live/activity_members_live/update.ex" => "a label, a table per reply",
     "lib/app/operation/change_attendance.ex" => "a row's status, changed by hand",
     "lib/app/operation/refresh_d4h_data/upsert_attendances.ex" =>

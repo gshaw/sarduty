@@ -262,6 +262,10 @@ fi
   `/styles/table` shows
   them, and `Web.StandardColumnsTest` fails on one built by hand. A column that recurs
   on a second page becomes the next one.
+- **A table that filters keeps its columns put** (/styles/table#fit). One column takes
+  the rest; every other column fits its longest values (`fit`, with `date_fit/2` and
+  the other fits in `Web.Components.Columns`) or takes a set share, such as `w-1/3`.
+  `Web.TableFitTest` fails on one that doesn't.
 - **Reach for a component or a class before utilities.** Banners, warning text, empty
   states, the error summary, and the result band are components; `.hint`,
   `.lead`, `.action`, `.card`, `.media`, `.heading-row`, `.code-block`, and `.small-print` are
@@ -279,6 +283,9 @@ fi
 - Buttons are `<.button variant={:success} size={:sm}>`; give it `navigate` or `href` for a
   link styled as a button. Badges are `<.badge kind={:incident}>`. Both check their values
   at compile time, so never write `class="btn btn-success"` or `class="badge"` by hand.
+- **A confirm for many records follows /styles/confirm-dialog#many**: name up to 3, then
+  a count and a total, and a check box from 10. The helpers are `names_or_count/2` and
+  `confirm_check/2` in `Web.Components.Messages`.
 - Phoenix hazards that are easy to trip on:
   - HEEx interpolates with `{…}` in attributes and bodies, and `<%= … %>` only for block
     constructs (`if`, `case`, `for`). Class lists use `[…]`. There is no `else if`; use

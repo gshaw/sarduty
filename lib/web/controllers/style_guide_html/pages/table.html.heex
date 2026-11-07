@@ -87,6 +87,61 @@
     A column that hides needs a reason in <code>Web.TableColumnsTest</code>.
   </p>
 
+  <h2 id="fit">Columns that stay put</h2>
+  <p>
+    A filter changes the rows, so a column sized by its rows moves with every tile and
+    search. Give each short column, such as a reply, a date, a time, or hours, its longest
+    values with <code>fit</code>: it is always that wide, and the name or title column takes
+    the rest. Here the same table shows everyone, then only Can't make it, and no edge moves.
+  </p>
+  <div
+    :for={rows <- [fit_rows(), Enum.filter(fit_rows(), &(&1.reply == "Can't make it"))]}
+    class="demo"
+  >
+    <.table id={"sample-fit-#{length(rows)}"} rows={rows} class="table-striped">
+      <:col :let={row} label="Member">
+        <.member_cell member={%{id: 0, name: row.name}} team={sample_team()} />
+      </:col>
+      <:col :let={row} label="Reply" fit={["Signed up", "Can't make it", "No reply"]}>
+        {row.reply}
+      </:col>
+      <:col :let={row} label="Replied" fit={["Sep 28, 20:08"]}>{row.replied}</:col>
+    </.table>
+  </div>
+  <ul>
+    <li>
+      A column of a few set words, such as a reply or a standing, fits all of them, even
+      the ones no row has now.
+    </li>
+    <li>
+      A date or time fits its longest form, such as "Sep 28, 20:08". A badge that can come
+      with it, such as New, comes in the fit too: pass the cell as it renders.
+    </li>
+    <li>
+      A value that comes from the records, such as each attended row's hours, fits every
+      row before the tiles, the search, and the pages. A pick that changes the values
+      themselves, such as a period or a year, fits what that pick shows.
+    </li>
+    <li>
+      One column takes the rest: the name or title, without a fit. Another text column fits
+      its values from the records when the team has a short list of them, such as roles,
+      places, or categories. One of any length, such as an activity's title, takes a set
+      share, such as <code>w-1/3</code>.
+    </li>
+    <li>
+      Tables one under the other, such as one for each place, give the same columns the
+      same fits, so their edges line up.
+    </li>
+    <li>
+      A fit makes a column as narrow as its values, so it takes the place of <code>w-px whitespace-nowrap</code>. On a phone, a stacked row lets a fitted value
+      wrap.
+    </li>
+  </ul>
+  <p>
+    A table with tiles, a search, or filters fits its short columns. A short table that never
+    filters doesn't need to.
+  </p>
+
   <h2>Standard columns</h2>
   <p>
     A column that recurs looks the same on every table. A record column is a record's name,
@@ -136,6 +191,10 @@
     </:col>
     <:col :let={c} label="Align" class="w-px">{c.align}</:col>
     <:col :let={c} label="Use for">{c.use}</:col>
+    <:col :let={c} label="Fit" class="w-px whitespace-nowrap">
+      <code :if={c.fit}>{c.fit}</code>
+      <span :if={!c.fit}>None</span>
+    </:col>
   </.table>
 
   <p>Every standing on the Member column:</p>
@@ -306,5 +365,7 @@
     to grey it. For row groups, pass
     <code>groups=&#123;[%&#123;id: "expired", title: "Expired", rows: […], muted: true&#125;]&#125;</code>
     instead of <code>rows</code>; each group is its own <code>tbody</code>, with the id <code>table-id-group-id</code>.
+    A short column takes <code>fit=&#123;["Signed up", "Can't make it"]&#125;</code>, its longest values as
+    text or as its own cell rendered; its header carries them unseen.
   </p>
 </.shell>

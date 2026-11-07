@@ -158,7 +158,7 @@ defmodule Web.Org.TeamLive do
             variant={:danger}
             phx-click="id_cards"
             phx-value-enabled="false"
-            data-confirm={"Turn off ID cards for #{@team.name}? This cancels its #{Service.Format.count(@cards, one: "%d card", many: "%d cards")}, and its team admins get an email."}
+            {Web.TeamSwitchConfirm.id_cards_off(@team, @cards)}
           >
             Turn off ID cards
           </.button>
