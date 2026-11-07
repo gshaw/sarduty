@@ -5,6 +5,11 @@ defmodule App.Report.ParserTest do
   alias App.Report.Parser
   alias App.Report.Query
 
+  test "reads a number with a decimal point" do
+    {:ok, query} = Parser.parse("select title from activities where hours > 0.25")
+    assert Query.text(query.where) == "hours > 0.25"
+  end
+
   test "reads every clause, in order" do
     {:ok, query} =
       Parser.parse("""

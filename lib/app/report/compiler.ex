@@ -43,6 +43,23 @@ defmodule App.Report.Compiler do
     do: with_subject(query, context, given, &plan(query, &1))
 
   @doc """
+  `{:ok, [%{text, type}]}`, one for each item in select, for a query checked as `compile/3`
+  checks it but with no SQL: a document's report (App.Document, #918), whose rows are
+  read when it prints. Nothing here reads the database.
+  """
+  def select_columns(%Query{} = query, %Context{} = context, given \\ %{}) do
+    with_subject(query, context, given, fn st ->
+      parts = parts(query, st)
+      check(query, parts)
+
+      {:ok,
+       query.select
+       |> Enum.zip(parts.select)
+       |> Enum.map(fn {ast, e} -> %{text: Query.text(ast), type: e.type} end)}
+    end)
+  end
+
+  @doc """
   `{:ok, {sql, params}}` that counts the rows `query` gives: groups when it groups, rows
   otherwise. For the page's total and its tiles (#784).
   """

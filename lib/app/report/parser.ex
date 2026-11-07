@@ -48,15 +48,23 @@ defmodule App.Report.Parser do
 
   @doc "`{:ok, %Query{}}`, or `{:error, %Error{}}` for the first mistake."
   def parse(text) when is_binary(text) do
-    with {:ok, tokens} <- Lexer.tokens(text) do
-      try do
-        {query, []} = query(tokens)
-        {:ok, query}
-      catch
-        {:report_error, error} -> {:error, error}
-      end
-    end
+    with {:ok, tokens} <- Lexer.tokens(text), do: parse_tokens(tokens)
   end
+
+  @doc "As `parse/1`, from the lexer's tokens: a document's report (App.Document, #918)."
+  def parse_tokens(tokens) when is_list(tokens) do
+    {query, []} = query(tokens)
+    {:ok, query}
+  catch
+    {:report_error, error} -> {:error, error}
+  end
+
+  @doc """
+  One expression from the front of `tokens`, and the tokens after it: `{expr, rest}`. A
+  document's values are a report's expressions (App.Document, #918). A mistake throws
+  `{:report_error, %Error{}}`, as everything here does.
+  """
+  def expression(tokens) when is_list(tokens), do: expr(tokens)
 
   defp query([]), do: fail(nil, "Write a query, starting with select.")
 
@@ -557,7 +565,11 @@ defmodule App.Report.Parser do
         "Write as and a format after #{Query.text(expr)}, such as format started_at as month."
       )
 
-  defp list(tokens, item) do
+  @doc """
+  A list split by commas from the front of `tokens`, each read by `item`, and the tokens
+  after it: `{items, rest}`.
+  """
+  def list(tokens, item) do
     {first, rest} = item.(tokens)
 
     case rest do
