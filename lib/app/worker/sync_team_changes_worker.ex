@@ -20,6 +20,7 @@ defmodule App.Worker.SyncTeamChangesWorker do
 
   alias App.Model.Event
   alias App.Model.Team
+  alias App.Operation.IssueEveryMemberCard
   alias App.Operation.SyncD4HChanges
   alias App.Worker.PushPassUpdatesWorker
 
@@ -63,6 +64,7 @@ defmodule App.Worker.SyncTeamChangesWorker do
         record(team, started_at, %{outcome: "changed", lists: changed})
         Phoenix.PubSub.broadcast(App.PubSub, "team_refresh", {:team_refreshed, team})
         PushPassUpdatesWorker.enqueue(team)
+        IssueEveryMemberCard.call(team, DateTime.utc_now())
         :ok
 
       {:error, {:key_rejected, status} = reason} ->

@@ -2,7 +2,9 @@
 
 A team manager issues a member an ID card from the member's **ID Card** tab, once a SAR
 Duty admin has turned ID cards on for the team on its admin page, `/admin/teams/:id`, or its organization
-admins have, on its page in the organization (#512). The card is emailed to the member
+admins have, on its page in the organization (#512). A team pilots cards with a few
+members, then turns on **Every member gets a card** and every member gets one
+([Every member gets a card](#every-member-gets-a-card)). The card is emailed to the member
 ([Issuing and emailing](#issuing-and-emailing)). A member sees the
 card on their own page ([members.md](members.md)). Anyone can
 check a card by scanning its QR code with a phone's camera, which opens its page on the
@@ -223,16 +225,47 @@ the code.
 
 Issue and Replace make the card when clicked, mark it `email_status: :sending`, and queue
 the job in the same transaction, so the tab shows the new card at once
-([SendMemberCard](../lib/app/operation/send_member_card.ex)). The job makes the card when
-the member has none, then emails it only while it is marked sending, so a retry, or a
-second job for the same card, sends one email. That lets a rollout queue the same job for
-every member, spread out with `enqueue(member, schedule_in: seconds)`. A member with no
-email still gets a card, with no email. The job is unique per member while it waits.
+([SendMemberCard](../lib/app/operation/send_member_card.ex)). The job emails the card only
+while it is marked sending, so a retry, or a second job for the same card, sends one
+email. A member with no email still gets a card, with no email. The job is unique per
+member while it waits, so a click joins a job already waiting and moves it to now and to
+the front of the queue.
 
 The card keeps how its email went, `email_status` and `emailed_at`, like
 `TaxCreditLetter.email_status`, and the tab's Emailed row shows it: when it went and to
 whom, Sending, or that it did not send. A refusal is tried again over about 2 hours; the
 last one marks it failed ([jobs.md](jobs.md)).
+
+## Every member gets a card
+
+A team pilots ID cards with a few members, issuing each from their ID Card tab. Then a
+team admin turns on **Every member gets a card** on team settings' Features tab, under ID
+cards (#893). It shows only as off, and can't be turned on, while ID cards are off.
+[IssueEveryMemberCard](../lib/app/operation/issue_every_member_card.ex) does the work.
+
+- **Turning it on asks first, with the counts**: "Creates 40 cards and emails 38 members.
+  2 have no email." From 10 emails up it waits on a check box, as every send to many
+  members does (`send_confirm/3`). It then makes a card, in one transaction, for each
+  member who is counted (a person, not retiring), current, and has no live card, and
+  queues a `SendMemberCardWorker` job to email each one with an address.
+- **Cards at once, emails over about 2 minutes.** Making a card is database rows alone,
+  so the ID Card tab and Your membership show it straight away. Each email job builds
+  an Apple pass (photo fetch, resize, signing) and a Google pass (HTTP), and production
+  is one shared CPU that throttles once its balance runs out (#584). The `bulk` queue's
+  limit of 2 paces them: about 1–2 seconds each, so 100 emails take about 2 minutes. They
+  run at a lower priority, after any click, reminder, or letter.
+- **While it's on, new members get theirs.** Each full refresh, and each sync that
+  changed something, does the same for members without a card: someone new in D4H, or
+  back from Retiring or retired with no card.
+- **Members with no email still get a card.** They see it on Your membership, and the
+  Features tab names them under the switch so a team admin can add an email in D4H.
+- **Off stops new cards and cancels none.** Emails already queued still go. Issue,
+  Replace, and Email card on the ID Card tab work either way.
+- **Turning ID cards off turns it off too**, and turning ID cards back on leaves it off
+  for a team admin to turn on again ([SetTeamIdCards](../lib/app/operation/set_team_id_cards.ex)).
+
+The Dashboard's "Add your ID card to Wallet" to-do is the only follow-up. No reminder
+email.
 
 ## Why the QR holds a link
 

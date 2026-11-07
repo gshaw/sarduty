@@ -10,8 +10,8 @@ defmodule App.Operation.SetTeamIdCards do
 
   Turning it off cancels every live card on the team, with a job per card that tells
   phones holding one to fetch the voided pass, so turning it back on never wakes old
-  cards. Either way the
-  team's team admins get an email.
+  cards. It also turns off the team's Every member gets a card
+  (App.Operation.IssueEveryMemberCard). Either way the team's team admins get an email.
   """
 
   import Ecto.Query
@@ -45,7 +45,7 @@ defmodule App.Operation.SetTeamIdCards do
   defp set(team, enabled, user, now) do
     {:ok, {team, revoked}} =
       Repo.transaction(fn ->
-        team = team |> Ecto.Changeset.change(id_cards_enabled: enabled) |> Repo.update!()
+        team = team |> Ecto.Changeset.change(changes(enabled)) |> Repo.update!()
         revoked = if enabled, do: [], else: MemberCard.revoke_team!(team, now)
         UpdateCancelledCardWorker.enqueue_all(revoked)
         kind = if enabled, do: :id_cards_turned_on, else: :id_cards_turned_off
@@ -62,4 +62,9 @@ defmodule App.Operation.SetTeamIdCards do
     TeamAdminMailer.deliver_id_cards(team, enabled, user.email, length(revoked), now)
     {:ok, team}
   end
+
+  # Every member gets a card (#893) waits on ID cards, so off turns it off too, and
+  # turning ID cards back on leaves it for a team admin to turn on again.
+  defp changes(true), do: [id_cards_enabled: true]
+  defp changes(false), do: [id_cards_enabled: false, every_member_card: false]
 end

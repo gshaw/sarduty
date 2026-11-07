@@ -9,6 +9,7 @@ defmodule App.Worker.RefreshTeamDataWorker do
   alias App.Adapter.D4H
   alias App.Model.Event
   alias App.Model.Team
+  alias App.Operation.IssueEveryMemberCard
   alias App.Operation.RefreshD4HData
   alias App.Worker.PushPassUpdatesWorker
 
@@ -45,6 +46,7 @@ defmodule App.Worker.RefreshTeamDataWorker do
     {:ok, team} = Team.update(team, %{d4h_refresh_result: "OK"})
     broadcast_team_refresh(team)
     PushPassUpdatesWorker.enqueue(team)
+    IssueEveryMemberCard.call(team, DateTime.utc_now())
     :ok
   end
 
