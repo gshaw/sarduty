@@ -401,6 +401,11 @@ defmodule Web.Components.Core do
   slot :below, doc: "under the box, such as what a time box read, or buttons that fill it"
   slot :label_end, doc: "after the label's text, such as a badge"
 
+  slot :beside,
+    doc: "radios: a field on the line of the choice whose `value` it names, such as a group box" do
+    attr :value, :string, required: true
+  end
+
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
     # Only show errors for fields the user has typed in, or after a failed save, as the
     # error summary does. A form sends nothing for radios none of which is checked, so
@@ -457,24 +462,43 @@ defmodule Web.Components.Core do
       <legend class="label mb-1">{@label}</legend>
       <.hint :if={@inner_block != []}>{render_slot(@inner_block)}</.hint>
       <.error :for={msg <- @errors}>{msg}</.error>
-      <label
-        :for={{label, value, hint, disabled?, i} <- @choices}
-        class={["choice", hint && "mb-3"]}
-      >
-        <input
-          type="radio"
-          id={if i == 0, do: @id, else: "#{@id}_#{value}"}
-          name={@name}
-          value={value}
-          checked={!disabled? and to_string(@value) == to_string(value)}
-          disabled={disabled?}
-          {@rest}
-        />
-        <span>
-          {label}
+      <%= for {label, value, hint, disabled?, i} <- @choices do %>
+        <% beside = Enum.filter(@beside, &(to_string(&1.value) == to_string(value))) %>
+        <label :if={beside == []} class={["choice", hint && "mb-3"]}>
+          <.radio_input
+            id={@id}
+            name={@name}
+            value={value}
+            i={i}
+            picked={@value}
+            disabled?={disabled?}
+            rest={@rest}
+          />
+          <span>
+            {label}
+            <span :if={hint} class="hint block">{hint}</span>
+          </span>
+        </label>
+        <%!-- A field beside the label sits outside it: a label holds one control. --%>
+        <div :if={beside != []} class={["choice-beside", hint && "mb-3"]}>
+          <div class="choice-beside-line">
+            <label class="choice">
+              <.radio_input
+                id={@id}
+                name={@name}
+                value={value}
+                i={i}
+                picked={@value}
+                disabled?={disabled?}
+                rest={@rest}
+              />
+              <span>{label}</span>
+            </label>
+            {render_slot(beside)}
+          </div>
           <span :if={hint} class="hint block">{hint}</span>
-        </span>
-      </label>
+        </div>
+      <% end %>
     </fieldset>
     """
   end
@@ -632,6 +656,28 @@ defmodule Web.Components.Core do
       />
       {render_slot(@below)}
     </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :name, :string, required: true
+  attr :value, :any, required: true
+  attr :i, :integer, required: true
+  attr :picked, :any, required: true
+  attr :disabled?, :boolean, required: true
+  attr :rest, :map, required: true
+
+  defp radio_input(assigns) do
+    ~H"""
+    <input
+      type="radio"
+      id={if @i == 0, do: @id, else: "#{@id}_#{@value}"}
+      name={@name}
+      value={@value}
+      checked={!@disabled? and to_string(@picked) == to_string(@value)}
+      disabled={@disabled?}
+      {@rest}
+    />
     """
   end
 

@@ -20,6 +20,17 @@
 
   fieldset { margin-bottom: var(--sp-4); }
 
+  /* A choice with a field on its line, such as Add to group's group box. The field drops
+     under the label on a phone, in line with the hint. See /styles/forms#radios. */
+  .choice-beside-line { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--sp-2); row-gap: var(--sp-1); }
+  .choice-beside-line > .choice { margin-block: 0; }
+  .choice-beside-line > .combobox { width: 16rem; }
+  .choice-beside > .hint { margin-left: calc(24px + var(--sp-2)); }
+
+  @media (max-width: 640px) {
+    .choice-beside-line > .combobox { width: auto; flex-basis: calc(100% - 24px - var(--sp-2)); margin-left: calc(24px + var(--sp-2)); }
+  }
+
   /* A switch: a checkbox drawn as a track and knob, on the trailing edge of its row. See
      /styles/forms. */
   .switch-row { display: flex; align-items: center; gap: var(--sp-3); }
