@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Log a chore: Today and Yesterday change the date in Safari after you've typed in the
+  date box.
 - Try a demo opens with something to see on every page: you're a member with an ID card
   and travel to confirm, group rules with changes to review, templates, whiteboard notes,
   and mileage set on the two latest incidents.

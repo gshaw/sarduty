@@ -186,6 +186,8 @@ defmodule Web.ChoreFormLive do
   attr :today, Date, required: true
   slot :inner_block
 
+  # Today and Yesterday take focus first: LiveView never changes a focused box's value,
+  # and Safari leaves focus in the date box when a button is tapped.
   defp date_field(assigns) do
     ~H"""
     <div class="max-w-xs">
@@ -198,8 +200,7 @@ defmodule Web.ChoreFormLive do
               id={"chore-date-#{String.downcase(label)}"}
               type="button"
               size={:sm}
-              phx-click="date"
-              phx-value-date={Date.to_iso8601(date)}
+              phx-click={JS.focus() |> JS.push("date", value: %{date: Date.to_iso8601(date)})}
             >
               {label}
             </.button>
