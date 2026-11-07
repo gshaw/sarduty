@@ -165,8 +165,9 @@ defmodule App.Model.MemberCard do
   @doc """
   `:active` while the member is in good standing (Member.good_standing?/3: current and
   not retiring), `:inactive` once they aren't, or `:revoked` for a replaced card, one a
-  team admin cancelled (#964), or one the team's ID cards switch cancelled. A member who comes back gets the same card back,
-  active. `repo` is App.SampleRepo for a sample card.
+  team admin cancelled (#964), or one the team's ID cards switch cancelled. A member who
+  comes back gets the same card back, active. `repo` is App.SampleRepo for a sample
+  card.
   """
   def status(card, now, repo \\ Repo)
 
