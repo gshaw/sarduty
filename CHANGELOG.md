@@ -9,6 +9,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
   attached under the signature.
 - Add ID card to Wallet on Your membership and the Dashboard opens the same page as the
   email. On a computer, it has a QR code to open it on your phone.
+- The ID card page no longer spins after you tap Add to Wallet. Its line says where SAR
+  Duty sees your card, and changes when that does. After a lost phone, it counts only
+  the devices that hold the new card.
 - A chore activity's page shows its chores' total under Duration, where it showed 0.
 - Try a demo opens with something to see on every page: you're a member with an ID card
   and travel to confirm, group rules with changes to review, templates, whiteboard notes,

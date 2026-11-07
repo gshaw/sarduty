@@ -66,7 +66,7 @@ defmodule App.Operation.PushPassUpdates do
     for registration <- PassRegistration.get_all_for_serial(card) do
       case APNs.push_pass_update(registration.push_token, config()) do
         :ok -> :ok
-        {:error, :unregistered} -> PassRegistration.delete!(registration)
+        {:error, :unregistered} -> drop(card, registration)
         {:error, _status} -> :error
       end
     end
@@ -74,6 +74,13 @@ defmodule App.Operation.PushPassUpdates do
     # A push is a nudge; the phone still gets the change on its next check. Log it
     # rather than fail the refresh or the cancel that caused it.
     error -> Logger.warning("pass push failed: #{Exception.message(error)}")
+  end
+
+  # A phone that dropped the pass without telling us. Its card's pages count it, so they
+  # hear of it as they do of an unregister.
+  defp drop(card, registration) do
+    PassRegistration.delete!(registration)
+    MemberCard.broadcast_wallet_changed(card.member_id)
   end
 
   defp config, do: :sarduty |> Application.get_env(:apple_pass) |> Map.new()

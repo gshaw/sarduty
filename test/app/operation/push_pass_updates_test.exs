@@ -130,12 +130,15 @@ defmodule App.Operation.PushPassUpdatesTest do
     refute_received {:pushed, _, _}
   end
 
-  test "drops a phone Apple says no longer has the pass", %{team: team, card: card} do
+  test "drops a phone Apple says no longer has the pass, and tells the card's pages",
+       %{team: team, card: card} do
     Req.Test.stub(App.Adapter.APNs, &Plug.Conn.send_resp(&1, 410, ~s({"reason":"Unregistered"})))
+    Phoenix.PubSub.subscribe(App.PubSub, MemberCard.pass_topic(card.member_id))
 
     PushPassUpdates.call(team, @now)
 
     assert PassRegistration.get_all_for_serial(card) == []
+    assert_received :wallet_changed
   end
 
   test "drops a phone whose push token Apple calls bad", %{team: team, card: card} do

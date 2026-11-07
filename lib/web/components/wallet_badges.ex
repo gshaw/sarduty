@@ -28,12 +28,10 @@ defmodule Web.Components.WalletBadges do
 
   attr :apple_click, :any, default: nil, doc: "a phx-click for a tap on Apple's badge"
   attr :google_click, :any, default: nil, doc: "a phx-click for a tap on Google's badge"
-  attr :adding, :atom, default: nil, doc: ":apple or :google: the badge the page waits on"
   attr :class, :any, default: nil
 
   # A phx-click on a link with a real href doesn't stop the link, so the pass still
-  # downloads or Google's page still opens while the page hears of the tap. LiveView
-  # marks the tapped badge phx-click-loading at once, before the server answers. Google's
+  # downloads or Google's page still opens while the page hears of the tap. Google's
   # opens in a new tab, so the page that sent it stays open to hear the save.
   def wallet_badges(assigns) do
     ~H"""
@@ -46,7 +44,6 @@ defmodule Web.Components.WalletBadges do
         :if={BuildApplePass.configured?()}
         id={"#{@id}-apple"}
         href={@apple_href}
-        class={@adding == :apple && "is-adding"}
         phx-click={@apple_click}
       >
         <img src={~p"/images/add-to-apple-wallet.svg"} alt="Add to Apple Wallet" />
@@ -56,7 +53,6 @@ defmodule Web.Components.WalletBadges do
         id={"#{@id}-google"}
         href={@google_href}
         target="_blank"
-        class={@adding == :google && "is-adding"}
         phx-click={@google_click}
       >
         <img src={~p"/images/add-to-google-wallet.svg"} alt="Add to Google Wallet" />

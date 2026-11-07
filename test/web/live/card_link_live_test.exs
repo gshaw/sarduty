@@ -66,23 +66,43 @@ defmodule Web.CardLinkLiveTest do
            )
   end
 
-  test "a tap on Apple's badge waits for the phone, until it registers the pass",
+  # The page's assigns: which Wallet a tap started a check on, and its give-up ref.
+  defp checking(lv),
+    do: Map.take(:sys.get_state(lv.pid).socket.assigns, [:checking, :checking_ref])
+
+  test "a tap on Apple's badge leaves the line as it was, until the phone registers the pass",
        %{conn: conn, member: member} do
     card = member_card_fixture(member)
     {:ok, lv, _html} = live(conn, CardLinks.path(card))
 
     lv |> element("#card-link-wallets-apple") |> render_click()
-    assert has_element?(lv, "#card-link-wallets-apple.is-adding")
+    assert has_element?(lv, "#card-link-status", "doesn't see your ID card in Wallet yet")
+    assert %{checking: :apple} = checking(lv)
+
+    PassRegistration.register!(card, "device-1", "push-token-1")
+    assert has_element?(lv, "#card-link-status", "in Apple Wallet on 1 device")
+    assert %{checking: nil} = checking(lv)
+  end
+
+  # A Wallet that already holds the card sends no news: Apple doesn't register the pass
+  # again, and Google's save is already marked.
+  test "a tap on a Wallet that already holds the card starts no check",
+       %{conn: conn, member: member} do
+    card = member_card_fixture(member)
+    PassRegistration.register!(card, "device-1", "push-token-1")
+    MemberCard.mark_in_wallet!(card, DateTime.utc_now())
+    {:ok, lv, _html} = live(conn, CardLinks.path(card))
+
+    lv |> element("#card-link-wallets-apple") |> render_click()
+    lv |> element("#card-link-wallets-google") |> render_click()
+
+    assert %{checking: nil} = checking(lv)
 
     assert has_element?(
              lv,
              "#card-link-status",
-             "Waiting for your phone to add it to Apple Wallet"
+             "in Apple Wallet on 1 device and in Google Wallet."
            )
-
-    PassRegistration.register!(card, "device-1", "push-token-1")
-    refute has_element?(lv, "#card-link-wallets-apple.is-adding")
-    assert has_element?(lv, "#card-link-status", "in Apple Wallet on 1 device")
   end
 
   test "a replacement isn't in Wallet until a phone fetches it, though its phones held the old card",
@@ -95,28 +115,33 @@ defmodule Web.CardLinkLiveTest do
     assert has_element?(lv, "#card-link-status", "doesn't see your ID card in Wallet yet")
 
     lv |> element("#card-link-wallets-apple") |> render_click()
+    assert %{checking: :apple} = checking(lv)
     # The phone, now holding the replacement, fetches it with its own token.
     replacement |> Repo.reload!() |> MemberCard.record_pass_fetched!(DateTime.utc_now())
 
-    refute has_element?(lv, "#card-link-wallets-apple.is-adding")
     assert has_element?(lv, "#card-link-status", "in Apple Wallet on 1 device")
+    assert %{checking: nil} = checking(lv)
   end
 
-  test "Google's badge opens in a new tab, and the page waits a while for the save",
+  test "Google's badge opens in a new tab, and a tap checks for a while, once",
        %{conn: conn, member: member} do
     {:ok, lv, _html} = live(conn, member |> member_card_fixture() |> CardLinks.path())
     assert has_element?(lv, ~s{#card-link-wallets-google[target="_blank"]})
 
     lv |> element("#card-link-wallets-google") |> render_click()
-    assert has_element?(lv, "#card-link-status", "Waiting for Google Wallet in the new tab")
+    assert has_element?(lv, "#card-link-status", "doesn't see your ID card in Wallet yet")
+    assert %{checking: :google, checking_ref: ref} = checking(lv)
 
-    %{waiting_ref: ref} = :sys.get_state(lv.pid).socket.assigns
+    # A second tap keeps the one check.
+    lv |> element("#card-link-wallets-google") |> render_click()
+    assert %{checking_ref: ^ref} = checking(lv)
+
     send(lv.pid, {:give_up, ref})
-    refute has_element?(lv, "#card-link-wallets-google.is-adding")
+    assert %{checking: nil} = checking(lv)
     assert has_element?(lv, "#card-link-status", "doesn't see your ID card in Wallet yet")
   end
 
-  test "while it waits on Google, the page asks Google, and a save ends the wait",
+  test "while it checks Google, the page asks Google, and a save ends the check",
        %{conn: conn, member: member} do
     Req.Test.stub(App.Adapter.GoogleWallet, fn conn ->
       if conn.host == "oauth2.googleapis.com",
@@ -129,7 +154,7 @@ defmodule Web.CardLinkLiveTest do
 
     send(lv.pid, :check_google)
     render_async(lv)
-    refute has_element?(lv, "#card-link-wallets-google.is-adding")
+    assert %{checking: nil} = checking(lv)
     assert has_element?(lv, "#card-link-status", "sees your ID card in Google Wallet.")
   end
 
