@@ -74,7 +74,7 @@ defmodule Web.EquipmentCollectionLive do
     rows = EquipmentList.filter(narrowed, show, fields.q, now)
 
     assign(socket,
-      show_counts: show_counts(narrowed, now),
+      show_counts: show_counts(narrowed, fields.q, now),
       count: length(rows),
       groups: groups(rows, place, held)
     )
@@ -136,10 +136,11 @@ defmodule Web.EquipmentCollectionLive do
   def handle_event("scan_failed", _params, socket),
     do: {:noreply, assign(socket, scan_failed: true)}
 
-  # Each stat switch tile's count, in the place and category picked.
-  defp show_counts(narrowed, now) do
+  # Each stat switch tile's count, in the place and category picked, and the search
+  # (#935): a search shows on the tiles where its matches are.
+  defp show_counts(narrowed, q, now) do
     Map.new(EquipmentList.show_values(), fn value ->
-      {value, length(EquipmentList.filter(narrowed, value, "", now))}
+      {value, length(EquipmentList.filter(narrowed, value, q, now))}
     end)
   end
 

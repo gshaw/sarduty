@@ -37,31 +37,35 @@ defmodule Web.GroupCollectionLive do
 
     groups = list_groups_with_counts(socket.assigns.current_team)
     q = String.trim(params["q"] || "")
-    in_view = in_view(view, groups)
+    # The tiles count the search too (#935): a search shows on them where its matches are.
+    matching = Enum.filter(groups, &StringHelpers.matches?(&1.group.title, q))
 
     socket =
       socket
-      |> assign_counts(groups)
+      |> assign_counts(groups, matching)
       |> assign(
         view: view,
         q: q,
         form: to_form(%{"q" => q}, as: "form"),
-        groups: Enum.filter(in_view, &StringHelpers.matches?(&1.group.title, q)),
-        in_view_count: length(in_view)
+        groups: in_view(view, matching)
       )
 
     {:noreply, socket}
   end
 
-  defp assign_counts(socket, groups) do
-    owned = Enum.filter(groups, & &1.group.organization_owned)
+  # The tiles from the groups that match the search; whether to split them, and whether
+  # the team has any, from all of them.
+  defp assign_counts(socket, groups, matching) do
+    owned = Enum.filter(matching, & &1.group.organization_owned)
 
     assign(socket,
-      all_count: length(groups),
+      any?: groups != [],
+      all_count: length(matching),
       organization_count: length(owned),
-      team_count: length(groups) - length(owned),
-      out_of_step_count: Enum.count(groups, &out_of_step?/1),
-      split?: socket.assigns.has_organization? and owned != []
+      team_count: length(matching) - length(owned),
+      out_of_step_count: Enum.count(matching, &out_of_step?/1),
+      split?:
+        socket.assigns.has_organization? and Enum.any?(groups, & &1.group.organization_owned)
     )
   end
 
@@ -100,7 +104,7 @@ defmodule Web.GroupCollectionLive do
       </:action>
     </.heading_row>
 
-    <.stat_switch :if={@all_count > 0} label="Groups">
+    <.stat_switch :if={@any?} label="Groups">
       <:view
         id="groups-all-link"
         patch={groups_path(@current_team, "all", @q)}
@@ -138,11 +142,11 @@ defmodule Web.GroupCollectionLive do
     </.stat_switch>
 
     <.filter_bar
-      :if={@all_count > 0}
+      :if={@any?}
       for={@form}
       id="group_filter_form"
       count={Service.Format.count(length(@groups), one: "%d group", many: "%d groups")}
-      repeats={length(@groups) == @in_view_count}
+      repeats
       clear={groups_path(@current_team, @view, "")}
     >
       <:search field={@form[:q]} />
@@ -169,11 +173,11 @@ defmodule Web.GroupCollectionLive do
       </:col>
     </.table>
 
-    <.empty_state :if={@all_count == 0} id="no-groups" title="No groups yet">
+    <.empty_state :if={!@any?} id="no-groups" title="No groups yet">
       Add one, or refresh to bring in the team's groups.
     </.empty_state>
     <.empty_state
-      :if={@all_count > 0 and @groups == [] and @q != ""}
+      :if={@any? and @groups == [] and @q != ""}
       id="no-matching-groups"
       title="No groups match"
     >

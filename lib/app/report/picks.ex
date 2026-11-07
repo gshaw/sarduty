@@ -170,14 +170,13 @@ defmodule App.Report.Picks do
   The plain query for `picks`: the query's `where` and each pick's, the search's, and
   the sort's `order by`. Options:
 
-  - `search: false` leaves the search out, as a switch's tiles count
   - `switch: pick` counts the switch at `pick` instead of its own
   - `paged: true` adds the page's `limit` and `offset`, given as `page: {n, size}`, and
     sorts by `id` last so no row lands on two pages
   """
   def plain(%Query{} = query, %__MODULE__{} = picks, opts \\ []) do
     filters = switched(query, picks.filters, opts)
-    search = search(query, picks.q, Keyword.get(opts, :search, true))
+    search = search(query, picks.q)
     conditions = Enum.flat_map(query.filters, &condition(&1, filters[&1.name])) ++ search
     where = and_all([query.where | conditions])
     paged(%{clear(query) | where: where, order_by: order(query, picks.sort)}, opts[:page])
@@ -216,11 +215,10 @@ defmodule App.Report.Picks do
   defp condition(_filter, _pick), do: []
 
   # The search box ORs `contains :q` over its fields.
-  defp search(%{search: []}, _q, _on?), do: []
-  defp search(_query, "", _on?), do: []
-  defp search(_query, _q, false), do: []
+  defp search(%{search: []}, _q), do: []
+  defp search(_query, ""), do: []
 
-  defp search(query, _q, true) do
+  defp search(query, _q) do
     line = query.search_line
 
     [

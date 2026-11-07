@@ -118,7 +118,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       assert has_element?(lv, "#letter-email-failed-#{letter.id}", "Email failed")
     end
 
-    test "the letter switch counts members before the search and lists one part",
+    test "the letter switch counts the search's matches (#935) and lists one part",
          %{conn: conn, team: team} do
       avery = member_fixture(team, %{name: "Avery"})
       blake = member_fixture(team, %{name: "Blake"})
@@ -129,9 +129,10 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       {:ok, lv, _html} =
         live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any&q=ver")
 
-      assert has_element?(lv, "#letter-view-all[aria-current]", "3")
-      assert has_element?(lv, "#letter-view-none", "2")
-      assert has_element?(lv, "#letter-view-made", "1")
+      # "ver" finds Avery only, who has no letter yet.
+      assert has_element?(lv, "#letter-view-all[aria-current]", "1")
+      assert has_element?(lv, "#letter-view-none", "1")
+      assert has_element?(lv, "#letter-view-made", "0")
       assert has_element?(lv, "#letter-view-changed", "0")
 
       lv |> element("#letter-view-none") |> render_click()

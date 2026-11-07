@@ -57,34 +57,34 @@ defmodule Web.QualificationCollectionLive do
     matching = Enum.filter(in_view, &StringHelpers.matches?(&1.title, q))
     expiring_matching = filter_expiring(expiring, current_team, filter_options)
 
+    # The tiles count the search and filters too (#935): a search shows on them where its
+    # matches are. Whether there are any at all, for the empty states, counts everything.
     socket
-    |> assign_owner_counts(qualifications)
+    |> assign_owner_counts(qualifications, q)
     |> assign(
       filter_options: filter_options,
       view: view,
       q: q,
       form: to_form(changeset, as: "form"),
-      expiring_count: length(expiring),
+      expiring_count: length(expiring_matching),
+      any_expiring?: expiring != [],
       qualifications: matching,
       expiring: expiring_matching,
       standings: Standing.by_member(current_team, Enum.map(expiring, & &1.member), now),
-      repeats:
-        if(view == :expiring,
-          do: length(expiring_matching) == length(expiring),
-          else: length(matching) == length(in_view)
-        ),
       shown_count: length(if view == :expiring, do: expiring_matching, else: matching)
     )
   end
 
-  defp assign_owner_counts(socket, qualifications) do
-    owned = owner_view(:organization, qualifications)
+  defp assign_owner_counts(socket, qualifications, q) do
+    matching = Enum.filter(qualifications, &StringHelpers.matches?(&1.title, q))
+    owned = owner_view(:organization, matching)
 
     assign(socket,
-      all_count: length(qualifications),
+      any?: qualifications != [],
+      all_count: length(matching),
       organization_count: length(owned),
-      team_count: length(qualifications) - length(owned),
-      split?: socket.assigns.has_organization? and owned != []
+      team_count: length(matching) - length(owned),
+      split?: socket.assigns.has_organization? and owner_view(:organization, qualifications) != []
     )
   end
 
@@ -188,7 +188,7 @@ defmodule Web.QualificationCollectionLive do
       for={@form}
       id="qualification_filter_form"
       count={count_text(@view, @shown_count)}
-      repeats={@repeats}
+      repeats
       clear={qualifications_path(@current_team, %QualificationFilterViewModel{view: "#{@view}"})}
       path_fn={&qualifications_path(@current_team, @filter_options, &1)}
     >
@@ -215,7 +215,7 @@ defmodule Web.QualificationCollectionLive do
       team={@current_team}
       expiring={@expiring}
       standings={@standings}
-      none={@expiring_count == 0}
+      none={!@any_expiring?}
       within={@filter_options.within}
     />
 
@@ -244,21 +244,21 @@ defmodule Web.QualificationCollectionLive do
     </.table>
 
     <.empty_state
-      :if={@view == :all and @all_count == 0}
+      :if={@view == :all and !@any?}
       id="no-qualifications"
       title="No qualifications yet"
     >
       Qualifications come in with each refresh.
     </.empty_state>
     <.empty_state
-      :if={@view != :expiring and @all_count > 0 and @qualifications == []}
+      :if={@view != :expiring and @any? and @qualifications == []}
       id="no-matching-qualifications"
       title={if @q == "", do: "No qualifications of its own", else: "No qualifications match"}
     >
       {if @q == "", do: "Each one is #{@organization_name}'s.", else: "Change the search."}
     </.empty_state>
     <.empty_state
-      :if={@view == :expiring and @expiring_count > 0 and @expiring == []}
+      :if={@view == :expiring and @any_expiring? and @expiring == []}
       id="no-matching-qualifications"
       title="No expiring awards match"
     >
@@ -270,7 +270,7 @@ defmodule Web.QualificationCollectionLive do
   attr :team, :map, required: true
   attr :expiring, :list, required: true
   attr :standings, :map, required: true
-  attr :none, :boolean, required: true, doc: "nothing expires, before the search"
+  attr :none, :boolean, required: true, doc: "nothing expires, before the search and filters"
   attr :within, :integer, required: true, doc: "how many days ahead the view looks"
 
   defp expiring_table(assigns) do

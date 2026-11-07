@@ -282,14 +282,14 @@ defmodule Web.MemberCollectionLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members?when=all&q=cara")
 
-    # The logged-in user is an active member too.
-    assert has_element?(lv, "#member-tile-current", "3")
-    assert has_element?(lv, "#member-tile-active", "2")
-    assert has_element?(lv, "#member-tile-not_a_person", "1")
-    assert has_element?(lv, "#member-tile-retired", "1")
+    # Each tile counts the search's matches in it (#935): Cara only.
+    assert has_element?(lv, "#member-tile-current", "1")
+    assert has_element?(lv, "#member-tile-active", "1")
+    assert has_element?(lv, "#member-tile-not_a_person", "0")
+    assert has_element?(lv, "#member-tile-retired", "0")
     refute has_element?(lv, "#member-tile-all")
     refute has_element?(lv, "select[name='values[standing]']")
-    assert has_element?(lv, "#member-filters-summary strong", "1 member")
+    refute has_element?(lv, "#member-filters-summary strong")
   end
 
   test "a search that finds no one offers all members, and All shows as a menu (#469)",

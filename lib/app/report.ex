@@ -277,8 +277,8 @@ defmodule App.Report do
          do: Runner.count(sql, context.repo)
   end
 
-  # With no search, the picked tile has already counted every row.
-  defp picked_count(query, %{q: ""} = picks, %{picked: picked, tiles: tiles}, context) do
+  # The picked tile has already counted every row, search and all (#935).
+  defp picked_count(query, picks, %{picked: picked, tiles: tiles}, context) do
     case Enum.find(tiles, &(&1.value == picked)) do
       nil -> count(Picks.plain(query, picks), picks, context)
       tile -> {:ok, tile.count}
@@ -288,7 +288,8 @@ defmodule App.Report do
   defp picked_count(query, picks, _switch, context),
     do: count(Picks.plain(query, picks), picks, context)
 
-  # Each tile counts its rows with every other pick on and the search off.
+  # Each tile counts its rows with every other pick on, the search too (#935): a search
+  # shows on the tiles where its matches are.
   defp switch(query, picks, context) do
     case Enum.find(query.filters, &(&1.kind == :switch)) do
       nil -> {:ok, nil}
@@ -340,7 +341,7 @@ defmodule App.Report do
 
   # One pass counts every tile; a query that groups counts each tile's groups on its own.
   defp counts(tiles, query, picks, context) do
-    base = Picks.plain(query, picks, switch: :all, search: false)
+    base = Picks.plain(query, picks, switch: :all)
     wheres = Enum.map(tiles, fn {_value, _label, pick} -> tile_where(pick) end)
 
     case Compiler.counts(base, wheres, context, picks.given) do
@@ -367,7 +368,7 @@ defmodule App.Report do
     tiles
     |> Enum.reverse()
     |> Enum.reduce_while({:ok, []}, fn {value, label, pick}, {:ok, acc} ->
-      plain = Picks.plain(query, picks, switch: pick, search: false)
+      plain = Picks.plain(query, picks, switch: pick)
 
       case count(plain, picks, context) do
         {:ok, n} -> {:cont, {:ok, [%{value: value, label: label, count: n} | acc]}}
