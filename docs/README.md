@@ -65,6 +65,12 @@ and MCP tool that needs it gets the same answer.
   `Activity.open?/2`. A source test keeps copies out when one is easy to rewrite by hand.
 - **A page may ask the same function** to hide a button or explain a refusal, never its
   own copy. The operation checks again when it runs.
+- **A feature supplies a shared idea, never a branch in shared code.** When shared code
+  needs something from one feature, the idea gets a name on the shared model and the
+  feature fills it in: `Activity.logged?/1` and `Activity.duration_minutes/1`, which
+  only `Activity` answers from chores. Asking "is this a chore?" in tax credit hours,
+  reports, and the activity pages spread chores over 10 shared files (#575, #584, #848).
+  `App.FeatureReachTest` lists the files outside a feature that call it.
 - **Views keep what to show and how**: wording, layout, and filtering rows already
   loaded. Read bundles for a page go in view data, and a view data module may hold a
   pure rule when only reading needs it, like `TeamAttention`, which the dashboard and

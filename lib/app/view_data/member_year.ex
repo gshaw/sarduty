@@ -6,6 +6,7 @@ defmodule App.ViewData.MemberYear do
   attended rows with their activity in, numbers out.
   """
 
+  alias App.Model.Activity
   alias App.Operation.CountTaxCreditHours
   alias App.ViewData.MemberRecords
   alias App.ViewData.TeamDashboardCharts
@@ -14,8 +15,8 @@ defmodule App.ViewData.MemberYear do
 
   @doc """
   Primary, secondary, and total minutes for the rows that started in `year`, as the
-  letter counts them (`CountTaxCreditHours.count/4`). A row's activity is a chore
-  activity when its `chore_minutes` is set (`MemberRecords.attendances/3`).
+  letter counts them (`CountTaxCreditHours.count/4`). A row's activity needs its
+  `logged_minutes` (`MemberRecords.attendances/3`).
   """
   def hours([], _year, _timezone, _hours_tags), do: CountTaxCreditHours.zero()
 
@@ -28,7 +29,7 @@ defmodule App.ViewData.MemberYear do
         finished_at: &1.finished_at,
         duration_in_minutes: &1.duration_in_minutes,
         tags: &1.activity.tags,
-        chore: is_integer(&1.activity.chore_minutes)
+        logged: Activity.logged?(&1.activity)
       }
     )
     |> CountTaxCreditHours.count(year, timezone, hours_tags)

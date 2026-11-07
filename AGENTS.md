@@ -203,6 +203,10 @@ fi
 - **Every rule has one home**: the operation every entry point calls, as a pure
   function, or the model when many places share it. A page asks that function, never
   its own copy. See [Where rules live](docs/README.md#where-rules-live).
+- **Shared code never asks whether a record belongs to one feature.** Name the idea on
+  the shared model and let the feature supply it: logged time on `Activity`, not chore
+  minutes (#848). `App.FeatureReachTest` lists every file outside chores and
+  certificates that calls them, with why, and fails on a new one.
 - **Background work follows [docs/jobs.md](docs/jobs.md).** A job when nobody waits for
   the answer or a retry would fix it; inline when the person needs it or it writes to
   D4H. Args are ids, never structs or personal data. Insert the job in the same

@@ -10,7 +10,6 @@ defmodule App.Operation.CountTaxCreditHours do
 
   alias App.Model.Activity
   alias App.Model.Attendance
-  alias App.Model.ChoreEvent
   alias App.Model.Team
   alias App.Repo
 
@@ -27,9 +26,8 @@ defmodule App.Operation.CountTaxCreditHours do
 
   @doc """
   Hours by member id. Each row is a map with `member_id`, `started_at`, `finished_at`,
-  `duration_in_minutes`, its activity's `tags`, and `chore`, true when its activity is
-  one of the team's chore activities (`ChoreEvent.totals/1`). `hours_tags` is the team's
-  `Activity.hours_tags/1`.
+  `duration_in_minutes`, its activity's `tags`, and `logged`, true when its activity has
+  logged time (`Activity.logged?/1`). `hours_tags` is the team's `Activity.hours_tags/1`.
 
   - Rows count only when they started in `year` in `timezone`, and their activity has
     the primary or secondary hours tag. Primary wins when it has both.
@@ -37,9 +35,10 @@ defmodule App.Operation.CountTaxCreditHours do
     the fallback when a time is missing.
   - Overlapping rows for one member count once. Where primary and secondary overlap,
     the overlap is primary.
-  - Chore rows are added up and never merged (#584). A chore has a date but no time of
-    day, so every chore row starts at 00:00 on the 1st (`BuildChoreEvent`), where it
-    would overlap the member's other chores and anything else that day.
+  - Rows with logged time are added up and never merged (#584). Their start stands for
+    a period, not a time of day: every chore row starts at 00:00 on the 1st
+    (`BuildChoreEvent`), where it would overlap the member's other chores and anything
+    else that day.
   """
   def count(rows, year, timezone, hours_tags) do
     {start, finish} = Service.YearRange.bounds(year, timezone)
@@ -92,13 +91,13 @@ defmodule App.Operation.CountTaxCreditHours do
 
   defp count_member(rows) do
     {timed, untimed} = Enum.split_with(rows, &timed?/1)
-    {chores, timed} = Enum.split_with(timed, & &1.chore)
+    {logged, timed} = Enum.split_with(timed, & &1.logged)
 
     primary = timed |> intervals(:primary) |> merge()
     secondary = timed |> intervals(:secondary) |> merge() |> subtract(primary)
 
-    primary_minutes = minutes(primary, chores, untimed, :primary)
-    secondary_minutes = minutes(secondary, chores, untimed, :secondary)
+    primary_minutes = minutes(primary, logged, untimed, :primary)
+    secondary_minutes = minutes(secondary, logged, untimed, :secondary)
 
     %{
       primary_minutes: primary_minutes,
@@ -107,10 +106,10 @@ defmodule App.Operation.CountTaxCreditHours do
     }
   end
 
-  # A kind's merged time, with its chores and its rows without times added on.
-  defp minutes(merged, chores, untimed, kind),
+  # A kind's merged time, with its logged rows and its rows without times added on.
+  defp minutes(merged, logged, untimed, kind),
     do:
-      seconds_to_minutes(length_of(merged) + length_of(intervals(chores, kind))) +
+      seconds_to_minutes(length_of(merged) + length_of(intervals(logged, kind))) +
         duration_sum(untimed, kind)
 
   defp timed?(row), do: not is_nil(row.started_at) and not is_nil(row.finished_at)
@@ -166,7 +165,7 @@ defmodule App.Operation.CountTaxCreditHours do
 
   @doc """
   The rows `count/4` takes: attended by `now` (Attendance.attended/2) and started in
-  `year`, each with `chore` set from the team's chore events.
+  `year`, each with `logged` set (`Activity.join_logged/2`).
   """
   def load_rows(%Team{} = team, year, member_ids \\ nil, now \\ DateTime.utc_now()),
     do: team |> rows_query(year, member_ids, now) |> Repo.all()
@@ -180,19 +179,15 @@ defmodule App.Operation.CountTaxCreditHours do
     |> where([at, ..., m], m.team_id == ^team.id)
     |> scope_members(member_ids)
     |> started_in(year, team.timezone)
-    |> join(:left, [activity: ac], c in subquery(ChoreEvent.totals(team.id)),
-      as: :chores,
-      on: c.d4h_activity_id == ac.d4h_activity_id
-    )
-    |> select([at, activity: ac, chores: c], %{
+    |> Activity.join_logged(team.id)
+    |> select([at, activity: ac], %{
       member_id: at.member_id,
       started_at: at.started_at,
       finished_at: at.finished_at,
       duration_in_minutes: at.duration_in_minutes,
-      tags: ac.tags,
-      # Typed, or SQLite's 0 for false would be truthy in Elixir.
-      chore: type(fragment("? IS NOT NULL", c.d4h_activity_id), :boolean)
+      tags: ac.tags
     })
+    |> select_merge(^%{logged: Activity.logged_dynamic()})
   end
 
   defp started_in(query, nil, _timezone), do: query

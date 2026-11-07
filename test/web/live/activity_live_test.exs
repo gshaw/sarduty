@@ -58,15 +58,18 @@ defmodule Web.ActivityLiveTest do
     assert has_element?(lv, ".activity-columns.is-overview #activity-facts")
   end
 
-  test "a chore activity's kind is Chores (#575)", %{conn: conn} do
+  test "a chore activity's kind is Chores (#575), and its duration its chores (#848)",
+       %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
-    activity = chore_activity_fixture(team, [60])
+    activity = chore_activity_fixture(team, [60, 45])
 
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities/#{activity.id}")
 
     assert has_element?(lv, ".badge-chores", "Chores")
     refute has_element?(lv, ".badge-event")
+    # D4H's event lasts no time.
+    assert has_element?(lv, "#activity-duration", "1h 45m")
   end
 
   test "opens the latitude and longitude in maps, or the address without them", %{conn: conn} do

@@ -19,7 +19,7 @@ defmodule App.Operation.CountTaxCreditHoursTest do
         finished_at: finished_at,
         duration_in_minutes: duration,
         tags: tags,
-        chore: false
+        logged: false
       },
       attrs
     )
@@ -29,7 +29,7 @@ defmodule App.Operation.CountTaxCreditHoursTest do
   # sends every chore row.
   defp chore(hours, tags \\ @primary) do
     start = ~U[2026-10-01 07:00:00Z]
-    row(start, DateTime.add(start, hours * 3600), tags, %{chore: true})
+    row(start, DateTime.add(start, hours * 3600), tags, %{logged: true})
   end
 
   defp hours(rows, year \\ 2025, member_id \\ 1) do
@@ -237,7 +237,7 @@ defmodule App.Operation.CountTaxCreditHoursTest do
 
     test "a chore with no times counts D4H's duration" do
       untimed =
-        row(~U[2026-10-01 07:00:00Z], nil, @primary, %{chore: true, duration_in_minutes: 90})
+        row(~U[2026-10-01 07:00:00Z], nil, @primary, %{logged: true, duration_in_minutes: 90})
 
       assert minutes([untimed, chore(2)], 2026) == {90 + 2 * 60, 0}
     end

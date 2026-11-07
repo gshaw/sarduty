@@ -62,17 +62,11 @@ defmodule Web.Components.ActivityTable do
         <span :if={activity_hours_type(record, @hours_tags)} class="text-text-muted">
           {activity_hours_type(record, @hours_tags)}
         </span>
-        <.hours_cell minutes={duration_minutes(record)} />
+        <.hours_cell minutes={Activity.duration_minutes(record)} />
       </:col>
     </.table>
     """
   end
-
-  # A chore activity lasts no time: its duration is its members' chores (#575).
-  defp duration_minutes(%{chore_minutes: minutes}) when is_integer(minutes), do: minutes
-
-  defp duration_minutes(activity),
-    do: Service.Convert.duration_to_minutes(activity.started_at, activity.finished_at)
 
   def activity_summary(activity) do
     case activity.description do

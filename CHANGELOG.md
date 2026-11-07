@@ -4,6 +4,7 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- A chore activity's page shows its chores' total under Duration, where it showed 0.
 - Try a demo opens with something to see on every page: you're a member with an ID card
   and travel to confirm, group rules with changes to review, templates, whiteboard notes,
   and mileage set on the two latest incidents.

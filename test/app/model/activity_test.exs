@@ -4,6 +4,7 @@ defmodule App.Model.ActivityTest do
   import App.DataFixtures
 
   alias App.Model.Activity
+  alias App.Model.ChoreEvent
   alias App.Model.Organization
   alias App.Model.Team
 
@@ -11,6 +12,56 @@ defmodule App.Model.ActivityTest do
 
   # 19:00–21:00 UTC.
   @evening %Activity{started_at: ~U[2026-10-10 19:00:00Z], finished_at: ~U[2026-10-10 21:00:00Z]}
+
+  describe "logged time (#848)" do
+    setup do
+      team = team_fixture()
+      chores = chore_activity_fixture(team, [45, 30])
+      emptied = activity_fixture(team)
+      chore_event_fixture(team, emptied)
+      %{team: team, chores: chores, emptied: emptied, plain: activity_fixture(team)}
+    end
+
+    test "logged minutes are ChoreEvent.totals/1's, and nil on any other activity", ctx do
+      totals = ctx.team.id |> ChoreEvent.totals() |> Repo.all()
+      activities = Activity.put_logged_minutes([ctx.chores, ctx.emptied, ctx.plain], ctx.team.id)
+
+      assert Enum.map(activities, & &1.logged_minutes) == [75, 0, nil]
+      assert Enum.map(activities, &Activity.logged?/1) == [true, true, false]
+
+      assert Map.new(totals, &{&1.d4h_activity_id, &1.minutes}) ==
+               %{ctx.chores.d4h_activity_id => 75, ctx.emptied.d4h_activity_id => 0}
+
+      assert Activity.put_logged_minutes(ctx.chores).logged_minutes == 75
+    end
+
+    test "duration is the logged minutes when there are some, in a query too", ctx do
+      [chores, _plain] =
+        activities = Activity.put_logged_minutes([ctx.chores, ctx.plain], ctx.team.id)
+
+      by_query =
+        Activity
+        |> from(as: :activity)
+        |> where([a], a.team_id == ^ctx.team.id)
+        |> Activity.join_logged(ctx.team.id)
+        |> select(
+          ^%{
+            id: dynamic([activity: a], a.id),
+            duration: Activity.duration_dynamic(),
+            logged: Activity.logged_dynamic()
+          }
+        )
+        |> Repo.all()
+        |> Map.new(&{&1.id, {&1.duration, &1.logged}})
+
+      for activity <- activities do
+        assert by_query[activity.id] ==
+                 {Activity.duration_minutes(activity), Activity.logged?(activity)}
+      end
+
+      assert Activity.duration_minutes(chores) == 75
+    end
+  end
 
   describe "finished_draft?/2" do
     test "an unpublished activity is a finished draft only once it has finished" do

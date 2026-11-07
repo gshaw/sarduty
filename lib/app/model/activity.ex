@@ -6,6 +6,7 @@ defmodule App.Model.Activity do
   alias App.Field.TrimmedString
   alias App.Model.Activity
   alias App.Model.Attendance
+  alias App.Model.ChoreEvent
   alias App.Model.Organization
   alias App.Model.Team
   alias App.Repo
@@ -191,18 +192,34 @@ defmodule App.Model.Activity do
     # for no number. Change activity sets them through SaveActivity.
     field :enough_at, :integer
     field :full_at, :integer
-    # The members' accepted chore minutes on a chore activity (#575), nil on any other.
-    # Set where it is read, from ChoreEvent.totals/1 or put_chore_minutes/1.
-    field :chore_minutes, :integer, virtual: true
+    # Logged time (#848), nil when it has none: see logged?/1. Set by put_logged_minutes/2.
+    field :logged_minutes, :integer, virtual: true
     timestamps(type: :utc_datetime_usec)
   end
 
   @doc """
-  The kind SAR Duty shows: "chores" for a chore activity (#575), else D4H's kind. D4H
-  holds a chore activity as an event.
+  Whether the activity has logged time (#848): time its members logged on their own rows,
+  rather than its own length. Its start stands for a period, not a time of day. Today
+  only chore activities (#575): D4H events that last no time, dated the 1st of their
+  month, whose minutes are their members' accepted chores. Needs put_logged_minutes/2.
   """
-  def shown_kind(%{chore_minutes: minutes}) when is_integer(minutes), do: "chores"
-  def shown_kind(%{activity_kind: kind}), do: kind
+  def logged?(%{logged_minutes: minutes}), do: is_integer(minutes)
+  def logged?(_activity), do: false
+
+  @doc """
+  How long the activity ran, in minutes: its logged minutes when it has them, otherwise
+  start to finish. duration_dynamic/0 is the same rule in a query.
+  """
+  def duration_minutes(%{logged_minutes: minutes}) when is_integer(minutes), do: minutes
+
+  def duration_minutes(activity),
+    do: Service.Convert.duration_to_minutes(activity.started_at, activity.finished_at)
+
+  @doc """
+  The kind SAR Duty shows: "chores" for an activity with logged time, else D4H's kind.
+  D4H holds a chore activity as an event.
+  """
+  def shown_kind(activity), do: if(logged?(activity), do: "chores", else: activity.activity_kind)
 
   def build_new_changeset(params \\ %{}), do: build_changeset(%Activity{}, params)
 
@@ -561,21 +578,59 @@ defmodule App.Model.Activity do
   end
 
   @doc """
-  How long an activity ran, in whole minutes, for a query joined to
-  `ChoreEvent.totals/1` as `:chores`: a chore activity lasts no time, so it's its members'
-  chores (#575). Activities' Duration sort, and a report's `duration`.
+  The activities with `logged_minutes` set, in one query. A single activity takes its
+  own team's.
+  """
+  def put_logged_minutes(%Activity{team_id: team_id} = activity),
+    do: [activity] |> put_logged_minutes(team_id) |> hd()
+
+  def put_logged_minutes(activities, team_id) when is_list(activities) do
+    ids = activities |> Enum.map(& &1.d4h_activity_id) |> Enum.uniq()
+
+    minutes =
+      team_id
+      |> logged_query()
+      |> subquery()
+      |> where([l], l.d4h_activity_id in ^ids)
+      |> Repo.all()
+      |> Map.new(&{&1.d4h_activity_id, &1.minutes})
+
+    Enum.map(activities, &%{&1 | logged_minutes: minutes[&1.d4h_activity_id]})
+  end
+
+  @doc """
+  `query` with each activity's logged time left-joined as `:logged`, on the binding named
+  `:activity`, for logged_dynamic/0 and duration_dynamic/0.
+  """
+  def join_logged(query, team_id),
+    do:
+      join(query, :left, [activity: a], l in subquery(logged_query(team_id)),
+        as: :logged,
+        on: l.d4h_activity_id == a.d4h_activity_id
+      )
+
+  @doc "Whether the activity has logged time, logged?/1 in a query joined by join_logged/2."
+  def logged_dynamic, do: dynamic([logged: l], not is_nil(l.d4h_activity_id))
+
+  @doc """
+  duration_minutes/1 in whole minutes, for a query joined by join_logged/2. Activities'
+  Duration sort, and a report's `duration`.
   """
   def duration_dynamic do
     dynamic(
-      [r, chores: c],
+      [activity: a, logged: l],
       fragment(
         "CAST(ROUND(COALESCE(?, (JULIANDAY(?) - JULIANDAY(?)) * 1440.0)) AS INTEGER)",
-        c.minutes,
-        r.finished_at,
-        r.started_at
+        l.minutes,
+        a.finished_at,
+        a.started_at
       )
     )
   end
+
+  # The team's activities with logged time, `%{d4h_activity_id:, minutes:}`. The one
+  # place SAR Duty reads chores to know it (#848).
+  defp logged_query(team_id), do: ChoreEvent.totals(team_id)
 
   @doc "Activities that carry the tag titled `title`."
   def tagged(query, title),

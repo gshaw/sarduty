@@ -9,8 +9,8 @@ defmodule Web.ActivityCollectionLive do
   import Web.Components.ActivityTable
   import Web.Components.ReportPage
 
+  alias App.Model.Activity
   alias App.Model.Attendance
-  alias App.Model.ChoreEvent
   alias App.Model.Team
   alias App.Report
   alias App.Report.Error
@@ -97,14 +97,14 @@ defmodule Web.ActivityCollectionLive do
     {:noreply, push_patch(socket, to: path, replace: true)}
   end
 
-  # The rows hold the activities' ids; the cells read the activities, each chore activity
-  # with its members' minutes (#575).
+  # The rows hold the activities' ids; the cells read the activities, with their logged
+  # time.
   defp activities(view, team, now) do
     records = view.result |> ReportRecords.load(team, now) |> Map.get(:activity, %{})
 
     view.result.rows
     |> Enum.map(fn [id | _] -> Map.fetch!(records, id) end)
-    |> ChoreEvent.put_chore_minutes(team.id)
+    |> Activity.put_logged_minutes(team.id)
   end
 
   # Chores only on a team that logs them, or once had chore activities in this view.
