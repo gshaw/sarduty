@@ -58,18 +58,24 @@ defmodule App.Operation.CountTaxCreditHours do
   Every year's hours, as reports read them (#918): one map per member and year with
   hours, each with `member_id`, `year`, and the minutes `count/4` gives, newest year
   first. Each year counts as a letter for that year does. `repo` is the report's.
+  `{member_id, year}` counts only that member's year, for a letter, rather than the
+  team's every year.
   """
-  def by_year(%Team{} = team, now \\ DateTime.utc_now(), repo \\ Repo) do
+  def by_year(%Team{} = team, now \\ DateTime.utc_now(), repo \\ Repo, only \\ nil) do
     hours_tags = Activity.hours_tags(team, repo)
+    {year, member_ids} = scope(only)
 
     team
-    |> rows_query(nil, nil, now)
+    |> rows_query(year, member_ids, now)
     |> repo.all()
     |> Enum.reject(&is_nil(&1.started_at))
     |> Enum.group_by(&local_year(&1.started_at, team.timezone))
     |> Enum.sort_by(&elem(&1, 0), :desc)
     |> Enum.flat_map(fn {year, rows} -> year_rows(rows, year, team.timezone, hours_tags) end)
   end
+
+  defp scope({member_id, year}), do: {year, [member_id]}
+  defp scope(nil), do: {nil, nil}
 
   defp year_rows(rows, year, timezone, hours_tags) do
     for {member_id, hours} <- rows |> count(year, timezone, hours_tags) |> Enum.sort(),

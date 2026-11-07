@@ -31,7 +31,8 @@ defmodule App.Operation.PrintTaxCreditLetter do
   """
   def read(%Team{} = team, member_id, year, now) do
     team = Repo.preload(team, :organization)
-    context = Context.new(team, now)
+    # Counts only this member's year, which the document's hours report filters to.
+    context = Context.new(team, now, hours_for: {member_id, year})
     {:ok, doc} = @document |> Document.read() |> Document.parse()
     {:ok, doc} = Document.check(doc, context)
     given = %{"member" => to_string(member_id), "year" => to_string(year)}
