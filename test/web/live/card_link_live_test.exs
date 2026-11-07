@@ -97,6 +97,23 @@ defmodule Web.CardLinkLiveTest do
     assert has_element?(lv, "#card-link-status", "doesn't see your ID card in Wallet yet")
   end
 
+  test "while it waits on Google, the page asks Google, and a save ends the wait",
+       %{conn: conn, member: member} do
+    Req.Test.stub(App.Adapter.GoogleWallet, fn conn ->
+      if conn.host == "oauth2.googleapis.com",
+        do: Req.Test.json(conn, %{"access_token" => "t"}),
+        else: Req.Test.json(conn, %{"hasUsers" => true})
+    end)
+
+    {:ok, lv, _html} = live(conn, member |> member_card_fixture() |> CardLinks.path())
+    lv |> element("#card-link-wallets-google") |> render_click()
+
+    send(lv.pid, :check_google)
+    render_async(lv)
+    refute has_element?(lv, "#card-link-wallets-google.is-adding")
+    assert has_element?(lv, "#card-link-status", "sees your ID card in Google Wallet.")
+  end
+
   test "the page is kept out of search", %{conn: conn, member: member} do
     card = member_card_fixture(member)
     conn = get(conn, CardLinks.path(card))

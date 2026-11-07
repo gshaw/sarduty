@@ -292,13 +292,17 @@ other way to get the card.
   your ID card in Apple Wallet on 1 phone." ([Web.WalletText](../lib/web/wallet_text.ex),
   which also writes the ID Card tab's Wallet row). It changes while the page is open: a
   phone adding or dropping the pass, and Google's save and delete, each broadcast
-  `:wallet_changed` on the card's topic (`MemberCard.pass_topic/1`). There's no refresh:
-  Apple has nothing to ask, and the page already hears every change.
+  `:wallet_changed` on the card's topic (`MemberCard.pass_topic/1`). There's no refresh
+  button: the page hears every change.
 - **A tap shows the page heard it.** The adding happens off the page, in Wallet's sheet
   or Google's tab, so the tapped badge dims at once (`phx-click-loading`, then
   `is-adding`) and the line becomes "Waiting for your phone to add it to Apple Wallet…"
   until the phone registers or 2 minutes pass. Google's badge opens in a new tab, so the
-  page stays open to hear the save. On a Mac the pass reaches the phone through iCloud,
+  page stays open to hear the save. Google's save callback only reaches production, so
+  while the page waits on Google it also asks Google every 4 seconds whether the pass
+  has users ([CheckGoogleWalletSave](../lib/app/operation/check_google_wallet_save.ex)).
+  That only ever marks a card saved: `hasUsers` may stay true after a delete, which the
+  delete callback clears. Apple has nothing to ask; the phone registering is the news. On a Mac the pass reaches the phone through iCloud,
   so the wait can be 15 seconds or more.
 - **On a computer** the page is wider, with Take attendance's Open on your phone
   sidebar and the page's QR code (`<.open_on_device>`, `/styles/open-on-device`). It's

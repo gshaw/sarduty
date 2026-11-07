@@ -67,6 +67,22 @@ defmodule App.Adapter.GoogleWallet do
   end
 
   @doc """
+  Whether anyone saved the object to Google Wallet (`hasUsers`, which Google sets).
+  `{:ok, false}` for an object Google doesn't have.
+  """
+  def has_users?(token, object_id) do
+    case request!(
+           url: @api <> "/genericObject/#{object_id}",
+           method: :get,
+           auth: {:bearer, token}
+         ) do
+      %{status: 200, body: body} -> {:ok, body["hasUsers"] == true}
+      %{status: 404} -> {:ok, false}
+      %{status: status, body: body} -> log_error("object", status, body)
+    end
+  end
+
+  @doc """
   The "Add to Google Wallet" link for an object that already exists. The link names the
   object and nothing else, so it can't change what's on the pass.
   """
