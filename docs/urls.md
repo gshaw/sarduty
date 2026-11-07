@@ -45,8 +45,8 @@ enforces the top-level list and the held URLs.
 - **Nothing fixed directly under `/teams/` or `/orgs/`.** It would block a team or an
   organization with that name. That's why sign-up is `/signup`, not `/teams/new`.
 - **Top-level paths are a short list**: `teams`, `orgs`, `admin`, `account`, `signup`,
-  `login`, `logout`, `replies`, `reminders`, `wallet`, `styles`, `terms`, `privacy`,
-  `agents`, `agents.md`, `changelog`, `changelog.md`, `maps`, `.well-known`,
+  `login`, `logout`, `replies`, `reminders`, `cards`, `wallet`, `styles`, `terms`,
+  `privacy`, `agents`, `agents.md`, `changelog`, `changelog.md`, `maps`, `.well-known`,
   `security.txt`, `llms.txt`, `letters`, `csp-reports` (Web.CSP), and `dev` in development. A
   new one is added to the router test on purpose. `agents` holds what agents read: `/agents`
   and `/agents.md`, the lander, How to
@@ -61,9 +61,10 @@ enforces the top-level list and the held URLs.
   the app in production only (`Web.FlyHostRedirect`, exact hosts).
 - **Search vs agents** (#824): nothing is blocked. Routes kept out of search pipe
   through `:noindex`, which sends `X-Robots-Tag: noindex`: the whole verify host,
-  `/replies/:token`, `/reminders/:token`, MCP, OAuth, wallet, and `/maps`. Public pages,
-  `/agents` and `/styles` included, stay indexable. The router test puts every route in
-  one group, hidden, logged in, or public, and fails on a new one until it's classified.
+  `/replies/:token`, `/reminders/:token`, `/cards/:token`, MCP, OAuth, wallet, and
+  `/maps`. Public pages, `/agents` and `/styles` included, stay indexable. The router
+  test puts every route in one group, hidden, logged in, or public, and fails on a new
+  one until it's classified.
 - **Anything printed on a card goes through the verify site**, so it stays short and never
   depends on a team page's path.
 - **Build paths one way**: `~p"/teams/#{team}/members"`. `App.Model.Team` derives
@@ -82,6 +83,8 @@ Devices, Google, Apple, and shared links hold these. They don't move.
 - `/replies/:token` and `/reminders/:token`: a reminder email's links, to reply and to
   turn reminders off (#444). Mail apps post to `/reminders/:token` for one-click
   unsubscribe.
+- `/cards/:token`: an ID card email's link to the card's page (#952), with
+  `/cards/:token/apple-wallet` and `/cards/:token/google-wallet` behind its badges.
 - `/teams/:subdomain/logo`: Google Wallet objects fetch it.
 - `/teams/:subdomain/take-attendance`: teams print a QR code of it for the hall (#475).
 - `/teams/:subdomain/mcp`: agents' MCP configs hold it ([mcp.md](mcp.md)).

@@ -7,7 +7,7 @@ defmodule Web.RouterTest do
   # Every top-level path on the main site. A new one fails here until it's added on
   # purpose: a fixed word at the top could block a future section, and one under
   # /teams/ or /orgs/ would block a team or organization with that name.
-  @main_top_level ~w(teams orgs admin account signup login logout replies reminders wallet styles
+  @main_top_level ~w(teams orgs admin account signup login logout replies reminders cards wallet styles
                      terms privacy agents agents.md changelog changelog.md maps .well-known
                      security.txt llms.txt letters csp-reports demo api)
   @verify_top_level [
@@ -129,6 +129,10 @@ defmodule Web.RouterTest do
     {"POST", "/wallet/v1/log", Web.WalletController, :log},
     {"GET", "/replies/token", Web.ReplyLinkLive, nil},
     {"GET", "/reminders/token", Web.InvitationRemindersLive, nil},
+    # Every ID card email holds it (#952).
+    {"GET", "/cards/token", Web.CardLinkLive, nil},
+    {"GET", "/cards/token/apple-wallet", Web.CardLinkController, :apple_pass},
+    {"GET", "/cards/token/google-wallet", Web.CardLinkController, :google_pass},
     {"POST", "/reminders/token", Web.InvitationRemindersController, :unsubscribe},
     {"GET", "/teams/nsr/logo", Web.TeamController, :logo},
     {"GET", "/teams/nsr/take-attendance", Web.TakeAttendanceLive, nil},
@@ -194,7 +198,7 @@ defmodule Web.RouterTest do
   # Search vs agents (#824). Every route is hidden from search, behind a login, or public,
   # and exactly one. Hidden routes send X-Robots-Tag: noindex through the :noindex
   # pipeline; public ones never do. robots.txt blocks nothing either way.
-  @hidden_prefixes ~w(/wallet/ /replies/ /reminders/ /maps/ /.well-known/oauth- /csp-reports
+  @hidden_prefixes ~w(/wallet/ /replies/ /reminders/ /cards/ /maps/ /.well-known/oauth- /csp-reports
                        /demo/open /api/)
   @hidden_team_routes ~w(/teams/:subdomain/mcp /teams/:subdomain/oauth/register
                          /teams/:subdomain/oauth/token)

@@ -82,7 +82,7 @@ defmodule App.Operation.SendMemberCard do
   end
 
   defp send_if_waiting(%MemberCard{email_status: :sending} = card, team, member, last?, now) do
-    case EmailMemberCard.call(team, member, now) do
+    case EmailMemberCard.call(team, member) do
       :ok ->
         finish(card, member, :sent, now)
         :ok

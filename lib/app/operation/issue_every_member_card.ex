@@ -6,10 +6,10 @@ defmodule App.Operation.IssueEveryMemberCard do
   App.Worker.SendMemberCardWorker job to email it. While it's on, each refresh and each
   sync that changed something does the same for members new since, through call/2.
 
-  Making a card is database rows alone; the email job builds the Apple and Google passes
-  and talks to D4H, Google, and the mail service. The `bulk` queue's limit of 2 paces
-  those, so 100 emails take about 2 minutes, and they run after any team admin's click,
-  reminder, or letter (SendMemberCard's rollout priority).
+  Making a card is database rows alone, and its email is a link to the card's page, which
+  builds each pass when the member taps (#952). The `bulk` queue's limit of 2 paces the
+  emails, and they run after any team admin's click, reminder, or letter
+  (SendMemberCard's rollout priority).
 
   Off stops new cards. Emails already queued still go. Turning ID cards off turns this
   off too, and cancels every card, so a waiting email finds no card

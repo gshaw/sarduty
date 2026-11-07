@@ -486,6 +486,16 @@ defmodule App.DataFixtures do
     |> Repo.insert!()
   end
 
+  @doc """
+  The id of the card an ID card email's link names (#952), or nil. A token is signed
+  with the time, so compare cards, never links.
+  """
+  def emailed_card_id(%Swoosh.Email{text_body: text}) do
+    with [_, token] <- Regex.run(~r{/cards/(\S+)}, text),
+         %MemberCard{id: id} <- Web.CardLinks.find_card(token),
+         do: id
+  end
+
   def tax_credit_letter_fixture(%Member{} = member, attrs \\ %{}) do
     unique = System.unique_integer([:positive])
 
