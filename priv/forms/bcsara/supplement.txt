@@ -1,0 +1,107 @@
+-- EMCR's Expense reimbursement request supplement, for BCSARA's teams (#950): one row
+-- for each person who attended, with their travel, meals, and personal equipment
+-- allowance. It prints on supplement.pdf, a blank page supplement.typ draws in D4H's
+-- layout, which EMCR takes today. More than 18 people print another copy of the page,
+-- with its own subtotal.
+--
+-- The rates are EMCR's 5.06 Volunteer Reimbursement and Allowance Rate Chart. Check every
+-- rate against the current chart before the form goes on. The Expense reimbursement
+-- request repeats these rules for its balance forward, reading the same answers.
+
+form 'Expense reimbursement request supplement'
+about 'Each person''s travel, meals, and personal equipment allowance. The task leader signs it by hand and sends it with the Expense reimbursement request.'
+for activity where kind = 'incident'
+
+report task
+  select ref_id, tracking_number, started_at, finished_at, `Response Type`,
+    `Task Leader's Name`, `Date Report Completed`
+  from activities
+  where id = :activity
+
+report people
+  select member, started_at, finished_at, km
+  from attendance
+  where activity.id = :activity and status = 'Attended'
+  order by member.name
+
+const km_rate        = 0.65, 0.67 from 2026-04-15   -- per km
+const meal           = 15.00
+const meals_a_day    = 4
+const equipment_rate = 25.00   -- personal equipment, per person on a response, per 24 hours
+
+ask meals_provided 'Meals provided to everyone' default 0
+  hint 'Meals the team or another agency gave each person. Change one person''s below.'
+ask each people on_task 'On task' choose 'Yes', 'No' default 'Yes'
+ask each people meals_given 'Meals provided' default :meals_provided
+
+-- A meal for every 3 hours on task, 4 a day at most, less those provided.
+compute each people
+  hours     = hours(started_at, finished_at)
+  rate      = km_rate on started_at
+  meals     = if on_task = 'Yes' and hours > 3
+                then max(0, min(floor(hours / 3), meals_a_day * days(hours)) - meals_given) else 0
+  allowance = if on_task = 'Yes' and task.`Response Type` = 'Response'
+                then equipment_rate * days(hours) else 0
+  total     = km * rate + meals * meal + allowance
+
+compute
+  personnel = sum(people.total)
+
+title 'Expense reimbursement request supplement {coalesce(task.tracking_number, task.ref_id)}'
+  by team.name
+keep task.tracking_number, personnel, :meals_provided
+
+page
+
+-- Each value's baseline sits 1.5pt above its line on supplement.typ's page, or in its
+-- cell: a place's top is three quarters of its size above it.
+places
+  task_number text top 91.25pt, left 80pt, width 139pt, fit, align center, size 9pt
+  from        text top 91.25pt, left 297pt, width 98pt, fit, align center, size 9pt
+  to          text top 91.25pt, left 428pt, width 142pt, fit, align center, size 9pt
+  rows rows top 165.6pt, pitch 14pt, lines 18
+    who       text top 3.6pt, left 44pt, width 294pt, fit, size 8.5pt
+    km        text top 3.6pt, left 344.6pt, width 26.8pt, fit, align right, size 8.5pt
+    rate      text top 3.6pt, left 377.4pt, width 30pt, fit, align right, size 8.5pt
+    meals     text top 3.6pt, left 413.4pt, width 45pt, fit, align right, size 8.5pt
+    allowance text top 3.6pt, left 464.4pt, width 54.2pt, fit, align right, size 8.5pt
+    total     text top 3.6pt, left 524.6pt, width 44.4pt, fit, align right, size 8.5pt
+  subtotal    text top 436.6pt, left 524.6pt, width 44.4pt, fit, align right, size 8.5pt
+  leader      text top 504.85pt, left 116pt, width 179pt, fit, align center, size 9pt
+  leader_date text top 526.85pt, left 68pt, width 227pt, fit, align center, size 9pt
+  page_number text top 526.85pt, left 345pt, width 225pt, fit, align center, size 9pt
+
+fill
+  task_number = task.tracking_number
+  from = '{task.started_at as date_short}, {task.started_at as time}'
+  to = '{task.finished_at as date_short}, {task.finished_at as time}'
+    if task.finished_at is not null
+  subtotal = sum(rows.total) as money
+  leader = task.`Task Leader's Name`
+  leader_date = task.`Date Report Completed` as date_long
+  page_number = '{page} of {pages}'
+
+fill each people into rows
+  who = if finished_at is null
+          then '{member}: {started_at as date_short}, {started_at as time}'
+          else '{member}: {started_at as date_short}, {started_at as time} to {finished_at as time}'
+  km = coalesce(km, 0) as number
+  rate = rate as money
+  meals = meals * meal as money
+  allowance = allowance as money
+  total = total as money
+
+expect with task.tracking_number = 'CR-4113', task.ref_id = '01428':
+  task_number = 'CR-4113' and title = 'Expense reimbursement request supplement CR-4113'
+
+-- 6 hours on a response, 30 km on Jun 1: 2 meals, a day's equipment, and $0.67 a km.
+expect with task.`Response Type` = 'Response'
+  people hours 6, km 30, on_task 'Yes', meals_given 0, started_at 2026-06-01: total = 75.10
+
+-- Off task, or every meal provided, no meals; and a training gets no allowance.
+expect with people on_task 'No', hours 6: meals = 0 and allowance = 0
+expect with people meals_given 3, hours 6: meals = 0
+expect with task.`Response Type` = 'Training' people hours 6: allowance = 0
+
+-- One copy of the page holds everyone here, and its subtotal is theirs.
+expect with people total 40.10, people total 35: subtotal = '$75.10' and page_number = '1 of 1'
