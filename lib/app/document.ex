@@ -5,7 +5,7 @@ defmodule App.Document do
   the first. "Template" is taken by kit templates, so in code it's a document. A form
   is a document an organization hosts (#950): it starts `form '…'`, prints for an
   activity, asks what SAR Duty can't know, and prints on an agency's own page, with a
-  row for each person when it has rows.
+  row for each person when it has rows, or on a page its own Typst layout draws.
 
   The language is the report language's (App.Report): its lexer, its parser for each
   report and every value, and its catalog. Everything here is pure: `parse/1` reads the
@@ -43,6 +43,9 @@ defmodule App.Document do
   - `expects`: `%{given, check, line}`, worked examples CI runs (`expect/1`); `given`
     holds `{target, value, line}`, and `{:row, report, [{name, value, line}], line}` for
     a row
+  - `layout`: `%{text, line}`, a form's Typst layout in place of its places, and the
+    line of the text it starts on. Each fill is then a value it reads by name, and
+    `fill each` a list of rows
   - `types`: after `check/2`, each name's type
   """
 
@@ -69,6 +72,7 @@ defmodule App.Document do
             places: [],
             fill: [],
             expects: [],
+            layout: nil,
             types: %{}
 
   @dir "documents"
@@ -281,7 +285,8 @@ defmodule App.Document do
   What a checked document prints from `values`: a map of names to values, `:year` for a
   value it starts from, `hours.total` for a report's, `team.logo` for one only printing
   reads, and `today`. Dates show in `timezone`. Gives `%{title, author, lock, keep,
-  places}`, each place `%{name, kind, …, value}`.
+  places}`, each place `%{name, kind, …, value}`, and a form's `layout` and `fills`,
+  each value its layout reads by name.
   """
   def evaluate(%__MODULE__{} = doc, values, timezone) when is_map(values),
     do: Evaluator.evaluate(doc, values, timezone)

@@ -9,8 +9,8 @@ defmodule Web.Settings.TaxCreditLettersLive do
   alias App.Operation.SaveTeamSignature
 
   # Settings' Tax credit letters tab, /teams/:subdomain/settings/tax-credit-letters: what every
-  # letter prints about the team and who signs it. Hours tags, which decide the hours,
-  # are their own tab.
+  # letter prints about the team and who signs it, and what an organization's forms print
+  # with them (#950), such as the city. Hours tags, which decide the hours, are their own tab.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
 
@@ -80,11 +80,17 @@ defmodule Web.Settings.TaxCreditLettersLive do
     ~H"""
     <.team_settings_tabs team={@current_team} current={:tax_credit_letters} />
     <div class="measure">
-      <p class="lead">What every tax credit letter prints about your team, and who signs it.</p>
+      <p class="lead">
+        What tax credit letters and forms print about your team, and who signs them.
+      </p>
       <p class="mb-6">Letters already made keep what they printed.</p>
       <.form for={@form} id="letter-settings-form" phx-submit="save" phx-change="validate">
         <.error_summary form={@form} />
         <.input field={@form[:mailing_address]} label="Mailing address" type="textarea" rows="6" />
+        <div class="grid md:grid-cols-2 gap-x-6">
+          <.input field={@form[:city]} label="City (optional)" />
+          <.input field={@form[:postal_code]} label="Postal code (optional)" />
+        </div>
         <.input
           field={@form[:authorized_by_name]}
           label="Tax credit letters authorized by"
@@ -113,7 +119,7 @@ defmodule Web.Settings.TaxCreditLettersLive do
           errors={if @signature_error, do: [@signature_error], else: []}
         >
           A PNG or JPEG of the signature, on white or transparent. New tax credit letters
-          print it above the signer's name.
+          and forms print it with the signer's name.
           <:current :if={@current_team.signature}>
             <div class="flex flex-wrap items-center gap-4">
               <img

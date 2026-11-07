@@ -24,6 +24,10 @@ defmodule App.Document.Evaluator do
   page, and the rest on more copies. Each place prints on each copy, reading `page` and
   `pages`, and the copy's rows as the rows place's name, so `sum(rows.total)` is that
   copy's subtotal. A row's places are named for the row, `rows.19.who`.
+
+  A form with a layout has no places: its `fills` are each value by name, as its Typst
+  layout reads them. Text, nil for a blank, true or false for a condition, and `{:image,
+  picture}` or nil; a `fill each` is a list of rows, each a map of its values.
   """
 
   alias App.Document
@@ -74,6 +78,8 @@ defmodule App.Document.Evaluator do
       lock: doc.lock,
       keep: Map.new(doc.keep, &{name(&1), value(&1, env)}),
       page: doc.page,
+      layout: doc.layout,
+      fills: fills(doc, env),
       copies: length(copies),
       places:
         copies
@@ -142,6 +148,32 @@ defmodule App.Document.Evaluator do
       })
       |> Map.put(:value, place_value(place, value, env))
     end
+  end
+
+  # A layout's values by name, each as its kind, and a list for each `fill each`.
+  defp fills(%Document{layout: nil}, _env), do: %{}
+
+  defp fills(%Document{fill: fill, types: types}, env) do
+    Map.new(fill, fn
+      %{place: list, value: {:each, report, fills}} ->
+        {list, Enum.map(Map.get(env.values, report, []), &fill_row(&1, list, fills, types, env))}
+
+      %{place: name, value: value} ->
+        {name, filled(types[{:fill, name}], value, env)}
+    end)
+  end
+
+  defp fill_row(row, list, fills, types, env) do
+    env = %{env | row: row.values}
+    Map.new(fills, &{&1.place, filled(types[{:fill, list, &1.place}], &1.value, env)})
+  end
+
+  defp filled(:condition, value, env), do: holds?(value, env)
+  defp filled(:text, value, env), do: text_value(value, env)
+
+  defp filled(:image, value, env) do
+    image = value(value, env)
+    if not blank?(image), do: {:image, image}
   end
 
   defp default(%{default: nil}, env), do: env
@@ -252,9 +284,12 @@ defmodule App.Document.Evaluator do
     case Enum.find(output.places, &(&1.name == place_name)) do
       %{kind: :text, value: value} -> value
       %{kind: :flow, across: false, value: items} -> flow_text(items)
-      _other -> nil
+      _other -> layout_text(Map.get(output, :fills, %{})[place_name])
     end
   end
+
+  defp layout_text(text) when is_binary(text), do: text
+  defp layout_text(_other), do: nil
 
   defp flow_text(items) do
     items
@@ -298,12 +333,9 @@ defmodule App.Document.Evaluator do
   # reads as whether it's ticked. An expect that gives one row reads that row first.
   defp read(env, output, given) do
     places =
-      output.places
-      |> Enum.filter(&(Map.get(&1, :copy, 1) == 1 and not Map.has_key?(&1, :row)))
-      |> Map.new(fn
-        %{kind: :tick} = place -> {place.name, place.value}
-        place -> {place.name, text(output, place.name)}
-      end)
+      output
+      |> printed_places()
+      |> Map.merge(Map.reject(output.fills, fn {_name, value} -> is_list(value) end))
       |> Map.merge(%{"title" => output.title, "author" => output.author})
 
     row =
@@ -313,6 +345,17 @@ defmodule App.Document.Evaluator do
       end
 
     %{env | values: Map.merge(env.values, places), row: row}
+  end
+
+  # Each place on the first copy, outside the rows, by name: a tick as whether it's
+  # ticked, and the rest as their text.
+  defp printed_places(output) do
+    output.places
+    |> Enum.filter(&(Map.get(&1, :copy, 1) == 1 and not Map.has_key?(&1, :row)))
+    |> Map.new(fn
+      %{kind: :tick} = place -> {place.name, place.value}
+      place -> {place.name, text(output, place.name)}
+    end)
   end
 
   # The condition, and what each value it reads holds.

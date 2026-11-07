@@ -232,6 +232,59 @@ defmodule Web.ActivityOrgFormLiveTest do
     end
   end
 
+  describe "the Expense reimbursement request" do
+    setup %{form: form} do
+      organization = Repo.get!(App.Model.Organization, form.organization_id)
+
+      request =
+        form_fixture(organization, %{
+          name: "Expense reimbursement request",
+          text: File.read!("priv/forms/bcsara/expense_request.txt"),
+          page: nil,
+          enabled: true
+        })
+
+      %{request: request}
+    end
+
+    test "shows each equipment use's total, and links an empty city to its settings", ctx do
+      %{cast: cast, request: request} = ctx
+      kayakers = MockupSeed.activity(cast, "Overdue kayakers")
+      Repo.update_all(App.Model.Team, set: [city: nil])
+
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(kayakers, request))
+
+      truck = App.Model.EquipmentItem |> where(title: "Truck 1") |> Repo.one!()
+
+      assert has_element?(
+               lv,
+               "#org-form-rows-equipment #org-form-row-item-#{truck.id}",
+               "Truck 1"
+             )
+
+      assert lv |> element("#org-form-total-item-#{truck.id}") |> render() =~ ~r/\$\d+\.\d\d/
+
+      assert has_element?(
+               lv,
+               ~s(#org-form-missing-table-team-city a[href="/teams/coastrange/settings/tax-credit-letters"]),
+               "Team settings"
+             )
+    end
+
+    test "Download PDF prints it with no page, and keeps the claim's totals", ctx do
+      %{cast: cast, request: request} = ctx
+      kayakers = MockupSeed.activity(cast, "Overdue kayakers")
+      conn = log_in_user(build_conn(), cast.alex)
+
+      conn = post(conn, form_path(kayakers, request) <> "/pdf", %{"answers" => %{"misc" => "40"}})
+      assert "%PDF" <> _ = conn.resp_body
+
+      pdf = SavedPDF |> where(activity_id: ^kayakers.id) |> Repo.one!()
+      assert pdf.keep[":misc"] == 40
+      assert pdf.keep["total"] |> Decimal.new() |> Decimal.gt?(40)
+    end
+  end
+
   describe "Download PDF and Open PDF" do
     test "keep the answers and save the PDF as it was made", ctx do
       %{cast: cast, hiker: hiker, form: form} = ctx

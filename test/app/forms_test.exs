@@ -9,6 +9,7 @@ defmodule App.FormsTest do
 
   alias App.Document
   alias App.Operation.PrintDocument
+  alias App.Operation.ReadDocument
   alias App.Operation.SaveForm
   alias App.Operation.TryForm
   alias App.Report.Context
@@ -30,7 +31,8 @@ defmodule App.FormsTest do
 
     for path <- forms() do
       text = File.read!(path <> ".txt")
-      page = File.read!(path <> ".pdf")
+      # A form with a layout has no page.
+      page = if File.exists?(path <> ".pdf"), do: File.read!(path <> ".pdf")
 
       assert {:ok, form} = SaveForm.call(organization_fixture(), nil, text, page, admin),
              "#{path}: #{inspect(SaveForm.call(organization_fixture(), nil, text, page, admin))}"
@@ -110,10 +112,10 @@ defmodule App.FormsTest do
              ]
     end
 
-    # The claim's rules print here, reading the same answers (#950).
-    test "works out each person's total as the claim's rules do", %{doc: doc} do
-      {:ok, claim} =
-        "test/support/fixtures/forms/claim_rules.txt" |> File.read!() |> Document.parse()
+    # The Expense reimbursement request repeats its rules, reading the same answers (#950).
+    test "works out each person's total as the Expense reimbursement request does",
+         %{doc: doc} do
+      {:ok, claim} = "#{@dir}/bcsara/expense_request.txt" |> File.read!() |> Document.parse()
 
       {:ok, claim} =
         Document.check(
@@ -160,6 +162,110 @@ defmodule App.FormsTest do
       page = File.read!("#{@dir}/bcsara/supplement.pdf")
 
       assert {:ok, pdf} = PrintDocument.call(output, page: page)
+      assert Service.PDFPages.count(pdf) == {:ok, 2}
+    end
+  end
+
+  describe "BCSARA's Expense reimbursement request" do
+    setup do
+      context = Context.new(SampleRepo.team(), DateTime.utc_now(), repo: SampleRepo)
+      text = File.read!("#{@dir}/bcsara/expense_request.txt")
+      {:ok, doc} = Document.parse(text)
+      {:ok, doc} = Document.check(doc, context)
+      %{doc: doc, text: text, context: context}
+    end
+
+    test "has no page: its layout draws it, and it reads the team's address and signer",
+         %{doc: doc} do
+      assert doc.layout && !doc.page && doc.places == []
+      refute File.exists?("#{@dir}/bcsara/expense_request.pdf")
+
+      assert Enum.map(doc.asks, &{&1.name, &1.each}) == [
+               {"meals_provided", nil},
+               {"on_task", "people"},
+               {"meals_given", "people"},
+               {"misc", nil}
+             ]
+
+      [team] = for %{name: "team"} = report <- doc.reports, do: report
+      fields = Enum.map(team.query.select, &Query.text/1)
+
+      for field <- ~w(legal_name mailing_address city postal_code signer signer_title
+                      signer_phone signer_email),
+          do: assert(field in fields, field)
+    end
+
+    # The Supplement's subtotal is this claim's balance forward, from the same answers
+    # (#950). The bundle will drop the repeat.
+    test "its balance forward is the Supplement's subtotal on Coast Range SAR's claim",
+         %{text: text, context: context} do
+      activity = SampleRepo.get_by!(App.Model.Activity, title: "Overdue kayakers")
+      supplement = File.read!("#{@dir}/bcsara/supplement.txt")
+
+      [claimed, supplied] =
+        for text <- [text, supplement] do
+          {:ok, %{doc: doc, values: values}} =
+            ReadDocument.call(text, context, %{activity: activity.id})
+
+          [first, second | _] = values["people"]
+
+          answers = %{
+            ":meals_provided" => 1,
+            {"on_task", first.key} => "No",
+            {"meals_given", second.key} => 0
+          }
+
+          Document.evaluate(doc, Map.merge(values, answers), context.timezone)
+        end
+
+      assert Decimal.gt?(claimed.keep["personnel"], 0)
+      assert claimed.fills["balance_forward"] == Document.text(supplied, "subtotal")
+    end
+
+    test "an item with a cost per hour and a cost per use prints a line for each",
+         %{doc: doc} do
+      use = %{
+        key: "item:1",
+        values: %{
+          "item" => "Truck 1",
+          "km" => 40,
+          "hours" => 300,
+          "quantity" => 1,
+          "item.cost_per_km" => 0.67,
+          "item.cost_per_hour" => 25.0,
+          "item.cost_per_use" => 125.0
+        }
+      }
+
+      output = Document.evaluate(doc, %{"equipment" => [use]}, "America/Vancouver")
+
+      # The km and the hours on the first line, and the use on the second.
+      assert [line] = output.fills["items"]
+
+      assert Map.take(line, ~w(km km_rate hours hour_rate hour_total used use_total total)) ==
+               %{
+                 "km" => "40",
+                 "km_rate" => "$0.67",
+                 "hours" => "5",
+                 "hour_rate" => "$25.00",
+                 "hour_total" => "$151.80",
+                 "used" => "1",
+                 "use_total" => "$125.00",
+                 "total" => "$276.80"
+               }
+
+      assert output.fills["equipment_subtotal"] == "$276.80"
+    end
+
+    # The table grows with its rows, onto another page with its heading again.
+    test "a claim with many uses runs onto a second page", %{doc: doc} do
+      uses =
+        for n <- 1..40,
+            do: %{key: "item:#{n}", values: %{"item" => "Radio #{n}", "hours" => 120}}
+
+      output = Document.evaluate(doc, %{"equipment" => uses}, "America/Vancouver")
+
+      assert {:ok, pdf} = PrintDocument.call(output)
       assert Service.PDFPages.count(pdf) == {:ok, 2}
     end
   end

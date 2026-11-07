@@ -10,6 +10,9 @@ defmodule App.Document.Parser do
   condition` is blank when the condition is false, `if condition then value else value`
   picks one, and `rate on date` reads a const on a date. A form's `rows` place holds a
   row's places, indented under it, and `fill each people into rows` fills them.
+
+  `layout` comes last, alone on its line, and every line after it is a form's Typst
+  layout, as written: Typst's own indents, blank lines, and `//` comments.
   """
 
   alias App.Document
@@ -20,7 +23,7 @@ defmodule App.Document.Parser do
   alias App.Report.Query
 
   @clauses ~w(document form about for report const ask compute title lock keep page places fill
-               expect)
+               expect layout)
   @starts ~w(member year)
   @repeated ~w(report const ask compute fill expect)
   @kinds %{
@@ -43,14 +46,37 @@ defmodule App.Document.Parser do
 
   @doc "`{:ok, %Document{}}`, or `{:error, %Error{}}` for the first mistake."
   def parse(text) when is_binary(text) do
+    {text, layout} = split_layout(text)
+
     text
     |> lines()
     |> blocks()
     |> Enum.reduce({%Document{}, nil}, &clause/2)
     |> elem(0)
+    |> Map.put(:layout, layout)
     |> finish()
   catch
     {:report_error, %Error{} = error} -> {:error, error}
+  end
+
+  # The text before a line that says `layout` alone, at the left edge, and the Typst after
+  # it as `%{text, line}`, with the line it starts on. Nil when there's none.
+  defp split_layout(text) do
+    lines = String.split(text, ~r/\r?\n/)
+
+    case Enum.find_index(lines, &Regex.match?(~r/\Alayout\s*\z/i, &1)) do
+      nil ->
+        {text, nil}
+
+      at ->
+        {before, [_layout | typst]} = Enum.split(lines, at)
+        typst = Enum.join(typst, "\n")
+
+        if String.trim(typst) == "",
+          do: fail(at + 1, "Write the form's Typst layout on the lines after layout.")
+
+        {Enum.join(before, "\n"), %{text: typst, line: at + 2}}
+    end
   end
 
   # Each line that holds more than a comment, as `{number, indent, text}`.
@@ -318,6 +344,10 @@ defmodule App.Document.Parser do
     end
   end
 
+  # A `layout` line that `split_layout/1` didn't take: it has more on it.
+  defp read("layout", _block, _doc, n),
+    do: fail(n, "Write layout alone on its line, and the form's Typst layout after it.")
+
   defp read("expect", block, doc, n) do
     {given, rest} =
       case tl(tokens(block)) do
@@ -344,7 +374,13 @@ defmodule App.Document.Parser do
         "Write for activity after the form's name, such as for activity where kind = 'incident'."
       )
 
-  defp finish(%Document{places: []}),
+  defp finish(%Document{layout: %{line: line}, page: true}),
+    do: fail(line - 1, "Take out page: the layout draws the form's page.")
+
+  defp finish(%Document{layout: %{line: line}, places: [_ | _]}),
+    do: fail(line - 1, "Take out places: the layout says where each value goes.")
+
+  defp finish(%Document{places: [], layout: nil}),
     do: fail(nil, "Add places: where each value goes on the page.")
 
   defp finish(%Document{fill: []}), do: fail(nil, "Add fill: what goes in each place.")
@@ -553,30 +589,48 @@ defmodule App.Document.Parser do
     given(rest, [given_item(expr) | items], n)
   end
 
-  # A row's values, each a name and then a value with no =, such as hours 6. A comma
-  # followed by anything else ends the row.
-  defp row_values([{:word, name, line} | rest], pairs, n) do
+  # A row's values, each a name and then a value with no =, such as hours 6, or a
+  # parent's, item.cost_per_hour 25. A comma followed by anything else ends the row.
+  defp row_values([{:word, _, line} | _] = tokens, pairs, n) do
+    {name, rest} = dotted(tokens)
+
     {value, rest} =
       case Parser.expression(rest) do
         {{:literal, value, _}, rest} -> {value, rest}
         _other -> fail(n, "Give each of a row's values after its name, such as people hours 6.")
       end
 
-    pairs = [{lower(name), value, line} | pairs]
+    pairs = [{name, value, line} | pairs]
 
-    case rest do
-      [{:symbol, ",", _}, {:word, _, _}, next | _] = rest ->
-        if value_start?(next),
-          do: row_values(tl(rest), pairs, n),
-          else: {Enum.reverse(pairs), rest}
-
-      rest ->
-        {Enum.reverse(pairs), rest}
-    end
+    if more_values?(rest),
+      do: row_values(tl(rest), pairs, n),
+      else: {Enum.reverse(pairs), rest}
   end
 
   defp row_values(_tokens, _pairs, n),
     do: fail(n, "Give each of a row's values after its name, such as people hours 6.")
+
+  # A name and its parents' names after dots, lower case but a custom field's title:
+  # `item.cost_per_hour`.
+  defp dotted([{:word, word, _} | rest]), do: dotted(rest, [lower_name(word)])
+
+  defp dotted([{:symbol, ".", _}, {:word, word, _} | rest], names),
+    do: dotted(rest, [lower_name(word) | names])
+
+  defp dotted(rest, names), do: {names |> Enum.reverse() |> Enum.join("."), rest}
+
+  defp lower_name("`" <> _ = title), do: title
+  defp lower_name(word), do: lower(word)
+
+  # A comma, a name, and a value: the row goes on.
+  defp more_values?([{:symbol, ",", _}, {:word, _, _} | _] = rest) do
+    case rest |> tl() |> dotted() do
+      {_name, [next | _]} -> value_start?(next)
+      {_name, []} -> false
+    end
+  end
+
+  defp more_values?(_rest), do: false
 
   defp value_start?({kind, _value, _line}) when kind in [:number, :string, :date], do: true
   defp value_start?({:symbol, "-", _line}), do: true
