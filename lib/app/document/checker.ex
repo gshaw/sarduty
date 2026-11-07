@@ -10,6 +10,9 @@ defmodule App.Document.Checker do
   only print, and no report reads them: the team's and the organization's logos, the
   team's signature, and the PDF's reference and verify link. `qr()` makes a link a QR
   code.
+
+  A form (#950) starts from `:activity`, and its `where` is checked as a report's on
+  activities. Each answer is `:name`, typed by its default: text, a number, or a date.
   """
 
   alias App.Document
@@ -51,8 +54,9 @@ defmodule App.Document.Checker do
 
   @doc "`{:ok, %Document{}}` with its types, or `{:error, %Error{}}` for the first mistake."
   def check(%Document{} = doc, %Context{} = context) do
+    check_where(doc, context)
     reports = Enum.map(doc.reports, &report(&1, doc.for, context)) ++ one_rows(doc, context)
-    types = types(doc, reports)
+    types = doc |> types(reports) |> asks(doc.asks)
     check_values(doc, types)
     {:ok, %{doc | reports: reports, types: types}}
   catch
@@ -60,11 +64,26 @@ defmodule App.Document.Checker do
   end
 
   defp check_values(doc, types) do
-    check_places(doc.places, types)
+    if doc.kind == :form and doc.lock,
+      do: fail(nil, "Take out lock: an agency writes on a form's PDF.")
+
+    check_places(doc, types)
     check_fill(doc, types)
     check_title(doc.title, types)
-    Enum.each(doc.keep, &check_keep(&1, types))
+    Enum.each(doc.keep, &check_keep(&1, doc.asks, types))
     Enum.each(doc.expects, &check_expect(&1, doc, types))
+  end
+
+  # Which activities show a form: its where, checked as a report's on activities. It
+  # reads no answers, since it decides whether the form shows before anyone answers.
+  defp check_where(%Document{where: nil}, _context), do: :ok
+
+  defp check_where(%Document{where: where} = doc, context) do
+    for {name, line} <- walk(where),
+        do: fail(line, "Take out :#{name}: where reads only the activity's fields.")
+
+    columns(Document.shown_on(doc), context)
+    :ok
   end
 
   # Reports
@@ -133,7 +152,8 @@ defmodule App.Document.Checker do
     expects =
       Enum.flat_map(doc.expects, &[&1.check | Enum.map(&1.given, fn {t, _v, _l} -> t end)])
 
-    [title, doc.keep, fill, expects] |> List.flatten() |> Enum.reject(&is_nil/1)
+    defaults = Enum.map(doc.asks, & &1.default)
+    [title, doc.keep, defaults, fill, expects] |> List.flatten() |> Enum.reject(&is_nil/1)
   end
 
   # Field paths, lower case, as `{path, line}`, leaving out a function's name.
@@ -158,19 +178,68 @@ defmodule App.Document.Checker do
     @print |> Map.merge(columns) |> Map.merge(starts) |> Map.put("today", :day)
   end
 
+  # Asks
+
+  # Each answer's type, in order, so a default reads only the asks above it.
+  defp asks(types, asks) do
+    Enum.reduce(asks, types, fn ask, types ->
+      if Map.has_key?(types, ":#{ask.name}"),
+        do:
+          fail(ask.line, "Give the ask another name: :#{ask.name} is what the form starts from.")
+
+      Map.put(types, ":#{ask.name}", ask_type(ask, types))
+    end)
+  end
+
+  defp ask_type(%{choices: [_one]} = ask, _types),
+    do: fail(ask.line, "Give choose two answers or more, such as choose 'Yes', 'No'.")
+
+  defp ask_type(%{choices: [_ | _]} = ask, types) do
+    check_choice(ask, types)
+    :text
+  end
+
+  defp ask_type(%{default: nil}, _types), do: :text
+
+  defp ask_type(ask, types) do
+    case type(ask.default, types) do
+      type when type in [:text, :choice] -> :text
+      type when type in [:number, :day] -> type
+      _other -> fail(ask.line, "Give default text, a number, or a date, such as default 0.")
+    end
+  end
+
+  defp check_choice(%{default: nil}, _types), do: :ok
+
+  defp check_choice(%{default: {:literal, value, line}, choices: choices}, _types) do
+    if value not in choices,
+      do: fail(line, "Make the default one of the choices: #{quoted(choices)}.")
+
+    :ok
+  end
+
+  defp check_choice(ask, types) do
+    if type(ask.default, types) not in [:text, :choice],
+      do: fail(ask.line, "Make the default one of the choices: #{quoted(ask.choices)}.")
+
+    :ok
+  end
+
+  defp quoted(choices), do: Enum.map_join(choices, " or ", &"'#{&1}'")
+
   # Places
 
-  defp check_places(places, types) do
-    names = Enum.map(places, & &1.name)
+  defp check_places(doc, types) do
+    names = Enum.map(doc.places, & &1.name)
 
-    for place <- places do
+    for place <- doc.places do
       if taken?(place.name, types),
         do: fail(place.line, "Give the place another name: #{place.name} is a value's.")
 
       if Enum.count(names, &(&1 == place.name)) > 1,
         do: fail(place.line, "Give the place another name: #{place.name} is used twice.")
 
-      check_place(place, places)
+      check_place(place, doc)
     end
   end
 
@@ -181,24 +250,73 @@ defmodule App.Document.Checker do
       types |> Map.keys() |> Enum.any?(&String.starts_with?(&1, prefix))
   end
 
-  defp check_place(place, places) do
+  defp check_place(place, doc) do
     check_position(place)
 
     if place.across and place.kind != :flow,
       do: fail(place.line, "Take out across: only a flow stacks across.")
 
-    if place.level_with && not Enum.any?(places, &down_flow?(&1, place.level_with)),
-      do:
-        fail(
-          place.line,
-          "Write level with and a flow that stacks down, not #{place.level_with}."
-        )
+    check_level_with(place, doc.places)
+    check_page(place, doc)
+    check_text_options(place)
+
+    if place.kind == :tick and not Map.has_key?(place, :size),
+      do: fail(place.line, "Give #{place.name} a size: the side of its box, such as size 9pt.")
 
     :ok
   end
 
+  defp check_level_with(%{level_with: nil}, _places), do: :ok
+
+  defp check_level_with(place, places) do
+    case Enum.find(places, &down_flow?(&1, place.level_with)) do
+      nil ->
+        fail(place.line, "Write level with and a flow that stacks down, not #{place.level_with}.")
+
+      %{page: page} when page != place.page ->
+        fail(place.line, "Put #{place.name} on page #{page}, where #{place.level_with} is.")
+
+      _flow ->
+        :ok
+    end
+  end
+
   defp down_flow?(place, name),
     do: place.name == name and place.kind == :flow and not place.across
+
+  defp check_page(%{page: 1}, _doc), do: :ok
+  defp check_page(_place, %Document{page: true}), do: :ok
+
+  defp check_page(place, _doc),
+    do:
+      fail(place.line, "Take out page #{place.page}, or add page: only a form's page has pages.")
+
+  # `fit` keeps one line and shrinks it to its width; `pitch` wraps it on the page's lines.
+  defp check_text_options(%{kind: :text, fit: true} = place) do
+    if Map.has_key?(place, :pitch),
+      do: fail(place.line, "Write fit or pitch, not both: fit keeps the text on one line.")
+
+    unless Map.has_key?(place, :width) or
+             (Map.has_key?(place, :left) and Map.has_key?(place, :right)),
+           do:
+             fail(
+               place.line,
+               "Give #{place.name} a width, or left and right: fit shrinks the text to it."
+             )
+
+    :ok
+  end
+
+  defp check_text_options(%{kind: :text}), do: :ok
+
+  defp check_text_options(place) do
+    if place.fit, do: fail(place.line, "Take out fit: only a text place shrinks to fit.")
+
+    if Map.has_key?(place, :pitch),
+      do: fail(place.line, "Take out pitch: only a text place wraps on the page's lines.")
+
+    :ok
+  end
 
   defp check_position(place) do
     unless Map.has_key?(place, :left) or Map.has_key?(place, :right),
@@ -243,6 +361,17 @@ defmodule App.Document.Checker do
 
   defp check_filled(%{kind: :flow} = place, {:flow, items}, types, _line),
     do: Enum.each(items, &check_item(&1, place, types))
+
+  defp check_filled(%{kind: :tick} = place, value, types, line) do
+    if type(value, types) not in [:condition, :bool],
+      do:
+        fail(
+          line,
+          "Fill #{place.name} with a condition, such as :injured > 0: it ticks when it holds."
+        )
+
+    :ok
+  end
 
   defp check_filled(%{kind: :image} = place, value, types, line) do
     if type(value, types) != :image,
@@ -301,7 +430,7 @@ defmodule App.Document.Checker do
   end
 
   # Only what a report reads is kept: never a value only printing reads, like the signature.
-  defp check_keep({:field, path, [], line}, types) do
+  defp check_keep({:field, path, [], line}, _asks, types) do
     name = lower_path(Enum.join(path, "."))
 
     cond do
@@ -316,12 +445,23 @@ defmodule App.Document.Checker do
     end
   end
 
-  defp check_keep(expr, _types),
+  # An answer is kept as it was given.
+  defp check_keep({:value, name, line}, asks, _types) do
+    if Enum.any?(asks, &(&1.name == name)),
+      do: :ok,
+      else: fail(line, "Keep a report's value or an answer, such as hours.total, not :#{name}.")
+  end
+
+  defp check_keep(expr, _asks, _types),
     do: fail(Query.line(expr), "Keep a report's value, such as hours.total, not #{text(expr)}.")
 
   defp check_expect(expect, doc, types) do
     Enum.each(expect.given, &check_given(&1, types))
-    outputs = Map.new(["title", "author" | Enum.map(doc.places, & &1.name)], &{&1, :text})
+    # A tick holds or doesn't, so an expect reads it as a condition.
+    outputs =
+      doc.places
+      |> Map.new(&{&1.name, if(&1.kind == :tick, do: :condition, else: :text)})
+      |> Map.merge(%{"title" => :text, "author" => :text})
 
     if type(expect.check, Map.merge(types, outputs)) != :condition,
       do:
@@ -368,7 +508,7 @@ defmodule App.Document.Checker do
   def type({:value, name, line}, types) do
     case Map.fetch(types, ":#{name}") do
       {:ok, type} -> type
-      :error -> fail(line, "Add #{name} after for, or take :#{name} out.")
+      :error -> fail(line, "Add #{name} after for or ask for it above, or take :#{name} out.")
     end
   end
 

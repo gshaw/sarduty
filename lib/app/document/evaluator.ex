@@ -7,6 +7,10 @@ defmodule App.Document.Evaluator do
   skips it, and a flow leaves it out. Text compares exactly, case and all, since an
   `expect` checks what a page prints. A picture stays whatever the caller gave, and
   `qr(link)` is `{:qr, link}` for the printer to draw.
+
+  A form's answer is `:name` in the values. One not given, or blank, takes its default,
+  in the order the asks are written, so a default can read an answer above it. A tick
+  is true or false.
   """
 
   alias App.Document
@@ -27,7 +31,7 @@ defmodule App.Document.Evaluator do
 
   @doc "What the document prints from `values`. See App.Document.evaluate/3."
   def evaluate(%Document{} = doc, values, timezone) do
-    env = %{values: values, timezone: timezone}
+    env = Enum.reduce(doc.asks, %{values: values, timezone: timezone}, &default/2)
     title = doc.title
 
     %{
@@ -35,8 +39,19 @@ defmodule App.Document.Evaluator do
       author: title && title.by && text_value(title.by, env),
       lock: doc.lock,
       keep: Map.new(doc.keep, &{name(&1), value(&1, env)}),
+      page: doc.page,
       places: Enum.map(doc.places, &place(&1, doc.fill, env))
     }
+  end
+
+  defp default(%{default: nil}, env), do: env
+
+  defp default(ask, env) do
+    key = ":#{ask.name}"
+
+    if blank?(Map.get(env.values, key)),
+      do: %{env | values: Map.put(env.values, key, value(ask.default, env))},
+      else: env
   end
 
   defp place(place, fill, env) do
@@ -47,6 +62,7 @@ defmodule App.Document.Evaluator do
   defp place_value(%{kind: :flow, across: across?}, {:flow, items}, env),
     do: items |> Enum.map(&item(&1, across?, env)) |> Enum.reject(&is_nil/1)
 
+  defp place_value(%{kind: :tick}, value, env), do: holds?(value, env)
   defp place_value(%{kind: :image}, value, env), do: value(value, env)
   defp place_value(%{kind: :text}, value, env), do: text_value(value, env)
 
@@ -98,7 +114,7 @@ defmodule App.Document.Evaluator do
   def expect(%Document{} = doc) do
     failed =
       for expect <- doc.expects,
-          values = given(expect.given),
+          values = answered(doc, given(expect.given)),
           output = evaluate(doc, values, "Etc/UTC"),
           not holds?(expect.check, %{values: outputs(output, values), timezone: "Etc/UTC"}) do
         Error.new(expect.line, "This expect fails: #{described(expect.check, output, values)}")
@@ -106,6 +122,10 @@ defmodule App.Document.Evaluator do
 
     if failed == [], do: :ok, else: {:error, failed}
   end
+
+  # The values with each answer not given at its default, as the form prints it.
+  defp answered(doc, values),
+    do: Enum.reduce(doc.asks, %{values: values, timezone: "Etc/UTC"}, &default/2).values
 
   defp given(given) do
     Map.new(given, fn
@@ -115,10 +135,14 @@ defmodule App.Document.Evaluator do
     end)
   end
 
-  # The values, with each place's text and the title, as an expect reads them.
+  # The values, with each place's text and the title, as an expect reads them. A tick
+  # reads as whether it's ticked.
   defp outputs(output, values) do
     output.places
-    |> Map.new(&{&1.name, text(output, &1.name)})
+    |> Map.new(fn
+      %{kind: :tick} = place -> {place.name, place.value}
+      place -> {place.name, text(output, place.name)}
+    end)
     |> Map.merge(%{"title" => output.title, "author" => output.author})
     |> then(&Map.merge(values, &1))
   end
