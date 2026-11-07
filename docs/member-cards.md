@@ -297,11 +297,16 @@ other way to get the card.
   pass on the tap. A mail app's link scanner or a preview only loads the page, so it
   builds nothing.
 - **One quiet line says what SAR Duty sees**, above "Lost your phone?": "SAR Duty sees
-  your ID card in Apple Wallet on 1 device." ([Web.WalletText](../lib/web/wallet_text.ex),
-  which also writes the ID Card tab's Wallet row). It changes while the page is open: a
-  phone adding or dropping the pass, and Google's save and delete, each broadcast
-  `:wallet_changed` on the card's topic (`MemberCard.pass_topic/1`). There's no refresh
-  button: the page hears every change.
+  your ID card in Apple Wallet.", "…in Google Wallet.", "…in Apple Wallet and in Google
+  Wallet.", or "SAR Duty doesn't see your ID card in Wallet yet."
+  ([Web.WalletText](../lib/web/wallet_text.ex), which also writes the ID Card tab's
+  Wallet row). It says whether a device holds the pass (`PassRegistration.holding/2`
+  above 0), never how many: a pass added on an iPhone syncs through iCloud to the
+  member's iPad, which registers on its own, so 1 added read as "2 devices". The ID Card
+  tab keeps the count and the last download for team admins. The line changes while the
+  page is open: a phone adding or dropping the pass, and Google's save and delete, each
+  broadcast `:wallet_changed` on the card's topic (`MemberCard.pass_topic/1`). There's
+  no refresh button: the page hears every change.
 - **The line is never a spinner.** A tap can't tell an added card from a cancelled
   sheet, a file downloaded on a computer, or a card already in that Wallet, which
   registers nothing again. So the line only ever says what SAR Duty sees, and a tap

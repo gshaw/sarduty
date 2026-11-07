@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- The ID card page says which Wallet SAR Duty sees your card in, without a device count.
+  An iPad that gets the card through iCloud made one card read as 2 devices.
 - An ID card's email has one button, Get your ID card. It opens a page with Add to Apple
   Wallet and Add to Google Wallet, so members on either phone find theirs. No more pass
   attached under the signature.
