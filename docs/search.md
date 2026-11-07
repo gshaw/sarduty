@@ -59,7 +59,7 @@ open. Nothing is stored on the server.
 
 ## A new kind of record
 
-Every team page for one record, `/teams/:subdomain/…/:id`, must be a kind in
+Every team page for one record, `/teams/:subdomain/…/:id` or `…/:rule_id`, must be a kind in
 `Web.Search.live_views/0` or be in `Web.Search.not_searched/0` with a reason.
 [test/web/search_test.exs](../test/web/search_test.exs) fails until one of them says so.
 

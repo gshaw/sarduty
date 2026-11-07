@@ -22,6 +22,7 @@ defmodule Web.ActivityLive do
   alias App.Operation.DeleteActivity
   alias App.Operation.SendReminders
   alias App.Repo
+  alias App.ViewData.ActivityForms
   alias App.ViewData.ActivityMembers
   alias App.ViewData.ActivityReminders
   alias App.ViewData.ActivityTravel
@@ -56,10 +57,8 @@ defmodule Web.ActivityLive do
     %{current_team: team, team_admin?: team_admin?} = socket.assigns
     activity = fetch_activity(team, params["id"])
 
-    if activity.deleted_at && !team_admin?, do: raise(Web.Status.NotFound)
     travel? = Activity.travel?(team, activity)
-    # Travel is a feature, on incidents only.
-    if socket.assigns.live_action == :travel && !travel?, do: raise(Web.Status.NotFound)
+    opens!(activity, travel?, team_admin?, socket.assigns.live_action)
     # The History tab is Web.ActivityHistoryLive's route, for team admins only.
     tab = tab(socket.assigns.live_action)
 
@@ -72,7 +71,7 @@ defmodule Web.ActivityLive do
         activity: activity,
         travel?: travel?,
         tab: tab,
-        entries: if(tab == :history, do: ChangeHistory.for_activity(team, activity), else: []),
+        entries: history(tab, team, activity),
         now: now,
         coming?: not Activity.started?(activity, now),
         hours_tags: Activity.hours_tags(team),
@@ -81,12 +80,31 @@ defmodule Web.ActivityLive do
         replier: Reply.replier(socket.assigns, now)
       )
       |> assign_fields()
+      |> assign_forms()
       |> assign_people()
 
     {:noreply, socket}
   end
 
+  # An organization's forms it shows on, above Actions, for team admins only (#950).
+  defp assign_forms(%{assigns: %{team_admin?: false}} = socket), do: assign(socket, forms: [])
+
+  defp assign_forms(socket) do
+    %{current_team: team, activity: activity, now: now} = socket.assigns
+    assign(socket, forms: ActivityForms.on(team, activity, now))
+  end
+
+  # A member never gets a deleted activity. Travel is a feature, on incidents only.
+  defp opens!(activity, travel?, team_admin?, action) do
+    if activity.deleted_at && !team_admin?, do: raise(Web.Status.NotFound)
+    if action == :travel && !travel?, do: raise(Web.Status.NotFound)
+    :ok
+  end
+
   @tabs [:overview, :members, :travel, :equipment, :fields, :history]
+
+  defp history(:history, team, activity), do: ChangeHistory.for_activity(team, activity)
+  defp history(_tab, _team, _activity), do: []
 
   # Any other live action is a step of the Members tab (Web.ActivityMembersLive).
   defp tab(action) when action in @tabs, do: action
@@ -469,6 +487,7 @@ defmodule Web.ActivityLive do
           change_fields?={@change_fields?}
           send_attendance?={@send_attendance?}
           delete_confirm={@delete_confirm}
+          forms={@forms}
         />
       </aside>
     </div>
@@ -574,8 +593,10 @@ defmodule Web.ActivityLive do
   attr :change_fields?, :boolean, default: false, doc: "whether its kind has custom fields"
   attr :send_attendance?, :boolean, default: false, doc: "whether anyone has scanned"
   attr :delete_confirm, :any, default: false, doc: "Delete's confirm dialog, or false for none"
+  attr :forms, :list, default: [], doc: "the organization's forms it shows on (#950)"
 
-  # Every record's sidebar ends the same way: Actions. Custom fields are a tab (#705).
+  # Every record's sidebar ends the same way: Actions. Custom fields are a tab (#705). An
+  # organization's forms come just above, for team admins (#950).
   def sidebar_end(assigns) do
     # A team admin's actions read or write the activity in D4H, which no longer has a
     # deleted one. A Records team has no D4H to open.
@@ -587,6 +608,17 @@ defmodule Web.ActivityLive do
 
     ~H"""
     <dl>
+      <dt :if={@forms != []}>Forms</dt>
+      <dd :if={@forms != []}>
+        <ul id="activity-forms" class="action-list">
+          <li :for={form <- @forms}>
+            <.a
+              id={"activity-form-#{form.id}"}
+              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/forms/#{form.id}"}
+            >{form.name}</.a>
+          </li>
+        </ul>
+      </dd>
       <dt :if={@admin_actions? or @d4h?}>Actions</dt>
       <dd :if={@admin_actions? or @d4h?}>
         <ul id="activity-actions" class="action-list">

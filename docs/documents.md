@@ -182,6 +182,32 @@ organization's space, `/orgs/:slug/forms` ([organizations.md](organizations.md#i
 - **Coast Range SAR has BCSARA's 27 incident fields**, with made-up values, so a BC form
   tried there fills every line. Its draft Missing hiker has no Agency File #.
 
+### On an activity
+
+Once on, a form shows in a **Forms** section above Actions on each activity its `where`
+shows it on, for team admins only, never members, and never on a deleted activity
+(App.ViewData.ActivityForms). Its page is
+`/teams/:subdomain/activities/:id/forms/:form_id` (Web.ActivityOrgFormLive), found
+through the team's organization, so a form that's off or another organization's is a 404. It shows:
+
+- **What SAR Duty filled in**: each column of each report, from ReadDocument's `read`.
+- **What's missing**: each one blank, with the page that fixes it, so the fix reaches
+  D4H and every form. An activity's D4H field links to Change fields, its own details to
+  Change activity, and the team's to team settings. Fields first, questions second: an
+  empty field never becomes a question. The PDF still prints with it blank.
+- **The questions.** Answers save as they change (App.Operation.SaveFormAnswers), in
+  `form_answers`: team, activity, name, row, the text typed, who, and when. They're the
+  activity's, by name, so every form that asks the same thing starts from them, and
+  they never go to D4H. A blank answer is deleted, so the default holds. An ask starts
+  from the activity's answer, then for `remember` the team's last answer on any
+  activity (`FormAnswer.starting/2`), then its default. `row` is "" until `ask each`.
+- **Download PDF and Open PDF** post the answers to Web.ActivityFormPDFController,
+  since a LiveView can't send a PDF. App.Operation.CreateFormPDF keeps the answers,
+  prints the form, and saves the PDF it sends, every time (`SavedPDF.add_for_form!/5`).
+  An answer that doesn't read makes nothing.
+
+Search leaves the page out: it's found from its activity (`Web.Search.not_searched/0`).
+
 ## Saved PDFs
 
 Every PDF a document makes is saved as it was made, so a download or email serves the

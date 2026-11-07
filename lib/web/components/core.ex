@@ -122,7 +122,9 @@ defmodule Web.Components.Core do
   attr :href, :string, default: nil
   attr :class, :string, default: nil
   attr :icon, :string, default: nil, values: [nil | @icon_names]
-  attr :rest, :global, include: ~w(disabled form formnovalidate name value method)
+
+  attr :rest, :global,
+    include: ~w(disabled form formaction formnovalidate formtarget name value method)
 
   slot :inner_block, required: true
 
