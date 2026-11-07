@@ -6,17 +6,17 @@ defmodule App.Operation.LoadTaxCreditLetterPDF do
   raises.
   """
 
-  alias App.Model.LetterPDF
+  alias App.Model.SavedPDF
   alias App.Model.TaxCreditLetter
   alias App.Operation.PrintTaxCreditLetter
 
   @doc "Expects the letter's member and team loaded."
   def call(%TaxCreditLetter{} = letter) do
-    case LetterPDF.attachment(letter) do
+    case SavedPDF.letter_attachment(letter) do
       nil ->
         case PrintTaxCreditLetter.call(letter) do
           {:ok, attachment} ->
-            LetterPDF.put!(letter, attachment)
+            SavedPDF.put_letter!(letter, attachment)
             attachment
 
           {:error, reason} ->
