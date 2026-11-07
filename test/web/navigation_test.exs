@@ -258,15 +258,19 @@ defmodule Web.NavigationTest do
       assert Navigation.area("/orgs/wsara", @team, nil) == nil
     end
 
-    test "its sections are Teams, then Organization settings" do
+    test "its sections are Teams and Forms, then Organization settings" do
       path = "/orgs/wsara/settings/hours-tags"
       sections = path |> Navigation.area(nil, @wsara) |> Navigation.sections(path)
 
-      assert keys(sections) == [["org-teams"], ["org-settings"]]
+      assert keys(sections) == [["org-teams", "org-forms"], ["org-settings"]]
       assert current(sections) == ["org-settings"]
 
       teams = "/orgs/wsara" |> Navigation.area(nil, @wsara) |> Navigation.sections("/orgs/wsara")
       assert current(teams) == ["org-teams"]
+
+      path = "/orgs/wsara/forms/3/edit"
+      forms = path |> Navigation.area(nil, @wsara) |> Navigation.sections(path)
+      assert current(forms) == ["org-forms"]
     end
 
     test "the switcher lists your organizations after your teams, before SAR Duty admin" do

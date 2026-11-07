@@ -48,4 +48,4 @@ incident attendance, SAR Duty removed its attendance import (#212, #424); Take a
 - **Group membership** (above): SAR Duty writes it to D4H, so SCA reading D4H groups is
   the clean way to get it there.
 
-<!-- cspell:ignore sarassist EMCR SARM — SCA's domain, BC's emergency management ID, a SAR manager -->
+<!-- cspell:ignore sarassist SARM — SCA's domain, a SAR manager -->

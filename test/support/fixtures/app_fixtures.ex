@@ -13,6 +13,8 @@ defmodule App.DataFixtures do
   alias App.Model.EndorsementQualification
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
+  alias App.Model.Form
+  alias App.Model.FormPage
   alias App.Model.Group
   alias App.Model.GroupMember
   alias App.Model.GroupRule
@@ -97,6 +99,30 @@ defmodule App.DataFixtures do
     |> Repo.update_all(set: [organization_id: organization.id])
 
     organization
+  end
+
+  @doc """
+  An organization's form (#950), inserted directly with the test form's text and a
+  stand-in page, or `page:` in `attrs`, so it isn't checked. Off unless `attrs` says
+  `enabled: true`.
+  """
+  def form_fixture(%Organization{} = organization, attrs \\ %{}) do
+    {page, attrs} = Map.pop(attrs, :page, "%PDF-1.7 a stand-in page")
+    text = File.read!("test/support/fixtures/forms/task_report.txt")
+
+    form =
+      %Form{
+        organization_id: organization.id,
+        name: "Task report",
+        about: "A made-up agency's task report, for tests.",
+        text: text,
+        page_sha256: Form.sha256(page)
+      }
+      |> Map.merge(attrs)
+      |> Repo.insert!()
+
+    Repo.insert!(%FormPage{form_id: form.id, bytes: page})
+    form
   end
 
   @doc "An organization admin (#512), inserted directly, so any email works."

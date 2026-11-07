@@ -55,7 +55,10 @@ defmodule App.Model.Event do
     organization_admin_removed: 730,
     organization_hours_tags_changed: 730,
     organization_team_added: 730,
-    organization_team_removed: 730
+    organization_team_removed: 730,
+    form_saved: 730,
+    form_turned_on: 730,
+    form_turned_off: 730
   }
 
   @kinds Map.keys(@retention_days)

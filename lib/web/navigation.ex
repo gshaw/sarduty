@@ -94,7 +94,10 @@ defmodule Web.Navigation do
   def sections(%{kind: :org, organization: organization}, path, _opts) do
     mark_current(
       [
-        [link("org-teams", "Teams", ~p"/orgs/#{organization}", exact: true)],
+        [
+          link("org-teams", "Teams", ~p"/orgs/#{organization}", exact: true),
+          link("org-forms", "Forms", ~p"/orgs/#{organization}/forms")
+        ],
         [link("org-settings", "Organization settings", ~p"/orgs/#{organization}/settings")]
       ],
       path

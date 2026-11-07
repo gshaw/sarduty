@@ -325,6 +325,17 @@ defmodule Web.Router do
       live "/orgs/:slug/settings", Org.SettingsLive
       live "/orgs/:slug/settings/admins", Org.AdminsLive
       live "/orgs/:slug/settings/hours-tags", Org.HoursTagsLive
+      live "/orgs/:slug/forms", Org.FormCollectionLive
+      live "/orgs/:slug/forms/new", Org.FormUploadLive, :new
+      live "/orgs/:slug/forms/:id", Org.FormLive
+      live "/orgs/:slug/forms/:id/edit", Org.FormUploadLive, :edit
+    end
+
+    # A form's page and a try on Coast Range SAR (#950): PDFs, which a LiveView can't send.
+    scope "/orgs/:slug/forms/:id" do
+      pipe_through :require_org_access
+      get "/page", Org.FormController, :page
+      get "/try", Org.FormController, :try
     end
 
     # Every team page, in one live_session so moving between them doesn't reload (#406).

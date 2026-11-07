@@ -63,7 +63,7 @@ defmodule App.Operation.PrintFormTest do
   test "says where a form's text is wrong", %{page: page} do
     text = String.replace(@form, "`People helped`", "`People halped`")
     assert {:error, message} = PrintForm.call(text, page, context(), incident().id)
-    assert message =~ "Line 9:"
+    assert message =~ "Line 10:"
 
     text = String.replace(@form, "form 'Task report'", "document 'Task report'")
     assert {:error, message} = PrintForm.call(text, page, context(), incident().id)
