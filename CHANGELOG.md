@@ -9,6 +9,10 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 - BC teams: EMCR's Expense reimbursement request supplement is under Forms too, with a
   row for each person who attended: their travel, meals, and personal equipment
   allowance, worked out from EMCR's rates. Mark who wasn't on task and the meals given.
+- BC teams: EMCR's Expense reimbursement request is under Forms as well: each item's km,
+  hours, and uses at its costs, your other expenses, the Supplement's total, and the 15%
+  safety allowance, signed by your team's signer. Add your city and postal code in team
+  settings, under Tax credit letters.
 - Reports read each attendance row's finish time and travel km, and each item's D4H costs
   per km, hour, and use, in dollars.
 - A chore activity's page shows its chores' total under Duration, where it showed 0.

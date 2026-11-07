@@ -24,6 +24,11 @@ defmodule App.Document.Checker do
   rows` from each of report `people`'s rows. A plain fill also reads `page` and `pages`,
   and `sum(rows.total)` over the rows on its copy of the page.
 
+  A form with a `layout` (#950) has no places: each fill is a value its Typst layout
+  reads by name, text, a picture, or a condition, and `fill each equipment into items`
+  a list of rows, each text or conditions. `{:fill, name}` holds each one's kind, and
+  `{:fill, list, name}` a row's.
+
   Besides each name's type, `types` holds what a scope needs under tuple keys:
   `{:rows, report}` is the names of a row each and their types, `{:const, name}` marks a
   const, and `{:dated, name}` the day a const first changes.
@@ -87,7 +92,7 @@ defmodule App.Document.Checker do
       |> asks(doc.asks)
       |> computes(doc.computes)
 
-    check_values(doc, types)
+    types = check_values(doc, types)
     {:ok, %{doc | reports: reports, types: types}}
   catch
     {:report_error, %Error{} = error} -> {:error, error}
@@ -113,10 +118,11 @@ defmodule App.Document.Checker do
       do: fail(nil, "Take out lock: an agency writes on a form's PDF.")
 
     check_places(doc, types)
-    check_fill(doc, types)
+    types = Map.merge(types, check_fill(doc, types))
     check_title(doc.title, types)
     Enum.each(doc.keep, &check_keep(&1, doc.asks, types))
     Enum.each(doc.expects, &check_expect(&1, doc, types))
+    types
   end
 
   # Which activities show a form: its where, checked as a report's on activities. It
@@ -607,6 +613,18 @@ defmodule App.Document.Checker do
 
   # Fill
 
+  # Each place filled once, or with a layout each value's kind.
+  defp check_fill(%Document{layout: %{}} = doc, types) do
+    check_names_once(doc.fill, "Give the value another name: ~s is filled twice.")
+
+    Enum.reduce(doc.fill, %{}, fn fill, kinds ->
+      if taken?(fill.place, types),
+        do: fail(fill.line, "Give the value another name: #{fill.place} is used above.")
+
+      Map.merge(kinds, layout_kinds(fill, types))
+    end)
+  end
+
   defp check_fill(doc, types) do
     types = fill_scope(doc, types)
 
@@ -618,6 +636,42 @@ defmodule App.Document.Checker do
     end
 
     check_filled_once(doc.places, doc.fill)
+    %{}
+  end
+
+  defp check_names_once(fills, message) do
+    for {name, [_, second | _]} <- Enum.group_by(fills, & &1.place) do
+      fail(second.line, String.replace(message, "~s", name))
+    end
+
+    :ok
+  end
+
+  # A layout's value is text, a picture, or a condition; a row's, text or a condition.
+  defp layout_kinds(%{place: list, value: {:each, report, fills}}, types) do
+    check_names_once(fills, "Give the value another name: ~s is in each row twice.")
+    row = Map.merge(types, row_types(types, report))
+
+    Map.new(fills, fn fill ->
+      case layout_kind(fill.value, row) do
+        :image ->
+          fail(fill.line, "Fill #{fill.place} with text or a condition: a row holds no pictures.")
+
+        kind ->
+          {{:fill, list, fill.place}, kind}
+      end
+    end)
+  end
+
+  defp layout_kinds(%{place: name, value: value}, types),
+    do: %{{:fill, name} => layout_kind(value, types)}
+
+  defp layout_kind(value, types) do
+    case type(value, types) do
+      type when type in [:condition, :bool] -> :condition
+      :image -> :image
+      _text -> :text
+    end
   end
 
   # What a fill reads besides the document's values: which copy of the form's page it's
@@ -779,6 +833,7 @@ defmodule App.Document.Checker do
       doc.places
       |> Enum.reject(&(&1.kind == :rows))
       |> Map.new(&{&1.name, if(&1.kind == :tick, do: :condition, else: :text)})
+      |> Map.merge(layout_outputs(types))
       |> Map.merge(%{"title" => :text, "author" => :text})
 
     if expect |> given_scope(types) |> Map.merge(outputs) |> then(&type(expect.check, &1)) !=
@@ -791,6 +846,9 @@ defmodule App.Document.Checker do
 
     :ok
   end
+
+  # A layout's values, each by its kind; a list of rows isn't read.
+  defp layout_outputs(types), do: for({{:fill, name}, kind} <- types, into: %{}, do: {name, kind})
 
   # The names an expect's check reads: one that gives one row reads the row first.
   defp given_scope(expect, types) do

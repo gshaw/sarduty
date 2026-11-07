@@ -134,4 +134,47 @@ defmodule App.Operation.SaveFormTest do
     assert SaveForm.call(organization, nil, @text, page, admin) ==
              {:error, :text, "WSARA has a form called Task report. Replace that one instead."}
   end
+
+  describe "a form with a layout" do
+    # Its layout draws the page: there's none to upload.
+    @layout_form """
+    form 'Claim'
+    for activity where kind = 'incident'
+    report task
+      select ref_id from activities where id = :activity
+    fill
+      ref = task.ref_id
+    expect with task.ref_id = '01428': ref = '01428'
+    layout
+    #set page(width: 200pt, height: 100pt)
+    Task #values.ref
+    """
+
+    test "saves with no page", %{organization: organization, admin: admin, page: page} do
+      assert {:ok, form} = SaveForm.call(organization, nil, @layout_form, nil, admin)
+      assert form.page_sha256 == nil and Form.page_bytes(form) == nil
+
+      assert SaveForm.call(organization, nil, @layout_form, page, admin) ==
+               {:error, :page, "Upload no page: the form's layout draws it."}
+    end
+
+    test "its layout must print, and a mistake names its line",
+         %{organization: organization, admin: admin} do
+      text = String.replace(@layout_form, "#values.ref", "#values.nothing")
+
+      assert {:error, :text, "The layout does not print. Line 10: " <> message} =
+               SaveForm.call(organization, nil, text, nil, admin)
+
+      assert message =~ ~s|does not contain key "nothing"|
+    end
+
+    test "replacing a form on a page with one with a layout drops the page",
+         %{organization: organization, admin: admin, page: page} do
+      {:ok, form} = SaveForm.call(organization, nil, @text, page, admin)
+      text = String.replace(@layout_form, "form 'Claim'", "form 'Task report'")
+
+      assert {:ok, replaced} = SaveForm.call(organization, form, text, nil, admin)
+      assert replaced.page_sha256 == nil and Form.page_bytes(replaced) == nil
+    end
+  end
 end

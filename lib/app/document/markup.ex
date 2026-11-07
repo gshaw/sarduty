@@ -24,6 +24,13 @@ defmodule App.Document.Markup do
   A form's page is `page.pdf`. Each of its pages prints at its own size, with the
   places that say that page drawn over it, once for each copy a form's rows need. A
   place on a later copy keeps its values under its own key, `subtotal-copy2`.
+
+  A form with a layout has no places (#950): its Typst layout follows a few lines that
+  read `values.json` as `values` and set the font, and it lays the page out itself.
+  It's `values`, not `v`, so the layout keeps Typst's `v()` for space. Each value is
+  there by its name, as text, true or false, or `none` for a blank: `values.claimant`.
+  A picture is a file the layout reads by the name it holds,
+  `image(values.signature)`, and a `fill each` is an array of dictionaries.
   """
 
   @letter_width 612
@@ -36,7 +43,26 @@ defmodule App.Document.Markup do
   a picture drawn over each page, for a Try a demo team (#857). `page` is `{pdf, pages}`,
   a form's page and how many pages it has; without it the page is letter paper.
   """
-  def typst(output, opts \\ []) do
+  def typst(output, opts \\ [])
+
+  def typst(%{layout: %{text: layout}} = output, opts) do
+    files = sample_mark_file(%{}, Keyword.get(opts, :sample_mark))
+    {values, files} = layout_values(output.fills, files)
+    values = Map.merge(values, %{"title" => output.title, "author" => output.author})
+
+    markup =
+      IO.iodata_to_binary([
+        ~s|#let values = json("values.json")\n|,
+        document("values", values),
+        ~s|#set text(font: "Arimo", fallback: false)\n|,
+        foreground_mark(files),
+        layout
+      ])
+
+    {markup, Map.put(files, "values.json", Jason.encode!(values))}
+  end
+
+  def typst(output, opts) do
     files = sample_mark_file(%{}, Keyword.get(opts, :sample_mark))
     page = Keyword.get(opts, :page)
     files = if page, do: Map.put(files, "page.pdf", elem(page, 0)), else: files
@@ -47,7 +73,7 @@ defmodule App.Document.Markup do
     markup =
       IO.iodata_to_binary([
         ~s|#let v = json("values.json")\n|,
-        document(values),
+        document("v", values),
         ~s|#set text(font: "Arimo", fallback: false)\n|,
         pages
       ])
@@ -70,10 +96,10 @@ defmodule App.Document.Markup do
   defp page_numbers(nil), do: [1]
   defp page_numbers({_pdf, pages}), do: Enum.to_list(1..pages)
 
-  defp document(values) do
+  defp document(var, values) do
     case Enum.filter(["title", "author"], &(values[&1] not in [nil, ""])) do
       [] -> ""
-      names -> "#set document(#{Enum.map_join(names, ", ", &"#{&1}: v.at(\"#{&1}\")")})\n"
+      names -> "#set document(#{Enum.map_join(names, ", ", &"#{&1}: #{var}.at(\"#{&1}\")")})\n"
     end
   end
 
@@ -109,6 +135,44 @@ defmodule App.Document.Markup do
     do: ~s|#place(top + left, image("sample-mark.png", width: page-width))\n|
 
   defp mark(_files), do: ""
+
+  # A layout sets its own pages, so the mark is each page's foreground.
+  defp foreground_mark(%{"sample-mark.png" => _}),
+    do: ~s|#set page(foreground: place(top + left, image("sample-mark.png", width: 100%)))\n|
+
+  defp foreground_mark(_files), do: ""
+
+  # A layout's values: each picture a file, by its value's name, and the rest as they are.
+  defp layout_values(fills, files) do
+    Enum.reduce(fills, {%{}, files}, fn
+      {name, {:image, picture}}, {values, files} ->
+        bytes = image_bytes(picture)
+        file = "#{name}.#{extension(bytes)}"
+        {Map.put(values, name, file), Map.put(files, file, bytes)}
+
+      {name, value}, {values, files} ->
+        {Map.put(values, name, value), files}
+    end)
+  end
+
+  @doc """
+  A Typst error on a form's layout, with each `main.typ:12:5:` read as the line of the
+  form's text it's on: `Line 140:`. `markup` is what `typst/2` gave.
+  """
+  def layout_error(reason, markup, %{layout: %{text: layout, line: line}}) do
+    # The lines before the layout's first.
+    before = newlines(markup) - newlines(layout)
+
+    reason
+    |> String.replace(~r/\ATypst stopped with status \d+: /, "")
+    |> then(
+      &Regex.replace(~r/main\.typ:(\d+):\d+: (?:error: )?/, &1, fn _all, at ->
+        "Line #{String.to_integer(at) - before + line - 1}: "
+      end)
+    )
+  end
+
+  defp newlines(text), do: text |> String.split("\n") |> length()
 
   # Places, each `{markup, {files, values}}`
 

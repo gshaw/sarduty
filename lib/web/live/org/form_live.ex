@@ -82,7 +82,8 @@ defmodule Web.Org.FormLive do
           </dd>
           <dt>Page</dt>
           <dd id="form-page">
-            <div :if={is_nil(@pages)}>None</div>
+            <div :if={is_nil(@pages) and layout?(@doc)}>Drawn by its layout</div>
+            <div :if={is_nil(@pages) and not layout?(@doc)}>None</div>
             <div :if={@pages}>
               <.a
                 href={~p"/orgs/#{@current_organization}/forms/#{@form}/page"}
@@ -189,6 +190,10 @@ defmodule Web.Org.FormLive do
   defp shows_on(nil), do: "Activities"
   defp shows_on(%Document{where: nil}), do: "Every activity"
   defp shows_on(%Document{where: where}), do: "Activities where #{Query.text(where)}"
+
+  # A form with a layout draws its own page each time it prints (#950).
+  defp layout?(%Document{layout: %{}}), do: true
+  defp layout?(_doc), do: false
 
   defp asks(nil), do: []
   defp asks(%Document{asks: asks}), do: asks

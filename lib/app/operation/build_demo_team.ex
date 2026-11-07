@@ -38,6 +38,8 @@ defmodule App.Operation.BuildDemoTeam do
     :legal_name,
     :abbreviated_name,
     :mailing_address,
+    :city,
+    :postal_code,
     :authorized_by_name,
     :authorized_by_title,
     :authorized_by_phone,
