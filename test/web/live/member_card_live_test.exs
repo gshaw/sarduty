@@ -201,7 +201,7 @@ defmodule Web.MemberCardLiveTest do
       PassRegistration.register!(card, "device-1", "push-token-1")
       PassRegistration.register!(card, "device-2", "push-token-2")
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
-      assert has_element?(lv, "#card-phones", "In Apple Wallet on 2 phones")
+      assert has_element?(lv, "#card-phones", "In Apple Wallet on 2 devices")
       refute render(lv) =~ "last downloaded"
 
       MemberCard.record_pass_fetched!(card, ~U[2026-09-30 22:42:00.000000Z])
@@ -209,7 +209,7 @@ defmodule Web.MemberCardLiveTest do
       assert has_element?(
                lv,
                "#card-phones",
-               "In Apple Wallet on 2 phones · last downloaded Sep 30, 15:42"
+               "In Apple Wallet on 2 devices · last downloaded Sep 30, 15:42"
              )
     end
   end

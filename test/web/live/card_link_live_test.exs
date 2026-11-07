@@ -55,14 +55,14 @@ defmodule Web.CardLinkLiveTest do
 
     # A phone registering the pass, and Google saying it was saved, each broadcast.
     PassRegistration.register!(card, "device-1", "push-token-1")
-    assert has_element?(lv, "#card-link-status", "sees your ID card in Apple Wallet on 1 phone.")
+    assert has_element?(lv, "#card-link-status", "sees your ID card in Apple Wallet on 1 device.")
 
     MemberCard.mark_in_wallet!(card, DateTime.utc_now())
 
     assert has_element?(
              lv,
              "#card-link-status",
-             "in Apple Wallet on 1 phone and in Google Wallet."
+             "in Apple Wallet on 1 device and in Google Wallet."
            )
   end
 
@@ -82,7 +82,7 @@ defmodule Web.CardLinkLiveTest do
 
     PassRegistration.register!(card, "device-1", "push-token-1")
     refute has_element?(lv, "#card-link-wallets-apple.is-adding")
-    assert has_element?(lv, "#card-link-status", "in Apple Wallet on 1 phone")
+    assert has_element?(lv, "#card-link-status", "in Apple Wallet on 1 device")
   end
 
   test "a replacement isn't in Wallet until a phone fetches it, though its phones held the old card",
@@ -99,7 +99,7 @@ defmodule Web.CardLinkLiveTest do
     replacement |> Repo.reload!() |> MemberCard.record_pass_fetched!(DateTime.utc_now())
 
     refute has_element?(lv, "#card-link-wallets-apple.is-adding")
-    assert has_element?(lv, "#card-link-status", "in Apple Wallet on 1 phone")
+    assert has_element?(lv, "#card-link-status", "in Apple Wallet on 1 device")
   end
 
   test "Google's badge opens in a new tab, and the page waits a while for the save",

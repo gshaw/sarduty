@@ -180,13 +180,14 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
   still go to every phone with the serial.
 - A pass made before updates existed has no token, so it never updates. Its card gets a
   token the next time its pass is built.
-- APNs only works in production, so dev can build passes but never deliver a push.
+- Pushes reach phones from dev too: a cancelled card's notice and the card page's
+  nudges arrived on a real iPhone from the dev server (2026-11-07).
 
-The ID Card tab's Wallet row shows how many phones hold the pass and when one last
-fetched it (`pass_fetched_at`), and whether the member saved it to Google Wallet
-(`in_wallet_at`). A phone's fetch broadcasts on PubSub, so the tab ticks over without a
-reload. Under the buttons it says how the card reaches the member: from Your membership
-on a team with member logins, otherwise by email.
+The ID Card tab's Wallet row shows how many devices hold the pass (an iPhone and a paired
+Apple Watch count as 2) and when one last fetched it (`pass_fetched_at`), and whether the
+member saved it to Google Wallet (`in_wallet_at`). A phone's fetch broadcasts on PubSub,
+so the tab ticks over without a reload. Under the buttons it says how the card reaches the
+member: from Your membership on a team with member logins, otherwise by email.
 
 There is no test button. "Last downloaded" shows a phone fetched the pass after a change,
 and a failed push logs "APNs pass push failed". To see a stale pass update, change
@@ -295,7 +296,7 @@ other way to get the card.
   pass on the tap. A mail app's link scanner or a preview only loads the page, so it
   builds nothing.
 - **One quiet line says what SAR Duty sees**, above "Lost your phone?": "SAR Duty sees
-  your ID card in Apple Wallet on 1 phone." ([Web.WalletText](../lib/web/wallet_text.ex),
+  your ID card in Apple Wallet on 1 device." ([Web.WalletText](../lib/web/wallet_text.ex),
   which also writes the ID Card tab's Wallet row). It changes while the page is open: a
   phone adding or dropping the pass, and Google's save and delete, each broadcast
   `:wallet_changed` on the card's topic (`MemberCard.pass_topic/1`). There's no refresh
