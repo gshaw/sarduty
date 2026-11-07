@@ -336,7 +336,10 @@ defmodule Web.ActivityMembersLiveTest do
              "The checked come off the activity. Those who signed up get your message."
            )
 
-    assert has_element?(lv, "#members-change-send[disabled]", "Ask 0 members")
+    # Nothing picked at the start: the admin picks the change.
+    refute has_element?(lv, "#members-change input[type=radio][checked]")
+    assert has_element?(lv, "#members-change-send[disabled]", "Change members")
+    assert has_element?(lv, "#members-bar-hint", "Check members, then select what to do.")
     refute has_element?(lv, "#members-remove")
   end
 
@@ -671,14 +674,19 @@ defmodule Web.ActivityMembersLiveTest do
                "Emails “Will you be there?” to the 2 checked with no reply. 1 has replied."
              )
 
+      # Checked, nothing picked: the button waits on a choice.
+      assert has_element?(lv, "#members-change-send[disabled]", "Change members")
+      assert has_element?(lv, "#members-bar-hint", "Select what to do.")
+
+      check(lv, [ctx.casey.id, ctx.cameron.id, ctx.riley.id], "ask")
       assert has_element?(lv, "#members-change-send", "Ask 2 members")
 
-      # Only replied checked: Ask greys out, and the list starts on Send an update (G).
-      check(lv, [ctx.alex.id, ctx.casey.id])
+      # Only replied checked: Ask greys out, and nothing is picked, never Send an update.
+      check(lv, [ctx.alex.id, ctx.casey.id], "ask")
       assert has_element?(lv, "#members-change-choice[disabled]")
       assert has_element?(lv, "#members-change", "Everyone checked has replied.")
-      assert has_element?(lv, "#members-change-choice_update[checked]")
-      assert has_element?(lv, "#members-change-send", "Email 2 members")
+      refute has_element?(lv, "#members-change input[type=radio][checked]")
+      assert has_element?(lv, "#members-change-send[disabled]", "Change members")
     end
 
     test "the step is /members/ask, and /members/remind is gone", ctx do
@@ -751,11 +759,11 @@ defmodule Web.ActivityMembersLiveTest do
       check(lv, Enum.map(ctx.everyone, & &1.id), "update")
       assert has_element?(lv, "#members-change-send", "Email 5 members")
 
-      # Casey signed up and Eli has no email: nobody to ask, so the list moves on.
+      # Casey signed up and Eli has no email: nobody to ask, so nothing is picked.
       check(lv, [ctx.casey.id, ctx.eli.id], "ask")
       assert has_element?(lv, "#members-change-choice[disabled]")
       assert has_element?(lv, "#members-change", "Nobody checked with no reply can get one.")
-      assert has_element?(lv, "#members-change-send", "Email 1 member")
+      assert has_element?(lv, "#members-change-send[disabled]", "Change members")
     end
 
     test "Ask for a reply names who gets it, and why the rest get none (B)", ctx do

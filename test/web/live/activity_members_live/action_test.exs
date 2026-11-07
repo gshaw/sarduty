@@ -267,30 +267,25 @@ defmodule Web.ActivityMembersLive.ActionTest do
     end
   end
 
-  describe "pick/5" do
+  describe "pick/4" do
     @list [Attended, Absent, Update, Remove]
 
     test "keeps a choice that reaches someone" do
-      assert Action.pick(@list, "absent", @from_start, [row(1, "attending")], false) == Absent
+      assert Action.pick(@list, "absent", @from_start, [row(1, "attending")]) == Absent
     end
 
-    test "before the start, moves off a greyed choice to the next one offered" do
+    test "a greyed choice leaves nothing picked, never the next one" do
       before = [Ask, Update, RemoveBeforeStart]
-      assert Action.pick(before, "ask", @before_start, [row(1, "attending")], true) == Update
+      assert Action.pick(before, "ask", @before_start, [row(1, "attending")]) == nil
+      assert Action.pick(@list, "attended", @from_start, [row(1, "attending")]) == nil
+      assert Action.pick(@list, "absent", @from_start, [row(1, "absent")]) == nil
     end
 
-    test "from the start, a greyed choice leaves nothing picked, never Mark absent" do
-      attended = [row(1, "attending")]
-      assert Action.pick(@list, "attended", @from_start, attended, false) == nil
-      assert Action.pick(@list, "absent", @from_start, [row(1, "absent")], false) == nil
-    end
-
-    test "with no choice, the first that reaches someone, or none from the start" do
-      replied = [row(1, "attending")]
+    test "with no choice, nothing is picked" do
       before = [Ask, Update, RemoveBeforeStart]
-      assert Action.pick(before, nil, @before_start, replied, true) == Update
-      assert Action.pick(before, nil, @before_start, [], true) == Ask
-      assert Action.pick(@list, nil, @from_start, replied, false) == nil
+      assert Action.pick(before, nil, @before_start, []) == nil
+      assert Action.pick(before, nil, @before_start, [row(1, "attending")]) == nil
+      assert Action.pick(@list, nil, @from_start, [row(1, "attending")]) == nil
     end
   end
 end
