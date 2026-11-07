@@ -628,13 +628,13 @@ defmodule App.Report.Parser do
   }
 
   defp comparison(tokens) do
-    {left, rest} = primary(tokens)
+    {left, rest} = sum(tokens)
     comparison_tail(left, rest)
   end
 
   defp comparison_tail(left, [{:symbol, symbol, line} | rest])
        when is_map_key(@comparisons, symbol) do
-    {right, rest} = primary(rest)
+    {right, rest} = sum(rest)
     {{:op, Map.fetch!(@comparisons, symbol), left, right, line}, rest}
   end
 
@@ -642,6 +642,45 @@ defmodule App.Report.Parser do
     do: word_tail(String.downcase(word), left, rest, line, tokens)
 
   defp comparison_tail(left, tokens), do: {left, tokens}
+
+  # Arithmetic, tighter than a comparison: `+` and `-`, then `*` and `/`, each from the
+  # left. Only a form works it out (App.Document, #950); a report refuses it.
+  @arithmetic %{"+" => :add, "-" => :sub, "*" => :mul, "/" => :div}
+
+  defp sum(tokens) do
+    {left, rest} = product(tokens)
+    arithmetic_loop(left, rest, ["+", "-"], &product/1)
+  end
+
+  defp product(tokens) do
+    {left, rest} = negative(tokens)
+    arithmetic_loop(left, rest, ["*", "/"], &negative/1)
+  end
+
+  defp arithmetic_loop(left, [{:symbol, symbol, line} | rest] = tokens, symbols, next) do
+    if symbol in symbols do
+      {right, rest} = next.(rest)
+
+      arithmetic_loop(
+        {:arith, Map.fetch!(@arithmetic, symbol), left, right, line},
+        rest,
+        symbols,
+        next
+      )
+    else
+      {left, tokens}
+    end
+  end
+
+  defp arithmetic_loop(left, tokens, _symbols, _next), do: {left, tokens}
+
+  # A minus before a number makes it negative: -5.
+  defp negative([{:symbol, "-", line}, {:number, n, _} | rest]), do: {{:literal, -n, line}, rest}
+
+  defp negative([{:symbol, "-", line} | _rest]),
+    do: fail_line(line, "Write a number after -, or subtract with a value before it: 0 - x.")
+
+  defp negative(tokens), do: primary(tokens)
 
   @matches %{"contains" => :contains, "like" => :like}
   @lists %{"includes" => :includes, "excludes" => :excludes}
@@ -717,6 +756,7 @@ defmodule App.Report.Parser do
   defp items(_tokens, line), do: fail_line(line, "Put the list in brackets: ('Callout', 'Rope').")
 
   defp primary([{:number, n, line} | rest]), do: {{:literal, n, line}, rest}
+  defp primary([{:date, date, line} | rest]), do: {{:literal, date, line}, rest}
   defp primary([{:string, text, line} | rest]), do: {{:literal, text, line}, rest}
   defp primary([{:value, name, line} | rest]), do: {{:value, name, line}, rest}
 

@@ -115,15 +115,15 @@ defmodule Web.ActivityOrgFormLive do
       >
         <%!-- Enter in a box would download a PDF: a disabled first button stops it. --%>
         <button type="submit" disabled hidden aria-hidden="true"></button>
-        <section :if={@page.doc.asks != []} id="org-form-questions" class="mb-8">
+        <section :if={ActivityForms.questions(@page.doc) != []} id="org-form-questions" class="mb-8">
           <h2 class="heading">Questions</h2>
           <p class="hint mb-4">
             Your answers stay with this activity. Another form that asks the same thing starts from them.
           </p>
           <.ask
-            :for={ask <- @page.doc.asks}
+            :for={ask <- ActivityForms.questions(@page.doc)}
             ask={ask}
-            type={@page.doc.types[":#{ask.name}"]}
+            type={App.Document.ask_type(@page.doc, ask)}
             value={@answers[ask.name]}
             errors={List.wrap(@errors[ask.name])}
           />

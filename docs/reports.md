@@ -33,6 +33,9 @@ editor links to it as How to write a report.
 ## How a query runs
 
 1. `App.Report.Parser` reads the text into an `App.Report.Query`. It knows no fields.
+   It reads a form's arithmetic too, which the compiler refuses
+   ([documents.md](documents.md#arithmetic)), and a day written `2026-04-15`, the same
+   as `date '2026-04-15'`.
 2. `App.Report.Compiler` checks every name against `App.Report.Catalog` before anything
    runs, and writes SQL. A mistake names its line and the closest field.
 3. `App.Report.Runner` runs the SQL, reads the rows back by type, and makes the pivot's

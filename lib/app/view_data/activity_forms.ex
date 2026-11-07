@@ -75,10 +75,18 @@ defmodule App.ViewData.ActivityForms do
     end
   end
 
-  @doc "Pure: each ask's starting text, with a plain default for one that has no answer."
+  @doc """
+  Pure: each ask's starting text, with a plain default for one that has no answer. An
+  answer on each row is left out: the page shows a form's rows (#950, step 8).
+  """
   def answers(%Document{asks: asks}, starting) do
-    Map.new(asks, fn ask -> {ask.name, Map.get(starting, ask.name) || default(ask.default)} end)
+    for %{each: nil} = ask <- asks,
+        into: %{},
+        do: {ask.name, Map.get(starting, ask.name) || default(ask.default)}
   end
+
+  @doc "The asks the page shows, one answer each."
+  def questions(%Document{asks: asks}), do: Enum.filter(asks, &is_nil(&1.each))
 
   defp default({:literal, value, _line}), do: to_string(value)
   defp default(_value_or_nil), do: nil

@@ -68,6 +68,33 @@ defmodule App.Report.ParserTest do
     assert {:op, :eq, _, {:literal, "Can't make it", 1}, 1} = query.where
   end
 
+  test "reads arithmetic tighter than a comparison, a day, a percent, and a minus" do
+    {:ok, query} =
+      Parser.parse(
+        "select name from members where (a + b) * c / 2 - d > 15% and joined_at > 2026-04-15 and x > -5"
+      )
+
+    assert Query.text(query.where) ==
+             "(a + b) * c / 2 - d > 0.15 and joined_at > date '2026-04-15' and x > -5"
+
+    assert {:op, :and, {:op, :and, {:op, :gt, {:arith, :sub, _, _, 1}, _, 1}, _, 1}, _, 1} =
+             query.where
+
+    {:ok, query} = Parser.parse("select name from members where a - (b - c) > a / (b * c)")
+    assert Query.text(query.where) == "a - (b - c) > a / (b * c)"
+
+    assert {:ok, %{where: {:op, :gt, _, {:literal, 0.143, 1}, 1}}} =
+             Parser.parse("select name from members where a > 14.3%")
+  end
+
+  test "a report refuses arithmetic" do
+    assert {:error, %Error{line: 1, message: message}} =
+             App.Report.run_sample("select hours * 2 from attendance")
+
+    assert message ==
+             "Take out the arithmetic: a report cannot add, subtract, multiply, or divide."
+  end
+
   test "a comment runs to the end of its line" do
     assert {:ok, %{from: "members"}} =
              Parser.parse("-- Members\nselect name from members -- all\n")

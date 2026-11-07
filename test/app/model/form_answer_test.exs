@@ -20,4 +20,17 @@ defmodule App.Model.FormAnswerTest do
     last = %{"leader" => "Harper Nguyen", "injured" => "1"}
     assert FormAnswer.start(%{}, last, @asks) == %{"leader" => "Harper Nguyen"}
   end
+
+  test "an answer on each row starts from the activity's, by row" do
+    asks = [%{name: "on_task", remember: false, each: "people"} | @asks]
+    saved = %{"on_task" => %{"member:7" => "No"}, "leader" => "Alex Chen"}
+
+    assert FormAnswer.start(saved, %{}, asks) == %{
+             "on_task" => %{"member:7" => "No"},
+             "leader" => "Alex Chen"
+           }
+
+    # One answer kept under the name before the form asked it for each row.
+    assert FormAnswer.start(%{"on_task" => "No"}, %{}, asks) == %{}
+  end
 end
