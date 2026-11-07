@@ -500,25 +500,25 @@ defmodule Web.StyleGuideHTML.SampleData do
 
   def standard_columns do
     [
-      {"Member", "member_cell", "Left",
+      {"Member", "member_cell", "Left", nil,
        "Every table that lists the members of something: an activity, a group, a qualification, chores, tax letters. The standing badge follows the name."},
-      {"Activity", "activity_cell", "Left",
+      {"Activity", "activity_cell", "Left", nil,
        "Every table of activities. Pass kind={false} when the table has a Kind column."},
-      {"Item", "item_cell", "Left",
+      {"Item", "item_cell", "Left", nil,
        "Every table of equipment. The status badge shows unless the item is operational."},
-      {"Qualification", "qualification_cell", "Left", "Every table of qualifications."},
-      {"Group", "group_cell", "Left", "Every table of groups."},
-      {"Date", "date_cell", "Left",
+      {"Qualification", "qualification_cell", "Left", nil, "Every table of qualifications."},
+      {"Group", "group_cell", "Left", nil, "Every table of groups."},
+      {"Date", "date_cell", "Left", "date_fit/2",
        "A day: when an activity started, a chore, a milestone. Also Joined, Retired, Start, and Sent. Pass activity={…} for an activity's start, so a chore activity reads as its month, \"Oct 2026\". The Activities list alone adds times, for its start and end under the date, with +1 when it ends the next day."},
-      {"Expires", "expires_cell", "Left",
+      {"Expires", "expires_cell", "Left", "expires_fit/1",
        "When a qualification, certificate, or item runs out. The badge counts the days left within 60."},
-      {"Hours", "hours_cell", "Right",
+      {"Hours", "hours_cell", "Right", "hours_fit/1",
        "Time spent: on an activity, a chore, or a year's tax credit hours."},
-      {"Last attended", "last_attended_cell", "Left",
+      {"Last attended", "last_attended_cell", "Left", "last_attended_fit/0",
        "How long since a member last attended. The date shows on hover."}
     ]
-    |> Enum.map(fn {label, cell, align, use} ->
-      %{id: cell, label: label, cell: cell, align: align, use: use}
+    |> Enum.map(fn {label, cell, align, fit, use} ->
+      %{id: cell, label: label, cell: cell, align: align, fit: fit, use: use}
     end)
   end
 

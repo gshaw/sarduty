@@ -76,12 +76,16 @@
   <p>
     Only where a delete takes other things with it: a group with members, an activity with
     attendance, a qualification someone holds. The dialog lists what's lost and ends with
-    "D4H can't bring it back." The action stays grey until the box is ticked.
+    "D4H can't bring it back." The action stays grey until the box is checked.
   </p>
   <p>
-    And an email to 10 or more members: reminders, an update, or tax credit letters. The box
+    And an email to 10 or more members: an ask for a reply, an update, or tax credit letters. The box
     names the count, so nobody emails the whole team by reflex. Fewer than 10 get a simple
     confirm. <code>send_confirm/3</code> picks one.
+  </p>
+  <p>
+    And a switch that turns off something 10 or more members use, such as a team's ID cards.
+    Turning off Agents asks from 1 AI agent, since each one has to be connected again.
   </p>
   <div class="demo grid gap-6">
     <.confirm_dialog
@@ -133,7 +137,7 @@
       id="confirm-example-check-send"
       open
       question="Email 73 members about Training night?"
-      list={["Each gets a reminder to reply."]}
+      list={["Each gets “Will you be there?” and the reply buttons."]}
       warning="Emails cannot be taken back."
       check="I understand 73 members get this email."
       action="Send 73 emails"
@@ -142,11 +146,56 @@
       <.button
         id="confirm-try-check-send"
         variant={:primary}
-        {send_confirm(73, "Email 73 members about Training night?", ["Each gets a reminder to reply."])}
+        {send_confirm(73, "Email 73 members about Training night?", ["Each gets “Will you be there?” and the reply buttons."])}
       >
         Send 73 emails
       </.button>
     </div>
+  </div>
+
+  <h2 id="many">Many at once</h2>
+  <p>
+    A change to checked rows can reach 2 members or 50. The dialog says how much is lost; the
+    checked rows behind it show who. It never lists everyone.
+  </p>
+  <ul>
+    <li>
+      <strong>Up to 3:</strong>
+      name them, so a member checked by mistake shows: "Avery Chen's 4h 30m and
+      Jordan Lee's 5 hours go."
+    </li>
+    <li>
+      <strong>4 or more:</strong> a count and a total: "6 who attended lose 30 hours."
+    </li>
+    <li>
+      <strong>10 or more:</strong>
+      the <a href="#check-box">check box</a>
+      too, naming the count: "I understand 12 members lose their hours."
+    </li>
+    <li>
+      <strong>When who matters more than how many</strong>, such as who gets an email and
+      why the rest don't, use a step: a page that lists them all, as Ask for a reply does.
+      Not a dialog.
+    </li>
+  </ul>
+  <div class="demo grid gap-6">
+    <.confirm_dialog
+      id="confirm-example-many"
+      open
+      question="Mark 6 members absent on Missing hiker?"
+      body="Their hours go, and Mark attended gives back the activity's times, not their own."
+      warning="6 who attended lose 30 hours."
+      action="Mark 6 absent"
+    />
+    <.confirm_dialog
+      id="confirm-example-many-check"
+      open
+      question="Mark 12 members absent on Missing hiker?"
+      body="Their hours go, and Mark attended gives back the activity's times, not their own."
+      warning="12 who attended lose 60 hours."
+      check="I understand 12 members lose their hours."
+      action="Mark 12 absent"
+    />
   </div>
 
   <h2 id="type-to-confirm">Type to confirm</h2>

@@ -1,6 +1,7 @@
 defmodule Web.StyleGuideHTML do
   use Web, :html
 
+  import Web.Components.ActionBar
   import Web.Components.ActivityMap, only: [activity_map: 1]
   import Web.Components.ActivityPanel
   import Web.Components.ActivityTable
@@ -72,6 +73,7 @@ defmodule Web.StyleGuideHTML do
        ]},
       {:components, "Components", "The parts pages are built from, one per page.",
        [
+         {:action_bar, "Action bar", "The one button for a long list of checked rows."},
          {:activity_panel, "Activity panel", "An activity's day and time, counts, and reply."},
          {:band, "Band", "The result of a check, big and in colour."},
          {:banner, "Banner", "Something true about the page until it changes."},
@@ -146,6 +148,16 @@ defmodule Web.StyleGuideHTML do
     Enum.find_value(pages, fn {page, _title, _about} ->
       page_path(page) == path && {:page, page}
     end)
+  end
+
+  # The Table page's Columns that stay put: one table, filtered and not.
+  def fit_rows do
+    [
+      %{name: "Avery Chen", reply: "Signed up", replied: "Nov 4, 09:20"},
+      %{name: "Drew Patel", reply: "Can't make it", replied: "Nov 3, 13:20"},
+      %{name: "Harper Nguyen", reply: "Signed up", replied: "Nov 5, 15:20"},
+      %{name: "Cameron Ruiz", reply: "No reply", replied: nil}
+    ]
   end
 
   # A page's template is its name with _page, as embed_templates names it.

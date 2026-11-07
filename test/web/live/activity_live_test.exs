@@ -175,7 +175,7 @@ defmodule Web.ActivityLiveTest do
       }
     end
 
-    test "Send a reminder from the tab, and the batch note shows what went (#895)",
+    test "Ask for a reply from the tab, and the batch note shows what went (#895)",
          %{conn: conn, team: team, activity: activity, cameron: cameron, wren: wren} do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
       refute has_element?(lv, "#activity-send-reminders")
@@ -184,17 +184,17 @@ defmodule Web.ActivityLiveTest do
       ids = for row <- Repo.all(App.Model.Attendance), do: to_string(row.member_id)
 
       lv
-      |> form("#members-change-form", %{"member_ids" => ids, "change" => "remind"})
+      |> form("#members-change-form", %{"member_ids" => ids, "change" => "ask"})
       |> render_submit()
 
-      assert_patch(lv, ~p"/teams/#{team}/activities/#{activity.id}/members/remind")
-      lv |> form("#remind-form") |> render_submit()
+      assert_patch(lv, ~p"/teams/#{team}/activities/#{activity.id}/members/ask")
+      lv |> form("#ask-form") |> render_submit()
       assert_patch(lv, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert_received {:email, %{to: [{"Cameron Ruiz", _}]}}
       assert_received {:email, %{to: [{"Frankie Moore", _}]}}
       refute_received {:email, _}
-      assert has_element?(lv, "#flash-info", "Sending 2 reminders.")
+      assert has_element?(lv, "#flash-info", "Asking 2 members.")
       assert has_element?(lv, "#members-batch", "2 sent")
       assert has_element?(lv, "#members-batch", "by Alex Chen · 0 replied since")
       refute has_element?(lv, ~s|#members-change-form input[name="member_ids[]"][checked]|)
@@ -202,9 +202,9 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, _html} =
         live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
-      assert has_element?(lv, "#activity-members th", "Reminder")
-      assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminded ")
-      refute has_element?(lv, "#member-reminded-#{wren.id}")
+      assert has_element?(lv, "#activity-members th", "Asked")
+      assert has_element?(lv, "#member-asked-#{cameron.id}", "Asked ")
+      refute has_element?(lv, "#member-asked-#{wren.id}")
       refute has_element?(lv, "#member-row-#{cameron.id} td", "No reply ·")
     end
 
@@ -223,13 +223,13 @@ defmodule Web.ActivityLiveTest do
         live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "#members-batch", "1 sending")
-      assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminder sending")
+      assert has_element?(lv, "#member-asked-#{cameron.id}", "Sending")
 
       reminder |> Ecto.Changeset.change(status: :sent) |> Repo.update!()
       send(lv.pid, {:reminder_done, activity.id})
 
       assert has_element?(lv, "#members-batch", "1 sent")
-      assert has_element?(lv, "#member-reminded-#{cameron.id}", "Reminded ")
+      assert has_element?(lv, "#member-asked-#{cameron.id}", "Asked ")
     end
   end
 
@@ -376,10 +376,10 @@ defmodule Web.ActivityLiveTest do
       assert has_element?(lv, "h1", "Rope practice")
       assert has_element?(lv, "#activity-panel-counts", "2 attended")
       assert has_element?(lv, "#members-hours", "2h 30m in total")
-      assert has_element?(lv, "#members-attended", "Casey Dhillon")
-      assert has_element?(lv, "#members-attended", "1h 30m")
+      assert has_element?(lv, "#members-table", "Casey Dhillon")
+      assert has_element?(lv, "#members-table", "1h 30m")
       refute has_element?(lv, "#activity-members th", "ID")
-      refute has_element?(lv, "#members-attended", other.ref_id)
+      refute has_element?(lv, "#members-table", other.ref_id)
       refute has_element?(lv, "#members-change-form")
       refute has_element?(lv, "#activity-members input[type=checkbox]")
 
@@ -432,7 +432,7 @@ defmodule Web.ActivityLiveTest do
       attendance_fixture(activity, member, %{started_at: starts})
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
-      assert has_element?(lv, "#members-signed-up #member-row-#{member.id}")
+      assert has_element?(lv, "#members-table #member-row-#{member.id}")
       refute has_element?(lv, "#members-add")
     end
 
@@ -463,7 +463,7 @@ defmodule Web.ActivityLiveTest do
       assert_received {:d4h_write, _id, %{"status" => "ATTENDING"}}
       assert has_element?(lv, "#activity-reply-state", "Signed up")
       assert has_element?(lv, "#activity-panel-counts", "1 signed up · 1 can't make it")
-      assert has_element?(lv, "#members-signed-up #member-row-#{member.id}")
+      assert has_element?(lv, "#members-table #member-row-#{member.id}")
       refute has_element?(lv, "#activity-reply-yes")
 
       assert has_element?(
@@ -497,7 +497,7 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert has_element?(lv, "#members-batch", "0 sent")
-      assert has_element?(lv, "#member-reminded-#{other.id}", "Reminder failed")
+      assert has_element?(lv, "#member-asked-#{other.id}", "Failed")
     end
 
     test "a member who isn't invited sees the counts alone", %{conn: conn, team: team} do
@@ -553,7 +553,8 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
       assert row_ids(html) == Enum.map([avery, member, quinn, wren], &"member-row-#{&1.id}")
-      refute has_element?(lv, "#members-switch")
+      # A tile per reply filters the table (#920); the panel's line stays.
+      assert has_element?(lv, "#members-tile-signed-up", "2")
 
       assert has_element?(
                lv,
@@ -561,9 +562,9 @@ defmodule Web.ActivityLiveTest do
                "2 signed up · 1 can't make it · 1 no reply"
              )
 
-      assert has_element?(lv, "#members-cant-make-it #member-row-#{quinn.id}")
-      assert has_element?(lv, "#members-no-reply #member-row-#{wren.id}")
-      assert has_element?(lv, "#activity-members th", "Can't make it")
+      assert has_element?(lv, "#members-table #member-row-#{quinn.id}")
+      assert has_element?(lv, "#members-table #member-row-#{wren.id}")
+      assert has_element?(lv, "#member-row-#{quinn.id} .marker-cant-make-it", "Can't make it")
       assert has_element?(lv, "#member-row-#{avery.id} .badge-primary", "New")
       refute has_element?(lv, "#member-row-#{member.id} .badge", "New")
       refute has_element?(lv, "#members-heading", "·")
@@ -582,7 +583,7 @@ defmodule Web.ActivityLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
-      assert has_element?(lv, "#members-cant-make-it #member-row-#{kiosk.id}")
+      assert has_element?(lv, "#members-table #member-row-#{kiosk.id}")
 
       assert has_element?(
                lv,
@@ -612,13 +613,14 @@ defmodule Web.ActivityLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/members")
 
-      # A table for each attendance (#766), with no checkboxes for a member.
+      # One table by attendance (#766, #920), with no checkboxes for a member.
       assert has_element?(lv, "#activity-panel-counts", "2 attended · 1 absent")
-      assert has_element?(lv, "#activity-members th", "Absent")
-      assert has_element?(lv, "#members-absent #member-row-#{away.id}")
+      assert has_element?(lv, "#activity-members th", "Attendance")
+      assert has_element?(lv, "#member-row-#{away.id} .marker-cant-make-it", "Absent")
+      assert has_element?(lv, "#members-table #member-row-#{away.id}")
       refute has_element?(lv, "#activity-members th", "Replied")
-      assert has_element?(lv, "#activity-members th", "Attended")
-      assert has_element?(lv, "#members-attended #member-row-#{member.id}")
+      assert has_element?(lv, "#member-row-#{member.id} .marker-signed-up", "Attended")
+      assert has_element?(lv, "#members-table #member-row-#{member.id}")
       refute has_element?(lv, "#activity-members input[type=checkbox]")
 
       start = Service.Format.time_short(started, team.timezone)

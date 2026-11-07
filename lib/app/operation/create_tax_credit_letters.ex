@@ -39,11 +39,14 @@ defmodule App.Operation.CreateTaxCreditLetters do
   def emailed?(member), do: member.email not in [nil, ""]
 
   # A letter and its email job commit together, so a retry of the whole run makes only
-  # the letters still missing, and no email is lost.
+  # the letters still missing, and no email is lost. Its PDF is drawn first, outside the
+  # transaction.
   defp create(team, member, year) do
+    prepared = CreateTaxCreditLetter.prepare(team, member.id, year)
+
     {:ok, result} =
       Repo.transaction(fn ->
-        letter = CreateTaxCreditLetter.call(team: team, member_id: member.id, year: year)
+        letter = CreateTaxCreditLetter.insert!(prepared)
 
         if emailed?(member) do
           letter

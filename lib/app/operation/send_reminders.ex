@@ -1,7 +1,7 @@
 defmodule App.Operation.SendReminders do
   @moduledoc """
   A team admin emails reminders to members who haven't replied to an activity (#444),
-  from Send a reminder on its Members tab (#608, #895), before it starts. Each send goes
+  from Ask for a reply on its Members tab (#608, #895), before it starts. Each send goes
   to the members they checked; the step shows when each was emailed before, and the team
   admin decides. Members who replied get none, and the step says why each other member
   checked gets none either.
@@ -114,7 +114,7 @@ defmodule App.Operation.SendReminders do
   end
 
   @doc """
-  The message Send a reminder starts with (#447): "We need 4 more people." while the
+  The message Ask for a reply starts with (#447): "We need 4 more people." while the
   activity is short of Enough at (`Activity.more_needed/3`), and empty otherwise. The
   team admin can change or clear it.
   """

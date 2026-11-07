@@ -62,4 +62,26 @@ defmodule Web.Components.TableTest do
              }
     end
   end
+
+  describe "fit" do
+    import Phoenix.Component
+    import Phoenix.LiveViewTest
+
+    test "the header carries the longest values unseen, and the column's cells fit" do
+      assigns = %{rows: [%{name: "Avery Chen", reply: "Signed up"}]}
+
+      html =
+        rendered_to_string(~H"""
+        <Web.Components.Table.table id="t" rows={@rows}>
+          <:col :let={row} label="Member">{row.name}</:col>
+          <:col :let={row} label="Reply" fit={["Signed up", "Can't make it"]}>{row.reply}</:col>
+        </Web.Components.Table.table>
+        """)
+
+      doc = LazyHTML.from_fragment(html)
+      assert doc |> LazyHTML.query("th.col-fit .col-fit-sizer[aria-hidden]") |> Enum.count() == 2
+      assert doc |> LazyHTML.query("td.col-fit") |> LazyHTML.text() =~ "Signed up"
+      assert doc |> LazyHTML.query("th:not(.col-fit)") |> LazyHTML.text() =~ "Member"
+    end
+  end
 end

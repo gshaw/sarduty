@@ -159,42 +159,79 @@ defmodule Web.Layouts do
 
   # On every page of a Try a demo team (#857), where View as puts its own: whose it is,
   # when it goes, its link, its Outbox, with a count after it of what's new, as tabs show one.
-  # Delete this demo asks first.
+  # Delete this demo asks first. Show less folds it to one row with the Outbox and Delete
+  # this demo, and Show more opens it again, remembered in this browser (DemoBanner).
   defp demo_banner(assigns) do
     ~H"""
-    <.banner kind={:info} title="Your demo" id="demo-banner" class="mb-6">
-      <p>
-        {@team.name} is made up, and this copy is yours alone. It sends nothing: every
-        email and text it would send goes to its Outbox. It is deleted on {Service.Format.date_long(
-          @demo.demo.expires_at,
-          @team.timezone
-        )}.
-      </p>
-      <p id="demo-link">
-        <.copy_button
-          id="demo-link-copy"
-          value={@demo.link}
-          label="Copy the demo's link"
-          text="Copy its link to open it on another device."
-        />
-      </p>
-      <div class="flex flex-wrap items-center gap-2">
-        <.button id="demo-outbox" navigate={@demo.outbox_path}>
-          Outbox<.badge :if={@demo.new > 0} id="demo-outbox-new" kind={:warning}>{@demo.new}</.badge>
-        </.button>
-        <.button
-          id="demo-delete"
-          variant={:danger}
-          href={~p"/teams/#{@team}/demo"}
-          method="delete"
-          data-confirm="Delete this demo? It goes at once, for anyone with its link, and you are logged out."
-        >
-          Delete this demo
-        </.button>
+    <div id="demo-banner" phx-hook="DemoBanner">
+      <.banner kind={:info} title="Your demo" id="demo-banner-full" class="demo-banner-full">
+        <p>
+          {@team.name} is made up, and this copy is yours alone. It sends nothing: every
+          email and text it would send goes to its Outbox. It is deleted on {Service.Format.date_long(
+            @demo.demo.expires_at,
+            @team.timezone
+          )}.
+        </p>
+        <p id="demo-link">
+          <.copy_button
+            id="demo-link-copy"
+            value={@demo.link}
+            label="Copy the demo's link"
+            text="Copy its link to open it on another device."
+          />
+        </p>
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" id="demo-banner-collapse" class="link mr-2" data-demo-toggle>
+            Show less
+          </button>
+          <.button id="demo-outbox" navigate={@demo.outbox_path}>
+            Outbox<.badge :if={@demo.new > 0} id="demo-outbox-new" kind={:warning}>
+              {@demo.new}
+            </.badge>
+          </.button>
+          <.button
+            id="demo-delete"
+            variant={:danger}
+            href={~p"/teams/#{@team}/demo"}
+            method="delete"
+            data-confirm={delete_demo_confirm()}
+          >
+            Delete this demo
+          </.button>
+        </div>
+      </.banner>
+      <div id="demo-banner-row" class="banner demo-banner-row" role="region" aria-label="Your demo">
+        <span class="demo-banner-name"><.icon name="info" />Your demo</span>
+        <span id="demo-expires" class="hint">
+          Until {Service.Format.date_long(@demo.demo.expires_at, @team.timezone)}
+        </span>
+        <div class="demo-banner-actions">
+          <button type="button" id="demo-banner-expand" class="link mr-2" data-demo-toggle>
+            Show more
+          </button>
+          <.button id="demo-row-outbox" size={:sm} navigate={@demo.outbox_path}>
+            Outbox<.badge :if={@demo.new > 0} id="demo-row-outbox-new" kind={:warning}>
+              {@demo.new}
+            </.badge>
+          </.button>
+          <.button
+            id="demo-row-delete"
+            size={:sm}
+            variant={:danger}
+            href={~p"/teams/#{@team}/demo"}
+            method="delete"
+            data-confirm={delete_demo_confirm()}
+          >
+            Delete this demo
+          </.button>
+        </div>
       </div>
-    </.banner>
+    </div>
     """
   end
+
+  defp delete_demo_confirm,
+    do: "Delete this demo? It goes at once, for anyone with its link, and you are logged out."
 
   # The verify site: a navy bar with the host beside it, so it doesn't look like the app,
   # and the host is what a checker is told to look for. No app navigation, no login. The

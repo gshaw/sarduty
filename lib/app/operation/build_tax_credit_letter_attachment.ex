@@ -1,4 +1,9 @@
 defmodule App.Operation.BuildTaxCreditLetterAttachment do
+  @moduledoc """
+  Draws a tax credit letter's PDF. Only App.Operation.SaveTaxCreditLetterPDF and
+  App.Operation.LoadTaxCreditLetterPDF call it: everything else serves the saved one.
+  """
+
   alias App.Model.DemoTeam
   alias App.Model.Organization
   alias App.Model.TaxCreditLetter
@@ -54,8 +59,8 @@ defmodule App.Operation.BuildTaxCreditLetterAttachment do
   end
 
   # The letterhead: the organization's logo, then the team's, each left out when it's
-  # missing. The current ones, since a letter saves its text but not its logos. A team
-  # without a logo gets none, not SAR Duty's.
+  # missing. The ones the team has when the PDF is drawn; the saved PDF keeps them
+  # (#918). A team without a logo gets none, not SAR Duty's.
   defp logos(team) do
     [organization_logo(team.organization), team_logo(team)] |> Enum.reject(&is_nil/1)
   end

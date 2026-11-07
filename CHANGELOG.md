@@ -6,6 +6,14 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 - Reports can read each member's tax credit hours by year, counted just as the letters
   count them, and the team's own details: its legal name, mailing address, and signer.
+- A tax credit letter's PDF is kept as it was made. Every download and email sends that
+  same file, even after the team changes its logo.
+- Removing many members at once, from a group or an activity, names up to 3 of them, and
+  from 10 asks you to tick a box first.
+- Send a reminder is now Ask for a reply, and each choice for checked members says who it
+  reaches.
+- Activity Members tab: one table, with reply tiles, search by name, and a button that
+  stays in view.
 - Say it before the click: Travel's Change names who loses Confirmed, Send letters counts
   who gets the email and names who has none, and Same as last counts only the items it
   adds, with why the rest stay out.

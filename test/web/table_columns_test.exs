@@ -10,15 +10,14 @@ defmodule Web.TableColumnsTest do
       "checkboxes add members to a group, for team admins on a team with groups to add to",
     {"lib/web/components/equipment.ex", "@where?"} =>
       "nothing the member holds is inside a kit, so every Where is blank",
-    {"lib/web/live/activity_members_live.ex", ~s|@started? and status == "attending"|} =>
-      "Start, Finish, and Hours: a table per attendance, and only Attended has times",
     {"lib/web/live/activity_members_live.ex", "@changeable?"} =>
       "the checkboxes, for team admins: emails before and after the start, attendance until it's published",
-    {"lib/web/live/activity_members_live.ex", ~s|!@started? and status != "requested"|} =>
-      "Replied: a table per reply before the start, and No reply has no reply dates",
-    {"lib/web/live/activity_members_live.ex",
-     ~s|!@started? and status == "requested" and reminded?(rows, @reminded)|} =>
-      "Reminder: only No reply gets one, and only once someone in it has",
+    {"lib/web/live/activity_members_live.ex", "!@started?"} =>
+      "Replied: replies close at the start, and from it the table shows attendance",
+    {"lib/web/live/activity_members_live.ex", "!@started? and @reminded != %{}"} =>
+      "Reminder: reminders go before the start, and the column waits for the activity's first",
+    {"lib/web/live/activity_members_live.ex", "@started?"} =>
+      "Start, Finish, and Hours: times come with attendance, from the start",
     {"lib/web/components/travel_tab.ex", "!@locked?"} =>
       "the checkboxes set travel, and a published activity's travel cannot change",
     {"lib/web/live/chore_collection_live.ex", "@selected"} =>
