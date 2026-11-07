@@ -600,6 +600,20 @@ defmodule Web.UserAuth do
     end
   end
 
+  @doc """
+  The plug for an organization's downloads (#950): `current_organization` is the URL's,
+  for its organization admins and SAR Duty admins, as `:ensure_org_access` does for its
+  pages. Anyone else gets a 404.
+  """
+  def require_org_access(conn, _opts) do
+    user = conn.assigns.current_user
+
+    case authorized_organization(user, user_organizations(user), conn.path_params["slug"]) do
+      nil -> raise Web.Status.NotFound
+      organization -> assign(conn, :current_organization, organization)
+    end
+  end
+
   @doc "A controller under /admin: a 404 for anyone who isn't a SAR Duty admin, like :ensure_admin."
   def require_admin(conn, _opts) do
     if conn.assigns.current_user.is_admin, do: conn, else: raise(Web.Status.NotFound)

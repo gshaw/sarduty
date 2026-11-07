@@ -38,8 +38,9 @@ enforces the top-level list and the held URLs.
   [members.md](members.md).
 - **Organizations are `/orgs/:slug`** on both sites. On the app it is the organization's
   space (#512): `/orgs/:slug` (Teams), `/orgs/:slug/teams/new` (Add a team),
-  `/orgs/:slug/teams/:subdomain`, `/orgs/:slug/settings`, `/settings/admins`, and
-  `/settings/hours-tags`. A team can't have the subdomain `new`, which Add a team would
+  `/orgs/:slug/teams/:subdomain`, `/orgs/:slug/settings`, `/settings/admins`,
+  `/settings/hours-tags`, and its forms (#950): `/orgs/:slug/forms`, `/forms/new`,
+  `/forms/:id`, `/forms/:id/edit`, and the PDFs `/forms/:id/page` and `/forms/:id/try`. A team can't have the subdomain `new`, which Add a team would
   hide; the Team changeset refuses it. `/admin/orgs/:id` went with no redirect. The verify site's
   `/orgs/:slug` is matched by host first, so the two never meet.
 - **Nothing fixed directly under `/teams/` or `/orgs/`.** It would block a team or an

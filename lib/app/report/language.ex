@@ -379,10 +379,10 @@ defmodule App.Report.Language do
     editor lists each team's own.
 
     ```sql
-    select `Task type`, count(id)
+    select `Task Type`, count(id)
     from activities
     where kind = 'Incident' and started_at = THIS_YEAR
-    group by `Task type`
+    group by `Task Type`
     order by count(id) desc
     ```
 
@@ -392,7 +392,7 @@ defmodule App.Report.Language do
     | Number | number | `<`, `>`, `sum()`; blank when it holds no number |
     | Date | date, a day | ranges, `year()`; the day it says, never the day before |
     | Date and time | date | ranges, `year()`, in the team's time zone |
-    | Single choice | choice | its options' labels: `` `Task type` = 'Search' `` |
+    | Single choice | choice | its options' labels: `` `Region` = 'South West' `` |
     | Multiple choice | list | `includes`, `excludes`, as tags |
 
     - An activity's field is its kind's. Fields with one title on two kinds, such as \

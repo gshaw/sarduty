@@ -30,12 +30,21 @@ defmodule App.Operation.PrintDocument do
   defp page(%{page: true}, nil), do: {:error, "This form has no page to print on."}
 
   defp page(%{page: true} = output, pdf) do
-    with {:ok, pages} <- pages(pdf),
-         :ok <- on_a_page(output.places, pages),
-         do: {:ok, {pdf, pages}}
+    with {:ok, pages} <- check_page(output.places, pdf), do: {:ok, {pdf, pages}}
   end
 
   defp page(_output, _pdf), do: {:ok, nil}
+
+  @doc """
+  `{:ok, pages}`, how many pages a form's page PDF has, when every place is on one of
+  them, or `{:error, reason}`. Saving a form checks its page with this
+  (App.Operation.SaveForm), and printing checks it again.
+  """
+  def check_page(places, pdf) when is_binary(pdf) do
+    with {:ok, pages} <- pages(pdf),
+         :ok <- on_a_page(places, pages),
+         do: {:ok, pages}
+  end
 
   defp pages(pdf) do
     case PDFPages.count(pdf) do

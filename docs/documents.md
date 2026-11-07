@@ -1,7 +1,5 @@
 # Documents
 
-<!-- cspell:ignore EMCR -- Emergency Management and Climate Readiness, BC's agency -->
-
 A document is a PDF SAR Duty prints from a text file in `priv/documents/` (#918). The
 file holds what the document reads, what it says, where each part sits on the page, and
 worked examples CI checks. The tax credit letter,
@@ -161,6 +159,29 @@ for activity where kind = 'incident'
 
 Values print in black Arimo, as a form typed in Acrobat. A form is never locked.
 
+### An organization's forms
+
+A form belongs to an organization, in `forms` ([App.Model.Form](../lib/app/model/form.ex)),
+with its page PDF's bytes in `form_pages` and its SHA-256 on the form, so a list never
+loads the page. Its name and about come from its text. Its pages are under the
+organization's space, `/orgs/:slug/forms` ([organizations.md](organizations.md#its-forms)).
+
+- **A SAR Duty admin uploads it**, the text and the page, and replaces it
+  (App.Operation.SaveForm). SAR Duty prepares each form's places on a Mac: there's no
+  editor in the browser. Replacing raises its `version`.
+- **Saving checks it everywhere it will print**: against the catalog of each of the
+  organization's teams and of Coast Range SAR, then every `expect`, then that each place
+  is on a page of the page PDF (`PrintDocument.check_page/2`). An error names the team,
+  and the upload page shows it under the file to fix. A team's RESTRICTED fields are left
+  out of the check, so a form never reads one ([organizations.md](organizations.md#what-an-organization-never-sees)).
+  A team on SAR Duty Records has no custom fields, so a form that reads BCSARA's fields
+  can't be saved for an organization with one.
+- **Its organization admins turn it on or off** for every team (App.Operation.SetFormEnabled),
+  and **try it** on Coast Range SAR (App.Operation.TryForm): one of its activities the
+  form shows on, every answer its default, marked SAMPLE, and nothing saved.
+- **Coast Range SAR has BCSARA's 27 incident fields**, with made-up values, so a BC form
+  tried there fills every line. Its draft Missing hiker has no Agency File #.
+
 ## Saved PDFs
 
 Every PDF a document makes is saved as it was made, so a download or email serves the
@@ -171,8 +192,9 @@ team, title, filename, size, and when it was made, and belongs to one of:
 
 - **A tax credit letter**: one PDF, replaced when the letter is (`put_letter!/2`).
 - **An activity**, for a form: a new PDF each time one prints, none replaced
-  (`add_for_activity!/4`). It keeps who made it and the values it printed that `keep`
-  names. The form and its version come with the forms table (#950, step 3).
+  (`add_for_form!/5`). It keeps its form and the version it printed from, who made it,
+  and the values it printed that `keep` names. If the form goes, the PDF stays
+  and its form is blank.
 
 Deleting a letter deletes its PDF. A team's purge deletes them all
 (App.Operation.DeleteTeam).
