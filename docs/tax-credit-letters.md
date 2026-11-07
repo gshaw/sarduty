@@ -58,8 +58,8 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
 - **The letterhead is the organization's logo, then the team's** (#290), top right. Either
   is left out when it's missing, and a team without a logo never gets SAR Duty's. Logos
   are the ones the team has when the PDF is drawn, and the saved PDF keeps them.
-- **A letter's PDF is kept as it was made** (#918), in `letter_pdfs` with the bytes in
-  `letter_pdf_files`, so lists never load them. Making or replacing a letter draws it
+- **A letter's PDF is kept as it was made** (#918), one of the
+  [saved PDFs](documents.md#saved-pdfs), and replaced when the letter is. Making or replacing a letter draws it
   before the write transaction, which holds SQLite's one write lock
   ([SaveTaxCreditLetterPDF](../lib/app/operation/save_tax_credit_letter_pdf.ex)).
   Downloads and emails serve the saved file

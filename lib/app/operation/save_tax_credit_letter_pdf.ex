@@ -5,7 +5,7 @@ defmodule App.Operation.SaveTaxCreditLetterPDF do
   write, since Typst takes a while and a transaction holds SQLite's one write lock.
   """
 
-  alias App.Model.LetterPDF
+  alias App.Model.SavedPDF
   alias App.Model.TaxCreditLetter
   alias App.Operation.PrintTaxCreditLetter
 
@@ -15,9 +15,9 @@ defmodule App.Operation.SaveTaxCreditLetterPDF do
   matches its text; its download prints it again.
   """
   def keep!(%TaxCreditLetter{} = letter, {:ok, attachment}),
-    do: LetterPDF.put!(letter, attachment)
+    do: SavedPDF.put_letter!(letter, attachment)
 
-  def keep!(%TaxCreditLetter{} = letter, {:error, _reason}), do: LetterPDF.delete!(letter)
+  def keep!(%TaxCreditLetter{} = letter, {:error, _reason}), do: SavedPDF.delete_letter!(letter)
 
   @doc """
   The letter's PDF, unsaved, for a letter that may not be in the database yet:
