@@ -4,8 +4,8 @@ defmodule Web.ActivityOrgFormLive do
   filled in, what's missing with the page that fixes it, and the questions, with a row
   for each person a form asks about, such as On task, and their total, and each
   equipment use's total for a form that works one out. Answers save as
-  they change (App.Operation.SaveFormAnswers), and each row's total follows them. Download PDF and Open PDF post the form
-  to Web.ActivityFormPDFController, which keeps the answers and saves the PDF it sends.
+  they change (App.Operation.SaveFormAnswers), and each row's total follows them. Download PDF posts the form to
+  Web.ActivityFormPDFController, which keeps the answers and saves the PDF it sends.
 
   The form is found on for the team's organization, and the activity through the team,
   so another organization's form, one turned off, or one not for this activity is a 404.
@@ -145,15 +145,6 @@ defmodule Web.ActivityOrgFormLive do
         <p class="hint">SAR Duty keeps a copy of each PDF it makes.</p>
         <.form_actions>
           <.button id="org-form-download" type="submit" variant={:primary}>Download PDF</.button>
-          <.button
-            id="org-form-open"
-            type="submit"
-            name="open"
-            value="true"
-            formtarget="_blank"
-          >
-            Open PDF
-          </.button>
         </.form_actions>
       </.form>
     </div>

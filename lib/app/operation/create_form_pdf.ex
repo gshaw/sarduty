@@ -1,7 +1,7 @@
 defmodule App.Operation.CreateFormPDF do
   @moduledoc """
-  A team admin's PDF of an organization's form for an activity (#950): Download PDF and
-  Open PDF on the activity's form page. It keeps the answers sent with it
+  A team admin's PDF of an organization's form for an activity (#950): Download PDF on
+  the activity's form page. It keeps the answers sent with it
   (App.Operation.SaveFormAnswers), prints the form with the activity's answers
   (App.Operation.PrintForm), and saves the PDF as it was made, with the values the form
   keeps and who made it (`App.Model.SavedPDF.add_for_form!/5`). Nothing goes to D4H.

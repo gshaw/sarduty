@@ -431,8 +431,8 @@ through the team's organization, so a form that's off or another organization's 
   answer that's the ask's plain default, such as On task's Yes, isn't kept: a choice
   sends one for every row. A report a form only works a value out for on each row, such
   as each equipment use's total, shows too, with no boxes.
-- **Download PDF and Open PDF** post the answers to Web.ActivityFormPDFController,
-  since a LiveView can't send a PDF. App.Operation.CreateFormPDF keeps the answers,
+- **Download PDF** posts the answers to Web.ActivityFormPDFController,
+  since a LiveView can't send a PDF, and the browser shows it. App.Operation.CreateFormPDF keeps the answers,
   prints the form, and saves the PDF it sends, every time (`SavedPDF.add_for_form!/5`).
   An answer that doesn't read makes nothing.
 

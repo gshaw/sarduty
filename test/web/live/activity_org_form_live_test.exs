@@ -285,7 +285,7 @@ defmodule Web.ActivityOrgFormLiveTest do
     end
   end
 
-  describe "Download PDF and Open PDF" do
+  describe "Download PDF" do
     test "keep the answers and save the PDF as it was made", ctx do
       %{cast: cast, hiker: hiker, form: form} = ctx
       conn = log_in_user(build_conn(), cast.alex)
@@ -293,7 +293,7 @@ defmodule Web.ActivityOrgFormLiveTest do
       answers = %{"leader" => "Alex Chen", "injured" => "1", "err" => "No"}
 
       conn = post(conn, path, %{"answers" => answers})
-      assert ["attachment" <> _] = get_resp_header(conn, "content-disposition")
+      assert ["inline" <> _] = get_resp_header(conn, "content-disposition")
       assert "%PDF" <> _ = conn.resp_body
 
       pdf = SavedPDF |> where(activity_id: ^hiker.id) |> Repo.one!()
@@ -302,10 +302,6 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert pdf.title == "Task report #{hiker.ref_id}"
       assert pdf.keep == %{":leader" => "Alex Chen", ":injured" => 1, ":err" => "No"}
       assert FormAnswer.for_activity(hiker)["leader"] == "Alex Chen"
-
-      conn = post(log_in_user(build_conn(), cast.alex), path, %{"open" => "true"})
-      assert ["inline" <> _] = get_resp_header(conn, "content-disposition")
-      assert SavedPDF |> where(activity_id: ^hiker.id) |> Repo.aggregate(:count) == 2
     end
 
     test "make nothing when an answer doesn't read", %{cast: cast, hiker: hiker, form: form} do
