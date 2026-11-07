@@ -363,8 +363,16 @@ defmodule App.Model.MemberCard do
     card
   end
 
-  @doc "The PubSub topic a member's ID Card tab listens on for phone fetches."
+  @doc """
+  The PubSub topic a member's card pages listen on: `:pass_fetched` when a phone fetches
+  the pass, `:wallet_changed` when a phone registers or drops it or Google says it was
+  saved or deleted (#952), and `:card_changed` for a new card or its email.
+  """
   def pass_topic(member_id), do: "member_card:#{member_id}"
+
+  @doc "Tells the member's card pages that what SAR Duty knows of their Wallets changed."
+  def broadcast_wallet_changed(member_id),
+    do: Phoenix.PubSub.broadcast(App.PubSub, pass_topic(member_id), :wallet_changed)
 
   def record_google_pass!(%MemberCard{} = card, fingerprint) do
     card |> change(google_pass_fingerprint: fingerprint) |> Repo.update!()
@@ -402,9 +410,15 @@ defmodule App.Model.MemberCard do
   def in_wallet?(%MemberCard{in_wallet_at: %DateTime{}}), do: true
   def in_wallet?(%MemberCard{} = card), do: PassRegistration.get_all_for_serial(card) != []
 
-  def mark_in_wallet!(%MemberCard{} = card, now),
-    do: card |> change(in_wallet_at: now) |> Repo.update!()
+  def mark_in_wallet!(%MemberCard{} = card, now) do
+    card = card |> change(in_wallet_at: now) |> Repo.update!()
+    broadcast_wallet_changed(card.member_id)
+    card
+  end
 
-  def mark_out_of_wallet!(%MemberCard{} = card),
-    do: card |> change(in_wallet_at: nil) |> Repo.update!()
+  def mark_out_of_wallet!(%MemberCard{} = card) do
+    card = card |> change(in_wallet_at: nil) |> Repo.update!()
+    broadcast_wallet_changed(card.member_id)
+    card
+  end
 end

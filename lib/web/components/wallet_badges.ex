@@ -26,8 +26,12 @@ defmodule Web.Components.WalletBadges do
     required: true,
     doc: "the route that redirects to Google's save link"
 
+  attr :apple_click, :any, default: nil, doc: "a phx-click for a tap on Apple's badge"
+  attr :google_click, :any, default: nil, doc: "a phx-click for a tap on Google's badge"
   attr :class, :any, default: nil
 
+  # A phx-click on a link with a real href doesn't stop the link, so the pass still
+  # downloads or Google's page still opens while the page hears of the tap.
   def wallet_badges(assigns) do
     ~H"""
     <div
@@ -35,10 +39,20 @@ defmodule Web.Components.WalletBadges do
       id={@id}
       class={["wallet-badges", @class]}
     >
-      <a :if={BuildApplePass.configured?()} id={"#{@id}-apple"} href={@apple_href}>
+      <a
+        :if={BuildApplePass.configured?()}
+        id={"#{@id}-apple"}
+        href={@apple_href}
+        phx-click={@apple_click}
+      >
         <img src={~p"/images/add-to-apple-wallet.svg"} alt="Add to Apple Wallet" />
       </a>
-      <a :if={BuildGooglePass.configured?()} id={"#{@id}-google"} href={@google_href}>
+      <a
+        :if={BuildGooglePass.configured?()}
+        id={"#{@id}-google"}
+        href={@google_href}
+        phx-click={@google_click}
+      >
         <img src={~p"/images/add-to-google-wallet.svg"} alt="Add to Google Wallet" />
       </a>
     </div>

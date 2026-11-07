@@ -13,7 +13,10 @@
      brands ask. Google's is its condensed button, two lines like Apple's, and 48px is
      its minimum height. The pair fits on one line on a 375px phone. */
   .wallet-badges { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
-  .wallet-badges img { display: block; height: 48px; width: auto; }
+  /* The whole badge is the tap target. No text selection, image callout, or drag on a
+     long press, and no double-tap zoom: the image takes no pointer, so the link does. */
+  .wallet-badges a { display: block; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .wallet-badges img { display: block; height: 48px; width: auto; pointer-events: none; -webkit-user-drag: none; }
 
   /* A picture beside its words: a photo and a name, a logo and a team. */
   .media { display: flex; align-items: center; gap: var(--sp-3); }
