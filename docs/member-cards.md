@@ -288,7 +288,7 @@ other way to get the card.
   ([CardLinkController](../lib/web/controllers/card_link_controller.ex)), which builds the
   pass on the tap. A mail app's link scanner or a preview only loads the page, so it
   builds nothing.
-- **One quiet line says what SAR Duty sees**, under "Lost your phone?": "SAR Duty sees
+- **One quiet line says what SAR Duty sees**, above "Lost your phone?": "SAR Duty sees
   your ID card in Apple Wallet on 1 phone." ([Web.WalletText](../lib/web/wallet_text.ex),
   which also writes the ID Card tab's Wallet row). It changes while the page is open: a
   phone adding or dropping the pass, and Google's save and delete, each broadcast

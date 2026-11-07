@@ -158,13 +158,13 @@ defmodule Web.CardLinkLive do
       google_click={JS.push("adding", value: %{wallet: "google"})}
       adding={@waiting}
     />
-    <p id="card-link-lost" class="hint mt-6 mb-0">
-      Lost your phone? Ask a team admin to replace your ID card. This link is yours alone.
-    </p>
-    <p id="card-link-status" class="hint mt-2 mb-0">
+    <p id="card-link-status" class="hint mt-6 mb-0">
       <.spinner :if={@waiting == :apple}>Waiting for your phone to add it to Apple Wallet…</.spinner>
       <.spinner :if={@waiting == :google}>Waiting for Google Wallet in the new tab…</.spinner>
       <span :if={!@waiting}>{WalletText.seen(@phones, @card)}</span>
+    </p>
+    <p id="card-link-lost" class="hint mt-2 mb-0">
+      Lost your phone? Ask a team admin to replace your ID card. This link is yours alone.
     </p>
     """
   end
