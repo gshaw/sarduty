@@ -24,7 +24,6 @@ defmodule Web.CardLinkLive do
        page_title: "Your ID card",
        token: token,
        card: card,
-       member: card.member,
        team: team,
        status: MemberCard.link_status(card, DateTime.utc_now()),
        url: Web.Endpoint.url() <> ~p"/cards/#{token}"
@@ -47,7 +46,7 @@ defmodule Web.CardLinkLive do
           <p id="card-link-team" class="subheading mb-0">{@team.name}</p>
         </div>
         <h1 class="heading">Your ID card</h1>
-        <.card_state status={@status} member={@member} team={@team} token={@token} />
+        <.card_state status={@status} team={@team} token={@token} />
       </div>
       <.open_on_device
         :if={@status == :active}
@@ -64,15 +63,14 @@ defmodule Web.CardLinkLive do
   end
 
   attr :status, :atom, required: true
-  attr :member, :map, required: true
   attr :team, :map, required: true
   attr :token, :string, required: true
 
   defp card_state(%{status: :active} = assigns) do
     ~H"""
     <p id="card-link-intro" class="lead">
-      {@member.name}, your ID card shows you are a current member of {@team.name}.
-      Show it at the door, or to another team on a search.
+      Your ID card shows you are a current member of {@team.name}, with your endorsements.
+      Show it at the door, or to another agency on a search.
     </p>
     <.wallet_badges
       id="card-link-wallets"

@@ -22,7 +22,12 @@ defmodule Web.CardLinkLiveTest do
     {:ok, lv, _html} = live(conn, path)
 
     assert has_element?(lv, "#card-link-team", "Coast Range SAR")
-    assert has_element?(lv, "#card-link-intro", "Cameron Ruiz, your ID card shows you are")
+
+    assert has_element?(
+             lv,
+             "#card-link-intro",
+             "a current member of Coast Range SAR, with your endorsements"
+           )
 
     assert has_element?(
              lv,
