@@ -321,7 +321,7 @@ defmodule App.Report.BuiltIn do
       query: """
       select name, position, standing
       from members
-      where counted = true
+      where person = true
       order by name
       search name, position
       switch standing 'Standing' default current
@@ -341,7 +341,7 @@ defmodule App.Report.BuiltIn do
       query: """
       select name, position, standing
       from members
-      where counted = true
+      where person = true
       order by name
       search name, position
       switch standing 'Standing' default current

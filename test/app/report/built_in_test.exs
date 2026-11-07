@@ -18,6 +18,16 @@ defmodule App.Report.BuiltInTest do
   defp ids(team, slug, params \\ %{}),
     do: team |> rows(slug, params) |> Enum.map(&hd/1) |> MapSet.new()
 
+  # A team with a Retiring group, and `member` in it.
+  defp retiring(team, member) do
+    leavers = group_fixture(team, %{title: "Leavers"})
+    group_member_fixture(leavers, member)
+
+    team
+    |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
+    |> App.Repo.update!()
+  end
+
   test "Hours in a tag counts only the activities with the tag, on this team" do
     team = team_fixture()
     tag_fixture(team, "Rope Rescue")
@@ -80,6 +90,17 @@ defmodule App.Report.BuiltInTest do
     refute holding.id in ids(team, "members-holding-items", %{"items" => "none"})
   end
 
+  test "Members holding items lists the retiring members who hold none, for Needs attention's link" do
+    team = team_fixture()
+    clear = member_fixture(team, %{name: "Clara Clear"})
+    bot = member_fixture(team, %{name: "Pager", not_a_person: true})
+    team = retiring(team, clear)
+    params = %{"standing" => "retiring", "items" => "none"}
+
+    assert ids(team, "members-holding-items", params) == MapSet.new([clear.id])
+    refute bot.id in ids(team, "members-holding-items", %{"items" => "none"})
+  end
+
   test "Members who can log in: who D4H lets log in, and who has No access" do
     team = team_fixture()
     can = member_fixture(team, %{name: "Cam Can", d4h_permission: 2})
@@ -93,6 +114,17 @@ defmodule App.Report.BuiltInTest do
     none = ids(team, "members-who-can-log-in", %{"access" => "none"})
     assert cannot.id in none
     refute can.id in none or unknown.id in none
+  end
+
+  test "Members who can log in lists the retiring members D4H still lets in, for Needs attention's link" do
+    team = team_fixture()
+    can = member_fixture(team, %{name: "Cam Can", d4h_permission: 2})
+    bot = member_fixture(team, %{name: "Pager", not_a_person: true, d4h_permission: 2})
+    team = retiring(team, can)
+    params = %{"standing" => "retiring", "access" => "some"}
+
+    assert ids(team, "members-who-can-log-in", params) == MapSet.new([can.id])
+    refute bot.id in ids(team, "members-who-can-log-in")
   end
 
   test "Activities missing required fields keeps the past ones with a required field empty" do
