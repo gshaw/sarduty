@@ -284,7 +284,7 @@ defmodule Web.Org.OrgPagesTest do
 
       {:ok, _lv, html} =
         lv
-        |> element("#remove-team")
+        |> element("#remove-team", "Remove team")
         |> render_click()
         |> follow_redirect(conn |> log_in_user(sar_duty_admin()))
 

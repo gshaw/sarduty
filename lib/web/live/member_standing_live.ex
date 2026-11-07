@@ -250,7 +250,7 @@ defmodule Web.MemberStandingLive do
             type="button"
             phx-click="mark-retiring"
             phx-disable-with="Marking as retiring…"
-            data-confirm={"Add #{@member.name} to #{@retiring_group.title}? They can't log in to SAR Duty from now on. Take away their #{@service} access too."}
+            data-confirm={"Mark #{@member.name} as retiring? They can't log in to SAR Duty from now on. Take away their #{@service} access too."}
           >
             Mark as retiring
           </.button>
@@ -259,10 +259,10 @@ defmodule Web.MemberStandingLive do
             id="unmark-retiring"
             type="button"
             phx-click="unmark-retiring"
-            phx-disable-with="Removing…"
-            data-confirm={"Remove #{@member.name} from #{@retiring_group.title}? They can log in to SAR Duty again, and SAR Duty counts them again."}
+            phx-disable-with="Marking as not retiring…"
+            data-confirm={"Mark #{@member.name} as not retiring? They can log in to SAR Duty again, and SAR Duty counts them again."}
           >
-            Remove from {@retiring_group.title}
+            Mark as not retiring
           </.button>
         </.form_actions>
       </section>

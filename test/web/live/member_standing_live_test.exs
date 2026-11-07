@@ -379,7 +379,7 @@ defmodule Web.MemberStandingLiveTest do
       {:ok, lv, _html} =
         conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
 
-      assert has_element?(lv, "#mark-retiring[data-confirm*='Add Avery Chen to Leavers?']")
+      assert has_element?(lv, "#mark-retiring[data-confirm*='Mark Avery Chen as retiring?']")
       lv |> element("#mark-retiring") |> render_click()
 
       assert_received {:d4h, "POST", _path}
@@ -388,7 +388,7 @@ defmodule Web.MemberStandingLiveTest do
       assert has_element?(lv, "#retiring-items", "Avery Chen holds no items. Retire them in D4H.")
       assert GroupMember.get_by(group_id: leavers.id, member_id: member.id)
 
-      lv |> element("#unmark-retiring", "Remove from Leavers") |> render_click()
+      lv |> element("#unmark-retiring", "Mark as not retiring") |> render_click()
 
       assert_received {:d4h, "DELETE", _path}
       assert has_element?(lv, "#standing-now", "Active")

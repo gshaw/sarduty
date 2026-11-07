@@ -179,7 +179,7 @@ defmodule Web.Org.TeamLive do
             phx-click="remove"
             data-confirm={"Remove #{@team.name} from #{@current_organization.short_name}? Its team admins get an email."}
           >
-            Remove {@team.name}
+            Remove team
           </.button>
         </section>
       </main>
