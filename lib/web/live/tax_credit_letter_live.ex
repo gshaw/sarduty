@@ -55,7 +55,7 @@ defmodule Web.TaxCreditLetterLive do
     <.form_actions>
       <.button
         href={~p"/teams/#{@current_team}/tax-credit-letters/#{@letter.id}/pdf"}
-        variant={:success}
+        variant={:primary}
       >
         Download PDF
       </.button>
