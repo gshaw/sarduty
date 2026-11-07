@@ -1,8 +1,9 @@
 defmodule Web.ActivityOrgFormLive do
   @moduledoc """
   An organization's form on an activity (#950), for team admins only: what SAR Duty
-  filled in, what's missing with the page that fixes it, and the questions. Answers save
-  as they change (App.Operation.SaveFormAnswers). Download PDF and Open PDF post the form
+  filled in, what's missing with the page that fixes it, and the questions, with a row
+  for each person a form asks about, such as On task, and their total. Answers save as
+  they change (App.Operation.SaveFormAnswers), and each row's total follows them. Download PDF and Open PDF post the form
   to Web.ActivityFormPDFController, which keeps the answers and saves the PDF it sends.
 
   The form is found on for the team's organization, and the activity through the team,
@@ -32,18 +33,18 @@ defmodule Web.ActivityOrgFormLive do
 
     case ActivityForms.load(team, activity, form, DateTime.utc_now()) do
       {:ok, page} ->
-        {:ok, assign(socket, page: page, problem: nil, answers: page.answers)}
+        {:ok, assign(socket, page: page, problem: nil, answers: page.answers, rows: page.rows)}
 
       {:error, :not_shown} ->
         raise Web.Status.NotFound
 
       {:error, reason} ->
-        {:ok, assign(socket, page: nil, problem: reason, answers: %{})}
+        {:ok, assign(socket, page: nil, problem: reason, answers: %{}, rows: [])}
     end
   end
 
   # Each change saves the answers that read, and shows what's wrong with the rest. What
-  # was typed stays in the boxes either way.
+  # was typed stays in the boxes either way, and each row's total follows what reads.
   def handle_event("change", %{"answers" => typed}, %{assigns: %{page: %{}}} = socket) do
     %{activity: activity, page: page, current_user: user} = socket.assigns
 
@@ -53,7 +54,9 @@ defmodule Web.ActivityOrgFormLive do
         {:error, errors} -> errors
       end
 
-    {:noreply, assign(socket, answers: Map.merge(socket.assigns.answers, typed), errors: errors)}
+    answers = Map.merge(socket.assigns.answers, typed)
+    rows = ActivityForms.rows(page.doc, page.values, answers, page.timezone)
+    {:noreply, assign(socket, answers: answers, rows: rows, errors: errors)}
   end
 
   def handle_event("change", _params, socket), do: {:noreply, socket}
@@ -128,6 +131,13 @@ defmodule Web.ActivityOrgFormLive do
             errors={List.wrap(@errors[ask.name])}
           />
         </section>
+        <.rows_table
+          :for={table <- @rows}
+          table={table}
+          doc={@page.doc}
+          team={@current_team}
+          errors={@errors}
+        />
         <p class="hint">SAR Duty keeps a copy of each PDF it makes.</p>
         <.form_actions>
           <.button id="org-form-download" type="submit" variant={:primary}>Download PDF</.button>
@@ -167,6 +177,104 @@ defmodule Web.ActivityOrgFormLive do
     </div>
     """
   end
+
+  attr :table, :map, required: true, doc: "one of ActivityForms.rows/4's"
+  attr :doc, :map, required: true
+  attr :team, :map, required: true
+  attr :errors, :map, required: true
+
+  # A row for each person or item the form asks about, with a box for each answer and
+  # the row's total. A blank box takes the answer shown in grey.
+  defp rows_table(assigns) do
+    ~H"""
+    <section id={"org-form-rows-#{@table.report}"} class="mb-8">
+      <h2 class="heading">{String.capitalize(@table.report)}</h2>
+      <p :for={hint <- blank_hints(@table.asks, @doc.asks)} class="hint mb-4">{hint}</p>
+      <.table
+        id={"org-form-rows-#{@table.report}-table"}
+        rows={@table.rows}
+        row_id={&"org-form-row-#{dom_key(&1.key)}"}
+        class="table-striped"
+      >
+        <:col :let={row} :if={@table.kind == :member} label="Member">
+          <.member_cell member={%{id: row.id, name: row.name}} team={@team} />
+        </:col>
+        <:col :let={row} :if={@table.kind == :item} label="Item">
+          <.item_cell item={%{title: row.name}} link={false} status={false} />
+        </:col>
+        <:col :let={row} :for={ask <- @table.asks} label={ask.label} class="w-px whitespace-nowrap">
+          <.row_answer
+            ask={ask}
+            row={row}
+            type={App.Document.ask_type(@doc, ask)}
+            error={@errors |> Map.get(ask.name) |> row_error(row.key)}
+          />
+        </:col>
+        <:col
+          :let={row}
+          :if={@table.total}
+          label={@table.total}
+          align="right"
+          class="w-px whitespace-nowrap"
+        >
+          <span id={"org-form-total-#{dom_key(row.key)}"}>{row.total}</span>
+        </:col>
+      </.table>
+    </section>
+    """
+  end
+
+  attr :ask, :map, required: true
+  attr :row, :map, required: true
+  attr :type, :atom, required: true
+  attr :error, :string, default: nil
+
+  defp row_answer(%{ask: %{choices: [_ | _]}} = assigns) do
+    ~H"""
+    <select
+      id={"org-form-answer-#{@ask.name}-#{dom_key(@row.key)}"}
+      name={"answers[#{@ask.name}][#{@row.key}]"}
+      class={["w-auto", @error && "is-invalid"]}
+      aria-label={"#{@ask.label} for #{@row.name}"}
+    >
+      {Phoenix.HTML.Form.options_for_select(
+        @ask.choices,
+        @row.answers[@ask.name] || @row.defaults[@ask.name]
+      )}
+    </select>
+    <.error :if={@error}>{@error}</.error>
+    """
+  end
+
+  defp row_answer(assigns) do
+    ~H"""
+    <input
+      type={input_type(@type)}
+      id={"org-form-answer-#{@ask.name}-#{dom_key(@row.key)}"}
+      name={"answers[#{@ask.name}][#{@row.key}]"}
+      value={@row.answers[@ask.name]}
+      placeholder={@row.defaults[@ask.name]}
+      step={@type == :number && "any"}
+      min={@type == :number && "0"}
+      class={[@type == :number && "w-16", @error && "is-invalid"]}
+      aria-label={"#{@ask.label} for #{@row.name}"}
+      phx-debounce="blur"
+    />
+    <.error :if={@error}>{@error}</.error>
+    """
+  end
+
+  # A row's answer that starts from another answer: blank, it takes that one.
+  defp blank_hints(asks, all) do
+    for %{default: {:value, name, _line}} = ask <- asks,
+        other = Enum.find(all, &(&1.name == name)),
+        do: "Leave #{ask.label} blank to use #{other.label}."
+  end
+
+  defp row_error(errors, key) when is_map(errors), do: errors[key]
+  defp row_error(_message, _key), do: nil
+
+  defp dom_key(key), do: String.replace(key || "", ":", "-")
 
   attr :ask, :map, required: true
   attr :type, :atom, default: :text

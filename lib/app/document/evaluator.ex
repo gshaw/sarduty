@@ -19,6 +19,11 @@ defmodule App.Document.Evaluator do
   (`"member:12"`) and an answer for it is `{name, key}` in the values. Each compute is
   worked out in order: one for each row in its row, the rest once. A value already
   given, as an expect gives one, is kept.
+
+  A form's rows place prints a row for each of a report's rows, `lines` to a copy of its
+  page, and the rest on more copies. Each place prints on each copy, reading `page` and
+  `pages`, and the copy's rows as the rows place's name, so `sum(rows.total)` is that
+  copy's subtotal. A row's places are named for the row, `rows.19.who`.
   """
 
   alias App.Document
@@ -61,6 +66,7 @@ defmodule App.Document.Evaluator do
 
   defp output(env, doc) do
     title = doc.title
+    copies = copies(doc, env)
 
     %{
       title: title && text_value(title.text, env),
@@ -68,8 +74,74 @@ defmodule App.Document.Evaluator do
       lock: doc.lock,
       keep: Map.new(doc.keep, &{name(&1), value(&1, env)}),
       page: doc.page,
-      places: Enum.map(doc.places, &place(&1, doc.fill, env))
+      copies: length(copies),
+      places:
+        copies
+        |> Enum.with_index(1)
+        |> Enum.flat_map(&copy_places(&1, length(copies), doc, env))
     }
+  end
+
+  # A rows place's rows, `lines` to a copy of the form's page; one copy with none.
+  defp copies(doc, env) do
+    with %{lines: lines} = rows <- Enum.find(doc.places, &(&1.kind == :rows)),
+         %{value: {:each, report, _fills}} <- Enum.find(doc.fill, &(&1.place == rows.name)),
+         [_ | _] = all <- env.values |> Map.get(report, []) |> Enum.with_index() do
+      Enum.chunk_every(all, lines)
+    else
+      _none -> [[]]
+    end
+  end
+
+  # Each place on one copy, which reads `page` and `pages`, and the rows on it as the
+  # rows place's name. A rows place is a text or tick for each place in each row.
+  defp copy_places({rows, copy}, pages, doc, env) do
+    env = copy_env(env, doc, rows, copy, pages)
+
+    Enum.flat_map(doc.places, fn
+      %{kind: :rows} = place ->
+        %{value: {:each, _report, fills}} = Enum.find(doc.fill, &(&1.place == place.name))
+        rows |> Enum.with_index() |> Enum.flat_map(&row_places(&1, place, fills, copy, env))
+
+      place ->
+        [place |> place(doc.fill, env) |> Map.put(:copy, copy)]
+    end)
+  end
+
+  defp copy_env(env, doc, rows, copy, pages) do
+    values =
+      env.values
+      |> Map.merge(%{"page" => copy, "pages" => pages})
+      |> put_copy_rows(doc, Enum.map(rows, &elem(&1, 0)))
+
+    %{env | values: values}
+  end
+
+  defp put_copy_rows(values, doc, rows) do
+    case Enum.find(doc.places, &(&1.kind == :rows)) do
+      nil -> values
+      place -> Map.put(values, place.name, rows)
+    end
+  end
+
+  # A row's places, each `top` below the row's own top, named for the row: `rows.3.km`.
+  defp row_places({{row, n}, i}, rows, fills, copy, env) do
+    top = rows.top + i * rows.pitch
+    env = %{env | row: row.values}
+
+    for place <- rows.places do
+      %{value: value} = Enum.find(fills, &(&1.place == place.name))
+
+      place
+      |> Map.merge(%{
+        name: "#{rows.name}.#{n + 1}.#{place.name}",
+        top: top + Map.get(place, :top, 0),
+        page: rows.page,
+        copy: copy,
+        row: n + 1
+      })
+      |> Map.put(:value, place_value(place, value, env))
+    end
   end
 
   defp default(%{default: nil}, env), do: env
@@ -168,6 +240,10 @@ defmodule App.Document.Evaluator do
   defp holds?(nil, _env), do: true
   defp holds?(condition, env), do: value(condition, env) == true
 
+  @doc "A value as text, in `format` when it has one, as a place prints it."
+  def printed(value, nil, _timezone), do: to_text(value)
+  def printed(value, format, timezone), do: value |> format(format, timezone) |> to_text()
+
   @doc """
   A place's text: a text place's value, or a flow's lines with a blank line for each
   space and nothing for a picture. Nil for an image, or a flow across.
@@ -223,6 +299,7 @@ defmodule App.Document.Evaluator do
   defp read(env, output, given) do
     places =
       output.places
+      |> Enum.filter(&(Map.get(&1, :copy, 1) == 1 and not Map.has_key?(&1, :row)))
       |> Map.new(fn
         %{kind: :tick} = place -> {place.name, place.value}
         place -> {place.name, text(output, place.name)}
@@ -491,6 +568,8 @@ defmodule App.Document.Evaluator do
   defp format(%Date{} = date, "date_short", _timezone), do: Format.date_short(date)
   defp format(%DateTime{} = at, "date_short", timezone), do: Format.date_short(at, timezone)
   defp format(%DateTime{} = at, "time", timezone), do: Format.time_short(at, timezone)
+  # An expect gives a day for a time, which has no time of day.
+  defp format(%Date{}, "time", _timezone), do: nil
 
   defp format(minutes, "duration", _timezone) when is_number(minutes),
     do: Format.duration(minutes)

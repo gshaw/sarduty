@@ -6,6 +6,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 - BC teams: each incident has EMCR's Task report under Forms, filled in from the incident
   and BCSARA's fields on EMCR's own page, ready for the task leader to sign.
+- BC teams: EMCR's Expense reimbursement request supplement is under Forms too, with a
+  row for each person who attended: their travel, meals, and personal equipment
+  allowance, worked out from EMCR's rates. Mark who wasn't on task and the meals given.
 - Reports read each attendance row's finish time and travel km, and each item's D4H costs
   per km, hour, and use, in dollars.
 - A chore activity's page shows its chores' total under Duration, where it showed 0.

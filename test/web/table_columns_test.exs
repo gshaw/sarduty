@@ -36,7 +36,13 @@ defmodule Web.TableColumnsTest do
       "Remove buttons, for SAR Duty admins only",
     {"lib/web/live/activity_live.ex", "@team_admin? and !@activity.deleted_at"} =>
       "Change links, for team admins on an activity not deleted",
-    {"lib/web/live/whiteboard_live.ex", "@team_admin?"} => "note actions, for team admins only"
+    {"lib/web/live/whiteboard_live.ex", "@team_admin?"} => "note actions, for team admins only",
+    {"lib/web/live/activity_org_form_live.ex", "@table.kind == :member"} =>
+      "a form's rows are a report's members or its items, never both: Member for people",
+    {"lib/web/live/activity_org_form_live.ex", "@table.kind == :item"} =>
+      "a form's rows are a report's members or its items, never both: Item for equipment",
+    {"lib/web/live/activity_org_form_live.ex", "@table.total"} =>
+      "a row's total is the form's last value worked out for it, and a form may work out none"
   }
 
   test "every column that hides has a reason" do

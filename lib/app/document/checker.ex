@@ -20,6 +20,10 @@ defmodule App.Document.Checker do
   value first, and elsewhere only `sum(people.total)` reads it. Arithmetic takes numbers,
   never a duration, which is minutes: `hours(duration)` reads it in hours.
 
+  A form's rows place (#950) holds a row's places, filled by `fill each people into
+  rows` from each of report `people`'s rows. A plain fill also reads `page` and `pages`,
+  and `sum(rows.total)` over the rows on its copy of the page.
+
   Besides each name's type, `types` holds what a scope needs under tuple keys:
   `{:rows, report}` is the names of a row each and their types, `{:const, name}` marks a
   const, and `{:dated, name}` the day a const first changes.
@@ -41,7 +45,7 @@ defmodule App.Document.Checker do
     "pdf.verify_link" => :text
   }
   @one_row ~w(team organization)
-  @reserved ~w(team organization pdf today title author)
+  @reserved ~w(team organization pdf today title author page pages)
   @functions ~w(coalesce qr hours days floor round)
   @calls ~w(min max sum)
   @numbers [:number, :km, :money]
@@ -91,7 +95,11 @@ defmodule App.Document.Checker do
 
   # The reports `compute each` and `ask each` name: each has a row each.
   defp rows_reports(doc) do
-    for %{each: each} = item <- doc.asks ++ doc.computes, each != nil, uniq: true do
+    fills =
+      for %{value: {:each, report, _fills}, line: line} <- doc.fill,
+          do: %{each: report, line: line}
+
+    for %{each: each} = item <- doc.asks ++ doc.computes ++ fills, each != nil, uniq: true do
       if each in @one_row or not Enum.any?(doc.reports, &(&1.name == each)),
         do:
           fail(item.line, "There is no report #{each}. Write report #{each} and its query above.")
@@ -186,7 +194,7 @@ defmodule App.Document.Checker do
   # Every value the document writes, outside its reports.
   defp asts(doc) do
     title = if doc.title, do: [doc.title.text, doc.title.by], else: []
-    fill = Enum.map(doc.fill, & &1.value)
+    fill = Enum.flat_map(doc.fill, &fill_values/1)
 
     expects =
       Enum.flat_map(doc.expects, &[&1.check | for({t, _v, _l} <- &1.given, do: t)])
@@ -198,6 +206,9 @@ defmodule App.Document.Checker do
     |> List.flatten()
     |> Enum.reject(&is_nil/1)
   end
+
+  defp fill_values(%{value: {:each, _report, fills}}), do: Enum.map(fills, & &1.value)
+  defp fill_values(fill), do: [fill.value]
 
   # Field paths, lower case, as `{path, line}`, leaving out a function's name.
   defp fields({:field, [name], args, _line}) when args != [] do
@@ -414,6 +425,19 @@ defmodule App.Document.Checker do
     end
   end
 
+  # A rows place repeats a row of places down a form's page, `pitch` apart, `lines` to a
+  # copy of the page. There's one, and only on a form's own page.
+  defp check_place(%{kind: :rows} = place, doc) do
+    if not doc.page,
+      do: fail(place.line, "Take out #{place.name}, or add page: rows repeat a form's page.")
+
+    if Enum.count(doc.places, &(&1.kind == :rows)) > 1,
+      do: fail(place.line, "Write one rows place: a form's rows fill one part of its page.")
+
+    check_rows_options(place)
+    Enum.each(place.places, &check_row_place(&1, place))
+  end
+
   defp check_place(place, doc) do
     check_position(place)
 
@@ -429,6 +453,55 @@ defmodule App.Document.Checker do
 
     :ok
   end
+
+  defp check_rows_options(place) do
+    for key <- [:top, :pitch, :lines], not Map.has_key?(place, key) do
+      fail(
+        place.line,
+        "Give #{place.name} a top, a pitch, and lines, such as top 260pt, pitch 14pt, lines 18."
+      )
+    end
+
+    for key <- [:left, :right, :bottom, :width, :height, :size, :leading, :gap, :pad, :indent],
+        Map.has_key?(place, key) do
+      fail(place.line, "Take out #{key}: rows take a top, a pitch, lines, and a page.")
+    end
+
+    if place.fit or Map.has_key?(place, :align),
+      do: fail(place.line, "Write fit and align on a row's places, not on #{place.name}.")
+
+    :ok
+  end
+
+  # A row's places sit in each row: `top` is from the row's top.
+  defp check_row_place(place, rows) do
+    if place.kind not in [:text, :tick],
+      do: fail(place.line, "Make #{place.name} text or tick: a row holds text and ticks.")
+
+    if Enum.count(rows.places, &(&1.name == place.name)) > 1,
+      do: fail(place.line, "Give the place another name: #{place.name} is used twice.")
+
+    unless Map.has_key?(place, :left) or Map.has_key?(place, :right),
+      do: fail(place.line, "Say where #{place.name} sits across the page: left or right.")
+
+    if in_row?(place),
+      do: :ok,
+      else:
+        fail(
+          place.line,
+          "Give #{place.name} a top in its row, if any: it sits in each of #{rows.name}."
+        )
+
+    check_text_options(place)
+
+    if place.kind == :tick and not Map.has_key?(place, :size),
+      do: fail(place.line, "Give #{place.name} a size: the side of its box, such as size 9pt.")
+
+    :ok
+  end
+
+  defp in_row?(place),
+    do: not Map.has_key?(place, :bottom) and place.page == 1 and is_nil(place.level_with)
 
   defp check_level_with(%{level_with: nil}, _places), do: :ok
 
@@ -457,6 +530,8 @@ defmodule App.Document.Checker do
 
   # `fit` keeps one line and shrinks it to its width; `pitch` wraps it on the page's lines.
   defp check_text_options(%{kind: :text, fit: true} = place) do
+    check_align(place)
+
     for key <- [:pitch, :indent],
         Map.has_key?(place, key),
         do: fail(place.line, "Write fit or #{key}, not both: fit keeps the text on one line.")
@@ -475,6 +550,8 @@ defmodule App.Document.Checker do
   # `indent` starts the first line further in, after a printed label; `lines` caps how
   # many of the page's lines it wraps on, so a long text shrinks to fit them.
   defp check_text_options(%{kind: :text} = place) do
+    check_align(place)
+
     if Map.has_key?(place, :lines) and not Map.has_key?(place, :pitch),
       do:
         fail(place.line, "Give #{place.name} a pitch with lines: lines counts the page's lines.")
@@ -484,6 +561,9 @@ defmodule App.Document.Checker do
 
   defp check_text_options(place) do
     if place.fit, do: fail(place.line, "Take out fit: only a text place shrinks to fit.")
+
+    if Map.has_key?(place, :align),
+      do: fail(place.line, "Take out align: only a text place lines up its text.")
 
     for {key, what} <- [
           pitch: "wraps on the page's lines",
@@ -495,6 +575,21 @@ defmodule App.Document.Checker do
 
     :ok
   end
+
+  # Right or center lines up text in a width it knows.
+  defp check_align(%{align: align} = place) when align in [:right, :center] do
+    unless Map.has_key?(place, :width) or
+             (Map.has_key?(place, :left) and Map.has_key?(place, :right)),
+           do:
+             fail(
+               place.line,
+               "Give #{place.name} a width, or left and right: align #{align} lines it up in it."
+             )
+
+    :ok
+  end
+
+  defp check_align(_place), do: :ok
 
   defp check_position(place) do
     unless Map.has_key?(place, :left) or Map.has_key?(place, :right),
@@ -513,6 +608,8 @@ defmodule App.Document.Checker do
   # Fill
 
   defp check_fill(doc, types) do
+    types = fill_scope(doc, types)
+
     for fill <- doc.fill do
       case Enum.find(doc.places, &(&1.name == fill.place)) do
         nil -> fail(fill.line, "There is no place #{fill.place}. Add it under places.")
@@ -520,13 +617,28 @@ defmodule App.Document.Checker do
       end
     end
 
-    check_filled_once(doc)
+    check_filled_once(doc.places, doc.fill)
   end
 
-  defp check_filled_once(doc) do
-    filled = Enum.map(doc.fill, & &1.place)
+  # What a fill reads besides the document's values: which copy of the form's page it's
+  # on and how many there are, `page` and `pages`, and a rows place's rows on that copy,
+  # as `sum(rows.total)`.
+  defp fill_scope(doc, types) do
+    types = Map.merge(types, %{"page" => :number, "pages" => :number})
 
-    for place <- doc.places do
+    Enum.reduce(doc.fill, types, fn
+      %{place: place, value: {:each, report, _fills}}, types ->
+        Map.put(types, {:rows, place}, row_types(types, report))
+
+      _fill, types ->
+        types
+    end)
+  end
+
+  defp check_filled_once(places, fill) do
+    filled = Enum.map(fill, & &1.place)
+
+    for place <- places do
       case Enum.count(filled, &(&1 == place.name)) do
         0 -> fail(place.line, "Fill #{place.name}: write what goes in it under fill.")
         1 -> :ok
@@ -536,6 +648,33 @@ defmodule App.Document.Checker do
 
     :ok
   end
+
+  defp check_filled(%{kind: :rows} = rows, {:each, report, fills}, types, _line) do
+    # A row reads its own values, never the copy's rows.
+    row = types |> Map.delete({:rows, rows.name}) |> Map.merge(row_types(types, report))
+
+    for fill <- fills do
+      case Enum.find(rows.places, &(&1.name == fill.place)) do
+        nil ->
+          fail(fill.line, "There is no place #{fill.place} in #{rows.name}. Add it under it.")
+
+        place ->
+          check_filled(place, fill.value, row, fill.line)
+      end
+    end
+
+    check_filled_once(rows.places, fills)
+  end
+
+  defp check_filled(%{kind: :rows} = place, _value, _types, line),
+    do:
+      fail(
+        line,
+        "Fill #{place.name} with fill each and a report, such as fill each people into #{place.name}."
+      )
+
+  defp check_filled(place, {:each, _report, _fills}, _types, line),
+    do: fail(line, "Fill #{place.name} under fill: fill each fills a rows place.")
 
   defp check_filled(%{kind: :flow} = place, {:flow, items}, types, _line),
     do: Enum.each(items, &check_item(&1, place, types))
@@ -638,6 +777,7 @@ defmodule App.Document.Checker do
     # A tick holds or doesn't, so an expect reads it as a condition.
     outputs =
       doc.places
+      |> Enum.reject(&(&1.kind == :rows))
       |> Map.new(&{&1.name, if(&1.kind == :tick, do: :condition, else: :text)})
       |> Map.merge(%{"title" => :text, "author" => :text})
 

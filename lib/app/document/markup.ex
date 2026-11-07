@@ -22,7 +22,8 @@ defmodule App.Document.Markup do
     `level with` puts its bottom edge level with a flow's last line.
 
   A form's page is `page.pdf`. Each of its pages prints at its own size, with the
-  places that say that page drawn over it.
+  places that say that page drawn over it, once for each copy a form's rows need. A
+  place on a later copy keeps its values under its own key, `subtotal-copy2`.
   """
 
   @letter_width 612
@@ -41,14 +42,7 @@ defmodule App.Document.Markup do
     files = if page, do: Map.put(files, "page.pdf", elem(page, 0)), else: files
     values = %{"title" => output.title, "author" => output.author}
 
-    {pages, {files, values}} =
-      page
-      |> page_numbers()
-      |> Enum.map_reduce({files, values}, fn n, acc ->
-        places = Enum.filter(output.places, &(Map.get(&1, :page, 1) == n))
-        {body, acc} = Enum.map_reduce(places, acc, &place/2)
-        {page_markup(n, page, [body, mark(files)]), acc}
-      end)
+    {pages, {files, values}} = pages(output, page, files, values)
 
     markup =
       IO.iodata_to_binary([
@@ -60,6 +54,18 @@ defmodule App.Document.Markup do
 
     {markup, Map.put(files, "values.json", Jason.encode!(values))}
   end
+
+  # Each page of each copy, with the places on it.
+  defp pages(output, page, files, values) do
+    for(copy <- 1..Map.get(output, :copies, 1), n <- page_numbers(page), do: {copy, n})
+    |> Enum.map_reduce({files, values}, fn {copy, n}, acc ->
+      {body, acc} = output.places |> on_page(copy, n) |> Enum.map_reduce(acc, &place/2)
+      {page_markup(n, page, [body, mark(files)]), acc}
+    end)
+  end
+
+  defp on_page(places, copy, n),
+    do: Enum.filter(places, &(Map.get(&1, :page, 1) == n and copy(&1) == copy))
 
   defp page_numbers(nil), do: [1]
   defp page_numbers({_pdf, pages}), do: Enum.to_list(1..pages)
@@ -110,11 +116,11 @@ defmodule App.Document.Markup do
     {items, {files, values}} =
       place.value
       |> Enum.with_index()
-      |> Enum.map_reduce({files, Map.put(values, place.name, [])}, &line(&1, place, &2))
+      |> Enum.map_reduce({files, Map.put(values, key(place), [])}, &line(&1, place, &2))
 
     markup = [
       "#let #{var(place)} = block(width: #{width(place)}, {\n",
-      "  set align(left)\n",
+      "  set align(#{align(place)})\n",
       "  set text(size: #{pt(size(place))}, top-edge: #{pt(ascent(place))}, bottom-edge: \"baseline\")\n",
       "  set par(leading: #{pt(gap(place))}, spacing: #{pt(gap(place))})\n",
       items,
@@ -194,15 +200,15 @@ defmodule App.Document.Markup do
     # A hair under the width, so a line scaled to it exactly doesn't wrap.
     markup = [
       "#place(#{at(place)}, block(width: #{width(place)}, layout(room => {\n",
-      "  set align(left)\n",
+      "  set align(#{align(place)})\n",
       "  set text(size: #{size}, top-edge: #{pt(ascent(place))}, bottom-edge: \"baseline\")\n",
-      ~s|  let body = v.at("#{place.name}").join(" ")\n|,
+      ~s|  let body = v.at("#{key(place)}").join(" ")\n|,
       "  let wide = measure(text(body)).width\n",
       "  text(size: #{size} * calc.min(1, room.width / wide * 0.999), body)\n",
       "})))\n"
     ]
 
-    {markup, {files, Map.put(values, place.name, lines(place.value))}}
+    {markup, {files, Map.put(values, key(place), lines(place.value))}}
   end
 
   defp place(%{kind: :text, lines: count} = place, {files, values}) do
@@ -212,9 +218,9 @@ defmodule App.Document.Markup do
 
     markup = [
       "#place(#{at(place)}, block(width: #{width(place)}, layout(room => {\n",
-      "  set align(left)\n",
+      "  set align(#{align(place)})\n",
       "  set par(leading: #{pt(gap(place))}, spacing: #{pt(gap(place))})\n",
-      ~s|  let body = #{indent(place)}v.at("#{place.name}").join(linebreak())\n|,
+      ~s|  let body = #{indent(place)}v.at("#{key(place)}").join(linebreak())\n|,
       "  let sized(s) = text(size: s, top-edge: #{pt(ascent(place))}, bottom-edge: \"baseline\", body)\n",
       "  let s = #{size}\n",
       "  while s > #{pt(@smallest)} and measure(sized(s), width: room.width).height > #{pt(height)} {\n",
@@ -224,21 +230,34 @@ defmodule App.Document.Markup do
       "})))\n"
     ]
 
-    {markup, {files, Map.put(values, place.name, lines(place.value))}}
+    {markup, {files, Map.put(values, key(place), lines(place.value))}}
   end
 
   defp place(%{kind: :text} = place, {files, values}) do
     markup = [
       "#place(#{at(place)}, block(width: #{width(place)}, {\n",
-      "  set align(left)\n",
+      "  set align(#{align(place)})\n",
       "  set text(size: #{pt(size(place))}, top-edge: #{pt(ascent(place))}, bottom-edge: \"baseline\")\n",
       "  set par(leading: #{pt(gap(place))}, spacing: #{pt(gap(place))})\n",
-      ~s|  #{indent(place)}v.at("#{place.name}").join(linebreak())\n|,
+      ~s|  #{indent(place)}v.at("#{key(place)}").join(linebreak())\n|,
       "}))\n"
     ]
 
-    {markup, {files, Map.put(values, place.name, lines(place.value))}}
+    {markup, {files, Map.put(values, key(place), lines(place.value))}}
   end
+
+  # A place's values key and file names: its name, and on a later copy of a form's page,
+  # which copy, since each copy fills the same place with its own values.
+  defp key(place) do
+    case copy(place) do
+      1 -> place.name
+      copy -> "#{place.name}-copy#{copy}"
+    end
+  end
+
+  defp copy(place), do: Map.get(place, :copy, 1)
+
+  defp align(place), do: place |> Map.get(:align, :left) |> Atom.to_string()
 
   defp indent(%{indent: indent}), do: "h(#{pt(indent)}) + "
   defp indent(_place), do: ""
@@ -250,10 +269,10 @@ defmodule App.Document.Markup do
 
     pars =
       lines
-      |> Enum.with_index(length(values[place.name]))
-      |> Enum.map(fn {_line, i} -> ~s|  par(v.at("#{place.name}").at(#{i}))\n| end)
+      |> Enum.with_index(length(values[key(place)]))
+      |> Enum.map(fn {_line, i} -> ~s|  par(v.at("#{key(place)}").at(#{i}))\n| end)
 
-    {pars, {files, Map.update!(values, place.name, &(&1 ++ lines))}}
+    {pars, {files, Map.update!(values, key(place), &(&1 ++ lines))}}
   end
 
   defp line({{:space, count}, _i}, _place, acc),
@@ -312,7 +331,7 @@ defmodule App.Document.Markup do
   defp image_bytes({:qr, link}), do: link |> EQRCode.encode(:m) |> EQRCode.svg()
   defp image_bytes(bytes) when is_binary(bytes), do: bytes
 
-  defp file_name(place, i, bytes), do: "#{place.name}-#{i}.#{extension(bytes)}"
+  defp file_name(place, i, bytes), do: "#{key(place)}-#{i}.#{extension(bytes)}"
 
   defp extension(<<0x89, "PNG", _rest::binary>>), do: "png"
   defp extension(<<0xFF, 0xD8, _rest::binary>>), do: "jpg"
