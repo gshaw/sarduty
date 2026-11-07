@@ -123,7 +123,8 @@ defmodule App.ViewData.TeamDashboardViewData do
       no_shows: no_shows(team, now),
       untagged: untagged_rows(team, now),
       two_hours_tags: two_hours_tags_rows(team, now),
-      letters: letters_row(team, now)
+      letters: letters_row(team, now),
+      letter_settings: letter_settings_row(team, now)
     }
   end
 
@@ -453,6 +454,22 @@ defmodule App.ViewData.TeamDashboardViewData do
         |> Enum.count(&is_nil(&1.tax_credit_letter_id))
 
       %{year: year, count: count}
+    end
+  end
+
+  # What a letter the CRA accepts without question needs from team settings (#918), only
+  # in letter season, when letters go out.
+  defp letter_settings_row(team, now) do
+    if Service.Period.letter_season?(now, team.timezone) do
+      [
+        mailing_address: team.mailing_address,
+        signer: team.authorized_by_name,
+        signature: team.signature
+      ]
+      |> Enum.filter(fn {_field, value} -> value in [nil, ""] end)
+      |> Enum.map(&elem(&1, 0))
+    else
+      []
     end
   end
 

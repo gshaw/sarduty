@@ -554,6 +554,9 @@ defmodule Web.TeamDashboardLive do
        when key in [:refresh, :long_name, :long_abbreviated_name],
        do: ~p"/teams/#{team}/settings"
 
+  defp attention_path(team, %{key: :letter_settings}),
+    do: ~p"/teams/#{team}/settings/tax-credit-letters"
+
   defp attention_path(team, %{key: :key_rejected}), do: ~p"/teams/#{team}/settings/access-key"
 
   defp attention_path(team, %{key: key, year: year}) when key in [:untagged, :untagged_last_year],

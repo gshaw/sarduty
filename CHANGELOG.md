@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- From January to April, the Dashboard says when tax credit letters are missing a
+  mailing address, signer, or signature, so the CRA accepts them without question.
 - A tax credit letter's page shows its reference to copy, and Verify letter opens the page
   anyone checking it sees.
 - Tax credit letters print names with letters outside Western European ones, such as Ł

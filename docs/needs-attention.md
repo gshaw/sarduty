@@ -44,6 +44,7 @@ other kind of item stays on the list until it's done:
 | Attendance to send, group rule changes, chores out of date | No     | One step in SAR Duty               |
 | No-shows to follow up                                      | No     | Leaves on its own after a week     |
 | Tax credit letters, last year's hours tags                 | No     | Has a deadline                     |
+| Letter settings incomplete                                 | No     | Has a deadline                     |
 | Team name too long                                         | No     | No ids to come back on             |
 | Pick team contacts                                         | No     | One step in SAR Duty               |
 
