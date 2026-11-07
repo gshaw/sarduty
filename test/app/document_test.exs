@@ -95,8 +95,9 @@ defmodule App.DocumentTest do
     doc
   end
 
+  # EMCR's claim's rules (#950), as BCSARA's Expense reimbursement request prints them.
   defp claim do
-    {:ok, doc} = "test/support/fixtures/forms/claim_rules.txt" |> File.read!() |> Document.parse()
+    {:ok, doc} = "priv/forms/bcsara/expense_request.txt" |> File.read!() |> Document.parse()
     {:ok, doc} = Document.check(doc, sample_context())
     doc
   end
@@ -602,6 +603,140 @@ defmodule App.DocumentTest do
       doc = supplement()
       assert Document.printed(doc, "total", Decimal.new("56.335"), "Etc/UTC") == "$56.34"
       assert Document.printed(doc, "hours", Decimal.new("6.5"), "Etc/UTC") == "6.5"
+    end
+  end
+
+  describe "a layout" do
+    @png <<0x89, "PNG", 13::32, 0::32, "IHDR", 400::32, 100::32>>
+
+    # The smallest form with a layout: `head` on line 5, each of `lines` from line 6, then
+    # layout and `typst`.
+    defp layout_form(head, lines, typst \\ "#values.who") do
+      """
+      form 'Test'
+      for activity where kind = 'incident'
+      report people
+        select member, km from attendance where activity.id = :activity
+      #{head}
+      #{Enum.map_join(lines, &"#{&1}\n")}\
+      layout
+      #{typst}
+      """
+    end
+
+    @wrong_expect ["expect who = 'x'"]
+
+    @fills [
+      "fill",
+      "  who = team.legal_name",
+      "  far = sum(people.km) > 10",
+      "  signature = team.signature",
+      "  address = team.mailing_address",
+      "fill each people into lines",
+      "  name = member",
+      "  km = km as number",
+      "  far = km > 5"
+    ]
+
+    test "is every line after layout, as written, with the line it starts on" do
+      typst = "// Typst's own comment\n\n  #let a = 1\n-- text, not a comment"
+      {:ok, doc} = "" |> layout_form(["fill", "  who = 'x'"], typst) |> Document.parse()
+
+      assert doc.layout == %{text: typst <> "\n", line: 9}
+      assert doc.places == [] and doc.page == false
+    end
+
+    test "its values are the fills by name: text, conditions, pictures, and rows" do
+      {:ok, doc} = "" |> layout_form(@fills) |> checked()
+
+      values = %{
+        "team.legal_name" => "Coast Range Search and Rescue Society",
+        "team.signature" => @png,
+        "people" => [%{key: "member:7", values: %{"member" => "Avery Chen", "km" => 12}}]
+      }
+
+      output = Document.evaluate(doc, values, "America/Vancouver")
+
+      assert output.places == []
+      assert output.layout == doc.layout
+
+      assert output.fills == %{
+               "who" => "Coast Range Search and Rescue Society",
+               "far" => true,
+               "signature" => {:image, @png},
+               "address" => nil,
+               "lines" => [%{"name" => "Avery Chen", "km" => "12", "far" => true}]
+             }
+    end
+
+    test "an expect reads its values by name" do
+      expects = [
+        "expect with team.legal_name = 'Coast Range': who = 'Coast Range' and not far",
+        "expect with people km 14: far"
+      ]
+
+      {:ok, doc} = "" |> layout_form(@fills ++ expects) |> checked()
+      assert Document.expect(doc) == :ok
+
+      {:ok, doc} = "" |> layout_form(@fills ++ @wrong_expect) |> checked()
+      assert {:error, [%Error{line: 15}]} = Document.expect(doc)
+    end
+
+    test "mistakes name the line" do
+      fill = ["fill", "  who = 'x'"]
+
+      assert error(layout_form("page", fill)) ==
+               "Line 8: Take out page: the layout draws the form's page."
+
+      assert error(layout_form("places\n  a text top 1in, left 1in", fill)) ==
+               "Line 9: Take out places: the layout says where each value goes."
+
+      assert error(layout_form("", fill, "")) ==
+               "Line 8: Write the form's Typst layout on the lines after layout."
+
+      assert "" |> layout_form(fill) |> String.replace("layout\n", "layout now\n") |> error() ==
+               "Line 8: Write layout alone on its line, and the form's Typst layout after it."
+
+      assert error(layout_form("", ["fill", "  team = 'x'"])) ==
+               "Line 7: Give the value another name: team is used above."
+
+      assert error(layout_form("", ["fill", "  who = 'x'", "  who = 'y'"])) ==
+               "Line 8: Give the value another name: who is filled twice."
+
+      assert error(layout_form("", ["fill each people into people", "  name = member"])) ==
+               "Line 6: Give the value another name: people is used above."
+
+      assert error(layout_form("", ["fill each people into lines", "  pic = team.signature"])) ==
+               "Line 7: Fill pic with text or a condition: a row holds no pictures."
+    end
+
+    test "an expect gives a row a parent's field: item.cost_per_hour 15" do
+      text = """
+      form 'Test'
+      for activity where kind = 'incident'
+      report equipment
+        select item, hours, item.cost_per_hour from equipment_use where activity.id = :activity
+      compute each equipment
+        cost = hours(hours) * item.cost_per_hour
+      fill
+        total = sum(equipment.cost) as money
+      expect with equipment hours 90, item.cost_per_hour 15: cost = 22.50
+      layout
+      #values.total
+      """
+
+      {:ok, doc} = checked(text)
+
+      assert [
+               %{
+                 given: [
+                   {:row, "equipment", [{"hours", 90, _}, {"item.cost_per_hour", 15, _}], _}
+                 ]
+               }
+             ] =
+               doc.expects
+
+      assert Document.expect(doc) == :ok
     end
   end
 

@@ -127,6 +127,21 @@ defmodule Web.Org.FormPagesTest do
       assert response_content_type(conn, :pdf) =~ "application/pdf"
     end
 
+    test "one with a layout has no page: its layout draws it", ctx do
+      %{conn: conn, dana: dana, organization: organization} = ctx
+
+      form =
+        form_fixture(organization, %{
+          name: "Expense reimbursement request",
+          text: File.read!("priv/forms/bcsara/expense_request.txt"),
+          page: nil
+        })
+
+      {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/forms/#{form}")
+      assert has_element?(lv, "#form-page", "Drawn by its layout")
+      assert has_element?(lv, "#form-text", "EMCR HEADQUARTERS USE ONLY")
+    end
+
     test "opens its blank page", %{conn: conn, dana: dana, form: form, page: page} do
       conn = conn |> log_in_user(dana) |> get(~p"/orgs/wsara/forms/#{form}/page")
       assert response(conn, 200) == page

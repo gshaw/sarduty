@@ -3,9 +3,11 @@ defmodule App.Operation.PrintDocument do
   Prints an evaluated App.Document with Typst (#918): App.Document.Markup lays it out,
   Service.Typst makes the PDF, and a document that says `lock print` goes through
   Service.PDFLock, so it can only be printed. A form that says `page` prints on its own
-  page PDF (#950), every page of it.
+  page PDF (#950), every page of it, and one with a `layout` on the pages its Typst
+  layout draws.
   """
 
+  alias App.Document
   alias App.Document.Markup
   alias Service.Format
   alias Service.PDFLock
@@ -22,7 +24,40 @@ defmodule App.Operation.PrintDocument do
 
     with {:ok, page} <- page(output, Keyword.get(opts, :page)) do
       {markup, files} = Markup.typst(output, sample_mark: mark, page: page)
-      with {:ok, pdf} <- Typst.compile(markup, files), do: {:ok, lock(pdf, output.lock)}
+      with {:ok, pdf} <- compile(markup, files, output), do: {:ok, lock(pdf, output.lock)}
+    end
+  end
+
+  # A layout's mistake names the line of the form's text it's on.
+  defp compile(markup, files, output) do
+    case Typst.compile(markup, files) do
+      {:ok, pdf} ->
+        {:ok, pdf}
+
+      {:error, reason} ->
+        if Map.get(output, :layout),
+          do: {:error, Markup.layout_error(reason, markup, output)},
+          else: {:error, reason}
+    end
+  end
+
+  @doc """
+  `:ok` when a checked form's layout prints with every value blank and one blank row in
+  each list, or `{:error, reason}` naming the line of its text: Typst finds a mistake
+  only when it runs. Saving a form checks it with this (App.Operation.SaveForm), and a
+  form with no layout has nothing to check.
+  """
+  def check_layout(%Document{layout: nil}), do: :ok
+
+  def check_layout(%Document{} = doc) do
+    rows =
+      for %{value: {:each, report, _fills}} <- doc.fill, do: {report, [%{key: nil, values: %{}}]}
+
+    output = Document.evaluate(doc, Map.new(rows), "Etc/UTC")
+
+    case call(output) do
+      {:ok, _pdf} -> :ok
+      {:error, reason} -> {:error, "The layout does not print. #{reason}"}
     end
   end
 

@@ -121,7 +121,8 @@ defmodule App.DataFixtures do
       |> Map.merge(attrs)
       |> Repo.insert!()
 
-    Repo.insert!(%FormPage{form_id: form.id, bytes: page})
+    # `page: nil` is a form with a layout, which has none.
+    if page, do: Repo.insert!(%FormPage{form_id: form.id, bytes: page})
     form
   end
 

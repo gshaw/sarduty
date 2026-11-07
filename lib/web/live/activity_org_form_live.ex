@@ -2,7 +2,8 @@ defmodule Web.ActivityOrgFormLive do
   @moduledoc """
   An organization's form on an activity (#950), for team admins only: what SAR Duty
   filled in, what's missing with the page that fixes it, and the questions, with a row
-  for each person a form asks about, such as On task, and their total. Answers save as
+  for each person a form asks about, such as On task, and their total, and each
+  equipment use's total for a form that works one out. Answers save as
   they change (App.Operation.SaveFormAnswers), and each row's total follows them. Download PDF and Open PDF post the form
   to Web.ActivityFormPDFController, which keeps the answers and saves the PDF it sends.
 
@@ -183,8 +184,8 @@ defmodule Web.ActivityOrgFormLive do
   attr :team, :map, required: true
   attr :errors, :map, required: true
 
-  # A row for each person or item the form asks about, with a box for each answer and
-  # the row's total. A blank box takes the answer shown in grey.
+  # A row for each person or item the form asks about or works a total out for, with a
+  # box for each answer and the row's total. A blank box takes the answer shown in grey.
   defp rows_table(assigns) do
     ~H"""
     <section id={"org-form-rows-#{@table.report}"} class="mb-8">
@@ -193,7 +194,7 @@ defmodule Web.ActivityOrgFormLive do
       <.table
         id={"org-form-rows-#{@table.report}-table"}
         rows={@table.rows}
-        row_id={&"org-form-row-#{dom_key(&1.key)}"}
+        row_id={&"org-form-row-#{&1.dom}"}
         class="table-striped"
       >
         <:col :let={row} :if={@table.kind == :member} label="Member">
@@ -217,7 +218,7 @@ defmodule Web.ActivityOrgFormLive do
           align="right"
           class="w-px whitespace-nowrap"
         >
-          <span id={"org-form-total-#{dom_key(row.key)}"}>{row.total}</span>
+          <span id={"org-form-total-#{row.dom}"}>{row.total}</span>
         </:col>
       </.table>
     </section>
@@ -324,7 +325,8 @@ defmodule Web.ActivityOrgFormLive do
 
   # The page that fixes an empty value, so the fix reaches D4H and every form: an
   # activity's D4H field on Change fields, its own details on Change activity, and the
-  # team's on team settings. Anything else has no page here.
+  # team's on team settings: its names on General, and its address and signer beside
+  # its tax credit letters'. Anything else has no page here.
   defp fix(%{from: "activities", custom?: true}, activity),
     do: %{
       label: "Change fields",
@@ -337,8 +339,14 @@ defmodule Web.ActivityOrgFormLive do
       path: ~p"/teams/#{activity.team}/activities/#{activity.id}/edit"
     }
 
-  defp fix(%{from: "team"}, activity),
+  defp fix(%{from: "team", name: name}, activity) when name in ~w(team.name team.legal_name),
     do: %{label: "Team settings", path: ~p"/teams/#{activity.team}/settings"}
+
+  defp fix(%{from: "team"}, activity),
+    do: %{
+      label: "Team settings",
+      path: ~p"/teams/#{activity.team}/settings/tax-credit-letters"
+    }
 
   defp fix(_row, _activity), do: nil
 end
