@@ -6,6 +6,7 @@ defmodule App.Operation.SetTeamIdCardsTest do
 
   alias App.Model.Event
   alias App.Model.MemberCard
+  alias App.Operation.IssueEveryMemberCard
   alias App.Operation.IssueMemberCard
   alias App.Operation.SetTeamIdCards
   alias App.Repo
@@ -43,6 +44,19 @@ defmodule App.Operation.SetTeamIdCardsTest do
 
     {:ok, team} = SetTeamIdCards.call(team, true, admin)
     refute team.every_member_card
+  end
+
+  test "a Features page opened before ID cards went off can't turn on every member's card",
+       %{admin: admin} do
+    page_team = team_fixture(%{id_cards_enabled: true})
+    member = member_fixture(page_team)
+    {:ok, _team} = SetTeamIdCards.call(page_team, false, admin)
+
+    assert IssueEveryMemberCard.set(page_team, true, admin, DateTime.utc_now()) ==
+             {:error, :id_cards_off}
+
+    refute Repo.reload!(page_team).every_member_card
+    assert MemberCard.find_current(page_team, member) == nil
   end
 
   test "a SAR Duty admin or the team's organization admins may; anyone else is refused" do

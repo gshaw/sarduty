@@ -30,9 +30,14 @@ defmodule App.Operation.IssueEveryMemberCard do
   Turns the switch on or off. On makes a card for each member who needs one. `{:ok, team,
   made}`, or `{:error, :id_cards_off}` to turn it on while ID cards are off.
   """
-  def set(%Team{id_cards_enabled: false}, true, %User{}, _now), do: {:error, :id_cards_off}
-
   def set(%Team{} = team, enabled, %User{} = user, now) when is_boolean(enabled) do
+    # Read again: the page's copy may predate a SAR Duty admin turning ID cards off.
+    team |> Repo.reload!() |> set_fresh(enabled, user, now)
+  end
+
+  defp set_fresh(%Team{id_cards_enabled: false}, true, _user, _now), do: {:error, :id_cards_off}
+
+  defp set_fresh(team, enabled, user, now) do
     Repo.transaction(fn ->
       team = team |> Ecto.Changeset.change(every_member_card: enabled) |> Repo.update!()
       made = call(team, now)
