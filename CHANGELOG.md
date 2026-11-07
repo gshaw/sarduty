@@ -4,6 +4,7 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- A tax credit letter's Email letter asks first, naming the address it goes to.
 - A retiring or retired member's ID Card tab has Cancel ID card, for the rare one who
   shouldn't keep a card at all. Their pass shows Cancelled at once, and History says who.
 - The ID card page says which Wallet SAR Duty sees your card in, without a device count.
