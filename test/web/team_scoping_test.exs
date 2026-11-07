@@ -26,6 +26,10 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/activities/:id/members/ask",
     "/teams/:subdomain/activities/:id/members/update",
     "/teams/:subdomain/activities/:id/tags",
+    # An organization's form on an activity (#950): the activity is found through the
+    # team first. Web.ActivityOrgFormLiveTest covers a form that's off.
+    "/teams/:subdomain/activities/:id/forms/:form_id",
+    "/teams/:subdomain/activities/:id/forms/:form_id/pdf",
     "/teams/:subdomain/equipment/:id",
     "/teams/:subdomain/equipment/:id/fields",
     "/teams/:subdomain/equipment/:id/fields/edit",
@@ -103,8 +107,11 @@ defmodule Web.TeamScopingTest do
     group = group_fixture(other_team)
     endorsement = endorsement_fixture(other_team)
 
+    organization = organization_fixture([other_team])
+
     other = %{
       activity: activity_fixture(other_team, %{activity_kind: "incident"}),
+      form: form_fixture(organization, %{enabled: true}),
       member: member,
       group: group,
       rule: group_rule_fixture(group, endorsement),
@@ -150,6 +157,10 @@ defmodule Web.TeamScopingTest do
   end
 
   defp request(conn, "/teams/:subdomain/members/:id/view-as", path), do: post(conn, path)
+
+  defp request(conn, "/teams/:subdomain/activities/:id/forms/:form_id/pdf", path),
+    do: post(conn, path)
+
   defp request(conn, _template, path), do: get(conn, path)
 
   describe "a member who is not a team admin" do
@@ -212,6 +223,12 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/activities/:id", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}"
+
+  defp path_for("/teams/:subdomain/activities/:id/forms/:form_id", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/forms/#{o.form.id}"
+
+  defp path_for("/teams/:subdomain/activities/:id/forms/:form_id/pdf", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/forms/#{o.form.id}/pdf"
 
   defp path_for("/teams/:subdomain/activities/:id/edit", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/edit"
