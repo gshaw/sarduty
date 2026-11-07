@@ -28,7 +28,7 @@ defmodule App.Report.Chart do
   alias App.Report.Value
   alias Service.Format
 
-  @numbers [:number, :hours, :km]
+  @numbers [:number, :hours, :km, :money]
   @kind_series %{"incident" => :incident, "exercise" => :exercise, "event" => :event}
   @series_keys [:primary, :c1, :c2, :c3, :c4, :c5]
   @max_series length(@series_keys)
@@ -545,5 +545,6 @@ defmodule App.Report.Chart do
 
   defp text(value, %{type: :hours}), do: Format.duration(value)
   defp text(value, %{type: :km}), do: Format.km(value)
+  defp text(value, %{type: :money}), do: Format.money(value)
   defp text(value, _column), do: Format.number(value)
 end

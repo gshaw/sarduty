@@ -28,6 +28,11 @@ defmodule App.Model.EquipmentItem do
     # D4H custom field values by D4H field id (#681): see App.Model.CustomField. Nil
     # until the first refresh after they were added copies them.
     field :custom_values, :map
+    # D4H's costs, in whole cents (#950): the item's, or its kind's when the item has
+    # none. Per km for a vehicle's distance, per hour, and per use.
+    field :cost_per_km_cents, :integer
+    field :cost_per_hour_cents, :integer
+    field :cost_per_use_cents, :integer
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -45,7 +50,10 @@ defmodule App.Model.EquipmentItem do
     :location_title,
     :d4h_container_id,
     :expires_at,
-    :custom_values
+    :custom_values,
+    :cost_per_km_cents,
+    :cost_per_hour_cents,
+    :cost_per_use_cents
   ]
 
   def fields, do: @fields

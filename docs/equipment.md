@@ -144,6 +144,13 @@ watches `equipment` and `equipment-usages` like the other small lists: see
 [d4h-sync.md](d4h-sync.md). Items and usages D4H stops listing are deleted. A D4H team
 without the equipment module answers 403, so its copy stays empty.
 
+Each item keeps D4H's costs (#950): per km, per hour, and per use, in whole cents as D4H
+holds them, for EMCR's claim. An item with no cost of its own takes its kind's, so a
+kind's change reaches the copy with the next change to its items, or the nightly
+refresh. South Fraser's D4H, read 2026-11-07, prices its vehicles at 67 per km, EMCR's
+$0.67, so the unit is cents. Reports read them in dollars as `cost_per_km`,
+`cost_per_hour`, and `cost_per_use`. SAR Duty Records has no costs, so they're blank.
+
 ## Scanning barcodes
 
 On a phone (a touch screen, by CSS `pointer: coarse`), "Add equipment" shows "Scan

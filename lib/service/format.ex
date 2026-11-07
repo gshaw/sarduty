@@ -126,6 +126,14 @@ defmodule Service.Format do
   @doc ~s(A distance in whole km: "42 km", "1,204 km".)
   def km(n) when is_number(n), do: number(n) <> " km"
 
+  @doc ~s(Dollars and cents: "$0.67", "$1,204.50".)
+  def money(n) when is_number(n), do: cents(round(n * 100))
+
+  defp cents(c) when c < 0, do: "-" <> cents(-c)
+
+  defp cents(c),
+    do: "$" <> number(div(c, 100)) <> "." <> String.pad_leading("#{rem(c, 100)}", 2, "0")
+
   @doc ~s(A number to one decimal place, for a column whose header names the unit: "1.5", "2.0".)
   def tenths(n) when is_number(n), do: decimals(n, 1)
 

@@ -524,11 +524,12 @@ defmodule App.Adapter.D4H do
   def location_bookmark_params, do: @location_bookmarks
 
   @doc """
-  Every equipment item, with its kind and location titles (#271). D4H answers 403 for
-  a team without its equipment module, which raises D4H.Error like any failure.
+  Every equipment item, with its kind and location titles (#271) and its costs (#950).
+  D4H answers 403 for a team without its equipment module, which raises D4H.Error like
+  any failure.
   """
   def fetch_equipment_items(context) do
-    kinds = context |> fetch_all("/equipment-kinds", &{&1["id"], &1["title"]}) |> Map.new()
+    kinds = context |> fetch_all("/equipment-kinds", &D4H.EquipmentItem.build_kind/1) |> Map.new()
 
     locations =
       context |> fetch_all("/equipment-locations", &{&1["id"], &1["title"]}) |> Map.new()

@@ -418,10 +418,10 @@ defmodule App.Report.Compiler do
   defp cell(_e), do: nil
 
   # How a total row adds up a column: counts, sums, and plain numbers add up.
-  defp total(%{agg: "min", type: type}) when type in [:number, :hours, :km], do: :min
-  defp total(%{agg: "max", type: type}) when type in [:number, :hours, :km], do: :max
+  defp total(%{agg: "min", type: type}) when type in [:number, :hours, :km, :money], do: :min
+  defp total(%{agg: "max", type: type}) when type in [:number, :hours, :km, :money], do: :max
   defp total(%{agg: "avg"}), do: nil
-  defp total(%{type: type}) when type in [:number, :hours, :km], do: :sum
+  defp total(%{type: type}) when type in [:number, :hours, :km, :money], do: :sum
   defp total(_e), do: nil
 
   defp combine(%{agg: agg}) when agg in ["count", "sum"], do: :sum
