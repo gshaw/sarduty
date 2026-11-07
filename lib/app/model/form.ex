@@ -5,6 +5,7 @@ defmodule App.Model.Form do
   alias App.Model.Form
   alias App.Model.FormPage
   alias App.Model.Organization
+  alias App.Model.Team
   alias App.Repo
 
   # An organization's form (#950), such as EMCR's Task report: an App.Document's text
@@ -32,6 +33,29 @@ defmodule App.Model.Form do
   @doc "The organization's forms, A to Z."
   def get_all(%Organization{id: id}),
     do: Form |> where([f], f.organization_id == ^id) |> order_by([f], asc: f.name) |> Repo.all()
+
+  @doc "The forms on for `team`'s organization, A to Z: none for a team in no organization."
+  def enabled_for(%Team{organization_id: nil}), do: []
+
+  def enabled_for(%Team{organization_id: id}) do
+    Form
+    |> where([f], f.organization_id == ^id and f.enabled)
+    |> order_by([f], asc: f.name)
+    |> Repo.all()
+  end
+
+  @doc """
+  The form `id` on for `team`, or nil, so an organization's form that's off, or another
+  organization's, is never found.
+  """
+  def get_enabled(%Team{organization_id: nil}, _id), do: nil
+
+  def get_enabled(%Team{organization_id: organization_id}, id) do
+    case id |> to_string() |> Integer.parse() do
+      {id, ""} -> Repo.get_by(Form, id: id, organization_id: organization_id, enabled: true)
+      _other -> nil
+    end
+  end
 
   @doc "The organization's form `id`, or nil, so another organization's is never found."
   def get(%Organization{id: organization_id}, id) do

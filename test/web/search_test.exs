@@ -14,7 +14,7 @@ defmodule Web.SearchTest do
       for %{path: path, metadata: %{phoenix_live_view: {view, _action, _opts, _extra}}} <-
             Web.Router.__routes__(),
           String.starts_with?(path, "/teams/:subdomain/"),
-          String.ends_with?(path, "/:id"),
+          path =~ ~r{/:(\w+_)?id$},
           uniq: true,
           do: view
 
