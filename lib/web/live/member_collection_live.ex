@@ -96,12 +96,13 @@ defmodule Web.MemberCollectionLive do
   end
 
   # No All tile: Not retired and Retired add up to it (#469), and All shows as the
-  # Standing menu. Retiring only for a team with a Retiring group (#514).
+  # Standing menu. No Retiring tile either: retiring members are under Retired, since
+  # they no longer count as members, and the menu keeps Retiring for a team with a
+  # Retiring group (#514).
   defp without_tiles(%{switch: switch} = view, team) do
     retiring? = Team.retiring?(team)
-    keep? = fn value -> value != "retiring" or retiring? end
-    tiles = Enum.filter(switch.tiles, &(&1.value != "all" and keep?.(&1.value)))
-    options = Enum.filter(switch.options, &keep?.(elem(&1, 1)))
+    tiles = Enum.reject(switch.tiles, &(&1.value in ["all", "retiring"]))
+    options = Enum.filter(switch.options, &(elem(&1, 1) != "retiring" or retiring?))
     %{view | switch: %{switch | tiles: tiles, options: options}}
   end
 

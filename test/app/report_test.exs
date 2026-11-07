@@ -947,12 +947,12 @@ defmodule App.ReportTest do
              ]
     end
 
-    test "a pick adds its where; tiles count with the search off", %{team: team} do
+    test "a pick adds its where; tiles count the search too (#935)", %{team: team} do
       view = page!(team, %{"when" => "2026", "q" => "rope", "page" => "1"})
 
       assert titles(view, team) == ["Night search", "Rope rescue"]
       assert view.params == %{"when" => "2026", "q" => "rope"}
-      assert Enum.map(view.switch.tiles, & &1.count) == [3, 2, 1]
+      assert Enum.map(view.switch.tiles, & &1.count) == [2, 1, 1]
 
       view = page!(team, %{"activity" => "incident", "when" => "past"})
       assert titles(view, team) == ["Lost hiker"]

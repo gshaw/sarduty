@@ -73,8 +73,9 @@
       no one offers all members.
     </li>
     <li>
-      A count is the rows in its part before the search, and after any other filter. A part
-      with none shows a grey 0 and stays selectable.
+      A count is the rows in its part after the search and every other filter, so a search
+      shows on the tiles where its matches are. A part with none shows a grey 0 and stays
+      selectable.
     </li>
     <li>
       When the rows show their part with a marker or an icon, the count's label has the same
@@ -96,15 +97,13 @@
       and so does a badge that says more than the tile, such as Away's last day.
     </li>
     <li>
-      A filter bar goes under it, and searches within the part showing. Its count shows only
-      while the search or a filter leaves fewer rows than the current tile: set
-      <code>repeats</code>
-      when the two match.
+      A filter bar goes under it, and searches within the part showing. The current tile
+      already counts what the list shows, so set <code>repeats</code>: the line under the bar keeps only Clear and the pages.
     </li>
     <li>
-      A search that finds nobody in the part showing says which parts have matches, "Drew
-      Patel is in Can't make it.", with Search all members to switch to All and keep the
-      search. With no match anywhere, no link. The count line counts the part: "0 of 4 members".
+      A search that finds nobody in the part showing leaves the tiles to say where its
+      matches are: select one to see them. A list with no All tile, such as Members, offers
+      Search all members.
     </li>
   </ul>
 

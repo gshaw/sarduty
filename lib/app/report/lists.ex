@@ -49,11 +49,11 @@ defmodule App.Report.Lists do
       order by name
       search name, position, ref_id
       switch standing 'Standing' default current
-        option current 'Not retired' where current = true
+        option current 'Not retired' where current = true and standing != 'retiring'
         option active 'Active' where standing = 'active'
         option away 'Away' where standing = 'away'
         option retiring 'Retiring' where standing = 'retiring'
-        option retired 'Retired' where standing = 'retired'
+        option retired 'Retired' where standing in ('retired', 'retiring')
         option not_a_person 'Not a person' where standing = 'not_a_person'
       filter when 'Period' default THIS_YEAR
       filter group 'Group'

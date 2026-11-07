@@ -51,7 +51,8 @@ defmodule Web.QualificationLive do
     view = String.to_existing_atom(filter_options.view)
     q = filter_options.q || ""
 
-    group_member_ids = GroupMember.member_ids(current_team.id, filter_options.group)
+    {shown_active, shown_expired} =
+      shown_awards(current_team, [active_awards, expired_awards], q, filter_options.group)
 
     assign(socket,
       page_title: qualification.title,
@@ -65,11 +66,18 @@ defmodule Web.QualificationLive do
       view: view,
       q: q,
       form: to_form(changeset, as: "form"),
-      awards:
-        view
-        |> view_awards(active_awards, expired_awards)
-        |> Enum.filter(&shown?(&1, q, group_member_ids))
+      active_count: length(shown_active),
+      expired_count: length(shown_expired),
+      awards: view_awards(view, shown_active, shown_expired)
     )
+  end
+
+  # The active and expired awards the search and Group leave. The tiles count them too
+  # (#935): a search shows on them where its matches are.
+  defp shown_awards(team, [active, expired], q, group_id) do
+    group_member_ids = GroupMember.member_ids(team.id, group_id)
+    shown = &Enum.filter(&1, fn award -> shown?(award, q, group_member_ids) end)
+    {shown.(active), shown.(expired)}
   end
 
   # Active and expired awards, and the standing of everyone holding one.
@@ -159,8 +167,8 @@ defmodule Web.QualificationLive do
       </aside>
       <main class="content-2/3">
         <.main_content
-          active_count={length(@active_awards)}
-          expired_count={length(@expired_awards)}
+          active_count={@active_count}
+          expired_count={@expired_count}
           awards={@awards}
           standings={@standings}
           expired_ids={@expired_ids}
@@ -226,10 +234,6 @@ defmodule Web.QualificationLive do
     """
   end
 
-  defp view_count(:active, active, _expired), do: active
-  defp view_count(:expired, _active, expired), do: expired
-  defp view_count(:all, active, expired), do: active + expired
-
   defp main_content(assigns) do
     ~H"""
     <.stat_switch label="Members">
@@ -263,7 +267,7 @@ defmodule Web.QualificationLive do
       for={@form}
       id="award_filter_form"
       count={Service.Format.count(length(@awards), one: "%d member", many: "%d members")}
-      repeats={length(@awards) == view_count(@view, @active_count, @expired_count)}
+      repeats
       clear={awards_path(@team, @qualification, %QualificationFilterViewModel{view: "#{@view}"})}
       path_fn={&awards_path(@team, @qualification, @filter_options, &1)}
     >

@@ -70,7 +70,9 @@ defmodule Web.QualificationLiveTest do
 
     assert has_element?(lv, "#active_awards", "Fiona MacLeod")
     refute has_element?(lv, "#active_awards", "Blake Okafor")
-    assert has_element?(lv, "#award_filter_form-summary", "1 member")
+    # The tiles count the search (#935), so the line keeps only Clear search.
+    assert has_element?(lv, "#awards-all-link", "1")
+    refute has_element?(lv, "#award_filter_form-summary strong")
   end
 
   test "renders qualification page with no awards", %{conn: conn} do

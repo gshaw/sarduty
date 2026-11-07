@@ -17,8 +17,8 @@ defmodule Web.Components.FilterBar do
   are on show as chips that remove them. The list's column headers sort it, so the bar has
   no sort menu: put the sort in `hidden` so a change keeps it.
 
-  Under a stat switch, set `repeats` while the count matches the switch's current one: the
-  line leaves out a number the tile already shows, and keeps any total, Clear, and page range.
+  Under a stat switch, set `repeats`: the current tile counts the search and filters too
+  (#935), so the line leaves out the number and keeps any total, Clear, and page range.
 
   ## Examples
 

@@ -15,7 +15,9 @@ defmodule Web.GroupCollectionLiveTest do
 
     assert has_element?(lv, "#group-#{rope.id}")
     refute has_element?(lv, "#group-#{drivers.id}")
-    assert has_element?(lv, "#group_filter_form-summary", "1 group")
+    # The tiles count the search (#935), so the line keeps only Clear search.
+    assert has_element?(lv, "#groups-all-link", "1")
+    refute has_element?(lv, "#group_filter_form-summary strong")
 
     lv |> form("#group_filter_form", form: %{q: "nothing"}) |> render_change()
     assert has_element?(lv, "#no-matching-groups")

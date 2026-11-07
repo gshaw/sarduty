@@ -75,7 +75,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       for={@form}
       id="tax_credit_letter_filter_form"
       count={Service.Format.count(Enum.count(@records), one: "%d member", many: "%d members")}
-      repeats={Enum.count(@records) == Map.get(@letter_counts, @filter_options.letter, 0)}
+      repeats
       clear={@path_fn.(:reset)}
       path_fn={@path_fn}
       hidden={[@form[:sort], @form[:letter]]}
@@ -326,7 +326,13 @@ defmodule Web.TaxCreditLetterCollectionLive do
     members = Enum.map(records, & &1.member)
 
     socket
-    |> assign(:letter_counts, TaxCreditLetterFilterViewModel.letter_counts(all))
+    # The tiles count the search too (#935): a search shows on them where its matches are.
+    |> assign(
+      :letter_counts,
+      all
+      |> TaxCreditLetterFilterViewModel.shown(%{filter_options | letter: nil})
+      |> TaxCreditLetterFilterViewModel.letter_counts()
+    )
     |> assign(:records, records)
     |> assign(:standings, Standing.by_member(team, members, DateTime.utc_now()))
     |> assign(

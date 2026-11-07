@@ -246,7 +246,7 @@ defmodule Web.ActivityCollectionLiveTest do
     refute has_element?(lv, ".filter-bar-chips")
   end
 
-  test "the count under the bar shows only while the search narrows the kind's tile",
+  test "a search shows on the tiles, so the line under the bar keeps only Clear search (#935)",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, %{title: "Rope practice"})
@@ -258,7 +258,9 @@ defmodule Web.ActivityCollectionLiveTest do
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/activities?q=rope")
 
-    assert has_element?(lv, "#activity-filters-summary strong", "1 activity")
+    assert has_element?(lv, "#activity-tile-all", "1")
+    refute has_element?(lv, "#activity-filters-summary strong")
+    assert has_element?(lv, "#activity-filters-summary a", "Clear search")
   end
 
   test "Clear shows only while a filter or search is on, and says which", %{conn: conn} do
