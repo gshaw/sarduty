@@ -14,7 +14,8 @@ defmodule App.Model.FormAnswer do
     belongs_to :team, Team
     belongs_to :activity, Activity
     field :name, :string
-    # "" for one answer. Step 7's `ask each` keys a row by its member or item.
+    # "" for one answer. An `ask each` keeps one for each row, by the row's member or
+    # item, such as "member:12".
     field :row, :string, default: ""
     field :value, :string, redact: true
     # Who answered last, and when: updated_at.
@@ -22,14 +23,24 @@ defmodule App.Model.FormAnswer do
     timestamps(type: :utc_datetime_usec)
   end
 
-  @doc "The activity's answers, `%{name => text}`."
+  @doc """
+  The activity's answers, `%{name => text}`, and for an answer on each row `%{name =>
+  %{row => text}}`.
+  """
   def for_activity(%Activity{id: id}) do
     FormAnswer
-    |> where([a], a.activity_id == ^id and a.row == "")
-    |> select([a], {a.name, a.value})
+    |> where([a], a.activity_id == ^id)
+    # Rows first, so one answer wins a name an older form asked for each row.
+    |> order_by([a], desc: a.row)
+    |> select([a], {a.name, a.row, a.value})
     |> Repo.all()
-    |> Map.new()
+    |> Enum.reduce(%{}, &put_answer/2)
   end
+
+  defp put_answer({name, "", text}, answers), do: Map.put(answers, name, text)
+
+  defp put_answer({name, row, text}, answers),
+    do: Map.update(answers, name, %{row => text}, &Map.put(&1, row, text))
 
   @doc "The team's last answer to each of `names` on any activity, `%{name => text}`."
   def last_answers(%Team{id: team_id}, names) do
@@ -56,12 +67,28 @@ defmodule App.Model.FormAnswer do
     start(for_activity(activity), last, asks)
   end
 
-  @doc "Pure: what each ask starts from, given the activity's answers and the team's last."
+  @doc """
+  Pure: what each ask starts from, given the activity's answers and the team's last. An
+  answer on each row starts from the activity's, `%{row => text}`.
+  """
   def start(saved, last, asks) do
     for ask <- asks,
-        text = Map.get(saved, ask.name) || (ask.remember && Map.get(last, ask.name)),
-        text not in [nil, false, ""],
+        answer = starting(ask, saved, last),
+        answer not in [nil, false, "", %{}],
         into: %{},
-        do: {ask.name, text}
+        do: {ask.name, answer}
   end
+
+  defp starting(%{each: report} = ask, saved, _last) when is_binary(report) do
+    case Map.get(saved, ask.name) do
+      rows when is_map(rows) -> rows
+      _one -> nil
+    end
+  end
+
+  defp starting(ask, saved, last),
+    do: text(Map.get(saved, ask.name)) || (ask.remember && text(Map.get(last, ask.name)))
+
+  defp text(text) when is_binary(text), do: text
+  defp text(_rows_or_nil), do: nil
 end

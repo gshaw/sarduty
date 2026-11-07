@@ -11,6 +11,14 @@ defmodule App.Document.Evaluator do
   A form's answer is `:name` in the values. One not given, or blank, takes its default,
   in the order the asks are written, so a default can read an answer above it. A tick
   is true or false.
+
+  A form's arithmetic is in exact decimals (#950): each number becomes a Decimal, so
+  0.67 × 30 is 20.10, never 20.099999. A blank counts as 0, as a spreadsheet's empty
+  cell does, and dividing by 0 is blank. A report with a row each is a list in the
+  values, `%{key, values}` for each row, where `key` is the row's member or item
+  (`"member:12"`) and an answer for it is `{name, key}` in the values. Each compute is
+  worked out in order: one for each row in its row, the rest once. A value already
+  given, as an expect gives one, is kept.
   """
 
   alias App.Document
@@ -30,8 +38,28 @@ defmodule App.Document.Evaluator do
   end
 
   @doc "What the document prints from `values`. See App.Document.evaluate/3."
-  def evaluate(%Document{} = doc, values, timezone) do
-    env = Enum.reduce(doc.asks, %{values: values, timezone: timezone}, &default/2)
+  def evaluate(%Document{} = doc, values, timezone),
+    do: doc |> prepare(values, timezone) |> output(doc)
+
+  @doc "The values worked out, with what reads them. See App.Document.values/3."
+  def prepare(%Document{} = doc, values, timezone) do
+    %{values: values, timezone: timezone, row: nil, consts: consts(doc)}
+    |> defaults(doc.asks)
+    |> rows(doc)
+    |> computes(doc.computes)
+  end
+
+  defp consts(doc), do: Map.new(doc.consts, &{&1.name, &1.values})
+
+  defp defaults(env, asks),
+    do: asks |> Enum.filter(&is_nil(&1.each)) |> Enum.reduce(env, &default/2)
+
+  defp rows(env, doc), do: Enum.reduce(doc.reports, env, &answer_rows(&1, doc.asks, &2))
+
+  defp computes(env, computes),
+    do: computes |> Enum.chunk_by(& &1.each) |> Enum.reduce(env, &compute/2)
+
+  defp output(env, doc) do
     title = doc.title
 
     %{
@@ -52,6 +80,58 @@ defmodule App.Document.Evaluator do
     if blank?(Map.get(env.values, key)),
       do: %{env | values: Map.put(env.values, key, value(ask.default, env))},
       else: env
+  end
+
+  # Each row's answers: one given in the row, then one kept for the row's member or
+  # item, then the default, worked out in the row.
+  defp answer_rows(%{rows: true, name: report}, asks, env) do
+    asks = Enum.filter(asks, &(&1.each == report))
+    rows = env.values |> Map.get(report, []) |> Enum.map(&answer_row(&1, asks, env))
+    %{env | values: Map.put(env.values, report, rows)}
+  end
+
+  defp answer_rows(_report, _asks, env), do: env
+
+  defp answer_row(row, asks, env) do
+    Enum.reduce(asks, row, fn ask, row ->
+      given = Map.get(row.values, ask.name)
+      kept = row.key && Map.get(env.values, {ask.name, row.key})
+
+      answer =
+        cond do
+          not blank?(given) -> given
+          not blank?(kept) -> kept
+          ask.default -> value(ask.default, %{env | row: row.values})
+          true -> nil
+        end
+
+      %{row | values: Map.put(row.values, ask.name, answer)}
+    end)
+  end
+
+  defp compute([%{each: nil} | _] = computes, env) do
+    Enum.reduce(computes, env, fn compute, env ->
+      if Map.has_key?(env.values, compute.name),
+        do: env,
+        else: %{env | values: Map.put(env.values, compute.name, value(compute.value, env))}
+    end)
+  end
+
+  defp compute([%{each: report} | _] = computes, env) do
+    rows =
+      env.values
+      |> Map.get(report, [])
+      |> Enum.map(fn row ->
+        %{row | values: Enum.reduce(computes, row.values, &compute_in_row(&1, &2, env))}
+      end)
+
+    %{env | values: Map.put(env.values, report, rows)}
+  end
+
+  defp compute_in_row(compute, values, env) do
+    if Map.has_key?(values, compute.name),
+      do: values,
+      else: Map.put(values, compute.name, value(compute.value, %{env | row: values}))
   end
 
   defp place(place, fill, env) do
@@ -114,50 +194,65 @@ defmodule App.Document.Evaluator do
   def expect(%Document{} = doc) do
     failed =
       for expect <- doc.expects,
-          values = answered(doc, given(expect.given)),
-          output = evaluate(doc, values, "Etc/UTC"),
-          not holds?(expect.check, %{values: outputs(output, values), timezone: "Etc/UTC"}) do
-        Error.new(expect.line, "This expect fails: #{described(expect.check, output, values)}")
+          env = prepare(doc, given(expect.given), "Etc/UTC"),
+          read = read(env, output(env, doc), expect.given),
+          not holds?(expect.check, read) do
+        Error.new(expect.line, "This expect fails: #{described(expect.check, read)}")
       end
 
     if failed == [], do: :ok, else: {:error, failed}
   end
 
-  # The values with each answer not given at its default, as the form prints it.
-  defp answered(doc, values),
-    do: Enum.reduce(doc.asks, %{values: values, timezone: "Etc/UTC"}, &default/2).values
+  # What an expect gives, as values: a row is one of its report's rows, in order.
+  defp given(given), do: given |> Enum.reverse() |> Enum.reduce(%{}, &give/2)
 
-  defp given(given) do
-    Map.new(given, fn
-      {{:value, name, _}, value, _line} -> {":#{name}", value}
-      {{:field, _path, [], _} = field, value, _line} -> {name(field), value}
-      {{:range, "TODAY", nil, _}, value, _line} -> {"today", value}
-    end)
+  defp give({:row, report, values, _line}, given) do
+    row = %{key: nil, values: Map.new(values, fn {name, value, _line} -> {name, value} end)}
+    Map.update(given, report, [row], &[row | &1])
   end
+
+  defp give({{:value, name, _}, value, _line}, given), do: Map.put(given, ":#{name}", value)
+
+  defp give({{:field, _path, [], _} = field, value, _line}, given),
+    do: Map.put(given, name(field), value)
+
+  defp give({{:range, "TODAY", nil, _}, value, _line}, given), do: Map.put(given, "today", value)
 
   # The values, with each place's text and the title, as an expect reads them. A tick
-  # reads as whether it's ticked.
-  defp outputs(output, values) do
-    output.places
-    |> Map.new(fn
-      %{kind: :tick} = place -> {place.name, place.value}
-      place -> {place.name, text(output, place.name)}
-    end)
-    |> Map.merge(%{"title" => output.title, "author" => output.author})
-    |> then(&Map.merge(values, &1))
+  # reads as whether it's ticked. An expect that gives one row reads that row first.
+  defp read(env, output, given) do
+    places =
+      output.places
+      |> Map.new(fn
+        %{kind: :tick} = place -> {place.name, place.value}
+        place -> {place.name, text(output, place.name)}
+      end)
+      |> Map.merge(%{"title" => output.title, "author" => output.author})
+
+    row =
+      case for({:row, report, _values, _line} <- given, do: report) do
+        [report] -> env.values |> Map.fetch!(report) |> hd() |> Map.fetch!(:values)
+        _none_or_more -> nil
+      end
+
+    %{env | values: Map.merge(env.values, places), row: row}
   end
 
-  # The condition, and what each place it reads holds.
-  defp described(check, output, values) do
+  # The condition, and what each value it reads holds.
+  defp described(check, env) do
     names = check |> names() |> Enum.uniq()
-    read = outputs(output, values)
 
     shown =
-      for name <- names, Map.has_key?(read, name) do
-        "#{name} is #{inspect(read[name], printable_limit: 2000)}"
+      for name <- names,
+          {:ok, value} <- [read_name(name, env)] do
+        "#{name} is #{inspect(value, printable_limit: 2000)}"
       end
 
     Enum.join(["#{safe_text(check)}." | shown], " ")
+  end
+
+  defp read_name(name, %{row: row, values: values}) do
+    if row && Map.has_key?(row, name), do: {:ok, row[name]}, else: Map.fetch(values, name)
   end
 
   defp names({:field, path, [], _line} = field) when is_list(path), do: [name(field)]
@@ -181,14 +276,46 @@ defmodule App.Document.Evaluator do
   @doc false
   def value({:literal, value, _line}, _env), do: value
 
-  def value({:field, [function], args, _line}, env) when args != [] do
-    case String.downcase(function) do
-      "coalesce" -> args |> Enum.map(&value(&1, env)) |> Enum.find(&(not blank?(&1)))
-      "qr" -> qr(value(hd(args), env))
+  def value({:field, [function], args, _line}, env) when args != [],
+    do: function(String.downcase(function), args, env)
+
+  # A row's value first, then the document's, then a const's.
+  def value({:field, _path, [], _line} = field, env) do
+    key = name(field)
+
+    cond do
+      env.row && Map.has_key?(env.row, key) -> env.row[key]
+      Map.has_key?(env.values, key) -> env.values[key]
+      true -> const(key, nil, env)
     end
   end
 
-  def value({:field, _path, [], _line} = field, env), do: Map.get(env.values, name(field))
+  def value({:on, {:field, [name], [], _}, day, _line}, env) do
+    key = String.downcase(name)
+
+    if Map.has_key?(env.values, key),
+      do: env.values[key],
+      else: const(key, day(value(day, env), env.timezone), env)
+  end
+
+  def value({:arith, op, left, right, _line}, env),
+    do: arith(op, decimal(value(left, env)), decimal(value(right, env)))
+
+  def value({:call, "min", false, args, _line}, env),
+    do: args |> Enum.map(&decimal(value(&1, env))) |> Enum.min(Decimal)
+
+  def value({:call, "max", false, args, _line}, env),
+    do: args |> Enum.map(&decimal(value(&1, env))) |> Enum.max(Decimal)
+
+  # `sum(people.total)`: the column over the report's rows, 0 for none.
+  def value({:call, "sum", false, [{:field, [report | path], [], line}], _line}, env) do
+    key = name({:field, path, [], line})
+
+    env.values
+    |> Map.get(String.downcase(report), [])
+    |> Enum.reduce(Decimal.new(0), &Decimal.add(&2, decimal(Map.get(&1.values, key))))
+  end
+
   def value({:value, name, _line}, env), do: Map.get(env.values, ":#{name}")
   def value({:range, "TODAY", nil, _line}, env), do: Map.get(env.values, "today")
 
@@ -224,21 +351,122 @@ defmodule App.Document.Evaluator do
   def value({:op, op, left, right, _line}, env),
     do: compare(op, value(left, env), value(right, env))
 
+  defp function("coalesce", args, env),
+    do: args |> Enum.map(&value(&1, env)) |> Enum.find(&(not blank?(&1)))
+
+  defp function("qr", [link], env), do: link |> value(env) |> qr()
+
+  defp function("floor", [n], env),
+    do: n |> value(env) |> decimal() |> Decimal.round(0, :floor)
+
+  defp function("round", args, env), do: round(args, env)
+  defp function("days", [hours], env), do: hours |> value(env) |> decimal() |> days()
+
+  defp function("hours", args, env),
+    do: args |> Enum.map(&value(&1, env)) |> hours(env.timezone)
+
   defp qr(link), do: if(blank?(link), do: nil, else: {:qr, link})
 
-  # As SQL does, a blank compares with nothing.
-  defp compare(op, left, right) do
-    cond do
-      blank?(left) or blank?(right) -> false
-      op == :eq -> same?(left, right)
-      op == :ne -> not same?(left, right)
-      op in [:contains, :starts_with, :ends_with] -> match(op, to_text(left), to_text(right))
-      true -> order(op, sort_key(left), sort_key(right))
+  # Arithmetic
+
+  defp arith(:add, a, b), do: Decimal.add(a, b)
+  defp arith(:sub, a, b), do: Decimal.sub(a, b)
+  defp arith(:mul, a, b), do: Decimal.mult(a, b)
+  defp arith(:div, a, b), do: if(Decimal.eq?(b, 0), do: nil, else: Decimal.div(a, b))
+
+  # A number as an exact decimal: 0.67 is 0.67, as written. A blank is 0.
+  defp decimal(%Decimal{} = n), do: n
+  defp decimal(n) when is_integer(n), do: Decimal.new(n)
+  defp decimal(n) when is_float(n), do: Decimal.from_float(n)
+  defp decimal(nil), do: Decimal.new(0)
+  defp decimal(""), do: Decimal.new(0)
+
+  defp round([value], env), do: value |> value(env) |> decimal() |> Decimal.round(0, :half_up)
+
+  defp round([value, {:literal, places, _line}], env),
+    do: value |> value(env) |> decimal() |> Decimal.round(places, :half_up)
+
+  # The days that many hours start: 6 hours is 1 day, and 25 hours is 2.
+  defp days(hours), do: hours |> Decimal.div(24) |> Decimal.round(0, :ceiling) |> Decimal.max(0)
+
+  # The hours between two times, or a duration's hours: it's kept in minutes.
+  defp hours([from, to], timezone) do
+    if blank?(from) or blank?(to) do
+      nil
+    else
+      to
+      |> moment(timezone)
+      |> DateTime.diff(moment(from, timezone))
+      |> Decimal.div(3600)
     end
   end
 
-  defp same?(a, b) when is_number(a) and is_number(b), do: a == b
-  defp same?(a, b), do: a == b
+  defp hours([minutes], _timezone) do
+    if blank?(minutes), do: nil, else: minutes |> decimal() |> Decimal.div(60)
+  end
+
+  defp moment(%DateTime{} = at, _timezone), do: at
+  defp moment(%Date{} = day, timezone), do: DateTime.new!(day, ~T[00:00:00], timezone)
+
+  # A const's value on `day`: the last that starts by then. A const that changes has no
+  # value on a blank day.
+  defp const(name, day, env) do
+    case Map.get(env.consts, name) do
+      nil ->
+        nil
+
+      [%{value: value}] ->
+        value
+
+      [_first | _later] when is_nil(day) ->
+        nil
+
+      [first | later] ->
+        Enum.reduce(later, first, &if(Date.after?(&1.from, day), do: &2, else: &1)).value
+    end
+  end
+
+  defp day(%DateTime{} = at, timezone),
+    do: at |> DateTime.shift_zone!(timezone) |> DateTime.to_date()
+
+  defp day(%Date{} = day, _timezone), do: day
+  defp day(_blank, _timezone), do: nil
+
+  # As SQL does, a blank compares with nothing. Numbers compare as numbers, exactly.
+  defp compare(op, left, right) do
+    cond do
+      blank?(left) or blank?(right) ->
+        false
+
+      op in [:contains, :starts_with, :ends_with] ->
+        match(op, to_text(left), to_text(right))
+
+      number?(left) and number?(right) ->
+        numbers(op, left |> decimal() |> Decimal.compare(decimal(right)))
+
+      op == :eq ->
+        same?(left, right)
+
+      op == :ne ->
+        not same?(left, right)
+
+      true ->
+        order(op, sort_key(left), sort_key(right))
+    end
+  end
+
+  defp number?(value), do: is_number(value) or is_struct(value, Decimal)
+
+  defp numbers(:eq, order), do: order == :eq
+  defp numbers(:ne, order), do: order != :eq
+  defp numbers(:lt, order), do: order == :lt
+  defp numbers(:gt, order), do: order == :gt
+  defp numbers(:le, order), do: order != :gt
+  defp numbers(:ge, order), do: order != :lt
+
+  defp same?(a, b) do
+    if number?(a) and number?(b), do: a |> decimal() |> Decimal.eq?(decimal(b)), else: a == b
+  end
 
   defp match(:contains, text, part), do: String.contains?(text, part)
   defp match(:starts_with, text, part), do: String.starts_with?(text, part)
@@ -256,6 +484,8 @@ defmodule App.Document.Evaluator do
   # Formats: Service.Format's, by the name `as` takes.
 
   defp format(value, _format, _timezone) when is_nil(value) or value == "", do: nil
+  defp format(%Decimal{} = n, "money", _timezone), do: Format.money(n)
+  defp format(%Decimal{} = n, format, timezone), do: format(Decimal.to_float(n), format, timezone)
   defp format(%Date{} = date, "date_long", _timezone), do: Format.date_long(date)
   defp format(%DateTime{} = at, "date_long", timezone), do: Format.date_long(at, timezone)
   defp format(%Date{} = date, "date_short", _timezone), do: Format.date_short(date)
@@ -274,6 +504,7 @@ defmodule App.Document.Evaluator do
   defp to_text(text) when is_binary(text), do: text
   defp to_text(list) when is_list(list), do: Enum.map_join(list, ", ", &to_text/1)
   defp to_text(%Date{} = date), do: Format.date_long(date)
+  defp to_text(%Decimal{} = n), do: Decimal.to_string(n, :normal)
   defp to_text(value), do: to_string(value)
 
   defp blank?(nil), do: true

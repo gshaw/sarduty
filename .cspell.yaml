@@ -20,6 +20,7 @@ ignorePaths:
 words:
   - typst # makes tax credit letters as PDFs (#918)
   - Arimo # the letters' font, Helvetica's widths (#918)
+  - mult # Decimal.mult, the decimal library's multiply: a form's money and Service.Format.money (#950)
   - EMCR # Emergency Management and Climate Readiness, BC's agency, whose forms teams fill (#950)
   - IHDR # a PNG's header chunk, which holds its size
   - devsar # Dev SAR, the dev team (tools/dev-sar.exs)

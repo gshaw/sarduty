@@ -186,8 +186,12 @@ defmodule Web.StyleGuideHTML.Values do
   defp measures do
     [
       {:km, "A distance", [{"km(42)", Format.km(42)}]},
-      {:money, "Dollars and cents",
-       [{"money(0.67)", Format.money(0.67)}, {"money(1204.5)", Format.money(1204.5)}]},
+      {:money, "Dollars and cents, exact: half a cent rounds up",
+       [
+         {"money(0.67)", Format.money(0.67)},
+         {"money(1204.5)", Format.money(1204.5)},
+         {~s{money(Decimal.new("11.265"))}, "11.265" |> Decimal.new() |> Format.money()}
+       ]},
       {:coordinate, "A place",
        [
          {"coordinate({49.75533, -123.1311}, 5)", Format.coordinate({49.75533, -123.1311}, 5)},
