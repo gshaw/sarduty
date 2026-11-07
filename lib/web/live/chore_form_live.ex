@@ -18,7 +18,7 @@ defmodule Web.ChoreFormLive do
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     if !Team.chores?(team), do: raise(Web.Status.NotFound)
-    today = Service.Period.today(DateTime.utc_now(), team.timezone)
+    today = today(team)
     {mode, chore} = mode_and_chore(socket.assigns, params["id"])
     chore = chore && %{chore | time: Service.Convert.duration_text(chore.minutes)}
     categories = categories(team.id, chore)
@@ -29,8 +29,15 @@ defmodule Web.ChoreFormLive do
     |> assign(page_title: if(chore, do: "Change chore", else: "Log a chore"))
     |> assign(categories: categories)
     |> assign_form(Chore.build_changeset(data, %{}, [], nil))
+    |> attach_hook(:today, :handle_event, &refresh_today/3)
     |> then(&{:ok, &1})
   end
+
+  # A page left open past midnight still knows what today is: every event asks again.
+  defp refresh_today(_event, _params, socket),
+    do: {:cont, assign(socket, today: today(socket.assigns.current_team))}
+
+  defp today(team), do: Service.Period.today(DateTime.utc_now(), team.timezone)
 
   defp mode_and_chore(%{live_action: :new, current_member: nil}, _id),
     do: raise(Web.Status.NotFound)
@@ -186,8 +193,6 @@ defmodule Web.ChoreFormLive do
   attr :today, Date, required: true
   slot :inner_block
 
-  # Today and Yesterday take focus first: LiveView never changes a focused box's value,
-  # and Safari leaves focus in the date box when a button is tapped.
   defp date_field(assigns) do
     ~H"""
     <div class="max-w-xs">
@@ -196,11 +201,12 @@ defmodule Web.ChoreFormLive do
         <:below>
           <div class="flex gap-2 mt-2">
             <.button
-              :for={{label, date} <- [{"Today", @today}, {"Yesterday", Date.add(@today, -1)}]}
+              :for={{label, days_ago} <- [{"Today", 0}, {"Yesterday", 1}]}
               id={"chore-date-#{String.downcase(label)}"}
               type="button"
               size={:sm}
-              phx-click={JS.focus() |> JS.push("date", value: %{date: Date.to_iso8601(date)})}
+              phx-click="date"
+              phx-value-days_ago={days_ago}
             >
               {label}
             </.button>
@@ -215,8 +221,10 @@ defmodule Web.ChoreFormLive do
     do: {:noreply, validate(socket, params)}
 
   # Today or Yesterday: the date box takes it, and the rest of the form stays as typed.
-  def handle_event("date", %{"date" => date}, socket),
-    do: {:noreply, validate(socket, Map.put(socket.assigns.params, "date", date))}
+  def handle_event("date", %{"days_ago" => days_ago}, socket) do
+    date = Date.add(socket.assigns.today, -String.to_integer(days_ago))
+    {:noreply, validate(socket, Map.put(socket.assigns.params, "date", Date.to_iso8601(date)))}
+  end
 
   def handle_event("save", %{"chore" => params}, %{assigns: %{mode: :team_admin}} = socket) do
     %{current_team: team, chore: chore, today: today} = socket.assigns

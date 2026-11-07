@@ -86,6 +86,21 @@ defmodule Web.ChoreCollectionLiveTest do
     assert has_element?(lv, selected)
   end
 
+  # A page opened yesterday: Today is today, not the day the page opened.
+  test "Today on a page left open past midnight", %{conn: conn, team: team} do
+    today = Service.Period.today(DateTime.utc_now(), team.timezone)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
+    yesterday = Date.add(today, -1)
+
+    :sys.replace_state(
+      lv.pid,
+      &%{&1 | socket: Phoenix.Component.assign(&1.socket, :today, yesterday)}
+    )
+
+    lv |> element("#chore-date-today") |> render_click()
+    assert has_element?(lv, ~s{#chore_date[value="#{today}"][max="#{today}"]})
+  end
+
   test "a save with no category marks the categories as the error", %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
     refute has_element?(lv, "#chore_chore_category_id-combobox.is-invalid")
