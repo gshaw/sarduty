@@ -117,8 +117,10 @@ order: changes, then sends, then Remove last. Each label starts with a verb: Mar
 Ask for a reply. Each hint says what happens to the checked, with counts, and names who it
 skips or what they lose: "Emails “Will you be there?” to the 2 checked with no reply. 1
 has replied." With nothing checked, the same sentence without counts. A choice that
-reaches nobody checked greys out and says why. The button counts who it reaches. See the
-[action bar](/styles/action-bar) for where the button goes.
+reaches nobody checked greys out and says why. Nothing is picked at the start, and a choice
+that greys out leaves nothing picked: the list never picks a change for the reader. The
+button counts who it reaches. See the [action bar](/styles/action-bar) for where the button
+goes.
 
 **Error messages.** Say how to fix it, starting with the verb: "Enter who authorizes tax
 letters", "Select a year", "Phone must be 10 digits". Never "invalid", "error", "failed",

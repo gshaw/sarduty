@@ -162,13 +162,11 @@ defmodule Web.ActivityMembersLive do
   defp checked(%{selected: selected} = assigns),
     do: assigns |> shown() |> Enum.filter(&MapSet.member?(selected, &1.member.id))
 
-  # The choice the list shows picked (Action.pick/5). Before the start it moves off one
-  # that greys out and starts on the first, so the button always says what it does; from
-  # the start a greyed one leaves nothing picked.
+  # The choice the list shows picked (Action.pick/4): none until the admin picks.
   defp chosen(%{choice: choice} = assigns) do
     assigns
     |> offered()
-    |> Action.pick(choice, ctx(assigns), checked(assigns), !started?(assigns))
+    |> Action.pick(choice, ctx(assigns), checked(assigns))
   end
 
   # The filter bar: the tab again with the search and group in the URL, and keep_ticks
@@ -375,7 +373,7 @@ defmodule Web.ActivityMembersLive do
       })
 
     checked = checked(assigns)
-    action = Action.pick(actions, assigns.choice, ctx, checked, !assigns.started?)
+    action = Action.pick(actions, assigns.choice, ctx, checked)
 
     shown = shown(assigns)
     filter = assigns.filter
@@ -514,7 +512,7 @@ defmodule Web.ActivityMembersLive do
         </div>
         <.action_bar
           id="members-bar"
-          hint={if @checked == [], do: "Check members, then select what to do."}
+          hint={bar_hint(@checked, @action)}
         >
           <.button
             id="members-change-send"
@@ -523,7 +521,7 @@ defmodule Web.ActivityMembersLive do
             phx-disable-with={send_waiting(@action, @checked)}
             {@confirm}
           >
-            {if @count > 0, do: @action.button_text(@count), else: idle_text(@action, @started?)}
+            {if @count > 0, do: @action.button_text(@count), else: "Change members"}
           </.button>
         </.action_bar>
       </.form>
@@ -615,9 +613,10 @@ defmodule Web.ActivityMembersLive do
     end
   end
 
-  # With nobody it reaches: before the start the choice's own, "Ask 0 members".
-  defp idle_text(action, false = _started?) when action != nil, do: action.button_text(0)
-  defp idle_text(_action, _started?), do: "Change members"
+  # What to do next while the button is greyed: check someone, then pick a change.
+  defp bar_hint([], _action), do: "Check members, then select what to do."
+  defp bar_hint(_checked, nil), do: "Select what to do."
+  defp bar_hint(_checked, _action), do: nil
 
   attr :activity, :map, required: true
   attr :team, :any, required: true

@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- The choices for checked members start with nothing picked, so you always pick the change
+  yourself.
 - From January to April, the Dashboard says when tax credit letters are missing a
   mailing address, signer, or signature, so the CRA accepts them without question.
 - A tax credit letter's page shows its reference to copy, and Verify letter opens the page
