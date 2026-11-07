@@ -19,7 +19,6 @@ defmodule App.Report.Catalog do
   alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
-  alias App.Model.ChoreEvent
   alias App.Model.EquipmentItem
   alias App.Model.EquipmentUsage
   alias App.Model.Group
@@ -700,14 +699,18 @@ defmodule App.Report.Catalog do
   # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
   defp activities(%Context{team: team, hours_tags: hours_tags} = context) do
     %Source{
-      query: Activity |> where([a], a.team_id == ^team.id) |> Activity.not_deleted(),
+      query:
+        Activity
+        |> from(as: :activity)
+        |> where([a], a.team_id == ^team.id)
+        |> Activity.not_deleted(),
       joins: activity_joins(context),
       needs: %{
         attended_count: [:attended],
         signed_up_count: [:attending],
         attended_hours: [:attended],
-        duration: [:chores],
-        chore: [:chores]
+        duration: [:logged],
+        chore: [:logged]
       },
       fields: %{
         id: dynamic([a], a.id),
@@ -734,7 +737,7 @@ defmodule App.Report.Catalog do
             fragment("NULLIF(NULLIF(?, ''), ?)", a.coordinate, ^Activity.null_island())
           ),
         duration: Activity.duration_dynamic(),
-        chore: dynamic([chores: c], not is_nil(c.d4h_activity_id)),
+        chore: Activity.logged_dynamic(),
         custom_values: dynamic([a], a.custom_values)
       }
     }
@@ -760,11 +763,7 @@ defmodule App.Report.Catalog do
           as: :attending,
           on: t.activity_id == a.id
         ),
-      chores:
-        &join(&1, :left, [a], c in subquery(ChoreEvent.totals(team.id)),
-          as: :chores,
-          on: c.d4h_activity_id == a.d4h_activity_id
-        )
+      logged: &Activity.join_logged(&1, team.id)
     }
   end
 

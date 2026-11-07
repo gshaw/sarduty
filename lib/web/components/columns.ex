@@ -169,7 +169,7 @@ defmodule Web.Components.Columns do
 
     assigns =
       assign(assigns,
-        chores?: Activity.shown_kind(activity) == "chores",
+        chores?: Activity.logged?(activity),
         days_later: Service.Convert.days_later(started_at, finished_at, assigns.timezone)
       )
 

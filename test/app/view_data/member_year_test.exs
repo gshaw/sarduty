@@ -20,7 +20,7 @@ defmodule App.ViewData.MemberYearTest do
       activity: %{
         tags: Keyword.get(opts, :tags, ["Primary Hours"]),
         activity_kind: Keyword.get(opts, :kind, "exercise"),
-        chore_minutes: Keyword.get(opts, :chore_minutes)
+        logged_minutes: Keyword.get(opts, :logged_minutes)
       }
     }
   end
@@ -29,8 +29,8 @@ defmodule App.ViewData.MemberYearTest do
     test "adds up rows on chore activities, as the letter does (#584)" do
       # Both start at 00:00 on March 1 in Toronto, as every chore row does.
       rows = [
-        row(~U[2026-03-01 05:00:00Z], 5, chore_minutes: 300),
-        row(~U[2026-03-01 05:00:00Z], 2, chore_minutes: 120)
+        row(~U[2026-03-01 05:00:00Z], 5, logged_minutes: 300),
+        row(~U[2026-03-01 05:00:00Z], 2, logged_minutes: 120)
       ]
 
       assert MemberYear.hours(rows, 2026, @tz, @tags).primary_minutes == 420

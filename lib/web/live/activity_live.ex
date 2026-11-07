@@ -12,7 +12,6 @@ defmodule Web.ActivityLive do
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.AttendanceScan
-  alias App.Model.ChoreEvent
   alias App.Model.Coordinate
   alias App.Model.CustomField
   alias App.Model.EquipmentUsage
@@ -549,7 +548,7 @@ defmodule Web.ActivityLive do
         {Service.Format.datetime_medium(@activity.finished_at, @activity.team.timezone)}
       </dd>
       <dt>Duration</dt>
-      <dd>{format_activity_duration(@activity)}</dd>
+      <dd id="activity-duration">{format_activity_duration(@activity)}</dd>
 
       <div :if={@activity.enough_at}>
         <dt>Enough at</dt>
@@ -731,13 +730,10 @@ defmodule Web.ActivityLive do
   def fetch_activity(team, activity_id) do
     team
     |> Activity.find!(activity_id)
-    |> ChoreEvent.put_chore_minutes()
+    |> Activity.put_logged_minutes()
     |> Repo.preload(:team)
   end
 
-  defp format_activity_duration(activity) do
-    activity.started_at
-    |> Service.Convert.duration_to_minutes(activity.finished_at)
-    |> Service.Format.duration()
-  end
+  defp format_activity_duration(activity),
+    do: activity |> Activity.duration_minutes() |> Service.Format.duration()
 end

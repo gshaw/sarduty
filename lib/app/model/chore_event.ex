@@ -156,26 +156,6 @@ defmodule App.Model.ChoreEvent do
     |> select([e, c], %{d4h_activity_id: e.d4h_activity_id, minutes: coalesce(sum(c.minutes), 0)})
   end
 
-  @doc "The activity with `chore_minutes` set when it is one of the team's chore activities."
-  def put_chore_minutes(%Activity{team_id: team_id, d4h_activity_id: d4h_id} = activity) do
-    total = team_id |> totals() |> where([e], e.d4h_activity_id == ^d4h_id) |> Repo.one()
-    %{activity | chore_minutes: total && total.minutes}
-  end
-
-  @doc "The team's activities, each with `chore_minutes` set as put_chore_minutes/1 does, in one query."
-  def put_chore_minutes(activities, team_id) when is_list(activities) do
-    ids = Enum.map(activities, & &1.d4h_activity_id)
-
-    minutes =
-      team_id
-      |> totals()
-      |> where([e], e.d4h_activity_id in ^ids)
-      |> Repo.all()
-      |> Map.new(&{&1.d4h_activity_id, &1.minutes})
-
-    Enum.map(activities, &%{&1 | chore_minutes: minutes[&1.d4h_activity_id]})
-  end
-
   @doc "One of the team's events, with its chore category and tags."
   def find!(%Team{} = team, id) do
     ChoreEvent
