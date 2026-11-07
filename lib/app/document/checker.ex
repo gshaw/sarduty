@@ -293,8 +293,9 @@ defmodule App.Document.Checker do
 
   # `fit` keeps one line and shrinks it to its width; `pitch` wraps it on the page's lines.
   defp check_text_options(%{kind: :text, fit: true} = place) do
-    if Map.has_key?(place, :pitch),
-      do: fail(place.line, "Write fit or pitch, not both: fit keeps the text on one line.")
+    for key <- [:pitch, :indent],
+        Map.has_key?(place, key),
+        do: fail(place.line, "Write fit or #{key}, not both: fit keeps the text on one line.")
 
     unless Map.has_key?(place, :width) or
              (Map.has_key?(place, :left) and Map.has_key?(place, :right)),
@@ -307,13 +308,26 @@ defmodule App.Document.Checker do
     :ok
   end
 
-  defp check_text_options(%{kind: :text}), do: :ok
+  # `indent` starts the first line further in, after a printed label; `lines` caps how
+  # many of the page's lines it wraps on, so a long text shrinks to fit them.
+  defp check_text_options(%{kind: :text} = place) do
+    if Map.has_key?(place, :lines) and not Map.has_key?(place, :pitch),
+      do:
+        fail(place.line, "Give #{place.name} a pitch with lines: lines counts the page's lines.")
+
+    :ok
+  end
 
   defp check_text_options(place) do
     if place.fit, do: fail(place.line, "Take out fit: only a text place shrinks to fit.")
 
-    if Map.has_key?(place, :pitch),
-      do: fail(place.line, "Take out pitch: only a text place wraps on the page's lines.")
+    for {key, what} <- [
+          pitch: "wraps on the page's lines",
+          lines: "wraps on the page's lines",
+          indent: "starts further in"
+        ],
+        Map.has_key?(place, key),
+        do: fail(place.line, "Take out #{key}: only a text place #{what}.")
 
     :ok
   end

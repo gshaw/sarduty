@@ -35,6 +35,11 @@ defmodule Service.PDFPagesTest do
     assert PDFPages.count(pdf <> update) == {:ok, 2}
   end
 
+  # EMCR's Task report (#950), as Word saved it: the first form page from an agency.
+  test "counts EMCR's own page" do
+    assert "priv/forms/bcsara/task_report.pdf" |> File.read!() |> PDFPages.count() == {:ok, 1}
+  end
+
   test "never guesses" do
     assert PDFPages.count("") == :error
     assert PDFPages.count("A page of text, not a PDF.") == :error
