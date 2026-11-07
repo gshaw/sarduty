@@ -18,7 +18,8 @@ or calls Typst: printing is App.Operation.PrintDocument's.
 
 ## The clauses
 
-They come in this order. `report`, `ask`, and `expect` can repeat; the rest come once.
+They come in this order. `report`, `const`, `ask`, `compute`, and `expect` can repeat;
+the rest come once.
 
 | Clause                              | What it says                                                                                      |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -26,7 +27,9 @@ They come in this order. `report`, `ask`, and `expect` can repeat; the rest come
 | `about '…'`                         | One line on what it's for.                                                                        |
 | `for member, year`                  | What it starts from, read as `:member` and `:year`. A form's is `for activity where …`.           |
 | `report hours` and a query under it | A report, read as `hours.total`: its first row's columns. Select fields only, so each has a name. |
+| `const meal = 15.00`                | A rate, read as `meal` ([Arithmetic](#arithmetic)).                                               |
 | `ask injured 'Injured'`             | A question a person answers, read as `:injured` ([Forms](#forms)).                                |
+| `compute` and values under it       | Values worked out, read by name ([Arithmetic](#arithmetic)).                                      |
 | `title '…' by …`                    | The PDF's title and author.                                                                       |
 | `lock print`                        | The PDF can only be printed (`Service.PDFLock`). Never on a form: the agency writes on it.        |
 | `keep hours.primary, …`             | Values saved with the PDF: what a report reads, and answers.                                      |
@@ -50,6 +53,7 @@ A value is a report expression: a name, a literal, a comparison, `and`, `or`, `n
 - `value if condition` is blank when the condition is false.
 - `if condition then value else value` picks one.
 - `coalesce(a, b)` is the first that isn't blank, and `qr(link)` a QR code of a link.
+- A form adds arithmetic and its functions ([Arithmetic](#arithmetic)).
 
 Blank is nil or empty text: `is null` holds for it, `coalesce` skips it, and a flow
 leaves it out. Text compares exactly, case and all, since an expect checks what prints.
@@ -62,6 +66,7 @@ leaves it out. Text compares exactly, case and all, since an expect checks what 
 | `team.legal_name`, `organization.name`             | The `team` and `organization` subjects' fields, with no report to write. |
 | `:member`, `:year`, `:activity`                    | What the document starts from.                                           |
 | `:injured`                                         | A form's answer.                                                         |
+| `km_rate`, `total`                                 | A form's const or compute.                                               |
 | `today`                                            | The team's date today.                                                   |
 | `team.logo`, `organization.logo`, `team.signature` | Pictures only printing reads.                                            |
 | `pdf.reference`, `pdf.verify_link`                 | The PDF's reference number and verify link.                              |
@@ -201,7 +206,62 @@ running its expects, then prints it there.
 - **EMCR's claim**, the Expense reimbursement request and its Supplement, is still to
   come. The fields it reads are in the catalog: attendance's `finished_at` and its
   Travel `km`, and each item's `cost_per_km`, `cost_per_hour`, and `cost_per_use`, in
-  dollars, copied from D4H ([equipment.md](equipment.md#the-copy)).
+  dollars, copied from D4H ([equipment.md](equipment.md#the-copy)). Its rules are
+  [claim_rules.txt](../test/support/fixtures/forms/claim_rules.txt), a test fixture
+  until then ([Arithmetic](#arithmetic)).
+
+### Arithmetic
+
+A form works out what an agency's page asks for, such as EMCR's claim, from rates and
+rules in its own text (#950). No rate lives in a table or in Elixir: another province's
+rates are another form's consts, guarded by its expects.
+
+```sql
+const km_rate = 0.65, 0.67 from 2026-04-15
+const ohs     = 15%
+
+ask each people on_task 'On task' choose 'Yes', 'No' default 'Yes'
+
+compute each people
+  hours = hours(started_at, finished_at)
+  rate  = km_rate on started_at
+  total = km * rate + ...
+
+compute
+  personnel = sum(people.total)
+  ohs_total = round(personnel * ohs, 2)
+
+expect with people hours 6, km 30, started_at 2026-06-01: total = 75.10
+```
+
+- **`const`** is a value, then each value after it with the day it starts. One that
+  changes is read on a day, `km_rate on started_at`, by the team's date: the last value
+  that starts by then. Read alone, it's a mistake. `on`, like `as`, takes a whole value,
+  so a rate gets a line of its own. Days are written `2026-04-15`, and `15%` is 0.15.
+- **`compute`** works out values, a line each, read by name below it. `compute each
+people` works out one for each row of report `people`: a bare name there reads the
+  row's column, answer, or value first. Anywhere else only `sum(people.total)` reads it.
+- **`ask each people`** asks for one answer on each row, read in the row by its bare
+  name. It's kept by the row's first member or item, `row` "member:12" in
+  `form_answers`, and starts from its default, which can read an answer above it, such
+  as `:meals_provided`. `remember` doesn't go with it. The form page doesn't show these
+  yet: step 8 of #950 shows each row.
+- **Arithmetic** is `+`, `-`, `*`, and `/`, tighter than a comparison, in exact
+  decimals: each number becomes a `Decimal`, so 0.67 × 30 is 20.10. A blank counts as
+  0, as a spreadsheet's empty cell does; dividing by 0 is blank; a comparison with a
+  blank is false. A duration is minutes, so arithmetic refuses one: `hours(duration)`
+  reads it in hours.
+- **Functions**: `hours(from, to)`, the hours between two times, or `hours(duration)`;
+  `days(hours)`, the days they start, rounded up; `floor`; `round(x)` and `round(x,
+2)`, half up; `min` and `max` of two or more; `sum(people.total)`; and `if … then …
+else`. Money prints with `as money` (`Service.Format.money/1`, exact, half a cent
+  up).
+- **`expect`** gives a compute or a const a value, which is kept instead of worked out,
+  and a report's row as its name and values: `people hours 6, km 30`. An expect that
+  gives one row checks it: its names read the row first.
+
+The report language reads arithmetic too, so a comparison takes it, but a report
+refuses it: arithmetic is a form's.
 
 ### An organization's forms
 
@@ -244,7 +304,8 @@ through the team's organization, so a form that's off or another organization's 
   activity's, by name, so every form that asks the same thing starts from them, and
   they never go to D4H. A blank answer is deleted, so the default holds. An ask starts
   from the activity's answer, then for `remember` the team's last answer on any
-  activity (`FormAnswer.starting/2`), then its default. `row` is "" until `ask each`.
+  activity (`FormAnswer.starting/2`), then its default. `row` is "" for one answer,
+  and the row's member or item for `ask each`.
 - **Download PDF and Open PDF** post the answers to Web.ActivityFormPDFController,
   since a LiveView can't send a PDF. App.Operation.CreateFormPDF keeps the answers,
   prints the form, and saves the PDF it sends, every time (`SavedPDF.add_for_form!/5`).

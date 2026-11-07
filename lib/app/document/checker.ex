@@ -13,6 +13,16 @@ defmodule App.Document.Checker do
 
   A form (#950) starts from `:activity`, and its `where` is checked as a report's on
   activities. Each answer is `:name`, typed by its default: text, a number, or a date.
+
+  A form works out values too (#950): a `const`, read on a day when it has several, and
+  each `compute`, which reads only what's above it. A report that `compute each` or `ask
+  each` names has a row each: within it a bare name reads the row's column, answer, or
+  value first, and elsewhere only `sum(people.total)` reads it. Arithmetic takes numbers,
+  never a duration, which is minutes: `hours(duration)` reads it in hours.
+
+  Besides each name's type, `types` holds what a scope needs under tuple keys:
+  `{:rows, report}` is the names of a row each and their types, `{:const, name}` marks a
+  const, and `{:dated, name}` the day a const first changes.
   """
 
   alias App.Document
@@ -32,7 +42,9 @@ defmodule App.Document.Checker do
   }
   @one_row ~w(team organization)
   @reserved ~w(team organization pdf today title author)
-  @functions ~w(coalesce qr)
+  @functions ~w(coalesce qr hours days floor round)
+  @calls ~w(min max sum)
+  @numbers [:number, :km, :money]
   @formats %{
     "date_long" => [:date, :day],
     "date_short" => [:date, :day],
@@ -51,17 +63,41 @@ defmodule App.Document.Checker do
   def formats, do: @formats
 
   @doc "The functions a document's values call."
-  def functions, do: @functions
+  def functions, do: @functions ++ @calls
+
+  @doc "The names a report `people` has a row each of, and their types: `%{name => type}`."
+  def row_types(types, report), do: Map.get(types, {:rows, report}, %{})
 
   @doc "`{:ok, %Document{}}` with its types, or `{:error, %Error{}}` for the first mistake."
   def check(%Document{} = doc, %Context{} = context) do
     check_where(doc, context)
-    reports = Enum.map(doc.reports, &report(&1, doc.for, context)) ++ one_rows(doc, context)
-    types = doc |> types(reports) |> asks(doc.asks)
+    rows = rows_reports(doc)
+
+    reports =
+      Enum.map(doc.reports, &report(&1, doc.for, rows, context)) ++ one_rows(doc, context)
+
+    types =
+      doc
+      |> types(reports)
+      |> consts(doc.consts)
+      |> asks(doc.asks)
+      |> computes(doc.computes)
+
     check_values(doc, types)
     {:ok, %{doc | reports: reports, types: types}}
   catch
     {:report_error, %Error{} = error} -> {:error, error}
+  end
+
+  # The reports `compute each` and `ask each` name: each has a row each.
+  defp rows_reports(doc) do
+    for %{each: each} = item <- doc.asks ++ doc.computes, each != nil, uniq: true do
+      if each in @one_row or not Enum.any?(doc.reports, &(&1.name == each)),
+        do:
+          fail(item.line, "There is no report #{each}. Write report #{each} and its query above.")
+
+      each
+    end
   end
 
   defp check_values(doc, types) do
@@ -89,7 +125,7 @@ defmodule App.Document.Checker do
 
   # Reports
 
-  defp report(report, starts, context) do
+  defp report(report, starts, rows, context) do
     if report.name in @reserved,
       do: fail(report.line, "Give the report another name: #{report.name} is the document's.")
 
@@ -103,7 +139,9 @@ defmodule App.Document.Checker do
         name not in starts,
         do: fail(line, "Add #{name} after for, or take :#{name} out.")
 
-    Map.put(report, :columns, columns(query, context))
+    report
+    |> Map.put(:columns, columns(query, context))
+    |> Map.put(:rows, report.name in rows)
   end
 
   defp columns(query, context) do
@@ -151,10 +189,14 @@ defmodule App.Document.Checker do
     fill = Enum.map(doc.fill, & &1.value)
 
     expects =
-      Enum.flat_map(doc.expects, &[&1.check | Enum.map(&1.given, fn {t, _v, _l} -> t end)])
+      Enum.flat_map(doc.expects, &[&1.check | for({t, _v, _l} <- &1.given, do: t)])
 
     defaults = Enum.map(doc.asks, & &1.default)
-    [title, doc.keep, defaults, fill, expects] |> List.flatten() |> Enum.reject(&is_nil/1)
+    computes = Enum.map(doc.computes, & &1.value)
+
+    [title, doc.keep, defaults, computes, fill, expects]
+    |> List.flatten()
+    |> Enum.reject(&is_nil/1)
   end
 
   # Field paths, lower case, as `{path, line}`, leaving out a function's name.
@@ -167,29 +209,157 @@ defmodule App.Document.Checker do
   defp fields(list) when is_list(list), do: Enum.flat_map(list, &fields/1)
   defp fields(_other), do: []
 
-  # Each name the document can read, and its type.
+  # Each name the document can read, and its type. A report with a row each is read
+  # within its rows.
   defp types(doc, reports) do
+    {rows, first} = Enum.split_with(reports, &Map.get(&1, :rows, false))
+
     columns =
-      for report <- reports,
+      for report <- first,
           column <- report.columns,
           into: %{},
           do: {"#{report.name}.#{lower_path(column.text)}", column.type}
 
+    each =
+      Map.new(rows, fn report ->
+        {{:rows, report.name}, Map.new(report.columns, &{lower_path(&1.text), &1.type})}
+      end)
+
     starts = Map.new(doc.for, &{":#{&1}", :number})
-    @print |> Map.merge(columns) |> Map.merge(starts) |> Map.put("today", :day)
+
+    @print
+    |> Map.merge(columns)
+    |> Map.merge(each)
+    |> Map.merge(starts)
+    |> Map.put("today", :day)
+  end
+
+  # Whether a value's name is taken: a word the document keeps, a value's name, a
+  # report's, or a const's.
+  defp taken?(name, types) do
+    prefix = name <> "."
+
+    name in @reserved or Map.has_key?(types, name) or Map.has_key?(types, {:rows, name}) or
+      types |> names() |> Enum.any?(&String.starts_with?(&1, prefix))
+  end
+
+  # The names in `types`, without the tuple keys a scope needs.
+  defp names(types), do: types |> Map.keys() |> Enum.filter(&is_binary/1)
+
+  # Consts
+
+  defp consts(types, consts) do
+    Enum.reduce(consts, types, fn const, types ->
+      check_const_name(const, types)
+      [type | _] = kinds = Enum.map(const.values, &literal_type(&1.value))
+
+      if Enum.uniq(kinds) != [type],
+        do:
+          fail(const.line, "Give #{const.name} values of one kind: all numbers, text, or dates.")
+
+      types
+      |> Map.put(const.name, type)
+      |> Map.put({:const, const.name}, true)
+      |> dated(const)
+    end)
+  end
+
+  defp check_const_name(const, types) do
+    if taken?(const.name, types),
+      do: fail(const.line, "Give the const another name: #{const.name} is used above.")
+
+    for {{:rows, report}, row} <- types, Map.has_key?(row, const.name) do
+      fail(const.line, "Give the const another name: #{const.name} is one of #{report}'s values.")
+    end
+
+    :ok
+  end
+
+  defp dated(types, %{values: [_one]}), do: types
+
+  defp dated(types, %{name: name, values: [_ | [later | _]]}),
+    do: Map.put(types, {:dated, name}, later.from)
+
+  # Computes
+
+  # Each value, in order, so it reads only what's above it. One for each row goes with
+  # its report's row.
+  defp computes(types, computes) do
+    Enum.reduce(computes, types, fn
+      %{each: nil} = compute, types ->
+        if taken?(compute.name, types),
+          do: fail(compute.line, "Give the compute another name: #{compute.name} is used above.")
+
+        Map.put(types, compute.name, compute_type(compute, types))
+
+      %{each: report} = compute, types ->
+        row = row_types(types, report)
+
+        if Map.has_key?(row, compute.name),
+          do:
+            fail(
+              compute.line,
+              "Give the compute another name: #{compute.name} is one of #{report}'s values."
+            )
+
+        if taken?(compute.name, types),
+          do: fail(compute.line, "Give the compute another name: #{compute.name} is used above.")
+
+        type = compute_type(compute, Map.merge(types, row))
+        Map.put(types, {:rows, report}, Map.put(row, compute.name, type))
+    end)
+  end
+
+  defp compute_type(compute, types) do
+    case type(compute.value, types) do
+      :image -> fail(compute.line, "Compute a number, text, or a date, not a picture.")
+      type -> type
+    end
   end
 
   # Asks
 
-  # Each answer's type, in order, so a default reads only the asks above it.
+  # Each answer's type, in order, so a default reads only the asks above it. An answer
+  # for each row goes with its report's row, kept by the row's member or item.
   defp asks(types, asks) do
-    Enum.reduce(asks, types, fn ask, types ->
-      if Map.has_key?(types, ":#{ask.name}"),
-        do:
-          fail(ask.line, "Give the ask another name: :#{ask.name} is what the form starts from.")
+    Enum.reduce(asks, types, fn
+      %{each: nil} = ask, types ->
+        if Map.has_key?(types, ":#{ask.name}"),
+          do:
+            fail(
+              ask.line,
+              "Give the ask another name: :#{ask.name} is what the form starts from."
+            )
 
-      Map.put(types, ":#{ask.name}", ask_type(ask, types))
+        Map.put(types, ":#{ask.name}", ask_type(ask, types))
+
+      %{each: report} = ask, types ->
+        row = row_types(types, report)
+        check_ask_each(ask, report, row)
+
+        Map.put(
+          types,
+          {:rows, report},
+          Map.put(row, ask.name, ask_type(ask, Map.merge(types, row)))
+        )
     end)
+  end
+
+  defp check_ask_each(ask, report, row) do
+    if Map.has_key?(row, ask.name),
+      do: fail(ask.line, "Give the ask another name: #{ask.name} is one of #{report}'s values.")
+
+    if ask.remember,
+      do: fail(ask.line, "Take out remember: an answer for each row starts from its default.")
+
+    if not Enum.any?(row, fn {_name, type} -> type in [{:record, :member}, {:record, :item}] end),
+      do:
+        fail(
+          ask.line,
+          "Select member or item in report #{report}: each row's answer is kept by it."
+        )
+
+    :ok
   end
 
   defp ask_type(%{choices: [_one]} = ask, _types),
@@ -242,13 +412,6 @@ defmodule App.Document.Checker do
 
       check_place(place, doc)
     end
-  end
-
-  defp taken?(name, types) do
-    prefix = name <> "."
-
-    name in @reserved or Map.has_key?(types, name) or
-      types |> Map.keys() |> Enum.any?(&String.starts_with?(&1, prefix))
   end
 
   defp check_place(place, doc) do
@@ -470,25 +633,73 @@ defmodule App.Document.Checker do
   defp check_keep(expr, _asks, _types),
     do: fail(Query.line(expr), "Keep a report's value, such as hours.total, not #{text(expr)}.")
 
+  # An expect that gives one row checks it: its names read the row first.
   defp check_expect(expect, doc, types) do
-    Enum.each(expect.given, &check_given(&1, types))
     # A tick holds or doesn't, so an expect reads it as a condition.
     outputs =
       doc.places
       |> Map.new(&{&1.name, if(&1.kind == :tick, do: :condition, else: :text)})
       |> Map.merge(%{"title" => :text, "author" => :text})
 
-    if type(expect.check, Map.merge(types, outputs)) != :condition,
-      do:
-        fail(
-          expect.line,
-          "Write a condition after expect, such as letter contains 'Total Hours'."
-        )
+    if expect |> given_scope(types) |> Map.merge(outputs) |> then(&type(expect.check, &1)) !=
+         :condition,
+       do:
+         fail(
+           expect.line,
+           "Write a condition after expect, such as letter contains 'Total Hours'."
+         )
 
     :ok
   end
 
-  defp check_given({target, value, line}, types) do
+  # The names an expect's check reads: one that gives one row reads the row first.
+  defp given_scope(expect, types) do
+    rows =
+      for {:row, report, values, line} <- expect.given, do: check_row(report, values, line, types)
+
+    for {_target, _value, _line} = given <- expect.given, do: check_given(given, types)
+
+    case rows do
+      [report] -> Map.merge(types, row_types(types, report))
+      _none_or_more -> types
+    end
+  end
+
+  # A row's values, each one of the report's: a column, an answer, or a compute.
+  defp check_row(report, values, line, types) do
+    if not Map.has_key?(types, {:rows, report}),
+      do:
+        fail(
+          line,
+          "There is no report #{report} with a row each. Give a row of one that compute each reads."
+        )
+
+    row = row_types(types, report)
+
+    for {name, value, line} <- values do
+      case Map.fetch(row, name) do
+        {:ok, type} when type in [:date, :day] and not is_struct(value, Date) ->
+          fail(line, "Give #{name} a date, such as #{name} 2026-06-01.")
+
+        {:ok, _type} ->
+          :ok
+
+        :error ->
+          fail(line, "#{report} has no #{name}.#{did_you_mean(name, Map.keys(row))}")
+      end
+    end
+
+    report
+  end
+
+  # A const reads as given, whatever day it is.
+  defp check_given({{:field, [name], [], _}, _value, _line} = given, types) do
+    if Map.has_key?(types, {:const, lower(name)}), do: :ok, else: check_typed(given, types)
+  end
+
+  defp check_given(given, types), do: check_typed(given, types)
+
+  defp check_typed({target, value, line}, types) do
     type = type(target, types)
 
     if type == :image and not is_binary(value),
@@ -503,22 +714,55 @@ defmodule App.Document.Checker do
   # Types
 
   @doc false
-  def type({:field, [name], args, line}, types) when args != [] do
-    case String.downcase(name) do
-      "coalesce" -> coalesce_type(args, types, line)
-      "qr" -> qr_type(args, types, line)
-      other -> fail(line, "There is no function #{other}. Use #{Enum.join(@functions, " or ")}.")
-    end
-  end
+  def type({:field, [name], args, line}, types) when args != [],
+    do: function_type(String.downcase(name), args, types, line)
 
   def type({:field, path, [], line}, types) do
     name = lower_path(Enum.join(path, "."))
 
-    case Map.fetch(types, name) do
-      {:ok, type} -> type
-      :error -> unknown(name, types, line)
+    case {Map.fetch(types, name), Map.get(types, {:dated, name})} do
+      {{:ok, _type}, %Date{} = day} ->
+        fail(
+          line,
+          "Read #{name} on a day, such as #{name} on started_at: it changes on #{Date.to_iso8601(day)}."
+        )
+
+      {{:ok, type}, nil} ->
+        type
+
+      {:error, _day} ->
+        unknown(path, name, types, line)
     end
   end
+
+  def type({:call, name, distinct?, args, line}, types) when name in @calls do
+    if distinct?, do: fail(line, "Take out distinct: #{name} takes values, not a report's rows.")
+    if name == "sum", do: sum_type(args, types, line), else: min_max_type(name, args, types, line)
+  end
+
+  def type({:call, name, _distinct?, _args, line}, _types), do: no_function(name, line)
+
+  def type({:arith, _op, left, right, _line}, types) do
+    number(left, types)
+    number(right, types)
+    :number
+  end
+
+  # `km_rate on started_at`: a const's value on a day.
+  def type({:on, {:field, [name], [], _}, day, line}, types) do
+    name = lower(name)
+
+    if not Map.has_key?(types, {:const, name}),
+      do: fail(line, "Read a const on a day, such as km_rate on started_at, not #{name}.")
+
+    if type(day, types) not in [:date, :day],
+      do: fail(line, "Write a day after on, such as #{name} on started_at.")
+
+    Map.fetch!(types, name)
+  end
+
+  def type({:on, expr, _day, line}, _types),
+    do: fail(line, "Read a const on a day, such as km_rate on started_at, not #{text(expr)}.")
 
   def type({:value, name, line}, types) do
     case Map.fetch(types, ":#{name}") do
@@ -602,6 +846,117 @@ defmodule App.Document.Checker do
     end
   end
 
+  defp function_type("coalesce", args, types, line), do: coalesce_type(args, types, line)
+  defp function_type("qr", args, types, line), do: qr_type(args, types, line)
+  defp function_type("hours", args, types, line), do: hours_type(args, types, line)
+  defp function_type("round", args, types, line), do: round_type(args, types, line)
+
+  defp function_type("days", args, types, line),
+    do: one_number(args, types, line, "days", "days(hours)")
+
+  defp function_type("floor", args, types, line),
+    do: one_number(args, types, line, "floor", "floor(hours / 3)")
+
+  defp function_type(name, _args, _types, line), do: no_function(name, line)
+
+  # Numbers
+
+  # A value arithmetic takes: a number, never a duration, which is kept in minutes.
+  defp number(expr, types) do
+    case type(expr, types) do
+      type when type in @numbers ->
+        type
+
+      :hours ->
+        fail(
+          Query.line(expr),
+          "Read #{text(expr)} in hours with hours(#{text(expr)}): a duration is kept in minutes."
+        )
+
+      _other ->
+        fail(Query.line(expr), "Use a number here, not #{text(expr)}.")
+    end
+  end
+
+  defp one_number([value], types, _line, _name, _example) do
+    number(value, types)
+    :number
+  end
+
+  defp one_number(_args, _types, line, name, example),
+    do: fail(line, "Give #{name} one number, such as #{example}.")
+
+  defp round_type([value], types, _line), do: one_number([value], types, nil, "round", "")
+
+  defp round_type([value, {:literal, places, _}], types, _line)
+       when is_integer(places) and places >= 0,
+       do: one_number([value], types, nil, "round", "")
+
+  defp round_type(_args, _types, line),
+    do: fail(line, "Give round a number and how many decimals, such as round(total, 2).")
+
+  defp min_max_type(_name, [_, _ | _] = args, types, _line) do
+    Enum.each(args, &number(&1, types))
+    :number
+  end
+
+  defp min_max_type(name, _args, _types, line),
+    do: fail(line, "Give #{name} two numbers or more, such as #{name}(0, total).")
+
+  # `hours(started_at, finished_at)`, the hours between two times, or `hours(duration)`.
+  defp hours_type([from, to], types, line) do
+    for time <- [from, to], type(time, types) not in [:date, :day] do
+      fail(line, "Give hours two times, such as hours(started_at, finished_at).")
+    end
+
+    :number
+  end
+
+  defp hours_type([duration], types, line) do
+    if type(duration, types) != :hours,
+      do:
+        fail(line, "Give hours a duration, or two times, such as hours(started_at, finished_at).")
+
+    :number
+  end
+
+  defp hours_type(_args, _types, line),
+    do: fail(line, "Give hours two times, such as hours(started_at, finished_at).")
+
+  # `sum(people.total)`: a column, answer, or value added up over a report's rows.
+  defp sum_type([{:field, [report | [_ | _] = path], [], _}], types, line) do
+    report = lower(report)
+    name = lower_path(Enum.join(path, "."))
+
+    case types |> Map.get({:rows, report}) |> then(&(&1 && Map.fetch(&1, name))) do
+      nil ->
+        sum_type(nil, types, line)
+
+      {:ok, type} when type in @numbers ->
+        :number
+
+      {:ok, :hours} ->
+        :hours
+
+      {:ok, _type} ->
+        fail(line, "Add up a number: #{report}.#{name} is not one.")
+
+      :error ->
+        row = row_types(types, report)
+        fail(line, "#{report} has no #{name}.#{did_you_mean(name, Map.keys(row))}")
+    end
+  end
+
+  defp sum_type(_args, _types, line),
+    do: fail(line, "Give sum one column of a report with a row each, such as sum(people.total).")
+
+  defp no_function(name, line),
+    do:
+      fail(
+        line,
+        "There is no function #{name}. Use #{Enum.join(@functions ++ @calls, ", ")}."
+      )
+
   defp coalesce_type([_one], _types, line),
     do: fail(line, "Give coalesce two values or more: it takes the first that isn't blank.")
 
@@ -652,13 +1007,23 @@ defmodule App.Document.Checker do
   defp literal_type(%Date{}), do: :day
   defp literal_type(nil), do: nil
 
-  defp unknown(name, types, line) do
-    case Expr.closest(name, Map.keys(types)) do
+  defp unknown([report | [_ | _]], name, types, line) when is_map_key(types, {:rows, report}),
+    do: fail(line, "Add up #{name} with sum(#{name}): #{report} has a row each.")
+
+  defp unknown(_path, name, types, line) do
+    case Expr.closest(name, names(types)) do
       nil ->
         fail(line, "There is no #{name}. A report's value is report.field, such as hours.total.")
 
       close ->
         fail(line, "There is no #{name}. Did you mean #{close}?")
+    end
+  end
+
+  defp did_you_mean(name, names) do
+    case Expr.closest(name, names) do
+      nil -> ""
+      close -> " Did you mean #{close}?"
     end
   end
 

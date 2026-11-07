@@ -5,9 +5,10 @@ defmodule App.Document.Parser do
 
   A clause starts at the left edge, and the lines indented under it are its own. Its
   words are App.Report.Lexer's tokens, a report is App.Report.Parser's query, and every
-  value is App.Report.Parser's expression, with four additions read here: `'text {value}'`
-  puts a value in text, `value as format` formats it, `value if condition` is blank when
-  the condition is false, and `if condition then value else value` picks one.
+  value is App.Report.Parser's expression, arithmetic and all, with five additions read
+  here: `'text {value}'` puts a value in text, `value as format` formats it, `value if
+  condition` is blank when the condition is false, `if condition then value else value`
+  picks one, and `rate on date` reads a const on a date.
   """
 
   alias App.Document
@@ -17,9 +18,10 @@ defmodule App.Document.Parser do
   alias App.Report.Parser
   alias App.Report.Query
 
-  @clauses ~w(document form about for report ask title lock keep page places fill expect)
+  @clauses ~w(document form about for report const ask compute title lock keep page places fill
+               expect)
   @starts ~w(member year)
-  @repeated ~w(report ask expect)
+  @repeated ~w(report const ask compute expect)
   @kinds %{"text" => :text, "image" => :image, "flow" => :flow, "tick" => :tick}
   @lengths ~w(top left right bottom width height size leading gap pad pitch indent)
   @ask_options ~w(remember default choose hint)
@@ -196,9 +198,32 @@ defmodule App.Document.Parser do
     %{doc | title: %{text: text, by: by, line: n}}
   end
 
-  # `ask name 'Label'`, then remember, default, choose, and hint in any order.
-  defp read("ask", block, doc, n) do
+  # `const km_rate = 0.65, 0.67 from 2026-04-15`: a value, and each value after it with
+  # the day it starts.
+  defp read("const", block, doc, n) do
     case tl(tokens(block)) do
+      [{:word, name, _}, {:symbol, "=", _} | [_ | _] = rest] ->
+        name = lower(name)
+
+        if Enum.any?(doc.consts, &(&1.name == name)),
+          do: fail(n, "Give the const another name: #{name} is used twice.")
+
+        {values, rest} = Parser.list(rest, &const_value(&1, n))
+        done(rest, "Put a comma between a const's values, such as 0.65, 0.67 from 2026-04-15.")
+        check_from(values, n)
+        %{doc | consts: [%{name: name, values: values, line: n} | doc.consts]}
+
+      _other ->
+        fail(n, "Write the const's name, =, and its value, such as const meal = 15.00.")
+    end
+  end
+
+  # `ask name 'Label'`, or `ask each people name 'Label'` for an answer on each row, then
+  # remember, default, choose, and hint in any order.
+  defp read("ask", block, doc, n) do
+    {each, tokens} = ask_each(tl(tokens(block)))
+
+    case tokens do
       [{:word, name, _}, {:string, label, _} | rest] when label != "" ->
         name = lower(name)
 
@@ -206,11 +231,41 @@ defmodule App.Document.Parser do
           do: fail(n, "Give the ask another name: #{name} is used twice.")
 
         ask = %{name: name, label: label, remember: false, default: nil, choices: []}
-        ask = ask |> Map.merge(%{hint: nil, line: n}) |> ask_options(rest, MapSet.new(), n)
+
+        ask =
+          ask
+          |> Map.merge(%{hint: nil, each: each, line: n})
+          |> ask_options(rest, MapSet.new(), n)
+
         %{doc | asks: [ask | doc.asks]}
 
       _other ->
         fail(n, "Write the answer's name and its label after ask, such as ask injured 'Injured'.")
+    end
+  end
+
+  # `compute` and a value a line under it, or `compute each people` and a value for each
+  # of a report's rows.
+  defp read("compute", [first | _] = block, doc, n) do
+    each =
+      case tl(line_tokens(first)) do
+        [] ->
+          nil
+
+        [{:word, word, _}, {:word, report, _}] ->
+          if lower(word) == "each", do: lower(report), else: compute_head(n)
+
+        _other ->
+          compute_head(n)
+      end
+
+    case children(block) do
+      [] ->
+        fail(n, "Write each value under compute, one a line, such as total = a + b.")
+
+      lines ->
+        computes = lines |> Enum.map(&compute(&1, each)) |> Enum.reverse()
+        %{doc | computes: computes ++ doc.computes}
     end
   end
 
@@ -281,9 +336,79 @@ defmodule App.Document.Parser do
      %{
        doc
        | reports: Enum.reverse(doc.reports),
+         consts: Enum.reverse(doc.consts),
          asks: Enum.reverse(doc.asks),
+         computes: Enum.reverse(doc.computes),
          expects: Enum.reverse(doc.expects)
      }}
+  end
+
+  # Consts
+
+  defp const_value(tokens, n) do
+    {value, rest} = literal(tokens, n)
+
+    case rest do
+      [{:word, word, _} | after_from] = rest ->
+        if lower(word) == "from",
+          do: from(value, after_from, n),
+          else: {%{value: value, from: nil}, rest}
+
+      rest ->
+        {%{value: value, from: nil}, rest}
+    end
+  end
+
+  defp literal([{:symbol, "-", _}, {:number, number, _} | rest], _n), do: {-number, rest}
+
+  defp literal([{kind, value, _} | rest], _n) when kind in [:number, :string, :date],
+    do: {value, rest}
+
+  defp literal(_tokens, n),
+    do: fail(n, "Write a const's value as a number, text in quotes, or a date.")
+
+  defp from(value, [{:date, date, _} | rest], _n), do: {%{value: value, from: date}, rest}
+
+  defp from(_value, _tokens, n),
+    do: fail(n, "Write the day the value starts after from, such as from 2026-04-15.")
+
+  # The first value holds before any day; each after it starts on a later day.
+  defp check_from([%{from: %Date{}} | _], n),
+    do: fail(n, "Start with the value before any day, such as 0.65, 0.67 from 2026-04-15.")
+
+  defp check_from([_first | later], n) do
+    for %{from: nil} <- later,
+        do: fail(n, "Write the day each later value starts, such as 0.67 from 2026-04-15.")
+
+    days = Enum.map(later, & &1.from)
+
+    if Enum.sort(days, Date) != days or Enum.uniq(days) != days,
+      do: fail(n, "Write the values in order of the day each starts, earliest first.")
+
+    :ok
+  end
+
+  # Computes
+
+  defp compute_head(n),
+    do:
+      fail(
+        n,
+        "Write compute alone, or compute each and a report's name, such as compute each people."
+      )
+
+  defp compute([{n, _indent, _text} = first | _] = group, each) do
+    case line_tokens(first) do
+      [{:word, name, _}, {:symbol, "=", _} | _] ->
+        [_name, _equals | tokens] = tokens(group)
+        if tokens == [], do: fail(n, "Write a value after =.")
+        {value, rest} = value(tokens, n)
+        done(rest, "Write one value after =.")
+        %{name: lower(name), each: each, value: value, line: n}
+
+      _other ->
+        fail(n, "Write a name, =, and its value, such as total = subtotal + ohs_total.")
+    end
   end
 
   # Starts
@@ -336,6 +461,13 @@ defmodule App.Document.Parser do
 
   # Asks
 
+  # `each people` before an ask's name: the report it asks on each row of.
+  defp ask_each([{:word, word, _}, {:word, report, _}, {:word, _, _} | _] = tokens) do
+    if lower(word) == "each", do: {lower(report), Enum.drop(tokens, 2)}, else: {nil, tokens}
+  end
+
+  defp ask_each(tokens), do: {nil, tokens}
+
   defp ask_options(ask, [], _seen, _n), do: ask
 
   defp ask_options(ask, [{:word, word, _} | rest], seen, n) do
@@ -379,21 +511,58 @@ defmodule App.Document.Parser do
   defp ask_option("hint", ask, [{:string, hint, _} | rest], _n), do: {%{ask | hint: hint}, rest}
   defp ask_option("hint", _ask, _rest, n), do: fail(n, "Write the hint in quotes after hint.")
 
-  # `with a = 1, b = 'x':`, each a name and a value.
-  defp given(tokens, n) do
-    {items, rest} = Parser.list(tokens, &Parser.expression/1)
+  # `with a = 1, b = 'x':`, each a name and a value, and a report's row as its name and
+  # each of its values: `people hours 6, km 30`. Commas between them are optional.
+  defp given(tokens, n), do: given(tokens, [], n)
 
-    rest =
-      case rest do
-        [{:symbol, ":", _} | rest] ->
-          rest
+  defp given([{:symbol, ":", _} | rest], [_ | _] = items, _n), do: {Enum.reverse(items), rest}
+  defp given([{:symbol, ",", _} | rest], [_ | _] = items, n), do: given(rest, items, n)
 
-        _rest ->
-          fail(n, "Write a colon after the values, then what to expect: with :year = 2025: …")
+  defp given([{:word, report, line}, {:word, _, _} | _] = tokens, items, n) do
+    if lower(report) in ~w(and or not),
+      do: fail(n, "Give a name a value after with, such as hours.total = 90.")
+
+    {pairs, rest} = row_values(tl(tokens), [], n)
+    given(rest, [{:row, lower(report), pairs, line} | items], n)
+  end
+
+  defp given([], _items, n),
+    do: fail(n, "Write a colon after the values, then what to expect: with :year = 2025: …")
+
+  defp given(tokens, items, n) do
+    {expr, rest} = Parser.expression(tokens)
+    given(rest, [given_item(expr) | items], n)
+  end
+
+  # A row's values, each a name and then a value with no =, such as hours 6. A comma
+  # followed by anything else ends the row.
+  defp row_values([{:word, name, line} | rest], pairs, n) do
+    {value, rest} =
+      case Parser.expression(rest) do
+        {{:literal, value, _}, rest} -> {value, rest}
+        _other -> fail(n, "Give each of a row's values after its name, such as people hours 6.")
       end
 
-    {Enum.map(items, &given_item/1), rest}
+    pairs = [{lower(name), value, line} | pairs]
+
+    case rest do
+      [{:symbol, ",", _}, {:word, _, _}, next | _] = rest ->
+        if value_start?(next),
+          do: row_values(tl(rest), pairs, n),
+          else: {Enum.reverse(pairs), rest}
+
+      rest ->
+        {Enum.reverse(pairs), rest}
+    end
   end
+
+  defp row_values(_tokens, _pairs, n),
+    do: fail(n, "Give each of a row's values after its name, such as people hours 6.")
+
+  defp value_start?({kind, _value, _line}) when kind in [:number, :string, :date], do: true
+  defp value_start?({:symbol, "-", _line}), do: true
+  defp value_start?({:word, word, _line}), do: lower(word) in ~w(true false null)
+  defp value_start?(_token), do: false
 
   defp given_item({:op, :eq, {kind, _, _, _} = target, {:literal, value, _}, line})
        when kind == :field,
@@ -633,7 +802,7 @@ defmodule App.Document.Parser do
 
   defp formatted(tokens, n) do
     {expr, rest} = Parser.expression(tokens)
-    expr = strings(expr, n)
+    {expr, rest} = on(strings(expr, n), rest, n)
 
     case rest do
       [{:word, as, _}, {:word, format, _} | after_format] ->
@@ -645,6 +814,18 @@ defmodule App.Document.Parser do
         {expr, rest}
     end
   end
+
+  # `km_rate on started_at`: a const's value on a day.
+  defp on(expr, [{:word, word, line} | rest] = tokens, n) do
+    if lower(word) == "on" do
+      {day, rest} = Parser.expression(rest)
+      {{:on, expr, strings(day, n), line}, rest}
+    else
+      {expr, tokens}
+    end
+  end
+
+  defp on(expr, tokens, _n), do: {expr, tokens}
 
   defp postfix_if([{:word, word, _} | rest] = tokens) do
     if lower(word) == "if" do

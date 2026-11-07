@@ -79,6 +79,10 @@ defmodule App.Report.Query do
   def text({:not, expr, _line}), do: "not #{text(expr)}"
   def text({:is_null, expr, false, _line}), do: "#{text(expr)} is null"
   def text({:is_null, expr, true, _line}), do: "#{text(expr)} is not null"
+
+  def text({:arith, op, left, right, _line}),
+    do: "#{in_arith(op, left, :left)} #{arith_text(op)} #{in_arith(op, right, :right)}"
+
   def text({:op, :and, left, right, _line}), do: "#{in_and(left)} and #{in_and(right)}"
   def text({:op, op, left, right, _line}), do: "#{text(left)} #{op_text(op)} #{text(right)}"
 
@@ -91,6 +95,23 @@ defmodule App.Report.Query do
 
   defp in_and({:op, :or, _, _, _} = expr), do: "(#{text(expr)})"
   defp in_and(expr), do: text(expr)
+
+  # Brackets where the order of working needs them: a + b inside a product, or anything
+  # but a product on the right of - or /.
+  defp in_arith(op, {:arith, inner, _, _, _} = expr, side) do
+    if tighter?(op, inner, side), do: "(#{text(expr)})", else: text(expr)
+  end
+
+  defp in_arith(_op, expr, _side), do: text(expr)
+
+  defp tighter?(op, inner, _side) when op in [:mul, :div] and inner in [:add, :sub], do: true
+  defp tighter?(op, _inner, :right) when op in [:sub, :div], do: true
+  defp tighter?(_op, _inner, _side), do: false
+
+  defp arith_text(:add), do: "+"
+  defp arith_text(:sub), do: "-"
+  defp arith_text(:mul), do: "*"
+  defp arith_text(:div), do: "/"
 
   defp op_text(:eq), do: "="
   defp op_text(:ne), do: "!="
