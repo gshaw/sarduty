@@ -1,35 +1,36 @@
 defmodule Service.PDFLockTest do
   use ExUnit.Case, async: true
 
-  alias Service.PDFLetter
+  alias App.Document.Markup
   alias Service.PDFLock
 
   # cspell:ignore AESV3 endobj startxref xref -- PDF syntax names
   # cspell:ignore pypdf Tadb Renéʼs -- a Python PDF library, the /Perms marker, test text
 
-  # The pdf package escapes parentheses but not backslashes, so a reader drops the
-  # backslash in "\ for", and writes the title's UTF-8 bytes as they are.
   @title "Tax (credit) letter \\ for Renéʼs team (2026"
-  @title_as_read "Tax (credit) letter  for Renéʼs team (2026"
 
-  defp letter(extra \\ %{}) do
-    %{
-      title: @title,
-      author: "Treasurer é",
-      creator: "SAR Duty",
-      logos: [],
-      content: "Dear René’s (friend) \\ backslash\nThanks for volunteering."
-    }
-    |> Map.merge(extra)
-    |> PDFLetter.render()
+  # A letter as Typst makes one (#918), the PDFs PDFLock locks.
+  defp letter(images \\ %{}) do
+    markup =
+      Enum.map_join(images, fn {name, _bytes} -> ~s|#image("#{name}", width: 1in)\n| end)
+
+    source = """
+    #set document(title: #{Markup.string(@title)}, author: "Treasurer é")
+    #set text(font: "Arimo")
+    Dear René’s (friend) \\\\ backslash
+
+    Thanks for volunteering.
+    #{markup}
+    """
+
+    {:ok, pdf} = Service.Typst.compile(source, images)
+    pdf
   end
 
   defp letter_with_images do
     letter(%{
-      logos: [File.read!("priv/static/images/logo-sarvac.png")],
-      signature: File.read!("priv/apple/sarduty_logo.png"),
-      body: "Dear René’s (friend)\nThanks for volunteering.",
-      signer: "Jane Doe\nTreasurer"
+      "logo.png" => File.read!("priv/static/images/logo-sarvac.png"),
+      "signature.png" => File.read!("priv/apple/sarduty_logo.png")
     })
   end
 
@@ -39,7 +40,7 @@ defmodule Service.PDFLockTest do
     |> Regex.scan(pdf, return: :index)
     |> Enum.map(fn [{_, _}, {dict_start, dict_length}] ->
       dict = binary_part(pdf, dict_start, dict_length)
-      [_, length] = Regex.run(~r"/Length (\d+)\n", dict)
+      [_, length] = Regex.run(~r"/Length (\d+)", dict)
       binary_part(pdf, dict_start + dict_length + 8, String.to_integer(length))
     end)
   end
@@ -56,7 +57,7 @@ defmodule Service.PDFLockTest do
       :crypto.crypto_one_time(:aes_256_cbc, key, iv, data, encrypt: false, padding: :pkcs_padding)
 
   defp hex_entry(pdf, key) do
-    [_, hex] = Regex.run(~r"/#{key} <([0-9a-f]+)>", pdf)
+    [_, hex] = Regex.run(~r"/#{key} ?<([0-9a-f]+)>", pdf)
     Base.decode16!(hex, case: :lower)
   end
 
@@ -68,7 +69,7 @@ defmodule Service.PDFLockTest do
     assert locked =~ "/CF << /StdCF << /AuthEvent /DocOpen /CFM /AESV3 /Length 32 >> >>"
     assert locked =~ "/StmF /StdCF\n/StrF /StdCF\n"
     assert locked =~ "/P -1340\n/EncryptMetadata true\n"
-    assert locked =~ ~r"/Encrypt 7 0 R\n/ID \[<[0-9a-f]{32}> <[0-9a-f]{32}>\]"
+    assert locked =~ ~r"/Encrypt \d+ 0 R\n/ID \[<[0-9a-f]{32}> <[0-9a-f]{32}>\]"
     assert byte_size(hex_entry(locked, "U")) == 48
     assert byte_size(hex_entry(locked, "O")) == 48
   end
@@ -78,7 +79,7 @@ defmodule Service.PDFLockTest do
     locked = PDFLock.lock(plain)
 
     # About 230 KB of ciphertext holds "Tax" by chance about 1 run in 40.
-    for text <- ["Tax", "credit", "SAR Duty", "Treasurer", "D:2026", "Elixir-PDF"] do
+    for text <- ["Tax", "credit", "Treasurer", "D:2026", "Typst"] do
       assert plain =~ text
       refute without_streams(locked) =~ text
     end
@@ -115,13 +116,13 @@ defmodule Service.PDFLockTest do
     assert PDFLock.file_key(locked, "wrong") == :error
 
     decrypted = locked |> streams() |> Enum.map(&decrypt(key, &1))
-    # The logo and the signature, each with an alpha mask, and the page content.
-    assert length(decrypted) == 5
     assert decrypted == streams(plain)
-    assert Enum.any?(decrypted, &(:zlib.uncompress(&1) =~ "volunteering"))
 
-    assert decrypt(key, hex_entry(locked, "Title")) == @title_as_read
-    assert decrypt(key, hex_entry(locked, "CreationDate")) =~ ~r/\AD:\d{8}\z/
+    # Typst writes the title as UTF-16 with its byte order mark.
+    assert decrypt(key, hex_entry(locked, "Title")) ==
+             <<0xFE, 0xFF>> <> :unicode.characters_to_binary(@title, :utf8, {:utf16, :big})
+
+    assert decrypt(key, hex_entry(locked, "CreationDate")) =~ ~r/\AD:\d{14}/
   end
 
   test "records print-only permissions in /Perms" do
@@ -168,7 +169,7 @@ defmodule Service.PDFLockTest do
              "EACE262798D0F7325982B486540FF1C118871E1515E59AD3AE35F093A26A54A6"
   end
 
-  test "raises on input that isn't a PDF from the pdf package" do
+  test "raises on input that isn't a PDF it can read" do
     assert_raise ArgumentError, ~r/no %PDF/, fn -> PDFLock.lock("hello") end
 
     assert_raise ArgumentError, ~r/unterminated string/, fn ->

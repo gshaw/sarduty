@@ -10,7 +10,7 @@ The language is the report language's ([reports.md](reports.md)): the same lexer
 same parser for each report and every value, and the same catalog. There is no second
 parser. `App.Document` is pure: it parses, checks against the catalog, and works out
 what each place holds from values it's given. It never runs a query, loads a picture,
-or calls Typst. Printing is step 4 of #918.
+or calls Typst: printing is App.Operation.PrintDocument's.
 
 ## The clauses
 
@@ -94,4 +94,8 @@ reads, and compares the two line for line.
 A caller runs `App.Document.queries/1` with `:member` and `:year`, adds each first row
 with `App.Document.put_row/5` (records from `App.ViewData.ReportRecords.names/3`), adds
 the pictures and the PDF's values, and calls `App.Document.evaluate/3`. That gives the
-title, the author, the lock, the kept values, and each place's value, for Typst to draw.
+title, the author, the lock, the kept values, and each place's value.
+`App.Operation.PrintDocument` prints that with Typst: `App.Document.Markup` lays each
+place out on letter paper, every value as a Typst string so it prints as written, and
+`lock print` runs `Service.PDFLock`. A QR code is an SVG from `EQRCode`, and Typst uses no
+packages. `App.Operation.PrintTaxCreditLetter` does all this for a letter.

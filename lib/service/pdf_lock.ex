@@ -1,8 +1,8 @@
 defmodule Service.PDFLock do
   @moduledoc """
   Encrypts a PDF with AES-256 (security handler revision 6) so it opens with no password
-  but allows only printing. It rewrites the output of the `pdf` package and raises on
-  anything else; it is not a general PDF parser.
+  but allows only printing. It rewrites Typst's output (#918) and raises on anything it
+  can't read; it is not a general PDF parser.
 
   The lock is honour-system: Acrobat and most readers respect it, but unlock tools strip it.
   """
@@ -17,7 +17,7 @@ defmodule Service.PDFLock do
   @whitespace [0, ?\t, ?\n, ?\f, ?\r, ?\s]
   @delimiters [?(, ?), ?<, ?>, ?[, ?], ?{, ?}, ?/, ?%]
 
-  @doc "Returns `pdf`, a document from the `pdf` package, encrypted print-only."
+  @doc "Returns `pdf`, a document from Typst, encrypted print-only."
   def lock(pdf) when is_binary(pdf) do
     {version, rest} = read_header(pdf)
     {objects, trailer} = read_objects(rest, [])

@@ -10,6 +10,10 @@ defmodule App.Report.Context do
 
   `repo` is the database every read goes to: App.Repo, or App.SampleRepo for Coast Range
   SAR (#816). Nothing in a run reads another.
+
+  `hours_for` is `{member_id, year}` when only that member's year of `tax_credit_hours`
+  is read, as a tax credit letter's report reads it (#918), so it doesn't count the
+  whole team's every year. Nil counts them all.
   """
 
   import Ecto.Query, only: [where: 3]
@@ -34,6 +38,7 @@ defmodule App.Report.Context do
     :dates_now,
     :dates_today,
     custom_fields: %{},
+    hours_for: nil,
     repo: App.Repo,
     team_admin?: true
   ]
@@ -56,6 +61,7 @@ defmodule App.Report.Context do
       groups: Group.kinds(team, repo),
       custom_fields: CustomFields.read(team, repo),
       repo: repo,
+      hours_for: Keyword.get(opts, :hours_for),
       team_admin?: Keyword.get(opts, :team_admin?, true)
     }
   end

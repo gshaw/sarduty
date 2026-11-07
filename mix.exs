@@ -52,7 +52,6 @@ defmodule App.MixProject do
       {:oban, "~> 2.19"},
       {:lazy_html, ">= 0.0.0", only: :test},
       {:mdex, "~> 0.13"},
-      {:pdf, "~> 0.6"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 4.0"},
       {:phoenix_live_reload, "~> 1.6", only: :dev},

@@ -8,9 +8,6 @@ defmodule App.Model.TaxCreditLetter do
   alias App.Model.TaxCreditLetter
   alias App.Repo
 
-  # The space left to sign in, as CreateTaxCreditLetter writes it.
-  @signature_gap "\n\n\n\n\n"
-
   schema "tax_credit_letters" do
     belongs_to :member, Member
     field :ref_id, :string
@@ -20,9 +17,6 @@ defmodule App.Model.TaxCreditLetter do
     # did not parse.
     field :primary_minutes, :integer
     field :secondary_minutes, :integer
-    # The team's signature PNG when the letter was made. Empty for letters made before
-    # #194 or by a team with no signature.
-    field :signature, :binary, redact: true
     # When the member first downloaded it from their own pages. A team admin's download
     # doesn't count.
     field :downloaded_at, :utc_datetime_usec
@@ -42,8 +36,7 @@ defmodule App.Model.TaxCreditLetter do
       :year,
       :letter_content,
       :primary_minutes,
-      :secondary_minutes,
-      :signature
+      :secondary_minutes
     ])
     |> validate_required([
       :ref_id,
@@ -262,18 +255,6 @@ defmodule App.Model.TaxCreditLetter do
 
   defp to_minutes("", minutes), do: String.to_integer(minutes)
   defp to_minutes(hours, minutes), do: String.to_integer(hours) * 60 + String.to_integer(minutes)
-
-  @doc """
-  The letter's text split where the signature goes: `{body, signer_block_onward}`, at
-  the blank lines between "Certified on" and the signer's name. `:error` for text
-  without that gap.
-  """
-  def split_at_signature(content) do
-    case String.split(content, @signature_gap, parts: 2) do
-      [body, rest] -> {body, rest}
-      [_content] -> :error
-    end
-  end
 
   # def get_all do
   #   TaxCreditLetter

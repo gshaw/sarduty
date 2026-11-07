@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Tax credit letters print names with letters outside Western European ones, such as Ł
+  or ễ. Those letters used to fail to download or email.
 - Reports can read each member's tax credit hours by year, counted just as the letters
   count them, and the team's own details: its legal name, mailing address, and signer.
 - A tax credit letter's PDF is kept as it was made. Every download and email sends that

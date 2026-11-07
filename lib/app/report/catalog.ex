@@ -953,10 +953,10 @@ defmodule App.Report.Catalog do
   end
 
   # Counted in Elixir, so the rows reach SQL as one JSON parameter.
-  defp tax_credit_hours(%Context{team: team, now: now, repo: repo}) do
+  defp tax_credit_hours(%Context{team: team, now: now, repo: repo, hours_for: only}) do
     rows =
       team
-      |> CountTaxCreditHours.by_year(now, repo)
+      |> CountTaxCreditHours.by_year(now, repo, only)
       |> Enum.with_index(1)
       |> Enum.map(fn {h, i} ->
         [i, h.member_id, h.year, h.primary_minutes, h.secondary_minutes, h.total_minutes]

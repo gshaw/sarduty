@@ -23,8 +23,8 @@ defmodule App.Model.LetterPDF do
   end
 
   @doc """
-  Saves `attachment`, as `App.Operation.BuildTaxCreditLetterAttachment` draws it, as
-  the letter's PDF, replacing any it had. Expects the letter's member loaded.
+  Saves `attachment`, as `App.Operation.PrintTaxCreditLetter` prints it, as the
+  letter's PDF, replacing any it had. Expects the letter's member loaded.
   """
   def put!(%TaxCreditLetter{member: %Member{team_id: team_id}} = letter, attachment) do
     {:ok, pdf} =

@@ -23,7 +23,6 @@ defmodule Service.CertificateFileTest do
   end
 
   # A 4 × 4 PNG whose header claims `width` × `height` pixels.
-  # cspell:ignore IHDR -- the PNG header chunk, which holds the size
   defp png_claiming(width, height) do
     <<signature::binary-8, length::32, "IHDR", _width::32, _height::32, rest::binary-5, _crc::32,
       tail::binary>> = png_fixture(4, 4)

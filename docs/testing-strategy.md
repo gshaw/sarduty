@@ -25,7 +25,7 @@ data?
 - HEEx markup, layout, and styling.
 - Ecto schemas round-tripping through the database, and session handling
   beyond what `accounts_test.exs` and `user_auth_test.exs` already cover.
-- Third-party libraries: Oban scheduling, Swoosh delivery, the `pdf` package's output.
+- Third-party libraries: Oban scheduling, Swoosh delivery, Typst's output.
 - Live D4H or Mapbox responses. **No test may call them.** Oban runs inline in tests, so
   enqueuing a refresh would hit the real API. A job inserted inside a transaction runs
   inside it in tests, not after the commit as in production

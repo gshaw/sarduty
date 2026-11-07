@@ -43,8 +43,14 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
   reads this and the older "212 hours, 30 minutes".
 - **The letter cites the Act, not a police force.** "An eligible search and rescue
   organization under subsection 118.07(1) of the Income Tax Act" is true in every
-  province. A letter's text is saved when it's made, so changing the wording never
-  changes a letter already issued.
+  province. A letter's text and PDF are saved when it's made, so changing the wording
+  never changes a letter already issued.
+- **The letter is a document**, [tax_credit_letter.txt](../priv/documents/tax_credit_letter.txt)
+  ([documents.md](documents.md)): what it reads, its wording, where each part sits,
+  and worked examples CI checks. Making a letter runs it once
+  ([PrintTaxCreditLetter](../lib/app/operation/print_tax_credit_letter.ex)): the
+  saved text, the hours it keeps, and the PDF all come from the same values. Typst
+  prints it in Arimo, so every name prints, whatever its letters (#917).
 - **Letters name the team by its legal name** (#738), `legal_name`: the body, the signer
   fallback, the PDF's title, author, and filename, the email, and the verify page. A team
   sets it in team settings › General. It starts as the team's name, and nothing checks
@@ -58,22 +64,17 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
   ([SaveTaxCreditLetterPDF](../lib/app/operation/save_tax_credit_letter_pdf.ex)).
   Downloads and emails serve the saved file
   ([LoadTaxCreditLetterPDF](../lib/app/operation/load_tax_credit_letter_pdf.ex)), so a
-  member gets the same file every time. Letters made before it got theirs from
-  `SaveLetterPDFsWorker`, which Oban's cron starts at boot. A letter whose text the
-  `pdf` package can't write (#917) has none, and its download and email fail, until
-  letters print with Typst.
-- **The QR code is drawn, not an image.** Vector squares from `eqrcode`'s matrix, beside
-  the signer block, so it prints sharp. It holds the URL in lower case, since the
+  member gets the same file every time. Letters made before it got theirs at boot, drawn
+  by the old code. A letter without one, such as a name that code couldn't draw
+  (#917), is printed from the document when it's first downloaded or emailed, with its
+  own hours, reference number, and date, and the team's logos and signature now.
+- **The signature is the team's when the PDF is printed**, and the saved PDF keeps it.
+  The letter keeps no copy of its own (#918).
+- **The QR code is vector**, an SVG from `eqrcode`, its bottom level with the letter's
+  last line, so it prints sharp. It holds the URL in lower case, since the
   `/letters` path is case-sensitive. Letters from before #207 get none.
 
 - **A member's download is recorded** (#389): the first time a member downloads their
   letter from their own pages sets `downloaded_at`, and the letter leaves their For you
   to do. Only the newest letter shows there, and only for last year or this year. A team
   admin's download doesn't count. A replaced letter is a new row, so it shows again.
-
-## The PDF package's limits
-
-The `pdf` package escapes parentheses but not backslashes, and writes the title and
-author as raw UTF-8, which readers show garbled. Page text can't hold characters outside
-WinAnsi, such as `ʼ` (U+02BC). None of this matters for letters today; it would for a
-team or member name with accents in the title.

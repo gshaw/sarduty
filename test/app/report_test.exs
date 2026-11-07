@@ -718,6 +718,14 @@ defmodule App.ReportTest do
              team
            ).rows ==
              [[avery.id, 450], [blake.id, 90]]
+
+    # A letter counts only its member's year, and gets the same row the team's count has.
+    all = CountTaxCreditHours.by_year(team, @now)
+
+    for member <- [avery, blake], year <- [2025, 2026] do
+      assert CountTaxCreditHours.by_year(team, @now, App.Repo, {member.id, year}) ==
+               Enum.filter(all, &(&1.member_id == member.id and &1.year == year))
+    end
   end
 
   # cspell:ignore Łukasz Tomáš Dvořák

@@ -12,7 +12,7 @@ defmodule App.Operation.SaveTaxCreditLetterPDFTest do
   alias App.Operation.LoadTaxCreditLetterPDF
   alias App.Operation.ReplaceTaxCreditLetter
 
-  # Ł is past WinAnsi, which is all the pdf package writes (#917).
+  # Ł is past WinAnsi, all the pdf package wrote before letters printed with Typst (#917).
   @past_win_ansi "Łukasz Nowak"
 
   setup do
@@ -31,12 +31,12 @@ defmodule App.Operation.SaveTaxCreditLetterPDFTest do
                LetterPDF.attachment(letter)
     end
 
-    test "with a name past WinAnsi makes the letter without one (#917)", %{team: team} do
+    test "saves one for a name past WinAnsi (#917)", %{team: team} do
       member = member_fixture(team, %{name: @past_win_ansi})
       letter = create(team, member)
 
       assert letter.letter_content =~ @past_win_ansi
-      assert LetterPDF.attachment(letter) == nil
+      assert %{content: "%PDF" <> _rest} = LetterPDF.attachment(letter)
     end
   end
 
@@ -50,7 +50,7 @@ defmodule App.Operation.SaveTaxCreditLetterPDFTest do
       assert LoadTaxCreditLetterPDF.call(letter).content == saved
     end
 
-    test "draws and saves one for a letter that has none yet", %{member: member} do
+    test "prints and saves one for a letter that has none", %{member: member} do
       letter = member |> tax_credit_letter_fixture() |> Repo.preload(member: :team)
       assert LetterPDF.attachment(letter) == nil
 
@@ -75,14 +75,14 @@ defmodule App.Operation.SaveTaxCreditLetterPDFTest do
       assert Repo.aggregate(LetterPDFFile, :count) == 1
     end
 
-    test "drops the old PDF when the new text can't be drawn", %{team: team, letter: letter} do
+    test "saves the new PDF for a name past WinAnsi", %{team: team, letter: letter} do
       letter.member |> Ecto.Changeset.change(name: @past_win_ansi) |> Repo.update!()
       letter = Repo.preload(letter, [member: :team], force: true)
 
       replaced = ReplaceTaxCreditLetter.call(team, letter)
 
       assert replaced.letter_content =~ @past_win_ansi
-      assert LetterPDF.attachment(replaced) == nil
+      assert %{content: "%PDF" <> _rest} = LetterPDF.attachment(replaced)
     end
   end
 

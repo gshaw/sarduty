@@ -82,6 +82,7 @@ defmodule Web.TaxCreditLetterLive do
         id="replace-letter"
         variant={:warning}
         phx-click="replace"
+        phx-disable-with="Replacing…"
         {replace_confirm(@letter, @hours)}
       >
         Replace letter
@@ -111,19 +112,7 @@ defmodule Web.TaxCreditLetterLive do
         </dl>
       </aside>
       <main class="content-2/3">
-        <%= case @letter.signature && TaxCreditLetter.split_at_signature(@letter.letter_content) do %>
-          <% {body, signer} -> %>
-            <.markdown content={body} />
-            <img
-              id="letter-signature"
-              src={Web.ImageData.png_data_url(@letter.signature)}
-              class="my-4 h-16 bg-paper"
-              alt="The signer's signature"
-            />
-            <.markdown content={signer} />
-          <% _unsigned -> %>
-            <.markdown content={@letter.letter_content} />
-        <% end %>
+        <.markdown content={@letter.letter_content} />
       </main>
     </div>
     """

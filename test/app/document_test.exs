@@ -1,12 +1,11 @@
 defmodule App.DocumentTest do
   use ExUnit.Case, async: true
 
-  # cspell:ignore Łukasz Dvořák totl
+  # cspell:ignore totl
 
   alias App.Document
   alias App.Model.Member
   alias App.Model.Team
-  alias App.Operation.CreateTaxCreditLetter
   alias App.Report.Context
   alias App.Report.Error
   alias App.Report.Parser
@@ -76,74 +75,20 @@ defmodule App.DocumentTest do
   end
 
   describe "the tax credit letter" do
-    # The values the letter reads, as CreateTaxCreditLetter reads them.
-    defp values(team, member, letter, now) do
-      %{
-        ":member" => member.id,
-        ":year" => letter.year,
-        "member.name" => member.name,
-        "member.address" => member.address,
-        "hours.primary" => letter.primary_minutes,
-        "hours.secondary" => letter.secondary_minutes,
-        "hours.total" => letter.primary_minutes + letter.secondary_minutes,
-        "team.legal_name" => team.legal_name,
-        "team.mailing_address" => team.mailing_address,
-        "team.signer" => team.authorized_by_name,
-        "team.signer_title" => team.authorized_by_title,
-        "team.signer_phone" => team.authorized_by_phone,
-        "team.signer_email" => team.authorized_by_email,
-        "pdf.reference" => letter.ref_id,
-        "today" => Service.Period.today(now, team.timezone)
-      }
-    end
-
-    defp row(started_at, minutes, tags) do
-      %{
-        member_id: 7,
-        started_at: started_at,
-        finished_at: DateTime.add(started_at, minutes, :minute),
-        duration_in_minutes: 0,
-        tags: tags,
-        chore: false
-      }
-    end
-
-    test "says what CreateTaxCreditLetter's letter says, line for line" do
-      member = %Member{id: 7, name: "Łukasz Dvořák", address: "1 Elm St, Hope BC"}
-
-      rows = [
-        row(~U[2025-03-01 17:00:00Z], 210, ["Primary Hours"]),
-        row(~U[2025-04-01 17:00:00Z], 60, ["Secondary Hours"])
-      ]
-
-      teams = [
-        @team,
-        %{@team | authorized_by_name: nil},
-        %{@team | authorized_by_phone: "604-555-0100", authorized_by_title: "President"},
-        %{@team | authorized_by_email: "president@example.com", mailing_address: "Box 1\nHope BC"}
-      ]
-
-      members = [member, %{member | address: nil}, %{member | address: ""}]
-      doc = letter()
-
-      for team <- teams, member <- members, rows <- [rows, []] do
-        planned = CreateTaxCreditLetter.plan(team, member, rows, 2025, "SRVTC-7KQ2M9XD", @now)
-        output = Document.evaluate(doc, values(team, member, planned, @now), team.timezone)
-
-        assert Document.text(output, "letter") ==
-                 String.trim_trailing(planned.letter_content, "\n")
-      end
-    end
-
     test "titles the PDF, locks it, and keeps the hours" do
-      member = %Member{id: 7, name: "Avery Chen"}
-      planned = CreateTaxCreditLetter.plan(@team, member, [], 2025, "SRVTC-7KQ2M9XD", @now)
-      output = Document.evaluate(letter(), values(@team, member, planned, @now), @team.timezone)
+      values = %{
+        ":year" => 2025,
+        "team.legal_name" => @team.legal_name,
+        "hours.primary" => 210,
+        "hours.secondary" => 60
+      }
+
+      output = Document.evaluate(letter(), values, @team.timezone)
 
       assert output.title == "2025 SRVTC Coast Range Search and Rescue Society"
       assert output.author == "Coast Range Search and Rescue Society"
       assert output.lock == :print
-      assert output.keep == %{"hours.primary" => 0, "hours.secondary" => 0}
+      assert output.keep == %{"hours.primary" => 210, "hours.secondary" => 60}
     end
 
     test "prints the logos in a row, the signature, and the verify link's QR code" do
