@@ -21,6 +21,27 @@ defmodule Web.TaxCreditLetterLiveTest do
     assert html =~ letter.ref_id
   end
 
+  test "shows the reference to copy, and a link to verify a current one", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team)
+    current = tax_credit_letter_fixture(member, %{ref_id: TaxCreditLetter.generate_ref_id()})
+    old = tax_credit_letter_fixture(member, %{ref_id: "SRVTC-M4K11", year: 2020})
+    conn = log_in_user(conn, user)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters/#{current.id}")
+    assert has_element?(lv, "#letter-reference[value='#{current.ref_id}']")
+
+    assert has_element?(
+             lv,
+             "#letter-verify[href='#{TaxCreditLetter.verify_url(current, Web.VerifyHost.url())}']"
+           )
+
+    # A reference from before #207 can't verify alone.
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters/#{old.id}")
+    assert has_element?(lv, "#letter-reference[value='SRVTC-M4K11']")
+    refute has_element?(lv, "#letter-verify")
+  end
+
   test "emails the letter to the member", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)

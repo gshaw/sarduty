@@ -1,6 +1,8 @@
 defmodule Web.TaxCreditLetterLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.CopyButton
+
   alias App.Model.TaxCreditLetter
   alias App.Operation.CountTaxCreditHours
   alias App.Operation.DeleteTaxCreditLetter
@@ -101,6 +103,24 @@ defmodule Web.TaxCreditLetterLive do
           </dd>
           <dt>Created</dt>
           <dd>{Service.Format.datetime_short(@letter.inserted_at, @current_team.timezone)}</dd>
+          <dt>Reference</dt>
+          <dd>
+            <.copy_button
+              id="letter-reference"
+              value={@letter.ref_id}
+              text={@letter.ref_id}
+              label="Copy reference"
+            />
+            <%!-- A reference from before #207 can't verify alone. --%>
+            <%= if TaxCreditLetter.current_ref_id?(@letter) do %>
+              <br />
+              <.a
+                id="letter-verify"
+                href={TaxCreditLetter.verify_url(@letter, Web.VerifyHost.url())}
+                external
+              >Verify letter</.a>
+            <% end %>
+          </dd>
           <%= if @hours_status != :unknown do %>
             <dt>Hours on the letter</dt>
             <dd id="letter-hours">{format_minutes(TaxCreditLetter.total_minutes(@letter))}</dd>

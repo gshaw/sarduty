@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- A tax credit letter's page shows its reference to copy, and Verify letter opens the page
+  anyone checking it sees.
 - Tax credit letters print names with letters outside Western European ones, such as Ł
   or ễ. Those letters used to fail to download or email.
 - Reports can read each member's tax credit hours by year, counted just as the letters
