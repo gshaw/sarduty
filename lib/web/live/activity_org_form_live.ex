@@ -72,6 +72,9 @@ defmodule Web.ActivityOrgFormLive do
       />
       <:item label={@form.name} />
     </.breadcrumbs>
+    <.banner id="org-form-in-development" kind={:warning} title="In development" class="mb-6">
+      <p>Forms are new and still changing. Check each PDF before you send it.</p>
+    </.banner>
     <h1 class="title">{@page_title}</h1>
     <p :if={@form.about} class="lead measure">{@form.about}</p>
 
