@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- A retiring or retired member's ID Card tab has Cancel ID card, for the rare one who
+  shouldn't keep a card at all. Their pass shows Cancelled at once, and History says who.
 - The ID card page says which Wallet SAR Duty sees your card in, without a device count.
   An iPad that gets the card through iCloud made one card read as 2 devices.
 - An ID card's email has one button, Get your ID card. It opens a page with Add to Apple

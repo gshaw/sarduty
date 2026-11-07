@@ -131,6 +131,7 @@ defmodule App.ViewData.ChangeHistory do
 
   def describe_standing(%MemberStandingChange{action: :not_a_person}), do: "Marked not a person"
   def describe_standing(%MemberStandingChange{action: :person}), do: "Marked as a person"
+  def describe_standing(%MemberStandingChange{action: :card_cancelled}), do: "ID card cancelled"
 
   defp away_period(details) do
     days =

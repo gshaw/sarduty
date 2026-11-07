@@ -65,8 +65,9 @@ organization gets its branding: see [organizations.md](organizations.md).
   the card's id. Letter references count toward the alarm but their hits aren't
   recorded: a letter also needs the member's last name.
 - **A cancelled card shows nothing about the member.** The verify site says it was cancelled,
-  and its photo route 404s. Cards are cancelled only by Replace ID card and by the team's
-  ID cards switch turning off.
+  and its photo route 404s. Cards are cancelled only by Replace ID card, by Cancel ID
+  card for a retiring or retired member (#964), and by the team's ID cards switch
+  turning off.
 - **A card that is not active shows no photo.** The page gives the name, the team, and
   "Not active", and the photo and banner routes 404, as for a cancelled card (#176). "Not
   active" is the whole answer a checker needs. A retired member's page says when they
@@ -250,9 +251,9 @@ reach a dev server, so dev passes have none. In production:
 
 ## Issuing and emailing
 
-The ID Card tab has three buttons, and each queues one job
-([SendMemberCardWorker](../lib/app/worker/send_member_card_worker.ex), on `bulk`) that
-emails the member one button, Get your ID card, to the card's page
+The ID Card tab has three buttons for a member in good standing, and each queues one
+job ([SendMemberCardWorker](../lib/app/worker/send_member_card_worker.ex), on `bulk`)
+that emails the member one button, Get your ID card, to the card's page
 ([The card's page](#the-cards-page)). The email builds no pass and attaches nothing
 ([EmailMemberCard](../lib/app/operation/email_member_card.ex)).
 
@@ -260,6 +261,9 @@ emails the member one button, Get your ID card, to the card's page
 - **Replace ID card**, for a lost phone, makes a new card with a new code. The old one
   stops working and its passes void, as above.
 - **Email ID card** sends the current card again. No limit.
+
+A retiring or retired member's card has one button instead, **Cancel ID card** (#964),
+which emails nothing ([Active and qualifications](#active-and-qualifications)).
 
 Issue and Replace make the card when clicked, mark it `email_status: :sending`, and queue
 the job in the same transaction, so the tab shows the new card at once
@@ -409,12 +413,23 @@ and the verify page, the JSON check, the door's scanner, and both passes read th
 Away and not a person don't change it.
 
 - **Retired and retiring members keep their card.** It verifies as Not active at once,
-  and its pass stops rolling Valid until. Nobody cancels one card by hand: a bad apple is
-  marked Retiring, which also stops their login. Retiring never cancels a card: Not
-  active already pulls the QR code and fails every check, it says the true thing
-  ("Retired Mar 2027", where Cancelled hints at a lost card or a firing), and it undoes
-  itself. A bad sync that marks many members retired fixes itself at the next sync;
-  cancelled cards would stay dead, and a returning member would need a new code.
+  and its pass stops rolling Valid until. Retiring never cancels a card: Not active
+  already pulls the QR code and fails every check, it says the true thing ("Retired Mar
+  2027", where Cancelled hints at a lost card or a firing), and it undoes itself. A bad
+  sync that marks many members retired fixes itself at the next sync; cancelled cards
+  would stay dead, and a returning member would need a new code.
+- **A team admin can cancel one by hand** (#964), for the rare member who shouldn't
+  keep a card at all: until it expires, a Not active pass still looks like an official
+  ID card, and scanning it shows their name and team. **Cancel ID card** on the ID Card
+  tab shows only while the member is retiring or retired, so an active member's card
+  can only be replaced, never taken. It asks first in the app's dialog, then does what
+  Replace does to the old card, with no new one: revokes it and queues
+  `UpdateCancelledCardWorker` to void the Apple pass and expire the Google one
+  ([CancelMemberCard](../lib/app/operation/cancel_member_card.ex)). The tab then says
+  when the last card was cancelled, and the member's History says who.
+- **A cancelled member who comes back has no card.** Every member gets a card issues
+  them a new one, with a new code, as for anyone without a live card; the confirm says
+  so when it's on. Otherwise a team admin issues one.
 - **A member who comes back gets the same card back,** active, with no email.
 - **A member not in good standing gets no new card**
   ([IssueMemberCard](../lib/app/operation/issue_member_card.ex) refuses), and the ID Card

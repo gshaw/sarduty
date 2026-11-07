@@ -164,8 +164,8 @@ defmodule App.Model.MemberCard do
 
   @doc """
   `:active` while the member is in good standing (Member.good_standing?/3: current and
-  not retiring), `:inactive` once they aren't, or `:revoked` for a replaced card or one
-  the team's ID cards switch cancelled. A member who comes back gets the same card back,
+  not retiring), `:inactive` once they aren't, or `:revoked` for a replaced card, one a
+  team admin cancelled (#964), or one the team's ID cards switch cancelled. A member who comes back gets the same card back,
   active. `repo` is App.SampleRepo for a sample card.
   """
   def status(card, now, repo \\ Repo)
@@ -269,6 +269,19 @@ defmodule App.Model.MemberCard do
   def find_current(%Team{} = team, %Member{} = member) do
     MemberCard
     |> where([c], c.team_id == ^team.id and c.member_id == ^member.id and is_nil(c.revoked_at))
+    |> Repo.one()
+  end
+
+  @doc """
+  When the member's last card stopped working, for a member with no live card: cancelled
+  on the ID Card tab or by the team's ID cards switch. Nil when they never had one.
+  """
+  def last_revoked_at(%Team{} = team, %Member{} = member) do
+    MemberCard
+    |> where([c], c.team_id == ^team.id and c.member_id == ^member.id)
+    |> order_by([c], desc: c.id)
+    |> limit(1)
+    |> select([c], c.revoked_at)
     |> Repo.one()
   end
 
