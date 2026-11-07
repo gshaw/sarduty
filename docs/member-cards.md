@@ -54,6 +54,14 @@ organization gets its branding: see [organizations.md](organizations.md).
   backend), which is enough on one machine and resets on deploy. The IP is Fly's
   `Fly-Client-IP`, read on the HTTP request and carried into the LiveView's session,
   since a websocket can't see that header.
+- **Misses across the site raise an alarm, never a block.** 500 misses in an hour from
+  any mix of IPs records a Verify alarm event and tells Honeybadger. A site-wide block
+  would refuse real cards too, so anyone could stop every card check at a callout with
+  junk codes. Slowing misses doesn't work either: a guesser drops any answer that takes
+  long, and a fast answer gives the hit away. While the alarm is up, a real card found
+  from an IP that has missed this window is recorded as Card found during alarm, with
+  the card's id. Letter references count toward the alarm but their hits aren't
+  recorded: a letter also needs the member's last name.
 - **A cancelled card shows nothing about the member.** The verify site says it was cancelled,
   and its photo route 404s. Cards are cancelled only by Replace ID card and by the team's
   ID cards switch turning off.
@@ -66,6 +74,22 @@ organization gets its branding: see [organizations.md](organizations.md).
 - **Status comes from the local copy of D4H**, so it can be 10 minutes behind, or a day
   for a change D4H doesn't mark ([d4h-sync.md](d4h-sync.md#where-the-copy-drifts)). The result says
   when the team last refreshed.
+
+## When the verify alarm goes off
+
+At about 3,000 misses a day per IP, even 1,000 IPs find a random card about once in 3
+weeks among 10,000 cards, so there's time to look.
+
+1. Check it's guessing, in Adminland's Events: many IPs sending codes that never repeat.
+   A few IPs with near-misses is a broken scanner or an app sending stale codes.
+2. Filter Events by Card found during alarm. Each is a card whose name, team, and
+   standing a guesser may have seen. Replace it, and tell the team's admins.
+3. If it goes on, block the ranges at the edge. Last resort, a browser challenge on the
+   verify page, which breaks apps on the JSON check until they get keys.
+
+Don't lengthen codes or replace every card for this: a guess gets one name and photo.
+The public side of this is the Guessing codes section of `/agents/id-cards`, which
+gives the per-IP limit but not the alarm's count.
 
 ## The check as JSON
 
@@ -82,8 +106,8 @@ public documentation. The page and the JSON share
   API's URL, and the team and member IDs there. Those open nothing without the team's own
   access key, and they let an app match a card to a member it already has, where a team's
   own ID number repeats across teams.
-- **Same rules as the page.** A cancelled card gives its status only; a former member's
-  gives the name, the team, and when they left, with no photo and no IDs (#176). Misses
+- **Same rules as the page.** A cancelled card gives its status only; a retired member's
+  gives the name, the team, and when they retired, with no photo and no IDs (#176). Misses
   count toward the same per-IP limit, and a limited IP gets `429` with `Retry-After`.
 - **Apps hold v1.** Add fields freely; renaming or removing one, or changing what a status
   means, is `/api/v2` beside it. The doc tells apps to ignore fields they don't know.
@@ -315,7 +339,11 @@ Away and not a person don't change it.
 
 - **Retired and retiring members keep their card.** It verifies as Not active at once,
   and its pass stops rolling Valid until. Nobody cancels one card by hand: a bad apple is
-  marked Retiring, which also stops their login.
+  marked Retiring, which also stops their login. Retiring never cancels a card: Not
+  active already pulls the QR code and fails every check, it says the true thing
+  ("Retired Mar 2027", where Cancelled hints at a lost card or a firing), and it undoes
+  itself. A bad sync that marks many members retired fixes itself at the next sync;
+  cancelled cards would stay dead, and a returning member would need a new code.
 - **A member who comes back gets the same card back,** active, with no email.
 - **A member not in good standing gets no new card**
   ([IssueMemberCard](../lib/app/operation/issue_member_card.ex) refuses), and the ID Card

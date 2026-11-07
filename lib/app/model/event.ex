@@ -25,6 +25,8 @@ defmodule App.Model.Event do
     logged_in: 90,
     logged_out: 90,
     verify_limit_reached: 90,
+    verify_alarm: 90,
+    verify_guess_found: 90,
     team_signup_failed: 90,
     integration_tested: 90,
     demo_deleted: 90,

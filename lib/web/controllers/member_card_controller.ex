@@ -27,19 +27,22 @@ defmodule Web.MemberCardController do
         send_resp(conn, :too_many_requests, "")
 
       true ->
-        conn = send_photo(conn, code, shape)
-        if conn.status == 404, do: VerifyLimit.miss(ip, code)
-        conn
+        send_photo(conn, ip, code, shape)
     end
   end
 
-  defp send_photo(conn, code, shape) do
+  defp send_photo(conn, ip, code, shape) do
     with code when is_binary(code) <- code,
-         %MemberCard{} = card <- MemberCard.find_by_code(code),
-         :active <- MemberCard.status(card, DateTime.utc_now()) do
-      send_png(conn, LoadImage.photo(card.member, shape))
+         %MemberCard{} = card <- MemberCard.find_by_code(code) do
+      VerifyLimit.hit(ip, card)
+
+      if MemberCard.status(card, DateTime.utc_now()) == :active,
+        do: send_png(conn, LoadImage.photo(card.member, shape)),
+        else: send_resp(conn, :not_found, "")
     else
-      _ -> send_resp(conn, :not_found, "")
+      _ ->
+        VerifyLimit.miss(ip, code)
+        send_resp(conn, :not_found, "")
     end
   end
 

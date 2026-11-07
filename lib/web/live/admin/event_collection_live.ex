@@ -15,6 +15,7 @@ defmodule Web.Admin.EventCollectionLive do
     :login_code_limited,
     :login_blocked,
     :verify_limit_reached,
+    :verify_guess_found,
     :team_signup_failed
   ]
 
