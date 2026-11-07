@@ -5,7 +5,7 @@ defmodule Web.ActivityFormPDFController do
   alias App.Model.Form
   alias App.Operation.CreateFormPDF
 
-  # Download PDF on an activity's form page (#950): the page's form posts its
+  # Download draft PDF on an activity's form page (#950): the page's form posts its
   # answers here, since a LiveView can't send a PDF. Each one is saved as it was made.
   # Team admins only; the form is found on for the team's organization.
   def create(conn, %{"id" => id, "form_id" => form_id} = params) do

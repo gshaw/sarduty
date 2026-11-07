@@ -216,7 +216,7 @@ defmodule Web.ActivityOrgFormLiveTest do
       refute kayakers |> FormAnswer.for_activity() |> Map.has_key?("meals_given")
     end
 
-    test "Download PDF prints each person's row", ctx do
+    test "Download draft PDF prints each person's row", ctx do
       %{cast: cast, supplement: supplement} = ctx
       kayakers = MockupSeed.activity(cast, "Overdue kayakers")
       alex = member_key(cast, "Alex Chen")
@@ -271,7 +271,7 @@ defmodule Web.ActivityOrgFormLiveTest do
              )
     end
 
-    test "Download PDF prints it with no page, and keeps the claim's totals", ctx do
+    test "Download draft PDF prints it with no page, and keeps the claim's totals", ctx do
       %{cast: cast, request: request} = ctx
       kayakers = MockupSeed.activity(cast, "Overdue kayakers")
       conn = log_in_user(build_conn(), cast.alex)
@@ -285,7 +285,7 @@ defmodule Web.ActivityOrgFormLiveTest do
     end
   end
 
-  describe "Download PDF" do
+  describe "Download draft PDF" do
     test "keep the answers and save the PDF as it was made", ctx do
       %{cast: cast, hiker: hiker, form: form} = ctx
       conn = log_in_user(build_conn(), cast.alex)

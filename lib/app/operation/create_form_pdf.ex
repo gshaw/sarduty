@@ -1,6 +1,6 @@
 defmodule App.Operation.CreateFormPDF do
   @moduledoc """
-  A team admin's PDF of an organization's form for an activity (#950): Download PDF on
+  A team admin's PDF of an organization's form for an activity (#950): Download draft PDF on
   the activity's form page. It keeps the answers sent with it
   (App.Operation.SaveFormAnswers), prints the form with the activity's answers
   (App.Operation.PrintForm), and saves the PDF as it was made, with the values the form
@@ -38,7 +38,9 @@ defmodule App.Operation.CreateFormPDF do
     answers = FormAnswer.starting(activity, doc.asks)
 
     with {:ok, %{attachment: attachment, keep: keep}} <-
-           PrintForm.call(form.text, Form.page_bytes(form), context, activity.id, answers) do
+           PrintForm.call(form.text, Form.page_bytes(form), context, activity.id, answers,
+             mark: :draft
+           ) do
       SavedPDF.add_for_form!(form, activity, user, attachment, keep)
       {:ok, attachment}
     end

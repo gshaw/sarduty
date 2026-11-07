@@ -39,14 +39,14 @@ defmodule App.Document.Markup do
   @smallest 6
 
   @doc """
-  `{markup, files}`: the Typst source, and each file it reads by name. `sample_mark` is
-  a picture drawn over each page, for a Try a demo team (#857). `page` is `{pdf, pages}`,
+  `{markup, files}`: the Typst source, and each file it reads by name. `mark` is a
+  picture drawn over each page, such as SAMPLE for a Try a demo team (#857). `page` is `{pdf, pages}`,
   a form's page and how many pages it has; without it the page is letter paper.
   """
   def typst(output, opts \\ [])
 
   def typst(%{layout: %{text: layout}} = output, opts) do
-    files = sample_mark_file(%{}, Keyword.get(opts, :sample_mark))
+    files = mark_file(%{}, Keyword.get(opts, :mark))
     {values, files} = layout_values(output.fills, files)
     values = Map.merge(values, %{"title" => output.title, "author" => output.author})
 
@@ -63,7 +63,7 @@ defmodule App.Document.Markup do
   end
 
   def typst(output, opts) do
-    files = sample_mark_file(%{}, Keyword.get(opts, :sample_mark))
+    files = mark_file(%{}, Keyword.get(opts, :mark))
     page = Keyword.get(opts, :page)
     files = if page, do: Map.put(files, "page.pdf", elem(page, 0)), else: files
     values = %{"title" => output.title, "author" => output.author}
@@ -128,17 +128,17 @@ defmodule App.Document.Markup do
     ]
   end
 
-  defp sample_mark_file(files, nil), do: files
-  defp sample_mark_file(files, png), do: Map.put(files, "sample-mark.png", png)
+  defp mark_file(files, nil), do: files
+  defp mark_file(files, png), do: Map.put(files, "mark.png", png)
 
-  defp mark(%{"sample-mark.png" => _}),
-    do: ~s|#place(top + left, image("sample-mark.png", width: page-width))\n|
+  defp mark(%{"mark.png" => _}),
+    do: ~s|#place(top + left, image("mark.png", width: page-width))\n|
 
   defp mark(_files), do: ""
 
   # A layout sets its own pages, so the mark is each page's foreground.
-  defp foreground_mark(%{"sample-mark.png" => _}),
-    do: ~s|#set page(foreground: place(top + left, image("sample-mark.png", width: 100%)))\n|
+  defp foreground_mark(%{"mark.png" => _}),
+    do: ~s|#set page(foreground: place(top + left, image("mark.png", width: 100%)))\n|
 
   defp foreground_mark(_files), do: ""
 

@@ -19,7 +19,8 @@ defmodule App.Operation.PrintForm do
   @doc """
   `{:ok, %{attachment, keep}}` or `{:error, reason}`: the PDF of form `text` on its page
   `page` for `activity_id`, with `answers` as typed by name, and the values it keeps.
-  `sample: true` marks it SAMPLE, for made-up data.
+  `mark: :sample` marks it SAMPLE, for made-up data, and `mark: :draft` DRAFT
+  (App.Operation.PrintDocument).
   """
   def call(text, page, %Context{} = context, activity_id, answers \\ %{}, opts \\ []) do
     with {:ok, %{doc: doc, values: values}} <-
@@ -28,12 +29,12 @@ defmodule App.Operation.PrintForm do
          :ok <- shown?(doc, context, activity_id),
          {:ok, answered} <- answers(doc, answers) do
       output = Document.evaluate(doc, Map.merge(values, answered), context.timezone)
-      print(output, doc.name, page, Keyword.get(opts, :sample, false))
+      print(output, doc.name, page, Keyword.get(opts, :mark))
     end
   end
 
-  defp print(output, name, page, sample) do
-    with {:ok, pdf} <- PrintDocument.call(output, page: page, sample: sample),
+  defp print(output, name, page, mark) do
+    with {:ok, pdf} <- PrintDocument.call(output, page: page, mark: mark),
          do: {:ok, %{attachment: attachment(pdf, output.title || name), keep: output.keep}}
   end
 

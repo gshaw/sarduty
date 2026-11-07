@@ -117,11 +117,11 @@ defmodule App.Document.MarkupTest do
     refute markup =~ "stack"
   end
 
-  test "draws the sample mark over the page" do
-    {markup, files} = typst([], sample_mark: @png)
+  test "draws the mark over the page" do
+    {markup, files} = typst([], mark: @png)
 
-    assert markup =~ ~s|image("sample-mark.png", width: page-width)|
-    assert files["sample-mark.png"] == @png
+    assert markup =~ ~s|image("mark.png", width: page-width)|
+    assert files["mark.png"] == @png
   end
 
   test "the markup makes a PDF" do
@@ -288,13 +288,13 @@ defmodule App.Document.MarkupTest do
       assert files["signature.png"] == @png
     end
 
-    test "the SAMPLE mark is each page's foreground" do
-      {markup, files} = %{} |> layout_output() |> Markup.typst(sample_mark: @png)
+    test "the mark is each page's foreground" do
+      {markup, files} = %{} |> layout_output() |> Markup.typst(mark: @png)
 
       assert markup =~
-               ~s|#set page(foreground: place(top + left, image("sample-mark.png", width: 100%)))|
+               ~s|#set page(foreground: place(top + left, image("mark.png", width: 100%)))|
 
-      assert files["sample-mark.png"] == @png
+      assert files["mark.png"] == @png
     end
 
     test "a mistake names the line of the form's text it's on" do

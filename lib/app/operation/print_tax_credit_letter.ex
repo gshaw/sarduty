@@ -55,7 +55,7 @@ defmodule App.Operation.PrintTaxCreditLetter do
     team = letter.member.team
     output = output(letter, read)
 
-    with {:ok, pdf} <- PrintDocument.call(output, sample: DemoTeam.demo?(team)) do
+    with {:ok, pdf} <- PrintDocument.call(output, mark: if(DemoTeam.demo?(team), do: :sample)) do
       {:ok,
        %{
          content: pdf,

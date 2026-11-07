@@ -16,14 +16,15 @@ defmodule App.Operation.PrintDocument do
 
   @doc """
   `{:ok, pdf}` or `{:error, reason}` for what `App.Document.evaluate/3` gave. With
-  `sample: true` the page says SAMPLE across it, for a Try a demo team (#857). `page` is
+  `mark: :sample` each page says SAMPLE across it, for a Try a demo team (#857), and with
+  `mark: :draft` DRAFT, for a form's PDF while forms are testing only (#950). `page` is
   a form's page PDF, for one that prints on it.
   """
   def call(output, opts \\ []) do
-    mark = if Keyword.get(opts, :sample, false), do: sample_mark()
+    mark = opts |> Keyword.get(:mark) |> mark()
 
     with {:ok, page} <- page(output, Keyword.get(opts, :page)) do
-      {markup, files} = Markup.typst(output, sample_mark: mark, page: page)
+      {markup, files} = Markup.typst(output, mark: mark, page: page)
       with {:ok, pdf} <- compile(markup, files, output), do: {:ok, lock(pdf, output.lock)}
     end
   end
@@ -102,9 +103,12 @@ defmodule App.Operation.PrintDocument do
   defp lock(pdf, :print), do: PDFLock.lock(pdf)
   defp lock(pdf, nil), do: pdf
 
-  # SAMPLE from top left to bottom right, in translucent red, so the text under it reads
-  # but no part of a printed copy can pass as real. Made by tools/sample-mark.py. A
-  # release keeps priv/ under lib/sarduty-<version>/ (#931).
-  defp sample_mark,
-    do: :sarduty |> Application.app_dir("priv/pdf/sample-mark.png") |> File.read!()
+  # SAMPLE or DRAFT from top left to bottom right, in translucent red, so the text under
+  # it reads but no part of a printed copy can pass as real. Made by tools/sample-mark.py.
+  # A release keeps priv/ under lib/sarduty-<version>/ (#931).
+  defp mark(nil), do: nil
+  defp mark(:sample), do: priv_file("priv/pdf/sample-mark.png")
+  defp mark(:draft), do: priv_file("priv/pdf/draft-mark.png")
+
+  defp priv_file(path), do: :sarduty |> Application.app_dir(path) |> File.read!()
 end
