@@ -1,7 +1,7 @@
 defmodule App.Document.Parser do
   @moduledoc """
-  Reads a document's text into an `App.Document` (#918). Pure, and knows no fields:
-  App.Document.Checker checks names against the catalog.
+  Reads a document's text into an `App.Document` (#918), or a form's (#950). Pure, and
+  knows no fields: App.Document.Checker checks names against the catalog.
 
   A clause starts at the left edge, and the lines indented under it are its own. Its
   words are App.Report.Lexer's tokens, a report is App.Report.Parser's query, and every
@@ -17,11 +17,12 @@ defmodule App.Document.Parser do
   alias App.Report.Parser
   alias App.Report.Query
 
-  @clauses ~w(document about for report title lock keep places fill expect)
+  @clauses ~w(document form about for report ask title lock keep page places fill expect)
   @starts ~w(member year)
-  @repeated ~w(report expect)
-  @kinds ~w(text image flow)
-  @lengths ~w(top left right bottom width height size leading gap pad)
+  @repeated ~w(report ask expect)
+  @kinds %{"text" => :text, "image" => :image, "flow" => :flow, "tick" => :tick}
+  @lengths ~w(top left right bottom width height size leading gap pad pitch)
+  @ask_options ~w(remember default choose hint)
   @units %{"in" => 72, "pt" => 1, "mm" => 72 / 25.4}
   @image_options ~w(width height pad)
   # Each option's atom, written out: to_existing_atom fails until some module loads `:pad`.
@@ -112,10 +113,10 @@ defmodule App.Document.Parser do
 
   defp check_order(name, last, n) do
     cond do
-      last == nil and name != "document" ->
+      last == nil and name not in ~w(document form) ->
         fail(
           n,
-          "Start with document and its name in quotes, such as document 'Tax credit letter'."
+          "Start with document or form and its name in quotes, such as form 'Task report'."
         )
 
       last == nil ->
@@ -124,7 +125,7 @@ defmodule App.Document.Parser do
       order_of(name) < order_of(last) ->
         fail(n, "Move #{name} before #{last}.")
 
-      name == last and name not in @repeated ->
+      order_of(name) == order_of(last) and name not in @repeated ->
         fail(n, "Write #{name} once.")
 
       true ->
@@ -132,12 +133,21 @@ defmodule App.Document.Parser do
     end
   end
 
+  # A form starts where a document does.
+  defp order_of("form"), do: order_of("document")
   defp order_of(name), do: Enum.find_index(@clauses, &(&1 == name))
 
   defp read("document", block, doc, n) do
     case tl(tokens(block)) do
       [{:string, name, _}] -> %{doc | name: name}
       _other -> fail(n, "Write the document's name in quotes after document.")
+    end
+  end
+
+  defp read("form", block, doc, n) do
+    case tl(tokens(block)) do
+      [{:string, name, _}] -> %{doc | name: name, kind: :form}
+      _other -> fail(n, "Write the form's name in quotes after form.")
     end
   end
 
@@ -148,18 +158,11 @@ defmodule App.Document.Parser do
     end
   end
 
+  # `for member, year`, or a form's `for activity where kind = 'incident'`.
   defp read("for", block, doc, n) do
-    names =
-      words(tl(tokens(block)), n, "Write what the document starts from after for: member, year.")
-
-    for name <- names,
-        name not in @starts,
-        do: fail(n, "A document starts from #{Enum.join(@starts, " or ")}, not #{name}.")
-
-    case names -- Enum.uniq(names) do
-      [] -> %{doc | for: names}
-      [name | _] -> fail(n, "Write #{name} once after for.")
-    end
+    {names, where} = starts(tl(tokens(block)), n)
+    check_starts(names, where, doc.kind, n)
+    %{doc | for: names, where: where}
   end
 
   defp read("report", [first | rest], doc, n) do
@@ -193,6 +196,24 @@ defmodule App.Document.Parser do
     %{doc | title: %{text: text, by: by, line: n}}
   end
 
+  # `ask name 'Label'`, then remember, default, choose, and hint in any order.
+  defp read("ask", block, doc, n) do
+    case tl(tokens(block)) do
+      [{:word, name, _}, {:string, label, _} | rest] when label != "" ->
+        name = lower(name)
+
+        if Enum.any?(doc.asks, &(&1.name == name)),
+          do: fail(n, "Give the ask another name: #{name} is used twice.")
+
+        ask = %{name: name, label: label, remember: false, default: nil, choices: []}
+        ask = ask |> Map.merge(%{hint: nil, line: n}) |> ask_options(rest, MapSet.new(), n)
+        %{doc | asks: [ask | doc.asks]}
+
+      _other ->
+        fail(n, "Write the answer's name and its label after ask, such as ask injured 'Injured'.")
+    end
+  end
+
   defp read("lock", block, doc, n) do
     case tl(tokens(block)) do
       [{:word, word, _}] -> if lower(word) == "print", do: %{doc | lock: :print}, else: lock(n)
@@ -205,6 +226,13 @@ defmodule App.Document.Parser do
       [] -> fail(n, "Write the values to keep with the PDF after keep, such as keep hours.total.")
       tokens -> %{doc | keep: expressions(tokens, n)}
     end
+  end
+
+  defp read("page", block, doc, n) do
+    if tl(tokens(block)) != [],
+      do: fail(n, "Write page alone: the values print on the form's own page.")
+
+    %{doc | page: true}
   end
 
   defp read("places", [first | _] = block, doc, n) do
@@ -236,13 +264,120 @@ defmodule App.Document.Parser do
 
   defp finish(%Document{name: nil}), do: fail(nil, "Start with document 'Its name'.")
 
+  defp finish(%Document{kind: :form, for: []}),
+    do:
+      fail(
+        nil,
+        "Write for activity after the form's name, such as for activity where kind = 'incident'."
+      )
+
   defp finish(%Document{places: []}),
     do: fail(nil, "Add places: where each value goes on the page.")
 
   defp finish(%Document{fill: []}), do: fail(nil, "Add fill: what goes in each place.")
 
-  defp finish(doc),
-    do: {:ok, %{doc | reports: Enum.reverse(doc.reports), expects: Enum.reverse(doc.expects)}}
+  defp finish(doc) do
+    {:ok,
+     %{
+       doc
+       | reports: Enum.reverse(doc.reports),
+         asks: Enum.reverse(doc.asks),
+         expects: Enum.reverse(doc.expects)
+     }}
+  end
+
+  # Starts
+
+  defp starts(tokens, n) do
+    {before, where} =
+      Enum.split_while(tokens, fn
+        {:word, word, _} -> lower(word) != "where"
+        _token -> true
+      end)
+
+    names = words(before, n, "Write what the document starts from after for: member, year.")
+
+    case where do
+      [] ->
+        {names, nil}
+
+      [_where] ->
+        fail(n, "Write which activities show the form after where, such as kind = 'incident'.")
+
+      [_where | tokens] ->
+        {condition, rest} = Parser.expression(tokens)
+        done(rest, "Write one condition after where, joined with and.")
+        {names, condition}
+    end
+  end
+
+  defp check_starts(names, where, kind, n) do
+    starts = if kind == :form, do: ["activity"], else: @starts
+
+    for name <- names, name not in starts, do: fail(n, not_a_start(kind, name))
+
+    if where != nil and names != ["activity"],
+      do: fail(n, "Take out where: it says which activities show a form.")
+
+    case names -- Enum.uniq(names) do
+      [] -> :ok
+      [name | _] -> fail(n, "Write #{name} once after for.")
+    end
+  end
+
+  defp not_a_start(:form, _name),
+    do: "A form starts from an activity: for activity where kind = 'incident'."
+
+  defp not_a_start(_kind, "activity"),
+    do: "Start with form 'Its name': what starts from an activity is a form."
+
+  defp not_a_start(_kind, name),
+    do: "A document starts from #{Enum.join(@starts, " or ")}, not #{name}."
+
+  # Asks
+
+  defp ask_options(ask, [], _seen, _n), do: ask
+
+  defp ask_options(ask, [{:word, word, _} | rest], seen, n) do
+    option = lower(word)
+
+    if option not in @ask_options,
+      do: fail(n, "Remove #{word}: an ask takes #{Enum.join(@ask_options, ", ")}.")
+
+    if MapSet.member?(seen, option), do: fail(n, "Write #{option} once.")
+    {ask, rest} = ask_option(option, ask, rest, n)
+    ask_options(ask, rest, MapSet.put(seen, option), n)
+  end
+
+  defp ask_options(_ask, [token | _], _seen, _n),
+    do:
+      fail(
+        elem(token, 2),
+        "Write the ask's options after its label: remember, default, choose, or hint."
+      )
+
+  defp ask_option("remember", ask, rest, _n), do: {%{ask | remember: true}, rest}
+
+  defp ask_option("default", ask, rest, n) do
+    if rest == [], do: fail(n, "Write a value after default, such as default 0.")
+    {value, rest} = value(rest, n)
+    {%{ask | default: value}, rest}
+  end
+
+  defp ask_option("choose", ask, rest, n) do
+    message = "Write the answers in quotes after choose, such as choose 'Yes', 'No'."
+
+    {choices, rest} =
+      Parser.list(rest, fn
+        [{:string, choice, _} | rest] -> {choice, rest}
+        _tokens -> fail(n, message)
+      end)
+
+    {%{ask | choices: choices}, rest}
+  end
+
+  defp ask_option("hint", ask, [{:string, hint, _} | rest], _n), do: {%{ask | hint: hint}, rest}
+  defp ask_option("hint", _ask, _rest, n), do: fail(n, "Write the hint in quotes after hint.")
 
   # `with a = 1, b = 'x':`, each a name and a value.
   defp given(tokens, n) do
@@ -285,11 +420,11 @@ defmodule App.Document.Parser do
       [{:word, name, _}, {:word, kind, _} | rest] ->
         kind = lower(kind)
 
-        if kind not in @kinds,
-          do: fail(n, "Write text, image, or flow after #{name}, not #{kind}.")
+        if not Map.has_key?(@kinds, kind),
+          do: fail(n, "Write text, image, flow, or tick after #{name}, not #{kind}.")
 
-        %{name: lower(name), kind: String.to_existing_atom(kind), line: n}
-        |> Map.merge(%{across: false, level_with: nil})
+        %{name: lower(name), kind: Map.fetch!(@kinds, kind), line: n}
+        |> Map.merge(%{across: false, level_with: nil, fit: false, page: 1})
         |> place_options(rest, n)
 
       _other ->
@@ -317,8 +452,14 @@ defmodule App.Document.Parser do
       "down" ->
         {place, rest}
 
+      "fit" ->
+        {%{place | fit: true}, rest}
+
       "level" ->
         level_with(place, rest, n)
+
+      "page" ->
+        page_option(place, rest, n)
 
       name when name in @lengths ->
         length_option(place, name, rest, n)
@@ -326,12 +467,19 @@ defmodule App.Document.Parser do
       other ->
         fail(
           n,
-          "Remove #{other}: a place takes #{Enum.join(@lengths, ", ")}, across, and level with."
+          "Remove #{other}: a place takes #{Enum.join(@lengths, ", ")}, across, fit, page, and level with."
         )
     end
   end
 
   defp place_option(_place, _tokens, n), do: fail(n, "Write a place's options, such as top 1in.")
+
+  # Which page of the form's page it's on, from 1.
+  defp page_option(place, [{:number, page, _} | rest], _n) when is_integer(page) and page > 0,
+    do: {%{place | page: page}, rest}
+
+  defp page_option(_place, _tokens, n),
+    do: fail(n, "Write which page after page, such as page 2.")
 
   defp level_with(place, [{:word, word, _}, {:word, other, _} | rest], n) do
     if lower(word) != "with", do: fail(n, "Write level with and a flow's name.")

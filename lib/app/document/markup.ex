@@ -1,85 +1,129 @@
 defmodule App.Document.Markup do
   @moduledoc """
   Typst markup for an evaluated App.Document (#918): what `App.Document.evaluate/3`
-  gives, laid out on letter paper. Pure: it returns the markup and the files it reads,
-  and App.Operation.PrintDocument runs Typst.
+  gives, laid out on letter paper, or on each page of a form's own PDF (#950). Pure: it
+  returns the markup and the files it reads, and App.Operation.PrintDocument runs Typst.
 
-  Every value goes in as a Typst string, never as markup, so a name with a `*` or a `#`
-  prints as written. Lengths are points from the page's edges, as the places say.
+  Values reach Typst as data, never as Typst code: they go in `values.json`, and the
+  markup reads them by key, so a name with a `*`, a `#`, or a `"` prints as written.
+  Lengths are points from the page's edges, as the places say.
 
+  - A text place wraps at its width, with lines `pitch` apart when it says so, to sit
+    on a form's printed lines. With `fit` it's one line, shrunk until it fits. Its first
+    baseline is three quarters of its size below its top, as a flow's is, and its text
+    starts at its left edge, wherever the place is anchored.
+  - A tick is an X across its box, when its condition holds.
   - A flow down is a block of lines, each `leading` below the last. A space is a blank
     line, and a picture is fitted in its box, keeping its shape, with `pad` above and
     below.
-  - A flow across is a row of pictures each `height` tall, the last at the right.
+  - A flow across is a row of pictures each `height` tall, from its right edge.
   - An image place is a picture, or `{:qr, link}`, a QR code as an SVG from EQRCode.
     `level with` puts its bottom edge level with a flow's last line.
+
+  A form's page is `page.pdf`. Each of its pages prints at its own size, with the
+  places that say that page drawn over it.
   """
 
-  @page_width 612
-  @page_height 792
+  @letter_width 612
+  @letter_height 792
 
   @doc """
   `{markup, files}`: the Typst source, and each file it reads by name. `sample_mark` is
-  a picture drawn over the whole page, for a Try a demo team (#857).
+  a picture drawn over each page, for a Try a demo team (#857). `page` is `{pdf, pages}`,
+  a form's page and how many pages it has; without it the page is letter paper.
   """
   def typst(output, opts \\ []) do
-    {places, files} =
-      output.places
-      |> Enum.map_reduce(%{}, fn place, files -> place(place, files) end)
+    files = sample_mark_file(%{}, Keyword.get(opts, :sample_mark))
+    page = Keyword.get(opts, :page)
+    files = if page, do: Map.put(files, "page.pdf", elem(page, 0)), else: files
+    values = %{"title" => output.title, "author" => output.author}
 
-    {mark, files} = sample_mark(Keyword.get(opts, :sample_mark), files)
+    {pages, {files, values}} =
+      page
+      |> page_numbers()
+      |> Enum.map_reduce({files, values}, fn n, acc ->
+        places = Enum.filter(output.places, &(Map.get(&1, :page, 1) == n))
+        {body, acc} = Enum.map_reduce(places, acc, &place/2)
+        {page_markup(n, page, [body, mark(files)]), acc}
+      end)
 
     markup =
-      [
-        document(output),
-        ~s|#set page(width: #{pt(@page_width)}, height: #{pt(@page_height)}, margin: 0pt)\n|,
+      IO.iodata_to_binary([
+        ~s|#let v = json("values.json")\n|,
+        document(values),
         ~s|#set text(font: "Arimo", fallback: false)\n|,
-        places,
-        mark
-      ]
-      |> IO.iodata_to_binary()
+        pages
+      ])
 
-    {markup, files}
+    {markup, Map.put(files, "values.json", Jason.encode!(values))}
   end
 
-  defp document(%{title: title, author: author}) do
-    fields =
-      [title: title, author: author]
-      |> Enum.reject(fn {_name, value} -> value in [nil, ""] end)
-      |> Enum.map_join(", ", fn {name, value} -> "#{name}: #{string(value)}" end)
+  defp page_numbers(nil), do: [1]
+  defp page_numbers({_pdf, pages}), do: Enum.to_list(1..pages)
 
-    if fields == "", do: "", else: "#set document(#{fields})\n"
+  defp document(values) do
+    case Enum.filter(["title", "author"], &(values[&1] not in [nil, ""])) do
+      [] -> ""
+      names -> "#set document(#{Enum.map_join(names, ", ", &"#{&1}: v.at(\"#{&1}\")")})\n"
+    end
   end
 
-  defp sample_mark(nil, files), do: {"", files}
-
-  defp sample_mark(png, files) do
-    {~s|#place(top + left, image("sample-mark.png", width: #{pt(@page_width)}))\n|,
-     Map.put(files, "sample-mark.png", png)}
+  # Letter paper, or one of the form's pages at its own size, drawn under the values.
+  # `page-width` is the page's width, for a place that reaches its right edge.
+  defp page_markup(_n, nil, body) do
+    [
+      "#set page(width: #{pt(@letter_width)}, height: #{pt(@letter_height)}, margin: 0pt)\n",
+      "#let page-width = #{pt(@letter_width)}\n",
+      body
+    ]
   end
 
-  # Places
+  defp page_markup(n, _page, body) do
+    [
+      "\#{\n",
+      ~s|  let page-image = image("page.pdf", page: #{n})\n|,
+      "  context {\n",
+      "    let size = measure(page-image)\n",
+      "    page(width: size.width, height: size.height, margin: 0pt, background: page-image)[\n",
+      "#let page-width = size.width\n",
+      body,
+      "    ]\n",
+      "  }\n",
+      "}\n"
+    ]
+  end
 
-  defp place(%{kind: :flow, across: false} = place, files) do
-    width = @page_width - place.left - Map.get(place, :right, 0)
+  defp sample_mark_file(files, nil), do: files
+  defp sample_mark_file(files, png), do: Map.put(files, "sample-mark.png", png)
 
-    {items, files} =
-      place.value |> Enum.with_index() |> Enum.map_reduce(files, &line(&1, place, &2))
+  defp mark(%{"sample-mark.png" => _}),
+    do: ~s|#place(top + left, image("sample-mark.png", width: page-width))\n|
+
+  defp mark(_files), do: ""
+
+  # Places, each `{markup, {files, values}}`
+
+  defp place(%{kind: :flow, across: false} = place, {files, values}) do
+    {items, {files, values}} =
+      place.value
+      |> Enum.with_index()
+      |> Enum.map_reduce({files, Map.put(values, place.name, [])}, &line(&1, place, &2))
 
     markup = [
-      "#let #{var(place)} = block(width: #{pt(width)}, {\n",
+      "#let #{var(place)} = block(width: #{width(place)}, {\n",
+      "  set align(left)\n",
       "  set text(size: #{pt(size(place))}, top-edge: #{pt(ascent(place))}, bottom-edge: \"baseline\")\n",
       "  set par(leading: #{pt(gap(place))}, spacing: #{pt(gap(place))})\n",
       items,
       "})\n",
       "#let #{var(place)}_top = #{pt(place.top)}\n",
-      "#place(top + left, dx: #{pt(place.left)}, dy: #{pt(place.top)}, #{var(place)})\n"
+      "#place(#{at(place)}, #{var(place)})\n"
     ]
 
-    {markup, files}
+    {markup, {files, values}}
   end
 
-  defp place(%{kind: :flow, across: true} = place, files) do
+  defp place(%{kind: :flow, across: true} = place, {files, values}) do
     {images, files} =
       place.value
       |> Enum.with_index()
@@ -92,20 +136,19 @@ defmodule App.Document.Markup do
       if images == [],
         do: "",
         else: [
-          "#place(top + right, dx: -#{pt(Map.get(place, :right, 0))}, dy: #{pt(place.top)}, ",
+          "#place(#{at(place)}, ",
           "stack(dir: ltr, spacing: #{pt(Map.get(place, :gap, 0))}, #{Enum.join(images, ", ")}))\n"
         ]
 
-    {markup, files}
+    {markup, {files, values}}
   end
 
-  defp place(%{kind: :image, value: nil}, files), do: {"", files}
+  defp place(%{kind: :image, value: nil}, acc), do: {"", acc}
 
-  defp place(%{kind: :image, value: value} = place, files) do
+  defp place(%{kind: :image, value: value} = place, {files, values}) do
     bytes = image_bytes(value)
     name = file_name(place, 0, bytes)
     image = ~s|image("#{name}", width: #{pt(place.width)}, height: #{pt(place.height)})|
-    left = Map.get(place, :left) || @page_width - Map.get(place, :right, 0) - place.width
 
     markup =
       case place do
@@ -113,40 +156,82 @@ defmodule App.Document.Markup do
           flow_top = "#{var(flow)}_top"
 
           [
-            "#context place(top + left, dx: #{pt(left)}, ",
+            "#context place(top + #{across(place)}, ",
             "dy: #{flow_top} + measure(#{var(flow)}).height - #{pt(place.height)}, #{image})\n"
           ]
 
         _place ->
-          "#place(top + left, dx: #{pt(left)}, dy: #{pt(Map.get(place, :top, 0))}, #{image})\n"
+          "#place(#{at(place)}, #{image})\n"
       end
 
-    {markup, Map.put(files, name, bytes)}
+    {markup, {Map.put(files, name, bytes), values}}
   end
 
-  defp place(%{kind: :text, value: text} = place, files) do
-    width = @page_width - place.left - Map.get(place, :right, 0)
+  defp place(%{kind: :tick, value: true} = place, acc) do
+    side = place.size
+    stroke = pt(side / 10)
 
-    markup =
-      if text in [nil, ""],
-        do: "",
-        else:
-          "#place(top + left, dx: #{pt(place.left)}, dy: #{pt(place.top)}, " <>
-            "block(width: #{pt(width)}, text(size: #{pt(size(place))}, #{string(text)})))\n"
+    markup = [
+      "#place(#{at(place)}, box(width: #{pt(side)}, height: #{pt(side)}, {\n",
+      "  place(line(start: (15%, 15%), end: (85%, 85%), stroke: #{stroke}))\n",
+      "  place(line(start: (85%, 15%), end: (15%, 85%), stroke: #{stroke}))\n",
+      "}))\n"
+    ]
 
-    {markup, files}
+    {markup, acc}
   end
 
-  # A flow down's items. A blank line is hidden text, so it's exactly a line's height.
-  defp line({{:text, text}, _i}, _place, files) do
-    lines = text |> String.split(~r/\r?\n/) |> Enum.map(&"  par(#{string(&1)})\n")
-    {lines, files}
+  defp place(%{kind: :tick}, acc), do: {"", acc}
+
+  defp place(%{kind: :text, value: text}, acc) when text in [nil, ""], do: {"", acc}
+
+  defp place(%{kind: :text, fit: true} = place, {files, values}) do
+    size = pt(size(place))
+
+    # A hair under the width, so a line scaled to it exactly doesn't wrap.
+    markup = [
+      "#place(#{at(place)}, block(width: #{width(place)}, layout(room => {\n",
+      "  set align(left)\n",
+      "  set text(size: #{size}, top-edge: #{pt(ascent(place))}, bottom-edge: \"baseline\")\n",
+      ~s|  let body = v.at("#{place.name}").join(" ")\n|,
+      "  let wide = measure(text(body)).width\n",
+      "  text(size: #{size} * calc.min(1, room.width / wide * 0.999), body)\n",
+      "})))\n"
+    ]
+
+    {markup, {files, Map.put(values, place.name, lines(place.value))}}
   end
 
-  defp line({{:space, count}, _i}, _place, files),
-    do: {List.duplicate("  par(hide[x])\n", count), files}
+  defp place(%{kind: :text} = place, {files, values}) do
+    markup = [
+      "#place(#{at(place)}, block(width: #{width(place)}, {\n",
+      "  set align(left)\n",
+      "  set text(size: #{pt(size(place))}, top-edge: #{pt(ascent(place))}, bottom-edge: \"baseline\")\n",
+      "  set par(leading: #{pt(gap(place))}, spacing: #{pt(gap(place))})\n",
+      ~s|  v.at("#{place.name}").join(linebreak())\n|,
+      "}))\n"
+    ]
 
-  defp line({{:image, bytes, options}, i}, place, files) do
+    {markup, {files, Map.put(values, place.name, lines(place.value))}}
+  end
+
+  # A flow down's items, each line a value of the flow's own. A blank line is hidden
+  # text, so it's exactly a line's height.
+  defp line({{:text, text}, _i}, place, {files, values}) do
+    lines = lines(text)
+
+    pars =
+      lines
+      |> Enum.with_index(length(values[place.name]))
+      |> Enum.map(fn {_line, i} -> ~s|  par(v.at("#{place.name}").at(#{i}))\n| end)
+
+    {pars, {files, Map.update!(values, place.name, &(&1 ++ lines))}}
+  end
+
+  defp line({{:space, count}, _i}, _place, acc),
+    do: {List.duplicate("  par(hide[x])\n", count), acc}
+
+  defp line({{:image, bytes, options}, i}, place, {files, values}) do
     name = file_name(place, i, bytes)
     {width, height} = fit(bytes, options)
     pad = Map.get(options, :pad, 0)
@@ -155,8 +240,30 @@ defmodule App.Document.Markup do
       "  block(above: #{pt(pad + gap(place))}, below: #{pt(pad)}, " <>
         "image(\"#{name}\", width: #{pt(width)}, height: #{pt(height)}))\n"
 
-    {markup, Map.put(files, name, bytes)}
+    {markup, {Map.put(files, name, bytes), values}}
   end
+
+  defp lines(text), do: String.split(text, ~r/\r?\n/)
+
+  # Where a place sits: from the page's top or bottom edge, and its left or right.
+  defp at(place) do
+    {edge, dy} =
+      case place do
+        %{top: top} -> {"top", top}
+        %{bottom: bottom} -> {"bottom", -bottom}
+      end
+
+    "#{edge} + #{across(place)}, dy: #{pt(dy)}"
+  end
+
+  defp across(%{left: left}), do: "left, dx: #{pt(left)}"
+  defp across(%{right: right}), do: "right, dx: #{pt(-right)}"
+
+  # A place's width: its own, or from its left edge to its right.
+  defp width(%{width: width}), do: pt(width)
+
+  defp width(place),
+    do: "page-width - #{pt(Map.get(place, :left, 0))} - #{pt(Map.get(place, :right, 0))}"
 
   # The flow's own name, and where it starts, for a place level with it.
   defp var(%{name: name}), do: var(name)
@@ -164,10 +271,13 @@ defmodule App.Document.Markup do
 
   defp size(place), do: Map.get(place, :size, 12)
 
-  # How far the first line's baseline sits below the flow's top, as the letters drawn
-  # before Typst had it, and the space from one line's baseline to the next line's top.
+  # How far the first line's baseline sits below the place's top, as the letters drawn
+  # before Typst had it, and the space from one line's baseline to the next line's top:
+  # `pitch` or `leading` apart, baseline to baseline.
   defp ascent(place), do: size(place) * 0.75
-  defp gap(place), do: Map.get(place, :leading, size(place) * 1.2) - ascent(place)
+
+  defp gap(place),
+    do: (Map.get(place, :pitch) || Map.get(place, :leading, size(place) * 1.2)) - ascent(place)
 
   # Pictures
 
@@ -198,21 +308,6 @@ defmodule App.Document.Markup do
 
   defp size_of(_bytes), do: nil
 
-  # Typst values
-
   defp pt(points) when is_integer(points), do: "#{points}pt"
   defp pt(points) when is_float(points), do: "#{Float.round(points, 3)}pt"
-
-  @doc "`text` as a Typst string, so it prints as written."
-  def string(text) do
-    escaped =
-      text
-      |> String.replace("\\", "\\\\")
-      |> String.replace("\"", "\\\"")
-      |> String.replace("\n", "\\n")
-      |> String.replace("\r", "\\r")
-      |> String.replace("\t", "\\t")
-
-    ~s|"#{escaped}"|
-  end
 end

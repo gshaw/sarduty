@@ -12,46 +12,24 @@ defmodule App.Operation.PrintTaxCreditLetter do
 
   alias App.Document
   alias App.Model.DemoTeam
-  alias App.Model.Organization
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
-  alias App.Operation.LoadImage
   alias App.Operation.PrintDocument
-  alias App.Repo
-  alias App.Report.Compiler
+  alias App.Operation.ReadDocument
   alias App.Report.Context
-  alias App.Report.Runner
-  alias App.ViewData.ReportRecords
 
   @document "tax_credit_letter"
 
   @doc """
   The checked document and the values it reads for `member_id` and `year`, as of
-  `now`: `%{doc, values}`. The values are its reports' rows and the team's pictures.
+  `now`: `%{doc, values}`, from App.Operation.ReadDocument.
   """
   def read(%Team{} = team, member_id, year, now) do
-    team = Repo.preload(team, :organization)
     # Counts only this member's year, which the document's hours report filters to.
     context = Context.new(team, now, hours_for: {member_id, year})
-    {:ok, doc} = @document |> Document.read() |> Document.parse()
-    {:ok, doc} = Document.check(doc, context)
-    given = %{"member" => to_string(member_id), "year" => to_string(year)}
-
-    start =
-      team
-      |> pictures()
-      |> Map.merge(%{":member" => member_id, ":year" => year, "today" => context.today})
-
-    values =
-      doc
-      |> Document.queries()
-      |> Enum.reduce(start, fn {name, query}, values ->
-        {:ok, plan} = Compiler.compile(query, context, given)
-        {:ok, result} = Runner.run(plan, team.timezone, Repo)
-        Document.put_row(values, name, query, result, ReportRecords.names(result, team, Repo))
-      end)
-
-    %{doc: doc, values: values}
+    starts = %{member: member_id, year: year}
+    {:ok, read} = @document |> Document.read() |> ReadDocument.call(context, starts)
+    read
   end
 
   @doc """
@@ -121,19 +99,4 @@ defmodule App.Operation.PrintTaxCreditLetter do
     if TaxCreditLetter.current_ref_id?(letter),
       do: TaxCreditLetter.verify_url(letter, Web.VerifyHost.url())
   end
-
-  # The logos and signature the team has when the PDF is printed; the saved PDF keeps
-  # them (#918). A team without a logo gets none, not SAR Duty's.
-  defp pictures(team) do
-    %{
-      "organization.logo" => organization_logo(team.organization),
-      "team.logo" => if(Team.logo_file(team.subdomain), do: LoadImage.logo(team, :square)),
-      "team.signature" => team.signature
-    }
-  end
-
-  defp organization_logo(%Organization{logo: logo} = organization) when is_binary(logo),
-    do: LoadImage.organization_logo(organization, :square)
-
-  defp organization_logo(_organization), do: nil
 end

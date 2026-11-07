@@ -1,7 +1,6 @@
 defmodule Service.PDFLockTest do
   use ExUnit.Case, async: true
 
-  alias App.Document.Markup
   alias Service.PDFLock
 
   # cspell:ignore AESV3 endobj startxref xref -- PDF syntax names
@@ -9,13 +8,13 @@ defmodule Service.PDFLockTest do
 
   @title "Tax (credit) letter \\ for Renéʼs team (2026"
 
-  # A letter as Typst makes one (#918), the PDFs PDFLock locks.
+  # A letter as Typst makes one (#918), the PDFs PDFLock locks: its title read as data.
   defp letter(images \\ %{}) do
     markup =
       Enum.map_join(images, fn {name, _bytes} -> ~s|#image("#{name}", width: 1in)\n| end)
 
     source = """
-    #set document(title: #{Markup.string(@title)}, author: "Treasurer é")
+    #set document(title: json("values.json").at("title"), author: "Treasurer é")
     #set text(font: "Arimo")
     Dear René’s (friend) \\\\ backslash
 
@@ -23,7 +22,8 @@ defmodule Service.PDFLockTest do
     #{markup}
     """
 
-    {:ok, pdf} = Service.Typst.compile(source, images)
+    files = Map.put(images, "values.json", Jason.encode!(%{title: @title}))
+    {:ok, pdf} = Service.Typst.compile(source, files)
     pdf
   end
 
