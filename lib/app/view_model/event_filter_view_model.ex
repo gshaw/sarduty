@@ -26,6 +26,8 @@ defmodule App.ViewModel.EventFilterViewModel do
   def label(:logged_in), do: "Logged in"
   def label(:logged_out), do: "Logged out"
   def label(:verify_limit_reached), do: "Verify limit reached"
+  def label(:verify_alarm), do: "Verify alarm"
+  def label(:verify_guess_found), do: "Card found during alarm"
   def label(:team_signup_failed), do: "Sign-up failed"
   def label(:integration_tested), do: "Integration test"
   def label(:team_signed_up), do: "Team signed up"

@@ -29,7 +29,11 @@ defmodule Web.CardApiController do
 
       true ->
         result = CheckMemberCard.call(code)
-        if result.status == :not_found, do: VerifyLimit.miss(ip, code)
+
+        if result.status == :not_found,
+          do: VerifyLimit.miss(ip, code),
+          else: VerifyLimit.hit(ip, result.card)
+
         answer(conn, result)
     end
   end

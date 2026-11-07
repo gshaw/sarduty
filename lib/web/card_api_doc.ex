@@ -70,20 +70,28 @@ defmodule Web.CardApiDoc do
     }
     ```
 
-    - `status` is `active`, `inactive` (the member left the team, or is leaving it), or `revoked` (the team cancelled or replaced the card). All three answer `200`, so read `status`, not the HTTP code. Sign in only an `active` card.
+    - `status` is `active`, `inactive` (the member is retiring or retired), or `revoked` (the card was replaced, for a lost phone, or the team stopped using ID cards). All three answer `200`, so read `status`, not the HTTP code. Sign in only an `active` card.
     - `sample` is true for Coast Range SAR's made-up cards. Never accept one as ID.
     - `photo_url` is the member's photo, a square PNG. Show it, and compare it with the person: the photo is what a copied code can't fake.
     - `qualifications` are the ones the team lists on its cards. `ends_at` is null when one doesn't expire.
     - `refreshed_at` is when SAR Duty last copied the team's records, so a status can be that far behind.
     - Times are ISO 8601, in UTC, to the second. `joined_at` and `organization` can be null.
 
-    A former member's card gives `member.name`, `member.left_at`, and `team`: no photo, no qualifications, and no `records`. `left_at` is null when the team marked them retired without a date, or they are leaving but have not left yet. A member who comes back keeps the same card, and it answers `active` again.
+    A retiring or retired member's card gives `member.name`, `member.left_at`, and `team`: no photo, no qualifications, and no `records`. `left_at` is when D4H retired them, and null while they are retiring or when the team gave no date.
 
     A revoked card gives only `code`, `status`, and `sample`.
 
     A code that matches no card answers `404` with `{"status": "not_found"}`.
 
     New fields can appear in any answer, so ignore the ones you don't know. A change that would break an app gets a new address, `/api/v2`.
+
+    ## When a member retires
+
+    A member's card is never cancelled when they retire. It answers `inactive` as soon as their team marks them retiring, and stays `inactive` once they're retired. If they come back, the same card answers `active` again.
+
+    This way the check tells the truth: a retired member, and when. A cancelled card couldn't say that, and couldn't come back if the team made a mistake.
+
+    Turn away an `inactive` card: the person is not an active member. For a `revoked` card, ask the member for their new one.
 
     ## Sample cards
 
@@ -98,9 +106,17 @@ defmodule Web.CardApiDoc do
 
     Only codes that could be a card's count. Real cards never count, and nor does anything else your scanner reads, such as another app's QR code. So checking a crowd at a callout can't trip it, even though everyone at a command post shares one address.
 
+    ## Guessing codes
+
+    A code is 8 characters from 30 letters and numbers, picked at random: about 660 billion codes. Codes don't follow a member number or the order cards were made, so one card's code says nothing about another's.
+
+    With the limit above, one address gets about 3,000 misses a day. Finding any real card that way takes years, and a chosen member's card far longer. SAR Duty also watches misses across every address, so guessing spread over many machines gets noticed, and any card it found is replaced.
+
+    A guessed code gets no more than the card shows anyone who sees it: a name, a team, a photo, and whether the member is active. It can't pass as the member, because the photo has to match the person in front of you. Codes stay 8 characters so they can be typed from a photo or read off a phone.
+
     ## No internet
 
-    The check needs SAR Duty, and a command post may have no internet. Keep each answer by its code, so a code you've checked before can sign its member in from your saved answer. For a new code, record the scan and the time, check it once you're back online, and flag any that come back not `active`.
+    The check needs SAR Duty, and a command post may have no internet. Keep each answer by its code, so a code you've checked before can sign its member in from your saved answer. For a new code, record the scan and the time, check it once you're back online, and flag any that come back not `active`. A member's status can change either way, so check saved answers again once you're back online too.
 
     ## More about the member
 
@@ -120,8 +136,8 @@ defmodule Web.CardApiDoc do
 
   @titles %{
     active: "An active member",
-    inactive: "A former member",
-    revoked: "A cancelled card",
+    inactive: "A retired member",
+    revoked: "A replaced card",
     not_found: "No card has this code"
   }
 
