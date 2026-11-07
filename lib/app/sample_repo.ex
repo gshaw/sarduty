@@ -16,6 +16,7 @@ defmodule App.SampleRepo do
 
   import Ecto.Query, only: [from: 2]
 
+  alias App.CoastRange
   alias App.Model.Team
   alias App.Operation.SeedCoastRange
 
@@ -61,7 +62,13 @@ defmodule App.SampleRepo do
       query!("PRAGMA defer_foreign_keys = ON")
       Enum.each(tables(), &query!(~s(DELETE FROM "#{&1}")))
       query!("DELETE FROM sqlite_sequence")
-      SeedCoastRange.call(__MODULE__, now)
+      rows = SeedCoastRange.call(__MODULE__, now)
+      organization = insert!(CoastRange.organization())
+
+      rows
+      |> Map.fetch!({:team, :coastrange})
+      |> Ecto.Changeset.change(organization_id: organization.id)
+      |> update!()
     end)
   end
 

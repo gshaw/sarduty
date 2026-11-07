@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Reports can read each member's tax credit hours by year, counted just as the letters
+  count them, and the team's own details: its legal name, mailing address, and signer.
 - A tax credit letter's PDF is kept as it was made. Every download and email sends that
   same file, even after the team changes its logo.
 - Removing many members at once, from a group or an activity, names up to 3 of them, and

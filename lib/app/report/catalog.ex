@@ -1,7 +1,7 @@
 defmodule App.Report.Catalog do
   @moduledoc """
   The subjects and fields a report can read (#768): an allowlist. Never emergency
-  contacts, letter text, or keys. A member's email, mobile number, and address are team
+  contacts, letter text, keys, or the signer's signature. A member's email, mobile number, and address are team
   admins' fields, as their page shows them (#827); an activity's address and place are
   for everyone who reads activities, as its page shows them.
 
@@ -9,7 +9,8 @@ defmodule App.Report.Catalog do
   `Attendance.status_word_dynamic/1`, `standing` is `Standing.dynamic/1`, `counted` is
   `Member.counted_dynamic/0`, and `not_seen(days)` is `Member.not_seen_query/4`. A field
   with a `query` is that rule's own query of ids (#784), such as `recent`, which is
-  `Activity.finished_recently/3`. Each subject's `source` scopes its rows to the team
+  `Activity.finished_recently/3`. `tax_credit_hours` is `CountTaxCreditHours.by_year/3`,
+  the hours the letters print (#918). Each subject's `source` scopes its rows to the team
   before a query's `where` runs.
   """
 
@@ -26,10 +27,12 @@ defmodule App.Report.Catalog do
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
+  alias App.Model.Organization
   alias App.Model.Qualification
   alias App.Model.Standing
   alias App.Model.Tag
   alias App.Model.Team
+  alias App.Operation.CountTaxCreditHours
   alias App.Report.Context
   alias App.Report.CustomFields
   alias App.Report.Field
@@ -37,7 +40,8 @@ defmodule App.Report.Catalog do
   alias App.Report.Subject
   alias App.ViewModel.EquipmentItemFormViewModel
 
-  @subjects ~w(activities attendance members awards qualifications equipment equipment_use groups)
+  @subjects ~w(activities attendance members awards qualifications equipment equipment_use groups
+               tax_credit_hours team organization)
 
   @doc "The subjects' names, in the order the editor lists them."
   def names, do: @subjects
@@ -210,6 +214,61 @@ defmodule App.Report.Catalog do
         id(),
         record("title", "Group", :group, :title),
         number(:member_count, "Members", "How many current members are in it.")
+      ]
+    }
+  end
+
+  def subject("tax_credit_hours") do
+    %Subject{
+      name: "tax_credit_hours",
+      label: "Tax credit hours",
+      one: "row",
+      many: "rows",
+      source: &tax_credit_hours/1,
+      parents: %{"member" => {"members", :member_id}},
+      fields: [
+        id(),
+        parent("member", "Member", :member),
+        number(:year, "Year", "The year the hours count in, as a letter for that year."),
+        hours(:primary, "Primary", "Primary hours, as a letter prints them."),
+        hours(:secondary, "Secondary", "Secondary hours, as a letter prints them."),
+        hours(:total, "Total", "Primary and secondary hours together.")
+      ]
+    }
+  end
+
+  def subject("team") do
+    %Subject{
+      name: "team",
+      label: "Team",
+      one: "team",
+      many: "teams",
+      source: &team/1,
+      fields: [
+        id(),
+        text(:name, "Team", "The team's name."),
+        text(:legal_name, "Legal name", "The name tax credit letters print."),
+        %{text(:mailing_address, "Mailing address") | cell: :address},
+        text(:signer, "Signer", "Who signs tax credit letters."),
+        text(:signer_title, "Signer's title"),
+        %{text(:signer_phone, "Signer's phone") | cell: :phone},
+        %{text(:signer_email, "Signer's email") | cell: :email}
+      ]
+    }
+  end
+
+  def subject("organization") do
+    %Subject{
+      name: "organization",
+      label: "Organization",
+      one: "organization",
+      many: "organizations",
+      source: &organization/1,
+      fields: [
+        id(),
+        text(:name, "Organization", "The organization's name."),
+        text(:short_name, "Short name"),
+        %{text(:website, "Website") | cell: :link}
       ]
     }
   end
@@ -556,6 +615,7 @@ defmodule App.Report.Catalog do
   defp text(column, label, about \\ nil), do: plain(column, label, :text, about: about)
   defp number(column, label, about), do: plain(column, label, :number, about: about)
   defp date(column, label), do: plain(column, label, :date, [])
+  defp hours(column, label, about), do: plain(column, label, :hours, about: about)
   defp bool(column, label, about \\ nil), do: plain(column, label, :bool, about: about)
   defp list(column, label, choices), do: plain(column, label, :list, choices: choices)
 
@@ -889,6 +949,59 @@ defmodule App.Report.Catalog do
       left_join: c in subquery(current),
       on: c.group_id == g.id,
       select: %{id: g.id, title: g.title, member_count: coalesce(c.count, 0)}
+    )
+  end
+
+  # Counted in Elixir, so the rows reach SQL as one JSON parameter.
+  defp tax_credit_hours(%Context{team: team, now: now, repo: repo}) do
+    rows =
+      team
+      |> CountTaxCreditHours.by_year(now, repo)
+      |> Enum.with_index(1)
+      |> Enum.map(fn {h, i} ->
+        [i, h.member_id, h.year, h.primary_minutes, h.secondary_minutes, h.total_minutes]
+      end)
+
+    from(
+      h in fragment(
+        "SELECT value ->> 0 AS id, value ->> 1 AS member_id, value ->> 2 AS year, value ->> 3 AS \"primary\", value ->> 4 AS secondary, value ->> 5 AS total FROM json_each(?)",
+        ^Jason.encode!(rows)
+      ),
+      select: %{
+        id: h.id,
+        member_id: h.member_id,
+        year: h.year,
+        primary: h.primary,
+        secondary: h.secondary,
+        total: h.total
+      }
+    )
+  end
+
+  # The team's one row. Never its signature, which only a letter prints.
+  defp team(%Context{team: team}) do
+    from(t in Team,
+      where: t.id == ^team.id,
+      select: %{
+        id: t.id,
+        name: t.name,
+        legal_name: t.legal_name,
+        mailing_address: t.mailing_address,
+        signer: t.authorized_by_name,
+        signer_title: t.authorized_by_title,
+        signer_phone: t.authorized_by_phone,
+        signer_email: t.authorized_by_email
+      }
+    )
+  end
+
+  # The team's organization, or no row when it has none. Never its logo.
+  defp organization(%Context{team: team}) do
+    from(o in Organization,
+      join: t in Team,
+      on: t.organization_id == o.id,
+      where: t.id == ^team.id,
+      select: %{id: o.id, name: o.name, short_name: o.short_name, website: o.website}
     )
   end
 

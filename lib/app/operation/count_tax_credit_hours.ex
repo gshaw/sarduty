@@ -54,6 +54,30 @@ defmodule App.Operation.CountTaxCreditHours do
 
   def get(hours, member_id), do: Map.get(hours, member_id, @zero)
 
+  @doc """
+  Every year's hours, as reports read them (#918): one map per member and year with
+  hours, each with `member_id`, `year`, and the minutes `count/4` gives, newest year
+  first. Each year counts as a letter for that year does. `repo` is the report's.
+  """
+  def by_year(%Team{} = team, now \\ DateTime.utc_now(), repo \\ Repo) do
+    hours_tags = Activity.hours_tags(team, repo)
+
+    team
+    |> rows_query(nil, nil, now)
+    |> repo.all()
+    |> Enum.reject(&is_nil(&1.started_at))
+    |> Enum.group_by(&local_year(&1.started_at, team.timezone))
+    |> Enum.sort_by(&elem(&1, 0), :desc)
+    |> Enum.flat_map(fn {year, rows} -> year_rows(rows, year, team.timezone, hours_tags) end)
+  end
+
+  defp year_rows(rows, year, timezone, hours_tags) do
+    for {member_id, hours} <- rows |> count(year, timezone, hours_tags) |> Enum.sort(),
+        do: Map.merge(hours, %{member_id: member_id, year: year})
+  end
+
+  defp local_year(datetime, timezone), do: DateTime.shift_zone!(datetime, timezone).year
+
   defp started_in?(%{started_at: nil}, _start, _finish), do: false
 
   defp started_in?(%{started_at: started_at}, start, finish),
@@ -137,14 +161,18 @@ defmodule App.Operation.CountTaxCreditHours do
   The rows `count/4` takes: attended by `now` (Attendance.attended/2) and started in
   `year`, each with `chore` set from the team's chore events.
   """
-  def load_rows(%Team{} = team, year, member_ids \\ nil, now \\ DateTime.utc_now()) do
+  def load_rows(%Team{} = team, year, member_ids \\ nil, now \\ DateTime.utc_now()),
+    do: team |> rows_query(year, member_ids, now) |> Repo.all()
+
+  # Every year's rows when `year` is nil.
+  defp rows_query(team, year, member_ids, now) do
     now
     |> Attendance.attended()
     |> join(:inner, [at], m in assoc(at, :member))
     |> where([at, activity: ac], ac.team_id == ^team.id)
     |> where([at, ..., m], m.team_id == ^team.id)
     |> scope_members(member_ids)
-    |> Attendance.started_in(year, team.timezone)
+    |> started_in(year, team.timezone)
     |> join(:left, [activity: ac], c in subquery(ChoreEvent.totals(team.id)),
       as: :chores,
       on: c.d4h_activity_id == ac.d4h_activity_id
@@ -158,8 +186,10 @@ defmodule App.Operation.CountTaxCreditHours do
       # Typed, or SQLite's 0 for false would be truthy in Elixir.
       chore: type(fragment("? IS NOT NULL", c.d4h_activity_id), :boolean)
     })
-    |> Repo.all()
   end
+
+  defp started_in(query, nil, _timezone), do: query
+  defp started_in(query, year, timezone), do: Attendance.started_in(query, year, timezone)
 
   defp scope_members(query, nil), do: query
   defp scope_members(query, member_ids), do: where(query, [at], at.member_id in ^member_ids)

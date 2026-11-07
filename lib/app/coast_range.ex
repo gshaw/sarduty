@@ -70,6 +70,7 @@ defmodule App.CoastRange do
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
+  alias App.Model.Organization
   alias App.Model.Qualification
   alias App.Model.Tag
   alias App.Model.Team
@@ -289,6 +290,20 @@ defmodule App.CoastRange do
     ])
   end
 
+  @doc """
+  Coast Range SAR's organization, made up like the team. Only App.SampleRepo seeds it,
+  for reports' organization subject (#918): its slug is unique, and mockups seed the
+  cast more than once.
+  """
+  def organization do
+    %Organization{
+      name: "Pacific Ranges SAR Association",
+      short_name: "PRSARA",
+      slug: "pacificranges",
+      website: "https://example.org"
+    }
+  end
+
   defp team(now) do
     %Team{
       name: "Coast Range SAR",
@@ -298,6 +313,10 @@ defmodule App.CoastRange do
       d4h_team_id: @d4h_team_id,
       d4h_api_host: "api.ca.d4h.org",
       mailing_address: "123 Main St",
+      authorized_by_name: "Alex Chen",
+      authorized_by_title: "President",
+      authorized_by_phone: "604-555-0112",
+      authorized_by_email: email("Alex Chen"),
       lat: 49.2,
       lng: -123.1,
       timezone: @timezone,
