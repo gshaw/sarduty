@@ -220,11 +220,17 @@ defmodule Web.MeLiveTest do
       card = member_card_fixture(member)
       lv = open(conn, ~p"/teams/#{team}/me")
       assert has_element?(lv, "#id-card", "a current member of #{team.name}")
-      refute has_element?(lv, "#card-verify-link")
+      code = App.Model.MemberCard.format_code(card.code)
 
       assert has_element?(
                lv,
-               ~s{.action #add-to-wallet[href^="/cards/"]},
+               ~s{#card-actions #card-verify-link[href$="/#{code}"]},
+               "Verify your ID card"
+             )
+
+      assert has_element?(
+               lv,
+               ~s{#card-actions #add-to-wallet[href^="/cards/"]},
                "Add ID card to Wallet"
              )
 
