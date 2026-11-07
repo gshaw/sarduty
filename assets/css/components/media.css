@@ -10,9 +10,10 @@
   /* Beside its words, on the verify site's sample cards. */
   .qr-code-sm { width: 112px; flex: none; }
   /* Apple's and Google's own Add to Wallet badges, side by side at one height, as both
-     brands ask. 38px keeps the pair on one line on a 375px phone. */
+     brands ask. Google's is its condensed button, two lines like Apple's, and 48px is
+     its minimum height. The pair fits on one line on a 375px phone. */
   .wallet-badges { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
-  .wallet-badges img { display: block; height: 38px; width: auto; }
+  .wallet-badges img { display: block; height: 48px; width: auto; }
 
   /* A picture beside its words: a photo and a name, a logo and a team. */
   .media { display: flex; align-items: center; gap: var(--sp-3); }

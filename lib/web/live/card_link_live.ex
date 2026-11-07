@@ -88,7 +88,7 @@ defmodule Web.CardLinkLive do
         id="card-link-google"
         href={~p"/cards/#{@token}/google-wallet"}
       >
-        <img src={~p"/images/add-to-google-wallet.png"} alt="Add to Google Wallet" />
+        <img src={~p"/images/add-to-google-wallet.svg"} alt="Add to Google Wallet" />
       </a>
     </div>
     <p id="card-link-lost" class="hint mt-6 mb-0">

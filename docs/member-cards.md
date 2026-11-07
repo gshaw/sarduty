@@ -276,8 +276,10 @@ other way to get the card.
 - **The link is the key.** A signed `Phoenix.Token` naming the card's id, with its own
   salt and the reminders link's 5-year age ([Web.CardLinks](../lib/web/card_links.ex)).
   No login and no table, so nothing to migrate; the page is `noindex`.
-- **Both badges on every device**, Apple's and Google's own, side by side at one height,
-  with no guessing which phone it is. Each opens `/cards/:token/apple-wallet` or
+- **Both badges on every device**, Apple's and Google's own, side by side at 48px,
+  Google's minimum, with no guessing which phone it is. Google's is its condensed
+  button, two lines like Apple's, so the pair fits on one line on a phone. Apple has no
+  wider badge for the web. Each opens `/cards/:token/apple-wallet` or
   `/cards/:token/google-wallet`
   ([CardLinkController](../lib/web/controllers/card_link_controller.ex)), which builds
   the pass on the tap as Your membership does. A mail app's link scanner or a preview
