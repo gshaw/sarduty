@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- Members: Add to group and Remove from group move under the table, say who each one
+  reaches before you click, and ask first before marking anyone as retiring.
 - The choices for checked members start with nothing picked, so you always pick the change
   yourself.
 - From January to April, the Dashboard says when tax credit letters are missing a

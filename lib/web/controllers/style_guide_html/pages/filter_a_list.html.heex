@@ -14,10 +14,6 @@
       marker={&if(&1 == "all", do: nil, else: &1)}
     >
       <:table>
-        <div class="table-actions">
-          <.button type="button">Add to group</.button>
-          <.button type="button">Remove from group</.button>
-        </div>
         <.activity_table
           id="sample-activities"
           rows={activities()}
@@ -40,10 +36,11 @@
     </li>
     <li>The line under it has the count and Clear filters, and which rows the page shows.</li>
     <li>
-      Actions on ticked rows, such as Add to group, go in a <code>.table-actions</code>
-      row under it, sized like the bar: 36px, small text, 44px on a touch screen. A long list
-      with one button puts it in an <a href={page_path(:action_bar)}>action bar</a>
-      instead, which sticks to the foot of the window.
+      Changes to checked rows, such as Members' Add to group, go under the table: a list of
+      choices headed For the checked members, and one button in an <a href={
+        page_path(:action_bar)
+      }>action bar</a>, which sticks to the foot of the window.
+      Never beside the filters, where a choice's box reads as another filter.
     </li>
     <li>The column headers sort the table.</li>
     <li><a href={page_path(:pagination)}>Pagination</a> goes under the table, 50 rows a page.</li>

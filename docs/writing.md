@@ -95,8 +95,12 @@ to do next, then gets out of the way. It does not sell, apologize, or celebrate.
 
 **Buttons.** A verb and its object, three words or fewer, saying what happens: "Create
 letter", "Save settings", "Send 3 changes". Never "Submit", "OK", "Yes", "Go", or "Click
-here". The button that confirms a delete names the thing: "Delete endorsement". The reply
-buttons are the exception: see [Invitations and attendance](#invitations-and-attendance).
+here". The button that confirms a delete names the thing: "Delete endorsement". Never a
+name someone typed, such as a group's or a team's: it can run to any length, and a button
+doesn't wrap. Name it in the question or the hint instead. The reply buttons are the
+exception: see [Invitations and attendance](#invitations-and-attendance). So is a button
+for checked rows, which counts who it reaches and may take a fourth word for it: "Remove 1
+from group", "Mark 3 as retiring".
 
 **Links.** The link text says where it goes and makes sense out of context: "tax credit
 letters for 2025". Never "here", "click here", "more", or "this page".
@@ -118,8 +122,10 @@ Ask for a reply. Each hint says what happens to the checked, with counts, and na
 skips or what they lose: "Emails “Will you be there?” to the 2 checked with no reply. 1
 has replied." With nothing checked, the same sentence without counts. A choice that
 reaches nobody checked greys out and says why. Nothing is picked at the start, and a choice
-that greys out leaves nothing picked: the list never picks a change for the reader. The
-button counts who it reaches. See the [action bar](/styles/action-bar) for where the button
+that greys out leaves nothing picked: the list never picks a change for the reader. A
+choice that needs a value, such as Add to group's group, shows its box beside it once
+picked. It never greys out, since another value could reach someone: the button greys
+instead, and says why beside it. The button counts who it reaches. See the [action bar](/styles/action-bar) for where the button
 goes.
 
 **Error messages.** Say how to fix it, starting with the verb: "Enter who authorizes tax
@@ -316,8 +322,8 @@ Before committing text a person will read, check each line:
 - [ ] Nothing from [words to avoid](#words-to-avoid) is used.
 - [ ] Negatives are in full in instructions, warnings, and errors: "cannot", "do not".
 - [ ] Headings, titles, buttons, labels, and tabs are in sentence case.
-- [ ] Buttons are a verb and an object, except words the reader says. Links make sense on
-      their own.
+- [ ] Buttons are a verb and an object, except words the reader says, and never a name
+      someone typed. Links make sense on their own.
 - [ ] Nothing says where a thing sits on the page.
 - [ ] Invitations and attendance use [their words](#invitations-and-attendance), switching
       when the activity starts.

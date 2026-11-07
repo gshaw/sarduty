@@ -532,9 +532,37 @@ defmodule Web.MemberCollectionLiveTest do
       {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
 
       assert has_element?(lv, "#member_collection-select-all")
-      assert has_element?(lv, "#member-group-id-select option", "Trainees")
       ids = [ctx.avery.id, ctx.quinn.id, ctx.robin.id]
-      submit(lv, "add", ctx.trainees.id, ids)
+
+      # Nothing picked, and no Group box until a choice is.
+      check(lv, ids)
+      refute has_element?(lv, "#member-change input[type=radio][checked]")
+      refute has_element?(lv, "#member-group-id")
+      assert has_element?(lv, "#member-change-send[disabled]", "Change members")
+      assert has_element?(lv, "#member-bar-hint", "Select what to do.")
+
+      check(lv, ids, "add")
+      assert has_element?(lv, "#member-group-id-select option", "Trainees")
+      assert has_element?(lv, "#member-change-send[disabled]", "Add to group")
+      assert has_element?(lv, "#member-bar-hint", "Select a group.")
+
+      pick(lv, ids, "add", ctx.trainees.id)
+
+      assert has_element?(
+               lv,
+               "#member-change",
+               "Adds 2 of the 3 checked to Trainees. Robin Tse is in it already."
+             )
+
+      assert has_element?(
+               lv,
+               "#member-change",
+               "Takes 1 of the 3 checked out of Trainees. Avery Chen and Quinn Laval aren't in it."
+             )
+
+      assert has_element?(lv, "#member-change-send", "Add 2 to group")
+      refute has_element?(lv, "#member-change-send[data-confirm]")
+      submit(lv, ids, "add", ctx.trainees.id)
 
       assert_received {:d4h, "POST", "/member-group-memberships", %{"memberId" => 501}}
       assert_received {:d4h, "POST", "/member-group-memberships", %{"memberId" => 502}}
@@ -567,19 +595,23 @@ defmodule Web.MemberCollectionLiveTest do
       quinn_in = group_member_fixture(ctx.trainees, ctx.quinn)
       {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
 
-      refute has_element?(lv, "#member-group-remove[data-confirm]")
       ids = [ctx.avery.id, ctx.quinn.id, ctx.robin.id]
+      pick(lv, ids, "remove", ctx.trainees.id)
 
-      lv
-      |> form("#member-group-form", %{group_id: ctx.trainees.id, member_ids: ids})
-      |> render_change()
-
+      # The confirm names only who it removes: Robin isn't in Trainees.
       assert has_element?(
                lv,
-               ~s(#member-group-remove[data-confirm="Remove Avery Chen, Quinn Laval, and Robin Tse from Trainees?"])
+               ~s(#member-change-send[data-confirm="Remove Avery Chen and Quinn Laval from Trainees?"]),
+               "Remove 2 from group"
              )
 
-      submit(lv, "remove", ctx.trainees.id, ids)
+      # Nobody checked is in it: the choice stays picked, and the button says why.
+      pick(lv, [ctx.robin.id], "remove", ctx.trainees.id)
+      assert has_element?(lv, "#member-change-choice_remove[checked]")
+      assert has_element?(lv, "#member-change-send[disabled]", "Remove from group")
+      assert has_element?(lv, "#member-bar-hint", "Nobody checked is in Trainees.")
+
+      submit(lv, ids, "remove", ctx.trainees.id)
 
       for group_member <- [avery_in, quinn_in] do
         path = "/member-group-memberships/#{group_member.d4h_group_membership_id}"
@@ -595,11 +627,44 @@ defmodule Web.MemberCollectionLiveTest do
       assert GroupMember.member_ids(ctx.team.id, ctx.trainees.id) == MapSet.new()
     end
 
+    test "Retiring has its own words, and asks both ways", ctx do
+      retiring = group_fixture(ctx.team, %{title: "Leaving"})
+
+      ctx.team
+      |> Ecto.Changeset.change(retiring_d4h_group_id: retiring.d4h_group_id)
+      |> Repo.update!()
+
+      group_member_fixture(retiring, ctx.quinn)
+      {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
+
+      pick(lv, [ctx.avery.id], "add", retiring.id)
+
+      assert has_element?(
+               lv,
+               "#member-change",
+               "Marks the 1 checked as retiring. They can't log in to SAR Duty from now on."
+             )
+
+      assert has_element?(
+               lv,
+               ~s(#member-change-send[data-confirm^="Mark Avery Chen as retiring? They can't log in"]),
+               "Mark 1 as retiring"
+             )
+
+      pick(lv, [ctx.quinn.id], "remove", retiring.id)
+
+      assert has_element?(
+               lv,
+               ~s(#member-change-send[data-confirm^="Mark Quinn Laval as not retiring?"]),
+               "Mark 1 as not retiring"
+             )
+    end
+
     test "names each member the service refuses, and adds the rest", ctx do
       refused = member_fixture(ctx.team, %{name: "Sky Refused", d4h_member_id: 666})
       {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
 
-      submit(lv, "add", ctx.trainees.id, [ctx.avery.id, refused.id])
+      submit(lv, [ctx.avery.id, refused.id], "add", ctx.trainees.id)
 
       assert has_element?(lv, "#flash-info", "1 member added to Trainees.")
       assert has_element?(lv, "#group-not-changed", "1 member not added to Trainees")
@@ -615,11 +680,14 @@ defmodule Web.MemberCollectionLiveTest do
     test "asks for a group and for members", ctx do
       {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
 
-      submit(lv, "add", "", [ctx.avery.id])
+      submit(lv, [ctx.avery.id], "add", "")
       assert has_element?(lv, "#flash-error", "Select a group.")
 
-      submit(lv, "add", ctx.trainees.id, [])
+      submit(lv, [], "add", ctx.trainees.id)
       assert has_element?(lv, "#flash-error", "Select members.")
+
+      render_submit(lv, "set-group", %{"member_ids" => ["#{ctx.avery.id}"]})
+      assert has_element?(lv, "#flash-error", "Select what to do.")
       refute_received {:d4h, _method, _path, _body}
     end
 
@@ -628,6 +696,8 @@ defmodule Web.MemberCollectionLiveTest do
       group_rule_fixture(callout, ctx.trainees)
       {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/members")
 
+      check(lv, [ctx.avery.id], "add")
+      assert has_element?(lv, "#member-group-id-select option", "Trainees")
       refute has_element?(lv, "#member-group-id-select option", "Callout")
 
       send_set_group(lv, callout.id, [ctx.avery.id])
@@ -667,16 +737,33 @@ defmodule Web.MemberCollectionLiveTest do
     end
   end
 
-  defp submit(lv, action, group_id, member_ids) do
+  defp check(lv, member_ids, change \\ nil) do
+    params = %{member_ids: member_ids}
+    params = if change, do: Map.put(params, :change, change), else: params
+    lv |> form("#member-group-form", params) |> render_change()
+  end
+
+  # A choice, then a group in the box that shows beside it.
+  defp pick(lv, member_ids, change, group_id) do
+    check(lv, member_ids, change)
+
     lv
-    |> form("#member-group-form", %{group_id: group_id, member_ids: member_ids})
-    |> render_submit(%{"do" => action})
+    |> form("#member-group-form", %{member_ids: member_ids, change: change, group_id: group_id})
+    |> render_change()
+  end
+
+  defp submit(lv, member_ids, change, group_id) do
+    pick(lv, member_ids, change, group_id)
+
+    lv
+    |> form("#member-group-form", %{member_ids: member_ids, change: change, group_id: group_id})
+    |> render_submit()
   end
 
   # The event as a browser could send it, with ids the form doesn't offer.
   defp send_set_group(lv, group_id, member_ids) do
     render_submit(lv, "set-group", %{
-      "do" => "add",
+      "change" => "add",
       "group_id" => "#{group_id}",
       "member_ids" => Enum.map(member_ids, &"#{&1}")
     })

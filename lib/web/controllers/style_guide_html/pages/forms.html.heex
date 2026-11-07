@@ -166,6 +166,31 @@
         {"Passenger, 0 km", "passenger"}
       ]}
     />
+    <.input
+      type="radios"
+      id="e-change"
+      name="e-change"
+      label="For the checked members"
+      value="add"
+      options={[
+        {"Add to group", "add",
+         "Adds 2 of the 3 checked to Rope team. Avery Chen is in it already."},
+        {"Remove from group", "remove",
+         "Takes 1 of the 3 checked out of Rope team. Cameron Ruiz and Riley Okafor aren't in it."}
+      ]}
+    >
+      <:beside value="add">
+        <.combobox
+          id="e-change-group"
+          name="e-change-group"
+          value="rope"
+          options={[{"Rope team", "rope"}, {"Swiftwater team", "swiftwater"}]}
+          prompt="Select a group"
+          placeholder="Select a group"
+          aria-label="Group"
+        />
+      </:beside>
+    </.input>
   </div>
 
   <p class="spec">
@@ -176,6 +201,11 @@
     for a line saying what a choice covers, and
     <code>&lbrace;label, value, hint, disabled: true&rbrace;</code>
     for one that can't be picked now. One answer, every choice in view. Its error shows after a failed save even when nothing is picked, since a form sends nothing for radios none of which is checked. Log a chore's categories use it. A choice that can't be picked stays in the list, greyed with its label, and its hint says why, such as "No route from their home.": hiding it would leave people wondering where it went.
+  </p>
+  <p class="spec">
+    A choice that needs a value, such as Members' Add to group, takes a
+    <code>&lt;:beside value="add"&gt;</code>
+    slot: a combobox on its line, shown only once that choice is picked. It drops under the label on a phone, in line with the hint.
   </p>
 
   <h2 id="below">Under the box</h2>

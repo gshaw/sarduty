@@ -9,10 +9,12 @@ defmodule Web.MemberCollectionLive do
   # view_events (#547).
   use Web, {:live_view_app_layout, access: :team, view_events: ["change"]}
 
+  import Web.Components.ActionBar, only: [action_bar: 1]
   import Web.Components.ReportPage
 
   alias App.Adapter.D4H
   alias App.Model.Group
+  alias App.Model.GroupMember
   alias App.Model.Member
   alias App.Model.Standing
   alias App.Model.Team
@@ -22,6 +24,7 @@ defmodule Web.MemberCollectionLive do
   alias App.Report.Lists
   alias App.ViewData.ReportRecords
   alias Web.Components.ReportPage
+  alias Web.MemberCollectionLive.GroupChoice
 
   def mount(_params, _session, socket) do
     groups = groups(socket.assigns)
@@ -29,17 +32,24 @@ defmodule Web.MemberCollectionLive do
     socket =
       socket
       |> assign(:page_title, "Members")
-      |> assign(groups: groups, group_form?: groups != [], group_id: nil, not_changed: nil)
+      |> assign(groups: groups, group_form?: groups != [], not_changed: nil)
+      |> assign(choice: nil, group_id: nil, group_member_ids: MapSet.new())
 
     {:ok, socket}
   end
 
-  # Only groups without rules: rules decide who is in the rest.
+  # Only groups without rules: rules decide who is in the rest. Each with its label and
+  # whether it is the team's Retiring group, by id.
   defp groups(%{team_admin?: true, current_team: team}) do
     organization_name = Team.organization_name(team) || "Your organization"
 
-    for group <- Group.get_kept_by_hand(team.id),
-        do: {Group.label(group, organization_name), group.id}
+    for group <- Group.get_kept_by_hand(team.id) do
+      %{
+        id: group.id,
+        title: Group.label(group, organization_name),
+        retiring?: group.d4h_group_id == team.retiring_d4h_group_id
+      }
+    end
   end
 
   defp groups(_assigns), do: []
@@ -113,7 +123,8 @@ defmodule Web.MemberCollectionLive do
   end
 
   def render(assigns) do
-    assigns = assign(assigns, :standing, assigns.view.switch.picked)
+    assigns =
+      assign(assigns, standing: assigns.view.switch.picked, change: change(assigns))
 
     ~H"""
     <.heading_row>
@@ -161,45 +172,54 @@ defmodule Web.MemberCollectionLive do
           </ul>
         </.banner>
 
-        <%!-- Team admins only. Apart from the filter bar's form, as forms cannot nest; the
-        tick boxes join it with their form attribute. --%>
+        <%!-- Team admins only: the table, the choices, and the bar in one form, so the bar
+        sticks while the table scrolls. The filter bar's form sits outside this slot. --%>
         <.form
           :if={@group_form? and @rows != []}
           for={%{}}
           id="member-group-form"
           phx-change="select"
           phx-submit="set-group"
-          class="table-actions"
         >
-          <.combobox
-            id="member-group-id"
-            name="group_id"
-            value={@group_id}
-            options={@groups}
-            aria-label="Group"
+          <.member_table
+            rows={@rows}
+            clock={@clock}
+            view={@view}
+            path_fn={@path_fn}
+            team={@current_team}
+            now={@now}
+            group_form?={true}
+            selected={@selected}
+            retired?={retired?(@standing)}
           />
-          <.button id="member-group-add" name="do" value="add" phx-disable-with="Adding…">
-            Add to group
-          </.button>
-          <.button
-            id="member-group-remove"
-            name="do"
-            value="remove"
-            phx-disable-with="Removing…"
-            {remove_confirm(@selected, @rows, @group_id, @groups)}
-          >
-            Remove from group
-          </.button>
+          <.group_choices
+            choice={@choice}
+            group_id={@group_id}
+            groups={@groups}
+            options={@change.options}
+          />
+          <.action_bar id="member-bar" hint={@change.hint}>
+            <.button
+              id="member-change-send"
+              variant={:primary}
+              disabled={@change.count == 0}
+              phx-disable-with={if @change.action == :remove, do: "Removing…", else: "Adding…"}
+              {@change.confirm}
+            >
+              {@change.button}
+            </.button>
+          </.action_bar>
         </.form>
 
         <.member_table
+          :if={!@group_form? or @rows == []}
           rows={@rows}
           clock={@clock}
           view={@view}
           path_fn={@path_fn}
           team={@current_team}
           now={@now}
-          group_form?={@group_form?}
+          group_form?={false}
           selected={@selected}
           retired?={retired?(@standing)}
         />
@@ -217,6 +237,89 @@ defmodule Web.MemberCollectionLive do
       </:table>
     </.report_page>
     """
+  end
+
+  # The checked members, the picked choice and group, and what the bar's button does
+  # with them: its words, its count, its confirm, and why it waits.
+  defp change(%{group_form?: false}), do: nil
+
+  defp change(assigns) do
+    checked = checked(assigns.rows, assigns.selected)
+    group = group(assigns.groups, assigns.group_id, assigns.group_member_ids)
+    action = action(assigns.choice)
+    changes = if action, do: GroupChoice.changes(action, checked, group), else: []
+    service = D4H.service_name(assigns.current_team)
+
+    %{
+      action: action,
+      count: length(changes),
+      hint: bar_hint(action, checked, group),
+      button:
+        if(action,
+          do: GroupChoice.button_text(action, length(changes), group),
+          else: "Change members"
+        ),
+      confirm: if(action, do: GroupChoice.confirm(action, changes, group, service), else: %{}),
+      options:
+        for(
+          a <- [:add, :remove],
+          do: {GroupChoice.label(a), Atom.to_string(a), GroupChoice.hint(a, checked, group)}
+        )
+    }
+  end
+
+  attr :choice, :string, required: true, doc: ~s("add", "remove", or nil)
+  attr :group_id, :integer, required: true
+  attr :groups, :list, required: true
+  attr :options, :list, required: true, doc: "each choice with its hint"
+
+  # For the checked members (#920's list): Add to group and Remove from group, with the
+  # Group box beside the picked one. Nothing is picked at the start. Neither choice greys
+  # out: another group could reach someone, so the bar's button greys instead, with why.
+  defp group_choices(assigns) do
+    ~H"""
+    <div id="member-change" class="mt-8">
+      <.input
+        type="radios"
+        id="member-change-choice"
+        name="change"
+        label="For the checked members"
+        value={@choice}
+        options={@options}
+      >
+        <:beside :if={@choice} value={@choice}>
+          <.combobox
+            id="member-group-id"
+            name="group_id"
+            value={@group_id}
+            options={for g <- @groups, do: {g.title, g.id}}
+            prompt="Select a group"
+            placeholder="Select a group"
+            aria-label="Group"
+          />
+        </:beside>
+      </.input>
+    </div>
+    """
+  end
+
+  defp action("add"), do: :add
+  defp action("remove"), do: :remove
+  defp action(_choice), do: nil
+
+  # What to do next while the button is greyed.
+  defp bar_hint(_action, [], _group), do: "Check members, then select what to do."
+  defp bar_hint(nil, _checked, _group), do: "Select what to do."
+  defp bar_hint(action, checked, group), do: GroupChoice.waiting(action, checked, group)
+
+  defp checked(rows, selected),
+    do: for(%{member: m} <- rows, MapSet.member?(selected, m.id), do: m)
+
+  defp group(groups, group_id, member_ids) do
+    case Enum.find(groups, &(&1.id == group_id)) do
+      nil -> nil
+      group -> %{title: group.title, retiring?: group.retiring?, member_ids: member_ids}
+    end
   end
 
   attr :rows, :list, required: true
@@ -243,7 +346,6 @@ defmodule Web.MemberCollectionLive do
           type="checkbox"
           id={"select-#{row.member.id}"}
           name="member_ids[]"
-          form="member-group-form"
           value={row.member.id}
           checked={MapSet.member?(@selected, row.member.id)}
           aria-label={row.member.name}
@@ -359,14 +461,25 @@ defmodule Web.MemberCollectionLive do
     {:noreply, push_patch(socket, to: path, replace: true)}
   end
 
+  # A check, a choice, or a group. The Group box shows only beside a picked choice, so
+  # without it the group stays as it was; a new group loads who is in it, once.
   def handle_event("select", params, socket) do
-    selected = params |> ids() |> MapSet.new()
-    {:noreply, assign(socket, selected: selected, group_id: parse_id(params["group_id"]))}
+    group_id =
+      if Map.has_key?(params, "group_id"),
+        do: parse_id(params["group_id"]),
+        else: socket.assigns.group_id
+
+    socket =
+      socket
+      |> assign(selected: params |> ids() |> MapSet.new(), choice: params["change"])
+      |> assign_group(group_id)
+
+    {:noreply, socket}
   end
 
   # The ticked rows of this page. The ids come from the browser; SetGroupMembers looks
   # each one up through the team.
-  def handle_event("set-group", %{"do" => action} = params, socket)
+  def handle_event("set-group", %{"change" => action} = params, socket)
       when action in ["add", "remove"] do
     %{current_team: team, current_user: user} = socket.assigns
     action = Map.fetch!(%{"add" => :add, "remove" => :remove}, action)
@@ -377,7 +490,8 @@ defmodule Web.MemberCollectionLive do
         socket =
           socket
           |> assign_list()
-          |> assign(:group_id, group_id)
+          |> assign(:group_id, nil)
+          |> assign_group(group_id)
           |> assign(:not_changed, not_changed(action, result))
 
         {:noreply, put_result_flash(socket, action, result)}
@@ -387,26 +501,9 @@ defmodule Web.MemberCollectionLive do
     end
   end
 
-  @doc """
-  Remove from group's `data-confirm` attributes for the checked `selected` among `rows`
-  (/styles/confirm-dialog#many): up to 3 by name, then a count, and from 10 a box. None
-  without a group and checked members: the click gets "Select a group" or "Select members"
-  instead. Pure.
-  """
-  def remove_confirm(selected, rows, group_id, groups) do
-    group = Enum.find_value(groups, fn {label, id} -> id == group_id && label end)
-    names = for %{member: m} <- rows, MapSet.member?(selected, m.id), do: m.name
-    members = count_members(length(names))
-
-    if is_nil(group) or names == [] do
-      %{}
-    else
-      Map.merge(
-        %{"data-confirm" => "Remove #{names_or_count(names, members)} from #{group}?"},
-        confirm_check(length(names), "I understand #{members} leave #{group}.")
-      )
-    end
-  end
+  # Sent with nothing picked, as only a browser's own submit can.
+  def handle_event("set-group", _params, socket),
+    do: {:noreply, put_flash(socket, :error, "Select what to do.")}
 
   defp count_members(n), do: Service.Format.count(n, one: "%d member", many: "%d members")
 
@@ -434,6 +531,13 @@ defmodule Web.MemberCollectionLive do
   defp not_changed(action, %{group: group, failed: failed}) do
     verb = if action == :add, do: "added to", else: "removed from"
     %{title: "#{count_members(length(failed))} not #{verb} #{group.title}", failed: failed}
+  end
+
+  defp assign_group(%{assigns: %{group_id: group_id}} = socket, group_id), do: socket
+
+  defp assign_group(socket, group_id) do
+    ids = GroupMember.member_ids(socket.assigns.current_team.id, group_id) || MapSet.new()
+    assign(socket, group_id: group_id, group_member_ids: ids)
   end
 
   defp ids(params) do
