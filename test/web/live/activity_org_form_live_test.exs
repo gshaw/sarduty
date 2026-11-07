@@ -136,6 +136,102 @@ defmodule Web.ActivityOrgFormLiveTest do
     end
   end
 
+  describe "a row for each person" do
+    setup %{form: form} do
+      organization = Repo.get!(App.Model.Organization, form.organization_id)
+
+      supplement =
+        form_fixture(organization, %{
+          name: "Expense reimbursement request supplement",
+          text: File.read!("priv/forms/bcsara/supplement.txt"),
+          page: File.read!("priv/forms/bcsara/supplement.pdf"),
+          enabled: true
+        })
+
+      %{supplement: supplement}
+    end
+
+    defp member_key(cast, name) do
+      id =
+        App.Model.Member
+        |> where(team_id: ^cast.team.id, name: ^name)
+        |> select([m], m.id)
+        |> Repo.one!()
+
+      "member:#{id}"
+    end
+
+    test "shows each person's answers and total, and the total follows them", ctx do
+      %{cast: cast, supplement: supplement} = ctx
+      kayakers = MockupSeed.activity(cast, "Overdue kayakers")
+      alex = member_key(cast, "Alex Chen")
+      dom = String.replace(alex, ":", "-")
+
+      {:ok, lv, _html} =
+        live(log_in_user(build_conn(), cast.alex), form_path(kayakers, supplement))
+
+      assert has_element?(lv, "#org-form-rows-people", "Leave Meals provided blank to use")
+      assert has_element?(lv, "#org-form-row-#{dom}", "Alex Chen")
+      assert has_element?(lv, ~s(#org-form-answer-on_task-#{dom} option[selected][value="Yes"]))
+      assert has_element?(lv, ~s(#org-form-answer-meals_given-#{dom}[placeholder="0"]))
+      # 22 km at $0.67, 2 meals, and a day's equipment.
+      assert has_element?(lv, "#org-form-total-#{dom}", "$69.74")
+
+      # Meals for everyone reach each row left blank.
+      lv |> form("#org-form-answers", answers: %{"meals_provided" => "2"}) |> render_change()
+      assert has_element?(lv, ~s(#org-form-answer-meals_given-#{dom}[placeholder="2"]))
+      assert has_element?(lv, "#org-form-total-#{dom}", "$39.74")
+
+      lv
+      |> form("#org-form-answers", answers: %{"on_task" => %{alex => "No"}})
+      |> render_change()
+
+      assert has_element?(lv, "#org-form-total-#{dom}", "$14.74")
+
+      # Only what differs from the default is kept.
+      assert FormAnswer.for_activity(kayakers) == %{
+               "meals_provided" => "2",
+               "on_task" => %{alex => "No"}
+             }
+    end
+
+    test "says what's wrong with a row's answer", ctx do
+      %{cast: cast, supplement: supplement} = ctx
+      kayakers = MockupSeed.activity(cast, "Overdue kayakers")
+      alex = member_key(cast, "Alex Chen")
+
+      {:ok, lv, _html} =
+        live(log_in_user(build_conn(), cast.alex), form_path(kayakers, supplement))
+
+      lv
+      |> form("#org-form-answers", answers: %{"meals_given" => %{alex => "lots"}})
+      |> render_change()
+
+      assert has_element?(
+               lv,
+               "#org-form-row-#{String.replace(alex, ":", "-")}",
+               "Enter a number, such as 3."
+             )
+
+      refute kayakers |> FormAnswer.for_activity() |> Map.has_key?("meals_given")
+    end
+
+    test "Download PDF prints each person's row", ctx do
+      %{cast: cast, supplement: supplement} = ctx
+      kayakers = MockupSeed.activity(cast, "Overdue kayakers")
+      alex = member_key(cast, "Alex Chen")
+      conn = log_in_user(build_conn(), cast.alex)
+      answers = %{"meals_provided" => "1", "on_task" => %{alex => "No"}}
+
+      conn = post(conn, form_path(kayakers, supplement) <> "/pdf", %{"answers" => answers})
+      assert "%PDF" <> _ = conn.resp_body
+
+      pdf = SavedPDF |> where(activity_id: ^kayakers.id) |> Repo.one!()
+      assert pdf.keep[":meals_provided"] == 1
+      assert FormAnswer.for_activity(kayakers)["on_task"] == %{alex => "No"}
+    end
+  end
+
   describe "Download PDF and Open PDF" do
     test "keep the answers and save the PDF as it was made", ctx do
       %{cast: cast, hiker: hiker, form: form} = ctx

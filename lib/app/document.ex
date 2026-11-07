@@ -4,7 +4,8 @@ defmodule App.Document do
   reads, what it says, and where each part sits on the page. The tax credit letter is
   the first. "Template" is taken by kit templates, so in code it's a document. A form
   is a document an organization hosts (#950): it starts `form '…'`, prints for an
-  activity, asks what SAR Duty can't know, and prints on an agency's own page.
+  activity, asks what SAR Duty can't know, and prints on an agency's own page, with a
+  row for each person when it has rows.
 
   The language is the report language's (App.Report): its lexer, its parser for each
   report and every value, and its catalog. Everything here is pure: `parse/1` reads the
@@ -34,8 +35,11 @@ defmodule App.Document do
   - `page`: true when the values print on the form's own page PDF, at its size
   - `places`: `%{name, kind, line, across, level_with, fit, page}` and its lengths in
     points, each a `:text`, an `:image`, a `:tick` (an X in a box), or a `:flow` that
-    stacks values down the page, or across it; `page` is which page of the form's page
-  - `fill`: `%{place, value, line}`, a flow's value `{:flow, items}`
+    stacks values down the page, or across it; `page` is which page of the form's page.
+    A text can have `align`. A form's `:rows` repeats its `places`, a row's, `pitch`
+    apart, `lines` to a copy of its page
+  - `fill`: `%{place, value, line}`, a flow's value `{:flow, items}`, and a rows place's
+    `{:each, report, fills}`, a fill for each of a row's places
   - `expects`: `%{given, check, line}`, worked examples CI runs (`expect/1`); `given`
     holds `{target, value, line}`, and `{:row, report, [{name, value, line}], line}` for
     a row
@@ -289,6 +293,26 @@ defmodule App.Document do
   """
   def values(%__MODULE__{} = doc, values, timezone) when is_map(values),
     do: Evaluator.prepare(doc, values, timezone).values
+
+  @doc """
+  A row's value `name`, such as a person's total, as the form's `fill each` prints it:
+  with the format a row's place gives it, `total as money`, or as text. A form's page
+  shows each row's total this way.
+  """
+  def printed(%__MODULE__{fill: fill}, name, value, timezone) do
+    format =
+      Enum.find_value(fill, fn
+        %{value: {:each, _report, fills}} -> Enum.find_value(fills, &format_of(&1.value, name))
+        _fill -> nil
+      end)
+
+    Evaluator.printed(value, format, timezone)
+  end
+
+  defp format_of({:as, {:field, [field], [], _}, format, _line}, name),
+    do: if(String.downcase(field) == name, do: format)
+
+  defp format_of(_value, _name), do: nil
 
   @doc "A place's text, as `expect` reads it: a flow's lines, a blank line for each space."
   defdelegate text(output, place), to: Evaluator

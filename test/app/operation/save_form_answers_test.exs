@@ -69,4 +69,20 @@ defmodule App.Operation.SaveFormAnswersTest do
              {"misc", ""} => "40"
            }
   end
+
+  # A row's choice always sends one, so the form page's first change would keep every row.
+  test "an answer on a row that's its plain default isn't kept", %{claim: claim} do
+    saved = %{"on_task" => %{"member:8" => "No"}}
+    typed = %{"on_task" => %{"member:7" => "Yes", "member:8" => "Yes", "member:9" => "No"}}
+
+    assert SaveFormAnswers.plan(claim, saved, typed) == %{
+             put: %{{"on_task", "member:9"} => "No"},
+             delete: [{"on_task", "member:8"}],
+             errors: %{}
+           }
+
+    # One that starts from another answer is kept as typed.
+    typed = %{"meals_given" => %{"member:7" => "0"}}
+    assert SaveFormAnswers.plan(claim, %{}, typed).put == %{{"meals_given", "member:7"} => "0"}
+  end
 end

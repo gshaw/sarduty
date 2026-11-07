@@ -7,6 +7,7 @@ defmodule App.ViewData.ActivityForms do
   """
 
   alias App.Document
+  alias App.Document.Evaluator
   alias App.Model.Activity
   alias App.Model.Form
   alias App.Model.FormAnswer
@@ -43,29 +44,38 @@ defmodule App.ViewData.ActivityForms do
   end
 
   @doc """
-  One form's page: `{:ok, %{doc, filled, missing, answers}}`, `{:error, :not_shown}` when
-  the form isn't for the activity, or `{:error, reason}` when it doesn't read on the team.
-  `filled` and `missing` are what the form reads, as ReadDocument's `read` lists it,
-  with a value or blank. `answers` is what each question starts from, `%{name => text}`:
-  the activity's answer, the team's last for one that says `remember`, or its default
-  when that's a plain value.
+  One form's page: `{:ok, %{doc, values, timezone, filled, missing, answers, rows}}`,
+  `{:error, :not_shown}` when the form isn't for the activity, or `{:error, reason}` when
+  it doesn't read on the team. `filled` and `missing` are what the form reads, as
+  ReadDocument's `read` lists it, with a value or blank. `answers` is what each question
+  starts from, `%{name => text}`: the activity's answer, the team's last for one that
+  says `remember`, or its default when that's a plain value; an answer on each row is
+  `%{row => text}`, the activity's alone. `rows` is `rows/4`'s, from `values`, what the
+  form read.
   """
   def load(%Team{} = team, %Activity{} = activity, %Form{} = form, now) do
     context = Context.new(team, now)
 
-    with {:ok, %{doc: doc, read: read}} <-
+    with {:ok, %{doc: doc, read: read, values: values}} <-
            ReadDocument.call(form.text, context, %{activity: activity.id}),
          :ok <- shown_on(doc, context, activity) do
-      {missing, filled} = Enum.split_with(read, &blank?(&1.value))
-
-      {:ok,
-       %{
-         doc: doc,
-         filled: filled,
-         missing: missing,
-         answers: answers(doc, FormAnswer.starting(activity, doc.asks))
-       }}
+      {:ok, page(doc, values, read, FormAnswer.starting(activity, doc.asks), context.timezone)}
     end
+  end
+
+  defp page(doc, values, read, starting, timezone) do
+    {missing, filled} = Enum.split_with(read, &blank?(&1.value))
+    answers = answers(doc, starting)
+
+    %{
+      doc: doc,
+      values: values,
+      timezone: timezone,
+      filled: filled,
+      missing: missing,
+      answers: answers,
+      rows: rows(doc, values, answers, timezone)
+    }
   end
 
   defp shown_on(doc, context, activity) do
@@ -77,13 +87,123 @@ defmodule App.ViewData.ActivityForms do
 
   @doc """
   Pure: each ask's starting text, with a plain default for one that has no answer. An
-  answer on each row is left out: the page shows a form's rows (#950, step 8).
+  answer on each row is `%{row => text}`, the activity's answers alone: a blank one
+  takes its default, which `rows/4` works out for each row.
   """
   def answers(%Document{asks: asks}, starting) do
-    for %{each: nil} = ask <- asks,
-        into: %{},
-        do: {ask.name, Map.get(starting, ask.name) || default(ask.default)}
+    Map.new(asks, fn
+      %{each: nil} = ask -> {ask.name, Map.get(starting, ask.name) || default(ask.default)}
+      ask -> {ask.name, Map.get(starting, ask.name, %{})}
+    end)
   end
+
+  @doc """
+  Pure: each report a form asks on each row of, and its rows as the form works them out
+  from `values`, what it read, with the answers `typed` (#950). For each report:
+  `%{report, kind, asks, total, rows}`, where `kind` is the row's `:member` or `:item`,
+  `asks` its `ask each`, and `total` the label of its last `compute each`, or nil. Each
+  row is `%{key, id, name, answers, defaults, total}`: `answers` what was typed for it,
+  `defaults` what each answer is when its box is blank, and `total` that compute as
+  the PDF prints it. An answer that doesn't read is left out until it does.
+  """
+  def rows(%Document{} = doc, values, typed, timezone) do
+    answered = readable(doc, typed)
+    # Each row's answers left out, so each takes its default.
+    one_each = Map.reject(answered, fn {key, _value} -> is_tuple(key) end)
+
+    worked = %{
+      worked: Document.values(doc, Map.merge(values, answered), timezone),
+      defaults: Document.values(doc, Map.merge(values, one_each), timezone),
+      typed: typed,
+      timezone: timezone
+    }
+
+    for report <- doc.reports,
+        asks = Enum.filter(doc.asks, &(&1.each == report.name)),
+        asks != [],
+        do: table(doc, report, asks, worked)
+  end
+
+  defp table(doc, report, asks, worked) do
+    {kind, column} = record_column(report)
+    total = doc.computes |> Enum.filter(&(&1.each == report.name)) |> List.last()
+    table = %{doc: doc, asks: asks, column: column, total: total, timezone: worked.timezone}
+
+    rows =
+      worked.worked
+      |> Map.get(report.name, [])
+      |> Enum.zip(Map.get(worked.defaults, report.name, []))
+      |> Enum.map(&row(&1, table, worked.typed))
+
+    %{
+      report: report.name,
+      kind: kind,
+      asks: asks,
+      total: total && String.capitalize(total.name),
+      rows: rows
+    }
+  end
+
+  defp row({row, default}, table, typed) do
+    %{
+      key: row.key,
+      id: row_id(row.key),
+      name: row.values[table.column],
+      answers: Map.new(table.asks, &{&1.name, typed |> Map.get(&1.name, %{}) |> at(row.key)}),
+      defaults: Map.new(table.asks, &{&1.name, text(default.values[&1.name])}),
+      total: total(row, table)
+    }
+  end
+
+  # The row's total, as its `fill each` prints it.
+  defp total(_row, %{total: nil}), do: nil
+
+  defp total(row, %{doc: doc, total: total, timezone: timezone}),
+    do: Document.printed(doc, total.name, row.values[total.name], timezone)
+
+  # What was typed that reads: an answer that doesn't is left out, so its default holds.
+  defp readable(doc, typed) do
+    case Document.answers(doc, typed) do
+      {:ok, answered} ->
+        answered
+
+      {:error, errors} ->
+        typed
+        |> Map.new(fn {name, value} -> {name, drop_errors(value, errors[name])} end)
+        |> then(&readable(doc, &1))
+    end
+  end
+
+  defp drop_errors(_value, message) when is_binary(message), do: nil
+
+  defp drop_errors(rows, errors) when is_map(rows) and is_map(errors),
+    do: Map.drop(rows, Map.keys(errors))
+
+  defp drop_errors(value, nil), do: value
+
+  # The report's first member or item, which keeps each row's answers, and its name in a
+  # row's values.
+  defp record_column(report) do
+    report.query.select
+    |> Enum.zip(report.columns)
+    |> Enum.find_value({nil, nil}, fn
+      {ast, %{type: {:record, kind}}} when kind in [:member, :item] ->
+        {kind, Evaluator.name(ast)}
+
+      _other ->
+        nil
+    end)
+  end
+
+  defp row_id(nil), do: nil
+  defp row_id(key), do: key |> String.split(":") |> List.last() |> String.to_integer()
+
+  defp at(rows, key) when is_map(rows), do: Map.get(rows, key)
+  defp at(_text, _key), do: nil
+
+  defp text(nil), do: ""
+  defp text(%Decimal{} = n), do: Decimal.to_string(n, :normal)
+  defp text(value), do: to_string(value)
 
   @doc "The asks the page shows, one answer each."
   def questions(%Document{asks: asks}), do: Enum.filter(asks, &is_nil(&1.each))
