@@ -31,7 +31,8 @@ defmodule App.ViewData.TeamAttentionTest do
         no_shows: [],
         untagged: [],
         two_hours_tags: [],
-        letters: nil
+        letters: nil,
+        letter_settings: []
       },
       attrs
     )
@@ -111,6 +112,7 @@ defmodule App.ViewData.TeamAttentionTest do
             %{year: 2026, primary: 0, secondary: 1, ids: [10]}
           ],
           letters: %{year: 2025, count: 1},
+          letter_settings: [:signature],
           names: %{name: String.duplicate("a", 21), abbreviated_name: String.duplicate("a", 11)},
           contacts?: false
         })
@@ -125,7 +127,7 @@ defmodule App.ViewData.TeamAttentionTest do
       assert cannot_snooze |> keys() |> Enum.sort() ==
                Enum.sort(~w(refresh retiring_access group_changes chores certificates
                             chores_to_send attendance_to_send no_shows untagged_last_year
-                            two_hours_tags_last_year letters long_name
+                            two_hours_tags_last_year letters letter_settings long_name
                             long_abbreviated_name team_contacts)a)
 
       for item <- can_snooze do
@@ -384,6 +386,19 @@ defmodule App.ViewData.TeamAttentionTest do
 
     assert items(%{refresh: %{state: :refreshing, message: nil}}, @october) ==
              []
+  end
+
+  test "letter settings name what a letter is missing" do
+    assert [%{key: :letter_settings, level: :warning} = item] =
+             items(%{letter_settings: [:mailing_address, :signer, :signature]}, @march)
+
+    assert item.title == "Tax credit letters are missing a mailing address, signer, and signature"
+    assert item.detail =~ "Add them"
+
+    assert [%{title: "Tax credit letters are missing a signer", detail: "Add it" <> _}] =
+             items(%{letter_settings: [:signer]}, @march)
+
+    assert items(%{letter_settings: []}, @march) == []
   end
 
   test "tax credit letters show from January to April only, in the team's zone" do

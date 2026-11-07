@@ -108,7 +108,7 @@ defmodule Web.Settings.TaxCreditLettersLive do
         <.file_drop
           id="team-signature"
           upload={@uploads.signature}
-          label="Signer's signature (optional)"
+          label="Signer's signature"
           kinds="a PNG or JPEG"
           errors={if @signature_error, do: [@signature_error], else: []}
         >

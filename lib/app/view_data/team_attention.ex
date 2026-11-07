@@ -56,6 +56,7 @@ defmodule App.ViewData.TeamAttention do
     |> Enum.concat(untagged_items(rows, this_year))
     |> Enum.concat(two_hours_tags_items(rows, this_year))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
+    |> Enum.concat([letter_settings_item(rows.letter_settings)])
     |> Enum.concat(name_items(rows.names))
     |> Enum.concat([contacts_item(rows.contacts?)])
     |> Enum.reject(&is_nil/1)
@@ -597,6 +598,26 @@ defmodule App.ViewData.TeamAttention do
       one: "Take the extra tag off with Change tags, or in #{name} if it is published.",
       many: "Take each extra tag off with Change tags, or in #{name} for a published one."
     )
+  end
+
+  # A letter prints without an address, signer, or signature, but the CRA may question it
+  # (#918).
+  # The row is empty outside letter season.
+  @missing_words %{mailing_address: "mailing address", signer: "signer", signature: "signature"}
+
+  defp letter_settings_item([]), do: nil
+
+  defp letter_settings_item(missing) do
+    %{
+      key: :letter_settings,
+      level: :warning,
+      title:
+        "Tax credit letters are missing a #{missing |> Enum.map(&@missing_words[&1]) |> Format.and_list()}",
+      detail:
+        "Add #{if length(missing) > 1, do: "them", else: "it"} in team settings, " <>
+          "so the CRA accepts letters without question.",
+      action: "Open letter settings"
+    }
   end
 
   # Get help sends the team's messages to its contacts (#780), and never to every team
