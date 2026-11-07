@@ -288,16 +288,18 @@ other way to get the card.
   ([CardLinkController](../lib/web/controllers/card_link_controller.ex)), which builds the
   pass on the tap. A mail app's link scanner or a preview only loads the page, so it
   builds nothing.
-- **In Wallet says what SAR Duty knows**: how many phones registered the Apple pass, and
-  whether Google said it was saved ([Web.WalletText](../lib/web/wallet_text.ex), the
-  same words as the ID Card tab's Wallet row). It changes while the page is open: a
+- **One quiet line says what SAR Duty sees**, under "Lost your phone?": "SAR Duty sees
+  your ID card in Apple Wallet on 1 phone." ([Web.WalletText](../lib/web/wallet_text.ex),
+  which also writes the ID Card tab's Wallet row). It changes while the page is open: a
   phone adding or dropping the pass, and Google's save and delete, each broadcast
   `:wallet_changed` on the card's topic (`MemberCard.pass_topic/1`). There's no refresh:
   Apple has nothing to ask, and the page already hears every change.
-- **A tap shows what the page waits on.** The badge's link still downloads the pass or
-  opens Google's page, and the badges give way to "Waiting for your phone to add it to
-  Apple Wallet…" until the phone registers, the member cancels, or 2 minutes pass. On a
-  Mac the pass reaches the phone through iCloud, so the wait can be 15 seconds or more.
+- **A tap shows the page heard it.** The adding happens off the page, in Wallet's sheet
+  or Google's tab, so the tapped badge dims at once (`phx-click-loading`, then
+  `is-adding`) and the line becomes "Waiting for your phone to add it to Apple Wallet…"
+  until the phone registers or 2 minutes pass. Google's badge opens in a new tab, so the
+  page stays open to hear the save. On a Mac the pass reaches the phone through iCloud,
+  so the wait can be 15 seconds or more.
 - **On a computer** the page is wider, with Take attendance's Open on your phone
   sidebar and the page's QR code (`<.open_on_device>`, `/styles/open-on-device`). It's
   hidden on a touch screen.

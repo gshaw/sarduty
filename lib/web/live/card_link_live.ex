@@ -6,8 +6,6 @@ defmodule Web.CardLinkLive do
 
   alias App.Model.MemberCard
   alias App.Model.PassRegistration
-  alias App.Operation.BuildApplePass
-  alias App.Operation.BuildGooglePass
   alias Web.CardLinks
   alias Web.Navigation
   alias Web.WalletText
@@ -19,10 +17,10 @@ defmodule Web.CardLinkLive do
   # your phone has the page's QR code. A card that is replaced, cancelled, or not active
   # says so and offers nothing. Logged in to the card's team, the bar names it.
   #
-  # In Wallet says what SAR Duty knows, and changes while the page is open: a phone
-  # registering the Apple pass, or Google saying it was saved, broadcasts on the card's
-  # topic. A tap on a badge swaps the badges for what the page waits on, until that
-  # news comes, the member cancels, or 2 minutes pass.
+  # Under it, one quiet line says what SAR Duty sees, and changes while the page is open:
+  # a phone registering the Apple pass, or Google saying it was saved, broadcasts on the
+  # card's topic. A tap dims its badge and turns the line into what the page waits on,
+  # since the adding happens off the page, until that news comes or 2 minutes pass.
   @give_up_ms :timer.minutes(2)
 
   def mount(%{"token" => token}, _session, socket) do
@@ -40,8 +38,7 @@ defmodule Web.CardLinkLive do
        team: team,
        url: Web.Endpoint.url() <> ~p"/cards/#{token}",
        waiting: nil,
-       waiting_ref: nil,
-       not_yet?: false
+       waiting_ref: nil
      )
      |> assign_card(card)
      |> assign_bar_team(team)}
@@ -64,11 +61,8 @@ defmodule Web.CardLinkLive do
     ref = make_ref()
     Process.send_after(self(), {:give_up, ref}, @give_up_ms)
     waiting = if wallet == "apple", do: :apple, else: :google
-    {:noreply, assign(socket, waiting: waiting, waiting_ref: ref, not_yet?: false)}
+    {:noreply, assign(socket, waiting: waiting, waiting_ref: ref)}
   end
-
-  def handle_event("cancel", _params, socket),
-    do: {:noreply, assign(socket, waiting: nil, waiting_ref: nil)}
 
   def handle_info(:wallet_changed, socket),
     do: {:noreply, socket |> reload_card() |> assign(waiting: nil, waiting_ref: nil)}
@@ -77,7 +71,7 @@ defmodule Web.CardLinkLive do
     do: {:noreply, reload_card(socket)}
 
   def handle_info({:give_up, ref}, %{assigns: %{waiting_ref: ref}} = socket),
-    do: {:noreply, assign(socket, waiting: nil, waiting_ref: nil, not_yet?: true)}
+    do: {:noreply, assign(socket, waiting: nil, waiting_ref: nil)}
 
   def handle_info(_message, socket), do: {:noreply, socket}
 
@@ -103,7 +97,6 @@ defmodule Web.CardLinkLive do
           card={@card}
           phones={@phones}
           waiting={@waiting}
-          not_yet?={@not_yet?}
         />
       </div>
       <.open_on_device
@@ -126,7 +119,6 @@ defmodule Web.CardLinkLive do
   attr :card, :map, default: nil
   attr :phones, :integer, default: 0
   attr :waiting, :atom, default: nil
-  attr :not_yet?, :boolean, default: false
 
   defp card_state(%{status: :active} = assigns) do
     ~H"""
@@ -134,36 +126,21 @@ defmodule Web.CardLinkLive do
       Your ID card shows you are a current member of {@team.name}, with your endorsements.
       Show it at the door, or to another agency on a search.
     </p>
-    <div :if={@waiting} id="card-link-waiting" class="flex flex-wrap items-center gap-3">
-      <.spinner :if={@waiting == :apple}>
-        Waiting for your phone to add it to Apple Wallet…
-      </.spinner>
-      <.spinner :if={@waiting == :google}>Opening Google Wallet…</.spinner>
-      <.a id="card-link-cancel" href="#" phx-click="cancel">Cancel</.a>
-    </div>
     <.wallet_badges
-      :if={!@waiting}
       id="card-link-wallets"
       apple_href={~p"/cards/#{@token}/apple-wallet"}
       google_href={~p"/cards/#{@token}/google-wallet"}
       apple_click={JS.push("adding", value: %{wallet: "apple"})}
       google_click={JS.push("adding", value: %{wallet: "google"})}
+      adding={@waiting}
     />
-    <p :if={@not_yet? and !@waiting} id="card-link-not-yet" class="hint mt-2 mb-0">
-      Your phone hasn't added it yet. Try again.
-    </p>
-    <section id="card-link-status" class="mt-8">
-      <h2 class="heading">In Wallet</h2>
-      <p :if={BuildApplePass.configured?()} id="card-link-apple-status" class="mb-1">
-        {WalletText.apple(@phones, @card, @team.timezone) || "Not in Apple Wallet yet"}
-      </p>
-      <p :if={BuildGooglePass.configured?()} id="card-link-google-status" class="mb-1">
-        {WalletText.google(@card) || "Not in Google Wallet yet"}
-      </p>
-      <p class="hint mb-0">This changes as soon as your phone or Google tells SAR Duty.</p>
-    </section>
     <p id="card-link-lost" class="hint mt-6 mb-0">
       Lost your phone? Ask a team admin to replace your ID card. This link is yours alone.
+    </p>
+    <p id="card-link-status" class="hint mt-2 mb-0">
+      <.spinner :if={@waiting == :apple}>Waiting for your phone to add it to Apple Wallet…</.spinner>
+      <.spinner :if={@waiting == :google}>Waiting for Google Wallet in the new tab…</.spinner>
+      <span :if={!@waiting}>{WalletText.seen(@phones, @card)}</span>
     </p>
     """
   end

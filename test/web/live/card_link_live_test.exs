@@ -45,19 +45,23 @@ defmodule Web.CardLinkLiveTest do
     assert has_element?(lv, "#open-on-phone", "Scan the code with your phone's camera")
   end
 
-  test "In Wallet says what SAR Duty knows, and changes while the page is open",
+  test "a line under the badges says what SAR Duty sees, and changes while the page is open",
        %{conn: conn, member: member} do
     card = member_card_fixture(member)
     {:ok, lv, _html} = live(conn, CardLinks.path(card))
-    assert has_element?(lv, "#card-link-apple-status", "Not in Apple Wallet yet")
-    assert has_element?(lv, "#card-link-google-status", "Not in Google Wallet yet")
+    assert has_element?(lv, "#card-link-status", "doesn't see your ID card in Wallet yet")
 
     # A phone registering the pass, and Google saying it was saved, each broadcast.
     PassRegistration.register!(card, "device-1", "push-token-1")
-    assert has_element?(lv, "#card-link-apple-status", "In Apple Wallet on 1 phone")
+    assert has_element?(lv, "#card-link-status", "sees your ID card in Apple Wallet on 1 phone.")
 
     MemberCard.mark_in_wallet!(card, DateTime.utc_now())
-    assert has_element?(lv, "#card-link-google-status", "In Google Wallet")
+
+    assert has_element?(
+             lv,
+             "#card-link-status",
+             "in Apple Wallet on 1 phone and in Google Wallet."
+           )
   end
 
   test "a tap on Apple's badge waits for the phone, until it registers the pass",
@@ -66,35 +70,31 @@ defmodule Web.CardLinkLiveTest do
     {:ok, lv, _html} = live(conn, CardLinks.path(card))
 
     lv |> element("#card-link-wallets-apple") |> render_click()
+    assert has_element?(lv, "#card-link-wallets-apple.is-adding")
 
     assert has_element?(
              lv,
-             "#card-link-waiting",
+             "#card-link-status",
              "Waiting for your phone to add it to Apple Wallet"
            )
 
-    refute has_element?(lv, "#card-link-wallets")
-
     PassRegistration.register!(card, "device-1", "push-token-1")
-    refute has_element?(lv, "#card-link-waiting")
-    assert has_element?(lv, "#card-link-wallets")
-    assert has_element?(lv, "#card-link-apple-status", "In Apple Wallet on 1 phone")
+    refute has_element?(lv, "#card-link-wallets-apple.is-adding")
+    assert has_element?(lv, "#card-link-status", "in Apple Wallet on 1 phone")
   end
 
-  test "Cancel brings the badges back, and so does giving up after a while",
+  test "Google's badge opens in a new tab, and the page waits a while for the save",
        %{conn: conn, member: member} do
     {:ok, lv, _html} = live(conn, member |> member_card_fixture() |> CardLinks.path())
+    assert has_element?(lv, ~s{#card-link-wallets-google[target="_blank"]})
 
     lv |> element("#card-link-wallets-google") |> render_click()
-    assert has_element?(lv, "#card-link-waiting", "Opening Google Wallet")
-    lv |> element("#card-link-cancel") |> render_click()
-    assert has_element?(lv, "#card-link-wallets")
+    assert has_element?(lv, "#card-link-status", "Waiting for Google Wallet in the new tab")
 
-    lv |> element("#card-link-wallets-apple") |> render_click()
     %{waiting_ref: ref} = :sys.get_state(lv.pid).socket.assigns
     send(lv.pid, {:give_up, ref})
-    assert has_element?(lv, "#card-link-wallets")
-    assert has_element?(lv, "#card-link-not-yet", "Your phone hasn't added it yet")
+    refute has_element?(lv, "#card-link-wallets-google.is-adding")
+    assert has_element?(lv, "#card-link-status", "doesn't see your ID card in Wallet yet")
   end
 
   test "the page is kept out of search", %{conn: conn, member: member} do
