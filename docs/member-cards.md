@@ -172,6 +172,12 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
   lands on the existing pass instead of beside it. Each card has its own token, and a
   phone's token picks which card it gets, so a lost phone still holding the old token
   only ever gets the old card, voided. Cards made before this keep `member-card-<id>`.
+- **A replacement isn't on a phone until a phone fetches it.** Wallet doesn't register
+  again when a replacement lands (#70), so the serial's registrations belong to whichever
+  card each phone holds. They count for a card once one registered it or fetched its
+  pass with its own token (`PassRegistration.count_holding/1`, #952). Before that the
+  phones hold the cancelled card, and the replacement shows as in no Wallet. Pushes
+  still go to every phone with the serial.
 - A pass made before updates existed has no token, so it never updates. Its card gets a
   token the next time its pass is built.
 - APNs only works in production, so dev can build passes but never deliver a push.
@@ -294,16 +300,20 @@ other way to get the card.
   phone adding or dropping the pass, and Google's save and delete, each broadcast
   `:wallet_changed` on the card's topic (`MemberCard.pass_topic/1`). There's no refresh
   button: the page hears every change.
-- **A tap shows the page heard it.** The adding happens off the page, in Wallet's sheet
-  or Google's tab, so the tapped badge dims at once (`phx-click-loading`, then
-  `is-adding`) and the line becomes "Waiting for your phone to add it to Apple Wallet…"
-  until the phone registers or 2 minutes pass. Google's badge opens in a new tab, so the
-  page stays open to hear the save. Google's save callback only reaches production, so
-  while the page waits on Google it also asks Google every 4 seconds whether the pass
-  has users ([CheckGoogleWalletSave](../lib/app/operation/check_google_wallet_save.ex)).
-  That only ever marks a card saved: `hasUsers` may stay true after a delete, which the
-  delete callback clears. Apple has nothing to ask; the phone registering is the news. On a Mac the pass reaches the phone through iCloud,
-  so the wait can be 15 seconds or more.
+- **A tap shows the page heard it.** The adding happens off the page, in Wallet's sheet or
+  Google's tab, so the tapped badge dims at once (`phx-click-loading`, then `is-adding`)
+  and the line becomes "Waiting for your phone to add it to Apple Wallet…" until the phone
+  registers or 2 minutes pass. Google's badge opens in a new tab, so the page stays open
+  to hear the save. Google's save callback only reaches production, so while the page
+  waits on Google it also asks Google every 4 seconds whether the pass has users
+  ([CheckGoogleWalletSave](../lib/app/operation/check_google_wallet_save.ex)). That only
+  ever marks a card saved: `hasUsers` may stay true after a delete, which the delete
+  callback clears. Apple has nothing to ask; the phone registering is the news. A
+  replacement lands on the cancelled card's pass with no new registration, so while the
+  page waits on Apple it nudges those phones every 10 seconds
+  (`PushPassUpdates.nudge_replacement/2`): it marks the pass updated and pushes, and a
+  phone now holding the replacement fetches it with its token. On a Mac the pass reaches
+  the phone through iCloud, so the wait can be 15 seconds or more.
 - **On a computer** the page is wider, with Take attendance's Open on your phone
   sidebar and the page's QR code (`<.open_on_device>`, `/styles/open-on-device`). It's
   hidden on a touch screen.

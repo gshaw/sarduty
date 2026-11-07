@@ -7,6 +7,7 @@ defmodule Web.CardLinkLive do
   alias App.Model.MemberCard
   alias App.Model.PassRegistration
   alias App.Operation.CheckGoogleWalletSave
+  alias App.Operation.PushPassUpdates
   alias Web.CardLinks
   alias Web.Navigation
   alias Web.WalletText
@@ -24,9 +25,12 @@ defmodule Web.CardLinkLive do
   # since the adding happens off the page, until that news comes or 2 minutes pass.
   # Google's save callback only reaches production, so while the page waits on Google it
   # also asks Google every few seconds (CheckGoogleWalletSave). Apple has nothing to ask:
-  # the phone registering is the news.
+  # the phone registering is the news. A replacement lands on the cancelled card's pass
+  # with no new registration, so while the page waits on Apple it nudges those phones
+  # to fetch it (PushPassUpdates.nudge_replacement/2).
   @give_up_ms :timer.minutes(2)
   @check_google_ms :timer.seconds(4)
+  @nudge_apple_ms :timer.seconds(10)
 
   def mount(%{"token" => token}, _session, socket) do
     card = CardLinks.find_card(token) || raise Web.Status.NotFound
@@ -53,7 +57,7 @@ defmodule Web.CardLinkLive do
     assign(socket,
       card: card,
       status: MemberCard.link_status(card, DateTime.utc_now()),
-      phones: length(PassRegistration.get_all_for_serial(card))
+      phones: PassRegistration.count_holding(card)
     )
   end
 
@@ -67,14 +71,13 @@ defmodule Web.CardLinkLive do
     Process.send_after(self(), {:give_up, ref}, @give_up_ms)
     waiting = if wallet == "apple", do: :apple, else: :google
     if waiting == :google, do: Process.send_after(self(), :check_google, @check_google_ms)
+    if waiting == :apple, do: Process.send_after(self(), :nudge_apple, @nudge_apple_ms)
     {:noreply, assign(socket, waiting: waiting, waiting_ref: ref)}
   end
 
-  def handle_info(:wallet_changed, socket),
-    do: {:noreply, socket |> reload_card() |> assign(waiting: nil, waiting_ref: nil)}
-
-  def handle_info(message, socket) when message in [:pass_fetched, :card_changed],
-    do: {:noreply, reload_card(socket)}
+  def handle_info(message, socket)
+      when message in [:wallet_changed, :pass_fetched, :card_changed],
+      do: {:noreply, socket |> reload_card() |> end_wait_when_seen()}
 
   def handle_info({:give_up, ref}, %{assigns: %{waiting_ref: ref}} = socket),
     do: {:noreply, assign(socket, waiting: nil, waiting_ref: nil)}
@@ -86,11 +89,37 @@ defmodule Web.CardLinkLive do
      end)}
   end
 
+  def handle_info(:nudge_apple, %{assigns: %{waiting: :apple, card: card}} = socket) do
+    {:noreply,
+     start_async(socket, :nudge_apple, fn ->
+       PushPassUpdates.nudge_replacement(card, DateTime.utc_now())
+     end)}
+  end
+
   def handle_info(_message, socket), do: {:noreply, socket}
+
+  # The wait ends once SAR Duty sees the card in the Wallet it waited on.
+  defp end_wait_when_seen(%{assigns: %{waiting: :apple, phones: phones}} = socket)
+       when phones > 0,
+       do: assign(socket, waiting: nil, waiting_ref: nil)
+
+  defp end_wait_when_seen(
+         %{assigns: %{waiting: :google, card: %{in_wallet_at: %DateTime{}}}} = socket
+       ),
+       do: assign(socket, waiting: nil, waiting_ref: nil)
+
+  defp end_wait_when_seen(socket), do: socket
 
   # A save broadcasts :wallet_changed, which ends the wait. Anything else asks again
   # while the page still waits.
   def handle_async(:check_google, {:ok, :saved}, socket), do: {:noreply, socket}
+
+  def handle_async(:nudge_apple, _result, socket) do
+    if socket.assigns.waiting == :apple,
+      do: Process.send_after(self(), :nudge_apple, @nudge_apple_ms)
+
+    {:noreply, socket}
+  end
 
   def handle_async(:check_google, _result, socket) do
     if socket.assigns.waiting == :google,

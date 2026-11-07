@@ -26,6 +26,23 @@ defmodule App.Operation.PushPassUpdates do
     :ok
   end
 
+  @doc """
+  While a replacement's page waits on Apple Wallet (#952): its phones still hold the
+  cancelled card until one fetches the replacement, and Wallet doesn't register it
+  again. Marks the pass updated and pushes, so a phone that now holds the replacement
+  fetches it with its own token, which `count_holding/1` then counts. A phone still
+  holding the cancelled card fetches that again, unchanged and silent. Does nothing for
+  a card a phone already holds, or a serial no phone has.
+  """
+  def nudge_replacement(%MemberCard{} = card, now) do
+    if BuildApplePass.configured?() and PassRegistration.count_holding(card) == 0 and
+         PassRegistration.get_all_for_serial(card) != [] do
+      card |> MemberCard.touch_pass_updated!(now) |> push()
+    end
+
+    :ok
+  end
+
   # Records the new fingerprint as it goes, so a card is pushed once per change.
   defp changed?(card, now) do
     status = MemberCard.status(card, now)

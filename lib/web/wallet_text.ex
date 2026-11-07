@@ -2,7 +2,7 @@ defmodule Web.WalletText do
   @moduledoc """
   What SAR Duty knows of a card's Wallets, in words: the ID Card tab's Wallet row and the
   card's page say the same (#952). `phones` is how many phones registered the Apple pass
-  (`PassRegistration.get_all_for_serial/1`); Google's mark is `in_wallet_at`.
+  (`PassRegistration.count_holding/1`); Google's mark is `in_wallet_at`.
   """
   alias App.Model.MemberCard
 

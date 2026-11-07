@@ -86,7 +86,7 @@ defmodule Web.MemberCardLive do
   end
 
   defp assign_card(socket, card) do
-    phones = if card, do: length(PassRegistration.get_all_for_serial(card)), else: 0
+    phones = if card, do: PassRegistration.count_holding(card), else: 0
     socket |> assign(:card, card) |> assign(:phones, phones)
   end
 

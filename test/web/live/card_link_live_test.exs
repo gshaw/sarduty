@@ -6,6 +6,8 @@ defmodule Web.CardLinkLiveTest do
 
   alias App.Model.MemberCard
   alias App.Model.PassRegistration
+  alias App.Operation.IssueMemberCard
+  alias App.Repo
   alias Web.CardLinks
 
   setup do
@@ -79,6 +81,23 @@ defmodule Web.CardLinkLiveTest do
            )
 
     PassRegistration.register!(card, "device-1", "push-token-1")
+    refute has_element?(lv, "#card-link-wallets-apple.is-adding")
+    assert has_element?(lv, "#card-link-status", "in Apple Wallet on 1 phone")
+  end
+
+  test "a replacement isn't in Wallet until a phone fetches it, though its phones held the old card",
+       %{conn: conn, team: team, member: member} do
+    old = member_card_fixture(member)
+    PassRegistration.register!(old, "device-1", "push-token-1")
+    {:ok, replacement} = IssueMemberCard.call(team, member, DateTime.utc_now())
+
+    {:ok, lv, _html} = live(conn, CardLinks.path(replacement))
+    assert has_element?(lv, "#card-link-status", "doesn't see your ID card in Wallet yet")
+
+    lv |> element("#card-link-wallets-apple") |> render_click()
+    # The phone, now holding the replacement, fetches it with its own token.
+    replacement |> Repo.reload!() |> MemberCard.record_pass_fetched!(DateTime.utc_now())
+
     refute has_element?(lv, "#card-link-wallets-apple.is-adding")
     assert has_element?(lv, "#card-link-status", "in Apple Wallet on 1 phone")
   end

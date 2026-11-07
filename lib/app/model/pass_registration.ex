@@ -61,6 +61,21 @@ defmodule App.Model.PassRegistration do
     result
   end
 
+  @doc """
+  How many phones hold this card's own pass, as far as SAR Duty knows (#952). A
+  replacement shares its serial with the card before it, and Wallet doesn't register
+  again when it lands, so the serial's phones count for a card only once one registered
+  it or fetched its pass. A fetch carries the card's own token, so it names the card
+  the phone holds. Until then they hold the cancelled card, not this one.
+  """
+  def count_holding(%MemberCard{} = card) do
+    registrations = get_all_for_serial(card)
+
+    if card.pass_fetched_at || Enum.any?(registrations, &(&1.member_card_id == card.id)),
+      do: length(registrations),
+      else: 0
+  end
+
   @doc "Every phone holding a pass with this card's serial, whichever card it was added as."
   def get_all_for_serial(%MemberCard{} = card), do: card |> for_serial() |> Repo.all()
 

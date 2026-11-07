@@ -38,6 +38,30 @@ defmodule App.Operation.PushPassUpdatesTest do
     refute_received {:pushed, _, _}
   end
 
+  # A replacement lands on the cancelled card's pass with no new registration (#952).
+  test "nudges a replacement's phones until one fetches it", %{team: team, member: member} do
+    expect_pushes(self())
+    {:ok, replacement} = IssueMemberCard.call(team, member, @now)
+    # Replacing pushes the cancelled card to its phone.
+    assert_received {:pushed, _, _}
+
+    assert PushPassUpdates.nudge_replacement(replacement, @now) == :ok
+    assert_received {:pushed, "/3/device/push-token-1", _topic}
+    refute_received {:pushed, _, _}
+    assert Repo.reload!(replacement).pass_updated_at == @now
+
+    replacement |> Repo.reload!() |> MemberCard.record_pass_fetched!(@now)
+    replacement |> Repo.reload!() |> PushPassUpdates.nudge_replacement(@now)
+    refute_received {:pushed, _, _}
+  end
+
+  test "nudges nobody for a card no phone has", %{team: team} do
+    expect_pushes(self())
+    card = member_card_fixture(member_fixture(team))
+    PushPassUpdates.nudge_replacement(card, @now)
+    refute_received {:pushed, _, _}
+  end
+
   test "doesn't push when only the last-refreshed date moved", %{team: team, card: card} do
     expect_pushes(self())
     team |> refreshed_at(~U[2026-10-01 13:00:00.000000Z]) |> PushPassUpdates.call(@now)

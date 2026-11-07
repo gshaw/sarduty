@@ -356,6 +356,10 @@ defmodule App.Model.MemberCard do
     card |> change(changes) |> Repo.update!()
   end
 
+  @doc "Marks the pass changed, so a pushed phone fetches it again."
+  def touch_pass_updated!(%MemberCard{} = card, now),
+    do: card |> change(pass_updated_at: now) |> Repo.update!()
+
   @doc "Records that a phone fetched the pass, and tells the member's ID Card tab."
   def record_pass_fetched!(%MemberCard{} = card, now) do
     card = card |> change(pass_fetched_at: now) |> Repo.update!()
@@ -402,13 +406,13 @@ defmodule App.Model.MemberCard do
   end
 
   @doc """
-  Whether the card is in a Wallet, as far as SAR Duty knows: a phone registered its Apple
-  Wallet pass, or the card was marked in Wallet. An Apple replacement lands on the same
-  pass, so its serial counts; a Google replacement is a new pass, so only the card's own
-  mark does.
+  Whether the card is in a Wallet, as far as SAR Duty knows: a phone holds its Apple
+  Wallet pass (`PassRegistration.count_holding/1`), or Google said it was saved. A
+  replacement counts only once a phone holds it, not while phones hold the cancelled card
+  before it (#952).
   """
   def in_wallet?(%MemberCard{in_wallet_at: %DateTime{}}), do: true
-  def in_wallet?(%MemberCard{} = card), do: PassRegistration.get_all_for_serial(card) != []
+  def in_wallet?(%MemberCard{} = card), do: PassRegistration.count_holding(card) > 0
 
   def mark_in_wallet!(%MemberCard{} = card, now) do
     card = card |> change(in_wallet_at: now) |> Repo.update!()
