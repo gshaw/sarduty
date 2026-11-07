@@ -4,6 +4,7 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- A member's Standing says Mark as not retiring, the opposite of Mark as retiring.
 - Members: Add to group and Remove from group move under the table, say who each one
   reaches before you click, and ask first before marking anyone as retiring.
 - The choices for checked members start with nothing picked, so you always pick the change
