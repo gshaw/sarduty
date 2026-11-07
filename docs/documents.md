@@ -1,10 +1,16 @@
 # Documents
 
+<!-- cspell:ignore EMCR -- Emergency Management and Climate Readiness, BC's agency -->
+
 A document is a PDF SAR Duty prints from a text file in `priv/documents/` (#918). The
 file holds what the document reads, what it says, where each part sits on the page, and
 worked examples CI checks. The tax credit letter,
 [tax_credit_letter.txt](../priv/documents/tax_credit_letter.txt), is the first. In code
 it's `App.Document`: "template" is taken by kit templates.
+
+A [form](#forms) is a document an organization hosts, such as EMCR's Task report (#950).
+It prints for an activity, asks what SAR Duty can't know, and prints on the agency's own
+page.
 
 The language is the report language's ([reports.md](reports.md)): the same lexer, the
 same parser for each report and every value, and the same catalog. There is no second
@@ -14,17 +20,19 @@ or calls Typst: printing is App.Operation.PrintDocument's.
 
 ## The clauses
 
-They come in this order. `report` and `expect` can repeat; the rest come once.
+They come in this order. `report`, `ask`, and `expect` can repeat; the rest come once.
 
 | Clause                              | What it says                                                                                      |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `document 'Tax credit letter'`      | Its name.                                                                                         |
+| `document 'Tax credit letter'`      | Its name. A form starts `form 'Task report'`.                                                     |
 | `about '…'`                         | One line on what it's for.                                                                        |
-| `for member, year`                  | What it starts from, read as `:member` and `:year`.                                               |
+| `for member, year`                  | What it starts from, read as `:member` and `:year`. A form's is `for activity where …`.           |
 | `report hours` and a query under it | A report, read as `hours.total`: its first row's columns. Select fields only, so each has a name. |
+| `ask injured 'Injured'`             | A question a person answers, read as `:injured` ([Forms](#forms)).                                |
 | `title '…' by …`                    | The PDF's title and author.                                                                       |
-| `lock print`                        | The PDF can only be printed (`Service.PDFLock`).                                                  |
-| `keep hours.primary, …`             | Values saved with the PDF. Only what a report reads.                                              |
+| `lock print`                        | The PDF can only be printed (`Service.PDFLock`). Never on a form: the agency writes on it.        |
+| `keep hours.primary, …`             | Values saved with the PDF: what a report reads, and answers.                                      |
+| `page`                              | The values print on the form's own page PDF.                                                      |
 | `places`                            | Where each value goes.                                                                            |
 | `fill`                              | What goes in each place.                                                                          |
 | `expect with … : …`                 | A worked example: values given, and a condition that must hold.                                   |
@@ -53,7 +61,8 @@ leaves it out. Text compares exactly, case and all, since an expect checks what 
 | -------------------------------------------------- | ------------------------------------------------------------------------ |
 | `hours.total`                                      | A report's column. A record, such as a member, prints its name.          |
 | `team.legal_name`, `organization.name`             | The `team` and `organization` subjects' fields, with no report to write. |
-| `:member`, `:year`                                 | What the document starts from.                                           |
+| `:member`, `:year`, `:activity`                    | What the document starts from.                                           |
+| `:injured`                                         | A form's answer.                                                         |
 | `today`                                            | The team's date today.                                                   |
 | `team.logo`, `organization.logo`, `team.signature` | Pictures only printing reads.                                            |
 | `pdf.reference`, `pdf.verify_link`                 | The PDF's reference number and verify link.                              |
@@ -70,12 +79,30 @@ places
   verify     image right 1in, width 1in, height 1in, level with letter
 ```
 
-A place is `text`, `image`, or `flow`, and lengths are in `in`, `pt`, or `mm` from the
-page's edges. A flow stacks values in order, down the page or across it, and leaves out
-the blank ones. Down, each item is text, `space` (a blank line, or `space 4`), or
-`image value width 3in height 0.75in pad 6pt`, which fits a picture in that box. Any
-item can end with `if condition`. Across, each item is a picture. `level with letter`
-puts a place's bottom edge level with a flow's last line.
+A place is `text`, `image`, `flow`, or `tick`, and lengths are in `in`, `pt`, or `mm`
+from the page's edges: `top` or `bottom`, and `left` or `right`. A flow stacks values in
+order, down the page or across it, and leaves out the blank ones. Down, each item is
+text, `space` (a blank line, or `space 4`), or `image value width 3in height 0.75in pad
+6pt`, which fits a picture in that box. Any item can end with `if condition`. Across,
+each item is a picture. `level with letter` puts a place's bottom edge level with a
+flow's last line.
+
+A text place's first baseline sits three quarters of its `size` below its `top`, as a
+flow's does, and its text starts at its left edge. It wraps at its `width`, or between
+`left` and `right`. A form adds:
+
+```sql
+places
+  task_number text top 112pt, left 164pt, width 132pt, fit, size 10pt
+  description text top 248pt, left 76pt, width 460pt, pitch 18pt, size 10pt
+  search      tick top 170pt, left 160pt, size 9pt
+  err         tick top 110pt, left 160pt, size 9pt, page 2
+```
+
+- `fit` keeps a text on one line and shrinks it until it fits its width.
+- `pitch 18pt` puts its lines 18pt apart, baseline to baseline, on the page's own lines.
+- `tick` draws an X across a box `size` wide when its fill, a condition, holds.
+- `page 2` puts a place on the page PDF's second page. Without it, a place is on page 1.
 
 ## Checks
 
@@ -87,18 +114,52 @@ only where a picture goes, a format only on a value it shows.
 
 `App.DocumentTest` checks every file in `priv/documents/` and runs its `expect` lines.
 It also prints the tax credit letter's text from the same values `CreateTaxCreditLetter`
-reads, and compares the two line for line.
+reads, and compares the two line for line. A form's `where` is checked as a report's on
+`activities`, and reads no answers: it decides whether the form shows before anyone
+answers.
 
 ## Printing it
 
-A caller runs `App.Document.queries/1` with `:member` and `:year`, adds each first row
-with `App.Document.put_row/5` (records from `App.ViewData.ReportRecords.names/3`), adds
-the pictures and the PDF's values, and calls `App.Document.evaluate/3`. That gives the
+`App.Operation.ReadDocument` checks the text against the team's catalog, runs each
+report with what it starts from, and adds each first row with `App.Document.put_row/5`
+(records from `App.ViewData.ReportRecords.names/3`), the team's pictures, and `today`.
+The caller adds the PDF's values and calls `App.Document.evaluate/3`. That gives the
 title, the author, the lock, the kept values, and each place's value.
-`App.Operation.PrintDocument` prints that with Typst: `App.Document.Markup` lays each
-place out on letter paper, every value as a Typst string so it prints as written, and
-`lock print` runs `Service.PDFLock`. A QR code is an SVG from `EQRCode`, and Typst uses no
-packages. `App.Operation.PrintTaxCreditLetter` does all this for a letter.
+
+`App.Operation.PrintDocument` prints that with Typst. `App.Document.Markup` lays each
+place out on letter paper, or on each page of a form's page. **Values reach Typst as
+data, never as Typst code**: they go in a `values.json` the markup reads by key, so a name
+with a `*` or a `#` prints as written. `lock print` runs `Service.PDFLock`. A QR code is
+an SVG from `EQRCode`, and Typst uses no packages.
+`App.Operation.PrintTaxCreditLetter` does all this for a letter, and
+`App.Operation.PrintForm` for a form.
+
+## Forms
+
+A form is a document an organization hosts for its teams (#950), such as the claim a BC
+team sends EMCR after an incident. Its text starts:
+
+```sql
+form 'Task report'
+about 'EMCR 1.01, the task report after an incident.'
+for activity where kind = 'incident'
+```
+
+- **`where`** says which activities show it, as a report's `where` on `activities`.
+  `App.Document.shown_on/1` is the query that finds `:activity` when the form shows on
+  it, and `PrintForm` refuses any other activity.
+- **`ask name 'Label'`** is a question, read as `:name`. `default` is the answer until
+  someone gives one, and can read an answer above it: `default :meals_provided`.
+  `choose 'Yes', 'No'` lists the answers, `hint '…'` goes under the label, and
+  `remember` starts from the team's last answer, which the caller gives. An answer is
+  text, a number, or a date, by its default. `App.Document.answers/2` reads what a person
+  typed and says what's wrong with it.
+- **`page`** prints the values on the form's own page PDF: every page of it, each at its
+  own size, any paper. Typst draws a PDF's page but can't count them, so
+  `Service.PDFPages` reads the page tree's `/Count`. A form's places say which page
+  they're on.
+
+Values print in black Arimo, as a form typed in Acrobat. A form is never locked.
 
 ## Saved PDFs
 
