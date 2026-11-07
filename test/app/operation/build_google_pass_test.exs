@@ -25,7 +25,12 @@ defmodule App.Operation.BuildGooglePassTest do
   end
 
   defp object(card, qualifications \\ []),
-    do: BuildGooglePass.pass_object(card, qualifications, @config, @now)
+    do: BuildGooglePass.pass_object(card, status(card), qualifications, @config)
+
+  # MemberCard.status/3 reads the database; these cards say theirs by revoked_at and left_at.
+  defp status(%MemberCard{revoked_at: %DateTime{}}), do: :revoked
+  defp status(%MemberCard{member: %{left_at: %DateTime{}}}), do: :inactive
+  defp status(_card), do: :active
 
   defp text(object, id), do: Enum.find(object.textModulesData, &(&1.id == id))
 
@@ -53,12 +58,12 @@ defmodule App.Operation.BuildGooglePassTest do
     assert text(object, "status").body == "Active"
   end
 
-  test "an inactive card doesn't say how long it's good for, but still expires" do
-    card = card()
+  test "an inactive card doesn't say how long it's good for, and stops rolling its expiry (#893)" do
+    card = card(expires_at: ~U[2026-11-01 06:59:59Z])
     object = object(put_in(card.member.left_at, ~U[2026-01-01 00:00:00Z]))
 
     refute text(object, "valid_until")
-    assert object.validTimeInterval
+    assert object.validTimeInterval == %{end: %{date: "2026-11-01T06:59:59Z"}}
   end
 
   test "the class puts every field its front row names on the object" do
@@ -95,7 +100,7 @@ defmodule App.Operation.BuildGooglePassTest do
     assert object.logo.sourceUri.uri =~ "/teams/example/logo"
     assert object.heroImage.sourceUri.uri == Web.VerifyHost.url() <> "/K7Q4M2XA/banner"
 
-    dev = BuildGooglePass.pass_object(card(), [], %{@config | images: false}, @now)
+    dev = BuildGooglePass.pass_object(card(), :active, [], %{@config | images: false})
     refute Map.has_key?(dev, :logo)
     refute Map.has_key?(dev, :heroImage)
   end

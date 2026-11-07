@@ -28,11 +28,13 @@ defmodule App.Operation.PushPassUpdates do
 
   # Records the new fingerprint as it goes, so a card is pushed once per change.
   defp changed?(card, now) do
+    status = MemberCard.status(card, now)
+    card = MemberCard.record_expires_at!(card, status)
     qualifications = BuildCardQualifications.call(card.member.team, card.member, now)
 
     fingerprint =
       card
-      |> BuildApplePass.pass_json(qualifications, config(), now)
+      |> BuildApplePass.pass_json(status, qualifications, config())
       |> BuildApplePass.fingerprint()
 
     if fingerprint == card.pass_fingerprint do

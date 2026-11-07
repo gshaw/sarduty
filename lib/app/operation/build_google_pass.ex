@@ -41,8 +41,10 @@ defmodule App.Operation.BuildGooglePass do
     if configured?() do
       card = Repo.preload(card, member: [team: :organization])
       config = config()
+      status = MemberCard.status(card, now)
+      card = MemberCard.record_expires_at!(card, status)
       qualifications = BuildCardQualifications.call(card.member.team, card.member, now)
-      object = pass_object(card, qualifications, config, now)
+      object = pass_object(card, status, qualifications, config)
 
       with {:ok, token} <- GoogleWallet.access_token(config.credentials, now),
            :ok <- GoogleWallet.upsert(token, "genericClass", pass_class(config)),
@@ -98,12 +100,11 @@ defmodule App.Operation.BuildGooglePass do
   end
 
   @doc """
-  The card's Google Wallet object as a map. `qualifications` comes from
-  `BuildCardQualifications.summarize/3`.
+  The card's Google Wallet object as a map, for the card's `status`
+  (MemberCard.status/3). `qualifications` comes from `BuildCardQualifications.summarize/3`.
   """
-  def pass_object(%MemberCard{member: member} = card, qualifications, config, now) do
+  def pass_object(%MemberCard{member: member} = card, status, qualifications, config) do
     team = member.team
-    status = MemberCard.status(card, now)
     # A Try a demo card says so, front and centre (#857).
     sample? = DemoTeam.demo?(team)
 
@@ -118,7 +119,7 @@ defmodule App.Operation.BuildGooglePass do
       header: localized(member.name),
       textModulesData: texts(card, qualifications, status)
     }
-    |> put_valid_time(team)
+    |> put_valid_time(MemberCard.expires_at(card, status))
     |> put_barcode(card, status)
     |> put_images(card, status, config)
   end
@@ -172,17 +173,12 @@ defmodule App.Operation.BuildGooglePass do
 
   defp put_barcode(object, _card, _status), do: object
 
-  # Wallet moves the pass to "Expired passes" once this passes, which happens only if
-  # refreshes stop.
-  defp put_valid_time(object, team) do
-    case MemberCard.valid_until(team) do
-      nil ->
-        object
+  # Wallet moves the pass to "Expired passes" once this passes: when refreshes stop, or
+  # within three months of the card going inactive (MemberCard.expires_at/2).
+  defp put_valid_time(object, nil), do: object
 
-      valid_until ->
-        Map.put(object, :validTimeInterval, %{end: %{date: DateTime.to_iso8601(valid_until)}})
-    end
-  end
+  defp put_valid_time(object, expires_at),
+    do: Map.put(object, :validTimeInterval, %{end: %{date: DateTime.to_iso8601(expires_at)}})
 
   # Only an active card says how long it's good for.
   defp valid_until_text(team, :active) do

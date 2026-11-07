@@ -11,13 +11,12 @@ defmodule Web.MemberCardLive do
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildCardQualifications
   alias App.Operation.BuildGooglePass
-  alias App.Operation.EmailMemberCard
-  alias App.Operation.IssueMemberCard
-  alias App.Operation.RevokeMemberCard
+  alias App.Operation.SendMemberCard
   alias App.Repo
 
-  # A phone fetching the pass ticks "last fetched" over. The topic is by the URL's member
-  # id, but the message carries nothing; the card is looked up through the team.
+  # A phone fetching the pass, or the card's job making it or emailing it, ticks the tab
+  # over. The topic is by the URL's member id, but the message carries nothing; the card
+  # is looked up through the team.
   def mount(params, _session, socket) do
     if connected?(socket),
       do: Phoenix.PubSub.subscribe(App.PubSub, MemberCard.pass_topic(params["id"]))
@@ -34,7 +33,7 @@ defmodule Web.MemberCardLive do
       socket
       |> assign(:page_title, "#{member.name} · ID card")
       |> assign(:member, member)
-      |> assign(:current?, Member.current?(member, now))
+      |> assign(:active?, Member.good_standing?(member, now))
       |> load_sidebar()
       |> assign_card(MemberCard.find_current(team, member))
       |> assign(:qualifications, BuildCardQualifications.call(team, member, now))
@@ -43,14 +42,15 @@ defmodule Web.MemberCardLive do
     {:noreply, socket}
   end
 
-  # The page shows the new card, so no message.
+  # Issue ID card, or Replace ID card once there is one: a new code, and its email
+  # queued. The page shows the new card and its Emailed row, so no message.
   def handle_event("issue", _params, socket) do
     %{current_team: team, member: member} = socket.assigns
 
-    case IssueMemberCard.call(team, member, DateTime.utc_now()) do
-      {:ok, card} -> {:noreply, assign_card(socket, card)}
+    case SendMemberCard.issue(team, member, DateTime.utc_now()) do
+      {:ok, _card} -> {:noreply, reload_card(socket)}
       {:error, :id_cards_off} -> {:noreply, put_flash(socket, :error, id_cards_off(team))}
-      {:error, :retired} -> {:noreply, socket}
+      {:error, :not_active} -> {:noreply, socket}
     end
   end
 
@@ -58,26 +58,17 @@ defmodule Web.MemberCardLive do
     %{current_team: team, member: member} = socket.assigns
 
     socket =
-      case EmailMemberCard.call(team, member, DateTime.utc_now()) do
-        :ok -> put_flash(socket, :info, "Emailed the ID card to #{member.email}.")
+      case SendMemberCard.email(team, member, DateTime.utc_now()) do
+        {:ok, _card} -> put_flash(socket, :info, "Sending the ID card to #{member.email}.")
         {:error, :no_email} -> put_flash(socket, :error, "#{member.name} has no email.")
-        {:error, _reason} -> put_flash(socket, :error, "The email did not send. Try again.")
+        {:error, :no_card} -> socket
       end
 
-    {:noreply, socket}
+    {:noreply, reload_card(socket)}
   end
 
-  # The page shows the card is gone, so no message.
-  def handle_event("revoke", _params, socket) do
-    %{current_team: team, member: member} = socket.assigns
-    :ok = RevokeMemberCard.call(team, member, DateTime.utc_now())
-    {:noreply, assign_card(socket, nil)}
-  end
-
-  def handle_info(:pass_fetched, socket) do
-    %{current_team: team, member: member} = socket.assigns
-    {:noreply, assign_card(socket, MemberCard.find_current(team, member))}
-  end
+  def handle_info(message, socket) when message in [:pass_fetched, :card_changed],
+    do: {:noreply, reload_card(socket)}
 
   # Swoosh's test adapter sends each email to the process that sent it.
   def handle_info(_message, socket), do: {:noreply, socket}
@@ -87,6 +78,11 @@ defmodule Web.MemberCardLive do
     do: "A SAR Duty site admin turns them on after checking your team. Ask one to turn them on."
 
   defp id_cards_off(_team), do: "Your organization admins turn them on. Ask one to turn them on."
+
+  defp reload_card(socket) do
+    %{current_team: team, member: member} = socket.assigns
+    assign_card(socket, MemberCard.find_current(team, member))
+  end
 
   defp assign_card(socket, card) do
     phones = if card, do: length(PassRegistration.get_all_for_serial(card)), else: 0
@@ -121,7 +117,8 @@ defmodule Web.MemberCardLive do
         :if={@current_team.id_cards_enabled}
         card={@card}
         member={@member}
-        current?={@current?}
+        active?={@active?}
+        standing={@standing}
         qualifications={@qualifications}
         endorsements_on_card?={@endorsements_on_card?}
         phones={@phones}
@@ -132,9 +129,9 @@ defmodule Web.MemberCardLive do
     """
   end
 
-  defp card_content(%{card: nil, current?: false} = assigns) do
+  defp card_content(%{card: nil, active?: false} = assigns) do
     ~H"""
-    <p id="no-card">{@member.name} is retired, so they cannot get an ID card.</p>
+    <p id="no-card">{@member.name} is {not_active_text(@standing)}, so they cannot get an ID card.</p>
     """
   end
 
@@ -142,7 +139,9 @@ defmodule Web.MemberCardLive do
     ~H"""
     <div id="no-card">
       <p>{@member.name} has no ID card.</p>
-      <.button id="issue" variant={:primary} phx-click="issue">Issue ID card</.button>
+      <.button id="issue" variant={:primary} phx-click="issue" phx-disable-with="Issuing…">
+        Issue ID card
+      </.button>
     </div>
     """
   end
@@ -159,10 +158,16 @@ defmodule Web.MemberCardLive do
         </dd>
         <dt>Status</dt>
         <dd id="card-status">
-          {if @current?, do: "Active", else: "Not active: #{@member.name} is retired"}
+          {if @active?,
+            do: "Active",
+            else: "Not active: #{@member.name} is #{not_active_text(@standing)}"}
         </dd>
         <dt>Issued</dt>
         <dd>{Service.Format.date_short(@card.inserted_at, @member.team.timezone)}</dd>
+        <dt :if={@card.email_status}>Emailed</dt>
+        <dd :if={@card.email_status} id="card-emailed">
+          {emailed_text(@card, @member)}
+        </dd>
         <dt>Endorsements</dt>
         <dd id="card-qualifications">
           <div :for={q <- @qualifications}>
@@ -179,9 +184,9 @@ defmodule Web.MemberCardLive do
           <span id="card-phones">{wallet_status(@phones, @card, @member.team.timezone)}</span>
         </dd>
       </dl>
-      <.form_actions>
+      <.form_actions :if={@active?}>
         <.button
-          :if={@current? && @member.email && wallet?()}
+          :if={@member.email && wallet?()}
           id="email-pass"
           variant={:primary}
           phx-click="email"
@@ -190,23 +195,43 @@ defmodule Web.MemberCardLive do
         >
           Email ID card
         </.button>
-        <:trailing>
-          <.button
-            id="revoke"
-            variant={:danger}
-            phx-click="revoke"
-            data-confirm={"Cancel #{@member.name}'s ID card? Its code stops working, and Wallet shows it as cancelled."}
-          >
-            Cancel ID card
-          </.button>
-        </:trailing>
+        <.button
+          id="replace"
+          phx-click="issue"
+          phx-disable-with="Replacing…"
+          data-confirm={replace_confirm(@member)}
+        >
+          Replace ID card
+        </.button>
       </.form_actions>
-      <p :if={@current? and wallet?()} id="card-delivery" class="hint">
+      <p :if={@active? and wallet?()} id="card-delivery" class="hint">
         {delivery_hint(assigns)}
       </p>
     </div>
     """
   end
+
+  # Why a member's card is not active, or why they cannot get one.
+  defp not_active_text(:retiring), do: "retiring"
+  defp not_active_text(_standing), do: "retired"
+
+  defp replace_confirm(%Member{email: email} = member) when email not in [nil, ""],
+    do:
+      "Replace #{member.name}'s ID card? Its code stops working. The new card is emailed to #{email}."
+
+  defp replace_confirm(member), do: "Replace #{member.name}'s ID card? Its code stops working."
+
+  defp emailed_text(%MemberCard{email_status: :sending}, member), do: "Sending to #{member.email}"
+
+  defp emailed_text(%MemberCard{email_status: :sent} = card, member),
+    do: "#{Service.Format.date_short(card.emailed_at, member.team.timezone)}, to #{member.email}"
+
+  defp emailed_text(%MemberCard{email_status: :failed}, %Member{email: email} = member)
+       when email in [nil, ""],
+       do: "Not sent: #{member.name} has no email."
+
+  defp emailed_text(%MemberCard{email_status: :failed}, _member),
+    do: "Did not send. Select Email ID card to try again."
 
   # How the card reaches the member's phone, now that only they add it to Wallet.
   defp delivery_hint(%{member_logins?: true, member: member}),

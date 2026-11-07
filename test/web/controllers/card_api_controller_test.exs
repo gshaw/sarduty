@@ -5,6 +5,7 @@ defmodule Web.CardApiControllerTest do
 
   alias App.Adapter.D4H
   alias App.Model.MemberCard
+  alias App.Repo
 
   # The check as JSON on the verify site. Each test gets its own IP, since misses count.
   setup %{conn: conn} do
@@ -86,6 +87,24 @@ defmodule Web.CardApiControllerTest do
     assert body["team"]["name"] == team.name
     assert body["team"]["valid_until"] == nil
     refute Map.has_key?(body, "records")
+  end
+
+  # The same rule as logins (#514, #893): a retiring member is no longer a member.
+  test "a retiring member's card is inactive, with no photo or IDs, and active once they stay",
+       %{conn: conn, team: team, member: member} do
+    leavers = group_fixture(team)
+    team |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id) |> Repo.update!()
+    membership = group_member_fixture(leavers, member)
+    card = member_card_fixture(member)
+
+    body = conn |> check(card.code) |> json_response(200)
+    assert body["status"] == "inactive"
+    assert body["member"] == %{"name" => member.name, "left_at" => nil}
+    refute Map.has_key?(body, "records")
+    assert conn |> get("/#{card.code}/photo") |> response(404)
+
+    Repo.delete!(membership)
+    assert conn |> check(card.code) |> json_response(200) |> Map.get("status") == "active"
   end
 
   test "a cancelled card says nothing about the member", %{conn: conn, member: member} do

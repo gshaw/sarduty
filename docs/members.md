@@ -161,7 +161,8 @@ team admin uses to finish retiring them still show them.
 | Skips retiring members                                                                                                               | Through                                                |
 | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
 | Logging in as a team admin, Agents, Team admins, the last team admin check, and team admin email                                     | `Member.managers_query/2`                              |
-| Logging in as a member                                                                                                               | `Member.counted_query/1` in `Member.get_logins/2`      |
+| Logging in as a member                                                                                                               | `Member.good_standing_query/2`                         |
+| Their ID card, which verifies as Not active and stops rolling Valid until (#893)                                                     | `Member.good_standing?/3` in `MemberCard.status/3`     |
 | Dashboard counts and charts, Missing details, Add members, a template's groups, Take attendance, and an organization's member totals | `Member.counted_query/1`                               |
 | Reminders                                                                                                                            | Ask for a reply names them under "Who does not get it" |
 

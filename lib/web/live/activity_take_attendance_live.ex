@@ -296,7 +296,7 @@ defmodule Web.ActivityTakeAttendanceLive do
   defp error_text(:revoked),
     do: {"This ID card is cancelled.", "Find the member by name instead."}
 
-  defp error_text(:left_team), do: {"This member is retired.", nil}
+  defp error_text(:inactive), do: {"This member is not active.", nil}
   defp error_text(:bad_time), do: {"Enter the time as hours and minutes, like 09:30.", nil}
 
   # Signed up is read again with the scans, so the 10-minute sync's changes show too.

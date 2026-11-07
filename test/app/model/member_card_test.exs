@@ -1,5 +1,7 @@
 defmodule App.Model.MemberCardTest do
-  use ExUnit.Case, async: true
+  use App.DataCase, async: true
+
+  import App.DataFixtures
 
   alias App.Model.Member
   alias App.Model.MemberCard
@@ -44,13 +46,56 @@ defmodule App.Model.MemberCardTest do
     assert MemberCard.normalize_code(nil) == nil
   end
 
-  test "status is active for a current member, inactive once they leave, revoked when cancelled" do
-    current = %Member{left_at: nil}
-    left = %Member{left_at: ~U[2026-01-01 00:00:00Z]}
+  describe "status" do
+    setup do
+      team = team_fixture()
+      %{team: team, member: member_fixture(team)}
+    end
 
-    assert MemberCard.status(%MemberCard{member: current}, @now) == :active
-    assert MemberCard.status(%MemberCard{member: left}, @now) == :inactive
-    assert MemberCard.status(%MemberCard{member: current, revoked_at: @now}, @now) == :revoked
+    test "is active for a current member, inactive once they leave, revoked when replaced",
+         %{team: team, member: member} do
+      left = member_fixture(team, %{left_at: ~U[2026-01-01 00:00:00Z]})
+
+      assert MemberCard.status(%MemberCard{member: member}, @now) == :active
+      assert MemberCard.status(%MemberCard{member: left}, @now) == :inactive
+      assert MemberCard.status(%MemberCard{member: member, revoked_at: @now}, @now) == :revoked
+    end
+
+    # The same rule as logins (#514, #893): a retiring member is no longer a member.
+    test "is inactive while the member is retiring, and active again once they aren't",
+         %{team: team, member: member} do
+      leavers = group_fixture(team)
+      team |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id) |> Repo.update!()
+      card = %MemberCard{member: member}
+
+      membership = group_member_fixture(leavers, member)
+      assert MemberCard.status(card, @now) == :inactive
+
+      Repo.delete!(membership)
+      assert MemberCard.status(card, @now) == :active
+    end
+  end
+
+  describe "expires_at" do
+    setup do
+      team = %Team{d4h_refreshed_at: ~U[2026-09-30 13:05:00Z], timezone: "America/Vancouver"}
+      %{card: %MemberCard{member: %Member{team: team}}}
+    end
+
+    test "rolls with the refresh while active", %{card: card} do
+      card = %{card | expires_at: ~U[2026-11-01 06:59:59Z]}
+      assert MemberCard.expires_at(card, :active) == ~U[2027-01-01 06:59:59Z]
+    end
+
+    test "stays put once the card isn't active", %{card: card} do
+      card = %{card | expires_at: ~U[2026-11-01 06:59:59Z]}
+      assert MemberCard.expires_at(card, :inactive) == ~U[2026-11-01 06:59:59Z]
+      assert MemberCard.expires_at(card, :revoked) == ~U[2026-11-01 06:59:59Z]
+    end
+
+    test "starts from the refresh for a card never built while active", %{card: card} do
+      assert MemberCard.expires_at(card, :inactive) == ~U[2027-01-01 06:59:59Z]
+    end
   end
 
   describe "valid_until" do

@@ -8,7 +8,6 @@ defmodule App.Operation.PushPassUpdatesTest do
   alias App.Operation.BuildApplePass
   alias App.Operation.IssueMemberCard
   alias App.Operation.PushPassUpdates
-  alias App.Operation.RevokeMemberCard
 
   @now ~U[2026-09-30 12:00:00.000000Z]
 
@@ -56,6 +55,31 @@ defmodule App.Operation.PushPassUpdatesTest do
 
     team |> refreshed_at(~U[2026-11-01 13:00:00.000000Z]) |> PushPassUpdates.call(@now)
     assert_received {:pushed, _, _}
+  end
+
+  # A retired or retiring member keeps their card (#893): one push says Not active, and
+  # its expiry stays where it was, so Wallet shows it expired within three months.
+  test "a member marked retiring gets one push, and their pass stops rolling",
+       %{team: team, member: member, card: card} do
+    expect_pushes(self())
+    team = refreshed_at(team, ~U[2026-10-01 13:00:00.000000Z])
+    PushPassUpdates.call(team, @now)
+    assert_received {:pushed, _, _}
+    expires_at = Repo.reload!(card).expires_at
+    assert expires_at == ~U[2027-02-01 06:59:59.000000Z]
+
+    leavers = group_fixture(team)
+
+    team =
+      team |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id) |> Repo.update!()
+
+    group_member_fixture(leavers, member)
+    PushPassUpdates.call(team, @now)
+    assert_received {:pushed, _, _}
+
+    team |> refreshed_at(~U[2026-11-01 13:00:00.000000Z]) |> PushPassUpdates.call(@now)
+    refute_received {:pushed, _, _}
+    assert Repo.reload!(card).expires_at == expires_at
   end
 
   defp refreshed_at(team, refreshed_at) do
@@ -112,10 +136,10 @@ defmodule App.Operation.PushPassUpdatesTest do
     assert [_] = PassRegistration.get_all_for_serial(card)
   end
 
-  test "cancelling a card pushes its voided pass", %{team: team, member: member, card: card} do
+  test "replacing a card pushes its voided pass", %{team: team, member: member, card: card} do
     expect_pushes(self())
 
-    RevokeMemberCard.call(team, member, @now)
+    {:ok, _replacement} = IssueMemberCard.call(team, member, @now)
 
     assert_received {:pushed, "/3/device/push-token-1", _}
     assert Repo.reload!(card).pass_updated_at == @now
@@ -149,8 +173,8 @@ defmodule App.Operation.PushPassUpdatesTest do
       %{replacement: replacement}
     end
 
-    test "cancelling the replacement still reaches the phone", %{team: team, member: member} do
-      RevokeMemberCard.call(team, member, @now)
+    test "replacing the replacement still reaches the phone", %{team: team, member: member} do
+      {:ok, _card} = IssueMemberCard.call(team, member, @now)
       assert_received {:pushed, "/3/device/push-token-1", _}
     end
 

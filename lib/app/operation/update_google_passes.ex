@@ -70,7 +70,9 @@ defmodule App.Operation.UpdateGooglePasses do
   end
 
   defp object(card, config, now) do
+    status = MemberCard.status(card, now)
+    card = MemberCard.record_expires_at!(card, status)
     qualifications = BuildCardQualifications.call(card.member.team, card.member, now)
-    BuildGooglePass.pass_object(card, qualifications, config, now)
+    BuildGooglePass.pass_object(card, status, qualifications, config)
   end
 end

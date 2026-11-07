@@ -32,6 +32,13 @@ defmodule App.Model.MemberCard do
     # When the member said the card is in Wallet, for "For you to do" (#389). Apple
     # Wallet tells SAR Duty itself, through pass_registrations.
     field :in_wallet_at, :utc_datetime_usec
+    # Whether its email went (#893): sending while its job waits, then sent or failed.
+    # Empty for a card never emailed, or one made before.
+    field :email_status, Ecto.Enum, values: [:sending, :sent, :failed]
+    field :emailed_at, :utc_datetime_usec
+    # When its passes expire, as last built: rolls with valid_until/1 while the card is
+    # active, and stays put once it isn't, so Wallet shows the pass expired (#893).
+    field :expires_at, :utc_datetime_usec
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -155,14 +162,21 @@ defmodule App.Model.MemberCard do
     end
   end
 
-  @doc "`:active`, `:inactive` when the member has retired, or `:revoked`."
-  def status(%MemberCard{revoked_at: nil, member: member}, now) do
-    if Member.current?(member, now), do: :active, else: :inactive
+  @doc """
+  `:active` while the member is in good standing (Member.good_standing?/3: current and
+  not retiring), `:inactive` once they aren't, or `:revoked` for a replaced card or one
+  the team's ID cards switch cancelled. A member who comes back gets the same card back,
+  active. `repo` is App.SampleRepo for a sample card.
+  """
+  def status(card, now, repo \\ Repo)
+
+  def status(%MemberCard{revoked_at: nil, member: member}, now, repo) do
+    if Member.good_standing?(member, now, repo), do: :active, else: :inactive
   end
 
-  def status(%MemberCard{}, _now), do: :revoked
+  def status(%MemberCard{}, _now, _repo), do: :revoked
 
-  @doc "A cancelled card, by id, or nil. Its member is found through the card's team."
+  @doc "A revoked card, by id, or nil. Its member is found through the card's team."
   def get_revoked(id) do
     MemberCard
     |> join(:inner, [c], m in assoc(c, :member), on: m.team_id == c.team_id)
@@ -186,6 +200,39 @@ defmodule App.Model.MemberCard do
     |> DateTime.new!(~T[23:59:59], timezone)
     |> DateTime.shift_zone!("Etc/UTC")
   end
+
+  @doc """
+  Pure. When the card's passes expire, given its `status`: valid_until/1 while active,
+  so it rolls with each refresh, and the date it last had once it isn't, so a former
+  member's pass shows expired within three months. Expects `member: :team`.
+  """
+  def expires_at(%MemberCard{member: %{team: team}}, :active), do: valid_until(team)
+  def expires_at(%MemberCard{expires_at: %DateTime{} = expires_at}, _status), do: expires_at
+  def expires_at(%MemberCard{member: %{team: team}}, _status), do: valid_until(team)
+
+  @doc "Stores expires_at/2 on the card when it moved, before a pass is built."
+  def record_expires_at!(%MemberCard{} = card, status) do
+    expires_at = expires_at(card, status)
+
+    if same_time?(expires_at, card.expires_at),
+      do: card,
+      else: card |> change(expires_at: usec(expires_at)) |> Repo.update!()
+  end
+
+  defp usec(nil), do: nil
+  defp usec(%DateTime{} = time), do: DateTime.add(time, 0, :microsecond)
+
+  # A stored time comes back with microseconds, so == would see every one as moved.
+  defp same_time?(nil, nil), do: true
+  defp same_time?(%DateTime{} = a, %DateTime{} = b), do: DateTime.compare(a, b) == :eq
+  defp same_time?(_a, _b), do: false
+
+  @doc "Records how the card's email went: `:sending` when its job is queued, then the result."
+  def set_email_status!(%MemberCard{} = card, :sent, now),
+    do: card |> change(email_status: :sent, emailed_at: now) |> Repo.update!()
+
+  def set_email_status!(%MemberCard{} = card, status, _now),
+    do: card |> change(email_status: status) |> Repo.update!()
 
   def find_by_code(code, repo \\ Repo) do
     MemberCard
@@ -225,7 +272,7 @@ defmodule App.Model.MemberCard do
     |> Map.new()
   end
 
-  @doc "Revokes the member's live cards and returns them."
+  @doc "Revokes the member's live cards and returns them, when a card replaces them."
   def revoke_all!(%Team{} = team, %Member{} = member, now) do
     {_count, cards} =
       MemberCard

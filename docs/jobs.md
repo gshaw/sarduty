@@ -52,13 +52,13 @@ discarded without a word, so a job that matters gets 2 or more, or a status.
 
 ## Queues
 
-| Queue     | Limit | For                                                                     |
-| --------- | ----- | ----------------------------------------------------------------------- |
-| `default` | 5     | Small jobs someone may be waiting on: login codes, notices              |
-| `bulk`    | 2     | Fan-out, one job per email or card: reminders, letters, cancelled cards |
-| `refresh` | 1     | The full D4H refresh, nightly or from a button                          |
-| `sync`    | 1     | The 10-minute D4H sync                                                  |
-| `demos`   | 1     | Building a Try a demo copy, while its visitor waits (#857)              |
+| Queue     | Limit | For                                                              |
+| --------- | ----- | ---------------------------------------------------------------- |
+| `default` | 5     | Small jobs someone may be waiting on: login codes, notices       |
+| `bulk`    | 2     | Fan-out, one job per email or card: reminders, letters, ID cards |
+| `refresh` | 1     | The full D4H refresh, nightly or from a button                   |
+| `sync`    | 1     | The 10-minute D4H sync                                           |
+| `demos`   | 1     | Building a Try a demo copy, while its visitor waits (#857)       |
 
 `bulk` keeps a long send from holding up a login code, and leaves the one CPU for
 pages. `refresh`, `sync`, and `demos` take 1 so two teams' copies never hold the write

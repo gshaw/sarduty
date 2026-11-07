@@ -78,7 +78,7 @@ defmodule App.Operation.RecordAttendanceScan do
     if card.team_id == activity.team_id and card.member.team_id == activity.team_id do
       case MemberCard.status(card, now) do
         :active -> :ok
-        :inactive -> {:error, :left_team}
+        :inactive -> {:error, :inactive}
         :revoked -> {:error, :revoked}
       end
     else

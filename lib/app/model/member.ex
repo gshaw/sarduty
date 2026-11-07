@@ -406,9 +406,21 @@ defmodule App.Model.Member do
     |> join(:inner, [m], t in assoc(m, :team))
     |> where([m, t], t.member_logins and fragment("lower(?)", m.email) == ^email)
     |> where([m], m.team_id not in subquery(DemoTeam.team_ids_closed_to_query(email)))
-    |> current_query(now)
-    |> not_retiring_query()
+    |> good_standing_query(now)
     |> preload([m, t], team: t)
+  end
+
+  @doc """
+  Narrows `query` to members in good standing on `now`: current, and not in their team's
+  Retiring group (#514). The one rule for who keeps a login and whose ID card verifies
+  as active (#893). Away and not a person don't change it.
+  """
+  def good_standing_query(query, now), do: query |> current_query(now) |> not_retiring_query()
+
+  @doc "good_standing_query/2 for one member, read from `repo`."
+  def good_standing?(%Member{id: id} = member, now, repo \\ Repo) do
+    current?(member, now) and
+      Member |> where([m], m.id == ^id) |> not_retiring_query() |> repo.exists?()
   end
 
   @doc """
@@ -485,8 +497,7 @@ defmodule App.Model.Member do
   def managers_query(query, now) do
     query
     |> where([m], m.d4h_permission in @manager_permissions)
-    |> current_query(now)
-    |> not_retiring_query()
+    |> good_standing_query(now)
   end
 
   @doc """
