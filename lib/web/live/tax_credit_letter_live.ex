@@ -59,7 +59,14 @@ defmodule Web.TaxCreditLetterLive do
       >
         Download PDF
       </.button>
-      <.button id="email-letter" variant={:warning} phx-click="email" phx-disable-with="Sending…">Email letter</.button>
+      <.button
+        id="email-letter"
+        phx-click="email"
+        phx-disable-with="Sending…"
+        {email_confirm(@letter)}
+      >
+        Email letter
+      </.button>
       <:trailing>
         <.button id="delete-letter" variant={:danger} phx-click="destroy" {delete_confirm(@letter)}>
           Delete letter
@@ -148,6 +155,16 @@ defmodule Web.TaxCreditLetterLive do
       "data-confirm-button" => "Replace letter"
     }
   end
+
+  # Says where it goes. With no email there's nothing to confirm; sending says so.
+  defp email_confirm(%{member: %{email: email}} = letter) when is_binary(email) and email != "" do
+    %{
+      "data-confirm" => "Email letter #{letter.ref_id} to #{email}?",
+      "data-confirm-button" => "Email letter"
+    }
+  end
+
+  defp email_confirm(_letter), do: %{}
 
   defp delete_confirm(letter) do
     %{
