@@ -667,7 +667,6 @@ defmodule Web.TeamDashboardLive do
       <ul :if={@items != []} id="to-do-list" class="divide-y divide-border-subtle">
         <.to_do_item :for={item <- @items} team={@team} item={item} />
       </ul>
-      <p :if={@items != []} class="hint mt-2 mb-0">Each one leaves this list once it's done.</p>
     </section>
     """
   end
