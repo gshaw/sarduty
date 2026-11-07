@@ -16,8 +16,6 @@ defmodule Web.MeLive do
   alias App.Model.Standing
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
-  alias App.Operation.BuildApplePass
-  alias App.Operation.BuildGooglePass
   alias App.Operation.SaveCertificate
   alias App.ViewData.EquipmentList
   alias App.ViewData.MemberChores
@@ -395,32 +393,19 @@ defmodule Web.MeLive do
         Your ID card shows you are a current member of {@team.name}, with your endorsements.
         Show it at the door, or to another agency on a search.
       </p>
-      <p class="hint">
-        Anyone can verify it at <.a
-          id="card-verify-link"
-          href={verify_url(@card)}
-          class="whitespace-nowrap"
-        >{verify_label(@card)}</.a>.
-      </p>
-      <div
-        :if={BuildApplePass.configured?() or BuildGooglePass.configured?()}
-        class="flex flex-wrap gap-2"
-      >
-        <.button
-          :if={BuildApplePass.configured?()}
-          id="apple-pass"
-          href={~p"/teams/#{@team}/me/card/apple-wallet"}
-        >
-          Add to Apple Wallet
-        </.button>
-        <.button
-          :if={BuildGooglePass.configured?()}
-          id="google-pass"
-          href={~p"/teams/#{@team}/me/card/google-wallet"}
-        >
-          Add to Google Wallet
-        </.button>
-      </div>
+      <%!-- The card's page has Apple's and Google's badges, and a QR code on a computer. --%>
+      <ul id="card-actions" class="action-list">
+        <li :if={Web.Components.WalletBadges.any?()}>
+          <.a id="add-to-wallet" href={Web.CardLinks.path(@card)}>Add ID card to Wallet</.a>
+        </li>
+        <li>
+          <.a
+            id="card-verify-link"
+            href={verify_url(@card)}
+            external={true}
+          >Verify your ID card</.a>
+        </li>
+      </ul>
     </div>
     """
   end
@@ -529,7 +514,6 @@ defmodule Web.MeLive do
     {:noreply, assign(socket, :certificates, sent_certificates(member))}
   end
 
-  defp verify_label(card), do: "#{Web.VerifyHost.host()}/#{MemberCard.format_code(card.code)}"
-
+  # The card's page on the verify site, as a checker sees it.
   defp verify_url(card), do: "#{Web.VerifyHost.url()}/#{MemberCard.format_code(card.code)}"
 end

@@ -18,8 +18,6 @@ defmodule Web.TeamDashboardLive do
   alias App.Model.Team
   alias App.Model.Trip
   alias App.Model.WhiteboardNote
-  alias App.Operation.BuildApplePass
-  alias App.Operation.BuildGooglePass
   alias App.Operation.SnoozeAttentionItem
   alias App.ViewData.ActivityTravel
   alias App.ViewData.MemberRecords
@@ -668,7 +666,6 @@ defmodule Web.TeamDashboardLive do
       <ul :if={@items != []} id="to-do-list" class="divide-y divide-border-subtle">
         <.to_do_item :for={item <- @items} team={@team} item={item} />
       </ul>
-      <p :if={@items != []} class="hint mt-2 mb-0">Each one leaves this list once it's done.</p>
     </section>
     """
   end
@@ -679,25 +676,15 @@ defmodule Web.TeamDashboardLive do
   defp to_do_item(%{item: %{key: :card}} = assigns) do
     ~H"""
     <li id="to-do-card" class="py-3">
-      <strong class="block">Add your ID card to Wallet</strong>
+      <%!-- The card's page has Apple's and Google's badges, and a QR code on a computer. --%>
+      <.a
+        :if={Web.Components.WalletBadges.any?()}
+        id="to-do-add-to-wallet"
+        href={Web.CardLinks.path(@item.card)}
+        class="font-semibold"
+      >Add ID card to Wallet</.a>
+      <strong :if={!Web.Components.WalletBadges.any?()} class="block">Add ID card to Wallet</strong>
       <span class="hint block">Show it at the door. Anyone can verify it.</span>
-      <%!-- Under the text: two Wallet buttons beside it squeeze it to a narrow column. --%>
-      <div class="flex flex-wrap gap-2 mt-2">
-        <.button
-          :if={BuildApplePass.configured?()}
-          id="to-do-apple-pass"
-          href={~p"/teams/#{@team}/me/card/apple-wallet"}
-        >
-          Add to Apple Wallet
-        </.button>
-        <.button
-          :if={BuildGooglePass.configured?()}
-          id="to-do-google-pass"
-          href={~p"/teams/#{@team}/me/card/google-wallet"}
-        >
-          Add to Google Wallet
-        </.button>
-      </div>
     </li>
     """
   end

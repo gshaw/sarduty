@@ -67,8 +67,9 @@ defmodule Web.MemberCardLive do
     {:noreply, reload_card(socket)}
   end
 
-  def handle_info(message, socket) when message in [:pass_fetched, :card_changed],
-    do: {:noreply, reload_card(socket)}
+  def handle_info(message, socket)
+      when message in [:pass_fetched, :wallet_changed, :card_changed],
+      do: {:noreply, reload_card(socket)}
 
   # Swoosh's test adapter sends each email to the process that sent it.
   def handle_info(_message, socket), do: {:noreply, socket}
@@ -85,7 +86,7 @@ defmodule Web.MemberCardLive do
   end
 
   defp assign_card(socket, card) do
-    phones = if card, do: length(PassRegistration.get_all_for_serial(card)), else: 0
+    phones = if card, do: PassRegistration.count_holding(card), else: 0
     socket |> assign(:card, card) |> assign(:phones, phones)
   end
 
@@ -181,7 +182,7 @@ defmodule Web.MemberCardLive do
         </dd>
         <dt :if={wallet?()}>Wallet</dt>
         <dd :if={wallet?()}>
-          <span id="card-phones">{wallet_status(@phones, @card, @member.team.timezone)}</span>
+          <span id="card-phones">{Web.WalletText.summary(@phones, @card, @member.team.timezone)}</span>
         </dd>
       </dl>
       <.form_actions :if={@active?}>
@@ -242,29 +243,6 @@ defmodule Web.MemberCardLive do
 
   defp delivery_hint(%{member: member}),
     do: "Email it so #{member.name} can add it to Wallet."
-
-  defp wallet_status(phones, card, timezone) do
-    google = if card.in_wallet_at, do: "In Google Wallet"
-
-    case [apple_status(phones, card, timezone), google] |> Enum.reject(&is_nil/1) do
-      [] -> "Not in Wallet yet"
-      parts -> Enum.join(parts, " · ")
-    end
-  end
-
-  defp apple_status(0, _card, _timezone), do: nil
-
-  defp apple_status(phones, card, timezone) do
-    on = "In Apple Wallet on #{Service.Format.count(phones, one: "1 phone", many: "%d phones")}"
-
-    case card.pass_fetched_at do
-      nil ->
-        on
-
-      fetched_at ->
-        "#{on} · last downloaded #{Service.Format.month_day_time(fetched_at, timezone)}"
-    end
-  end
 
   # The card's page on the verify site, the same one its QR code opens.
   defp verify_url(card), do: "#{Web.VerifyHost.url()}/#{MemberCard.format_code(card.code)}"

@@ -20,6 +20,12 @@ defmodule App.Model.PassRegistration do
 
   @doc "`:created`, or `:existing` when the phone already had the pass (its token is updated)."
   def register!(%MemberCard{} = card, device, push_token) do
+    result = insert_or_update(card, device, push_token)
+    MemberCard.broadcast_wallet_changed(card.member_id)
+    result
+  end
+
+  defp insert_or_update(card, device, push_token) do
     case card
          |> for_serial()
          |> where([r], r.device_library_identifier == ^device)
@@ -40,15 +46,34 @@ defmodule App.Model.PassRegistration do
   end
 
   # SQLite can't DELETE with a JOIN, so the serial's cards go in as a subquery.
-  def unregister!(%MemberCard{serial_number: serial_number}, device) do
+  def unregister!(%MemberCard{serial_number: serial_number} = card, device) do
     card_ids = MemberCard |> where([c], c.serial_number == ^serial_number) |> select([c], c.id)
 
-    PassRegistration
-    |> where(
-      [r],
-      r.member_card_id in subquery(card_ids) and r.device_library_identifier == ^device
-    )
-    |> Repo.delete_all()
+    result =
+      PassRegistration
+      |> where(
+        [r],
+        r.member_card_id in subquery(card_ids) and r.device_library_identifier == ^device
+      )
+      |> Repo.delete_all()
+
+    MemberCard.broadcast_wallet_changed(card.member_id)
+    result
+  end
+
+  @doc """
+  How many phones hold this card's own pass, as far as SAR Duty knows (#952). A
+  replacement shares its serial with the card before it, and Wallet doesn't register
+  again when it lands, so the serial's phones count for a card only once one registered
+  it or fetched its pass. A fetch carries the card's own token, so it names the card
+  the phone holds. Until then they hold the cancelled card, not this one.
+  """
+  def count_holding(%MemberCard{} = card) do
+    registrations = get_all_for_serial(card)
+
+    if card.pass_fetched_at || Enum.any?(registrations, &(&1.member_card_id == card.id)),
+      do: length(registrations),
+      else: 0
   end
 
   @doc "Every phone holding a pass with this card's serial, whichever card it was added as."

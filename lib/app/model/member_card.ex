@@ -176,6 +176,31 @@ defmodule App.Model.MemberCard do
 
   def status(%MemberCard{}, _now, _repo), do: :revoked
 
+  @doc """
+  What a card's link (#952) offers: `:active`, its passes; or why not: `:replaced`, a
+  revoked card whose member has a newer live one; `:cancelled`, a revoked card with none,
+  as when the team's ID cards were turned off; `:inactive`, a member not in good
+  standing. Expects `member: :team`.
+  """
+  def link_status(%MemberCard{} = card, now) do
+    case status(card, now) do
+      :revoked -> if find_current(card.member.team, card.member), do: :replaced, else: :cancelled
+      status -> status
+    end
+  end
+
+  @doc """
+  A card by id, with `member: [team: :organization]`, or nil. Its member is found
+  through the card's team.
+  """
+  def get_with_member(id) do
+    MemberCard
+    |> join(:inner, [c], m in assoc(c, :member), on: m.team_id == c.team_id)
+    |> where([c], c.id == ^id)
+    |> preload(member: [team: :organization])
+    |> Repo.one()
+  end
+
   @doc "A revoked card, by id, or nil. Its member is found through the card's team."
   def get_revoked(id) do
     MemberCard
@@ -331,6 +356,10 @@ defmodule App.Model.MemberCard do
     card |> change(changes) |> Repo.update!()
   end
 
+  @doc "Marks the pass changed, so a pushed phone fetches it again."
+  def touch_pass_updated!(%MemberCard{} = card, now),
+    do: card |> change(pass_updated_at: now) |> Repo.update!()
+
   @doc "Records that a phone fetched the pass, and tells the member's ID Card tab."
   def record_pass_fetched!(%MemberCard{} = card, now) do
     card = card |> change(pass_fetched_at: now) |> Repo.update!()
@@ -338,8 +367,16 @@ defmodule App.Model.MemberCard do
     card
   end
 
-  @doc "The PubSub topic a member's ID Card tab listens on for phone fetches."
+  @doc """
+  The PubSub topic a member's card pages listen on: `:pass_fetched` when a phone fetches
+  the pass, `:wallet_changed` when a phone registers or drops it or Google says it was
+  saved or deleted (#952), and `:card_changed` for a new card or its email.
+  """
   def pass_topic(member_id), do: "member_card:#{member_id}"
+
+  @doc "Tells the member's card pages that what SAR Duty knows of their Wallets changed."
+  def broadcast_wallet_changed(member_id),
+    do: Phoenix.PubSub.broadcast(App.PubSub, pass_topic(member_id), :wallet_changed)
 
   def record_google_pass!(%MemberCard{} = card, fingerprint) do
     card |> change(google_pass_fingerprint: fingerprint) |> Repo.update!()
@@ -369,17 +406,23 @@ defmodule App.Model.MemberCard do
   end
 
   @doc """
-  Whether the card is in a Wallet, as far as SAR Duty knows: a phone registered its Apple
-  Wallet pass, or the card was marked in Wallet. An Apple replacement lands on the same
-  pass, so its serial counts; a Google replacement is a new pass, so only the card's own
-  mark does.
+  Whether the card is in a Wallet, as far as SAR Duty knows: a phone holds its Apple
+  Wallet pass (`PassRegistration.count_holding/1`), or Google said it was saved. A
+  replacement counts only once a phone holds it, not while phones hold the cancelled card
+  before it (#952).
   """
   def in_wallet?(%MemberCard{in_wallet_at: %DateTime{}}), do: true
-  def in_wallet?(%MemberCard{} = card), do: PassRegistration.get_all_for_serial(card) != []
+  def in_wallet?(%MemberCard{} = card), do: PassRegistration.count_holding(card) > 0
 
-  def mark_in_wallet!(%MemberCard{} = card, now),
-    do: card |> change(in_wallet_at: now) |> Repo.update!()
+  def mark_in_wallet!(%MemberCard{} = card, now) do
+    card = card |> change(in_wallet_at: now) |> Repo.update!()
+    broadcast_wallet_changed(card.member_id)
+    card
+  end
 
-  def mark_out_of_wallet!(%MemberCard{} = card),
-    do: card |> change(in_wallet_at: nil) |> Repo.update!()
+  def mark_out_of_wallet!(%MemberCard{} = card) do
+    card = card |> change(in_wallet_at: nil) |> Repo.update!()
+    broadcast_wallet_changed(card.member_id)
+    card
+  end
 end

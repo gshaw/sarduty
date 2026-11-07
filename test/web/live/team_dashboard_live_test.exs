@@ -699,9 +699,15 @@ defmodule Web.TeamDashboardLiveTest do
 
     test "For you to do: the ID card leaves once it is in Wallet",
          %{conn: conn, team: team, member: member} do
+      App.ApplePassCredentials.configure()
       card = member_card_fixture(member)
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
-      assert has_element?(lv, "#to-do-card")
+
+      assert has_element?(
+               lv,
+               ~s{#to-do-card a#to-do-add-to-wallet[href^="/cards/"]},
+               "Add ID card to Wallet"
+             )
 
       card |> Ecto.Changeset.change(in_wallet_at: DateTime.utc_now()) |> Repo.update!()
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")

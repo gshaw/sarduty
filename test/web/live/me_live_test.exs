@@ -210,7 +210,7 @@ defmodule Web.MeLiveTest do
       refute has_element?(lv, "#qualifications-list", "Does not expire")
     end
 
-    test "the ID card, with Wallet buttons and the verify link",
+    test "the ID card, with a link to its page to add it to Wallet",
          %{conn: conn, team: team, member: member} do
       App.ApplePassCredentials.configure()
       team = team |> Ecto.Changeset.change(id_cards_enabled: true) |> Repo.update!()
@@ -221,12 +221,34 @@ defmodule Web.MeLiveTest do
       card = member_card_fixture(member)
       lv = open(conn, ~p"/teams/#{team}/me")
       assert has_element?(lv, "#id-card", "a current member of #{team.name}")
-      assert has_element?(lv, "#card-verify-link", MemberCard.format_code(card.code))
+      code = MemberCard.format_code(card.code)
 
       assert has_element?(
                lv,
-               ~s{#apple-pass[href="/teams/#{team.subdomain}/me/card/apple-wallet"]}
+               ~s{#card-actions #card-verify-link[href$="/#{code}"]},
+               "Verify your ID card"
              )
+
+      assert has_element?(
+               lv,
+               ~s{#card-actions #add-to-wallet[href^="/cards/"]},
+               "Add ID card to Wallet"
+             )
+
+      [_, token] = Regex.run(~r{href="/cards/([^"]+)"}, render(lv))
+      assert Web.CardLinks.find_card(token).id == card.id
+    end
+
+    # Your membership never asks whether the card is in Wallet (#952): the card's page
+    # is where a member adds it, again on a new phone.
+    test "Add ID card to Wallet stays once the card is in Wallet",
+         %{conn: conn, team: team, member: member} do
+      App.ApplePassCredentials.configure()
+      team = team |> Ecto.Changeset.change(id_cards_enabled: true) |> Repo.update!()
+      member_card_fixture(member, %{in_wallet_at: DateTime.utc_now()})
+
+      lv = open(conn, ~p"/teams/#{team}/me")
+      assert has_element?(lv, "#add-to-wallet")
     end
 
     test "the latest tax credit letter, to download", %{conn: conn, team: team, member: member} do

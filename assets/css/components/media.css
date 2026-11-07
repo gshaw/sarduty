@@ -9,6 +9,16 @@
   .qr-code svg { display: block; width: 100%; height: auto; }
   /* Beside its words, on the verify site's sample cards. */
   .qr-code-sm { width: 112px; flex: none; }
+  /* Apple's and Google's own Add to Wallet badges, side by side at one height, as both
+     brands ask. Google's is its condensed button, two lines like Apple's, and 48px is
+     its minimum height. The pair fits on one line on a 375px phone. */
+  .wallet-badges { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+  /* The whole badge is the tap target. No text selection, image callout, or drag on a
+     long press, and no double-tap zoom: the image takes no pointer, so the link does. */
+  .wallet-badges a { display: block; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .wallet-badges img { display: block; height: 48px; width: auto; pointer-events: none; -webkit-user-drag: none; }
+  /* The badge just tapped, while the page waits on its Wallet. */
+  .wallet-badges a.is-adding, .wallet-badges a.phx-click-loading { opacity: 0.6; }
 
   /* A picture beside its words: a photo and a name, a logo and a team. */
   .media { display: flex; align-items: center; gap: var(--sp-3); }

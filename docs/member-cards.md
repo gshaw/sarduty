@@ -4,8 +4,10 @@ A team manager issues a member an ID card from the member's **ID Card** tab, onc
 Duty admin has turned ID cards on for the team on its admin page, `/admin/teams/:id`, or its organization
 admins have, on its page in the organization (#512). A team pilots cards with a few
 members, then turns on **Every member gets a card** and every member gets one
-([Every member gets a card](#every-member-gets-a-card)). The card is emailed to the member
-([Issuing and emailing](#issuing-and-emailing)). A member sees the
+([Every member gets a card](#every-member-gets-a-card)). The member gets an email with a
+link to the card's page, where they add it to Wallet
+([Issuing and emailing](#issuing-and-emailing), [The card's page](#the-cards-page)). A
+member sees the
 card on their own page ([members.md](members.md)). Anyone can
 check a card by scanning its QR code with a phone's camera, which opens its page on the
 verify site, `verify.sarduty.com/K7Q4-M2XA`
@@ -144,10 +146,12 @@ retired), `SAMP-CNCD` (cancelled), and `SAMP-NCRD`, which no card has. A fifth Q
 
 ## Apple Wallet
 
-A member adds their card from Your membership, `/teams/:subdomain/me`. The card's email
-([Issuing and emailing](#issuing-and-emailing)) attaches its pass when Apple Wallet is set
-up (see [external-services.md](external-services.md)). The ID Card tab has no Wallet
-buttons: they would put the member's card on the team admin's phone.
+A member adds their card on the card's page ([The card's page](#the-cards-page)). Its
+email links there, and so does Add ID card to Wallet on Your membership,
+`/teams/:subdomain/me`, and on the Dashboard's to-do. The page builds the pass when they
+tap, once Apple Wallet is set up (see [external-services.md](external-services.md)). The
+email carries no pass (#952). The ID Card tab has no Wallet buttons: they would put the
+member's card on the team admin's phone.
 
 Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
 `authentication_token`. Wallet registers the phone with
@@ -157,7 +161,7 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
 - **After every team refresh** it rebuilds each registered card's pass and pushes only
   when its fingerprint changed. The fingerprint leaves out the "last checked" date, or
   every pass would buzz every day.
-- **When a pass is built** for an email, a download, or a phone, and its fingerprint
+- **When a pass is built** for a download or a phone, and its fingerprint
   changed, it pushes too. Building records the fingerprint, so the next refresh would
   otherwise see nothing new and the phones would keep the old pass.
 - **On replace, or the ID cards switch turning off,** a job per card
@@ -168,15 +172,22 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
   lands on the existing pass instead of beside it. Each card has its own token, and a
   phone's token picks which card it gets, so a lost phone still holding the old token
   only ever gets the old card, voided. Cards made before this keep `member-card-<id>`.
+- **A replacement isn't on a phone until a phone fetches it.** Wallet doesn't register
+  again when a replacement lands (#70), so the serial's registrations belong to whichever
+  card each phone holds. They count for a card once one registered it or fetched its
+  pass with its own token (`PassRegistration.count_holding/1`, #952). Before that the
+  phones hold the cancelled card, and the replacement shows as in no Wallet. Pushes
+  still go to every phone with the serial.
 - A pass made before updates existed has no token, so it never updates. Its card gets a
   token the next time its pass is built.
-- APNs only works in production, so dev can build passes but never deliver a push.
+- Pushes reach phones from dev too: a cancelled card's notice and the card page's
+  nudges arrived on a real iPhone from the dev server (2026-11-07).
 
-The ID Card tab's Wallet row shows how many phones hold the pass and when one last
-fetched it (`pass_fetched_at`), and whether the member saved it to Google Wallet
-(`in_wallet_at`). A phone's fetch broadcasts on PubSub, so the tab ticks over without a
-reload. Under the buttons it says how the card reaches the member: from Your membership
-on a team with member logins, otherwise by email.
+The ID Card tab's Wallet row shows how many devices hold the pass (an iPhone and a paired
+Apple Watch count as 2) and when one last fetched it (`pass_fetched_at`), and whether the
+member saved it to Google Wallet (`in_wallet_at`). A phone's fetch broadcasts on PubSub,
+so the tab ticks over without a reload. Under the buttons it says how the card reaches the
+member: from Your membership on a team with member logins, otherwise by email.
 
 There is no test button. "Last downloaded" shows a phone fetched the pass after a change,
 and a failed push logs "APNs pass push failed". To see a stale pass update, change
@@ -192,10 +203,9 @@ goes on the pass.
 
 ## Google Wallet
 
-Your membership's **Add to Google Wallet** sends the current card's pass to Google and
-opens Google's save page. The email from the team admin's ID Card tab has the same link,
-beside the Apple pass. The link is a JWT that names the pass and nothing else; Google holds the pass
-itself.
+The card's page's **Add to Google Wallet** sends the card's pass to Google and opens
+Google's save page ([The card's page](#the-cards-page)). The save link is a JWT that names
+the pass and nothing else; Google holds the pass itself.
 
 Google keeps the pass, so there's no phone to push to.
 [UpdateGooglePasses](../lib/app/operation/update_google_passes.ex) sends Google a card's
@@ -211,10 +221,12 @@ pass again, and every saved copy changes:
   has no per-phone token to say which card a phone holds. The member adds the new one.
 
 **In Wallet** (#389): the team's Dashboard lists "Add your ID card to Wallet" under a
-member's For you to do (#406) until SAR Duty knows the card is in one (`MemberCard.in_wallet?/1`). Apple
-Wallet registers the phone, for the serial. Google posts a signed message to
-`/wallet/google` when the member saves or deletes the pass: the class's
-`callbackOptions`, production only, since Google can't reach a dev server.
+member's For you to do (#406) until SAR Duty knows the card is in one
+(`MemberCard.in_wallet?/1`). Your membership's Add ID card to Wallet stays: it opens the
+card's page, where a member adds it again on a new phone (#952). Apple Wallet registers the
+phone, for the serial. Google
+posts a signed message to `/wallet/google` when the member saves or deletes the pass: the
+class's `callbackOptions`, production only, since Google can't reach a dev server.
 [GoogleWallet.Callback](../lib/app/adapter/google_wallet/callback.ex) checks it with
 Google's `ECv2SigningOnly` protocol: a root key from `pay.google.com/gp/m/issuer/keys`
 signs an intermediate key, which signs the message for SAR Duty's issuer. A save sets the
@@ -239,8 +251,9 @@ reach a dev server, so dev passes have none. In production:
 
 The ID Card tab has three buttons, and each queues one job
 ([SendMemberCardWorker](../lib/app/worker/send_member_card_worker.ex), on `bulk`) that
-emails the card: the Apple pass attached and the Google link, whichever are set up, and
-the code.
+emails the member one button, Get your ID card, to the card's page
+([The card's page](#the-cards-page)). The email builds no pass and attaches nothing
+([EmailMemberCard](../lib/app/operation/email_member_card.ex)).
 
 - **Issue ID card**, before the member has one, makes the card.
 - **Replace ID card**, for a lost phone, makes a new card with a new code. The old one
@@ -260,6 +273,58 @@ The card keeps how its email went, `email_status` and `emailed_at`, like
 whom, Sending, or that it did not send. A refusal is tried again over about 2 hours; the
 last one marks it failed ([jobs.md](jobs.md)).
 
+## The card's page
+
+Every card email links to `sarduty.com/cards/<token>`
+([CardLinkLive](../lib/web/live/card_link_live.ex), #952). Until then the email built
+both passes and sent them: Google's badge at the top and the Apple pass attached under
+the signature, where members missed it. Teams with ID cards and no member logins had no
+other way to get the card.
+
+- **The link is the key.** A signed `Phoenix.Token` naming the card's id, with its own
+  salt and the reminders link's 5-year age ([Web.CardLinks](../lib/web/card_links.ex)).
+  No login and no table, so nothing to migrate; the page is `noindex`.
+- **The one place with the badges.** Your membership and the Dashboard's to-do have a
+  link, Add ID card to Wallet, that opens this page, so a member learns one page, and on a
+  computer gets its QR code rather than a pass iCloud carries to the phone.
+- **Both badges on every device**, Apple's and Google's own (`<.wallet_badges>`,
+  `/styles/wallet-badges`), side by side at 48px, Google's minimum, with no guessing which
+  phone it is. Google's is its condensed button, two lines like Apple's, so the pair fits
+  on one line on a phone. Apple has no wider badge for the web. Each opens
+  `/cards/:token/apple-wallet` or `/cards/:token/google-wallet`
+  ([CardLinkController](../lib/web/controllers/card_link_controller.ex)), which builds the
+  pass on the tap. A mail app's link scanner or a preview only loads the page, so it
+  builds nothing.
+- **One quiet line says what SAR Duty sees**, above "Lost your phone?": "SAR Duty sees
+  your ID card in Apple Wallet on 1 device." ([Web.WalletText](../lib/web/wallet_text.ex),
+  which also writes the ID Card tab's Wallet row). It changes while the page is open: a
+  phone adding or dropping the pass, and Google's save and delete, each broadcast
+  `:wallet_changed` on the card's topic (`MemberCard.pass_topic/1`). There's no refresh
+  button: the page hears every change.
+- **A tap shows the page heard it.** The adding happens off the page, in Wallet's sheet or
+  Google's tab, so the tapped badge dims at once (`phx-click-loading`, then `is-adding`)
+  and the line becomes "Waiting for your phone to add it to Apple Wallet…" until the phone
+  registers or 2 minutes pass. Google's badge opens in a new tab, so the page stays open
+  to hear the save. Google's save callback only reaches production, so while the page
+  waits on Google it also asks Google every 4 seconds whether the pass has users
+  ([CheckGoogleWalletSave](../lib/app/operation/check_google_wallet_save.ex)). That only
+  ever marks a card saved: `hasUsers` may stay true after a delete, which the delete
+  callback clears. Apple has nothing to ask; the phone registering is the news. A
+  replacement lands on the cancelled card's pass with no new registration, so while the
+  page waits on Apple it nudges those phones every 10 seconds
+  (`PushPassUpdates.nudge_replacement/2`): it marks the pass updated and pushes, and a
+  phone now holding the replacement fetches it with its token. On a Mac the pass reaches
+  the phone through iCloud, so the wait can be 15 seconds or more.
+- **On a computer** the page is wider, with Take attendance's Open on your phone
+  sidebar and the page's QR code (`<.open_on_device>`, `/styles/open-on-device`). It's
+  hidden on a touch screen.
+- **Only a live, active card offers passes** (`MemberCard.link_status/2`). A replaced
+  card's page says to use the newest email, a cancelled one says it was cancelled, and a
+  retired or retiring member's says it is not active. None shows a badge, and the pass
+  routes 404. A member who comes back gets the same card back, so its link works again.
+- **Anyone with the link can add the card,** as anyone could open a forwarded pass. The
+  page says the link is the member's alone, and Replace ID card ends it.
+
 ## Every member gets a card
 
 A team pilots ID cards with a few members, issuing each from their ID Card tab. Then a
@@ -272,12 +337,11 @@ cards (#893). It shows only as off, and can't be turned on, while ID cards are o
   members does (`send_confirm/3`). It then makes a card, in one transaction, for each
   member who is counted (a person, not retiring), current, and has no live card, and
   queues a `SendMemberCardWorker` job to email each one with an address.
-- **Cards at once, emails over about 2 minutes.** Making a card is database rows alone,
-  so the ID Card tab and Your membership show it straight away. Each email job builds
-  an Apple pass (photo fetch, resize, signing) and a Google pass (HTTP), and production
-  is one shared CPU that throttles once its balance runs out (#584). The `bulk` queue's
-  limit of 2 paces them: about 1–2 seconds each, so 100 emails take about 2 minutes. They
-  run at a lower priority, after any click, reminder, or letter.
+- **Cards at once, emails after.** Making a card is database rows alone, so the ID Card
+  tab and Your membership show it straight away. Each email job sends one email with a
+  link and builds no pass (#952): passes are built as members tap, spread over days, so
+  production's one shared CPU never builds 100 at once (#584). The `bulk` queue's limit
+  of 2 paces the emails, at a lower priority, after any click, reminder, or letter.
 - **While it's on, new members get theirs.** Each full refresh, and each sync that
   changed something, does the same for members without a card: someone new in D4H, or
   back from Retiring or retired with no card.

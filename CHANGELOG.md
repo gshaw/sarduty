@@ -4,6 +4,11 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- An ID card's email has one button, Get your ID card. It opens a page with Add to Apple
+  Wallet and Add to Google Wallet, so members on either phone find theirs. No more pass
+  attached under the signature.
+- Add ID card to Wallet on Your membership and the Dashboard opens the same page as the
+  email. On a computer, it has a QR code to open it on your phone.
 - A chore activity's page shows its chores' total under Duration, where it showed 0.
 - Try a demo opens with something to see on every page: you're a member with an ID card
   and travel to confirm, group rules with changes to review, templates, whiteboard notes,

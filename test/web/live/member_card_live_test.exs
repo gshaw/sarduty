@@ -39,7 +39,7 @@ defmodule Web.MemberCardLiveTest do
     url = "#{Web.VerifyHost.url()}/#{MemberCard.format_code(card.code)}"
     assert has_element?(lv, ~s(#card-verify-link[href="#{url}"]))
 
-    assert_email_sent(&(&1.text_body =~ MemberCard.format_code(card.code)))
+    assert_email_sent(&(emailed_card_id(&1) == card.id))
     assert has_element?(lv, "#card-emailed", "to #{member.email}")
   end
 
@@ -54,7 +54,7 @@ defmodule Web.MemberCardLiveTest do
     assert Repo.reload!(old).revoked_at
     card = MemberCard.find_current(team, member)
     assert has_element?(lv, "#card-code", MemberCard.format_code(card.code))
-    assert_email_sent(&(&1.text_body =~ MemberCard.format_code(card.code)))
+    assert_email_sent(&(emailed_card_id(&1) == card.id))
   end
 
   test "says when the card's email did not send", %{conn: conn, team: team, member: member} do
@@ -142,7 +142,7 @@ defmodule Web.MemberCardLiveTest do
       :ok
     end
 
-    test "emails the pass to the member", %{conn: conn, team: team, member: member} do
+    test "emails the card's link to the member", %{conn: conn, team: team, member: member} do
       card = member_card_fixture(member)
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
@@ -150,12 +150,8 @@ defmodule Web.MemberCardLiveTest do
 
       assert_email_sent(fn email ->
         assert email.to == [{member.name, member.email}]
-        assert email.text_body =~ MemberCard.format_code(card.code)
-
-        assert [%{filename: filename, content_type: "application/vnd.apple.pkpass"}] =
-                 email.attachments
-
-        assert filename =~ ".pkpass"
+        assert emailed_card_id(email) == card.id
+        assert email.attachments == []
       end)
 
       assert render(lv) =~ "Sending the ID card to #{member.email}"
@@ -205,7 +201,7 @@ defmodule Web.MemberCardLiveTest do
       PassRegistration.register!(card, "device-1", "push-token-1")
       PassRegistration.register!(card, "device-2", "push-token-2")
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
-      assert has_element?(lv, "#card-phones", "In Apple Wallet on 2 phones")
+      assert has_element?(lv, "#card-phones", "In Apple Wallet on 2 devices")
       refute render(lv) =~ "last downloaded"
 
       MemberCard.record_pass_fetched!(card, ~U[2026-09-30 22:42:00.000000Z])
@@ -213,7 +209,7 @@ defmodule Web.MemberCardLiveTest do
       assert has_element?(
                lv,
                "#card-phones",
-               "In Apple Wallet on 2 phones · last downloaded Sep 30, 15:42"
+               "In Apple Wallet on 2 devices · last downloaded Sep 30, 15:42"
              )
     end
   end
@@ -231,19 +227,6 @@ defmodule Web.MemberCardLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
       assert has_element?(lv, "#card-phones", "In Google Wallet")
-    end
-
-    test "emails the Google Wallet link", %{conn: conn, team: team, member: member} do
-      member_card_fixture(member)
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
-
-      lv |> element("#email-pass") |> render_click()
-
-      assert_email_sent(fn email ->
-        assert email.text_body =~ "https://pay.google.com/gp/v/save/"
-        refute email.text_body =~ "iPhone"
-        assert email.attachments == []
-      end)
     end
   end
 end

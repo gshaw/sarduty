@@ -235,8 +235,9 @@ defmodule Web.Router do
     delete "/logout", UserSessionController, :delete
   end
 
-  # A reminder email's links (#444): replying, and turning reminders off. No login. The
-  # token is the key, so they stay out of search.
+  # A reminder email's links (#444): replying, and turning reminders off. An ID card
+  # email's link (#952): the card's page, and its passes. No login. The token is the
+  # key, so they stay out of search.
   scope "/", Web do
     pipe_through [:browser, :noindex]
 
@@ -245,7 +246,12 @@ defmodule Web.Router do
       on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :mount_current_user}] do
       live "/replies/:token", ReplyLinkLive
       live "/reminders/:token", InvitationRemindersLive
+      live "/cards/:token", CardLinkLive
     end
+
+    # The card page's badges: each builds its pass on the tap.
+    get "/cards/:token/apple-wallet", CardLinkController, :apple_pass
+    get "/cards/:token/google-wallet", CardLinkController, :google_pass
 
     # A demo's link (#857): logs in as its visitor, then builds it the first time.
     get "/demo/open/:token", DemoController, :open

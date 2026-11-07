@@ -29,7 +29,7 @@ defmodule App.Worker.SendMemberCardWorkerTest do
     card = MemberCard.find_current(team, member)
     assert %MemberCard{email_status: :sent, emailed_at: %DateTime{}} = card
     assert_received {:email, %{to: [{"Cameron Ruiz", "cameron@example.com"}]} = email}
-    assert email.text_body =~ MemberCard.format_code(card.code)
+    assert emailed_card_id(email) == card.id
 
     # A second job finds the card sent and leaves it.
     assert perform(member) == :ok
@@ -157,7 +157,7 @@ defmodule App.Worker.SendMemberCardWorkerTest do
     assert Repo.reload!(old).revoked_at
     refute new.code == old.code
     assert_received {:email, email}
-    assert email.text_body =~ MemberCard.format_code(new.code)
+    assert emailed_card_id(email) == new.id
     assert Repo.reload!(new).email_status == :sent
   end
 end
