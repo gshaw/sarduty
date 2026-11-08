@@ -12,6 +12,11 @@ config :sarduty, App.Repo,
   database: Path.expand("../db/sarduty_test.db", Path.dirname(__ENV__.file)),
   pool_size: 5,
   pool: Ecto.Adapters.SQL.Sandbox,
+  # Each test's sandbox is an immediate transaction, so it holds SQLite's one write lock
+  # until it ends, and the rest wait their turn. By default the pool drops a wait past
+  # 50 ms once it's busy, which failed 10 to 20 tests at random in a run.
+  queue_target: 30_000,
+  queue_interval: 60_000,
   # `mix test` migrates first, and the :warning level below isn't applied until the app
   # starts, so each migration query would print at :debug.
   log: false
