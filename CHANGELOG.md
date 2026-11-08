@@ -4,6 +4,7 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- A tax credit letter's Email letter asks first, naming the address it goes to.
 - A retiring or retired member's ID Card tab has Cancel ID card, for the rare one who
   shouldn't keep a card at all. Their pass shows Cancelled at once, and History says who.
 - The ID card page says which Wallet SAR Duty sees your card in, without a device count.
@@ -16,11 +17,17 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 - The ID card page no longer spins after you tap Add to Wallet. Its line says where SAR
   Duty sees your card, and changes when that does. After a lost phone, it counts only
   the devices that hold the new card.
-- BC teams: each incident has EMCR's Task report under Forms, filled in from the incident
-  and BCSARA's fields on EMCR's own page, ready for the task leader to sign.
-- BC teams: EMCR's Expense reimbursement request supplement is under Forms too, with a
-  row for each person who attended: their travel, meals, and personal equipment
-  allowance, worked out from EMCR's rates. Mark who wasn't on task and the meals given.
+- BC teams: EMCR's forms are in early development, for testing only. Don't send them
+  to EMCR yet.
+  - Each incident has EMCR's Task report under Forms, filled in from the incident and
+    BCSARA's fields on EMCR's own page, ready for the task leader to sign.
+  - EMCR's Expense reimbursement request supplement is under Forms too, with a row for
+    each person who attended: their travel, meals, and personal equipment allowance,
+    worked out from EMCR's rates. Mark who wasn't on task and the meals given.
+  - EMCR's Expense reimbursement request is under Forms as well: each item's km, hours,
+    and uses at its costs, your other expenses, the Supplement's total, and the 15%
+    safety allowance, signed by your team's signer. Add your city and postal code in
+    team settings, under Tax credit letters.
 - Reports read each attendance row's finish time and travel km, and each item's D4H costs
   per km, hour, and use, in dollars.
 - A chore activity's page shows its chores' total under Duration, where it showed 0.

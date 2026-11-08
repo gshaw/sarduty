@@ -514,6 +514,8 @@ defmodule App.CoastRange do
       d4h_team_id: @d4h_team_id,
       d4h_api_host: "api.ca.d4h.org",
       mailing_address: "123 Main St",
+      city: "Vancouver BC",
+      postal_code: "V5K 0A1",
       authorized_by_name: "Alex Chen",
       authorized_by_title: "President",
       authorized_by_phone: "604-555-0112",

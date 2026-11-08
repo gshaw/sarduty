@@ -2,7 +2,6 @@ defmodule App.Mailer.TaxCreditLetterMailer do
   import Swoosh.Email
 
   alias App.Mailer
-  alias App.Operation.LoadTaxCreditLetterPDF
 
   require Logger
 
@@ -33,13 +32,16 @@ defmodule App.Mailer.TaxCreditLetterMailer do
     end
   end
 
-  def deliver_tax_credit_letter(letter) do
-    email = letter.member.email
-    attachment = LoadTaxCreditLetterPDF.call(letter)
-    subject = attachment.title
-
-    deliver_with_attachment(letter, email, subject, body(letter), attachment)
-  end
+  @doc "Emails `attachment`, the letter's saved PDF (App.Operation.EmailTaxCreditLetter)."
+  def deliver_tax_credit_letter(letter, attachment),
+    do:
+      deliver_with_attachment(
+        letter,
+        letter.member.email,
+        attachment.title,
+        body(letter),
+        attachment
+      )
 
   @doc "The email's text: what the letter is for, and who answers questions about it."
   def body(letter) do

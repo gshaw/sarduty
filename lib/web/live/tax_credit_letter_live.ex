@@ -55,11 +55,18 @@ defmodule Web.TaxCreditLetterLive do
     <.form_actions>
       <.button
         href={~p"/teams/#{@current_team}/tax-credit-letters/#{@letter.id}/pdf"}
-        variant={:success}
+        variant={:primary}
       >
         Download PDF
       </.button>
-      <.button id="email-letter" variant={:warning} phx-click="email" phx-disable-with="Sending…">Email letter</.button>
+      <.button
+        id="email-letter"
+        phx-click="email"
+        phx-disable-with="Sending…"
+        {email_confirm(@letter)}
+      >
+        Email letter
+      </.button>
       <:trailing>
         <.button id="delete-letter" variant={:danger} phx-click="destroy" {delete_confirm(@letter)}>
           Delete letter
@@ -149,6 +156,16 @@ defmodule Web.TaxCreditLetterLive do
     }
   end
 
+  # Says where it goes. With no email there's nothing to confirm; sending says so.
+  defp email_confirm(%{member: %{email: email}} = letter) when is_binary(email) and email != "" do
+    %{
+      "data-confirm" => "Email letter #{letter.ref_id} to #{email}?",
+      "data-confirm-button" => "Email letter"
+    }
+  end
+
+  defp email_confirm(_letter), do: %{}
+
   defp delete_confirm(letter) do
     %{
       "data-confirm" => "Delete letter #{letter.ref_id}? The member may already have it.",
@@ -204,6 +221,9 @@ defmodule Web.TaxCreditLetterLive do
 
       {:error, :no_email} ->
         put_flash(socket, :error, "#{letter.member.name} has no email.")
+
+      {:error, :not_printed} ->
+        put_flash(socket, :error, "The letter's PDF didn't print. Ask for help with Get help.")
 
       {:error, _reason} ->
         put_flash(socket, :error, "The email did not send. Try again.")

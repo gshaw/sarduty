@@ -98,13 +98,15 @@ defmodule App.ViewData.ActivityForms do
   end
 
   @doc """
-  Pure: each report a form asks on each row of, and its rows as the form works them out
-  from `values`, what it read, with the answers `typed` (#950). For each report:
+  Pure: each report a form asks on each row of, or works a value out for on each row of,
+  such as each equipment use's total, and its rows as the form works them out from
+  `values`, what it read, with the answers `typed` (#950). For each report:
   `%{report, kind, asks, total, rows}`, where `kind` is the row's `:member` or `:item`,
   `asks` its `ask each`, and `total` the label of its last `compute each`, or nil. Each
-  row is `%{key, id, name, answers, defaults, total}`: `answers` what was typed for it,
-  `defaults` what each answer is when its box is blank, and `total` that compute as
-  the PDF prints it. An answer that doesn't read is left out until it does.
+  row is `%{key, dom, id, name, answers, defaults, total}`: `dom` a part of an element
+  id unique in the table, `answers` what was typed for it, `defaults` what each answer
+  is when its box is blank, and `total` that compute as the PDF prints it. An answer
+  that doesn't read is left out until it does.
   """
   def rows(%Document{} = doc, values, typed, timezone) do
     answered = readable(doc, typed)
@@ -120,9 +122,11 @@ defmodule App.ViewData.ActivityForms do
 
     for report <- doc.reports,
         asks = Enum.filter(doc.asks, &(&1.each == report.name)),
-        asks != [],
+        asks != [] or computes_each?(doc, report),
         do: table(doc, report, asks, worked)
   end
+
+  defp computes_each?(doc, report), do: Enum.any?(doc.computes, &(&1.each == report.name))
 
   defp table(doc, report, asks, worked) do
     {kind, column} = record_column(report)
@@ -134,6 +138,7 @@ defmodule App.ViewData.ActivityForms do
       |> Map.get(report.name, [])
       |> Enum.zip(Map.get(worked.defaults, report.name, []))
       |> Enum.map(&row(&1, table, worked.typed))
+      |> dom_ids(report.name)
 
     %{
       report: report.name,
@@ -153,6 +158,23 @@ defmodule App.ViewData.ActivityForms do
       defaults: Map.new(table.asks, &{&1.name, text(default.values[&1.name])}),
       total: total(row, table)
     }
+  end
+
+  # Each row's key, as an element id takes it, or the report and the row's number when
+  # two rows share one, as two uses of one item do.
+  defp dom_ids(rows, report) do
+    keys = Enum.map(rows, & &1.key)
+    keyed? = nil not in keys and Enum.uniq(keys) == keys
+
+    rows
+    |> Enum.with_index(1)
+    |> Enum.map(fn {row, n} ->
+      Map.put(
+        row,
+        :dom,
+        if(keyed?, do: String.replace(row.key, ":", "-"), else: "#{report}-#{n}")
+      )
+    end)
   end
 
   # The row's total, as its `fill each` prints it.

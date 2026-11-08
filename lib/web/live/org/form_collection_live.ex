@@ -2,27 +2,12 @@ defmodule Web.Org.FormCollectionLive do
   use Web, :live_view_app_layout
 
   alias App.Model.Form
-  alias App.Model.SavedPDF
 
   # An organization's forms (#950), such as EMCR's Task report. SAR Duty admins upload
-  # them; its organization admins try each and turn it on for every team. The PDFs its
-  # teams made are a count only, never a team's people.
+  # them; its organization admins try each and turn it on for every team.
   def mount(_params, _session, socket) do
-    organization = socket.assigns.current_organization
-    now = DateTime.utc_now()
-    year = Service.YearRange.year_in(now, organization.timezone)
-    {since, _until} = Service.YearRange.bounds(year, organization.timezone)
-    forms = Form.get_all(organization)
-
-    socket =
-      assign(socket,
-        page_title: "Forms",
-        forms: forms,
-        year: year,
-        counts: forms |> Enum.map(& &1.id) |> SavedPDF.form_counts(since)
-      )
-
-    {:ok, socket}
+    forms = Form.get_all(socket.assigns.current_organization)
+    {:ok, assign(socket, page_title: "Forms", forms: forms)}
   end
 
   def render(assigns) do
@@ -62,16 +47,10 @@ defmodule Web.Org.FormCollectionLive do
         <span :if={form.enabled} id={"form-#{form.id}-state"} class="text-success-text">On</span>
         <span :if={!form.enabled} id={"form-#{form.id}-state"} class="text-text-muted">Off</span>
       </:col>
-      <:col :let={form} label={"PDFs made, #{@year}"}>
-        <span id={"form-#{form.id}-pdfs"}>{count_or_none(@counts[form.id])}</span>
-      </:col>
       <:col :let={form} label="Version" class="max-md:hidden">
         <span id={"form-#{form.id}-version"}>{form.version}</span>
       </:col>
     </.table>
     """
   end
-
-  defp count_or_none(nil), do: "None"
-  defp count_or_none(count), do: count
 end

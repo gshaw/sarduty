@@ -46,16 +46,16 @@ An organization hosts its agency forms for its teams (#950), such as the claim a
 sends EMCR after an incident. Its Forms page, `/orgs/:slug/forms`, lists them, and each
 has its own page.
 
-- **SAR Duty admins upload and replace them**, the form's text and its page PDF. Saving
-  checks it on each of the organization's teams ([documents.md](documents.md#an-organizations-forms)).
+- **SAR Duty admins upload and replace them**, the form's text and its page PDF, unless
+  its own layout draws the page. Saving checks it on each of the organization's teams
+  ([documents.md](documents.md#an-organizations-forms)).
 - **Organization admins see each one**: what it reads and asks, its page, and its text.
   They try it on Coast Range SAR, a made-up team, and turn it on or off for every team.
 - **Once on, it shows for every team** in the organization, for team admins only. A team
   with no organization has none.
-- **The list counts the PDFs its teams made this year**, a count only. The PDFs are the
-  teams' and never show here.
 
-BCSARA's first is EMCR's Task report (1.01), on EMCR's own page
+BCSARA's are EMCR's Task report (1.01), on EMCR's own page, and its Expense
+reimbursement request and the request's Supplement, in D4H's layout
 ([documents.md](documents.md#preparing-a-form)).
 
 ## What an organization changes today

@@ -3,7 +3,6 @@ defmodule Web.Org.FormLive do
 
   alias App.Document
   alias App.Model.Form
-  alias App.Model.SavedPDF
   alias App.Operation.SetFormEnabled
   alias App.Operation.TryForm
   alias App.Report.Query
@@ -25,21 +24,8 @@ defmodule Web.Org.FormLive do
   end
 
   defp assign_form(socket, form) do
-    organization = socket.assigns.current_organization
-    now = DateTime.utc_now()
-    year = Service.YearRange.year_in(now, organization.timezone)
-    {since, _until} = Service.YearRange.bounds(year, organization.timezone)
-
     page = Form.page_bytes(form)
-    counts = SavedPDF.form_counts([form.id], since)
-
-    assign(socket,
-      form: form,
-      doc: parse(form.text),
-      year: year,
-      pdfs: Map.get(counts, form.id, 0),
-      pages: page && pages(page)
-    )
+    assign(socket, form: form, doc: parse(form.text), pages: page && pages(page))
   end
 
   defp parse(text) do
@@ -82,7 +68,8 @@ defmodule Web.Org.FormLive do
           </dd>
           <dt>Page</dt>
           <dd id="form-page">
-            <div :if={is_nil(@pages)}>None</div>
+            <div :if={is_nil(@pages) and layout?(@doc)}>Drawn by its layout</div>
+            <div :if={is_nil(@pages) and not layout?(@doc)}>None</div>
             <div :if={@pages}>
               <.a
                 href={~p"/orgs/#{@current_organization}/forms/#{@form}/page"}
@@ -97,8 +84,6 @@ defmodule Web.Org.FormLive do
               {Service.Format.date_long(@form.updated_at, @current_organization.timezone)}
             </span>
           </dd>
-          <dt>PDFs made, {@year}</dt>
-          <dd id="form-pdfs">{if @pdfs == 0, do: "None", else: @pdfs}</dd>
         </dl>
       </aside>
       <main class="content-2/3">
@@ -127,7 +112,7 @@ defmodule Web.Org.FormLive do
             variant={:danger}
             phx-click="enabled"
             phx-value-enabled="false"
-            data-confirm={"Turn off #{@form.name}? Team admins can no longer fill it in. PDFs already made stay saved."}
+            data-confirm={"Turn off #{@form.name}? Team admins can no longer fill it in."}
           >
             Turn off form
           </.button>
@@ -164,7 +149,7 @@ defmodule Web.Org.FormLive do
         <section :if={@current_user.is_admin} id="form-replace" class="mb-8 measure">
           <h2 class="heading">Replace</h2>
           <p>
-            Upload a new text or page. PDFs already made keep the version they printed from.
+            Upload a new text or page.
           </p>
           <.button
             id="form-replace-button"
@@ -190,6 +175,10 @@ defmodule Web.Org.FormLive do
   defp shows_on(%Document{where: nil}), do: "Every activity"
   defp shows_on(%Document{where: where}), do: "Activities where #{Query.text(where)}"
 
+  # A form with a layout draws its own page each time it prints (#950).
+  defp layout?(%Document{layout: %{}}), do: true
+  defp layout?(_doc), do: false
+
   defp asks(nil), do: []
   defp asks(%Document{asks: asks}), do: asks
 
@@ -205,7 +194,7 @@ defmodule Web.Org.FormLive do
         message =
           if form.enabled,
             do: "#{form.name} turned on for every team.",
-            else: "#{form.name} turned off. PDFs already made stay saved."
+            else: "#{form.name} turned off."
 
         {:noreply, socket |> assign_form(form) |> put_flash(:info, message)}
 

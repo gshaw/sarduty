@@ -33,7 +33,7 @@ defmodule App.Operation.CreateTaxCreditLetter do
       |> Ecto.Changeset.apply_action!(:insert)
       |> Map.put(:member, %{member | team: team})
 
-    %{changeset: changeset, pdf: SaveTaxCreditLetterPDF.draw(letter, read)}
+    %{changeset: changeset, pdf: SaveTaxCreditLetterPDF.draw!(letter, read)}
   end
 
   @doc "Saves a letter from `prepare/4`, with its PDF, and returns it with its member and team."

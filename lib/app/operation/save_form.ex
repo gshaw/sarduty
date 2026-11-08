@@ -8,9 +8,10 @@ defmodule App.Operation.SaveForm do
   Coast Range SAR, where its organization admins try it, so it prints on every one of
   them. No team's RESTRICTED field passes the check, since the form is the
   organization's (docs/organizations.md). Every `expect` must hold, and every place must
-  be on a page of its page PDF.
+  be on a page of its page PDF. A form with a layout has no page, and its layout must
+  print.
 
-  Replacing it raises its version. PDFs already made keep theirs (App.Model.SavedPDF).
+  Replacing it raises its version.
   """
 
   import Ecto.Query
@@ -31,7 +32,8 @@ defmodule App.Operation.SaveForm do
   @doc """
   `{:ok, form}`; `{:error, field, message}`, where `field` is `:text` or `:page`, the
   file to fix; or `{:error, :forbidden}` for anyone but a SAR Duty admin. `form` is nil
-  for a new one. `page` is the page PDF's bytes; nil when replacing keeps the form's.
+  for a new one. `page` is the page PDF's bytes; nil when replacing keeps the form's, if
+  the new text says page.
   """
   def call(
         %Organization{} = organization,
@@ -44,12 +46,20 @@ defmodule App.Operation.SaveForm do
     cond do
       !user.is_admin -> {:error, :forbidden}
       form && form.organization_id != organization.id -> {:error, :forbidden}
-      true -> save(organization, form, text, page || current_page(form), user, now)
+      true -> save(organization, form, text, page || kept_page(form, text), user, now)
     end
   end
 
-  defp current_page(nil), do: nil
-  defp current_page(%Form{} = form), do: Form.page_bytes(form)
+  # Replacing keeps the form's page while its text prints on one, and drops it for a
+  # layout.
+  defp kept_page(nil, _text), do: nil
+
+  defp kept_page(%Form{} = form, text) do
+    case Document.parse(text) do
+      {:ok, %Document{page: true}} -> Form.page_bytes(form)
+      _other -> nil
+    end
+  end
 
   defp save(organization, form, text, page, user, now) do
     with {:ok, doc} <- check(text, page, contexts(organization, now)) do
@@ -111,15 +121,24 @@ defmodule App.Operation.SaveForm do
 
   @doc """
   `{:ok, doc}`, the form checked, or `{:error, field, message}`: the text against each catalog
-  in `contexts`, `[{name, %Context{}}]`, then its `expect` lines, then its page. Reads
-  each context's database only through the catalog the context already holds.
+  in `contexts`, `[{name, %Context{}}]`, then its `expect` lines, then its page, then
+  that its layout prints. Reads each context's database only through the catalog the
+  context already holds.
   """
   def check(text, page, contexts) when is_binary(text) do
     with {:ok, doc} <- parse(text),
          {:ok, doc} <- check_contexts(doc, contexts),
          :ok <- expects(doc),
          :ok <- check_page(doc, page),
+         :ok <- check_layout(doc),
          do: {:ok, doc}
+  end
+
+  defp check_layout(doc) do
+    case PrintDocument.check_layout(doc) do
+      :ok -> :ok
+      {:error, reason} -> {:error, :text, reason}
+    end
   end
 
   defp parse(text) do
@@ -170,6 +189,9 @@ defmodule App.Operation.SaveForm do
   end
 
   defp check_page(_doc, nil), do: :ok
+
+  defp check_page(%Document{layout: %{}}, _page),
+    do: {:error, :page, "Upload no page: the form's layout draws it."}
 
   defp check_page(_doc, _page),
     do: {:error, :page, "Add page to the form's text, or upload no page."}

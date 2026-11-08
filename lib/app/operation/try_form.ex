@@ -60,7 +60,7 @@ defmodule App.Operation.TryForm do
       context ->
         with {:ok, %{attachment: attachment}} <-
                PrintForm.call(form.text, Form.page_bytes(form), context, activity_id, %{},
-                 sample: true
+                 mark: :sample
                ),
              do: {:ok, attachment}
     end

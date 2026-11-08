@@ -26,6 +26,10 @@ defmodule App.Model.Team do
     field :d4h_team_id, :integer
     field :d4h_api_host, :string
     field :mailing_address, TrimmedString
+    # Apart from the mailing address, for a form that asks for each on its own line, such
+    # as EMCR's Expense reimbursement request (#950).
+    field :city, TrimmedString
+    field :postal_code, TrimmedString
     field :authorized_by_name, TrimmedString
     field :authorized_by_title, TrimmedString
     field :authorized_by_phone, TrimmedString, redact: true
@@ -226,17 +230,21 @@ defmodule App.Model.Team do
     end
   end
 
-  @doc "Settings' Tax credit letters tab: the mailing address and who signs."
+  @doc "Settings' Tax credit letters tab: the mailing address, city, and postal code, and who signs."
   def build_letters_changeset(data, params \\ %{}) do
     data
     |> cast(params, [
       :mailing_address,
+      :city,
+      :postal_code,
       :authorized_by_name,
       :authorized_by_title,
       :authorized_by_phone,
       :authorized_by_email
     ])
     |> Validate.address(:mailing_address)
+    |> validate_length(:city, max: 100)
+    |> validate_length(:postal_code, max: 20)
     |> validate_length(:authorized_by_name, max: 250)
     |> validate_length(:authorized_by_title, max: 100)
     |> validate_length(:authorized_by_phone, max: 30)

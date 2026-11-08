@@ -216,7 +216,7 @@ defmodule Web.ActivityOrgFormLiveTest do
       refute kayakers |> FormAnswer.for_activity() |> Map.has_key?("meals_given")
     end
 
-    test "Download PDF prints each person's row", ctx do
+    test "Download draft PDF prints each person's row", ctx do
       %{cast: cast, supplement: supplement} = ctx
       kayakers = MockupSeed.activity(cast, "Overdue kayakers")
       alex = member_key(cast, "Alex Chen")
@@ -225,34 +225,73 @@ defmodule Web.ActivityOrgFormLiveTest do
 
       conn = post(conn, form_path(kayakers, supplement) <> "/pdf", %{"answers" => answers})
       assert "%PDF" <> _ = conn.resp_body
-
-      pdf = SavedPDF |> where(activity_id: ^kayakers.id) |> Repo.one!()
-      assert pdf.keep[":meals_provided"] == 1
       assert FormAnswer.for_activity(kayakers)["on_task"] == %{alex => "No"}
     end
   end
 
-  describe "Download PDF and Open PDF" do
-    test "keep the answers and save the PDF as it was made", ctx do
+  describe "the Expense reimbursement request" do
+    setup %{form: form} do
+      organization = Repo.get!(App.Model.Organization, form.organization_id)
+
+      request =
+        form_fixture(organization, %{
+          name: "Expense reimbursement request",
+          text: File.read!("priv/forms/bcsara/expense_request.txt"),
+          page: nil,
+          enabled: true
+        })
+
+      %{request: request}
+    end
+
+    test "shows each equipment use's total, and links an empty city to its settings", ctx do
+      %{cast: cast, request: request} = ctx
+      kayakers = MockupSeed.activity(cast, "Overdue kayakers")
+      Repo.update_all(App.Model.Team, set: [city: nil])
+
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(kayakers, request))
+
+      truck = App.Model.EquipmentItem |> where(title: "Truck 1") |> Repo.one!()
+
+      assert has_element?(
+               lv,
+               "#org-form-rows-equipment #org-form-row-item-#{truck.id}",
+               "Truck 1"
+             )
+
+      assert lv |> element("#org-form-total-item-#{truck.id}") |> render() =~ ~r/\$\d+\.\d\d/
+
+      assert has_element?(
+               lv,
+               ~s(#org-form-missing-table-team-city a[href="/teams/coastrange/settings/tax-credit-letters"]),
+               "Team settings"
+             )
+    end
+
+    test "Download draft PDF prints it with no page", ctx do
+      %{cast: cast, request: request} = ctx
+      kayakers = MockupSeed.activity(cast, "Overdue kayakers")
+      conn = log_in_user(build_conn(), cast.alex)
+
+      conn = post(conn, form_path(kayakers, request) <> "/pdf", %{"answers" => %{"misc" => "40"}})
+      assert "%PDF" <> _ = conn.resp_body
+      assert FormAnswer.for_activity(kayakers)["misc"] == "40"
+    end
+  end
+
+  describe "Download draft PDF" do
+    test "keeps the answers and saves no PDF: it's a draft", ctx do
       %{cast: cast, hiker: hiker, form: form} = ctx
       conn = log_in_user(build_conn(), cast.alex)
       path = form_path(hiker, form) <> "/pdf"
       answers = %{"leader" => "Alex Chen", "injured" => "1", "err" => "No"}
 
       conn = post(conn, path, %{"answers" => answers})
-      assert ["attachment" <> _] = get_resp_header(conn, "content-disposition")
+      assert ["inline" <> _] = get_resp_header(conn, "content-disposition")
       assert "%PDF" <> _ = conn.resp_body
 
-      pdf = SavedPDF |> where(activity_id: ^hiker.id) |> Repo.one!()
-      assert pdf.form_id == form.id and pdf.form_version == form.version
-      assert pdf.user_id == cast.alex.id
-      assert pdf.title == "Task report #{hiker.ref_id}"
-      assert pdf.keep == %{":leader" => "Alex Chen", ":injured" => 1, ":err" => "No"}
+      refute Repo.exists?(SavedPDF)
       assert FormAnswer.for_activity(hiker)["leader"] == "Alex Chen"
-
-      conn = post(log_in_user(build_conn(), cast.alex), path, %{"open" => "true"})
-      assert ["inline" <> _] = get_resp_header(conn, "content-disposition")
-      assert SavedPDF |> where(activity_id: ^hiker.id) |> Repo.aggregate(:count) == 2
     end
 
     test "make nothing when an answer doesn't read", %{cast: cast, hiker: hiker, form: form} do

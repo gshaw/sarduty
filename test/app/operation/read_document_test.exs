@@ -11,7 +11,7 @@ defmodule App.Operation.ReadDocumentTest do
   alias App.Report.Context
   alias App.SampleRepo
 
-  @claim File.read!("test/support/fixtures/forms/claim_rules.txt")
+  @claim File.read!("priv/forms/bcsara/expense_request.txt")
 
   defp context, do: Context.new(SampleRepo.team(), DateTime.utc_now(), repo: SampleRepo)
 
@@ -29,7 +29,9 @@ defmodule App.Operation.ReadDocumentTest do
              ReadDocument.call(@claim, context, %{activity: incident().id})
 
     # The rows show with the form's rows, not as values filled in.
-    assert Enum.map(read, & &1.name) == ["task.ref_id", "task.`Response Type`", "team.name"]
+    names = Enum.map(read, & &1.name)
+    assert "task.`Response Type`" in names and "team.city" in names
+    refute Enum.any?(names, &String.starts_with?(&1, ["people.", "equipment."]))
 
     assert [_ | _] = people = values["people"]
     assert Enum.all?(people, &(&1.key =~ ~r/^member:\d+$/ and is_binary(&1.values["member"])))

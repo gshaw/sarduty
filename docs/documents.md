@@ -8,7 +8,7 @@ it's `App.Document`: "template" is taken by kit templates.
 
 A [form](#forms) is a document an organization hosts, such as EMCR's Task report (#950).
 It prints for an activity, asks what SAR Duty can't know, and prints on the agency's own
-page.
+page, or on one its own Typst [layout](#layout) draws.
 
 The language is the report language's ([reports.md](reports.md)): the same lexer, the
 same parser for each report and every value, and the same catalog. There is no second
@@ -20,6 +20,7 @@ or calls Typst: printing is App.Operation.PrintDocument's.
 
 They come in this order. `report`, `const`, `ask`, `compute`, and `expect` can repeat;
 `fill` comes once, and once more as `fill each` for a form's rows; the rest come once.
+`layout` comes last, and every line after it is Typst.
 
 | Clause                              | What it says                                                                                      |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -37,6 +38,7 @@ They come in this order. `report`, `const`, `ask`, `compute`, and `expect` can r
 | `places`                            | Where each value goes.                                                                            |
 | `fill`                              | What goes in each place. `fill each people into rows` fills a row each ([Rows](#rows)).           |
 | `expect with … : …`                 | A worked example: values given, and a condition that must hold.                                   |
+| `layout`                            | A form's Typst layout, in place of `page` and `places` ([Layout](#layout)).                       |
 
 A clause starts at the left edge, and the lines indented under it are its own. `--`
 starts a comment.
@@ -140,7 +142,7 @@ title, the author, the lock, the kept values, and each place's value.
 
 `App.Operation.PrintDocument` prints that with Typst. `App.Document.Markup` lays each
 place out on letter paper, or on each page of a form's page, in as many copies as its
-rows need. **Values reach Typst as data, never as Typst code**: they go in a
+rows need, or puts a form's layout after a few lines that read its values. **Values reach Typst as data, never as Typst code**: they go in a
 `values.json` the markup reads by key, so a name with a `*` or a `#` prints as written.
 `lock print` runs `Service.PDFLock`. A QR code is an SVG from `EQRCode`, and Typst uses
 no packages. `App.Operation.PrintTaxCreditLetter` does all this for a letter, and
@@ -198,6 +200,10 @@ uv run --with pdfplumber python -I tools/forms/find_places.py \
   priv/forms/bcsara/task_report.txt priv/forms/bcsara/task_report.pdf
 ```
 
+A form can have no page at all: its own [layout](#layout) draws it each time it prints,
+and it's only the text to upload. Change the layout and upload it again: saving prints
+it once, and FormsTest prints it on Coast Range SAR.
+
 A form whose agency takes a page drawn in another's layout, such as D4H's, gets a blank
 page SAR Duty draws once: a Typst program beside it, such as
 [supplement.typ](../priv/forms/bcsara/supplement.typ), with each line and cell at a
@@ -227,13 +233,19 @@ running its expects, then prints it there.
   provided. The header has the task number and when the task ran, and the footer the
   Task Leader's Name, Date Report Completed, and the page; the task leader signs by
   hand. More than 18 people print another copy of the page, each with its own subtotal.
-- **The Expense reimbursement request** is still to come. The fields it reads are in
-  the catalog: each item's `cost_per_km`, `cost_per_hour`, and `cost_per_use`, in
-  dollars, copied from D4H ([equipment.md](equipment.md#the-copy)), as are attendance's
-  `finished_at` and its Travel `km`, which the Supplement reads. Its rules are
-  [claim_rules.txt](../test/support/fixtures/forms/claim_rules.txt), a test fixture
-  until then ([Arithmetic](#arithmetic)), and a test checks the Supplement works out
-  the same personnel total from them.
+- **BCSARA's Expense reimbursement request**
+  ([expense_request.txt](../priv/forms/bcsara/expense_request.txt)) is EMCR's, with no
+  page: its [layout](#layout) draws it in D4H's layout. The header is the team's legal
+  name, mailing address, city, and postal code, then the task number and when the task
+  ran. Each equipment use is a line: its km at the item's cost per km, then its hours
+  (2 at least) or its uses at the item's cost per hour or per use, copied from D4H
+  ([equipment.md](equipment.md#the-copy)). An item with both prints a line for each,
+  the km on the first. Under the table: miscellaneous expenses (asked), the
+  Supplement's subtotal as its balance forward, the subtotal, 15% for occupational
+  health and safety, and the total. The team's signer signs it with the team's
+  signature, dated the day it prints, and EMCR's own boxes are left blank. It repeats
+  the Supplement's people rules, reading the same answers, and a test checks the two
+  agree on Coast Range SAR's claim. The bundle will drop the repeat.
 
 ### Arithmetic
 
@@ -282,8 +294,9 @@ people` works out one for each row of report `people`: a bare name there reads t
 else`. Money prints with `as money` (`Service.Format.money/1`, exact, half a cent
   up).
 - **`expect`** gives a compute or a const a value, which is kept instead of worked out,
-  and a report's row as its name and values: `people hours 6, km 30`. An expect that
-  gives one row checks it: its names read the row first.
+  and a report's row as its name and values: `people hours 6, km 30`, or a parent's,
+  `equipment item.cost_per_hour 15`. An expect that gives one row checks it: its names
+  read the row first.
 
 The report language reads arithmetic too, so a comparison takes it, but a report
 refuses it: arithmetic is a form's.
@@ -326,6 +339,44 @@ fill each people into rows
   named for the row, `rows.19.who`, and placed on it. An expect reads the first copy,
   and no row's places: what the rows work out, it checks with `compute each`'s values.
 
+### Layout
+
+A form can carry a Typst layout in place of a page (#950): `layout` comes last, alone on
+its line, and every line after it is Typst, as written. Its `fill` is no place's: each
+line is a value the layout reads by name, and `fill each equipment into items` a list,
+a row of values for each of the report's rows. The table it draws grows with them, onto
+more pages.
+
+```sql
+fill
+  claimant = team.legal_name
+  claim_total = total as money
+  signature = team.signature
+
+fill each equipment into items
+  item = item
+  total = total as money
+
+layout
+#set page(paper: "us-letter", margin: 40pt)
+Claimant: #values.claimant
+#for use in values.items [#use.item: #use.total \ ]
+#if values.signature != none { image(values.signature, height: 30pt) }
+```
+
+- **Values reach it as data.** SAR Duty puts them in `values.json`, reads it as
+  `values` above the layout's first line, and sets Arimo. A value is text, `true` or
+  `false` for a condition, or `none` for a blank; a picture is the name of its file.
+  It's `values`, not `v`, so the layout keeps Typst's `v()`.
+- **Formats stay in the form.** A value prints as its fill formats it, `total as
+money`, so the layout does no arithmetic and formats nothing.
+- **An expect reads each value** by its name, as it reads a place, and no list.
+- **Saving prints it** with every value blank and one blank row in each list, since
+  Typst finds a mistake only when it runs. A mistake names the line of the form's
+  text: `Line 140: dictionary does not contain key "claimant"`.
+- **A layout has no `page` or `places`**, and its fills' names are its own: not a
+  report's, a const's, or a compute's. A row holds text and conditions, no pictures.
+
 ### An organization's forms
 
 A form belongs to an organization, in `forms` ([App.Model.Form](../lib/app/model/form.ex)),
@@ -334,11 +385,13 @@ loads the page. Its name and about come from its text. Its pages are under the
 organization's space, `/orgs/:slug/forms` ([organizations.md](organizations.md#its-forms)).
 
 - **A SAR Duty admin uploads it**, the text and the page, and replaces it
-  (App.Operation.SaveForm). SAR Duty prepares each form's places on a Mac: there's no
-  editor in the browser. Replacing raises its `version`.
+  (App.Operation.SaveForm). A form with a layout is its text alone. SAR Duty prepares
+  each form's places on a Mac: there's no editor in the browser. Replacing raises its
+  `version`, and keeps the page while the new text says `page`.
 - **Saving checks it everywhere it will print**: against the catalog of each of the
   organization's teams and of Coast Range SAR, then every `expect`, then that each place
-  is on a page of the page PDF (`PrintDocument.check_page/2`). An error names the team,
+  is on a page of the page PDF (`PrintDocument.check_page/2`), or that its layout prints
+  (`PrintDocument.check_layout/1`). An error names the team,
   and the upload page shows it under the file to fix. A team's RESTRICTED fields are left
   out of the check, so a form never reads one ([organizations.md](organizations.md#what-an-organization-never-sees)).
   A team on SAR Duty Records has no custom fields, so a form that reads BCSARA's fields
@@ -360,7 +413,8 @@ through the team's organization, so a form that's off or another organization's 
 - **What SAR Duty filled in**: each column of each report, from ReadDocument's `read`.
 - **What's missing**: each one blank, with the page that fixes it, so the fix reaches
   D4H and every form. An activity's D4H field links to Change fields, its own details to
-  Change activity, and the team's to team settings. Fields first, questions second: an
+  Change activity, and the team's to team settings: its names to General, and its
+  address, city, postal code, and signer to Tax credit letters. Fields first, questions second: an
   empty field never becomes a question. The PDF still prints with it blank.
 - **The questions.** Answers save as they change (App.Operation.SaveFormAnswers), in
   `form_answers`: team, activity, name, row, the text typed, who, and when. They're the
@@ -375,27 +429,29 @@ through the team's organization, so a form that's off or another organization's 
   blank box shows its default in grey, such as Meals provided to everyone, and takes
   it; a choice shows its answer. Each total follows the answers as they change. A row's
   answer that's the ask's plain default, such as On task's Yes, isn't kept: a choice
-  sends one for every row.
-- **Download PDF and Open PDF** post the answers to Web.ActivityFormPDFController,
-  since a LiveView can't send a PDF. App.Operation.CreateFormPDF keeps the answers,
-  prints the form, and saves the PDF it sends, every time (`SavedPDF.add_for_form!/5`).
-  An answer that doesn't read makes nothing.
+  sends one for every row. A report a form only works a value out for on each row, such
+  as each equipment use's total, shows too, with no boxes.
+- **Download draft PDF** posts the answers to Web.ActivityFormPDFController,
+  since a LiveView can't send a PDF, and the browser shows it. DRAFT runs across
+  each page while forms are testing only. App.Operation.CreateFormPDF keeps the answers
+  and prints the form. A draft is never saved; publishing a form, saved with an ID, comes
+  later. An answer that doesn't read makes nothing.
 
 Search leaves the page out: it's found from its activity (`Web.Search.not_searched/0`).
 
 ## Saved PDFs
 
-Every PDF a document makes is saved as it was made, so a download or email serves the
-same file, whatever the team's logos or the document say now (#918, #950).
+A published PDF is saved as it was made, so a download or email serves the same file,
+whatever the team's logos or the document say now (#918, #950). For now only tax credit
+letters publish: making or replacing one, or emailing one that has none, saves its PDF.
+A form prints drafts only.
 [App.Model.SavedPDF](../lib/app/model/saved_pdf.ex) is one table, `saved_pdfs`, for all
 of them, with the bytes in `saved_pdf_files`, so lists never load them. Each row has its
 team, title, filename, size, and when it was made, and belongs to one of:
 
 - **A tax credit letter**: one PDF, replaced when the letter is (`put_letter!/2`).
-- **An activity**, for a form: a new PDF each time one prints, none replaced
-  (`add_for_form!/5`). It keeps its form and the version it printed from, who made it,
-  and the values it printed that `keep` names. If the form goes, the PDF stays
-  and its form is blank.
+- **A published form**, not yet built: its activity, the form and the version it
+  printed from, who made it, and the values it printed that `keep` names.
 
 Deleting a letter deletes its PDF. A team's purge deletes them all
 (App.Operation.DeleteTeam).

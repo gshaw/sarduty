@@ -1,0 +1,315 @@
+-- EMCR's Expense reimbursement request, for BCSARA's teams (#950): the team's claim
+-- for an incident, with its equipment, miscellaneous expenses, and the Supplement's
+-- total as its balance forward. There's no page to upload: the layout at the end
+-- draws it in D4H's layout each time it prints, and the equipment table grows with
+-- its rows. The team's signer signs it with the team's signature.
+--
+-- The rates are EMCR's 5.06 Volunteer Reimbursement and Allowance Rate Chart. Check every
+-- rate against the current chart before the form goes on. The people rules repeat the
+-- Supplement's, reading the same answers, so its balance forward is the Supplement's
+-- subtotal; App.FormsTest checks the two agree.
+
+form 'Expense reimbursement request'
+about 'The team''s claim for an incident: its equipment, other expenses, and the Supplement''s total. It prints signed by the team''s signer.'
+for activity where kind = 'incident'
+
+report task
+  select ref_id, tracking_number, started_at, finished_at, `Response Type`
+  from activities
+  where id = :activity
+
+report people
+  select member, started_at, finished_at, km
+  from attendance
+  where activity.id = :activity and status = 'Attended'
+  order by member.name
+
+report equipment
+  select item, hours, km, quantity, item.cost_per_km, item.cost_per_hour, item.cost_per_use
+  from equipment_use
+  where activity.id = :activity
+  order by item.title
+
+const km_rate        = 0.65, 0.67 from 2026-04-15   -- per km
+const meal           = 15.00
+const meals_a_day    = 4
+const equipment_rate = 25.00   -- personal equipment, per person on a response, per 24 hours
+const ohs            = 15%     -- occupational health and safety
+
+ask meals_provided 'Meals provided to everyone' default 0
+  hint 'Meals the team or another agency gave each person. Change one person''s below.'
+ask each people on_task 'On task' choose 'Yes', 'No' default 'Yes'
+ask each people meals_given 'Meals provided' default :meals_provided
+ask misc 'Miscellaneous expenses' default 0
+  hint 'Other costs of the task, in dollars. Attach the receipts.'
+
+-- The Supplement's rules: a meal for every 3 hours on task, 4 a day at most, less
+-- those provided.
+compute each people
+  hours     = hours(started_at, finished_at)
+  rate      = km_rate on started_at
+  meals     = if on_task = 'Yes' and hours > 3
+                then max(0, min(floor(hours / 3), meals_a_day * days(hours)) - meals_given) else 0
+  allowance = if on_task = 'Yes' and task.`Response Type` = 'Response'
+                then equipment_rate * days(hours) else 0
+  total     = km * rate + meals * meal + allowance
+
+-- Each use: its km at the item's cost per km, then its hours or its uses at their rate.
+-- An item's hours bill 2 at least. An item with a cost per hour and a cost per use
+-- prints a line for each, with the km on the first.
+compute each equipment
+  billed   = if item.cost_per_hour > 0 then max(2, round(hours(hours))) else 0
+  travel   = km * item.cost_per_km
+  by_hour  = billed * item.cost_per_hour
+  by_use   = quantity * item.cost_per_use
+  use_line = if item.cost_per_hour > 0 then by_use else travel + by_use
+  total    = travel + by_hour + by_use
+
+compute
+  personnel = sum(people.total)
+  subtotal  = sum(equipment.total) + :misc + personnel
+  ohs_total = round(subtotal * ohs, 2)
+  total     = subtotal + ohs_total
+
+title 'Expense reimbursement request {coalesce(task.tracking_number, task.ref_id)}'
+  by team.name
+keep task.tracking_number, personnel, subtotal, ohs_total, total, :misc
+
+-- What the layout reads, each by its name: values.claimant.
+fill
+  claimant = team.legal_name
+  address = team.mailing_address
+  city = team.city
+  postal_code = team.postal_code
+  task_number = task.tracking_number
+  from = '{task.started_at as date_short}, {task.started_at as time}'
+  to = '{task.finished_at as date_short}, {task.finished_at as time}'
+    if task.finished_at is not null
+  equipment_subtotal = sum(equipment.total) as money
+  misc_expenses = :misc as money
+  balance_forward = personnel as money
+  claim_subtotal = subtotal as money
+  ohs_label = '{ohs * 100 as number}% Occupational Health and Safety Supplement Allowance'
+  ohs_allowance = ohs_total as money
+  claim_total = total as money
+  signature = team.signature
+  signed_on = today as date_long
+  signer = team.signer
+  position = team.signer_title
+  phone = team.signer_phone
+  email = team.signer_email
+
+-- Each use's line or two. A blank prints as a dash.
+fill each equipment into items
+  item       = item
+  km         = km as number if travel > 0
+  km_rate    = item.cost_per_km as money if travel > 0
+  hours      = billed as number if item.cost_per_hour > 0
+  hour_rate  = item.cost_per_hour as money if item.cost_per_hour > 0
+  hour_total = travel + by_hour as money if item.cost_per_hour > 0
+  used       = quantity as number if item.cost_per_use > 0
+  use_rate   = item.cost_per_use as money if item.cost_per_use > 0
+  use_total  = use_line as money if item.cost_per_use > 0
+  total      = total as money
+
+expect with task.tracking_number = 'CR-4113', task.ref_id = '01428':
+  task_number = 'CR-4113' and title = 'Expense reimbursement request CR-4113'
+
+-- The Supplement's people rules, as it checks them.
+expect with task.`Response Type` = 'Response'
+  people hours 6, km 30, on_task 'Yes', meals_given 0, started_at 2026-06-01: total = 75.10
+expect with people meals_given 3, hours 6: meals = 0
+
+-- 42 km at $0.67 a km. A radio's 45 minutes bill 2 hours at $15.00.
+expect with equipment km 42, item.cost_per_km 0.67: total = 28.14
+expect with equipment hours 45, item.cost_per_hour 15.00: billed = 2 and total = 30.00
+
+-- 5 hours at $25.00 and one use at $125.00: the km go on the hours' line.
+expect with equipment km 40, item.cost_per_km 0.67, hours 300, item.cost_per_hour 25.00,
+    quantity 1, item.cost_per_use 125.00:
+  travel + by_hour = 151.80 and use_line = 125.00 and total = 276.80
+
+-- With no cost per hour, the km go on the uses' line.
+expect with equipment km 40, item.cost_per_km 0.67, quantity 2, item.cost_per_use 10.00:
+  use_line = 46.80
+
+-- The totals, from the Supplement's $347.20 and $165.14 of equipment.
+expect with personnel = 347.20, :misc = 0, equipment total 165.14:
+  claim_subtotal = '$512.34' and ohs_allowance = '$76.85' and claim_total = '$589.19'
+expect with subtotal = 1000.00: ohs_total = 150.00
+expect ohs_label = '15% Occupational Health and Safety Supplement Allowance'
+
+layout
+// EMCR's Expense reimbursement request in D4H's layout, which EMCR takes today (#950).
+// SAR Duty reads values.json as values before this line: each value by its name, text
+// or none, a picture as its file's name, and items as an array of each use's values.
+#set document(date: none)
+// A long claim runs onto more pages, numbered, with the table's heading on each.
+#set page(
+  paper: "us-letter",
+  margin: (left: 40pt, right: 40pt, top: 32pt, bottom: 32pt),
+  footer: context {
+    let pages = counter(page).final().first()
+    if pages > 1 { align(right, text(size: 8pt)[Page #counter(page).display() of #pages]) }
+  },
+)
+#set text(size: 9pt)
+
+#let rule = 0.6pt
+#let shade = rgb("#f2f2f2")
+
+// A value on one line, shrunk to fit its width; a blank keeps the line's height.
+#let fit(value, size: 9pt) = layout(room => {
+  if value == none or value == "" {
+    hide(text(size: size)[X])
+  } else {
+    let wide = measure(text(size: size, value)).width
+    text(size: size * calc.min(1, room.width / wide * 0.999), value)
+  }
+})
+
+// A label and its value centred on the line after it, as D4H prints them.
+#let field(label, value) = grid(
+  columns: (auto, 1fr),
+  column-gutter: 6pt,
+  align: (left + bottom, center + bottom),
+  text(weight: "bold", label),
+  block(width: 100%, stroke: (bottom: rule), inset: (bottom: 1.5pt), {
+    if type(value) == str or value == none { fit(value) } else { value }
+  }),
+)
+
+#let pair(a, b) = grid(columns: (1fr, 1fr), column-gutter: 24pt, align: bottom, a, b)
+
+// A table cell: a blank is a dash, as on D4H's.
+#let dash(value) = if value == none [-] else [#value]
+
+// The agency, where D4H puts its logo, and the form's name.
+#grid(
+  columns: (1fr, auto),
+  align: (left + top, right + top),
+  {
+    text(size: 6.5pt, tracking: 0.5pt)[BRITISH COLUMBIA]
+    linebreak()
+    text(size: 9pt)[Emergency Management and Climate Readiness]
+  },
+  text(size: 12pt, weight: "bold")[EXPENSE REIMBURSEMENT REQUEST],
+)
+#v(28pt)
+
+#field("Claimant Name:", values.claimant)
+#v(8pt)
+// The mailing address on one line, however many it has.
+#field("Mailing Address:", if values.address != none { values.address.split("\n").join(", ") })
+#v(8pt)
+#pair(field("City:", values.city), field("Postal Code:", values.postal_code))
+#v(8pt)
+#grid(
+  columns: (1.1fr, 1fr, 1fr),
+  column-gutter: 12pt,
+  field("Task No:", values.task_number),
+  field("(from)", values.from),
+  field("(to)", values.to),
+)
+#v(16pt)
+
+// Each use is a line, or two for an item with a cost per hour and a cost per use: its
+// km and their rate go on the first.
+#let use-lines(use) = {
+  let units = ()
+  if use.hour_total != none { units.push((use.hours, use.hour_rate, "hour", use.hour_total)) }
+  if use.use_total != none { units.push((use.used, use.use_rate, "use", use.use_total)) }
+  if units.len() == 0 { units.push((none, none, none, use.total)) }
+
+  let cells = ()
+  for (i, (qty, rate, unit, total)) in units.enumerate() {
+    cells += (
+      fit(use.item),
+      align(right, dash(if i == 0 { use.km })),
+      align(right, dash(if i == 0 { use.km_rate })),
+      align(right, dash(qty)),
+      align(right, dash(rate)),
+      align(center, dash(unit)),
+      align(right, dash(total)),
+    )
+  }
+  cells
+}
+
+// One empty line when nothing was used, so the table still reads as one.
+#let lines = if values.items == () { ([],) * 7 } else { values.items.map(use-lines).flatten() }
+#table(
+  columns: (1fr, 40pt, 44pt, 40pt, 56pt, 46pt, 62pt),
+  stroke: rule,
+  inset: (x: 4pt, y: 4pt),
+  table.header(
+    table.cell(colspan: 7, fill: shade, align: center, strong[LOCAL GOVT/SOCIETY ELIGIBLE EXPENSES]),
+    table.cell(rowspan: 2, fill: shade, align: center + horizon, strong[Equipment]),
+    table.cell(colspan: 2, fill: shade, align: center, strong[Travel]),
+    table.cell(rowspan: 2, fill: shade, align: center + horizon, strong[Qty]),
+    table.cell(rowspan: 2, fill: shade, align: center + horizon, strong[Rate]),
+    table.cell(rowspan: 2, fill: shade, align: center + horizon, strong[Unit]),
+    table.cell(rowspan: 2, fill: shade, align: center + horizon, strong[Total]),
+    table.cell(fill: shade, align: center, strong[km]),
+    table.cell(fill: shade, align: center, strong[rate#super[1]]),
+  ),
+  ..lines,
+  table.cell(colspan: 7, align: center, text(size: 6.5pt)[1\. Rates as per current 5.06 Volunteer Reimbursement and Allowance Rate Chart.]),
+  table.cell(colspan: 6, align: right, strong[SUBTOTAL]),
+  align(right, dash(values.equipment_subtotal)),
+)
+#v(10pt)
+
+// The claim's totals: the Supplement's subtotal comes forward.
+#block(breakable: false, table(
+  columns: (1fr, 62pt),
+  stroke: rule,
+  inset: (x: 4pt, y: 4pt),
+  [Miscellaneous Expenses (attach receipts)], align(right, dash(values.misc_expenses)),
+  [Balance Forward from Supplements], align(right, dash(values.balance_forward)),
+  align(right, strong[SUBTOTAL]), align(right, dash(values.claim_subtotal)),
+  [#values.ohs_label], align(right, dash(values.ohs_allowance)),
+  align(right, strong[TOTAL]), align(right, strong(dash(values.claim_total))),
+))
+#v(20pt)
+
+// The team's signer signs it with the team's signature. Without one, the line is
+// left to sign by hand.
+#let signature = if values.signature != none { image(values.signature, height: 30pt) }
+#block(breakable: false, {
+  pair(field("Signature:", signature), field("Date:", values.signed_on))
+  v(8pt)
+  pair(field("Name:", values.signer), field("Position:", values.position))
+  v(8pt)
+  pair(field("Email:", values.email), field("Telephone:", values.phone))
+})
+#v(18pt)
+
+// EMCR's own boxes, left blank.
+#block(breakable: false, {
+  text(weight: "bold", style: "italic")[EMCR USE ONLY]
+  v(4pt)
+  [Equipment Replacement/Repair Request Approval #h(24pt) YES / NO]
+  v(12pt)
+  block(width: 100%, stroke: rule, inset: 8pt, {
+    text(weight: "bold")[EMCR HEADQUARTERS USE ONLY]
+    linebreak()
+    text(size: 6.5pt, style: "italic")[I do hereby certify that the amount to be paid is correct, complies with the appropriate statute or other authority where required, the goods have been received and/or other conditions have been met:]
+    v(10pt)
+    field("Spending Authority:", none)
+    v(8pt)
+    grid(
+      columns: (1fr, 1fr, 1fr, 1fr),
+      column-gutter: 12pt,
+      field("Resp:", none), field("Account:", none), field("STOB:", none), field("Project #:", none),
+    )
+    v(8pt)
+    grid(
+      columns: (1fr, 1fr, 1fr),
+      column-gutter: 12pt,
+      field("Commitment #:", none), field("Supplier #:", none), field("INV #:", none),
+    )
+    v(8pt)
+    pair(field("Entered by:", none), field("Date:", none))
+  })
+})

@@ -9,7 +9,7 @@ defmodule App.Operation.SaveFormAnswersTest do
   alias App.SampleRepo
 
   @form File.read!("test/support/fixtures/forms/task_report.txt")
-  @claim File.read!("test/support/fixtures/forms/claim_rules.txt")
+  @claim File.read!("priv/forms/bcsara/expense_request.txt")
 
   setup_all do
     context = Context.new(SampleRepo.team(), DateTime.utc_now(), repo: SampleRepo)

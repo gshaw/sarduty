@@ -24,6 +24,22 @@ defmodule Web.Settings.TaxCreditLettersLiveTest do
     assert team.authorized_by_phone == "604-555-0100"
   end
 
+  # A form that asks for them apart from the mailing address prints them (#950).
+  test "saves the city and postal code", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/tax-credit-letters")
+
+    assert lv
+           |> form("#letter-settings-form",
+             form: %{city: " Squamish BC ", postal_code: "V8B 0A1"}
+           )
+           |> render_submit() =~ "Team settings saved."
+
+    assert %Team{city: "Squamish BC", postal_code: "V8B 0A1"} = Team.get!(team.id)
+  end
+
   test "the signer's email must look like one", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 

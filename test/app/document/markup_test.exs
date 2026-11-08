@@ -117,11 +117,11 @@ defmodule App.Document.MarkupTest do
     refute markup =~ "stack"
   end
 
-  test "draws the sample mark over the page" do
-    {markup, files} = typst([], sample_mark: @png)
+  test "draws the mark over the page" do
+    {markup, files} = typst([], mark: @png)
 
-    assert markup =~ ~s|image("sample-mark.png", width: page-width)|
-    assert files["sample-mark.png"] == @png
+    assert markup =~ ~s|image("mark.png", width: page-width)|
+    assert files["mark.png"] == @png
   end
 
   test "the markup makes a PDF" do
@@ -243,6 +243,71 @@ defmodule App.Document.MarkupTest do
 
       assert {:ok, pdf} = Service.Typst.compile(markup, files)
       assert Service.PDFPages.count(pdf) == {:ok, 4}
+    end
+  end
+
+  describe "a layout" do
+    @layout "#set page(width: 200pt, height: 100pt)\n#values.who\n"
+
+    defp layout_output(fills) do
+      %{
+        title: "Expense reimbursement request CR-4113",
+        author: "Coast Range SAR",
+        places: [],
+        layout: %{text: @layout, line: 40},
+        fills: fills
+      }
+    end
+
+    test "reads its values as data, and each picture is a file it names" do
+      fills = %{
+        "who" => ~s|*Sam* #1 "q"|,
+        "far" => true,
+        "signature" => {:image, @png},
+        "address" => nil,
+        "lines" => [%{"km" => "12"}]
+      }
+
+      {markup, files} = fills |> layout_output() |> Markup.typst()
+
+      assert markup =~ ~s|#let values = json("values.json")\n|
+      assert markup =~ ~s|#set document(title: values.at("title"), author: values.at("author"))|
+      assert String.ends_with?(markup, @layout)
+      refute markup =~ "Sam"
+
+      assert values(files) == %{
+               "title" => "Expense reimbursement request CR-4113",
+               "author" => "Coast Range SAR",
+               "who" => ~s|*Sam* #1 "q"|,
+               "far" => true,
+               "signature" => "signature.png",
+               "address" => nil,
+               "lines" => [%{"km" => "12"}]
+             }
+
+      assert files["signature.png"] == @png
+    end
+
+    test "the mark is each page's foreground" do
+      {markup, files} = %{} |> layout_output() |> Markup.typst(mark: @png)
+
+      assert markup =~
+               ~s|#set page(foreground: place(top + left, image("mark.png", width: 100%)))|
+
+      assert files["mark.png"] == @png
+    end
+
+    test "a mistake names the line of the form's text it's on" do
+      output = layout_output(%{})
+      {markup, _files} = Markup.typst(output)
+      at = (markup |> String.split("\n") |> Enum.find_index(&(&1 == "#values.who"))) + 1
+
+      reason =
+        ~s|Typst stopped with status 1: main.typ:#{at}:9: error: dictionary does not contain key "who"|
+
+      # The layout starts on line 40, so its second line is 41.
+      assert Markup.layout_error(reason, markup, output) ==
+               ~s|Line 41: dictionary does not contain key "who"|
     end
   end
 end
