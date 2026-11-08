@@ -40,7 +40,9 @@ defmodule App.Operation.RefreshD4HData.UpsertEquipmentTest do
     template_fixture(team, "Old template", [{gone, 60}])
 
     stub(%{
-      "equipment-kinds" => [%{"id" => 1, "title" => "Rescue Truck"}],
+      "equipment-kinds" => [
+        %{"id" => 1, "title" => "Rescue Truck", "costPerDistance" => 67, "costPerHour" => 0}
+      ],
       "equipment-locations" => [%{"id" => 875, "title" => "South Fraser SAR Yard"}],
       "equipment" => [
         %{
@@ -49,6 +51,7 @@ defmodule App.Operation.RefreshD4HData.UpsertEquipmentTest do
           "type" => "VEHICLE",
           "status" => "OPERATIONAL",
           "kind" => %{"id" => 1},
+          "costPerHour" => 5000,
           "location" => %{"resourceType" => "EquipmentLocation", "id" => 875}
         },
         %{
@@ -81,6 +84,10 @@ defmodule App.Operation.RefreshD4HData.UpsertEquipmentTest do
 
     assert {truck.kind, truck.location_title, truck.item_type} ==
              {"Rescue Truck", "South Fraser SAR Yard", "vehicle"}
+
+    # Its own cost per hour, and its kind's per km.
+    assert {truck.cost_per_km_cents, truck.cost_per_hour_cents, truck.cost_per_use_cents} ==
+             {67, 5000, nil}
 
     assert Repo.get_by!(EquipmentItem, team_id: team.id, d4h_equipment_id: 101).member_id ==
              member.id

@@ -42,6 +42,9 @@ Change activity's note, and whether SetTravel and CheckTravel save.
   unpublishes first. Change activity says how many rows aren't set, beside the Published
   box: a note, never a block.
 
+Reports read a row's km as attendance's `km` (#950), blank when it isn't set, so a
+form, such as EMCR's claim, can pay mileage from it.
+
 ## Into D4H
 
 D4H's API has no mileage, so SAR Duty can't write it. Travel's folded "Copy into D4H"

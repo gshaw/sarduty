@@ -178,23 +178,30 @@ defmodule Web.StyleGuideHTML.Values do
           [{"tenths(1.5)", Format.tenths(1.5)}]},
          {:days, "A count of days", [{"days(1)", Format.days(1)}, {"days(30)", Format.days(30)}]},
          {:months, "How long a qualification lasts",
-          [{"months(6)", Format.months(6)}, {"months(36)", Format.months(36)}]},
-         {:km, "A distance", [{"km(42)", Format.km(42)}]},
-         {:coordinate, "A place",
-          [
-            {"coordinate({49.75533, -123.1311}, 5)", Format.coordinate({49.75533, -123.1311}, 5)},
-            {"coordinate({49.75533, -123.1311}, 3)", Format.coordinate({49.75533, -123.1311}, 3)}
-          ]},
-         {:run_time, "How long a job took, for admins",
-          [
-            {"run_time(850)", Format.run_time(850)},
-            {"run_time(4_200)", Format.run_time(4_200)},
-            {"run_time(210_000)", Format.run_time(210_000)}
-          ]}
-       ]}
+          [{"months(6)", Format.months(6)}, {"months(36)", Format.months(36)}]}
+       ] ++ measures()}
   end
 
   # Split from quantities only to keep each function short.
+  defp measures do
+    [
+      {:km, "A distance", [{"km(42)", Format.km(42)}]},
+      {:money, "Dollars and cents",
+       [{"money(0.67)", Format.money(0.67)}, {"money(1204.5)", Format.money(1204.5)}]},
+      {:coordinate, "A place",
+       [
+         {"coordinate({49.75533, -123.1311}, 5)", Format.coordinate({49.75533, -123.1311}, 5)},
+         {"coordinate({49.75533, -123.1311}, 3)", Format.coordinate({49.75533, -123.1311}, 3)}
+       ]},
+      {:run_time, "How long a job took, for admins",
+       [
+         {"run_time(850)", Format.run_time(850)},
+         {"run_time(4_200)", Format.run_time(4_200)},
+         {"run_time(210_000)", Format.run_time(210_000)}
+       ]}
+    ]
+  end
+
   defp name_lists do
     [
       {:and_list, "Names in a sentence, such as what deleting a group stops",

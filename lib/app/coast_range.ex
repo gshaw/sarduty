@@ -244,6 +244,15 @@ defmodule App.CoastRange do
     {9_800_011, "Headlamp 3", "equipment", "Headlamp", "lost", nil}
   ]
 
+  # D4H's costs in whole cents, per km, per hour, and per use, as EMCR's claim reads them
+  # (#950). Others have none.
+  @costs %{
+    9_800_001 => {67, 0, 0},
+    9_800_002 => {nil, 1500, nil},
+    9_800_006 => {nil, 3000, nil},
+    9_800_009 => {nil, nil, 2500}
+  }
+
   # Each month's accepted chores: who, the day, minutes, and what.
   @chores [
     {"Priya Nair", 5, 90, "Checked the first aid packs."},
@@ -1222,9 +1231,18 @@ defmodule App.CoastRange do
         custom_values: %{"#{@serviced}" => today |> Date.add(-30 * n) |> Date.to_iso8601()}
       }
 
-      links = if holder, do: [member_id: {:member, holder}], else: []
-      {:equipment_item, id, item, links}
+      item_row(item, holder)
     end
+  end
+
+  defp item_row(item, holder) do
+    links = if holder, do: [member_id: {:member, holder}], else: []
+    {:equipment_item, item.d4h_equipment_id, with_costs(item), links}
+  end
+
+  defp with_costs(item) do
+    {km, hour, use} = Map.get(@costs, item.d4h_equipment_id, {nil, nil, nil})
+    %{item | cost_per_km_cents: km, cost_per_hour_cents: hour, cost_per_use_cents: use}
   end
 
   # The truck and a radio go to every incident, a rope kit to rope training, and throw

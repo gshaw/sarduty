@@ -242,6 +242,8 @@ defmodule App.Report.Runner do
   defp pivot_label(value, %{type: type}, _timezone) when type in [:number, :km],
     do: Format.number(value)
 
+  defp pivot_label(value, %{type: :money}, _timezone), do: Format.money(value)
+
   defp pivot_label(value, _pivot, _timezone), do: to_string(value)
 
   @doc "A choice's label from its value, or the value when it is not one of them."

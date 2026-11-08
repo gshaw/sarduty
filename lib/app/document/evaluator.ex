@@ -268,6 +268,7 @@ defmodule App.Document.Evaluator do
   defp format(minutes, "hours", _timezone) when is_number(minutes), do: Format.hours(minutes)
   defp format(n, "number", _timezone) when is_number(n), do: Format.number(n)
   defp format(n, "km", _timezone) when is_number(n), do: Format.km(n)
+  defp format(n, "money", _timezone) when is_number(n), do: Format.money(n)
 
   defp to_text(nil), do: ""
   defp to_text(text) when is_binary(text), do: text
