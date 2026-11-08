@@ -377,6 +377,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/activities/:id/templates", ActivityTemplateLive
       live "/teams/:subdomain/activities/:id/members/add", ActivityAddMembersLive
       live "/teams/:subdomain/activities/:id/tags", ActivityTagsLive
+      live "/teams/:subdomain/activities/:id/forms/:form_id", ActivityOrgFormLive
       live "/teams/:subdomain/templates", TemplateCollectionLive
       live "/teams/:subdomain/templates/new", TemplateFormLive, :new
       live "/teams/:subdomain/templates/:id", TemplateLive
@@ -487,6 +488,8 @@ defmodule Web.Router do
 
       get "/members/:id/certificates/:award_id", MemberController, :certificate
       get "/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
+      # An organization's form on an activity (#950): posts its answers, gets the PDF.
+      post "/activities/:id/forms/:form_id/pdf", ActivityFormPDFController, :create
       get "/reports/:id/csv", ReportController, :csv
       post "/members/:id/view-as", ViewAsController, :create
       delete "/view-as", ViewAsController, :delete

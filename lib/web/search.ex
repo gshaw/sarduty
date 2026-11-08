@@ -40,6 +40,8 @@ defmodule Web.Search do
       Web.Settings.ChoreCategoryFormLive => "A setting, found from Team settings.",
       Web.Settings.PlaceFormLive => "A setting, found from Team settings.",
       Web.ReportLive => "Reports lists every report on one page.",
+      Web.ActivityOrgFormLive => "A form on an activity: find the activity, then its form.",
+      Web.GroupRuleLive => "A group rule: find the group, then its rule.",
       Web.OutboxLive => "Only a demo has an Outbox, and its banner links it."
     }
 
