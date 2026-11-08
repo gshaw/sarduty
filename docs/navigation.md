@@ -18,8 +18,9 @@ still lists the area's pages.
   area.
 - **An organization's space**, `/orgs/:slug/…` (#512), for its organization admins and
   SAR Duty admins. The organization is the URL's, which its pages' hook assigns as
-  `current_organization`. Its side navigation is Teams, then Organization settings, whose
-  pages are tabs: General, Organization admins, and Hours tags. The bar names the
+  `current_organization`. Its side navigation is Teams and Forms (#950), then
+  Organization settings, whose pages are tabs: General, Organization admins, and Hours
+  tags. The bar names the
   organization, and the phone bar its short name. It has no search, since search reads a
   team's tables.
 - **SAR Duty admin**, `/admin/…`, for SAR Duty admins: Teams and Organizations, then

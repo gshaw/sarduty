@@ -34,7 +34,8 @@ defmodule App.Operation.DeleteTeamTest do
     letter = tax_credit_letter_fixture(member)
     pdf = %{content: "%PDF-1.7", title: "A PDF", filename: "a.pdf"}
     SavedPDF.put_letter!(%{letter | member: member}, pdf)
-    SavedPDF.add_for_activity!(activity, user_fixture(), pdf)
+    form = [team] |> organization_fixture() |> form_fixture()
+    SavedPDF.add_for_form!(form, activity, user_fixture(), pdf)
     item = equipment_item_fixture(team)
     equipment_usage_fixture(activity, item)
     template_fixture(team, "Truck 1", [item])

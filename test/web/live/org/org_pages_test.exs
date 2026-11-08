@@ -411,12 +411,15 @@ defmodule Web.Org.OrgPagesTest do
           })
         end
 
+      form = form_fixture(Repo.get_by!(Organization, slug: "wsara"))
+
       paths =
         for %{path: "/orgs/:slug" <> _rest = path, plug: Phoenix.LiveView.Plug} <-
               Web.Router.__routes__() do
           path
           |> String.replace(":slug", "wsara")
           |> String.replace(":subdomain", coast.subdomain)
+          |> String.replace(":id", to_string(form.id))
         end
 
       assert "/orgs/wsara" in paths

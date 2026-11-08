@@ -318,7 +318,7 @@ defmodule Web.MCPControllerTest do
       assert "Search manager" in output["names"]["qualifications"]
       assert "Rope team" in output["names"]["groups"]
       assert "Swiftwater" in output["names"]["tags"]
-      assert %{"write" => "`Task type`", "on" => "activities"} in output["names"]["custom_fields"]
+      assert %{"write" => "`Task Type`", "on" => "activities"} in output["names"]["custom_fields"]
       refute text =~ "Pat Example"
 
       # A year sent as a JSON number picks that year, not this one.

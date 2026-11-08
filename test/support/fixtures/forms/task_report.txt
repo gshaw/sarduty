@@ -6,7 +6,8 @@ about 'A made-up agency''s task report, for tests.'
 for activity where kind = 'incident'
 
 report task
-  select ref_id, title, started_at, description, `Task type`, `People helped`
+  select ref_id, title, started_at, description, `What was SAR tasked to do?`,
+    `People helped`
   from activities
   where id = :activity
 
@@ -40,9 +41,9 @@ fill
   task_number = task.ref_id
   task_name = task.title
   started = task.started_at as date_long
-  search = task.`Task type` = 'Search'
-  rescue = task.`Task type` = 'Rescue'
-  evidence = task.`Task type` = 'Evidence search'
+  search = task.`What was SAR tasked to do?` starts with 'Search'
+  rescue = task.`What was SAR tasked to do?` starts with 'Rescue'
+  evidence = task.`What was SAR tasked to do?` = 'Evidence search'
   helped = task.`People helped` as number
   injured = :injured as number
   description = if :notes is null then task.description else '{task.description} {:notes}'
@@ -54,7 +55,8 @@ expect with task.ref_id = '26-7310', task.title = 'Overdue kayakers':
   task_number = '26-7310' and task_name = 'Overdue kayakers'
   and title = 'Task report 26-7310'
 
-expect with task.`Task type` = 'Rescue': rescue and not search and not evidence
+expect with task.`What was SAR tasked to do?` = 'Rescue - injury & medical emergency':
+  rescue and not search and not evidence
 
 -- Unanswered, Injured is 0 and ERR attached is No.
 expect :injured = 0 and injured = '0' and not err

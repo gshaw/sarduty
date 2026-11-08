@@ -57,7 +57,7 @@ defmodule App.SampleRepoTest do
 
       :choice ->
         for {_label, value} <- field.choices.(context),
-            count(subject, "#{expr} = '#{value}'") == 0,
+            count(subject, "#{expr} = '#{String.replace(value, "'", "''")}'") == 0,
             do: "never #{value}"
 
       _other ->
