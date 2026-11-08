@@ -8,7 +8,6 @@ defmodule Web.Org.FormPagesTest do
 
   alias App.Model.Event
   alias App.Model.Form
-  alias App.Model.SavedPDF
   alias App.Repo
 
   @text File.read!("test/support/fixtures/forms/task_report.txt")
@@ -58,21 +57,11 @@ defmodule Web.Org.FormPagesTest do
   end
 
   describe "Forms" do
-    test "lists each form, on or off, with the PDFs its teams made this year",
-         %{conn: conn, dana: dana, form: form, team: team} do
-      activity = activity_fixture(team, %{activity_kind: "incident"})
-
-      SavedPDF.add_for_form!(form, activity, dana, %{
-        content: "%PDF",
-        title: "T",
-        filename: "t.pdf"
-      })
-
+    test "lists each form, on or off", %{conn: conn, dana: dana, form: form} do
       {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/forms")
 
       assert has_element?(lv, "#form-#{form.id}-name", "Task report")
       assert has_element?(lv, "#form-#{form.id}-state", "Off")
-      assert has_element?(lv, "#form-#{form.id}-pdfs", "1")
       assert has_element?(lv, "#side-nav a[href='/orgs/wsara/forms']")
       refute has_element?(lv, "#upload-form")
     end

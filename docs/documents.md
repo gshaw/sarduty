@@ -433,25 +433,25 @@ through the team's organization, so a form that's off or another organization's 
   as each equipment use's total, shows too, with no boxes.
 - **Download draft PDF** posts the answers to Web.ActivityFormPDFController,
   since a LiveView can't send a PDF, and the browser shows it. DRAFT runs across
-  each page while forms are testing only. App.Operation.CreateFormPDF keeps the answers,
-  prints the form, and saves the PDF it sends, every time (`SavedPDF.add_for_form!/5`).
-  An answer that doesn't read makes nothing.
+  each page while forms are testing only. App.Operation.CreateFormPDF keeps the answers
+  and prints the form. A draft is never saved; publishing a form, saved with an ID, comes
+  later. An answer that doesn't read makes nothing.
 
 Search leaves the page out: it's found from its activity (`Web.Search.not_searched/0`).
 
 ## Saved PDFs
 
-Every PDF a document makes is saved as it was made, so a download or email serves the
-same file, whatever the team's logos or the document say now (#918, #950).
+A published PDF is saved as it was made, so a download or email serves the same file,
+whatever the team's logos or the document say now (#918, #950). For now only tax credit
+letters publish: making or replacing one, or emailing one that has none, saves its PDF.
+A form prints drafts only.
 [App.Model.SavedPDF](../lib/app/model/saved_pdf.ex) is one table, `saved_pdfs`, for all
 of them, with the bytes in `saved_pdf_files`, so lists never load them. Each row has its
 team, title, filename, size, and when it was made, and belongs to one of:
 
 - **A tax credit letter**: one PDF, replaced when the letter is (`put_letter!/2`).
-- **An activity**, for a form: a new PDF each time one prints, none replaced
-  (`add_for_form!/5`). It keeps its form and the version it printed from, who made it,
-  and the values it printed that `keep` names. If the form goes, the PDF stays
-  and its form is blank.
+- **A published form**, not yet built: its activity, the form and the version it
+  printed from, who made it, and the values it printed that `keep` names.
 
 Deleting a letter deletes its PDF. A team's purge deletes them all
 (App.Operation.DeleteTeam).

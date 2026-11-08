@@ -2,7 +2,7 @@ defmodule App.Operation.SetFormEnabled do
   @moduledoc """
   Turns an organization's form on or off for every team in it (#950). One of its
   organization admins does, or a SAR Duty admin; anyone else is refused, which also stops
-  someone removed while the page is open. PDFs already made stay saved either way.
+  someone removed while the page is open.
   """
 
   alias App.Accounts.User

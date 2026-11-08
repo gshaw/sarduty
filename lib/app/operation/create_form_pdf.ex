@@ -3,8 +3,8 @@ defmodule App.Operation.CreateFormPDF do
   A team admin's PDF of an organization's form for an activity (#950): Download draft PDF on
   the activity's form page. It keeps the answers sent with it
   (App.Operation.SaveFormAnswers), prints the form with the activity's answers
-  (App.Operation.PrintForm), and saves the PDF as it was made, with the values the form
-  keeps and who made it (`App.Model.SavedPDF.add_for_form!/5`). Nothing goes to D4H.
+  (App.Operation.PrintForm), marked DRAFT. A draft is never saved: publishing a form,
+  saved with an ID, comes later. Nothing goes to D4H.
 
   The caller finds the form on for the team (`App.Model.Form.get_enabled/2`) and the
   activity through the team.
@@ -15,7 +15,6 @@ defmodule App.Operation.CreateFormPDF do
   alias App.Model.Activity
   alias App.Model.Form
   alias App.Model.FormAnswer
-  alias App.Model.SavedPDF
   alias App.Model.Team
   alias App.Operation.PrintForm
   alias App.Operation.SaveFormAnswers
@@ -23,27 +22,25 @@ defmodule App.Operation.CreateFormPDF do
   alias App.Report.Error
 
   @doc """
-  `{:ok, attachment}`, the PDF it saved, or `{:error, reason}` with nothing printed.
+  `{:ok, attachment}`, the draft PDF, or `{:error, reason}` with nothing printed.
   `typed` is the answers as the page sent them, `%{name => text}`.
   """
   def call(%Team{} = team, %Form{} = form, %Activity{} = activity, %User{} = user, typed, now) do
     with :ok <- check(team, form, activity),
          {:ok, doc, context} <- read(team, form, now),
          {:ok, _answers} <- save(activity, doc, typed, user, now),
-         do: print(form, activity, user, doc, context)
+         do: print(form, activity, doc, context)
   end
 
   # With the answers just kept, and the team's last for a question that remembers.
-  defp print(form, activity, user, doc, context) do
+  defp print(form, activity, doc, context) do
     answers = FormAnswer.starting(activity, doc.asks)
 
-    with {:ok, %{attachment: attachment, keep: keep}} <-
+    with {:ok, %{attachment: attachment}} <-
            PrintForm.call(form.text, Form.page_bytes(form), context, activity.id, answers,
              mark: :draft
-           ) do
-      SavedPDF.add_for_form!(form, activity, user, attachment, keep)
-      {:ok, attachment}
-    end
+           ),
+         do: {:ok, attachment}
   end
 
   defp check(team, form, activity) do

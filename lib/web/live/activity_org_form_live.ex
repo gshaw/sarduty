@@ -5,7 +5,7 @@ defmodule Web.ActivityOrgFormLive do
   for each person a form asks about, such as On task, and their total, and each
   equipment use's total for a form that works one out. Answers save as
   they change (App.Operation.SaveFormAnswers), and each row's total follows them. Download draft PDF posts the form to
-  Web.ActivityFormPDFController, which keeps the answers and saves the PDF it sends.
+  Web.ActivityFormPDFController, which keeps the answers and sends a draft PDF, never saved.
 
   The form is found on for the team's organization, and the activity through the team,
   so another organization's form, one turned off, or one not for this activity is a 404.

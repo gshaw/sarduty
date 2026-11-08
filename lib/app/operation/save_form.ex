@@ -11,7 +11,7 @@ defmodule App.Operation.SaveForm do
   be on a page of its page PDF. A form with a layout has no page, and its layout must
   print.
 
-  Replacing it raises its version. PDFs already made keep theirs (App.Model.SavedPDF).
+  Replacing it raises its version.
   """
 
   import Ecto.Query

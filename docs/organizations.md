@@ -53,8 +53,6 @@ has its own page.
   They try it on Coast Range SAR, a made-up team, and turn it on or off for every team.
 - **Once on, it shows for every team** in the organization, for team admins only. A team
   with no organization has none.
-- **The list counts the PDFs its teams made this year**, a count only. The PDFs are the
-  teams' and never show here.
 
 BCSARA's are EMCR's Task report (1.01), on EMCR's own page, and its Expense
 reimbursement request and the request's Supplement, in D4H's layout

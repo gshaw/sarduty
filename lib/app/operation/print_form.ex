@@ -2,8 +2,7 @@ defmodule App.Operation.PrintForm do
   @moduledoc """
   Prints a form for an activity (#950): reads the form's values for it
   (App.Operation.ReadDocument), adds what a person answered, and prints it on the
-  form's own page (App.Operation.PrintDocument). Saving the PDF is the caller's, with
-  `App.Model.SavedPDF.add_for_form!/5`.
+  form's own page (App.Operation.PrintDocument). Nothing is saved.
 
   A form prints only for an activity its `where` shows it on. Its answers are checked
   as the form page checks them, by `App.Document.answers/2`.

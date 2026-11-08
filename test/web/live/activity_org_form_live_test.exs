@@ -225,9 +225,6 @@ defmodule Web.ActivityOrgFormLiveTest do
 
       conn = post(conn, form_path(kayakers, supplement) <> "/pdf", %{"answers" => answers})
       assert "%PDF" <> _ = conn.resp_body
-
-      pdf = SavedPDF |> where(activity_id: ^kayakers.id) |> Repo.one!()
-      assert pdf.keep[":meals_provided"] == 1
       assert FormAnswer.for_activity(kayakers)["on_task"] == %{alex => "No"}
     end
   end
@@ -271,22 +268,19 @@ defmodule Web.ActivityOrgFormLiveTest do
              )
     end
 
-    test "Download draft PDF prints it with no page, and keeps the claim's totals", ctx do
+    test "Download draft PDF prints it with no page", ctx do
       %{cast: cast, request: request} = ctx
       kayakers = MockupSeed.activity(cast, "Overdue kayakers")
       conn = log_in_user(build_conn(), cast.alex)
 
       conn = post(conn, form_path(kayakers, request) <> "/pdf", %{"answers" => %{"misc" => "40"}})
       assert "%PDF" <> _ = conn.resp_body
-
-      pdf = SavedPDF |> where(activity_id: ^kayakers.id) |> Repo.one!()
-      assert pdf.keep[":misc"] == 40
-      assert pdf.keep["total"] |> Decimal.new() |> Decimal.gt?(40)
+      assert FormAnswer.for_activity(kayakers)["misc"] == "40"
     end
   end
 
   describe "Download draft PDF" do
-    test "keep the answers and save the PDF as it was made", ctx do
+    test "keeps the answers and saves no PDF: it's a draft", ctx do
       %{cast: cast, hiker: hiker, form: form} = ctx
       conn = log_in_user(build_conn(), cast.alex)
       path = form_path(hiker, form) <> "/pdf"
@@ -296,11 +290,7 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert ["inline" <> _] = get_resp_header(conn, "content-disposition")
       assert "%PDF" <> _ = conn.resp_body
 
-      pdf = SavedPDF |> where(activity_id: ^hiker.id) |> Repo.one!()
-      assert pdf.form_id == form.id and pdf.form_version == form.version
-      assert pdf.user_id == cast.alex.id
-      assert pdf.title == "Task report #{hiker.ref_id}"
-      assert pdf.keep == %{":leader" => "Alex Chen", ":injured" => 1, ":err" => "No"}
+      refute Repo.exists?(SavedPDF)
       assert FormAnswer.for_activity(hiker)["leader"] == "Alex Chen"
     end
 
