@@ -1,0 +1,64 @@
+-- A sample form (#950): an incident's values, and three answers, printed on a made-up
+-- agency's page, task_report_page.typ. Tests print it on Coast Range SAR.
+
+form 'Task report'
+about 'A made-up agency''s task report, for tests.'
+for activity where kind = 'incident'
+
+report task
+  select ref_id, title, started_at, description, `Task type`, `People helped`
+  from activities
+  where id = :activity
+
+ask leader 'Task leader' remember hint 'They sign the report by hand.'
+ask injured 'Injured' default 0
+ask notes 'Notes' hint 'Anything the description leaves out.'
+ask err 'ERR attached' choose 'Yes', 'No' default 'No'
+
+title 'Task report {task.ref_id}' by team.legal_name
+keep :leader, :injured, :err
+
+page
+
+-- Points from each page's top left. A line's baseline sits 7.5pt below its top, 2.5pt
+-- above the page's rule.
+places
+  task_number text top 112pt, left 164pt, width 132pt, fit, size 10pt
+  task_name   text top 112pt, left 404pt, width 92pt, fit, size 10pt
+  started     text top 142pt, left 164pt, width 132pt, fit, size 10pt
+  search      tick top 170pt, left 160pt, size 9pt
+  rescue      tick top 170pt, left 240pt, size 9pt
+  evidence    tick top 170pt, left 320pt, size 9pt
+  helped      text top 202pt, left 164pt, width 52pt, fit, size 10pt
+  injured     text top 202pt, left 294pt, width 42pt, fit, size 10pt
+  description text top 248pt, left 76pt, width 460pt, pitch 18pt, size 10pt
+  leader      text top 342pt, left 164pt, width 232pt, fit, size 10pt
+  err         tick top 110pt, left 160pt, size 9pt, page 2
+  prepared    text top 926pt, right 72pt, width 210pt, fit, size 10pt, page 2
+
+fill
+  task_number = task.ref_id
+  task_name = task.title
+  started = task.started_at as date_long
+  search = task.`Task type` = 'Search'
+  rescue = task.`Task type` = 'Rescue'
+  evidence = task.`Task type` = 'Evidence search'
+  helped = task.`People helped` as number
+  injured = :injured as number
+  description = if :notes is null then task.description else '{task.description} {:notes}'
+  leader = :leader
+  err = :err = 'Yes'
+  prepared = team.legal_name
+
+expect with task.ref_id = '26-7310', task.title = 'Overdue kayakers':
+  task_number = '26-7310' and task_name = 'Overdue kayakers'
+  and title = 'Task report 26-7310'
+
+expect with task.`Task type` = 'Rescue': rescue and not search and not evidence
+
+-- Unanswered, Injured is 0 and ERR attached is No.
+expect :injured = 0 and injured = '0' and not err
+expect with :injured = 2, :err = 'Yes': injured = '2' and err
+
+expect with task.description = 'Found on the ridge.', :notes = 'Walked out at dusk.':
+  description = 'Found on the ridge. Walked out at dusk.'

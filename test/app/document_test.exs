@@ -1,7 +1,7 @@
 defmodule App.DocumentTest do
   use ExUnit.Case, async: true
 
-  # cspell:ignore totl
+  # cspell:ignore totl incidnt -- misspelled on purpose
 
   alias App.Document
   alias App.Model.Member
@@ -61,6 +61,21 @@ defmodule App.DocumentTest do
   # The smallest document, with `fill` under `places`.
   defp doc(head, fill),
     do: "document 'Test'\nfor member, year\n#{head}\n#{@places}fill\n  body =\n    #{fill}\n"
+
+  # The smallest form, with `head` after for, and its places and fill.
+  defp form(head, places \\ ["body text top 1in, left 1in, width 2in"], fill \\ ["body = 'x'"]),
+    do:
+      "form 'Test'\nfor activity where kind = 'incident'\n#{head}\npage\nplaces\n" <>
+        Enum.map_join(places, &"  #{&1}\n") <> "fill\n" <> Enum.map_join(fill, &"  #{&1}\n")
+
+  # Coast Range SAR's catalog, with its custom fields (#816).
+  defp sample_context, do: Context.new(App.SampleRepo.team(), @now, repo: App.SampleRepo)
+
+  defp task_report do
+    {:ok, doc} = "test/support/fixtures/forms/task_report.txt" |> File.read!() |> Document.parse()
+    {:ok, doc} = Document.check(doc, sample_context())
+    doc
+  end
 
   test "every document parses, checks against the catalog, and its expects hold" do
     names = Document.names()
@@ -183,6 +198,80 @@ defmodule App.DocumentTest do
     end
   end
 
+  describe "a form" do
+    test "the sample form checks against Coast Range SAR's catalog, and its expects hold" do
+      doc = task_report()
+
+      assert doc.kind == :form
+      assert doc.for == ["activity"]
+      assert doc.page
+      assert Document.expect(doc) == :ok
+      assert Enum.map(doc.asks, & &1.name) == ~w(leader injured notes err)
+      assert %{remember: true, hint: "They sign the report by hand."} = hd(doc.asks)
+      assert doc.types[":injured"] == :number
+      assert doc.types[":err"] == :text
+    end
+
+    test "shows on the activities its where says" do
+      assert Query.text(Document.shown_on(task_report()).where) ==
+               "id = :activity and kind = 'incident'"
+
+      {:ok, doc} = "" |> form() |> String.replace(" where kind = 'incident'", "") |> checked()
+      assert Query.text(Document.shown_on(doc).where) == "id = :activity"
+    end
+
+    test "an answer not given takes its default, which can read an answer above it" do
+      head = "ask meals 'Meals for everyone' default 0\nask given 'Meals given' default :meals"
+
+      {:ok, doc} =
+        checked(form(head, ["body text top 1in, left 1in"], ["body = :given as number"]))
+
+      assert doc |> Document.evaluate(%{}, "Etc/UTC") |> Document.text("body") == "0"
+
+      assert doc |> Document.evaluate(%{":meals" => 2}, "Etc/UTC") |> Document.text("body") ==
+               "2"
+
+      values = %{":meals" => 2, ":given" => 1}
+      assert doc |> Document.evaluate(values, "Etc/UTC") |> Document.text("body") == "1"
+    end
+
+    test "a tick holds or doesn't, and each place keeps its page" do
+      output = Document.evaluate(task_report(), %{":err" => "Yes"}, "Etc/UTC")
+      places = Map.new(output.places, &{&1.name, &1})
+
+      assert output.page
+      assert %{kind: :tick, value: true, page: 2, size: 9} = places["err"]
+      assert %{value: false, page: 1} = places["search"]
+      assert %{fit: true, width: 132} = places["task_number"]
+      assert %{fit: false, pitch: 18} = places["description"]
+      assert %{right: 72, page: 2} = places["prepared"]
+    end
+
+    test "keeps its answers" do
+      output = Document.evaluate(task_report(), %{":leader" => "Jordan Lee"}, "Etc/UTC")
+      assert output.keep == %{":leader" => "Jordan Lee", ":injured" => 0, ":err" => "No"}
+    end
+
+    test "reads what a person typed by each answer's type" do
+      doc = task_report()
+
+      assert Document.answers(doc, %{"injured" => " 2 ", "err" => "Yes", "notes" => ""}) ==
+               {:ok, %{":injured" => 2, ":err" => "Yes"}}
+
+      assert Document.answers(doc, %{"injured" => "1.5"}) == {:ok, %{":injured" => 1.5}}
+
+      assert Document.answers(doc, %{"injured" => "two", "err" => "yes"}) ==
+               {:error, %{"injured" => "Enter a number, such as 3.", "err" => "Pick Yes or No."}}
+
+      {:ok, doc} = checked(form("ask on 'Date report completed' default today"))
+      assert doc.types[":on"] == :day
+      assert Document.answers(doc, %{"on" => "2026-11-06"}) == {:ok, %{":on" => ~D[2026-11-06]}}
+
+      assert Document.answers(doc, %{"on" => "Nov 6"}) ==
+               {:error, %{"on" => "Enter a date, such as 2026-11-06."}}
+    end
+  end
+
   describe "mistakes" do
     test "name the line and say how to fix it" do
       assert error("for member") =~ "Start with document"
@@ -221,6 +310,84 @@ defmodule App.DocumentTest do
       assert error(doc("", "image team.legal_name")) =~ "Write an image after image"
       assert error(doc("", "qr(team.logo)")) =~ "Give qr a link"
       assert error(doc("", "'{today as km}'")) =~ "Show TODAY as date_long or date_short."
+    end
+
+    test "a form starts from an activity, and only a form does" do
+      assert error("form 'A'\npage\nplaces\n  a text top 1in, left 1in\nfill\n  a = 'x'\n") =~
+               "Write for activity after the form's name"
+
+      assert error("form 'A'\nfor member") ==
+               "Line 2: A form starts from an activity: for activity where kind = 'incident'."
+
+      assert error("document 'A'\nfor activity") ==
+               "Line 2: Start with form 'Its name': what starts from an activity is a form."
+
+      assert error("document 'A'\nfor member where kind = 'incident'") ==
+               "Line 2: Take out where: it says which activities show a form."
+
+      assert "" |> form() |> String.replace("'incident'", "'incidnt'") |> error() =~ "Line 2:"
+
+      assert "" |> form() |> String.replace("kind = 'incident'", "id = :activity") |> error() ==
+               "Line 2: Take out :activity: where reads only the activity's fields."
+
+      assert error(form("lock print")) == "Take out lock: an agency writes on a form's PDF."
+    end
+
+    test "check each ask" do
+      assert error(form("ask injured")) =~ "Line 3: Write the answer's name and its label"
+      assert error(form("ask a 'A' remember remember")) == "Line 3: Write remember once."
+      assert error(form("ask a 'A' often")) =~ "Line 3: Remove often: an ask takes"
+
+      assert error(form("ask a 'A'\nask a 'B'")) ==
+               "Line 4: Give the ask another name: a is used twice."
+
+      assert error(form("ask activity 'A'")) ==
+               "Line 3: Give the ask another name: :activity is what the form starts from."
+
+      assert error(form("ask a 'A' choose 'Yes'")) =~ "Line 3: Give choose two answers or more"
+
+      assert error(form("ask a 'A' choose 'Yes', 'No' default 'Maybe'")) ==
+               "Line 3: Make the default one of the choices: 'Yes' or 'No'."
+
+      assert error(form("ask a 'A' default team.logo")) =~ "Line 3: Give default text, a number"
+
+      assert error(form("ask a 'A' default :b\nask b 'B'")) =~
+               "Line 3: Add b after for or ask for it"
+
+      assert error(form("ask a 'A'\nkeep :activity")) =~
+               "Line 4: Keep a report's value or an answer"
+    end
+
+    test "check a form's places" do
+      assert error(form("", ["body tick top 1in, left 1in"], ["body = :activity > 0"])) ==
+               "Line 6: Give body a size: the side of its box, such as size 9pt."
+
+      assert error(form("", ["body tick top 1in, left 1in, size 9pt"], ["body = 'x'"])) =~
+               "Line 8: Fill body with a condition"
+
+      assert error(form("", ["body image top 1in, left 1in, fit"], ["body = team.logo"])) ==
+               "Line 6: Take out fit: only a text place shrinks to fit."
+
+      assert error(form("", ["body text top 1in, left 1in, fit"])) ==
+               "Line 6: Give body a width, or left and right: fit shrinks the text to it."
+
+      assert error(form("", ["body text top 1in, left 1in, width 1in, fit, pitch 12pt"])) ==
+               "Line 6: Write fit or pitch, not both: fit keeps the text on one line."
+
+      assert error(form("", ["body text top 1in, left 1in, page 0"])) ==
+               "Line 6: Write which page after page, such as page 2."
+
+      assert error(doc("", "'x'") |> String.replace("right 1in", "right 1in, page 2")) ==
+               "Line 5: Take out page 2, or add page: only a form's page has pages."
+
+      flow = "body flow down, top 1in, left 1in"
+      qr = "code image right 1in, width 1in, height 1in, level with body, page 2"
+
+      assert error(form("", [flow, qr], ["body = 'x'", "code = qr('x')"])) ==
+               "Line 7: Put code on page 1, where body is."
+
+      assert error("form 'A'\nfor activity\npage x") ==
+               "Line 3: Write page alone: the values print on the form's own page."
     end
 
     test "never keep what only printing reads" do

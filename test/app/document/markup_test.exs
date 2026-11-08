@@ -18,28 +18,52 @@ defmodule App.Document.MarkupTest do
   }
   @png <<0x89, "PNG", 13::32, 0::32, "IHDR", 400::32, 100::32>>
 
+  # A form's page: letter paper, then legal (#950).
+  @page """
+  #set page(width: 612pt, height: 792pt)
+  One
+  #pagebreak()
+  #set page(width: 612pt, height: 1008pt)
+  Two
+  """
+
   defp typst(places, opts \\ []) do
     %{title: "2025 SRVTC Coast Range", author: "Coast Range", places: places}
     |> Markup.typst(opts)
   end
 
-  test "writes every value as a string, so markup in it prints as written" do
-    assert Markup.string(~s|*Bold* #x "q" \\ end\nnext|) ==
-             ~s|"*Bold* #x \\"q\\" \\\\ end\\nnext"|
+  defp values(files), do: Jason.decode!(files["values.json"])
 
-    {markup, files} = typst([%{@flow | value: [{:text, "Name: *Sam* #1"}]}])
+  test "values reach Typst as data, never as Typst code" do
+    {markup, files} = typst([%{@flow | value: [{:text, ~s|Name: *Sam* #1 "q" \\ end|}]}])
 
-    assert markup =~ ~s|par("Name: *Sam* #1")|
-    assert markup =~ ~s|#set document(title: "2025 SRVTC Coast Range", author: "Coast Range")|
-    assert files == %{}
+    refute markup =~ "Sam"
+    assert markup =~ ~s|#let v = json("values.json")|
+    assert markup =~ ~s|par(v.at("letter").at(0))|
+    assert markup =~ ~s|#set document(title: v.at("title"), author: v.at("author"))|
+
+    assert values(files) == %{
+             "title" => "2025 SRVTC Coast Range",
+             "author" => "Coast Range",
+             "letter" => [~s|Name: *Sam* #1 "q" \\ end|]
+           }
   end
 
   test "a flow's text is a line each, and a space a blank line" do
     value = [{:text, "PO Box 1\nHope BC"}, {:space, 2}, {:text, "End"}]
-    {markup, _files} = typst([%{@flow | value: value}])
+    {markup, files} = typst([%{@flow | value: value}])
 
     lines = Regex.scan(~r/^  par\((.*)\)$/m, markup, capture: :all_but_first)
-    assert lines == [[~s|"PO Box 1"|], [~s|"Hope BC"|], ["hide[x]"], ["hide[x]"], [~s|"End"|]]
+
+    assert lines == [
+             [~s|v.at("letter").at(0)|],
+             [~s|v.at("letter").at(1)|],
+             ["hide[x]"],
+             ["hide[x]"],
+             [~s|v.at("letter").at(2)|]
+           ]
+
+    assert values(files)["letter"] == ["PO Box 1", "Hope BC", "End"]
   end
 
   test "fits a picture in its box, keeping its shape" do
@@ -48,7 +72,7 @@ defmodule App.Document.MarkupTest do
 
     # 400 by 100 fits 216 wide, 54 tall.
     assert markup =~ ~s|image("letter-0.png", width: 216.0pt, height: 54.0pt)|
-    assert files == %{"letter-0.png" => @png}
+    assert Map.delete(files, "values.json") == %{"letter-0.png" => @png}
   end
 
   test "puts a QR code level with a flow's last line, at the right" do
@@ -64,7 +88,9 @@ defmodule App.Document.MarkupTest do
 
     {markup, files} = typst([%{@flow | value: []}, verify])
 
-    assert markup =~ "dx: 468pt, dy: place_letter_top + measure(place_letter).height - 72pt"
+    assert markup =~
+             "place(top + right, dx: -72pt, dy: place_letter_top + measure(place_letter).height - 72pt"
+
     assert files["verify-0.svg"] =~ "<svg"
   end
 
@@ -84,23 +110,92 @@ defmodule App.Document.MarkupTest do
       typst([%{across | value: [{:image, @png, %{}}, {:image, @png, %{}}]}])
 
     assert markup =~ "#place(top + right, dx: -72pt, dy: 72pt, stack(dir: ltr, spacing: 18.0pt"
-    assert Map.keys(files) == ["letterhead-0.png", "letterhead-1.png"]
+    assert Map.keys(files) == ["letterhead-0.png", "letterhead-1.png", "values.json"]
 
-    assert {markup, %{}} = typst([%{across | value: []}])
+    assert {markup, files} = typst([%{across | value: []}])
+    assert Map.keys(files) == ["values.json"]
     refute markup =~ "stack"
   end
 
   test "draws the sample mark over the page" do
     {markup, files} = typst([], sample_mark: @png)
 
-    assert markup =~ ~s|image("sample-mark.png", width: 612pt)|
-    assert files == %{"sample-mark.png" => @png}
+    assert markup =~ ~s|image("sample-mark.png", width: page-width)|
+    assert files["sample-mark.png"] == @png
   end
 
   test "the markup makes a PDF" do
     value = [{:text, "Łukasz Nowak"}, {:space, 1}, {:text, "End"}]
-    {markup, _files} = typst([%{@flow | value: value}])
+    {markup, files} = typst([%{@flow | value: value}])
 
-    assert {:ok, "%PDF" <> _rest} = Service.Typst.compile(markup)
+    assert {:ok, "%PDF" <> _rest} = Service.Typst.compile(markup, files)
+  end
+
+  describe "a form's places" do
+    defp text(options),
+      do: Map.merge(%{name: "task", kind: :text, top: 112, left: 164, fit: false}, options)
+
+    test "a text place wraps at its width, its lines a pitch apart" do
+      {markup, files} =
+        typst([
+          text(%{width: 460, size: 10, pitch: 18, value: "Found on the ridge.\nWalked out."})
+        ])
+
+      assert markup =~ "block(width: 460pt"
+      # 18pt baseline to baseline: 7.5pt to the first baseline, then 10.5pt to the next top.
+      assert markup =~ "top-edge: 7.5pt, bottom-edge: \"baseline\""
+      assert markup =~ "set par(leading: 10.5pt, spacing: 10.5pt)"
+      assert markup =~ ~s|v.at("task").join(linebreak())|
+      assert values(files)["task"] == ["Found on the ridge.", "Walked out."]
+    end
+
+    test "fit keeps one line and shrinks it to the place's width" do
+      {markup, files} = typst([text(%{width: 132, size: 10, fit: true, value: "26-7310"})])
+
+      assert markup =~ "block(width: 132pt, layout(room => {"
+      assert markup =~ ~s|let body = v.at("task").join(" ")|
+      assert markup =~ "text(size: 10pt * calc.min(1, room.width / wide * 0.999), body)"
+      assert values(files)["task"] == ["26-7310"]
+    end
+
+    test "a place from the right edge, or as wide as its left and right leave" do
+      {markup, _files} = typst([text(%{value: "x", left: 72, right: 72})])
+      assert markup =~ "block(width: page-width - 72pt - 72pt"
+
+      from_right = %{value: "x", width: 210, right: 72} |> text() |> Map.delete(:left)
+      {markup, _files} = typst([from_right])
+
+      assert markup =~ "#place(top + right, dx: -72pt, dy: 112pt, block(width: 210pt"
+      assert markup =~ "set align(left)"
+    end
+
+    test "a tick draws an X across its box only when it holds" do
+      tick = %{name: "err", kind: :tick, top: 110, left: 160, size: 9, value: true}
+      {markup, _files} = typst([tick])
+
+      assert markup =~ "#place(top + left, dx: 160pt, dy: 110pt, box(width: 9pt, height: 9pt"
+      assert markup =~ "line(start: (15%, 15%), end: (85%, 85%), stroke: 0.9pt)"
+
+      {markup, _files} = typst([%{tick | value: false}])
+      refute markup =~ "line("
+    end
+
+    test "print on each page of the form's own page, at that page's size" do
+      {:ok, page} = Service.Typst.compile(@page)
+      first = text(%{value: "Overdue kayakers", width: 132, page: 1})
+      second = %{name: "err", kind: :tick, top: 110, left: 160, size: 9, value: true, page: 2}
+
+      {markup, files} = typst([first, second], page: {page, 2})
+
+      assert markup =~ ~s|image("page.pdf", page: 1)|
+      assert markup =~ ~s|image("page.pdf", page: 2)|
+      assert files["page.pdf"] == page
+
+      assert {:ok, pdf} = Service.Typst.compile(markup, files)
+      assert Service.PDFPages.count(pdf) == {:ok, 2}
+
+      assert Regex.scan(~r{/MediaBox\s*\[([^\]]*)\]}, pdf, capture: :all_but_first) ==
+               [["0 0 612 792"], ["0 0 612 1008"]]
+    end
   end
 end
