@@ -99,6 +99,9 @@ places
 
 - `fit` keeps a text on one line and shrinks it until it fits its width.
 - `pitch 18pt` puts its lines 18pt apart, baseline to baseline, on the page's own lines.
+- `indent 233pt` starts its first line further in, after a label printed on that line.
+- `lines 8`, with `pitch`, is as many of the page's lines as it has. A longer text
+  shrinks, down to 6pt, until it fits them, so it never runs into the next part.
 - `tick` draws an X across a box `size` wide when its fill, a condition, holds.
 - `page 2` puts a place on the page PDF's second page. Without it, a place is on page 1.
 
@@ -158,6 +161,42 @@ for activity where kind = 'incident'
   they're on.
 
 Values print in black Arimo, as a form typed in Acrobat. A form is never locked.
+
+### Preparing a form
+
+A form's places come from its page, measured on a Mac with
+[tools/forms/find_places.py](../tools/forms/find_places.py). Each place's comment names
+the printed label it sits after, and the script finds it and writes the place's lengths,
+leaving its other options as they are:
+
+```sql
+places
+  task_number text top 91.3pt, left 156.7pt, width 105.7pt, fit, size 10pt  -- after 'Task Number:'
+  others_hours text top 281.8pt, left 475.6pt, width 39.8pt, fit, size 10pt  -- after the second 'Number of Person Hours:'
+  details text top 335.6pt, left 92pt, width 445.3pt, indent 232.8pt, pitch 13.6pt, lines 8, size 10pt  -- after 'Details of Task (attach additional pages if required):' lines 8
+  equipment text top 488.1pt, left 92pt, width 444.3pt, pitch 14.6pt, lines 4, size 10pt  -- under 'Equipment Used/Lost' lines 4
+  err_yes tick top 475.5pt, left 481.2pt, size 7.1pt  -- box after 'YES'
+```
+
+A blank is a run of underscores, as Word prints a form's lines, and a value sits 1.5pt
+above it. `lines` takes the lines under the blank too, and `box after` the box after a
+label. Run it, then read the diff:
+
+```sh
+uv run --with pdfplumber python -I tools/forms/find_places.py \
+  priv/forms/bcsara/task_report.txt priv/forms/bcsara/task_report.pdf
+```
+
+Each form's text and page are in `priv/forms/<organization>/`, as uploaded.
+`App.FormsTest` saves each one as an upload does, checking it on Coast Range SAR and
+running its expects, then prints it there.
+
+- **BCSARA's Task report** ([task_report.txt](../priv/forms/bcsara/task_report.txt)) is
+  EMCR's 1.01, on EMCR's own page, unchanged. It reads the incident and BCSARA's fields
+  (Agency File #, Region, Area, Task Type, people helped, Equipment Used/Lost, Task
+  Leader's Name, Date Report Completed), and asks 6 things: other response personnel,
+  their person hours, injured, fatalities, still missing, and whether an equipment
+  repair/replacement request is attached. The task leader signs it by hand.
 
 ### An organization's forms
 

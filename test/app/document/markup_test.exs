@@ -149,6 +149,29 @@ defmodule App.Document.MarkupTest do
       assert values(files)["task"] == ["Found on the ridge.", "Walked out."]
     end
 
+    test "indent starts the first line after a printed label" do
+      {markup, _files} = typst([text(%{width: 445, indent: 233, pitch: 13.6, value: "Found."})])
+      assert markup =~ ~s|h(233pt) + v.at("task").join(linebreak())|
+    end
+
+    # EMCR's Details of Task has 8 lines (#950): a long text shrinks to them, its lines
+    # still on the page's, rather than running into Equipment Used/Lost below.
+    test "lines shrinks a long text until it fits that many of the page's lines" do
+      place = text(%{width: 300, size: 10, pitch: 13.6, lines: 2})
+      {markup, _files} = typst([Map.put(place, :value, "Found.")])
+
+      # 7.5pt to the first baseline, 13.6pt to the second, and half a point to spare.
+      assert markup =~ "measure(sized(s), width: room.width).height > 21.6pt"
+      assert markup =~ "while s > 6pt"
+
+      long = String.duplicate("Walked out at dusk with the subject. ", 12)
+
+      for value <- ["Found.", long] do
+        {markup, files} = typst([Map.put(place, :value, value)])
+        assert {:ok, "%PDF" <> _rest} = Service.Typst.compile(markup, files)
+      end
+    end
+
     test "fit keeps one line and shrinks it to the place's width" do
       {markup, files} = typst([text(%{width: 132, size: 10, fit: true, value: "26-7310"})])
 

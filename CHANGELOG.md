@@ -16,6 +16,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 - The ID card page no longer spins after you tap Add to Wallet. Its line says where SAR
   Duty sees your card, and changes when that does. After a lost phone, it counts only
   the devices that hold the new card.
+- BC teams: each incident has EMCR's Task report under Forms, filled in from the incident
+  and BCSARA's fields on EMCR's own page, ready for the task leader to sign.
 - A chore activity's page shows its chores' total under Duration, where it showed 0.
 - Try a demo opens with something to see on every page: you're a member with an ID card
   and travel to confirm, group rules with changes to review, templates, whiteboard notes,

@@ -21,7 +21,7 @@ defmodule App.Document.Parser do
   @starts ~w(member year)
   @repeated ~w(report ask expect)
   @kinds %{"text" => :text, "image" => :image, "flow" => :flow, "tick" => :tick}
-  @lengths ~w(top left right bottom width height size leading gap pad pitch)
+  @lengths ~w(top left right bottom width height size leading gap pad pitch indent)
   @ask_options ~w(remember default choose hint)
   @units %{"in" => 72, "pt" => 1, "mm" => 72 / 25.4}
   @image_options ~w(width height pad)
@@ -461,13 +461,16 @@ defmodule App.Document.Parser do
       "page" ->
         page_option(place, rest, n)
 
+      "lines" ->
+        lines_option(place, rest, n)
+
       name when name in @lengths ->
         length_option(place, name, rest, n)
 
       other ->
         fail(
           n,
-          "Remove #{other}: a place takes #{Enum.join(@lengths, ", ")}, across, fit, page, and level with."
+          "Remove #{other}: a place takes #{Enum.join(@lengths, ", ")}, lines, across, fit, page, and level with."
         )
     end
   end
@@ -480,6 +483,16 @@ defmodule App.Document.Parser do
 
   defp page_option(_place, _tokens, n),
     do: fail(n, "Write which page after page, such as page 2.")
+
+  # At most how many of the page's lines a text wraps on, from 1.
+  defp lines_option(place, [{:number, lines, _} | rest], n)
+       when is_integer(lines) and lines > 0 do
+    if Map.has_key?(place, :lines), do: fail(n, "Write lines once.")
+    {Map.put(place, :lines, lines), rest}
+  end
+
+  defp lines_option(_place, _tokens, n),
+    do: fail(n, "Write how many lines after lines, such as lines 8.")
 
   defp level_with(place, [{:word, word, _}, {:word, other, _} | rest], n) do
     if lower(word) != "with", do: fail(n, "Write level with and a flow's name.")

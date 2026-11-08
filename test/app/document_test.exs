@@ -374,6 +374,20 @@ defmodule App.DocumentTest do
       assert error(form("", ["body text top 1in, left 1in, width 1in, fit, pitch 12pt"])) ==
                "Line 6: Write fit or pitch, not both: fit keeps the text on one line."
 
+      assert error(form("", ["body text top 1in, left 1in, width 1in, fit, indent 1in"])) ==
+               "Line 6: Write fit or indent, not both: fit keeps the text on one line."
+
+      assert error(form("", ["body text top 1in, left 1in, width 1in, lines 8"])) ==
+               "Line 6: Give body a pitch with lines: lines counts the page's lines."
+
+      assert error(form("", ["body text top 1in, left 1in, pitch 12pt, lines 0"])) ==
+               "Line 6: Write how many lines after lines, such as lines 8."
+
+      assert error(
+               form("", ["body tick top 1in, left 1in, size 9pt, indent 1in"], ["body = 1 = 1"])
+             ) ==
+               "Line 6: Take out indent: only a text place starts further in."
+
       assert error(form("", ["body text top 1in, left 1in, page 0"])) ==
                "Line 6: Write which page after page, such as page 2."
 
