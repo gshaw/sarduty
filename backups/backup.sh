@@ -14,9 +14,10 @@ export FLY_ACCESS_TOKEN="${FLY_ACCESS_TOKEN:-$(fnox get FLY_SARDUTY_SSH_TOKEN)}"
 curl -s -o /dev/null https://sarduty.com/
 
 # Tarring the live database can catch the WAL mid-write. VACUUM INTO, run by the app,
-# writes a consistent copy instead; the image has no sqlite3 to do it.
+# writes a consistent copy instead; the image has no sqlite3 to do it. It can take longer
+# than the Repo's 15 s query limit, as it did on 2026-11-07.
 snapshot=/tmp/backup.db
-fly ssh console -a sarduty -C "/app/bin/sarduty rpc \"File.rm(\\\"$snapshot\\\"); App.Repo.query!(\\\"VACUUM INTO ?1\\\", [\\\"$snapshot\\\"])\"" > /dev/null
+fly ssh console -a sarduty -C "/app/bin/sarduty rpc \"File.rm(\\\"$snapshot\\\"); App.Repo.query!(\\\"VACUUM INTO ?1\\\", [\\\"$snapshot\\\"], timeout: 300_000)\"" > /dev/null
 
 # A timestamp, so a second backup on one day doesn't overwrite the first.
 filename="backups/data_backup_$(date +%F-%H%M).tar.gz.age"
