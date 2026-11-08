@@ -24,6 +24,7 @@ defmodule App.DataFixtures do
   alias App.Model.MemberQualificationAward
   alias App.Model.Organization
   alias App.Model.Qualification
+  alias App.Model.SavedPDF
   alias App.Model.Tag
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
@@ -540,7 +541,7 @@ defmodule App.DataFixtures do
     letter = params |> TaxCreditLetter.build_new_changeset() |> Repo.insert!()
 
     # Every letter is made with its PDF (#918). A stand-in, since printing takes a while.
-    App.Model.SavedPDF.put_letter!(%{letter | member: member}, %{
+    SavedPDF.put_letter!(%{letter | member: member}, %{
       content: "%PDF-1.7 test letter #{letter.ref_id}",
       title: "#{letter.year} test letter",
       filename: "#{letter.year}_test_letter.pdf"
