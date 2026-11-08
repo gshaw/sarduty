@@ -19,7 +19,7 @@ or calls Typst: printing is App.Operation.PrintDocument's.
 ## The clauses
 
 They come in this order. `report`, `const`, `ask`, `compute`, and `expect` can repeat;
-the rest come once.
+`fill` comes once, and once more as `fill each` for a form's rows; the rest come once.
 
 | Clause                              | What it says                                                                                      |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -35,7 +35,7 @@ the rest come once.
 | `keep hours.primary, …`             | Values saved with the PDF: what a report reads, and answers.                                      |
 | `page`                              | The values print on the form's own page PDF.                                                      |
 | `places`                            | Where each value goes.                                                                            |
-| `fill`                              | What goes in each place.                                                                          |
+| `fill`                              | What goes in each place. `fill each people into rows` fills a row each ([Rows](#rows)).           |
 | `expect with … : …`                 | A worked example: values given, and a condition that must hold.                                   |
 
 A clause starts at the left edge, and the lines indented under it are its own. `--`
@@ -68,6 +68,7 @@ leaves it out. Text compares exactly, case and all, since an expect checks what 
 | `:injured`                                         | A form's answer.                                                         |
 | `km_rate`, `total`                                 | A form's const or compute.                                               |
 | `today`                                            | The team's date today.                                                   |
+| `page`, `pages`                                    | In `fill`: which copy of a form's page, and how many ([Rows](#rows)).    |
 | `team.logo`, `organization.logo`, `team.signature` | Pictures only printing reads.                                            |
 | `pdf.reference`, `pdf.verify_link`                 | The PDF's reference number and verify link.                              |
 
@@ -108,8 +109,12 @@ places
 - `indent 233pt` starts its first line further in, after a label printed on that line.
 - `lines 8`, with `pitch`, is as many of the page's lines as it has. A longer text
   shrinks, down to 6pt, until it fits them, so it never runs into the next part.
+- `align right` puts each line against its right edge, as a column of money does, and
+  `align center` centres it, as on a form's line. Either needs a width, or left and
+  right.
 - `tick` draws an X across a box `size` wide when its fill, a condition, holds.
 - `page 2` puts a place on the page PDF's second page. Without it, a place is on page 1.
+- `rows` repeats a row of places down the page ([Rows](#rows)).
 
 ## Checks
 
@@ -134,11 +139,11 @@ The caller adds the PDF's values and calls `App.Document.evaluate/3`. That gives
 title, the author, the lock, the kept values, and each place's value.
 
 `App.Operation.PrintDocument` prints that with Typst. `App.Document.Markup` lays each
-place out on letter paper, or on each page of a form's page. **Values reach Typst as
-data, never as Typst code**: they go in a `values.json` the markup reads by key, so a name
-with a `*` or a `#` prints as written. `lock print` runs `Service.PDFLock`. A QR code is
-an SVG from `EQRCode`, and Typst uses no packages.
-`App.Operation.PrintTaxCreditLetter` does all this for a letter, and
+place out on letter paper, or on each page of a form's page, in as many copies as its
+rows need. **Values reach Typst as data, never as Typst code**: they go in a
+`values.json` the markup reads by key, so a name with a `*` or a `#` prints as written.
+`lock print` runs `Service.PDFLock`. A QR code is an SVG from `EQRCode`, and Typst uses
+no packages. `App.Operation.PrintTaxCreditLetter` does all this for a letter, and
 `App.Operation.PrintForm` for a form.
 
 ## Forms
@@ -193,6 +198,16 @@ uv run --with pdfplumber python -I tools/forms/find_places.py \
   priv/forms/bcsara/task_report.txt priv/forms/bcsara/task_report.pdf
 ```
 
+A form whose agency takes a page drawn in another's layout, such as D4H's, gets a blank
+page SAR Duty draws once: a Typst program beside it, such as
+[supplement.typ](../priv/forms/bcsara/supplement.typ), with each line and cell at a
+round number of points. Its places are written from those numbers. Draw the page again
+after changing the program; `App.FormsTest` checks the PDF is the one it draws:
+
+```sh
+mise exec -- mix run --no-start tools/forms/draw_page.exs priv/forms/bcsara/supplement.typ
+```
+
 Each form's text and page are in `priv/forms/<organization>/`, as uploaded.
 `App.FormsTest` saves each one as an upload does, checking it on Coast Range SAR and
 running its expects, then prints it there.
@@ -203,12 +218,22 @@ running its expects, then prints it there.
   Leader's Name, Date Report Completed), and asks 6 things: other response personnel,
   their person hours, injured, fatalities, still missing, and whether an equipment
   repair/replacement request is attached. The task leader signs it by hand.
-- **EMCR's claim**, the Expense reimbursement request and its Supplement, is still to
-  come. The fields it reads are in the catalog: attendance's `finished_at` and its
-  Travel `km`, and each item's `cost_per_km`, `cost_per_hour`, and `cost_per_use`, in
-  dollars, copied from D4H ([equipment.md](equipment.md#the-copy)). Its rules are
+- **BCSARA's Supplement** ([supplement.txt](../priv/forms/bcsara/supplement.txt)) is
+  EMCR's Expense reimbursement request supplement, on a blank page in D4H's layout with
+  room for 18 people, which EMCR takes today. It prints the claim's people rules: a
+  row for each person who attended, by name, with their Travel km, the km rate on the
+  day they started, meals, the personal equipment allowance on a response, and their
+  total. It asks meals provided to everyone, and for each person On task and Meals
+  provided. The header has the task number and when the task ran, and the footer the
+  Task Leader's Name, Date Report Completed, and the page; the task leader signs by
+  hand. More than 18 people print another copy of the page, each with its own subtotal.
+- **The Expense reimbursement request** is still to come. The fields it reads are in
+  the catalog: each item's `cost_per_km`, `cost_per_hour`, and `cost_per_use`, in
+  dollars, copied from D4H ([equipment.md](equipment.md#the-copy)), as are attendance's
+  `finished_at` and its Travel `km`, which the Supplement reads. Its rules are
   [claim_rules.txt](../test/support/fixtures/forms/claim_rules.txt), a test fixture
-  until then ([Arithmetic](#arithmetic)).
+  until then ([Arithmetic](#arithmetic)), and a test checks the Supplement works out
+  the same personnel total from them.
 
 ### Arithmetic
 
@@ -244,8 +269,8 @@ people` works out one for each row of report `people`: a bare name there reads t
 - **`ask each people`** asks for one answer on each row, read in the row by its bare
   name. It's kept by the row's first member or item, `row` "member:12" in
   `form_answers`, and starts from its default, which can read an answer above it, such
-  as `:meals_provided`. `remember` doesn't go with it. The form page doesn't show these
-  yet: step 8 of #950 shows each row.
+  as `:meals_provided`. `remember` doesn't go with it. The form page shows a row for
+  each, with a box for each answer ([On an activity](#on-an-activity)).
 - **Arithmetic** is `+`, `-`, `*`, and `/`, tighter than a comparison, in exact
   decimals: each number becomes a `Decimal`, so 0.67 × 30 is 20.10. A blank counts as
   0, as a spreadsheet's empty cell does; dividing by 0 is blank; a comparison with a
@@ -262,6 +287,44 @@ else`. Money prints with `as money` (`Service.Format.money/1`, exact, half a cen
 
 The report language reads arithmetic too, so a comparison takes it, but a report
 refuses it: arithmetic is a form's.
+
+### Rows
+
+A form can print a row for each of a report's rows, one person a row, down its page
+(#950). More rows than the page holds print another copy of it:
+
+```sql
+places
+  rows rows top 165.6pt, pitch 14pt, lines 18
+    who   text top 3.6pt, left 44pt, width 294pt, fit, size 8.5pt
+    total text top 3.6pt, left 524.6pt, width 44.4pt, fit, align right, size 8.5pt
+  subtotal    text top 436.6pt, left 524.6pt, width 44.4pt, fit, align right, size 8.5pt
+  page_number text top 526.85pt, left 345pt, width 225pt, fit, align center, size 9pt
+
+fill
+  subtotal = sum(rows.total) as money
+  page_number = '{page} of {pages}'
+
+fill each people into rows
+  who = '{member}: {started_at as date_short}'
+  total = total as money
+```
+
+- **`rows`** is where the first row starts, `pitch` from one row to the next, and how
+  many `lines` a copy of the page holds. A form has one, and only on its own page. The
+  places in a row are indented under it: text and ticks, each `top` from the row's
+  top.
+- **`fill each people into rows`** fills each row's places from one of report
+  `people`'s rows, which reads its columns, answers, and values by their bare names, as
+  `compute each` does. The rows keep the report's order.
+- **Copies.** A copy of the page holds `lines` rows; the rest print on another copy,
+  every page of the page PDF again, with every other place filled again. `page` is
+  which copy it is and `pages` how many, so the form numbers them, "Page 2 of 2". With
+  no rows, one copy prints. `sum(rows.total)` adds up the rows on that copy, for its own
+  subtotal, while `sum(people.total)` is every row's.
+- **Evaluating** gives `copies`, and each place with its `copy`. A row's places are
+  named for the row, `rows.19.who`, and placed on it. An expect reads the first copy,
+  and no row's places: what the rows work out, it checks with `compute each`'s values.
 
 ### An organization's forms
 
@@ -306,6 +369,13 @@ through the team's organization, so a form that's off or another organization's 
   from the activity's answer, then for `remember` the team's last answer on any
   activity (`FormAnswer.starting/2`), then its default. `row` is "" for one answer,
   and the row's member or item for `ask each`.
+- **A row for each person**, for a form that asks on each row (`ActivityForms.rows/4`):
+  under a heading for its report, such as People, the Member column, a box for each of
+  the row's answers, and its total, the last `compute each`, as the PDF prints it. A
+  blank box shows its default in grey, such as Meals provided to everyone, and takes
+  it; a choice shows its answer. Each total follows the answers as they change. A row's
+  answer that's the ask's plain default, such as On task's Yes, isn't kept: a choice
+  sends one for every row.
 - **Download PDF and Open PDF** post the answers to Web.ActivityFormPDFController,
   since a LiveView can't send a PDF. App.Operation.CreateFormPDF keeps the answers,
   prints the form, and saves the PDF it sends, every time (`SavedPDF.add_for_form!/5`).

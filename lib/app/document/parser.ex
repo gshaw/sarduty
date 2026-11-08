@@ -8,7 +8,8 @@ defmodule App.Document.Parser do
   value is App.Report.Parser's expression, arithmetic and all, with five additions read
   here: `'text {value}'` puts a value in text, `value as format` formats it, `value if
   condition` is blank when the condition is false, `if condition then value else value`
-  picks one, and `rate on date` reads a const on a date.
+  picks one, and `rate on date` reads a const on a date. A form's `rows` place holds a
+  row's places, indented under it, and `fill each people into rows` fills them.
   """
 
   alias App.Document
@@ -21,8 +22,15 @@ defmodule App.Document.Parser do
   @clauses ~w(document form about for report const ask compute title lock keep page places fill
                expect)
   @starts ~w(member year)
-  @repeated ~w(report const ask compute expect)
-  @kinds %{"text" => :text, "image" => :image, "flow" => :flow, "tick" => :tick}
+  @repeated ~w(report const ask compute fill expect)
+  @kinds %{
+    "text" => :text,
+    "image" => :image,
+    "flow" => :flow,
+    "tick" => :tick,
+    "rows" => :rows
+  }
+  @aligns %{"left" => :left, "right" => :right, "center" => :center}
   @lengths ~w(top left right bottom width height size leading gap pad pitch indent)
   @ask_options ~w(remember default choose hint)
   @units %{"in" => 72, "pt" => 1, "mm" => 72 / 25.4}
@@ -295,9 +303,19 @@ defmodule App.Document.Parser do
     %{doc | places: block |> children() |> Enum.map(&place/1)}
   end
 
+  # `fill` once, and `fill each people into rows` for each rows place: one row a row.
   defp read("fill", [first | _] = block, doc, n) do
-    if tl(line_tokens(first)) != [], do: fail(n, "Write each fill on its own line under fill.")
-    %{doc | fill: block |> children() |> Enum.map(&fill(&1, doc.places))}
+    case tl(line_tokens(first)) do
+      [] ->
+        fill_places(block, doc, n)
+
+      [{:word, each, _}, {:word, report, _}, {:word, into, _}, {:word, place, _}] ->
+        if lower(each) != "each" or lower(into) != "into", do: fill_head(n)
+        fill_each(block, lower(report), lower(place), doc, n)
+
+      _other ->
+        fill_head(n)
+    end
   end
 
   defp read("expect", block, doc, n) do
@@ -339,6 +357,7 @@ defmodule App.Document.Parser do
          consts: Enum.reverse(doc.consts),
          asks: Enum.reverse(doc.asks),
          computes: Enum.reverse(doc.computes),
+         fill: Enum.reverse(doc.fill),
          expects: Enum.reverse(doc.expects)
      }}
   end
@@ -584,7 +603,20 @@ defmodule App.Document.Parser do
 
   # Places
 
-  defp place([{n, _indent, _text} | _] = group) do
+  # A rows place's own options are on its first line, and its row's places under it.
+  defp place([{n, _indent, _text} = first | _] = group) do
+    case line_tokens(first) do
+      [{:word, name, _}, {:word, kind, _} | rest] ->
+        if lower(kind) == "rows",
+          do: rows_place(lower(name), rest, group, n),
+          else: place(group, n)
+
+      _other ->
+        place(group, n)
+    end
+  end
+
+  defp place(group, n) do
     case tokens(group) do
       [{:word, name, _}, {:word, kind, _} | rest] ->
         kind = lower(kind)
@@ -599,6 +631,18 @@ defmodule App.Document.Parser do
       _other ->
         fail(n, "Write the place's name and kind, such as total text top 2in, left 1in.")
     end
+  end
+
+  defp rows_place(name, options, group, n) do
+    places =
+      case children(group) do
+        [] -> fail(n, "Write the places in each row under #{name}, indented.")
+        groups -> Enum.map(groups, &place/1)
+      end
+
+    %{name: name, kind: :rows, line: n, places: places}
+    |> Map.merge(%{across: false, level_with: nil, fit: false, page: 1})
+    |> place_options(options, n)
   end
 
   defp place_options(place, [], _n), do: place
@@ -624,14 +668,8 @@ defmodule App.Document.Parser do
       "fit" ->
         {%{place | fit: true}, rest}
 
-      "level" ->
-        level_with(place, rest, n)
-
-      "page" ->
-        page_option(place, rest, n)
-
-      "lines" ->
-        lines_option(place, rest, n)
+      word when word in ~w(level page align lines) ->
+        valued_option(word, place, rest, n)
 
       name when name in @lengths ->
         length_option(place, name, rest, n)
@@ -639,12 +677,18 @@ defmodule App.Document.Parser do
       other ->
         fail(
           n,
-          "Remove #{other}: a place takes #{Enum.join(@lengths, ", ")}, lines, across, fit, page, and level with."
+          "Remove #{other}: a place takes #{Enum.join(@lengths, ", ")}, lines, across, fit, align, page, and level with."
         )
     end
   end
 
   defp place_option(_place, _tokens, n), do: fail(n, "Write a place's options, such as top 1in.")
+
+  # An option and what follows it: `level with letter`, `page 2`, `align right`, `lines 8`.
+  defp valued_option("level", place, rest, n), do: level_with(place, rest, n)
+  defp valued_option("page", place, rest, n), do: page_option(place, rest, n)
+  defp valued_option("align", place, rest, n), do: align_option(place, rest, n)
+  defp valued_option("lines", place, rest, n), do: lines_option(place, rest, n)
 
   # Which page of the form's page it's on, from 1.
   defp page_option(place, [{:number, page, _} | rest], _n) when is_integer(page) and page > 0,
@@ -652,6 +696,17 @@ defmodule App.Document.Parser do
 
   defp page_option(_place, _tokens, n),
     do: fail(n, "Write which page after page, such as page 2.")
+
+  # `align right` puts each line against the place's right edge, as a column of money.
+  defp align_option(place, [{:word, word, _} | rest], n) do
+    case Map.fetch(@aligns, lower(word)) do
+      {:ok, align} -> {Map.put(place, :align, align), rest}
+      :error -> align_option(place, [], n)
+    end
+  end
+
+  defp align_option(_place, _tokens, n),
+    do: fail(n, "Write left, right, or center after align, such as align right.")
 
   # At most how many of the page's lines a text wraps on, from 1.
   defp lines_option(place, [{:number, lines, _} | rest], n)
@@ -689,6 +744,35 @@ defmodule App.Document.Parser do
     do: fail(n, "Write #{name} in in, pt, or mm, such as #{name} 1in.")
 
   # Fill
+
+  defp fill_head(n),
+    do:
+      fail(
+        n,
+        "Write fill alone, or fill each, a report, into, and a rows place: fill each people into rows."
+      )
+
+  # Fills are kept newest first until `finish/1`, as the other repeated clauses are.
+  defp fill_places(block, doc, n) do
+    if Enum.any?(doc.fill, &(not match?({:each, _, _}, &1.value))),
+      do: fail(n, "Write fill once.")
+
+    fills = block |> children() |> Enum.map(&fill(&1, doc.places))
+    %{doc | fill: Enum.reverse(fills, doc.fill)}
+  end
+
+  defp fill_each(block, report, place, doc, n) do
+    if Enum.any?(doc.fill, &(&1.place == place)), do: fail(n, "Fill #{place} once.")
+
+    case children(block) do
+      [] ->
+        fail(n, "Write what goes in each of a row's places under fill each, one a line.")
+
+      lines ->
+        fills = Enum.map(lines, &fill(&1, []))
+        %{doc | fill: [%{place: place, value: {:each, report, fills}, line: n} | doc.fill]}
+    end
+  end
 
   defp fill([{n, _indent, _text} = first | _] = group, places) do
     case line_tokens(first) do

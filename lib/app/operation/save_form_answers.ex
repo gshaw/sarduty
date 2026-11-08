@@ -4,7 +4,8 @@ defmodule App.Operation.SaveFormAnswers do
   one row per name, shared by every form that asks it. Each answer is checked by its ask,
   as printing checks it (`App.Document.answers/2`). A blank one is deleted, so the form's
   default holds again. An `ask each` answer is kept for each row, by the row's member or
-  item. Nothing goes to D4H.
+  item, unless it's the ask's plain default: a row's choice always sends one, and only
+  a change from the default is worth keeping. Nothing goes to D4H.
   """
 
   import Ecto.Query
@@ -64,11 +65,17 @@ defmodule App.Operation.SaveFormAnswers do
     saved = if is_map(saved), do: saved, else: %{}
 
     Enum.reduce(typed, plan, fn {row, text}, plan ->
-      step(plan, doc, ask.name, to_string(row), trim(text), Map.get(saved, to_string(row)))
+      text = text |> trim() |> unless_default(ask.default)
+      step(plan, doc, ask.name, to_string(row), text, Map.get(saved, to_string(row)))
     end)
   end
 
   defp plan_ask(plan, _doc, _ask, _typed, _saved), do: plan
+
+  defp unless_default(text, {:literal, value, _line}),
+    do: if(text == to_string(value), do: "", else: text)
+
+  defp unless_default(text, _default), do: text
 
   defp trim(text) when is_binary(text) or is_number(text),
     do: text |> to_string() |> String.trim()

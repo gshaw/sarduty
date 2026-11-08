@@ -8,9 +8,12 @@ defmodule App.FormsTest do
   import App.DataFixtures
 
   alias App.Document
+  alias App.Operation.PrintDocument
   alias App.Operation.SaveForm
   alias App.Operation.TryForm
+  alias App.Report.Context
   alias App.Report.Query
+  alias App.SampleRepo
 
   @dir "priv/forms"
 
@@ -80,6 +83,84 @@ defmodule App.FormsTest do
 
       spots = Enum.map(doc.places, &{&1.top, &1.left})
       assert Enum.uniq(spots) == spots
+    end
+  end
+
+  describe "BCSARA's Supplement" do
+    setup do
+      context = Context.new(SampleRepo.team(), DateTime.utc_now(), repo: SampleRepo)
+      {:ok, doc} = "#{@dir}/bcsara/supplement.txt" |> File.read!() |> Document.parse()
+      {:ok, doc} = Document.check(doc, context)
+      %{doc: doc}
+    end
+
+    # Typst draws the blank once, and the PDF is what it drew: change the program, then
+    # draw the page again with tools/forms/draw_page.exs.
+    test "its page is the blank its Typst program draws" do
+      {:ok, drawn} = "#{@dir}/bcsara/supplement.typ" |> File.read!() |> Service.Typst.compile()
+      assert drawn == File.read!("#{@dir}/bcsara/supplement.pdf")
+    end
+
+    test "asks On task and Meals provided for each person, starting from one for everyone",
+         %{doc: doc} do
+      assert Enum.map(doc.asks, &{&1.name, &1.each}) == [
+               {"meals_provided", nil},
+               {"on_task", "people"},
+               {"meals_given", "people"}
+             ]
+    end
+
+    # The claim's rules print here, reading the same answers (#950).
+    test "works out each person's total as the claim's rules do", %{doc: doc} do
+      {:ok, claim} =
+        "test/support/fixtures/forms/claim_rules.txt" |> File.read!() |> Document.parse()
+
+      {:ok, claim} =
+        Document.check(
+          claim,
+          Context.new(SampleRepo.team(), DateTime.utc_now(), repo: SampleRepo)
+        )
+
+      person = fn key, km, from, to ->
+        %{
+          key: key,
+          values: %{"member" => key, "km" => km, "started_at" => from, "finished_at" => to}
+        }
+      end
+
+      values = %{
+        "task.`Response Type`" => "Response",
+        "people" => [
+          person.("member:1", 30, ~U[2026-06-01 15:00:00Z], ~U[2026-06-01 21:30:00Z]),
+          person.("member:2", 12, ~U[2026-04-15 06:00:00Z], ~U[2026-04-16 08:00:00Z]),
+          person.("member:3", nil, ~U[2026-06-01 15:00:00Z], nil)
+        ],
+        ":meals_provided" => 1,
+        {"on_task", "member:2"} => "No",
+        {"meals_given", "member:1"} => 0
+      }
+
+      # $75.10 on task for 6.5 hours, $7.80 off task, and nothing for one still out.
+      supplement = Document.values(doc, values, "America/Vancouver")
+      claimed = Document.values(claim, values, "America/Vancouver")
+
+      assert Service.Format.money(supplement["personnel"]) == "$82.90"
+      assert Decimal.eq?(supplement["personnel"], claimed["personnel"])
+    end
+
+    test "20 people print two copies of its page, numbered", %{doc: doc} do
+      people =
+        for i <- 1..20,
+            do: %{
+              key: "member:#{i}",
+              values: %{"member" => "Person #{i}", "started_at" => ~U[2026-06-01 15:00:00Z]}
+            }
+
+      output = Document.evaluate(doc, %{"people" => people}, "America/Vancouver")
+      page = File.read!("#{@dir}/bcsara/supplement.pdf")
+
+      assert {:ok, pdf} = PrintDocument.call(output, page: page)
+      assert Service.PDFPages.count(pdf) == {:ok, 2}
     end
   end
 end

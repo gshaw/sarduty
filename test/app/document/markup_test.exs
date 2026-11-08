@@ -220,5 +220,29 @@ defmodule App.Document.MarkupTest do
       assert Regex.scan(~r{/MediaBox\s*\[([^\]]*)\]}, pdf, capture: :all_but_first) ==
                [["0 0 612 792"], ["0 0 612 1008"]]
     end
+
+    test "align right puts each line against the place's right edge" do
+      {markup, _files} = typst([text(%{value: "$56.34", width: 44, fit: true, align: :right})])
+      assert markup =~ "set align(right)"
+    end
+
+    # A form's rows past one page's (#950): each copy fills the same places with its own.
+    test "print each copy of the form's page, each place with its own values" do
+      {:ok, page} = Service.Typst.compile(@page)
+      one = text(%{name: "page_number", value: "1 of 2", width: 132, copy: 1})
+      two = text(%{name: "page_number", value: "2 of 2", width: 132, copy: 2})
+
+      {markup, files} =
+        Markup.typst(%{title: "Supplement", author: nil, copies: 2, places: [one, two]},
+          page: {page, 2}
+        )
+
+      assert values(files)["page_number"] == ["1 of 2"]
+      assert values(files)["page_number-copy2"] == ["2 of 2"]
+      assert markup =~ ~s|v.at("page_number-copy2")|
+
+      assert {:ok, pdf} = Service.Typst.compile(markup, files)
+      assert Service.PDFPages.count(pdf) == {:ok, 4}
+    end
   end
 end

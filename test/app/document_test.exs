@@ -69,6 +69,23 @@ defmodule App.DocumentTest do
       "form 'Test'\nfor activity where kind = 'incident'\n#{head}\npage\nplaces\n" <>
         Enum.map_join(places, &"  #{&1}\n") <> "fill\n" <> Enum.map_join(fill, &"  #{&1}\n")
 
+  # A form with a rows place, `places` under `places` after its total, and `fills` under
+  # fill each. Its page is `page` alone, or nothing.
+  defp rows_form(places, fills \\ ["who = member"], page \\ "page\n") do
+    """
+    form 'Test'
+    for activity where kind = 'incident'
+    report people
+      select member, km from attendance where activity.id = :activity
+    #{page}places
+      total text top 1in, left 1in, width 1in
+    #{Enum.map_join(places, &"#{&1}\n")}fill
+      total = sum(rows.km) as number
+    fill each people into rows
+    #{Enum.map_join(fills, &"  #{&1}\n")}\
+    """
+  end
+
   # Coast Range SAR's catalog, with its custom fields (#816).
   defp sample_context, do: Context.new(App.SampleRepo.team(), @now, repo: App.SampleRepo)
 
@@ -491,6 +508,103 @@ defmodule App.DocumentTest do
     end
   end
 
+  describe "rows" do
+    defp supplement do
+      {:ok, doc} = "priv/forms/bcsara/supplement.txt" |> File.read!() |> Document.parse()
+      {:ok, doc} = Document.check(doc, sample_context())
+      doc
+    end
+
+    # `count` people on a 6-hour response on Jun 1, person i driving i km.
+    defp people(count) do
+      for i <- 1..count//1 do
+        %{
+          key: "member:#{i}",
+          values: %{
+            "member" => "Person #{i}",
+            "started_at" => ~U[2026-06-01 15:00:00Z],
+            "finished_at" => ~U[2026-06-01 21:00:00Z],
+            "km" => i
+          }
+        }
+      end
+    end
+
+    defp supplement_output(count) do
+      values = %{"task.`Response Type`" => "Response", "people" => people(count)}
+      Document.evaluate(supplement(), values, "America/Vancouver")
+    end
+
+    defp on_copy(output, copy, name),
+      do: Enum.find(output.places, &(&1.copy == copy and &1.name == name)).value
+
+    test "the Supplement checks on Coast Range SAR, and its expects hold" do
+      doc = supplement()
+
+      assert Document.expect(doc) == :ok
+
+      assert %{kind: :rows, lines: 18, pitch: 14} =
+               rows = Enum.find(doc.places, &(&1.name == "rows"))
+
+      assert Enum.map(rows.places, & &1.name) == ~w(who km rate meals allowance total)
+      assert %{place: "rows", value: {:each, "people", fills}} = List.last(doc.fill)
+      assert length(fills) == 6
+    end
+
+    test "fill each prints a row for each person, each place in its row" do
+      output = supplement_output(2)
+      [first | _] = rows = Enum.filter(output.places, &Map.has_key?(&1, :row))
+
+      assert output.copies == 1
+      assert length(rows) == 12
+      assert first.name == "rows.1.who"
+      assert first.value == "Person 1: Jun 1, 2026, 08:00 to 14:00"
+      assert first.top == 165.6 + 3.6
+
+      second = Enum.find(rows, &(&1.name == "rows.2.total"))
+      assert second.top == 165.6 + 14 + 3.6
+      # 2 km at $0.67, 2 meals, and a day's equipment.
+      assert second.value == "$56.34"
+      assert %{align: :right} = second
+    end
+
+    test "more people than fit print another copy, numbered, each with its own subtotal" do
+      output = supplement_output(20)
+
+      assert output.copies == 2
+      assert on_copy(output, 1, "page_number") == "1 of 2"
+      assert on_copy(output, 2, "page_number") == "2 of 2"
+
+      # 18 rows on the first, starting at the top again on the second.
+      assert output.places |> Enum.filter(&(&1[:row] && &1.copy == 1)) |> length() == 18 * 6
+      assert on_copy(output, 2, "rows.19.who") =~ "Person 19: "
+      assert Enum.find(output.places, &(&1.name == "rows.19.who")).top == 165.6 + 3.6
+
+      # Each person is $55 and 67¢ a km: people 1 to 18, then 19 and 20.
+      assert on_copy(output, 1, "subtotal") == "$1,104.57"
+      assert on_copy(output, 2, "subtotal") == "$136.13"
+      assert Service.Format.money(output.keep["personnel"]) == "$1,240.70"
+
+      # The header prints on each copy.
+      assert on_copy(output, 2, "leader") == on_copy(output, 1, "leader")
+    end
+
+    test "with nobody, one copy and no rows" do
+      output = supplement_output(0)
+
+      assert output.copies == 1
+      assert on_copy(output, 1, "page_number") == "1 of 1"
+      assert on_copy(output, 1, "subtotal") == "$0.00"
+      refute Enum.any?(output.places, &Map.has_key?(&1, :row))
+    end
+
+    test "a row's total shows as its fill each prints it" do
+      doc = supplement()
+      assert Document.printed(doc, "total", Decimal.new("56.335"), "Etc/UTC") == "$56.34"
+      assert Document.printed(doc, "hours", Decimal.new("6.5"), "Etc/UTC") == "6.5"
+    end
+  end
+
   describe "mistakes" do
     test "name the line and say how to fix it" do
       assert error("for member") =~ "Start with document"
@@ -621,6 +735,77 @@ defmodule App.DocumentTest do
 
       assert error("form 'A'\nfor activity\npage x") ==
                "Line 3: Write page alone: the values print on the form's own page."
+    end
+
+    test "check rows and fill each" do
+      places = ["  rows rows top 2in, pitch 14pt, lines 2", "    who text left 1in, width 2in"]
+
+      assert error(rows_form(places, ["who = member"], "")) ==
+               "Line 7: Take out rows, or add page: rows repeat a form's page."
+
+      assert error(rows_form(["  rows rows top 2in, lines 2", "    who text left 1in"])) ==
+               "Line 8: Give rows a top, a pitch, and lines, such as top 260pt, pitch 14pt, lines 18."
+
+      left = ["  rows rows top 2in, pitch 14pt, lines 2, left 1in", "    who text left 1in"]
+
+      assert error(rows_form(left)) ==
+               "Line 8: Take out left: rows take a top, a pitch, lines, and a page."
+
+      assert error(rows_form(["  rows rows top 2in, pitch 14pt, lines 2"])) ==
+               "Line 8: Write the places in each row under rows, indented."
+
+      image = "    who image left 1in, width 1in, height 1in"
+
+      assert error(rows_form([hd(places), image])) ==
+               "Line 9: Make who text or tick: a row holds text and ticks."
+
+      assert error(rows_form([hd(places), "    who text left 1in, align right"])) ==
+               "Line 9: Give who a width, or left and right: align right lines it up in it."
+
+      tick = [hd(places), "    who tick left 1in, size 9pt, align right"]
+
+      assert error(rows_form(tick, ["who = km > 0"])) ==
+               "Line 9: Take out align: only a text place lines up its text."
+
+      assert error(rows_form([hd(places), "    who text bottom 1in, left 1in"])) ==
+               "Line 9: Give who a top in its row, if any: it sits in each of rows."
+
+      assert error(rows_form(places, ["what = member"])) =~
+               "There is no place what in rows. Add it under it."
+
+      assert error(rows_form(places, ["who = member", "who = km"])) =~ "Fill who once."
+
+      assert error(rows_form(places, ["who = sum(rows.km)"])) =~
+               "Give sum one column of a report with a row each"
+
+      text = rows_form(places, ["who = member"])
+
+      changed = fn pairs ->
+        Enum.reduce(pairs, text, fn {from, to}, text -> String.replace(text, from, to) end)
+      end
+
+      assert error(
+               changed.([{"  total = sum(rows.km) as number\n", ""}, {"into rows", "into total"}])
+             ) =~
+               "Fill total under fill: fill each fills a rows place."
+
+      assert error(changed.([{"fill each people into rows", "fill"}])) =~ "Write fill once."
+
+      assert error(changed.([{"fill each people", "fill every people"}])) =~
+               "Write fill alone, or fill each, a report, into, and a rows place"
+
+      plain = [
+        {"fill each people into rows\n  who = member\n", ""},
+        {"total = sum", "rows = 'x'\n  total = sum"}
+      ]
+
+      assert error(changed.(plain)) =~
+               "Fill rows with fill each and a report, such as fill each people into rows."
+
+      two = places ++ ["  more rows top 5in, pitch 14pt, lines 2", "    who text left 1in"]
+
+      assert error(rows_form(two)) =~
+               "Write one rows place: a form's rows fill one part of its page."
     end
 
     test "check consts and computes" do
