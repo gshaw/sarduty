@@ -2,7 +2,6 @@ defmodule App.Mailer.TaxCreditLetterMailer do
   import Swoosh.Email
 
   alias App.Mailer
-  alias App.Model.SavedPDF
 
   require Logger
 
@@ -33,17 +32,16 @@ defmodule App.Mailer.TaxCreditLetterMailer do
     end
   end
 
-  @doc "Emails the letter's saved PDF, or `{:error, :no_pdf}` for a letter without one."
-  def deliver_tax_credit_letter(letter) do
-    case SavedPDF.letter_attachment(letter) do
-      nil ->
-        {:error, :no_pdf}
-
-      attachment ->
-        email = letter.member.email
-        deliver_with_attachment(letter, email, attachment.title, body(letter), attachment)
-    end
-  end
+  @doc "Emails `attachment`, the letter's saved PDF (App.Operation.EmailTaxCreditLetter)."
+  def deliver_tax_credit_letter(letter, attachment),
+    do:
+      deliver_with_attachment(
+        letter,
+        letter.member.email,
+        attachment.title,
+        body(letter),
+        attachment
+      )
 
   @doc "The email's text: what the letter is for, and who answers questions about it."
   def body(letter) do

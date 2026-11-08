@@ -222,8 +222,8 @@ defmodule Web.TaxCreditLetterLive do
       {:error, :no_email} ->
         put_flash(socket, :error, "#{letter.member.name} has no email.")
 
-      {:error, :no_pdf} ->
-        put_flash(socket, :error, "This letter has no PDF to send. Ask for help with Get help.")
+      {:error, :not_printed} ->
+        put_flash(socket, :error, "The letter's PDF didn't print. Ask for help with Get help.")
 
       {:error, _reason} ->
         put_flash(socket, :error, "The email did not send. Try again.")

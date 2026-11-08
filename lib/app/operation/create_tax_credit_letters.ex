@@ -82,13 +82,6 @@ defmodule App.Operation.CreateTaxCreditLetters do
     {:cancel, "the member has no email"}
   end
 
-  # A retry can't give the letter a PDF.
-  defp finish_email({:error, :no_pdf}, letter, _last?) do
-    TaxCreditLetter.set_email_status!(letter, :failed)
-    broadcast_emailed(letter)
-    {:cancel, "the letter has no PDF"}
-  end
-
   defp finish_email({:error, reason}, letter, last?) do
     if last? do
       TaxCreditLetter.set_email_status!(letter, :failed)

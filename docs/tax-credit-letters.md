@@ -63,8 +63,9 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
   when the letter is. It prints before the write transaction, which holds SQLite's one
   write lock, and a print that fails makes or replaces nothing
   ([SaveTaxCreditLetterPDF](../lib/app/operation/save_tax_credit_letter_pdf.ex)).
-  Downloads and emails serve only the saved file and never print, so a member gets the
-  same file every time. A letter without one is a 404, and its email fails.
+  Downloads and emails serve the saved file, so a member gets the same file every time.
+  A download never prints: a letter without one is a 404. Emailing one without one
+  publishes it first.
 - **The signature is the team's when the PDF is printed**, and the saved PDF keeps it.
   The letter keeps no copy of its own (#918).
 - **The QR code is vector**, an SVG from `eqrcode`, its bottom level with the letter's

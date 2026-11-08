@@ -5,6 +5,7 @@ defmodule Web.TaxCreditLetterLiveTest do
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
 
+  alias App.Model.SavedPDF
   alias App.Model.TaxCreditLetter
   alias App.Repo
 
@@ -54,7 +55,11 @@ defmodule Web.TaxCreditLetterLiveTest do
 
     lv |> element("#email-letter") |> render_click()
 
-    assert_email_sent(fn email -> assert email.to == [{"", member.email}] end)
+    assert_email_sent(fn email ->
+      assert email.to == [{"", member.email}]
+      assert [%{data: "%PDF-1.7 test letter " <> _ref}] = email.attachments
+    end)
+
     assert render(lv) =~ "Emailed the tax credit letter to #{member.email}"
   end
 
@@ -74,10 +79,11 @@ defmodule Web.TaxCreditLetterLiveTest do
     assert render(lv) =~ "has no email."
   end
 
-  test "says so when the letter has no PDF, and sends nothing", %{conn: conn} do
+  test "emailing a letter with no PDF publishes it first", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
-    letter = team |> member_fixture() |> tax_credit_letter_fixture()
-    App.Model.SavedPDF.delete_letter!(letter)
+    member = member_fixture(team)
+    letter = tax_credit_letter_fixture(member)
+    SavedPDF.delete_letter!(letter)
 
     {:ok, lv, _html} =
       conn
@@ -86,8 +92,12 @@ defmodule Web.TaxCreditLetterLiveTest do
 
     lv |> element("#email-letter") |> render_click()
 
-    assert_no_email_sent()
-    assert render(lv) =~ "This letter has no PDF to send."
+    assert %{content: "%PDF" <> _rest} = saved = SavedPDF.letter_attachment(letter)
+
+    assert_email_sent(fn email ->
+      assert [%{data: data}] = email.attachments
+      assert data == saved.content
+    end)
   end
 
   describe "hours" do
