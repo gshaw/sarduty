@@ -62,6 +62,11 @@ defmodule App.Report.Expr do
   end
 
   def compile({:op, op, left, right, line}, st), do: compare(op, left, right, line, st)
+
+  # Arithmetic is a form's (App.Document, #950).
+  def compile({:arith, _op, _left, _right, line}, _st),
+    do: fail(line, "Take out the arithmetic: a report cannot add, subtract, multiply, or divide.")
+
   def compile({:is_null, inner, negated?, line}, st), do: null(compile(inner, st), negated?, line)
 
   def compile({:in, inner, items, negated?, line}, st),

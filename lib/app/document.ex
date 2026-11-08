@@ -18,10 +18,16 @@ defmodule App.Document do
     or a form's `activity`, read as `:activity`
   - `where`: which activities show a form, a condition on `activities`, or nil for all
   - `reports`: `%{name, query, line}`, each an App.Report.Query; after `check/2` each has
-    `columns` too, and `team` and `organization` are reports of the fields it names
-  - `asks`: `%{name, label, remember, default, choices, hint, line}`, what a person
+    `columns` too, `rows` when it has a row each, and `team` and `organization` are
+    reports of the fields it names
+  - `consts`: `%{name, values, line}`, each value `%{value, from}`: the first holds
+    before any day, and each after it from its day
+  - `asks`: `%{name, label, remember, default, choices, hint, each, line}`, what a person
     answers, read as `:name`; `default` is a value, and `remember` starts from the
-    team's last answer, which is the caller's to give
+    team's last answer, which is the caller's to give. With `each`, a report's name, it's
+    an answer on each of the report's rows, read in the row by its bare name
+  - `computes`: `%{name, each, value, line}` in order: a value worked out from those
+    above it, or with `each` one for each of a report's rows
   - `title`: `%{text, by, line}`, the PDF's title and author
   - `lock`: `:print` when the PDF can only be printed, or nil
   - `keep`: the values saved with the PDF
@@ -30,7 +36,9 @@ defmodule App.Document do
     points, each a `:text`, an `:image`, a `:tick` (an X in a box), or a `:flow` that
     stacks values down the page, or across it; `page` is which page of the form's page
   - `fill`: `%{place, value, line}`, a flow's value `{:flow, items}`
-  - `expects`: `%{given, check, line}`, worked examples CI runs (`expect/1`)
+  - `expects`: `%{given, check, line}`, worked examples CI runs (`expect/1`); `given`
+    holds `{target, value, line}`, and `{:row, report, [{name, value, line}], line}` for
+    a row
   - `types`: after `check/2`, each name's type
   """
 
@@ -47,7 +55,9 @@ defmodule App.Document do
             for: [],
             where: nil,
             reports: [],
+            consts: [],
             asks: [],
+            computes: [],
             title: nil,
             lock: nil,
             keep: [],
@@ -117,20 +127,54 @@ defmodule App.Document do
   A checked form's answers from what a person typed, by the ask's name: `{:ok, values}`
   with each as `:name`, ready for `evaluate/3`, or `{:error, %{name => message}}`. A
   blank answer is left out, so its default holds.
+
+  An `ask each` answer is typed for each row, `%{name => %{row => text}}`, where `row`
+  is the row's key, such as `"member:12"`. It's `{name, row}` in the values, and its
+  error `%{name => %{row => message}}`.
   """
   def answers(%__MODULE__{} = doc, typed) when is_map(typed) do
-    results =
-      for ask <- doc.asks,
-          text = typed |> Map.get(ask.name) |> to_string() |> String.trim(),
-          text != "",
-          do: {ask.name, answer(ask, doc.types[":#{ask.name}"], text)}
-
-    errors = for {name, {:error, text}} <- results, into: %{}, do: {name, text}
-
-    if errors == %{},
-      do: {:ok, Map.new(results, fn {name, {:ok, value}} -> {":#{name}", value} end)},
-      else: {:error, errors}
+    results = Enum.flat_map(doc.asks, &read_answers(doc, &1, Map.get(typed, &1.name)))
+    errors = Enum.reduce(results, %{}, &put_error/2)
+    if errors == %{}, do: {:ok, Map.new(results, &answered/1)}, else: {:error, errors}
   end
+
+  defp read_answers(doc, ask, typed) do
+    type = ask_type(doc, ask)
+    for {row, text} <- typed_texts(ask, typed), do: {ask, row, answer(ask, type, text)}
+  end
+
+  defp answered({ask, nil, {:ok, value}}), do: {":#{ask.name}", value}
+  defp answered({ask, row, {:ok, value}}), do: {{ask.name, row}, value}
+
+  defp put_error({ask, nil, {:error, message}}, errors), do: Map.put(errors, ask.name, message)
+
+  defp put_error({ask, row, {:error, message}}, errors),
+    do: Map.update(errors, ask.name, %{row => message}, &Map.put(&1, row, message))
+
+  defp put_error(_answered, errors), do: errors
+
+  @doc "A checked form's type for an ask's answer: `:text`, `:number`, or `:day`."
+  def ask_type(%__MODULE__{types: types}, %{each: nil, name: name}), do: types[":#{name}"]
+
+  def ask_type(%__MODULE__{types: types}, %{each: report, name: name}),
+    do: types |> Checker.row_types(report) |> Map.get(name)
+
+  # What a person typed, as `{row, text}`, leaving out blanks: row nil for one answer.
+  defp typed_texts(%{each: nil}, text), do: trimmed(nil, text)
+
+  defp typed_texts(_ask, rows) when is_map(rows),
+    do: Enum.flat_map(rows, fn {row, text} -> trimmed(to_string(row), text) end)
+
+  defp typed_texts(_ask, _other), do: []
+
+  defp trimmed(row, text) when is_binary(text) or is_number(text) do
+    case text |> to_string() |> String.trim() do
+      "" -> []
+      text -> [{row, text}]
+    end
+  end
+
+  defp trimmed(_row, _blank), do: []
 
   defp answer(%{choices: [_ | _] = choices}, _type, text) do
     if text in choices,
@@ -175,6 +219,48 @@ defmodule App.Document do
     end
   end
 
+  @doc """
+  `values` with every row of a report that has a row each, as `name`: a list of `%{key,
+  values}`, each column by its name. `key` is the row's first member or item, as
+  `"member:12"`, which keeps its answers; a record's value is its name.
+  """
+  def put_rows(values, name, %Query{} = query, %Result{} = result, records \\ %{}) do
+    names = Enum.map(query.select, &Evaluator.name/1)
+    key_at = Enum.find_index(result.columns, &keyed?/1)
+
+    rows =
+      for row <- result.rows,
+          do: %{
+            key: row_key(row, result.columns, key_at),
+            values: cells(row, names, result, records)
+          }
+
+    Map.put(values, name, rows)
+  end
+
+  defp cells(row, names, result, records) do
+    cells =
+      row
+      |> Enum.zip(result.columns)
+      |> Enum.map(fn {value, column} -> cell(value, column, records) end)
+
+    names |> Enum.zip(cells) |> Map.new()
+  end
+
+  defp keyed?(%{type: {:record, kind}}), do: kind in [:member, :item]
+  defp keyed?(_column), do: false
+
+  defp row_key(_row, _columns, nil), do: nil
+
+  defp row_key(row, columns, at) do
+    %{type: {:record, kind}} = Enum.at(columns, at)
+
+    case Enum.at(row, at) do
+      nil -> nil
+      id -> "#{kind}:#{id}"
+    end
+  end
+
   defp cell(nil, _column, _records), do: nil
 
   defp cell(id, %{type: {:record, kind}}, records) do
@@ -195,6 +281,14 @@ defmodule App.Document do
   """
   def evaluate(%__MODULE__{} = doc, values, timezone) when is_map(values),
     do: Evaluator.evaluate(doc, values, timezone)
+
+  @doc """
+  The values a checked document reads from `values`, worked out as `evaluate/3` works
+  them out: each answer at its default, each report's rows with their answers and
+  values, and each compute. A form's page shows them.
+  """
+  def values(%__MODULE__{} = doc, values, timezone) when is_map(values),
+    do: Evaluator.prepare(doc, values, timezone).values
 
   @doc "A place's text, as `expect` reads it: a flow's lines, a blank line for each space."
   defdelegate text(output, place), to: Evaluator

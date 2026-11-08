@@ -126,8 +126,15 @@ defmodule Service.Format do
   @doc ~s(A distance in whole km: "42 km", "1,204 km".)
   def km(n) when is_number(n), do: number(n) <> " km"
 
-  @doc ~s(Dollars and cents: "$0.67", "$1,204.50".)
-  def money(n) when is_number(n), do: cents(round(n * 100))
+  @doc """
+  Dollars and cents: "$0.67", "$1,204.50". Exact: a form's sums are decimals (#950), and
+  a float is read as written, so half a cent rounds up, as 11.265 is "$11.27".
+  """
+  def money(%Decimal{} = n),
+    do: n |> Decimal.round(2, :half_up) |> Decimal.mult(100) |> Decimal.to_integer() |> cents()
+
+  def money(n) when is_float(n), do: money(Decimal.from_float(n))
+  def money(n) when is_integer(n), do: cents(n * 100)
 
   defp cents(c) when c < 0, do: "-" <> cents(-c)
 

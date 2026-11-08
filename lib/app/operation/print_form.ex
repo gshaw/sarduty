@@ -60,12 +60,18 @@ defmodule App.Operation.PrintForm do
     end
   end
 
-  @doc "What's wrong with the answers, `%{name => message}`, each after its ask's label."
+  @doc """
+  What's wrong with the answers, `%{name => message}`, each after its ask's label. An
+  answer on each row says each of its rows' messages once.
+  """
   def errors_text(%Document{} = doc, errors) do
     doc.asks
     |> Enum.filter(&Map.has_key?(errors, &1.name))
-    |> Enum.map_join(" ", &"#{&1.label}: #{errors[&1.name]}")
+    |> Enum.map_join(" ", &"#{&1.label}: #{message(errors[&1.name])}")
   end
+
+  defp message(rows) when is_map(rows), do: rows |> Map.values() |> Enum.uniq() |> Enum.join(" ")
+  defp message(message), do: message
 
   defp attachment(pdf, title) do
     %{

@@ -6,7 +6,9 @@ defmodule App.Operation.ReadDocument do
 
   A tax credit letter starts from a member and a year, and a form from an activity. The
   reports read the context's database, so a form tried on Coast Range SAR reads
-  App.SampleRepo and nothing else.
+  App.SampleRepo and nothing else. A report with a row each, which a form's `compute
+  each` or `ask each` reads, adds every row (`App.Document.put_rows/5`) and nothing to
+  `read`.
   """
 
   alias App.Document
@@ -43,13 +45,15 @@ defmodule App.Operation.ReadDocument do
     context = %{context | team: context.repo.preload(context.team, :organization)}
     given = Map.new(starts, fn {name, value} -> {to_string(name), to_string(value)} end)
 
-    doc
-    |> Document.queries()
-    |> Enum.reduce_while({:ok, start(context, starts), []}, &add_report(&1, &2, context, given))
+    Enum.reduce_while(
+      doc.reports,
+      {:ok, start(context, starts), []},
+      &add_report(&1, &2, context, given)
+    )
   end
 
-  defp add_report({name, query}, {:ok, values, read}, context, given) do
-    case put_report(values, name, query, context, given) do
+  defp add_report(report, {:ok, values, read}, context, given) do
+    case put_report(values, report, context, given) do
       {:ok, values, entries} -> {:cont, {:ok, values, read ++ entries}}
       {:error, reason} -> {:halt, {:error, reason}}
     end
@@ -63,13 +67,19 @@ defmodule App.Operation.ReadDocument do
     |> Map.put("today", context.today)
   end
 
-  # The report's first row, added to `values`, and its columns as `read` lists them.
-  defp put_report(values, name, query, context, given) do
+  # The report's first row, or every row, added to `values`, and its columns as `read`
+  # lists them.
+  defp put_report(values, %{name: name, query: query} = report, context, given) do
     with {:ok, plan} <- Compiler.compile(query, context, given),
          {:ok, result} <- Runner.run(plan, context.timezone, context.repo) do
       records = ReportRecords.names(result, context.team, context.repo)
-      values = Document.put_row(values, name, query, result, records)
-      {:ok, values, read(values, name, query, result)}
+
+      if Map.get(report, :rows, false) do
+        {:ok, Document.put_rows(values, name, query, result, records), []}
+      else
+        values = Document.put_row(values, name, query, result, records)
+        {:ok, values, read(values, name, query, result)}
+      end
     end
   end
 

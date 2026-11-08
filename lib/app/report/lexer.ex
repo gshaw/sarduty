@@ -3,14 +3,15 @@ defmodule App.Report.Lexer do
   Splits a report query into tokens, each with its line. Pure.
 
   Tokens are `{:word, text, line}` for names and keywords, `{:string, text, line}` for a
-  quoted value, `{:number, n, line}`, `{:value, name, line}` for `:name`, and
-  `{:symbol, text, line}` for punctuation and operators. `--` starts a comment to the end
+  quoted value, `{:number, n, line}`, `{:date, date, line}` for a day written
+  `2026-04-15`, `{:value, name, line}` for `:name`, and `{:symbol, text, line}` for
+  punctuation and operators. `15%` is the number 0.15. `--` starts a comment to the end
   of the line.
   """
 
   alias App.Report.Error
 
-  @symbols ["<=", ">=", "!=", "<>", "=", "<", ">", "(", ")", ",", ".", ":", "*"]
+  @symbols ["<=", ">=", "!=", "<>", "=", "<", ">", "(", ")", ",", ".", ":", "*", "+", "-", "/"]
 
   @doc "The tokens, or `{:error, %Error{}}` at the first character it cannot read."
   def tokens(text) when is_binary(text), do: scan(text, 1, [])
@@ -60,16 +61,12 @@ defmodule App.Report.Lexer do
     scan(rest, line, [{:value, name, line} | acc])
   end
 
+  # A day, as a form's rates and examples write it (#950): 2026-04-15. Otherwise a number.
   defp scan(<<c, _::binary>> = text, line, acc) when c in ?0..?9 do
-    [digits | _] = Regex.run(~r/^\d+(\.\d+)?/, text)
-    rest = binary_part(text, byte_size(digits), byte_size(text) - byte_size(digits))
-
-    number =
-      if String.contains?(digits, "."),
-        do: String.to_float(digits),
-        else: String.to_integer(digits)
-
-    scan(rest, line, [{:number, number, line} | acc])
+    case Regex.run(~r/^\d{4}-\d\d-\d\d(?!\d)/, text) do
+      [day] -> date(day, text, line, acc)
+      nil -> number(text, line, acc)
+    end
   end
 
   defp scan(<<c, _::binary>> = text, line, acc) when c in ?a..?z or c in ?A..?Z or c == ?_ do
@@ -88,6 +85,39 @@ defmodule App.Report.Lexer do
         rest = binary_part(text, byte_size(symbol), byte_size(text) - byte_size(symbol))
         scan(rest, line, [{:symbol, symbol, line} | acc])
     end
+  end
+
+  defp date(day, text, line, acc) do
+    rest = binary_part(text, byte_size(day), byte_size(text) - byte_size(day))
+
+    case Date.from_iso8601(day) do
+      {:ok, date} -> scan(rest, line, [{:date, date, line} | acc])
+      {:error, _reason} -> {:error, Error.new(line, "Write a real date, such as 2026-04-15.")}
+    end
+  end
+
+  # A number, or a percent: 15% is 0.15, worked out from the digits so 14.3% is 0.143.
+  defp number(text, line, acc) do
+    [digits | _] = Regex.run(~r/^\d+(\.\d+)?%?/, text)
+    rest = binary_part(text, byte_size(digits), byte_size(text) - byte_size(digits))
+
+    number =
+      cond do
+        String.ends_with?(digits, "%") ->
+          digits |> String.trim_trailing("%") |> Decimal.new() |> Decimal.div(100) |> plain()
+
+        String.contains?(digits, ".") ->
+          String.to_float(digits)
+
+        true ->
+          String.to_integer(digits)
+      end
+
+    scan(rest, line, [{:number, number, line} | acc])
+  end
+
+  defp plain(decimal) do
+    if Decimal.integer?(decimal), do: Decimal.to_integer(decimal), else: Decimal.to_float(decimal)
   end
 
   # A quote written twice is one quote inside the value: 'Can''t make it'.

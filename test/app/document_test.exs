@@ -4,6 +4,7 @@ defmodule App.DocumentTest do
   # cspell:ignore totl incidnt -- misspelled on purpose
 
   alias App.Document
+  alias App.Document.Checker
   alias App.Model.Member
   alias App.Model.Team
   alias App.Report.Context
@@ -76,6 +77,20 @@ defmodule App.DocumentTest do
     {:ok, doc} = Document.check(doc, sample_context())
     doc
   end
+
+  defp claim do
+    {:ok, doc} = "test/support/fixtures/forms/claim_rules.txt" |> File.read!() |> Document.parse()
+    {:ok, doc} = Document.check(doc, sample_context())
+    doc
+  end
+
+  # What a small form works out, from the consts, asks, and computes in `head`.
+  defp worked(head, values \\ %{}, timezone \\ "America/Vancouver") do
+    {:ok, doc} = checked(form(head))
+    Document.values(doc, values, timezone)
+  end
+
+  defp money(values, name), do: Service.Format.money(values[name])
 
   test "every document parses, checks against the catalog, and its expects hold" do
     names = Document.names()
@@ -272,6 +287,210 @@ defmodule App.DocumentTest do
     end
   end
 
+  describe "arithmetic" do
+    test "the claim's rules check on Coast Range SAR, and their expects hold" do
+      doc = claim()
+
+      assert Document.expect(doc) == :ok
+      assert Enum.map(doc.consts, & &1.name) == ~w(km_rate meal meals_a_day equipment_rate ohs)
+
+      assert [%{value: 0.65, from: nil}, %{value: 0.67, from: ~D[2026-04-15]}] =
+               hd(doc.consts).values
+
+      assert List.last(doc.consts).values == [%{value: 0.15, from: nil}]
+      assert for(%{each: "people", name: name} <- doc.asks, do: name) == ~w(on_task meals_given)
+      assert for(%{rows: true, name: name} <- doc.reports, do: name) == ~w(people equipment)
+      assert doc.types |> Checker.row_types("people") |> Map.fetch!("meals_given") == :number
+    end
+
+    test "works out each person's claim, and the totals, in exact decimals" do
+      values = %{
+        "task.`Response Type`" => "Response",
+        "people" => [
+          %{
+            key: "member:7",
+            values: %{
+              "member" => "Avery Chen",
+              "started_at" => ~U[2026-06-01 15:00:00Z],
+              "finished_at" => ~U[2026-06-01 21:30:00Z],
+              "km" => 30
+            }
+          },
+          # Starts on Apr 14 in Vancouver, before the new rate, and runs 26 hours.
+          %{
+            key: "member:8",
+            values: %{
+              "member" => "Jordan Lee",
+              "started_at" => ~U[2026-04-15 06:00:00Z],
+              "finished_at" => ~U[2026-04-16 08:00:00Z],
+              "km" => 12
+            }
+          }
+        ],
+        {"meals_given", "member:8"} => 1,
+        ":misc" => 40
+      }
+
+      values = Document.values(claim(), values, "America/Vancouver")
+      [avery, jordan] = Enum.map(values["people"], & &1.values)
+
+      # 30 km at $0.67, 2 meals, and a day's equipment.
+      assert avery["rate"] == 0.67
+      assert Decimal.eq?(avery["hours"], "6.5")
+      assert {money(avery, "meals"), money(avery, "allowance")} == {"$2.00", "$25.00"}
+      assert money(avery, "total") == "$75.10"
+
+      # 12 km at $0.65, 8 meals less the 1 given, and 2 days' equipment.
+      assert jordan["rate"] == 0.65
+      assert jordan["meals_given"] == 1
+      assert money(jordan, "total") == "$162.80"
+
+      assert money(values, "personnel") == "$237.90"
+      assert money(values, "subtotal") == "$277.90"
+      # 15% of $277.90 is $41.685, which rounds up.
+      assert money(values, "ohs_total") == "$41.69"
+      assert money(values, "total") == "$319.59"
+      assert Decimal.to_string(values["total"]) == "319.59"
+    end
+
+    test "a blank counts as 0, dividing by 0 is blank, and decimals are exact" do
+      values =
+        worked("""
+        report task
+          select attended_count from activities where id = :activity
+        ask a 'A' default 0
+        compute
+          x = :a + 1
+          y = 1 / :a
+          z = task.attended_count * 2
+          w = 0.1 + 0.2
+        """)
+
+      assert Decimal.eq?(values["x"], 1)
+      assert values["y"] == nil
+      assert Decimal.eq?(values["z"], 0)
+      assert Decimal.to_string(values["w"]) == "0.3"
+    end
+
+    test "functions: days, floor, round, min, max, and hours" do
+      values =
+        worked(
+          """
+          report task
+            select started_at, finished_at, attended_hours from activities where id = :activity
+          compute
+            a = days(6)
+            b = days(25)
+            c = days(0)
+            d = floor(7 / 3)
+            e = round(2.5)
+            f = round(11.265, 2)
+            g = min(3, 1, 2)
+            h = max(0, 2 - 5)
+            i = hours(task.started_at, task.finished_at)
+            j = hours(task.attended_hours)
+            k = hours(2026-06-01, 2026-06-02)
+          """,
+          %{
+            "task.started_at" => ~U[2026-06-01 15:00:00Z],
+            "task.finished_at" => ~U[2026-06-01 19:45:00Z],
+            "task.attended_hours" => 870
+          }
+        )
+
+      texts = Map.new(~w(a b c d e f g h i j k), &{&1, Decimal.to_string(values[&1], :normal)})
+
+      assert texts == %{
+               "a" => "1",
+               "b" => "2",
+               "c" => "0",
+               "d" => "2",
+               "e" => "3",
+               "f" => "11.27",
+               "g" => "1",
+               "h" => "0",
+               "i" => "4.75",
+               "j" => "14.5",
+               "k" => "24"
+             }
+    end
+
+    test "a const reads on a day: the last value that starts by then" do
+      head = """
+      report task
+        select started_at from activities where id = :activity
+      const rate = 0.65, 0.67 from 2026-04-15, 0.70 from 2027-01-01
+      ask day 'Day' default today
+      compute
+        on_day = rate on :day
+        started = rate on task.started_at
+      """
+
+      for {day, rate} <- [
+            {~D[2026-04-14], 0.65},
+            {~D[2026-04-15], 0.67},
+            {~D[2027-03-01], 0.7}
+          ],
+          do: assert(worked(head, %{":day" => day})["on_day"] == rate)
+
+      # 06:00 UTC is still Apr 14 in Vancouver.
+      started = %{"task.started_at" => ~U[2026-04-15 06:00:00Z]}
+      assert worked(head, started)["started"] == 0.65
+      assert worked(head, started, "Etc/UTC")["started"] == 0.67
+      assert worked(head)["started"] == nil
+    end
+
+    test "an answer on each row is typed for the row's member, and read in its row" do
+      doc = claim()
+
+      typed = %{
+        "on_task" => %{"member:7" => "No"},
+        "meals_given" => %{"member:7" => "2", "member:8" => "a few"},
+        "misc" => "12.50"
+      }
+
+      assert Document.answers(doc, typed) ==
+               {:error, %{"meals_given" => %{"member:8" => "Enter a number, such as 3."}}}
+
+      typed = put_in(typed["meals_given"]["member:8"], " ")
+
+      assert {:ok, answers} = Document.answers(doc, typed)
+
+      assert answers == %{
+               {"on_task", "member:7"} => "No",
+               {"meals_given", "member:7"} => 2,
+               ":misc" => 12.5
+             }
+
+      row = %{key: "member:7", values: %{"started_at" => ~U[2026-06-01 15:00:00Z], "km" => 10}}
+      values = Map.put(answers, "people", [row])
+      [row] = Document.values(doc, values, "America/Vancouver")["people"]
+
+      # Off task, a person claims only their km.
+      assert row.values["on_task"] == "No"
+      assert Decimal.eq?(row.values["meals"], 0)
+      assert Service.Format.money(row.values["total"]) == "$6.70"
+    end
+
+    test "a report with a row each keeps every row, by its member or item" do
+      {:ok, query} = Parser.parse("select member, km from attendance")
+
+      result = %Result{
+        columns: [%{type: {:record, :member}}, %{type: :km}],
+        rows: [[7, 30], [8, nil]]
+      }
+
+      records = %{member: %{7 => %Member{id: 7, name: "Avery Chen"}}}
+
+      assert Document.put_rows(%{}, "people", query, result, records) == %{
+               "people" => [
+                 %{key: "member:7", values: %{"member" => "Avery Chen", "km" => 30}},
+                 %{key: "member:8", values: %{"member" => nil, "km" => nil}}
+               ]
+             }
+    end
+  end
+
   describe "mistakes" do
     test "name the line and say how to fix it" do
       assert error("for member") =~ "Start with document"
@@ -402,6 +621,108 @@ defmodule App.DocumentTest do
 
       assert error("form 'A'\nfor activity\npage x") ==
                "Line 3: Write page alone: the values print on the form's own page."
+    end
+
+    test "check consts and computes" do
+      assert error(form("const rate = 0.67 from 2026-04-15")) ==
+               "Line 3: Start with the value before any day, such as 0.65, 0.67 from 2026-04-15."
+
+      assert error(form("const rate = 1, 2 from 2026-05-01, 3 from 2026-04-01")) ==
+               "Line 3: Write the values in order of the day each starts, earliest first."
+
+      assert error(form("const rate = 1, 2")) =~
+               "Line 3: Write the day each later value starts"
+
+      assert error(form("const rate = 1, 'a' from 2026-05-01")) ==
+               "Line 3: Give rate values of one kind: all numbers, text, or dates."
+
+      assert error(form("const today = 1")) ==
+               "Line 3: Give the const another name: today is used above."
+
+      assert error(form("const rate = 0.65, 0.67 from 2026-04-15\ncompute\n  x = rate * 2")) ==
+               "Line 5: Read rate on a day, such as rate on started_at: it changes on 2026-04-15."
+
+      assert error(form("compute\n  x = rate on today")) ==
+               "Line 4: Read a const on a day, such as km_rate on started_at, not rate."
+
+      assert error(form("const rate = 1\ncompute\n  x = rate on 3")) ==
+               "Line 5: Write a day after on, such as rate on started_at."
+
+      assert error(form("compute\n  x = 1\ncompute\n  x = 2")) ==
+               "Line 6: Give the compute another name: x is used above."
+
+      assert error(form("compute\n  x = y + 1\n  y = 2")) =~ "Line 4: There is no y."
+      assert error(form("compute\n  x =")) == "Line 4: Write a value after =."
+      assert error(form("compute x = 1")) =~ "Line 3: Write compute alone, or compute each"
+    end
+
+    test "check arithmetic and functions" do
+      assert error(form("compute\n  x = 'a' + 1")) == "Line 4: Use a number here, not 'a'."
+
+      duration =
+        "report task\n  select attended_hours from activities where id = :activity\ncompute\n" <>
+          "  x = task.attended_hours * 2"
+
+      assert error(form(duration)) ==
+               "Line 6: Read task.attended_hours in hours with hours(task.attended_hours): " <>
+                 "a duration is kept in minutes."
+
+      assert error(form("compute\n  x = floor(1, 2)")) ==
+               "Line 4: Give floor one number, such as floor(hours / 3)."
+
+      assert error(form("compute\n  x = round(1, 'a')")) ==
+               "Line 4: Give round a number and how many decimals, such as round(total, 2)."
+
+      assert error(form("compute\n  x = min(1)")) ==
+               "Line 4: Give min two numbers or more, such as min(0, total)."
+
+      assert error(form("compute\n  x = hours(today)")) =~ "Line 4: Give hours a duration"
+
+      assert error(form("compute\n  x = count(1)")) ==
+               "Line 4: There is no function count. Use coalesce, qr, hours, days, floor, round, min, max, sum."
+
+      assert error(form("compute\n  x = -today")) =~ "Line 4: Write a number after -"
+    end
+
+    test "check each report's rows" do
+      people =
+        "report people\n  select member, km from attendance where activity.id = :activity\n"
+
+      assert error(form("compute each people\n  x = 1")) ==
+               "Line 4: There is no report people. Write report people and its query above."
+
+      assert error(form(people <> "compute each people\n  km = 1")) ==
+               "Line 6: Give the compute another name: km is one of people's values."
+
+      assert error(form(people <> "compute each people\n  x = km\ncompute\n  y = people.x")) ==
+               "Line 8: Add up people.x with sum(people.x): people has a row each."
+
+      assert error(form(people <> "compute\n  y = sum(km)")) ==
+               "Line 6: Give sum one column of a report with a row each, such as sum(people.total)."
+
+      assert error(
+               form(people <> "compute each people\n  x = km\ncompute\n  y = sum(people.kms)")
+             ) ==
+               "Line 8: people has no kms. Did you mean km?"
+
+      assert error(form(people <> "ask each people a 'A' remember")) ==
+               "Line 5: Take out remember: an answer for each row starts from its default."
+
+      assert error(form(people <> "ask each people km 'Km'")) ==
+               "Line 5: Give the ask another name: km is one of people's values."
+
+      no_member = "report people\n  select km from attendance where activity.id = :activity\n"
+
+      assert error(form(no_member <> "ask each people a 'A'")) ==
+               "Line 5: Select member or item in report people: each row's answer is kept by it."
+
+      rows = form(people <> "compute each people\n  y = 1")
+
+      assert error(rows <> "expect with people kms 30: y = 1\n") ==
+               "Line 12: people has no kms. Did you mean km?"
+
+      assert error(rows <> "expect with task hours 3: y = 1\n") =~
+               "Line 12: There is no report task with a row each."
     end
 
     test "never keep what only printing reads" do
