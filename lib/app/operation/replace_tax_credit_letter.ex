@@ -21,7 +21,7 @@ defmodule App.Operation.ReplaceTaxCreditLetter do
       |> Ecto.Changeset.put_change(:inserted_at, DateTime.add(now, 0, :microsecond))
 
     # Printed before the transaction, which holds the write lock.
-    pdf = changeset |> Ecto.Changeset.apply_changes() |> SaveTaxCreditLetterPDF.draw(read)
+    pdf = changeset |> Ecto.Changeset.apply_changes() |> SaveTaxCreditLetterPDF.draw!(read)
 
     {:ok, letter} =
       Repo.transaction(fn ->

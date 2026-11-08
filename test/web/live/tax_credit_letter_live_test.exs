@@ -74,6 +74,22 @@ defmodule Web.TaxCreditLetterLiveTest do
     assert render(lv) =~ "has no email."
   end
 
+  test "says so when the letter has no PDF, and sends nothing", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    letter = team |> member_fixture() |> tax_credit_letter_fixture()
+    App.Model.SavedPDF.delete_letter!(letter)
+
+    {:ok, lv, _html} =
+      conn
+      |> log_in_user(user)
+      |> live(~p"/teams/#{team}/tax-credit-letters/#{letter.id}")
+
+    lv |> element("#email-letter") |> render_click()
+
+    assert_no_email_sent()
+    assert render(lv) =~ "This letter has no PDF to send."
+  end
+
   describe "hours" do
     setup do
       %{user: user, team: team} = user_with_team_fixture()

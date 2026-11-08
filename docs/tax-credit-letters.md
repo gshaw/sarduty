@@ -58,16 +58,13 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
 - **The letterhead is the organization's logo, then the team's** (#290), top right. Either
   is left out when it's missing, and a team without a logo never gets SAR Duty's. Logos
   are the ones the team has when the PDF is drawn, and the saved PDF keeps them.
-- **A letter's PDF is kept as it was made** (#918), one of the
-  [saved PDFs](documents.md#saved-pdfs), and replaced when the letter is. Making or replacing a letter draws it
-  before the write transaction, which holds SQLite's one write lock
+- **Making or replacing a letter publishes it** (#918): its PDF prints once and is
+  kept as it was made, one of the [saved PDFs](documents.md#saved-pdfs), and replaced
+  when the letter is. It prints before the write transaction, which holds SQLite's one
+  write lock, and a print that fails makes or replaces nothing
   ([SaveTaxCreditLetterPDF](../lib/app/operation/save_tax_credit_letter_pdf.ex)).
-  Downloads and emails serve the saved file
-  ([LoadTaxCreditLetterPDF](../lib/app/operation/load_tax_credit_letter_pdf.ex)), so a
-  member gets the same file every time. Letters made before it got theirs at boot, drawn
-  by the old code. A letter without one, such as a name that code couldn't draw
-  (#917), is printed from the document when it's first downloaded or emailed, with its
-  own hours, reference number, and date, and the team's logos and signature now.
+  Downloads and emails serve only the saved file and never print, so a member gets the
+  same file every time. A letter without one is a 404, and its email fails.
 - **The signature is the team's when the PDF is printed**, and the saved PDF keeps it.
   The letter keeps no copy of its own (#918).
 - **The QR code is vector**, an SVG from `eqrcode`, its bottom level with the letter's

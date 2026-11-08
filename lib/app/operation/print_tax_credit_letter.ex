@@ -3,8 +3,8 @@ defmodule App.Operation.PrintTaxCreditLetter do
   Prints a tax credit letter from its document, priv/documents/tax_credit_letter.txt
   (#918): runs the document's reports for the member and year, adds the pictures and
   the PDF's reference and verify link, and prints it with Typst
-  (App.Operation.PrintDocument). Only App.Operation.SaveTaxCreditLetterPDF and
-  App.Operation.LoadTaxCreditLetterPDF print: everything else serves the saved PDF.
+  (App.Operation.PrintDocument). Only App.Operation.SaveTaxCreditLetterPDF prints,
+  when a letter is made or replaced: everything else serves the saved PDF.
 
   A letter prints its own hours, reference number, and date certified, so one made
   before letters kept their PDF prints what it says.

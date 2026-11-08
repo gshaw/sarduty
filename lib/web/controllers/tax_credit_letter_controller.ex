@@ -2,11 +2,11 @@ defmodule Web.TaxCreditLetterController do
   use Web, :controller
 
   alias App.Model.TaxCreditLetter
-  alias App.Operation.LoadTaxCreditLetterPDF
+  alias App.Model.SavedPDF
 
   def show(conn, %{"id" => tax_credit_letter_id}) do
     tax_credit_letter = TaxCreditLetter.find!(conn.assigns.current_team, tax_credit_letter_id)
-    attachment = LoadTaxCreditLetterPDF.call(tax_credit_letter)
+    attachment = SavedPDF.letter_attachment(tax_credit_letter) || raise(Web.Status.NotFound)
 
     conn
     |> put_resp_content_type(attachment.content_type)

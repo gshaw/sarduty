@@ -9,7 +9,6 @@ defmodule App.Operation.SaveTaxCreditLetterPDFTest do
   alias App.Model.TaxCreditLetter
   alias App.Operation.CreateTaxCreditLetter
   alias App.Operation.DeleteTaxCreditLetter
-  alias App.Operation.LoadTaxCreditLetterPDF
   alias App.Operation.ReplaceTaxCreditLetter
 
   # Ł is past WinAnsi, all the pdf package wrote before letters printed with Typst (#917).
@@ -37,27 +36,6 @@ defmodule App.Operation.SaveTaxCreditLetterPDFTest do
 
       assert letter.letter_content =~ @past_win_ansi
       assert %{content: "%PDF" <> _rest} = SavedPDF.letter_attachment(letter)
-    end
-  end
-
-  describe "downloading or emailing" do
-    test "serves the saved file, not one drawn with the team's logo now",
-         %{team: team, member: member} do
-      letter = create(team, member)
-      saved = SavedPDF.letter_attachment(letter).content
-      team_logo_fixture(team, png_fixture(300, 150))
-
-      assert LoadTaxCreditLetterPDF.call(letter).content == saved
-    end
-
-    test "prints and saves one for a letter that has none", %{member: member} do
-      letter = member |> tax_credit_letter_fixture() |> Repo.preload(member: :team)
-      assert SavedPDF.letter_attachment(letter) == nil
-
-      attachment = LoadTaxCreditLetterPDF.call(letter)
-
-      assert attachment.content =~ "%PDF"
-      assert SavedPDF.letter_attachment(letter) == attachment
     end
   end
 
