@@ -43,8 +43,7 @@ defmodule App.Operation.SignUpTeam do
              d4h_team,
              members,
              existing,
-             DateTime.utc_now(),
-             D4H.service(view_model.api_host)
+             DateTime.utc_now()
            ) do
       {:ok, whoami, d4h_team, signer}
     end
@@ -52,12 +51,11 @@ defmodule App.Operation.SignUpTeam do
 
   @doc """
   Whether this email may sign the team up: it isn't on SAR Duty yet, and the email
-  belongs to one of its current Owners or Editors in `service`, D4H or Records. Returns
-  that member, or the form field and message to show.
+  belongs to one of its current Owners or Editors. Returns that member, or the form field
+  and message to show. The messages name no service, D4H or Records: "your team".
   """
-  def check(email, d4h_team, members, existing_team, now, service \\ :d4h) do
+  def check(email, d4h_team, members, existing_team, now) do
     email = email |> String.trim() |> String.downcase()
-    name = D4H.service_name(service)
     signer = Enum.find(members, &(String.downcase(&1.email || "") == email))
 
     cond do
@@ -69,10 +67,10 @@ defmodule App.Operation.SignUpTeam do
       signer == nil ->
         {:error,
          {:email,
-          "Enter the email #{name} has for you. No member of #{d4h_team.name} uses this one."}}
+          "Enter the email your team has for you. No member of #{d4h_team.name} uses this one."}}
 
       not manager?(signer, now) ->
-        {:error, {:email, "Use the email of an Owner or Editor of #{d4h_team.name} in #{name}."}}
+        {:error, {:email, "Use the email of an Owner or Editor of #{d4h_team.name}."}}
 
       true ->
         {:ok, signer}
