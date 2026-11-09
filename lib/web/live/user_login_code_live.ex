@@ -75,6 +75,7 @@ defmodule Web.UserLoginCodeLive do
           inputmode="numeric"
           maxlength="9"
         />
+        <div :if={@field == "phone"} id="login-webotp" phx-hook="WebOTP" />
         <.input
           field={@form[:remember_me]}
           type="checkbox"
