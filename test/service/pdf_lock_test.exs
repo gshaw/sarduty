@@ -29,8 +29,8 @@ defmodule Service.PDFLockTest do
 
   defp letter_with_images do
     letter(%{
-      "logo.png" => File.read!("priv/static/images/logo-sarvac.png"),
-      "signature.png" => File.read!("priv/apple/sarduty_logo.png")
+      "logo.png" => File.read!("priv/apple/sarduty_logo.png"),
+      "signature.png" => File.read!("test/support/fixtures/files/signature.png")
     })
   end
 
