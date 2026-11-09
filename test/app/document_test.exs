@@ -139,21 +139,14 @@ defmodule App.DocumentTest do
       assert output.keep == %{"hours.primary" => 210, "hours.secondary" => 60}
     end
 
-    test "prints the logos in a row, the signature, and the verify link's QR code" do
-      values = %{
-        "team.logo" => "team png",
-        "team.signature" => "signature png",
-        "pdf.verify_link" => "https://verify.sarduty.com/letters/SRVTC-7KQ2M9XD"
-      }
+    test "prints the logos in a row and the signature" do
+      values = %{"team.logo" => "team png", "team.signature" => "signature png"}
 
       places = Map.new(Document.evaluate(letter(), values, "Etc/UTC").places, &{&1.name, &1})
 
       # No organization logo: the team's alone, in the top right corner.
       assert %{across: true, top: 72, right: 72, height: 72, gap: 18.0} = places["letterhead"]
       assert places["letterhead"].value == [{:image, "team png", %{}}]
-
-      assert %{level_with: "letter", right: 72, width: 72} = places["verify"]
-      assert places["verify"].value == {:qr, "https://verify.sarduty.com/letters/SRVTC-7KQ2M9XD"}
 
       # The signature takes the place of the blank lines.
       items = places["letter"].value
@@ -163,12 +156,33 @@ defmodule App.DocumentTest do
       assert %{size: 12, leading: 14.4, top: 72, left: 72, right: 72} = places["letter"]
     end
 
-    test "has no picture without a logo, a signature, or a link" do
+    test "has no picture without a logo or a signature" do
       places = Map.new(Document.evaluate(letter(), %{}, "Etc/UTC").places, &{&1.name, &1})
 
       assert places["letterhead"].value == []
-      assert places["verify"].value == nil
       assert {:space, 4} in places["letter"].value
+    end
+
+    test "prints the default verify code, and its verify page shows the hours (#970)" do
+      values = %{
+        "member.name" => "Avery Chen",
+        ":year" => 2025,
+        "hours.primary" => 210,
+        "hours.secondary" => 60,
+        "hours.total" => 270
+      }
+
+      output = Document.evaluate(letter(), values, "Etc/UTC")
+
+      assert output.verify_code == %{at: :bottom_left, show: :both}
+
+      assert output.shows == [
+               %{"label" => "Name", "text" => "Avery Chen"},
+               %{"label" => "Year", "text" => "2025"},
+               %{"label" => "Primary hours", "text" => "3h 30m"},
+               %{"label" => "Secondary hours", "text" => "1 hour"},
+               %{"label" => "Total hours", "text" => "4h 30m"}
+             ]
     end
 
     test "reads its reports, the team's fields, and nothing only printing reads" do
@@ -1043,6 +1057,40 @@ defmodule App.DocumentTest do
 
       assert error(rows <> "expect with task hours 3: y = 1\n") =~
                "Line 12: There is no report task with a row each."
+    end
+
+    test "verify code says where, or none (#970)" do
+      for {clause, want} <- [
+            {"", %{at: :bottom_left, show: :both}},
+            {"verify code bottom right", %{at: :bottom_right, show: :both}},
+            {"verify code top left qr only", %{at: :top_left, show: :qr}},
+            {"verify code link only", %{at: :bottom_left, show: :link}},
+            {"verify code none", :none}
+          ] do
+        {:ok, doc} = checked(doc(clause, "'x'"))
+        assert doc.verify_code == want, clause
+      end
+
+      assert error(doc("verify code middle", "'x'")) =~
+               "Line 3: Write verify code and top or bottom, left or right"
+
+      assert error(doc("verify code none\nverify code none", "'x'")) ==
+               "Line 4: Write verify code once."
+
+      assert error(doc("verify", "'x'")) =~ "Line 3: Write verify code and where it goes"
+    end
+
+    test "verify shows a label and a value a line, never what only prints (#970)" do
+      {:ok, doc} = checked(doc("verify shows\n  'Year' :year\n  'Total' 1 + 2", "'x'"))
+      assert [%{label: "Year"}, %{label: "Total"}] = doc.verify_shows
+
+      assert error(doc("verify shows", "'x'")) =~ "Line 3: Write what the verify page shows"
+
+      assert error(doc("verify shows\n  :year", "'x'")) =~
+               "Line 4: Start with the label in quotes"
+
+      assert error(doc("verify shows\n  'Signature' team.signature", "'x'")) ==
+               "Line 4: Show a value a report reads: team.signature only prints."
     end
 
     test "never keep what only printing reads" do

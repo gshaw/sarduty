@@ -4,8 +4,8 @@ defmodule App.Operation.SaveTaxCreditLetterPDFTest do
 
   import App.DataFixtures
 
-  alias App.Model.SavedPDF
-  alias App.Model.SavedPDFFile
+  alias App.Model.PublishedPDF
+  alias App.Model.PublishedPDFFile
   alias App.Model.TaxCreditLetter
   alias App.Operation.CreateTaxCreditLetter
   alias App.Operation.DeleteTaxCreditLetter
@@ -27,7 +27,7 @@ defmodule App.Operation.SaveTaxCreditLetterPDFTest do
       letter = create(team, member)
 
       assert %{content: "%PDF" <> _rest, title: "2025 SRVTC " <> _name} =
-               SavedPDF.letter_attachment(letter)
+               PublishedPDF.letter_attachment(letter)
     end
 
     test "saves one for a name past WinAnsi (#917)", %{team: team} do
@@ -35,22 +35,25 @@ defmodule App.Operation.SaveTaxCreditLetterPDFTest do
       letter = create(team, member)
 
       assert letter.letter_content =~ @past_win_ansi
-      assert %{content: "%PDF" <> _rest} = SavedPDF.letter_attachment(letter)
+      assert %{content: "%PDF" <> _rest} = PublishedPDF.letter_attachment(letter)
     end
   end
 
   describe "replacing a letter" do
     setup %{team: team, member: member} do
       letter = team |> create(member) |> Map.put(:primary_minutes, -1)
-      %{letter: letter, before: SavedPDF.letter_attachment(letter).content}
+      %{letter: letter, before: PublishedPDF.letter_attachment(letter).content}
     end
 
-    test "saves its new PDF in place of the old", %{team: team, letter: letter, before: before} do
+    test "publishes its new PDF with a new ID, and the old one says Replaced (#970)",
+         %{team: team, letter: letter, before: before} do
+      old = letter.pdf
       replaced = ReplaceTaxCreditLetter.call(team, letter)
 
-      assert SavedPDF.letter_attachment(replaced).content != before
-      assert Repo.aggregate(SavedPDF, :count) == 1
-      assert Repo.aggregate(SavedPDFFile, :count) == 1
+      assert PublishedPDF.letter_attachment(replaced).content != before
+      assert replaced.pdf.code != old.code
+      assert PublishedPDF.status(Repo.reload!(old)) == :replaced
+      assert Repo.aggregate(PublishedPDFFile, :count) == 2
     end
 
     test "saves the new PDF for a name past WinAnsi", %{team: team, letter: letter} do
@@ -60,7 +63,7 @@ defmodule App.Operation.SaveTaxCreditLetterPDFTest do
       replaced = ReplaceTaxCreditLetter.call(team, letter)
 
       assert replaced.letter_content =~ @past_win_ansi
-      assert %{content: "%PDF" <> _rest} = SavedPDF.letter_attachment(replaced)
+      assert %{content: "%PDF" <> _rest} = PublishedPDF.letter_attachment(replaced)
     end
   end
 
@@ -68,7 +71,7 @@ defmodule App.Operation.SaveTaxCreditLetterPDFTest do
     team |> create(member) |> DeleteTaxCreditLetter.call()
 
     assert Repo.aggregate(TaxCreditLetter, :count) == 0
-    assert Repo.aggregate(SavedPDF, :count) == 0
-    assert Repo.aggregate(SavedPDFFile, :count) == 0
+    assert Repo.aggregate(PublishedPDF, :count) == 0
+    assert Repo.aggregate(PublishedPDFFile, :count) == 0
   end
 end

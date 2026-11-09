@@ -27,7 +27,7 @@ defmodule App.Model.PublishedPDF do
     field :subject, :string
     # Its ID: 15 characters, stored without dashes. A letter from before #970 keeps its
     # reference number, `SRVTC-K7Q4M2XA`, or `SRVTC-M4K11` from before #207.
-    field :code, :string
+    field :code, :string, redact: true
     belongs_to :tax_credit_letter, TaxCreditLetter
     belongs_to :member, Member
     field :year, :integer
@@ -120,7 +120,7 @@ defmodule App.Model.PublishedPDF do
     Repo.transaction(fn ->
       current = get_current(attrs.team_id, attrs.name, attrs.subject)
 
-      if (current && current.id != current_id) or (current == nil and current_id != nil),
+      if (current && current.id) != current_id,
         do: Repo.rollback(:stale)
 
       # The current PDF stops being current before the new one is, since a subject has

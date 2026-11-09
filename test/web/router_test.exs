@@ -152,7 +152,10 @@ defmodule Web.RouterTest do
     {"GET", "/K7Q4M-2XA9H/photo", Web.MemberCardController, :photo},
     {"GET", "/K7Q4M-2XA9H/banner", Web.MemberCardController, :banner},
     {"GET", "/orgs/nsr", Web.VerifyLive, nil},
-    {"GET", "/letters/SRVTC-K7Q4M2XA", Web.VerifyLetterLive, nil},
+    # Printed letters link here (#207); it moves to the root (#970).
+    {"GET", "/letters/SRVTC-K7Q4M2XA", Web.VerifyController, :letter},
+    # A published PDF's verify code (#970).
+    {"GET", "/K7Q4M-2XA9H-VB3TN", Web.VerifyLive, nil},
     # Apps that scan cards hold it (#299).
     {"GET", "/api/v1/cards/K7Q4M-2XA9H", Web.CardApiController, :show}
   ]

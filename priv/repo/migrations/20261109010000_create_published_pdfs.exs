@@ -42,7 +42,10 @@ defmodule App.Repo.Migrations.CreatePublishedPdfs do
     end
 
     # A reference number from before #207 has 5 characters and was never unique.
-    create unique_index(:published_pdfs, [:code], where: "length(code) > 11")
+    create unique_index(:published_pdfs, [:code],
+             where: "length(code) > 11",
+             name: :published_pdfs_unique_code_index
+           )
     create index(:published_pdfs, [:code])
 
     create unique_index(:published_pdfs, [:team_id, :name, :subject],

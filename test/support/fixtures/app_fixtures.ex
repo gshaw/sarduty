@@ -24,7 +24,7 @@ defmodule App.DataFixtures do
   alias App.Model.MemberQualificationAward
   alias App.Model.Organization
   alias App.Model.Qualification
-  alias App.Model.SavedPDF
+  alias App.Model.PublishedPDF
   alias App.Model.Tag
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
@@ -524,30 +524,59 @@ defmodule App.DataFixtures do
          do: id
   end
 
+  @doc """
+  A tax credit letter published with a stand-in PDF (#918, #970), since printing takes a
+  while. `code` sets its ID, such as an old `SRVTC-K7Q4M2XA`; it's new by default. Its
+  verify page shows the name, year, and any hours it has.
+  """
   def tax_credit_letter_fixture(%Member{} = member, attrs \\ %{}) do
-    unique = System.unique_integer([:positive])
+    attrs = Map.new(attrs)
+    {code, attrs} = Map.pop(attrs, :code, PublishedPDF.generate_code())
 
     params =
       Map.merge(
-        %{
-          member_id: member.id,
-          ref_id: "TCL#{unique}",
-          year: Date.utc_today().year - 1,
-          letter_content: "Test letter content"
-        },
+        %{member_id: member.id, year: Date.utc_today().year - 1, letter_content: "Test letter content"},
         attrs
       )
 
     letter = params |> TaxCreditLetter.build_new_changeset() |> Repo.insert!()
-
-    # Every letter is made with its PDF (#918). A stand-in, since printing takes a while.
-    SavedPDF.put_letter!(%{letter | member: member}, %{
-      content: "%PDF-1.7 test letter #{letter.ref_id}",
+    attachment = %{
+      content: "%PDF-1.7 test letter #{code}",
       title: "#{letter.year} test letter",
       filename: "#{letter.year}_test_letter.pdf"
-    })
+    }
 
-    letter
+    {:ok, _pdf} =
+      PublishedPDF.publish(
+        %{
+          team_id: member.team_id,
+          name: "Tax credit letter",
+          subject: PublishedPDF.letter_subject(member.id, letter.year),
+          code: code,
+          tax_credit_letter_id: letter.id,
+          member_id: member.id,
+          year: letter.year
+        },
+        %{attachment: attachment, keep: %{}, shows: letter_shows(member, letter)},
+        nil
+      )
+
+    Repo.preload(letter, :pdf)
+  end
+
+  defp letter_shows(member, letter) do
+    hours =
+      if letter.primary_minutes && letter.secondary_minutes,
+        do: [
+          {"Primary hours", letter.primary_minutes},
+          {"Secondary hours", letter.secondary_minutes},
+          {"Total hours", letter.primary_minutes + letter.secondary_minutes}
+        ],
+        else: []
+
+    [%{"label" => "Name", "text" => member.name}, %{"label" => "Year", "text" => "#{letter.year}"}] ++
+      for {label, minutes} <- hours,
+          do: %{"label" => label, "text" => Service.Format.duration(minutes)}
   end
 
   @doc """

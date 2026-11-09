@@ -8,7 +8,7 @@ defmodule Web.ActivityOrgFormLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.FormAnswer
-  alias App.Model.SavedPDF
+  alias App.Model.PublishedPDF
   alias App.Repo
   alias Web.MockupSeed
 
@@ -290,7 +290,7 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert ["inline" <> _] = get_resp_header(conn, "content-disposition")
       assert "%PDF" <> _ = conn.resp_body
 
-      refute Repo.exists?(SavedPDF)
+      refute Repo.exists?(PublishedPDF)
       assert FormAnswer.for_activity(hiker)["leader"] == "Alex Chen"
     end
 
@@ -304,7 +304,7 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "Injured: Enter a number, such as 3."
 
-      refute SavedPDF |> where(activity_id: ^hiker.id) |> Repo.exists?()
+      refute PublishedPDF |> where(activity_id: ^hiker.id) |> Repo.exists?()
     end
 
     test "only for team admins", %{cast: cast, hiker: hiker, form: form} do

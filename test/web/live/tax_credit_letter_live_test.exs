@@ -5,7 +5,7 @@ defmodule Web.TaxCreditLetterLiveTest do
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
 
-  alias App.Model.SavedPDF
+  alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Repo
 
@@ -83,7 +83,7 @@ defmodule Web.TaxCreditLetterLiveTest do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
     letter = tax_credit_letter_fixture(member)
-    SavedPDF.delete_letter!(letter)
+    PublishedPDF.delete_letter!(letter)
 
     {:ok, lv, _html} =
       conn
@@ -92,7 +92,7 @@ defmodule Web.TaxCreditLetterLiveTest do
 
     lv |> element("#email-letter") |> render_click()
 
-    assert %{content: "%PDF" <> _rest} = saved = SavedPDF.letter_attachment(letter)
+    assert %{content: "%PDF" <> _rest} = saved = PublishedPDF.letter_attachment(letter)
 
     assert_email_sent(fn email ->
       assert [%{data: data}] = email.attachments

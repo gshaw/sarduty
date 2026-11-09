@@ -17,10 +17,9 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
     do: CreateTaxCreditLetter.call(team: Repo.reload!(team), member_id: member.id, year: 2025)
 
   defp print(letter) do
-    {:ok, attachment} =
-      letter |> Repo.preload([member: :team], force: true) |> PrintTaxCreditLetter.call()
-
-    attachment
+    letter = Repo.preload(letter, [:pdf, member: :team], force: true)
+    {:ok, printed} = PrintTaxCreditLetter.call(letter, letter.pdf.code)
+    printed.attachment
   end
 
   # Pictures on the page. A picture with an alpha channel stores it as a second image,
@@ -47,25 +46,24 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
     assert {:ok, _key} = Service.PDFLock.file_key(attachment.content)
   end
 
-  test "prints the letter's own hours, reference, and date, not attendance now",
-       %{member: member} do
+  test "prints the letter's own hours and date, not attendance now", %{member: member} do
     letter =
       member
-      |> tax_credit_letter_fixture(%{
-        ref_id: "SRVTC-K7Q4M2XA",
-        year: 2024,
-        primary_minutes: 600,
-        secondary_minutes: 30
-      })
+      |> tax_credit_letter_fixture(%{year: 2024, primary_minutes: 600, secondary_minutes: 30})
       |> Map.put(:inserted_at, ~U[2025-01-20 18:00:00Z])
       |> Repo.preload(member: :team)
 
-    text = letter |> PrintTaxCreditLetter.output() |> App.Document.text("letter")
+    read = PrintTaxCreditLetter.read(letter.member.team, member.id, 2024, letter.inserted_at)
+    output = PrintTaxCreditLetter.output(letter, "K7Q4M2XA9HVB3TN", read)
+    text = App.Document.text(output, "letter")
 
     assert text =~ "in 2024."
     assert text =~ "Primary Hours: 10 hours\nSecondary Hours: 30 min\nTotal Hours: 10h 30m\n"
     assert text =~ "Certified on January 20, 2025."
-    assert text =~ "Reference: SRVTC-K7Q4M2XA"
+
+    # Its verify page shows the same hours (#970).
+    assert %{"label" => "Total hours", "text" => "10h 30m"} in output.shows
+    assert %{"label" => "Name", "text" => member.name} in output.shows
   end
 
   describe "the letterhead" do
@@ -108,19 +106,13 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
     end
   end
 
-  describe "the QR code" do
-    test "opens the letter's page on the verify site", %{member: member} do
-      letter = %{tax_credit_letter_fixture(member) | ref_id: "SRVTC-K7Q4M2XA"}
+  test "prints the verify code of the ID it's published under (#970)", %{member: member} do
+    letter = member |> tax_credit_letter_fixture() |> Repo.preload(member: :team)
+    {:ok, printed} = PrintTaxCreditLetter.call(letter, "K7Q4M2XA9HVB3TN")
 
-      assert PrintTaxCreditLetter.qr_url(letter) ==
-               "#{Web.VerifyHost.url()}/letters/SRVTC-K7Q4M2XA"
-    end
-
-    test "a letter from before #207 gets none", %{member: member} do
-      letter = tax_credit_letter_fixture(member, %{ref_id: "SRVTC-M4K11"})
-      assert PrintTaxCreditLetter.qr_url(letter) == nil
-      assert %{content: "%PDF" <> _rest} = print(letter)
-    end
+    assert printed.code == "K7Q4M2XA9HVB3TN"
+    assert printed.name == "Tax credit letter"
+    assert %{content: "%PDF" <> _rest} = printed.attachment
   end
 
   test "a Try a demo team's letter says SAMPLE across it (#857)", %{team: team, member: member} do
