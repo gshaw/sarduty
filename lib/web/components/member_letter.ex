@@ -7,6 +7,7 @@ defmodule Web.Components.MemberLetter do
 
   use Web, :function_component
 
+  alias App.Model.TaxCreditLetter
   alias Service.Format
 
   attr :id, :string, required: true
@@ -25,15 +26,18 @@ defmodule Web.Components.MemberLetter do
   end
 
   def member_letter(assigns) do
+    # An old letter that kept no hours has none to show.
+    assigns = assign(assigns, :minutes, TaxCreditLetter.minutes(assigns.letter))
+
     ~H"""
     <div id={@id}>
       <h2 class="chart-title mb-1">{@year} tax credit letter</h2>
       <p class="hint mb-2">For your {@year} tax return.</p>
-      <dl :if={@hours and hours?(@letter)} class="dl-pairs">
+      <dl :if={@hours and @minutes != nil} class="dl-pairs">
         <dt>Primary hours</dt>
-        <dd>{Format.duration(@letter.primary_minutes)}</dd>
+        <dd>{Format.duration(elem(@minutes, 0))}</dd>
         <dt>Secondary hours</dt>
-        <dd>{Format.duration(@letter.secondary_minutes)}</dd>
+        <dd>{Format.duration(elem(@minutes, 1))}</dd>
       </dl>
       <.button
         id={"#{@id}-download"}
@@ -44,8 +48,4 @@ defmodule Web.Components.MemberLetter do
     </div>
     """
   end
-
-  # Old letters whose hours did not parse have none to show.
-  defp hours?(letter),
-    do: is_integer(letter.primary_minutes) and is_integer(letter.secondary_minutes)
 end

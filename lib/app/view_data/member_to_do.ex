@@ -92,7 +92,7 @@ defmodule App.ViewData.MemberToDo do
 
     case Service.Period.letter_season?(now, timezone) &&
            Enum.max_by(letters, & &1.year, fn -> nil end) do
-      %{year: year, downloaded_at: nil} = letter when year >= recent ->
+      %{year: year, first_opened_at: nil} = letter when year >= recent ->
         [%{key: :letter, letter: letter}]
 
       _other ->

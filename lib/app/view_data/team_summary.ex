@@ -12,6 +12,7 @@ defmodule App.ViewData.TeamSummary do
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Model.TeamLoginGrant
@@ -139,15 +140,15 @@ defmodule App.ViewData.TeamSummary do
   @doc "Each team's live ID cards. `%{team_id => count}`."
   def card_counts, do: MemberCard.count_live_by_team()
 
-  @doc "Tax credit letters made for `year`, by team. `%{team_id => count}`."
+  @doc "Current tax credit letters for `year`, by team. `%{team_id => count}`."
   def letter_counts(teams, year) do
     ids = Enum.map(teams, & &1.id)
 
-    TaxCreditLetter
-    |> join(:inner, [l], m in Member, on: m.id == l.member_id)
-    |> where([l, m], m.team_id in ^ids and l.year == ^year)
-    |> group_by([l, m], m.team_id)
-    |> select([l, m], {m.team_id, count(l.id)})
+    PublishedPDF
+    |> where([l], l.team_id in ^ids and l.name == ^TaxCreditLetter.name() and l.year == ^year)
+    |> TaxCreditLetter.current()
+    |> group_by([l], l.team_id)
+    |> select([l], {l.team_id, count(l.id)})
     |> Repo.all()
     |> Map.new()
   end

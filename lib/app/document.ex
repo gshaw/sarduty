@@ -331,6 +331,17 @@ defmodule App.Document do
 
   defp format_of(_value, _name), do: nil
 
+  @doc """
+  The names of the settings a checked document `needs` that are blank in `values`, in
+  its order, such as `team.mailing_address` (#970).
+  """
+  def missing(%__MODULE__{needs: needs}, values) do
+    for need <- needs,
+        name = Evaluator.name(need),
+        Evaluator.blank?(Map.get(values, name)),
+        do: name
+  end
+
   @doc "A place's text, as `expect` reads it: a flow's lines, a blank line for each space."
   defdelegate text(output, place), to: Evaluator
 

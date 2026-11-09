@@ -46,9 +46,9 @@ defmodule Web.MeController do
 
   def tax_credit_letter(conn, %{"id" => id}) do
     letter = TaxCreditLetter.find_for_member!(conn.assigns.member, id)
-    attachment = PublishedPDF.letter_attachment(letter) || raise(Web.Status.NotFound)
+    attachment = PublishedPDF.attachment(letter)
     # Takes the letter off the member's "For you to do" (#389).
-    if !conn.assigns.viewing_as, do: TaxCreditLetter.mark_downloaded(letter, DateTime.utc_now())
+    if !conn.assigns.viewing_as, do: TaxCreditLetter.mark_opened(letter, DateTime.utc_now())
 
     conn
     |> put_resp_content_type(attachment.content_type)

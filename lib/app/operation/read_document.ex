@@ -41,6 +41,34 @@ defmodule App.Operation.ReadDocument do
     end
   end
 
+  @picture_labels %{
+    "team.signature" => "Signature",
+    "team.logo" => "Logo",
+    "organization.logo" => "Organization logo"
+  }
+
+  @doc """
+  `{:ok, %{doc, values, labels}}` with only the team's and the organization's values the
+  document reads, and the team's pictures: what its `needs` asks about (#970). `labels`
+  names each, `"team.signer" => "Signer"`. Runs no other report, so it needs nothing to
+  start from.
+  """
+  def settings(text, %Context{} = context) when is_binary(text) do
+    with {:ok, doc} <- Document.parse(text),
+         {:ok, doc} <- Document.check(doc, context) do
+      settings_doc = %{
+        doc
+        | reports: Enum.filter(doc.reports, &(&1.name in ~w(team organization)))
+      }
+
+      {:ok, values, read} = values(settings_doc, context, %{})
+      labels = Map.merge(@picture_labels, Map.new(read, &{&1.name, &1.label}))
+      {:ok, %{doc: doc, values: values, labels: labels}}
+    else
+      {:error, %Error{} = error} -> {:error, Error.text(error)}
+    end
+  end
+
   defp values(doc, context, starts) do
     context = %{context | team: context.repo.preload(context.team, :organization)}
     given = Map.new(starts, fn {name, value} -> {to_string(name), to_string(value)} end)

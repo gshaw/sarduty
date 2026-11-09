@@ -792,13 +792,17 @@ defmodule Web.TeamDashboardLive do
   defp declined_certificate_hint(_certificates),
     do: "Read why, then delete them or send them again."
 
-  # "52 hours primary, 25 hours secondary", or a plain line for an old letter whose
-  # hours did not parse.
-  defp letter_hours(%{primary_minutes: primary, secondary_minutes: secondary})
-       when is_integer(primary) and is_integer(secondary),
-       do: "#{Format.duration(primary)} primary, #{Format.duration(secondary)} secondary"
+  # "52 hours primary, 25 hours secondary", or a plain line for an old letter that kept
+  # no hours.
+  defp letter_hours(letter) do
+    case TaxCreditLetter.minutes(letter) do
+      {primary, secondary} ->
+        "#{Format.duration(primary)} primary, #{Format.duration(secondary)} secondary"
 
-  defp letter_hours(_letter), do: "Give it to the CRA with your tax return."
+      nil ->
+        "Give it to the CRA with your tax return."
+    end
+  end
 
   attr :team, :map, required: true
   attr :charts, :map, required: true, doc: "TeamDashboardViewData.chart_reports/3's"

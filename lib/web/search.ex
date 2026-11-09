@@ -13,6 +13,7 @@ defmodule Web.Search do
     statics: Web.static_paths()
 
   alias App.Model.Standing
+  alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.ViewData.Search
   alias Web.UserAuth
@@ -178,8 +179,8 @@ defmodule Web.Search do
   defp shown(hit, :document, team, _team_admin?) do
     path =
       cond do
-        hit.tax_credit_letter_id ->
-          ~p"/teams/#{team}/tax-credit-letters/#{hit.tax_credit_letter_id}"
+        hit.name == TaxCreditLetter.name() ->
+          ~p"/teams/#{team}/tax-credit-letters/#{hit.id}"
 
         hit.activity_id && hit.form_id ->
           ~p"/teams/#{team}/activities/#{hit.activity_id}/forms/#{hit.form_id}"

@@ -601,9 +601,8 @@ defmodule App.ViewData.TeamAttention do
   end
 
   # A letter prints without an address, signer, or signature, but the CRA may question it
-  # (#918).
+  # (#918). The settings come from the letter's `needs` (#970), each named in lower case.
   # The row is empty outside letter season.
-  @missing_words %{mailing_address: "mailing address", signer: "signer", signature: "signature"}
 
   defp letter_settings_item([]), do: nil
 
@@ -611,8 +610,7 @@ defmodule App.ViewData.TeamAttention do
     %{
       key: :letter_settings,
       level: :warning,
-      title:
-        "Tax credit letters are missing a #{missing |> Enum.map(&@missing_words[&1]) |> Format.and_list()}",
+      title: "Tax credit letters are missing a #{Format.and_list(missing)}",
       detail:
         "Add #{if length(missing) > 1, do: "them", else: "it"} in team settings, " <>
           "so the CRA accepts letters without question.",

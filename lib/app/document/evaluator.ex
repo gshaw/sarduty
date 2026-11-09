@@ -641,8 +641,9 @@ defmodule App.Document.Evaluator do
   defp to_text(%Decimal{} = n), do: Decimal.to_string(n, :normal)
   defp to_text(value), do: to_string(value)
 
-  defp blank?(nil), do: true
+  @doc false
+  def blank?(nil), do: true
   # A picture's bytes are seldom valid text, and never blank.
-  defp blank?(text) when is_binary(text), do: String.valid?(text) and String.trim(text) == ""
-  defp blank?(_value), do: false
+  def blank?(text) when is_binary(text), do: String.valid?(text) and String.trim(text) == ""
+  def blank?(_value), do: false
 end
