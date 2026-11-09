@@ -148,13 +148,13 @@ defmodule Web.RouterTest do
   ]
 
   @pinned_verify [
-    {"GET", "/K7Q4-M2XA", Web.VerifyLive, nil},
-    {"GET", "/K7Q4-M2XA/photo", Web.MemberCardController, :photo},
-    {"GET", "/K7Q4-M2XA/banner", Web.MemberCardController, :banner},
+    {"GET", "/K7Q4M-2XA9H", Web.VerifyLive, nil},
+    {"GET", "/K7Q4M-2XA9H/photo", Web.MemberCardController, :photo},
+    {"GET", "/K7Q4M-2XA9H/banner", Web.MemberCardController, :banner},
     {"GET", "/orgs/nsr", Web.VerifyLive, nil},
     {"GET", "/letters/SRVTC-K7Q4M2XA", Web.VerifyLetterLive, nil},
     # Apps that scan cards hold it (#299).
-    {"GET", "/api/v1/cards/K7Q4-M2XA", Web.CardApiController, :show}
+    {"GET", "/api/v1/cards/K7Q4M-2XA9H", Web.CardApiController, :show}
   ]
 
   test "pinned URLs on the main site still route" do

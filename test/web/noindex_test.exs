@@ -28,7 +28,7 @@ defmodule Web.NoindexTest do
   end
 
   test "a card photo", %{verify: conn} do
-    conn = get(conn, "/SAMP-ACTV/photo")
+    conn = get(conn, "/SAMPX-ACTVX/photo")
     assert response(conn, 200)
     assert robots(conn) == ["noindex"]
   end

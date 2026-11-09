@@ -144,7 +144,7 @@ defmodule Web.VerifyLiveTest do
   end
 
   test "an unknown or malformed code is not found", %{conn: conn} do
-    {:ok, lv, _html} = live(conn, ~p"/?#{[code: "AAAA-AAAA"]}")
+    {:ok, lv, _html} = live(conn, ~p"/?#{[code: "AAAAA-AAAAA"]}")
     assert has_element?(lv, "#result-not-found")
 
     {:ok, lv, _html} = live(conn, ~p"/?#{[code: "not a code"]}")
@@ -177,11 +177,11 @@ defmodule Web.VerifyLiveTest do
     assert_push_event(lv, "scan-sound", %{sound: :ok})
 
     {:ok, lv, _html} = live(conn, ~p"/")
-    lv |> element("#scanner") |> render_hook("scanned", %{code: "ZZZZ-ZZZZ"})
+    lv |> element("#scanner") |> render_hook("scanned", %{code: "ZZZZZ-ZZZZZ"})
     assert_push_event(lv, "scan-sound", %{sound: :error})
 
     {:ok, lv, _html} = live(conn, ~p"/")
-    lv |> form("#check-form", check: %{code: "ZZZZ-ZZZZ"}) |> render_submit()
+    lv |> form("#check-form", check: %{code: "ZZZZZ-ZZZZZ"}) |> render_submit()
     assert_push_event(lv, "scan-sound", %{sound: :error})
 
     {:ok, lv, _html} = live(conn, ~p"/")
@@ -207,7 +207,7 @@ defmodule Web.VerifyLiveTest do
       card = member_card_fixture(member)
       {:ok, lv, _html} = live(conn, ~p"/")
 
-      for _ <- 1..20, do: check(lv, "ZZZZ-ZZZZ")
+      for _ <- 1..20, do: check(lv, "ZZZZZ-ZZZZZ")
       assert has_element?(lv, "#result-not-found")
 
       check(lv, card.code)
@@ -218,7 +218,7 @@ defmodule Web.VerifyLiveTest do
     test "a limited IP doesn't stop others", %{conn: conn, member: member} do
       card = member_card_fixture(member)
       {:ok, lv, _html} = live(conn, ~p"/")
-      for _ <- 1..21, do: check(lv, "ZZZZ-ZZZZ")
+      for _ <- 1..21, do: check(lv, "ZZZZZ-ZZZZZ")
       assert has_element?(lv, "#result-limited")
 
       other = build_conn() |> Map.put(:host, conn.host) |> with_ip(unique_ip())
@@ -233,7 +233,7 @@ defmodule Web.VerifyLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/")
 
       for _ <- 1..25, do: check(lv, card.code)
-      check(lv, "ZZZZ-ZZZZ")
+      check(lv, "ZZZZZ-ZZZZZ")
 
       assert has_element?(lv, "#result-not-found")
     end
@@ -249,9 +249,9 @@ defmodule Web.VerifyLiveTest do
     end
 
     test "a bad link opened directly counts", %{conn: conn} do
-      for _ <- 1..10, do: {:ok, _lv, _html} = live(conn, ~p"/ZZZZ-ZZZZ")
+      for _ <- 1..10, do: {:ok, _lv, _html} = live(conn, ~p"/ZZZZZ-ZZZZZ")
 
-      {:ok, lv, _html} = live(conn, ~p"/ZZZZ-ZZZZ")
+      {:ok, lv, _html} = live(conn, ~p"/ZZZZZ-ZZZZZ")
       assert has_element?(lv, "#result-limited")
     end
   end
@@ -259,7 +259,7 @@ defmodule Web.VerifyLiveTest do
   # Coast Range SAR's sample cards (#854), in App.SampleRepo, seeded at boot.
   describe "sample cards" do
     test "the active sample shows Cameron as active, marked as a sample", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/SAMP-ACTV")
+      {:ok, lv, _html} = live(conn, ~p"/SAMPX-ACTVX")
 
       assert has_element?(lv, "#result-sample", "never accept it as ID")
       assert has_element?(lv, "#result-active")
@@ -270,12 +270,12 @@ defmodule Web.VerifyLiveTest do
     end
 
     test "the retired and cancelled samples", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/SAMP-RTRD")
+      {:ok, lv, _html} = live(conn, ~p"/SAMPX-RTRDX")
       assert has_element?(lv, "#result-sample")
       assert has_element?(lv, "#result-inactive")
       assert has_element?(lv, "#result-name", "Robin Tse")
 
-      check(lv, "SAMP-CNCD")
+      check(lv, "SAMPX-CNCDX")
       assert has_element?(lv, "#result-sample")
       assert has_element?(lv, "#result-revoked")
     end
@@ -283,11 +283,11 @@ defmodule Web.VerifyLiveTest do
     test "the not-found sample never counts toward the limit", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/")
 
-      for _ <- 1..25, do: check(lv, "SAMP-NCRD")
+      for _ <- 1..25, do: check(lv, "SAMPX-NCRDX")
       assert has_element?(lv, "#result-sample")
       assert has_element?(lv, "#result-not-found")
 
-      check(lv, "ZZZZ-ZZZZ")
+      check(lv, "ZZZZZ-ZZZZZ")
       assert has_element?(lv, "#result-not-found")
     end
 
@@ -309,8 +309,8 @@ defmodule Web.VerifyLiveTest do
     setup %{conn: conn}, do: %{conn: %{conn | host: Web.Endpoint.host()}}
 
     test "there is no /verify (#153)", %{conn: conn} do
-      assert conn |> get("/verify/K7Q4-M2XA") |> response(404)
-      assert build_conn() |> get("/VERIFY/K7Q4-M2XA") |> response(404)
+      assert conn |> get("/verify/K7Q4M-2XA9H") |> response(404)
+      assert build_conn() |> get("/VERIFY/K7Q4M-2XA9H") |> response(404)
     end
   end
 

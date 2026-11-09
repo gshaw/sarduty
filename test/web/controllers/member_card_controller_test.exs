@@ -30,10 +30,10 @@ defmodule Web.MemberCardControllerTest do
   end
 
   test "the active sample card gets the placeholder, without asking D4H (#854)", %{verify: conn} do
-    {width, height} = conn |> get(~p"/SAMP-ACTV/photo") |> response(200) |> image_size()
+    {width, height} = conn |> get(~p"/SAMPX-ACTVX/photo") |> response(200) |> image_size()
     assert width == height
 
-    assert build_conn() |> verify_conn() |> get(~p"/SAMP-RTRD/photo") |> response(404)
+    assert build_conn() |> verify_conn() |> get(~p"/SAMPX-RTRDX/photo") |> response(404)
   end
 
   test "sends a square placeholder when D4H's photo won't decode", %{verify: conn, member: member} do
@@ -95,7 +95,7 @@ defmodule Web.MemberCardControllerTest do
       card = member_card_fixture(member)
       Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, png_fixture(64, 64)))
 
-      for _ <- 1..20, do: assert(conn |> get(~p"/ZZZZZZZZ/photo") |> response(404))
+      for _ <- 1..20, do: assert(conn |> get(~p"/ZZZZZZZZZZ/photo") |> response(404))
 
       assert conn |> get(~p"/#{card.code}/photo") |> response(429)
       assert build_conn() |> verify_conn() |> get(~p"/#{card.code}/photo") |> response(200)
@@ -104,7 +104,7 @@ defmodule Web.MemberCardControllerTest do
     test "banner 404s count too", %{verify: conn, member: member} do
       card = member_card_fixture(member)
 
-      for _ <- 1..20, do: assert(conn |> get(~p"/ZZZZZZZZ/banner") |> response(404))
+      for _ <- 1..20, do: assert(conn |> get(~p"/ZZZZZZZZZZ/banner") |> response(404))
 
       assert conn |> get(~p"/#{card.code}/banner") |> response(429)
     end

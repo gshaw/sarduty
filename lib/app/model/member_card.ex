@@ -44,17 +44,28 @@ defmodule App.Model.MemberCard do
 
   # cspell:ignore ABCDEFGHJKMNPQRSTVWXYZ -- the code alphabet
   # No 0/O, 1/I/L, or U, so a code read off a phone or typed from a photo survives.
-  # 30 characters, 8 long: about 6.6 × 10^11 codes.
+  # 30 characters, 10 long: about 5.9 × 10^14 codes, so with 10,000 cards and 1,000 IPs
+  # guessing under VerifyLimit's cap, the first hit takes about 56 years (#969). Longer
+  # would make a bigger QR code and slow reading one off a phone.
   @alphabet ~c"23456789ABCDEFGHJKMNPQRSTVWXYZ"
-  @code_length 8
+  @code_length 10
 
   # Coast Range SAR's sample cards (App.CoastRange, #854) start with it, and no real card does.
   @sample_prefix "SAMP"
 
-  @doc "A new random code, stored without the dash: `K7Q4M2XA`. Never a sample's."
+  @doc "A new random code, stored without the dash: `K7Q4M2XA9H`. Never a sample's."
   def generate_code do
-    code = random_chars(@code_length, "")
+    code = random_code(@code_length)
     if sample_code?(code), do: generate_code(), else: code
+  end
+
+  @doc "`length` random characters from the code alphabet."
+  def random_code(length), do: random_chars(length, "")
+
+  @doc "Whether `code` is `length` characters, all from the code alphabet."
+  def alphabet_code?(code, length) do
+    chars = String.to_charlist(code)
+    length(chars) == length and Enum.all?(chars, &(&1 in @alphabet))
   end
 
   @doc "Whether a stored code is one of Coast Range SAR's sample cards, made up for demos."
@@ -73,7 +84,7 @@ defmodule App.Model.MemberCard do
     end
   end
 
-  @doc "The code as printed on the card: `K7Q4-M2XA`."
+  @doc "The code as printed on the card: `K7Q4M-2XA9H`."
   def format_code(code) do
     {first, last} = String.split_at(code, div(@code_length, 2))
     "#{first}-#{last}"
@@ -103,9 +114,7 @@ defmodule App.Model.MemberCard do
   """
   def normalize_code(input) when is_binary(input) do
     code = input |> String.upcase() |> String.replace(~r/[\s-]/, "")
-
-    chars = String.to_charlist(code)
-    if length(chars) == @code_length and Enum.all?(chars, &(&1 in @alphabet)), do: code
+    if alphabet_code?(code, @code_length), do: code
   end
 
   def normalize_code(_input), do: nil
@@ -114,7 +123,8 @@ defmodule App.Model.MemberCard do
   What the card's QR code holds: its page on the verify site, so a phone's camera opens
   the check. In capitals, because a QR code packs capitals, digits, and `:/.-` into fewer
   squares, and neither the host nor the code cares about case.
-  `HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA`.
+  `HTTPS://VERIFY.SARDUTY.COM/K7Q4M-2XA9H`: 38 characters, which still fits the
+  smallest QR code a link fits, version 2. 12 characters would not.
   """
   def qr_url(code, verify_url), do: String.upcase("#{verify_url}/#{format_code(code)}")
 
@@ -137,7 +147,7 @@ defmodule App.Model.MemberCard do
 
   @doc """
   The code in what a scanner read: a bare code, or a link to a card's page,
-  `/K7Q4-M2XA`, on one of `hosts`. `{:other_site, host}` for a link anywhere else, which
+  `/K7Q4M-2XA9H`, on one of `hosts`. `{:other_site, host}` for a link anywhere else, which
   is what a forged card would carry. Nil when it's neither.
   """
   def code_from_scan(text, hosts) when is_binary(text) do
@@ -265,6 +275,20 @@ defmodule App.Model.MemberCard do
     |> where([c], c.code == ^code)
     |> preload(member: [team: :organization])
     |> repo.one()
+  end
+
+  @doc """
+  Gives a live card made before #969 a new 10-character code. The card keeps its serial
+  and token, so its passes update in place, and its old code matches no card.
+  """
+  def lengthen_code!(%MemberCard{} = card),
+    do: card |> change(code: generate_code()) |> Repo.update!()
+
+  @doc "The live cards still on an 8-character code from before #969."
+  def get_all_with_old_codes do
+    MemberCard
+    |> where([c], is_nil(c.revoked_at) and fragment("length(?)", c.code) == 8)
+    |> Repo.all()
   end
 
   def find_current(%Team{} = team, %Member{} = member) do

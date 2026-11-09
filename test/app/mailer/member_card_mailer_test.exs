@@ -14,7 +14,7 @@ defmodule App.Mailer.MemberCardMailerTest do
   defp card do
     team = team_fixture(%{name: "Search & Rescue", subdomain: "example"})
     member = %Member{name: "Alex <Example>", email: "alex@example.com", team: team}
-    %MemberCard{code: "K7Q4M2XA", member: member}
+    %MemberCard{code: "K7Q4M2XA9H", member: member}
   end
 
   test "one button to the card's page, and no pass" do

@@ -121,22 +121,31 @@ defmodule App.ReportTest do
       blake = member_fixture(team, %{name: "Blake Diaz"})
       member_fixture(team, %{name: "Casey Ng"})
 
-      member_card_fixture(avery, %{code: "AAAA2222", revoked_at: ~U[2026-04-01 17:00:00.000000Z]})
+      member_card_fixture(avery, %{
+        code: "AAAA222222",
+        revoked_at: ~U[2026-04-01 17:00:00.000000Z]
+      })
 
-      member_card_fixture(avery, %{code: "K7Q4M2XA", inserted_at: ~U[2026-05-01 17:00:00.000000Z]})
+      member_card_fixture(avery, %{
+        code: "K7Q4M2XA9H",
+        inserted_at: ~U[2026-05-01 17:00:00.000000Z]
+      })
 
-      member_card_fixture(blake, %{code: "BBBB3333", revoked_at: ~U[2026-04-01 17:00:00.000000Z]})
+      member_card_fixture(blake, %{
+        code: "BBBB333333",
+        revoked_at: ~U[2026-04-01 17:00:00.000000Z]
+      })
 
       text = "select name, id_card, id_card_link, id_card_issued from members order by name"
       result = run!(text, team)
 
       assert [
-               [_avery, "K7Q4-M2XA", link, ~U[2026-05-01 17:00:00Z]],
+               [_avery, "K7Q4M-2XA9H", link, ~U[2026-05-01 17:00:00Z]],
                [_blake, nil, nil, nil],
                [_casey, nil, nil, nil]
              ] = result.rows
 
-      assert link == Web.VerifyHost.url() <> "/K7Q4-M2XA"
+      assert link == Web.VerifyHost.url() <> "/K7Q4M-2XA9H"
       assert {:ok, _plan} = Report.check("select name from members where id_card is null", team)
 
       assert {:error, error} = Report.page(text, team, %{}, @now, team_admin?: false)

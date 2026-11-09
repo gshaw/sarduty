@@ -11,11 +11,11 @@ defmodule Web.CardApiLiveTest do
 
     assert has_element?(
              lv,
-             "#card-api a[href='#{Web.VerifyHost.url()}/api/v1/cards/SAMP-ACTV']"
+             "#card-api a[href='#{Web.VerifyHost.url()}/api/v1/cards/SAMPX-ACTVX']"
            )
 
     markdown = conn |> get(~p"/agents/id-cards.md") |> response(200)
-    assert markdown =~ "GET #{Web.VerifyHost.url()}/api/v1/cards/K7Q4-M2XA"
+    assert markdown =~ "GET #{Web.VerifyHost.url()}/api/v1/cards/K7Q4M-2XA9H"
   end
 
   # The doc's example is written by hand, so it could drift from what the check sends.
@@ -26,7 +26,7 @@ defmodule Web.CardApiLiveTest do
     answer =
       conn
       |> Map.put(:host, Web.VerifyHost.host())
-      |> get("/api/v1/cards/SAMP-ACTV")
+      |> get("/api/v1/cards/SAMPX-ACTVX")
       |> json_response(200)
 
     assert fields(Jason.decode!(example)) == fields(answer)
@@ -35,7 +35,7 @@ defmodule Web.CardApiLiveTest do
   test "Sample cards links each sample and shows its answer", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/agents/id-cards")
 
-    for code <- ~w(SAMP-ACTV SAMP-RTRD SAMP-CNCD SAMP-NCRD) do
+    for code <- ~w(SAMPX-ACTVX SAMPX-RTRDX SAMPX-CNCDX SAMPX-NCRDX) do
       assert has_element?(lv, "#card-api a[href='#{Web.VerifyHost.url()}/api/v1/cards/#{code}']")
     end
 

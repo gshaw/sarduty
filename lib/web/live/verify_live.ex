@@ -144,7 +144,7 @@ defmodule Web.VerifyLive do
         <.input
           field={@form[:code]}
           label="Or type the code under the QR code"
-          placeholder="XXXX-XXXX"
+          placeholder="XXXXX-XXXXX"
           autocomplete="off"
           autocapitalize="characters"
           spellcheck="false"
@@ -214,7 +214,7 @@ defmodule Web.VerifyLive do
     <div id="result-not-found">
       <.band kind={:danger} title="No card has this code">Check the code and try again</.band>
       <.panel>
-        Codes are 8 letters and numbers, under the QR code. If the code is right, the card is
+        Codes are 10 letters and numbers, under the QR code. If the code is right, the card is
         not valid.
       </.panel>
     </div>

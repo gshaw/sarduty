@@ -120,12 +120,12 @@ defmodule Web.CardApiControllerTest do
   end
 
   test "an unknown code is a 404", %{conn: conn} do
-    assert conn |> check("ZZZZ-ZZZZ") |> json_response(404) == %{"status" => "not_found"}
+    assert conn |> check("ZZZZZ-ZZZZZ") |> json_response(404) == %{"status" => "not_found"}
     assert conn |> check("not-a-code") |> json_response(404)
   end
 
   test "the sample cards answer from Coast Range SAR (#854)", %{conn: conn} do
-    body = conn |> check("SAMP-ACTV") |> json_response(200)
+    body = conn |> check("SAMPX-ACTVX") |> json_response(200)
     assert body["status"] == "active"
     assert body["sample"] == true
   end
@@ -135,7 +135,7 @@ defmodule Web.CardApiControllerTest do
     member: member
   } do
     card = member_card_fixture(member)
-    for _ <- 1..20, do: check(conn, "ZZZZ-ZZZZ")
+    for _ <- 1..20, do: check(conn, "ZZZZZ-ZZZZZ")
 
     conn = check(conn, card.code)
 

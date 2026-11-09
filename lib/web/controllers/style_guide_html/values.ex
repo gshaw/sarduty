@@ -231,7 +231,7 @@ defmodule Web.StyleGuideHTML.Values do
           {~s{Service.Phone.format("+44 20 7946 0958")}, Service.Phone.format("+44 20 7946 0958")}
         ]},
        {:"MemberCard.format_code", "An ID card's code",
-        [{~s{MemberCard.format_code("K7Q4M2XA")}, MemberCard.format_code("K7Q4M2XA")}]}
+        [{~s{MemberCard.format_code("K7Q4M2XA9H")}, MemberCard.format_code("K7Q4M2XA9H")}]}
      ]}
   end
 end
