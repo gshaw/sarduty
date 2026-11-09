@@ -47,11 +47,19 @@ defmodule Web.CardLinkLiveTest do
     assert has_element?(lv, "#open-on-phone", "Scan the code with your phone's camera")
   end
 
-  test "the card itself, front and back, each to save, then Print ID card and Verify",
+  test "what a copy can't do and Print ID card, then the card, each side to save, and Verify beside it",
        %{conn: conn, team: team, member: member} do
     card = member_card_fixture(member)
     path = CardLinks.path(card)
-    {:ok, lv, _html} = live(conn, path)
+    {:ok, lv, html} = live(conn, path)
+
+    # On a phone, where the sidebar's QR code hides, Verify and Lost your phone follow the card.
+    order =
+      for id <- ~w(card-link-no-wallet card-link-print card-link-front card-link-help),
+          do: elem(:binary.match(html, ~s{id="#{id}"}), 0)
+
+    assert order == Enum.sort(order)
+    assert has_element?(lv, "#card-link-help #card-link-lost", "Ask a team admin")
 
     for side <- ~w(front back) do
       assert has_element?(lv, ~s{#card-link-#{side} img[src="#{path}/#{side}"]})

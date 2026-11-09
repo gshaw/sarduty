@@ -21,9 +21,10 @@ defmodule Web.CardLinkLive do
   # card's own member gets a trail back to Your membership, as the reply links lead back
   # into the app: the page stays one page for everyone, with no redirect.
   #
-  # Under the Wallet, the card itself (#973): its front and back as SAR Duty draws
-  # them, each with Save image, then Print ID card, and Verify your ID card, for a member
-  # with no Wallet or one who wants a copy on paper.
+  # Under the Wallet, the card itself (#973), for a member with no Wallet or one who
+  # wants a copy on paper: a line on what a copy can't do, Print ID card, then its front
+  # and back as SAR Duty draws them, each with Save image. Verify your ID card and Lost
+  # your phone go in the sidebar, under Open on your phone; on a phone, under the card.
   #
   # Under it, one quiet line says what SAR Duty sees, and nothing else: no spinner, since
   # a tap can't tell an added card from a cancelled sheet or a card already there. It
@@ -179,16 +180,14 @@ defmodule Web.CardLinkLive do
           phones={@phones}
         />
       </div>
-      <.open_on_device
-        :if={@status == :active}
-        id="open-on-phone"
-        heading="Open on your phone"
-        url={@url}
-      >
-        <p class="mb-0">
-          Scan the code with your phone's camera, then add your ID card to Wallet there.
-        </p>
-      </.open_on_device>
+      <div :if={@status == :active} class="md:w-1/3">
+        <.open_on_device id="open-on-phone" class={nil} heading="Open on your phone" url={@url}>
+          <p class="mb-0">
+            Scan the code with your phone's camera, then add your ID card to Wallet there.
+          </p>
+        </.open_on_device>
+        <.card_help card={@card} />
+      </div>
     </div>
     """
   end
@@ -213,9 +212,11 @@ defmodule Web.CardLinkLive do
       google_click={JS.push("adding", value: %{wallet: "google"})}
     />
     <p id="card-link-status" class="hint mt-6 mb-0">{WalletText.seen(@phones, @card)}</p>
-    <.card_side id="card-link-front" class="mt-8" token={@token} side="front" card={@card} />
-    <.card_side id="card-link-back" class="mt-6" token={@token} side="back" card={@card} />
-    <div id="card-link-print" class="mt-6">
+    <p id="card-link-no-wallet" class="mt-8 mb-0">
+      No Wallet? Save each side as an image, or print both. Neither updates, so checkers
+      scan the code.
+    </p>
+    <div id="card-link-print" class="mt-2">
       <p class="mb-0">
         <.a
           id="card-link-print-link"
@@ -225,22 +226,8 @@ defmodule Web.CardLinkLive do
       </p>
       <p class="hint mt-1 mb-0">Both sides at card size, in black on white, to cut out.</p>
     </div>
-    <div id="card-link-verify" class="mt-4">
-      <p class="mb-0">
-        <.a
-          id="card-link-verify-link"
-          href={verify_url(@card)}
-          external={true}
-        >Verify your ID card</.a>
-      </p>
-      <p class="hint mt-1 mb-0">What a checker sees when they scan your code.</p>
-    </div>
-    <p id="card-link-no-wallet" class="hint mt-4 mb-0">
-      No Wallet? Save the images or print your card. Neither updates, so checkers scan the code.
-    </p>
-    <p id="card-link-lost" class="hint mt-4 mb-0">
-      Lost your phone? Ask a team admin to replace your ID card. This link is yours alone.
-    </p>
+    <.card_side id="card-link-front" class="mt-6" token={@token} side="front" card={@card} />
+    <.card_side id="card-link-back" class="mt-6" token={@token} side="back" card={@card} />
     """
   end
 
@@ -259,6 +246,30 @@ defmodule Web.CardLinkLive do
   defp card_state(%{status: :inactive} = assigns) do
     ~H"""
     <p id="card-link-inactive">This ID card is not active.</p>
+    """
+  end
+
+  attr :card, :map, required: true
+
+  # Under Open on your phone on a computer, and under the card on a phone, where the QR
+  # code hides.
+  defp card_help(assigns) do
+    ~H"""
+    <aside id="card-link-help" class="mt-8">
+      <div id="card-link-verify">
+        <p class="mb-0">
+          <.a
+            id="card-link-verify-link"
+            href={verify_url(@card)}
+            external={true}
+          >Verify your ID card</.a>
+        </p>
+        <p class="hint mt-1 mb-0">What a checker sees when they scan your code.</p>
+      </div>
+      <p id="card-link-lost" class="hint mt-4 mb-0">
+        Lost your phone? Ask a team admin to replace your ID card. This link is yours alone.
+      </p>
+    </aside>
     """
   end
 
