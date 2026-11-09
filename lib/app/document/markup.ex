@@ -175,7 +175,7 @@ defmodule App.Document.Markup do
   # cspell:ignore luma -- Typst's grey
   @verify_margin 36
   @verify_qr 50
-  @verify_size 7
+  @verify_size 8
 
   defp verify_code(%{verify_code: %{at: at, show: show}}, verify, var, files, values)
        when verify != nil do
