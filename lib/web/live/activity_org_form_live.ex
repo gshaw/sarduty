@@ -278,9 +278,9 @@ defmodule Web.ActivityOrgFormLive do
           <span :if={pdf.user}>by {pdf.user.email}</span>
         </p>
         <p class="mono mb-4">
-          <.a id="org-form-verify" href={PublishedPDF.verify_link(pdf.code)} external>
-            {PublishedPDF.format_code(pdf.code)}
-          </.a>
+          <.a id="org-form-verify" href={PublishedPDF.verify_link(pdf.code)} external>{PublishedPDF.format_code(
+            pdf.code
+          )}</.a>
         </p>
         <div :if={@changes != []} id="org-form-out-of-date" class="callout mb-4">
           <p class="mb-1"><b>Out of date.</b> The form reads differently now:</p>
@@ -330,9 +330,9 @@ defmodule Web.ActivityOrgFormLive do
       <ul :if={@published.earlier != []} id="org-form-earlier" class="value-rows mt-4 text-sm">
         <li :for={pdf <- @published.earlier} id={"org-form-earlier-#{pdf.id}"}>
           <span>
-            <.a href={~p"/teams/#{@team}/pdfs/#{pdf.id}"} target="_blank" class="mono">
-              {PublishedPDF.format_code(pdf.code)}
-            </.a>
+            <.a href={~p"/teams/#{@team}/pdfs/#{pdf.id}"} target="_blank" class="mono">{PublishedPDF.format_code(
+              pdf.code
+            )}</.a>
             <span class="hint">
               {Service.Format.date_long(pdf.inserted_at, @team.timezone)}
             </span>

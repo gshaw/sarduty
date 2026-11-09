@@ -56,6 +56,6 @@ defmodule Web.Org.FormCollectionLive do
   end
 
   defp state_class(:on), do: "text-success-text"
-  defp state_class(:testing), do: "text-warning-text"
+  defp state_class(:testing), do: nil
   defp state_class(:off), do: "text-text-muted"
 end

@@ -781,11 +781,15 @@ defmodule Web.ActivityLive do
   # Whether a form is published for the activity (#970): a testing form only prints drafts.
   defp form_state(%{state: nil} = assigns), do: ~H""
 
+  defp form_state(%{state: :out_of_date} = assigns) do
+    ~H"""
+    <.badge id={@id} kind={:warning} class="ml-1">{form_state_text(@state)}</.badge>
+    """
+  end
+
   defp form_state(assigns) do
     ~H"""
-    <span id={@id} class={["hint ml-1", @state == :out_of_date && "text-warning-text"]}>
-      {form_state_text(@state)}
-    </span>
+    <span id={@id} class="hint ml-1">{form_state_text(@state)}</span>
     """
   end
 
