@@ -389,7 +389,7 @@ defmodule App.AccountsTest do
       :ok = Accounts.deliver_login_text("+16045551234")
 
       assert_received {:text, "+16045551234", body}
-      [first, last] = Regex.run(~r/code: (\d{4}) (\d{4})/, body, capture: :all_but_first)
+      [first, last] = Regex.run(~r/code: (\d{4})-(\d{4})/, body, capture: :all_but_first)
       assert body =~ ~r/@\S+ ##{first}#{last}\z/
     end
 
