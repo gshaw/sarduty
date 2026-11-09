@@ -73,7 +73,7 @@ defmodule Web.UserLoginCodeLive do
           required
           autocomplete="one-time-code"
           inputmode="numeric"
-          maxlength="9"
+          maxlength="12"
         />
         <div :if={@field == "phone"} id="login-webotp" phx-hook="WebOTP" />
         <.input

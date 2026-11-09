@@ -323,9 +323,13 @@ defmodule App.AccountsTest do
       :ok = Accounts.deliver_login_code("html@example.com")
 
       assert_received {:email, email}
-      [code] = Regex.run(~r/\d{4} \d{4}/, email.subject)
+      [code, first, last] = Regex.run(~r/(\d{4}) (\d{4})/, email.subject)
       assert email.text_body =~ code
-      assert email.html_body =~ code
+
+      assert email.html_body =~
+               ~s(<span>#{first}</span><span style="margin-left: 16px;">#{last}</span>)
+
+      assert email.html_body =~ ~s(<meta name="format-detection" content="telephone=no">)
 
       assert email.html_body =~
                ~s(/images/sarduty-logo-96.png" width="48" height="48" alt="SAR Duty")

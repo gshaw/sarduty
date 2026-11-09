@@ -31,7 +31,7 @@ defmodule App.Accounts.UserNotifier do
 
       @#{host} ##{code}
       """)
-      |> html_body(login_html(code, shown, host))
+      |> html_body(login_html(code, host))
       |> Mailer.for_no_team()
 
     with {:ok, _metadata} <- Mailer.deliver(email) do
@@ -166,15 +166,20 @@ defmodule App.Accounts.UserNotifier do
 
   # cspell:ignore Segoe -- Windows' system font, in the email's font stack
   # The logo is a PNG at 2x, since Gmail won't show SVG (see /styles/logo).
+  # The gap between the code's groups is a margin, not a space, so a double-click copies
+  # the whole code. The meta and the style stop iOS Mail making it a phone-number link.
   # The domain line is hidden: it's for Mail, not people.
-  defp login_html(code, shown, host) do
+  defp login_html(code, host) do
     logo = Web.Endpoint.url() <> "/images/sarduty-logo-96.png"
+    {first, last} = String.split_at(code, div(String.length(code), 2))
 
     """
+    <meta name="format-detection" content="telephone=no">
+    <style>a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; font: inherit !important; letter-spacing: inherit !important; }</style>
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; color: #18181b; max-width: 480px;">
       <img src="#{logo}" width="48" height="48" alt="SAR Duty" style="display: block; border: 0;">
       <p>Your code to log in to SAR Duty:</p>
-      <p style="margin: 24px 0; font-size: 32px; font-weight: 700; letter-spacing: 6px; font-family: ui-monospace, Menlo, monospace;">#{shown}</p>
+      <p style="margin: 24px 0; font-size: 32px; font-weight: 700; letter-spacing: 6px; font-family: ui-monospace, Menlo, monospace;"><span>#{first}</span><span style="margin-left: 16px;">#{last}</span></p>
       <p style="color: #52525b; font-size: 14px;">Enter it on the login page. It works once, for 15 minutes. If you did not ask for it, ignore this email.</p>
       <p style="display: none; font-size: 0; line-height: 0; max-height: 0; overflow: hidden;">@#{host} ##{code}</p>
     </div>

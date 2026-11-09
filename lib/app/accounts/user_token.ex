@@ -8,8 +8,8 @@ defmodule App.Accounts.UserToken do
 
   # A login code is single use and short-lived: anyone who can read the inbox can use it.
   # Eight digits, so a code dies after 5 wrong tries, and Web.LoginLimit caps misses per
-  # email and IP across codes: someone who keeps trying at one account for a year gets in
-  # about 1 time in 13,700 (#969).
+  # email, number and IP across codes: someone who keeps trying at one email for a year
+  # gets in about 1 time in 13,700, or 1 in 6,850 at an account with text login too (#969).
   @code_digits 8
   @login_validity_in_minutes 15
   @login_max_attempts 5
