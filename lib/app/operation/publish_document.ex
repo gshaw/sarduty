@@ -18,7 +18,6 @@ defmodule App.Operation.PublishDocument do
   """
 
   alias App.Accounts.User
-  alias App.Document
   alias App.Model.Activity
   alias App.Model.DemoTeam
   alias App.Model.Form
@@ -26,8 +25,6 @@ defmodule App.Operation.PublishDocument do
   alias App.Model.PublishedPDF
   alias App.Model.Team
   alias App.Operation.PrintForm
-  alias App.Report.Context
-  alias App.Report.Error
 
   @doc "`{:ok, pdf}` or `{:error, message}` with nothing saved."
   def call(
@@ -39,26 +36,32 @@ defmodule App.Operation.PublishDocument do
         now
       ) do
     with :ok <- check(team, form, activity, user, now),
-         {:ok, doc, context} <- read(team, form, now),
+         {:ok, doc, context} <- PrintForm.read(team, form.text, now),
          answers = FormAnswer.starting(activity, doc.asks),
          code = PublishedPDF.generate_code(),
          {:ok, printed} <- print(team, form, activity, context, answers, code) do
-      attrs = %{
-        team_id: team.id,
-        name: form.name,
-        subject: subject(activity),
-        code: code,
-        activity_id: activity.id,
-        form_id: form.id,
-        form_version: form.version,
-        user_id: user.id,
-        answers: answers
-      }
+      save(%{code: code, answers: answers}, {team, form, activity, user}, printed, current_id)
+    end
+  end
 
-      case PublishedPDF.publish(attrs, printed, current_id) do
-        {:ok, pdf} -> {:ok, pdf}
-        {:error, :stale} -> {:error, "Someone just published this. Reload to see it."}
-      end
+  defp save(attrs, {team, form, activity, user}, printed, current_id) do
+    attrs
+    |> Map.merge(%{
+      team_id: team.id,
+      name: form.name,
+      subject: subject(activity),
+      activity_id: activity.id,
+      form_id: form.id,
+      form_version: form.version,
+      user_id: user.id
+    })
+    |> save(printed, current_id)
+  end
+
+  defp save(attrs, printed, current_id) do
+    case PublishedPDF.publish(attrs, printed, current_id) do
+      {:ok, pdf} -> {:ok, pdf}
+      {:error, :stale} -> {:error, "Someone just published this. Reload to see it."}
     end
   end
 
@@ -87,23 +90,12 @@ defmodule App.Operation.PublishDocument do
   def team_admin?(_team, %User{is_admin: true}, _now), do: true
   def team_admin?(team, %User{email: email}, now), do: Team.managed_by?(team, email, now)
 
-  defp read(team, form, now) do
-    context = Context.new(team, now)
-
-    with {:ok, doc} <- Document.parse(form.text),
-         {:ok, doc} <- Document.check(doc, context) do
-      {:ok, doc, context}
-    else
-      {:error, %Error{} = error} -> {:error, Error.text(error)}
-    end
-  end
-
   defp print(team, form, activity, context, answers, code) do
     opts = [verify: PublishedPDF.verify_link(code), mark: if(DemoTeam.demo?(team), do: :sample)]
 
     case PrintForm.call(form.text, Form.page_bytes(form), context, activity.id, answers, opts) do
       {:ok, printed} -> {:ok, printed}
-      {:error, %{} = errors} -> {:error, Enum.join(Map.values(errors), " ")}
+      {:error, %{} = errors} -> {:error, errors |> Map.values() |> Enum.join(" ")}
       {:error, message} -> {:error, message}
     end
   end

@@ -10,6 +10,7 @@ defmodule Web.Components.Search do
 
   import Web.Components.Core, only: [icon: 1]
 
+  alias App.Model.PublishedPDF
   alias Phoenix.LiveView.JS
   alias Service.Format
   alias Web.Components.Standing
@@ -329,7 +330,7 @@ defmodule Web.Components.Search do
   defp line(:document, hit),
     do:
       join([
-        App.Model.PublishedPDF.format_code(hit.code),
+        PublishedPDF.format_code(hit.code),
         cond do
           hit.withdrawn_at -> "Withdrawn"
           hit.replaced_by_id -> "Replaced"

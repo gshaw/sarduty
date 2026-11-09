@@ -9,10 +9,12 @@ defmodule App.Operation.PrintForm do
   """
 
   alias App.Document
+  alias App.Model.Team
   alias App.Operation.PrintDocument
   alias App.Operation.ReadDocument
   alias App.Report.Compiler
   alias App.Report.Context
+  alias App.Report.Error
   alias App.Report.Runner
 
   @doc """
@@ -53,6 +55,21 @@ defmodule App.Operation.PrintForm do
     do: Map.merge(values, %{"team.signature" => nil, "pdf.verify_link" => nil})
 
   defp sign(values, link), do: Map.put(values, "pdf.verify_link", link)
+
+  @doc """
+  `{:ok, doc, context}`, form `text` checked against `team`'s catalog as of `now`, or
+  `{:error, message}`: what a draft and publishing read before they print.
+  """
+  def read(%Team{} = team, text, now) do
+    context = Context.new(team, now)
+
+    with {:ok, doc} <- Document.parse(text),
+         {:ok, doc} <- Document.check(doc, context) do
+      {:ok, doc, context}
+    else
+      {:error, %Error{} = error} -> {:error, Error.text(error)}
+    end
+  end
 
   defp form?(%Document{kind: :form}), do: :ok
   defp form?(_doc), do: {:error, "Start a form with form and its name."}

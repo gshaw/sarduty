@@ -185,13 +185,12 @@ defmodule App.Model.PublishedPDF do
   def withdraw(%PublishedPDF{id: id}, %User{id: user_id}, now) do
     at = DateTime.truncate(now, :microsecond)
 
-    PublishedPDF
-    |> where([p], p.id == ^id and is_nil(p.withdrawn_at) and is_nil(p.replaced_by_id))
-    |> Repo.update_all(set: [withdrawn_at: at, withdrawn_by_id: user_id])
-    |> case do
-      {1, _rows} -> {:ok, Repo.get!(PublishedPDF, id)}
-      {0, _rows} -> {:error, :not_current}
-    end
+    {count, _rows} =
+      PublishedPDF
+      |> where([p], p.id == ^id and is_nil(p.withdrawn_at) and is_nil(p.replaced_by_id))
+      |> Repo.update_all(set: [withdrawn_at: at, withdrawn_by_id: user_id])
+
+    if count == 1, do: {:ok, Repo.get!(PublishedPDF, id)}, else: {:error, :not_current}
   end
 
   @doc "The subject's current PDF of the definition `name`, or nil."

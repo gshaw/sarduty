@@ -9,7 +9,10 @@ defmodule Web.ActivityOrgFormLiveTest do
 
   alias App.Model.FormAnswer
   alias App.Model.PublishedPDF
+  alias App.Operation.PublishDocument
+  alias App.Operation.SaveTeamSignature
   alias App.Repo
+  alias App.ViewData.Search
   alias Web.MockupSeed
 
   # The test form, reading BCSARA's Agency File # too, which Missing hiker leaves empty.
@@ -283,8 +286,7 @@ defmodule Web.ActivityOrgFormLiveTest do
       %{cast: cast, request: request} = ctx
       kayakers = MockupSeed.activity(cast, "Overdue kayakers")
 
-      {:ok, team} =
-        App.Operation.SaveTeamSignature.call(Repo.reload!(cast.team), png_fixture(600, 150))
+      {:ok, team} = cast.team |> Repo.reload!() |> SaveTeamSignature.call(png_fixture(600, 150))
 
       conn = log_in_user(build_conn(), cast.alex)
 
@@ -294,7 +296,7 @@ defmodule Web.ActivityOrgFormLiveTest do
       now = DateTime.utc_now()
 
       {:ok, pdf} =
-        App.Operation.PublishDocument.call(team, request, kayakers, cast.alex, nil, now)
+        PublishDocument.call(team, request, kayakers, cast.alex, nil, now)
 
       published = PublishedPDF.attachment(pdf).content
       # The draft's one picture is its DRAFT mark; the published one's is the signature.
@@ -442,19 +444,14 @@ defmodule Web.ActivityOrgFormLiveTest do
     test "a form that's testing prints drafts only", ctx do
       %{cast: cast, hiker: hiker, form: form} = ctx
       form = form |> Ecto.Changeset.change(state: :testing) |> Repo.update!()
-      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      {:ok, lv, _html} = build_conn() |> log_in_user(cast.alex) |> live(form_path(hiker, form))
 
       assert has_element?(lv, "#org-form-in-development", "Testing only")
       refute has_element?(lv, "#org-form-publish")
 
-      assert App.Operation.PublishDocument.call(
-               Repo.reload!(cast.team),
-               form,
-               hiker,
-               cast.alex,
-               nil,
-               DateTime.utc_now()
-             ) ==
+      team = Repo.reload!(cast.team)
+
+      assert PublishDocument.call(team, form, hiker, cast.alex, nil, DateTime.utc_now()) ==
                {:error, "This form is testing. Download a draft PDF instead."}
     end
 
@@ -466,8 +463,8 @@ defmodule Web.ActivityOrgFormLiveTest do
 
       assert "%PDF" <> _ = conn |> get(~p"/teams/coastrange/pdfs/#{pdf.id}") |> response(200)
 
-      [group] =
-        App.ViewData.Search.run(cast.team, PublishedPDF.format_code(pdf.code), kinds: [:document])
+      query = PublishedPDF.format_code(pdf.code)
+      [group] = Search.run(cast.team, query, kinds: [:document])
 
       assert [%{id: id}] = group.hits
       assert id == pdf.id

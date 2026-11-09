@@ -424,19 +424,27 @@ organization's space, `/orgs/:slug/forms` ([organizations.md](organizations.md#i
   out of the check, so a form never reads one ([organizations.md](organizations.md#what-an-organization-never-sees)).
   A team on SAR Duty Records has no custom fields, so a form that reads BCSARA's fields
   can't be saved for an organization with one.
-- **Its organization admins turn it on or off** for every team (App.Operation.SetFormEnabled),
-  and **try it** on Coast Range SAR (App.Operation.TryForm): one of its activities the
+- **Its organization admins set it Off, Testing, or On** for every team
+  (App.Operation.SetFormState, #970). Testing, team admins download draft PDFs only,
+  under a Testing only banner; on, they publish. Its admins **try it** on Coast Range SAR (App.Operation.TryForm): one of its activities the
   form shows on, every answer its default, marked SAMPLE, and nothing saved.
 - **Coast Range SAR has BCSARA's 27 incident fields**, with made-up values, so a BC form
   tried there fills every line. Its draft Missing hiker has no Agency File #.
 
 ### On an activity
 
-Once on, a form shows in a **Forms** section above Actions on each activity its `where`
-shows it on, for team admins only, never members, and never on a deleted activity
-(App.ViewData.ActivityForms). Its page is
+Testing or on, a form shows in a **Forms** section above Actions on each activity its
+`where` shows it on, for team admins only, never members, and never on a deleted
+activity (App.ViewData.ActivityForms), each with its state: Testing, Published, Out of
+date, or Not published. Its page is
 `/teams/:subdomain/activities/:id/forms/:form_id` (Web.ActivityOrgFormLive), found
 through the team's organization, so a form that's off or another organization's is a 404. It shows:
+
+- **The Published box**, once one is published: when and who, its ID linking to its
+  verify page, Download PDF, Publish again, and Withdraw. When the form reads
+  differently now (`ActivityForms.changes/3`), it says what changed, each `verify shows`
+  line, or each kept value for a form with none. Earlier ones list under it, marked
+  Replaced or Withdrawn, and still download.
 
 - **What SAR Duty filled in**: each column of each report, from ReadDocument's `read`.
 - **What's missing**: each one blank, with the page that fixes it, so the fix reaches
@@ -459,21 +467,28 @@ through the team's organization, so a form that's off or another organization's 
   answer that's the ask's plain default, such as On task's Yes, isn't kept: a choice
   sends one for every row. A report a form only works a value out for on each row, such
   as each equipment use's total, shows too, with no boxes.
+- **Publish**, on a form that's on (App.Operation.PublishDocument): checks, reads the
+  form with the activity's answers, prints with a new ID, the verify code, and the
+  team's signature, and saves in one transaction. When another admin published
+  meanwhile, it says "Someone just published this. Reload to see it." History shows each
+  publish and withdraw (App.ViewData.ChangeHistory, from the PDFs themselves).
 - **Download draft PDF** posts the answers to Web.ActivityFormPDFController,
   since a LiveView can't send a PDF, and the browser shows it. DRAFT runs across
-  each page while forms are testing only. App.Operation.CreateFormPDF keeps the answers
-  and prints the form. A draft is never saved; publishing a form, saved with an ID, comes
-  later. An answer that doesn't read makes nothing.
+  each page, the verify code's place is a grey box, and the signature is left blank.
+  App.Operation.CreateFormPDF keeps the answers and prints the form. A draft is never
+  saved. An answer that doesn't read makes nothing.
 
-Search leaves the page out: it's found from its activity (`Web.Search.not_searched/0`).
+Search finds a published PDF by its ID (`App.ViewData.Search`, Documents), and opens its
+form on its activity.
 
 ## Published PDFs
 
 A document is a draft or published, nothing in between (#970). A draft is never saved,
 says DRAFT on every page, and prints a grey box where its verify code goes. Publishing
 prints once with an ID and the verify code, and keeps the PDF, so a download or email
-serves the same file, whatever the team's logos or the definition say now. For now only
-tax credit letters publish: making or replacing one, or emailing one that has none.
+serves the same file, whatever the team's logos or the definition say now. Tax credit
+letters publish when made or replaced, or emailed without one; forms on Publish
+([On an activity](#on-an-activity)).
 
 [App.Model.PublishedPDF](../lib/app/model/published_pdf.ex) is one table,
 `published_pdfs`, with the bytes in `published_pdf_files`, so lists never load them.
@@ -488,6 +503,8 @@ values `keep` names, its answers, and what `verify shows` printed.
 - **One current PDF** per subject and definition, held by a unique index. Publishing
   again (`publish/3`) keeps the old one, Replaced. It takes the current PDF's id the
   person saw, and refuses when another took its place meanwhile.
+- **Withdraw** (App.Operation.WithdrawDocument) ends one with no new one. It stays,
+  marked Withdrawn, and still downloads for team admins (`/teams/:subdomain/pdfs/:id`).
 - **No delete.** A team's purge deletes them all (App.Operation.DeleteTeam). Deleting a
   letter still deletes its PDFs, until letters withdraw instead.
 

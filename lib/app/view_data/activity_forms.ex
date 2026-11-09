@@ -13,8 +13,8 @@ defmodule App.ViewData.ActivityForms do
   alias App.Model.FormAnswer
   alias App.Model.PublishedPDF
   alias App.Model.Team
-  alias App.Operation.PublishDocument
   alias App.Operation.PrintForm
+  alias App.Operation.PublishDocument
   alias App.Operation.ReadDocument
   alias App.Report.Context
 

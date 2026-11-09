@@ -11,15 +11,12 @@ defmodule App.Operation.CreateFormPDF do
   """
 
   alias App.Accounts.User
-  alias App.Document
   alias App.Model.Activity
   alias App.Model.Form
   alias App.Model.FormAnswer
   alias App.Model.Team
   alias App.Operation.PrintForm
   alias App.Operation.SaveFormAnswers
-  alias App.Report.Context
-  alias App.Report.Error
 
   @doc """
   `{:ok, attachment}`, the draft PDF, or `{:error, reason}` with nothing printed.
@@ -27,7 +24,7 @@ defmodule App.Operation.CreateFormPDF do
   """
   def call(%Team{} = team, %Form{} = form, %Activity{} = activity, %User{} = user, typed, now) do
     with :ok <- check(team, form, activity),
-         {:ok, doc, context} <- read(team, form, now),
+         {:ok, doc, context} <- PrintForm.read(team, form.text, now),
          {:ok, _answers} <- save(activity, doc, typed, user, now),
          do: print(form, activity, doc, context)
   end
@@ -53,17 +50,6 @@ defmodule App.Operation.CreateFormPDF do
   end
 
   defp off, do: "This form is turned off. Ask your organization to turn it on."
-
-  defp read(team, form, now) do
-    context = Context.new(team, now)
-
-    with {:ok, doc} <- Document.parse(form.text),
-         {:ok, doc} <- Document.check(doc, context) do
-      {:ok, doc, context}
-    else
-      {:error, %Error{} = error} -> {:error, Error.text(error)}
-    end
-  end
 
   defp save(activity, doc, typed, user, now) do
     case SaveFormAnswers.call(activity, doc, typed, user, now) do

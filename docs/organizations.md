@@ -50,7 +50,8 @@ has its own page.
   its own layout draws the page. Saving checks it on each of the organization's teams
   ([documents.md](documents.md#an-organizations-forms)).
 - **Organization admins see each one**: what it reads and asks, its page, and its text.
-  They try it on Coast Range SAR, a made-up team, and turn it on or off for every team.
+  They try it on Coast Range SAR, a made-up team, and set it Off, Testing (draft PDFs
+  only), or On (team admins publish it) for every team (#970).
 - **Once on, it shows for every team** in the organization, for team admins only. A team
   with no organization has none.
 
