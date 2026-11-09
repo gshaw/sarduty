@@ -397,6 +397,29 @@ defmodule Web.UserSessionControllerTest do
       refute build_conn() |> from_ip() |> log_in(user.email, code) |> get_session(:user_token)
     end
 
+    test "a miss after old ones age out doesn't block or email again", %{conn: conn} do
+      %{user: user} = user_with_team_fixture()
+      who = Event.who(user.email)
+      data = %{via: "email", known_browser: false}
+      recent = DateTime.add(DateTime.utc_now(), -23, :hour)
+
+      for _ <- 1..19,
+          do: Event.record!(:login_code_missed, who: who, data: data, occurred_at: recent)
+
+      Event.record!(:login_blocked,
+        who: who,
+        data: Map.put(data, :scope, "account"),
+        occurred_at: recent
+      )
+
+      conn |> from_ip() |> log_in(user.email, "00000000")
+
+      since = DateTime.add(DateTime.utc_now(), -1, :day)
+      assert Event.count_since(:login_code_missed, since, who: who) == 20
+      assert Event.count_since(:login_blocked, since, who: who) == 1
+      refute_received {:email, %{subject: "Wrong login codes entered" <> _}}
+    end
+
     test "counts misses per IP, an IPv6 /64 as one", %{conn: conn} do
       %{user: user} = user_with_team_fixture()
       data = %{via: "email", known_browser: false}

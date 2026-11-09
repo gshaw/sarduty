@@ -126,7 +126,10 @@ defmodule Web.LoginLimit do
   recorded as `login_blocked`. A known browser's misses don't count against the account.
 
   The miss and the count are one transaction, and SQLite has one writer, so two misses at
-  once count 20 and 21, and only one of them blocks.
+  once count 20 and 21, and only one of them blocks. The count looks back 24 hours, so it
+  drops below the cap as old misses age out, and one more wrong code takes it back to the
+  cap. That isn't a new block while one stands from the last 24 hours, so the owner gets
+  one email a day, not one per aged-out miss.
   """
   def miss(source, who, ip, data) do
     hash = Event.who(who)
@@ -135,8 +138,14 @@ defmodule Web.LoginLimit do
       Repo.transaction(fn ->
         SecurityEvent.record(source, :login_code_missed, who: hash, data: data)
         since = day_ago()
-        account? = not data.known_browser and account_misses(hash, since) == @account_miss_limit
-        ip? = ip_misses(ip, since) == @ip_miss_limit
+
+        account? =
+          not data.known_browser and account_misses(hash, since) == @account_miss_limit and
+            not blocked_since?(since, who: hash, data: %{scope: "account"})
+
+        ip? =
+          ip_misses(ip, since) == @ip_miss_limit and
+            not blocked_since?(since, ip_key: RateLimit.ip_key(ip), data: %{scope: "ip"})
 
         for {scope, true} <- [account: account?, ip: ip?] do
           Logger.warning("Login code miss limit reached (#{scope}) from #{ip}")
@@ -158,6 +167,8 @@ defmodule Web.LoginLimit do
 
   defp ip_misses(ip, since),
     do: Event.count_since(:login_code_missed, since, ip_key: RateLimit.ip_key(ip))
+
+  defp blocked_since?(since, opts), do: Event.count_since(:login_blocked, since, opts) > 0
 
   defp day_ago, do: DateTime.add(DateTime.utc_now(), -1, :day)
 
