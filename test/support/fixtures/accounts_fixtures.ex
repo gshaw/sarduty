@@ -69,7 +69,7 @@ defmodule App.AccountsFixtures do
 
     receive do
       {:text, ^phone, "Your SAR Duty login code: " <> <<code::binary-9, _rest::binary>>} ->
-        String.replace(code, " ", "")
+        String.replace(code, "-", "")
     after
       0 -> raise "no login code was texted to #{phone}"
     end

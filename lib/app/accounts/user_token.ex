@@ -73,10 +73,13 @@ defmodule App.Accounts.UserToken do
      }}
   end
 
-  @doc "A code as people read it, in groups of 4: `4829 1375`."
-  def format_code(code) do
+  @doc """
+  A code as people read it, in groups of 4: `4829 1375`, or `4829-1375` with "-" as
+  `separator`.
+  """
+  def format_code(code, separator \\ " ") do
     {first, last} = String.split_at(code, div(@code_digits, 2))
-    first <> " " <> last
+    first <> separator <> last
   end
 
   @doc "A code as typed or pasted, without the spaces and dashes of its groups."
