@@ -9,8 +9,8 @@ defmodule App.ViewData.MemberToDoTest do
   @tz "America/Vancouver"
   @card %{id: 1}
 
-  defp letter(year, downloaded_at \\ nil),
-    do: %{id: year, year: year, downloaded_at: downloaded_at}
+  defp letter(year, first_opened_at \\ nil),
+    do: %{id: year, year: year, first_opened_at: first_opened_at}
 
   defp row(status, title, days_left),
     do: %{status: status, award: %{qualification: %{title: title}}, days_left: days_left}
