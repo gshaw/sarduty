@@ -304,5 +304,5 @@ defmodule Web.MemberCardLive do
     do: "Email it so #{member.name} can add it to Wallet."
 
   # The card's page on the verify site, the same one its QR code opens.
-  defp verify_url(card), do: "#{Web.VerifyHost.url()}/#{MemberCard.format_code(card.code)}"
+  defp verify_url(card), do: MemberCard.verify_url(card.code, Web.VerifyHost.url())
 end

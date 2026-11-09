@@ -1,8 +1,8 @@
 defmodule Web.Components.WalletBadges do
   @moduledoc """
   Apple's and Google's own Add to Wallet badges, side by side at 48px, Google's minimum
-  (#952). Only the card's page has them: Your membership and the Dashboard's to-do have
-  a link, Add ID card to Wallet, that opens it, so a member learns one page, and on a
+  (#952). Only the card's page has them: Your membership's Show ID card and the
+  Dashboard's Add ID card to Wallet open it, so a member learns one page, and on a
   computer gets its QR code. Each badge shows only when its Wallet is set up. They're
   links to a route that builds the pass on the tap, never `<.button>`s: both brands
   forbid changing the artwork. Google's is its condensed button, two lines like Apple's,

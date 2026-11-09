@@ -391,20 +391,11 @@ defmodule Web.MeLive do
       <h2 class="chart-title mb-1">ID card</h2>
       <p class="hint mb-2">
         Your ID card shows you are a current member of {@team.name}, with your endorsements.
-        Show it at the door, or to another agency on a search.
+        Show it at the door, or to another agency at an incident.
       </p>
-      <%!-- The card's page has Apple's and Google's badges, and a QR code on a computer. --%>
+      <%!-- The card's page has the card, both Wallets, Save image, Print, and Verify (#973). --%>
       <ul id="card-actions" class="action-list">
-        <li :if={Web.Components.WalletBadges.any?()}>
-          <.a id="add-to-wallet" href={Web.CardLinks.path(@card)}>Add ID card to Wallet</.a>
-        </li>
-        <li>
-          <.a
-            id="card-verify-link"
-            href={verify_url(@card)}
-            external={true}
-          >Verify your ID card</.a>
-        </li>
+        <li><.a id="show-id-card" href={Web.CardLinks.path(@card)}>Show ID card</.a></li>
       </ul>
     </div>
     """
@@ -513,7 +504,4 @@ defmodule Web.MeLive do
 
     {:noreply, assign(socket, :certificates, sent_certificates(member))}
   end
-
-  # The card's page on the verify site, as a checker sees it.
-  defp verify_url(card), do: "#{Web.VerifyHost.url()}/#{MemberCard.format_code(card.code)}"
 end

@@ -11,9 +11,14 @@ defmodule Web.Components.Core do
 
   # The icons in assets/icons, so <.icon> and <.button icon> refuse any other name: a
   # written-out name when it compiles, a worked-out one when it renders.
-  @icon_files "../../../assets/icons/*.svg" |> Path.expand(__DIR__) |> Path.wildcard()
+  @icon_glob Path.expand("../../../assets/icons/*.svg", __DIR__)
+  @icon_files @icon_glob |> Path.wildcard() |> Enum.sort()
   for file <- @icon_files, do: @external_resource(file)
   @icon_names Enum.map(@icon_files, &Path.basename(&1, ".svg"))
+
+  # An icon bin/icons adds is no @external_resource yet, so ask mix to recompile when the
+  # files change, or a running dev server keeps the old set.
+  def __mix_recompile__?, do: @icon_glob |> Path.wildcard() |> Enum.sort() != @icon_files
 
   @doc """
   Renders a flash as a toast: a pill under the top bar, dark or light against the theme

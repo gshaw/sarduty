@@ -17,7 +17,14 @@ defmodule Web.CardLinkLive do
   # it is. Each opens Web.CardLinkController, which builds the pass on the tap, so a mail
   # scanner or a link preview that opens the page builds nothing. On a computer, Open on
   # your phone has the page's QR code. A card that is replaced, cancelled, or not active
-  # says so and offers nothing. Logged in to the card's team, the bar names it.
+  # says so and offers nothing. Logged in to the card's team, the bar names it, and the
+  # card's own member gets a trail back to Your membership, as the reply links lead back
+  # into the app: the page stays one page for everyone, with no redirect.
+  #
+  # Under the Wallet, the card itself (#973), for a member with no Wallet or one who
+  # wants a copy on paper: a line on what a copy can't do, Print ID card, then its front
+  # and back as SAR Duty draws them, each with Save image. Verify your ID card and Lost
+  # your phone go in the sidebar, under Open on your phone; on a phone, under the card.
   #
   # Under it, one quiet line says what SAR Duty sees, and nothing else: no spinner, since
   # a tap can't tell an added card from a cancelled sheet or a card already there. It
@@ -48,7 +55,8 @@ defmodule Web.CardLinkLive do
        team: team,
        url: Web.Endpoint.url() <> ~p"/cards/#{token}",
        checking: nil,
-       checking_ref: nil
+       checking_ref: nil,
+       own_card?: Enum.any?(socket.assigns.member_logins, &(&1.id == card.member_id))
      )
      |> assign_card(card)
      |> assign_bar_team(team)}
@@ -153,6 +161,10 @@ defmodule Web.CardLinkLive do
 
   def render(assigns) do
     ~H"""
+    <.breadcrumbs :if={@own_card?}>
+      <:item label="Your membership" path={~p"/teams/#{@team}/me"} />
+      <:item label="ID card" />
+    </.breadcrumbs>
     <div class="md:flex md:gap-8">
       <div class="md:w-2/3 min-w-0">
         <div class="media mb-4">
@@ -168,16 +180,14 @@ defmodule Web.CardLinkLive do
           phones={@phones}
         />
       </div>
-      <.open_on_device
-        :if={@status == :active}
-        id="open-on-phone"
-        heading="Open on your phone"
-        url={@url}
-      >
-        <p class="mb-0">
-          Scan the code with your phone's camera, then add your ID card to Wallet there.
-        </p>
-      </.open_on_device>
+      <div :if={@status == :active} class="md:w-1/3">
+        <.open_on_device id="open-on-phone" class={nil} heading="Open on your phone" url={@url}>
+          <p class="mb-0">
+            Scan the code with your phone's camera. Add your ID card to Wallet there.
+          </p>
+        </.open_on_device>
+        <.card_help card={@card} />
+      </div>
     </div>
     """
   end
@@ -192,7 +202,7 @@ defmodule Web.CardLinkLive do
     ~H"""
     <p id="card-link-intro" class="lead">
       Your ID card shows you are a current member of {@team.name}, with your endorsements.
-      Show it at the door, or to another agency on a search.
+      Show it at the door, or to another agency at an incident.
     </p>
     <.wallet_badges
       id="card-link-wallets"
@@ -202,9 +212,23 @@ defmodule Web.CardLinkLive do
       google_click={JS.push("adding", value: %{wallet: "google"})}
     />
     <p id="card-link-status" class="hint mt-6 mb-0">{WalletText.seen(@phones, @card)}</p>
-    <p id="card-link-lost" class="hint mt-2 mb-0">
-      Lost your phone? Ask a team admin to replace your ID card. This link is yours alone.
+    <p id="card-link-no-wallet" class="mt-8 mb-0">
+      No Wallet? Save each side as an image, or print both. Neither updates. Anyone
+      verifying your card scans its code.
     </p>
+    <div id="card-link-print" class="mt-2">
+      <p class="action mb-0">
+        <.a
+          id="card-link-print-link"
+          href={~p"/cards/#{@token}/pdf"}
+          target="_blank"
+          icon="printer"
+        >Print ID card</.a>
+      </p>
+      <p class="hint mt-1 mb-0">Both sides at card size, in black on white, to cut out.</p>
+    </div>
+    <.card_side id="card-link-front" class="mt-6" token={@token} side="front" card={@card} />
+    <.card_side id="card-link-back" class="mt-6" token={@token} side="back" card={@card} />
     """
   end
 
@@ -216,13 +240,67 @@ defmodule Web.CardLinkLive do
 
   defp card_state(%{status: :cancelled} = assigns) do
     ~H"""
-    <p id="card-link-cancelled">This ID card was cancelled.</p>
+    <p id="card-link-cancelled">This ID card was cancelled. Ask a team admin if you need one.</p>
     """
   end
 
   defp card_state(%{status: :inactive} = assigns) do
     ~H"""
-    <p id="card-link-inactive">This ID card is not active.</p>
+    <p id="card-link-inactive">This ID card is not active. Ask a team admin if you need one.</p>
     """
   end
+
+  attr :card, :map, required: true
+
+  # Under Open on your phone on a computer, and under the card on a phone, where the QR
+  # code hides.
+  defp card_help(assigns) do
+    ~H"""
+    <aside id="card-link-help" class="mt-8">
+      <%!-- The verify site is SAR Duty's own: the same tab, with the arrow. --%>
+      <div id="card-link-verify">
+        <p class="action mb-0">
+          <.a id="card-link-verify-link" href={verify_url(@card)}>Verify your ID card</.a>
+        </p>
+        <p class="hint mt-1 mb-0">What someone verifying your card sees.</p>
+      </div>
+      <p id="card-link-lost" class="hint mt-4 mb-0">
+        Lost your phone? Ask a team admin to replace your ID card. This link is yours alone.
+      </p>
+    </aside>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :class, :string, default: nil
+  attr :token, :string, required: true
+  attr :side, :string, required: true, doc: "front or back"
+  attr :card, :map, required: true
+
+  # One side as SAR Duty draws it (DrawMemberCard, #973), with Save image under it. A
+  # long press on the picture saves it on a phone too.
+  defp card_side(assigns) do
+    ~H"""
+    <div id={@id} class={@class}>
+      <p class="hint mb-2">{String.capitalize(@side)}</p>
+      <img
+        src={~p"/cards/#{@token}/#{@side}"}
+        alt={"#{@card.member.name}'s ID card, #{@side}"}
+        class="id-card-side"
+      />
+      <p class="action mt-2 mb-0">
+        <.a
+          id={"#{@id}-save"}
+          href={~p"/cards/#{@token}/#{@side}"}
+          download={"#{@card.member.team.subdomain}-id-card-#{@side}.png"}
+          phx-hook="SaveImage"
+          icon="download"
+        >Save {@side} image</.a>
+      </p>
+    </div>
+    """
+  end
+
+  # The card's page on the verify site, as a checker sees it.
+  defp verify_url(card), do: MemberCard.verify_url(card.code, Web.VerifyHost.url())
 end

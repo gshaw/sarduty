@@ -126,7 +126,34 @@ defmodule App.Model.MemberCard do
   `HTTPS://VERIFY.SARDUTY.COM/K7Q4M-2XA9H`: 38 characters, which still fits the
   smallest QR code a link fits, version 2. 12 characters would not.
   """
-  def qr_url(code, verify_url), do: String.upcase("#{verify_url}/#{format_code(code)}")
+  def qr_url(code, verify_url), do: code |> verify_url(verify_url) |> String.upcase()
+
+  @doc """
+  The card's page on the verify site as a link people read and open:
+  `https://verify.sarduty.com/K7Q4M-2XA9H`. The QR code holds `qr_url/2`'s capitals.
+  """
+  def verify_url(code, verify_url), do: "#{verify_url}/#{format_code(code)}"
+
+  @doc """
+  The label over the name on a card's front, for its `status/2`: Apple's pass, Google's,
+  and the drawn card (App.Operation.DrawMemberCard). A Try a demo card says it's a sample
+  (#857).
+  """
+  def name_label(:active, true = _sample?), do: "Sample, not real ID"
+  def name_label(:active, _sample?), do: "Member"
+  def name_label(:inactive, _sample?), do: "Not an active member"
+  def name_label(:revoked, _sample?), do: "Card cancelled"
+
+  @doc "A card's Status field, for its `status/2`."
+  def status_text(:active), do: "Active"
+  def status_text(:inactive), do: "Not active"
+  def status_text(:revoked), do: "Cancelled"
+
+  @doc "When the team's records were last refreshed, for a card's Last updated field."
+  def last_updated(%Team{d4h_refreshed_at: nil}), do: "Never"
+
+  def last_updated(%Team{} = team),
+    do: Service.Format.date_long(team.d4h_refreshed_at, team.timezone)
 
   @doc "How to verify a card, for the back of the pass. `code` is as printed."
   def how_to_check(code) do

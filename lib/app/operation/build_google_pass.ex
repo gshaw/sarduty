@@ -115,7 +115,7 @@ defmodule App.Operation.BuildGooglePass do
       state: if(status == :revoked, do: "EXPIRED", else: "ACTIVE"),
       hexBackgroundColor: @background_color,
       cardTitle: localized(if(sample?, do: "Sample card", else: team.name)),
-      subheader: localized(name_label(status, sample?)),
+      subheader: localized(MemberCard.name_label(status, sample?)),
       header: localized(member.name),
       textModulesData: texts(card, qualifications, status)
     }
@@ -128,7 +128,7 @@ defmodule App.Operation.BuildGooglePass do
     team = member.team
 
     List.flatten([
-      text("status", "Status", status_text(status)),
+      text("status", "Status", MemberCard.status_text(status)),
       member_since_text(member),
       valid_until_text(team, status),
       text(
@@ -137,7 +137,7 @@ defmodule App.Operation.BuildGooglePass do
         MemberCard.how_to_check(MemberCard.format_code(card.code))
       ),
       qualification_texts(qualifications, team.timezone),
-      text("checked", "Last updated", last_checked(team)),
+      text("checked", "Last updated", MemberCard.last_updated(team)),
       text("issuer", "Issued by", MemberCard.issued_by(team))
     ])
   end
@@ -233,15 +233,6 @@ defmodule App.Operation.BuildGooglePass do
 
   defp localized(value), do: %{defaultValue: %{language: "en", value: value}}
 
-  defp name_label(:active, true = _sample?), do: "Sample, not real ID"
-  defp name_label(:active, _sample?), do: "Member"
-  defp name_label(:inactive, _sample?), do: "Not an active member"
-  defp name_label(:revoked, _sample?), do: "Card cancelled"
-
-  defp status_text(:active), do: "Active"
-  defp status_text(:inactive), do: "Not active"
-  defp status_text(:revoked), do: "Cancelled"
-
   # D4H allows a member with no start date (#421).
   defp member_since_text(%{joined_at: nil}), do: []
 
@@ -252,7 +243,4 @@ defmodule App.Operation.BuildGooglePass do
         "Member since",
         Service.Format.month_year(member.joined_at, member.team.timezone)
       )
-
-  defp last_checked(%{d4h_refreshed_at: nil}), do: "Never"
-  defp last_checked(team), do: Service.Format.date_long(team.d4h_refreshed_at, team.timezone)
 end

@@ -7,7 +7,7 @@
       <div class="md:w-2/3 min-w-0">
         <h2 class="heading">Your ID card</h2>
         <p class="lead mb-0">
-          Cameron Ruiz, your ID card shows you are a current member of Coast Range SAR. Show it at the door, or to another team on a search.
+          Cameron Ruiz, your ID card shows you are a current member of Coast Range SAR. Show it at the door, or to another agency at an incident.
         </p>
       </div>
       <.open_on_device
@@ -16,7 +16,7 @@
         url="https://sarduty.com/cards/sample"
       >
         <p class="mb-0">
-          Scan the code with your phone's camera, then add your ID card to Wallet there.
+          Scan the code with your phone's camera. Add your ID card to Wallet there.
         </p>
       </.open_on_device>
     </div>
@@ -42,5 +42,10 @@
     It is the page's sidebar: put the main column in <code>md:w-2/3</code>, beside it in a
     <code>md:flex md:gap-8</code>
     row, and it takes <code>md:w-1/3</code>. On a phone it goes under the page. It is hidden on a touch screen, which is the device already, so view this page on a computer to see it.
+  </p>
+  <p>
+    With more in the sidebar that every device needs, such as the ID card page's Verify your ID card, put both in a
+    <code>md:w-1/3</code>
+    column and pass <code>class=&#123;nil&#125;</code>, so only the QR code hides on a touch screen.
   </p>
 </.shell>

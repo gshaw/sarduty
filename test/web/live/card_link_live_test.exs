@@ -47,6 +47,38 @@ defmodule Web.CardLinkLiveTest do
     assert has_element?(lv, "#open-on-phone", "Scan the code with your phone's camera")
   end
 
+  test "what a copy can't do and Print ID card, then the card, each side to save, and Verify beside it",
+       %{conn: conn, team: team, member: member} do
+    card = member_card_fixture(member)
+    path = CardLinks.path(card)
+    {:ok, lv, html} = live(conn, path)
+
+    # On a phone, where the sidebar's QR code hides, Verify and Lost your phone follow the card.
+    order =
+      for id <- ~w(card-link-no-wallet card-link-print card-link-front card-link-help),
+          do: elem(:binary.match(html, ~s{id="#{id}"}), 0)
+
+    assert order == Enum.sort(order)
+    assert has_element?(lv, "#card-link-help #card-link-lost", "Ask a team admin")
+
+    for side <- ~w(front back) do
+      assert has_element?(lv, ~s{#card-link-#{side} img[src="#{path}/#{side}"]})
+
+      assert has_element?(
+               lv,
+               ~s{#card-link-#{side}-save[href="#{path}/#{side}"][download="#{team.subdomain}-id-card-#{side}.png"][phx-hook="SaveImage"]},
+               "Save #{side} image"
+             )
+    end
+
+    assert has_element?(lv, ~s{#card-link-print-link[href="#{path}/pdf"]}, "Print ID card")
+    assert has_element?(lv, "#card-link-print", "in black on white, to cut out")
+
+    verify = MemberCard.verify_url(card.code, Web.VerifyHost.url())
+    assert has_element?(lv, ~s{#card-link-verify-link[href="#{verify}"]}, "Verify your ID card")
+    assert has_element?(lv, "#card-link-no-wallet", "Neither updates")
+  end
+
   test "a line under the badges says what SAR Duty sees, and changes while the page is open",
        %{conn: conn, member: member} do
     card = member_card_fixture(member)
@@ -181,7 +213,12 @@ defmodule Web.CardLinkLiveTest do
     card = member_card_fixture(member, %{revoked_at: DateTime.utc_now()})
     {:ok, lv, _html} = live(conn, CardLinks.path(card))
 
-    assert has_element?(lv, "#card-link-cancelled", "This ID card was cancelled.")
+    assert has_element?(
+             lv,
+             "#card-link-cancelled",
+             "This ID card was cancelled. Ask a team admin"
+           )
+
     refute_offers(lv)
   end
 
@@ -190,8 +227,36 @@ defmodule Web.CardLinkLiveTest do
     card = member_card_fixture(retired)
     {:ok, lv, _html} = live(conn, CardLinks.path(card))
 
-    assert has_element?(lv, "#card-link-inactive", "This ID card is not active.")
+    assert has_element?(lv, "#card-link-inactive", "This ID card is not active. Ask a team admin")
     refute_offers(lv)
+  end
+
+  describe "Your membership" do
+    test "the card's own member, logged in, has a trail back to it" do
+      %{team: team, member: member, user: user} = member_with_login_fixture()
+      path = member |> member_card_fixture() |> CardLinks.path()
+
+      {:ok, lv, _html} = live(log_in_user(build_conn(), user), path)
+
+      assert has_element?(
+               lv,
+               ~s{.breadcrumbs a[href="/teams/#{team.subdomain}/me"]},
+               "Your membership"
+             )
+
+      assert has_element?(lv, ".breadcrumbs [aria-current=page]", "ID card")
+    end
+
+    test "anyone else gets the page alone", %{conn: conn, member: member} do
+      path = member |> member_card_fixture() |> CardLinks.path()
+      %{user: someone_else} = member_with_login_fixture()
+
+      for conn <- [conn, log_in_user(build_conn(), someone_else)] do
+        {:ok, lv, _html} = live(conn, path)
+        refute has_element?(lv, ".breadcrumbs")
+        assert has_element?(lv, "#card-link-wallets")
+      end
+    end
   end
 
   test "a bad token is not found", %{conn: conn} do
@@ -203,5 +268,9 @@ defmodule Web.CardLinkLiveTest do
     refute has_element?(lv, "#card-link-wallets-apple")
     refute has_element?(lv, "#card-link-wallets-google")
     refute has_element?(lv, "#open-on-phone")
+    refute has_element?(lv, "#card-link-front")
+    refute has_element?(lv, "#card-link-back")
+    refute has_element?(lv, "#card-link-print")
+    refute has_element?(lv, "#card-link-verify")
   end
 end

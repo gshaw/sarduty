@@ -5,11 +5,11 @@ defmodule Web.MeLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.AccountsFixtures
-  alias App.Model.MemberCard
   alias App.Model.NoShow
   alias App.Model.SavedPDF
   alias App.Operation.SetTeamFeature
   alias App.Repo
+  alias Web.Components.WalletBadges
 
   setup %{conn: conn} do
     %{team: team, member: member, user: user} = member_with_login_fixture()
@@ -211,9 +211,7 @@ defmodule Web.MeLiveTest do
       refute has_element?(lv, "#qualifications-list", "Does not expire")
     end
 
-    test "the ID card, with a link to its page to add it to Wallet",
-         %{conn: conn, team: team, member: member} do
-      App.ApplePassCredentials.configure()
+    test "the ID card, with Show ID card to its page", %{conn: conn, team: team, member: member} do
       team = team |> Ecto.Changeset.change(id_cards_enabled: true) |> Repo.update!()
 
       lv = open(conn, ~p"/teams/#{team}/me")
@@ -222,34 +220,23 @@ defmodule Web.MeLiveTest do
       card = member_card_fixture(member)
       lv = open(conn, ~p"/teams/#{team}/me")
       assert has_element?(lv, "#id-card", "a current member of #{team.name}")
-      code = MemberCard.format_code(card.code)
-
-      assert has_element?(
-               lv,
-               ~s{#card-actions #card-verify-link[href$="/#{code}"]},
-               "Verify your ID card"
-             )
-
-      assert has_element?(
-               lv,
-               ~s{#card-actions #add-to-wallet[href^="/cards/"]},
-               "Add ID card to Wallet"
-             )
+      assert has_element?(lv, ~s{#card-actions #show-id-card[href^="/cards/"]}, "Show ID card")
 
       [_, token] = Regex.run(~r{href="/cards/([^"]+)"}, render(lv))
       assert Web.CardLinks.find_card(token).id == card.id
     end
 
-    # Your membership never asks whether the card is in Wallet (#952): the card's page
-    # is where a member adds it, again on a new phone.
-    test "Add ID card to Wallet stays once the card is in Wallet",
+    # The card's page shows the card, to save or print, so the link stays with no Wallet
+    # set up, and once the card is in one (#952). Verify your ID card moved there.
+    test "Show ID card is always there, and Verify is on the card's page",
          %{conn: conn, team: team, member: member} do
-      App.ApplePassCredentials.configure()
       team = team |> Ecto.Changeset.change(id_cards_enabled: true) |> Repo.update!()
       member_card_fixture(member, %{in_wallet_at: DateTime.utc_now()})
+      refute WalletBadges.any?()
 
       lv = open(conn, ~p"/teams/#{team}/me")
-      assert has_element?(lv, "#add-to-wallet")
+      assert has_element?(lv, "#show-id-card")
+      refute has_element?(lv, "#id-card", "Verify")
     end
 
     test "the latest tax credit letter, to download", %{conn: conn, team: team, member: member} do

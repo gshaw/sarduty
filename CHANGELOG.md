@@ -4,6 +4,11 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- ⭐ The ID card page shows your card, front and back, under the Wallet buttons. No
+  Wallet? Save image puts each side in Photos, and Print ID card prints both at card
+  size, in black on white, to cut out for a badge holder.
+- Your membership's ID card link is Show ID card, and it's there even without a Wallet.
+  Verify your ID card moved to the card page.
 - Login codes are 8 digits, shown as 4829 1375 (4829-1375 in a text), so they're far
   harder to guess. On an iPhone or a Mac, Safari offers the code from Mail or Messages.
   On Android, Chrome asks to fill in a texted code.

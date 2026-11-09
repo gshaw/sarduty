@@ -265,6 +265,8 @@ defmodule Web.StyleGuideHTML do
       {"file", "A file in a file drop that is not a photo, and an email's attachment"},
       {"calendar-plus", "Add to calendar, in the arrow's place"},
       {"map-pin", "Open in Google Maps or Apple Maps, in the arrow's place"},
+      {"printer", "Print ID card, in the arrow's place"},
+      {"download", "Save an ID card's front or back image, in the arrow's place"},
       {"clock", "Hours milestones"},
       {"cake", "Years milestones"},
       {"life-buoy", "Incidents milestones"},
