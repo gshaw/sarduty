@@ -180,7 +180,7 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
     render_hook(lv, "scanned", %{code: cancelled.code})
     assert has_element?(lv, "#message", "cancelled")
 
-    render_hook(lv, "scanned", %{code: "https://example.com/K7Q4-M2XA"})
+    render_hook(lv, "scanned", %{code: "https://example.com/K7Q4M-2XA9H"})
     assert has_element?(lv, "#message", "not a SAR Duty ID card")
 
     assert scans(activity) == []
@@ -403,9 +403,9 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
   end
 
   test "card_entry? tells a card from a name" do
-    assert Web.ActivityTakeAttendanceLive.card_entry?("HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA")
-    assert Web.ActivityTakeAttendanceLive.card_entry?("K7Q4-M2XA")
-    assert Web.ActivityTakeAttendanceLive.card_entry?("k7q4m2xa")
+    assert Web.ActivityTakeAttendanceLive.card_entry?("HTTPS://VERIFY.SARDUTY.COM/K7Q4M-2XA9H")
+    assert Web.ActivityTakeAttendanceLive.card_entry?("K7Q4M-2XA9H")
+    assert Web.ActivityTakeAttendanceLive.card_entry?("k7q4m2xa9h")
     refute Web.ActivityTakeAttendanceLive.card_entry?("Matthews")
     refute Web.ActivityTakeAttendanceLive.card_entry?("mei")
   end
@@ -421,7 +421,7 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
     render_hook(lv, "scanned", %{code: card.code})
     assert_push_event(lv, "scan-sound", %{sound: :left})
 
-    render_hook(lv, "scanned", %{code: "ZZZZ-ZZZZ"})
+    render_hook(lv, "scanned", %{code: "ZZZZZ-ZZZZZ"})
     assert_push_event(lv, "scan-sound", %{sound: :error})
   end
 

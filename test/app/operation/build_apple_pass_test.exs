@@ -20,7 +20,11 @@ defmodule App.Operation.BuildApplePassTest do
     }
 
     member = %Member{name: "Alex Example", joined_at: ~U[2019-03-12 08:00:00Z], team: team}
-    struct(%MemberCard{id: 7, code: "K7Q4M2XA", serial_number: "member-3", member: member}, attrs)
+
+    struct(
+      %MemberCard{id: 7, code: "K7Q4M2XA9H", serial_number: "member-3", member: member},
+      attrs
+    )
   end
 
   test "shows the member, their status, and how long the card is good for" do
@@ -76,8 +80,8 @@ defmodule App.Operation.BuildApplePassTest do
     [barcode] = BuildApplePass.pass_json(card(), :active, [], @config).barcodes
 
     assert barcode.format == "PKBarcodeFormatQR"
-    assert barcode.message =~ ~r{^HTTPS?://VERIFY\.[A-Z0-9.:]+/K7Q4-M2XA$}
-    assert barcode.altText == "K7Q4-M2XA"
+    assert barcode.message =~ ~r{^HTTPS?://VERIFY\.[A-Z0-9.:]+/K7Q4M-2XA9H$}
+    assert barcode.altText == "K7Q4M-2XA9H"
   end
 
   test "keeps to Apple's limit of four secondary and auxiliary fields with a square code" do

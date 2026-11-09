@@ -6,8 +6,8 @@ defmodule Web.VerifySamplesLive do
 
   # Public, on the verify site, at /samples (#854): a QR code for each answer the check
   # gives, for demos and docs. The cards are Coast Range SAR's (App.CoastRange), made up
-  # and looked up in App.SampleRepo only, so their codes never change. "samples" has an
-  # L, which card codes never do.
+  # and looked up in App.SampleRepo only, so their codes change only when the code format
+  # does (#969). "samples" has an L, which card codes never do.
   #
   # The forged card's QR links to `.example`, a domain nobody can register.
   @forged_host "verify.sarduty.example"
@@ -72,7 +72,8 @@ defmodule Web.VerifySamplesLive do
       <h1 class="heading">Sample ID cards</h1>
       <p class="text-text-muted">
         Scan these to see each answer the check gives. They belong to Coast Range SAR, a
-        made-up team, and every result says it is a sample. Their codes never change.
+        made-up team, and every result says it is a sample. Their codes change only when
+        the code format does.
       </p>
 
       <div :for={sample <- @samples} id={"sample-#{sample.id}"} class="card mt-4">

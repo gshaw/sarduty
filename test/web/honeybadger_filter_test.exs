@@ -92,12 +92,12 @@ defmodule Web.HoneybadgerFilterTest do
 
   test "cuts card codes from Insights request events" do
     conn = %Plug.Conn{host: "verify.sarduty.com"}
-    data = %{request_path: "/K7Q4M2XA/photo", params: %{"code" => "K7Q4M2XA"}}
+    data = %{request_path: "/K7Q4M2XA9H/photo", params: %{"code" => "K7Q4M2XA9H"}}
 
     filtered = HoneybadgerFilter.filter_telemetry_event(data, %{conn: conn}, [:phoenix])
 
     assert filtered.request_path == "/[FILTERED]/photo"
-    refute inspect(filtered) =~ "K7Q4M2XA"
+    refute inspect(filtered) =~ "K7Q4M2XA9H"
   end
 
   test "never sends a LiveView's assigns to Insights" do

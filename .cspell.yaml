@@ -28,10 +28,15 @@ words:
   - DSAR # Dev SAR's abbreviated name
   - nohup
   - SAMP # the prefix of Coast Range SAR's sample ID card codes (#854)
-  - ACTV # sample card code SAMP-ACTV, the active member (#854)
-  - RTRD # sample card code SAMP-RTRD, the retired member (#854)
-  - CNCD # sample card code SAMP-CNCD, the cancelled card (#854)
-  - NCRD # sample card code SAMP-NCRD, no card (#854)
+  - SAMPX # the first half of a sample ID card code, SAMPX-ACTVX (#969)
+  - ACTVX # sample card code SAMPX-ACTVX, the active member (#854)
+  - RTRDX # sample card code SAMPX-RTRDX, the retired member (#854)
+  - CNCDX # sample card code SAMPX-CNCDX, the cancelled card (#854)
+  - NCRDX # sample card code SAMPX-NCRDX, no card (#854)
+  - SAMPXACTVX # the codes as stored, without the dash
+  - SAMPXRTRDX
+  - SAMPXCNCDX
+  - SAMPXNCRDX
   - PKCE # OAuth's proof key for code exchange (RFC 7636), in agent connections (#761)
   - oxipng # the lossless PNG optimizer the mockup kit runs, pinned in .mise.toml
   - noindex # X-Robots-Tag's value, and the router pipeline that sends it (#824)

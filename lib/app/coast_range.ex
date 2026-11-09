@@ -813,16 +813,16 @@ defmodule App.CoastRange do
 
   @doc """
   The sample ID cards (#854): what each shows on the verify site, its stored code, and
-  whose it is. `SAMPNCRD` matches no card, for "No card has this code". Codes start with
+  whose it is. `SAMPXNCRDX` matches no card, for "No card has this code". Codes start with
   `SAMP`, which MemberCard.generate_code/0 never makes, and the verify site looks them up
   in App.SampleRepo only.
   """
   def sample_cards do
     [
-      %{status: :active, code: "SAMPACTV", member: "Cameron Ruiz"},
-      %{status: :inactive, code: "SAMPRTRD", member: "Robin Tse"},
-      %{status: :revoked, code: "SAMPCNCD", member: "Cameron Ruiz"},
-      %{status: :not_found, code: "SAMPNCRD", member: nil}
+      %{status: :active, code: "SAMPXACTVX", member: "Cameron Ruiz"},
+      %{status: :inactive, code: "SAMPXRTRDX", member: "Robin Tse"},
+      %{status: :revoked, code: "SAMPXCNCDX", member: "Cameron Ruiz"},
+      %{status: :not_found, code: "SAMPXNCRDX", member: nil}
     ]
   end
 

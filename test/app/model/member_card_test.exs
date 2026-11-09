@@ -17,32 +17,38 @@ defmodule App.Model.MemberCardTest do
              &(MemberCard.normalize_code(&1.code) == &1.code)
            )
 
-    refute MemberCard.sample_code?("K7Q4M2XA")
+    refute MemberCard.sample_code?("K7Q4M2XA9H")
   end
 
-  test "generate_code makes 8 characters that normalize to themselves" do
+  test "generate_code makes 10 characters that normalize to themselves" do
     for _ <- 1..200 do
       code = MemberCard.generate_code()
-      assert String.length(code) == 8
+      assert String.length(code) == 10
       assert MemberCard.normalize_code(code) == code
     end
   end
 
   test "format_code puts a dash in the middle" do
-    assert MemberCard.format_code("K7Q4M2XA") == "K7Q4-M2XA"
+    assert MemberCard.format_code("K7Q4M2XA9H") == "K7Q4M-2XA9H"
+  end
+
+  test "the QR link still fits a version 2 QR code, 38 characters (#969)" do
+    url = MemberCard.qr_url(MemberCard.generate_code(), "https://verify.sarduty.com")
+    assert url =~ ~r"^HTTPS://VERIFY.SARDUTY.COM/[A-Z0-9]{5}-[A-Z0-9]{5}$"
+    assert String.length(url) == 38
   end
 
   test "normalize_code ignores case, spaces, and dashes" do
-    assert MemberCard.normalize_code(" k7q4-m2xa ") == "K7Q4M2XA"
-    assert MemberCard.normalize_code("K7Q4 M2XA") == "K7Q4M2XA"
-    assert MemberCard.normalize_code("AAAAAAAA") == "AAAAAAAA"
+    assert MemberCard.normalize_code(" k7q4m-2xa9h ") == "K7Q4M2XA9H"
+    assert MemberCard.normalize_code("K7Q4M 2XA9H") == "K7Q4M2XA9H"
   end
 
   test "normalize_code rejects what can't be a code" do
-    assert MemberCard.normalize_code("K7Q4M2X") == nil
-    assert MemberCard.normalize_code("K7Q4M2XAB") == nil
-    assert MemberCard.normalize_code("K7Q4M2X0") == nil
-    assert MemberCard.normalize_code("https://evil.example/K7Q4M2XA") == nil
+    assert MemberCard.normalize_code("K7Q4M2XA") == nil, "an 8-character code from before #969"
+    assert MemberCard.normalize_code("K7Q4M2XA9H9") == nil
+    assert MemberCard.normalize_code("K7Q4M2XA9HB") == nil
+    assert MemberCard.normalize_code("K7Q4M2XA9H90") == nil
+    assert MemberCard.normalize_code("https://evil.example/K7Q4M2XA9H") == nil
     assert MemberCard.normalize_code(nil) == nil
   end
 
@@ -129,38 +135,38 @@ defmodule App.Model.MemberCardTest do
   end
 
   test "qr_url is the card's page on the verify site, in capitals" do
-    assert MemberCard.qr_url("K7Q4M2XA", "https://verify.sarduty.com") ==
-             "HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA"
+    assert MemberCard.qr_url("K7Q4M2XA9H", "https://verify.sarduty.com") ==
+             "HTTPS://VERIFY.SARDUTY.COM/K7Q4M-2XA9H"
   end
 
   describe "code_from_scan" do
     @hosts ["verify.sarduty.com"]
 
     test "reads a bare code, as on the first cards" do
-      assert MemberCard.code_from_scan("K7Q4M2XA", @hosts) == "K7Q4M2XA"
+      assert MemberCard.code_from_scan("K7Q4M2XA9H", @hosts) == "K7Q4M2XA9H"
     end
 
     test "reads the code from a card's link, in any case" do
       for link <- [
-            "HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA",
-            "https://verify.sarduty.com/k7q4m2xa",
-            "https://verify.sarduty.com/K7Q4-M2XA/"
+            "HTTPS://VERIFY.SARDUTY.COM/K7Q4M-2XA9H",
+            "https://verify.sarduty.com/k7q4m2xa9h",
+            "https://verify.sarduty.com/K7Q4M-2XA9H/"
           ] do
-        assert MemberCard.code_from_scan(link, @hosts) == "K7Q4M2XA"
+        assert MemberCard.code_from_scan(link, @hosts) == "K7Q4M2XA9H"
       end
     end
 
     test "flags the app's own host: cards never linked there (#153)" do
-      assert MemberCard.code_from_scan("https://sarduty.com/verify/K7Q4-M2XA", @hosts) ==
+      assert MemberCard.code_from_scan("https://sarduty.com/verify/K7Q4M-2XA9H", @hosts) ==
                {:other_site, "sarduty.com"}
     end
 
     test "flags a link to another site, the way a forged card would" do
-      assert MemberCard.code_from_scan("https://sarduty-verify.com/K7Q4-M2XA", @hosts) ==
+      assert MemberCard.code_from_scan("https://sarduty-verify.com/K7Q4M-2XA9H", @hosts) ==
                {:other_site, "sarduty-verify.com"}
 
       assert MemberCard.code_from_scan(
-               "https://verify.sarduty.com.evil.example/K7Q4-M2XA",
+               "https://verify.sarduty.com.evil.example/K7Q4M-2XA9H",
                @hosts
              ) ==
                {:other_site, "verify.sarduty.com.evil.example"}

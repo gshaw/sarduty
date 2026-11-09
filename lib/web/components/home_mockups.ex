@@ -9,7 +9,7 @@ defmodule Web.Components.HomeMockups do
   alias Web.Components.Core
 
   # cspell:ignore viewbox Okafor Nakamura Dhillon Moreau Larsen SAMP — made-up names, and the
-  # sample ID card code SAMP-LE00
+  # sample ID card code SAMPX-ACTVX
 
   @qr "SAMPLE" |> EQRCode.encode(:m) |> EQRCode.svg(viewbox: true, color: "#000")
 
@@ -167,7 +167,7 @@ defmodule Web.Components.HomeMockups do
       </div>
       <div class="home-pass-qr">
         <.qr />
-        <span>SAMP-LE00</span>
+        <span>SAMPX-ACTVX</span>
       </div>
       <.sample />
     </figure>

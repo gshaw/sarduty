@@ -103,7 +103,7 @@ defmodule App.Model.TaxCreditLetter do
   `SRVTC-K7Q4M2XA`. It's what someone types to verify the letter, so it can't be guessed.
   Letters before #207 have 5 characters from `Service.Random.token/1`, `SRVTC-M4K11`.
   """
-  def generate_ref_id, do: @ref_prefix <> MemberCard.generate_code()
+  def generate_ref_id, do: @ref_prefix <> MemberCard.random_code(8)
 
   @doc """
   What someone typed, as a stored reference number: `{:current, ref_id}` for a code
@@ -118,7 +118,7 @@ defmodule App.Model.TaxCreditLetter do
       |> String.replace_prefix("SRVTC", "")
 
     cond do
-      MemberCard.normalize_code(code) -> {:current, @ref_prefix <> code}
+      MemberCard.alphabet_code?(code, 8) -> {:current, @ref_prefix <> code}
       code =~ ~r/^[A-Z1-9]{5}$/ -> {:old, @ref_prefix <> code}
       true -> nil
     end

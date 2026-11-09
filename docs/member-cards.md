@@ -10,7 +10,7 @@ link to the card's page, where they add it to Wallet
 member sees the
 card on their own page ([members.md](members.md)). Anyone can
 check a card by scanning its QR code with a phone's camera, which opens its page on the
-verify site, `verify.sarduty.com/K7Q4-M2XA`
+verify site, `verify.sarduty.com/K7Q4M-2XA9H`
 ([VerifyLive](../lib/web/live/verify_live.ex)), or by typing the code printed under it
 at `verify.sarduty.com`. Issue #63 has the design and the plan. A team in a parent
 organization gets its branding: see [organizations.md](organizations.md).
@@ -33,9 +33,10 @@ organization gets its branding: see [organizations.md](organizations.md).
   showing the member's face, so the result shows the photo large and tells the checker
   to look at the address bar.
 - **The QR opens the card's page, and only the code is printed under it.** It holds
-  `HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA`
+  `HTTPS://VERIFY.SARDUTY.COM/K7Q4M-2XA9H`
   ([MemberCard.qr_url/2](../lib/app/model/member_card.ex)), in capitals because a QR code
-  packs capitals, digits, and `:/.-` into fewer squares. That fits the size-2 QR code.
+  packs capitals, digits, and `:/.-` into fewer squares. That's 38 characters, which fits
+  the size-2 QR code. A 12-character code would not.
 - **The verify site serves only the check.** The router matches it by its `verify.`
   host ([Web.VerifyHost](../lib/web/verify_host.ex)). There's no login there, and the
   app's session cookie never reaches it, since that cookie is host-only. Other paths go to
@@ -44,9 +45,16 @@ organization gets its branding: see [organizations.md](organizations.md).
 - **Scanning from the verify site is the careful check.** The page's scanner never
   follows a link. It takes the code out of a card's link, accepts a bare code, and flags
   a link to anywhere else as forged.
-- **Codes are random.** They come from `:crypto`, 8 characters from a 30-character
-  alphabet ([MemberCard](../lib/app/model/member_card.ex)). Never derive one from the D4H
-  member number or the local id: a guessable code would let anyone walk the roster.
+- **Codes are random.** They come from `:crypto`, 10 characters from a 30-character
+  alphabet ([MemberCard](../lib/app/model/member_card.ex)), printed 5-5. Never derive
+  one from the D4H member number or the local id: a guessable code would let anyone walk
+  the roster.
+- **Only 10-character codes count.** Codes were 8 characters until #969. Each live card
+  then got a 10-character code
+  ([LengthenCardCodes](../lib/app/operation/lengthen_card_codes.ex)), keeping its row,
+  serial, and token, so its passes changed in place at the push that followed. An old
+  code matches no card, and a cancelled card from before then keeps its 8 characters,
+  which nothing looks up.
 - **Misses are capped per IP.** 20 codes that match no card in 10 minutes, on the page,
   the photo and banner routes, or the JSON check, and that IP gets "Too many tries" with
   no lookup ([Web.VerifyLimit](../lib/web/verify_limit.ex)). Real codes never count, so
@@ -80,8 +88,9 @@ organization gets its branding: see [organizations.md](organizations.md).
 
 ## When the verify alarm goes off
 
-At about 3,000 misses a day per IP, even 1,000 IPs find a random card about once in 3
-weeks among 10,000 cards, so there's time to look.
+At about 3,000 misses a day per IP, 1,000 IPs would take about 56 years to find a
+random card among 10,000, so there's time to look. With 8-character codes it was 3
+weeks (#969).
 
 1. Check it's guessing, in Adminland's Events: many IPs sending codes that never repeat.
    A few IPs with near-misses is a broken scanner or an app sending stale codes.
@@ -90,13 +99,13 @@ weeks among 10,000 cards, so there's time to look.
 3. If it goes on, block the ranges at the edge. Last resort, a browser challenge on the
    verify page, which breaks apps on the JSON check until they get keys.
 
-Don't lengthen codes or replace every card for this: a guess gets one name and photo.
-The public side of this is the Guessing codes section of `/agents/id-cards`, which
-gives the per-IP limit but not the alarm's count.
+Don't replace every card for this: a guess gets one name and photo. The public side of
+this is the Guessing codes section of `/agents/id-cards`, which gives the per-IP limit
+but not the alarm's count.
 
 ## The check as JSON
 
-`verify.sarduty.com/api/v1/cards/K7Q4-M2XA`
+`verify.sarduty.com/api/v1/cards/K7Q4M-2XA9H`
 ([CardApiController](../lib/web/controllers/card_api_controller.ex)) answers the same
 check for apps that sign members in by scanning their card, SAR Command Assist first
 (#299, [sar-command-assist.md](sar-command-assist.md)).
@@ -133,13 +142,14 @@ until is the team's, not the card's ([Valid until](#valid-until)).
 `verify.sarduty.com/samples` ([VerifySamplesLive](../lib/web/live/verify_samples_live.ex))
 has a QR code for each answer the check gives, for demos and docs (#854). The cards are
 Coast Range SAR's, the made-up team ([App.CoastRange](../lib/app/coast_range.ex)), and
-their codes never change: `SAMP-ACTV` (Cameron Ruiz, active), `SAMP-RTRD` (Robin Tse,
-retired), `SAMP-CNCD` (cancelled), and `SAMP-NCRD`, which no card has. A fifth QR code links to
-`verify.sarduty.example`, a domain nobody can register, for "Not a SAR Duty card".
+their codes change only when the code format does (#969): `SAMPX-ACTVX` (Cameron Ruiz,
+active), `SAMPX-RTRDX` (Robin Tse, retired), `SAMPX-CNCDX` (cancelled), and
+`SAMPX-NCRDX`, which no card has. A fifth QR code links to `verify.sarduty.example`, a
+domain nobody can register, for "Not a SAR Duty card".
 
 - **A sample is looked up in App.SampleRepo only**, never the real database, and every
   sample result opens with a "Sample card" band saying never to accept it as ID. Without
-  it, anyone could print `SAMP-ACTV` on a fake card and get a green Active member.
+  it, anyone could print `SAMPX-ACTVX` on a fake card and get a green Active member.
 - **No real code starts with `SAMP`.** `MemberCard.generate_code/0` rolls again.
 - **Samples never count toward the miss limit**, so a demo of "No card has this code"
   never locks anyone out. The active sample's photo is the placeholder, since Coast Range

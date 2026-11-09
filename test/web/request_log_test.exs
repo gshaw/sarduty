@@ -7,17 +7,17 @@ defmodule Web.RequestLogTest do
 
   describe "filter_path/2" do
     test "cuts card codes" do
-      assert RequestLog.filter_path("sarduty.com", "/verify/K7Q4M2XA/photo") ==
+      assert RequestLog.filter_path("sarduty.com", "/verify/K7Q4M2XA9H/photo") ==
                "/verify/[FILTERED]/photo"
 
-      assert RequestLog.filter_path("sarduty.com", "/VERIFY/K7Q4M2XA") == "/VERIFY/[FILTERED]"
+      assert RequestLog.filter_path("sarduty.com", "/VERIFY/K7Q4M2XA9H") == "/VERIFY/[FILTERED]"
     end
 
     test "on the verify site, cuts a bare card code but not its other pages" do
       host = "verify.sarduty.com"
 
-      assert RequestLog.filter_path(host, "/K7Q4M2XA") == "/[FILTERED]"
-      assert RequestLog.filter_path(host, "/K7Q4M2XA/photo") == "/[FILTERED]/photo"
+      assert RequestLog.filter_path(host, "/K7Q4M2XA9H") == "/[FILTERED]"
+      assert RequestLog.filter_path(host, "/K7Q4M2XA9H/photo") == "/[FILTERED]/photo"
       assert RequestLog.filter_path(host, "/") == "/"
       assert RequestLog.filter_path(host, "/orgs/nsr") == "/orgs/nsr"
       assert RequestLog.filter_path(host, "/assets/app.js") == "/assets/app.js"
@@ -25,7 +25,7 @@ defmodule Web.RequestLogTest do
 
     test "leaves other paths alone" do
       assert RequestLog.filter_path("sarduty.com", "/nsr/members/1") == "/nsr/members/1"
-      assert RequestLog.filter_path("sarduty.com", "/K7Q4M2XA") == "/K7Q4M2XA"
+      assert RequestLog.filter_path("sarduty.com", "/K7Q4M2XA9H") == "/K7Q4M2XA9H"
     end
   end
 

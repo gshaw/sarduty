@@ -17,20 +17,20 @@ defmodule Web.CardApiDoc do
     """
     # How to check an ID card
 
-    Every SAR Duty ID card has a QR code that opens the card's page on the verify site, such as `#{verify}/K7Q4-M2XA`. An app that signs members in, such as SAR Command Assist, can ask SAR Duty the same check as JSON: scan the card, take the code, and get back who it is, their team, and whether they are an active member.
+    Every SAR Duty ID card has a QR code that opens the card's page on the verify site, such as `#{verify}/K7Q4M-2XA9H`. An app that signs members in, such as SAR Command Assist, can ask SAR Duty the same check as JSON: scan the card, take the code, and get back who it is, their team, and whether they are an active member.
 
     To try your app end to end, scan the [sample ID cards](#{verify}/samples): each has a QR code. [Sample cards](#sample-cards) shows what each one answers.
 
     ## Get the code from a scan
 
-    The QR code holds a link like `HTTPS://VERIFY.SARDUTY.COM/K7Q4-M2XA`, in capitals. The code is the last part of the link. Do not open the link. Send the code to SAR Duty's check, whatever site the link names. A forged card can't send your app anywhere else that way.
+    The QR code holds a link like `HTTPS://VERIFY.SARDUTY.COM/K7Q4M-2XA9H`, in capitals. The code is the last part of the link. Do not open the link. Send the code to SAR Duty's check, whatever site the link names. A forged card can't send your app anywhere else that way.
 
-    Codes are 8 letters and numbers, printed under the QR code with a dash in the middle. The check takes them with or without the dash, in either case.
+    Codes are 10 letters and numbers, printed under the QR code with a dash in the middle. The check takes them with or without the dash, in either case. Cards made before November 2026 had 8 and moved to 10, and their Wallet passes changed with them. An 8-character code now matches no card.
 
     ## Ask for the card
 
     ```
-    GET #{verify}/api/v1/cards/K7Q4-M2XA
+    GET #{verify}/api/v1/cards/K7Q4M-2XA9H
     ```
 
     No key or login. It answers what the verify page shows anyone who has the card in hand, plus where an active member's records live.
@@ -43,13 +43,13 @@ defmodule Web.CardApiDoc do
 
     ```json
     {
-      "code": "K7Q4-M2XA",
+      "code": "K7Q4M-2XA9H",
       "status": "active",
       "sample": false,
       "member": {
         "name": "Cameron Ruiz",
         "joined_at": "2023-10-31T03:06:10Z",
-        "photo_url": "#{verify}/K7Q4-M2XA/photo",
+        "photo_url": "#{verify}/K7Q4M-2XA9H/photo",
         "qualifications": [
           {"name": "First aid", "ends_at": "2027-11-18T12:00:00Z"},
           {"name": "Ground search and rescue", "ends_at": null}
@@ -95,7 +95,7 @@ defmodule Web.CardApiDoc do
 
     ## Sample cards
 
-    Coast Range SAR is a made-up team. Its cards answer like real ones, with `"sample": true`, and their codes never change, so you can build against them. Their dates move with today's.
+    Coast Range SAR is a made-up team. Its cards answer like real ones, with `"sample": true`, and their codes change only when the code format does, as in November 2026, so you can build against them. Their dates move with today's.
 
     Scan them from [Sample ID cards](#{verify}/samples), which shows each card's QR code. Its forged card links to another site, with the active card's code. Your app gets the active answer, since it sends the code and never opens the link: the photo is the check.
 
@@ -108,11 +108,11 @@ defmodule Web.CardApiDoc do
 
     ## Guessing codes
 
-    A code is 8 characters from 30 letters and numbers, picked at random: about 660 billion codes. Codes don't follow a member number or the order cards were made, so one card's code says nothing about another's.
+    A code is 10 characters from 30 letters and numbers, picked at random: about 590 trillion codes. Codes don't follow a member number or the order cards were made, so one card's code says nothing about another's.
 
-    With the limit above, one address gets about 3,000 misses a day. Finding any real card that way takes years, and a chosen member's card far longer. SAR Duty also watches misses across every address, so guessing spread over many machines gets noticed, and any card it found is replaced.
+    With the limit above, one address gets about 3,000 misses a day. Even 1,000 addresses guessing at once would take about 56 years to find any of 10,000 cards, and a chosen member's card far longer. SAR Duty also watches misses across every address, so guessing spread over many machines gets noticed, and any card it found is replaced.
 
-    A guessed code gets no more than the card shows anyone who sees it: a name, a team, a photo, and whether the member is active. It can't pass as the member, because the photo has to match the person in front of you. Codes stay 8 characters so they can be typed from a photo or read off a phone.
+    A guessed code gets no more than the card shows anyone who sees it: a name, a team, a photo, and whether the member is active. It can't pass as the member, because the photo has to match the person in front of you.
 
     ## No internet
 

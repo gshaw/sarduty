@@ -21,7 +21,7 @@ defmodule App.Operation.BuildGooglePassTest do
     }
 
     member = %Member{name: "Alex Example", joined_at: ~U[2019-03-12 08:00:00Z], team: team}
-    struct(%MemberCard{id: 7, code: "K7Q4M2XA", member: member}, attrs)
+    struct(%MemberCard{id: 7, code: "K7Q4M2XA9H", member: member}, attrs)
   end
 
   defp object(card, qualifications \\ []),
@@ -91,14 +91,14 @@ defmodule App.Operation.BuildGooglePassTest do
     barcode = object(card()).barcode
 
     assert barcode.type == "QR_CODE"
-    assert barcode.value =~ ~r{^HTTPS?://VERIFY\.[A-Z0-9.:]+/K7Q4-M2XA$}
-    assert barcode.alternateText == "K7Q4-M2XA"
+    assert barcode.value =~ ~r{^HTTPS?://VERIFY\.[A-Z0-9.:]+/K7Q4M-2XA9H$}
+    assert barcode.alternateText == "K7Q4M-2XA9H"
   end
 
   test "the team logo is by the name, the photo is under the code, and dev has neither" do
     object = object(card())
     assert object.logo.sourceUri.uri =~ "/teams/example/logo"
-    assert object.heroImage.sourceUri.uri == Web.VerifyHost.url() <> "/K7Q4M2XA/banner"
+    assert object.heroImage.sourceUri.uri == Web.VerifyHost.url() <> "/K7Q4M2XA9H/banner"
 
     dev = BuildGooglePass.pass_object(card(), :active, [], %{@config | images: false})
     refute Map.has_key?(dev, :logo)

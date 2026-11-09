@@ -456,7 +456,7 @@ defmodule App.Report.Catalog do
   # cards and loading codes into other apps.
   defp id_card_fields do
     for field <- [
-          text(:id_card, "ID card", "The code printed on their ID card, as K7Q4-M2XA."),
+          text(:id_card, "ID card", "The code printed on their ID card, as K7Q4M-2XA9H."),
           %{
             text(:id_card_link, "ID card link", "The page their ID card's QR code opens.")
             | cell: :link
