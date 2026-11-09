@@ -101,7 +101,7 @@ defmodule Web.UserLoginCodeLive do
       <%= if @field == "email" do %>
         <p class="text-text-muted">
           No email after a few minutes? Check your spam folder. Codes go only to team admins,
-          and to members when their team turns on member logins, at the email D4H has for them.
+          and to members when their team turns on member logins.
         </p>
         <p class="action">
           <.a id="login-again" navigate={~p"/login"}>Use a different email</.a>
@@ -109,8 +109,8 @@ defmodule Web.UserLoginCodeLive do
       <% else %>
         <p class="text-text-muted">
           No text after a few minutes? Codes go only to team admins, and to members when their
-          team turns on member logins, at the mobile number D4H has for them. Two people with
-          the same number get a code by email instead.
+          team turns on member logins. Two people with the same number get a code by email
+          instead.
         </p>
         <p :if={not Twilio.delivers?()} id="login-dev-text">
           In development the text is kept in the <.a href="/dev/outbox" external={true}>outbox</.a>, not sent.
