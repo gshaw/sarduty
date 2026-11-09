@@ -17,7 +17,7 @@
      long press, and no double-tap zoom: the image takes no pointer, so the link does. */
   .wallet-badges a { display: block; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   .wallet-badges img { display: block; height: 48px; width: auto; pointer-events: none; -webkit-user-drag: none; }
-  /* An ID card's side as SAR Duty draws it (#CARDPR), on its page: a pass's width on a
+  /* An ID card's side as SAR Duty draws it (#973), on its page: a pass's width on a
      phone, with a pass's round corners. The picture itself is square, to print and cut. */
   .id-card-side { display: block; width: 100%; max-width: 340px; height: auto; border-radius: 12px; }
 

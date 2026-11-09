@@ -31,29 +31,17 @@ defmodule Service.Typst do
   Makes a PDF from `source`, Typst markup. `files` maps a name to its bytes, for
   images the markup reads by that name. Returns `{:ok, pdf}` or `{:error, reason}`.
   With `png: ppi`, a PNG of its one page at that many pixels an inch instead, as for
-  an ID card's sides (#CARDPR).
+  an ID card's sides (#973).
   """
   def compile(source, files \\ %{}, opts \\ []) when is_binary(source) and is_map(files) do
     dir = Service.Temp.path()
     File.mkdir_p!(dir)
 
     try do
-      files
-      |> Map.put("main.typ", source)
-      |> Enum.each(fn {name, bytes} -> dir |> Path.join(name) |> File.write!(bytes) end)
+      write_files(dir, Map.put(files, "main.typ", source))
+      {output, format_args} = output(dir, Keyword.get(opts, :png))
 
-      {output, format_args} =
-        case Keyword.get(opts, :png) do
-          nil -> {Path.join(dir, "out.pdf"), []}
-          ppi -> {Path.join(dir, "out.png"), ["--ppi", to_string(ppi)]}
-        end
-
-      args =
-        ["compile", "--root", dir, "--diagnostic-format", "short"] ++
-          ["--font-path", fonts_dir(), "--ignore-system-fonts", "--ignore-embedded-fonts"] ++
-          format_args ++ ["main.typ", output]
-
-      case run(args, dir) do
+      case dir |> args(format_args, output) |> run(dir) do
         {:ok, ""} -> {:ok, File.read!(output)}
         {:ok, warnings} -> {:error, warnings}
         {:error, reason} -> {:error, reason}
@@ -62,6 +50,19 @@ defmodule Service.Typst do
       File.rm_rf(dir)
     end
   end
+
+  defp write_files(dir, files),
+    do: Enum.each(files, fn {name, bytes} -> dir |> Path.join(name) |> File.write!(bytes) end)
+
+  defp args(dir, format_args, output),
+    do:
+      ["compile", "--root", dir, "--diagnostic-format", "short"] ++
+        ["--font-path", fonts_dir(), "--ignore-system-fonts", "--ignore-embedded-fonts"] ++
+        format_args ++ ["main.typ", output]
+
+  # A PDF, or with `png: ppi` a PNG at that many pixels an inch.
+  defp output(dir, nil), do: {Path.join(dir, "out.pdf"), []}
+  defp output(dir, ppi), do: {Path.join(dir, "out.png"), ["--ppi", to_string(ppi)]}
 
   def fonts_dir, do: Application.app_dir(:sarduty, "priv/fonts")
 

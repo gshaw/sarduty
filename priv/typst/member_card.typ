@@ -1,5 +1,5 @@
 // An ID card's two sides, drawn once for the card page's pictures, Save image, and the
-// printed card (App.Operation.DrawMemberCard, #CARDPR). Both sides are 54 mm wide, a badge
+// printed card (App.Operation.DrawMemberCard, #973). Both sides are 54 mm wide, a badge
 // holder's width. The front is always one size; the back is as tall as its list.
 //
 // `card` is the dictionary DrawMemberCard writes as card.json. `ink` draws black on
@@ -113,8 +113,8 @@
   v(5mm)
   let cut(name, body) = stack(
     spacing: 1.5mm,
-    text(size: 7pt, fill: luma(80), name),
-    block(stroke: (paint: luma(120), thickness: 0.4pt, dash: "dashed"), inset: 2mm, body),
+    text(size: 7pt, fill: rgb(80, 80, 80), name),
+    block(stroke: (paint: rgb(120, 120, 120), thickness: 0.4pt, dash: "dashed"), inset: 2mm, body),
   )
   grid(
     columns: (auto, auto),

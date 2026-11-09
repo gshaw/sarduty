@@ -1,4 +1,4 @@
-// Save image under each side of an ID card on its page (#CARDPR). On a phone it opens
+// Save image under each side of an ID card on its page (#973). On a phone it opens
 // the share sheet, whose Save Image puts the picture in Photos; a download would land in
 // Files. Anywhere else the link downloads as it is. The picture is fetched when the page
 // opens, because the share sheet opens only straight from a tap.

@@ -10,7 +10,7 @@ defmodule Web.CardLinkController do
   # The badges on an ID card's page (#952): no login, only the link's token. Each builds
   # the card's pass when the member taps it, as Your membership's buttons do
   # (MeController), and only for a live card in good standing. Anything else is a 404,
-  # the page having already said why. The card's two sides and its PDF (#CARDPR) are
+  # the page having already said why. The card's two sides and its PDF (#973) are
   # drawn on each request, as a pass is built, so they always show today's card.
 
   def apple_pass(conn, %{"token" => token}) do

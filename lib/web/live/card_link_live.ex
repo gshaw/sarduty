@@ -19,7 +19,7 @@ defmodule Web.CardLinkLive do
   # your phone has the page's QR code. A card that is replaced, cancelled, or not active
   # says so and offers nothing. Logged in to the card's team, the bar names it.
   #
-  # Under the Wallet, the card itself (#CARDPR): its front and back as SAR Duty draws
+  # Under the Wallet, the card itself (#973): its front and back as SAR Duty draws
   # them, each with Save image, then Print ID card, and Verify your ID card, for a member
   # with no Wallet or one who wants a copy on paper.
   #
@@ -233,7 +233,6 @@ defmodule Web.CardLinkLive do
     """
   end
 
-
   defp card_state(%{status: :replaced} = assigns) do
     ~H"""
     <p id="card-link-replaced">This ID card was replaced. Use the link in your newest email.</p>
@@ -258,7 +257,7 @@ defmodule Web.CardLinkLive do
   attr :side, :string, required: true, doc: "front or back"
   attr :card, :map, required: true
 
-  # One side as SAR Duty draws it (DrawMemberCard, #CARDPR), with Save image under it. A
+  # One side as SAR Duty draws it (DrawMemberCard, #973), with Save image under it. A
   # long press on the picture saves it on a phone too.
   defp card_side(assigns) do
     ~H"""

@@ -1,6 +1,6 @@
 defmodule App.Operation.DrawMemberCard do
   @moduledoc """
-  An ID card drawn by SAR Duty, not a Wallet (#CARDPR): the card page's pictures of its
+  An ID card drawn by SAR Duty, not a Wallet (#973): the card page's pictures of its
   front and back, which Save image saves, and Print ID card's PDF, both sides at actual
   size to cut out. One Typst drawing, `priv/typst/member_card.typ`, makes all three, so
   they never disagree, and its sides are 54 mm wide, a badge holder's width.
@@ -38,18 +38,20 @@ defmodule App.Operation.DrawMemberCard do
     member = card.member
     team = member.team
     qualifications = BuildCardQualifications.call(team, member, now)
+    sample? = DemoTeam.demo?(team)
 
     files = %{
-      "card.typ" => File.read!(template()),
-      "card.json" => card |> card_data(qualifications, DemoTeam.demo?(team), now) |> Jason.encode!(),
+      "card.typ" => template() |> File.read!(),
+      "card.json" => card |> card_data(qualifications, sample?, now) |> Jason.encode!(),
       "photo.png" => LoadImage.photo(member, :square),
       "logo.png" => LoadImage.logo(team, :square),
-      "qr.svg" => card.code |> MemberCard.qr_url(Web.VerifyHost.url()) |> EQRCode.encode() |> EQRCode.svg()
+      "qr.svg" =>
+        card.code |> MemberCard.qr_url(Web.VerifyHost.url()) |> EQRCode.encode() |> EQRCode.svg()
     }
 
     case side do
-      :print -> Typst.compile(source(side), files)
-      _side -> Typst.compile(source(side), files, png: @ppi)
+      :print -> side |> source() |> Typst.compile(files)
+      _side -> side |> source() |> Typst.compile(files, png: @ppi)
     end
   end
 
@@ -71,8 +73,7 @@ defmodule App.Operation.DrawMemberCard do
       member_since: member.joined_at && Format.month_year(member.joined_at, timezone),
       code: code,
       made: "#{Format.date_short(now, timezone)} · Scan the code to check it",
-      endorsements:
-        for(q <- qualifications, do: %{name: q.name, expires: expires(q, timezone)}),
+      endorsements: for(q <- qualifications, do: %{name: q.name, expires: expires(q, timezone)}),
       notes: [
         ["How to verify this card", MemberCard.how_to_check(code)],
         ["Last updated", MemberCard.last_updated(team)],

@@ -9,6 +9,7 @@ defmodule Web.MeLiveTest do
   alias App.Model.SavedPDF
   alias App.Operation.SetTeamFeature
   alias App.Repo
+  alias Web.Components.WalletBadges
 
   setup %{conn: conn} do
     %{team: team, member: member, user: user} = member_with_login_fixture()
@@ -231,7 +232,7 @@ defmodule Web.MeLiveTest do
          %{conn: conn, team: team, member: member} do
       team = team |> Ecto.Changeset.change(id_cards_enabled: true) |> Repo.update!()
       member_card_fixture(member, %{in_wallet_at: DateTime.utc_now()})
-      refute Web.Components.WalletBadges.any?()
+      refute WalletBadges.any?()
 
       lv = open(conn, ~p"/teams/#{team}/me")
       assert has_element?(lv, "#show-id-card")

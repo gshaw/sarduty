@@ -235,7 +235,7 @@ pass again, and every saved copy changes:
 **In Wallet** (#389): the team's Dashboard lists "Add your ID card to Wallet" under a
 member's For you to do (#406) until SAR Duty knows the card is in one
 (`MemberCard.in_wallet?/1`). Your membership's Show ID card stays: it opens the card's
-page, where a member adds it again on a new phone (#952), saves it, or prints it (#CARDPR). Apple Wallet registers the
+page, where a member adds it again on a new phone (#952), saves it, or prints it (#973). Apple Wallet registers the
 phone, for the serial. Google
 posts a signed message to `/wallet/google` when the member saves or deletes the pass: the
 class's `callbackOptions`, production only, since Google can't reach a dev server.
@@ -302,7 +302,7 @@ other way to get the card.
 - **The one place with the badges.** Your membership's Show ID card and the Dashboard's
   Add ID card to Wallet open this page, so a member learns one page, and on a computer
   gets its QR code rather than a pass iCloud carries to the phone. Show ID card shows
-  whether or not a Wallet is set up, since the page has the card itself (#CARDPR).
+  whether or not a Wallet is set up, since the page has the card itself (#973).
 - **Both badges on every device**, Apple's and Google's own (`<.wallet_badges>`,
   `/styles/wallet-badges`), side by side at 48px, Google's minimum, with no guessing which
   phone it is. Google's is its condensed button, two lines like Apple's, so the pair fits
@@ -337,7 +337,7 @@ other way to get the card.
   its token. On a Mac the pass reaches the phone through iCloud, so that can take 15
   seconds or more. Google's badge opens in a new tab, so the page stays open to hear
   the save.
-- **The card itself, under the Wallet** (#CARDPR): its front and back as SAR Duty draws
+- **The card itself, under the Wallet** (#973): its front and back as SAR Duty draws
   them, for a member with no Wallet or one who wants a copy.
   [DrawMemberCard](../lib/app/operation/draw_member_card.ex) runs one Typst drawing,
   `priv/typst/member_card.typ`, for `/cards/:token/front` and `/cards/:token/back`,
@@ -354,7 +354,7 @@ other way to get the card.
     on white, each in a dashed cut line 2 mm out, with square corners to cut. Black on
     white prints on any printer, and the QR code is black on white either way.
   - **Verify your ID card** opens the card's page on the verify site, as a checker sees
-    it. It was on Your membership until #CARDPR.
+    it. It was on Your membership until #973.
 - **On a computer** the page is wider, with Take attendance's Open on your phone
   sidebar and the page's QR code (`<.open_on_device>`, `/styles/open-on-device`). It's
   hidden on a touch screen.
@@ -412,7 +412,7 @@ mutual aid, a call to the member's team is the check; the card speeds it up.
 ## Valid until
 
 The front of both passes reads **Status · Member since · Valid until**. The card SAR
-Duty draws on its page, saves as an image, and prints (#CARDPR) leaves it off: a copy
+Duty draws on its page, saves as an image, and prints (#973) leaves it off: a copy
 never updates, so its Valid until would look expired on an active member, or current on
 one who left. It prints the day it was drawn instead, and the QR code is the check. Valid until is
 the end of the month three months after the team last checked D4H, shown as "Dec 2026"

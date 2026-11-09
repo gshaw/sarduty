@@ -7,6 +7,7 @@ defmodule App.Operation.DrawMemberCardTest do
   alias App.Operation.DrawMemberCard
 
   @now ~U[2026-11-08 18:00:00Z]
+  @code MemberCard.generate_code()
 
   defp card(team_attrs \\ %{}, member_attrs \\ %{}) do
     team =
@@ -27,7 +28,7 @@ defmodule App.Operation.DrawMemberCardTest do
         member_attrs
       )
 
-    %MemberCard{code: "K7Q4M2XA", member: member}
+    %MemberCard{code: @code, member: member}
   end
 
   @endorsements [
@@ -37,6 +38,7 @@ defmodule App.Operation.DrawMemberCardTest do
 
   test "the front has the pass's front, with the day it was drawn in place of Valid until" do
     data = DrawMemberCard.card_data(card(), @endorsements, false, @now)
+    code = MemberCard.format_code(@code)
 
     assert %{
              team: "Coast Range SAR",
@@ -44,7 +46,7 @@ defmodule App.Operation.DrawMemberCardTest do
              name: "Cameron Ruiz",
              status: "Active",
              member_since: "Nov 2023",
-             code: "K7Q4-M2XA",
+             code: code,
              made: "Nov 8, 2026 · Scan the code to check it"
            } = data
 
@@ -65,16 +67,17 @@ defmodule App.Operation.DrawMemberCardTest do
              ["Issued by", "Coast Range Search and Rescue Society through SAR Duty." <> _]
            ] = data.notes
 
-    assert verify =~ "enter K7Q4-M2XA."
+    assert verify =~ "enter #{MemberCard.format_code(@code)}."
   end
 
   test "a member with no start date has no Member since (#421)" do
-    assert %{member_since: nil} =
-             DrawMemberCard.card_data(card(%{}, %{joined_at: nil}), [], false, @now)
+    card = card(%{}, %{joined_at: nil})
+    assert %{member_since: nil} = DrawMemberCard.card_data(card, [], false, @now)
   end
 
   test "a team never refreshed says so" do
-    data = DrawMemberCard.card_data(card(%{d4h_refreshed_at: nil}), [], false, @now)
+    card = card(%{d4h_refreshed_at: nil})
+    data = DrawMemberCard.card_data(card, [], false, @now)
     assert ["Last updated", "Never"] in data.notes
   end
 

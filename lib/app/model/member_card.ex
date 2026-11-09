@@ -151,7 +151,9 @@ defmodule App.Model.MemberCard do
 
   @doc "When the team's records were last refreshed, for a card's Last updated field."
   def last_updated(%Team{d4h_refreshed_at: nil}), do: "Never"
-  def last_updated(%Team{} = team), do: Service.Format.date_long(team.d4h_refreshed_at, team.timezone)
+
+  def last_updated(%Team{} = team),
+    do: Service.Format.date_long(team.d4h_refreshed_at, team.timezone)
 
   @doc "How to verify a card, for the back of the pass. `code` is as printed."
   def how_to_check(code) do

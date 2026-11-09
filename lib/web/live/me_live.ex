@@ -393,7 +393,7 @@ defmodule Web.MeLive do
         Your ID card shows you are a current member of {@team.name}, with your endorsements.
         Show it at the door, or to another agency on a search.
       </p>
-      <%!-- The card's page has the card, both Wallets, Save image, Print, and Verify (#CARDPR). --%>
+      <%!-- The card's page has the card, both Wallets, Save image, Print, and Verify (#973). --%>
       <ul id="card-actions" class="action-list">
         <li><.a id="show-id-card" href={Web.CardLinks.path(@card)}>Show ID card</.a></li>
       </ul>
@@ -504,5 +504,4 @@ defmodule Web.MeLive do
 
     {:noreply, assign(socket, :certificates, sent_certificates(member))}
   end
-
 end
