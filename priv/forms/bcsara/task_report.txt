@@ -29,9 +29,9 @@ title 'Task report {coalesce(task.tracking_number, task.ref_id)}' by team.name
 keep task.tracking_number, task.`Agency File #`, task.attended_count, task.attended_hours,
   :others, :others_hours, :injured, :fatalities, :still_missing, :err
 
--- EMCR's page has room for the QR code alone, in its left margin beside the regional
--- manager's lines.
-verify code qr only
+-- No verify code on EMCR's forms for now: Andrew asked that they stay a drop-in
+-- replacement for EMCR's current process (#970). Each still gets an ID.
+verify code none
 
 -- What its verify page shows anyone holding it: never a name.
 verify shows
