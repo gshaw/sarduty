@@ -32,6 +32,10 @@ defmodule App.Document do
   - `title`: `%{text, by, line}`, the PDF's title and author
   - `lock`: `:print` when the PDF can only be printed, or nil
   - `keep`: the values saved with the PDF
+  - `needs`: the team's settings the PDF needs, such as `team.signer`; Needs attention
+    names those that are blank (#970)
+  - `email`: `%{subject, body, line}`, the email a published PDF goes out with to its
+    member, `body` a flow's items; or nil (#970)
   - `verify_code`: where a published PDF's verify code prints on each page, `%{at,
     show}`, `at` a corner such as `:bottom_left` and `show` `:both`, `:link`, or `:qr`;
     or `:none` when its places print `pdf.verify_link` themselves (#970)
@@ -72,6 +76,8 @@ defmodule App.Document do
             title: nil,
             lock: nil,
             keep: [],
+            needs: [],
+            email: nil,
             verify_code: %{at: :bottom_left, show: :both},
             verify_shows: [],
             page: false,

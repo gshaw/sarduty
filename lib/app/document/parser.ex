@@ -22,8 +22,8 @@ defmodule App.Document.Parser do
   alias App.Report.Parser
   alias App.Report.Query
 
-  @clauses ~w(document form about for report const ask compute title lock keep verify page places
-               fill expect layout)
+  @clauses ~w(document form about for report const ask compute title lock keep needs verify email
+               page places fill expect layout)
   @starts ~w(member year)
   @repeated ~w(report const ask compute verify fill expect)
   @kinds %{
@@ -323,6 +323,26 @@ defmodule App.Document.Parser do
     end
   end
 
+  # `needs team.mailing_address, team.signer`: the team's settings a PDF needs (#970).
+  defp read("needs", block, doc, n) do
+    case tl(tokens(block)) do
+      [] -> fail(n, "Write the settings it needs after needs, such as needs team.signer.")
+      tokens -> %{doc | needs: expressions(tokens, n)}
+    end
+  end
+
+  # `email to member`, its `subject`, and its `body` a line an item, as a flow's (#970).
+  defp read("email", [first | _] = block, doc, n) do
+    case line_tokens(first) do
+      [_email, {:word, to, _}, {:word, member, _}] ->
+        if lower(to) != "to" or lower(member) != "member", do: email_head(n)
+        %{doc | email: email_parts(children(block), n)}
+
+      _other ->
+        email_head(n)
+    end
+  end
+
   # `verify code` and `verify shows`, once each.
   defp read("verify", [first | _] = block, doc, n) do
     case line_tokens(first) do
@@ -385,6 +405,39 @@ defmodule App.Document.Parser do
   end
 
   defp lock(n), do: fail(n, "Write lock print: the PDF can only be printed.")
+
+  defp email_head(n), do: fail(n, "Write email to member, then its subject and body under it.")
+
+  defp email_parts(groups, n) do
+    parts =
+      Map.new(groups, fn [{line, _indent, _text} = first | _] = group ->
+        case line_tokens(first) do
+          [{:word, word, _} | rest] -> email_part(lower(word), rest, group, line)
+          _other -> email_part(nil, [], group, line)
+        end
+      end)
+
+    case parts do
+      %{"subject" => subject, "body" => body} -> %{subject: subject, body: body, line: n}
+      _other -> fail(n, "Write the email's subject and body under email to member.")
+    end
+  end
+
+  defp email_part("subject", rest, _group, line) do
+    {value, rest} = value(rest, line)
+    done(rest, "Write one value after subject.")
+    {"subject", value}
+  end
+
+  defp email_part("body", [], group, line) do
+    case children(group) do
+      [] -> fail(line, "Write the email's body under body, one item a line, as a flow's.")
+      items -> {"body", Enum.map(items, &item/1)}
+    end
+  end
+
+  defp email_part(_word, _rest, _group, line),
+    do: fail(line, "Write subject and a value, or body and its lines under it.")
 
   defp verify_head(n),
     do: fail(n, "Write verify code and where it goes, or verify shows and its values under it.")

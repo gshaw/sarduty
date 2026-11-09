@@ -80,6 +80,7 @@ defmodule App.Document.Evaluator do
       shows:
         Enum.map(doc.verify_shows, &%{"label" => &1.label, "text" => text_value(&1.value, env)}),
       verify_code: doc.verify_code,
+      email: email(doc.email, env),
       page: doc.page,
       layout: doc.layout,
       fills: fills(doc, env),
@@ -89,6 +90,14 @@ defmodule App.Document.Evaluator do
         |> Enum.with_index(1)
         |> Enum.flat_map(&copy_places(&1, length(copies), doc, env))
     }
+  end
+
+  # The email's subject and text, its body's lines with a newline after the last.
+  defp email(nil, _env), do: nil
+
+  defp email(%{subject: subject, body: body}, env) do
+    lines = body |> Enum.map(&item(&1, false, env)) |> Enum.reject(&is_nil/1) |> flow_text()
+    %{subject: text_value(subject, env), body: lines <> "\n"}
   end
 
   # A rows place's rows, `lines` to a copy of the form's page; one copy with none.
