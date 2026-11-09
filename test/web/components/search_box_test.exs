@@ -22,7 +22,7 @@ defmodule Web.Components.SearchBoxTest do
       assert has_element?(
                lv,
                "#search-hint",
-               "Find members, activities, equipment, qualifications, groups, endorsements, templates, and pages by name, ID number, barcode, or serial number."
+               "Find members, activities, equipment, qualifications, groups, endorsements, templates, documents, and pages by name, ID number, barcode, or serial number."
              )
     end
 

@@ -19,6 +19,10 @@ ask err 'ERR attached' choose 'Yes', 'No' default 'No'
 title 'Task report {task.ref_id}' by team.legal_name
 keep :leader, :injured, :err
 
+verify shows
+  'Task' task.ref_id
+  'Injured' :injured
+
 page
 
 -- Points from each page's top left. A line's baseline sits 7.5pt below its top, 2.5pt

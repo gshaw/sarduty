@@ -77,6 +77,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/qualifications/:id",
     "/teams/:subdomain/qualifications/:id/edit",
     "/teams/:subdomain/tax-credit-letters/:id",
+    "/teams/:subdomain/pdfs/:id",
     "/teams/:subdomain/tax-credit-letters/:id/pdf",
     # A member's own letter (#156). Web.MeLiveTest covers another member on the same team.
     "/teams/:subdomain/me/tax-credit-letters/:id/pdf",
@@ -111,7 +112,7 @@ defmodule Web.TeamScopingTest do
 
     other = %{
       activity: activity_fixture(other_team, %{activity_kind: "incident"}),
-      form: form_fixture(organization, %{enabled: true}),
+      form: form_fixture(organization, %{state: :on}),
       member: member,
       group: group,
       rule: group_rule_fixture(group, endorsement),
@@ -376,6 +377,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/me/tax-credit-letters/:id/pdf", s, o),
     do: ~p"/teams/#{s}/me/tax-credit-letters/#{o.letter.id}/pdf"
+
+  defp path_for("/teams/:subdomain/pdfs/:id", s, o),
+    do: ~p"/teams/#{s}/pdfs/#{o.letter.pdf.id}"
 
   defp path_for("/teams/:subdomain/tax-credit-letters/:id/pdf", s, o),
     do: ~p"/teams/#{s}/tax-credit-letters/#{o.letter.id}/pdf"
