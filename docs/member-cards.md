@@ -347,20 +347,23 @@ other way to get the card.
   freeze ([Valid until](#valid-until)), and the day it was drawn in its place. The back
   has the pass's back, as tall as its endorsements: the front is 54 × 60 mm, and a back
   fits a 54 × 86 mm badge holder up to about 8 endorsements.
-  - **Save image** under each side. On a phone it opens the share sheet, whose Save Image
+  - **Save front image** and **Save back image**, under each side, with the download
+    icon in the arrow's place. On a phone it opens the share sheet, whose Save Image
     puts the picture in Photos (`SaveImage`, `assets/js/save_image.js`); a download would
     land in Files. On a computer it downloads. A long press on the picture saves it too.
-  - **Print ID card** opens the PDF: a Letter page with both sides at actual size in black
+  - **Print ID card**, with the printer icon in the arrow's place, opens the PDF: a Letter page with both sides at actual size in black
     on white, each in a dashed cut line 2 mm out, with square corners to cut. Black on
     white prints on any printer, and the QR code is black on white either way.
-  - **Verify your ID card** opens the card's page on the verify site, as a checker sees
-    it. It was on Your membership until #973.
+  - **Verify your ID card** opens the card's page on the verify site in the same tab,
+    since the verify site is SAR Duty's own, as someone verifying it sees it. It was on
+    Your membership until #973. With Lost your phone, it sits under Open on your phone
+    on a computer, and under the card on a phone.
 - **On a computer** the page is wider, with Take attendance's Open on your phone
   sidebar and the page's QR code (`<.open_on_device>`, `/styles/open-on-device`). It's
   hidden on a touch screen.
 - **Only a live, active card offers passes** (`MemberCard.link_status/2`). A replaced
   card's page says to use the newest email, a cancelled one says it was cancelled, and a
-  retired or retiring member's says it is not active. None shows a badge or the card,
+  retired or retiring member's says it is not active; both send the member to a team admin. None shows a badge or the card,
   and the pass, picture, and PDF routes 404. A member who comes back gets the same card back, so its link works again.
 - **Anyone with the link can add the card,** as anyone could open a forwarded pass. The
   page says the link is the member's alone, and Replace ID card ends it.

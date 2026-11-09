@@ -183,7 +183,7 @@ defmodule Web.CardLinkLive do
       <div :if={@status == :active} class="md:w-1/3">
         <.open_on_device id="open-on-phone" class={nil} heading="Open on your phone" url={@url}>
           <p class="mb-0">
-            Scan the code with your phone's camera, then add your ID card to Wallet there.
+            Scan the code with your phone's camera. Add your ID card to Wallet there.
           </p>
         </.open_on_device>
         <.card_help card={@card} />
@@ -202,7 +202,7 @@ defmodule Web.CardLinkLive do
     ~H"""
     <p id="card-link-intro" class="lead">
       Your ID card shows you are a current member of {@team.name}, with your endorsements.
-      Show it at the door, or to another agency on a search.
+      Show it at the door, or to another agency at an incident.
     </p>
     <.wallet_badges
       id="card-link-wallets"
@@ -213,15 +213,16 @@ defmodule Web.CardLinkLive do
     />
     <p id="card-link-status" class="hint mt-6 mb-0">{WalletText.seen(@phones, @card)}</p>
     <p id="card-link-no-wallet" class="mt-8 mb-0">
-      No Wallet? Save each side as an image, or print both. Neither updates, so checkers
-      scan the code.
+      No Wallet? Save each side as an image, or print both. Neither updates. Anyone
+      verifying your card scans its code.
     </p>
     <div id="card-link-print" class="mt-2">
-      <p class="mb-0">
+      <p class="action mb-0">
         <.a
           id="card-link-print-link"
           href={~p"/cards/#{@token}/pdf"}
           target="_blank"
+          icon="printer"
         >Print ID card</.a>
       </p>
       <p class="hint mt-1 mb-0">Both sides at card size, in black on white, to cut out.</p>
@@ -239,13 +240,13 @@ defmodule Web.CardLinkLive do
 
   defp card_state(%{status: :cancelled} = assigns) do
     ~H"""
-    <p id="card-link-cancelled">This ID card was cancelled.</p>
+    <p id="card-link-cancelled">This ID card was cancelled. Ask a team admin if you need one.</p>
     """
   end
 
   defp card_state(%{status: :inactive} = assigns) do
     ~H"""
-    <p id="card-link-inactive">This ID card is not active.</p>
+    <p id="card-link-inactive">This ID card is not active. Ask a team admin if you need one.</p>
     """
   end
 
@@ -256,15 +257,12 @@ defmodule Web.CardLinkLive do
   defp card_help(assigns) do
     ~H"""
     <aside id="card-link-help" class="mt-8">
+      <%!-- The verify site is SAR Duty's own: the same tab, with the arrow. --%>
       <div id="card-link-verify">
-        <p class="mb-0">
-          <.a
-            id="card-link-verify-link"
-            href={verify_url(@card)}
-            external={true}
-          >Verify your ID card</.a>
+        <p class="action mb-0">
+          <.a id="card-link-verify-link" href={verify_url(@card)}>Verify your ID card</.a>
         </p>
-        <p class="hint mt-1 mb-0">What a checker sees when they scan your code.</p>
+        <p class="hint mt-1 mb-0">What someone verifying your card sees.</p>
       </div>
       <p id="card-link-lost" class="hint mt-4 mb-0">
         Lost your phone? Ask a team admin to replace your ID card. This link is yours alone.
@@ -290,14 +288,14 @@ defmodule Web.CardLinkLive do
         alt={"#{@card.member.name}'s ID card, #{@side}"}
         class="id-card-side"
       />
-      <p class="mt-2 mb-0">
-        <a
+      <p class="action mt-2 mb-0">
+        <.a
           id={"#{@id}-save"}
           href={~p"/cards/#{@token}/#{@side}"}
           download={"#{@card.member.team.subdomain}-id-card-#{@side}.png"}
           phx-hook="SaveImage"
-          class="link"
-        >Save image</a>
+          icon="download"
+        >Save {@side} image</.a>
       </p>
     </div>
     """

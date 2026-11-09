@@ -72,7 +72,7 @@ defmodule App.Operation.DrawMemberCard do
       status: MemberCard.status_text(:active),
       member_since: member.joined_at && Format.month_year(member.joined_at, timezone),
       code: code,
-      made: "#{Format.date_short(now, timezone)} · Scan the code to check it",
+      made: "#{Format.date_short(now, timezone)} · Scan the code to verify it",
       endorsements: for(q <- qualifications, do: %{name: q.name, expires: expires(q, timezone)}),
       notes: [
         ["How to verify this card", MemberCard.how_to_check(code)],

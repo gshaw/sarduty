@@ -47,7 +47,7 @@ defmodule App.Operation.DrawMemberCardTest do
              status: "Active",
              member_since: "Nov 2023",
              code: ^code,
-             made: "Nov 8, 2026 · Scan the code to check it"
+             made: "Nov 8, 2026 · Scan the code to verify it"
            } = data
 
     refute Map.has_key?(data, :valid_until)

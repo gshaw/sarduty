@@ -67,7 +67,7 @@ defmodule Web.CardLinkLiveTest do
       assert has_element?(
                lv,
                ~s{#card-link-#{side}-save[href="#{path}/#{side}"][download="#{team.subdomain}-id-card-#{side}.png"][phx-hook="SaveImage"]},
-               "Save image"
+               "Save #{side} image"
              )
     end
 
@@ -213,7 +213,12 @@ defmodule Web.CardLinkLiveTest do
     card = member_card_fixture(member, %{revoked_at: DateTime.utc_now()})
     {:ok, lv, _html} = live(conn, CardLinks.path(card))
 
-    assert has_element?(lv, "#card-link-cancelled", "This ID card was cancelled.")
+    assert has_element?(
+             lv,
+             "#card-link-cancelled",
+             "This ID card was cancelled. Ask a team admin"
+           )
+
     refute_offers(lv)
   end
 
@@ -222,7 +227,7 @@ defmodule Web.CardLinkLiveTest do
     card = member_card_fixture(retired)
     {:ok, lv, _html} = live(conn, CardLinks.path(card))
 
-    assert has_element?(lv, "#card-link-inactive", "This ID card is not active.")
+    assert has_element?(lv, "#card-link-inactive", "This ID card is not active. Ask a team admin")
     refute_offers(lv)
   end
 

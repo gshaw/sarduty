@@ -391,7 +391,7 @@ defmodule Web.MeLive do
       <h2 class="chart-title mb-1">ID card</h2>
       <p class="hint mb-2">
         Your ID card shows you are a current member of {@team.name}, with your endorsements.
-        Show it at the door, or to another agency on a search.
+        Show it at the door, or to another agency at an incident.
       </p>
       <%!-- The card's page has the card, both Wallets, Save image, Print, and Verify (#973). --%>
       <ul id="card-actions" class="action-list">
