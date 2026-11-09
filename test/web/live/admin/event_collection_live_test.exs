@@ -53,6 +53,35 @@ defmodule Web.Admin.EventCollectionLiveTest do
     refute has_element?(lv, "#event-#{miss.id}")
   end
 
+  test "counts an IPv6 /64 as one IP, and lists the accounts with the most misses", %{
+    conn: conn
+  } do
+    %{user: user} = user_with_team_fixture()
+    admin = make_admin(user)
+    who = Event.who("guessed@example.org")
+
+    for n <- 1..3, do: Event.record!(:login_code_missed, ip: "2001:db8:1:2::#{n}", who: who)
+    Event.record!(:login_blocked, ip: "2001:db8:1:2::9", who: who, data: %{scope: "account"})
+    other = Event.record!(:login_code_missed, ip: "198.51.100.4", who: Event.who("x@example.org"))
+    Event.record!(:login_code_requested, ip: "198.51.100.4", who: Event.who("y@example.org"))
+
+    {:ok, lv, _html} = live(log_in_user(conn, admin), ~p"/admin/events")
+
+    assert has_element?(lv, "#top-ip-1", "2001:db8:1:2::/64")
+    assert has_element?(lv, "#top-ip-1", "4")
+    assert has_element?(lv, "#top-account-1", who)
+    assert has_element?(lv, "#top-account-1", "4")
+    refute has_element?(lv, "#top-account-3")
+
+    lv |> element("#top-account-1 a") |> render_click()
+    assert_patch(lv, ~p"/admin/events?who=#{who}")
+    refute has_element?(lv, "#event-#{other.id}")
+
+    {:ok, lv, _html} = live(log_in_user(conn, admin), ~p"/admin/events?ip=2001:db8:1:2::/64")
+    assert lv |> element("#events") |> render() =~ "2001:db8:1:2::3"
+    refute has_element?(lv, "#event-#{other.id}")
+  end
+
   test "is for admins only", %{conn: conn} do
     %{user: user} = user_with_team_fixture()
 

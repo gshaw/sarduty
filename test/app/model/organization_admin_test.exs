@@ -27,7 +27,7 @@ defmodule App.Model.OrganizationAdminTest do
     assert [event] = events(:organization_admin_added)
     assert event.user_id == admin.id
     assert event.data["organization_id"] == organization.id
-    assert event.data["who"] == Event.who("dana@wsara.example.org")
+    assert event.who == Event.who("dana@wsara.example.org")
     refute inspect(event.data) =~ "dana"
   end
 

@@ -77,7 +77,7 @@ defmodule Web.Admin.TeamLiveTest do
       event = Event.get_last(:login_grant_added)
       assert event.user_id == admin.id
       assert event.team_id == team.id
-      assert event.data["who"] == Event.who("office@example.com")
+      assert event.who == Event.who("office@example.com")
     end
 
     test "a bad or repeated email is a field error", %{conn: conn, team: team} do

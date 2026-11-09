@@ -84,7 +84,7 @@ defmodule App.Worker.FinishRunWorker do
 
   defp record(config, teams, started_at, signal) do
     now = DateTime.utc_now()
-    count = &Event.count_since(config.team_event, started_at, %{outcome: &1})
+    count = &Event.count_since(config.team_event, started_at, data: %{outcome: &1})
 
     Event.record!(config.event,
       duration_ms: Event.duration_ms(started_at, now),

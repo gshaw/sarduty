@@ -167,7 +167,7 @@ defmodule Web.TeamSignupLiveTest do
 
     refute Team.get_by(d4h_team_id: @d4h_team_id)
 
-    assert %Event{ip: "127.0.0.1", data: %{"fields" => ["email"], "who" => who}} =
+    assert %Event{ip: "127.0.0.1", who: who, data: %{"fields" => ["email"]}} =
              Event.get_last(:team_signup_failed)
 
     refute who =~ "@"

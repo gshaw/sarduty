@@ -2,12 +2,14 @@ defmodule App.ViewModel.EventFilterViewModel do
   use App, :view_model
 
   alias App.Model.Event
+  alias App.RateLimit
 
   @primary_key false
   embedded_schema do
     field :kind, :string, default: "all"
     field :team, :string, default: "all"
     field :ip, App.Field.TrimmedString
+    field :who, :string
   end
 
   def kinds, do: [{"All", "all"} | Enum.map(Event.kinds(), &{label(&1), Atom.to_string(&1)})]
@@ -64,10 +66,11 @@ defmodule App.ViewModel.EventFilterViewModel do
   def validate(params) do
     changeset =
       %__MODULE__{}
-      |> cast(params, [:kind, :team, :ip])
+      |> cast(params, [:kind, :team, :ip, :who])
       |> validate_inclusion(:kind, Enum.map(kinds(), &elem(&1, 1)))
       |> validate_format(:team, ~r/\A(all|\d+)\z/)
-      |> validate_format(:ip, ~r/\A[0-9a-fA-F.:]{1,45}\z/)
+      |> validate_format(:ip, ~r/\A[0-9a-fA-F.:\/]{1,45}\z/)
+      |> validate_format(:who, ~r/\A[0-9a-f]{16}\z/)
 
     case apply_action(changeset, :replace) do
       {:ok, filter} -> {:ok, filter, changeset}
@@ -75,19 +78,23 @@ defmodule App.ViewModel.EventFilterViewModel do
     end
   end
 
-  @doc "The filter as `Event.get_recent/2` takes it."
-  def to_query(%__MODULE__{kind: kind, team: team, ip: ip}) do
+  @doc """
+  The filter as `Event.get_recent/2` takes it. An IP matches as the limits count it, so
+  an IPv6 address or a /64 from Top IPs shows the whole /64.
+  """
+  def to_query(%__MODULE__{kind: kind, team: team, ip: ip, who: who}) do
     %{
       kind: if(kind != "all", do: Enum.find(Event.kinds(), &(Atom.to_string(&1) == kind))),
       team_id: if(team != "all", do: String.to_integer(team)),
-      ip: ip
+      ip_key: ip && RateLimit.ip_key(ip),
+      who: who
     }
   end
 
   @doc "Query params for a path, leaving out the defaults."
   def to_params(%__MODULE__{} = filter) do
     filter
-    |> Map.take([:kind, :team, :ip])
+    |> Map.take([:kind, :team, :ip, :who])
     |> Enum.reject(fn {_key, value} -> value in ["all", nil] end)
   end
 end

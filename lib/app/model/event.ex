@@ -4,6 +4,7 @@ defmodule App.Model.Event do
   alias App.Accounts.User
   alias App.Model.Event
   alias App.Model.Team
+  alias App.RateLimit
   alias App.Repo
   alias Plug.Crypto.KeyGenerator
 
@@ -65,14 +66,19 @@ defmodule App.Model.Event do
 
   # Something the app did, kept to answer questions later: how long sync rounds take,
   # which team failed and since when, who is guessing login codes. `data` holds counts
-  # and ids, never names, emails, or phone numbers: a typed email or number is stored as
-  # `who`, a keyed hash (who/1), so attempts on one account group
-  # together. Healthchecks and Honeybadger alert; this table only records.
+  # and ids, never names, emails, or phone numbers. A typed email or number goes in the
+  # `who` column as a keyed hash (who/1), so attempts on one account group together, and
+  # `ip_key` is the IP as the limits count it (App.RateLimit.ip_key/1, IPv6 by its /64).
+  # Both are indexed with kind and time (#974), so counting one account's or one
+  # connection's events in a window is one index range. Healthchecks and Honeybadger
+  # alert.
   schema "events" do
     field :kind, Ecto.Enum, values: @kinds
     belongs_to :team, Team
     belongs_to :user, User
+    field :who, :string
     field :ip, :string
+    field :ip_key, :string
     field :user_agent, :string
     field :duration_ms, :integer
     field :data, :map, default: %{}
@@ -82,8 +88,9 @@ defmodule App.Model.Event do
   def kinds, do: @kinds
 
   @doc """
-  Records an event. `attrs` takes `team_id`, `user_id`, `ip`, `user_agent`,
-  `duration_ms`, `data`, and `occurred_at`, which defaults to now.
+  Records an event. `attrs` takes `team_id`, `user_id`, `who` (a hash from who/1), `ip`,
+  `user_agent`, `duration_ms`, `data`, and `occurred_at`, which defaults to now.
+  `ip_key` comes from `ip`.
   """
   def record!(kind, attrs \\ []) when kind in @kinds do
     attrs = Map.new(attrs)
@@ -92,7 +99,9 @@ defmodule App.Model.Event do
       kind: kind,
       team_id: attrs[:team_id],
       user_id: attrs[:user_id],
+      who: attrs[:who],
       ip: attrs[:ip],
+      ip_key: attrs[:ip] && RateLimit.ip_key(attrs[:ip]),
       user_agent: attrs[:user_agent] && String.slice(attrs[:user_agent], 0, 255),
       duration_ms: attrs[:duration_ms],
       data: attrs[:data] || %{},
@@ -113,12 +122,13 @@ defmodule App.Model.Event do
   @doc "Milliseconds from `started_at` to `now`."
   def duration_ms(started_at, now), do: DateTime.diff(now, started_at, :millisecond)
 
-  @doc "The newest events, newest first, of one kind, team, and IP when given."
+  @doc "The newest events, newest first, of one kind, team, `ip_key`, and `who` when given."
   def get_recent(filter, limit) do
     Event
     |> scope(kind: filter[:kind])
     |> scope(team_id: filter[:team_id])
-    |> scope(ip: filter[:ip])
+    |> scope(ip_key: filter[:ip_key])
+    |> scope(who: filter[:who])
     |> order_by([e], desc: e.occurred_at, desc: e.id)
     |> limit(^limit)
     |> preload(:team)
@@ -146,11 +156,16 @@ defmodule App.Model.Event do
     |> Map.new(&{&1.data[key], &1})
   end
 
-  @doc "How many events of a kind since `since`, and how many of those match `data`."
-  def count_since(kind, since, data \\ %{}) when kind in @kinds do
+  @doc """
+  How many events of a kind since `since`. `opts` narrows them: `who:` and `ip_key:` to
+  one account or connection, and `data:` to events whose `data` has these values.
+  """
+  def count_since(kind, since, opts \\ []) when kind in @kinds do
     Event
     |> where([e], e.kind == ^kind and e.occurred_at >= ^since)
-    |> scope(data: data)
+    |> scope(who: opts[:who])
+    |> scope(ip_key: opts[:ip_key])
+    |> scope(data: opts[:data] || %{})
     |> Repo.aggregate(:count)
   end
 
@@ -170,16 +185,37 @@ defmodule App.Model.Event do
 
   @doc """
   The IPs with the most events of these kinds since `since`, most first, as
-  `{ip, count}`.
+  `{ip_key, count}`. An IPv6 /64 counts as one, as the limits count it.
   """
   def get_top_ips(kinds, since, limit) do
-    Event
-    |> where([e], e.kind in ^kinds and e.occurred_at >= ^since and not is_nil(e.ip))
-    |> group_by([e], e.ip)
-    |> select([e], {e.ip, count(e.id)})
-    |> order_by([e], desc: count(e.id), asc: e.ip)
-    |> limit(^limit)
+    kinds
+    |> top(since, limit)
+    |> where([e], not is_nil(e.ip_key))
+    |> group_by([e], e.ip_key)
+    |> select([e], {e.ip_key, count(e.id)})
+    |> order_by([e], asc: e.ip_key)
     |> Repo.all()
+  end
+
+  @doc """
+  The accounts with the most events of these kinds since `since`, most first, as
+  `{who, count}`.
+  """
+  def get_top_accounts(kinds, since, limit) do
+    kinds
+    |> top(since, limit)
+    |> where([e], not is_nil(e.who))
+    |> group_by([e], e.who)
+    |> select([e], {e.who, count(e.id)})
+    |> order_by([e], asc: e.who)
+    |> Repo.all()
+  end
+
+  defp top(kinds, since, limit) do
+    Event
+    |> where([e], e.kind in ^kinds and e.occurred_at >= ^since)
+    |> order_by([e], desc: count(e.id))
+    |> limit(^limit)
   end
 
   @doc """
@@ -216,8 +252,10 @@ defmodule App.Model.Event do
   defp scope(query, kind: kind), do: where(query, [e], e.kind == ^kind)
   defp scope(query, team_id: nil), do: query
   defp scope(query, team_id: team_id), do: where(query, [e], e.team_id == ^team_id)
-  defp scope(query, ip: nil), do: query
-  defp scope(query, ip: ip), do: where(query, [e], e.ip == ^ip)
+  defp scope(query, who: nil), do: query
+  defp scope(query, who: who), do: where(query, [e], e.who == ^who)
+  defp scope(query, ip_key: nil), do: query
+  defp scope(query, ip_key: ip_key), do: where(query, [e], e.ip_key == ^ip_key)
 
   defp scope(query, data: data) do
     Enum.reduce(data, query, fn {key, value}, query ->
