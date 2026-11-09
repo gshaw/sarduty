@@ -79,15 +79,15 @@ defmodule Web.Router do
     # Before /:code, which would take /security.txt for a card code.
     get "/.well-known/security.txt", VerifyController, :security_txt
     get "/security.txt", VerifyController, :to_security_txt
+    # Tax credit letters printed before #970 link to /letters/<reference number>.
+    get "/letters", VerifyController, :to_root
+    get "/letters/:ref", VerifyController, :letter
 
     live_session :verify, session: {Web.VerifyLimit, :session, []} do
       live "/", VerifyLive
       # An organization's own start page, until it has its own verify host. Codes look
       # like K7Q4M-2XA9H, so "orgs" can't be one.
       live "/orgs/:slug", VerifyLive
-      # Tax credit letters (#207). "letters" has an L, which card codes never do.
-      live "/letters", VerifyLetterLive
-      live "/letters/:ref", VerifyLetterLive
       # Sample cards for demos (#854). "samples" has an L too.
       live "/samples", VerifySamplesLive
       live "/:code", VerifyLive

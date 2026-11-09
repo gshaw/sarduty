@@ -238,7 +238,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       <.a
         class="mono"
         navigate={~p"/teams/#{@current_team}/tax-credit-letters/#{@record.tax_credit_letter_id}"}
-      >{@record.tax_credit_letter_ref_id}</.a>
+      >{@record.tax_credit_letter_code || "Letter"}</.a>
       <.badge
         :if={@record.letter_hours_status == :changed}
         id={"hours-changed-#{@record.tax_credit_letter_id}"}

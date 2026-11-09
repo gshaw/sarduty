@@ -35,8 +35,9 @@ defmodule Web.RequestLog do
   end
 
   @doc """
-  The path with any card code in it replaced by `[FILTERED]`. `host` tells the
-  verify site, where a bare `/K7Q4M2XA9H` is a card code, from the app.
+  The path with any card code or document ID in it replaced by `[FILTERED]`. `host`
+  tells the verify site, where a bare `/K7Q4M2XA9H` is a card code, from the app. A
+  letter's old link, `/letters/<reference number>`, keeps `letters`.
   """
   def filter_path(host, path) when is_binary(path) do
     host |> verify_host?() |> filter_segments(String.split(path, "/")) |> Enum.join("/")
@@ -45,6 +46,9 @@ defmodule Web.RequestLog do
   def filter_path(_host, path), do: path
 
   defp verify_host?(host), do: is_binary(host) and String.starts_with?(host, "verify.")
+
+  defp filter_segments(true, ["", "letters", ref | rest]) when ref != "",
+    do: ["", "letters", @filtered | rest]
 
   defp filter_segments(true, ["", code | rest]) when code != "" and code not in @verify_paths,
     do: ["", @filtered | rest]

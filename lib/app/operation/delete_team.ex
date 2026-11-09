@@ -37,7 +37,7 @@ defmodule App.Operation.DeleteTeam do
                   equipment_usages events group_membership_changes group_rules groups
                   home_coordinates location_bookmarks mcp_calls member_away_periods member_cards
                   member_check_ins member_standing_changes members no_shows outbox_messages qualifications
-                  reminders reports route_distances saved_pdfs form_answers tags team_login_grants templates trips
+                  reminders reports route_distances published_pdfs form_answers tags team_login_grants templates trips
                   whiteboard_notes)
 
   # Table, its key, and the team table that key points at.
@@ -49,7 +49,7 @@ defmodule App.Operation.DeleteTeam do
     {"member_qualification_awards", "member_id", "members"},
     {"member_qualification_awards", "qualification_id", "qualifications"},
     {"tax_credit_letters", "member_id", "members"},
-    {"saved_pdf_files", "saved_pdf_id", "saved_pdfs"},
+    {"published_pdf_files", "published_pdf_id", "published_pdfs"},
     {"endorsement_includes", "endorsement_id", "endorsements"},
     {"endorsement_includes", "included_endorsement_id", "endorsements"},
     {"endorsement_qualifications", "endorsement_id", "endorsements"},

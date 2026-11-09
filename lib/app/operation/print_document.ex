@@ -18,13 +18,17 @@ defmodule App.Operation.PrintDocument do
   `{:ok, pdf}` or `{:error, reason}` for what `App.Document.evaluate/3` gave. With
   `mark: :sample` each page says SAMPLE across it, for a Try a demo team (#857), and with
   `mark: :draft` DRAFT, for a form's PDF while forms are testing only (#950). `page` is
-  a form's page PDF, for one that prints on it.
+  a form's page PDF, for one that prints on it. `verify` is a published PDF's verify
+  link, printed as its verify code on every page (#970), or `:draft` for the grey box a
+  draft prints in its place.
   """
   def call(output, opts \\ []) do
     mark = opts |> Keyword.get(:mark) |> mark()
 
     with {:ok, page} <- page(output, Keyword.get(opts, :page)) do
-      {markup, files} = Markup.typst(output, mark: mark, page: page)
+      {markup, files} =
+        Markup.typst(output, mark: mark, page: page, verify: Keyword.get(opts, :verify))
+
       with {:ok, pdf} <- compile(markup, files, output), do: {:ok, lock(pdf, output.lock)}
     end
   end

@@ -20,19 +20,24 @@ title '{:year} SRVTC {team.legal_name}' by team.legal_name
 lock print
 keep hours.primary, hours.secondary
 
+-- What the letter's verify page shows anyone holding it, beside the team and the date
+-- it was certified.
+verify shows
+  'Name' member.name
+  'Year' :year
+  'Primary hours' coalesce(hours.primary, 0) as duration
+  'Secondary hours' coalesce(hours.secondary, 0) as duration
+  'Total hours' coalesce(hours.total, 0) as duration
+
 -- Letter paper. Lengths are from the page's edges.
 places
   letterhead flow across, top 1in, right 1in, height 1in, gap 0.25in
   letter     flow down, top 1in, left 1in, right 1in, size 12pt, leading 14.4pt
-  verify     image right 1in, width 1in, height 1in, level with letter
 
 fill
   -- The organization's logo, then the team's, the last in the top right corner. A
   -- missing logo is left out.
   letterhead = organization.logo, team.logo
-
-  -- The QR code's bottom edge is level with the letter's last line.
-  verify = qr(pdf.verify_link)
 
   -- A blank line drops out. `space` is a blank line, and `space 2` two.
   letter =
@@ -64,9 +69,6 @@ fill
     team.signer_title
     team.signer_phone
     team.signer_email
-    space
-    'Reference: {pdf.reference}'
-    'Verify this letter at verify.sarduty.com/letters'
 
 expect with :year = 2025, team.legal_name = 'Coast Range Search and Rescue Society':
   title = '2025 SRVTC Coast Range Search and Rescue Society'
@@ -106,6 +108,7 @@ expect with team.signer_email = 'president@example.com':
 expect with today = date '2026-01-15':
   letter contains 'Certified on January 15, 2026.'
 
-expect with pdf.reference = 'SRVTC-7KQ2M9XD':
-  letter contains 'Reference: SRVTC-7KQ2M9XD'
-  and letter ends with 'Verify this letter at verify.sarduty.com/letters'
+-- The verify code prints the letter's ID and link, so the letter's text ends with
+-- the signer.
+expect with team.signer_email = 'president@example.com':
+  letter ends with 'president@example.com'

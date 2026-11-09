@@ -25,6 +25,12 @@ defmodule App.Document.Markup do
   places that say that page drawn over it, once for each copy a form's rows need. A
   place on a later copy keeps its values under its own key, `subtotal-copy2`.
 
+  A published PDF's verify code (#970) prints on every page, since an agency may
+  separate them: in a corner, half an inch from its edges, the QR code of its verify
+  link in capitals, which fits a version 3 code, then "Verify this document" and the
+  link. The document's `verify code` moves it or trims it. A draft prints a grey box in
+  its place, so a team admin can check the layout before publishing.
+
   A form with a layout has no places (#950): its Typst layout follows a few lines that
   read `values.json` as `values` and set the font, and it lays the page out itself.
   It's `values`, not `v`, so the layout keeps Typst's `v()` for space. Each value is
@@ -42,6 +48,8 @@ defmodule App.Document.Markup do
   `{markup, files}`: the Typst source, and each file it reads by name. `mark` is a
   picture drawn over each page, such as SAMPLE for a Try a demo team (#857). `page` is `{pdf, pages}`,
   a form's page and how many pages it has; without it the page is letter paper.
+  `verify` is a published PDF's verify link, or `:draft` for a draft's grey box; without
+  it no verify code prints.
   """
   def typst(output, opts \\ [])
 
@@ -50,12 +58,16 @@ defmodule App.Document.Markup do
     {values, files} = layout_values(output.fills, files)
     values = Map.merge(values, %{"title" => output.title, "author" => output.author})
 
+    {verify, {files, values}} =
+      verify_code(output, Keyword.get(opts, :verify), "values", files, values)
+
     markup =
       IO.iodata_to_binary([
         ~s|#let values = json("values.json")\n|,
         document("values", values),
         ~s|#set text(font: "Arimo", fallback: false)\n|,
-        foreground_mark(files),
+        verify,
+        foreground(files, verify),
         layout
       ])
 
@@ -68,25 +80,30 @@ defmodule App.Document.Markup do
     files = if page, do: Map.put(files, "page.pdf", elem(page, 0)), else: files
     values = %{"title" => output.title, "author" => output.author}
 
-    {pages, {files, values}} = pages(output, page, files, values)
+    {verify, {files, values}} =
+      verify_code(output, Keyword.get(opts, :verify), "v", files, values)
+
+    {pages, {files, values}} = pages(output, page, files, values, verify != "")
 
     markup =
       IO.iodata_to_binary([
         ~s|#let v = json("values.json")\n|,
         document("v", values),
         ~s|#set text(font: "Arimo", fallback: false)\n|,
+        verify,
         pages
       ])
 
     {markup, Map.put(files, "values.json", Jason.encode!(values))}
   end
 
-  # Each page of each copy, with the places on it.
-  defp pages(output, page, files, values) do
+  # Each page of each copy, with the places on it, then the verify code and the mark.
+  defp pages(output, page, files, values, verify?) do
     for(copy <- 1..Map.get(output, :copies, 1), n <- page_numbers(page), do: {copy, n})
     |> Enum.map_reduce({files, values}, fn {copy, n}, acc ->
       {body, acc} = output.places |> on_page(copy, n) |> Enum.map_reduce(acc, &place/2)
-      {page_markup(n, page, [body, mark(files)]), acc}
+      verify = if verify?, do: "#verify-code\n", else: ""
+      {page_markup(n, page, [body, verify, mark(files)]), acc}
     end)
   end
 
@@ -136,11 +153,95 @@ defmodule App.Document.Markup do
 
   defp mark(_files), do: ""
 
-  # A layout sets its own pages, so the mark is each page's foreground.
-  defp foreground_mark(%{"mark.png" => _}),
-    do: ~s|#set page(foreground: place(top + left, image("mark.png", width: 100%)))\n|
+  # A layout sets its own pages, so the verify code and the mark are each page's
+  # foreground.
+  defp foreground(files, verify) do
+    parts =
+      [
+        if(verify != "", do: "verify-code"),
+        if(Map.has_key?(files, "mark.png"),
+          do: ~s|place(top + left, image("mark.png", width: 100%))|
+        )
+      ]
+      |> Enum.reject(&is_nil/1)
 
-  defp foreground_mark(_files), do: ""
+    if parts == [],
+      do: "",
+      else: "#set page(foreground: {#{Enum.join(parts, "; ")}})\n"
+  end
+
+  # The verify code as `#let verify-code`, which each page places, and the files and
+  # values it reads: `{markup, {files, values}}`, or "" when nothing prints.
+  @verify_margin 36
+  @verify_qr 50
+  @verify_size 7
+
+  defp verify_code(%{verify_code: %{at: at, show: show}}, verify, var, files, values)
+       when verify != nil do
+    {qr, link, files, values} = verify_parts(verify, show, var, files, values)
+
+    # The QR code sits in the corner, with the words on the page's side of it.
+    parts = if at in [:top_right, :bottom_right], do: [link, qr], else: [qr, link]
+    body = parts |> Enum.reject(&(&1 == nil)) |> Enum.join(", ")
+
+    {edge, dy} =
+      if at in [:top_left, :top_right],
+        do: {"top", @verify_margin},
+        else: {"bottom", -@verify_margin}
+
+    {side, dx} =
+      if at in [:top_left, :bottom_left],
+        do: {"left", @verify_margin},
+        else: {"right", -@verify_margin}
+
+    markup = [
+      "#let verify-code = place(#{edge} + #{side}, dx: #{pt(dx)}, dy: #{pt(dy)}, ",
+      "stack(dir: ltr, spacing: 6pt, #{body}))\n"
+    ]
+
+    {markup, {files, values}}
+  end
+
+  defp verify_code(_output, _verify, _var, files, values), do: {"", {files, values}}
+
+  # A draft's grey box, as big as what will print there.
+  defp verify_parts(:draft, show, _var, files, values) do
+    {width, height} =
+      case show do
+        :qr -> {@verify_qr, @verify_qr}
+        :link -> {150, 20}
+        :both -> {@verify_qr + 156, @verify_qr}
+      end
+
+    box = [
+      "box(width: #{pt(width)}, height: #{pt(height)}, fill: luma(225), inset: 4pt, ",
+      "align(horizon + center, text(size: #{pt(@verify_size)}, fill: luma(80))",
+      "[The verify code prints here when this is published.]))"
+    ]
+
+    {IO.iodata_to_binary(box), nil, files, values}
+  end
+
+  defp verify_parts(link, show, var, files, values) when is_binary(link) do
+    qr =
+      if show in [:both, :qr],
+        do: ~s|image("verify-qr.svg", width: #{pt(@verify_qr)}, height: #{pt(@verify_qr)})|
+
+    words =
+      if show in [:both, :link],
+        do:
+          "align(horizon, stack(spacing: 4pt, " <>
+            ~s|text(size: #{pt(@verify_size)}, weight: "bold")[Verify this document], | <>
+            ~s|text(size: #{pt(@verify_size)}, #{var}.at("verify-link"))))|
+
+    files =
+      if qr,
+        do: Map.put(files, "verify-qr.svg", image_bytes({:qr, String.upcase(link)})),
+        else: files
+
+    shown = String.replace(link, ~r{\Ahttps?://}, "")
+    {qr, words, files, Map.put(values, "verify-link", shown)}
+  end
 
   # A layout's values: each picture a file, by its value's name, and the rest as they are.
   defp layout_values(fills, files) do

@@ -32,6 +32,10 @@ defmodule App.Document do
   - `title`: `%{text, by, line}`, the PDF's title and author
   - `lock`: `:print` when the PDF can only be printed, or nil
   - `keep`: the values saved with the PDF
+  - `verify_code`: where a published PDF's verify code prints on each page, `%{at,
+    show}`, `at` a corner such as `:bottom_left` and `show` `:both`, `:link`, or `:qr`;
+    or `:none` when its places print `pdf.verify_link` themselves (#970)
+  - `verify_shows`: `%{label, value, line}`, what the PDF's verify page shows
   - `page`: true when the values print on the form's own page PDF, at its size
   - `places`: `%{name, kind, line, across, level_with, fit, page}` and its lengths in
     points, each a `:text`, an `:image`, a `:tick` (an X in a box), or a `:flow` that
@@ -68,6 +72,8 @@ defmodule App.Document do
             title: nil,
             lock: nil,
             keep: [],
+            verify_code: %{at: :bottom_left, show: :both},
+            verify_shows: [],
             page: false,
             places: [],
             fill: [],

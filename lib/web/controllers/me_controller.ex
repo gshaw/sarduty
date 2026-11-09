@@ -3,7 +3,7 @@ defmodule Web.MeController do
 
   alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
-  alias App.Model.SavedPDF
+  alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildGooglePass
@@ -46,7 +46,7 @@ defmodule Web.MeController do
 
   def tax_credit_letter(conn, %{"id" => id}) do
     letter = TaxCreditLetter.find_for_member!(conn.assigns.member, id)
-    attachment = SavedPDF.letter_attachment(letter) || raise(Web.Status.NotFound)
+    attachment = PublishedPDF.letter_attachment(letter) || raise(Web.Status.NotFound)
     # Takes the letter off the member's "For you to do" (#389).
     if !conn.assigns.viewing_as, do: TaxCreditLetter.mark_downloaded(letter, DateTime.utc_now())
 

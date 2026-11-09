@@ -4,13 +4,14 @@ defmodule App.Model.TaxCreditLetter do
   import Ecto.Query
 
   alias App.Model.Member
-  alias App.Model.MemberCard
+  alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Repo
 
   schema "tax_credit_letters" do
     belongs_to :member, Member
-    field :ref_id, :string
+    # Its current PDF (#970), which holds its ID. One it replaced stays, Replaced.
+    has_one :pdf, PublishedPDF, where: [replaced_by_id: nil, withdrawn_at: nil]
     field :year, :integer
     field :letter_content, :string, redact: true
     # The hours the letter says, as it was created. Empty for an old letter whose text
@@ -31,7 +32,6 @@ defmodule App.Model.TaxCreditLetter do
   def build_changeset(data, params \\ %{}) do
     data
     |> cast(params, [
-      :ref_id,
       :member_id,
       :year,
       :letter_content,
@@ -39,7 +39,6 @@ defmodule App.Model.TaxCreditLetter do
       :secondary_minutes
     ])
     |> validate_required([
-      :ref_id,
       :member_id,
       :year,
       :letter_content
@@ -54,7 +53,7 @@ defmodule App.Model.TaxCreditLetter do
   def get_sending(id) do
     TaxCreditLetter
     |> where([tcl], tcl.id == ^id and tcl.email_status == :sending)
-    |> preload(member: :team)
+    |> preload([:pdf, member: :team])
     |> Repo.one()
   end
 
@@ -68,7 +67,7 @@ defmodule App.Model.TaxCreditLetter do
         left_join: m in assoc(tcl, :member),
         where: tcl.id == ^id,
         where: m.team_id == ^team.id,
-        preload: [member: :team]
+        preload: [:pdf, member: :team]
       )
 
     Repo.one!(query)
@@ -78,7 +77,7 @@ defmodule App.Model.TaxCreditLetter do
   def find_for_member!(%Member{} = member, id) do
     TaxCreditLetter
     |> where([tcl], tcl.id == ^id and tcl.member_id == ^member.id)
-    |> preload(member: :team)
+    |> preload([:pdf, member: :team])
     |> Repo.one!()
   end
 
@@ -95,67 +94,6 @@ defmodule App.Model.TaxCreditLetter do
     |> order_by([tcl], desc: tcl.year, desc: tcl.inserted_at)
     |> Repo.all()
   end
-
-  @ref_prefix "SRVTC-"
-
-  @doc """
-  A new reference number: `SRVTC-` and 8 random characters from the ID card alphabet,
-  `SRVTC-K7Q4M2XA`. It's what someone types to verify the letter, so it can't be guessed.
-  Letters before #207 have 5 characters from `Service.Random.token/1`, `SRVTC-M4K11`.
-  """
-  def generate_ref_id, do: @ref_prefix <> MemberCard.random_code(8)
-
-  @doc """
-  What someone typed, as a stored reference number: `{:current, ref_id}` for a code
-  from `generate_ref_id/0`, `{:old, ref_id}` for one from before #207, nil for neither.
-  Case, spaces, dashes, and the `SRVTC` prefix don't matter.
-  """
-  def parse_ref_id(input) when is_binary(input) do
-    code =
-      input
-      |> String.upcase()
-      |> String.replace(~r/[\s-]/, "")
-      |> String.replace_prefix("SRVTC", "")
-
-    cond do
-      MemberCard.alphabet_code?(code, 8) -> {:current, @ref_prefix <> code}
-      code =~ ~r/^[A-Z1-9]{5}$/ -> {:old, @ref_prefix <> code}
-      true -> nil
-    end
-  end
-
-  def parse_ref_id(_input), do: nil
-
-  @doc "Whether the letter's reference number is one the verify site can show alone."
-  def current_ref_id?(%TaxCreditLetter{ref_id: ref_id}),
-    do: match?({:current, ^ref_id}, parse_ref_id(ref_id))
-
-  @doc "The letter's page on the verify site, which its QR code opens."
-  def verify_url(%TaxCreditLetter{ref_id: ref_id}, verify_url),
-    do: "#{verify_url}/letters/#{ref_id}"
-
-  @doc """
-  The letter with this reference number, for the verify site. An old reference number
-  was never unique or hard to guess, so it also needs the member's last name.
-  """
-  def find_by_ref_id({:current, ref_id}) do
-    TaxCreditLetter
-    |> where([l], l.ref_id == ^ref_id)
-    |> preload(member: :team)
-    |> Repo.one()
-  end
-
-  def find_by_ref_id({:old, ref_id}, last_name) do
-    TaxCreditLetter
-    |> where([l], l.ref_id == ^ref_id)
-    |> preload(member: :team)
-    |> Repo.all()
-    |> Enum.filter(&last_name_matches?(&1.member, last_name))
-    |> only_one()
-  end
-
-  defp only_one([letter]), do: letter
-  defp only_one(_none_or_several), do: nil
 
   @doc """
   Whether `last_name` is the member's last name, ignoring case. D4H names come as

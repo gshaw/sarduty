@@ -6,6 +6,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   alias App.Field
   alias App.Model.Attendance
   alias App.Model.Member
+  alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Operation.CountTaxCreditHours
   alias App.Repo
@@ -95,7 +96,8 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     |> join(:left, [m], tcl in assoc(m, :tax_credit_letters),
       on: tcl.year == ^filter_options.year
     )
-    |> select([m, tcl], %{member: m, letter: tcl})
+    |> join(:left, [m, tcl], p in assoc(tcl, :pdf))
+    |> select([m, tcl, p], %{member: m, letter: tcl, code: p.code})
     |> Repo.all()
     |> Enum.map(&build_record(&1, CountTaxCreditHours.get(hours, &1.member.id), team, now))
     |> filter_records(filter_options.filter)
@@ -121,11 +123,11 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   defp letter_kind(%{letter_hours_status: :changed}), do: "changed"
   defp letter_kind(_record), do: "made"
 
-  defp build_record(%{member: member, letter: letter}, hours, team, now) do
+  defp build_record(%{member: member, letter: letter, code: code}, hours, team, now) do
     hours
     |> Map.put(:member, member)
     |> Map.put(:tax_credit_letter_id, letter && letter.id)
-    |> Map.put(:tax_credit_letter_ref_id, letter && letter.ref_id)
+    |> Map.put(:tax_credit_letter_code, code && PublishedPDF.format_code(code))
     |> Map.put(:tax_credit_letter_email_status, letter && letter.email_status)
     |> Map.put(:letter_minutes, letter && TaxCreditLetter.total_minutes(letter))
     |> Map.put(

@@ -136,8 +136,8 @@ defmodule Web.Components.HomeMockups do
         <div>
           <span class="home-signature">Jordan Larsen</span>
           <span>Jordan Larsen, Training Officer</span>
-          <span class="home-mono">Reference: SRVTC-SAMPLE00</span>
-          <span class="home-mono">Verify this letter at verify.sarduty.com/letters</span>
+          <span class="home-mono">Verify this document</span>
+          <span class="home-mono">verify.sarduty.com/K7Q4M-2XA9H-VB3TN</span>
         </div>
         <.qr />
       </div>

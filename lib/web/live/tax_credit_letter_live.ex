@@ -3,6 +3,7 @@ defmodule Web.TaxCreditLetterLive do
 
   import Web.Components.CopyButton
 
+  alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Operation.CountTaxCreditHours
   alias App.Operation.DeleteTaxCreditLetter
@@ -48,7 +49,7 @@ defmodule Web.TaxCreditLetterLive do
         label="Tax credit letters"
         path={~p"/teams/#{@current_team}/tax-credit-letters?year=#{@letter.year}"}
       />
-      <:item label={@letter.ref_id} />
+      <:item label={code(@letter) || "#{@letter.year}"} />
     </.breadcrumbs>
 
     <h1 class="title">{@page_title}</h1>
@@ -84,8 +85,8 @@ defmodule Web.TaxCreditLetterLive do
       <p>
         This letter says {format_minutes(TaxCreditLetter.total_minutes(@letter))}.
         Attendance now adds up to {format_minutes(@hours.total_minutes)}.
-        Replace the letter to use the new hours. It gets a new reference number and is not emailed.
-        Only the new letter verifies.
+        Replace the letter to use the new hours. It gets a new ID and is not emailed.
+        The old letter's verify page then says Replaced.
       </p>
       <.button
         id="replace-letter"
@@ -110,24 +111,26 @@ defmodule Web.TaxCreditLetterLive do
           </dd>
           <dt>Created</dt>
           <dd>{Service.Format.datetime_short(@letter.inserted_at, @current_team.timezone)}</dd>
-          <dt>Reference</dt>
-          <dd>
-            <.copy_button
-              id="letter-reference"
-              value={@letter.ref_id}
-              text={@letter.ref_id}
-              label="Copy reference"
-            />
-            <%!-- A reference from before #207 can't verify alone. --%>
-            <%= if TaxCreditLetter.current_ref_id?(@letter) do %>
-              <br />
-              <.a
-                id="letter-verify"
-                href={TaxCreditLetter.verify_url(@letter, Web.VerifyHost.url())}
-                external
-              >Verify letter</.a>
-            <% end %>
-          </dd>
+          <%= if @letter.pdf do %>
+            <dt>ID</dt>
+            <dd>
+              <.copy_button
+                id="letter-reference"
+                value={code(@letter)}
+                text={code(@letter)}
+                label="Copy ID"
+              />
+              <%!-- A reference number from before #207 can't verify alone. --%>
+              <%= if match?({:code, _}, PublishedPDF.parse_code(@letter.pdf.code)) do %>
+                <br />
+                <.a
+                  id="letter-verify"
+                  href={PublishedPDF.verify_link(@letter.pdf.code)}
+                  external
+                >Verify letter</.a>
+              <% end %>
+            </dd>
+          <% end %>
           <%= if @hours_status != :unknown do %>
             <dt>Hours on the letter</dt>
             <dd id="letter-hours">{format_minutes(TaxCreditLetter.total_minutes(@letter))}</dd>
@@ -145,13 +148,19 @@ defmodule Web.TaxCreditLetterLive do
     """
   end
 
-  # Both stop the letter's reference number verifying, so each asks for the box ticked.
+  # The letter's ID as printed, or nil for one never published.
+  defp code(%{pdf: %PublishedPDF{code: code}}), do: PublishedPDF.format_code(code)
+  defp code(_letter), do: nil
+
+  defp name(letter), do: code(letter) || "for #{letter.year}"
+
+  # Both stop the letter's ID verifying as current, so each asks for the box ticked.
   defp replace_confirm(letter, hours) do
     %{
       "data-confirm" =>
-        "Replace letter #{letter.ref_id} with #{format_minutes(hours.total_minutes)}? It gets a new reference number and is not emailed.",
+        "Replace letter #{name(letter)} with #{format_minutes(hours.total_minutes)}? It gets a new ID and is not emailed.",
       "data-confirm-warning" => "The member needs the new letter.",
-      "data-confirm-check" => "I understand #{letter.ref_id} no longer verifies.",
+      "data-confirm-check" => "I understand the old letter's verify page says Replaced.",
       "data-confirm-button" => "Replace letter"
     }
   end
@@ -159,7 +168,7 @@ defmodule Web.TaxCreditLetterLive do
   # Says where it goes. With no email there's nothing to confirm; sending says so.
   defp email_confirm(%{member: %{email: email}} = letter) when is_binary(email) and email != "" do
     %{
-      "data-confirm" => "Email letter #{letter.ref_id} to #{email}?",
+      "data-confirm" => "Email letter #{name(letter)} to #{email}?",
       "data-confirm-button" => "Email letter"
     }
   end
@@ -168,9 +177,9 @@ defmodule Web.TaxCreditLetterLive do
 
   defp delete_confirm(letter) do
     %{
-      "data-confirm" => "Delete letter #{letter.ref_id}? The member may already have it.",
-      "data-confirm-warning" => "A new letter gets a new reference number.",
-      "data-confirm-check" => "I understand #{letter.ref_id} no longer verifies.",
+      "data-confirm" => "Delete letter #{name(letter)}? The member may already have it.",
+      "data-confirm-warning" => "A new letter gets a new ID.",
+      "data-confirm-check" => "I understand #{name(letter)} no longer verifies.",
       "data-confirm-button" => "Delete letter"
     }
   end
@@ -190,7 +199,7 @@ defmodule Web.TaxCreditLetterLive do
         |> assign_letter(letter)
         |> put_flash(
           :info,
-          "Letter replaced. #{letter.ref_id} says #{format_minutes(TaxCreditLetter.total_minutes(letter))}."
+          "Letter replaced. #{name(letter)} says #{format_minutes(TaxCreditLetter.total_minutes(letter))}."
         )
 
       {:noreply, socket}
