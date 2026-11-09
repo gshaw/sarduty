@@ -25,8 +25,9 @@ defmodule App.Model.PublishedPDF do
     field :name, :string
     # What it's for: `member:45:2026` for a member's year, `activity:812` for an activity.
     field :subject, :string
-    # Its ID: 15 characters, stored without dashes. A letter from before #970 keeps its
-    # reference number, `SRVTC-K7Q4M2XA`, or `SRVTC-M4K11` from before #207.
+    # Its ID: 15 characters, stored without dashes. A letter from before #970 has its
+    # old reference number until App.Worker.RenewLetterCodesWorker gives it an ID; an
+    # old reference number never verifies.
     field :code, :string, redact: true
     belongs_to :tax_credit_letter, TaxCreditLetter
     belongs_to :member, Member
@@ -63,37 +64,23 @@ defmodule App.Model.PublishedPDF do
   """
   def generate_code, do: MemberCard.random_code(@code_length)
 
-  @doc "An ID as people read it: `K7Q4M-2XA9H-VB3TN`. A letter's reference number as it is."
+  @doc "An ID as people read it: `K7Q4M-2XA9H-VB3TN`."
   def format_code(<<a::binary-5, b::binary-5, c::binary-5>>), do: "#{a}-#{b}-#{c}"
   def format_code(code), do: code
 
   @doc """
-  What someone typed or scanned, as an ID to look up: `{:code, code}`, `{:old, code}`
-  for a letter's reference number from before #207, which needs the member's last name
-  too, or nil when it can't be either. Case, spaces, and dashes don't matter.
+  What someone typed or scanned, as a stored ID, or nil when it can't be one. Case,
+  spaces, and dashes don't matter. A letter's reference number from before #970 is nil:
+  only 15-character IDs verify.
   """
   def parse_code(input) when is_binary(input) do
     code = input |> String.upcase() |> String.replace(~r/[\s-]/, "")
-
-    case code do
-      "SRVTC" <> rest ->
-        cond do
-          alphabet?(rest, 8) -> {:code, "SRVTC-" <> rest}
-          rest =~ ~r/^[A-Z1-9]{5}$/ -> {:old, "SRVTC-" <> rest}
-          true -> nil
-        end
-
-      code ->
-        if alphabet?(code, @code_length), do: {:code, code}
-    end
+    if String.length(code) == @code_length and code =~ ~r/^[2-9A-HJKMNP-TV-Z]+$/, do: code
   end
 
   def parse_code(_input), do: nil
 
-  # `length` characters of the ID card alphabet, MemberCard's: no 0/O, 1/I/L, or U.
-  # cspell:ignore HJKMNP
-  defp alphabet?(code, length),
-    do: String.length(code) == length and code =~ ~r/^[2-9A-HJKMNP-TV-Z]+$/
+  # cspell:ignore HJKMNP -- the ID card alphabet, MemberCard's: no 0/O, 1/I/L, or U
 
   @doc """
   The PDF's page on the verify site, which its verify code opens:
@@ -164,6 +151,33 @@ defmodule App.Model.PublishedPDF do
   defp set_replaced_by!(pdf, id),
     do: PublishedPDF |> where(id: ^pdf.id) |> Repo.update_all(set: [replaced_by_id: id])
 
+  @doc """
+  Replaces a PDF's ID, file, and what it printed with `printed`, a new print of the same
+  document, in one transaction (App.Operation.RenewLetterCodes). Its row and date stay.
+  """
+  def reprint!(%PublishedPDF{} = pdf, %{attachment: attachment, code: code} = printed) do
+    {:ok, pdf} =
+      Repo.transaction(fn ->
+        PublishedPDFFile
+        |> where(published_pdf_id: ^pdf.id)
+        |> Repo.update_all(set: [bytes: attachment.content])
+
+        pdf
+        |> Ecto.Changeset.change(
+          code: code,
+          title: attachment.title,
+          filename: attachment.filename,
+          byte_size: byte_size(attachment.content),
+          sha256: :sha256 |> :crypto.hash(attachment.content) |> Base.encode16(case: :lower),
+          keep: printed.keep,
+          shows: printed.shows
+        )
+        |> Repo.update!()
+      end)
+
+    pdf
+  end
+
   @doc "The subject's current PDF of the definition `name`, or nil."
   def get_current(team_id, name, subject) do
     PublishedPDF
@@ -203,32 +217,15 @@ defmodule App.Model.PublishedPDF do
   end
 
   @doc """
-  The PDF with this ID, for the verify site, with its team, the team's organization, and
-  the PDF that replaced it; or nil. An old letter reference number (`{:old, code}`) was
-  never unique or hard to guess, so it also needs the member's last name, and finds only
-  the one it matches.
+  The PDF with this stored ID, for the verify site, with its team, the team's
+  organization, and the PDF that replaced it; or nil.
   """
-  def find_for_verify(parsed, last_name \\ nil)
-
-  def find_for_verify({:code, code}, _last_name) do
+  def find_for_verify(code) do
     PublishedPDF
     |> where([p], p.code == ^code)
     |> verify_preload()
     |> Repo.one()
   end
-
-  def find_for_verify({:old, code}, last_name) do
-    PublishedPDF
-    |> where([p], p.code == ^code)
-    |> verify_preload()
-    |> preload(:member)
-    |> Repo.all()
-    |> Enum.filter(&(&1.member && TaxCreditLetter.last_name_matches?(&1.member, last_name || "")))
-    |> only_one()
-  end
-
-  defp only_one([pdf]), do: pdf
-  defp only_one(_none_or_several), do: nil
 
   defp verify_preload(query), do: preload(query, [:replaced_by, team: :organization])
 end

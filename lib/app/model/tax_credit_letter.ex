@@ -96,20 +96,6 @@ defmodule App.Model.TaxCreditLetter do
   end
 
   @doc """
-  Whether `last_name` is the member's last name, ignoring case. D4H names come as
-  "Nadia Mercer" or "Mercer, Nadia".
-  """
-  def last_name_matches?(member, last_name) do
-    want = last_name |> String.trim() |> String.downcase()
-
-    case member.name |> String.downcase() |> String.split(",", parts: 2) do
-      _name when want == "" -> false
-      [last, _first] -> String.trim(last) == want
-      [name] -> String.ends_with?(" " <> String.trim(name), " " <> want)
-    end
-  end
-
-  @doc """
   The year whose letters go out now: last year. Letters for it, or for the year
   still under way, warn when attendance no longer adds up to their hours (#192).
   """

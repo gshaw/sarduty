@@ -58,8 +58,7 @@ enforces the top-level list and the held URLs.
 - **Files crawlers and agents look for** (#824): `/.well-known/security.txt` on both
   hosts, with `/security.txt` redirecting to it; `/llms.txt`, the agents lander plus the
   style guide; `/robots.txt`, which blocks nothing; and the root `apple-touch-icon` copies
-  and `manifest.webmanifest`. `/letters` and `/letters/:ref` on the app's host redirect
-  to the verify host, since letters print its address. `sarduty.fly.dev` redirects to
+  and `manifest.webmanifest`. `sarduty.fly.dev` redirects to
   the app in production only (`Web.FlyHostRedirect`, exact hosts).
 - **Search vs agents** (#824): nothing is blocked. Routes kept out of search pipe
   through `:noindex`, which sends `X-Robots-Tag: noindex`: the whole verify host,
@@ -95,8 +94,7 @@ Devices, Google, Apple, and shared links hold these. They don't move.
   `/.well-known/oauth-…/teams/:subdomain…` metadata addresses: agents keep them from
   their first connection (#761).
 - On the verify site: `/:code` (the QR code), `/:code/photo`, `/:code/banner` (the Google
-  Wallet banner), `/orgs/:slug`, `/letters/:ref` (the QR code on tax credit
-  letters from #207 to #970, which redirects to `/:ref`), `/samples`, the sample ID cards (#854), and `/api/v1/cards/:code`,
+  Wallet banner), `/orgs/:slug`, `/samples`, the sample ID cards (#854), and `/api/v1/cards/:code`,
   the card check as JSON that apps scanning cards call (#299). A change that breaks those
   apps goes in `/api/v2`.
 

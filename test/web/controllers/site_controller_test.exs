@@ -27,13 +27,6 @@ defmodule Web.SiteControllerTest do
     end
   end
 
-  test "a letter's address typed without verify. goes to the verify host", %{conn: conn} do
-    assert conn |> get("/letters/SRVTC-K7Q4M2XA?x=1") |> redirected_to() ==
-             Web.VerifyHost.url() <> "/letters/SRVTC-K7Q4M2XA?x=1"
-
-    assert conn |> get("/letters") |> redirected_to() == Web.VerifyHost.url() <> "/letters"
-  end
-
   test "robots.txt blocks nothing" do
     text = @static |> Path.join("robots.txt") |> File.read!()
     assert text =~ "User-agent: *"

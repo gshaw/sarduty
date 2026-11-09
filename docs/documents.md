@@ -482,8 +482,9 @@ Each row has its team, the definition's name, its subject (`member:45:2026` or
 values `keep` names, its answers, and what `verify shows` printed.
 
 - **The ID** is 15 characters from the ID card alphabet, about 74 bits, stored without
-  dashes and shown 5-5-5: `K7Q4M-2XA9H-VB3TN`. A letter from before #970 keeps its
-  reference number, `SRVTC-K7Q4M2XA`.
+  dashes and shown 5-5-5: `K7Q4M-2XA9H-VB3TN`. Only these verify: a letter from before
+  #970 gets one, and its PDF prints again, once after deploy
+  (App.Worker.RenewLetterCodesWorker).
 - **One current PDF** per subject and definition, held by a unique index. Publishing
   again (`publish/3`) keeps the old one, Replaced. It takes the current PDF's id the
   person saw, and refuses when another took its place meanwhile.
@@ -493,4 +494,4 @@ values `keep` names, its answers, and what `verify shows` printed.
 The verify site's root takes a card code or a document ID, and the length says which:
 10 characters is a card, 15 a document. A current one shows its title, team, date, and
 what `verify shows` printed; a replaced or withdrawn one says so and shows nothing from
-the PDF. `/letters/:ref` redirects to `/:ref` for good, since printed letters carry it.
+the PDF. An old letter's reference number, or its old link, is not found.

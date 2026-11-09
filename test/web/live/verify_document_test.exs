@@ -61,17 +61,22 @@ defmodule Web.VerifyDocumentTest do
     assert_patch(lv, path(letter))
   end
 
-  test "a letter's old link goes to the root, for good", %{conn: conn, member: member} do
+  test "a letter's code from before #970 is not found, nor its old link (#970)",
+       %{conn: conn, member: member} do
     letter(member, %{code: "SRVTC-K7Q4M2XA"})
 
-    conn = get(conn, "/letters/SRVTC-K7Q4M2XA")
-    assert redirected_to(conn, 301) == "/SRVTC-K7Q4M2XA"
-    assert conn |> recycle() |> get("/letters") |> redirected_to(301) == "/"
+    {:ok, lv, _html} = live(conn, "/SRVTC-K7Q4M2XA")
+    assert has_element?(lv, "#result-not-found")
 
-    {:ok, lv, _html} =
-      live(build_conn() |> Map.put(:host, Web.VerifyHost.host()), "/SRVTC-K7Q4M2XA")
+    # Its QR code's link, scanned from the start page.
+    {:ok, lv, _html} = live(conn, ~p"/")
 
-    assert has_element?(lv, "#result-current")
+    lv
+    |> render_hook("scanned", %{
+      "code" => "https://#{Web.VerifyHost.host()}/letters/SRVTC-K7Q4M2XA"
+    })
+
+    assert has_element?(lv, "#result-not-found")
   end
 
   test "an unknown ID is not found", %{conn: conn} do
@@ -120,27 +125,6 @@ defmodule Web.VerifyDocumentTest do
            )
 
     refute html =~ "Mercer"
-  end
-
-  describe "a letter's reference number from before #207" do
-    test "needs the member's last name before it shows anything", %{conn: conn, member: member} do
-      letter(member, %{code: "SRVTC-M4K11"})
-      {:ok, lv, html} = live(conn, ~p"/SRVTC-M4K11")
-
-      assert has_element?(lv, "#last-name-form")
-      refute html =~ "Mercer"
-
-      lv |> form("#last-name-form", check: %{last_name: "nadia"}) |> render_submit()
-      assert has_element?(lv, "#result-not-found")
-    end
-
-    test "shows the letter with the right last name", %{conn: conn, member: member} do
-      letter(member, %{code: "SRVTC-M4K11"})
-      {:ok, lv, _html} = live(conn, ~p"/srvtc-m4k11")
-
-      lv |> form("#last-name-form", check: %{last_name: "MERCER"}) |> render_submit()
-      assert has_element?(lv, "#result-current", "Published by North Shore Rescue")
-    end
   end
 
   test "misses share the ID card check's limit", %{conn: conn, member: member} do

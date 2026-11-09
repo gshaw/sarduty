@@ -120,8 +120,8 @@ defmodule Web.TaxCreditLetterLive do
                 text={code(@letter)}
                 label="Copy ID"
               />
-              <%!-- A reference number from before #207 can't verify alone. --%>
-              <%= if match?({:code, _}, PublishedPDF.parse_code(@letter.pdf.code)) do %>
+              <%!-- A reference number from before #970 verifies nowhere. --%>
+              <%= if PublishedPDF.parse_code(@letter.pdf.code) do %>
                 <br />
                 <.a
                   id="letter-verify"

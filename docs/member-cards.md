@@ -70,8 +70,8 @@ organization gets its branding: see [organizations.md](organizations.md).
   junk codes. Slowing misses doesn't work either: a guesser drops any answer that takes
   long, and a fast answer gives the hit away. While the alarm is up, a real card found
   from an IP that has missed this window is recorded as Card found during alarm, with
-  the card's id. Letter references count toward the alarm but their hits aren't
-  recorded: a letter also needs the member's last name.
+  the card's id. A published document's ID counts the same way (#970), its hit recorded
+  with the document's id.
 - **A cancelled card shows nothing about the member.** The verify site says it was cancelled,
   and its photo route 404s. Cards are cancelled only by Replace ID card, by Cancel ID
   card for a retiring or retired member (#964), and by the team's ID cards switch

@@ -79,9 +79,6 @@ defmodule Web.Router do
     # Before /:code, which would take /security.txt for a card code.
     get "/.well-known/security.txt", VerifyController, :security_txt
     get "/security.txt", VerifyController, :to_security_txt
-    # Tax credit letters printed before #970 link to /letters/<reference number>.
-    get "/letters", VerifyController, :to_root
-    get "/letters/:ref", VerifyController, :letter
 
     live_session :verify, session: {Web.VerifyLimit, :session, []} do
       live "/", VerifyLive
@@ -219,10 +216,6 @@ defmodule Web.Router do
 
     get "/.well-known/security.txt", SiteController, :security_txt
     get "/security.txt", SiteController, :to_security_txt
-    # Letters print the verify host's address; people type it without "verify.".
-    get "/letters", SiteController, :to_verify
-    get "/letters/:ref", SiteController, :to_verify
-
     get "/styles", StyleGuideController, :index
     get "/styles/:page", StyleGuideController, :show
 

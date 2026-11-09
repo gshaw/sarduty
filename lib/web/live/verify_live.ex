@@ -21,8 +21,8 @@ defmodule Web.VerifyLive do
   #
   # A document shows what its definition's `verify shows` printed while it's current. One
   # replaced or withdrawn says so and shows nothing from the PDF. A tax credit letter's
-  # reference number from before #970 verifies here too, and one from before #207 was
-  # easy to guess, so it shows nothing until the reader gives the member's last name.
+  # reference number from before #970 is not found, as any unknown code: its letter was
+  # printed again with an ID.
   #
   # Misses count toward a per-IP limit (Web.VerifyLimit). It's checked here rather than in
   # a plug, which would miss checks sent over the open connection. A bad link opened
@@ -87,18 +87,6 @@ defmodule Web.VerifyLive do
     {:noreply, assign(socket, :scan_failed, true)}
   end
 
-  def handle_event("check_name", %{"check" => %{"last_name" => last_name}}, socket) do
-    parsed = {:old, socket.assigns.result.code}
-    ip = socket.assigns.client_ip
-
-    result =
-      if VerifyLimit.limited?(ip),
-        do: %{status: :limited},
-        else: parsed |> PublishedPDF.find_for_verify(last_name) |> document(ip, parsed)
-
-    {:noreply, assign(socket, :result, result)}
-  end
-
   # A scan or a typed code sounds its result. A card's link opened directly stays quiet,
   # since a browser plays nothing before a tap.
   defp scan_sound(%{assigns: %{sound_next: true}} = socket, result) when result != nil do
@@ -113,14 +101,13 @@ defmodule Web.VerifyLive do
   defp path_for(input) do
     case read(input) do
       {:card, code} -> ~p"/#{MemberCard.format_code(code)}"
-      {:document, {_kind, code}} -> ~p"/#{PublishedPDF.format_code(code)}"
+      {:document, code} -> ~p"/#{PublishedPDF.format_code(code)}"
       _other -> ~p"/?#{[code: input]}"
     end
   end
 
-  # What the input names: `{:card, code}`, `{:document, parsed}`, `{:other_site, host}`
-  # for a link anywhere else, or nil. A letter's QR code from before #970 links to
-  # /letters/<reference number>.
+  # What the input names: `{:card, code}`, `{:document, code}`, `{:other_site, host}`
+  # for a link anywhere else, or nil.
   defp read(input) do
     case MemberCard.code_from_scan(input, Web.VerifyHost.trusted_hosts()) do
       code when is_binary(code) ->
@@ -139,7 +126,7 @@ defmodule Web.VerifyLive do
 
     case URI.parse(input) do
       %URI{scheme: scheme, path: path} when scheme in ["http", "https", "HTTP", "HTTPS"] ->
-        case Regex.run(~r{^/(?:letters/)?([^/]+)/?$}i, path || "") do
+        case Regex.run(~r{^/([^/]+)/?$}, path || "") do
           [_path, code] -> code
           nil -> ""
         end
@@ -180,9 +167,7 @@ defmodule Web.VerifyLive do
     end
   end
 
-  # An old letter's reference number asks for the member's last name before it looks.
-  defp document({:old, code}, _ip), do: %{status: :needs_last_name, code: code, sample: false}
-  defp document(parsed, ip), do: parsed |> PublishedPDF.find_for_verify() |> document(ip, parsed)
+  defp document(code, ip), do: code |> PublishedPDF.find_for_verify() |> document(ip, code)
 
   defp document(nil, ip, parsed) do
     VerifyLimit.miss(ip, parsed)
@@ -245,23 +230,6 @@ defmodule Web.VerifyLive do
           <.a id="samples-link" navigate={~p"/samples"}>Try a sample card</.a>
         </p>
       </section>
-    </div>
-    """
-  end
-
-  def render(%{result: %{status: :needs_last_name}} = assigns) do
-    ~H"""
-    <div id="needs-last-name">
-      <h1 class="heading">Verify a tax credit letter</h1>
-      <p class="text-text-muted">
-        Older letters need the member's last name too. Enter it as it is on the letter.
-      </p>
-
-      <.form for={@form} id="last-name-form" phx-submit="check_name">
-        <p class="mono">{@result.code}</p>
-        <.input field={@form[:last_name]} label="Last name" autocomplete="off" spellcheck="false" />
-        <.button size={:lg} class="w-full">Verify letter</.button>
-      </.form>
     </div>
     """
   end

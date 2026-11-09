@@ -5,35 +5,32 @@ defmodule App.Model.PublishedPDFTest do
 
   alias App.Model.PublishedPDF
 
-  # cspell:ignore ABCDEFGHJKMNPQRSTVWXYZ SRVTCK -- the code alphabet, and a typed number
+  # cspell:ignore ABCDEFGHJKMNPQRSTVWXYZ -- the code alphabet
   describe "IDs" do
     test "a new one is 15 characters from the ID card alphabet, shown 5-5-5" do
       code = PublishedPDF.generate_code()
       assert code =~ ~r/^[23456789ABCDEFGHJKMNPQRSTVWXYZ]{15}$/
-      assert PublishedPDF.parse_code(code) == {:code, code}
+      assert PublishedPDF.parse_code(code) == code
       assert PublishedPDF.format_code("K7Q4M2XA9HVB3TN") == "K7Q4M-2XA9H-VB3TN"
     end
 
     test "case, spaces, and dashes do not matter" do
       for typed <- ["k7q4m-2xa9h-vb3tn", " K7Q4M 2XA9H VB3TN ", "K7Q4M2XA9HVB3TN"] do
-        assert PublishedPDF.parse_code(typed) == {:code, "K7Q4M2XA9HVB3TN"}, typed
+        assert PublishedPDF.parse_code(typed) == "K7Q4M2XA9HVB3TN", typed
       end
     end
 
-    test "a letter's reference number from before #970 keeps its prefix" do
-      for typed <- ["srvtc-k7q4m2xa", " SRVTC K7Q4 M2XA ", "SRVTCK7Q4M2XA"] do
-        assert PublishedPDF.parse_code(typed) == {:code, "SRVTC-K7Q4M2XA"}, typed
-      end
-
-      assert PublishedPDF.format_code("SRVTC-K7Q4M2XA") == "SRVTC-K7Q4M2XA"
-    end
-
-    test "a reference number from before #207 is old" do
-      assert PublishedPDF.parse_code("SRVTC-M4K11") == {:old, "SRVTC-M4K11"}
-    end
-
-    test "anything else is nil, a card's code too" do
-      for typed <- ["", "SRVTC-", "K7Q4M2XA", "K7Q4M2XA9H", "K7Q4M2XA9HVB3T0", "../etc", nil] do
+    test "anything else is nil: a card's code, and a letter's from before #970" do
+      for typed <-
+            [
+              "",
+              "K7Q4M2XA",
+              "K7Q4M2XA9H",
+              "K7Q4M2XA9HVB3T0",
+              "SRVTC-K7Q4M2XA",
+              "SRVTC-M4K11",
+              nil
+            ] do
         assert PublishedPDF.parse_code(typed) == nil, inspect(typed)
       end
     end
@@ -96,20 +93,12 @@ defmodule App.Model.PublishedPDFTest do
     test "finds a letter by its ID, with its team and what replaced it" do
       team = team_fixture()
       member = member_fixture(team)
-      letter = tax_credit_letter_fixture(member, %{code: "SRVTC-K7Q4M2XA"})
+      letter = tax_credit_letter_fixture(member, %{code: "K7Q4M2XA9HVB3TN"})
 
-      pdf = PublishedPDF.find_for_verify({:code, "SRVTC-K7Q4M2XA"})
+      pdf = PublishedPDF.find_for_verify("K7Q4M2XA9HVB3TN")
       assert pdf.tax_credit_letter_id == letter.id
       assert pdf.team.id == team.id
-      refute PublishedPDF.find_for_verify({:code, "SRVTC-K7Q4M2XB"})
-    end
-
-    test "an old reference number needs the member's last name" do
-      member = member_fixture(team_fixture(), %{name: "Nadia Mercer"})
-      tax_credit_letter_fixture(member, %{code: "SRVTC-M4K11", year: 2020})
-
-      assert PublishedPDF.find_for_verify({:old, "SRVTC-M4K11"}, "mercer")
-      refute PublishedPDF.find_for_verify({:old, "SRVTC-M4K11"}, "Nadia")
+      refute PublishedPDF.find_for_verify("K7Q4M2XA9HVB3TM")
     end
   end
 end

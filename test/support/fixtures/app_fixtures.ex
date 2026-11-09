@@ -526,7 +526,7 @@ defmodule App.DataFixtures do
 
   @doc """
   A tax credit letter published with a stand-in PDF (#918, #970), since printing takes a
-  while. `code` sets its ID, such as an old `SRVTC-K7Q4M2XA`; it's new by default. Its
+  while. `code` sets its ID, or an old `SRVTC-K7Q4M2XA`; it's new by default. Its
   verify page shows the name, year, and any hours it has.
   """
   def tax_credit_letter_fixture(%Member{} = member, attrs \\ %{}) do

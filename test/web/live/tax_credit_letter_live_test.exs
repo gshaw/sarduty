@@ -26,16 +26,16 @@ defmodule Web.TaxCreditLetterLiveTest do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
     current = tax_credit_letter_fixture(member, %{code: "K7Q4M2XA9HVB3TN"})
-    old = tax_credit_letter_fixture(member, %{code: "SRVTC-M4K11", year: 2020})
+    old = tax_credit_letter_fixture(member, %{code: "SRVTC-K7Q4M2XA", year: 2020})
     conn = log_in_user(conn, user)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters/#{current.id}")
     assert has_element?(lv, "#letter-reference[value='K7Q4M-2XA9H-VB3TN']")
     assert has_element?(lv, "#letter-verify[href='#{Web.VerifyHost.url()}/K7Q4M-2XA9H-VB3TN']")
 
-    # A reference from before #207 can't verify alone.
+    # A reference number from before #970 verifies nowhere, until it's renewed.
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters/#{old.id}")
-    assert has_element?(lv, "#letter-reference[value='SRVTC-M4K11']")
+    assert has_element?(lv, "#letter-reference[value='SRVTC-K7Q4M2XA']")
     refute has_element?(lv, "#letter-verify")
   end
 
@@ -139,7 +139,7 @@ defmodule Web.TaxCreditLetterLiveTest do
       assert has_element?(lv, "#letter-hours", "1h 30m")
 
       replaced = TaxCreditLetter |> Repo.get!(letter.id) |> Repo.preload(:pdf)
-      assert {:code, _code} = PublishedPDF.parse_code(replaced.pdf.code)
+      assert PublishedPDF.parse_code(replaced.pdf.code)
       assert replaced.pdf.code != letter.pdf.code
       assert letter.pdf |> Repo.reload!() |> PublishedPDF.status() == :replaced
       assert replaced.primary_minutes == 90

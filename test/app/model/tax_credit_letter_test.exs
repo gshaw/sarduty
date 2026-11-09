@@ -1,26 +1,10 @@
 defmodule App.Model.TaxCreditLetterTest do
   use ExUnit.Case, async: true
 
-  alias App.Model.Member
   alias App.Model.TaxCreditLetter
 
   @timezone "America/Vancouver"
   @now ~U[2026-01-15 18:00:00Z]
-
-  describe "last_name_matches?/2" do
-    test "reads both ways D4H writes names, ignoring case" do
-      assert TaxCreditLetter.last_name_matches?(%Member{name: "Nadia Mercer"}, "mercer")
-      assert TaxCreditLetter.last_name_matches?(%Member{name: "Mercer, Nadia"}, " Mercer ")
-      assert TaxCreditLetter.last_name_matches?(%Member{name: "Ana de la Cruz"}, "de la Cruz")
-    end
-
-    test "a first name, part of a name, or nothing does not match" do
-      refute TaxCreditLetter.last_name_matches?(%Member{name: "Nadia Mercer"}, "Nadia")
-      refute TaxCreditLetter.last_name_matches?(%Member{name: "Mercer, Nadia"}, "Nadia")
-      refute TaxCreditLetter.last_name_matches?(%Member{name: "Nadia Mercer"}, "cer")
-      refute TaxCreditLetter.last_name_matches?(%Member{name: "Nadia Mercer"}, "")
-    end
-  end
 
   describe "parse_minutes/1" do
     defp parse(primary, secondary) do

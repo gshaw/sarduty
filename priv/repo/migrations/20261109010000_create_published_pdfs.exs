@@ -6,10 +6,11 @@ defmodule App.Repo.Migrations.CreatePublishedPdfs do
   # Saved PDFs become published PDFs (#970): only a published PDF is saved, each with an
   # ID the verify site finds it by. A subject has one current PDF for each definition;
   # one it replaced stays, marked Replaced. Every saved PDF in production is a tax
-  # credit letter's: each moves over with its letter's reference number as its ID, the
-  # letter's hours as what its verify page shows, and the letter's date as when it was
-  # published. A form's saved PDF was a draft from before drafts stopped being saved, so
-  # it goes. The letter's reference number lives on its PDF from now on.
+  # credit letter's: each moves over with the letter's hours as what its verify page
+  # shows, and the letter's date as when it was published. Its old reference number
+  # comes along as its code until App.Worker.RenewLetterCodesWorker, run once after
+  # deploy, gives it an ID and prints it again; an old number never verifies. A form's
+  # saved PDF was a draft from before drafts stopped being saved, so it goes.
   #
   # SQLite changes no foreign key or unique index in place, so the tables are made new
   # and the rows copied.

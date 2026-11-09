@@ -46,7 +46,7 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
     letter = create(team, member)
 
     assert {letter.member_id, letter.year} == {member.id, 2025}
-    assert {:code, _code} = PublishedPDF.parse_code(letter.pdf.code)
+    assert PublishedPDF.parse_code(letter.pdf.code)
     assert {letter.primary_minutes, letter.secondary_minutes} == {210, 60}
     assert letter.letter_content =~ "Primary Hours: 3h 30m\nSecondary Hours: 1 hour\n"
     assert letter.letter_content =~ "Total Hours: 4h 30m\n"

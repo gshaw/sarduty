@@ -23,12 +23,13 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
   a letter. What can't be faked is the page showing the hours the team issued.
 - **IDs can't be guessed.** A letter's ID is its PDF's: 15 characters from the ID card
   alphabet, from `:crypto` (`PublishedPDF.generate_code/0`). The page shows a member's
-  name and hours, so a guessable ID would let anyone walk the roster. Letters from #207
-  to #970 keep their reference number, `SRVTC-` and 8 characters, as their ID.
-- **Old reference numbers need the last name too.** Letters before #207 have 5
-  characters from `Service.Random.token/1`, about 2 million, never checked for
-  duplicates. The page asks for the member's last name before it shows one. The unique
-  index on `code` covers only the longer IDs for the same reason.
+  name and hours, so a guessable ID would let anyone walk the roster.
+- **Old reference numbers never verify** (#970). Letter verify shipped on 2026-10-07
+  (#207), and few letters with a verify code went out, all test letters, so the
+  `SRVTC-` numbers and the last-name check for the 5-character ones before #207 went.
+  Each letter from before #970 gets an ID and its saved PDF prints again with the new
+  verify code, once, after deploy (App.Worker.RenewLetterCodesWorker), so no saved PDF
+  carries a dead code. Its row stays: nothing says Replaced.
 - **Only the current letter verifies as current.** Replace publishes the letter again
   with a new ID, and the old one's page says Replaced and shows nothing from it, so an
   old paper copy can't pass for the hours the team stands behind now. Delete
@@ -37,9 +38,8 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
   member may already have the letter.
 - **Letters verify at the verify site's root**, beside cards, so they get the host's
   isolation (no login cookie), its miss limit ([Web.VerifyLimit](../lib/web/verify_limit.ex),
-  shared with cards), and an organization's own verify host when that ships.
-  `/letters/:ref`, which letters printed before #970 carry, redirects to `/:ref` for
-  good.
+  shared with cards), and an organization's own verify host when that ships. An old
+  letter's link, `/letters/:ref`, is not found.
 - **Hours print as the letters table shows them**, from `Service.Format.duration/1`:
   "212h 30m", or "202 hours" when there are no minutes (#260). Nothing is rounded, so
   the letter, the verify page, and the saved minutes agree. `TaxCreditLetter.parse_minutes/1`
