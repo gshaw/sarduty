@@ -51,12 +51,12 @@ defmodule Web.UserLoginCodeLive do
         Log in to connect an AI agent to {@agent_team}.
       </p>
       <p :if={@field == "email"}>
-        If <strong>{@value}</strong> can use SAR Duty, we've emailed it a 6-digit code. It
+        If <strong>{@value}</strong> can use SAR Duty, we've emailed it a 8-digit code. It
         works once, for 15 minutes.
       </p>
       <p :if={@field == "phone"}>
         If <strong>{Service.Phone.format(@value)}</strong> can use SAR Duty, we've texted it a
-        6-digit code. It works once, for 15 minutes.
+        8-digit code. It works once, for 15 minutes.
       </p>
       <.form
         for={@form}
@@ -73,7 +73,7 @@ defmodule Web.UserLoginCodeLive do
           required
           autocomplete="one-time-code"
           inputmode="numeric"
-          maxlength="7"
+          maxlength="9"
         />
         <.input
           field={@form[:remember_me]}

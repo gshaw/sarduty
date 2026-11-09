@@ -23,7 +23,7 @@ defmodule Web.UserSessionControllerTest do
   defp from_ip(conn),
     do: put_req_header(conn, "fly-client-ip", "test-#{System.unique_integer([:positive])}")
 
-  defp wrong(code), do: if(code == "000000", do: "111111", else: "000000")
+  defp wrong(code), do: if(code == "00000000", do: "11111111", else: "00000000")
 
   describe "POST /login/code" do
     test "emails a manager a code, and says the same as for anyone", %{conn: conn} do
@@ -209,7 +209,7 @@ defmodule Web.UserSessionControllerTest do
 
     test "is off without Twilio: a texted code can't log in", %{conn: conn} do
       conn =
-        post(conn, ~p"/login", %{"user" => %{"phone" => "+16045551234", "code" => "123456"}})
+        post(conn, ~p"/login", %{"user" => %{"phone" => "+16045551234", "code" => "12345678"}})
 
       refute get_session(conn, :user_token)
     end
@@ -328,7 +328,7 @@ defmodule Web.UserSessionControllerTest do
       email = "guess-#{System.unique_integer([:positive])}@example.com"
       user_fixture(%{email: email})
 
-      for _ <- 1..22, do: conn |> from_ip() |> log_in(email, "000000")
+      for _ <- 1..22, do: conn |> from_ip() |> log_in(email, "00000000")
 
       who = Event.who(email)
       since = DateTime.add(DateTime.utc_now(), -1, :minute)

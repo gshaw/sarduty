@@ -162,8 +162,8 @@ defmodule App.AccountsTest do
       team = member_logins_team_fixture()
       member_fixture(team, %{email: "member@example.com", phone: "604-555-0199"})
 
-      assert login_code_fixture("member@example.com") =~ ~r/^\d{6}$/
-      assert text_code_fixture("+16045550199") =~ ~r/^\d{6}$/
+      assert login_code_fixture("member@example.com") =~ ~r/^\d{8}$/
+      assert text_code_fixture("+16045550199") =~ ~r/^\d{8}$/
     end
   end
 
@@ -227,12 +227,12 @@ defmodule App.AccountsTest do
   end
 
   describe "login codes" do
-    test "emails a manager a six-digit code, and makes their user" do
+    test "emails a manager an 8-digit code, and makes their user" do
       manager_fixture(team_fixture(), %{email: "pat@example.com"})
 
       code = deliver(" Pat@Example.com ")
 
-      assert code =~ ~r/\A\d{6}\z/
+      assert code =~ ~r/\A\d{8}\z/
 
       assert {:ok, %User{email: "pat@example.com"}} =
                Accounts.log_in_with_code("pat@example.com", code)
@@ -247,7 +247,7 @@ defmodule App.AccountsTest do
     test "a code works once, with spaces and in any email case" do
       %{user: user} = user_with_team_fixture()
       code = deliver(user.email)
-      spaced = String.slice(code, 0, 3) <> " " <> String.slice(code, 3, 3)
+      spaced = String.slice(code, 0, 4) <> " " <> String.slice(code, 4, 4)
 
       upcased = String.upcase(user.email)
 
@@ -268,7 +268,7 @@ defmodule App.AccountsTest do
     test "a code dies after 5 wrong tries" do
       %{user: user} = user_with_team_fixture()
       code = deliver(user.email)
-      wrong = if code == "000000", do: "111111", else: "000000"
+      wrong = if code == "00000000", do: "11111111", else: "00000000"
 
       for _ <- 1..5, do: assert(Accounts.log_in_with_code(user.email, wrong) == :error)
 
@@ -323,7 +323,7 @@ defmodule App.AccountsTest do
       :ok = Accounts.deliver_login_code("html@example.com")
 
       assert_received {:email, email}
-      [code] = Regex.run(~r/\d{6}/, email.subject)
+      [code] = Regex.run(~r/\d{4} \d{4}/, email.subject)
       assert email.text_body =~ code
       assert email.html_body =~ code
 
@@ -331,16 +331,29 @@ defmodule App.AccountsTest do
                ~s(/images/sarduty-logo-96.png" width="48" height="48" alt="SAR Duty")
     end
 
-    test "the email ends with the domain line Safari reads" do
+    test "the email ends with the domain line Safari reads, the code whole" do
       manager_fixture(team_fixture(), %{email: "otp@example.com"})
 
       :ok = Accounts.deliver_login_code("otp@example.com")
 
       assert_received {:email, email}
-      [code] = Regex.run(~r/\d{6}/, email.subject)
+      [first, last] = Regex.run(~r/(\d{4}) (\d{4})/, email.subject, capture: :all_but_first)
       host = Web.Endpoint.host()
-      assert email.text_body =~ ~r/@#{Regex.escape(host)} ##{code}\n\z/
-      assert email.html_body =~ "@#{host} ##{code}"
+      assert email.text_body =~ ~r/@#{Regex.escape(host)} ##{first}#{last}\n\z/
+      assert email.html_body =~ "@#{host} ##{first}#{last}"
+    end
+
+    test "the code works typed with a dash, or spaces around it" do
+      team = team_fixture()
+
+      for {typed, i} <- Enum.with_index([&"#{&1}-#{&2}", &" #{&1}#{&2} "]) do
+        email = "typed#{i}@example.com"
+        manager_fixture(team, %{email: email})
+        :ok = Accounts.deliver_login_code(email)
+        assert_received {:email, sent}
+        [first, last] = Regex.run(~r/(\d{4}) (\d{4})/, sent.subject, capture: :all_but_first)
+        assert {:ok, _} = Accounts.log_in_with_code(email, typed.(first, last))
+      end
     end
   end
 
@@ -352,7 +365,7 @@ defmodule App.AccountsTest do
       assert Accounts.deliver_login_text("+16045551234") == :ok
       refute_received {:text, _, _}
       assert Repo.aggregate(UserToken, :count) == 0
-      assert Accounts.log_in_with_text_code("+16045551234", "123456") == :error
+      assert Accounts.log_in_with_text_code("+16045551234", "12345678") == :error
     end
 
     test "texts a manager at the number D4H has, however it's typed" do
@@ -372,8 +385,8 @@ defmodule App.AccountsTest do
       :ok = Accounts.deliver_login_text("+16045551234")
 
       assert_received {:text, "+16045551234", body}
-      [code] = Regex.run(~r/\d{6}/, body)
-      assert body =~ ~r/@\S+ ##{code}\z/
+      [first, last] = Regex.run(~r/code: (\d{4}) (\d{4})/, body, capture: :all_but_first)
+      assert body =~ ~r/@\S+ ##{first}#{last}\z/
     end
 
     test "a refused text leaves no code, so the retry sends a new one at once" do
@@ -418,7 +431,7 @@ defmodule App.AccountsTest do
       manager_fixture(team_fixture(), %{email: "pat@example.com", phone: "604-555-1234"})
       manager_fixture(team_fixture(), %{email: "Pat@Example.com", phone: "6045551234"})
 
-      assert text_code_fixture("+16045551234") =~ ~r/\A\d{6}\z/
+      assert text_code_fixture("+16045551234") =~ ~r/\A\d{8}\z/
     end
 
     test "a texted code works only with the number, and an emailed one only with the email" do
@@ -437,7 +450,7 @@ defmodule App.AccountsTest do
       text_login_fixture()
       manager_fixture(team_fixture(), %{email: "pat@example.com", phone: "604-555-1234"})
       code = text_code_fixture("+16045551234")
-      wrong = if code == "000000", do: "111111", else: "000000"
+      wrong = if code == "00000000", do: "11111111", else: "00000000"
 
       for _ <- 1..5, do: Accounts.log_in_with_text_code("+16045551234", wrong)
 
@@ -460,7 +473,7 @@ defmodule App.AccountsTest do
   defp deliver(email) do
     :ok = Accounts.deliver_login_code(email)
     assert_received {:email, sent}
-    [code] = Regex.run(~r/\d{6}/, sent.subject)
-    code
+    [code] = Regex.run(~r/\d{4} \d{4}/, sent.subject)
+    String.replace(code, " ", "")
   end
 end

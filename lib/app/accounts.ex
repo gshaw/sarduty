@@ -172,7 +172,7 @@ defmodule App.Accounts do
   end
 
   defp check_code(user, sent_to, code) do
-    code = String.replace(code, ~r/\s/, "")
+    code = UserToken.normalize_code(code)
 
     case user |> UserToken.live_login_code_query(sent_to) |> Repo.one() do
       %UserToken{} = token ->

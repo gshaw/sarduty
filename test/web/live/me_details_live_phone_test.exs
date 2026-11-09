@@ -45,8 +45,8 @@ defmodule Web.MeDetailsLivePhoneTest do
     lv |> form("#phone-form", phone: %{phone: phone}) |> render_submit()
 
     receive do
-      {:text, _to, "Your SAR Duty confirmation code: " <> <<code::binary-6, _rest::binary>>} ->
-        code
+      {:text, _to, "Your SAR Duty confirmation code: " <> <<code::binary-9, _rest::binary>>} ->
+        String.replace(code, " ", "")
     after
       0 -> flunk("no code was texted")
     end
@@ -81,7 +81,7 @@ defmodule Web.MeDetailsLivePhoneTest do
     stub_d4h(team, member)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
     code = send_code(lv, "604-555-0199")
-    wrong = if code == "000000", do: "111111", else: "000000"
+    wrong = if code == "00000000", do: "11111111", else: "00000000"
 
     html = lv |> form("#code-form", confirm: %{code: wrong}) |> render_submit()
 

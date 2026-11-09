@@ -101,7 +101,7 @@ defmodule App.Operation.ChangeOwnPhone do
   end
 
   defp match_code(user, e164, code) do
-    code = String.replace(code || "", ~r/\s/, "")
+    code = UserToken.normalize_code(code || "")
 
     case user |> UserToken.live_code_query("confirm", e164) |> Repo.one() do
       %UserToken{} = token ->

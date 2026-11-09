@@ -7,7 +7,7 @@ defmodule Web.LoginLimit do
 
   Also caps wrong codes. Each code dies after 5 misses, but asking again gets a fresh
   one, so misses also count per email or number over a day and per IP: 20 a day on one
-  makes guessing a six-digit code across new ones hopeless. Counters are in memory, so a
+  makes guessing an 8-digit code across new ones hopeless. Counters are in memory, so a
   deploy resets them.
 
   A browser that has logged in to the account before (Web.UserAuth.known_browser?/2)
