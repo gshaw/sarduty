@@ -84,7 +84,7 @@ defmodule App.Operation.BuildApplePass do
         # No header fields: they share the top row with the team name, which Wallet
         # then cuts short.
         primaryFields: [
-          %{key: "name", label: name_label(status, sample?), value: member.name}
+          %{key: "name", label: MemberCard.name_label(status, sample?), value: member.name}
         ],
         secondaryFields: secondary_fields(card, status),
         backFields: back_fields(card, code, qualifications)
@@ -147,7 +147,7 @@ defmodule App.Operation.BuildApplePass do
       %{
         key: "status",
         label: "Status",
-        value: status_text(status),
+        value: MemberCard.status_text(status),
         changeMessage: "Your card is now %@."
       },
       member.joined_at &&
@@ -190,33 +190,12 @@ defmodule App.Operation.BuildApplePass do
         value: MemberCard.how_to_check(code)
       },
       qualification_fields(qualifications, team.timezone),
-      %{key: "checked", label: "Last updated", value: last_checked(team)},
+      %{key: "checked", label: "Last updated", value: MemberCard.last_updated(team)},
       %{key: "issuer", label: "Issued by", value: MemberCard.issued_by(team)}
     ])
-  end
-
-  defp name_label(:active, true = _sample?), do: "Sample, not real ID"
-
-  defp name_label(status, _sample?) do
-    case status do
-      :active -> "Member"
-      :inactive -> "Not an active member"
-      :revoked -> "Card cancelled"
-    end
-  end
-
-  defp status_text(status) do
-    case status do
-      :active -> "Active"
-      :inactive -> "Not active"
-      :revoked -> "Cancelled"
-    end
   end
 
   # A card made before pass updates has no token until its pass is next built.
   defp drop_web_service(json, nil), do: Map.drop(json, [:webServiceURL, :authenticationToken])
   defp drop_web_service(json, _token), do: json
-
-  defp last_checked(%{d4h_refreshed_at: nil}), do: "Never"
-  defp last_checked(team), do: Service.Format.date_long(team.d4h_refreshed_at, team.timezone)
 end

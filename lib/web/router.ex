@@ -252,6 +252,10 @@ defmodule Web.Router do
     # The card page's badges: each builds its pass on the tap.
     get "/cards/:token/apple-wallet", CardLinkController, :apple_pass
     get "/cards/:token/google-wallet", CardLinkController, :google_pass
+    # Its pictures of the card, and Print ID card (#CARDPR).
+    get "/cards/:token/front", CardLinkController, :front
+    get "/cards/:token/back", CardLinkController, :back
+    get "/cards/:token/pdf", CardLinkController, :pdf
 
     # A demo's link (#857): logs in as its visitor, then builds it the first time.
     get "/demo/open/:token", DemoController, :open

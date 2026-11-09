@@ -19,6 +19,10 @@ defmodule Web.CardLinkLive do
   # your phone has the page's QR code. A card that is replaced, cancelled, or not active
   # says so and offers nothing. Logged in to the card's team, the bar names it.
   #
+  # Under the Wallet, the card itself (#CARDPR): its front and back as SAR Duty draws
+  # them, each with Save image, then Print ID card, and Verify your ID card, for a member
+  # with no Wallet or one who wants a copy on paper.
+  #
   # Under it, one quiet line says what SAR Duty sees, and nothing else: no spinner, since
   # a tap can't tell an added card from a cancelled sheet or a card already there. It
   # changes while the page is open: a phone registering the Apple pass, or Google saying
@@ -202,11 +206,33 @@ defmodule Web.CardLinkLive do
       google_click={JS.push("adding", value: %{wallet: "google"})}
     />
     <p id="card-link-status" class="hint mt-6 mb-0">{WalletText.seen(@phones, @card)}</p>
-    <p id="card-link-lost" class="hint mt-2 mb-0">
+    <.card_side id="card-link-front" class="mt-8" token={@token} side="front" card={@card} />
+    <.card_side id="card-link-back" class="mt-6" token={@token} side="back" card={@card} />
+    <div id="card-link-print" class="mt-6">
+      <p class="mb-0">
+        <.a id="card-link-print-link" href={~p"/cards/#{@token}/pdf"} target="_blank">
+          Print ID card
+        </.a>
+      </p>
+      <p class="hint mt-1 mb-0">Both sides at card size, in black on white, to cut out.</p>
+    </div>
+    <div id="card-link-verify" class="mt-4">
+      <p class="mb-0">
+        <.a id="card-link-verify-link" href={verify_url(@card)} external={true}>
+          Verify your ID card
+        </.a>
+      </p>
+      <p class="hint mt-1 mb-0">What a checker sees when they scan your code.</p>
+    </div>
+    <p id="card-link-no-wallet" class="hint mt-4 mb-0">
+      No Wallet? Save the images or print your card. Neither updates, so checkers scan the code.
+    </p>
+    <p id="card-link-lost" class="hint mt-4 mb-0">
       Lost your phone? Ask a team admin to replace your ID card. This link is yours alone.
     </p>
     """
   end
+
 
   defp card_state(%{status: :replaced} = assigns) do
     ~H"""
@@ -225,4 +251,37 @@ defmodule Web.CardLinkLive do
     <p id="card-link-inactive">This ID card is not active.</p>
     """
   end
+
+  attr :id, :string, required: true
+  attr :class, :string, default: nil
+  attr :token, :string, required: true
+  attr :side, :string, required: true, doc: "front or back"
+  attr :card, :map, required: true
+
+  # One side as SAR Duty draws it (DrawMemberCard, #CARDPR), with Save image under it. A
+  # long press on the picture saves it on a phone too.
+  defp card_side(assigns) do
+    ~H"""
+    <div id={@id} class={@class}>
+      <p class="hint mb-2">{String.capitalize(@side)}</p>
+      <img
+        src={~p"/cards/#{@token}/#{@side}"}
+        alt={"#{@card.member.name}'s ID card, #{@side}"}
+        class="id-card-side"
+      />
+      <p class="mt-2 mb-0">
+        <a
+          id={"#{@id}-save"}
+          href={~p"/cards/#{@token}/#{@side}"}
+          download={"#{@card.member.team.subdomain}-id-card-#{@side}.png"}
+          phx-hook="SaveImage"
+          class="link"
+        >Save image</a>
+      </p>
+    </div>
+    """
+  end
+
+  # The card's page on the verify site, as a checker sees it.
+  defp verify_url(card), do: MemberCard.verify_url(card.code, Web.VerifyHost.url())
 end

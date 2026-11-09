@@ -37,6 +37,7 @@ import {InsertField} from "./insert_field"
 import {SelectAll} from "./select_all"
 import {ScannerInput} from "./scanner_input"
 import {RichText} from "./rich_text"
+import {SaveImage} from "./save_image"
 import {Search} from "./search"
 import {Toast} from "./toast"
 import {listenForBarMenuKeys} from "./bar_menu_keys"
@@ -46,7 +47,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, AskDialog, Combobox, DemoBanner, FileDrop, HelpToggle, InsertField, QRScanner, RichText, ScannerInput, Search, SelectAll, SoundSwitch, Toast, WebOTP},
+  hooks: {...colocatedHooks, AskDialog, Combobox, DemoBanner, FileDrop, HelpToggle, InsertField, QRScanner, RichText, SaveImage, ScannerInput, Search, SelectAll, SoundSwitch, Toast, WebOTP},
 })
 
 trackPointer()

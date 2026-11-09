@@ -30,8 +30,10 @@ defmodule Service.Typst do
   @doc """
   Makes a PDF from `source`, Typst markup. `files` maps a name to its bytes, for
   images the markup reads by that name. Returns `{:ok, pdf}` or `{:error, reason}`.
+  With `png: ppi`, a PNG of its one page at that many pixels an inch instead, as for
+  an ID card's sides (#CARDPR).
   """
-  def compile(source, files \\ %{}) when is_binary(source) and is_map(files) do
+  def compile(source, files \\ %{}, opts \\ []) when is_binary(source) and is_map(files) do
     dir = Service.Temp.path()
     File.mkdir_p!(dir)
 
@@ -40,12 +42,16 @@ defmodule Service.Typst do
       |> Map.put("main.typ", source)
       |> Enum.each(fn {name, bytes} -> dir |> Path.join(name) |> File.write!(bytes) end)
 
-      output = Path.join(dir, "out.pdf")
+      {output, format_args} =
+        case Keyword.get(opts, :png) do
+          nil -> {Path.join(dir, "out.pdf"), []}
+          ppi -> {Path.join(dir, "out.png"), ["--ppi", to_string(ppi)]}
+        end
 
       args =
         ["compile", "--root", dir, "--diagnostic-format", "short"] ++
           ["--font-path", fonts_dir(), "--ignore-system-fonts", "--ignore-embedded-fonts"] ++
-          ["main.typ", output]
+          format_args ++ ["main.typ", output]
 
       case run(args, dir) do
         {:ok, ""} -> {:ok, File.read!(output)}
