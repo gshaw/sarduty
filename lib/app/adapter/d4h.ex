@@ -510,7 +510,15 @@ defmodule App.Adapter.D4H do
   end
 
   @doc "Whether the context's service has custom fields: D4H does, SAR Duty Records doesn't."
-  def custom_fields?(context), do: not records?(URI.parse(context.options.base_url).host)
+  def custom_fields?(context), do: not records?(api_host(context))
+
+  # The host a context calls, with its port unless 443: a dev RECORDS_HOST may have one.
+  defp api_host(context) do
+    case URI.parse(context.options.base_url) do
+      %URI{host: host, port: 443} -> host
+      %URI{host: host, port: port} -> "#{host}:#{port}"
+    end
+  end
 
   # The team names its own places, so its organization's bookmarks are left out (#614).
   @location_bookmarks [exclude_org_data: true]
