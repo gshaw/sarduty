@@ -35,8 +35,9 @@ sarduty-*.tar
 npm-debug.log
 /assets/node_modules/
 
-# Ignore development database files
+# Ignore development database files, and a stray SQLite file at the root
 /db
+/*.db
 
 # Ignore developer environment config file that may contain secrets
 .mise.local.toml
