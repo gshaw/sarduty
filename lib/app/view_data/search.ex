@@ -2,7 +2,7 @@ defmodule App.ViewData.Search do
   @moduledoc """
   Global search (#473): a team's records and pages whose name, D4H number, or barcode, or
   a chore's words, or a certificate's qualification or member, match every word typed, in
-  any order. It reads the live tables on each
+  any order. A published PDF is found by its ID (#970). It reads the live tables on each
   search, with no index, so nothing can go stale; the largest team's activities take a
   few ms.
 
@@ -18,6 +18,7 @@ defmodule App.ViewData.Search do
   alias App.Model.Group
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
+  alias App.Model.PublishedPDF
   alias App.Model.Qualification
   alias App.Model.Standing
   alias App.Model.Team
@@ -34,6 +35,7 @@ defmodule App.ViewData.Search do
     :template,
     :chore,
     :certificate,
+    :document,
     :page
   ]
 
@@ -279,6 +281,28 @@ defmodule App.ViewData.Search do
     |> fetch()
   end
 
+  # A published PDF by its ID, typed with or without its dashes (#970). Each word must
+  # be 5 characters or more, a group of the ID, so a year or a name finds none.
+  defp candidates(:document, team, filter, _opts) do
+    PublishedPDF
+    |> where([p], p.team_id == ^team.id)
+    |> matching_code(filter)
+    |> order_by([p], desc: p.inserted_at, desc: p.id)
+    |> select([p], %{
+      id: p.id,
+      title: p.title,
+      name: p.name,
+      code: p.code,
+      activity_id: p.activity_id,
+      form_id: p.form_id,
+      tax_credit_letter_id: p.tax_credit_letter_id,
+      replaced_by_id: p.replaced_by_id,
+      withdrawn_at: p.withdrawn_at
+    })
+    |> fetch()
+    |> Enum.map(&Map.put(&1, :keys, [PublishedPDF.format_code(&1.code)]))
+  end
+
   # Pages match at the start of a word, so "ali" doesn't find Qualifications.
   # A page's title, or its other `words` (#780), each matched at the start of a word.
   defp candidates(:page, _team, {:terms, terms}, opts) do
@@ -332,6 +356,28 @@ defmodule App.ViewData.Search do
         fragment("? LIKE ? ESCAPE '\\'", m.name, ^pattern) or
           fragment("? LIKE ? ESCAPE '\\'", q.title, ^pattern)
       )
+    end)
+  end
+
+  defp matching_code(query, {:ids, ids}), do: where(query, [p], p.id in ^ids)
+
+  defp matching_code(query, {:terms, terms}) do
+    Enum.reduce(terms, query, fn term, query ->
+      bare = String.replace(term, "-", "")
+
+      if String.length(bare) < 5 do
+        where(query, false)
+      else
+        pattern = "%" <> escape_like(term) <> "%"
+        bare_pattern = "%" <> escape_like(bare) <> "%"
+
+        where(
+          query,
+          [p],
+          fragment("? LIKE ? ESCAPE '\\'", p.code, ^pattern) or
+            fragment("? LIKE ? ESCAPE '\\'", p.code, ^bare_pattern)
+        )
+      end
     end)
   end
 

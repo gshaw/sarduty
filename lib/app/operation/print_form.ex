@@ -28,7 +28,8 @@ defmodule App.Operation.PrintForm do
          :ok <- form?(doc),
          :ok <- shown?(doc, context, activity_id),
          {:ok, answered} <- answers(doc, answers) do
-      output = Document.evaluate(doc, Map.merge(values, answered), context.timezone)
+      values = values |> Map.merge(answered) |> sign(Keyword.get(opts, :verify, :draft))
+      output = Document.evaluate(doc, values, context.timezone)
       print(output, doc.name, page, opts)
     end
   end
@@ -45,6 +46,13 @@ defmodule App.Operation.PrintForm do
               shows: output.shows
             }}
   end
+
+  # Only a published PDF carries the team's signature (#970). A draft leaves it blank,
+  # and its verify link with it.
+  defp sign(values, :draft),
+    do: Map.merge(values, %{"team.signature" => nil, "pdf.verify_link" => nil})
+
+  defp sign(values, link), do: Map.put(values, "pdf.verify_link", link)
 
   defp form?(%Document{kind: :form}), do: :ok
   defp form?(_doc), do: {:error, "Start a form with form and its name."}

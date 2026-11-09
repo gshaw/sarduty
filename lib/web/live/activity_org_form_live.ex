@@ -7,6 +7,10 @@ defmodule Web.ActivityOrgFormLive do
   they change (App.Operation.SaveFormAnswers), and each row's total follows them. Download draft PDF posts the form to
   Web.ActivityFormPDFController, which keeps the answers and sends a draft PDF, never saved.
 
+  A form that's on publishes (#970, App.Operation.PublishDocument). The Published box
+  above the answers says when and who, with Download, the verify link, and Withdraw.
+  When the form reads differently now, it says what changed and offers Publish again.
+
   The form is found on for the team's organization, and the activity through the team,
   so another organization's form, one turned off, or one not for this activity is a 404.
   """
@@ -14,7 +18,11 @@ defmodule Web.ActivityOrgFormLive do
 
   alias App.Model.Activity
   alias App.Model.Form
+  alias App.Model.FormAnswer
+  alias App.Model.PublishedPDF
+  alias App.Operation.PublishDocument
   alias App.Operation.SaveFormAnswers
+  alias App.Operation.WithdrawDocument
   alias App.ViewData.ActivityForms
   alias Web.Components.ReportTable
 
@@ -22,7 +30,7 @@ defmodule Web.ActivityOrgFormLive do
     team = socket.assigns.current_team
     activity = team |> Activity.find!(id) |> App.Repo.preload(:team)
     if activity.deleted_at, do: raise(Web.Status.NotFound)
-    form = Form.get_enabled(team, form_id) || raise(Web.Status.NotFound)
+    form = Form.get_shown(team, form_id) || raise(Web.Status.NotFound)
 
     socket =
       assign(socket,
@@ -34,14 +42,36 @@ defmodule Web.ActivityOrgFormLive do
 
     case ActivityForms.load(team, activity, form, DateTime.utc_now()) do
       {:ok, page} ->
-        {:ok, assign(socket, page: page, problem: nil, answers: page.answers, rows: page.rows)}
+        socket = assign(socket, page: page, problem: nil, answers: page.answers, rows: page.rows)
+        {:ok, assign_published(socket)}
 
       {:error, :not_shown} ->
         raise Web.Status.NotFound
 
       {:error, reason} ->
-        {:ok, assign(socket, page: nil, problem: reason, answers: %{}, rows: [])}
+        {:ok,
+         socket
+         |> assign(page: nil, problem: reason, answers: %{}, rows: [])
+         |> assign_published()}
     end
+  end
+
+  # The form's PDFs for the activity, and what changed since the current one.
+  defp assign_published(socket) do
+    %{current_team: team, activity: activity, form: form, page: page} = socket.assigns
+    published = ActivityForms.published(team, activity, form)
+
+    changes =
+      if published.current && page,
+        do:
+          ActivityForms.changes(
+            page,
+            FormAnswer.starting(activity, page.doc.asks),
+            published.current
+          ),
+        else: []
+
+    assign(socket, published: published, changes: changes)
   end
 
   # Each change saves the answers that read, and shows what's wrong with the rest. What
@@ -57,10 +87,54 @@ defmodule Web.ActivityOrgFormLive do
 
     answers = Map.merge(socket.assigns.answers, typed)
     rows = ActivityForms.rows(page.doc, page.values, answers, page.timezone)
-    {:noreply, assign(socket, answers: answers, rows: rows, errors: errors)}
+
+    {:noreply,
+     socket |> assign(answers: answers, rows: rows, errors: errors) |> assign_published()}
   end
 
   def handle_event("change", _params, socket), do: {:noreply, socket}
+
+  def handle_event("publish", _params, socket) do
+    %{current_team: team, form: form, activity: activity, current_user: user} = socket.assigns
+    current = socket.assigns.published.current
+
+    case PublishDocument.call(
+           team,
+           form,
+           activity,
+           user,
+           current && current.id,
+           DateTime.utc_now()
+         ) do
+      {:ok, pdf} ->
+        socket =
+          socket
+          |> assign_published()
+          |> put_flash(:info, "Published #{form.name}, #{code(pdf)}.")
+
+        {:noreply, socket}
+
+      {:error, message} ->
+        {:noreply, socket |> assign_published() |> put_flash(:error, message)}
+    end
+  end
+
+  def handle_event("withdraw", _params, socket) do
+    %{current_team: team, current_user: user, published: %{current: pdf}} = socket.assigns
+
+    case pdf && WithdrawDocument.call(team, pdf, user, DateTime.utc_now()) do
+      {:ok, pdf} ->
+        {:noreply, socket |> assign_published() |> put_flash(:info, "Withdrew #{code(pdf)}.")}
+
+      {:error, message} ->
+        {:noreply, socket |> assign_published() |> put_flash(:error, message)}
+
+      nil ->
+        {:noreply, assign_published(socket)}
+    end
+  end
+
+  defp code(pdf), do: PublishedPDF.format_code(pdf.code)
 
   def render(assigns) do
     ~H"""
@@ -72,8 +146,14 @@ defmodule Web.ActivityOrgFormLive do
       />
       <:item label={@form.name} />
     </.breadcrumbs>
-    <.banner id="org-form-in-development" kind={:warning} title="Testing only" class="mb-6">
-      <p>Forms are in early development and not ready for real use. Don't send what they print.</p>
+    <.banner
+      :if={@form.state == :testing}
+      id="org-form-in-development"
+      kind={:warning}
+      title="Testing only"
+      class="mb-6"
+    >
+      <p>This form is testing and not ready for real use. Don't send what it prints.</p>
     </.banner>
     <h1 class="title">{@page_title}</h1>
     <p :if={@form.about} class="lead measure">{@form.about}</p>
@@ -84,6 +164,13 @@ defmodule Web.ActivityOrgFormLive do
     </.banner>
 
     <div :if={@page} class="measure">
+      <.published_box
+        published={@published}
+        changes={@changes}
+        form={@form}
+        team={@current_team}
+      />
+
       <section :if={@page.missing != []} id="org-form-missing" class="mb-8">
         <h2 class="heading">Missing</h2>
         <p class="mb-4">
@@ -142,14 +229,119 @@ defmodule Web.ActivityOrgFormLive do
           team={@current_team}
           errors={@errors}
         />
-        <p class="hint">SAR Duty keeps a copy of each PDF it makes.</p>
+        <p :if={@form.state == :on} class="hint">
+          A draft says DRAFT on every page and is never kept. Publish keeps the PDF, with an ID
+          anyone holding it can check.
+        </p>
         <.form_actions>
-          <.button id="org-form-download" type="submit" variant={:primary}>
+          <.button
+            :if={@form.state == :on and is_nil(@published.current)}
+            id="org-form-publish"
+            type="button"
+            variant={:primary}
+            phx-click="publish"
+            phx-disable-with="Publishing…"
+          >
+            Publish
+          </.button>
+          <.button
+            id="org-form-download"
+            type="submit"
+            variant={if @form.state == :on, do: :secondary, else: :primary}
+          >
             Download draft PDF
           </.button>
         </.form_actions>
       </.form>
     </div>
+    """
+  end
+
+  attr :published, :map, required: true
+  attr :changes, :list, required: true
+  attr :form, :map, required: true
+  attr :team, :map, required: true
+
+  # The current PDF: when and who, Download, the verify link, Withdraw, and Publish again
+  # with what changed when it's out of date. Earlier ones under it, marked.
+  defp published_box(assigns) do
+    ~H"""
+    <section
+      :if={@published.current || @published.earlier != []}
+      id="org-form-published"
+      class="mb-8"
+    >
+      <h2 class="heading">Published</h2>
+      <div :if={pdf = @published.current} id="org-form-current" class="card">
+        <p class="mb-2">
+          {Service.Format.datetime_short(pdf.inserted_at, @team.timezone)}
+          <span :if={pdf.user}>by {pdf.user.email}</span>
+        </p>
+        <p class="mono mb-4">
+          <.a id="org-form-verify" href={PublishedPDF.verify_link(pdf.code)} external>
+            {PublishedPDF.format_code(pdf.code)}
+          </.a>
+        </p>
+        <div :if={@changes != []} id="org-form-out-of-date" class="callout mb-4">
+          <p class="mb-1"><b>Out of date.</b> The form reads differently now:</p>
+          <ul>
+            <li :for={change <- @changes}>{change}</li>
+          </ul>
+        </div>
+        <.form_actions>
+          <.button
+            id="org-form-download-published"
+            href={~p"/teams/#{@team}/pdfs/#{pdf.id}"}
+            variant={:primary}
+          >
+            Download PDF
+          </.button>
+          <.button
+            :if={@form.state == :on}
+            id="org-form-publish-again"
+            type="button"
+            variant={if @changes != [], do: :warning, else: :secondary}
+            phx-click="publish"
+            phx-disable-with="Publishing…"
+            data-confirm={"Publish #{@form.name} again? It gets a new ID."}
+            data-confirm-warning={"The verify page for #{PublishedPDF.format_code(pdf.code)} will say Replaced."}
+            data-confirm-button="Publish again"
+          >
+            Publish again
+          </.button>
+          <:trailing>
+            <.button
+              id="org-form-withdraw"
+              type="button"
+              variant={:danger}
+              phx-click="withdraw"
+              phx-disable-with="Withdrawing…"
+              data-confirm={"Withdraw #{PublishedPDF.format_code(pdf.code)}? Nothing takes its place."}
+              data-confirm-warning="Its verify page will say Withdrawn."
+              data-confirm-check="I understand anyone holding it will see it was withdrawn."
+              data-confirm-button="Withdraw"
+            >
+              Withdraw
+            </.button>
+          </:trailing>
+        </.form_actions>
+      </div>
+
+      <ul :if={@published.earlier != []} id="org-form-earlier" class="value-rows mt-4 text-sm">
+        <li :for={pdf <- @published.earlier} id={"org-form-earlier-#{pdf.id}"}>
+          <span>
+            <.a href={~p"/teams/#{@team}/pdfs/#{pdf.id}"} target="_blank" class="mono">
+              {PublishedPDF.format_code(pdf.code)}
+            </.a>
+            <span class="hint">
+              {Service.Format.date_long(pdf.inserted_at, @team.timezone)}
+            </span>
+          </span>
+          <.badge :if={PublishedPDF.status(pdf) == :replaced} kind={:warning}>Replaced</.badge>
+          <.badge :if={PublishedPDF.status(pdf) == :withdrawn} kind={:danger}>Withdrawn</.badge>
+        </li>
+      </ul>
+    </section>
     """
   end
 

@@ -486,6 +486,8 @@ defmodule Web.Router do
       get "/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
       # An organization's form on an activity (#950): posts its answers, gets the PDF.
       post "/activities/:id/forms/:form_id/pdf", ActivityFormPDFController, :create
+      # A published PDF as it was saved, current or not (#970).
+      get "/pdfs/:id", PublishedPDFController, :show
       get "/reports/:id/csv", ReportController, :csv
       post "/members/:id/view-as", ViewAsController, :create
       delete "/view-as", ViewAsController, :delete

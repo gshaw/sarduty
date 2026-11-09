@@ -27,7 +27,9 @@ defmodule Web.Search do
     endorsement: Web.EndorsementFormLive,
     template: Web.TemplateLive,
     chore: Web.ChoreLive,
-    certificate: Web.CertificateLive
+    certificate: Web.CertificateLive,
+    # A published PDF (#970) opens its form on its activity, or its letter.
+    document: Web.ActivityOrgFormLive
   }
 
   @doc "The page each kind of record opens."
@@ -40,7 +42,6 @@ defmodule Web.Search do
       Web.Settings.ChoreCategoryFormLive => "A setting, found from Team settings.",
       Web.Settings.PlaceFormLive => "A setting, found from Team settings.",
       Web.ReportLive => "Reports lists every report on one page.",
-      Web.ActivityOrgFormLive => "A form on an activity: find the activity, then its form.",
       Web.GroupRuleLive => "A group rule: find the group, then its rule.",
       Web.OutboxLive => "Only a demo has an Outbox, and its banner links it."
     }
@@ -173,6 +174,23 @@ defmodule Web.Search do
   end
 
   # A hit with where it opens, and a member's standing as the person searching sees it.
+  # A published PDF opens its letter, its form on its activity, or the PDF itself.
+  defp shown(hit, :document, team, _team_admin?) do
+    path =
+      cond do
+        hit.tax_credit_letter_id ->
+          ~p"/teams/#{team}/tax-credit-letters/#{hit.tax_credit_letter_id}"
+
+        hit.activity_id && hit.form_id ->
+          ~p"/teams/#{team}/activities/#{hit.activity_id}/forms/#{hit.form_id}"
+
+        true ->
+          ~p"/teams/#{team}/pdfs/#{hit.id}"
+      end
+
+    Map.put(hit, :path, path)
+  end
+
   defp shown(hit, kind, team, team_admin?) do
     hit = Map.put_new(hit, :path, hit_path(kind, team, hit.id))
 
@@ -193,6 +211,7 @@ defmodule Web.Search do
   def hit_path(:template, team, id), do: ~p"/teams/#{team}/templates/#{id}"
   def hit_path(:chore, team, id), do: ~p"/teams/#{team}/chores/#{id}"
   def hit_path(:certificate, team, id), do: ~p"/teams/#{team}/certificates/#{id}"
+  def hit_path(:document, team, id), do: ~p"/teams/#{team}/pdfs/#{id}"
   def hit_path(:page, _team, _id), do: nil
 
   @doc "The list a group's \"All …\" link opens, filtered by `query`, or nil when it has none."

@@ -86,12 +86,15 @@ defmodule Web.ActivityLive do
     {:noreply, socket}
   end
 
-  # An organization's forms it shows on, above Actions, for team admins only (#950).
-  defp assign_forms(%{assigns: %{team_admin?: false}} = socket), do: assign(socket, forms: [])
+  # An organization's forms it shows on, above Actions, for team admins only (#950),
+  # each with whether it's published for the activity (#970).
+  defp assign_forms(%{assigns: %{team_admin?: false}} = socket),
+    do: assign(socket, forms: [], form_states: %{})
 
   defp assign_forms(socket) do
     %{current_team: team, activity: activity, now: now} = socket.assigns
-    assign(socket, forms: ActivityForms.on(team, activity, now))
+    forms = ActivityForms.on(team, activity, now)
+    assign(socket, forms: forms, form_states: ActivityForms.states(team, activity, forms, now))
   end
 
   # A member never gets a deleted activity. Travel is a feature, on incidents only.
@@ -488,6 +491,7 @@ defmodule Web.ActivityLive do
           send_attendance?={@send_attendance?}
           delete_confirm={@delete_confirm}
           forms={@forms}
+          form_states={@form_states}
         />
       </aside>
     </div>
@@ -594,6 +598,7 @@ defmodule Web.ActivityLive do
   attr :send_attendance?, :boolean, default: false, doc: "whether anyone has scanned"
   attr :delete_confirm, :any, default: false, doc: "Delete's confirm dialog, or false for none"
   attr :forms, :list, default: [], doc: "the organization's forms it shows on (#950)"
+  attr :form_states, :map, default: %{}, doc: "each form's state, ActivityForms.states/4's"
 
   # Every record's sidebar ends the same way: Actions. Custom fields are a tab (#705). An
   # organization's forms come just above, for team admins (#950).
@@ -616,6 +621,7 @@ defmodule Web.ActivityLive do
               id={"activity-form-#{form.id}"}
               navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/forms/#{form.id}"}
             >{form.name}</.a>
+            <.form_state id={"activity-form-#{form.id}-state"} state={@form_states[form.id]} />
           </li>
         </ul>
       </dd>
@@ -768,4 +774,23 @@ defmodule Web.ActivityLive do
 
   defp format_activity_duration(activity),
     do: activity |> Activity.duration_minutes() |> Service.Format.duration()
+
+  attr :id, :string, required: true
+  attr :state, :atom, default: nil
+
+  # Whether a form is published for the activity (#970): a testing form only prints drafts.
+  defp form_state(%{state: nil} = assigns), do: ~H""
+
+  defp form_state(assigns) do
+    ~H"""
+    <span id={@id} class={["hint ml-1", @state == :out_of_date && "text-warning-text"]}>
+      {form_state_text(@state)}
+    </span>
+    """
+  end
+
+  defp form_state_text(:published), do: "Published"
+  defp form_state_text(:out_of_date), do: "Out of date"
+  defp form_state_text(:not_published), do: "Not published"
+  defp form_state_text(:testing), do: "Testing"
 end

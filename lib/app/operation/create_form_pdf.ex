@@ -6,7 +6,7 @@ defmodule App.Operation.CreateFormPDF do
   (App.Operation.PrintForm), marked DRAFT. A draft is never saved: publishing a form,
   saved with an ID, comes later. Nothing goes to D4H.
 
-  The caller finds the form on for the team (`App.Model.Form.get_enabled/2`) and the
+  The caller finds the form shown for the team (`App.Model.Form.get_shown/2`) and the
   activity through the team.
   """
 
@@ -47,7 +47,7 @@ defmodule App.Operation.CreateFormPDF do
     cond do
       activity.team_id != team.id -> {:error, "This activity is not on your team."}
       activity.deleted_at -> {:error, "This activity is deleted. Nothing can be made from it."}
-      not form.enabled or form.organization_id != team.organization_id -> {:error, off()}
+      form.state == :off or form.organization_id != team.organization_id -> {:error, off()}
       true -> :ok
     end
   end
