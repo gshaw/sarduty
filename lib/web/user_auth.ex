@@ -673,8 +673,14 @@ defmodule Web.UserAuth do
     |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
   end
 
+  # The session is a 4 KB cookie, and an agent's report link can carry a long query
+  # (App.MCP.Tool.CheckReport). Past 2 KB the login returns to the page without it.
+  @max_return_to 2_000
+
   defp maybe_store_return_to(%{method: "GET"} = conn) do
-    put_session(conn, :user_return_to, current_path(conn))
+    path = current_path(conn)
+    path = if byte_size(path) > @max_return_to, do: current_path(conn, %{}), else: path
+    put_session(conn, :user_return_to, path)
   end
 
   defp maybe_store_return_to(conn), do: conn

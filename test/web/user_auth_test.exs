@@ -403,6 +403,14 @@ defmodule Web.UserAuthTest do
       assert halted_conn.halted
       assert get_session(halted_conn, :user_return_to) == "/foo?bar=baz"
 
+      # Too long for the session cookie, so only the path.
+      halted_conn =
+        %{conn | path_info: ["foo"], query_string: "q=" <> String.duplicate("a", 5_000)}
+        |> fetch_flash()
+        |> UserAuth.require_authenticated_user([])
+
+      assert get_session(halted_conn, :user_return_to) == "/foo"
+
       halted_conn =
         %{conn | path_info: ["foo"], query_string: "bar", method: "POST"}
         |> fetch_flash()
