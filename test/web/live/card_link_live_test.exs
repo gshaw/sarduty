@@ -218,6 +218,34 @@ defmodule Web.CardLinkLiveTest do
     refute_offers(lv)
   end
 
+  describe "Your membership" do
+    test "the card's own member, logged in, has a trail back to it" do
+      %{team: team, member: member, user: user} = member_with_login_fixture()
+      path = member |> member_card_fixture() |> CardLinks.path()
+
+      {:ok, lv, _html} = live(log_in_user(build_conn(), user), path)
+
+      assert has_element?(
+               lv,
+               ~s{.breadcrumbs a[href="/teams/#{team.subdomain}/me"]},
+               "Your membership"
+             )
+
+      assert has_element?(lv, ".breadcrumbs [aria-current=page]", "ID card")
+    end
+
+    test "anyone else gets the page alone", %{conn: conn, member: member} do
+      path = member |> member_card_fixture() |> CardLinks.path()
+      %{user: someone_else} = member_with_login_fixture()
+
+      for conn <- [conn, log_in_user(build_conn(), someone_else)] do
+        {:ok, lv, _html} = live(conn, path)
+        refute has_element?(lv, ".breadcrumbs")
+        assert has_element?(lv, "#card-link-wallets")
+      end
+    end
+  end
+
   test "a bad token is not found", %{conn: conn} do
     assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/cards/not-a-token") end
   end

@@ -17,7 +17,9 @@ defmodule Web.CardLinkLive do
   # it is. Each opens Web.CardLinkController, which builds the pass on the tap, so a mail
   # scanner or a link preview that opens the page builds nothing. On a computer, Open on
   # your phone has the page's QR code. A card that is replaced, cancelled, or not active
-  # says so and offers nothing. Logged in to the card's team, the bar names it.
+  # says so and offers nothing. Logged in to the card's team, the bar names it, and the
+  # card's own member gets a trail back to Your membership, as the reply links lead back
+  # into the app: the page stays one page for everyone, with no redirect.
   #
   # Under the Wallet, the card itself (#973): its front and back as SAR Duty draws
   # them, each with Save image, then Print ID card, and Verify your ID card, for a member
@@ -52,7 +54,8 @@ defmodule Web.CardLinkLive do
        team: team,
        url: Web.Endpoint.url() <> ~p"/cards/#{token}",
        checking: nil,
-       checking_ref: nil
+       checking_ref: nil,
+       own_card?: Enum.any?(socket.assigns.member_logins, &(&1.id == card.member_id))
      )
      |> assign_card(card)
      |> assign_bar_team(team)}
@@ -157,6 +160,10 @@ defmodule Web.CardLinkLive do
 
   def render(assigns) do
     ~H"""
+    <.breadcrumbs :if={@own_card?}>
+      <:item label="Your membership" path={~p"/teams/#{@team}/me"} />
+      <:item label="ID card" />
+    </.breadcrumbs>
     <div class="md:flex md:gap-8">
       <div class="md:w-2/3 min-w-0">
         <div class="media mb-4">
