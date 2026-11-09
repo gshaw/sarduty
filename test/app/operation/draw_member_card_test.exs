@@ -46,7 +46,7 @@ defmodule App.Operation.DrawMemberCardTest do
              name: "Cameron Ruiz",
              status: "Active",
              member_since: "Nov 2023",
-             code: code,
+             code: ^code,
              made: "Nov 8, 2026 · Scan the code to check it"
            } = data
 

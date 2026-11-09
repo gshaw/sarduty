@@ -210,17 +210,21 @@ defmodule Web.CardLinkLive do
     <.card_side id="card-link-back" class="mt-6" token={@token} side="back" card={@card} />
     <div id="card-link-print" class="mt-6">
       <p class="mb-0">
-        <.a id="card-link-print-link" href={~p"/cards/#{@token}/pdf"} target="_blank">
-          Print ID card
-        </.a>
+        <.a
+          id="card-link-print-link"
+          href={~p"/cards/#{@token}/pdf"}
+          target="_blank"
+        >Print ID card</.a>
       </p>
       <p class="hint mt-1 mb-0">Both sides at card size, in black on white, to cut out.</p>
     </div>
     <div id="card-link-verify" class="mt-4">
       <p class="mb-0">
-        <.a id="card-link-verify-link" href={verify_url(@card)} external={true}>
-          Verify your ID card
-        </.a>
+        <.a
+          id="card-link-verify-link"
+          href={verify_url(@card)}
+          external={true}
+        >Verify your ID card</.a>
       </p>
       <p class="hint mt-1 mb-0">What a checker sees when they scan your code.</p>
     </div>
