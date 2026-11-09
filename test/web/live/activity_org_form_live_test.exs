@@ -277,7 +277,35 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert "%PDF" <> _ = conn.resp_body
       assert FormAnswer.for_activity(kayakers)["misc"] == "40"
     end
+
+    # The signature is a picture: a draft leaves it out, and publishing signs (#970).
+    test "a draft prints no signature; publishing signs it", ctx do
+      %{cast: cast, request: request} = ctx
+      kayakers = MockupSeed.activity(cast, "Overdue kayakers")
+
+      {:ok, team} =
+        App.Operation.SaveTeamSignature.call(Repo.reload!(cast.team), png_fixture(600, 150))
+
+      conn = log_in_user(build_conn(), cast.alex)
+
+      draft = conn |> post(form_path(kayakers, request) <> "/pdf", %{}) |> response(200)
+
+      request = request |> Ecto.Changeset.change(state: :on) |> Repo.update!()
+      now = DateTime.utc_now()
+
+      {:ok, pdf} =
+        App.Operation.PublishDocument.call(team, request, kayakers, cast.alex, nil, now)
+
+      published = PublishedPDF.attachment(pdf).content
+      # The draft's one picture is its DRAFT mark; the published one's is the signature.
+      assert images(draft) == 1
+      assert images(published) == 1
+    end
   end
+
+  # Pictures on the page, less each one's alpha channel, a second image.
+  defp images(pdf), do: count(pdf, "/Subtype/Image") - count(pdf, "/SMask")
+  defp count(content, pattern), do: length(String.split(content, pattern)) - 1
 
   describe "Download draft PDF" do
     test "keeps the answers and saves no PDF: it's a draft", ctx do
