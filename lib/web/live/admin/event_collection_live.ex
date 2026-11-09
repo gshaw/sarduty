@@ -106,34 +106,36 @@ defmodule Web.Admin.EventCollectionLive do
       </dd>
     </dl>
     <div class="mb-8 grid items-start gap-8 md:grid-cols-2">
-      <.table
-        :if={@top_ips != []}
-        id="top-ips"
-        rows={Enum.with_index(@top_ips, 1)}
-        row_id={fn {_ip_count, rank} -> "top-ip-#{rank}" end}
-        class="table-striped"
-      >
-        <:col :let={{{ip, _count}, _rank}} label="IP">
-          <.a patch={~p"/admin/events?#{[ip: ip]}"}>{ip}</.a>
-        </:col>
-        <:col :let={{{_ip, count}, _rank}} label="Wrong codes, limits, blocks, and failed sign-ups">
-          {count}
-        </:col>
-      </.table>
-      <.table
-        :if={@top_accounts != []}
-        id="top-accounts"
-        rows={Enum.with_index(@top_accounts, 1)}
-        row_id={fn {_who_count, rank} -> "top-account-#{rank}" end}
-        class="table-striped"
-      >
-        <:col :let={{{who, _count}, _rank}} label="Account">
-          <.a patch={~p"/admin/events?#{[who: who]}"} class="font-mono">{who}</.a>
-        </:col>
-        <:col :let={{{_who, count}, _rank}} label="Wrong codes and blocks">
-          {count}
-        </:col>
-      </.table>
+      <section :if={@top_ips != []} id="top-ips-list">
+        <h3 class="subheading mb-0">Top IPs</h3>
+        <.hint>Wrong codes, limits, blocks, and failed sign-ups. An IPv6 /64 counts as one.</.hint>
+        <.table
+          id="top-ips"
+          rows={Enum.with_index(@top_ips, 1)}
+          row_id={fn {_ip_count, rank} -> "top-ip-#{rank}" end}
+          class="table-striped"
+        >
+          <:col :let={{{ip, _count}, _rank}} label="IP">
+            <.a patch={~p"/admin/events?#{[ip: ip]}"}>{ip}</.a>
+          </:col>
+          <:col :let={{{_ip, count}, _rank}} label="Events">{count}</:col>
+        </.table>
+      </section>
+      <section :if={@top_accounts != []} id="top-accounts-list">
+        <h3 class="subheading mb-0">Top accounts</h3>
+        <.hint>Wrong codes and blocks, by each email's or number's hash.</.hint>
+        <.table
+          id="top-accounts"
+          rows={Enum.with_index(@top_accounts, 1)}
+          row_id={fn {_who_count, rank} -> "top-account-#{rank}" end}
+          class="table-striped"
+        >
+          <:col :let={{{who, _count}, _rank}} label="Account">
+            <.a patch={~p"/admin/events?#{[who: who]}"} class="font-mono">{who}</.a>
+          </:col>
+          <:col :let={{{_who, count}, _rank}} label="Events">{count}</:col>
+        </.table>
+      </section>
     </div>
 
     <h2 class="heading">Latest events</h2>
@@ -170,8 +172,13 @@ defmodule Web.Admin.EventCollectionLive do
       <:col :let={event} label="Details">
         <.a :if={event.who} patch={events_path(@filter, who: event.who)} class="font-mono">
           {event.who}
-        </.a>
-        {details(event.data)}
+        </.a>{if event.who &&
+                                                                                                                             event.data !=
+                                                                                                                               %{},
+                                                                                                                           do:
+                                                                                                                             " · "}{details(
+          event.data
+        )}
       </:col>
     </.table>
     <.hint :if={length(@events) == @limit}>The newest {@limit}.</.hint>
