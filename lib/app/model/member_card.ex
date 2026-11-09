@@ -130,7 +130,7 @@ defmodule App.Model.MemberCard do
 
   @doc """
   The card's page on the verify site as a link people read and open:
-  `https://verify.sarduty.com/K7Q4-M2XA`. The QR code holds `qr_url/2`'s capitals.
+  `https://verify.sarduty.com/K7Q4M-2XA9H`. The QR code holds `qr_url/2`'s capitals.
   """
   def verify_url(code, verify_url), do: "#{verify_url}/#{format_code(code)}"
 

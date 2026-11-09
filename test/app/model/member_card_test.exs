@@ -140,8 +140,8 @@ defmodule App.Model.MemberCardTest do
   end
 
   test "verify_url is the same page as a link people read" do
-    assert MemberCard.verify_url("K7Q4M2XA", "https://verify.sarduty.com") ==
-             "https://verify.sarduty.com/K7Q4-M2XA"
+    assert MemberCard.verify_url("K7Q4M2XA9H", "https://verify.sarduty.com") ==
+             "https://verify.sarduty.com/K7Q4M-2XA9H"
   end
 
   describe "code_from_scan" do
