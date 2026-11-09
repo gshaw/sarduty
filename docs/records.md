@@ -36,7 +36,7 @@ like a D4H key. Existing D4H teams need no change.
   from the team: `@service`, set for every team page in `on_mount(:ensure_team_access)`.
   Everywhere else the words are true on both services ([writing.md](writing.md), rule 16).
 - `D4H.records_host/0` is `records.sarduty.com`. In dev, `RECORDS_HOST` points it at a
-  local copy.
+  local copy ([Records in dev](#records-in-dev)).
 - Deleting a Records team in SAR Duty (#889) deletes it in Records too, first, with
   SAR Duty's own key (`RECORDS_SARDUTY_KEY`), never the team's. Records switches it off
   at once and deletes it 7 days on; until then Switch on in Records' admin keeps it. A
@@ -127,6 +127,17 @@ barcode on `/equipment`, and `POST`, `PATCH`, and `DELETE` on `/location-bookmar
 where D4H's API only reads. The guard test in
 `test/app/operation/apply_change_set_test.exs` lists every write function, so only
 `ApplyChangeSet` calls them.
+
+## Records in dev
+
+Dev SAR (`tools/dev-sar.exs`) is a team on a local Records, built as Try a demo builds
+one, so edits, photos, and the sync work as on a real Records team. Run Records from
+`~/Developer/sarduty-records` with a `SARDUTY_KEY`, then set SAR Duty's
+`RECORDS_HOST` and `RECORDS_SARDUTY_KEY` (that key) in `.mise.local.toml`.
+
+SAR Duty only calls Records over HTTPS with a certificate Erlang trusts, so puma-dev's
+`*.test` won't do: put Records behind a proxy with a public certificate, such as Caddy
+with Let's Encrypt. `RECORDS_HOST` may carry a port, like `records.example.ca:8443`.
 
 ## Where the code is
 

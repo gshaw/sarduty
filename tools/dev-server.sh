@@ -6,7 +6,9 @@
 #   tools/dev-server.sh            # in the foreground
 #   tools/dev-server.sh --detach   # in the background, log in tmp/dev-server.log
 #
-# Dev SAR (tools/dev-sar.exs) is the team to try things on.
+# Dev SAR (tools/dev-sar.exs) is the team to try things on. DEV_URL_HOST, such as
+# sarduty.gshaw.ca, is the app's own URL in QR codes and emailed links, so a phone can
+# open them; sarduty.test otherwise.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -23,6 +25,13 @@ fi
 serve=(mise exec -- mix run --no-halt --no-start -e '
   repo = Application.get_env(:sarduty, App.Repo)
   Application.put_env(:sarduty, App.Repo, Keyword.put(repo, :database, System.fetch_env!("DEV_DB")))
+
+  if host = System.get_env("DEV_URL_HOST") do
+    endpoint = Application.get_env(:sarduty, Web.Endpoint)
+    url = [host: host, scheme: "https", port: 443]
+    Application.put_env(:sarduty, Web.Endpoint, Keyword.put(endpoint, :url, url))
+  end
+
   Application.put_env(:phoenix, :serve_endpoints, true)
   {:ok, _} = Application.ensure_all_started(:sarduty)
 ')

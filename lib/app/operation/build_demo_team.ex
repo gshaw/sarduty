@@ -8,6 +8,8 @@ defmodule App.Operation.BuildDemoTeam do
 
   A failure removes whatever was made, in Records too, so the next open starts clean.
   Runs in App.Worker.BuildDemoTeamWorker, and tells the waiting page through topic/1.
+
+  build_dev_team/3 makes Dev SAR the same way (tools/dev-sar.exs).
   """
 
   import Ecto.Query, only: [where: 2]
@@ -65,12 +67,30 @@ defmodule App.Operation.BuildDemoTeam do
     do: tell(demo, {:ok, Team.get!(team_id)})
 
   def call(%DemoTeam{} = demo, now) do
+    visitor = visitor(demo)
+
     result =
-      with {:ok, records} <- now |> DemoCast.cast(visitor(demo)) |> D4H.create_demo_team() do
-        build(demo, records, now)
+      with {:ok, records} <- now |> DemoCast.cast(visitor) |> D4H.create_demo_team() do
+        build(demo, records, visitor, %{subdomain: subdomain()}, now)
       end
 
     tell(demo, result)
+  end
+
+  @doc """
+  Dev SAR (tools/dev-sar.exs): the same team in the dev database, with a site admin
+  `%{name:, email:}` as the visitor and `names` (`:name`, `:legal_name`,
+  `:abbreviated_name`, `:subdomain`) in place of Coast Range's. It has no demo row, so
+  it never expires and shows no banner. `{:ok, team}` or `{:error, reason}`, with
+  nothing left behind.
+  """
+  def build_dev_team(%{name: _, email: _} = visitor, %{subdomain: _} = names, now) do
+    cast = DemoCast.cast(now, visitor)
+    cast = put_in(cast, ["team", "title"], names[:name] || cast["team"]["title"])
+
+    with {:ok, records} <- D4H.create_demo_team(cast) do
+      build(nil, records, visitor, names, now)
+    end
   end
 
   defp tell(demo, result) do
@@ -87,10 +107,10 @@ defmodule App.Operation.BuildDemoTeam do
 
   defp expires_at(%DemoTeam{expires_at: expires_at}, _now), do: expires_at
 
-  defp build(demo, records, now) do
-    team = insert_team(demo, records, now)
+  defp build(demo, records, visitor, names, now) do
+    team = insert_team(demo, records, names, now)
     {:ok, team} = team |> RefreshD4HData.call() |> refreshed(team)
-    add_local_rows(team, records.ids, visitor(demo), now)
+    add_local_rows(team, records.ids, visitor, now)
     {:ok, put_contact(team, records.ids)}
   rescue
     error ->
@@ -106,6 +126,13 @@ defmodule App.Operation.BuildDemoTeam do
   defp refreshed(other, _team), do: raise("refresh: #{inspect(other)}")
 
   # DeleteTeam.purge/2 deletes the team in Records too. Records deletes a demo at once.
+  defp clean_up(nil, records) do
+    case Repo.get_by(Team, d4h_api_host: D4H.records_host(), d4h_team_id: records.d4h_team_id) do
+      %Team{} = team -> DeleteTeam.purge(team, reason: :admin)
+      nil -> D4H.delete_records_team(%Team{d4h_team_id: records.d4h_team_id})
+    end
+  end
+
   defp clean_up(demo, records) do
     case Repo.reload(demo) do
       %DemoTeam{team_id: team_id} when is_integer(team_id) ->
@@ -119,7 +146,7 @@ defmodule App.Operation.BuildDemoTeam do
   end
 
   # The team and its demo row commit together, so it is a demo before it has a member.
-  defp insert_team(demo, records, now) do
+  defp insert_team(demo, records, names, now) do
     [{:team, :coastrange, cast_team, []} | _rows] = CoastRange.build(now)
 
     {:ok, team} =
@@ -129,7 +156,7 @@ defmodule App.Operation.BuildDemoTeam do
             name: cast_team.name,
             legal_name: cast_team.legal_name,
             abbreviated_name: cast_team.abbreviated_name,
-            subdomain: subdomain(),
+            subdomain: names.subdomain,
             d4h_team_id: records.d4h_team_id,
             d4h_api_host: D4H.records_host(),
             mailing_address: cast_team.mailing_address,
@@ -145,12 +172,15 @@ defmodule App.Operation.BuildDemoTeam do
         team =
           team
           |> Ecto.Changeset.change(Map.take(cast_team, @settings))
+          |> Ecto.Changeset.change(Map.take(names, [:name, :legal_name, :abbreviated_name]))
           |> Ecto.Changeset.change(retiring_d4h_group_id: retiring)
           |> Repo.update!()
 
-        demo
-        |> Ecto.Changeset.change(team_id: team.id, expires_at: expires_at(demo, now))
-        |> Repo.update!()
+        if demo do
+          demo
+          |> Ecto.Changeset.change(team_id: team.id, expires_at: expires_at(demo, now))
+          |> Repo.update!()
+        end
 
         team
       end)
