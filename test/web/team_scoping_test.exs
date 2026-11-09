@@ -383,7 +383,7 @@ defmodule Web.TeamScopingTest do
     do: ~p"/teams/#{s}/me/tax-credit-letters/#{o.letter.id}/pdf"
 
   defp path_for("/teams/:subdomain/pdfs/:id", s, o),
-    do: ~p"/teams/#{s}/pdfs/#{o.letter.pdf.id}"
+    do: ~p"/teams/#{s}/pdfs/#{o.letter.id}"
 
   defp path_for("/teams/:subdomain/tax-credit-letters/:id/pdf", s, o),
     do: ~p"/teams/#{s}/tax-credit-letters/#{o.letter.id}/pdf"

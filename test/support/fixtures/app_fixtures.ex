@@ -525,64 +525,70 @@ defmodule App.DataFixtures do
   end
 
   @doc """
-  A tax credit letter published with a stand-in PDF (#918, #970), since printing takes a
-  while. `code` sets its ID, or an old `SRVTC-K7Q4M2XA`; it's new by default. Its
-  verify page shows the name, year, and any hours it has.
+  A tax credit letter, published with a stand-in PDF (#918, #970), since printing takes a
+  while: a published PDF with its member loaded. `code` sets its ID; it's new by
+  default. `primary_minutes` and `secondary_minutes` are
+  the hours it keeps; without them it kept none, as an old letter. `email_status`,
+  `first_opened_at`, and `inserted_at` set those. Its verify page shows the name, year,
+  and any hours.
   """
   def tax_credit_letter_fixture(%Member{} = member, attrs \\ %{}) do
     attrs = Map.new(attrs)
-    {code, attrs} = Map.pop(attrs, :code, PublishedPDF.generate_code())
+    code = Map.get(attrs, :code, PublishedPDF.generate_code())
+    year = Map.get(attrs, :year, Date.utc_today().year - 1)
+    minutes = {attrs[:primary_minutes], attrs[:secondary_minutes]}
 
-    params =
-      Map.merge(
-        %{
-          member_id: member.id,
-          year: Date.utc_today().year - 1,
-          letter_content: "Test letter content"
-        },
-        attrs
-      )
+    keep =
+      case minutes do
+        {nil, nil} -> %{}
+        {primary, secondary} -> %{"hours.primary" => primary, "hours.secondary" => secondary}
+      end
 
-    letter = params |> TaxCreditLetter.build_new_changeset() |> Repo.insert!()
-
-    attachment = %{
-      content: "%PDF-1.7 test letter #{code}",
-      title: "#{letter.year} test letter",
-      filename: "#{letter.year}_test_letter.pdf"
+    printed = %{
+      attachment: %{
+        content: "%PDF-1.7 test letter #{code}",
+        title: "#{year} test letter",
+        filename: "#{year}_test_letter.pdf"
+      },
+      keep: keep,
+      shows: letter_shows(member, year, minutes)
     }
 
-    {:ok, _pdf} =
+    {:ok, letter} =
       PublishedPDF.publish(
         %{
           team_id: member.team_id,
-          name: "Tax credit letter",
-          subject: PublishedPDF.letter_subject(member.id, letter.year),
+          name: TaxCreditLetter.name(),
+          subject: TaxCreditLetter.subject(member.id, year),
           code: code,
-          tax_credit_letter_id: letter.id,
           member_id: member.id,
-          year: letter.year
+          year: year
         },
-        %{attachment: attachment, keep: %{}, shows: letter_shows(member, letter)},
-        nil
+        printed,
+        attrs[:current_id]
       )
 
-    Repo.preload(letter, :pdf)
+    letter
+    |> Ecto.Changeset.change(Map.take(attrs, [:email_status, :first_opened_at, :inserted_at]))
+    |> Repo.update!()
+    |> Map.put(:member, member)
   end
 
-  defp letter_shows(member, letter) do
+  defp letter_shows(member, year, minutes) do
     hours =
-      if letter.primary_minutes && letter.secondary_minutes,
-        do: [
-          {"Primary hours", letter.primary_minutes},
-          {"Secondary hours", letter.secondary_minutes},
-          {"Total hours", letter.primary_minutes + letter.secondary_minutes}
-        ],
-        else: []
+      case minutes do
+        {primary, secondary} when is_integer(primary) and is_integer(secondary) ->
+          [
+            {"Primary hours", primary},
+            {"Secondary hours", secondary},
+            {"Total hours", primary + secondary}
+          ]
 
-    [
-      %{"label" => "Name", "text" => member.name},
-      %{"label" => "Year", "text" => "#{letter.year}"}
-    ] ++
+        _none ->
+          []
+      end
+
+    [%{"label" => "Name", "text" => member.name}, %{"label" => "Year", "text" => "#{year}"}] ++
       for {label, minutes} <- hours,
           do: %{"label" => label, "text" => Service.Format.duration(minutes)}
   end

@@ -1,54 +1,18 @@
 defmodule App.Model.TaxCreditLetterTest do
   use ExUnit.Case, async: true
 
+  alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
 
   @timezone "America/Vancouver"
   @now ~U[2026-01-15 18:00:00Z]
 
-  describe "parse_minutes/1" do
-    defp parse(primary, secondary) do
-      TaxCreditLetter.parse_minutes("""
-      Name: Sam Doe
-
-      Primary Hours: #{primary}
-      Secondary Hours: #{secondary}
-      Total Hours: whatever
-      """)
-    end
-
-    test "reads the hours as the letter writes them" do
-      assert parse("143h 30m", "72 hours") == {143 * 60 + 30, 72 * 60}
-      assert parse("45 min", "1 hour") == {45, 60}
-      assert parse("0 hours", "1h 5m") == {0, 65}
-      assert parse("1,204h 30m", "1,000 hours") == {1204 * 60 + 30, 1000 * 60}
-    end
-
-    test "reads the hours as letters before #260 wrote them" do
-      assert parse("143 hours, 30 minutes", "72 hours") == {143 * 60 + 30, 72 * 60}
-      assert parse("1 hour, 1 minute", "45 minutes") == {61, 45}
-      assert parse("0 hours", "1 hour") == {0, 60}
-    end
-
-    test "a bare number has no unit, so the letter stays empty" do
-      # Some early letters say "Primary Hours: 708": hours or minutes, nobody can tell.
-      assert parse("708", "77") == nil
-    end
-
-    test "a letter missing either line stays empty" do
-      assert TaxCreditLetter.parse_minutes("Primary Hours: 3 hours\n") == nil
-      assert TaxCreditLetter.parse_minutes("Test letter content") == nil
-      assert TaxCreditLetter.parse_minutes(nil) == nil
-    end
-  end
-
   describe "hours_status/4" do
     # A letter for `year` that says {primary, secondary}, against today's count.
     defp status({year, primary, secondary}, {now_primary, now_secondary}, now \\ @now) do
-      letter = %TaxCreditLetter{
+      letter = %PublishedPDF{
         year: year,
-        primary_minutes: primary,
-        secondary_minutes: secondary
+        keep: %{"hours.primary" => primary, "hours.secondary" => secondary}
       }
 
       hours = %{

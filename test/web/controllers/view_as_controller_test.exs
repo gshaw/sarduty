@@ -5,6 +5,7 @@ defmodule Web.ViewAsControllerTest do
   import Phoenix.LiveViewTest
 
   alias App.AccountsFixtures
+  alias App.Model.PublishedPDF
   alias App.Model.Event
   alias App.Model.TaxCreditLetter
   alias App.Repo
@@ -168,7 +169,7 @@ defmodule Web.ViewAsControllerTest do
 
       conn = get(conn, ~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf")
       assert response(conn, 200)
-      assert Repo.get!(TaxCreditLetter, letter.id).downloaded_at == nil
+      assert Repo.get!(PublishedPDF, letter.id).first_opened_at == nil
     end
 
     test "no Wallet pass", %{conn: conn, team: team, sam: sam} do

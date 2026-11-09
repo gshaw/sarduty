@@ -179,9 +179,16 @@ defmodule App.DocumentTest do
                  "Claim the search and rescue volunteers amount on line 31240 of your tax return. " <>
                  "Keep this letter in case the CRA asks for it.\n"
 
-      values = Map.put(values, "team.signer_phone", "604-555-0100")
+      # The signer's phone when they have no email; their email first when they have both.
+      values =
+        Map.merge(values, %{"team.signer_email" => "", "team.signer_phone" => "604-555-0100"})
+
       email = Document.evaluate(letter(), values, "Etc/UTC").email
       assert email.body =~ "it.\n\nQuestions about your hours? Contact Pat Lee at 604-555-0100.\n"
+
+      values = Map.put(values, "team.signer_email", "pat@example.com")
+      email = Document.evaluate(letter(), values, "Etc/UTC").email
+      assert email.body =~ "Contact Pat Lee at pat@example.com.\n"
     end
 
     test "prints the default verify code, and its verify page shows the hours (#970)" do

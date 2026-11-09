@@ -31,16 +31,10 @@ defmodule App.Operation.DeleteTeamTest do
     endorsement_qualification_fixture(endorsement, qualification)
     group_rule_fixture(group, endorsement)
     member_card_fixture(member)
-    # A letter and its published PDF, and one it replaced (#970).
-    %{pdf: old} = letter = tax_credit_letter_fixture(member)
+    # A letter, and the one it replaced (#970).
+    old = tax_credit_letter_fixture(member)
     pdf = %{content: "%PDF-1.7", title: "A PDF", filename: "a.pdf"}
-
-    attrs = %{
-      team_id: team.id,
-      name: old.name,
-      subject: old.subject,
-      tax_credit_letter_id: letter.id
-    }
+    attrs = %{team_id: team.id, name: old.name, subject: old.subject, member_id: member.id}
 
     {:ok, _pdf} =
       attrs

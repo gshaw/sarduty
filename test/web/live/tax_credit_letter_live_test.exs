@@ -19,24 +19,18 @@ defmodule Web.TaxCreditLetterLiveTest do
       |> log_in_user(user)
       |> live(~p"/teams/#{team}/tax-credit-letters/#{letter.id}")
 
-    assert html =~ PublishedPDF.format_code(letter.pdf.code)
+    assert html =~ PublishedPDF.format_code(letter.code)
   end
 
-  test "shows the ID to copy, and a link to verify a current one", %{conn: conn} do
+  test "shows the ID to copy, and a link to verify it", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
     current = tax_credit_letter_fixture(member, %{code: "K7Q4M2XA9HVB3TN"})
-    old = tax_credit_letter_fixture(member, %{code: "SRVTC-K7Q4M2XA", year: 2020})
     conn = log_in_user(conn, user)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters/#{current.id}")
     assert has_element?(lv, "#letter-reference[value='K7Q4M-2XA9H-VB3TN']")
     assert has_element?(lv, "#letter-verify[href='#{Web.VerifyHost.url()}/K7Q4M-2XA9H-VB3TN']")
-
-    # A reference number from before #970 verifies nowhere, until it's renewed.
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters/#{old.id}")
-    assert has_element?(lv, "#letter-reference[value='SRVTC-K7Q4M2XA']")
-    refute has_element?(lv, "#letter-verify")
   end
 
   test "emails the letter to the member", %{conn: conn} do
@@ -75,25 +69,16 @@ defmodule Web.TaxCreditLetterLiveTest do
     assert render(lv) =~ "has no email."
   end
 
-  test "emailing a letter with no PDF publishes it first", %{conn: conn} do
+  test "shows what its verify page shows, and who published it (#970)", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
-    member = member_fixture(team)
-    letter = tax_credit_letter_fixture(member)
-    Repo.delete!(letter.pdf)
+    member = member_fixture(team, %{name: "Sam Doe"})
+    letter = tax_credit_letter_fixture(member, %{primary_minutes: 90, secondary_minutes: 0})
 
     {:ok, lv, _html} =
-      conn
-      |> log_in_user(user)
-      |> live(~p"/teams/#{team}/tax-credit-letters/#{letter.id}")
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/tax-credit-letters/#{letter.id}")
 
-    lv |> element("#email-letter") |> render_click()
-
-    assert %{content: "%PDF" <> _rest} = saved = PublishedPDF.letter_attachment(letter)
-
-    assert_email_sent(fn email ->
-      assert [%{data: data}] = email.attachments
-      assert data == saved.content
-    end)
+    assert has_element?(lv, "#letter-shows", "Sam Doe")
+    assert has_element?(lv, "#letter-shows", "1h 30m")
   end
 
   describe "hours" do
@@ -130,25 +115,32 @@ defmodule Web.TaxCreditLetterLiveTest do
 
       assert has_element?(
                lv,
-               ~s(#replace-letter[data-confirm-check="I understand the old letter's verify page says Replaced."])
+               ~s(#replace-letter[data-confirm-check="I understand this letter's verify page says Replaced."])
              )
 
       lv |> element("#replace-letter") |> render_click()
 
+      new = TaxCreditLetter.get_current(member, year)
+      assert_patch(lv, ~p"/teams/#{team}/tax-credit-letters/#{new.id}")
       refute has_element?(lv, "#hours-changed")
       assert has_element?(lv, "#letter-hours", "1h 30m")
 
-      replaced = TaxCreditLetter |> Repo.get!(letter.id) |> Repo.preload(:pdf)
-      assert PublishedPDF.parse_code(replaced.pdf.code)
-      assert replaced.pdf.code != letter.pdf.code
-      assert letter.pdf |> Repo.reload!() |> PublishedPDF.status() == :replaced
-      assert replaced.primary_minutes == 90
-      assert replaced.letter_content =~ "Primary Hours: 1h 30m\n"
+      assert PublishedPDF.parse_code(new.code)
+      assert new.code != letter.code
+      assert new.user_id == user.id
+      assert TaxCreditLetter.minutes(new) == {90, 0}
+      assert letter |> Repo.reload!() |> PublishedPDF.status() == :replaced
 
+      # The old one says so, and links the new one.
+      {:ok, old, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/tax-credit-letters/#{letter.id}")
+
+      assert has_element?(old, "#letter-replaced")
+      refute has_element?(old, "#email-letter")
       assert_no_email_sent()
     end
 
-    test "deletes the letter once the box is ticked", %{
+    test "withdraws the letter once the box is ticked (#970)", %{
       conn: conn,
       user: user,
       team: team,
@@ -161,11 +153,19 @@ defmodule Web.TaxCreditLetterLiveTest do
 
       assert has_element?(
                lv,
-               ~s(#delete-letter[data-confirm-check="I understand #{PublishedPDF.format_code(letter.pdf.code)} no longer verifies."])
+               ~s(#withdraw-letter[data-confirm-check="I understand #{PublishedPDF.format_code(letter.code)} no longer verifies."])
              )
 
-      assert {:error, {:redirect, _}} = lv |> element("#delete-letter") |> render_click()
-      refute Repo.get(TaxCreditLetter, letter.id)
+      lv |> element("#withdraw-letter") |> render_click()
+
+      letter = Repo.reload!(letter)
+      assert PublishedPDF.status(letter) == :withdrawn
+      assert letter.withdrawn_by_id == user.id
+      assert has_element?(lv, "#letter-withdrawn")
+      refute has_element?(lv, "#withdraw-letter")
+
+      # The member lists under No letter again.
+      refute TaxCreditLetter.get_current(member, 2025)
     end
 
     test "an older letter shows both numbers with no warning",
@@ -174,12 +174,7 @@ defmodule Web.TaxCreditLetterLiveTest do
       attend(team, member, year)
 
       letter =
-        tax_credit_letter_fixture(member, %{
-          year: year,
-          primary_minutes: 60,
-          secondary_minutes: 0,
-          letter_content: "Primary Hours: 1 hour"
-        })
+        tax_credit_letter_fixture(member, %{year: year, primary_minutes: 60, secondary_minutes: 0})
 
       {:ok, lv, _html} =
         conn |> log_in_user(user) |> live(~p"/teams/#{team}/tax-credit-letters/#{letter.id}")
@@ -189,7 +184,7 @@ defmodule Web.TaxCreditLetterLiveTest do
       assert has_element?(lv, "#attendance-hours", "1h 30m")
 
       # Nothing changed the letter.
-      assert Repo.get!(TaxCreditLetter, letter.id).letter_content == "Primary Hours: 1 hour"
+      assert letter |> Repo.reload!() |> PublishedPDF.status() == :current
     end
   end
 end

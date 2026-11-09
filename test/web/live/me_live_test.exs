@@ -526,21 +526,19 @@ defmodule Web.MeLiveTest do
       letter = tax_credit_letter_fixture(member)
       conn = get(conn, ~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf")
 
-      assert response(conn, 200) == "%PDF-1.7 test letter #{letter.pdf.code}"
+      assert response(conn, 200) == "%PDF-1.7 test letter #{letter.code}"
       assert [content_type] = get_resp_header(conn, "content-type")
       assert content_type =~ "application/pdf"
     end
 
-    test "a letter with no saved PDF is a 404, never printed now",
+    test "a withdrawn letter is a 404: only a current one is the member's (#970)",
          %{conn: conn, team: team, member: member} do
       letter = tax_credit_letter_fixture(member)
-      Repo.delete!(letter.pdf)
+      letter |> Ecto.Changeset.change(withdrawn_at: DateTime.utc_now()) |> Repo.update!()
 
       assert_error_sent 404, fn ->
         get(conn, ~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf")
       end
-
-      refute PublishedPDF.letter_attachment(letter)
     end
 
     test "another member's letter on the same team is a 404", %{conn: conn, team: team} do

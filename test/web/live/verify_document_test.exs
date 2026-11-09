@@ -31,13 +31,13 @@ defmodule Web.VerifyDocumentTest do
     tax_credit_letter_fixture(member, attrs)
   end
 
-  defp path(%{pdf: pdf}), do: ~p"/#{PublishedPDF.format_code(pdf.code)}"
+  defp path(pdf), do: ~p"/#{PublishedPDF.format_code(pdf.code)}"
 
   test "a typed ID shows what the document's verify page shows", %{conn: conn, member: member} do
     letter = letter(member)
     {:ok, lv, _html} = live(conn, ~p"/")
 
-    typed = letter.pdf.code |> String.downcase()
+    typed = letter.code |> String.downcase()
     lv |> form("#check-form", check: %{code: typed}) |> render_submit()
 
     assert_patch(lv, path(letter))
@@ -70,7 +70,7 @@ defmodule Web.VerifyDocumentTest do
 
     # Scanned from the start page: the QR code holds the link in capitals.
     {:ok, lv, _html} = live(conn, ~p"/")
-    link = letter.pdf.code |> PublishedPDF.verify_link() |> String.upcase()
+    link = letter.code |> PublishedPDF.verify_link() |> String.upcase()
     lv |> render_hook("scanned", %{"code" => link})
     assert_patch(lv, path(letter))
   end
@@ -104,13 +104,13 @@ defmodule Web.VerifyDocumentTest do
     {:ok, new} =
       PublishedPDF.publish(
         %{
-          team_id: old.pdf.team_id,
-          name: old.pdf.name,
-          subject: old.pdf.subject,
+          team_id: old.team_id,
+          name: old.name,
+          subject: old.subject,
           code: PublishedPDF.generate_code()
         },
         %{attachment: %{content: "%PDF new", title: "New", filename: "new.pdf"}},
-        old.pdf.id
+        old.id
       )
 
     {:ok, lv, html} = live(conn, path(old))
@@ -118,7 +118,7 @@ defmodule Web.VerifyDocumentTest do
     assert has_element?(lv, "#result-name", "Tax credit letter")
     refute html =~ "Mercer"
 
-    {:ok, lv, _html} = live(conn, path(%{pdf: new}))
+    {:ok, lv, _html} = live(conn, path(new))
     assert has_element?(lv, "#result-current")
   end
 
@@ -126,7 +126,7 @@ defmodule Web.VerifyDocumentTest do
        %{conn: conn, member: member} do
     letter = letter(member)
 
-    letter.pdf
+    letter
     |> Ecto.Changeset.change(withdrawn_at: ~U[2027-03-03 18:00:00.000000Z])
     |> Repo.update!()
 

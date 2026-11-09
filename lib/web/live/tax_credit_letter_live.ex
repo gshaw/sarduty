@@ -160,7 +160,7 @@ defmodule Web.TaxCreditLetterLive do
               text={code(@letter)}
               label="Copy ID"
             />
-              <br />
+            <br />
             <.a id="letter-verify" href={PublishedPDF.verify_link(@letter.code)} external>Verify letter</.a>
           </dd>
           <%= if @letter.email_status do %>
