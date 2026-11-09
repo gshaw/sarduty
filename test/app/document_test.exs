@@ -1,7 +1,7 @@
 defmodule App.DocumentTest do
   use ExUnit.Case, async: true
 
-  # cspell:ignore totl incidnt -- misspelled on purpose
+  # cspell:ignore totl incidnt signr -- misspelled on purpose
 
   alias App.Document
   alias App.Document.Checker

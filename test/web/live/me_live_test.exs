@@ -6,7 +6,6 @@ defmodule Web.MeLiveTest do
 
   alias App.AccountsFixtures
   alias App.Model.NoShow
-  alias App.Model.PublishedPDF
   alias App.Operation.SetTeamFeature
   alias App.Repo
   alias Web.Components.WalletBadges

@@ -27,15 +27,24 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
 - **Old reference numbers never verify** (#970). Letter verify shipped on 2026-10-07
   (#207), and few letters with a verify code went out, all test letters, so the
   `SRVTC-` numbers and the last-name check for the 5-character ones before #207 went.
-  Each letter from before #970 gets an ID and its saved PDF prints again with the new
-  verify code, once, after deploy (App.Worker.RenewLetterCodesWorker), so no saved PDF
-  carries a dead code. Its row stays: nothing says Replaced.
-- **Only the current letter verifies as current.** Replace publishes the letter again
-  with a new ID, and the old one's page says Replaced and shows nothing from it, so an
-  old paper copy can't pass for the hours the team stands behind now. Delete
-  ([DeleteTaxCreditLetter](../lib/app/operation/delete_tax_credit_letter.ex)) removes
-  the letter and its PDFs, so its ID is not found. Both ask for a ticked box, since the
-  member may already have the letter.
+  Each letter from before #970 got an ID and its saved PDF printed again with the new
+  verify code, once, after part 1 of #970 deployed, so no saved PDF carries a dead code.
+- **A letter is its published PDF** (#970): a row in `published_pdfs` named `Tax credit
+  letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](../lib/app/model/tax_credit_letter.ex)
+  has its queries and rules). Its ID, the hours it kept, its date, who published it, its
+  member's first download, and its email status are on it. Its page shows what its
+  verify page shows, not its text.
+- **Only the current letter verifies as current.** Publish again
+  ([PublishTaxCreditLetter](../lib/app/operation/publish_tax_credit_letter.ex)) prints a
+  new letter with a new ID, and the old one's verify page says Replaced and shows
+  nothing from it, so an old paper copy can't pass for the hours the team stands behind
+  now. Withdraw ([WithdrawDocument](../lib/app/operation/withdraw_document.ex)) ends one
+  with no new one, and its member lists under No letter again. Both ask for a ticked
+  box, since the member may already have the letter. Nothing deletes a letter but its
+  team's purge.
+- **Out of date** is the hours rule: while the letter's year is open, attendance no
+  longer adds up to its hours (`TaxCreditLetter.hours_status/4`). It offers Publish
+  again, which is never automatic.
 - **Letters verify at the verify site's root**, beside cards, so they get the host's
   isolation (no login cookie), its miss limit ([Web.VerifyLimit](../lib/web/verify_limit.ex),
   shared with cards), and an organization's own verify host when that ships. An old
@@ -61,14 +70,17 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
 - **The letterhead is the organization's logo, then the team's** (#290), top right. Either
   is left out when it's missing, and a team without a logo never gets SAR Duty's. Logos
   are the ones the team has when the PDF is drawn, and the saved PDF keeps them.
-- **Making or replacing a letter publishes it** (#918, #970): its PDF prints once with
-  a new ID and is kept as it was made, one of the
-  [published PDFs](documents.md#published-pdfs). It prints before the write transaction, which holds SQLite's one
-  write lock, and a print that fails makes or replaces nothing
-  ([SaveTaxCreditLetterPDF](../lib/app/operation/save_tax_credit_letter_pdf.ex)).
+- **Making a letter publishes it** (#918, #970): its PDF prints once with a new ID and
+  is kept as it was made, one of the [published PDFs](documents.md#published-pdfs). It prints before the write transaction, which holds SQLite's one
+  write lock, and a print that fails makes nothing
+  ([PublishTaxCreditLetter](../lib/app/operation/publish_tax_credit_letter.ex)).
   Downloads and emails serve the saved file, so a member gets the same file every time.
-  A download never prints: a letter without one is a 404. Emailing one without one
-  publishes it first.
+- **The email's words are the letter's** (`email to member` in its document, #970):
+  what it's for, the CRA line, and who answers questions. Send letters gives each
+  letter its own email job, and its status shows in its row; Email letter sends it
+  again. A member with no email gets a letter that isn't emailed.
+- **The team settings a letter needs are the letter's** (`needs`, #943, #970): Needs
+  attention names each blank one from January to April.
 - **The signature is the team's when the PDF is printed**, and the saved PDF keeps it.
   The letter keeps no copy of its own (#918).
 - **The verify code is a published PDF's** (#970), bottom left: a vector QR code, an
@@ -77,6 +89,6 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
   `verify shows`.
 
 - **A member's download is recorded** (#389): the first time a member downloads their
-  letter from their own pages sets `downloaded_at`, and the letter leaves their For you
+  letter from their own pages sets its PDF's `first_opened_at`, and the letter leaves their For you
   to do. Only the newest letter shows there, and only for last year or this year. A team
   admin's download doesn't count. A replaced letter is a new row, so it shows again.

@@ -56,18 +56,17 @@ defmodule App.Operation.ReadDocument do
   def settings(text, %Context{} = context) when is_binary(text) do
     with {:ok, doc} <- Document.parse(text),
          {:ok, doc} <- Document.check(doc, context) do
-      settings_doc = %{
-        doc
-        | reports: Enum.filter(doc.reports, &(&1.name in ~w(team organization)))
-      }
-
-      {:ok, values, read} = values(settings_doc, context, %{})
-      labels = Map.merge(@picture_labels, Map.new(read, &{&1.name, &1.label}))
-      {:ok, %{doc: doc, values: values, labels: labels}}
+      {:ok, values, read} = doc |> settings_only() |> values(context, %{})
+      {:ok, %{doc: doc, values: values, labels: labels(read)}}
     else
       {:error, %Error{} = error} -> {:error, Error.text(error)}
     end
   end
+
+  defp settings_only(doc),
+    do: %{doc | reports: Enum.filter(doc.reports, &(&1.name in ~w(team organization)))}
+
+  defp labels(read), do: Map.merge(@picture_labels, Map.new(read, &{&1.name, &1.label}))
 
   defp values(doc, context, starts) do
     context = %{context | team: context.repo.preload(context.team, :organization)}

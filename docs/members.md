@@ -401,7 +401,7 @@ The team's Dashboard, `/teams/:subdomain`
   add your ID card to Wallet (on a team with ID cards on, until
   `MemberCard.in_wallet?/1`), each qualification expiring within 60 days (until it's
   renewed), and a new tax credit letter (from January to April, until the member
-  downloads it, `downloaded_at`). Each leaves once done. With nothing to do, the card
+  downloads it, its PDF's `first_opened_at`). Each leaves once done. With nothing to do, the card
   says so in one line.
 - `"refresh"` is a team admin's event: the team pages' hook refuses it from a member
   (#440), and only a team admin's visit starts the catch-up sync.

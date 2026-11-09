@@ -14,9 +14,9 @@ defmodule App.ViewData.ChangeHistory do
   # from applied change set rows, and what the sync saw change in D4H, from `d4h_changes`.
   # A member's history adds the standing changes team admins made (#366), `by:
   # :team_admin`; both add the PDFs published and withdrawn for them, such as a member's
-  # tax credit letters and an activity's forms (#970). Each entry is a map: `at`, `by` (`:sar_duty` or `:d4h`), `seen_after` for a D4H
-  # change (the last refresh before it), `text`, and for SAR Duty's changes `source`,
-  # `applied_by`, and `reason`. Newest first.
+  # tax credit letters and an activity's forms (#970). Each entry is a map: `at`, `by`
+  # (`:sar_duty` or `:d4h`), `seen_after` for a D4H change (the last refresh before it),
+  # `text`, and for SAR Duty's changes `source`, `applied_by`, and `reason`. Newest first.
   #
   # `field_values: false` names an activity's changed custom fields without their values,
   # for the MCP (#681), which never gets a custom field value.

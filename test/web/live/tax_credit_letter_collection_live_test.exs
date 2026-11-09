@@ -6,8 +6,8 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
 
-  alias App.Model.PublishedPDF
   alias App.Model.Event
+  alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Operation.CreateTaxCreditLetters
   alias App.Operation.SaveTeamSignature

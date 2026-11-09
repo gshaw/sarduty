@@ -5,8 +5,8 @@ defmodule Web.ViewAsControllerTest do
   import Phoenix.LiveViewTest
 
   alias App.AccountsFixtures
-  alias App.Model.PublishedPDF
   alias App.Model.Event
+  alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Repo
 

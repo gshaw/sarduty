@@ -10,9 +10,9 @@ defmodule App.DemoTeamSendsTest do
 
   alias App.Accounts
   alias App.Mailer
-  alias App.Model.PublishedPDF
   alias App.Model.Member
   alias App.Model.OutboxMessage
+  alias App.Model.PublishedPDF
   alias App.Model.Reminder
   alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass

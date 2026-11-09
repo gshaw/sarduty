@@ -536,23 +536,9 @@ defmodule App.DataFixtures do
     attrs = Map.new(attrs)
     code = Map.get(attrs, :code, PublishedPDF.generate_code())
     year = Map.get(attrs, :year, Date.utc_today().year - 1)
-    minutes = {attrs[:primary_minutes], attrs[:secondary_minutes]}
 
-    keep =
-      case minutes do
-        {nil, nil} -> %{}
-        {primary, secondary} -> %{"hours.primary" => primary, "hours.secondary" => secondary}
-      end
-
-    printed = %{
-      attachment: %{
-        content: "%PDF-1.7 test letter #{code}",
-        title: "#{year} test letter",
-        filename: "#{year}_test_letter.pdf"
-      },
-      keep: keep,
-      shows: letter_shows(member, year, minutes)
-    }
+    printed =
+      letter_printed(member, code, year, {attrs[:primary_minutes], attrs[:secondary_minutes]})
 
     {:ok, letter} =
       PublishedPDF.publish(
@@ -572,6 +558,24 @@ defmodule App.DataFixtures do
     |> Ecto.Changeset.change(Map.take(attrs, [:email_status, :first_opened_at, :inserted_at]))
     |> Repo.update!()
     |> Map.put(:member, member)
+  end
+
+  defp letter_printed(member, code, year, minutes) do
+    keep =
+      case minutes do
+        {nil, nil} -> %{}
+        {primary, secondary} -> %{"hours.primary" => primary, "hours.secondary" => secondary}
+      end
+
+    %{
+      attachment: %{
+        content: "%PDF-1.7 test letter #{code}",
+        title: "#{year} test letter",
+        filename: "#{year}_test_letter.pdf"
+      },
+      keep: keep,
+      shows: letter_shows(member, year, minutes)
+    }
   end
 
   defp letter_shows(member, year, minutes) do

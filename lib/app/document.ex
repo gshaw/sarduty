@@ -336,10 +336,9 @@ defmodule App.Document do
   its order, such as `team.mailing_address` (#970).
   """
   def missing(%__MODULE__{needs: needs}, values) do
-    for need <- needs,
-        name = Evaluator.name(need),
-        Evaluator.blank?(Map.get(values, name)),
-        do: name
+    needs
+    |> Enum.map(&Evaluator.name/1)
+    |> Enum.filter(&(values |> Map.get(&1) |> Evaluator.blank?()))
   end
 
   @doc "A place's text, as `expect` reads it: a flow's lines, a blank line for each space."
