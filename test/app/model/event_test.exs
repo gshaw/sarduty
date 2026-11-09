@@ -54,6 +54,12 @@ defmodule App.Model.EventTest do
     assert Event.count_since(:login_code_missed, since, who: who) == 1
     assert Event.count_since(:login_code_missed, since, ip_key: "2001:db8:1:2::/64") == 2
     assert Event.count_since(:login_code_missed, since, ip_key: "2001:db8:1:3::/64") == 0
+
+    Event.record!(:login_code_missed, who: who, data: %{known_browser: true}, occurred_at: @now)
+    assert Event.count_since(:login_code_missed, since, who: who) == 2
+
+    assert Event.count_since(:login_code_missed, since, who: who, data: %{known_browser: true}) ==
+             1
   end
 
   test "prunes each kind past its retention" do

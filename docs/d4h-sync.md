@@ -310,11 +310,13 @@ than waiting for the next refresh. See [group-rules.md](group-rules.md).
 ## Who can log in
 
 Login is by a code, emailed, or texted when Twilio is set up (#142, #150, #241; the
-link from #57 is gone). One field takes an email or a mobile number. A code is six
+link from #57 is gone). One field takes an email or a mobile number. A code is eight
 digits, works once for 15 minutes, and dies after 5 wrong tries. A code sent in the last
 minute stands, so a double tap sends one. `Web.LoginLimit` caps sends and misses per
-email, number, and IP. 20 wrong codes in a day block an email or number, and its owner
-gets an email saying so, but a browser that has logged in to it before (a signed
+email, number, and IP, and texts to one number at 30 a day. 20 wrong codes in 24 hours
+block an email or number, and 50 an IP. Misses and texts are counted from the events
+table, so a deploy doesn't reset them (#975); the 15-minute send caps are in memory. A
+blocked email's or number's owner gets an email saying so, but a browser that has logged in to it before (a signed
 `_sarduty_known_browser` cookie) is never blocked by them, so nobody can lock a person out
 of their own browsers (#176). A login lasts until the browser closes; only ticking "Remember
 me on this computer for 60 days" (off by default) sets the 60-day cookie. A user reaches

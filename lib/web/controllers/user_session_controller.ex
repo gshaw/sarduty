@@ -60,19 +60,8 @@ defmodule Web.UserSessionController do
     |> redirect(to: ~p"/login")
   end
 
-  # Records each request within the limits, and the first one over them.
-  defp request_allowed?(conn, who) do
-    result = LoginLimit.check(who, VerifyLimit.client_ip(conn))
-    attrs = [who: SecurityEvent.who(who), data: %{via: via(who)}]
-
-    case result do
-      :ok -> SecurityEvent.record(conn, :login_code_requested, attrs)
-      :limit_reached -> SecurityEvent.record(conn, :login_code_limited, attrs)
-      :limited -> :ok
-    end
-
-    result == :ok
-  end
+  defp request_allowed?(conn, who),
+    do: LoginLimit.request(conn, who, VerifyLimit.client_ip(conn), via(who))
 
   defp via({:phone, _phone}), do: "text"
   defp via(_email), do: "email"
@@ -132,18 +121,11 @@ defmodule Web.UserSessionController do
   # The miss that blocks an account tells its owner, from a job like the login code.
   # Tries after a block aren't recorded, so a flood can't fill the events table; the
   # block itself is.
-  defp count_miss(conn, who, blocked?, known?, args) do
-    ip = VerifyLimit.client_ip(conn)
-    hash = SecurityEvent.who(who)
+  defp count_miss(_conn, _who, true = _blocked?, _known?, _args), do: :ok
+
+  defp count_miss(conn, who, false, known?, args) do
     data = %{via: via(who), known_browser: known?}
-    blocks = LoginLimit.miss(who, ip, known?)
-
-    unless blocked?, do: SecurityEvent.record(conn, :login_code_missed, who: hash, data: data)
-
-    for scope <- blocks do
-      SecurityEvent.record(conn, :login_blocked, who: hash, data: Map.put(data, :scope, scope))
-    end
-
+    blocks = LoginLimit.miss(conn, who, VerifyLimit.client_ip(conn), data)
     if :account in blocks, do: NotifyLoginBlockedWorker.enqueue(args)
   end
 
