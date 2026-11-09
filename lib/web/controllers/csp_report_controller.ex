@@ -48,7 +48,7 @@ defmodule Web.CSPReportController do
 
   defp handle(raw) do
     report = CSPReport.new(raw)
-    report |> CSPReport.message() |> Logger.warning()
+    report |> CSPReport.log_line() |> Logger.warning()
     unless CSPReport.noise?(report), do: notify(report)
   end
 

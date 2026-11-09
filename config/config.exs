@@ -15,6 +15,9 @@ config :sarduty,
 config :sarduty, Web.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
+  # An agent's report link (App.MCP.Tool.CheckReport) carries the whole query, past
+  # Bandit's 10 KB default on 2026-11-03. Fly's proxy passes at least 40 KB.
+  http: [http_1_options: [max_request_line_length: 32_768]],
   render_errors: [
     formats: [html: Web.ErrorHTML, json: Web.ErrorJSON],
     layout: false

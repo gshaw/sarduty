@@ -161,7 +161,12 @@ defmodule App.Operation.ChangeActivityEquipment do
   @doc "Removes one usage from the activity. `{:ok, rows}`, or `{:error, text}` to show."
   def remove(%Team{} = team, %Activity{} = activity, %EquipmentUsage{} = usage, user, now)
       when usage.activity_id == activity.id do
-    row = %ChangeSetRow{
+    apply_rows(team, activity, [plan_remove(usage)], user, now)
+  end
+
+  @doc "The row that removes one usage. Unapplied."
+  def plan_remove(%EquipmentUsage{} = usage) do
+    %ChangeSetRow{
       action: :delete_equipment_usage,
       d4h_record_id: usage.d4h_equipment_usage_id,
       old_value: %{
@@ -169,10 +174,9 @@ defmodule App.Operation.ChangeActivityEquipment do
         "title" => usage.equipment_item.title,
         "minutes" => usage.minutes,
         "km" => usage.distance
-      }
+      },
+      new_value: %{}
     }
-
-    apply_rows(team, activity, [row], user, now)
   end
 
   defp apply_rows(team, activity, rows, user, now) do

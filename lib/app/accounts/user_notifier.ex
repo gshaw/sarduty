@@ -97,19 +97,22 @@ defmodule App.Accounts.UserNotifier do
   end
 
   # A login is no team's. Text login never reaches a demo team's member, whose number a
-  # visitor typed: Member.current_emails_with_phone/2 leaves them out.
+  # visitor typed: Member.current_emails_with_phone/2 leaves them out. A refusal is
+  # `{:error, {status, twilio_code}}`, so the job's error in Honeybadger says why
+  # (a 400 on 2026-11-01 didn't, and the log line had aged out).
   def deliver_login_text(phone, code) do
-    Twilio.send_sms(
-      phone,
-      """
-      Your SAR Duty login code: #{UserToken.format_code(code, "-")}
+    body = """
+    Your SAR Duty login code: #{UserToken.format_code(code, "-")}
 
-      It works once, for 15 minutes.
+    It works once, for 15 minutes.
 
-      @#{Web.Endpoint.host()} ##{code}\
-      """,
-      :no_team
-    )
+    @#{Web.Endpoint.host()} ##{code}\
+    """
+
+    case Twilio.send_sms_with_reason(phone, body, :no_team) do
+      {:error, %{status: status, code: twilio_code}} -> {:error, {status, twilio_code}}
+      result -> result
+    end
   end
 
   @doc "Tells the admins a team signed itself up. Sends nothing when there are none."

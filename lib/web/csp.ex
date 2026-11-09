@@ -13,30 +13,33 @@ defmodule Web.CSP do
   nothing. Once the logs are quiet, `header/0` changes to `content-security-policy`.
 
   - `'wasm-unsafe-eval'`: the barcode reader is WebAssembly (assets/js/barcode_reader.js).
+  - `'report-sample'`: a report of blocked inline script carries its first 40
+    characters, which tells SAR Duty's own from a browser extension's.
+  - img-src the app's host: verify pages show team and organization logos from it.
   - `style-src 'unsafe-inline'`: `style=` attributes, and the styles Trix and LiveView
     set. An injected style can't run code.
   - No `form-action`: the agent authorize form redirects to the agent's own callback
     (#761), which is on another site, so `'self'` would break it.
   """
 
-  @policy Enum.join(
-            [
-              "default-src 'self'",
-              "script-src 'self' 'wasm-unsafe-eval'",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob:",
-              "font-src 'self'",
-              "connect-src 'self'",
-              "media-src 'self' blob:",
-              "worker-src 'self' blob:",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "frame-ancestors 'self'"
-            ],
-            "; "
-          )
-
-  def policy, do: @policy
+  def policy do
+    Enum.join(
+      [
+        "default-src 'self'",
+        "script-src 'self' 'wasm-unsafe-eval' 'report-sample'",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' #{Web.Endpoint.url()} data: blob:",
+        "font-src 'self'",
+        "connect-src 'self'",
+        "media-src 'self' blob:",
+        "worker-src 'self' blob:",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "frame-ancestors 'self'"
+      ],
+      "; "
+    )
+  end
 
   @doc "The header the policy goes in."
   def header, do: "content-security-policy-report-only"
@@ -46,5 +49,5 @@ defmodule Web.CSP do
   from the verify site, whose other paths redirect to the app.
   """
   def headers,
-    do: %{header() => @policy <> "; report-uri " <> Web.Endpoint.url() <> "/csp-reports"}
+    do: %{header() => policy() <> "; report-uri " <> Web.Endpoint.url() <> "/csp-reports"}
 end
