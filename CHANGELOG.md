@@ -11,6 +11,11 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 2–8
 
+- ⭐ The ID card page shows your card, front and back, under the Wallet buttons. No
+  Wallet? Save image puts each side in Photos, and Print ID card prints both at card
+  size, in black on white, to cut out for a badge holder.
+- Your membership's ID card link is Show ID card, and it's there even without a Wallet.
+  Verify your ID card moved to the card page.
 - A tax credit letter's Email letter asks first, naming the address it goes to.
 - A retiring or retired member's ID Card tab has Cancel ID card, for the rare one who
   shouldn't keep a card at all. Their pass shows Cancelled at once, and History says who.
