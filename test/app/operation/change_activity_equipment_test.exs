@@ -117,4 +117,15 @@ defmodule App.Operation.ChangeActivityEquipmentTest do
 
     assert ChangeActivityEquipment.plan_tags(@activity, [10], []) == nil
   end
+
+  # new_value is NOT NULL: a nil one failed every Remove on the activity's equipment page.
+  test "removing a usage keeps what D4H had and sends nothing new" do
+    usage = %EquipmentUsage{d4h_equipment_usage_id: 77, minutes: 60, equipment_item: item(1)}
+    row = ChangeActivityEquipment.plan_remove(usage)
+
+    assert row.action == :delete_equipment_usage
+    assert row.d4h_record_id == 77
+    assert row.old_value["title"] == "Item 1"
+    assert row.new_value == %{}
+  end
 end

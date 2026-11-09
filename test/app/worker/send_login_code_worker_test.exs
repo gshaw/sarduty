@@ -16,7 +16,7 @@ defmodule App.Worker.SendLoginCodeWorkerTest do
       conn |> Plug.Conn.put_status(503) |> Req.Test.json(%{})
     end)
 
-    assert perform(%{"phone" => "+16045551234"}) == {:error, 503}
+    assert perform(%{"phone" => "+16045551234"}) == {:error, {503, nil}}
   end
 
   test "a code that went, or no code for a stranger, completes the job" do
