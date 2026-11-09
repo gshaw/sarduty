@@ -170,15 +170,8 @@ defmodule Web.Admin.EventCollectionLive do
         <span :if={event.ip} title={event.user_agent}>{event.ip}</span>
       </:col>
       <:col :let={event} label="Details">
-        <.a :if={event.who} patch={events_path(@filter, who: event.who)} class="font-mono">
-          {event.who}
-        </.a>{if event.who &&
-                                                                                                                             event.data !=
-                                                                                                                               %{},
-                                                                                                                           do:
-                                                                                                                             " · "}{details(
-          event.data
-        )}
+        <.a :if={event.who} patch={events_path(@filter, who: event.who)} class="font-mono">{event.who}</.a>
+        {details(event)}
       </:col>
     </.table>
     <.hint :if={length(@events) == @limit}>The newest {@limit}.</.hint>
@@ -197,7 +190,11 @@ defmodule Web.Admin.EventCollectionLive do
     "#{ago}: #{teams} in #{event.duration_ms && Service.Format.run_time(event.duration_ms)}, #{event.data["outcome"]}"
   end
 
-  defp details(data) do
+  # After the account's hash, when there is one.
+  defp details(%{who: who, data: data}) when is_binary(who) and data != %{},
+    do: "· " <> details(%{who: nil, data: data})
+
+  defp details(%{data: data}) do
     data
     |> Enum.sort()
     |> Enum.map_join(" · ", fn {key, value} -> "#{key}: #{value(value)}" end)

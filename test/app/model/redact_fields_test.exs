@@ -20,6 +20,7 @@ defmodule App.Model.RedactFieldsTest do
     {App.Model.CustomField, :value_units} => "a D4H field's unit, like km",
     {App.Model.CustomField, :copy_values} => "a team setting",
     {App.Model.EquipmentItem, :barcode} => "the label on a piece of equipment",
+    {App.Model.Event, :ip_key} => "an event's IP, or its IPv6 /64, shown like `ip`",
     {App.Model.Form, :text} => "an organization's form: what it reads, never values",
     {App.Model.EquipmentItem, :custom_values} => "equipment's own fields",
     {App.Model.GroupMembershipChange, :reason} => "the group rule that made the change",
