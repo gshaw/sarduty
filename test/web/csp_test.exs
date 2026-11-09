@@ -32,6 +32,11 @@ defmodule Web.CSPTest do
     refute scripts =~ "*"
   end
 
+  test "verify pages may show logos from the app's host" do
+    [images] = Regex.run(~r/img-src ([^;]+)/, Web.CSP.policy(), capture: :all_but_first)
+    assert images =~ Web.Endpoint.url()
+  end
+
   # The policy refuses inline JS, so a template with any would break in the browser.
   test "no template has an inline script or an on…= handler" do
     files = Path.wildcard("lib/**/*.{ex,heex}") -- ["lib/web/csp.ex"]
@@ -135,6 +140,29 @@ defmodule Web.CSPTest do
       assert noise?("moz-extension://abc/x.js")
       refute noise?("inline")
       refute noise?("https://tiles.example/1.png")
+    end
+
+    test "inline script an extension adds is noise, by its source file" do
+      from = fn source ->
+        CSPReport.new(%{
+          "blocked-uri" => "inline",
+          "document-uri" => "https://sarduty.com/replies/SECRET",
+          "effective-directive" => "script-src-elem",
+          "source-file" => source,
+          "script-sample" => "window.__x = 1"
+        })
+      end
+
+      assert "chrome-extension://abc/content.js" |> from.() |> CSPReport.noise?()
+      assert "safari-web-extension://abc/inject.js" |> from.() |> CSPReport.noise?()
+
+      ours = from.("https://sarduty.com/replies/SECRET?a=1")
+      refute CSPReport.noise?(ours)
+      assert ours.source == "/replies/[FILTERED]"
+
+      assert CSPReport.log_line(ours) ==
+               ~s{CSP would block inline (script-src-elem) on /replies/[FILTERED], } <>
+                 ~s{from /replies/[FILTERED], sample "window.__x = 1"}
     end
 
     test "one fingerprint for one problem, whatever the team, id or token" do
