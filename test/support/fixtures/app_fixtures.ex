@@ -535,11 +535,16 @@ defmodule App.DataFixtures do
 
     params =
       Map.merge(
-        %{member_id: member.id, year: Date.utc_today().year - 1, letter_content: "Test letter content"},
+        %{
+          member_id: member.id,
+          year: Date.utc_today().year - 1,
+          letter_content: "Test letter content"
+        },
         attrs
       )
 
     letter = params |> TaxCreditLetter.build_new_changeset() |> Repo.insert!()
+
     attachment = %{
       content: "%PDF-1.7 test letter #{code}",
       title: "#{letter.year} test letter",
@@ -574,7 +579,10 @@ defmodule App.DataFixtures do
         ],
         else: []
 
-    [%{"label" => "Name", "text" => member.name}, %{"label" => "Year", "text" => "#{letter.year}"}] ++
+    [
+      %{"label" => "Name", "text" => member.name},
+      %{"label" => "Year", "text" => "#{letter.year}"}
+    ] ++
       for {label, minutes} <- hours,
           do: %{"label" => label, "text" => Service.Format.duration(minutes)}
   end

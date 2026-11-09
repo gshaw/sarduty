@@ -7,7 +7,7 @@ defmodule Web.DemoTeamMarksTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.MemberCard
-  alias App.Model.TaxCreditLetter
+  alias App.Model.PublishedPDF
 
   defp verify_conn(conn) do
     conn
@@ -36,12 +36,13 @@ defmodule Web.DemoTeamMarksTest do
     letter =
       team
       |> member_fixture()
-      |> tax_credit_letter_fixture(%{ref_id: TaxCreditLetter.generate_ref_id(), year: 2025})
+      |> tax_credit_letter_fixture(%{year: 2025})
 
-    {:ok, lv, _html} = conn |> verify_conn() |> live(~p"/letters/#{letter.ref_id}")
+    {:ok, lv, _html} =
+      conn |> verify_conn() |> live(~p"/#{PublishedPDF.format_code(letter.pdf.code)}")
 
-    assert has_element?(lv, "#result-issued")
-    assert has_element?(lv, "#result-sample", "Sample letter")
+    assert has_element?(lv, "#result-current")
+    assert has_element?(lv, "#result-sample", "Sample")
   end
 
   test "a demo team has no Access key tab, and its page is a 404", %{conn: conn} do

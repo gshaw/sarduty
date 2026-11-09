@@ -46,6 +46,7 @@ defmodule App.Repo.Migrations.CreatePublishedPdfs do
              where: "length(code) > 11",
              name: :published_pdfs_unique_code_index
            )
+
     create index(:published_pdfs, [:code])
 
     create unique_index(:published_pdfs, [:team_id, :name, :subject],

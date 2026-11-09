@@ -24,7 +24,7 @@ defmodule Web.HomePageLiveTest do
   test "the page links to where a tax credit letter is verified", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/")
 
-    assert has_element?(lv, ~s(a[href="#{Web.VerifyHost.url()}/letters"]))
+    assert has_element?(lv, ~s(a[href="#{Web.VerifyHost.url()}"]))
   end
 
   test "a logged-in user with no team is told where access comes from", %{conn: conn} do

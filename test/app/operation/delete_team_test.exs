@@ -34,7 +34,13 @@ defmodule App.Operation.DeleteTeamTest do
     # A letter and its published PDF, and one it replaced (#970).
     %{pdf: old} = letter = tax_credit_letter_fixture(member)
     pdf = %{content: "%PDF-1.7", title: "A PDF", filename: "a.pdf"}
-    attrs = %{team_id: team.id, name: old.name, subject: old.subject, tax_credit_letter_id: letter.id}
+
+    attrs = %{
+      team_id: team.id,
+      name: old.name,
+      subject: old.subject,
+      tax_credit_letter_id: letter.id
+    }
 
     {:ok, _pdf} =
       PublishedPDF.publish(
@@ -42,6 +48,7 @@ defmodule App.Operation.DeleteTeamTest do
         %{attachment: pdf},
         old.id
       )
+
     item = equipment_item_fixture(team)
     equipment_usage_fixture(activity, item)
     template_fixture(team, "Truck 1", [item])
