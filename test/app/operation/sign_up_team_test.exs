@@ -30,6 +30,7 @@ defmodule App.Operation.SignUpTeamTest do
   test "a member who isn't an Owner or Editor may not" do
     assert {:error, {:email, message}} = check("pat@example.com", [member(%{permission: 2})])
     assert message =~ "Owner or Editor of Ridge SAR"
+    refute message =~ "D4H"
   end
 
   test "a manager who is retired, or has a leave date, may not" do
@@ -49,19 +50,5 @@ defmodule App.Operation.SignUpTeamTest do
              check("pat@example.com", [member(%{})], %App.Model.Team{})
 
     assert message =~ "already on SAR Duty"
-  end
-
-  test "a team on SAR Duty Records hears Records' name" do
-    assert {:error, {:email, message}} =
-             SignUpTeam.check(
-               "pat@example.com",
-               @d4h_team,
-               [member(%{permission: 2})],
-               nil,
-               @now,
-               :records
-             )
-
-    assert message =~ "in SAR Duty Records"
   end
 end

@@ -1,6 +1,7 @@
 defmodule App.Accounts.UserNotifier do
   import Swoosh.Email
 
+  alias App.Accounts.UserToken
   alias App.Adapter.D4H
   alias App.Adapter.Twilio
   alias App.Mailer
@@ -9,18 +10,21 @@ defmodule App.Accounts.UserNotifier do
   # without opening the email. The last line binds the code to this site's domain, in the
   # format of Apple's origin-bound code draft, so Safari can suggest it. The draft's
   # One-Time-Code header would do the same, but Cloudflare rejects headers off its list.
+  # People read the code in groups of 4; the bound line keeps it whole, since a space
+  # there would end it.
   def deliver_login_code(user, code) do
     host = Web.Endpoint.host()
+    shown = UserToken.format_code(code)
 
     email =
       new()
       |> to(user.email)
       |> from({"SAR Duty", "noreply@sarduty.com"})
-      |> subject("Your SAR Duty login code: #{code}")
+      |> subject("Your SAR Duty login code: #{shown}")
       |> text_body("""
       Your code to log in to SAR Duty:
 
-      #{code}
+      #{shown}
 
       Enter it on the login page. It works once, for 15 minutes. If you did not ask for it,
       ignore this email.
@@ -60,7 +64,7 @@ defmodule App.Accounts.UserNotifier do
     Twilio.send_sms(
       phone,
       """
-      Your SAR Duty confirmation code: #{code}
+      Your SAR Duty confirmation code: #{UserToken.format_code(code)}
 
       It works once, for 15 minutes.
 
@@ -97,7 +101,7 @@ defmodule App.Accounts.UserNotifier do
     Twilio.send_sms(
       phone,
       """
-      Your SAR Duty login code: #{code}
+      Your SAR Duty login code: #{UserToken.format_code(code)}
 
       It works once, for 15 minutes.
 
@@ -162,15 +166,20 @@ defmodule App.Accounts.UserNotifier do
 
   # cspell:ignore Segoe -- Windows' system font, in the email's font stack
   # The logo is a PNG at 2x, since Gmail won't show SVG (see /styles/logo).
+  # The gap between the code's groups is a margin, not a space, so a double-click copies
+  # the whole code. The meta and the style stop iOS Mail making it a phone-number link.
   # The domain line is hidden: it's for Mail, not people.
   defp login_html(code, host) do
     logo = Web.Endpoint.url() <> "/images/sarduty-logo-96.png"
+    {first, last} = String.split_at(code, div(String.length(code), 2))
 
     """
+    <meta name="format-detection" content="telephone=no">
+    <style>a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; font: inherit !important; letter-spacing: inherit !important; }</style>
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; color: #18181b; max-width: 480px;">
       <img src="#{logo}" width="48" height="48" alt="SAR Duty" style="display: block; border: 0;">
       <p>Your code to log in to SAR Duty:</p>
-      <p style="margin: 24px 0; font-size: 32px; font-weight: 700; letter-spacing: 6px; font-family: ui-monospace, Menlo, monospace;">#{code}</p>
+      <p style="margin: 24px 0; font-size: 32px; font-weight: 700; letter-spacing: 6px; font-family: ui-monospace, Menlo, monospace;"><span>#{first}</span><span style="margin-left: 16px;">#{last}</span></p>
       <p style="color: #52525b; font-size: 14px;">Enter it on the login page. It works once, for 15 minutes. If you did not ask for it, ignore this email.</p>
       <p style="display: none; font-size: 0; line-height: 0; max-height: 0; overflow: hidden;">@#{host} ##{code}</p>
     </div>

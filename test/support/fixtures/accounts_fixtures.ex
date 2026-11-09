@@ -23,7 +23,7 @@ defmodule App.AccountsFixtures do
     :ok = App.Accounts.deliver_login_code(email)
 
     receive do
-      {:email, %{subject: "Your SAR Duty login code: " <> code}} -> code
+      {:email, %{subject: "Your SAR Duty login code: " <> code}} -> String.replace(code, " ", "")
     after
       0 -> raise "no login code was sent to #{email}"
     end
@@ -68,7 +68,8 @@ defmodule App.AccountsFixtures do
     :ok = App.Accounts.deliver_login_text(phone)
 
     receive do
-      {:text, ^phone, "Your SAR Duty login code: " <> <<code::binary-6, _rest::binary>>} -> code
+      {:text, ^phone, "Your SAR Duty login code: " <> <<code::binary-9, _rest::binary>>} ->
+        String.replace(code, " ", "")
     after
       0 -> raise "no login code was texted to #{phone}"
     end

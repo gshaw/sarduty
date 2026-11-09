@@ -51,12 +51,12 @@ defmodule Web.UserLoginCodeLive do
         Log in to connect an AI agent to {@agent_team}.
       </p>
       <p :if={@field == "email"}>
-        If <strong>{@value}</strong> can use SAR Duty, we've emailed it a 6-digit code. It
+        If <strong>{@value}</strong> can use SAR Duty, we've emailed it an 8-digit code. It
         works once, for 15 minutes.
       </p>
       <p :if={@field == "phone"}>
-        If <strong>{Service.Phone.format(@value)}</strong> can use SAR Duty, we've texted it a
-        6-digit code. It works once, for 15 minutes.
+        If <strong>{Service.Phone.format(@value)}</strong> can use SAR Duty, we've texted it an
+        8-digit code. It works once, for 15 minutes.
       </p>
       <.form
         for={@form}
@@ -73,8 +73,9 @@ defmodule Web.UserLoginCodeLive do
           required
           autocomplete="one-time-code"
           inputmode="numeric"
-          maxlength="7"
+          maxlength="12"
         />
+        <div :if={@field == "phone"} id="login-webotp" phx-hook="WebOTP" />
         <.input
           field={@form[:remember_me]}
           type="checkbox"
@@ -101,7 +102,7 @@ defmodule Web.UserLoginCodeLive do
       <%= if @field == "email" do %>
         <p class="text-text-muted">
           No email after a few minutes? Check your spam folder. Codes go only to team admins,
-          and to members when their team turns on member logins, at the email D4H has for them.
+          and to members when their team turns on member logins.
         </p>
         <p class="action">
           <.a id="login-again" navigate={~p"/login"}>Use a different email</.a>
@@ -109,8 +110,8 @@ defmodule Web.UserLoginCodeLive do
       <% else %>
         <p class="text-text-muted">
           No text after a few minutes? Codes go only to team admins, and to members when their
-          team turns on member logins, at the mobile number D4H has for them. Two people with
-          the same number get a code by email instead.
+          team turns on member logins. Two people with the same number get a code by email
+          instead.
         </p>
         <p :if={not Twilio.delivers?()} id="login-dev-text">
           In development the text is kept in the <.a href="/dev/outbox" external={true}>outbox</.a>, not sent.

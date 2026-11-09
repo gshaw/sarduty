@@ -18,11 +18,11 @@ defmodule Web.UserLoginLive do
         Log in to connect an AI agent to {@agent_team}.
       </p>
       <p :if={@text_login}>
-        Enter the email or mobile number D4H has for you. If you may log in, we'll send you a
+        Enter the email or mobile number your team has for you. If you may log in, we'll send you a
         code. There's no password.
       </p>
       <p :if={not @text_login}>
-        Enter the email D4H has for you. If you may log in, we'll email you a code. There's
+        Enter the email your team has for you. If you may log in, we'll email you a code. There's
         no password.
       </p>
       <p class="hint">

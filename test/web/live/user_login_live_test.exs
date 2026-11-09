@@ -55,6 +55,7 @@ defmodule Web.UserLoginLiveTest do
            )
 
     refute has_element?(lv, ~s(#login_code_form input[name="user[remember_me]"][checked]))
+    refute has_element?(lv, "#login-webotp")
 
     {:ok, lv, _html} = live(conn, ~p"/login/code")
     assert has_element?(lv, "#login-code", "pat@example.com")
@@ -124,6 +125,7 @@ defmodule Web.UserLoginLiveTest do
              )
 
       refute has_element?(lv, ~s(#login_code_form input[name="user[email]"]))
+      assert has_element?(lv, ~s(#login_code_form #login-webotp[phx-hook=WebOTP]))
     end
   end
 end

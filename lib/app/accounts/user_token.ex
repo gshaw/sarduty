@@ -7,8 +7,10 @@ defmodule App.Accounts.UserToken do
   @rand_size 32
 
   # A login code is single use and short-lived: anyone who can read the inbox can use it.
-  # Six digits are guessable, so a code dies after 5 wrong tries, and Web.LoginLimit caps
-  # misses per email and IP across codes.
+  # Eight digits, so a code dies after 5 wrong tries, and Web.LoginLimit caps misses per
+  # email, number and IP across codes: someone who keeps trying at one email for a year
+  # gets in about 1 time in 13,700, or 1 in 6,850 at an account with text login too (#969).
+  @code_digits 8
   @login_validity_in_minutes 15
   @login_max_attempts 5
   @session_validity_in_days 60
@@ -44,18 +46,23 @@ defmodule App.Accounts.UserToken do
   end
 
   @doc """
-  A six-digit login code. `sent_to` gets the code: the user's email, or an E.164 number
+  An 8-digit login code. `sent_to` gets the code: the user's email, or an E.164 number
   for a text. The database keeps only its hash.
   """
   def build_login_code(user, sent_to \\ nil), do: build_code(user, "login", sent_to || user.email)
 
   @doc """
-  A six-digit code in `context`: "login", or "confirm" for a member proving they get
+  An 8-digit code in `context`: "login", or "confirm" for a member proving they get
   mail or texts at a new email or number (#156). It lives and dies like a login code.
   """
   def build_code(user, context, sent_to) when context in ["login", "confirm"] do
-    <<n::32>> = :crypto.strong_rand_bytes(4)
-    code = n |> rem(1_000_000) |> Integer.to_string() |> String.pad_leading(6, "0")
+    <<n::64>> = :crypto.strong_rand_bytes(8)
+
+    code =
+      n
+      |> rem(Integer.pow(10, @code_digits))
+      |> Integer.to_string()
+      |> String.pad_leading(@code_digits, "0")
 
     {code,
      %UserToken{
@@ -66,9 +73,18 @@ defmodule App.Accounts.UserToken do
      }}
   end
 
+  @doc "A code as people read it, in groups of 4: `4829 1375`."
+  def format_code(code) do
+    {first, last} = String.split_at(code, div(@code_digits, 2))
+    first <> " " <> last
+  end
+
+  @doc "A code as typed or pasted, without the spaces and dashes of its groups."
+  def normalize_code(code), do: String.replace(code, ~r/[\s-]/u, "")
+
   @doc """
-  A code's hash, keyed with the app's secret: a million codes are quick to try against
-  a plain hash, so a copy of the database alone mustn't be enough.
+  A code's hash, keyed with the app's secret: a hundred million codes are quick to try
+  against a plain hash, so a copy of the database alone mustn't be enough.
   """
   # cspell:ignore hmac -- the :crypto.mac/4 algorithm name
   def hash_code(user, code) do

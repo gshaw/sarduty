@@ -208,8 +208,8 @@ defmodule Web.HomePageLive do
         <% true -> %>
           <p class="home-start-title">You are not on a team yet</p>
           <p>
-            Your email is not an Owner or Editor on any team SAR Duty knows. Check the email D4H
-            has for you, or ask an Owner of your team in D4H.
+            Your email is not an Owner or Editor on any team SAR Duty knows. Check the email your
+            team has for you, or ask an Owner of your team.
           </p>
           <div class="home-cta">
             <.button navigate={~p"/signup"} variant={:primary}>Sign up a team</.button>
