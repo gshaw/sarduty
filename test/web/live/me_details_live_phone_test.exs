@@ -60,6 +60,7 @@ defmodule Web.MeDetailsLivePhoneTest do
 
     code = send_code(lv, "(604) 555-0199")
     assert has_element?(lv, "#code-sent", "604-555-0199")
+    assert has_element?(lv, ~s(#code-form #code-webotp[phx-hook=WebOTP]))
     refute_received {:patch, _body}
 
     lv |> form("#code-form", confirm: %{code: code}) |> render_submit()

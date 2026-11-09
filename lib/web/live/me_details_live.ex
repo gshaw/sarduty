@@ -259,6 +259,7 @@ defmodule Web.MeDetailsLive do
         autocomplete="one-time-code"
         required
       />
+      <div id="code-webotp" phx-hook="WebOTP" />
       <.form_actions>
         <.button variant={:success} phx-disable-with="Checking…">Confirm code</.button>
         <.button id="cancel-code" type="button" phx-click="cancel">Cancel</.button>
