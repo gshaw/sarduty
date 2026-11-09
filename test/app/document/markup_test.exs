@@ -1,7 +1,7 @@
 defmodule App.Document.MarkupTest do
   use ExUnit.Case, async: true
 
-  # cspell:ignore Łukasz Nowak -- a name past WinAnsi (#917)
+  # cspell:ignore Łukasz Nowak luma -- a name past WinAnsi (#917), and Typst's grey
 
   alias App.Document.Markup
 

@@ -43,11 +43,9 @@ defmodule App.Operation.DeleteTeamTest do
     }
 
     {:ok, _pdf} =
-      PublishedPDF.publish(
-        Map.put(attrs, :code, PublishedPDF.generate_code()),
-        %{attachment: pdf},
-        old.id
-      )
+      attrs
+      |> Map.put(:code, PublishedPDF.generate_code())
+      |> PublishedPDF.publish(%{attachment: pdf}, old.id)
 
     item = equipment_item_fixture(team)
     equipment_usage_fixture(activity, item)

@@ -23,8 +23,8 @@ defmodule App.DataFixtures do
   alias App.Model.MemberCard
   alias App.Model.MemberQualificationAward
   alias App.Model.Organization
-  alias App.Model.Qualification
   alias App.Model.PublishedPDF
+  alias App.Model.Qualification
   alias App.Model.Tag
   alias App.Model.TaxCreditLetter
   alias App.Model.Team

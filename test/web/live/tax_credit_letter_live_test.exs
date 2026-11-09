@@ -141,7 +141,7 @@ defmodule Web.TaxCreditLetterLiveTest do
       replaced = TaxCreditLetter |> Repo.get!(letter.id) |> Repo.preload(:pdf)
       assert {:code, _code} = PublishedPDF.parse_code(replaced.pdf.code)
       assert replaced.pdf.code != letter.pdf.code
-      assert PublishedPDF.status(Repo.reload!(letter.pdf)) == :replaced
+      assert letter.pdf |> Repo.reload!() |> PublishedPDF.status() == :replaced
       assert replaced.primary_minutes == 90
       assert replaced.letter_content =~ "Primary Hours: 1h 30m\n"
 

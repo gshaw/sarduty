@@ -237,6 +237,10 @@ defmodule Web.VerifyLive do
           A real card's QR code always opens <b class="text-text">{Web.VerifyHost.host()}</b>. Add this page
           to your home screen if you verify ID cards often.
         </p>
+        <p id="documents-note">
+          A document a team published through SAR Duty, such as a tax credit letter, has a
+          verify code too. Scan it, or type the 15 letters and numbers under it.
+        </p>
         <p class="action">
           <.a id="samples-link" navigate={~p"/samples"}>Try a sample card</.a>
         </p>

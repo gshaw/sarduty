@@ -205,15 +205,16 @@ defmodule App.Document.Checker do
     expects =
       Enum.flat_map(doc.expects, &[&1.check | for({t, _v, _l} <- &1.given, do: t)])
 
-    defaults = Enum.map(doc.asks, & &1.default)
-    computes = Enum.map(doc.computes, & &1.value)
-
-    shows = Enum.map(doc.verify_shows, & &1.value)
-
-    [title, doc.keep, shows, defaults, computes, fill, expects]
+    [title, doc.keep, named_values(doc), fill, expects]
     |> List.flatten()
     |> Enum.reject(&is_nil/1)
   end
+
+  # The values an ask's default, a compute, and a verify shows line hold.
+  defp named_values(doc),
+    do:
+      Enum.map(doc.asks, & &1.default) ++
+        Enum.map(doc.computes, & &1.value) ++ Enum.map(doc.verify_shows, & &1.value)
 
   defp fill_values(%{value: {:each, _report, fills}}), do: Enum.map(fills, & &1.value)
   defp fill_values(fill), do: [fill.value]

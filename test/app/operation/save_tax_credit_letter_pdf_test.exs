@@ -52,7 +52,7 @@ defmodule App.Operation.SaveTaxCreditLetterPDFTest do
 
       assert PublishedPDF.letter_attachment(replaced).content != before
       assert replaced.pdf.code != old.code
-      assert PublishedPDF.status(Repo.reload!(old)) == :replaced
+      assert old |> Repo.reload!() |> PublishedPDF.status() == :replaced
       assert Repo.aggregate(PublishedPDFFile, :count) == 2
     end
 

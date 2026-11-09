@@ -91,6 +91,7 @@ defmodule App.Model.PublishedPDF do
   def parse_code(_input), do: nil
 
   # `length` characters of the ID card alphabet, MemberCard's: no 0/O, 1/I/L, or U.
+  # cspell:ignore HJKMNP
   defp alphabet?(code, length),
     do: String.length(code) == length and code =~ ~r/^[2-9A-HJKMNP-TV-Z]+$/
 
@@ -116,7 +117,7 @@ defmodule App.Model.PublishedPDF do
   when another took its place since, nothing is saved and it's `{:error, :stale}`.
   Gives `{:ok, pdf}`. Call it inside the caller's transaction when it writes more.
   """
-  def publish(attrs, %{attachment: attachment} = printed, current_id) do
+  def publish(attrs, printed, current_id) do
     Repo.transaction(fn ->
       current = get_current(attrs.team_id, attrs.name, attrs.subject)
 
@@ -127,32 +128,37 @@ defmodule App.Model.PublishedPDF do
       # one current PDF at a time: for a moment it's replaced by itself.
       if current, do: set_replaced_by!(current, current.id)
 
-      pdf =
-        Repo.insert!(%PublishedPDF{
-          team_id: attrs.team_id,
-          name: attrs.name,
-          subject: attrs.subject,
-          code: attrs.code,
-          tax_credit_letter_id: attrs[:tax_credit_letter_id],
-          member_id: attrs[:member_id],
-          year: attrs[:year],
-          activity_id: attrs[:activity_id],
-          form_id: attrs[:form_id],
-          form_version: attrs[:form_version],
-          user_id: attrs[:user_id],
-          answers: attrs[:answers] || %{},
-          keep: printed[:keep] || %{},
-          shows: printed[:shows] || [],
-          title: attachment.title,
-          filename: attachment.filename,
-          byte_size: byte_size(attachment.content),
-          sha256: :sha256 |> :crypto.hash(attachment.content) |> Base.encode16(case: :lower)
-        })
-
-      Repo.insert!(%PublishedPDFFile{published_pdf_id: pdf.id, bytes: attachment.content})
+      pdf = insert!(attrs, printed)
       if current, do: set_replaced_by!(current, pdf.id)
       pdf
     end)
+  end
+
+  defp insert!(attrs, %{attachment: attachment} = printed) do
+    pdf =
+      Repo.insert!(%PublishedPDF{
+        team_id: attrs.team_id,
+        name: attrs.name,
+        subject: attrs.subject,
+        code: attrs.code,
+        tax_credit_letter_id: attrs[:tax_credit_letter_id],
+        member_id: attrs[:member_id],
+        year: attrs[:year],
+        activity_id: attrs[:activity_id],
+        form_id: attrs[:form_id],
+        form_version: attrs[:form_version],
+        user_id: attrs[:user_id],
+        answers: attrs[:answers] || %{},
+        keep: printed[:keep] || %{},
+        shows: printed[:shows] || [],
+        title: attachment.title,
+        filename: attachment.filename,
+        byte_size: byte_size(attachment.content),
+        sha256: :sha256 |> :crypto.hash(attachment.content) |> Base.encode16(case: :lower)
+      })
+
+    Repo.insert!(%PublishedPDFFile{published_pdf_id: pdf.id, bytes: attachment.content})
+    pdf
   end
 
   defp set_replaced_by!(pdf, id),
@@ -218,11 +224,11 @@ defmodule App.Model.PublishedPDF do
     |> preload(:member)
     |> Repo.all()
     |> Enum.filter(&(&1.member && TaxCreditLetter.last_name_matches?(&1.member, last_name || "")))
-    |> case do
-      [pdf] -> pdf
-      _none_or_several -> nil
-    end
+    |> only_one()
   end
+
+  defp only_one([pdf]), do: pdf
+  defp only_one(_none_or_several), do: nil
 
   defp verify_preload(query), do: preload(query, [:replaced_by, team: :organization])
 end

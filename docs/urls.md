@@ -95,8 +95,8 @@ Devices, Google, Apple, and shared links hold these. They don't move.
   `/.well-known/oauth-…/teams/:subdomain…` metadata addresses: agents keep them from
   their first connection (#761).
 - On the verify site: `/:code` (the QR code), `/:code/photo`, `/:code/banner` (the Google
-  Wallet banner), `/orgs/:slug`, `/letters/:ref` (the QR code on every tax credit
-  letter since #207), `/samples`, the sample ID cards (#854), and `/api/v1/cards/:code`,
+  Wallet banner), `/orgs/:slug`, `/letters/:ref` (the QR code on tax credit
+  letters from #207 to #970, which redirects to `/:ref`), `/samples`, the sample ID cards (#854), and `/api/v1/cards/:code`,
   the card check as JSON that apps scanning cards call (#299). A change that breaks those
   apps goes in `/api/v2`.
 

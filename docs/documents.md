@@ -19,7 +19,8 @@ or calls Typst: printing is App.Operation.PrintDocument's.
 ## The clauses
 
 They come in this order. `report`, `const`, `ask`, `compute`, and `expect` can repeat;
-`fill` comes once, and once more as `fill each` for a form's rows; the rest come once.
+`fill` comes once, and once more as `fill each` for a form's rows; `verify` comes as
+`verify code` and `verify shows`, once each; the rest come once.
 `layout` comes last, and every line after it is Typst.
 
 | Clause                              | What it says                                                                                      |
@@ -34,6 +35,8 @@ They come in this order. `report`, `const`, `ask`, `compute`, and `expect` can r
 | `title '…' by …`                    | The PDF's title and author.                                                                       |
 | `lock print`                        | The PDF can only be printed (`Service.PDFLock`). Never on a form: the agency writes on it.        |
 | `keep hours.primary, …`             | Values saved with the PDF: what a report reads, and answers.                                      |
+| `verify code bottom right`          | Where the verify code prints, or `none` ([Verify code](#verify-code)).                            |
+| `verify shows` and values under it  | What the PDF's verify page shows ([Verify code](#verify-code)).                                   |
 | `page`                              | The values print on the form's own page PDF.                                                      |
 | `places`                            | Where each value goes.                                                                            |
 | `fill`                              | What goes in each place. `fill each people into rows` fills a row each ([Rows](#rows)).           |
@@ -72,7 +75,7 @@ leaves it out. Text compares exactly, case and all, since an expect checks what 
 | `today`                                            | The team's date today.                                                   |
 | `page`, `pages`                                    | In `fill`: which copy of a form's page, and how many ([Rows](#rows)).    |
 | `team.logo`, `organization.logo`, `team.signature` | Pictures only printing reads.                                            |
-| `pdf.reference`, `pdf.verify_link`                 | The PDF's reference number and verify link.                              |
+| `pdf.verify_link`                                  | The published PDF's verify link, for `verify code none`.                 |
 
 The pictures and the PDF's values print only. No report reads them, and `keep` refuses
 them, so the signature never reaches a report (#918).
@@ -83,7 +86,6 @@ them, so the signature never reaches a report (#918).
 places
   letterhead flow across, top 1in, right 1in, height 1in, gap 0.25in
   letter     flow down, top 1in, left 1in, right 1in, size 12pt, leading 14.4pt
-  verify     image right 1in, width 1in, height 1in, level with letter
 ```
 
 A place is `text`, `image`, `flow`, or `tick`, and lengths are in `in`, `pt`, or `mm`
@@ -117,6 +119,32 @@ places
 - `tick` draws an X across a box `size` wide when its fill, a condition, holds.
 - `page 2` puts a place on the page PDF's second page. Without it, a place is on page 1.
 - `rows` repeats a row of places down the page ([Rows](#rows)).
+
+## Verify code
+
+Every published PDF prints its verify code on every page, since an agency may separate
+them (#970): bottom left, half an inch from the edges, the QR code of its verify link,
+then "Verify this document" and the link, `verify.sarduty.com/K7Q4M-2XA9H-VB3TN`. The QR
+code holds the link in capitals, which fits a version 3 code. A draft prints a grey box
+in its place, so a team admin can check the layout before publishing.
+
+```sql
+verify code bottom right            -- or top left, top right
+verify code link only               -- or qr only, after a corner or alone
+verify code none                    -- the places put qr(pdf.verify_link) and pdf.verify_link themselves
+```
+
+`verify shows` says what the verify page shows anyone holding the paper, a label and a
+value a line. Without it, the page shows only the title, team, date, and state. It's
+checked like `keep`: a value a report reads, an answer, or a compute, never a picture or
+`pdf.verify_link`. What it printed is saved with the PDF, so the page never reads the
+definition again.
+
+```sql
+verify shows
+  'Task number' task.tracking_number
+  'Total claimed' total as money
+```
 
 ## Checks
 
@@ -439,19 +467,30 @@ through the team's organization, so a form that's off or another organization's 
 
 Search leaves the page out: it's found from its activity (`Web.Search.not_searched/0`).
 
-## Saved PDFs
+## Published PDFs
 
-A published PDF is saved as it was made, so a download or email serves the same file,
-whatever the team's logos or the document say now (#918, #950). For now only tax credit
-letters publish: making or replacing one, or emailing one that has none, saves its PDF.
-A form prints drafts only.
-[App.Model.SavedPDF](../lib/app/model/saved_pdf.ex) is one table, `saved_pdfs`, for all
-of them, with the bytes in `saved_pdf_files`, so lists never load them. Each row has its
-team, title, filename, size, and when it was made, and belongs to one of:
+A document is a draft or published, nothing in between (#970). A draft is never saved,
+says DRAFT on every page, and prints a grey box where its verify code goes. Publishing
+prints once with an ID and the verify code, and keeps the PDF, so a download or email
+serves the same file, whatever the team's logos or the definition say now. For now only
+tax credit letters publish: making or replacing one, or emailing one that has none.
 
-- **A tax credit letter**: one PDF, replaced when the letter is (`put_letter!/2`).
-- **A published form**, not yet built: its activity, the form and the version it
-  printed from, who made it, and the values it printed that `keep` names.
+[App.Model.PublishedPDF](../lib/app/model/published_pdf.ex) is one table,
+`published_pdfs`, with the bytes in `published_pdf_files`, so lists never load them.
+Each row has its team, the definition's name, its subject (`member:45:2026` or
+`activity:812`), its ID, title, filename, size, SHA-256, and when it was published; the
+values `keep` names, its answers, and what `verify shows` printed.
 
-Deleting a letter deletes its PDF. A team's purge deletes them all
-(App.Operation.DeleteTeam).
+- **The ID** is 15 characters from the ID card alphabet, about 74 bits, stored without
+  dashes and shown 5-5-5: `K7Q4M-2XA9H-VB3TN`. A letter from before #970 keeps its
+  reference number, `SRVTC-K7Q4M2XA`.
+- **One current PDF** per subject and definition, held by a unique index. Publishing
+  again (`publish/3`) keeps the old one, Replaced. It takes the current PDF's id the
+  person saw, and refuses when another took its place meanwhile.
+- **No delete.** A team's purge deletes them all (App.Operation.DeleteTeam). Deleting a
+  letter still deletes its PDFs, until letters withdraw instead.
+
+The verify site's root takes a card code or a document ID, and the length says which:
+10 characters is a card, 15 a document. A current one shows its title, team, date, and
+what `verify shows` printed; a replaced or withdrawn one says so and shows nothing from
+the PDF. `/letters/:ref` redirects to `/:ref` for good, since printed letters carry it.

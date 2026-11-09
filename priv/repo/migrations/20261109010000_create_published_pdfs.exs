@@ -224,6 +224,7 @@ defmodule App.Repo.Migrations.CreatePublishedPdfs do
   end
 
   # 8 characters from the ID card alphabet, as reference numbers were.
+  # cspell:ignore ABCDEFGHJKMNPQRSTVWXYZ
   defp old_code do
     alphabet = ~c"23456789ABCDEFGHJKMNPQRSTVWXYZ"
     for _ <- 1..8, into: "", do: <<Enum.random(alphabet)>>

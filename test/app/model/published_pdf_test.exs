@@ -61,7 +61,7 @@ defmodule App.Model.PublishedPDFTest do
       }
 
     test "saves the PDF, what it keeps and shows, and its checksum", %{team: team} do
-      {:ok, pdf} = PublishedPDF.publish(attrs(team, "AAAAABBBBBCCCCC"), printed("one"), nil)
+      {:ok, pdf} = team |> attrs("K7Q4M2XA9HVB3TN") |> PublishedPDF.publish(printed("one"), nil)
 
       assert PublishedPDF.status(pdf) == :current
       assert pdf.keep == %{"total" => 3}
@@ -70,10 +70,10 @@ defmodule App.Model.PublishedPDFTest do
     end
 
     test "publishing again replaces the current one, which stays", %{team: team} do
-      {:ok, first} = PublishedPDF.publish(attrs(team, "AAAAABBBBBCCCCC"), printed("one"), nil)
+      {:ok, first} = team |> attrs("K7Q4M2XA9HVB3TN") |> PublishedPDF.publish(printed("one"), nil)
 
       {:ok, second} =
-        PublishedPDF.publish(attrs(team, "DDDDDEEEEEFFFFF"), printed("two"), first.id)
+        team |> attrs("M2XA9HVB3TNK7Q4") |> PublishedPDF.publish(printed("two"), first.id)
 
       first = Repo.reload!(first)
       assert first.replaced_by_id == second.id
@@ -82,12 +82,13 @@ defmodule App.Model.PublishedPDFTest do
     end
 
     test "when another published meanwhile, nothing is saved", %{team: team} do
-      {:ok, _first} = PublishedPDF.publish(attrs(team, "AAAAABBBBBCCCCC"), printed("one"), nil)
+      {:ok, _first} =
+        team |> attrs("K7Q4M2XA9HVB3TN") |> PublishedPDF.publish(printed("one"), nil)
 
-      assert PublishedPDF.publish(attrs(team, "DDDDDEEEEEFFFFF"), printed("two"), nil) ==
+      assert team |> attrs("M2XA9HVB3TNK7Q4") |> PublishedPDF.publish(printed("two"), nil) ==
                {:error, :stale}
 
-      refute Repo.get_by(PublishedPDF, code: "DDDDDEEEEEFFFFF")
+      refute Repo.get_by(PublishedPDF, code: "M2XA9HVB3TNK7Q4")
     end
   end
 

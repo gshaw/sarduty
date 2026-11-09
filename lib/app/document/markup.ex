@@ -172,6 +172,7 @@ defmodule App.Document.Markup do
 
   # The verify code as `#let verify-code`, which each page places, and the files and
   # values it reads: `{markup, {files, values}}`, or "" when nothing prints.
+  # cspell:ignore luma -- Typst's grey
   @verify_margin 36
   @verify_qr 50
   @verify_size 7
