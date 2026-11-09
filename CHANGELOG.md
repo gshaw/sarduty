@@ -4,9 +4,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
-- Login codes are 8 digits, shown as 4829 1375, so they're far harder to guess. On an
-  iPhone or a Mac, Safari offers the code from Mail or Messages. On Android, Chrome asks
-  to fill in a texted code.
+- Login codes are 8 digits, shown as 4829 1375 (4829-1375 in a text), so they're far
+  harder to guess. On an iPhone or a Mac, Safari offers the code from Mail or Messages.
+  On Android, Chrome asks to fill in a texted code.
 - The login page asks for the email or mobile number your team has for you.
 
 ## Nov 2–8
