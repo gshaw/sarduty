@@ -15,11 +15,17 @@ defmodule App.Repo.Migrations.LettersArePublishedPdfs do
   # migration runs outside Ecto's, on one connection, and copies inside its own.
   @disable_ddl_transaction true
 
+  # Part 1's App.Worker.RenewLetterCodesWorker gives each letter from before #970 an ID
+  # and prints it again from its letter's row. It needs the letters table, so this waits
+  # until it's done: then every code is an ID, and the code index is plainly unique.
+
   @columns ~w(id team_id name subject code member_id year activity_id form_id form_version
               user_id replaced_by_id withdrawn_at withdrawn_by_id title filename byte_size
               sha256 keep answers shows inserted_at)
 
   def up do
+    check_codes_renewed()
+
     run([
       table_sql("published_pdfs_new", ~s|"first_opened_at" TEXT, "email_status" TEXT,|),
       """
@@ -79,6 +85,18 @@ defmodule App.Repo.Migrations.LettersArePublishedPdfs do
     ])
   end
 
+  defp check_codes_renewed do
+    %{rows: [[old]]} =
+      repo().query!("SELECT count(*) FROM published_pdfs WHERE length(code) != 15")
+
+    if old > 0,
+      do:
+        raise(
+          "#{old} published PDFs still have a code from before #970. " <>
+            "Run App.Worker.RenewLetterCodesWorker.enqueue() on part 1 first."
+        )
+  end
+
   defp run(statements) do
     repo = repo()
 
@@ -128,8 +146,7 @@ defmodule App.Repo.Migrations.LettersArePublishedPdfs do
 
   defp indexes do
     [
-      ~s|CREATE UNIQUE INDEX "published_pdfs_unique_code_index" ON "published_pdfs" ("code") WHERE length(code) > 11|,
-      ~s|CREATE INDEX "published_pdfs_code_index" ON "published_pdfs" ("code")|,
+      ~s|CREATE UNIQUE INDEX "published_pdfs_code_index" ON "published_pdfs" ("code")|,
       ~s|CREATE UNIQUE INDEX "published_pdfs_current_index" ON "published_pdfs" ("team_id", "name", "subject") WHERE replaced_by_id IS NULL AND withdrawn_at IS NULL|,
       ~s|CREATE INDEX "published_pdfs_member_id_index" ON "published_pdfs" ("member_id")|,
       ~s|CREATE INDEX "published_pdfs_activity_id_index" ON "published_pdfs" ("activity_id")|,

@@ -8,7 +8,6 @@ defmodule App.Model.PublishedPDF do
   alias App.Model.MemberCard
   alias App.Model.PublishedPDF
   alias App.Model.PublishedPDFFile
-  alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Repo
 
@@ -25,9 +24,7 @@ defmodule App.Model.PublishedPDF do
     field :name, :string
     # What it's for: `member:45:2026` for a member's year, `activity:812` for an activity.
     field :subject, :string
-    # Its ID: 15 characters, stored without dashes. A letter from before #970 has its
-    # old reference number until App.Worker.RenewLetterCodesWorker gives it an ID; an
-    # old reference number never verifies.
+    # Its ID: 15 characters, stored without dashes.
     field :code, :string, redact: true
     belongs_to :member, Member
     field :year, :integer
@@ -149,33 +146,6 @@ defmodule App.Model.PublishedPDF do
 
   defp set_replaced_by!(pdf, id),
     do: PublishedPDF |> where(id: ^pdf.id) |> Repo.update_all(set: [replaced_by_id: id])
-
-  @doc """
-  Replaces a PDF's ID, file, and what it printed with `printed`, a new print of the same
-  document, in one transaction (App.Operation.RenewLetterCodes). Its row and date stay.
-  """
-  def reprint!(%PublishedPDF{} = pdf, %{attachment: attachment, code: code} = printed) do
-    {:ok, pdf} =
-      Repo.transaction(fn ->
-        PublishedPDFFile
-        |> where(published_pdf_id: ^pdf.id)
-        |> Repo.update_all(set: [bytes: attachment.content])
-
-        pdf
-        |> Ecto.Changeset.change(
-          code: code,
-          title: attachment.title,
-          filename: attachment.filename,
-          byte_size: byte_size(attachment.content),
-          sha256: :sha256 |> :crypto.hash(attachment.content) |> Base.encode16(case: :lower),
-          keep: printed.keep,
-          shows: printed.shows
-        )
-        |> Repo.update!()
-      end)
-
-    pdf
-  end
 
   @doc """
   Marks the PDF withdrawn by `user` at `now`: `{:ok, pdf}`, or `{:error, :not_current}`

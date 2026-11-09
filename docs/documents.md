@@ -523,9 +523,8 @@ Each row has its team, the definition's name, its subject (`member:45:2026` or
 values `keep` names, its answers, and what `verify shows` printed.
 
 - **The ID** is 15 characters from the ID card alphabet, about 74 bits, stored without
-  dashes and shown 5-5-5: `K7Q4M-2XA9H-VB3TN`. Only these verify: a letter from before
-  #970 gets one, and its PDF prints again, once after deploy
-  (App.Worker.RenewLetterCodesWorker).
+  dashes and shown 5-5-5: `K7Q4M-2XA9H-VB3TN`. Only these verify: each letter from before
+  #970 got one, and its PDF printed again, once after part 1 deployed.
 - **One current PDF** per subject and definition, held by a unique index. Publishing
   again (`publish/3`) keeps the old one, Replaced. It takes the current PDF's id the
   person saw, and refuses when another took its place meanwhile.

@@ -30,7 +30,7 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
   Each letter from before #970 got an ID and its saved PDF printed again with the new
   verify code, once, after part 1 of #970 deployed, so no saved PDF carries a dead code.
 - **A letter is its published PDF** (#970): a row in `published_pdfs` named `Tax credit
-  letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](../lib/app/model/tax_credit_letter.ex)
+letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](../lib/app/model/tax_credit_letter.ex)
   has its queries and rules). Its ID, the hours it kept, its date, who published it, its
   member's first download, and its email status are on it. Its page shows what its
   verify page shows, not its text.
@@ -51,8 +51,7 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
   letter's link, `/letters/:ref`, is not found.
 - **Hours print as the letters table shows them**, from `Service.Format.duration/1`:
   "212h 30m", or "202 hours" when there are no minutes (#260). Nothing is rounded, so
-  the letter, the verify page, and the saved minutes agree. `TaxCreditLetter.parse_minutes/1`
-  reads this and the older "212 hours, 30 minutes".
+  the letter, the verify page, and the saved minutes agree.
 - **The letter cites the Act, not a police force.** "An eligible search and rescue
   organization under subsection 118.07(1) of the Income Tax Act" is true in every
   province. A letter's text and PDF are saved when it's made, so changing the wording

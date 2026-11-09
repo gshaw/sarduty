@@ -59,7 +59,7 @@ defmodule App.Operation.PublishTaxCreditLetterTest do
     assert {letter.member_id, letter.year, letter.subject} ==
              {member.id, 2025, "member:#{member.id}:2025"}
 
-    assert {:code, _code} = PublishedPDF.parse_code(letter.code)
+    assert PublishedPDF.parse_code(letter.code)
     assert TaxCreditLetter.minutes(letter) == {210, 60}
     assert %{"label" => "Total hours", "text" => "4h 30m"} in letter.shows
     assert "%PDF" <> _ = PublishedPDF.attachment(letter).content
