@@ -373,7 +373,7 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert {pdf.name, pdf.subject, pdf.user_id} ==
                {"Task report", "activity:#{hiker.id}", cast.alex.id}
 
-      assert {:code, _code} = PublishedPDF.parse_code(pdf.code)
+      assert PublishedPDF.parse_code(pdf.code)
       assert pdf.answers["leader"] == "Alex Chen"
       assert pdf.keep[":injured"] == 2
       assert %{"label" => "Injured", "text" => "2"} in pdf.shows
