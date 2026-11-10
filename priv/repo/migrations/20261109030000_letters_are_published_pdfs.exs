@@ -4,8 +4,9 @@ defmodule App.Repo.Migrations.LettersArePublishedPdfs do
   # cspell:ignore fkey (ecto_sqlite3's suffix for a foreign key's constraint name)
 
   # A tax credit letter is its published PDF (#970, part 3): its ID, hours, and date are
-  # already there, and its first download and email status move over, onto its current
-  # PDF. `tax_credit_letters` goes, with each letter's text: the letter page shows what
+  # already there, and its email status moves over, onto its current PDF. Its first
+  # download goes: it only took the letter off the member's For you to do, which is gone.
+  # Down gives a letter back with no download. `tax_credit_letters` goes, with each letter's text: the letter page shows what
   # its verify page shows instead. A letter with no PDF would go with it, so the migration
   # refuses while there is one; production had none (2026-11-07, 232 letters and 232 PDFs).
   #
@@ -28,10 +29,10 @@ defmodule App.Repo.Migrations.LettersArePublishedPdfs do
     check_letters_have_pdfs()
 
     run([
-      table_sql("published_pdfs_new", ~s|"first_opened_at" TEXT, "email_status" TEXT,|),
+      table_sql("published_pdfs_new", ~s|"email_status" TEXT,|),
       """
-      INSERT INTO published_pdfs_new (#{columns()}, first_opened_at, email_status)
-      SELECT #{columns("p.")}, l.downloaded_at, l.email_status
+      INSERT INTO published_pdfs_new (#{columns()}, email_status)
+      SELECT #{columns("p.")}, l.email_status
       FROM published_pdfs p
       LEFT JOIN tax_credit_letters l ON l.id = p.tax_credit_letter_id
         AND p.replaced_by_id IS NULL AND p.withdrawn_at IS NULL
@@ -65,7 +66,7 @@ defmodule App.Repo.Migrations.LettersArePublishedPdfs do
       INSERT INTO tax_credit_letters (id, member_id, year, letter_content, inserted_at,
         primary_minutes, secondary_minutes, downloaded_at, email_status)
       SELECT id, member_id, year, '', inserted_at, json_extract(keep, '$."hours.primary"'),
-        json_extract(keep, '$."hours.secondary"'), first_opened_at, email_status
+        json_extract(keep, '$."hours.secondary"'), NULL, email_status
       FROM published_pdfs
       WHERE name = 'Tax credit letter' AND replaced_by_id IS NULL AND withdrawn_at IS NULL
       """,

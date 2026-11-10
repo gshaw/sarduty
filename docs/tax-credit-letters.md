@@ -87,7 +87,7 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   verify page shows the member's name, the year, and the hours, from the letter's
   `verify shows`.
 
-- **A member's download is recorded** (#389): the first time a member downloads their
-  letter from their own pages sets its PDF's `first_opened_at`, and the letter leaves their For you
-  to do. Only the newest letter shows there, and only for last year or this year. A team
-  admin's download doesn't count. A replaced letter is a new row, so it shows again.
+- **No download tracking, and no For you to do item** (#389, dropped in #970): the
+  email attaches the PDF, so publishing is the notice. A member with no email shows in
+  Needs attention ("N members have no email, mobile phone, or address") until one is
+  added. The letter stays on Your membership with Download letter all year.

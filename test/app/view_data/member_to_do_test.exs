@@ -3,14 +3,7 @@ defmodule App.ViewData.MemberToDoTest do
 
   alias App.ViewData.MemberToDo
 
-  @now ~U[2026-10-20 19:00:00Z]
-  # Letter season, January to April.
-  @in_season ~U[2026-03-10 19:00:00Z]
-  @tz "America/Vancouver"
   @card %{id: 1}
-
-  defp letter(year, first_opened_at \\ nil),
-    do: %{id: year, year: year, first_opened_at: first_opened_at}
 
   defp row(status, title, days_left),
     do: %{status: status, award: %{qualification: %{title: title}}, days_left: days_left}
@@ -18,9 +11,9 @@ defmodule App.ViewData.MemberToDoTest do
   defp keys(items), do: Enum.map(items, & &1.key)
 
   test "the card stays until it's in Wallet, and a member with no card has no item" do
-    assert keys(MemberToDo.items(@card, false, [], [], @now, @tz)) == [:card]
-    assert MemberToDo.items(@card, true, [], [], @now, @tz) == []
-    assert MemberToDo.items(nil, false, [], [], @now, @tz) == []
+    assert keys(MemberToDo.items(@card, false, [])) == [:card]
+    assert MemberToDo.items(@card, true, []) == []
+    assert MemberToDo.items(nil, false, []) == []
   end
 
   test "each qualification expiring within 60 days, with its days left" do
@@ -31,26 +24,13 @@ defmodule App.ViewData.MemberToDoTest do
       row(:expired, "Rope", -750)
     ]
 
-    assert [%{days: 41}, %{days: 1}] = MemberToDo.items(nil, false, [], rows, @now, @tz)
+    assert [%{days: 41}, %{days: 1}] = MemberToDo.items(nil, false, rows)
   end
 
-  test "the newest letter until downloaded, and only last year's or this year's" do
-    assert [%{key: :letter, letter: %{year: 2025}}] =
-             MemberToDo.items(nil, false, [letter(2024), letter(2025)], [], @in_season, @tz)
-
-    downloaded = [letter(2025, @in_season), letter(2024)]
-    assert MemberToDo.items(nil, false, downloaded, [], @in_season, @tz) == []
-    assert MemberToDo.items(nil, false, [letter(2023)], [], @in_season, @tz) == []
-  end
-
-  test "the letter only in letter season, January to April" do
-    assert MemberToDo.items(nil, false, [letter(2025)], [], @now, @tz) == []
-  end
-
-  test "items come card, qualifications, then the letter" do
+  test "items come card, then qualifications" do
     rows = [row(:expiring, "First Aid", 41)]
-    items = MemberToDo.items(@card, false, [letter(2025)], rows, @in_season, @tz)
-    assert keys(items) == [:card, :qualification, :letter]
+    items = MemberToDo.items(@card, false, rows)
+    assert keys(items) == [:card, :qualification]
   end
 
   test "declined chores are one item until the member deletes them" do
@@ -61,9 +41,9 @@ defmodule App.ViewData.MemberToDoTest do
     ]
 
     assert [%{key: :declined_chores, chores: [%{id: 1}, %{id: 3}]}] =
-             MemberToDo.items(nil, false, [], [], @now, @tz, chores: chores)
+             MemberToDo.items(nil, false, [], chores: chores)
 
-    assert MemberToDo.items(nil, false, [], [], @now, @tz, chores: [%{status: :waiting, id: 4}]) ==
+    assert MemberToDo.items(nil, false, [], chores: [%{status: :waiting, id: 4}]) ==
              []
   end
 
@@ -79,7 +59,7 @@ defmodule App.ViewData.MemberToDoTest do
     ]
 
     assert [%{key: :qualification, award: %{qualification_id: 8}}, item] =
-             MemberToDo.items(nil, false, [], rows, @now, @tz, certificates: certificates)
+             MemberToDo.items(nil, false, rows, certificates: certificates)
 
     assert %{key: :declined_certificates, certificates: [%{id: 2}]} = item
   end

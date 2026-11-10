@@ -528,8 +528,8 @@ defmodule App.DataFixtures do
   A tax credit letter, published with a stand-in PDF (#918, #970), since printing takes a
   while: a published PDF with its member loaded. `code` sets its ID; it's new by
   default. `primary_minutes` and `secondary_minutes` are
-  the hours it keeps; without them it kept none, as an old letter. `email_status`,
-  `first_opened_at`, and `inserted_at` set those. Its verify page shows the name, year,
+  the hours it keeps; without them it kept none, as an old letter. `email_status` and
+  `inserted_at` set those. Its verify page shows the name, year,
   and any hours.
   """
   def tax_credit_letter_fixture(%Member{} = member, attrs \\ %{}) do
@@ -555,7 +555,7 @@ defmodule App.DataFixtures do
       )
 
     letter
-    |> Ecto.Changeset.change(Map.take(attrs, [:email_status, :first_opened_at, :inserted_at]))
+    |> Ecto.Changeset.change(Map.take(attrs, [:email_status, :inserted_at]))
     |> Repo.update!()
     |> Map.put(:member, member)
   end

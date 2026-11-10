@@ -91,12 +91,6 @@ defmodule App.Model.TaxCreditLetter do
   def set_email_status!(%PublishedPDF{} = letter, status),
     do: letter |> Ecto.Changeset.change(email_status: status) |> Repo.update!()
 
-  @doc "Marks the letter opened by its member, once; later downloads change nothing."
-  def mark_opened(%PublishedPDF{first_opened_at: nil} = letter, now),
-    do: letter |> Ecto.Changeset.change(first_opened_at: now) |> Repo.update!()
-
-  def mark_opened(%PublishedPDF{} = letter, _now), do: letter
-
   @doc """
   The year whose letters go out now: last year. Letters for it, or for the year
   still under way, warn when attendance no longer adds up to their hours (#192).

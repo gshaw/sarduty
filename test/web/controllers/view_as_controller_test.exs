@@ -6,7 +6,6 @@ defmodule Web.ViewAsControllerTest do
 
   alias App.AccountsFixtures
   alias App.Model.Event
-  alias App.Model.PublishedPDF
   alias App.Repo
 
   # A team admin views the team as a member (#425): the member's pages, read-only.
@@ -161,14 +160,12 @@ defmodule Web.ViewAsControllerTest do
       assert id == chore.id
     end
 
-    test "the letter downloads but stays on the member's to-do",
-         %{conn: conn, team: team, sam: sam} do
+    test "the letter downloads", %{conn: conn, team: team, sam: sam} do
       letter = tax_credit_letter_fixture(sam)
       conn = view_as(conn, team, sam)
 
       conn = get(conn, ~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf")
       assert response(conn, 200)
-      assert Repo.get!(PublishedPDF, letter.id).first_opened_at == nil
     end
 
     test "no Wallet pass", %{conn: conn, team: team, sam: sam} do

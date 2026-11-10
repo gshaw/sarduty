@@ -14,7 +14,6 @@ defmodule Web.TeamDashboardLive do
   alias App.Model.Certificate
   alias App.Model.Chore
   alias App.Model.MemberCard
-  alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Model.Trip
   alias App.Model.WhiteboardNote
@@ -112,7 +111,6 @@ defmodule Web.TeamDashboardLive do
     # Only a team with ID cards on offers one, as Your membership does.
     card = if member.team.id_cards_enabled, do: MemberCard.find_current(member.team, member)
     in_wallet? = card != nil and MemberCard.in_wallet?(card)
-    letters = TaxCreditLetter.get_all_for_member(member)
     qualifications = MemberRecords.qualifications(member, now)
 
     chores =
@@ -130,10 +128,7 @@ defmodule Web.TeamDashboardLive do
         MemberToDo.items(
           card,
           in_wallet?,
-          letters,
           qualifications,
-          now,
-          member.team.timezone,
           [chores: chores, certificates: certificates] ++ travel(member, now)
         )
     )
@@ -753,23 +748,6 @@ defmodule Web.TeamDashboardLive do
     """
   end
 
-  defp to_do_item(%{item: %{key: :letter}} = assigns) do
-    ~H"""
-    <li id="to-do-letter" class="flex flex-wrap items-center gap-3 py-3">
-      <div class="flex-1 min-w-0">
-        <strong class="block">Your {@item.letter.year} tax credit letter is ready</strong>
-        <span class="hint">{letter_hours(@item.letter)}</span>
-      </div>
-      <.button
-        id="to-do-letter-download"
-        href={~p"/teams/#{@team}/me/tax-credit-letters/#{@item.letter.id}/pdf"}
-      >
-        Download letter
-      </.button>
-    </li>
-    """
-  end
-
   defp travel_hint(%{trips: [], unset: _rows}),
     do: "Not set yet. Set it before the activity is published."
 
@@ -791,18 +769,6 @@ defmodule Web.TeamDashboardLive do
 
   defp declined_certificate_hint(_certificates),
     do: "Read why, then delete them or send them again."
-
-  # "52 hours primary, 25 hours secondary", or a plain line for an old letter that kept
-  # no hours.
-  defp letter_hours(letter) do
-    case TaxCreditLetter.minutes(letter) do
-      {primary, secondary} ->
-        "#{Format.duration(primary)} primary, #{Format.duration(secondary)} secondary"
-
-      nil ->
-        "Give it to the CRA with your tax return."
-    end
-  end
 
   attr :team, :map, required: true
   attr :charts, :map, required: true, doc: "TeamDashboardViewData.chart_reports/3's"

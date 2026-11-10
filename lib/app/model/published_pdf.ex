@@ -44,9 +44,8 @@ defmodule App.Model.PublishedPDF do
     field :sha256, :string
     # The values it printed that `keep` names, by name, such as `hours.primary`.
     field :keep, :map, default: %{}, redact: true
-    # A letter's: when its member first downloaded it from their own pages, and whether
-    # its email went, sending while its job waits, then sent or failed (#970).
-    field :first_opened_at, :utc_datetime_usec
+    # A letter's: whether its email went, sending while its job waits, then sent or
+    # failed (#970).
     field :email_status, Ecto.Enum, values: [:sending, :sent, :failed]
     # Every answer it printed with, by name.
     field :answers, :map, default: %{}, redact: true
