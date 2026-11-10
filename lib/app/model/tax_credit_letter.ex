@@ -64,6 +64,16 @@ defmodule App.Model.TaxCreditLetter do
     |> Repo.one()
   end
 
+  @doc "The team's current letters among `ids`, with their members and team, as the list checks them."
+  def get_all_current(%Team{id: team_id}, ids) do
+    team_id
+    |> query()
+    |> current()
+    |> where([p], p.id in ^ids)
+    |> preload(member: :team)
+    |> Repo.all()
+  end
+
   @doc "The members on the team with a current letter for `year`."
   def member_ids(team_id, year) do
     team_id

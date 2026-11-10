@@ -45,6 +45,13 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   emailed, with a badge when it needs a team admin: Out of date, Did not send, or No
   email. Each tile is a to-do (No letter, Not emailed, Out of date), and a member can be
   in two; emailed letters show under All.
+- **Check, then act** (#970, as an activity's Members tab): team admins check members,
+  or a tile then select all, and pick one of For the checked members: Send letters,
+  Email letters, or Publish again. Each counts only the checked it fits, a choice that
+  fits none greys out and says why, and one button in the action bar does it. Send
+  letters runs in a job, Publish again in the page's background since each prints a
+  PDF, and every email has its own job
+  ([CreateTaxCreditLetters](../lib/app/operation/create_tax_credit_letters.ex)).
 - **Only the current letter verifies as current.** Publish again
   ([PublishTaxCreditLetter](../lib/app/operation/publish_tax_credit_letter.ex)) prints a
   new letter with a new ID, and the old one's verify page says Replaced and shows

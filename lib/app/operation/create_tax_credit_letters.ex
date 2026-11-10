@@ -1,3 +1,4 @@
+alias App.Accounts.User
 alias App.Model.Event
 alias App.Model.Member
 alias App.Model.TaxCreditLetter
@@ -50,10 +51,7 @@ defmodule App.Operation.CreateTaxCreditLetters do
         letter = PublishTaxCreditLetter.insert!(prepared, nil)
 
         if emailed?(member) do
-          letter
-          |> TaxCreditLetter.set_email_status!(:sending)
-          |> EmailTaxCreditLetterWorker.enqueue()
-
+          enqueue_email(letter)
           {member, :emailing}
         else
           {member, :no_email}
@@ -61,6 +59,50 @@ defmodule App.Operation.CreateTaxCreditLetters do
       end)
 
     result
+  end
+
+  @doc """
+  Emails each of these current letters again, each by its own job as Send letters does
+  (#970): those whose member has an email and whose email isn't already waiting. Gives
+  the letters emailing. Expects each with its member.
+  """
+  def email_again(letters) do
+    for letter <- letters, emailed?(letter.member), letter.email_status != :sending do
+      {:ok, letter} = Repo.transaction(fn -> enqueue_email(letter) end)
+      letter
+    end
+  end
+
+  @doc """
+  Publishes each member's letter for `year` again (#970), from `rows` of `{member_id,
+  current_id}`, the letter the list showed: a new letter with a new ID, emailed by its
+  job when the member has an email. Each is its own transaction, so one another admin
+  published meanwhile skips only itself. Gives `%{published: [letter], stale: count}`.
+  """
+  def publish_again(%Team{} = team, year, rows, %User{} = user) do
+    results =
+      for {member_id, current_id} <- rows do
+        prepared = PublishTaxCreditLetter.prepare(team, member_id, year, user.id)
+        Repo.transaction(fn -> publish_and_email(prepared, current_id) end)
+      end
+
+    %{
+      published: for({:ok, letter} <- results, do: letter),
+      stale: Enum.count(results, &(&1 == {:error, :stale}))
+    }
+  end
+
+  defp publish_and_email(prepared, current_id) do
+    case PublishTaxCreditLetter.insert(prepared, current_id) do
+      {:ok, letter} -> if emailed?(letter.member), do: enqueue_email(letter), else: letter
+      {:error, :stale} -> Repo.rollback(:stale)
+    end
+  end
+
+  defp enqueue_email(letter) do
+    letter = TaxCreditLetter.set_email_status!(letter, :sending)
+    EmailTaxCreditLetterWorker.enqueue(letter)
+    letter
   end
 
   @doc """

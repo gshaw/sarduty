@@ -8,6 +8,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
 
   alias App.Model.Event
   alias App.Model.PublishedPDF
+  alias App.Model.TaxCreditLetter
   alias App.Operation.CreateTaxCreditLetters
   alias App.Operation.SaveTeamSignature
   alias App.Repo
@@ -39,10 +40,31 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
     refute has_element?(lv, "#member_collection", member.ref_id)
   end
 
-  describe "sending letters to everyone shown" do
+  describe "check, then act (#970)" do
     setup %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
       %{conn: log_in_user(conn, user), team: team}
+    end
+
+    # Checks `members` and picks `choice`, as the person does.
+    defp check(lv, members, choice) do
+      lv
+      |> form("#letters-form", %{
+        "member_ids" => Enum.map(members, &to_string(&1.id)),
+        "choice" => choice
+      })
+      |> render_change()
+    end
+
+    defp apply_choice(lv, members, choice) do
+      check(lv, members, choice)
+
+      lv
+      |> form("#letters-form", %{
+        "member_ids" => Enum.map(members, &to_string(&1.id)),
+        "choice" => choice
+      })
+      |> render_submit()
     end
 
     # 90 minutes of primary hours in 2025.
@@ -55,7 +77,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       })
     end
 
-    test "creates and emails a letter for each member with hours and no letter",
+    test "Send letters creates and emails a letter for each checked member with none",
          %{conn: conn, team: team} do
       avery = member_fixture(team, %{name: "Avery"})
       blake = member_fixture(team, %{name: "Blake", email: nil})
@@ -66,14 +88,20 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any")
 
-      assert has_element?(lv, "#send-all-button", "Send 2 letters")
+      assert has_element?(lv, "#letters-apply[disabled]")
+      assert has_element?(lv, "#letters-bar-hint", "Check members, then select what to do.")
+
+      # Casey has a letter, so Send letters counts 2 of the 3 checked.
+      check(lv, [avery, blake, casey], "send")
+      assert has_element?(lv, "#letters-apply", "Send 2 letters")
+      assert has_element?(lv, "#letters-choice", "to the 2 checked with no letter")
 
       assert has_element?(
                lv,
-               ~s(#send-all-button[data-confirm$="No email, so not emailed: Blake."])
+               ~s(#letters-apply[data-confirm$="No email, so not emailed: Blake."])
              )
 
-      lv |> element("#send-all-button") |> render_click()
+      apply_choice(lv, [avery, blake, casey], "send")
 
       assert has_element?(
                lv,
@@ -82,7 +110,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
              )
 
       assert has_element?(lv, "#letters-no-email", "Blake")
-      refute has_element?(lv, "#send-all-button")
+      refute has_element?(lv, "#letters-select-#{avery.id}[checked]")
 
       assert_email_sent(fn email -> assert email.to == [{"", avery.email}] end)
       assert_no_email_sent()
@@ -167,11 +195,9 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
                "Avery"
              )
 
-      assert has_element?(lv, "#send-letter-#{avery.id}")
       assert has_element?(lv, "#letter-state-#{blake.id}", "Not emailed")
       assert has_element?(lv, "#letter-no-email-#{blake.id}", "No email")
       assert has_element?(lv, "#letter-state-#{casey.id}", "Emailed")
-      refute has_element?(lv, "#send-letter-#{casey.id}")
       assert has_element?(lv, "#hours-changed-#{devon.id}", "Out of date")
       refute has_element?(lv, "#member_collection th", "Email")
 
@@ -198,29 +224,109 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       for member <- members, do: attend(team, member)
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any")
+      check(lv, members, "send")
 
-      assert has_element?(lv, "#send-all-button", "Send 11 letters")
+      assert has_element?(lv, "#letters-apply", "Send 11 letters")
 
       assert has_element?(
                lv,
-               ~s(#send-all-button[data-confirm-check="I understand 10 members get this email."])
+               ~s(#letters-apply[data-confirm-check="I understand 10 members get this email."])
              )
 
-      assert has_element?(lv, ~s(#send-all-button[data-confirm-list*="not emailed: Member 1."]))
+      assert has_element?(lv, ~s(#letters-apply[data-confirm-list*="not emailed: Member 1."]))
     end
 
     test "warns that letters go out unsigned until the team has a signature",
          %{conn: conn, team: team} do
-      team |> member_fixture() |> then(&attend(team, &1))
+      member = member_fixture(team)
+      attend(team, member)
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025")
-      assert has_element?(lv, "#send-all-unsigned")
-      assert has_element?(lv, ~s(#send-all-button[data-confirm$="They go out unsigned."]))
+      assert has_element?(lv, "#letters-unsigned")
+      check(lv, [member], "send")
+      assert has_element?(lv, ~s(#letters-apply[data-confirm*="They go out unsigned."]))
 
       {:ok, _team} = SaveTeamSignature.call(team, png_fixture(600, 150))
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025")
-      refute has_element?(lv, "#send-all-unsigned")
+      refute has_element?(lv, "#letters-unsigned")
+    end
+
+    test "a choice that fits none of the checked greys out and says why",
+         %{conn: conn, team: team} do
+      avery = member_fixture(team, %{name: "Avery"})
+      attend(team, avery)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any")
+      check(lv, [avery], "send")
+
+      assert has_element?(lv, ~s(#letters-choice input[value="email"][disabled]))
+      assert has_element?(lv, "#letters-choice", "The member checked has a letter to email.")
+      assert has_element?(lv, ~s(#letters-choice input[value="publish"][disabled]))
+      refute has_element?(lv, ~s(#letters-choice input[value="send"][disabled]))
+    end
+
+    test "Email letters emails each checked letter again, by its job",
+         %{conn: conn, team: team} do
+      avery = member_fixture(team, %{name: "Avery"})
+      blake = member_fixture(team, %{name: "Blake", email: nil})
+      for member <- [avery, blake], do: attend(team, member)
+      letter = tax_credit_letter_fixture(avery, %{year: 2025, email_status: :sent})
+      tax_credit_letter_fixture(blake, %{year: 2025})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any")
+      check(lv, [avery, blake], "email")
+      assert has_element?(lv, "#letters-apply", "Email 1 letter")
+
+      apply_choice(lv, [avery, blake], "email")
+
+      assert_email_sent(fn email -> assert email.to == [{"", avery.email}] end)
+      assert_no_email_sent()
+      assert Repo.reload!(letter).email_status == :sent
+      assert render(lv) =~ "Emailing 1 letter again."
+    end
+
+    test "Publish again prints a new letter for each checked one out of date, and emails it",
+         %{conn: conn, team: team} do
+      avery = member_fixture(team, %{name: "Avery"})
+      blake = member_fixture(team, %{name: "Blake"})
+      for member <- [avery, blake], do: attend(team, member)
+
+      old =
+        tax_credit_letter_fixture(avery, %{year: 2025, primary_minutes: 60, secondary_minutes: 0})
+
+      tax_credit_letter_fixture(blake, %{year: 2025, primary_minutes: 90, secondary_minutes: 0})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any")
+      check(lv, [avery, blake], "publish")
+      assert has_element?(lv, "#letters-apply", "Publish 1 letter again")
+      assert has_element?(lv, ~s(#letters-apply[data-confirm-button="Publish again"]))
+
+      apply_choice(lv, [avery, blake], "publish")
+      render_async(lv, 10_000)
+
+      assert old |> Repo.reload!() |> PublishedPDF.status() == :replaced
+      new = TaxCreditLetter.get_current(avery, 2025)
+      assert TaxCreditLetter.minutes(new) == {90, 0}
+      assert_email_sent(fn email -> assert email.to == [{"", avery.email}] end)
+      assert render(lv) =~ "Published 1 letter again."
+      refute has_element?(lv, "#hours-changed-#{avery.id}")
+    end
+
+    test "a filter that hides a checked row unchecks it", %{conn: conn, team: team} do
+      avery = member_fixture(team, %{name: "Avery"})
+      blake = member_fixture(team, %{name: "Blake"})
+      for member <- [avery, blake], do: attend(team, member)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any")
+      check(lv, [avery, blake], "send")
+      assert has_element?(lv, "#letters-apply", "Send 2 letters")
+
+      lv
+      |> element("#tax_credit_letter_filter_form")
+      |> render_change(%{"form" => %{"q" => "ave"}})
+
+      assert has_element?(lv, "#letters-apply", "Send 1 letter")
     end
 
     test "never makes a letter for another team's member", %{team: team} do

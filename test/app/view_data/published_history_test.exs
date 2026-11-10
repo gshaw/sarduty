@@ -6,7 +6,7 @@ defmodule App.ViewData.PublishedHistoryTest do
 
   @names %{1 => "Alex Chen", 2 => "Sam Rivera"}
 
-  defp pdf(id, inserted_at, attrs \\ []),
+  defp pdf(id, inserted_at, attrs),
     do:
       struct!(
         PublishedPDF,

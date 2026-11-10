@@ -1,15 +1,30 @@
 defmodule Web.TaxCreditLetterCollectionLive do
+  @moduledoc """
+  A year's tax credit letters, one row per member (#970): each name opens the member's
+  letter for the year, sent or not, and Letter says where it is. A tile per to-do over
+  it filters it. Team admins check members and act on them under it: For the checked
+  members, Send letters, Email letters, or Publish again, and one button in the action
+  bar at the foot of the window, as on an activity's Members tab. Each choice counts
+  only the checked it fits, and one that fits none greys out and says why. The ticks
+  are the rows shown: a filter that hides a row unchecks it.
+
+  Send letters runs in a job (App.Worker.CreateTaxCreditLettersWorker) and Publish again
+  in the background of this page, since each prints a PDF; each email has its own job,
+  and each row updates as its email goes.
+  """
   use Web, :live_view_app_layout
 
+  import Web.Components.ActionBar
   import Web.Components.FilterBar
   import Web.Components.StatSwitch
 
   alias App.Model.Standing
+  alias App.Model.TaxCreditLetter
   alias App.Operation.CreateTaxCreditLetters
-  alias App.Operation.EmailTaxCreditLetter
-  alias App.Operation.PublishTaxCreditLetter
   alias App.ViewModel.TaxCreditLetterFilterViewModel
   alias App.Worker.CreateTaxCreditLettersWorker
+
+  @choices ~w(send email publish)
 
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
@@ -17,7 +32,14 @@ defmodule Web.TaxCreditLetterCollectionLive do
     if connected?(socket),
       do: Phoenix.PubSub.subscribe(App.PubSub, CreateTaxCreditLetters.topic(team.id))
 
-    {:ok, assign(socket, sending: nil, sent: nil)}
+    {:ok,
+     assign(socket,
+       sending: nil,
+       sent: nil,
+       publishing: nil,
+       selected: MapSet.new(),
+       choice: nil
+     )}
   end
 
   def handle_params(params, _uri, socket) do
@@ -51,13 +73,23 @@ defmodule Web.TaxCreditLetterCollectionLive do
         )} for {@sending.year}. This page updates when they are done.
       </p>
     </.banner>
-    <.send_all
-      :if={!@sending && @to_send != []}
-      count={length(@to_send)}
-      no_email={no_email(@to_send)}
-      year={@filter_options.year}
-      team={@current_team}
-    />
+    <.banner :if={@publishing} id="letters-publishing" title="Publishing letters again" role="status">
+      <p>
+        Printing {Service.Format.count(@publishing,
+          one: "%d new letter",
+          many: "%d new letters"
+        )}. This page updates when they are done.
+      </p>
+    </.banner>
+    <.warning_text
+      :if={!@current_team.signature and Enum.any?(@records, &is_nil(&1.tax_credit_letter_id))}
+      id="letters-unsigned"
+      class="mb-4"
+    >
+      Letters go out unsigned. Add the signer's signature in
+      <.a navigate={~p"/teams/#{@current_team}/settings/tax-credit-letters"}>team settings</.a>
+      first.
+    </.warning_text>
 
     <.stat_switch id="letter-switch" label="Letters">
       <:view
@@ -95,122 +127,212 @@ defmodule Web.TaxCreditLetterCollectionLive do
       />
     </.filter_bar>
 
-    <.table
-      id="member_collection"
-      rows={@records}
-      sort={@filter_options.sort}
-      path_fn={@path_fn}
-      class="table-striped"
+    <.form
+      :if={@records != []}
+      for={%{}}
+      id="letters-form"
+      phx-change="tick"
+      phx-submit="apply"
     >
-      <:header_row>
-        <th colspan="2"></th>
-        <th colspan="3" class="text-center">Tax credit hours</th>
-        <th></th>
-      </:header_row>
-      <:col :let={record} label="Member" sorts={[{"↑", "name"}]}>
-        <.member_cell
-          member={record.member}
-          team={@current_team}
-          standing={@standings[record.member.id]}
-          path={
-            ~p"/teams/#{@current_team}/tax-credit-letters/#{@filter_options.year}/members/#{record.member.id}"
-          }
-        />
-      </:col>
-      <:col :let={record} label="Letter" class="whitespace-nowrap">
-        <.letter_cell record={record} />
-      </:col>
+      <.table
+        id="member_collection"
+        rows={@records}
+        sort={@filter_options.sort}
+        path_fn={@path_fn}
+        class="table-striped"
+      >
+        <:header_row>
+          <th colspan="3"></th>
+          <th colspan="3" class="text-center">Tax credit hours</th>
+        </:header_row>
+        <:col :let={record} label="" class="w-px" select_all>
+          <input
+            type="checkbox"
+            id={"letters-select-#{record.member.id}"}
+            name="member_ids[]"
+            value={record.member.id}
+            checked={MapSet.member?(@selected, record.member.id)}
+            aria-label={"Check #{record.member.name}"}
+          />
+        </:col>
+        <:col :let={record} label="Member" sorts={[{"↑", "name"}]}>
+          <.member_cell
+            member={record.member}
+            team={@current_team}
+            standing={@standings[record.member.id]}
+            path={
+              ~p"/teams/#{@current_team}/tax-credit-letters/#{@filter_options.year}/members/#{record.member.id}"
+            }
+          />
+        </:col>
+        <:col :let={record} label="Letter" class="whitespace-nowrap">
+          <.letter_cell record={record} />
+        </:col>
 
-      <:col
-        :let={record}
-        label="Primary"
-        align="right"
-        class="w-px whitespace-nowrap"
-        sorts={[{"↓", "primary"}]}
-      >
-        <.hours_cell minutes={record.primary_minutes} />
-      </:col>
-      <:col
-        :let={record}
-        label="Secondary"
-        align="right"
-        class="w-px whitespace-nowrap"
-        sorts={[{"↓", "secondary"}]}
-      >
-        <.hours_cell minutes={record.secondary_minutes} />
-      </:col>
-      <:col
-        :let={record}
-        label="Total"
-        align="right"
-        class="w-px whitespace-nowrap"
-        sorts={[{"↓", "total"}]}
-      >
-        <.hours_cell minutes={record.total_minutes} />
-      </:col>
-      <:col :let={record} label="" class="w-px whitespace-nowrap">
-        <.button
-          :if={is_nil(record.tax_credit_letter_id)}
-          id={"send-letter-#{record.member.id}"}
-          variant={:success}
-          size={:sm}
-          phx-click="create"
-          value={record.member.id}
-          phx-disable-with="Sending…"
+        <:col
+          :let={record}
+          label="Primary"
+          align="right"
+          class="w-px whitespace-nowrap"
+          sorts={[{"↓", "primary"}]}
         >
-          Send letter
+          <.hours_cell minutes={record.primary_minutes} />
+        </:col>
+        <:col
+          :let={record}
+          label="Secondary"
+          align="right"
+          class="w-px whitespace-nowrap"
+          sorts={[{"↓", "secondary"}]}
+        >
+          <.hours_cell minutes={record.secondary_minutes} />
+        </:col>
+        <:col
+          :let={record}
+          label="Total"
+          align="right"
+          class="w-px whitespace-nowrap"
+          sorts={[{"↓", "total"}]}
+        >
+          <.hours_cell minutes={record.total_minutes} />
+        </:col>
+      </.table>
+      <div id="letters-choice" class="mt-8">
+        <.input
+          type="radios"
+          id="letters-choice-input"
+          name="choice"
+          label="For the checked members"
+          value={@choice}
+          options={choices(@checked)}
+        />
+      </div>
+      <.action_bar id="letters-bar" hint={bar_hint(@checked, @choice)}>
+        <.button
+          id="letters-apply"
+          variant={variant(@choice)}
+          disabled={@fit == []}
+          phx-disable-with={waiting(@choice)}
+          {confirm(@choice, @fit, @filter_options.year, @current_team)}
+        >
+          {button_text(@choice, length(@fit))}
         </.button>
-      </:col>
-    </.table>
+      </.action_bar>
+    </.form>
     """
   end
 
-  defp send_all(assigns) do
-    ~H"""
-    <div id="send-all" class="mb-4 flex flex-wrap items-center gap-4">
-      <.button
-        id="send-all-button"
-        variant={:success}
-        phx-click="send_all"
-        {send_all_confirm(@count, @no_email, @year, @team)}
-      >
-        Send {Service.Format.count(@count, one: "%d letter", many: "%d letters")}
-      </.button>
-      <span class="hint">
-        Creates and emails a letter to each member shown with hours and no letter yet.
-      </span>
-      <.warning_text :if={!@team.signature} id="send-all-unsigned" class="w-full">
-        These letters go out unsigned. Add the signer's signature in
-        <.a navigate={~p"/teams/#{@team}/settings/tax-credit-letters"}>team settings</.a>
-        first.
-      </.warning_text>
-    </div>
-    """
+  # Whether a choice reaches a checked row: Send letters a member with hours and no
+  # letter, Email letters a letter whose member has an email and isn't already emailing,
+  # Publish again a letter out of date.
+  defp fits?("send", record), do: is_nil(record.tax_credit_letter_id) and record.total_minutes > 0
+
+  defp fits?("email", record),
+    do:
+      record.tax_credit_letter_id != nil and
+        record.letter_email_state not in [:no_email, :sending]
+
+  defp fits?("publish", record), do: record.letter_hours_status == :changed
+  defp fits?(_choice, _record), do: false
+
+  # Each choice with what it does for the checked, or greyed with why it reaches nobody.
+  defp choices(checked) do
+    for choice <- @choices do
+      fit = Enum.count(checked, &fits?(choice, &1))
+
+      cond do
+        checked == [] -> {choice_label(choice), choice, hint(choice, nil)}
+        fit == 0 -> {choice_label(choice), choice, none(choice, length(checked)), disabled: true}
+        true -> {choice_label(choice), choice, hint(choice, fit)}
+      end
+    end
   end
 
-  # The members shown who get a letter but no email, by name.
-  defp no_email(to_send) do
-    for(record <- to_send, !CreateTaxCreditLetters.emailed?(record.member), do: record.member)
-    |> Enum.sort_by(& &1.name)
-  end
+  defp choice_label("send"), do: "Send letters"
+  defp choice_label("email"), do: "Email letters"
+  defp choice_label("publish"), do: "Publish again"
 
-  # The check counts who gets the email, so it leaves out the members with no email.
-  defp send_all_confirm(count, no_email, year, team) do
-    letters = Service.Format.count(count, one: "%d letter", many: "%d letters")
+  defp hint("send", nil),
+    do: "Creates and emails a letter to each checked member with hours and no letter."
+
+  defp hint("email", nil), do: "Emails their letter again to each checked member with one."
+
+  defp hint("publish", nil),
+    do: "Prints a new letter for each checked member out of date, and emails it."
+
+  defp hint("send", n), do: "Creates and emails a letter to #{the_checked(n)} with no letter."
+  defp hint("email", n), do: "Emails their letter again to #{the_checked(n)} with one."
+
+  defp hint("publish", n),
+    do: "Prints a new letter for #{the_checked(n)} out of date, and emails it."
+
+  defp none("send", n), do: "#{none_of(n)} is without a letter and has hours."
+  defp none("email", n), do: "#{none_of(n)} has a letter to email."
+  defp none("publish", n), do: "#{none_of(n)} is out of date."
+
+  defp the_checked(n), do: Service.Format.count(n, one: "the %d checked", many: "the %d checked")
+  defp none_of(1), do: "The member checked"
+  defp none_of(n), do: "None of the #{n} checked"
+
+  defp letters(n), do: Service.Format.count(n, one: "%d letter", many: "%d letters")
+
+  defp button_text("send", n) when n > 0, do: "Send #{letters(n)}"
+  defp button_text("email", n) when n > 0, do: "Email #{letters(n)}"
+  defp button_text("publish", n) when n > 0, do: "Publish #{letters(n)} again"
+  defp button_text(_choice, _n), do: "Change letters"
+
+  defp variant("send"), do: :success
+  defp variant("publish"), do: :warning
+  defp variant(_choice), do: :primary
+
+  defp waiting("publish"), do: "Publishing…"
+  defp waiting(_choice), do: "Sending…"
+
+  # What to do next while the button is greyed: check someone, then pick a choice.
+  defp bar_hint([], _choice), do: "Check members, then select what to do."
+  defp bar_hint(_checked, nil), do: "Select what to do."
+  defp bar_hint(_checked, _choice), do: nil
+
+  # Each confirm counts who gets an email, so it leaves out the members with no email.
+  defp confirm(_choice, [], _year, _team), do: %{}
+
+  defp confirm("send", fit, year, team) do
     unsigned = if team.signature, do: [], else: ["They go out unsigned."]
 
-    not_emailed =
-      if no_email == [],
-        do: [],
-        else: [
-          "No email, so not emailed: #{Service.Format.and_list(Enum.map(no_email, & &1.name))}."
-        ]
-
     send_confirm(
-      count - length(no_email),
-      "Create and email #{letters} for #{year}?",
-      ["Each member shown with hours and no letter yet gets one." | unsigned] ++ not_emailed
+      emailed(fit),
+      "Create and email #{letters(length(fit))} for #{year}?",
+      ["Each member checked with hours and no letter gets one." | unsigned] ++ not_emailed(fit)
     )
+  end
+
+  defp confirm("email", fit, _year, _team),
+    do:
+      send_confirm(length(fit), "Email #{letters(length(fit))} again?", [
+        "Each member checked gets the letter they have, as it was published."
+      ])
+
+  defp confirm("publish", fit, _year, _team) do
+    fit
+    |> emailed()
+    |> send_confirm("Publish #{letters(length(fit))} again?", [
+      "Each gets a new ID, and the old one's verify page says Replaced.",
+      "Each new letter is emailed to its member." | not_emailed(fit)
+    ])
+    |> Map.put("data-confirm-button", "Publish again")
+  end
+
+  defp confirm(_choice, _fit, _year, _team), do: %{}
+
+  defp emailed(records), do: Enum.count(records, &CreateTaxCreditLetters.emailed?(&1.member))
+
+  defp not_emailed(records) do
+    case records
+         |> Enum.reject(&CreateTaxCreditLetters.emailed?(&1.member))
+         |> Enum.map(& &1.member.name) do
+      [] -> []
+      names -> ["No email, so not emailed: #{Service.Format.and_list(Enum.sort(names))}."]
+    end
   end
 
   defp sent_banner(assigns) do
@@ -284,29 +406,20 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp letter_word(:sending), do: "Emailing"
   defp letter_word(_not_emailed), do: "Not emailed"
 
-  def handle_event("create", %{"value" => member_id}, socket) do
-    %{current_team: team, current_user: user, filter_options: filter_options} = socket.assigns
+  # The checked members and the choice, kept so a re-render never unchecks them.
+  def handle_event("tick", params, socket),
+    do: {:noreply, socket |> assign_ticks(params) |> assign_checked()}
 
-    case PublishTaxCreditLetter.call(team, member_id, filter_options.year, user, nil) do
-      {:ok, letter} -> {:noreply, socket |> assign_records() |> put_email_flash(letter)}
-      {:error, message} -> {:noreply, socket |> assign_records() |> put_flash(:error, message)}
+  def handle_event("apply", params, socket) do
+    socket = socket |> assign_ticks(params) |> assign_checked()
+
+    case socket.assigns do
+      %{fit: []} ->
+        {:noreply, put_flash(socket, :error, "Check members, then select what to do.")}
+
+      %{choice: choice, fit: fit} ->
+        {:noreply, apply_choice(socket, choice, fit)}
     end
-  end
-
-  def handle_event("send_all", _params, socket) do
-    %{current_team: team, filter_options: filter_options, to_send: to_send} = socket.assigns
-
-    member_ids = Enum.map(to_send, & &1.member.id)
-
-    CreateTaxCreditLettersWorker.enqueue(
-      team,
-      filter_options.year,
-      member_ids,
-      socket.assigns.current_user
-    )
-
-    {:noreply,
-     assign(socket, sending: %{count: length(to_send), year: filter_options.year}, sent: nil)}
   end
 
   def handle_event("change", %{"form" => form_params}, socket) do
@@ -318,6 +431,93 @@ defmodule Web.TaxCreditLetterCollectionLive do
       {:error, _} ->
         raise Web.Status.NotFound
     end
+  end
+
+  defp apply_choice(socket, "send", fit) do
+    %{current_team: team, current_user: user, filter_options: %{year: year}} = socket.assigns
+    CreateTaxCreditLettersWorker.enqueue(team, year, Enum.map(fit, & &1.member.id), user)
+    socket |> clear_ticks() |> assign(sending: %{count: length(fit), year: year}, sent: nil)
+  end
+
+  defp apply_choice(socket, "email", fit) do
+    letters =
+      socket.assigns.current_team
+      |> TaxCreditLetter.get_all_current(Enum.map(fit, & &1.tax_credit_letter_id))
+      |> CreateTaxCreditLetters.email_again()
+
+    socket
+    |> clear_ticks()
+    |> assign_records()
+    |> put_flash(
+      :info,
+      "Emailing #{letters(length(letters))} again. Each row updates as it goes."
+    )
+  end
+
+  # Each prints a PDF, so they publish in the background and the page stays live.
+  defp apply_choice(socket, "publish", fit) do
+    %{current_team: team, current_user: user, filter_options: %{year: year}} = socket.assigns
+    rows = for record <- fit, do: {record.member.id, record.tax_credit_letter_id}
+
+    socket
+    |> clear_ticks()
+    |> assign(publishing: length(rows))
+    |> start_async(:publish_again, fn ->
+      CreateTaxCreditLetters.publish_again(team, year, rows, user)
+    end)
+  end
+
+  def handle_async(:publish_again, {:ok, %{published: published, stale: stale}}, socket) do
+    socket = socket |> assign(publishing: nil) |> assign_records()
+    done = "Published #{letters(length(published))} again."
+
+    if stale == 0,
+      do: {:noreply, put_flash(socket, :info, done)},
+      else:
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "#{done} #{Service.Format.count(stale, one: "%d was", many: "%d were")} published by someone else meanwhile."
+         )}
+  end
+
+  def handle_async(:publish_again, {:exit, _reason}, socket) do
+    {:noreply,
+     socket
+     |> assign(publishing: nil)
+     |> assign_records()
+     |> put_flash(:error, "Publishing again stopped. Check the list, then try again.")}
+  end
+
+  # Ids come from the browser; only rows shown are checked.
+  defp assign_ticks(socket, params) do
+    ids =
+      params
+      |> Map.get("member_ids", [])
+      |> Enum.flat_map(fn id ->
+        case Integer.parse(id) do
+          {id, ""} -> [id]
+          _other -> []
+        end
+      end)
+
+    choice = if params["choice"] in @choices, do: params["choice"]
+    assign(socket, selected: MapSet.new(ids), choice: choice)
+  end
+
+  defp clear_ticks(socket), do: socket |> assign(selected: MapSet.new()) |> assign_checked()
+
+  # The checked rows among those shown, and those the choice reaches.
+  defp assign_checked(socket) do
+    %{records: records, selected: selected, choice: choice} = socket.assigns
+    checked = Enum.filter(records, &MapSet.member?(selected, &1.member.id))
+
+    assign(socket,
+      selected: MapSet.new(checked, & &1.member.id),
+      checked: checked,
+      fit: Enum.filter(checked, &fits?(choice, &1))
+    )
   end
 
   defp assign_records(socket) do
@@ -336,10 +536,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
     )
     |> assign(:records, records)
     |> assign(:standings, Standing.by_member(team, members, DateTime.utc_now()))
-    |> assign(
-      :to_send,
-      Enum.filter(records, &(is_nil(&1.tax_credit_letter_id) and &1.total_minutes > 0))
-    )
+    |> assign_checked()
   end
 
   def handle_info({:tax_credit_letters_sent, summary}, socket) do
@@ -369,26 +566,5 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp build_filter_path(team, filter_options) do
     query_params = Service.PathHelpers.build_filter_query_params(filter_options)
     ~p"/teams/#{team}/tax-credit-letters?#{query_params}"
-  end
-
-  defp put_email_flash(socket, letter) do
-    case EmailTaxCreditLetter.send_now(letter) do
-      :ok ->
-        put_flash(socket, :info, "Emailed the tax credit letter to #{letter.member.email}.")
-
-      {:error, :no_email} ->
-        put_flash(
-          socket,
-          :error,
-          "Published the letter. #{letter.member.name} has no email."
-        )
-
-      {:error, _reason} ->
-        put_flash(
-          socket,
-          :error,
-          "Published the letter, but the email did not send. Open the letter to try again."
-        )
-    end
   end
 end
