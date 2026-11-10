@@ -158,7 +158,8 @@ defmodule Web.Layouts do
   attr :team, :map, required: true
 
   # On every page of a Try a demo team (#857), where View as puts its own: whose it is,
-  # when it goes, its link, its Outbox, with a count after it of what's new, as tabs show one.
+  # when it goes, its organization's space (#963), its link, its Outbox, with a count after
+  # it of what's new, as tabs show one.
   # Delete this demo asks first. Show less folds it to one row with the Outbox and Delete
   # this demo, and Show more opens it again, remembered in this browser (DemoBanner).
   defp demo_banner(assigns) do
@@ -171,6 +172,13 @@ defmodule Web.Layouts do
             @demo.demo.expires_at,
             @team.timezone
           )}.
+        </p>
+        <p :if={@demo.organization} id="demo-organization">
+          It belongs to {@demo.organization.short_name}, a made-up organization, beside a second
+          team, Silver Basin SAR. You are one of its organization admins: <.a
+            id="demo-organization-link"
+            navigate={~p"/orgs/#{@demo.organization}"}
+          >open {@demo.organization.short_name}'s space</.a>.
         </p>
         <p id="demo-link">
           <.copy_button

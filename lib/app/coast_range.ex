@@ -54,6 +54,8 @@ defmodule App.CoastRange do
     so equipment with a retiring member.
   - **Robin Tse**: Retired, 120 days ago.
   - **Duty pager**: not a person. No email, never attends.
+  - **Zoë Lefèvre**, ground searcher: an accented name, with attended hours, so she gets
+    a tax letter. Her email is plain letters: zoe.lefevre@example.com.
   - **The visitor**, only in a demo: a team admin beside Alex, a team leader for 1600
     days, keyed `{:member, :visitor}`. Attended Missing hiker, where a team admin set
     their travel for them to confirm; first aid expires in 30 days; an ID card not yet
@@ -135,7 +137,8 @@ defmodule App.CoastRange do
     {"Riley Okafor", "142", "604-555-0132", 40, "Ground searcher", []},
     {"Sam Rivera", "143", "604-555-0133", 3700, "Ground searcher", [:retiring]},
     {"Robin Tse", "144", "604-555-0134", 3500, "Ground searcher", [:retired]},
-    {"Duty pager", "145", "604-555-0135", 2000, nil, [:not_a_person]}
+    {"Duty pager", "145", "604-555-0135", 2000, nil, [:not_a_person]},
+    {"Zoë Lefèvre", "147", "604-555-0137", 700, "Ground searcher", []}
   ]
 
   # Days ago, local hour, hours long, title, and its description.
@@ -492,17 +495,31 @@ defmodule App.CoastRange do
       )
 
   @doc """
-  Coast Range SAR's organization, made up like the team. Only App.SampleRepo seeds it,
-  for reports' organization subject (#918): its slug is unique, and mockups seed the
-  cast more than once.
+  Coast Range SAR's organization, made up like the team (#963): Western Search and Rescue
+  Association, said "we-SAR-ah", with Silver Basin SAR (App.SilverBasin) as its second
+  team. App.SampleRepo seeds it, for reports' organization subject (#918), and so do the
+  dev teams; each demo gets a copy of its own, slug `wesara-<demo id>`. Mockups seed the
+  cast more than once, so they leave it out: its slug is unique.
   """
   def organization do
     %Organization{
-      name: "Pacific Ranges SAR Association",
-      short_name: "PRSARA",
-      slug: "pacificranges",
+      name: "Western Search and Rescue Association",
+      short_name: "WESARA",
+      slug: "wesara",
       website: "https://example.org"
     }
+  end
+
+  @doc """
+  WESARA's organization admins, `%{name:, title:, email:}`: neither belongs to a team. Not
+  Taylor Brooks, a demo visitor's default name.
+  """
+  def organization_admins do
+    for {name, title} <- [
+          {"Morgan Ellis", "Executive director"},
+          {"Rowan Pike", "Office manager"}
+        ],
+        do: %{name: name, title: title, email: email(name)}
   end
 
   defp team(now) do
@@ -676,7 +693,22 @@ defmodule App.CoastRange do
   defp name_and_email(:visitor, visitor), do: {visitor.name, visitor.email}
   defp name_and_email(name, _visitor), do: {name, email(name)}
 
-  defp email(name), do: "#{name |> String.downcase() |> String.replace(" ", ".")}@example.com"
+  @doc """
+  A cast member's made-up email, in plain letters: "Zoë Lefèvre" is
+  zoe.lefevre@example.com, "Siobhán O'Connor-Hale" siobhan.oconnor-hale@example.com.
+  """
+  def email(name) do
+    local =
+      name
+      |> String.replace(["Ł", "ł"], "l")
+      |> :unicode.characters_to_nfd_binary()
+      |> String.replace(~r/\p{Mn}/u, "")
+      |> String.downcase()
+      |> String.replace(~r/[^a-z0-9 -]/, "")
+      |> String.replace(" ", ".")
+
+    "#{local}@example.com"
+  end
 
   defp left_at(now), do: DateTime.add(now, -120, :day)
 
@@ -1528,6 +1560,7 @@ defmodule App.CoastRange do
     {49.22100, -122.68900},
     {49.32900, -122.95000},
     {49.23000, -122.97000},
+    {49.24100, -122.89000},
     {49.26200, -122.78100},
     {49.70160, -123.15580}
   ]

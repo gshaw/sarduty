@@ -391,9 +391,9 @@ defmodule Web.UserAuth do
     })
   end
 
-  # A Try a demo team's banner (#857), for its team admins: the demo, its link, how many
-  # messages are new in its Outbox, and the toast for what just arrived. Nil on a real
-  # team. Opening a page marks the demo in use, so it syncs.
+  # A Try a demo team's banner (#857), for its team admins: the demo, its link, its
+  # organization (#963), how many messages are new in its Outbox, and the toast for what
+  # just arrived. Nil on a real team. Opening a page marks the demo in use, so it syncs.
   defp demo_banner(%{team_admin?: true, current_team: team}) do
     case DemoTeam.for_team(team) do
       nil ->
@@ -406,6 +406,7 @@ defmodule Web.UserAuth do
           demo: demo,
           link: url(~p"/demo/open/#{DemoTeam.link_token(demo)}"),
           outbox_path: ~p"/teams/#{team}/outbox",
+          organization: demo.organization_id && Organization.get(demo.organization_id),
           new: OutboxMessage.count_since(team, demo.outbox_seen_at),
           last_id: OutboxMessage.last_id(team),
           waiting?: false,

@@ -7,6 +7,35 @@ SAR Duty, or a script checking a live server. Each demo is a copy of Coast Range
 the made-up team (`App.CoastRange`), opened by a link. Its visitor is a team admin
 beside Alex Chen. Nobody sees another demo.
 
+The decision to use SAR Duty is often an organization's or a senior SAR manager's, so a
+demo is an organization too (#963): Coast Range SAR, a second team, Silver Basin SAR
+(`App.SilverBasin`), and their organization, WESARA. The visitor is one of WESARA's
+organization admins, so they open both Coast Range and the organization's space.
+
+## The cast
+
+- **WESARA**, Western Search and Rescue Association, said "we-SAR-ah"
+  (`CoastRange.organization/0`). Its organization admins are Morgan Ellis, executive
+  director, and Rowan Pike, office manager; neither belongs to a team.
+- **Coast Range SAR** has a member for each case (the `App.CoastRange` moduledoc's Who to
+  use). Zoë Lefèvre is its accented name, with attended hours, so she gets a tax letter.
+- **Silver Basin SAR** (SBSAR, `silverbasin`) has five members, four incidents and two
+  trainings in the past year, all with hours tags, so the organization's totals aren't
+  zero and every member gets a letter. Jamie Sato is its team admin. Łukasz Wójcik, Trần
+  Minh Châu, and Siobhán O'Connor-Hale are names tax letters once crashed on: a letter
+  outside Latin-1, stacked marks, and an apostrophe that breaks HTML, Typst, and CSV
+  escaping. No groups, equipment, chores, or cards.
+
+No first or last name repeats between the teams, so a sweep for one team's names never
+finds the other's. Their emails are the names in plain letters, like
+`zoe.lefevre@example.com` (`CoastRange.email/1`).
+
+The same cast fills the reports sample database (`App.SampleRepo`) and the dev teams
+(`tools/dev-teams.exs`): Coast Range SAR at `/teams/coastrange`, Silver Basin SAR at
+`/teams/silverbasin`, and WESARA at `/orgs/wesara`, with no demo row, so they keep their
+addresses and never expire. A SAR Duty admin opens every organization, so the dev
+WESARA has no admin beside Morgan and Rowan.
+
 No email is asked. An agent can't read one, and a form that emails any address is a
 way to send mail to strangers. The link is the login instead.
 
@@ -31,15 +60,21 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    there (`DemoTeam.team_ids_closed_to_query/1`), or the demo would land in that
    person's account.
 3. **The build.** `/demo/building` (`Web.DemoBuildLive`) runs
-   `App.Operation.BuildDemoTeam` once, behind a spinner, in about a second. Records makes
-   the team from the cast (`App.DemoCast`, `POST /v3/sarduty/demo-teams`) and picks its ids. SAR Duty adds the team, marked
-   as the demo in the same transaction, refreshes it like any team, and adds what only it
-   keeps (endorsements, group rules, ID cards with real codes, away periods, chores,
+   `App.Operation.BuildDemoTeam` once, behind a spinner, in about two seconds. Records
+   makes both teams from their casts (`App.DemoCast`, a `POST /v3/sarduty/demo-teams`
+   each) and picks their ids. SAR Duty adds each team, marked as the demo's in the same
+   transaction, refreshes it like any team, and adds what only it keeps on Coast Range
+   (endorsements, group rules, ID cards with real codes, away periods, chores,
    templates, and travel), matched through Records' ids. Alex Chen is the team contact.
-   A failure removes everything, in Records too, and the page offers Try again. A
-   visitor's 3 days count from here.
+   Then WESARA's copy, slug `wesara-<demo id>`, with both teams in it and Morgan Ellis,
+   Rowan Pike, and the visitor as its organization admins. One shared WESARA would let
+   a visitor change settings other visitors see, and see other demos' totals. A failure
+   removes everything, in Records too, and the page offers Try again. A visitor's 3
+   days count from here. Silver Basin never syncs after the build: nobody opens its team
+   pages, and organization admins can't, so its data doesn't change.
 4. **The banner.** Every page of a demo team has it, for team admins, where View as puts
-   its own: when it goes, its link to copy, its Outbox, and Delete this demo. The
+   its own: when it goes, a link to WESARA's space, its link to copy, its Outbox, and
+   Delete this demo. The
    Outbox button counts what arrived since the visitor last opened it
    (`DemoTeam.outbox_seen!/2`), an amber number after the label as tabs show one, and
    has none otherwise. The banner scrolls
@@ -48,11 +83,11 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    list, where a new row is easy to miss too. The
    banner's hook in `Web.UserAuth` waits a second after the first message, so a burst
    of reminders is one toast, and counts only what that burst brought.
-5. **The end.** `App.Operation.DeleteDemo` deletes the team through
+5. **The end.** `App.Operation.DeleteDemo` deletes both teams through
    `DeleteTeam.purge(team, reason: :demo)`, the same delete as any team's: in Records
    first, which deletes a demo at once with no 7-day hold, then every row in SAR Duty,
-   recorded as a `demo_deleted` event, kept 90 days. Then the row with the name, and its
-   user. Delete this demo, or `DELETE /api/demos/<token>`, does
+   recorded as a `demo_deleted` event, kept 90 days. Then WESARA's copy, the row with the
+   name, and its user. Delete this demo, or `DELETE /api/demos/<token>`, does
    it at once; `App.Worker.DemoTeamsWorker`, every hour, deletes each demo past its time,
    built or never opened.
 
@@ -63,14 +98,15 @@ demo through the link like a person, reads its Outbox, and deletes it. Fake data
 the real code path, in place of a test activity on a real team.
 
 Demo teams sync only while someone has one open: a team admin's page marks it seen
-(`DemoTeam.seen!/2`), and the 10-minute sync takes demos seen in the last hour. They stay
-out of the nightly refresh and the sync's team count for Healthchecks
+(`DemoTeam.seen!/2`), and the 10-minute sync takes demos seen in the last hour. Both of a
+demo's teams stay out of the nightly refresh and the sync's team count for Healthchecks
 (`Team.get_all_real/0`). Adminland's team list shows them under Demos, apart from the
-real teams, with whose each is and when it goes. Custom fields stay out of the cast:
+real teams, each demo's Silver Basin after its Coast Range, with whose each is and when
+it goes. 200 live demos are 400 Records teams. Custom fields stay out of the cast:
 Records has none.
 
-/agents/demo (`Web.DemoAgentsDoc`) tells agents how to start one, find their way, and
-end it.
+/agents/demo (`Web.DemoAgentsDoc`) tells agents how to start one, find their way, the
+organization's space included, and end it.
 
 ## What it shows off
 

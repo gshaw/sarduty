@@ -20,6 +20,14 @@ defmodule App.SampleRepoTest do
     end
   end
 
+  test "Silver Basin SAR is beside Coast Range SAR in WESARA (#963)" do
+    teams = App.SampleRepo.all(App.Model.Team)
+    assert teams |> Enum.map(& &1.name) |> Enum.sort() == ["Coast Range SAR", "Silver Basin SAR"]
+    assert [organization] = App.SampleRepo.all(App.Model.Organization)
+    assert organization.short_name == "WESARA"
+    assert Enum.all?(teams, &(&1.organization_id == organization.id))
+  end
+
   test "a sample run reads Coast Range SAR" do
     # A member cell is the member's id.
     assert [[id]] = run!("select name from members where ref_id = '132'").rows

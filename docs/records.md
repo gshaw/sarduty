@@ -130,8 +130,9 @@ where D4H's API only reads. The guard test in
 
 ## Records in dev
 
-Dev SAR (`tools/dev-sar.exs`) is a team on a local Records, built as Try a demo builds
-one, so edits, photos, and the sync work as on a real Records team. Run Records from
+The dev teams (`tools/dev-teams.exs`), Coast Range SAR and Silver Basin SAR, are teams on
+a local Records, built as Try a demo builds them, so edits, photos, and the sync work as
+on a real Records team. Run Records from
 `~/Developer/sarduty-records` with a `SARDUTY_KEY`, then set SAR Duty's
 `RECORDS_HOST` and `RECORDS_SARDUTY_KEY` (that key) in `.mise.local.toml`.
 

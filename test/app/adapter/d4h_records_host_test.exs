@@ -25,7 +25,7 @@ defmodule App.Adapter.D4HRecordsHostTest do
     refute custom_fields?(D4H.records_host())
     assert custom_fields?("api.ca.d4h.org")
 
-    # A local Records in dev, as Dev SAR uses (docs/records.md).
+    # A local Records in dev, as the dev teams use (docs/records.md).
     Application.put_env(:sarduty, :records_host, "sarduty-records.gshaw.ca:8443")
     refute custom_fields?("sarduty-records.gshaw.ca:8443")
     assert custom_fields?("sarduty-records.gshaw.ca")

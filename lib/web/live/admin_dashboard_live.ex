@@ -14,11 +14,13 @@ defmodule Web.AdminDashboardLive do
 
   # Every team, one short row each (#513). Its emails, key, and switches are on its own
   # page, /admin/teams/:id. Refreshes update the rows live. Try a demo's copies (#857)
-  # are a view of their own; every other view is real teams only.
+  # are a view of their own, each demo's two teams together (#963); every other view is
+  # real teams only.
   def mount(_params, _session, socket) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(App.PubSub, "team_refresh")
 
-    demos = Map.new(DemoTeam.all_built(), &{&1.team_id, &1})
+    demos = demos_by_team_id()
+
     teams = Team.get_all() |> Enum.sort_by(&String.downcase(&1.name))
 
     now = DateTime.utc_now()
@@ -38,6 +40,15 @@ defmodule Web.AdminDashboardLive do
     {:ok, socket}
   end
 
+  # Both of each demo's teams.
+  defp demos_by_team_id do
+    for demo <- DemoTeam.all_built(),
+        id <- [demo.team_id, demo.second_team_id],
+        id != nil,
+        into: %{},
+        do: {id, demo}
+  end
+
   def handle_params(params, _uri, socket),
     do:
       {:noreply, socket |> assign(view: TeamListViewModel.view(params, @views)) |> assign_rows()}
@@ -45,8 +56,15 @@ defmodule Web.AdminDashboardLive do
   defp assign_rows(socket) do
     %{teams: teams, view: view} = socket.assigns
 
+    rows = Enum.filter(teams, &in_view?(&1, view, socket.assigns))
+
+    rows =
+      if view == "demos",
+        do: Enum.sort_by(rows, &demo_order(socket.assigns.demos[&1.id], &1)),
+        else: rows
+
     assign(socket,
-      rows: Enum.filter(teams, &in_view?(&1, view, socket.assigns)),
+      rows: rows,
       counts:
         Map.new(@views, fn v -> {v, Enum.count(teams, &in_view?(&1, v, socket.assigns))} end)
     )
@@ -186,8 +204,9 @@ defmodule Web.AdminDashboardLive do
       </dd>
       <dt>Demos</dt>
       <dd>
-        Try a demo's copies of Coast Range SAR, a visitor's for 3 days or a test's for up to 24
-        hours. The other views, the nightly refresh, and the sync's count leave them out.
+        Try a demo's copies of Coast Range SAR, each with Silver Basin SAR, its second team in
+        their organization, after it. A visitor's lasts 3 days, a test's up to 24 hours. The
+        other views, the nightly refresh, and the sync's count leave them out.
       </dd>
       <dt>Last seen</dt>
       <dd>
@@ -215,7 +234,11 @@ defmodule Web.AdminDashboardLive do
     {:noreply, put_flash(socket, :info, "Refreshes scheduled for all teams.")}
   end
 
-  # "Visitor, Morgan · goes Nov 9, 14:17" or "Test · goes Nov 6, 14:17".
+  # Newest demo first, its Coast Range SAR, then its Silver Basin SAR.
+  defp demo_order(demo, team), do: {-demo.id, team.id == demo.second_team_id}
+
+  # "Visitor, Morgan · goes Nov 9, 14:17" or "Test · goes Nov 6, 14:17". A demo's second
+  # team starts "Second team".
   defp demo_line(%DemoTeam{} = demo, team) do
     who =
       case demo do
@@ -224,7 +247,9 @@ defmodule Web.AdminDashboardLive do
         %{name: name} -> "Visitor, #{name}"
       end
 
-    "#{who} · goes #{Service.Format.month_day_time(demo.expires_at, team.timezone)}"
+    second = if team.id == demo.second_team_id, do: "Second team · "
+
+    "#{second}#{who} · goes #{Service.Format.month_day_time(demo.expires_at, team.timezone)}"
   end
 
   defp refresh_summary(teams, demos) do

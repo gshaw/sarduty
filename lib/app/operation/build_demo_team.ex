@@ -1,18 +1,20 @@
 defmodule App.Operation.BuildDemoTeam do
   @moduledoc """
-  Builds a visitor's copy of Coast Range SAR (#857) the first time they open their demo
-  link, the way a team signs up. Records makes the team from the cast and picks its ids
-  (App.DemoCast). SAR Duty then adds the team, marked as the demo before anything can
-  send, refreshes it like any team, and adds what only SAR Duty keeps (endorsements, ID
-  cards, away periods, chores), matched through Records' ids.
+  Builds a visitor's demo the first time they open its link (#857), the way a team signs
+  up: Coast Range SAR, Silver Basin SAR beside it, and WESARA's copy with both in it
+  (#963). Records makes each team from its cast and picks its ids (App.DemoCast). SAR
+  Duty then adds each team, marked as the demo's before anything can send, refreshes it
+  like any team, and adds what only SAR Duty keeps on Coast Range (endorsements, ID
+  cards, away periods, chores), matched through Records' ids. Silver Basin never syncs
+  after this: nobody opens its team pages.
 
   A failure removes whatever was made, in Records too, so the next open starts clean.
   Runs in App.Worker.BuildDemoTeamWorker, and tells the waiting page through topic/1.
 
-  build_dev_team/3 makes Dev SAR the same way (tools/dev-sar.exs).
+  build_dev_teams/2 makes the same three in the dev database (tools/dev-teams.exs).
   """
 
-  import Ecto.Query, only: [where: 2]
+  import Ecto.Query, only: [where: 2, where: 3]
 
   alias App.Adapter.D4H
   alias App.CoastRange
@@ -24,12 +26,15 @@ defmodule App.Operation.BuildDemoTeam do
   alias App.Model.GroupRule
   alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Model.Organization
+  alias App.Model.OrganizationAdmin
   alias App.Model.Tag
   alias App.Model.Team
   alias App.Model.Trip
   alias App.Operation.DeleteTeam
   alias App.Operation.RefreshD4HData
   alias App.Repo
+  alias App.SilverBasin
 
   require Logger
 
@@ -60,7 +65,7 @@ defmodule App.Operation.BuildDemoTeam do
   @doc "The topic a demo's build tells, as `{:demo_built, demo_id, result}`."
   def topic(%DemoTeam{id: id}), do: "demo:#{id}"
 
-  @doc "`{:ok, team}`, or `{:error, reason}` with nothing left behind."
+  @doc "`{:ok, team}`, Coast Range's, or `{:error, reason}` with nothing left behind."
   # Built already, it tells the topic too: a page that subscribed after the build
   # finished is waiting on this job.
   def call(%DemoTeam{team_id: team_id} = demo, _now) when is_integer(team_id),
@@ -68,28 +73,40 @@ defmodule App.Operation.BuildDemoTeam do
 
   def call(%DemoTeam{} = demo, now) do
     visitor = visitor(demo)
+    casts = [DemoCast.cast(now, visitor), DemoCast.silver_basin(now)]
 
     result =
-      with {:ok, records} <- now |> DemoCast.cast(visitor) |> D4H.create_demo_team() do
-        build(demo, records, visitor, %{subdomain: subdomain()}, now)
+      with {:ok, records} <- create_in_records(casts) do
+        names = %{
+          coast_range: %{subdomain: subdomain()},
+          silver_basin: %{subdomain: subdomain()},
+          slug: "wesara-#{demo.id}"
+        }
+
+        build(demo, records, visitor, names, now)
       end
 
     tell(demo, result)
   end
 
   @doc """
-  Dev SAR (tools/dev-sar.exs): the same team in the dev database, with a site admin
-  `%{name:, email:}` as the visitor and `names` (`:name`, `:legal_name`,
-  `:abbreviated_name`, `:subdomain`) in place of Coast Range's. It has no demo row, so
-  it never expires and shows no banner. `{:ok, team}` or `{:error, reason}`, with
-  nothing left behind.
+  The dev teams (tools/dev-teams.exs): Coast Range SAR at `coastrange`, Silver Basin SAR
+  at `silverbasin`, and WESARA at `wesara`, in the dev database, with a site admin
+  `%{name:, email:}` as the visitor. No demo row, so they never expire and show no
+  banner. SAR Duty admins open every organization, so the site admin isn't one of
+  WESARA's. `{:ok, coast_range_team}` or `{:error, reason}`, with nothing left behind.
   """
-  def build_dev_team(%{name: _, email: _} = visitor, %{subdomain: _} = names, now) do
-    cast = DemoCast.cast(now, visitor)
-    cast = put_in(cast, ["team", "title"], names[:name] || cast["team"]["title"])
+  def build_dev_teams(%{name: _, email: _} = visitor, now) do
+    casts = [DemoCast.cast(now, visitor), DemoCast.silver_basin(now)]
 
-    with {:ok, records} <- D4H.create_demo_team(cast) do
-      build(nil, records, visitor, names, now)
+    with {:ok, records} <- create_in_records(casts) do
+      names = %{
+        coast_range: %{subdomain: "coastrange"},
+        silver_basin: %{subdomain: "silverbasin"},
+        slug: "wesara"
+      }
+
+      build(nil, records, nil, names, now, visitor)
     end
   end
 
@@ -101,53 +118,88 @@ defmodule App.Operation.BuildDemoTeam do
   defp visitor(demo),
     do: %{name: DemoTeam.visitor_name(demo), email: DemoTeam.visitor_email(demo)}
 
+  # Both teams in Records, or neither.
+  defp create_in_records(casts) do
+    result =
+      Enum.reduce_while(casts, {:ok, []}, fn cast, {:ok, made} ->
+        case D4H.create_demo_team(cast) do
+          {:ok, records} ->
+            {:cont, {:ok, [records | made]}}
+
+          {:error, _error} = error ->
+            Enum.each(made, &D4H.delete_records_team(%Team{d4h_team_id: &1.d4h_team_id}))
+            {:halt, error}
+        end
+      end)
+
+    with {:ok, made} <- result, do: {:ok, Enum.reverse(made)}
+  end
+
   # A visitor's days count from now, when they first see it. A test's keeps its hours.
   defp expires_at(%DemoTeam{kind: :visitor}, now),
     do: now |> DateTime.add(DemoTeam.days(), :day) |> DateTime.truncate(:second)
 
   defp expires_at(%DemoTeam{expires_at: expires_at}, _now), do: expires_at
 
-  defp build(demo, records, visitor, names, now) do
-    team = insert_team(demo, records, names, now)
-    {:ok, team} = team |> RefreshD4HData.call() |> refreshed(team)
-    add_local_rows(team, records.ids, visitor, now)
-    {:ok, put_contact(team, records.ids)}
+  # `org_visitor` is who joins WESARA as an organization admin: a demo's visitor, or
+  # nobody for the dev teams.
+  defp build(demo, records, org_visitor, names, now, visitor \\ nil)
+
+  defp build(demo, [coast, basin] = records, org_visitor, names, now, visitor) do
+    visitor = visitor || org_visitor
+    team = insert_team(CoastRange.build(now), demo, :team_id, coast, names.coast_range, now)
+    team = refresh!(team)
+    add_local_rows(team, coast.ids, visitor, now)
+    team = put_contact(team, coast.ids)
+
+    second =
+      now
+      |> SilverBasin.build()
+      |> insert_team(demo, :second_team_id, basin, names.silver_basin, now)
+      |> refresh!()
+
+    insert_organization(demo, [team, second], names.slug, org_visitor)
+    {:ok, team}
   rescue
     error ->
       Logger.error("Try a demo build failed: " <> Exception.message(error))
-      clean_up(demo, records)
+      clean_up(demo, records, names.slug)
       {:error, :build_failed}
   end
 
-  defp refreshed({:ok, refreshed, _missed}, _team) do
-    Team.update(refreshed, %{d4h_refresh_result: "OK"})
-  end
+  defp refresh!(team) do
+    case RefreshD4HData.call(team) do
+      {:ok, refreshed, _missed} ->
+        {:ok, team} = Team.update(refreshed, %{d4h_refresh_result: "OK"})
+        team
 
-  defp refreshed(other, _team), do: raise("refresh: #{inspect(other)}")
-
-  # DeleteTeam.purge/2 deletes the team in Records too. Records deletes a demo at once.
-  defp clean_up(nil, records) do
-    case Repo.get_by(Team, d4h_api_host: D4H.records_host(), d4h_team_id: records.d4h_team_id) do
-      %Team{} = team -> DeleteTeam.purge(team, reason: :admin)
-      nil -> D4H.delete_records_team(%Team{d4h_team_id: records.d4h_team_id})
+      other ->
+        raise("refresh: #{inspect(other)}")
     end
   end
 
-  defp clean_up(demo, records) do
-    case Repo.reload(demo) do
-      %DemoTeam{team_id: team_id} when is_integer(team_id) ->
-        team = Team.get!(team_id)
-        DemoTeam |> where(id: ^demo.id) |> Repo.update_all(set: [team_id: nil])
-        DeleteTeam.purge(team, reason: :demo)
+  # DeleteTeam.purge/2 deletes a team in Records too, and Records deletes a demo at once.
+  # A team Records made that SAR Duty never added goes from Records alone. Teams first:
+  # Coast Range's delete takes the demo's row with it.
+  defp clean_up(demo, records, slug) do
+    demo = demo && Repo.reload(demo)
+    if demo, do: DemoTeam |> where(id: ^demo.id) |> Repo.update_all(set: [team_id: nil])
+    reason = if demo, do: :demo, else: :admin
 
-      _unbuilt ->
-        D4H.delete_records_team(%Team{d4h_team_id: records.d4h_team_id})
+    for %{d4h_team_id: d4h_team_id} <- records do
+      case Repo.get_by(Team, d4h_api_host: D4H.records_host(), d4h_team_id: d4h_team_id) do
+        %Team{} = team -> DeleteTeam.purge(team, reason: reason)
+        nil -> D4H.delete_records_team(%Team{d4h_team_id: d4h_team_id})
+      end
     end
+
+    Organization |> where(slug: ^slug) |> Repo.delete_all()
   end
 
-  # The team and its demo row commit together, so it is a demo before it has a member.
-  defp insert_team(demo, records, names, now) do
-    [{:team, :coastrange, cast_team, []} | _rows] = CoastRange.build(now)
+  # The team and its demo row's link commit together, so it is a demo before it has a
+  # member. Coast Range's (`team_id`) starts the visitor's days.
+  defp insert_team(rows, demo, field, records, names, now) do
+    [{:team, _key, cast_team, []} | _rows] = rows
 
     {:ok, team} =
       Repo.transaction(fn ->
@@ -167,25 +219,64 @@ defmodule App.Operation.BuildDemoTeam do
             d4h_access_key_saved_at: now
           })
 
-        retiring = records.ids[DemoCast.key({:group, cast_team.retiring_d4h_group_id})]
+        retiring =
+          cast_team.retiring_d4h_group_id &&
+            records.ids[DemoCast.key({:group, cast_team.retiring_d4h_group_id})]
 
         team =
           team
           |> Ecto.Changeset.change(Map.take(cast_team, @settings))
-          |> Ecto.Changeset.change(Map.take(names, [:name, :legal_name, :abbreviated_name]))
           |> Ecto.Changeset.change(retiring_d4h_group_id: retiring)
           |> Repo.update!()
 
-        if demo do
-          demo
-          |> Ecto.Changeset.change(team_id: team.id, expires_at: expires_at(demo, now))
-          |> Repo.update!()
-        end
-
+        if demo, do: link_demo(demo, field, team, now)
         team
       end)
 
     team
+  end
+
+  defp link_demo(demo, :team_id, team, now),
+    do:
+      demo
+      |> Ecto.Changeset.change(team_id: team.id, expires_at: expires_at(demo, now))
+      |> Repo.update!()
+
+  defp link_demo(demo, field, team, _now),
+    do: demo |> Ecto.Changeset.change([{field, team.id}]) |> Repo.update!()
+
+  # WESARA's copy, with both teams in it, its two organization admins, and a demo's
+  # visitor beside them: the senior manager who opens both Coast Range and its space.
+  defp insert_organization(demo, teams, slug, visitor) do
+    {:ok, organization} =
+      Repo.transaction(fn ->
+        organization = Repo.insert!(%{CoastRange.organization() | slug: slug})
+
+        Team
+        |> where([t], t.id in ^Enum.map(teams, & &1.id))
+        |> Repo.update_all(set: [organization_id: organization.id])
+
+        visitors =
+          if visitor, do: [%{email: visitor.email, title: "Your demo's visitor"}], else: []
+
+        for admin <- CoastRange.organization_admins() ++ visitors do
+          Repo.insert!(%OrganizationAdmin{
+            organization_id: organization.id,
+            email: admin.email,
+            reason: admin.title
+          })
+        end
+
+        if demo do
+          DemoTeam
+          |> where(id: ^demo.id)
+          |> Repo.update_all(set: [organization_id: organization.id])
+        end
+
+        organization
+      end)
+
+    organization
   end
 
   # Never a real team's: "demo" and 8 random letters and digits.

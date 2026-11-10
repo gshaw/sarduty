@@ -50,6 +50,8 @@ defmodule Web.DemoAgentsDoc do
 
     Every page of a demo has a banner with its link, its Outbox, and **Delete this demo**. To see SAR Duty as a member does, open a member and choose **View as member**. The side navigation has the rest. The team has a year of activities, members with qualifications and ID cards, equipment, and chores.
 
+    The team belongs to WESARA, a made-up organization, beside a second team, Silver Basin SAR. The demo's team admin is also one of WESARA's organization admins: the banner links to its space, `#{url}/orgs/wesara-<demo id>`, which shows each team's totals but never its people. Show it to someone who runs an organization of teams.
+
     For what a page is for, read its heading and the one-line description under it. SAR Duty's own [Agents](#{url}/agents.md) page lists what else agents can do.
 
     ## End a demo

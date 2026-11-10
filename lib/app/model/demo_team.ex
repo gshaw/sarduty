@@ -5,13 +5,15 @@ defmodule App.Model.DemoTeam do
 
   alias App.Accounts.User
   alias App.Model.DemoTeam
+  alias App.Model.Organization
   alias App.Model.Team
   alias App.Repo
 
   # Try a demo (#857): a copy of Coast Range SAR of its own, opened by a link. The row
-  # and its user come first, and the team the first time the link is opened. A demo
-  # sends nothing: its email and texts go to its Outbox (App.Mailer, Twilio). Its
-  # cards and letters say Sample. See docs/demo.md.
+  # and its user come first, and the teams the first time the link is opened: Coast
+  # Range SAR (team), Silver Basin SAR (second_team), and WESARA's copy with both in it
+  # (organization, #963). A demo sends nothing: its email and texts go to its Outbox
+  # (App.Mailer, Twilio). Its cards and letters say Sample. See docs/demo.md.
   #
   # A visitor's demo lasts 3 days from the build. A test's, made with the test key
   # for a script that checks SAR Duty on a live server, lasts the hours it asked for, and
@@ -21,6 +23,8 @@ defmodule App.Model.DemoTeam do
     field :name, :string, redact: true
     belongs_to :user, User
     belongs_to :team, Team
+    belongs_to :second_team, Team
+    belongs_to :organization, Organization
     field :expires_at, :utc_datetime
     field :seen_at, :utc_datetime
     field :outbox_seen_at, :utc_datetime_usec
@@ -81,20 +85,32 @@ defmodule App.Model.DemoTeam do
   @doc "The demo a user's link opened, or nil."
   def for_user(%User{id: id}), do: Repo.get_by(DemoTeam, user_id: id)
 
-  @doc "The demo a team is, or nil for a real team."
+  @doc """
+  The demo whose Coast Range SAR this is, or nil for a real team. Silver Basin SAR gets
+  nil too: nobody is its team admin, so it has no banner.
+  """
   def for_team(%Team{id: id}), do: for_team(id)
   def for_team(nil), do: nil
   def for_team(team_id) when is_integer(team_id), do: Repo.get_by(DemoTeam, team_id: team_id)
 
-  @doc "Whether the team is a demo copy."
+  @doc "Whether the team is a demo copy: either of a demo's teams."
   def demo?(%Team{id: id}), do: demo?(id)
   def demo?(nil), do: false
 
   def demo?(team_id) when is_integer(team_id),
-    do: DemoTeam |> where(team_id: ^team_id) |> Repo.exists?()
+    do:
+      DemoTeam
+      |> where([d], d.team_id == ^team_id or d.second_team_id == ^team_id)
+      |> Repo.exists?()
 
-  @doc "The ids of every demo team, for queries that leave them out."
-  def team_ids_query, do: from(d in DemoTeam, where: not is_nil(d.team_id), select: d.team_id)
+  @doc "The ids of every demo team, both of each demo's, for queries that leave them out."
+  def team_ids_query do
+    from(t in Team,
+      join: d in DemoTeam,
+      on: d.team_id == t.id or d.second_team_id == t.id,
+      select: t.id
+    )
+  end
 
   @doc "Every demo with its team built, for the admin team list's Demos view."
   def all_built, do: DemoTeam |> where([d], not is_nil(d.team_id)) |> Repo.all()
@@ -102,14 +118,18 @@ defmodule App.Model.DemoTeam do
   @doc """
   The ids of demo teams `email` isn't the visitor of. A member there with that email
   logs in to nothing (#857): a visitor can add anyone's email to a member, and the demo
-  would land in that person's account.
+  would land in that person's account. Silver Basin SAR is closed to everyone: the
+  visitor isn't a member there.
   """
   def team_ids_closed_to_query(email) do
-    from(d in DemoTeam,
+    from(t in Team,
+      join: d in DemoTeam,
+      on: d.team_id == t.id or d.second_team_id == t.id,
       left_join: u in assoc(d, :user),
-      where: not is_nil(d.team_id),
-      where: is_nil(u.id) or fragment("lower(?)", u.email) != ^String.downcase(email),
-      select: d.team_id
+      where:
+        t.id == d.second_team_id or is_nil(u.id) or
+          fragment("lower(?)", u.email) != ^String.downcase(email),
+      select: t.id
     )
   end
 

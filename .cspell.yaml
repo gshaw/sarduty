@@ -25,8 +25,18 @@ words:
   - mult # Decimal.mult, the decimal library's multiply: a form's money and Service.Format.money (#950)
   - EMCR # Emergency Management and Climate Readiness, BC's agency, whose forms teams fill (#950)
   - IHDR # a PNG's header chunk, which holds its size
-  - devsar # Dev SAR, the dev team (tools/dev-sar.exs)
-  - DSAR # Dev SAR's abbreviated name
+  - silverbasin # Silver Basin SAR's subdomain, a made-up team (App.SilverBasin, #963)
+  - WESARA # Western Search and Rescue Association, the made-up organization (#963)
+  - SBSAR # Silver Basin SAR's abbreviated name (#963)
+  # The made-up cast's names that aren't plain English (#963)
+  - Lefèvre
+  - Łukasz
+  - Wójcik
+  - Trần
+  - Minh
+  - Châu
+  - Siobhán
+  - Moreau
   - nohup
   - SAMP # the prefix of Coast Range SAR's sample ID card codes (#854)
   - SAMPX # the first half of a sample ID card code, SAMPX-ACTVX (#969)

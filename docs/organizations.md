@@ -6,6 +6,10 @@ A team can belong to one parent organization, like BCSARA (bcsara.com). Its card
 check pages then carry the organization's name and logo instead of SAR Duty's. Issue #87
 has the design of its own verify host.
 
+Western Search and Rescue Association (WESARA) is the made-up one (#963), with Coast
+Range SAR and Silver Basin SAR as its teams: in the reports sample database, the dev
+teams (`/orgs/wesara`), and a copy in every demo ([demo.md](demo.md#the-cast)).
+
 ## Its space and its admins (#512)
 
 Each organization has its own space at `/orgs/:slug`, beside a team's space, SAR Duty

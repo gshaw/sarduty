@@ -3,6 +3,7 @@ defmodule App.Model.DemoTeamTest do
 
   alias App.AccountsFixtures
   alias App.DataFixtures
+  alias App.Model.DemoTeam
   alias App.Model.Member
   alias App.Model.Team
 
@@ -39,6 +40,22 @@ defmodule App.Model.DemoTeamTest do
       DataFixtures.manager_fixture(other, %{email: "left@example.org"})
 
       assert Team.get_managed_by("left@example.org", now()) == []
+    end
+  end
+
+  describe "a demo's second team (#963)" do
+    test "is a demo, closed to every login, and out of the real teams" do
+      visitor = AccountsFixtures.user_fixture()
+      coast = DataFixtures.member_logins_team_fixture()
+      basin = DataFixtures.member_logins_team_fixture()
+      real = DataFixtures.team_fixture()
+      DataFixtures.demo_team_fixture(coast, %{user_id: visitor.id, second_team_id: basin.id})
+      DataFixtures.manager_fixture(basin, %{email: visitor.email})
+
+      assert DemoTeam.demo?(basin)
+      assert DemoTeam.for_team(basin) == nil
+      assert Team.get_managed_by(visitor.email, now()) == []
+      assert Enum.map(Team.get_all_real(), & &1.id) == [real.id]
     end
   end
 

@@ -259,6 +259,7 @@ defmodule App.DataFixtures do
   def demo_team_fixture(%Team{} = team, attrs \\ %{}) do
     Repo.insert!(%App.Model.DemoTeam{
       team_id: team.id,
+      second_team_id: attrs[:second_team_id],
       kind: Map.get(attrs, :kind, :visitor),
       name: Map.get(attrs, :name, "Morgan Visitor"),
       user_id: attrs[:user_id],
