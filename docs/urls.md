@@ -87,7 +87,7 @@ Devices, Google, Apple, and shared links hold these. They don't move.
   unsubscribe.
 - `/cards/:token`: an ID card email's link to the card's page (#952), with
   `/cards/:token/apple-wallet` and `/cards/:token/google-wallet` behind its badges, and
-  `/cards/:token/front`, `/back`, and `/pdf`, the card it draws (#973).
+  `/cards/:token/image` and `/pdf`, the card it draws (#973).
 - `/teams/:subdomain/logo`: Google Wallet objects fetch it.
 - `/teams/:subdomain/take-attendance`: teams print a QR code of it for the hall (#475).
 - `/teams/:subdomain/mcp`: agents' MCP configs hold it ([mcp.md](mcp.md)).

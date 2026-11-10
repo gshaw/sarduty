@@ -25,7 +25,7 @@ defmodule Web.CardLinkLiveTest do
     path = member |> member_card_fixture() |> CardLinks.path()
     {:ok, lv, _html} = live(conn, path)
 
-    assert has_element?(lv, "#card-link-team", "Coast Range SAR")
+    assert has_element?(lv, "#card-link-intro", "a current member of Coast Range SAR")
 
     assert has_element?(
              lv,
@@ -47,7 +47,7 @@ defmodule Web.CardLinkLiveTest do
     assert has_element?(lv, "#open-on-phone", "Scan the code with your phone's camera")
   end
 
-  test "what a copy can't do and Print ID card, then the card, each side to save, and Verify beside it",
+  test "what a copy can't do, the card to save, Print ID card, and Verify beside it",
        %{conn: conn, team: team, member: member} do
     card = member_card_fixture(member)
     path = CardLinks.path(card)
@@ -55,28 +55,26 @@ defmodule Web.CardLinkLiveTest do
 
     # On a phone, where the sidebar's QR code hides, Verify and Lost your phone follow the card.
     order =
-      for id <- ~w(card-link-no-wallet card-link-print card-link-front card-link-help),
+      for id <- ~w(card-link-no-wallet card-link-card card-link-print card-link-help),
           do: elem(:binary.match(html, ~s{id="#{id}"}), 0)
 
     assert order == Enum.sort(order)
     assert has_element?(lv, "#card-link-help #card-link-lost", "Ask a team admin")
 
-    for side <- ~w(front back) do
-      assert has_element?(lv, ~s{#card-link-#{side} img[src="#{path}/#{side}"]})
+    assert has_element?(lv, ~s{#card-link-card img[src="#{path}/image"]})
 
-      assert has_element?(
-               lv,
-               ~s{#card-link-#{side}-save[href="#{path}/#{side}"][download="#{team.subdomain}-id-card-#{side}.png"][phx-hook="SaveImage"]},
-               "Save #{side} image"
-             )
-    end
+    assert has_element?(
+             lv,
+             ~s{#card-link-card-save[href="#{path}/image"][download="#{team.subdomain}-id-card.png"][phx-hook="SaveImage"]},
+             "Save image"
+           )
 
     assert has_element?(lv, ~s{#card-link-print-link[href="#{path}/pdf"]}, "Print ID card")
-    assert has_element?(lv, "#card-link-print", "in black on white, to cut out")
+    assert has_element?(lv, "#card-link-print", "Your endorsements show when someone verifies")
 
     verify = MemberCard.verify_url(card.code, Web.VerifyHost.url())
     assert has_element?(lv, ~s{#card-link-verify-link[href="#{verify}"]}, "Verify your ID card")
-    assert has_element?(lv, "#card-link-no-wallet", "Neither updates")
+    assert has_element?(lv, "#card-link-no-wallet", "Show this card")
   end
 
   test "a line under the badges says what SAR Duty sees, and changes while the page is open",
@@ -216,7 +214,7 @@ defmodule Web.CardLinkLiveTest do
     assert has_element?(
              lv,
              "#card-link-cancelled",
-             "This ID card was cancelled. Ask a team admin"
+             "Your Coast Range SAR ID card was cancelled. Ask a team admin"
            )
 
     refute_offers(lv)
@@ -227,7 +225,12 @@ defmodule Web.CardLinkLiveTest do
     card = member_card_fixture(retired)
     {:ok, lv, _html} = live(conn, CardLinks.path(card))
 
-    assert has_element?(lv, "#card-link-inactive", "This ID card is not active. Ask a team admin")
+    assert has_element?(
+             lv,
+             "#card-link-inactive",
+             "Your Coast Range SAR ID card is not active. Ask a team admin"
+           )
+
     refute_offers(lv)
   end
 
@@ -268,8 +271,7 @@ defmodule Web.CardLinkLiveTest do
     refute has_element?(lv, "#card-link-wallets-apple")
     refute has_element?(lv, "#card-link-wallets-google")
     refute has_element?(lv, "#open-on-phone")
-    refute has_element?(lv, "#card-link-front")
-    refute has_element?(lv, "#card-link-back")
+    refute has_element?(lv, "#card-link-card")
     refute has_element?(lv, "#card-link-print")
     refute has_element?(lv, "#card-link-verify")
   end

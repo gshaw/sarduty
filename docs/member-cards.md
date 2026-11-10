@@ -337,23 +337,45 @@ other way to get the card.
   its token. On a Mac the pass reaches the phone through iCloud, so that can take 15
   seconds or more. Google's badge opens in a new tab, so the page stays open to hear
   the save.
-- **The card itself, under the Wallet** (#973): its front and back as SAR Duty draws
-  them, for a member with no Wallet or one who wants a copy.
-  [DrawMemberCard](../lib/app/operation/draw_member_card.ex) runs one Typst drawing,
-  `priv/typst/member_card.typ`, for `/cards/:token/front` and `/cards/:token/back`,
-  PNGs at 400 pixels an inch, and `/cards/:token/pdf`. Each is drawn on the request, as
-  a pass is built, so it shows today's card. Both sides are 54 mm wide, a badge
-  holder's width. The front has the pass's front less Valid until, which a copy would
-  freeze ([Valid until](#valid-until)), and the day it was drawn in its place. The back
-  has the pass's back, as tall as its endorsements: the front is 54 × 60 mm, and a back
-  fits a 54 × 86 mm badge holder up to about 8 endorsements.
-  - **Save front image** and **Save back image**, under each side, with the download
-    icon in the arrow's place. On a phone it opens the share sheet, whose Save Image
-    puts the picture in Photos (`SaveImage`, `assets/js/save_image.js`); a download would
-    land in Files. On a computer it downloads. A long press on the picture saves it too.
-  - **Print ID card**, with the printer icon in the arrow's place, opens the PDF: a Letter page with both sides at actual size in black
-    on white, each in a dashed cut line 2 mm out, with square corners to cut. Black on
-    white prints on any printer, and the QR code is black on white either way.
+- **The card itself, under the Wallet** (#973), for a member with no Wallet or one who
+  wants a copy. [DrawMemberCard](../lib/app/operation/draw_member_card.ex) runs one
+  Typst drawing, `priv/typst/member_card.typ`, for `/cards/:token/image`, a PNG at 400
+  pixels an inch, and `/cards/:token/pdf`. Each is drawn on the request, as a pass is
+  built, so it shows today's card.
+  - **The picture is the front as the iPhone Wallet pass draws it**: upright, 54 × 74 mm,
+    in the pass's navy with yellow labels and the team's name in yellow. Issued sits in
+    the pass's Status place and Member since in the middle, at 7 pt; the third column,
+    the pass's Valid until, stays empty. "No Wallet? Show this card,
+    save it as an image, or print it." A member can show the page at the door as they
+    would the pass. It draws its own round corners, with clear corners around them.
+  - **The code under the QR code is IBM Plex Mono**, the app's font for codes, on the
+    picture and the printed card; `priv/fonts` holds its Medium beside Arimo.
+  - **One front, two looks.** The picture and the printed front show the same facts:
+    the team's logo and name, the photo, the name, Member since, Issued, and the QR code
+    with its code. Issued is the day the card was created (`inserted_at`), not the day
+    it's drawn, so every copy of a card is the same; a replaced card gets a new date. A
+    Try a demo card says "Sample, not real ID" over the name and "Sample card" for the
+    team, as its passes do (#857).
+  - **Nothing that changes.** No status, Valid until, Last updated, or endorsements: a
+    copy never updates, so they would freeze ([Valid until](#valid-until)). The QR code
+    is the check, and the verify page lists the endorsements.
+  - **Save image**, under the picture, with the download icon in the arrow's place. On
+    a phone it opens the share sheet, whose Save Image puts the picture in Photos
+    (`SaveImage`, `assets/js/save_image.js`); a download would land in Files. On a
+    computer it downloads. A long press on the picture saves it too.
+  - **The printed card is CR80, across**: both sides 85.60 × 53.98 mm with 3.18 mm
+    corners, the size of a plastic ID card, so it fits any card holder or sleeve. White
+    under a 1 mm navy line with the team's logo and its name in navy, so any logo shows
+    and any printer prints it. A long team name drops from 8 pt to 6.6 pt, and wraps only
+    if it still doesn't fit. The back has the code again, so either side verifies, the
+    name, How to verify, and Issued by, as the passes' backs say them, less "Status
+    comes from the team's records" (`MemberCard.issuer/1`): the drawn card shows no
+    status.
+  - **Print ID card**, with the printer icon in the arrow's place, opens the PDF: a
+    Letter page with both sides at actual size, each cut on its own edge, a dashed line
+    with the card's rounded corners, so the piece is the card's size. A line further
+    out would make a piece too big for a rigid card holder; the card keeps its text
+    2.4 mm or more inside the edge for a crooked cut.
   - **Verify your ID card** opens the card's page on the verify site in the same tab,
     since the verify site is SAR Duty's own, as someone verifying it sees it. It was on
     Your membership until #973. With Lost your phone, it sits under Open on your phone
@@ -417,7 +439,7 @@ mutual aid, a call to the member's team is the check; the card speeds it up.
 The front of both passes reads **Status · Member since · Valid until**. The card SAR
 Duty draws on its page, saves as an image, and prints (#973) leaves it off: a copy
 never updates, so its Valid until would look expired on an active member, or current on
-one who left. It prints the day it was drawn instead, and the QR code is the check. Valid until is
+one who left. It shows the day the card was issued instead, and the QR code is the check. Valid until is
 the end of the month three months after the team last checked D4H, shown as "Dec 2026"
 in the team's zone ([MemberCard.valid_until/1](../lib/app/model/member_card.ex)). Apple
 gets it as `expirationDate`, Google as `validTimeInterval.end`, and each marks the pass

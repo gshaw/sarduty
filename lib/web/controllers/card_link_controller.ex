@@ -38,8 +38,7 @@ defmodule Web.CardLinkController do
     end
   end
 
-  def front(conn, %{"token" => token}), do: send_drawing(conn, token, :front)
-  def back(conn, %{"token" => token}), do: send_drawing(conn, token, :back)
+  def image(conn, %{"token" => token}), do: send_drawing(conn, token, :image)
   def pdf(conn, %{"token" => token}), do: send_drawing(conn, token, :print)
 
   # Inline, so the page shows the pictures and a phone opens the PDF to print; the card
@@ -53,7 +52,7 @@ defmodule Web.CardLinkController do
         send_resp(conn, :not_found, "")
 
       card ->
-        {:ok, bytes} = DrawMemberCard.call(card, side, now)
+        {:ok, bytes} = DrawMemberCard.call(card, side)
 
         conn
         |> put_resp_header("cache-control", "private, max-age=300")
@@ -66,7 +65,7 @@ defmodule Web.CardLinkController do
   end
 
   defp filename(card, :print), do: "#{card.member.team.subdomain}-id-card.pdf"
-  defp filename(card, side), do: "#{card.member.team.subdomain}-id-card-#{side}.png"
+  defp filename(card, :image), do: "#{card.member.team.subdomain}-id-card.png"
 
   defp active_card(token, now) do
     with %MemberCard{} = card <- CardLinks.find_card(token),
