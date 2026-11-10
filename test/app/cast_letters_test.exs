@@ -9,8 +9,8 @@ defmodule App.CastLettersTest do
   import App.DataFixtures
 
   alias App.Model.OutboxMessage
-  alias App.Model.TaxCreditLetter
-  alias App.Operation.CreateTaxCreditLetters
+  alias App.Operation.EmailTaxCreditLetters
+  alias App.Operation.PrintTaxCreditLetter
   alias App.Operation.SeedCoastRange
   alias App.SilverBasin
 
@@ -29,8 +29,8 @@ defmodule App.CastLettersTest do
           {basin_team, basin, SilverBasin.names()}
         ] do
       ids = for name <- names, do: rows[{:member, name}].id
-      summary = CreateTaxCreditLetters.call(team, 2025, ids)
-      assert summary.created == length(names)
+      summary = EmailTaxCreditLetters.run(team, 2025, ids, nil, now: @now)
+      assert summary.published == length(names) and summary.emailing == length(names)
 
       messages = OutboxMessage.list(team)
 
@@ -42,8 +42,9 @@ defmodule App.CastLettersTest do
         assert "%PDF" <> _rest = OutboxMessage.get_attachment(message, pdf.id).data
 
         # The PDF is locked, and its text is glyphs, so read the letter's own text.
-        letter = Repo.get_by!(TaxCreditLetter, member_id: rows[{:member, name}].id)
-        assert letter.letter_content =~ "Name: #{name}\n"
+        member = rows[{:member, name}]
+        read = PrintTaxCreditLetter.read(team, member.id, 2025, @now)
+        assert PrintTaxCreditLetter.text(team, read) =~ "Name: #{name}\n"
       end
     end
   end
