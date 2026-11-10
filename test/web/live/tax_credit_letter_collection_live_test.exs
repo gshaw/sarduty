@@ -321,6 +321,33 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       apply_choice(lv, [avery], "email")
       assert has_element?(lv, "#letters-emailed", "Emailing 1 tax credit letter for 2026.")
       assert_email_sent(fn email -> assert email.to == [{"", avery.email}] end)
+      [letter] = Repo.all(PublishedPDF)
+
+      # Emailed again with the same hours, the same letter goes: nothing replaces it.
+      check(lv, [avery], "email")
+
+      assert has_element?(
+               lv,
+               ~s(#letters-apply[data-confirm-list='["Avery, their letter again"]'])
+             )
+
+      apply_choice(lv, [avery], "email")
+      assert_email_sent(fn email -> assert email.to == [{"", avery.email}] end)
+      assert [%{id: id, replaced_by_id: nil, withdrawn_at: nil}] = Repo.all(PublishedPDF)
+      assert id == letter.id
+
+      # Once hours are added, it's out of date, and Email publishes a new one in its place.
+      later =
+        activity_fixture(team, %{
+          started_at: ~U[2026-11-01 17:00:00Z],
+          finished_at: ~U[2026-11-01 18:00:00Z]
+        })
+
+      attendance_fixture(later, avery)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2026&filter=any")
+      assert has_element?(lv, "#hours-changed-#{avery.id}", "Out of date")
+      apply_choice(lv, [avery], "email")
+      assert letter |> Repo.reload!() |> PublishedPDF.status() == :replaced
 
       # Without early: true, the operation refuses it.
       refused = "2026 isn't over. Email sends its letters only once you tick that it's early."
