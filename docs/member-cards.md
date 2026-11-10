@@ -385,8 +385,11 @@ other way to get the card.
   hidden on a touch screen.
 - **Only a live, active card offers passes** (`MemberCard.link_status/2`). A replaced
   card's page says to use the newest email, a cancelled one says it was cancelled, and a
-  retired or retiring member's says it is not active; both send the member to a team admin. None shows a badge or the card,
-  and the pass, picture, and PDF routes 404. A member who comes back gets the same card back, so its link works again.
+  retired or retiring member's says it is not active; both send the member to a team admin. None shows a badge,
+  Save image, or Print, and the pass and PDF routes 404. Each shows the card's picture
+  drawn grey, its logo and photo dimmed, with Replaced, Cancelled, or Not active where
+  the QR code goes, so the page shows the card as dead. The page has no team heading:
+  the picture and the intro name the team. A member who comes back gets the same card back, so its link works again.
 - **Anyone with the link can add the card,** as anyone could open a forwarded pass. The
   page says the link is the member's alone, and Replace ID card ends it.
 

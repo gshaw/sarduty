@@ -16,7 +16,9 @@ defmodule App.Operation.DrawMemberCard do
   QR code is the real check, and the verify page lists the endorsements. Nothing changes
   with the day it's drawn, so every copy of a card is the same.
 
-  Only for a live card in good standing (`MemberCard.link_status/2`); the routes check.
+  Print ID card is only for a live card in good standing (`MemberCard.link_status/2`);
+  the routes check. A replaced, cancelled, or not active card's picture draws grey, with
+  its state in the QR code's place, for its page.
   """
 
   alias App.Model.DemoTeam
@@ -35,16 +37,18 @@ defmodule App.Operation.DrawMemberCard do
 
   @doc """
   `{:ok, bytes}` or `{:error, reason}`: the `:image` as a PNG, or `:print`, a Letter page
-  with both sides, as a PDF. Fetches the member's photo from D4H, as a pass does.
+  with both sides, as a PDF. `status` is the card's `MemberCard.link_status/2`. Fetches
+  the member's photo from D4H, as a pass does.
   """
-  def call(%MemberCard{} = card, side) when side in [:image, :print] do
+  def call(%MemberCard{} = card, side, status \\ :active)
+      when side == :image or (side == :print and status == :active) do
     card = Repo.preload(card, member: [team: :organization])
     member = card.member
     team = member.team
 
     files = %{
       "card.typ" => template() |> File.read!(),
-      "card.json" => card |> card_data(DemoTeam.demo?(team)) |> Jason.encode!(),
+      "card.json" => card |> card_data(DemoTeam.demo?(team), status) |> Jason.encode!(),
       "photo.png" => LoadImage.photo(member, :square),
       "logo.png" => LoadImage.logo(team, :square),
       "qr.svg" =>
@@ -60,9 +64,9 @@ defmodule App.Operation.DrawMemberCard do
   @doc """
   Pure. What the drawing writes, as the card.json the template reads. `card` has
   `member: [team: :organization]`; `sample?` marks a Try a demo card, as its passes are
-  marked (#857).
+  marked (#857); `status` is its `MemberCard.link_status/2`.
   """
-  def card_data(%MemberCard{member: member} = card, sample?) do
+  def card_data(%MemberCard{member: member} = card, sample?, status \\ :active) do
     team = member.team
     timezone = team.timezone
     code = MemberCard.format_code(card.code)
@@ -74,6 +78,7 @@ defmodule App.Operation.DrawMemberCard do
       member_since: member.joined_at && Format.month_year(member.joined_at, timezone),
       issued: Format.date_short(card.inserted_at, timezone),
       code: code,
+      state: state(status),
       notes: [
         ["How to verify this card", MemberCard.how_to_check(code)],
         ["Issued by", MemberCard.issuer(team)]
@@ -90,6 +95,12 @@ defmodule App.Operation.DrawMemberCard do
     do:
       ~s|#import "card.typ": *\n#set page(width: auto, height: auto, margin: 0pt, fill: none)\n| <>
         ~s|#pass(json("card.json"))\n|
+
+  # What a dead card's picture says where its QR code goes.
+  defp state(:active), do: nil
+  defp state(:replaced), do: "Replaced"
+  defp state(:cancelled), do: "Cancelled"
+  defp state(:inactive), do: "Not active"
 
   defp template, do: Application.app_dir(:sarduty, "priv/typst/member_card.typ")
 end

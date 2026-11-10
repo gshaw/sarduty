@@ -83,6 +83,13 @@ defmodule App.Operation.DrawMemberCardTest do
              DrawMemberCard.card_data(card(), true)
   end
 
+  test "a dead card's picture says why, where its QR code goes" do
+    assert %{state: nil} = DrawMemberCard.card_data(card(), false)
+    assert %{state: "Replaced"} = DrawMemberCard.card_data(card(), false, :replaced)
+    assert %{state: "Cancelled"} = DrawMemberCard.card_data(card(), false, :cancelled)
+    assert %{state: "Not active"} = DrawMemberCard.card_data(card(), false, :inactive)
+  end
+
   test "the printed page names whose card it is and says what to do with it" do
     data = DrawMemberCard.card_data(card(), false)
     assert data.sheet_title == "Coast Range SAR ID card · Cameron Ruiz"

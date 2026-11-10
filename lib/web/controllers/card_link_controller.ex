@@ -42,25 +42,25 @@ defmodule Web.CardLinkController do
   def pdf(conn, %{"token" => token}), do: send_drawing(conn, token, :print)
 
   # Inline, so the page shows the pictures and a phone opens the PDF to print; the card
-  # page's Save image names the file. A drawing that fails raises: it's a bug, not a
-  # card that can't be shown.
+  # page's Save image names the file. A dead card's page shows its grey picture, but it
+  # prints nothing. A drawing that fails raises: it's a bug, not a card that can't be
+  # shown.
   defp send_drawing(conn, token, side) do
-    now = DateTime.utc_now()
+    card = CardLinks.find_card(token)
+    status = card && MemberCard.link_status(card, DateTime.utc_now())
 
-    case active_card(token, now) do
-      nil ->
-        send_resp(conn, :not_found, "")
+    if is_nil(card) or (side == :print and status != :active) do
+      send_resp(conn, :not_found, "")
+    else
+      {:ok, bytes} = DrawMemberCard.call(card, side, status)
 
-      card ->
-        {:ok, bytes} = DrawMemberCard.call(card, side)
-
-        conn
-        |> put_resp_header("cache-control", "private, max-age=300")
-        |> send_download({:binary, bytes},
-          filename: filename(card, side),
-          content_type: if(side == :print, do: "application/pdf", else: "image/png"),
-          disposition: :inline
-        )
+      conn
+      |> put_resp_header("cache-control", "private, max-age=300")
+      |> send_download({:binary, bytes},
+        filename: filename(card, side),
+        content_type: if(side == :print, do: "application/pdf", else: "image/png"),
+        disposition: :inline
+      )
     end
   end
 
