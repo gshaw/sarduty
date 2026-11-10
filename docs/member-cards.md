@@ -342,10 +342,13 @@ other way to get the card.
   Typst drawing, `priv/typst/member_card.typ`, for `/cards/:token/image`, a PNG at 400
   pixels an inch, and `/cards/:token/pdf`. Each is drawn on the request, as a pass is
   built, so it shows today's card.
-  - **The picture is the front as the Wallet passes draw theirs**: upright, 54 × 74 mm,
-    in the passes' navy with yellow labels and the team's name in yellow. "No Wallet?
-    Show this card, save it as an image, or print it." A member can show the page at
-    the door as they would the pass. It draws its own round corners.
+  - **The picture is the front as the iPhone Wallet pass draws it**: upright, 54 × 74 mm,
+    in the pass's navy with yellow labels and the team's name in yellow. Issued sits in
+    the pass's Status place and Member since in the middle. "No Wallet? Show this card,
+    save it as an image, or print it." A member can show the page at the door as they
+    would the pass. It draws its own round corners, with clear corners around them.
+  - **The code under the QR code is IBM Plex Mono**, the app's font for codes, on the
+    picture and the printed card; `priv/fonts` holds its Medium beside Arimo.
   - **One front, two looks.** The picture and the printed front show the same facts:
     the team's logo and name, the photo, the name, Member since, Issued, and the QR code
     with its code. Issued is the day the card was created (`inserted_at`), not the day

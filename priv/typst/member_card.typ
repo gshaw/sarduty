@@ -56,10 +56,13 @@
   block(width: 100%, height: 1mm, fill: navy, spacing: 0pt)
 }
 
+// The code as a person types it, in IBM Plex Mono, the app's font for codes.
+#let code-text(code, size) = text(font: "IBM Plex Mono", weight: "medium", size: size, fill: black, code)
+
 #let code(card, width, size) = align(center, {
   image("qr.svg", width: width)
   v(0.4mm)
-  text(size: size, weight: "bold", tracking: 0.03em, card.code)
+  code-text(card.code, size)
 })
 
 #let front(card, edge: none) = side(edge, {
@@ -112,12 +115,13 @@
   v(1fr)
 })
 
-// The card page's picture, which Save image saves: the front as the Wallet passes draw
-// theirs, upright in SAR Duty's navy with yellow labels, so a member can show the page or
-// the picture as they would the pass.
+// The card page's picture, which Save image saves: the front as the iPhone Wallet pass
+// draws it, upright in SAR Duty's navy with yellow labels, so a member can show the page
+// or the picture as they would the pass. Issued takes the pass's Status, and there is no
+// Valid until: a saved picture never updates.
 #let yellow = rgb(255, 196, 0)
-#let soft = rgb(255, 255, 255, 190)
-#let pass-label(body) = text(size: 4.8pt, weight: "bold", fill: yellow, upper(body))
+#let pass-label(body) = text(size: 5.4pt, weight: "bold", fill: yellow, upper(body))
+#let pass-field(name, value) = [#pass-label(name) \ #text(size: 9pt, value)]
 
 #let pass(card) = block(
   width: 54mm,
@@ -125,44 +129,50 @@
   fill: navy,
   radius: 3mm,
   clip: true,
-  inset: (x: 3mm, top: 2.8mm, bottom: 3mm),
+  inset: (x: 3mm, top: 2.4mm, bottom: 2.2mm),
   spacing: 0pt,
   {
     set text(font: "Arimo", size: 6.4pt, fill: white)
     set par(leading: 0.42em, spacing: 0.5em)
+    // The logo, and the team's name in the width left: 9 pt, 7.4 pt if that doesn't fit
+    // on one line, then wrapped.
     grid(
-      columns: (5.4mm, 1fr),
-      column-gutter: 1.8mm,
+      columns: (7.4mm, 1fr),
+      column-gutter: 2mm,
       align: horizon,
-      image("logo.png", height: 5.4mm),
-      text(size: 7.4pt, weight: "bold", fill: yellow, card.team),
+      image("logo.png", height: 7.4mm),
+      layout(size => {
+        let one = text(size: 9pt, weight: "bold", fill: yellow, card.team)
+        if measure(one).width <= size.width { one } else {
+          block(text(size: 7.4pt, weight: "bold", fill: yellow, card.team))
+        }
+      }),
     )
-    v(1fr)
+    v(3mm)
     grid(
-      columns: (1fr, 15mm),
+      columns: (1fr, 12.5mm),
       column-gutter: 2mm,
       align: top,
       {
         pass-label(if card.name_label != none { card.name_label } else { "Member" })
         linebreak()
-        text(size: 10.4pt, card.name)
+        text(size: 12pt, card.name)
       },
-      box(clip: true, radius: 1.2mm, image("photo.png", width: 15mm, height: 15mm, fit: "cover")),
+      image("photo.png", width: 12.5mm, height: 12.5mm, fit: "cover"),
     )
-    v(2.4mm)
+    v(2.6mm)
     grid(
-      columns: (auto, auto),
-      column-gutter: 4mm,
-      ..if card.member_since != none { ([#pass-label("Member since") \ #card.member_since],) },
-      [#pass-label("Issued") \ #card.issued],
+      columns: (1fr, 1fr),
+      column-gutter: 2mm,
+      pass-field("Issued", card.issued),
+      ..if card.member_since != none { (pass-field("Member since", card.member_since),) },
     )
     v(1fr)
-    align(center, box(fill: white, radius: 1.2mm, inset: (x: 1.4mm, top: 1.4mm, bottom: 0.9mm), {
-      image("qr.svg", width: 24mm)
-      v(0.5mm)
-      text(size: 6.2pt, weight: "bold", tracking: 0.03em, fill: black, card.code)
+    align(center, box(fill: white, radius: 1mm, inset: (x: 1.6mm, top: 1.6mm, bottom: 1.1mm), {
+      image("qr.svg", width: 20.5mm)
+      v(0.6mm)
+      code-text(card.code, 7pt)
     }))
-    v(1fr)
   },
 )
 
