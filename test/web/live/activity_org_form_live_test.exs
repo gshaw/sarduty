@@ -380,6 +380,9 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert "%PDF" <> _ = PublishedPDF.attachment(pdf).content
 
       assert has_element?(lv, "#org-form-current", PublishedPDF.format_code(pdf.code))
+      # Who published it, by their member name, not their email.
+      assert has_element?(lv, "#org-form-current", "by Alex Chen")
+      refute has_element?(lv, "#org-form-current", "@")
       refute has_element?(lv, "#org-form-out-of-date")
       refute has_element?(lv, "#org-form-publish")
 
@@ -409,6 +412,26 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert first |> Repo.reload!() |> PublishedPDF.status() == :replaced
       refute has_element?(lv, "#org-form-out-of-date")
       assert has_element?(lv, "#org-form-earlier-#{first.id}", "Replaced")
+    end
+
+    test "a box that shows an error stops Publish, since it prints what's saved", ctx do
+      %{cast: cast, hiker: hiker, form: form} = ctx
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+
+      lv |> form("#org-form-answers", answers: %{"injured" => "a few"}) |> render_change()
+      assert has_element?(lv, "#org-form-publish[disabled]")
+      assert has_element?(lv, "#org-form-fix-first")
+
+      render_hook(lv, "publish", %{})
+      assert render(lv) =~ "Fix the boxes marked first."
+      refute Repo.exists?(PublishedPDF)
+
+      lv |> form("#org-form-answers", answers: %{"injured" => "2"}) |> render_change()
+      refute has_element?(lv, "#org-form-publish[disabled]")
+      assert publish(lv).keep[":injured"] == 2
+
+      lv |> form("#org-form-answers", answers: %{"injured" => "lots"}) |> render_change()
+      assert has_element?(lv, "#org-form-publish-again[disabled]")
     end
 
     test "Withdraw ends it with no new one, and Publish comes back", ctx do

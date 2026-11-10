@@ -19,6 +19,7 @@ defmodule Web.ActivityOrgFormLive do
   alias App.Model.Activity
   alias App.Model.Form
   alias App.Model.FormAnswer
+  alias App.Model.Member
   alias App.Model.PublishedPDF
   alias App.Operation.PublishDocument
   alias App.Operation.SaveFormAnswers
@@ -71,7 +72,12 @@ defmodule Web.ActivityOrgFormLive do
           ),
         else: []
 
-    assign(socket, published: published, changes: changes)
+    # Who published it, by their member name, as other "by" lines say.
+    published_by =
+      published.current &&
+        Member.name_for_user(team, published.current.user, DateTime.utc_now())
+
+    assign(socket, published: published, changes: changes, published_by: published_by)
   end
 
   # Each change saves the answers that read, and shows what's wrong with the rest. What
@@ -93,6 +99,13 @@ defmodule Web.ActivityOrgFormLive do
   end
 
   def handle_event("change", _params, socket), do: {:noreply, socket}
+
+  # A box that shows an error isn't saved, so publishing then would print its last saved
+  # answer, not what the box shows.
+  def handle_event("publish", _params, %{assigns: %{errors: errors}} = socket)
+      when errors != %{} do
+    {:noreply, put_flash(socket, :error, fix_first())}
+  end
 
   def handle_event("publish", _params, socket) do
     %{current_team: team, form: form, activity: activity, current_user: user} = socket.assigns
@@ -136,6 +149,8 @@ defmodule Web.ActivityOrgFormLive do
 
   defp code(pdf), do: PublishedPDF.format_code(pdf.code)
 
+  defp fix_first, do: "Fix the boxes marked first. Publish prints what's saved."
+
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
@@ -166,7 +181,9 @@ defmodule Web.ActivityOrgFormLive do
     <div :if={@page} class="measure">
       <.published_box
         published={@published}
+        published_by={@published_by}
         changes={@changes}
+        errors={@errors}
         form={@form}
         team={@current_team}
       />
@@ -233,6 +250,13 @@ defmodule Web.ActivityOrgFormLive do
           A draft says DRAFT on every page and is never kept. Publish keeps the PDF, with an ID
           anyone holding it can check.
         </p>
+        <p
+          :if={@form.state == :on and @errors != %{}}
+          id="org-form-fix-first"
+          class="text-danger-text"
+        >
+          {fix_first()}
+        </p>
         <.form_actions>
           <.button
             :if={@form.state == :on and is_nil(@published.current)}
@@ -241,6 +265,7 @@ defmodule Web.ActivityOrgFormLive do
             variant={:primary}
             phx-click="publish"
             phx-disable-with="Publishing…"
+            disabled={@errors != %{}}
           >
             Publish
           </.button>
@@ -258,7 +283,9 @@ defmodule Web.ActivityOrgFormLive do
   end
 
   attr :published, :map, required: true
+  attr :published_by, :string, default: nil
   attr :changes, :list, required: true
+  attr :errors, :map, required: true
   attr :form, :map, required: true
   attr :team, :map, required: true
 
@@ -275,7 +302,7 @@ defmodule Web.ActivityOrgFormLive do
       <div :if={pdf = @published.current} id="org-form-current" class="card">
         <p class="mb-2">
           {Service.Format.datetime_short(pdf.inserted_at, @team.timezone)}
-          <span :if={pdf.user}>by {pdf.user.email}</span>
+          <span :if={@published_by}>by {@published_by}</span>
         </p>
         <p class="mono mb-4">
           <.a id="org-form-verify" href={PublishedPDF.verify_link(pdf.code)} external>{PublishedPDF.format_code(
@@ -303,6 +330,7 @@ defmodule Web.ActivityOrgFormLive do
             variant={if @changes != [], do: :warning, else: :secondary}
             phx-click="publish"
             phx-disable-with="Publishing…"
+            disabled={@errors != %{}}
             data-confirm={"Publish #{@form.name} again? It gets a new ID."}
             data-confirm-warning={"The verify page for #{PublishedPDF.format_code(pdf.code)} will say Replaced."}
             data-confirm-button="Publish again"
