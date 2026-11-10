@@ -164,7 +164,6 @@ defmodule Web.TaxCreditLetterLive do
                 <.button
                   :if={@changes != []}
                   id="replace-letter"
-                  variant={:warning}
                   phx-click="publish"
                   phx-disable-with="Publishing…"
                   {publish_confirm(@member, @hours)}

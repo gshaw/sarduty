@@ -154,7 +154,7 @@ defmodule Web.ActivityTagsLive do
       <p>
         {@service} does not let SAR Duty change a published activity's tags. Change them in {@service}.
       </p>
-      <.button variant={:warning} href={D4H.activity_url(@current_team, @activity)}>
+      <.button href={D4H.activity_url(@current_team, @activity)}>
         Open in {@service}
       </.button>
     </.banner>

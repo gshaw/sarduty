@@ -157,8 +157,9 @@ defmodule Web.ChoreCollectionLive do
       <.button
         id="send-changes"
         type="button"
-        variant={:warning}
         phx-click="send-changes"
+        data-confirm={send_changes_confirm(@to_send)}
+        data-confirm-button="Send changes"
         phx-disable-with="Sending…"
       >
         Send changes
@@ -497,4 +498,13 @@ defmodule Web.ChoreCollectionLive do
   end
 
   defp count_chores(n), do: Format.count(n, one: "%d chore", many: "%d chores")
+
+  # Send changes asks first and says what it changes, as no button is yellow (#995).
+  defp send_changes_confirm(count) do
+    Format.count(count,
+      one: "Send changes to 1 activity? It gets the chores accepted for its category and month.",
+      many:
+        "Send changes to %d activities? Each gets the chores accepted for its category and month."
+    )
+  end
 end

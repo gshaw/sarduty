@@ -59,13 +59,6 @@
     --btn-edge: color-mix(in srgb, var(--danger) 55%, #000);
   }
 
-  .btn-warning {
-    --btn-bg: var(--warning);
-    --btn-bg-hover: color-mix(in srgb, var(--warning) 85%, #000);
-    --btn-fg: var(--on-warning);
-    --btn-edge: color-mix(in srgb, var(--warning) 55%, #000);
-  }
-
   .btn-link {
     --btn-bg: transparent;
     --btn-bg-hover: transparent;

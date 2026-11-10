@@ -476,7 +476,6 @@ defmodule Web.ActivityOrgFormLive do
             :if={@form.state == :on}
             id="org-form-publish-again"
             type="button"
-            variant={if @changes != [], do: :warning, else: :secondary}
             phx-click="preview"
             disabled={@errors != %{}}
           >

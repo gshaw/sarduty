@@ -119,7 +119,7 @@ defmodule Web.Components.Core do
 
   attr :variant, :atom,
     default: :default,
-    values: [:default, :primary, :secondary, :success, :warning, :danger, :link]
+    values: [:default, :primary, :secondary, :success, :danger, :link]
 
   attr :size, :atom, default: :md, values: [:sm, :md, :lg]
   attr :navigate, :string, default: nil

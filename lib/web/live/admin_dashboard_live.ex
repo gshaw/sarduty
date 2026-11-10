@@ -96,7 +96,13 @@ defmodule Web.AdminDashboardLive do
       <h1 class="title">Teams</h1>
       <:note><span id="refresh-summary">{refresh_summary(@teams, @demos)}</span></:note>
       <:action>
-        <.button type="button" variant={:warning} phx-click="refresh-all">
+        <.button
+          id="refresh-all"
+          type="button"
+          phx-click="refresh-all"
+          data-confirm="Refresh all teams now? Each team's full refresh runs, as it does every night."
+          data-confirm-button="Refresh all teams"
+        >
           Refresh all teams
         </.button>
       </:action>

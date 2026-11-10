@@ -11,12 +11,14 @@ defmodule Web.AdminDashboardLiveTest do
     %{user: user} = user_with_team_fixture()
     user = make_admin(user)
 
-    {:ok, _lv, html} =
+    {:ok, lv, html} =
       conn
       |> log_in_user(user)
       |> live(~p"/admin")
 
     assert html =~ "Admin"
+    # Plain, and asks first: no button is yellow (#995).
+    assert has_element?(lv, "#refresh-all.btn:not(.btn-primary)[data-confirm^='Refresh all teams now?']")
   end
 
   test "shows each team's logo from the shared logo route", %{conn: conn} do

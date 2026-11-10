@@ -282,7 +282,6 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp button_text(_choice, _n), do: "Change letters"
 
   defp variant("send"), do: :success
-  defp variant("publish"), do: :warning
   defp variant(_choice), do: :primary
 
   defp waiting("publish"), do: "Publishing…"
