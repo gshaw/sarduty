@@ -168,14 +168,19 @@
       <strong>4 or more:</strong> a count and a total: "6 who attended lose 30 hours."
     </li>
     <li>
+      <strong>In different states:</strong>
+      a line for each group, by what happens to it, with its count: "60 get their first
+      letter." A group of 3 or fewer names its members, and those it leaves out get their
+      own line: "Not emailed: Blake Morrison has no email."
+    </li>
+    <li>
       <strong>10 or more:</strong>
       the <a href="#check-box">check box</a>
       too, naming the count: "I understand 12 members lose their hours."
     </li>
     <li>
-      <strong>When who matters more than how many</strong>, such as who gets an email and
-      why the rest don't, use a step: a page that lists them all, as Ask for a reply does.
-      Not a dialog.
+      <strong>When it needs more than a yes</strong>, such as a message to write, use a
+      step: a page that lists them all, as Ask for a reply does. Not a dialog.
     </li>
   </ul>
   <div class="demo grid gap-6">
@@ -195,6 +200,21 @@
       warning="12 who attended lose 60 hours."
       check="I understand 12 members lose their hours."
       action="Mark 12 absent"
+    />
+    <.confirm_dialog
+      id="confirm-example-many-groups"
+      open
+      question="Email 87 tax credit letters for 2025?"
+      body="Each member gets their latest letter as a PDF."
+      list={[
+        "60 get their first letter.",
+        "18 get a new letter in place of one out of date. Their old letters will verify as Replaced.",
+        "9 get the letter that did not send.",
+        "Not emailed: 2 already have the latest letter by email, and Blake Morrison has no email."
+      ]}
+      warning="Emails cannot be taken back."
+      check="I understand 87 members get this email."
+      action="Email 87 letters"
     />
   </div>
 

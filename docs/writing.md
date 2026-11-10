@@ -143,7 +143,9 @@ its own confirmation, such as a reply's "Signed up".
 
 **Confirmations.** Before a change that cannot be undone, name the thing and what happens:
 "Delete First Aid? It comes off ID cards and the rules of Callout." The buttons are the action
-("Delete endorsement") and "Cancel".
+("Delete endorsement") and "Cancel". For many members, name up to 3; past that, a line for
+each group by what happens to it, with its count, and a line for those it leaves out
+([/styles/confirm-dialog#many](/styles/confirm-dialog#many)).
 
 **Warnings.** The consequence first, then what to do: "Attendance cannot be changed once
 the activity is published. Unpublish it with Change activity first."
