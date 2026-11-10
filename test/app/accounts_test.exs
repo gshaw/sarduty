@@ -323,11 +323,9 @@ defmodule App.AccountsTest do
       :ok = Accounts.deliver_login_code("html@example.com")
 
       assert_received {:email, email}
-      [code, first, last] = Regex.run(~r/(\d{4}) (\d{4})/, email.subject)
+      [code] = Regex.run(~r/\d{4}-\d{4}/, email.subject)
       assert email.text_body =~ code
-
-      assert email.html_body =~
-               ~s(<span>#{first}</span><span style="margin-left: 16px;">#{last}</span>)
+      assert email.html_body =~ ~s(monospace;">#{code}</p>)
 
       assert email.html_body =~ ~s(<meta name="format-detection" content="telephone=no">)
 
@@ -341,7 +339,7 @@ defmodule App.AccountsTest do
       :ok = Accounts.deliver_login_code("otp@example.com")
 
       assert_received {:email, email}
-      [first, last] = Regex.run(~r/(\d{4}) (\d{4})/, email.subject, capture: :all_but_first)
+      [first, last] = Regex.run(~r/(\d{4})-(\d{4})/, email.subject, capture: :all_but_first)
       host = Web.Endpoint.host()
       assert email.text_body =~ ~r/@#{Regex.escape(host)} ##{first}#{last}\n\z/
       assert email.html_body =~ "@#{host} ##{first}#{last}"
@@ -355,7 +353,7 @@ defmodule App.AccountsTest do
         manager_fixture(team, %{email: email})
         :ok = Accounts.deliver_login_code(email)
         assert_received {:email, sent}
-        [first, last] = Regex.run(~r/(\d{4}) (\d{4})/, sent.subject, capture: :all_but_first)
+        [first, last] = Regex.run(~r/(\d{4})-(\d{4})/, sent.subject, capture: :all_but_first)
         assert {:ok, _} = Accounts.log_in_with_code(email, typed.(first, last))
       end
     end
@@ -477,7 +475,7 @@ defmodule App.AccountsTest do
   defp deliver(email) do
     :ok = Accounts.deliver_login_code(email)
     assert_received {:email, sent}
-    [code] = Regex.run(~r/\d{4} \d{4}/, sent.subject)
-    String.replace(code, " ", "")
+    [code] = Regex.run(~r/\d{4}-\d{4}/, sent.subject)
+    String.replace(code, "-", "")
   end
 end
