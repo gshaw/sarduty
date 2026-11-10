@@ -86,48 +86,36 @@ defmodule Web.Org.FormLive do
         </dl>
       </aside>
       <main class="content-2/3">
-        <section id="form-on-off" class="mb-8 measure">
-          <h2 class="heading">For teams</h2>
-          <p>
-            Testing, team admins of every team in {@current_organization.short_name} fill it in
-            from an activity it shows on and download draft PDFs, marked DRAFT. On, they publish
-            it, with an ID and a verify code. Members never see it. Turning it off keeps every
-            PDF already published.
-          </p>
-          <.form_actions>
-            <.button
-              :if={@form.state != :on}
-              id="form-on"
-              phx-disable-with="Turning on…"
-              type="button"
-              phx-click="state"
-              phx-value-state="on"
-            >
-              Turn on form
-            </.button>
-            <.button
-              :if={@form.state != :testing}
+        <%!-- Two switches for three states, as Features nests one under another: on shows
+        it to teams, and testing under it keeps it to drafts. Turning it on starts testing. --%>
+        <section id="form-on-off" class="mb-8 measure flex flex-col gap-6">
+          <h2 class="heading mb-0">For teams</h2>
+          <.switch
+            id="form-on"
+            label="Turned on"
+            checked={@form.state != :off}
+            phx-click="state"
+            phx-value-state={if @form.state == :off, do: "testing", else: "off"}
+            {off_confirm(@form)}
+          >
+            Team admins of every team in {@current_organization.short_name} fill it in from an
+            activity it shows on. Members never see it. Turning it off keeps every PDF already
+            published.
+          </.switch>
+          <div class="pl-8">
+            <.switch
               id="form-testing"
-              phx-disable-with="Saving…"
-              type="button"
+              label="Testing"
+              checked={@form.state != :on}
+              disabled={@form.state == :off}
               phx-click="state"
-              phx-value-state="testing"
+              phx-value-state={if @form.state == :testing, do: "on", else: "testing"}
+              {publish_confirm(@form)}
             >
-              Set to testing
-            </.button>
-            <.button
-              :if={@form.state != :off}
-              id="form-off"
-              phx-disable-with="Turning off…"
-              type="button"
-              variant={:danger}
-              phx-click="state"
-              phx-value-state="off"
-              data-confirm={"Turn off #{@form.name}? Team admins can no longer fill it in."}
-            >
-              Turn off form
-            </.button>
-          </.form_actions>
+              Draft PDFs only, marked DRAFT. Turn testing off and they publish it, with an ID
+              and a verify code.
+            </.switch>
+          </div>
         </section>
 
         <section id="form-try" class="mb-8 measure">
@@ -182,6 +170,23 @@ defmodule Web.Org.FormLive do
     </div>
     """
   end
+
+  defp off_confirm(%Form{state: :off}), do: %{}
+
+  defp off_confirm(form),
+    do: %{
+      "data-confirm" => "Turn off #{form.name}? Team admins can no longer fill it in.",
+      "data-confirm-button" => "Turn off"
+    }
+
+  defp publish_confirm(%Form{state: :testing} = form),
+    do: %{
+      "data-confirm" =>
+        "Turn off testing for #{form.name}? Team admins of every team can then publish it.",
+      "data-confirm-button" => "Turn off testing"
+    }
+
+  defp publish_confirm(_form), do: %{}
 
   defp shows_on(nil), do: "Activities"
   defp shows_on(%Document{where: nil}), do: "Every activity"

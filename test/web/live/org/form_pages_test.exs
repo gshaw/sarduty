@@ -94,17 +94,24 @@ defmodule Web.Org.FormPagesTest do
          %{conn: conn, dana: dana, form: form} do
       {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/forms/#{form}")
 
-      lv |> element("#form-testing") |> render_click()
+      # Off: Testing waits under Turned on.
+      assert has_element?(lv, "#form-testing[disabled]")
+
+      # Turning it on starts testing.
+      lv |> element("#form-on") |> render_click()
       assert Repo.reload!(form).state == :testing
       assert has_element?(lv, "#form-state", "Testing")
-      refute has_element?(lv, "#form-testing")
+      assert has_element?(lv, "#form-on[checked]")
+      assert has_element?(lv, "#form-testing[checked]:not([disabled])")
 
-      lv |> element("#form-on") |> render_click()
+      lv |> element("#form-testing") |> render_click()
       assert Repo.reload!(form).state == :on
       assert has_element?(lv, "#form-state", "On")
+      refute has_element?(lv, "#form-testing[checked]")
 
-      lv |> element("#form-off") |> render_click()
+      lv |> element("#form-on") |> render_click()
       assert Repo.reload!(form).state == :off
+      refute has_element?(lv, "#form-on[checked]")
 
       kinds = [:form_set_testing, :form_turned_on, :form_turned_off]
       assert [_testing, _on, _off] = Event |> where([e], e.kind in ^kinds) |> Repo.all()
