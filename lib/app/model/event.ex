@@ -222,10 +222,10 @@ defmodule App.Model.Event do
 
   # The latest email or number typed for each hash. Each is encrypted with its own IV,
   # so SQL can't group them; the newest row per hash is enough.
-  defp get_shown(whos) do
+  defp get_shown(hashes) do
     latest =
       from e in Event,
-        where: e.who in ^whos and not is_nil(e.email_or_phone),
+        where: e.who in ^hashes and not is_nil(e.email_or_phone),
         group_by: e.who,
         select: max(e.id)
 
