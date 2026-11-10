@@ -7,6 +7,7 @@ alias App.Model.Team
 alias App.Operation.EmailTaxCreditLetter
 alias App.Operation.PrintTaxCreditLetter
 alias App.Operation.PublishTaxCreditLetter
+alias App.Operation.ReadDocument
 alias App.Repo
 alias App.Worker.EmailTaxCreditLettersWorker
 alias App.Worker.EmailTaxCreditLetterWorker
@@ -242,8 +243,14 @@ defmodule App.Operation.EmailTaxCreditLetters do
       {:published, email}
     else
       {:error, :stale} -> :stale
-      {:error, message} -> {:refused, message}
+      {:error, {:needed, needed}} -> {:refused, needed_error(member, needed)}
     end
+  end
+
+  # What a letter needs, said for the button: Email, or Publish letter with no email.
+  defp needed_error(member, needed) do
+    verb = if emailed?(member), do: "emailed", else: "published"
+    ReadDocument.needed_error("This letter", needed, verb)
   end
 
   defp publish_and_email(prepared, record) do
@@ -277,7 +284,7 @@ defmodule App.Operation.EmailTaxCreditLetters do
     else
       false -> {:ok, record.letter}
       {:error, :stale} -> {:error, "Someone just published this letter. Reload to see it."}
-      {:error, message} -> {:error, message}
+      {:error, {:needed, needed}} -> {:error, needed_error(member, needed)}
     end
   end
 

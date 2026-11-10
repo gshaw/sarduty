@@ -80,7 +80,13 @@ defmodule Web.TaxCreditLetterCollectionLive do
     ~H"""
     <h1 class="title">{@page_title}</h1>
 
-    <.needed_banner id="letters-needed" what="Letters" needed={@needed} team={@current_team} />
+    <.needed_banner
+      id="letters-needed"
+      what="Letters"
+      needed={@needed}
+      team={@current_team}
+      action={:email}
+    />
     <.emailed_banner :if={@emailed} emailed={@emailed} />
     <.banner :if={@emailing} id="letters-emailing" title="Emailing letters" role="status">
       <p>
@@ -379,8 +385,8 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp refused_text([{_member, message} | _rest] = refused),
     do:
       count_of(refused,
-        one: "1 letter was not published. #{message}",
-        many: "%d letters were not published. #{message}"
+        one: "1 letter did not go out. #{message}",
+        many: "%d letters did not go out. #{message}"
       )
 
   defp count_of(list, words), do: list |> length() |> Service.Format.count(words)
@@ -463,7 +469,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         put_flash(socket, :error, refusal)
 
       needed != [] and Enum.any?(fit, &EmailTaxCreditLetters.publishes?(&1.email)) ->
-        put_flash(socket, :error, ReadDocument.needed_error("Letters", needed))
+        put_flash(socket, :error, ReadDocument.needed_error("Letters", needed, "emailed"))
 
       true ->
         email(socket, fit)

@@ -48,27 +48,34 @@ defmodule Web.Components.PublishedPDF do
   attr :team, :map, required: true
   attr :activity, :map, default: nil, doc: "a form's, whose fields fill it"
 
+  attr :action, :atom,
+    default: :publish,
+    values: [:publish, :email],
+    doc: "what its button does: a letter's Email says emailed (#995)"
+
   # What publishing needs that's missing, each with the page that fills it, or what the
   # activity has to do first (#995). The same words as publishing's refusal.
   def needed_banner(%{needed: [one]} = assigns) do
-    assigns = assign(assigns, one: one)
+    assigns = assign(assigns, one: one, verb: verb(assigns.action))
 
     ~H"""
-    <.banner id={@id} kind={:warning} title="Needed to publish" class="measure">
-      <p>{ReadDocument.needed_error(@what, [@one])}</p>
+    <.banner id={@id} kind={:warning} title={title(@action)} class="measure">
+      <p>{ReadDocument.needed_error(@what, [@one], @verb)}</p>
       <.need_fix id={"#{@id}-fix"} need={@one} team={@team} activity={@activity} sentence />
     </.banner>
     """
   end
 
   def needed_banner(%{needed: [_, _ | _]} = assigns) do
+    assigns = assign(assigns, verb: verb(assigns.action))
+
     ~H"""
-    <.banner id={@id} kind={:warning} title="Needed to publish" class="measure">
+    <.banner id={@id} kind={:warning} title={title(@action)} class="measure">
       <p :if={Enum.all?(@needed, &is_nil(ReadDocument.waits_for(&1)))}>
-        {@what} cannot be published without {length(@needed)} values:
+        {@what} cannot be {@verb} without {length(@needed)} values:
       </p>
       <p :if={Enum.any?(@needed, &ReadDocument.waits_for/1)}>
-        {@what} needs {length(@needed)} things before it can be published:
+        {@what} needs {length(@needed)} things before it can be {@verb}:
       </p>
       <ul>
         <li :for={need <- @needed}><.need_fix need={need} team={@team} activity={@activity} /></li>
@@ -78,6 +85,13 @@ defmodule Web.Components.PublishedPDF do
   end
 
   def needed_banner(assigns), do: ~H""
+
+  defp title(:publish), do: "Needed to publish"
+  defp title(:email), do: "Needed to email"
+
+  @doc "The word a refusal uses for `action`: a letter is emailed, a form published."
+  def verb(:publish), do: "published"
+  def verb(:email), do: "emailed"
 
   attr :id, :string, default: nil
   attr :need, :map, required: true

@@ -316,11 +316,13 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
 
       {:ok, _team} = SaveTeamSignature.call(team, nil)
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025")
+      # Letters have no Publish: the words say what Email does.
+      assert has_element?(lv, "#letters-needed", "Needed to email")
 
       assert has_element?(
                lv,
                "#letters-needed",
-               "Letters cannot be published without the signer's signature."
+               "Letters cannot be emailed without the signer's signature."
              )
 
       assert has_element?(
@@ -338,7 +340,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       assert has_element?(
                lv,
                "#flash-error",
-               "Letters cannot be published without the signer's signature."
+               "Letters cannot be emailed without the signer's signature."
              )
 
       refute Repo.exists?(PublishedPDF)
@@ -346,7 +348,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       # The job refuses it too.
       team = Repo.reload!(team)
 
-      assert %{published: 0, refused: [{_avery, "This letter cannot be published" <> _}]} =
+      assert %{published: 0, refused: [{_avery, "This letter cannot be emailed" <> _}]} =
                EmailTaxCreditLetters.run(team, 2025, [avery.id], nil)
     end
 

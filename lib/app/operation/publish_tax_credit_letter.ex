@@ -22,17 +22,23 @@ defmodule App.Operation.PublishTaxCreditLetter do
   `current_id` is the member's current letter's id the person saw, nil for none.
   """
   def call(%Team{} = team, member_id, year, %User{} = user, current_id, now \\ DateTime.utc_now()) do
-    with {:ok, prepared} <- prepare(team, member_id, year, user.id, now) do
-      case insert(prepared, current_id) do
-        {:ok, letter} -> {:ok, letter}
-        {:error, :stale} -> {:error, "Someone just published this letter. Reload to see it."}
-      end
+    case prepare(team, member_id, year, user.id, now) do
+      {:ok, prepared} -> insert_or_stale(prepared, current_id)
+      {:error, {:needed, needed}} -> {:error, ReadDocument.needed_error("This letter", needed)}
+    end
+  end
+
+  defp insert_or_stale(prepared, current_id) do
+    case insert(prepared, current_id) do
+      {:ok, letter} -> {:ok, letter}
+      {:error, :stale} -> {:error, "Someone just published this letter. Reload to see it."}
     end
   end
 
   @doc """
   The letter printed, and nothing written yet: `{:ok, %{attrs, printed, member}}`, or
-  `{:error, message}` while a value it needs is blank, with nothing printed. A print that
+  `{:error, {:needed, needed}}` while a value it needs is blank, with nothing printed:
+  the caller words it for its button (ReadDocument.needed_error/3). A print that
   fails raises, so no letter is made without its PDF. `user_id` is who publishes it, nil
   for none. `read` is the member's letter as PrintTaxCreditLetter.read/4 read it, when
   the caller has it.
@@ -43,7 +49,7 @@ defmodule App.Operation.PublishTaxCreditLetter do
 
     case PrintTaxCreditLetter.needed(read) do
       [] -> {:ok, print(team, member, year, user_id, read)}
-      needed -> {:error, ReadDocument.needed_error("This letter", needed)}
+      needed -> {:error, {:needed, needed}}
     end
   end
 

@@ -137,8 +137,8 @@ defmodule App.Operation.PublishTaxCreditLetterTest do
        %{team: team, member: member} do
     team = team |> Ecto.Changeset.change(signature: nil) |> Repo.update!()
 
-    assert PublishTaxCreditLetter.prepare(team, member.id, 2025, nil) ==
-             {:error, "This letter cannot be published without the signer's signature."}
+    assert {:error, {:needed, [%{name: "team.signature", label: "Signer's signature"}]}} =
+             PublishTaxCreditLetter.prepare(team, member.id, 2025, nil)
 
     team = team |> Ecto.Changeset.change(mailing_address: nil) |> Repo.update!()
     user = App.AccountsFixtures.user_fixture()

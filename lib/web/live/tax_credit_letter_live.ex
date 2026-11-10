@@ -149,7 +149,13 @@ defmodule Web.TaxCreditLetterLive do
           changes={@record.changes}
           next={"#{email_label(@member)} makes a new one#{if emailed?(@member), do: " and sends it"}."}
         />
-        <.needed_banner id="letter-needed" what="This letter" needed={@needed} team={@current_team} />
+        <.needed_banner
+          id="letter-needed"
+          what="This letter"
+          needed={@needed}
+          team={@current_team}
+          action={if emailed?(@member), do: :email, else: :publish}
+        />
         <%= if @letter do %>
           <.published_section
             prefix="letter"

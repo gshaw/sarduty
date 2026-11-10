@@ -141,20 +141,22 @@ defmodule App.Operation.ReadDocument do
   Publishing's refusal while `needed/3` names something, starting with `what`, such as
   "This letter": "This letter cannot be published without the signer's signature.",
   or for a state it waits for, "This form cannot be published until the activity is
-  published." The page's warning banner says the same, with the page that fills each.
+  published." `verb` is what the person's button does, so a letter, which only Email
+  publishes, says "emailed" (#995). The page's warning banner says the same, with the
+  page that fills each.
   """
-  def needed_error(what, needed) do
+  def needed_error(what, needed, verb \\ "published") do
     {states, blanks} = Enum.split_with(needed, &waits_for/1)
 
     case {states, blanks} do
       {[], blanks} ->
-        "#{what} cannot be published #{without(blanks)}."
+        "#{what} cannot be #{verb} #{without(blanks)}."
 
       {states, []} ->
-        "#{what} cannot be published until #{until(states)}."
+        "#{what} cannot be #{verb} until #{until(states)}."
 
       {states, blanks} ->
-        "#{what} cannot be published until #{until(states)}. It needs #{needs_too(blanks)}."
+        "#{what} cannot be #{verb} until #{until(states)}. It needs #{needs_too(blanks)}."
     end
   end
 

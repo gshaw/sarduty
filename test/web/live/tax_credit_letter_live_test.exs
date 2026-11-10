@@ -304,11 +304,11 @@ defmodule Web.TaxCreditLetterLiveTest do
        %{conn: conn, team: team, member: member} do
     attend(team, member, 2025)
     team |> Ecto.Changeset.change(signature: nil) |> Repo.update!()
-    message = "This letter cannot be published without the signer's signature."
+    message = "This letter cannot be emailed without the signer's signature."
 
     {:ok, lv, _html} = live(conn, letter_path(team, member, 2025))
 
-    assert has_element?(lv, "#letter-needed.banner-warning", "Needed to publish")
+    assert has_element?(lv, "#letter-needed.banner-warning", "Needed to email")
     assert has_element?(lv, "#letter-needed", message)
 
     assert has_element?(
@@ -322,6 +322,19 @@ defmodule Web.TaxCreditLetterLiveTest do
 
     assert has_element?(lv, "#flash-error", message)
     refute TaxCreditLetter.get_current(member, 2025)
+
+    # With no email the button is Publish letter, and the words follow it.
+    blake = member_fixture(team, %{name: "Blake Morrison", email: nil})
+    attend(team, blake, 2025)
+    {:ok, lv, _html} = live(conn, letter_path(team, blake, 2025))
+    assert has_element?(lv, "#letter-needed", "Needed to publish")
+    lv |> element("#email-letter", "Publish letter") |> render_click()
+
+    assert has_element?(
+             lv,
+             "#flash-error",
+             "This letter cannot be published without the signer's signature."
+           )
   end
 
   test "a year that can't have letters is a 404", %{conn: conn, team: team, member: member} do
