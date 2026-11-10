@@ -85,9 +85,10 @@ defmodule App.Operation.DrawMemberCard do
 
   defp source(:print), do: ~s|#import "card.typ": *\n#sheet(json("card.json"))\n|
 
+  # No page fill, so the corners outside the card's rounding stay see-through on a dark page.
   defp source(:image),
     do:
-      ~s|#import "card.typ": *\n#set page(width: auto, height: auto, margin: 0pt)\n| <>
+      ~s|#import "card.typ": *\n#set page(width: auto, height: auto, margin: 0pt, fill: none)\n| <>
         ~s|#pass(json("card.json"))\n|
 
   defp template, do: Application.app_dir(:sarduty, "priv/typst/member_card.typ")
