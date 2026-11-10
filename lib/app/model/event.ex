@@ -70,8 +70,9 @@ defmodule App.Model.Event do
   # `who` column as a keyed hash (who/1), so attempts on one account group together, and
   # `ip_key` is the IP as the limits count it (App.RateLimit.ip_key/1, IPv6 by its /64).
   # Both are indexed with kind and time (#974), so counting one account's or one
-  # connection's events in a window is one index range. Healthchecks and Honeybadger
-  # alert.
+  # connection's events in a window is one index range. Web.LoginLimit counts wrong codes
+  # and texts from these rows (#975), looking back one day, so the table is more than a
+  # record: login events stay 90 days. Healthchecks and Honeybadger alert.
   schema "events" do
     field :kind, Ecto.Enum, values: @kinds
     belongs_to :team, Team
@@ -259,7 +260,12 @@ defmodule App.Model.Event do
 
   defp scope(query, data: data) do
     Enum.reduce(data, query, fn {key, value}, query ->
-      where(query, [e], fragment("json_extract(?, ?)", e.data, ^"$.#{key}") == ^value)
+      where(query, [e], fragment("json_extract(?, ?)", e.data, ^"$.#{key}") == ^json(value))
     end)
   end
+
+  # json_extract gives JSON's true and false as 1 and 0.
+  defp json(true), do: 1
+  defp json(false), do: 0
+  defp json(value), do: value
 end

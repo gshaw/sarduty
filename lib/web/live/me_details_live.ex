@@ -16,11 +16,12 @@ defmodule Web.MeDetailsLive do
   # never from the URL.
   #
   # The address form shows the member's copy, which the sync keeps (#423), and saving
-  # sends the change straight to D4H. Text login uses the mobile number, so a change waits for the code texted to the
-  # new number. Codes count against the login limits for that number. A code waiting for
-  # an answer shows its form, even after a reload. Members don't change their email here;
-  # team admins do, in D4H. A team admin viewing as the member (#425) sees the page with
-  # saving turned off. Invitation reminders are in account settings.
+  # sends the change straight to D4H. Text login uses the mobile number, so a change waits
+  # for the code texted to the new number. Codes and wrong codes count against the login
+  # limits for that number, as events with `via: "confirm"`. A code waiting for an answer
+  # shows its form, even after a reload. Members don't change their email here; team
+  # admins do, in D4H. A team admin viewing as the member (#425) sees the page with saving
+  # turned off. Invitation reminders are in account settings.
   def mount(_params, session, socket) do
     member = socket.assigns.current_member
     socket = assign(socket, :member, member)
@@ -30,6 +31,7 @@ defmodule Web.MeDetailsLive do
       |> assign(:page_title, "Contact details")
       |> assign(:field_rows, own_field_rows(member))
       |> assign(:client_ip, session["client_ip"])
+      |> assign(:user_agent, get_connect_info(socket, :user_agent))
       |> assign(:text_login?, Accounts.text_login?())
       |> assign(:phone_form, to_form(%{"phone" => ""}, as: "phone"))
       |> assign_pending(pending(socket.assigns))
@@ -68,7 +70,7 @@ defmodule Web.MeDetailsLive do
 
   def handle_event("send", %{"phone" => %{"phone" => input}}, socket) do
     %{client_ip: ip} = socket.assigns
-    allowed? = fn e164 -> LoginLimit.check({:phone, e164}, ip) == :ok end
+    allowed? = &LoginLimit.request(socket.assigns, {:phone, &1}, ip, "confirm")
 
     {:noreply,
      with_login(socket, fn member ->
@@ -87,7 +89,7 @@ defmodule Web.MeDetailsLive do
      with_login(socket, fn member ->
        result =
          if LoginLimit.guessing_blocked?(who, ip),
-           do: {:error, :wrong_code},
+           do: {:error, :blocked},
            else: ChangeOwnPhone.confirm(member, user, e164, code, DateTime.utc_now())
 
        confirmed(socket, member, who, ip, result)
@@ -112,8 +114,12 @@ defmodule Web.MeDetailsLive do
     socket |> put_flash(:info, message) |> push_navigate(to: ~p"/teams/#{member.team}/me/details")
   end
 
-  defp confirmed(socket, _member, who, ip, {:error, :wrong_code}) do
-    LoginLimit.miss(who, ip)
+  # Tries after a block aren't recorded, as on the login page.
+  defp confirmed(socket, _member, who, ip, {:error, reason})
+       when reason in [:wrong_code, :blocked] do
+    if reason == :wrong_code,
+      do: LoginLimit.miss(socket.assigns, who, ip, %{via: "confirm", known_browser: false})
+
     put_flash(socket, :error, "That code is wrong or expired. Check it, or ask for a new one.")
   end
 

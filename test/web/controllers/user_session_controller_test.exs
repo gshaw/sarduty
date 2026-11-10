@@ -251,6 +251,30 @@ defmodule Web.UserSessionControllerTest do
       assert length(sent_texts()) == 3
     end
 
+    test "stops texting one number after 30 texts in 24 hours, saying the same", %{conn: conn} do
+      text_login_fixture()
+      manager_fixture(team_fixture(), %{email: "texted@example.com", phone: "604-555-7788"})
+      who = Event.who({:phone, "+16045557788"})
+      earlier = DateTime.add(DateTime.utc_now(), -23, :hour)
+
+      for _ <- 1..30 do
+        Event.record!(:login_code_requested, who: who, data: %{via: "text"}, occurred_at: earlier)
+      end
+
+      for _ <- 1..2 do
+        conn = build_conn() |> from_ip() |> request_text("604-555-7788")
+        assert redirected_to(conn) == ~p"/login/code"
+      end
+
+      assert sent_texts() == []
+      since = DateTime.add(DateTime.utc_now(), -1, :minute)
+      assert Event.count_since(:login_code_limited, since, who: who) == 1
+
+      # Emails keep only the 15-minute cap.
+      conn |> from_ip() |> request_code("texted@example.com")
+      assert_received {:email, %{subject: "Your SAR Duty login code: " <> _}}
+    end
+
     test "logs in with the texted code", %{conn: conn} do
       text_login_fixture()
       team = team_fixture()
@@ -337,6 +361,81 @@ defmodule Web.UserSessionControllerTest do
       assert Event.count_since(:login_code_missed, since, who: who) == 20
 
       assert Event.count_since(:login_blocked, since, who: who, data: %{scope: "account"}) == 1
+    end
+
+    test "a blocked email stays blocked when a deploy clears the in-memory counters",
+         %{conn: conn} do
+      %{user: user} = user_with_team_fixture()
+      for _ <- 1..20, do: conn |> from_ip() |> log_in(user.email, "00000000")
+      assert_received {:email, %{subject: "Wrong login codes entered" <> _}}
+
+      :ets.delete_all_objects(App.RateLimit)
+      Repo.delete_all(UserToken)
+      code = login_code_fixture(user.email)
+
+      refute build_conn() |> from_ip() |> log_in(user.email, code) |> get_session(:user_token)
+    end
+
+    test "counts misses over the last 24 hours, not since midnight", %{conn: conn} do
+      %{user: user} = user_with_team_fixture()
+      who = Event.who(user.email)
+      data = %{via: "email", known_browser: false}
+      long_ago = DateTime.add(DateTime.utc_now(), -25, :hour)
+      recent = DateTime.add(DateTime.utc_now(), -23, :hour)
+
+      for _ <- 1..19,
+          do: Event.record!(:login_code_missed, who: who, data: data, occurred_at: long_ago)
+
+      code = login_code_fixture(user.email)
+      assert conn |> from_ip() |> log_in(user.email, code) |> get_session(:user_token)
+
+      for _ <- 1..20,
+          do: Event.record!(:login_code_missed, who: who, data: data, occurred_at: recent)
+
+      Repo.delete_all(UserToken)
+      code = login_code_fixture(user.email)
+      refute build_conn() |> from_ip() |> log_in(user.email, code) |> get_session(:user_token)
+    end
+
+    test "a miss after old ones age out doesn't block or email again", %{conn: conn} do
+      %{user: user} = user_with_team_fixture()
+      who = Event.who(user.email)
+      data = %{via: "email", known_browser: false}
+      recent = DateTime.add(DateTime.utc_now(), -23, :hour)
+
+      for _ <- 1..19,
+          do: Event.record!(:login_code_missed, who: who, data: data, occurred_at: recent)
+
+      Event.record!(:login_blocked,
+        who: who,
+        data: Map.put(data, :scope, "account"),
+        occurred_at: recent
+      )
+
+      conn |> from_ip() |> log_in(user.email, "00000000")
+
+      since = DateTime.add(DateTime.utc_now(), -1, :day)
+      assert Event.count_since(:login_code_missed, since, who: who) == 20
+      assert Event.count_since(:login_blocked, since, who: who) == 1
+      refute_received {:email, %{subject: "Wrong login codes entered" <> _}}
+    end
+
+    test "counts misses per IP, an IPv6 /64 as one", %{conn: conn} do
+      %{user: user} = user_with_team_fixture()
+      data = %{via: "email", known_browser: false}
+
+      for n <- 1..50 do
+        Event.record!(:login_code_missed, ip: "2001:db8:7:7::#{n}", who: "x", data: data)
+      end
+
+      code = login_code_fixture(user.email)
+
+      refute conn
+             |> put_req_header("fly-client-ip", "2001:db8:7:7::abcd")
+             |> log_in(user.email, code)
+             |> get_session(:user_token)
+
+      assert build_conn() |> from_ip() |> log_in(user.email, code) |> get_session(:user_token)
     end
   end
 

@@ -8,6 +8,7 @@ defmodule Web.MeDetailsLivePhoneTest do
 
   alias App.Model.ChangeSet
   alias App.Model.ChangeSetRow
+  alias App.Model.Event
   alias App.Repo
 
   setup %{conn: conn} do
@@ -89,6 +90,12 @@ defmodule Web.MeDetailsLivePhoneTest do
     assert html =~ "wrong or expired"
     refute_received {:patch, _body}
     assert Repo.reload!(member).phone == "604-555-0100"
+
+    # The code and the miss count against the number, as at the login page.
+    who = Event.who({:phone, "+16045550199"})
+    since = DateTime.add(DateTime.utc_now(), -1, :minute)
+    assert %Event{who: ^who, data: %{"via" => "confirm"}} = Event.get_last(:login_code_requested)
+    assert Event.count_since(:login_code_missed, since, who: who) == 1
   end
 
   test "a waiting code shows its form after a reload, and cancel drops it",
