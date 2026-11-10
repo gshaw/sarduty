@@ -204,15 +204,14 @@ defmodule Web.TaxCreditLetterCollectionLive do
           <.hours_cell minutes={record.total_minutes} />
         </:col>
       </.table>
-      <p :if={@refusal} id="letters-year-open" class="mt-8">{@refusal}</p>
-      <div id="letters-choice" class={["mb-6", if(@refusal, do: "mt-4", else: "mt-8")]}>
+      <div id="letters-choice" class="mt-8 mb-6">
         <.input
           type="radios"
           id="letters-choice-input"
           name="choice"
           label="For the checked members"
           value={@choice}
-          options={choices(@checked)}
+          options={choices(@checked, @refusal)}
         />
       </div>
       <.action_bar id="letters-bar" hint={bar_hint(@checked, @choice)}>
@@ -221,7 +220,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
           variant={variant(@choice)}
           disabled={@fit == []}
           phx-disable-with={waiting(@choice)}
-          {if refused?(@choice, @fit, @refusal, @needed), do: %{}, else: confirm(@choice, @fit, @filter_options.year)}
+          {if refused?(@choice, @fit, @needed), do: %{}, else: confirm(@choice, @fit, @filter_options.year)}
         >
           {button_text(@choice, @fit)}
         </.button>
@@ -237,15 +236,19 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp fits?(_choice, _record), do: false
 
   # Each choice with what it does for the checked, or greyed with why it reaches nobody.
-  defp choices(checked) do
-    for choice <- @choices do
-      fit = Enum.filter(checked, &fits?(choice, &1))
+  # Email for a year that isn't over reaches nobody, so it greys out and says when it can.
+  defp choices(checked, refusal), do: Enum.map(@choices, &choice(&1, checked, refusal))
 
-      cond do
-        checked == [] -> {choice_label(choice), choice, choice_hint(choice)}
-        fit == [] -> {choice_label(choice), choice, none(choice, length(checked)), disabled: true}
-        true -> {choice_label(choice), choice, choice_hint(choice, fit, checked)}
-      end
+  defp choice("email", _checked, refusal) when is_binary(refusal),
+    do: {choice_label("email"), "email", refusal, disabled: true}
+
+  defp choice(choice, checked, _refusal) do
+    fit = Enum.filter(checked, &fits?(choice, &1))
+
+    cond do
+      checked == [] -> {choice_label(choice), choice, choice_hint(choice)}
+      fit == [] -> {choice_label(choice), choice, none(choice, length(checked)), disabled: true}
+      true -> {choice_label(choice), choice, choice_hint(choice, fit, checked)}
     end
   end
 
@@ -341,14 +344,12 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp bar_hint(_checked, _choice), do: nil
 
   # Every Email asks, naming who gets what; Withdraw asks with its box from 1 (#995).
-  # Nobody confirms a send that can't go (/styles/confirm-dialog): while the year isn't
-  # over, or what every letter needs is blank, Email goes straight to its error.
-  defp refused?("email", fit, refusal, needed),
-    do:
-      refusal != nil or
-        (needed != [] and Enum.any?(fit, &EmailTaxCreditLetters.publishes?(&1.email)))
+  # Nobody confirms a send that can't go (/styles/confirm-dialog): while what every letter
+  # needs is blank, an Email that would publish goes straight to its error.
+  defp refused?("email", fit, needed),
+    do: needed != [] and Enum.any?(fit, &EmailTaxCreditLetters.publishes?(&1.email))
 
-  defp refused?(_choice, _fit, _refusal, _needed), do: false
+  defp refused?(_choice, _fit, _needed), do: false
 
   defp confirm(_choice, [], _year), do: %{}
   defp confirm("email", fit, year), do: TaxCreditLetterConfirm.email(fit, year)
@@ -533,7 +534,12 @@ defmodule Web.TaxCreditLetterCollectionLive do
         end
       end)
 
-    choice = if params["choice"] in @choices, do: params["choice"]
+    # A choice that greys out leaves nothing picked.
+    choice =
+      if params["choice"] in @choices and
+           not (params["choice"] == "email" and socket.assigns.refusal != nil),
+         do: params["choice"]
+
     assign(socket, selected: MapSet.new(ids), choice: choice)
   end
 

@@ -291,18 +291,16 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=#{year}&filter=any")
       when_text = "#{year} letters can be emailed from January 1, #{year + 1}."
-      assert has_element?(lv, "#letters-year-open", when_text)
-      refute has_element?(lv, "#letters-year-open.warning-text")
 
-      check(lv, [avery], "email")
-      refute has_element?(lv, "#letters-apply[disabled]")
-      # Nobody confirms a send that can't go: it goes straight to its error.
-      refute has_element?(lv, "#letters-apply[data-confirm]")
-      apply_choice(lv, [avery], "email")
-
-      assert has_element?(lv, "#flash-error", when_text)
+      # Email reaches nobody until the year ends, so it greys out and says when.
+      check(lv, [avery], "withdraw")
+      assert has_element?(lv, ~s(#letters-choice input[value="email"][disabled]))
+      assert has_element?(lv, "#letters-choice", when_text)
+      refute has_element?(lv, ~s(#letters-choice input[value="email"][checked]))
+      assert has_element?(lv, "#letters-apply[disabled]")
       refute Repo.exists?(PublishedPDF)
 
+      # The operation refuses it too.
       user = App.AccountsFixtures.user_fixture()
       assert EmailTaxCreditLetters.call(team, year, [avery.id], user) == {:error, when_text}
 

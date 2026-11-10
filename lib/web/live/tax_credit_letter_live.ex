@@ -38,7 +38,7 @@ defmodule Web.TaxCreditLetterLive do
      socket
      |> assign(page_title: "#{member.name}'s #{year} tax credit letter")
      |> assign(member: member, year: year)
-     # A year that isn't over can't be emailed yet: the button says so, with no confirm.
+     # A year that isn't over can't be emailed yet: no Email letter, and the page says when.
      |> assign(refusal: EmailTaxCreditLetters.refusal(year, team, DateTime.utc_now()))
      |> assign_letter()}
   end
@@ -171,7 +171,7 @@ defmodule Web.TaxCreditLetterLive do
               </p>
             </:status>
             <:actions>
-              <.email_button record={@record} ask={is_nil(@refusal) and @needed == []} />
+              <.email_button record={@record} refusal={@refusal} ask={@needed == []} />
             </:actions>
             <:withdraw>
               <.button
@@ -198,8 +198,9 @@ defmodule Web.TaxCreditLetterLive do
               <p class="mb-4">No letter for {@year} yet. This is how it prints today.</p>
               <.email_button
                 record={@record}
+                refusal={@refusal}
                 variant={:primary}
-                ask={is_nil(@refusal) and @needed == []}
+                ask={@needed == []}
               />
               <p :if={is_nil(@record.email)} id="letter-no-hours" class="hint">
                 {@member.name} has no hours in {@year}, so there is no letter to email.
@@ -223,15 +224,18 @@ defmodule Web.TaxCreditLetterLive do
   end
 
   attr :record, :map, required: true
+  attr :refusal, :string, default: nil, doc: "why Email can't go yet: a year not over"
   attr :ask, :boolean, required: true, doc: "false when it can only refuse: no confirm for that"
   attr :variant, :atom, default: :default
 
-  # Email letter, or Publish letter for a member with no email: the same action. It
-  # stays on while the year is under way or a value it needs is blank, and says why.
+  # Email letter, or Publish letter for a member with no email: the same action. In a year
+  # that isn't over it can never go, so the page says when it can instead. It stays on
+  # while a value it needs is blank, and says what as an error, with no confirm.
   defp email_button(assigns) do
     ~H"""
+    <span :if={@record.email && @refusal} id="letter-year-open" class="hint">{@refusal}</span>
     <.button
-      :if={@record.email}
+      :if={@record.email && is_nil(@refusal)}
       id="email-letter"
       variant={@variant}
       phx-click="email"

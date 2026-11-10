@@ -277,7 +277,7 @@ defmodule Web.TaxCreditLetterLiveTest do
            )
   end
 
-  test "a year that isn't over is refused, with the button on (#995)",
+  test "a year that isn't over has no Email letter, and says when (#995)",
        %{conn: conn, team: team, member: member} do
     year = Service.YearRange.year_in(DateTime.utc_now(), team.timezone)
     {start, _finish} = Service.YearRange.bounds(year, team.timezone)
@@ -288,8 +288,16 @@ defmodule Web.TaxCreditLetterLiveTest do
     attendance_fixture(activity, member)
 
     {:ok, lv, _html} = live(conn, letter_path(team, member, year))
-    refute has_element?(lv, "#email-letter[data-confirm]")
-    lv |> element("#email-letter") |> render_click()
+    refute has_element?(lv, "#email-letter")
+
+    assert has_element?(
+             lv,
+             "#letter-year-open",
+             "#{year} letters can be emailed from January 1, #{year + 1}."
+           )
+
+    # A stale page's click is refused by the operation.
+    render_click(lv, "email", %{})
 
     assert has_element?(
              lv,
