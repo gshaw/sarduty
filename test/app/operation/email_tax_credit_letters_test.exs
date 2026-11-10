@@ -61,16 +61,19 @@ defmodule App.Operation.EmailTaxCreditLettersTest do
     end
   end
 
-  test "refuses a year that isn't over in the team's time zone" do
+  test "a year that isn't over in the team's time zone is early, refused without early: true" do
     team = %Team{timezone: "America/Vancouver"}
     # The evening of December 31, 2026 in Vancouver: 2026 isn't over there yet.
     evening = ~U[2027-01-01 05:00:00Z]
 
-    assert EmailTaxCreditLetters.refusal(2026, team, evening) ==
-             "2026 letters can be emailed from January 1, 2027."
+    assert EmailTaxCreditLetters.early?(2026, team, evening)
+    refute EmailTaxCreditLetters.early?(2026, team, ~U[2027-01-01 09:00:00Z])
 
-    assert EmailTaxCreditLetters.refusal(2026, team, ~U[2027-01-01 09:00:00Z]) == nil
-    assert EmailTaxCreditLetters.refusal(2025, team, evening) == nil
+    assert EmailTaxCreditLetters.refusal(2026, team, evening, nil) ==
+             "2026 isn't over. Email sends its letters only once you tick that it's early."
+
+    assert EmailTaxCreditLetters.refusal(2026, team, evening, true) == nil
+    assert EmailTaxCreditLetters.refusal(2025, team, evening, nil) == nil
   end
 
   test "summarizes what each member got" do

@@ -12,8 +12,8 @@ defmodule Web.TaxCreditLetterCollectionLive do
 
   Email runs in a job (App.Operation.EmailTaxCreditLetters), since each new letter
   prints a PDF; each email has its own job, and each row updates as its email goes.
-  Withdraw is at once. A year that isn't over can't be emailed, and the list says when
-  it can.
+  Withdraw is at once. In a year that isn't over, Email is early: its hint says each
+  letter has the hours so far, and its confirm waits on a box that says so.
   """
   use Web, :live_view_app_layout
 
@@ -59,10 +59,10 @@ defmodule Web.TaxCreditLetterCollectionLive do
           |> assign(:filter_options, filter_options)
           |> assign(:form, to_form(changeset, as: "form"))
           |> assign(:path_fn, build_path_fn(socket.assigns.current_team, filter_options))
-          # A year that isn't over can't be emailed yet (#995): the list says when.
+          # A year that isn't over is early (#995): Email asks first.
           |> assign(
-            :refusal,
-            EmailTaxCreditLetters.refusal(
+            :early,
+            EmailTaxCreditLetters.early?(
               filter_options.year,
               socket.assigns.current_team,
               Service.Clock.utc_now()
@@ -150,10 +150,10 @@ defmodule Web.TaxCreditLetterCollectionLive do
         class="table-striped"
       >
         <:header_row>
-          <th colspan={if @refusal, do: 2, else: 3}></th>
+          <th colspan="3"></th>
           <th colspan="3" class="text-center">Tax credit hours</th>
         </:header_row>
-        <:col :let={record} :if={is_nil(@refusal)} label="" class="w-px" select_all>
+        <:col :let={record} label="" class="w-px" select_all>
           <input
             type="checkbox"
             id={"letters-select-#{record.member.id}"}
@@ -205,26 +205,23 @@ defmodule Web.TaxCreditLetterCollectionLive do
           <.hours_cell minutes={record.total_minutes} />
         </:col>
       </.table>
-      <%!-- No letter for a year that isn't over can be emailed, so none can be withdrawn:
-      no boxes and no actions until it ends (#995). --%>
-      <p :if={@refusal} id="letters-year-open" class="mt-8">{@refusal}</p>
-      <div :if={is_nil(@refusal)} id="letters-choice" class="mt-8 mb-6">
+      <div id="letters-choice" class="mt-8 mb-6">
         <.input
           type="radios"
           id="letters-choice-input"
           name="choice"
           label="For the checked members"
           value={@choice}
-          options={choices(@checked, @needed)}
+          options={choices(@checked, %{needed: @needed, early: if(@early, do: @filter_options.year)})}
         />
       </div>
-      <.action_bar :if={is_nil(@refusal)} id="letters-bar" hint={bar_hint(@checked, @choice)}>
+      <.action_bar id="letters-bar" hint={bar_hint(@checked, @choice)}>
         <.button
           id="letters-apply"
           variant={variant(@choice)}
           disabled={@fit == []}
           phx-disable-with={waiting(@choice)}
-          {confirm(@choice, @fit, @filter_options.year)}
+          {confirm(@choice, @fit, @filter_options.year, @early)}
         >
           {button_text(@choice, @fit)}
         </.button>
@@ -244,39 +241,40 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp publishes?(record), do: EmailTaxCreditLetters.publishes?(record.email)
 
   # Each choice with what it does for the checked, or greyed with why it reaches nobody.
-  defp choices(checked, needed), do: Enum.map(@choices, &choice(&1, checked, needed))
+  # `context` has what every letter needs from team settings, and `early`, the year when
+  # it isn't over.
+  defp choices(checked, context), do: Enum.map(@choices, &choice(&1, checked, context))
 
-  defp choice(choice, checked, needed) do
+  defp choice(choice, checked, %{needed: needed} = context) do
     fit = Enum.filter(checked, &fits?(choice, &1, needed))
 
     cond do
       checked == [] ->
-        {choice_label(choice), choice, choice_hint(choice)}
+        {choice_label(choice), choice, choice_hint(choice, context)}
 
       fit == [] ->
         {choice_label(choice), choice, none(choice, checked, needed), disabled: true}
 
       true ->
-        {choice_label(choice), choice, choice_hint(choice, fit, checked, needed)}
+        {choice_label(choice), choice, choice_hint(choice, fit, checked, context)}
     end
   end
 
   defp choice_label("email"), do: "Email letters"
   defp choice_label("withdraw"), do: "Withdraw letters"
 
-  defp choice_hint("email"),
-    do:
-      "Emails each checked member their latest letter. A missing or out-of-date letter is published first."
+  defp choice_hint("email", %{early: early}),
+    do: "Emails each checked member their latest letter#{what_email_does(early)}"
 
-  defp choice_hint("withdraw"),
+  defp choice_hint("withdraw", _context),
     do: "Withdraws the letter of each checked member with one. Nothing takes their place."
 
-  defp choice_hint("email", fit, checked, needed) do
+  defp choice_hint("email", fit, checked, %{needed: needed, early: early}) do
     {emailed, not_emailed} = Enum.split_with(fit, &EmailTaxCreditLetters.emailed?(&1.member))
 
     [
       emailed != [] &&
-        "Emails #{the_checked(length(emailed))} their latest letter. A missing or out-of-date letter is published first.",
+        "Emails #{the_checked(length(emailed))} their latest letter#{what_email_does(early)}",
       not_emailed != [] &&
         count_of(not_emailed,
           one: "1 with no email gets theirs on Your membership only.",
@@ -288,7 +286,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
     |> Enum.join(" ")
   end
 
-  defp choice_hint("withdraw", fit, checked, _needed) do
+  defp choice_hint("withdraw", fit, checked, _context) do
     without = length(checked) - length(fit)
 
     "Withdraws the #{if length(fit) == 1, do: "letter", else: "letters"} of #{the_checked(length(fit))} with one. " <>
@@ -300,6 +298,13 @@ defmodule Web.TaxCreditLetterCollectionLive do
         else: ""
       )
   end
+
+  # The rest of Email's hint: what it publishes first, or, in a year that isn't over,
+  # that its letters have the hours so far and it asks first.
+  defp what_email_does(nil), do: ". A missing or out-of-date letter is published first."
+
+  defp what_email_does(year),
+    do: ", with their hours so far. #{year} isn't over, so it asks first."
 
   # Who Email leaves out of the checked, and why.
   defp skipped([], _needed), do: nil
@@ -377,10 +382,10 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp bar_hint(_checked, _choice), do: nil
 
   # Every Email asks, naming who gets what; Withdraw asks with its box from 1 (#995).
-  defp confirm(_choice, [], _year), do: %{}
-  defp confirm("email", fit, year), do: TaxCreditLetterConfirm.email(fit, year)
-  defp confirm("withdraw", fit, year), do: TaxCreditLetterConfirm.withdraw(fit, year)
-  defp confirm(_choice, _fit, _year), do: %{}
+  defp confirm(_choice, [], _year, _early), do: %{}
+  defp confirm("email", fit, year, early), do: TaxCreditLetterConfirm.email(fit, year, early)
+  defp confirm("withdraw", fit, year, _early), do: TaxCreditLetterConfirm.withdraw(fit, year)
+  defp confirm(_choice, _fit, _year, _early), do: %{}
 
   attr :emailed, :map, required: true
 
@@ -477,9 +482,6 @@ defmodule Web.TaxCreditLetterCollectionLive do
     socket = socket |> assign_ticks(params) |> assign_checked()
 
     case socket.assigns do
-      %{refusal: refusal} when is_binary(refusal) ->
-        {:noreply, put_flash(socket, :error, refusal)}
-
       %{fit: []} ->
         {:noreply, put_flash(socket, :error, "Check members, then select what to do.")}
 
@@ -511,7 +513,9 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp email(socket, fit) do
     %{current_team: team, current_user: user, filter_options: %{year: year}} = socket.assigns
 
-    case EmailTaxCreditLetters.call(team, year, Enum.map(fit, & &1.member.id), user) do
+    ids = Enum.map(fit, & &1.member.id)
+
+    case EmailTaxCreditLetters.call(team, year, ids, user, early: socket.assigns.early) do
       {:ok, count} ->
         socket |> clear_ticks() |> assign(emailing: %{count: count, year: year}, emailed: nil)
 

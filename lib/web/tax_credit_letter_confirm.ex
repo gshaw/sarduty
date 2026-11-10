@@ -6,7 +6,8 @@ defmodule Web.TaxCreditLetterConfirm do
   (/styles/confirm-dialog#many). Each function gives a button's `data-confirm`
   attributes. A record is the letters list's: the member, their current `letter` or
   nil, `email`, what Email does for them (EmailTaxCreditLetters.what/1), and
-  `total_minutes`.
+  `total_minutes`. In a year that isn't over, every Email waits on a box that says it's
+  early, from 1 (EmailTaxCreditLetters.early?/3).
   """
 
   import Web.Components.Messages, only: [confirm_check: 2, name_them?: 1]
@@ -17,8 +18,8 @@ defmodule Web.TaxCreditLetterConfirm do
   alias App.Operation.EmailTaxCreditLetters
   alias Service.Format
 
-  @doc "Email letters on the list, for the checked it reaches."
-  def email(records, year) do
+  @doc "Email letters on the list, for the checked it reaches; `early` in a year that isn't over."
+  def email(records, year, early \\ false) do
     {emailed, not_emailed} = Enum.split_with(records, &EmailTaxCreditLetters.emailed?(&1.member))
     count = length(emailed)
 
@@ -44,7 +45,29 @@ defmodule Web.TaxCreditLetterConfirm do
       "data-confirm-list" => Jason.encode!(lines),
       "data-confirm-button" => button
     }
-    |> Map.merge(cannot_take_back(count))
+    |> Map.merge(
+      if early, do: early_box(year, length(records), count), else: cannot_take_back(count)
+    )
+  end
+
+  # In a year that isn't over: what early means, and a box from 1 that says so (#995).
+  # It takes the place of the box from 10 emails, and says the count from there.
+  defp early_box(year, letters, emails) do
+    {these, them} = if letters == 1, do: {"this letter", "it"}, else: {"these letters", "them"}
+    verb = if emails > 0, do: "emailing", else: "publishing"
+
+    who =
+      if emails >= 10,
+        do: " #{Format.count(emails, one: "%d member", many: "%d members")}",
+        else: ""
+
+    %{
+      "data-confirm-warning" =>
+        "#{year} isn't over. Hours added later make #{these} out of date, and #{verb} #{them} again in January replaces #{them}." <>
+          if(emails >= 10, do: " Emails cannot be taken back.", else: ""),
+      "data-confirm-check" =>
+        "I know the #{year} tax year isn't over. I'm #{verb}#{who} early to test."
+    }
   end
 
   # From 10 emails, a send waits on a box naming the count.
@@ -201,42 +224,48 @@ defmodule Web.TaxCreditLetterConfirm do
 
   @doc """
   Email letter on a letter's page, or Publish letter for a member with no email: what
-  Email does for them, and what it replaces.
+  Email does for them, and what it replaces. `early_year` is the letter's year when it
+  isn't over: the letter has the hours so far, and the box asks first.
   """
-  def email_one(%{member: member} = record) do
-    if EmailTaxCreditLetters.emailed?(member) do
-      %{
-        "data-confirm" =>
-          join("Email #{member.name}'s letter to #{member.email}?", email_body(record)),
-        "data-confirm-button" => "Email letter"
-      }
-    else
-      %{
-        "data-confirm" =>
-          join(
-            "Publish #{member.name}'s letter?",
-            "#{Member.first_name(member)} has no email, so it goes on Your membership only.#{replaced(record)}"
-          ),
-        "data-confirm-button" => "Publish letter"
-      }
-    end
+  def email_one(%{member: member} = record, early_year \\ nil) do
+    emailed? = EmailTaxCreditLetters.emailed?(member)
+    early = if early_year, do: early_box(early_year, 1, if(emailed?, do: 1, else: 0)), else: %{}
+    so_far = if early_year, do: " so far", else: ""
+    record |> email_one_asks(emailed?, so_far) |> Map.merge(early)
   end
 
-  defp email_body(%{email: :first} = record),
-    do:
-      "There is no letter yet, so one with #{Format.duration(record.total_minutes)} is published first."
+  defp email_one_asks(%{member: member} = record, true, so_far),
+    do: %{
+      "data-confirm" =>
+        join("Email #{member.name}'s letter to #{member.email}?", email_body(record, so_far)),
+      "data-confirm-button" => "Email letter"
+    }
 
-  defp email_body(%{email: :replace} = record),
+  defp email_one_asks(%{member: member} = record, false, _so_far),
+    do: %{
+      "data-confirm" =>
+        join(
+          "Publish #{member.name}'s letter?",
+          "#{Member.first_name(member)} has no email, so it goes on Your membership only.#{replaced(record)}"
+        ),
+      "data-confirm-button" => "Publish letter"
+    }
+
+  defp email_body(%{email: :first} = record, so_far),
     do:
-      "It is out of date, so a new letter with #{Format.duration(record.total_minutes)} is published first." <>
+      "There is no letter yet, so one with #{Format.duration(record.total_minutes)}#{so_far} is published first."
+
+  defp email_body(%{email: :replace} = record, so_far),
+    do:
+      "It is out of date, so a new letter with #{Format.duration(record.total_minutes)}#{so_far} is published first." <>
         replaced(record)
 
-  defp email_body(%{email: :failed}), do: "The last email did not send."
+  defp email_body(%{email: :failed}, _so_far), do: "The last email did not send."
 
-  defp email_body(%{email: :again}),
+  defp email_body(%{email: :again}, _so_far),
     do: "It was emailed before, and goes again as it was published."
 
-  defp email_body(_record), do: nil
+  defp email_body(_record, _so_far), do: nil
 
   defp replaced(%{email: :replace}), do: " The old one then verifies as Replaced."
   defp replaced(_record), do: ""

@@ -65,12 +65,15 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   go out and members file by April 30; this year from May, while hours still grow and
   members can still reach the 200-hour mark. It turns over in the team's time zone. Any
   other year is one Year filter away.
-- **A year that isn't over has no actions** (#995): until it ends in the team's time
-  zone, its hours can grow, and its letters would need publishing again. Only Email
-  publishes a letter, so none can be withdrawn either. The list has no boxes, choices,
-  or button, and says "2026 letters can be emailed from January 1, 2027."; the letter
-  page shows that sentence in place of Email letter and Withdraw letter. The operation
-  refuses Email too. A draft still prints.
+- **Email in a year that isn't over is early** (#995,
+  `EmailTaxCreditLetters.early?/3`): until it ends in the team's time zone, a letter has
+  the hours so far, and goes out of date as more are added. So a team can try letters
+  before January, every early Email asks for a box, from 1, in a chore exception's
+  words: "I know the 2026 tax year isn't over. I'm emailing early to test." The confirm
+  says what early means, and Email's hint on the list says it asks first. From 10 emails
+  the same box says the count, in place of the usual one. The operation refuses an early
+  Email unless the page passes `early: true`, so nothing else emails early by mistake.
+  Withdraw works as in any year, so a test letter can be taken back.
 - **Check, then act** (#970, as an activity's Members tab): team admins check members,
   or a tile then select all, and pick Email letters or Withdraw letters under For the
   checked members. Each counts only the checked it fits, a choice that fits none greys
@@ -79,7 +82,8 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   letter page, Email publishes and emails at once.
 - **Every Email and Withdraw asks first** ([Web.TaxCreditLetterConfirm](../lib/web/tax_credit_letter_confirm.ex)):
   Email names who gets what, up to 3, then a counted line per group by what happens,
-  with anyone not emailed on their own line, and a box from 10 emails. Withdraw asks
+  with anyone not emailed on their own line, and a box from 10 emails, or from 1 when
+  it's early. Withdraw asks
   for a box from 1, naming the count: nothing takes its place. There's no preview page
   before emailing a letter: the letter page shows Page 1.
 - **Only the current letter verifies as current.** A new letter

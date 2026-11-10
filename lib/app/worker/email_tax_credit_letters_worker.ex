@@ -13,9 +13,12 @@ defmodule App.Worker.EmailTaxCreditLettersWorker do
   alias App.Model.Team
   alias App.Operation.EmailTaxCreditLetters
 
-  @doc "Queues Email for `year`'s letters of these members, by `user`."
-  def enqueue(%Team{id: team_id}, year, member_ids, %User{id: user_id}) do
-    %{team_id: team_id, year: year, member_ids: member_ids, user_id: user_id}
+  @doc """
+  Queues Email for `year`'s letters of these members, by `user`; `early`, as the page
+  asked first, for a year that isn't over.
+  """
+  def enqueue(%Team{id: team_id}, year, member_ids, %User{id: user_id}, early) do
+    %{team_id: team_id, year: year, member_ids: member_ids, user_id: user_id, early: early}
     |> new()
     |> Oban.insert!()
   end
@@ -23,7 +26,11 @@ defmodule App.Worker.EmailTaxCreditLettersWorker do
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
     team = Team.get!(args["team_id"])
-    EmailTaxCreditLetters.run(team, args["year"], args["member_ids"], args["user_id"])
+
+    EmailTaxCreditLetters.run(team, args["year"], args["member_ids"], args["user_id"],
+      early: args["early"] == true
+    )
+
     :ok
   end
 end

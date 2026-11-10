@@ -280,42 +280,33 @@ defmodule Web.TaxCreditLetterLiveTest do
            )
   end
 
-  test "a year that isn't over has no actions, and says when (#995)",
+  test "a year that isn't over is emailed early, after a box that says so (#995)",
        %{conn: conn, team: team, member: member} do
-    year = Service.YearRange.year_in(DateTime.utc_now(), team.timezone)
-    {start, _finish} = Service.YearRange.bounds(year, team.timezone)
+    App.Clock.freeze(~U[2026-11-10 20:00:00Z])
+    attend(team, member, 2026)
 
-    activity =
-      activity_fixture(team, %{started_at: start, finished_at: DateTime.add(start, 90, :minute)})
+    # One published earlier, and out of date since: Email replaces it, and Withdraw works.
+    letter =
+      tax_credit_letter_fixture(member, %{year: 2026, primary_minutes: 60, secondary_minutes: 0})
 
-    attendance_fixture(activity, member)
-
-    # One published before this rule, by hand, and out of date since: no Withdraw either.
-    tax_credit_letter_fixture(member, %{year: year, primary_minutes: 60, secondary_minutes: 0})
-    {:ok, lv, _html} = live(conn, letter_path(team, member, year))
-    refute has_element?(lv, "#email-letter")
-    refute has_element?(lv, "#withdraw-letter")
-
-    # Out of date says what changed, but not what Email would do: there's none yet.
-    assert has_element?(lv, "#letter-out-of-date", "Total hours: 1 hour → 1h 30m")
-    refute has_element?(lv, "#letter-out-of-date", "makes a new one")
+    {:ok, lv, _html} = live(conn, letter_path(team, member, 2026))
+    refute has_element?(lv, "#letter-year-open")
+    assert has_element?(lv, "#withdraw-letter")
+    assert has_element?(lv, "#letter-out-of-date", "Email letter makes a new one and sends it.")
 
     assert has_element?(
              lv,
-             "#letter-year-open",
-             "#{year} letters can be emailed from January 1, #{year + 1}."
+             ~s(#email-letter[data-confirm-check="I know the 2026 tax year isn't over. I'm emailing early to test."])
            )
-
-    # A stale page's click is refused by the operation.
-    render_click(lv, "email", %{})
 
     assert has_element?(
              lv,
-             "#flash-error",
-             "#{year} letters can be emailed from January 1, #{year + 1}."
+             ~s(#email-letter[data-confirm*="a new letter with 1h 30m so far is published first"])
            )
 
-    assert_no_email_sent()
+    lv |> element("#email-letter") |> render_click()
+    assert has_element?(lv, "#flash-info", "and emailed it to #{member.email}.")
+    assert letter |> Repo.reload!() |> PublishedPDF.status() == :replaced
   end
 
   test "what the letter needs is a warning banner, and the page has no Email letter (#995)",
