@@ -226,34 +226,45 @@ defmodule Web.ActivityOrgFormLive do
 
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <section id="publish-what" class="mb-6">
-          <h2 class="heading">What Publish does</h2>
-          <ul :if={is_map(@preview)} class="list-disc pl-5 flex flex-col gap-2">
-            <li id="publish-id">
-              It gets the ID <span class="mono">{PublishedPDF.format_code(@preview.code)}</span>,
-              and SAR Duty keeps the PDF for your team's admins.
-            </li>
-            <li id="publish-verify">
-              Anyone with its ID can check it at {Web.VerifyHost.host()}<span :if={
-                @preview.printed.shows != []
-              }>, which shows:</span><span :if={@preview.printed.shows == []}>.</span>
-              <span :for={shown <- @preview.printed.shows} class="block">
-                {shown["label"]}: <b>{shown["text"] || "blank"}</b>
-              </span>
-            </li>
-            <li id="publish-signature">
-              {@current_team.name}'s signature prints where the form has one. A draft leaves
-              it blank.
-            </li>
-            <li :if={@published.current} id="publish-replaces">
-              It replaces <span class="mono">{PublishedPDF.format_code(@published.current.code)}</span>,
-              whose verify page then says Replaced.
-            </li>
-            <li id="publish-not-sent">
-              It isn't sent anywhere. Download it once it's published, and send it yourself.
-            </li>
-          </ul>
-        </section>
+        <h2 class="heading">What Publish does</h2>
+        <p :if={@preview == :printing} class="hint">Printing the preview…</p>
+        <dl :if={is_map(@preview)} id="publish-what">
+          <dt>ID</dt>
+          <dd id="publish-id">
+            <span class="mono">{PublishedPDF.format_code(@preview.code)}</span>
+            <span class="hint block">SAR Duty keeps the PDF for your team's admins.</span>
+          </dd>
+          <dt>Verify page</dt>
+          <dd id="publish-verify">
+            {Web.VerifyHost.host()}
+            <span :if={@preview.printed.shows == []} class="hint block">
+              Shows your team and the date it was published.
+            </span>
+            <div :if={@preview.printed.shows != []} class="value-rows text-sm mt-1">
+              <div :for={shown <- @preview.printed.shows}>
+                <span>{shown["label"]}</span>
+                <strong>{shown["text"] || "blank"}</strong>
+              </div>
+            </div>
+          </dd>
+          <dt>Signature</dt>
+          <dd id="publish-signature">
+            {@current_team.name}'s, where the form has one
+            <span class="hint block">A draft leaves it blank.</span>
+          </dd>
+          <%= if @published.current do %>
+            <dt>Replaces</dt>
+            <dd id="publish-replaces">
+              <span class="mono">{PublishedPDF.format_code(@published.current.code)}</span>
+              <span class="hint block">Its verify page then says Replaced.</span>
+            </dd>
+          <% end %>
+          <dt>Sent to</dt>
+          <dd id="publish-not-sent">
+            No one
+            <span class="hint block">Download it once it's published, and send it yourself.</span>
+          </dd>
+        </dl>
         <.form_actions>
           <.button
             id="publish-confirm"
@@ -274,9 +285,6 @@ defmodule Web.ActivityOrgFormLive do
         </.form_actions>
       </aside>
       <main class="content-2/3">
-        <p :if={@preview == :printing} id="publish-printing" class="hint">
-          Printing the preview…
-        </p>
         <div :if={is_map(@preview)} id="publish-pages" class="flex flex-col gap-4">
           <img
             :for={{png, n} <- Enum.with_index(@preview.pages, 1)}
