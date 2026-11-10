@@ -32,22 +32,20 @@ defmodule Web.CardLinkControllerTest do
     assert_received {:google, "PUT", "/walletobjects/v1/genericObject/" <> _, _object}
   end
 
-  test "the card's front and back are pictures, and Print ID card a PDF",
+  test "the card is a picture, and Print ID card a PDF",
        %{conn: conn, team: team, member: member} do
     path = member |> member_card_fixture() |> CardLinks.path()
 
-    for side <- ~w(front back) do
-      conn = get(conn, "#{path}/#{side}")
-      # CR80, 85.60 × 53.98 mm, at 400 pixels an inch.
-      assert <<0x89, "PNG", _::binary-size(12), width::32, height::32, _rest::binary>> =
-               response(conn, 200)
+    conn = get(conn, "#{path}/image")
+    # 54 × 74 mm, a pass's shape, at 400 pixels an inch.
+    assert <<0x89, "PNG", _::binary-size(12), width::32, height::32, _rest::binary>> =
+             response(conn, 200)
 
-      assert {width, height} == {1348, 850}
-      assert ["image/png"] = get_resp_header(conn, "content-type")
+    assert {width, height} == {850, 1165}
+    assert ["image/png"] = get_resp_header(conn, "content-type")
 
-      assert get_resp_header(conn, "content-disposition") ==
-               [~s(inline; filename="#{team.subdomain}-id-card-#{side}.png")]
-    end
+    assert get_resp_header(conn, "content-disposition") ==
+             [~s(inline; filename="#{team.subdomain}-id-card.png")]
 
     conn = get(conn, "#{path}/pdf")
     assert "%PDF" <> _rest = response(conn, 200)
@@ -72,13 +70,13 @@ defmodule Web.CardLinkControllerTest do
   end
 
   test "a bad token gets no pass", %{conn: conn} do
-    for route <- ~w(apple-wallet google-wallet front back pdf),
+    for route <- ~w(apple-wallet google-wallet image pdf),
         do: assert(conn |> get("/cards/not-a-token/#{route}") |> response(404))
   end
 
   # Nor a picture of the card, nor its PDF.
   defp assert_no_passes(conn, card) do
-    for route <- ~w(apple-wallet google-wallet front back pdf),
+    for route <- ~w(apple-wallet google-wallet image pdf),
         do: assert(conn |> get(CardLinks.path(card) <> "/#{route}") |> response(404))
 
     refute_received {:google, _, _, _}

@@ -1,7 +1,9 @@
-// An ID card's two sides at CR80 size, 85.60 × 53.98 mm with 3.18 mm corners, the size of a
-// plastic ID card, so a printed copy fits any card holder. One drawing for the card page's
-// pictures, Save image, and Print ID card's Letter page (App.Operation.DrawMemberCard). White, under a navy line in SAR Duty's navy, the Wallet
-// passes' colour, so any team logo shows; it prints on any printer.
+// An ID card, drawn by App.Operation.DrawMemberCard: `pass`, the card page's picture that
+// Save image saves, like the Wallet pass; and `sheet`, Print ID card's Letter page, with
+// both sides at CR80 size, 85.60 × 53.98 mm with 3.18 mm corners, the size of a plastic ID
+// card, so a printed copy fits any card holder. The printed sides are white under a line
+// of SAR Duty's navy, the Wallet passes' colour, so any team logo shows and any printer
+// prints them.
 //
 // `card` is the dictionary DrawMemberCard writes as card.json.
 
@@ -109,6 +111,60 @@
   )
   v(1fr)
 })
+
+// The card page's picture, which Save image saves: the front as the Wallet passes draw
+// theirs, upright in SAR Duty's navy with yellow labels, so a member can show the page or
+// the picture as they would the pass.
+#let yellow = rgb(255, 196, 0)
+#let soft = rgb(255, 255, 255, 190)
+#let pass-label(body) = text(size: 4.8pt, weight: "bold", fill: yellow, upper(body))
+
+#let pass(card) = block(
+  width: 54mm,
+  height: 74mm,
+  fill: navy,
+  radius: 3mm,
+  clip: true,
+  inset: (x: 3mm, top: 2.8mm, bottom: 3mm),
+  spacing: 0pt,
+  {
+    set text(font: "Arimo", size: 6.4pt, fill: white)
+    set par(leading: 0.42em, spacing: 0.5em)
+    grid(
+      columns: (5.4mm, 1fr),
+      column-gutter: 1.8mm,
+      align: horizon,
+      image("logo.png", height: 5.4mm),
+      text(size: 7.4pt, weight: "bold", fill: yellow, card.team),
+    )
+    v(1fr)
+    grid(
+      columns: (1fr, 15mm),
+      column-gutter: 2mm,
+      align: top,
+      {
+        pass-label(if card.name_label != none { card.name_label } else { "Member" })
+        linebreak()
+        text(size: 10.4pt, card.name)
+      },
+      box(clip: true, radius: 1.2mm, image("photo.png", width: 15mm, height: 15mm, fit: "cover")),
+    )
+    v(2.4mm)
+    grid(
+      columns: (auto, auto),
+      column-gutter: 4mm,
+      ..if card.member_since != none { ([#pass-label("Member since") \ #card.member_since],) },
+      [#pass-label("Issued") \ #card.issued],
+    )
+    v(1fr)
+    align(center, box(fill: white, radius: 1.2mm, inset: (x: 1.4mm, top: 1.4mm, bottom: 0.9mm), {
+      image("qr.svg", width: 24mm)
+      v(0.5mm)
+      text(size: 6.2pt, weight: "bold", tracking: 0.03em, fill: black, card.code)
+    }))
+    v(1fr)
+  },
+)
 
 // One Letter page to cut out: whose card, what to do, and both sides at actual size, each
 // cut on its own edge, so the piece is the card's size and fits a card holder.

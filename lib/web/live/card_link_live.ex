@@ -22,8 +22,8 @@ defmodule Web.CardLinkLive do
   # into the app: the page stays one page for everyone, with no redirect.
   #
   # Under the Wallet, the card itself (#973), for a member with no Wallet or one who
-  # wants a copy on paper: a line on what a copy can't do, Print ID card, then its front
-  # and back as SAR Duty draws them, each with Save image. Verify your ID card and Lost
+  # wants a copy: a line on what a copy can't do, the card drawn like the Wallet pass,
+  # with Save image, then Print ID card. Verify your ID card and Lost
   # your phone go in the sidebar, under Open on your phone; on a phone, under the card.
   #
   # Under it, one quiet line says what SAR Duty sees, and nothing else: no spinner, since
@@ -213,10 +213,11 @@ defmodule Web.CardLinkLive do
     />
     <p id="card-link-status" class="hint mt-6 mb-0">{WalletText.seen(@phones, @card)}</p>
     <p id="card-link-no-wallet" class="mt-8 mb-0">
-      No Wallet? Save each side as an image, or print both. Neither updates. Anyone
-      verifying your card scans its code.
+      No Wallet? Show this card, save it as an image, or print it. A saved or printed copy
+      doesn't update. Anyone verifying your card scans its code.
     </p>
-    <div id="card-link-print" class="mt-2">
+    <.card_image id="card-link-card" class="mt-4" token={@token} card={@card} />
+    <div id="card-link-print" class="mt-6">
       <p class="action mb-0">
         <.a
           id="card-link-print-link"
@@ -230,8 +231,6 @@ defmodule Web.CardLinkLive do
         the card.
       </p>
     </div>
-    <.card_side id="card-link-front" class="mt-6" token={@token} side="front" card={@card} />
-    <.card_side id="card-link-back" class="mt-6" token={@token} side="back" card={@card} />
     """
   end
 
@@ -277,28 +276,26 @@ defmodule Web.CardLinkLive do
   attr :id, :string, required: true
   attr :class, :string, default: nil
   attr :token, :string, required: true
-  attr :side, :string, required: true, doc: "front or back"
   attr :card, :map, required: true
 
-  # One side as SAR Duty draws it (DrawMemberCard, #973), with Save image under it. A
-  # long press on the picture saves it on a phone too.
-  defp card_side(assigns) do
+  # The card as SAR Duty draws it for a screen (DrawMemberCard, #973), like the Wallet
+  # pass, with Save image under it. A long press on the picture saves it on a phone too.
+  defp card_image(assigns) do
     ~H"""
     <div id={@id} class={@class}>
-      <p class="hint mb-2">{String.capitalize(@side)}</p>
       <img
-        src={~p"/cards/#{@token}/#{@side}"}
-        alt={"#{@card.member.name}'s ID card, #{@side}"}
-        class="id-card-side"
+        src={~p"/cards/#{@token}/image"}
+        alt={"#{@card.member.name}'s ID card"}
+        class="id-card-image"
       />
       <p class="action mt-2 mb-0">
         <.a
           id={"#{@id}-save"}
-          href={~p"/cards/#{@token}/#{@side}"}
-          download={"#{@card.member.team.subdomain}-id-card-#{@side}.png"}
+          href={~p"/cards/#{@token}/image"}
+          download={"#{@card.member.team.subdomain}-id-card.png"}
           phx-hook="SaveImage"
           icon="download"
-        >Save {@side} image</.a>
+        >Save image</.a>
       </p>
     </div>
     """

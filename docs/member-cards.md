@@ -337,34 +337,36 @@ other way to get the card.
   its token. On a Mac the pass reaches the phone through iCloud, so that can take 15
   seconds or more. Google's badge opens in a new tab, so the page stays open to hear
   the save.
-- **The card itself, under the Wallet** (#973): its front and back as SAR Duty draws
-  them, for a member with no Wallet or one who wants a copy.
-  [DrawMemberCard](../lib/app/operation/draw_member_card.ex) runs one Typst drawing,
-  `priv/typst/member_card.typ`, for `/cards/:token/front` and `/cards/:token/back`,
-  PNGs at 400 pixels an inch, and `/cards/:token/pdf`. Each is drawn on the request, as
-  a pass is built, so it shows today's card.
-  - **CR80, across.** Both sides are 85.60 × 53.98 mm with 3.18 mm corners, the size
-    of a plastic ID card, so a printed copy fits any card holder or sleeve. The picture
-    draws its own corners, so the page doesn't round it.
-  - **White, under a 1 mm navy line**, the Wallet passes' navy, on both sides: the
-    team's logo and its name in navy above it. Any logo shows on white, and white prints
-    on any printer, so the screen and the Letter page use one drawing. A long team name
-    drops from 8 pt to 6.6 pt, and wraps only if it still doesn't fit.
-  - **The front**: the photo, the name, "Member since Nov 2023" under it, Issued, and the
-    QR code with its code. Issued is the day the card was created (`inserted_at`), not
-    the day it's drawn, so every copy of a card is the same; a replaced card gets a new
-    date. A Try a demo card says "Sample, not real ID" over the name and "Sample card"
-    for the team, as its passes do (#857).
-  - **The back**: the code again, so either side verifies, the name, How to verify,
-    and Issued by, as the passes' backs say them, less "Status comes from the team's
-    records" (`MemberCard.issuer/1`): the drawn card shows no status.
+- **The card itself, under the Wallet** (#973), for a member with no Wallet or one who
+  wants a copy. [DrawMemberCard](../lib/app/operation/draw_member_card.ex) runs one
+  Typst drawing, `priv/typst/member_card.typ`, for `/cards/:token/image`, a PNG at 400
+  pixels an inch, and `/cards/:token/pdf`. Each is drawn on the request, as a pass is
+  built, so it shows today's card.
+  - **The picture is the front as the Wallet passes draw theirs**: upright, 54 × 74 mm,
+    in the passes' navy with yellow labels and the team's name in yellow. "No Wallet?
+    Show this card, save it as an image, or print it." A member can show the page at
+    the door as they would the pass. It draws its own round corners.
+  - **One front, two looks.** The picture and the printed front show the same facts:
+    the team's logo and name, the photo, the name, Member since, Issued, and the QR code
+    with its code. Issued is the day the card was created (`inserted_at`), not the day
+    it's drawn, so every copy of a card is the same; a replaced card gets a new date. A
+    Try a demo card says "Sample, not real ID" over the name and "Sample card" for the
+    team, as its passes do (#857).
   - **Nothing that changes.** No status, Valid until, Last updated, or endorsements: a
     copy never updates, so they would freeze ([Valid until](#valid-until)). The QR code
     is the check, and the verify page lists the endorsements.
-  - **Save front image** and **Save back image**, under each side, with the download
-    icon in the arrow's place. On a phone it opens the share sheet, whose Save Image
-    puts the picture in Photos (`SaveImage`, `assets/js/save_image.js`); a download would
-    land in Files. On a computer it downloads. A long press on the picture saves it too.
+  - **Save image**, under the picture, with the download icon in the arrow's place. On
+    a phone it opens the share sheet, whose Save Image puts the picture in Photos
+    (`SaveImage`, `assets/js/save_image.js`); a download would land in Files. On a
+    computer it downloads. A long press on the picture saves it too.
+  - **The printed card is CR80, across**: both sides 85.60 × 53.98 mm with 3.18 mm
+    corners, the size of a plastic ID card, so it fits any card holder or sleeve. White
+    under a 1 mm navy line with the team's logo and its name in navy, so any logo shows
+    and any printer prints it. A long team name drops from 8 pt to 6.6 pt, and wraps only
+    if it still doesn't fit. The back has the code again, so either side verifies, the
+    name, How to verify, and Issued by, as the passes' backs say them, less "Status
+    comes from the team's records" (`MemberCard.issuer/1`): the drawn card shows no
+    status.
   - **Print ID card**, with the printer icon in the arrow's place, opens the PDF: a
     Letter page with both sides at actual size, each cut on its own edge, a dashed line
     with the card's rounded corners, so the piece is the card's size. A line further

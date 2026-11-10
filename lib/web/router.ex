@@ -253,8 +253,7 @@ defmodule Web.Router do
     get "/cards/:token/apple-wallet", CardLinkController, :apple_pass
     get "/cards/:token/google-wallet", CardLinkController, :google_pass
     # Its pictures of the card, and Print ID card (#973).
-    get "/cards/:token/front", CardLinkController, :front
-    get "/cards/:token/back", CardLinkController, :back
+    get "/cards/:token/image", CardLinkController, :image
     get "/cards/:token/pdf", CardLinkController, :pdf
 
     # A demo's link (#857): logs in as its visitor, then builds it the first time.
