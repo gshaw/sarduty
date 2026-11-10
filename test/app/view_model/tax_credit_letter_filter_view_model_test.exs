@@ -117,7 +117,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
     _older = tax_credit_letter_fixture(member, %{year: 2024})
 
     assert [%{tax_credit_letter_id: id, tax_credit_letter_code: code}] = find_all(team, 2025)
-    assert {id, code} == {letter.id, PublishedPDF.format_code(letter.pdf.code)}
+    assert {id, code} == {letter.id, PublishedPDF.format_code(letter.code)}
   end
 
   describe "chores (#584)" do

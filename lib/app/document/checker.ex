@@ -121,6 +121,8 @@ defmodule App.Document.Checker do
     check_title(doc.title, types)
     Enum.each(doc.keep, &check_keep(&1, doc.asks, types))
     Enum.each(doc.verify_shows, &check_shown(&1, types))
+    Enum.each(doc.needs, &check_need(&1, types))
+    check_email(doc.email, types)
     Enum.each(doc.expects, &check_expect(&1, doc, types))
     types
   end
@@ -210,11 +212,15 @@ defmodule App.Document.Checker do
     |> Enum.reject(&is_nil/1)
   end
 
-  # The values an ask's default, a compute, and a verify shows line hold.
-  defp named_values(doc),
-    do:
-      Enum.map(doc.asks, & &1.default) ++
-        Enum.map(doc.computes, & &1.value) ++ Enum.map(doc.verify_shows, & &1.value)
+  # The values an ask's default, a compute, a verify shows line, a need, and the email
+  # hold.
+  defp named_values(doc) do
+    email = if doc.email, do: [doc.email.subject, {:flow, doc.email.body}], else: []
+
+    Enum.map(doc.asks, & &1.default) ++
+      Enum.map(doc.computes, & &1.value) ++
+      Enum.map(doc.verify_shows, & &1.value) ++ doc.needs ++ email
+  end
 
   defp fill_values(%{value: {:each, _report, fills}}), do: Enum.map(fills, & &1.value)
   defp fill_values(fill), do: [fill.value]
@@ -804,6 +810,25 @@ defmodule App.Document.Checker do
   end
 
   # Only what a report reads is kept: never a value only printing reads, like the signature.
+  # A need is one of the team's or organization's settings, a field or a picture.
+  defp check_need({:field, [subject, _name], [], line} = field, types) do
+    if lower(subject) not in @one_row, do: need_mistake(line)
+    _type = type(field, types)
+    :ok
+  end
+
+  defp check_need(expr, _types), do: need_mistake(Query.line(expr))
+
+  defp need_mistake(line),
+    do: fail(line, "Write the team's settings after needs, such as team.signer.")
+
+  defp check_email(nil, _types), do: :ok
+
+  defp check_email(%{subject: subject, body: body, line: line}, types) do
+    check_text(subject, types, line, "the email's subject")
+    Enum.each(body, &check_item(&1, %{across: false, name: "the email's body"}, types))
+  end
+
   # A verify page shows text from what the document reads, never what only prints: the
   # page shows it to anyone holding the paper, so it's text a reviewer can read.
   defp check_shown(%{value: value, line: line, label: label}, types) do

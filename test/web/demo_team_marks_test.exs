@@ -39,7 +39,7 @@ defmodule Web.DemoTeamMarksTest do
       |> tax_credit_letter_fixture(%{year: 2025})
 
     {:ok, lv, _html} =
-      conn |> verify_conn() |> live(~p"/#{PublishedPDF.format_code(letter.pdf.code)}")
+      conn |> verify_conn() |> live(~p"/#{PublishedPDF.format_code(letter.code)}")
 
     assert has_element?(lv, "#result-current")
     assert has_element?(lv, "#result-sample", "Sample")

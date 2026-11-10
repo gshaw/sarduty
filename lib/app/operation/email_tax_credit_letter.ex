@@ -1,31 +1,25 @@
 defmodule App.Operation.EmailTaxCreditLetter do
+  @moduledoc """
+  Emails a tax credit letter's published PDF to its member (#918, #970), with the words
+  its document's `email to member` writes, and records that it went. A member with no
+  email gets none. Expects the letter with its member and team.
+  """
+
   alias App.Mailer.TaxCreditLetterMailer
   alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
-  alias App.Operation.SaveTaxCreditLetterPDF
+  alias App.Operation.PrintTaxCreditLetter
 
-  @doc """
-  Emails the letter's saved PDF to its member and returns whether it went, so the page
-  can say so. A letter without one is published first: its PDF prints and is saved, as
-  making the letter does, or `{:error, :not_printed}` when that fails. A letter that went
-  is marked sent. Expects `member` and its team preloaded, as `TaxCreditLetter.find!/2`
-  and `CreateTaxCreditLetter.call/1` return it.
-  """
-  def call(%TaxCreditLetter{member: member} = letter) do
+  @doc "`:ok`, `{:error, :no_email}`, or `{:error, reason}` when the email didn't send."
+  def call(%PublishedPDF{member: member} = letter, now \\ DateTime.utc_now()) do
     with :ok <- email?(member),
-         {:ok, attachment} <- pdf(letter),
-         {:ok, _metadata} <- TaxCreditLetterMailer.deliver_tax_credit_letter(letter, attachment) do
+         email = PrintTaxCreditLetter.email(letter, now),
+         attachment = PublishedPDF.attachment(letter),
+         {:ok, _metadata} <- TaxCreditLetterMailer.deliver(letter, email, attachment) do
       TaxCreditLetter.set_email_status!(letter, :sent)
       :ok
     end
   end
 
   defp email?(member), do: if(member.email in [nil, ""], do: {:error, :no_email}, else: :ok)
-
-  defp pdf(letter) do
-    case PublishedPDF.letter_attachment(letter) do
-      nil -> SaveTaxCreditLetterPDF.publish(letter)
-      attachment -> {:ok, attachment}
-    end
-  end
 end

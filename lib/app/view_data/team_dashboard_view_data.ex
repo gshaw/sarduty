@@ -23,6 +23,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Tag
   alias App.Model.Team
   alias App.Operation.BuildGroupRulePreview
+  alias App.Operation.PrintTaxCreditLetter
   alias App.Operation.SyncD4HChanges
   alias App.Repo
   alias App.Report
@@ -457,20 +458,12 @@ defmodule App.ViewData.TeamDashboardViewData do
     end
   end
 
-  # What a letter the CRA accepts without question needs from team settings (#918), only
-  # in letter season, when letters go out.
+  # What a letter the CRA accepts without question needs from team settings (#918), its
+  # document's `needs` (#970), only in letter season, when letters go out.
   defp letter_settings_row(team, now) do
-    if Service.Period.letter_season?(now, team.timezone) do
-      [
-        mailing_address: team.mailing_address,
-        signer: team.authorized_by_name,
-        signature: team.signature
-      ]
-      |> Enum.filter(fn {_field, value} -> value in [nil, ""] end)
-      |> Enum.map(&elem(&1, 0))
-    else
-      []
-    end
+    if Service.Period.letter_season?(now, team.timezone),
+      do: PrintTaxCreditLetter.missing_settings(team, now),
+      else: []
   end
 
   @chart_reports ~w(activities-this-year incidents-this-year member-hours-this-year

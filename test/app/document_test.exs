@@ -1,7 +1,7 @@
 defmodule App.DocumentTest do
   use ExUnit.Case, async: true
 
-  # cspell:ignore totl incidnt -- misspelled on purpose
+  # cspell:ignore totl incidnt signr -- misspelled on purpose
 
   alias App.Document
   alias App.Document.Checker
@@ -161,6 +161,34 @@ defmodule App.DocumentTest do
 
       assert places["letterhead"].value == []
       assert {:space, 4} in places["letter"].value
+    end
+
+    test "its email says what the mailer said, and its questions line only with a contact" do
+      values = %{
+        ":year" => 2025,
+        "team.legal_name" => "North Shore Rescue",
+        "team.signer" => "Pat Lee"
+      }
+
+      email = Document.evaluate(letter(), values, "Etc/UTC").email
+
+      assert email.subject == "2025 SRVTC North Shore Rescue"
+
+      assert email.body ==
+               "Attached is your 2025 tax credit letter from North Shore Rescue.\n\n" <>
+                 "Claim the search and rescue volunteers amount on line 31240 of your tax return. " <>
+                 "Keep this letter in case the CRA asks for it.\n"
+
+      # The signer's phone when they have no email; their email first when they have both.
+      values =
+        Map.merge(values, %{"team.signer_email" => "", "team.signer_phone" => "604-555-0100"})
+
+      email = Document.evaluate(letter(), values, "Etc/UTC").email
+      assert email.body =~ "it.\n\nQuestions about your hours? Contact Pat Lee at 604-555-0100.\n"
+
+      values = Map.put(values, "team.signer_email", "pat@example.com")
+      email = Document.evaluate(letter(), values, "Etc/UTC").email
+      assert email.body =~ "Contact Pat Lee at pat@example.com.\n"
     end
 
     test "prints the default verify code, and its verify page shows the hours (#970)" do
@@ -1091,6 +1119,30 @@ defmodule App.DocumentTest do
 
       assert error(doc("verify shows\n  'Signature' team.signature", "'x'")) ==
                "Line 4: Show a value a report reads: team.signature only prints."
+    end
+
+    test "needs names the team's settings, and nothing else (#970)" do
+      {:ok, doc} = checked(doc("needs team.signer, team.signature", "'x'"))
+
+      assert [{:field, ["team", "signer"], [], 3}, {:field, ["team", "signature"], [], 3}] =
+               doc.needs
+
+      assert error(doc("needs :year", "'x'")) ==
+               "Line 3: Write the team's settings after needs, such as team.signer."
+
+      assert error(doc("needs team.signr", "'x'")) =~ "Line 3: team has no field signr."
+    end
+
+    test "email to member has a subject and a body (#970)" do
+      email = "email to member\n  subject 'Hi {:year}'\n  body\n    'One'\n    space\n    'Two'"
+      {:ok, doc} = checked(doc(email, "'x'"))
+      output = Document.evaluate(doc, %{":year" => 2025}, "Etc/UTC")
+      assert output.email == %{subject: "Hi 2025", body: "One\n\nTwo\n"}
+
+      assert error(doc("email to member\n  subject 'Hi'", "'x'")) ==
+               "Line 3: Write the email's subject and body under email to member."
+
+      assert error(doc("email to team", "'x'")) =~ "Line 3: Write email to member"
     end
 
     test "never keep what only printing reads" do

@@ -28,7 +28,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
       {"All", nil},
       {"No letter", "none"},
       {"Letter", "made"},
-      {"Hours changed", "changed"}
+      {"Out of date", "changed"}
     ]
 
   def filters,
@@ -93,11 +93,13 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
     Member
     |> Member.scope(team_id: team.id)
-    |> join(:left, [m], tcl in assoc(m, :tax_credit_letters),
-      on: tcl.year == ^filter_options.year
+    |> join(
+      :left,
+      [m],
+      l in subquery(team.id |> TaxCreditLetter.query() |> TaxCreditLetter.current()),
+      on: l.member_id == m.id and l.year == ^filter_options.year
     )
-    |> join(:left, [m, tcl], p in assoc(tcl, :pdf))
-    |> select([m, tcl, p], %{member: m, letter: tcl, code: p.code})
+    |> select([m, l], %{member: m, letter: l})
     |> Repo.all()
     |> Enum.map(&build_record(&1, CountTaxCreditHours.get(hours, &1.member.id), team, now))
     |> filter_records(filter_options.filter)
@@ -123,11 +125,13 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   defp letter_kind(%{letter_hours_status: :changed}), do: "changed"
   defp letter_kind(_record), do: "made"
 
-  defp build_record(%{member: member, letter: letter, code: code}, hours, team, now) do
+  defp build_record(%{member: member, letter: letter}, hours, team, now) do
+    letter = if letter && letter.id, do: letter
+
     hours
     |> Map.put(:member, member)
     |> Map.put(:tax_credit_letter_id, letter && letter.id)
-    |> Map.put(:tax_credit_letter_code, code && PublishedPDF.format_code(code))
+    |> Map.put(:tax_credit_letter_code, letter && PublishedPDF.format_code(letter.code))
     |> Map.put(:tax_credit_letter_email_status, letter && letter.email_status)
     |> Map.put(:letter_minutes, letter && TaxCreditLetter.total_minutes(letter))
     |> Map.put(

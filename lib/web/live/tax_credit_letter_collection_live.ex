@@ -5,9 +5,9 @@ defmodule Web.TaxCreditLetterCollectionLive do
   import Web.Components.StatSwitch
 
   alias App.Model.Standing
-  alias App.Operation.CreateTaxCreditLetter
   alias App.Operation.CreateTaxCreditLetters
   alias App.Operation.EmailTaxCreditLetter
+  alias App.Operation.PublishTaxCreditLetter
   alias App.ViewModel.TaxCreditLetterFilterViewModel
   alias App.Worker.CreateTaxCreditLettersWorker
 
@@ -245,7 +245,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         kind={:warning}
         title={"The letter says #{Service.Format.duration(@record.letter_minutes)}"}
       >
-        Hours changed
+        Out of date
       </.badge>
       <span
         :if={@record.tax_credit_letter_email_status == :sending}
@@ -277,19 +277,12 @@ defmodule Web.TaxCreditLetterCollectionLive do
   end
 
   def handle_event("create", %{"value" => member_id}, socket) do
-    tax_credit_letter =
-      CreateTaxCreditLetter.call(
-        team: socket.assigns.current_team,
-        member_id: member_id,
-        year: socket.assigns.filter_options.year
-      )
+    %{current_team: team, current_user: user, filter_options: filter_options} = socket.assigns
 
-    socket =
-      socket
-      |> assign_records()
-      |> put_email_flash(tax_credit_letter)
-
-    {:noreply, socket}
+    case PublishTaxCreditLetter.call(team, member_id, filter_options.year, user, nil) do
+      {:ok, letter} -> {:noreply, socket |> assign_records() |> put_email_flash(letter)}
+      {:error, message} -> {:noreply, socket |> assign_records() |> put_flash(:error, message)}
+    end
   end
 
   def handle_event("send_all", _params, socket) do
@@ -379,14 +372,14 @@ defmodule Web.TaxCreditLetterCollectionLive do
         put_flash(
           socket,
           :error,
-          "Created the letter. #{letter.member.name} has no email."
+          "Published the letter. #{letter.member.name} has no email."
         )
 
       {:error, _reason} ->
         put_flash(
           socket,
           :error,
-          "Created the letter, but the email did not send. Open the letter to try again."
+          "Published the letter, but the email did not send. Open the letter to try again."
         )
     end
   end

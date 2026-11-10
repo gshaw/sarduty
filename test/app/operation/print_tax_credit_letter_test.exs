@@ -4,8 +4,9 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
 
   import App.DataFixtures
 
-  alias App.Operation.CreateTaxCreditLetter
+  alias App.Model.PublishedPDF
   alias App.Operation.PrintTaxCreditLetter
+  alias App.Operation.PublishTaxCreditLetter
   alias App.Operation.SaveTeamSignature
 
   setup do
@@ -13,13 +14,23 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
     %{team: team, member: member_fixture(team)}
   end
 
-  defp create(team, member),
-    do: CreateTaxCreditLetter.call(team: Repo.reload!(team), member_id: member.id, year: 2025)
+  defp create(team, member) do
+    team
+    |> Repo.reload!()
+    |> PublishTaxCreditLetter.prepare(member.id, 2025, nil)
+    |> PublishTaxCreditLetter.insert!(nil)
+  end
 
-  defp print(letter) do
-    letter = Repo.preload(letter, [:pdf, member: :team], force: true)
-    {:ok, printed} = PrintTaxCreditLetter.call(letter, letter.pdf.code)
-    printed.attachment
+  # The PDF as it was published.
+  defp print(letter), do: PublishedPDF.attachment(letter)
+
+  defp text(team, member) do
+    team = Repo.reload!(team)
+
+    PrintTaxCreditLetter.text(
+      team,
+      PrintTaxCreditLetter.read(team, member.id, 2025, DateTime.utc_now())
+    )
   end
 
   # Pictures on the page. A picture with an alpha channel stores it as a second image,
@@ -30,10 +41,10 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
 
   test "prints a name past Western European letters (#917)", %{team: team} do
     for name <- ["Łukasz Nowak", "Nguyễn Văn An"] do
-      letter = create(team, member_fixture(team, %{name: name}))
+      member = member_fixture(team, %{name: name})
 
-      assert letter.letter_content =~ "Name: #{name}\n"
-      assert %{content: "%PDF" <> _rest} = print(letter)
+      assert text(team, member) =~ "Name: #{name}\n"
+      assert %{content: "%PDF" <> _rest} = team |> create(member) |> print()
     end
   end
 
@@ -44,26 +55,6 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
     assert attachment.filename =~ ~r/^2025_SRVTC_.*\.pdf$/
     assert attachment.content =~ "/Encrypt"
     assert {:ok, _key} = Service.PDFLock.file_key(attachment.content)
-  end
-
-  test "prints the letter's own hours and date, not attendance now", %{member: member} do
-    letter =
-      member
-      |> tax_credit_letter_fixture(%{year: 2024, primary_minutes: 600, secondary_minutes: 30})
-      |> Map.put(:inserted_at, ~U[2025-01-20 18:00:00Z])
-      |> Repo.preload(member: :team)
-
-    read = PrintTaxCreditLetter.read(letter.member.team, member.id, 2024, letter.inserted_at)
-    output = PrintTaxCreditLetter.output(letter, "K7Q4M2XA9HVB3TN", read)
-    text = App.Document.text(output, "letter")
-
-    assert text =~ "in 2024."
-    assert text =~ "Primary Hours: 10 hours\nSecondary Hours: 30 min\nTotal Hours: 10h 30m\n"
-    assert text =~ "Certified on January 20, 2025."
-
-    # Its verify page shows the same hours (#970).
-    assert %{"label" => "Total hours", "text" => "10h 30m"} in output.shows
-    assert %{"label" => "Name", "text" => member.name} in output.shows
   end
 
   describe "the letterhead" do
@@ -91,28 +82,41 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
   describe "the signature" do
     test "prints the team's signature", %{team: team, member: member} do
       {:ok, _team} = SaveTeamSignature.call(team, png_fixture(600, 150))
-      letter = create(team, member)
 
-      assert images(print(letter)) == 1
+      assert images(print(create(team, member))) == 1
       # The picture takes the place of the blank lines left to sign in.
-      refute letter.letter_content =~ "\n\n\n\n"
+      refute text(team, member) =~ "\n\n\n\n"
     end
 
     test "leaves room to sign without one", %{team: team, member: member} do
-      letter = create(team, member)
-
-      assert images(print(letter)) == 0
-      assert letter.letter_content =~ ~r/Certified on .*\.\n\n\n\n\n#{team.legal_name}/
+      assert images(print(create(team, member))) == 0
+      assert text(team, member) =~ ~r/Certified on .*\.\n\n\n\n\n#{team.legal_name}/
     end
   end
 
-  test "prints the verify code of the ID it's published under (#970)", %{member: member} do
-    letter = member |> tax_credit_letter_fixture() |> Repo.preload(member: :team)
-    {:ok, printed} = PrintTaxCreditLetter.call(letter, "K7Q4M2XA9HVB3TN")
+  test "prints under the ID it's published with, and keeps 0 for no hours (#970)",
+       %{team: team, member: member} do
+    read = PrintTaxCreditLetter.read(team, member.id, 2025, DateTime.utc_now())
+    {:ok, printed} = PrintTaxCreditLetter.call(team, read, "K7Q4M2XA9HVB3TN")
 
     assert printed.code == "K7Q4M2XA9HVB3TN"
     assert printed.name == "Tax credit letter"
+    assert printed.keep == %{"hours.primary" => 0, "hours.secondary" => 0}
     assert %{content: "%PDF" <> _rest} = printed.attachment
+  end
+
+  test "names the settings it needs that the team hasn't filled in (#943, #970)", %{team: team} do
+    team =
+      team
+      |> Ecto.Changeset.change(
+        mailing_address: nil,
+        authorized_by_name: "Pat Lee",
+        signature: nil
+      )
+      |> Repo.update!()
+
+    assert PrintTaxCreditLetter.missing_settings(team, DateTime.utc_now()) ==
+             ["mailing address", "signature"]
   end
 
   test "a Try a demo team's letter says SAMPLE across it (#857)", %{team: team, member: member} do

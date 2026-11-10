@@ -12,8 +12,8 @@ defmodule App.DemoTeamSendsTest do
   alias App.Mailer
   alias App.Model.Member
   alias App.Model.OutboxMessage
+  alias App.Model.PublishedPDF
   alias App.Model.Reminder
-  alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass
   alias App.Operation.ChangeOwnPhone
   alias App.Operation.CreateTaxCreditLetters
@@ -119,7 +119,7 @@ defmodule App.DemoTeamSendsTest do
       summary = CreateTaxCreditLetters.call(ctx.team, 2025, ids)
 
       assert summary.created == 3 and summary.emailing == 3
-      assert Repo.aggregate(TaxCreditLetter, :count) == 3
+      assert Repo.aggregate(PublishedPDF, :count) == 3
       refute_email_sent()
 
       assert [message | _rest] = OutboxMessage.list(ctx.team)

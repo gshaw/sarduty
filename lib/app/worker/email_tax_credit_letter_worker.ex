@@ -7,18 +7,17 @@ defmodule App.Worker.EmailTaxCreditLetterWorker do
 
   use Oban.Worker, queue: :bulk, max_attempts: 5
 
-  alias App.Model.TaxCreditLetter
+  alias App.Model.PublishedPDF
   alias App.Operation.CreateTaxCreditLetters
 
-  @doc "Queues the letter's email. Call it in the transaction that makes the letter."
-  def enqueue(%TaxCreditLetter{id: id}),
-    do: %{tax_credit_letter_id: id} |> new() |> Oban.insert!()
+  @doc "Queues the letter's email. Call it in the transaction that publishes the letter."
+  def enqueue(%PublishedPDF{id: id}), do: %{published_pdf_id: id} |> new() |> Oban.insert!()
 
   # After 10, 20, 30, then 40 minutes.
   @impl Oban.Worker
   def backoff(%Oban.Job{attempt: attempt}), do: attempt * 10 * 60
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"tax_credit_letter_id" => id}} = job),
+  def perform(%Oban.Job{args: %{"published_pdf_id" => id}} = job),
     do: CreateTaxCreditLetters.email(id, job.attempt >= job.max_attempts)
 end

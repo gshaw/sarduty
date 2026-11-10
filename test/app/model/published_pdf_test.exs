@@ -96,7 +96,7 @@ defmodule App.Model.PublishedPDFTest do
       letter = tax_credit_letter_fixture(member, %{code: "K7Q4M2XA9HVB3TN"})
 
       pdf = PublishedPDF.find_for_verify("K7Q4M2XA9HVB3TN")
-      assert pdf.tax_credit_letter_id == letter.id
+      assert pdf.id == letter.id
       assert pdf.team.id == team.id
       refute PublishedPDF.find_for_verify("K7Q4M2XA9HVB3TM")
     end

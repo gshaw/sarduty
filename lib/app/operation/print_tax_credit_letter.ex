@@ -2,19 +2,15 @@ defmodule App.Operation.PrintTaxCreditLetter do
   @moduledoc """
   Prints a tax credit letter from its document, priv/documents/tax_credit_letter.txt
   (#918): runs the document's reports for the member and year, adds the pictures, and
-  prints it with Typst (App.Operation.PrintDocument), with the verify code of the ID
-  it's published under (#970). Only App.Operation.SaveTaxCreditLetterPDF prints, when a
-  letter is made, replaced, or emailed without a PDF: everything else serves the saved
-  PDF.
-
-  A letter prints its own hours and date certified, so one made before letters kept
-  their PDF prints what it says.
+  prints it with Typst (App.Operation.PrintDocument), with the verify code of the ID it's
+  published under (#970). Only App.Operation.PublishTaxCreditLetter prints: everything
+  else serves the saved PDF. The document also writes the letter's email
+  (`email to member`) and says which team settings it needs (`needs`).
   """
 
   alias App.Document
   alias App.Model.DemoTeam
   alias App.Model.PublishedPDF
-  alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Operation.PrintDocument
   alias App.Operation.ReadDocument
@@ -35,32 +31,13 @@ defmodule App.Operation.PrintTaxCreditLetter do
   end
 
   @doc """
-  A new letter's fields from `read/4`: its text and the hours it keeps. The PDF is
-  printed from the same values, so the two agree.
+  The letter's PDF from `read/4`, published under the ID `code`: `{:ok, %{attachment,
+  keep, shows, name, code}}`, what App.Model.PublishedPDF.publish/3 saves, or `{:error,
+  reason}`. A member with no hours keeps 0, as the letter prints.
   """
-  def fields(%{doc: doc, values: values}, %Team{} = team) do
-    output = Document.evaluate(doc, values, team.timezone)
-
-    %{
-      primary_minutes: output.keep["hours.primary"] || 0,
-      secondary_minutes: output.keep["hours.secondary"] || 0,
-      letter_content: Document.text(output, "letter")
-    }
-  end
-
-  @doc """
-  The letter's PDF, published under the ID `code`: `{:ok, %{attachment, keep, shows,
-  name, code}}`, what App.Model.PublishedPDF.publish/3 saves, or `{:error, reason}`.
-  Expects its member and team loaded. `read` is `read/4`'s, when the caller has it.
-  """
-  def call(%TaxCreditLetter{} = letter, code, read \\ nil) do
-    team = letter.member.team
-
-    read =
-      read || read(team, letter.member_id, letter.year, letter.inserted_at || DateTime.utc_now())
-
-    output = output(letter, code, read)
+  def call(%Team{} = team, %{doc: doc, values: values}, code) do
     link = PublishedPDF.verify_link(code)
+    output = Document.evaluate(doc, Map.put(values, "pdf.verify_link", link), team.timezone)
     mark = if DemoTeam.demo?(team), do: :sample
 
     with {:ok, pdf} <- PrintDocument.call(output, mark: mark, verify: link) do
@@ -72,32 +49,35 @@ defmodule App.Operation.PrintTaxCreditLetter do
            filename: Service.StringHelpers.to_filename("#{output.title}.pdf"),
            content_type: "application/pdf"
          },
-         keep: output.keep,
+         keep: Map.new(output.keep, fn {name, value} -> {name, value || 0} end),
          shows: output.shows,
-         name: read.doc.name,
+         name: doc.name,
          code: code
        }}
     end
   end
 
-  @doc "What `call/3` prints: the document evaluated with the letter's own values."
-  def output(%TaxCreditLetter{} = letter, code, %{doc: doc, values: values}) do
-    values = Map.merge(values, own_values(letter, code))
-    Document.evaluate(doc, values, letter.member.team.timezone)
+  @doc "The letter's text from `read/4`, as it prints, for a test or a check."
+  def text(%Team{} = team, %{doc: doc, values: values}),
+    do: doc |> Document.evaluate(values, team.timezone) |> Document.text("letter")
+
+  @doc """
+  The letter's email to its member, `%{subject, body}`, as of `now`: the document's
+  `email to member`, read again, so it names the team's signer as they are now.
+  """
+  def email(%PublishedPDF{member: %{team: team}} = letter, now) do
+    %{doc: doc, values: values} = read(team, letter.member_id, letter.year, now)
+    Document.evaluate(doc, values, team.timezone).email
   end
 
-  # What the letter says, whatever attendance says now. A letter from before the hours
-  # were saved (#260) reads them from attendance.
-  defp own_values(letter, code) do
-    hours =
-      if letter.primary_minutes && letter.secondary_minutes,
-        do: %{
-          "hours.primary" => letter.primary_minutes,
-          "hours.secondary" => letter.secondary_minutes,
-          "hours.total" => letter.primary_minutes + letter.secondary_minutes
-        },
-        else: %{}
+  @doc """
+  The settings the letter needs that the team hasn't filled in, by their names in lower
+  case, such as `["mailing address", "signature"]`: the document's `needs` (#943).
+  """
+  def missing_settings(%Team{} = team, now) do
+    {:ok, %{doc: doc, values: values, labels: labels}} =
+      @document |> Document.read() |> ReadDocument.settings(Context.new(team, now))
 
-    Map.put(hours, "pdf.verify_link", PublishedPDF.verify_link(code))
+    doc |> Document.missing(values) |> Enum.map(&String.downcase(labels[&1] || &1))
   end
 end

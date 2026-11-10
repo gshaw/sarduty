@@ -37,6 +37,8 @@ They come in this order. `report`, `const`, `ask`, `compute`, and `expect` can r
 | `keep hours.primary, …`             | Values saved with the PDF: what a report reads, and answers.                                      |
 | `verify code bottom right`          | Where the verify code prints, or `none` ([Verify code](#verify-code)).                            |
 | `verify shows` and values under it  | What the PDF's verify page shows ([Verify code](#verify-code)).                                   |
+| `needs team.signer, …`              | Settings it needs; Needs attention names blank ones ([Needs and email](#needs-and-email)).        |
+| `email to member` and lines under   | The email a letter goes out with ([Needs and email](#needs-and-email)).                           |
 | `page`                              | The values print on the form's own page PDF.                                                      |
 | `places`                            | Where each value goes.                                                                            |
 | `fill`                              | What goes in each place. `fill each people into rows` fills a row each ([Rows](#rows)).           |
@@ -146,6 +148,26 @@ verify shows
   'Total claimed' total as money
 ```
 
+## Needs and email
+
+`needs` names the team's settings a published PDF shouldn't go out without, such as the
+letter's `needs team.mailing_address, team.signer, team.signature`. Each is a `team` or
+`organization` field or picture. Needs attention lists each blank one in letter season,
+by its catalog name (App.Operation.ReadDocument.settings/2 reads only those).
+
+`email to member` writes the email a letter goes out with, its PDF attached: a
+`subject`, and a `body` written one item a line, as a flow's, with `space` and `if`.
+It's read again when the email goes, so it names the team's signer as they are then.
+
+```sql
+email to member
+  subject '{:year} SRVTC {team.legal_name}'
+  body
+    'Attached is your {:year} tax credit letter from {team.legal_name}.'
+    space
+    'Questions? Contact {team.signer_email}.' if team.signer_email is not null
+```
+
 ## Checks
 
 `App.Document.check/2` checks each report with `App.Report.Compiler.select_columns/3`,
@@ -155,8 +177,7 @@ those too. Then every name, format, place, and fill: each place filled once, a p
 only where a picture goes, a format only on a value it shows.
 
 `App.DocumentTest` checks every file in `priv/documents/` and runs its `expect` lines.
-It also prints the tax credit letter's text from the same values `CreateTaxCreditLetter`
-reads, and compares the two line for line. A form's `where` is checked as a report's on
+A form's `where` is checked as a report's on
 `activities`, and reads no answers: it decides whether the form shows before anyone
 answers.
 
@@ -502,16 +523,14 @@ Each row has its team, the definition's name, its subject (`member:45:2026` or
 values `keep` names, its answers, and what `verify shows` printed.
 
 - **The ID** is 15 characters from the ID card alphabet, about 74 bits, stored without
-  dashes and shown 5-5-5: `K7Q4M-2XA9H-VB3TN`. Only these verify: a letter from before
-  #970 gets one, and its PDF prints again, once after deploy
-  (App.Worker.RenewLetterCodesWorker).
+  dashes and shown 5-5-5: `K7Q4M-2XA9H-VB3TN`. Only these verify: each letter from before
+  #970 got one, and its PDF printed again, once after part 1 deployed.
 - **One current PDF** per subject and definition, held by a unique index. Publishing
   again (`publish/3`) keeps the old one, Replaced. It takes the current PDF's id the
   person saw, and refuses when another took its place meanwhile.
 - **Withdraw** (App.Operation.WithdrawDocument) ends one with no new one. It stays,
   marked Withdrawn, and still downloads for team admins (`/teams/:subdomain/pdfs/:id`).
-- **No delete.** A team's purge deletes them all (App.Operation.DeleteTeam). Deleting a
-  letter still deletes its PDFs, until letters withdraw instead.
+- **No delete.** A team's purge deletes them all (App.Operation.DeleteTeam).
 
 The verify site's root takes a card code or a document ID, and the length says which:
 10 characters is a card, 15 a document. A current one shows its title, team, date, and

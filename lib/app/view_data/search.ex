@@ -295,7 +295,6 @@ defmodule App.ViewData.Search do
       code: p.code,
       activity_id: p.activity_id,
       form_id: p.form_id,
-      tax_credit_letter_id: p.tax_credit_letter_id,
       replaced_by_id: p.replaced_by_id,
       withdrawn_at: p.withdrawn_at
     })

@@ -7,7 +7,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
   import Swoosh.TestAssertions
 
   alias App.Model.Event
-  alias App.Model.TaxCreditLetter
+  alias App.Model.PublishedPDF
   alias App.Operation.CreateTaxCreditLetters
   alias App.Operation.SaveTeamSignature
   alias App.Repo
@@ -87,14 +87,14 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       assert_email_sent(fn email -> assert email.to == [{"", avery.email}] end)
       assert_no_email_sent()
 
-      query = from l in TaxCreditLetter, where: l.year == 2025, select: l.member_id
+      query = from l in PublishedPDF, where: l.year == 2025, select: l.member_id
       assert query |> Repo.all() |> Enum.sort() == Enum.sort([avery.id, blake.id, casey.id])
-      assert Repo.get!(TaxCreditLetter, had.id).inserted_at == had.inserted_at
+      assert Repo.get!(PublishedPDF, had.id).inserted_at == had.inserted_at
       assert Event.get_last(:tax_credit_letters_sent).data["created"] == 2
 
       # Each email is its own job, which ran inline, and the letter says it went.
       statuses =
-        from l in TaxCreditLetter, where: l.year == 2025, select: {l.member_id, l.email_status}
+        from l in PublishedPDF, where: l.year == 2025, select: {l.member_id, l.email_status}
 
       assert statuses |> Repo.all() |> Map.new() ==
                %{avery.id => :sent, blake.id => nil, casey.id => nil}
@@ -107,10 +107,10 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       refusing_mailer_fixture()
 
       CreateTaxCreditLetters.call(team, 2025, [avery.id])
-      letter = Repo.get_by!(TaxCreditLetter, member_id: avery.id)
+      letter = Repo.get_by!(PublishedPDF, member_id: avery.id)
       assert letter.email_status == :sending
 
-      job = %Oban.Job{args: %{"tax_credit_letter_id" => letter.id}, attempt: 5, max_attempts: 5}
+      job = %Oban.Job{args: %{"published_pdf_id" => letter.id}, attempt: 5, max_attempts: 5}
       assert {:error, _reason} = EmailTaxCreditLetterWorker.perform(job)
       assert Repo.reload!(letter).email_status == :failed
 
@@ -191,7 +191,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       summary = CreateTaxCreditLetters.call(team, 2025, [outsider.id])
 
       assert summary.created == 0
-      assert Repo.aggregate(TaxCreditLetter, :count) == 0
+      assert Repo.aggregate(PublishedPDF, :count) == 0
     end
   end
 end

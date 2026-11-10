@@ -9,7 +9,6 @@ defmodule App.Model.Member do
   alias App.Model.MemberCheckIn
   alias App.Model.MemberQualificationAward
   alias App.Model.Standing
-  alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Repo
 
@@ -19,7 +18,6 @@ defmodule App.Model.Member do
     has_many :groups, through: [:group_members, :group]
     has_many :member_qualification_awards, MemberQualificationAward
     has_many :qualifications, through: [:member_qualification_awards, :qualification]
-    has_many :tax_credit_letters, TaxCreditLetter
     field :d4h_member_id, :integer
     field :ref_id, :string
     field :name, :string

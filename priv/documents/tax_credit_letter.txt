@@ -20,6 +20,10 @@ title '{:year} SRVTC {team.legal_name}' by team.legal_name
 lock print
 keep hours.primary, hours.secondary
 
+-- What the CRA may question a letter without. Needs attention names each one that's
+-- blank in letter season (#943).
+needs team.mailing_address, team.signer, team.signature
+
 -- What the letter's verify page shows anyone holding it, beside the team and the date
 -- it was certified.
 verify shows
@@ -28,6 +32,17 @@ verify shows
   'Primary hours' coalesce(hours.primary, 0) as duration
   'Secondary hours' coalesce(hours.secondary, 0) as duration
   'Total hours' coalesce(hours.total, 0) as duration
+
+-- The email the letter goes out with, to the member, with the PDF attached. Questions go
+-- to the signer's email, or their phone when they have no email.
+email to member
+  subject '{:year} SRVTC {team.legal_name}'
+  body
+    'Attached is your {:year} tax credit letter from {team.legal_name}.'
+    space
+    'Claim the search and rescue volunteers amount on line 31240 of your tax return. Keep this letter in case the CRA asks for it.'
+    space if team.signer_email is not null or team.signer_phone is not null
+    'Questions about your hours? Contact {coalesce(team.signer, team.legal_name)} at {coalesce(team.signer_email, team.signer_phone)}.' if team.signer_email is not null or team.signer_phone is not null
 
 -- Letter paper. Lengths are from the page's edges.
 places

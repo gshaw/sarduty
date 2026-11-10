@@ -112,7 +112,7 @@ defmodule App.ViewData.TeamAttentionTest do
             %{year: 2026, primary: 0, secondary: 1, ids: [10]}
           ],
           letters: %{year: 2025, count: 1},
-          letter_settings: [:signature],
+          letter_settings: ["signature"],
           names: %{name: String.duplicate("a", 21), abbreviated_name: String.duplicate("a", 11)},
           contacts?: false
         })
@@ -390,13 +390,13 @@ defmodule App.ViewData.TeamAttentionTest do
 
   test "letter settings name what a letter is missing" do
     assert [%{key: :letter_settings, level: :warning} = item] =
-             items(%{letter_settings: [:mailing_address, :signer, :signature]}, @march)
+             items(%{letter_settings: ["mailing address", "signer", "signature"]}, @march)
 
     assert item.title == "Tax credit letters are missing a mailing address, signer, and signature"
     assert item.detail =~ "Add them"
 
     assert [%{title: "Tax credit letters are missing a signer", detail: "Add it" <> _}] =
-             items(%{letter_settings: [:signer]}, @march)
+             items(%{letter_settings: ["signer"]}, @march)
 
     assert items(%{letter_settings: []}, @march) == []
   end

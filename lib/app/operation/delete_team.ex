@@ -48,7 +48,6 @@ defmodule App.Operation.DeleteTeam do
     {"group_members", "member_id", "members"},
     {"member_qualification_awards", "member_id", "members"},
     {"member_qualification_awards", "qualification_id", "qualifications"},
-    {"tax_credit_letters", "member_id", "members"},
     {"published_pdf_files", "published_pdf_id", "published_pdfs"},
     {"endorsement_includes", "endorsement_id", "endorsements"},
     {"endorsement_includes", "included_endorsement_id", "endorsements"},

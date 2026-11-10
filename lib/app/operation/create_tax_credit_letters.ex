@@ -2,8 +2,8 @@ alias App.Model.Event
 alias App.Model.Member
 alias App.Model.TaxCreditLetter
 alias App.Model.Team
-alias App.Operation.CreateTaxCreditLetter
 alias App.Operation.EmailTaxCreditLetter
+alias App.Operation.PublishTaxCreditLetter
 alias App.Repo
 alias App.Worker.EmailTaxCreditLetterWorker
 
@@ -11,7 +11,7 @@ defmodule App.Operation.CreateTaxCreditLetters do
   import Ecto.Query
 
   @doc """
-  Creates a letter for `year` for each of these members who has none yet (#195), each
+  Publishes a letter for `year` for each of these members who has none yet (#195), each
   with its email job (App.Worker.EmailTaxCreditLetterWorker) in one transaction. Runs in
   `App.Worker.CreateTaxCreditLettersWorker`. Records the counts as an event, tells the
   letter list through `topic/1`, and returns the summary. Each email job tells the list
@@ -25,7 +25,8 @@ defmodule App.Operation.CreateTaxCreditLetters do
       |> Repo.all()
 
     results =
-      for member <- pick(members, letter_member_ids(team, year)), do: create(team, member, year)
+      for member <- pick(members, TaxCreditLetter.member_ids(team.id, year)),
+          do: create(team, member, year, user_id)
 
     summary = summarize(results, year)
     record_event(team, user_id, summary)
@@ -41,12 +42,12 @@ defmodule App.Operation.CreateTaxCreditLetters do
   # A letter and its email job commit together, so a retry of the whole run makes only
   # the letters still missing, and no email is lost. Its PDF is drawn first, outside the
   # transaction.
-  defp create(team, member, year) do
-    prepared = CreateTaxCreditLetter.prepare(team, member.id, year)
+  defp create(team, member, year, user_id) do
+    prepared = PublishTaxCreditLetter.prepare(team, member.id, year, user_id)
 
     {:ok, result} =
       Repo.transaction(fn ->
-        letter = CreateTaxCreditLetter.insert!(prepared)
+        letter = PublishTaxCreditLetter.insert!(prepared, nil)
 
         if emailed?(member) do
           letter
@@ -113,14 +114,6 @@ defmodule App.Operation.CreateTaxCreditLetters do
       emailing: Enum.count(results, fn {_member, result} -> result == :emailing end),
       no_email: for({member, :no_email} <- results, do: member)
     }
-  end
-
-  defp letter_member_ids(team, year) do
-    TaxCreditLetter
-    |> join(:inner, [tcl], m in assoc(tcl, :member))
-    |> where([tcl, m], m.team_id == ^team.id and tcl.year == ^year)
-    |> select([tcl], tcl.member_id)
-    |> Repo.all()
   end
 
   # Ids and counts only, never names or emails, as Event asks.

@@ -399,9 +399,9 @@ The team's Dashboard, `/teams/:subdomain`
   the other. A member's page doesn't work out Needs attention at all.
 - **For you to do** comes from [MemberToDo](../lib/app/view_data/member_to_do.ex), pure:
   add your ID card to Wallet (on a team with ID cards on, until
-  `MemberCard.in_wallet?/1`), each qualification expiring within 60 days (until it's
-  renewed), and a new tax credit letter (from January to April, until the member
-  downloads it, `downloaded_at`). Each leaves once done. With nothing to do, the card
+  `MemberCard.in_wallet?/1`), and each qualification expiring within 60 days (until it's
+  renewed). Each leaves once done. A tax credit letter isn't one: its email carries the
+  PDF, and a member with no email shows in Needs attention until one is added. With nothing to do, the card
   says so in one line.
 - `"refresh"` is a team admin's event: the team pages' hook refuses it from a member
   (#440), and only a team admin's visit starts the catch-up sync.

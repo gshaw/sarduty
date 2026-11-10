@@ -8,7 +8,6 @@ defmodule App.Model.PublishedPDF do
   alias App.Model.MemberCard
   alias App.Model.PublishedPDF
   alias App.Model.PublishedPDFFile
-  alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Repo
 
@@ -25,18 +24,15 @@ defmodule App.Model.PublishedPDF do
     field :name, :string
     # What it's for: `member:45:2026` for a member's year, `activity:812` for an activity.
     field :subject, :string
-    # Its ID: 15 characters, stored without dashes. A letter from before #970 has its
-    # old reference number until App.Worker.RenewLetterCodesWorker gives it an ID; an
-    # old reference number never verifies.
+    # Its ID: 15 characters, stored without dashes.
     field :code, :string, redact: true
-    belongs_to :tax_credit_letter, TaxCreditLetter
     belongs_to :member, Member
     field :year, :integer
     belongs_to :activity, Activity
     # A form's, and the version it printed from: nil once the form is gone.
     belongs_to :form, Form
     field :form_version, :integer
-    # Who published it. Nil for a letter.
+    # Who published it. Nil for a letter made by Send letters before #970.
     belongs_to :user, User
     belongs_to :replaced_by, PublishedPDF
     field :withdrawn_at, :utc_datetime_usec
@@ -48,6 +44,9 @@ defmodule App.Model.PublishedPDF do
     field :sha256, :string
     # The values it printed that `keep` names, by name, such as `hours.primary`.
     field :keep, :map, default: %{}, redact: true
+    # A letter's: whether its email went, sending while its job waits, then sent or
+    # failed (#970).
+    field :email_status, Ecto.Enum, values: [:sending, :sent, :failed]
     # Every answer it printed with, by name.
     field :answers, :map, default: %{}, redact: true
     # What its verify page shows, `[%{"label", "text"}]`, as `verify shows` printed it.
@@ -93,9 +92,6 @@ defmodule App.Model.PublishedPDF do
   def status(%PublishedPDF{replaced_by_id: id}) when is_integer(id), do: :replaced
   def status(%PublishedPDF{}), do: :current
 
-  @doc "A tax credit letter's subject: the member and the year."
-  def letter_subject(member_id, year), do: "member:#{member_id}:#{year}"
-
   @doc """
   Saves a PDF just printed as published, in one transaction: `attrs` say what it is
   (`team_id`, `name`, `subject`, `code`, and what it's about), `printed` is
@@ -128,7 +124,6 @@ defmodule App.Model.PublishedPDF do
         name: attrs.name,
         subject: attrs.subject,
         code: attrs.code,
-        tax_credit_letter_id: attrs[:tax_credit_letter_id],
         member_id: attrs[:member_id],
         year: attrs[:year],
         activity_id: attrs[:activity_id],
@@ -150,33 +145,6 @@ defmodule App.Model.PublishedPDF do
 
   defp set_replaced_by!(pdf, id),
     do: PublishedPDF |> where(id: ^pdf.id) |> Repo.update_all(set: [replaced_by_id: id])
-
-  @doc """
-  Replaces a PDF's ID, file, and what it printed with `printed`, a new print of the same
-  document, in one transaction (App.Operation.RenewLetterCodes). Its row and date stay.
-  """
-  def reprint!(%PublishedPDF{} = pdf, %{attachment: attachment, code: code} = printed) do
-    {:ok, pdf} =
-      Repo.transaction(fn ->
-        PublishedPDFFile
-        |> where(published_pdf_id: ^pdf.id)
-        |> Repo.update_all(set: [bytes: attachment.content])
-
-        pdf
-        |> Ecto.Changeset.change(
-          code: code,
-          title: attachment.title,
-          filename: attachment.filename,
-          byte_size: byte_size(attachment.content),
-          sha256: :sha256 |> :crypto.hash(attachment.content) |> Base.encode16(case: :lower),
-          keep: printed.keep,
-          shows: printed.shows
-        )
-        |> Repo.update!()
-      end)
-
-    pdf
-  end
 
   @doc """
   Marks the PDF withdrawn by `user` at `now`: `{:ok, pdf}`, or `{:error, :not_current}`
@@ -213,6 +181,15 @@ defmodule App.Model.PublishedPDF do
     |> Repo.all()
   end
 
+  @doc "The member's PDFs, such as their letters, newest first, with who published and withdrew each."
+  def get_all_for_member(team_id, member_id) do
+    PublishedPDF
+    |> where([p], p.team_id == ^team_id and p.member_id == ^member_id)
+    |> order_by([p], desc: p.inserted_at, desc: p.id)
+    |> preload([:user, :withdrawn_by])
+    |> Repo.all()
+  end
+
   @doc "The activity's PDFs, newest first, with who published and withdrew each: its History."
   def get_all_for_activity(team_id, activity_id) do
     PublishedPDF
@@ -227,22 +204,6 @@ defmodule App.Model.PublishedPDF do
     case id |> to_string() |> Integer.parse() do
       {id, ""} -> Repo.get_by(PublishedPDF, id: id, team_id: team_id)
       _other -> nil
-    end
-  end
-
-  @doc "The letter's current PDF, or nil."
-  def current_for_letter(%TaxCreditLetter{id: id}) do
-    PublishedPDF
-    |> where([p], p.tax_credit_letter_id == ^id)
-    |> where([p], is_nil(p.replaced_by_id) and is_nil(p.withdrawn_at))
-    |> Repo.one()
-  end
-
-  @doc "The letter's current PDF as an attachment, like the one `publish/3` took, or nil."
-  def letter_attachment(%TaxCreditLetter{} = letter) do
-    case current_for_letter(letter) do
-      nil -> nil
-      pdf -> attachment(pdf)
     end
   end
 

@@ -722,24 +722,6 @@ defmodule Web.TeamDashboardLiveTest do
       refute has_element?(lv, "#to-do-card")
     end
 
-    # MemberToDo's tests cover the season with a fixed date; this checks the page reads
-    # today's.
-    test "For you to do: a new letter in letter season, until the member downloads it",
-         %{conn: conn, team: team, member: member} do
-      %{year: year} = this_year_fixture(team)
-      letter = tax_credit_letter_fixture(member, %{year: year - 1})
-      in_season? = Service.Period.letter_season?(DateTime.utc_now(), team.timezone)
-
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
-
-      assert has_element?(lv, "#to-do-letter", "Your #{year - 1} tax credit letter is ready") ==
-               in_season?
-
-      conn |> get(~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf") |> response(200)
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
-      refute has_element?(lv, "#to-do-letter")
-    end
-
     test "For you to do: a declined chore, until the member deletes it",
          %{conn: conn, team: team, member: member} do
       category = chore_category_fixture(team)
