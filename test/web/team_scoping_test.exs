@@ -30,6 +30,7 @@ defmodule Web.TeamScopingTest do
     # team first. Web.ActivityOrgFormLiveTest covers a form that's off.
     "/teams/:subdomain/activities/:id/forms/:form_id",
     "/teams/:subdomain/activities/:id/forms/:form_id/pdf",
+    "/teams/:subdomain/activities/:id/forms/:form_id/publish",
     "/teams/:subdomain/equipment/:id",
     "/teams/:subdomain/equipment/:id/fields",
     "/teams/:subdomain/equipment/:id/fields/edit",
@@ -77,6 +78,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/qualifications/:id",
     "/teams/:subdomain/qualifications/:id/edit",
     "/teams/:subdomain/tax-credit-letters/:id",
+    "/teams/:subdomain/pdfs/:id",
     "/teams/:subdomain/tax-credit-letters/:id/pdf",
     # A member's own letter (#156). Web.MeLiveTest covers another member on the same team.
     "/teams/:subdomain/me/tax-credit-letters/:id/pdf",
@@ -111,7 +113,7 @@ defmodule Web.TeamScopingTest do
 
     other = %{
       activity: activity_fixture(other_team, %{activity_kind: "incident"}),
-      form: form_fixture(organization, %{enabled: true}),
+      form: form_fixture(organization, %{state: :on}),
       member: member,
       group: group,
       rule: group_rule_fixture(group, endorsement),
@@ -226,6 +228,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/activities/:id/forms/:form_id", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/forms/#{o.form.id}"
+
+  defp path_for("/teams/:subdomain/activities/:id/forms/:form_id/publish", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/forms/#{o.form.id}/publish"
 
   defp path_for("/teams/:subdomain/activities/:id/forms/:form_id/pdf", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/forms/#{o.form.id}/pdf"
@@ -376,6 +381,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/me/tax-credit-letters/:id/pdf", s, o),
     do: ~p"/teams/#{s}/me/tax-credit-letters/#{o.letter.id}/pdf"
+
+  defp path_for("/teams/:subdomain/pdfs/:id", s, o),
+    do: ~p"/teams/#{s}/pdfs/#{o.letter.pdf.id}"
 
   defp path_for("/teams/:subdomain/tax-credit-letters/:id/pdf", s, o),
     do: ~p"/teams/#{s}/tax-credit-letters/#{o.letter.id}/pdf"

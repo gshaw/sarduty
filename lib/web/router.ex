@@ -374,6 +374,11 @@ defmodule Web.Router do
       live "/teams/:subdomain/activities/:id/members/add", ActivityAddMembersLive
       live "/teams/:subdomain/activities/:id/tags", ActivityTagsLive
       live "/teams/:subdomain/activities/:id/forms/:form_id", ActivityOrgFormLive
+      # Its preview before Publish keeps it (#970).
+      live "/teams/:subdomain/activities/:id/forms/:form_id/publish",
+           ActivityOrgFormLive,
+           :publish
+
       live "/teams/:subdomain/templates", TemplateCollectionLive
       live "/teams/:subdomain/templates/new", TemplateFormLive, :new
       live "/teams/:subdomain/templates/:id", TemplateLive
@@ -486,6 +491,8 @@ defmodule Web.Router do
       get "/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
       # An organization's form on an activity (#950): posts its answers, gets the PDF.
       post "/activities/:id/forms/:form_id/pdf", ActivityFormPDFController, :create
+      # A published PDF as it was saved, current or not (#970).
+      get "/pdfs/:id", PublishedPDFController, :show
       get "/reports/:id/csv", ReportController, :csv
       post "/members/:id/view-as", ViewAsController, :create
       delete "/view-as", ViewAsController, :delete

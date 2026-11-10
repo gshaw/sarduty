@@ -10,6 +10,7 @@ defmodule Web.Components.Search do
 
   import Web.Components.Core, only: [icon: 1]
 
+  alias App.Model.PublishedPDF
   alias Phoenix.LiveView.JS
   alias Service.Format
   alias Web.Components.Standing
@@ -24,6 +25,7 @@ defmodule Web.Components.Search do
     template: "Templates",
     chore: "Chores",
     certificate: "Certificates",
+    document: "Documents",
     page: "Pages",
     recent: "Recent"
   }
@@ -323,6 +325,17 @@ defmodule Web.Components.Search do
       join([
         hit.member_name,
         if(hit.status != :accepted, do: hit.status |> Atom.to_string() |> String.capitalize())
+      ])
+
+  defp line(:document, hit),
+    do:
+      join([
+        PublishedPDF.format_code(hit.code),
+        cond do
+          hit.withdrawn_at -> "Withdrawn"
+          hit.replaced_by_id -> "Replaced"
+          true -> nil
+        end
       ])
 
   defp line(_kind, _hit), do: ""

@@ -196,6 +196,25 @@ defmodule App.ReportTest do
     end
   end
 
+  test "an activity's description reads as text, not D4H's HTML, and still filters (#970)" do
+    team = team_fixture()
+
+    activity_fixture(team, %{
+      title: "Port Mann",
+      description: "<p>Requested by Surrey Police &amp; RCMP.</p><p>Stood down.</p>"
+    })
+
+    {:ok, result} =
+      Report.run(
+        "select title, description from activities where description contains 'Surrey'",
+        team,
+        %{},
+        @now
+      )
+
+    assert [[_id, "Requested by Surrey Police & RCMP.\nStood down."]] = result.rows
+  end
+
   # A report's rows are plain lists, with no redact: true, so they hold contact details
   # in the clear (#827). Only SQLite's message reaches the log.
   test "nothing in the report code logs rows" do

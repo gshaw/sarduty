@@ -90,18 +90,31 @@ defmodule Web.Org.FormPagesTest do
       refute has_element?(lv, "#form-replace")
     end
 
-    test "its organization admin turns it on and off", %{conn: conn, dana: dana, form: form} do
+    test "its organization admin sets it testing, on, and off (#970)",
+         %{conn: conn, dana: dana, form: form} do
       {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/forms/#{form}")
 
+      # Off: Testing waits under Turned on.
+      assert has_element?(lv, "#form-testing[disabled]")
+
+      # Turning it on starts testing.
       lv |> element("#form-on") |> render_click()
-      assert Repo.reload!(form).enabled
+      assert Repo.reload!(form).state == :testing
+      assert has_element?(lv, "#form-state", "Testing")
+      assert has_element?(lv, "#form-on[checked]")
+      assert has_element?(lv, "#form-testing[checked]:not([disabled])")
+
+      lv |> element("#form-testing") |> render_click()
+      assert Repo.reload!(form).state == :on
       assert has_element?(lv, "#form-state", "On")
+      refute has_element?(lv, "#form-testing[checked]")
 
-      lv |> element("#form-off") |> render_click()
-      refute Repo.reload!(form).enabled
+      lv |> element("#form-on") |> render_click()
+      assert Repo.reload!(form).state == :off
+      refute has_element?(lv, "#form-on[checked]")
 
-      kinds = [:form_turned_on, :form_turned_off]
-      assert [_on, _off] = Event |> where([e], e.kind in ^kinds) |> Repo.all()
+      kinds = [:form_set_testing, :form_turned_on, :form_turned_off]
+      assert [_testing, _on, _off] = Event |> where([e], e.kind in ^kinds) |> Repo.all()
     end
 
     test "tries it on Coast Range SAR's activities", %{conn: conn, dana: dana, form: form} do

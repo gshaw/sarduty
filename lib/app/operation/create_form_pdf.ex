@@ -6,20 +6,17 @@ defmodule App.Operation.CreateFormPDF do
   (App.Operation.PrintForm), marked DRAFT. A draft is never saved: publishing a form,
   saved with an ID, comes later. Nothing goes to D4H.
 
-  The caller finds the form on for the team (`App.Model.Form.get_enabled/2`) and the
+  The caller finds the form shown for the team (`App.Model.Form.get_shown/2`) and the
   activity through the team.
   """
 
   alias App.Accounts.User
-  alias App.Document
   alias App.Model.Activity
   alias App.Model.Form
   alias App.Model.FormAnswer
   alias App.Model.Team
   alias App.Operation.PrintForm
   alias App.Operation.SaveFormAnswers
-  alias App.Report.Context
-  alias App.Report.Error
 
   @doc """
   `{:ok, attachment}`, the draft PDF, or `{:error, reason}` with nothing printed.
@@ -27,7 +24,7 @@ defmodule App.Operation.CreateFormPDF do
   """
   def call(%Team{} = team, %Form{} = form, %Activity{} = activity, %User{} = user, typed, now) do
     with :ok <- check(team, form, activity),
-         {:ok, doc, context} <- read(team, form, now),
+         {:ok, doc, context} <- PrintForm.read(team, form.text, now),
          {:ok, _answers} <- save(activity, doc, typed, user, now),
          do: print(form, activity, doc, context)
   end
@@ -47,23 +44,12 @@ defmodule App.Operation.CreateFormPDF do
     cond do
       activity.team_id != team.id -> {:error, "This activity is not on your team."}
       activity.deleted_at -> {:error, "This activity is deleted. Nothing can be made from it."}
-      not form.enabled or form.organization_id != team.organization_id -> {:error, off()}
+      form.state == :off or form.organization_id != team.organization_id -> {:error, off()}
       true -> :ok
     end
   end
 
   defp off, do: "This form is turned off. Ask your organization to turn it on."
-
-  defp read(team, form, now) do
-    context = Context.new(team, now)
-
-    with {:ok, doc} <- Document.parse(form.text),
-         {:ok, doc} <- Document.check(doc, context) do
-      {:ok, doc, context}
-    else
-      {:error, %Error{} = error} -> {:error, Error.text(error)}
-    end
-  end
 
   defp save(activity, doc, typed, user, now) do
     case SaveFormAnswers.call(activity, doc, typed, user, now) do

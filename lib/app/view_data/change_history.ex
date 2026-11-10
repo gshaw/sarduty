@@ -5,6 +5,7 @@ defmodule App.ViewData.ChangeHistory do
   alias App.Model.D4HChange
   alias App.Model.Member
   alias App.Model.MemberStandingChange
+  alias App.Model.PublishedPDF
   alias App.Model.Team
   alias App.Repo
   alias App.ViewModel.ActivityFormViewModel
@@ -12,7 +13,8 @@ defmodule App.ViewData.ChangeHistory do
   # A member's or an activity's history (#174, step 3): what SAR Duty changed in D4H,
   # from applied change set rows, and what the sync saw change in D4H, from `d4h_changes`.
   # A member's history adds the standing changes team admins made (#366), `by:
-  # :team_admin`. Each entry is a map: `at`, `by` (`:sar_duty` or `:d4h`), `seen_after` for a D4H
+  # :team_admin`, and an activity's the PDFs its team admins published and withdrew
+  # (#970). Each entry is a map: `at`, `by` (`:sar_duty` or `:d4h`), `seen_after` for a D4H
   # change (the last refresh before it), `text`, and for SAR Duty's changes `source`,
   # `applied_by`, and `reason`. Newest first.
   #
@@ -57,7 +59,45 @@ defmodule App.ViewData.ChangeHistory do
       |> where([r, s], r.team_id == ^team.id and s.activity_id == ^activity.id)
       |> applied_rows()
 
-    merge(changes, rows, :activity, team.timezone)
+    published =
+      team.id
+      |> PublishedPDF.get_all_for_activity(activity.id)
+      |> Enum.flat_map(&published_entries/1)
+
+    changes
+    |> merge(rows, :activity, team.timezone)
+    |> Enum.concat(published)
+    |> Enum.sort_by(& &1.at, {:desc, DateTime})
+    |> Enum.take(@limit)
+  end
+
+  # Publishing, and withdrawing when it was. Publishing again replaces with no line of
+  # its own: the new one's "Published" says it.
+  defp published_entries(%PublishedPDF{} = pdf) do
+    published = %{
+      id: "published-#{pdf.id}",
+      at: pdf.inserted_at,
+      seen_after: nil,
+      by: :team_admin,
+      kind: :published,
+      applied_by: pdf.user && pdf.user.email,
+      text: "Published #{pdf.name}, #{PublishedPDF.format_code(pdf.code)}"
+    }
+
+    withdrawn =
+      if pdf.withdrawn_at,
+        do: [
+          %{
+            published
+            | id: "withdrawn-#{pdf.id}",
+              at: pdf.withdrawn_at,
+              applied_by: pdf.withdrawn_by && pdf.withdrawn_by.email,
+              text: "Withdrew #{pdf.name}, #{PublishedPDF.format_code(pdf.code)}"
+          }
+        ],
+        else: []
+
+    [published | withdrawn]
   end
 
   defp field_titles(%D4HChange{new_value: %{"custom_values" => %{} = values}} = change),

@@ -45,6 +45,42 @@ defmodule Service.DescriptionHTML do
     end
   end
 
+  @doc """
+  The description as plain text, for a form or a report (#970): a line for each
+  paragraph and each line break, `• ` before each list item, and no tags. Nil when it
+  says nothing.
+  """
+  def text(nil), do: nil
+
+  def text(html) when is_binary(html) do
+    case clean(html) do
+      nil ->
+        nil
+
+      clean ->
+        clean
+        |> Floki.parse_fragment!()
+        |> Enum.map_join(&text_node/1)
+        |> String.split("\n")
+        |> Enum.map(&String.trim/1)
+        |> Enum.reject(&(&1 == ""))
+        |> Enum.join("\n")
+        |> then(&if(&1 == "", do: nil, else: &1))
+    end
+  end
+
+  # Paragraphs, line breaks, and list items each end a line; a nested list's items are
+  # lines too.
+  defp text_node(text) when is_binary(text), do: text
+  defp text_node({"br", _attrs, _kids}), do: "\n"
+  defp text_node({"li", _attrs, kids}), do: "\n• #{Enum.map_join(kids, &text_node/1)}\n"
+
+  defp text_node({tag, _attrs, kids}) when tag in ~w(p ul ol),
+    do: "\n#{Enum.map_join(kids, &text_node/1)}\n"
+
+  defp text_node({_tag, _attrs, kids}), do: Enum.map_join(kids, &text_node/1)
+  defp text_node(_node), do: ""
+
   # Floki drops text that is only spaces, such as the one in "<b>Date:</b> <i>soon</i>",
   # but keeps a character reference.
   defp parse(html), do: html |> String.replace(~r/>\s+</u, ">&#32;<") |> Floki.parse_fragment!()

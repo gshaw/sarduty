@@ -40,7 +40,7 @@ defmodule App.Operation.SaveFormTest do
        %{organization: organization, admin: admin, page: page} do
     assert {:ok, form} = SaveForm.call(organization, nil, @text, page, admin)
 
-    assert %Form{name: "Task report", version: 1, enabled: false} = form
+    assert %Form{name: "Task report", version: 1, state: :off} = form
     assert form.about == "A made-up agency's task report, for tests."
     assert form.user_id == admin.id
     assert form.page_sha256 == Form.sha256(page)
@@ -105,7 +105,7 @@ defmodule App.Operation.SaveFormTest do
       String.replace(@text, "description = 'Found on the ridge. Walked", "description = 'Walked")
 
     assert {:error, :text, message} = SaveForm.call(organization, nil, text, page, admin)
-    assert message =~ "Line 65:"
+    assert message =~ "Line 69:"
   end
 
   test "checks the page", %{organization: organization, admin: admin, page: page} do

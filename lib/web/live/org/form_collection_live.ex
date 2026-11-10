@@ -27,8 +27,8 @@ defmodule Web.Org.FormCollectionLive do
 
     <p class="lead measure">
       {@current_organization.short_name}'s forms for its teams, such as the claim after an
-      incident. Once a form is on, team admins fill it in from an activity and download the
-      PDF.
+      incident. While a form is testing, team admins fill it in from an activity and download
+      draft PDFs. Once it's on, they publish it.
     </p>
 
     <.empty_state :if={@forms == []} id="no-forms" title="No forms yet">
@@ -44,8 +44,9 @@ defmodule Web.Org.FormCollectionLive do
         <div :if={form.about} class="hint">{form.about}</div>
       </:col>
       <:col :let={form} label="For teams">
-        <span :if={form.enabled} id={"form-#{form.id}-state"} class="text-success-text">On</span>
-        <span :if={!form.enabled} id={"form-#{form.id}-state"} class="text-text-muted">Off</span>
+        <span id={"form-#{form.id}-state"} class={state_class(form.state)}>
+          {Form.state_label(form.state)}
+        </span>
       </:col>
       <:col :let={form} label="Version" class="max-md:hidden">
         <span id={"form-#{form.id}-version"}>{form.version}</span>
@@ -53,4 +54,8 @@ defmodule Web.Org.FormCollectionLive do
     </.table>
     """
   end
+
+  defp state_class(:on), do: "text-success-text"
+  defp state_class(:testing), do: nil
+  defp state_class(:off), do: "text-text-muted"
 end

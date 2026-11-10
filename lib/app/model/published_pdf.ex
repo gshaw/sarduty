@@ -178,12 +178,56 @@ defmodule App.Model.PublishedPDF do
     pdf
   end
 
+  @doc """
+  Marks the PDF withdrawn by `user` at `now`: `{:ok, pdf}`, or `{:error, :not_current}`
+  when it was replaced or withdrawn meanwhile, so two at once withdraw it once.
+  """
+  def withdraw(%PublishedPDF{id: id}, %User{id: user_id}, now) do
+    at = DateTime.truncate(now, :microsecond)
+
+    {count, _rows} =
+      PublishedPDF
+      |> where([p], p.id == ^id and is_nil(p.withdrawn_at) and is_nil(p.replaced_by_id))
+      |> Repo.update_all(set: [withdrawn_at: at, withdrawn_by_id: user_id])
+
+    if count == 1, do: {:ok, Repo.get!(PublishedPDF, id)}, else: {:error, :not_current}
+  end
+
   @doc "The subject's current PDF of the definition `name`, or nil."
   def get_current(team_id, name, subject) do
     PublishedPDF
     |> where([p], p.team_id == ^team_id and p.name == ^name and p.subject == ^subject)
     |> where([p], is_nil(p.replaced_by_id) and is_nil(p.withdrawn_at))
     |> Repo.one()
+  end
+
+  @doc """
+  The subject's PDFs of the definition `name`, newest first, with who published and
+  withdrew each: the current one, if any, then those it replaced or that were withdrawn.
+  """
+  def get_all_for(team_id, name, subject) do
+    PublishedPDF
+    |> where([p], p.team_id == ^team_id and p.name == ^name and p.subject == ^subject)
+    |> order_by([p], desc: p.inserted_at, desc: p.id)
+    |> preload([:user, :withdrawn_by])
+    |> Repo.all()
+  end
+
+  @doc "The activity's PDFs, newest first, with who published and withdrew each: its History."
+  def get_all_for_activity(team_id, activity_id) do
+    PublishedPDF
+    |> where([p], p.team_id == ^team_id and p.activity_id == ^activity_id)
+    |> order_by([p], desc: p.inserted_at, desc: p.id)
+    |> preload([:user, :withdrawn_by])
+    |> Repo.all()
+  end
+
+  @doc "The team's PDF `id`, or nil."
+  def get(%Team{id: team_id}, id) do
+    case id |> to_string() |> Integer.parse() do
+      {id, ""} -> Repo.get_by(PublishedPDF, id: id, team_id: team_id)
+      _other -> nil
+    end
   end
 
   @doc "The letter's current PDF, or nil."

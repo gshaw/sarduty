@@ -9,10 +9,12 @@ defmodule App.Operation.PrintForm do
   """
 
   alias App.Document
+  alias App.Model.Team
   alias App.Operation.PrintDocument
   alias App.Operation.ReadDocument
   alias App.Report.Compiler
   alias App.Report.Context
+  alias App.Report.Error
   alias App.Report.Runner
 
   @doc """
@@ -28,7 +30,8 @@ defmodule App.Operation.PrintForm do
          :ok <- form?(doc),
          :ok <- shown?(doc, context, activity_id),
          {:ok, answered} <- answers(doc, answers) do
-      output = Document.evaluate(doc, Map.merge(values, answered), context.timezone)
+      values = values |> Map.merge(answered) |> sign(Keyword.get(opts, :verify, :draft))
+      output = Document.evaluate(doc, values, context.timezone)
       print(output, doc.name, page, opts)
     end
   end
@@ -44,6 +47,28 @@ defmodule App.Operation.PrintForm do
               keep: output.keep,
               shows: output.shows
             }}
+  end
+
+  # Only a published PDF carries the team's signature (#970). A draft leaves it blank,
+  # and its verify link with it.
+  defp sign(values, :draft),
+    do: Map.merge(values, %{"team.signature" => nil, "pdf.verify_link" => nil})
+
+  defp sign(values, link), do: Map.put(values, "pdf.verify_link", link)
+
+  @doc """
+  `{:ok, doc, context}`, form `text` checked against `team`'s catalog as of `now`, or
+  `{:error, message}`: what a draft and publishing read before they print.
+  """
+  def read(%Team{} = team, text, now) do
+    context = Context.new(team, now)
+
+    with {:ok, doc} <- Document.parse(text),
+         {:ok, doc} <- Document.check(doc, context) do
+      {:ok, doc, context}
+    else
+      {:error, %Error{} = error} -> {:error, Error.text(error)}
+    end
   end
 
   defp form?(%Document{kind: :form}), do: :ok

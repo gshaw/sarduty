@@ -3,12 +3,12 @@ defmodule Web.Org.FormLive do
 
   alias App.Document
   alias App.Model.Form
-  alias App.Operation.SetFormEnabled
+  alias App.Operation.SetFormState
   alias App.Operation.TryForm
   alias App.Report.Query
 
-  # One of an organization's forms (#950): what it reads and asks, whether it's on for
-  # its teams, and a try on Coast Range SAR, a made-up team. Found through the
+  # One of an organization's forms (#950): what it reads and asks, whether it's off,
+  # testing, or on for its teams (#970), and a try on Coast Range SAR, a made-up team. Found through the
   # organization, so another's is a 404. SAR Duty admins also replace it.
   def mount(%{"id" => id}, _session, socket) do
     form = Form.get(socket.assigns.current_organization, id) || raise(Web.Status.NotFound)
@@ -56,8 +56,7 @@ defmodule Web.Org.FormLive do
         <dl id="form-facts">
           <dt>For teams</dt>
           <dd id="form-state">
-            <span :if={@form.enabled} class="text-success-text">On</span>
-            <span :if={!@form.enabled} class="text-text-muted">Off</span>
+            {Form.state_label(@form.state)}
           </dd>
           <dt>Shows on</dt>
           <dd id="form-shows-on">{shows_on(@doc)}</dd>
@@ -87,35 +86,36 @@ defmodule Web.Org.FormLive do
         </dl>
       </aside>
       <main class="content-2/3">
-        <section id="form-on-off" class="mb-8 measure">
-          <h2 class="heading">For teams</h2>
-          <p>
-            Once on, team admins of every team in {@current_organization.short_name} fill it in
-            from an activity it shows on. Members never see it. Turning it off keeps every PDF
-            already made.
-          </p>
-          <.button
-            :if={!@form.enabled}
+        <%!-- Two switches for three states, as Features nests one under another: on shows
+        it to teams, and testing under it keeps it to drafts. Turning it on starts testing. --%>
+        <section id="form-on-off" class="mb-8 measure flex flex-col gap-6">
+          <h2 class="heading mb-0">For teams</h2>
+          <.switch
             id="form-on"
-            phx-disable-with="Turning on…"
-            type="button"
-            phx-click="enabled"
-            phx-value-enabled="true"
+            label="Turned on"
+            checked={@form.state != :off}
+            phx-click="state"
+            phx-value-state={if @form.state == :off, do: "testing", else: "off"}
+            {off_confirm(@form)}
           >
-            Turn on form
-          </.button>
-          <.button
-            :if={@form.enabled}
-            id="form-off"
-            phx-disable-with="Turning off…"
-            type="button"
-            variant={:danger}
-            phx-click="enabled"
-            phx-value-enabled="false"
-            data-confirm={"Turn off #{@form.name}? Team admins can no longer fill it in."}
-          >
-            Turn off form
-          </.button>
+            Team admins of every team in {@current_organization.short_name} fill it in from an
+            activity it shows on. Members never see it. Turning it off keeps every PDF already
+            published.
+          </.switch>
+          <div class="pl-8">
+            <.switch
+              id="form-testing"
+              label="Testing"
+              checked={@form.state != :on}
+              disabled={@form.state == :off}
+              phx-click="state"
+              phx-value-state={if @form.state == :testing, do: "on", else: "testing"}
+              {publish_confirm(@form)}
+            >
+              Draft PDFs only, marked DRAFT. Turn testing off and they publish it, with an ID
+              and a verify code.
+            </.switch>
+          </div>
         </section>
 
         <section id="form-try" class="mb-8 measure">
@@ -171,6 +171,23 @@ defmodule Web.Org.FormLive do
     """
   end
 
+  defp off_confirm(%Form{state: :off}), do: %{}
+
+  defp off_confirm(form),
+    do: %{
+      "data-confirm" => "Turn off #{form.name}? Team admins can no longer fill it in.",
+      "data-confirm-button" => "Turn off"
+    }
+
+  defp publish_confirm(%Form{state: :testing} = form),
+    do: %{
+      "data-confirm" =>
+        "Turn off testing for #{form.name}? Team admins of every team can then publish it.",
+      "data-confirm-button" => "Turn off testing"
+    }
+
+  defp publish_confirm(_form), do: %{}
+
   defp shows_on(nil), do: "Activities"
   defp shows_on(%Document{where: nil}), do: "Every activity"
   defp shows_on(%Document{where: where}), do: "Activities where #{Query.text(where)}"
@@ -186,20 +203,19 @@ defmodule Web.Org.FormLive do
     do:
       "#{activity.title}, #{Service.Format.date_short(activity.started_at, App.CoastRange.timezone())}"
 
-  def handle_event("enabled", %{"enabled" => enabled}, socket) do
+  def handle_event("state", %{"state" => state}, socket) when state in ~w(off testing on) do
     %{form: form, current_user: user} = socket.assigns
 
-    case SetFormEnabled.call(form, enabled == "true", user) do
+    case SetFormState.call(form, String.to_existing_atom(state), user) do
       {:ok, form} ->
-        message =
-          if form.enabled,
-            do: "#{form.name} turned on for every team.",
-            else: "#{form.name} turned off."
-
-        {:noreply, socket |> assign_form(form) |> put_flash(:info, message)}
+        {:noreply, socket |> assign_form(form) |> put_flash(:info, state_message(form))}
 
       {:error, :forbidden} ->
         {:noreply, put_flash(socket, :error, "You can no longer turn this form on or off.")}
     end
   end
+
+  defp state_message(%Form{state: :on, name: name}), do: "#{name} turned on for every team."
+  defp state_message(%Form{state: :testing, name: name}), do: "#{name} set to testing."
+  defp state_message(%Form{state: :off, name: name}), do: "#{name} turned off."
 end

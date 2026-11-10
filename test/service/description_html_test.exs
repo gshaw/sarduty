@@ -88,6 +88,19 @@ defmodule Service.DescriptionHTMLTest do
     end
   end
 
+  test "text is a line for each paragraph, break, and list item, with no tags (#970)" do
+    html =
+      "<p>South Fraser SAR &amp; Surrey <b>Police</b>.</p><p>Stood down.<br>Later</p>" <>
+        "<ul><li>Boat</li><li>Shore <i>team</i></li></ul>"
+
+    assert DescriptionHTML.text(html) ==
+             "South Fraser SAR & Surrey Police.\nStood down.\nLater\n• Boat\n• Shore team"
+
+    assert DescriptionHTML.text("Plain text\n\nfrom Records") == "Plain text\nfrom Records"
+    assert DescriptionHTML.text("<p> </p>") == nil
+    assert DescriptionHTML.text(nil) == nil
+  end
+
   test "tables, pictures, headings, and rules are not editable" do
     for html <- [
           "<table><tr><td>1</td></tr></table>",

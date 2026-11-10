@@ -51,6 +51,15 @@ title 'Expense reimbursement request supplement {coalesce(task.tracking_number, 
   by team.name
 keep task.tracking_number, personnel, :meals_provided
 
+-- No verify code on EMCR's forms for now: Andrew asked that they stay a drop-in
+-- replacement for EMCR's current process (#970). Each still gets an ID.
+verify code none
+
+-- What its verify page shows anyone holding it: never a name.
+verify shows
+  'Task number' coalesce(task.tracking_number, task.ref_id)
+  'Personnel total' personnel as money
+
 page
 
 -- Each value's baseline sits 1.5pt above its line on supplement.typ's page, or in its

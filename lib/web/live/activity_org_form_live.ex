@@ -7,6 +7,10 @@ defmodule Web.ActivityOrgFormLive do
   they change (App.Operation.SaveFormAnswers), and each row's total follows them. Download draft PDF posts the form to
   Web.ActivityFormPDFController, which keeps the answers and sends a draft PDF, never saved.
 
+  A form that's on publishes (#970, App.Operation.PublishDocument). The Published box
+  above the answers says when and who, with Download, the verify link, and Withdraw.
+  When the form reads differently now, it says what changed and offers Publish again.
+
   The form is found on for the team's organization, and the activity through the team,
   so another organization's form, one turned off, or one not for this activity is a 404.
   """
@@ -14,7 +18,12 @@ defmodule Web.ActivityOrgFormLive do
 
   alias App.Model.Activity
   alias App.Model.Form
+  alias App.Model.FormAnswer
+  alias App.Model.Member
+  alias App.Model.PublishedPDF
+  alias App.Operation.PublishDocument
   alias App.Operation.SaveFormAnswers
+  alias App.Operation.WithdrawDocument
   alias App.ViewData.ActivityForms
   alias Web.Components.ReportTable
 
@@ -22,26 +31,109 @@ defmodule Web.ActivityOrgFormLive do
     team = socket.assigns.current_team
     activity = team |> Activity.find!(id) |> App.Repo.preload(:team)
     if activity.deleted_at, do: raise(Web.Status.NotFound)
-    form = Form.get_enabled(team, form_id) || raise(Web.Status.NotFound)
+    form = Form.get_shown(team, form_id) || raise(Web.Status.NotFound)
 
     socket =
       assign(socket,
         page_title: "#{form.name} for #{activity.title}",
         activity: activity,
         form: form,
-        errors: %{}
+        errors: %{},
+        preview: nil
       )
 
     case ActivityForms.load(team, activity, form, DateTime.utc_now()) do
       {:ok, page} ->
-        {:ok, assign(socket, page: page, problem: nil, answers: page.answers, rows: page.rows)}
+        socket = assign(socket, page: page, problem: nil, answers: page.answers, rows: page.rows)
+        {:ok, assign_published(socket)}
 
       {:error, :not_shown} ->
         raise Web.Status.NotFound
 
       {:error, reason} ->
-        {:ok, assign(socket, page: nil, problem: reason, answers: %{}, rows: [])}
+        {:ok,
+         socket
+         |> assign(page: nil, problem: reason, answers: %{}, rows: [])
+         |> assign_published()}
     end
+  end
+
+  # The form's PDFs for the activity, and what changed since the current one.
+  defp assign_published(socket) do
+    %{current_team: team, activity: activity, form: form, page: page} = socket.assigns
+    published = ActivityForms.published(team, activity, form)
+
+    changes =
+      if published.current && page,
+        do:
+          ActivityForms.changes(
+            page,
+            FormAnswer.starting(activity, page.doc.asks),
+            published.current
+          ),
+        else: []
+
+    # Who published it, by their member name, as other "by" lines say.
+    published_by =
+      published.current &&
+        Member.name_for_user(team, published.current.user, DateTime.utc_now())
+
+    assign(socket, published: published, changes: changes, published_by: published_by)
+  end
+
+  # Publish opens its preview, /publish: the PDF printed once with the ID it publishes
+  # under, every page as a picture, and what publishing does. Publish there keeps that
+  # PDF. Printing takes a moment, so it runs once connected, not in the first render.
+  def handle_params(_params, _uri, %{assigns: %{live_action: :publish}} = socket) do
+    %{form: form, page: page, errors: errors} = socket.assigns
+
+    cond do
+      page == nil or form.state != :on ->
+        {:noreply, back(socket, :error, "This form can't publish now.")}
+
+      errors != %{} ->
+        {:noreply, back(socket, :error, fix_first())}
+
+      connected?(socket) ->
+        {:noreply, start_preview(socket)}
+
+      true ->
+        {:noreply, assign(socket, preview: :printing)}
+    end
+  end
+
+  def handle_params(_params, _uri, socket), do: {:noreply, assign(socket, preview: nil)}
+
+  defp start_preview(socket) do
+    %{current_team: team, form: form, activity: activity, current_user: user} = socket.assigns
+    current = socket.assigns.published.current
+
+    socket
+    |> assign(preview: :printing, preview_current_id: current && current.id)
+    |> start_async(:preview, fn ->
+      with {:ok, preview} <-
+             PublishDocument.preview(team, form, activity, user, DateTime.utc_now()),
+           {:ok, pages} <- Service.PDFImages.pages(preview.printed.attachment.content) do
+        {:ok, Map.put(preview, :pages, pages)}
+      end
+    end)
+  end
+
+  def handle_async(:preview, {:ok, {:ok, preview}}, socket),
+    do: {:noreply, assign(socket, preview: preview)}
+
+  def handle_async(:preview, {:ok, {:error, message}}, socket),
+    do: {:noreply, back(socket, :error, message)}
+
+  def handle_async(:preview, {:exit, _reason}, socket),
+    do: {:noreply, back(socket, :error, "The preview did not print. Try again.")}
+
+  defp back(socket, kind, message) do
+    %{current_team: team, activity: activity, form: form} = socket.assigns
+
+    socket
+    |> put_flash(kind, message)
+    |> push_patch(to: ~p"/teams/#{team}/activities/#{activity.id}/forms/#{form.id}")
   end
 
   # Each change saves the answers that read, and shows what's wrong with the rest. What
@@ -57,10 +149,155 @@ defmodule Web.ActivityOrgFormLive do
 
     answers = Map.merge(socket.assigns.answers, typed)
     rows = ActivityForms.rows(page.doc, page.values, answers, page.timezone)
-    {:noreply, assign(socket, answers: answers, rows: rows, errors: errors)}
+
+    {:noreply,
+     socket |> assign(answers: answers, rows: rows, errors: errors) |> assign_published()}
   end
 
   def handle_event("change", _params, socket), do: {:noreply, socket}
+
+  # A box that shows an error isn't saved, so publishing then would print its last saved
+  # answer, not what the box shows.
+  def handle_event("preview", _params, %{assigns: %{errors: errors}} = socket)
+      when errors != %{} do
+    {:noreply, put_flash(socket, :error, fix_first())}
+  end
+
+  def handle_event("preview", _params, socket) do
+    %{current_team: team, activity: activity, form: form} = socket.assigns
+
+    {:noreply,
+     push_patch(socket, to: ~p"/teams/#{team}/activities/#{activity.id}/forms/#{form.id}/publish")}
+  end
+
+  def handle_event("publish", _params, %{assigns: %{preview: %{code: _code} = preview}} = socket) do
+    %{current_team: team, form: form, activity: activity, current_user: user} = socket.assigns
+    current_id = socket.assigns.preview_current_id
+
+    case PublishDocument.publish(team, form, activity, user, preview, current_id) do
+      {:ok, pdf} ->
+        {:noreply,
+         socket |> assign_published() |> back(:info, "Published #{form.name}, #{code(pdf)}.")}
+
+      {:error, message} ->
+        {:noreply, put_flash(socket, :error, message)}
+    end
+  end
+
+  def handle_event("publish", _params, socket), do: {:noreply, socket}
+
+  def handle_event("withdraw", _params, socket) do
+    %{current_team: team, current_user: user, published: %{current: pdf}} = socket.assigns
+
+    case pdf && WithdrawDocument.call(team, pdf, user, DateTime.utc_now()) do
+      {:ok, pdf} ->
+        {:noreply, socket |> assign_published() |> put_flash(:info, "Withdrew #{code(pdf)}.")}
+
+      {:error, message} ->
+        {:noreply, socket |> assign_published() |> put_flash(:error, message)}
+
+      nil ->
+        {:noreply, assign_published(socket)}
+    end
+  end
+
+  defp code(pdf), do: PublishedPDF.format_code(pdf.code)
+
+  defp fix_first, do: "Fix the boxes marked first. Publish prints what's saved."
+
+  def render(%{live_action: :publish} = assigns) do
+    ~H"""
+    <.breadcrumbs>
+      <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
+      <:item
+        label={@activity.ref_id || @activity.title}
+        path={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
+      />
+      <:item
+        label={@form.name}
+        path={~p"/teams/#{@current_team}/activities/#{@activity.id}/forms/#{@form.id}"}
+      />
+      <:item label="Publish" />
+    </.breadcrumbs>
+    <h1 class="title">Publish {@form.name}</h1>
+    <p class="lead measure">
+      Check every page. Publish keeps this PDF, exactly as it shows here.
+    </p>
+
+    <div class="content-wrapper">
+      <aside class="content-1/3">
+        <h2 class="heading">What Publish does</h2>
+        <p :if={@preview == :printing} class="hint">Printing the preview…</p>
+        <dl :if={is_map(@preview)} id="publish-what">
+          <dt>ID</dt>
+          <dd id="publish-id">
+            <span class="mono">{PublishedPDF.format_code(@preview.code)}</span>
+            <span class="hint block">SAR Duty keeps the PDF for your team's admins.</span>
+          </dd>
+          <dt>Verify page</dt>
+          <dd id="publish-verify">
+            {Web.VerifyHost.host()}
+            <span :if={@preview.printed.shows == []} class="hint block">
+              Shows your team and the date it was published.
+            </span>
+            <div :if={@preview.printed.shows != []} class="value-rows text-sm mt-1">
+              <div :for={shown <- @preview.printed.shows}>
+                <span>{shown["label"]}</span>
+                <strong>{shown["text"] || "blank"}</strong>
+              </div>
+            </div>
+          </dd>
+          <dt>Signature</dt>
+          <dd id="publish-signature">
+            {@current_team.name}'s, where the form has one
+            <span class="hint block">A draft leaves it blank.</span>
+          </dd>
+          <%= if @published.current do %>
+            <dt>Replaces</dt>
+            <dd id="publish-replaces">
+              <span class="mono">{PublishedPDF.format_code(@published.current.code)}</span>
+              <span class="hint block">Its verify page then says Replaced.</span>
+            </dd>
+          <% end %>
+          <dt>Sent to</dt>
+          <dd id="publish-not-sent">
+            No one
+            <span class="hint block">Download it once it's published, and send it yourself.</span>
+          </dd>
+        </dl>
+        <.form_actions>
+          <.button
+            id="publish-confirm"
+            type="button"
+            variant={:primary}
+            phx-click="publish"
+            phx-disable-with="Publishing…"
+            disabled={!is_map(@preview)}
+          >
+            Publish
+          </.button>
+          <.button
+            id="publish-back"
+            patch={~p"/teams/#{@current_team}/activities/#{@activity.id}/forms/#{@form.id}"}
+          >
+            Back to answers
+          </.button>
+        </.form_actions>
+      </aside>
+      <main class="content-2/3">
+        <div :if={is_map(@preview)} id="publish-pages" class="flex flex-col gap-4">
+          <img
+            :for={{png, n} <- Enum.with_index(@preview.pages, 1)}
+            id={"publish-page-#{n}"}
+            src={"data:image/png;base64," <> Base.encode64(png)}
+            alt={"Page #{n} of #{length(@preview.pages)} of the #{@form.name} as it publishes"}
+            class="w-full border border-border-subtle shadow-sm"
+          />
+        </div>
+      </main>
+    </div>
+    """
+  end
 
   def render(assigns) do
     ~H"""
@@ -72,8 +309,14 @@ defmodule Web.ActivityOrgFormLive do
       />
       <:item label={@form.name} />
     </.breadcrumbs>
-    <.banner id="org-form-in-development" kind={:warning} title="Testing only" class="mb-6">
-      <p>Forms are in early development and not ready for real use. Don't send what they print.</p>
+    <.banner
+      :if={@form.state == :testing}
+      id="org-form-in-development"
+      kind={:warning}
+      title="Testing only"
+      class="mb-6"
+    >
+      <p>This form is testing and not ready for real use. Don't send what it prints.</p>
     </.banner>
     <h1 class="title">{@page_title}</h1>
     <p :if={@form.about} class="lead measure">{@form.about}</p>
@@ -84,6 +327,15 @@ defmodule Web.ActivityOrgFormLive do
     </.banner>
 
     <div :if={@page} class="measure">
+      <.published_box
+        published={@published}
+        published_by={@published_by}
+        changes={@changes}
+        errors={@errors}
+        form={@form}
+        team={@current_team}
+      />
+
       <section :if={@page.missing != []} id="org-form-missing" class="mb-8">
         <h2 class="heading">Missing</h2>
         <p class="mb-4">
@@ -142,14 +394,125 @@ defmodule Web.ActivityOrgFormLive do
           team={@current_team}
           errors={@errors}
         />
-        <p class="hint">SAR Duty keeps a copy of each PDF it makes.</p>
+        <p :if={@form.state == :on} class="hint">
+          A draft says DRAFT on every page and is never kept. Publish keeps the PDF, with an ID
+          anyone holding it can check.
+        </p>
+        <p
+          :if={@form.state == :on and @errors != %{}}
+          id="org-form-fix-first"
+          class="text-danger-text"
+        >
+          {fix_first()}
+        </p>
         <.form_actions>
-          <.button id="org-form-download" type="submit" variant={:primary}>
+          <.button
+            :if={@form.state == :on and is_nil(@published.current)}
+            id="org-form-publish"
+            type="button"
+            variant={:primary}
+            phx-click="preview"
+            disabled={@errors != %{}}
+          >
+            Publish
+          </.button>
+          <.button
+            id="org-form-download"
+            type="submit"
+            variant={if @form.state == :on, do: :secondary, else: :primary}
+          >
             Download draft PDF
           </.button>
         </.form_actions>
       </.form>
     </div>
+    """
+  end
+
+  attr :published, :map, required: true
+  attr :published_by, :string, default: nil
+  attr :changes, :list, required: true
+  attr :errors, :map, required: true
+  attr :form, :map, required: true
+  attr :team, :map, required: true
+
+  # The current PDF: when and who, Download, the verify link, Withdraw, and Publish again
+  # with what changed when it's out of date. Earlier ones under it, marked.
+  defp published_box(assigns) do
+    ~H"""
+    <section
+      :if={@published.current || @published.earlier != []}
+      id="org-form-published"
+      class="mb-8"
+    >
+      <h2 class="heading">Published</h2>
+      <div :if={pdf = @published.current} id="org-form-current" class="card">
+        <p class="mb-2">
+          {Service.Format.datetime_short(pdf.inserted_at, @team.timezone)}
+          <span :if={@published_by}>by {@published_by}</span>
+        </p>
+        <p class="mono mb-4">
+          <.a id="org-form-verify" href={PublishedPDF.verify_link(pdf.code)} external>{PublishedPDF.format_code(
+            pdf.code
+          )}</.a>
+        </p>
+        <div :if={@changes != []} id="org-form-out-of-date" class="callout mb-4">
+          <p class="mb-1"><b>Out of date.</b> The form reads differently now:</p>
+          <ul>
+            <li :for={change <- @changes}>{change}</li>
+          </ul>
+        </div>
+        <.form_actions>
+          <.button
+            id="org-form-download-published"
+            href={~p"/teams/#{@team}/pdfs/#{pdf.id}"}
+            variant={:primary}
+          >
+            Download PDF
+          </.button>
+          <.button
+            :if={@form.state == :on}
+            id="org-form-publish-again"
+            type="button"
+            variant={if @changes != [], do: :warning, else: :secondary}
+            phx-click="preview"
+            disabled={@errors != %{}}
+          >
+            Publish again
+          </.button>
+          <:trailing>
+            <.button
+              id="org-form-withdraw"
+              type="button"
+              variant={:danger}
+              phx-click="withdraw"
+              phx-disable-with="Withdrawing…"
+              data-confirm={"Withdraw #{PublishedPDF.format_code(pdf.code)}? Nothing takes its place."}
+              data-confirm-warning="Its verify page will say Withdrawn."
+              data-confirm-check="I understand anyone holding it will see it was withdrawn."
+              data-confirm-button="Withdraw"
+            >
+              Withdraw
+            </.button>
+          </:trailing>
+        </.form_actions>
+      </div>
+
+      <ul :if={@published.earlier != []} id="org-form-earlier" class="value-rows mt-4 text-sm">
+        <li :for={pdf <- @published.earlier} id={"org-form-earlier-#{pdf.id}"}>
+          <span>
+            <.a href={~p"/teams/#{@team}/pdfs/#{pdf.id}"} target="_blank" class="mono">{PublishedPDF.format_code(
+              pdf.code
+            )}</.a>
+            <span class="hint">
+              {Service.Format.date_long(pdf.inserted_at, @team.timezone)}
+            </span>
+          </span>
+          <.badge :if={PublishedPDF.status(pdf) == :replaced} kind={:warning}>Replaced</.badge>
+          <.badge :if={PublishedPDF.status(pdf) == :withdrawn} kind={:danger}>Withdrawn</.badge>
+        </li>
+      </ul>
+    </section>
     """
   end
 

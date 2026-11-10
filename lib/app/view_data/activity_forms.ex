@@ -11,8 +11,10 @@ defmodule App.ViewData.ActivityForms do
   alias App.Model.Activity
   alias App.Model.Form
   alias App.Model.FormAnswer
+  alias App.Model.PublishedPDF
   alias App.Model.Team
   alias App.Operation.PrintForm
+  alias App.Operation.PublishDocument
   alias App.Operation.ReadDocument
   alias App.Report.Context
 
@@ -22,7 +24,7 @@ defmodule App.ViewData.ActivityForms do
   its page can say why.
   """
   def on(%Team{} = team, %Activity{} = activity, now) do
-    forms = if activity.deleted_at, do: [], else: Form.enabled_for(team)
+    forms = if activity.deleted_at, do: [], else: Form.shown_for(team)
 
     case forms do
       [] ->
@@ -226,6 +228,73 @@ defmodule App.ViewData.ActivityForms do
   defp text(nil), do: ""
   defp text(%Decimal{} = n), do: Decimal.to_string(n, :normal)
   defp text(value), do: to_string(value)
+
+  @doc """
+  The form's PDFs published for the activity (#970): `%{current, earlier}`, the current
+  one or nil, and the rest, newest first, each Replaced or Withdrawn.
+  """
+  def published(%Team{} = team, %Activity{} = activity, %Form{} = form) do
+    all = PublishedPDF.get_all_for(team.id, form.name, PublishDocument.subject(activity))
+    {current, earlier} = Enum.split_with(all, &(PublishedPDF.status(&1) == :current))
+    %{current: List.first(current), earlier: earlier}
+  end
+
+  @doc """
+  What changed since `pdf` was published, reading the form again with the activity's
+  answers now: `[]` when nothing did, or a line for each value its verify page shows
+  that changed, `"Total claimed: $1,240.00 → $1,310.00"`. A form with nothing its verify
+  page shows names each kept value that changed instead. `page` is `load/4`'s.
+  """
+  def changes(%{doc: doc, values: values, timezone: timezone}, starting, %PublishedPDF{} = pdf) do
+    output = Document.evaluate(doc, Map.merge(values, readable(doc, starting)), timezone)
+
+    case shown_changes(pdf.shows, output.shows) do
+      [] -> kept_changes(pdf.keep, output.keep)
+      changes -> changes
+    end
+  end
+
+  defp shown_changes(was, now) do
+    now = Map.new(now, &{&1["label"], &1["text"]})
+
+    for %{"label" => label, "text" => text} <- was,
+        Map.get(now, label) != text,
+        do: "#{label}: #{text || "blank"} → #{now[label] || "blank"}"
+  end
+
+  # Kept values come back from the database as JSON, so each side is compared as JSON.
+  defp kept_changes(was, now) do
+    now = now |> Jason.encode!() |> Jason.decode!()
+
+    for {name, value} <- Enum.sort(was),
+        Map.get(now, name) != value,
+        do: "#{name}: #{inspect_kept(value)} → #{inspect_kept(now[name])}"
+  end
+
+  defp inspect_kept(nil), do: "blank"
+  defp inspect_kept(value) when is_binary(value), do: value
+  defp inspect_kept(value), do: inspect(value)
+
+  @doc """
+  Each form's state on the activity's list (#970): `:testing` for a form that prints
+  drafts only, else `:published`, `:out_of_date`, or `:not_published`.
+  """
+  def states(%Team{} = team, %Activity{} = activity, forms, now) do
+    Map.new(forms, &{&1.id, state(team, activity, &1, now)})
+  end
+
+  defp state(_team, _activity, %Form{state: :testing}, _now), do: :testing
+
+  defp state(team, activity, form, now) do
+    with %PublishedPDF{} = pdf <- published(team, activity, form).current,
+         {:ok, page} <- load(team, activity, form, now) do
+      starting = FormAnswer.starting(activity, page.doc.asks)
+      if changes(page, starting, pdf) == [], do: :published, else: :out_of_date
+    else
+      nil -> :not_published
+      {:error, _reason} -> :published
+    end
+  end
 
   @doc "The asks the page shows, one answer each."
   def questions(%Document{asks: asks}), do: Enum.filter(asks, &is_nil(&1.each))
