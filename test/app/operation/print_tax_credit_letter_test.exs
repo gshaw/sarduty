@@ -115,8 +115,10 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
       )
       |> Repo.update!()
 
-    assert PrintTaxCreditLetter.missing_settings(team, DateTime.utc_now()) ==
-             ["mailing address", "signature"]
+    assert PrintTaxCreditLetter.missing_settings(team, DateTime.utc_now()) == [
+             %{name: "team.mailing_address", label: "Mailing address"},
+             %{name: "team.signature", label: "Signer's signature"}
+           ]
   end
 
   test "a Try a demo team's letter says SAMPLE across it (#857)", %{team: team, member: member} do

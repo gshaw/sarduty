@@ -22,6 +22,7 @@ defmodule Web.TeamDashboardLive do
   alias App.ViewData.MemberRecords
   alias App.ViewData.MemberToDo
   alias App.ViewData.TeamAttention
+  alias Web.Components.TeamSettingsTabs
   alias App.ViewData.TeamDashboardViewData
   alias App.Worker.RefreshTeamDataWorker
   alias App.Worker.SyncTeamChangesWorker
@@ -547,8 +548,9 @@ defmodule Web.TeamDashboardLive do
        when key in [:refresh, :long_name, :long_abbreviated_name],
        do: ~p"/teams/#{team}/settings"
 
-  defp attention_path(team, %{key: :letter_settings}),
-    do: ~p"/teams/#{team}/settings/tax-credit-letters"
+  # The tab that fills the first one missing: General for the address, Signer for the rest.
+  defp attention_path(team, %{key: :letter_settings, names: [name | _rest]}),
+    do: TeamSettingsTabs.tab_path(team, TeamSettingsTabs.tab_for(name) || :general)
 
   defp attention_path(team, %{key: :key_rejected}), do: ~p"/teams/#{team}/settings/access-key"
 

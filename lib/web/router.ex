@@ -444,7 +444,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings/access-key", Settings.AccessKeyLive
       live "/teams/:subdomain/settings/members", Settings.MembersLive
       live "/teams/:subdomain/settings/features", Settings.FeaturesLive
-      live "/teams/:subdomain/settings/tax-credit-letters", Settings.TaxCreditLettersLive
+      live "/teams/:subdomain/settings/signer", Settings.SignerLive
       live "/teams/:subdomain/settings/hours-tags", Settings.HoursTagsLive
       live "/teams/:subdomain/settings/places", Settings.PlaceCollectionLive
       live "/teams/:subdomain/settings/places/new", Settings.PlaceFormLive, :new

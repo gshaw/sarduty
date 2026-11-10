@@ -600,21 +600,23 @@ defmodule App.ViewData.TeamAttention do
     )
   end
 
-  # A letter prints without an address, signer, or signature, but the CRA may question it
-  # (#918). The settings come from the letter's `needs` (#970), each named in lower case.
-  # The row is empty outside letter season.
+  # A letter without an address, signer, or signature cannot be published, so none can be
+  # emailed (#995): the CRA may question one without them (#918). The settings are the
+  # letter's `needs` (#970), each `%{name, label}`; `names` say which settings tab fills
+  # them. The row is empty outside letter season.
 
   defp letter_settings_item([]), do: nil
 
   defp letter_settings_item(missing) do
+    labels = Enum.map(missing, &String.downcase(&1.label))
+
     %{
       key: :letter_settings,
       level: :warning,
-      title: "Tax credit letters are missing a #{Format.and_list(missing)}",
-      detail:
-        "Add #{if length(missing) > 1, do: "them", else: "it"} in team settings, " <>
-          "so the CRA accepts letters without question.",
-      action: "Open letter settings"
+      title: "Tax credit letters cannot be emailed until you add the #{Format.and_list(labels)}",
+      detail: "The CRA may question a letter without #{if length(missing) > 1, do: "them", else: "it"}.",
+      action: "Open team settings",
+      names: Enum.map(missing, & &1.name)
     }
   end
 

@@ -266,7 +266,7 @@ defmodule Web.ActivityOrgFormLiveTest do
 
       assert has_element?(
                lv,
-               ~s(#org-form-missing-table-team-city a[href="/teams/coastrange/settings/tax-credit-letters"]),
+               ~s(#org-form-missing-table-team-city a[href="/teams/coastrange/settings"]),
                "Team settings"
              )
     end

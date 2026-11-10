@@ -83,13 +83,13 @@ defmodule App.Operation.PrintTaxCreditLetter do
   end
 
   @doc """
-  The settings the letter needs that the team hasn't filled in, by their names in lower
-  case, such as `["mailing address", "signature"]`: the document's `needs` (#943).
+  The settings the letter needs that the team hasn't filled in, the document's `needs`
+  (#943), each `%{name, label}`: `%{name: "team.signature", label: "Signer's signature"}`.
   """
   def missing_settings(%Team{} = team, now) do
     {:ok, %{doc: doc, values: values, labels: labels}} =
       @document |> Document.read() |> ReadDocument.settings(Context.new(team, now))
 
-    doc |> Document.missing(values) |> Enum.map(&String.downcase(labels[&1] || &1))
+    doc |> Document.missing(values) |> Enum.map(&%{name: &1, label: labels[&1] || &1})
   end
 end

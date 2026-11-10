@@ -629,19 +629,17 @@ defmodule Web.StyleGuideHTML.SampleData do
       {"Endorsements", [{"First Aid", "endorsement:1"}, {"Swiftwater 1", "endorsement:2"}]}
     ]
 
-  # Team settings' Tax credit letters tab after a failed save: the app's own changeset,
-  # with a phone number too long and an email that isn't one.
+  # Team settings' Signer tab after a failed save: the app's own changeset, with a phone
+  # number too long and an email that isn't one.
   def settings_form do
-    team = %{sample_team() | mailing_address: "PO Box 123\nSquamish BC V8B 0A1"}
-
     params = %{
       "authorized_by_name" => "Avery Chen",
       "authorized_by_phone" => "604 555 0100, or 604 555 0101 after 6 pm",
       "authorized_by_email" => "avery at example"
     }
 
-    team
-    |> Team.build_letters_changeset(params)
+    sample_team()
+    |> Team.build_signer_changeset(params)
     |> Map.put(:action, :update)
     |> Phoenix.Component.to_form(as: "form", id: "settings")
   end

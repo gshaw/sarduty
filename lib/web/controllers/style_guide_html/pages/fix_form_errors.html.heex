@@ -1,18 +1,12 @@
 <.shell current={:fix_form_errors}>
   <h1>Fix form errors</h1>
-  <p class="lead">Team settings' Tax credit letters tab after a failed save.</p>
+  <p class="lead">Team settings' Signer tab after a failed save.</p>
 
   <.form :let={f} for={settings_form()} class="example measure" data-example-form>
     <.error_summary form={f} />
-    <.input field={f[:mailing_address]} label="Mailing address" type="textarea" rows="3" />
-    <.input
-      field={f[:authorized_by_name]}
-      label="Tax credit letters authorized by"
-      type="textarea"
-      rows="3"
-    >
-      The full name of your team president, or someone in a similar role. The CRA uses this during
-      tax audits.
+    <.input field={f[:authorized_by_name]} label="Signer" type="textarea" rows="3">
+      The full name of your team president, or someone in a similar role. The CRA may call them
+      about a letter.
     </.input>
     <div class="grid md:grid-cols-2 gap-x-6">
       <.input field={f[:authorized_by_phone]} label="Signer's phone (optional)" />
@@ -32,6 +26,6 @@
     <li>Each field shows its own error, in the same words, above the input.</li>
   </ul>
   <p class="spec">
-    The same components as the Tax credit letters tab, given a made-up changeset that failed to save.
+    The same components as the Signer tab, given a made-up changeset that failed to save.
   </p>
 </.shell>

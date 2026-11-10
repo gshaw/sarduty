@@ -1,23 +1,23 @@
-defmodule Web.Settings.TaxCreditLettersLive do
+defmodule Web.Settings.SignerLive do
   use Web, :live_view_app_layout
 
   import Web.Components.FileDrop
   import Web.Components.TeamSettingsTabs
 
   alias App.Model.Team
-  alias App.Operation.SaveTeamLetterSettings
+  alias App.Operation.SaveTeamSigner
   alias App.Operation.SaveTeamSignature
 
-  # Settings' Tax credit letters tab, /teams/:subdomain/settings/tax-credit-letters: what every
-  # letter prints about the team and who signs it, and what an organization's forms print
-  # with them (#950), such as the city. Hours tags, which decide the hours, are their own tab.
+  # Settings' Signer tab, /teams/:subdomain/settings/signer (#995): who signs the team's
+  # tax credit letters and an organization's forms (#950), with their title, phone, email,
+  # and signature. The team's address is on General, and the hours tags their own tab.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
 
     socket =
       socket
-      |> assign(page_title: "Team settings · Tax credit letters", signature_error: nil)
-      |> assign_form(Team.build_letters_changeset(team))
+      |> assign(page_title: "Team settings · Signer", signature_error: nil)
+      |> assign_form(Team.build_signer_changeset(team))
       |> allow_upload(:signature,
         accept: ~w(.png .jpg .jpeg),
         max_entries: 1,
@@ -30,19 +30,19 @@ defmodule Web.Settings.TaxCreditLettersLive do
   defp assign_form(socket, changeset), do: assign(socket, :form, to_form(changeset, as: "form"))
 
   def handle_event("validate", %{"form" => params}, socket) do
-    changeset = Team.build_letters_changeset(socket.assigns.current_team, params)
+    changeset = Team.build_signer_changeset(socket.assigns.current_team, params)
     {:noreply, assign_form(socket, Map.put(changeset, :action, :validate))}
   end
 
   def handle_event("save", %{"form" => params}, socket) do
     signature = consume_signature(socket)
 
-    with {:ok, team} <- SaveTeamLetterSettings.call(socket.assigns.current_team, params),
+    with {:ok, team} <- SaveTeamSigner.call(socket.assigns.current_team, params),
          {:ok, team} <- save_signature(team, signature) do
       socket =
         socket
         |> assign(current_team: team, signature_error: nil)
-        |> assign_form(Team.build_letters_changeset(team))
+        |> assign_form(Team.build_signer_changeset(team))
         |> put_flash(:info, "Team settings saved.")
 
       {:noreply, socket}
@@ -78,30 +78,18 @@ defmodule Web.Settings.TaxCreditLettersLive do
 
   def render(assigns) do
     ~H"""
-    <.team_settings_tabs team={@current_team} current={:tax_credit_letters} />
+    <.team_settings_tabs team={@current_team} current={:signer} />
     <div class="measure">
-      <p class="lead">
-        What tax credit letters and forms print about your team, and who signs them.
-      </p>
-      <p class="mb-6">Letters already made keep what they printed.</p>
-      <.form for={@form} id="letter-settings-form" phx-submit="save" phx-change="validate">
+      <p class="lead">Who signs your team's tax credit letters and forms.</p>
+      <p class="mb-6">Letters and forms already published keep what they printed.</p>
+      <.form for={@form} id="signer-form" phx-submit="save" phx-change="validate">
         <.error_summary form={@form} />
-        <.input field={@form[:mailing_address]} label="Mailing address" type="textarea" rows="6" />
-        <div class="grid md:grid-cols-2 gap-x-6">
-          <.input field={@form[:city]} label="City (optional)" />
-          <.input field={@form[:postal_code]} label="Postal code (optional)" />
-        </div>
-        <.input
-          field={@form[:authorized_by_name]}
-          label="Tax credit letters authorized by"
-          type="textarea"
-          rows="6"
-        >
-          The full name of your team president, or someone in a similar role. The CRA uses
-          this during tax audits.
+        <.input field={@form[:authorized_by_name]} label="Signer" type="textarea" rows="3">
+          The full name of your team president, or someone in a similar role. The CRA may
+          call them about a letter.
         </.input>
         <.input field={@form[:authorized_by_title]} label="Signer's title (optional)">
-          Printed under the name on tax credit letters, like President.
+          Printed under the name on letters and forms, like President.
         </.input>
         <div class="grid md:grid-cols-2 gap-x-6">
           <.input field={@form[:authorized_by_phone]} label="Signer's phone (optional)" />
@@ -132,7 +120,7 @@ defmodule Web.Settings.TaxCreditLettersLive do
                 id="remove-signature"
                 type="button"
                 phx-click="remove_signature"
-                data-confirm="Remove the signature? New tax credit letters go out unsigned until you add one."
+                data-confirm="Remove the signature? New tax credit letters cannot be emailed until you add one."
               >
                 Remove signature
               </.button>

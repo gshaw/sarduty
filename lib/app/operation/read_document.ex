@@ -42,7 +42,7 @@ defmodule App.Operation.ReadDocument do
   end
 
   @picture_labels %{
-    "team.signature" => "Signature",
+    "team.signature" => "Signer's signature",
     "team.logo" => "Logo",
     "organization.logo" => "Organization logo"
   }

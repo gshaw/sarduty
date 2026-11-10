@@ -8,9 +8,10 @@ enforces the top-level list and the held URLs.
 
 - **Plural kebab-case nouns**: `/members`, `/tax-credit-letters`.
 - **A URL says what its page says**, in the glossary's words ([writing.md](writing.md)):
-  `/settings/team-admins` for the Team admins tab, not `managers`, and
-  `/settings/tax-credit-letters`, not `letters`. Both moved on 2026-10-28 with no
-  redirects.
+  `/settings/team-admins` for the Team admins tab, not `managers`. It moved on
+  2026-10-28 with no redirect. The Tax credit letters tab became Signer,
+  `/settings/signer`, on 2026-11-10, when the team's address moved to General (#995);
+  `/settings/tax-credit-letters` went with no redirect.
 - **Local ids, never D4H ids**: `/members/42`. D4H ids stay in `d4h_*_id` columns.
 - **A record's page only shows it; `/edit` changes its fields** on its own page, with
   its own Actions link (decided 2026-10-28). A group or qualification is only a title,

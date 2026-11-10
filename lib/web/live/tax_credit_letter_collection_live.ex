@@ -87,7 +87,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       class="mb-4"
     >
       Letters go out unsigned. Add the signer's signature in
-      <.a navigate={~p"/teams/#{@current_team}/settings/tax-credit-letters"}>team settings</.a>
+      <.a navigate={~p"/teams/#{@current_team}/settings/signer"}>team settings</.a>
       first.
     </.warning_text>
 

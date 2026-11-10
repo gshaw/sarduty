@@ -31,6 +31,7 @@ defmodule Web.ActivityOrgFormLive do
   alias App.ViewData.ActivityForms
   alias App.ViewData.PublishedHistory
   alias Web.Components.ReportTable
+  alias Web.Components.TeamSettingsTabs
 
   def mount(%{"id" => id, "form_id" => form_id}, _session, socket) do
     team = socket.assigns.current_team
@@ -675,8 +676,8 @@ defmodule Web.ActivityOrgFormLive do
 
   # The page that fixes an empty value, so the fix reaches D4H and every form: an
   # activity's D4H field on Change fields, its own details on Change activity, and the
-  # team's on team settings: its names on General, and its address and signer beside
-  # its tax credit letters'. Anything else has no page here.
+  # team's on team settings: its names and address on General, and who signs on Signer.
+  # Anything else has no page here.
   defp fix(%{from: "activities", custom?: true}, activity),
     do: %{
       label: "Change fields",
@@ -689,14 +690,12 @@ defmodule Web.ActivityOrgFormLive do
       path: ~p"/teams/#{activity.team}/activities/#{activity.id}/edit"
     }
 
-  defp fix(%{from: "team", name: name}, activity) when name in ~w(team.name team.legal_name),
-    do: %{label: "Team settings", path: ~p"/teams/#{activity.team}/settings"}
-
-  defp fix(%{from: "team"}, activity),
-    do: %{
-      label: "Team settings",
-      path: ~p"/teams/#{activity.team}/settings/tax-credit-letters"
-    }
+  defp fix(%{from: "team", name: name}, activity) do
+    case TeamSettingsTabs.tab_for(name) do
+      nil -> nil
+      tab -> %{label: "Team settings", path: TeamSettingsTabs.tab_path(activity.team, tab)}
+    end
+  end
 
   defp fix(_row, _activity), do: nil
 end

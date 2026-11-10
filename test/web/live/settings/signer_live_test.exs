@@ -1,4 +1,4 @@
-defmodule Web.Settings.TaxCreditLettersLiveTest do
+defmodule Web.Settings.SignerLiveTest do
   use Web.ConnCase, async: true
 
   import App.DataFixtures
@@ -11,10 +11,10 @@ defmodule Web.Settings.TaxCreditLettersLiveTest do
     %{user: user, team: team} = user_with_team_fixture()
 
     {:ok, lv, _html} =
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/tax-credit-letters")
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/signer")
 
     assert lv
-           |> form("#letter-settings-form",
+           |> form("#signer-form",
              form: %{authorized_by_title: " President ", authorized_by_phone: " 604-555-0100 "}
            )
            |> render_submit() =~ "Team settings saved."
@@ -24,30 +24,28 @@ defmodule Web.Settings.TaxCreditLettersLiveTest do
     assert team.authorized_by_phone == "604-555-0100"
   end
 
-  # A form that asks for them apart from the mailing address prints them (#950).
-  test "saves the city and postal code", %{conn: conn} do
+  # The address is on General now, and the old path is gone (#995).
+  test "has no address, and Signer is the current tab", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/signer")
 
-    {:ok, lv, _html} =
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/tax-credit-letters")
+    refute has_element?(lv, "#form_mailing_address")
 
-    assert lv
-           |> form("#letter-settings-form",
-             form: %{city: " Squamish BC ", postal_code: "V8B 0A1"}
+    assert has_element?(
+             lv,
+             ~s(a[aria-current="page"][href="/teams/#{team.subdomain}/settings/signer"]),
+             "Signer"
            )
-           |> render_submit() =~ "Team settings saved."
-
-    assert %Team{city: "Squamish BC", postal_code: "V8B 0A1"} = Team.get!(team.id)
   end
 
   test "the signer's email must look like one", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
     {:ok, lv, _html} =
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/tax-credit-letters")
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/signer")
 
     assert lv
-           |> form("#letter-settings-form", form: %{authorized_by_email: "president"})
+           |> form("#signer-form", form: %{authorized_by_email: "president"})
            |> render_submit() =~ "Enter an email like name@example.com."
   end
 
@@ -59,16 +57,16 @@ defmodule Web.Settings.TaxCreditLettersLiveTest do
 
     defp upload(lv, bytes, name \\ "signature.png") do
       lv
-      |> file_input("#letter-settings-form", :signature, [
+      |> file_input("#signer-form", :signature, [
         %{name: name, content: bytes, type: "image/png"}
       ])
       |> render_upload(name)
 
-      lv |> form("#letter-settings-form") |> render_submit()
+      lv |> form("#signer-form") |> render_submit()
     end
 
     test "uploads as a PNG, shows a preview, and removes", %{conn: conn, team: team} do
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/tax-credit-letters")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/signer")
       refute has_element?(lv, "#signature-preview")
 
       upload(lv, png_fixture(1800, 400))
@@ -86,7 +84,7 @@ defmodule Web.Settings.TaxCreditLettersLiveTest do
     end
 
     test "a file that is not an image is not saved", %{conn: conn, team: team} do
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/tax-credit-letters")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/signer")
 
       upload(lv, "not an image")
 
