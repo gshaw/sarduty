@@ -801,15 +801,14 @@ defmodule App.ReportTest do
            ]
   end
 
-  test "reports never read the signer's signature or an organization's logo" do
+  test "reports never read a team's or an organization's logo" do
     team = team_fixture()
 
-    for {subject, field} <- [{"team", "signature"}, {"organization", "logo"}] do
-      assert {:error, _error} = Report.check("select #{field} from #{subject}", team)
+    for subject <- ["team", "organization"] do
+      assert {:error, _error} = Report.check("select logo from #{subject}", team)
     end
 
     columns = for subject <- Catalog.subjects(), field <- subject.fields, do: field.column
-    refute :signature in columns
     refute :logo in columns
   end
 

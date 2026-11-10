@@ -315,8 +315,8 @@ defmodule Web.TaxCreditLetterLiveTest do
   test "what the letter needs is a warning banner, and Email letter says it as an error (#995)",
        %{conn: conn, team: team, member: member} do
     attend(team, member, 2025)
-    team |> Ecto.Changeset.change(signature: nil) |> Repo.update!()
-    message = "This letter cannot be emailed without the signer's signature."
+    team |> Ecto.Changeset.change(authorized_by_title: nil) |> Repo.update!()
+    message = "This letter cannot be emailed without the signer's title."
 
     {:ok, lv, _html} = live(conn, letter_path(team, member, 2025))
 
@@ -346,7 +346,7 @@ defmodule Web.TaxCreditLetterLiveTest do
     assert has_element?(
              lv,
              "#flash-error",
-             "This letter cannot be published without the signer's signature."
+             "This letter cannot be published without the signer's title."
            )
   end
 

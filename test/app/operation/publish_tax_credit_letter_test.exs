@@ -15,7 +15,7 @@ defmodule App.Operation.PublishTaxCreditLetterTest do
     team =
       %{legal_name: "North Shore Rescue"}
       |> team_fixture()
-      |> Ecto.Changeset.change(authorized_by_name: "Pat Lee", signature: png_fixture(600, 150))
+      |> Ecto.Changeset.change(authorized_by_name: "Pat Lee", authorized_by_title: "Chair")
       |> Repo.update!()
 
     %{team: team, member: member_fixture(team, %{name: "Sam Doe", address: "1 Elm St"})}
@@ -103,11 +103,18 @@ defmodule App.Operation.PublishTaxCreditLetterTest do
     assert text(team, member) =~ ~r/Pat Lee\nPresident\npresident@example.com\z/
   end
 
-  test "without a signer, the team's legal name signs", %{team: team, member: member} do
-    team =
-      team |> Ecto.Changeset.change(authorized_by_name: nil, signature: nil) |> Repo.update!()
+  test "the signer signs by name, /s/ in front, above their name (#995)",
+       %{team: team, member: member} do
+    assert text(team, member) =~ ~r/Certified on .*\.\n\/s\/ Pat Lee\nPat Lee\nChair\z/
+  end
 
-    assert text(team, member) =~ ~r/\n\n\n\n\nNorth Shore Rescue\z/
+  test "without a signer, nobody signs, and the team's legal name stands under it",
+       %{team: team, member: member} do
+    team = team |> Ecto.Changeset.change(authorized_by_name: nil) |> Repo.update!()
+
+    text = text(team, member)
+    refute text =~ "/s/"
+    assert text =~ ~r/Certified on .*\.\nNorth Shore Rescue\nChair\z/
   end
 
   describe "publishing again (#970)" do
@@ -135,9 +142,9 @@ defmodule App.Operation.PublishTaxCreditLetterTest do
   # What the letter needs blocks publishing, never a draft (#995).
   test "refuses while a value the letter needs is blank, and prints nothing",
        %{team: team, member: member} do
-    team = team |> Ecto.Changeset.change(signature: nil) |> Repo.update!()
+    team = team |> Ecto.Changeset.change(authorized_by_title: nil) |> Repo.update!()
 
-    assert {:error, {:needed, [%{name: "team.signature", label: "Signer's signature"}]}} =
+    assert {:error, {:needed, [%{name: "team.signer_title", label: "Signer's title"}]}} =
              PublishTaxCreditLetter.prepare(team, member.id, 2025, nil)
 
     team = team |> Ecto.Changeset.change(mailing_address: nil) |> Repo.update!()
@@ -145,7 +152,7 @@ defmodule App.Operation.PublishTaxCreditLetterTest do
 
     assert PublishTaxCreditLetter.call(team, member.id, 2025, user, nil) ==
              {:error,
-              "This letter cannot be published without 2 values: mailing address and signer's signature."}
+              "This letter cannot be published without 2 values: mailing address and signer's title."}
 
     assert TaxCreditLetter.get_current(member, 2025) == nil
   end

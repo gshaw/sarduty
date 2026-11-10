@@ -10,7 +10,6 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
   alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Operation.EmailTaxCreditLetters
-  alias App.Operation.SaveTeamSignature
   alias App.Repo
   alias App.Worker.EmailTaxCreditLetterWorker
 
@@ -324,7 +323,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025")
       refute has_element?(lv, "#letters-needed")
 
-      {:ok, _team} = SaveTeamSignature.call(team, nil)
+      team = team |> Ecto.Changeset.change(authorized_by_title: nil) |> Repo.update!()
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025")
       # Letters have no Publish: the words say what Email does.
       assert has_element?(lv, "#letters-needed", "Needed to email")
@@ -332,7 +331,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       assert has_element?(
                lv,
                "#letters-needed",
-               "Letters cannot be emailed without the signer's signature."
+               "Letters cannot be emailed without the signer's title."
              )
 
       assert has_element?(
@@ -350,7 +349,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       assert has_element?(
                lv,
                "#flash-error",
-               "Letters cannot be emailed without the signer's signature."
+               "Letters cannot be emailed without the signer's title."
              )
 
       refute Repo.exists?(PublishedPDF)

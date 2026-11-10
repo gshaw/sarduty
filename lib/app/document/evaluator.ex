@@ -270,6 +270,11 @@ defmodule App.Document.Evaluator do
     if holds?(condition, env) and not blank?(image), do: {:image, image, options}
   end
 
+  defp item({:signature, expr, condition, _line}, _across?, env) do
+    name = value(expr, env)
+    if holds?(condition, env) and not blank?(name), do: {:signature, "/s/ " <> to_text(name)}
+  end
+
   # Across, each item is a picture; down, text.
   defp item(expr, true, env) do
     image = value(expr, env)
@@ -307,6 +312,7 @@ defmodule App.Document.Evaluator do
     items
     |> Enum.flat_map(fn
       {:text, text} -> String.split(text, ~r/\r?\n/)
+      {:signature, text} -> [text]
       {:space, count} -> List.duplicate("", count)
       {:image, _image, _options} -> []
     end)

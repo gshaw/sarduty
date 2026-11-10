@@ -198,12 +198,12 @@ defmodule App.DataFixtures do
   end
 
   @doc """
-  The team with a signer and their signature, which a tax credit letter needs before it
-  can be published (#995). The fixture team has its mailing address already.
+  The team with a signer and their title, which a tax credit letter needs before it can
+  be published (#995). The fixture team has its mailing address already.
   """
   def signer_fixture(%Team{} = team) do
     team
-    |> Ecto.Changeset.change(authorized_by_name: "Alex Chen", signature: png_fixture(600, 150))
+    |> Ecto.Changeset.change(authorized_by_name: "Alex Chen", authorized_by_title: "President")
     |> Repo.update!()
   end
 

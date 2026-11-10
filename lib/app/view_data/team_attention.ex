@@ -600,10 +600,10 @@ defmodule App.ViewData.TeamAttention do
     )
   end
 
-  # A letter without an address, signer, or signature cannot be published, so none can be
+  # A letter without an address, signer, or signer's title cannot be published, so none can be
   # emailed (#995): the CRA may question one without them (#918). The settings are the
   # letter's `needs` (#970), each `%{name, label}`; `names` say which settings tab fills
-  # them. The row is empty outside letter season.
+  # them. The row is empty outside December to April (TaxCreditLetter.settings_season?/2).
 
   defp letter_settings_item([]), do: nil
 

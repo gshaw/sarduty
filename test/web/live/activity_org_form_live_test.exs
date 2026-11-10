@@ -10,7 +10,6 @@ defmodule Web.ActivityOrgFormLiveTest do
   alias App.Model.FormAnswer
   alias App.Model.PublishedPDF
   alias App.Operation.PublishDocument
-  alias App.Operation.SaveTeamSignature
   alias App.Repo
   alias App.ViewData.Search
   alias Web.MockupSeed
@@ -281,13 +280,11 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert FormAnswer.for_activity(kayakers)["misc"] == "40"
     end
 
-    # The signature is a picture: a draft leaves it out, and publishing signs (#970).
-    test "a draft prints no signature; publishing signs it", ctx do
+    # Its signature block is left to sign by hand, draft or published (#995).
+    test "prints no signature, draft or published", ctx do
       %{cast: cast, request: request} = ctx
       kayakers = MockupSeed.activity(cast, "Overdue kayakers")
-
-      {:ok, team} = cast.team |> Repo.reload!() |> SaveTeamSignature.call(png_fixture(600, 150))
-
+      team = Repo.reload!(cast.team)
       conn = log_in_user(build_conn(), cast.alex)
 
       draft = conn |> post(form_path(kayakers, request) <> "/pdf", %{}) |> response(200)
@@ -299,9 +296,11 @@ defmodule Web.ActivityOrgFormLiveTest do
         PublishDocument.call(team, request, kayakers, cast.alex, nil, now)
 
       published = PublishedPDF.attachment(pdf).content
-      # The draft's one picture is its DRAFT mark; the published one's is the signature.
+      # The draft's one picture is its DRAFT mark; the published one has none, and
+      # neither is signed in a script.
       assert images(draft) == 1
-      assert images(published) == 1
+      assert images(published) == 0
+      refute published =~ "DancingScript"
     end
   end
 
@@ -416,6 +415,7 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert has_element?(lv, "#publish-page-2")
       assert has_element?(lv, "#publish-verify", "Injured")
       assert has_element?(lv, "#publish-not-sent")
+      assert has_element?(lv, "#publish-signature", "Left blank, to sign by hand")
       refute has_element?(lv, "#publish-replaces")
       refute Repo.exists?(PublishedPDF)
 

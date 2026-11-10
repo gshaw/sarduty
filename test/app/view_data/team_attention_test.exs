@@ -112,7 +112,7 @@ defmodule App.ViewData.TeamAttentionTest do
             %{year: 2026, primary: 0, secondary: 1, ids: [10]}
           ],
           letters: %{year: 2025, count: 1},
-          letter_settings: [%{name: "team.signature", label: "Signer's signature"}],
+          letter_settings: [%{name: "team.signer_title", label: "Signer's title"}],
           names: %{name: String.duplicate("a", 21), abbreviated_name: String.duplicate("a", 11)},
           contacts?: false
         })
@@ -392,17 +392,17 @@ defmodule App.ViewData.TeamAttentionTest do
     missing = [
       %{name: "team.mailing_address", label: "Mailing address"},
       %{name: "team.signer", label: "Signer"},
-      %{name: "team.signature", label: "Signer's signature"}
+      %{name: "team.signer_title", label: "Signer's title"}
     ]
 
     assert [%{key: :letter_settings, level: :warning} = item] =
              items(%{letter_settings: missing}, @march)
 
     assert item.title ==
-             "Tax credit letters cannot be emailed until you add the mailing address, signer, and signer's signature"
+             "Tax credit letters cannot be emailed until you add the mailing address, signer, and signer's title"
 
     assert item.detail == "The CRA may question a letter without them."
-    assert item.names == ~w(team.mailing_address team.signer team.signature)
+    assert item.names == ~w(team.mailing_address team.signer team.signer_title)
 
     assert [
              %{

@@ -6,7 +6,6 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
 
   alias App.Model.PublishedPDF
   alias App.Operation.PrintTaxCreditLetter
-  alias App.Operation.SaveTeamSignature
 
   setup do
     team = team_fixture()
@@ -111,33 +110,39 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
     end
   end
 
+  # A typed signature, /s/ and the name in Dancing Script (#995): never a picture.
   describe "the signature" do
-    test "prints the team's signature", %{team: team, member: member} do
-      {:ok, _team} = SaveTeamSignature.call(team, png_fixture(600, 150))
-
-      assert images(print(create(team, member))) == 1
-      # The picture takes the place of the blank lines left to sign in.
-      refute text(team, member) =~ "\n\n\n\n"
+    defp signed(team) do
+      team |> Ecto.Changeset.change(authorized_by_name: "Pat Lee") |> Repo.update!()
     end
 
-    # The letter page's picture of the letter before it's published (#995).
-    test "the draft draws it too, when the team has one", %{team: team, member: member} do
+    defp script?(%{content: pdf}), do: pdf =~ "DancingScript"
+
+    test "signs with the signer's name in a script, and draws no picture",
+         %{team: team, member: member} do
+      team = signed(team)
+      attachment = team |> create(member) |> print()
+
+      assert script?(attachment)
+      assert images(attachment) == 0
+      assert text(team, member) =~ ~r/Certified on .*\.\n\/s\/ Pat Lee\nPat Lee\z/
+    end
+
+    # The letter page's picture of the letter before it's published.
+    test "the draft signs as the letter will", %{team: team, member: member} do
       draft = fn team ->
-        team = Repo.reload!(team)
         read = PrintTaxCreditLetter.read(team, member.id, 2025, DateTime.utc_now())
         {:ok, pdf} = PrintTaxCreditLetter.draft(team, read)
         %{content: pdf}
       end
 
-      # The draft draws a picture of its own; the signature adds one.
-      unsigned = images(draft.(team))
-      {:ok, _team} = SaveTeamSignature.call(team, png_fixture(600, 150))
-      assert images(draft.(team)) == unsigned + 1
+      refute script?(draft.(team))
+      assert team |> signed() |> draft.() |> script?()
     end
 
-    test "leaves room to sign without one", %{team: team, member: member} do
-      assert images(print(create(team, member))) == 0
-      assert text(team, member) =~ ~r/Certified on .*\.\n\n\n\n\n#{team.legal_name}/
+    test "without a signer, no signature and no blank lines", %{team: team, member: member} do
+      refute team |> create(member) |> print() |> script?()
+      assert text(team, member) =~ ~r/Certified on .*\.\n#{team.legal_name}\z/
     end
   end
 
@@ -158,13 +163,13 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
       |> Ecto.Changeset.change(
         mailing_address: nil,
         authorized_by_name: "Pat Lee",
-        signature: nil
+        authorized_by_title: nil
       )
       |> Repo.update!()
 
     assert [
              %{name: "team.mailing_address", label: "Mailing address", from: "team"},
-             %{name: "team.signature", label: "Signer's signature", from: "team"}
+             %{name: "team.signer_title", label: "Signer's title", from: "team"}
            ] = PrintTaxCreditLetter.missing_settings(team, DateTime.utc_now())
   end
 

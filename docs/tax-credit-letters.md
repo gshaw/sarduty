@@ -42,7 +42,7 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   letter. With none, Not published and Email letter. A member with no email gets
   Publish letter, the same action. Page 1 is open under it either way: the saved PDF,
   drawn when the page asks (`Service.PDFImages.first_page/2`), or the letter as it
-  prints today, marked DRAFT, with the team's signature when it has one. The draft is
+  prints today, marked DRAFT, signed as the letter will be. The draft is
   only a picture, never a download. History lists every letter for the year from their
   own dates ([PublishedHistory](../lib/app/view_data/published_history.ex)): published,
   published again, and withdrawn. Emails aren't History, since a letter keeps only its
@@ -135,15 +135,24 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   letter its own email job, and its row says when it went or didn't; on the letter
   page it sends at once, and a refusal there says Did not send at once.
 - **What a letter needs blocks publishing it, never a draft** (`needs`, #943, #995):
-  `team.mailing_address, team.signer, team.signature`. While one is blank, no letter is
-  published, so none is emailed; letters already published stay as they are. The list
-  and the letter page say so in a warning banner, Needed to publish, linking the tab
-  that fills each, and Email says the same as an error. Needs attention says "Tax credit
-  letters cannot be emailed until you add the signer's signature" from December to April,
-  so it's fixed before January 1.
+  `team.mailing_address, team.signer, team.signer_title`. While one is blank, no letter
+  is published, so none is emailed; letters already published stay as they are. The
+  list and the letter page say so in a warning banner, Needed to email (Needed to
+  publish for a member with no email), linking the tab that fills each, and Email says
+  the same as an error. Needs attention says "Tax credit letters cannot be emailed until
+  you add the signer's title" from December to April, so it's fixed before January 1.
   The address is on team settings' General tab, and who signs on Signer.
-- **The signature is the team's when the PDF is printed**, and the saved PDF keeps it.
-  The letter keeps no copy of its own (#918).
+- **The signer signs by typing their name** (#995): every letter prints "/s/ Alex Chen"
+  in Dancing Script, bold, under Certified on, then the name, title, phone, and email.
+  BCSARA said the CRA wants a signature, and no team admin has to upload a picture: on
+  2026-11-10 only one of the 10 teams that sent letters had one. The Signer tab
+  ([SignerLive](../lib/web/live/settings/signer_live.ex)) shows the end of every letter
+  as it's typed, and a test checks it against the letter's own text. The signer is one
+  line: the migration that dropped the picture kept the first line, up to a comma, and
+  moved a title, phone, or email it held to its own field. A form is signed by its task
+  leader, by hand, never by the team's letter signer.
+- **Signed by is not on the verify page.** A new signer would make every letter out of
+  date, since out of date is what the verify page would show.
 - **The verify code is a published PDF's** (#970), bottom left: a vector QR code, an
   SVG from `eqrcode`, so it prints sharp, then "Verify this document" and the link. Its
   verify page shows the member's name, the year, and the hours, from the letter's

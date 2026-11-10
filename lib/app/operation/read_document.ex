@@ -67,7 +67,6 @@ defmodule App.Operation.ReadDocument do
   end
 
   @picture_labels %{
-    "team.signature" => "Signer's signature",
     "team.logo" => "Logo",
     "organization.logo" => "Organization logo"
   }
@@ -139,7 +138,7 @@ defmodule App.Operation.ReadDocument do
 
   @doc """
   Publishing's refusal while `needed/3` names something, starting with `what`, such as
-  "This letter": "This letter cannot be published without the signer's signature.",
+  "This letter": "This letter cannot be published without the signer's title.",
   or for a state it waits for, "This form cannot be published until the activity is
   published." `verb` is what the person's button does, so a letter, which only Email
   publishes, says "emailed" (#995). The page's warning banner says the same, with the
@@ -290,13 +289,13 @@ defmodule App.Operation.ReadDocument do
   defp custom?({:field, path, _args, _line}), do: path |> List.last() |> String.starts_with?("`")
   defp custom?(_ast), do: false
 
-  # The logos and signature the team has when the PDF is printed; the saved PDF keeps
-  # them (#918). A team without a logo gets none, not SAR Duty's.
+  # The logos the team has when the PDF is printed; the saved PDF keeps them (#918). A
+  # team without a logo gets none, not SAR Duty's. A signature is typed, not a picture
+  # (#995): the signer's name, which the team report reads.
   defp pictures(team) do
     %{
       "organization.logo" => organization_logo(team.organization),
-      "team.logo" => if(Team.logo_file(team.subdomain), do: LoadImage.logo(team, :square)),
-      "team.signature" => team.signature
+      "team.logo" => if(Team.logo_file(team.subdomain), do: LoadImage.logo(team, :square))
     }
   end
 

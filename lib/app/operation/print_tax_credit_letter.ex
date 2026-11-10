@@ -10,6 +10,7 @@ defmodule App.Operation.PrintTaxCreditLetter do
   """
 
   alias App.Document
+  alias App.Document.Evaluator
   alias App.Model.DemoTeam
   alias App.Model.PublishedPDF
   alias App.Model.Team
@@ -89,9 +90,9 @@ defmodule App.Operation.PrintTaxCreditLetter do
 
   @doc """
   The letter from `read/4` as it prints today, marked DRAFT, for the letter page's
-  picture before there's a letter: `{:ok, pdf}` or `{:error, reason}`. It draws the
-  team's signature when it has one, as the letter will (#995): the picture is never
-  downloaded. A grey box takes the verify code's place.
+  picture before there's a letter: `{:ok, pdf}` or `{:error, reason}`. It signs as the
+  letter will, /s/ and the signer's name (#995), and a grey box takes the verify code's
+  place. The picture is never downloaded.
   """
   def draft(%Team{} = team, %{doc: doc, values: values}) do
     values = Map.put(values, "pdf.verify_link", nil)
@@ -113,6 +114,16 @@ defmodule App.Operation.PrintTaxCreditLetter do
   end
 
   @doc """
+  The names of the values the letter `needs`, in its order, such as
+  `["team.mailing_address", "team.signer", "team.signer_title"]`: the Signer tab marks a
+  blank one in its preview.
+  """
+  def need_names do
+    {:ok, doc} = @document |> Document.read() |> Document.parse()
+    Enum.map(doc.needs, &Evaluator.name/1)
+  end
+
+  @doc """
   What the letter from `read/4` needs to publish that's blank, the document's `needs`
   (ReadDocument.needed/3): `[]` when it can be published. Publishing refuses while
   there's one (#995).
@@ -121,8 +132,8 @@ defmodule App.Operation.PrintTaxCreditLetter do
 
   @doc """
   The team's settings the letter needs that it hasn't filled in, the document's `needs`
-  (#943), as `needed/1` names them: `%{name: "team.signature", label: "Signer's
-  signature", …}`. They keep every letter from being published, so Needs attention and
+  (#943), as `needed/1` names them: `%{name: "team.signer_title", label: "Signer's
+  title", …}`. They keep every letter from being published, so Needs attention and
   the letters list name them.
   """
   def missing_settings(%Team{} = team, now) do

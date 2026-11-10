@@ -67,20 +67,20 @@ leaves it out. Text compares exactly, case and all, since an expect checks what 
 
 ## Names
 
-| Name                                               | What it is                                                               |
-| -------------------------------------------------- | ------------------------------------------------------------------------ |
-| `hours.total`                                      | A report's column. A record, such as a member, prints its name.          |
-| `team.legal_name`, `organization.name`             | The `team` and `organization` subjects' fields, with no report to write. |
-| `:member`, `:year`, `:activity`                    | What the document starts from.                                           |
-| `:injured`                                         | A form's answer.                                                         |
-| `km_rate`, `total`                                 | A form's const or compute.                                               |
-| `today`                                            | The team's date today.                                                   |
-| `page`, `pages`                                    | In `fill`: which copy of a form's page, and how many ([Rows](#rows)).    |
-| `team.logo`, `organization.logo`, `team.signature` | Pictures only printing reads.                                            |
-| `pdf.verify_link`                                  | The published PDF's verify link, for `verify code none`.                 |
+| Name                                   | What it is                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------ |
+| `hours.total`                          | A report's column. A record, such as a member, prints its name.          |
+| `team.legal_name`, `organization.name` | The `team` and `organization` subjects' fields, with no report to write. |
+| `:member`, `:year`, `:activity`        | What the document starts from.                                           |
+| `:injured`                             | A form's answer.                                                         |
+| `km_rate`, `total`                     | A form's const or compute.                                               |
+| `today`                                | The team's date today.                                                   |
+| `page`, `pages`                        | In `fill`: which copy of a form's page, and how many ([Rows](#rows)).    |
+| `team.logo`, `organization.logo`       | Pictures only printing reads.                                            |
+| `pdf.verify_link`                      | The published PDF's verify link, for `verify code none`.                 |
 
 The pictures and the PDF's values print only. No report reads them, and `keep` refuses
-them, so the signature never reaches a report (#918).
+them (#918). A signature isn't a picture: it's typed (`signature team.signer`, below).
 
 ## Places
 
@@ -93,9 +93,11 @@ places
 A place is `text`, `image`, `flow`, or `tick`, and lengths are in `in`, `pt`, or `mm`
 from the page's edges: `top` or `bottom`, and `left` or `right`. A flow stacks values in
 order, down the page or across it, and leaves out the blank ones. Down, each item is
-text, `space` (a blank line, or `space 4`), or `image value width 3in height 0.75in pad
-6pt`, which fits a picture in that box. Any item can end with `if condition`. Across,
-each item is a picture. `level with letter` puts a place's bottom edge level with a
+text, `space` (a blank line, or `space 4`), `image value width 3in height 0.75in pad
+6pt`, which fits a picture in that box, or `signature team.signer`, a typed signature:
+"/s/" and the name in Dancing Script, bold, 16pt, black, on its own line with 6 points
+above and below, and a blank name drops out (#995). A letter the script lacks prints
+in Arimo. Any item can end with `if condition`. Across, each item is a picture. `level with letter` puts a place's bottom edge level with a
 flow's last line.
 
 A text place's first baseline sits three quarters of its `size` below its `top`, as a
@@ -152,14 +154,14 @@ verify shows
 
 `needs` names what publishing needs (#995): any value the document reads, such as a
 team setting or picture, a report's value, or an answer. The letter has `needs
-team.mailing_address, team.signer, team.signature`, and a form can wait for its
+team.mailing_address, team.signer, team.signer_title`, and a form can wait for its
 activity with `needs task.published` or `needs task.finished`, where `task` is its
 report on `activities`. A blank value counts as missing, and so does a false one, which
 only `needs` reads that way: `keep` and `verify shows` keep false as it is.
 
 While one is missing, publishing refuses with the same words its page's warning banner,
 Needed to publish, shows under the title: "This letter cannot be published without the
-signer's signature." The banner names each, with the page that fills it, or says when
+signer's title." The banner names each, with the page that fills it, or says when
 the activity finishes and links its page to publish it in D4H. The check is in the
 operations, `PublishTaxCreditLetter` and `PrintForm` (App.Operation.ReadDocument.needed/3),
 so no page can skip it. A draft prints without them, and a form's Missing section
@@ -304,8 +306,10 @@ running its expects, then prints it there.
   ([equipment.md](equipment.md#the-copy)). An item with both prints a line for each,
   the km on the first. Under the table: miscellaneous expenses (asked), the
   Supplement's subtotal as its balance forward, the subtotal, 15% for occupational
-  health and safety, and the total. The team's signer signs it with the team's
-  signature, dated the day it prints, and EMCR's own boxes are left blank. It repeats
+  health and safety, and the total. Its signature block (signature, date, name,
+  position, email, telephone) and EMCR's own boxes are left blank, to fill by hand,
+  as the Task report's and the Supplement's are (#995): the team's letter signer is the
+  wrong person for a claim. It repeats
   the Supplement's people rules, reading the same answers, and a test checks the two
   agree on Coast Range SAR's claim. The bundle will drop the repeat.
 
@@ -413,7 +417,7 @@ more pages.
 fill
   claimant = team.legal_name
   claim_total = total as money
-  signature = team.signature
+  logo = team.logo
 
 fill each equipment into items
   item = item
@@ -423,7 +427,7 @@ layout
 #set page(paper: "us-letter", margin: 40pt)
 Claimant: #values.claimant
 #for use in values.items [#use.item: #use.total \ ]
-#if values.signature != none { image(values.signature, height: 30pt) }
+#if values.logo != none { image(values.logo, height: 30pt) }
 ```
 
 - **Values reach it as data.** SAR Duty puts them in `values.json`, reads it as
@@ -510,9 +514,10 @@ shows` line, or each kept value for a form with none. Page 1 folds under it, dra
   as each equipment use's total, shows too, with no boxes.
 - **Publish**, on a form that's on (App.Operation.PublishDocument), opens its preview
   at `…/forms/:form_id/publish`: it checks, reads the form with the activity's answers,
-  and prints once with a new ID, the verify code, and the team's signature. The page
+  and prints once with a new ID and the verify code. The page
   shows every page as a picture (Service.PDFImages) and what publishing does: its ID,
-  what its verify page shows, what it replaces, and that it isn't sent anywhere.
+  what its verify page shows, that its signature is left blank to sign by hand, what
+  it replaces, and that it isn't sent anywhere.
   Publish there checks again and saves that same PDF in one transaction, so what's kept
   is what was looked at. When another admin published meanwhile, it says "Someone just
   published this. Reload to see it." Publish again goes through the same preview.
@@ -520,7 +525,7 @@ shows` line, or each kept value for a form with none. Page 1 folds under it, dra
   themselves).
 - **Download draft PDF** posts the answers to Web.ActivityFormPDFController,
   since a LiveView can't send a PDF, and the browser shows it. DRAFT runs across
-  each page, the verify code's place is a grey box, and the signature is left blank.
+  each page, and the verify code's place is a grey box.
   App.Operation.CreateFormPDF keeps the answers and prints the form. A draft is never
   saved. An answer that doesn't read makes nothing.
 

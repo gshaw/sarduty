@@ -145,7 +145,7 @@ defmodule App.Model.TaxCreditLetter do
 
   @doc """
   Whether Needs attention names what letters need from team settings, such as the
-  signature: December to April, so it's fixed before letters can be emailed on
+  signer's title: December to April, so it's fixed before letters can be emailed on
   January 1 (#995).
   """
   def settings_season?(now, timezone),

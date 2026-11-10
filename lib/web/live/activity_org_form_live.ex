@@ -263,10 +263,7 @@ defmodule Web.ActivityOrgFormLive do
             </div>
           </dd>
           <dt>Signature</dt>
-          <dd id="publish-signature">
-            {@current_team.name}'s, where the form has one
-            <span class="hint block">A draft leaves it blank.</span>
-          </dd>
+          <dd id="publish-signature">Left blank, to sign by hand</dd>
           <%= if @published.current do %>
             <dt>Replaces</dt>
             <dd id="publish-replaces">

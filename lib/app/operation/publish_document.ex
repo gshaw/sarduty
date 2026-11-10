@@ -2,7 +2,7 @@ defmodule App.Operation.PublishDocument do
   @moduledoc """
   The one way an organization's form publishes (#970): Publish on an activity's form
   page opens a preview, and Publish there keeps it. A draft is never saved; the preview
-  prints once, with a new ID, its verify code, and the team's signature, and publishing
+  prints once, with a new ID and its verify code, and publishing
   keeps that PDF, every answer it printed with, the values `keep` names, and what
   `verify shows` printed (App.Model.PublishedPDF).
 

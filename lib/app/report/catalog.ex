@@ -1,7 +1,7 @@
 defmodule App.Report.Catalog do
   @moduledoc """
   The subjects and fields a report can read (#768): an allowlist. Never emergency
-  contacts, letter text, keys, or the signer's signature. A member's email, mobile number, and address are team
+  contacts, letter text, or keys. A member's email, mobile number, and address are team
   admins' fields, as their page shows them (#827); an activity's address and place are
   for everyone who reads activities, as its page shows them.
 
@@ -1018,7 +1018,7 @@ defmodule App.Report.Catalog do
     )
   end
 
-  # The team's one row. Never its signature, which only a letter prints.
+  # The team's one row.
   defp team(%Context{team: team}) do
     from(t in Team,
       where: t.id == ^team.id,

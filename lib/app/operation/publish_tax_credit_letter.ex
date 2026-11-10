@@ -5,7 +5,7 @@ defmodule App.Operation.PublishTaxCreditLetter do
   saves it as a published PDF (App.Model.PublishedPDF). A first letter and a new one in
   place of one out of date are both this; the member's current letter, if any, becomes
   Replaced. It is not emailed here. It refuses while a value the letter `needs` is blank
-  (#995), such as the signer's signature. Printing happens before the write, since Typst
+  (#995), such as the signer's title. Printing happens before the write, since Typst
   takes a while and a transaction holds SQLite's one write lock.
   """
 

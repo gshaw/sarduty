@@ -1,8 +1,8 @@
 defmodule App.Operation.SaveTeamSigner do
   @moduledoc """
-  Saves team settings' Signer tab (#995): who signs the team's tax credit letters and
-  forms, with their title, phone, and email. The signature is
-  App.Operation.SaveTeamSignature's, and the address is on General.
+  Saves team settings' Signer tab (#995): who signs the team's tax credit letters, with
+  their title, phone, and email. Letters sign with the name typed, "/s/ Alex Chen", so
+  there's no picture to upload. The address is on General.
   """
 
   alias App.Model.Team

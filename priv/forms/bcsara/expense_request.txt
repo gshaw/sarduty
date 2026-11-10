@@ -2,7 +2,8 @@
 -- for an incident, with its equipment, miscellaneous expenses, and the Supplement's
 -- total as its balance forward. There's no page to upload: the layout at the end
 -- draws it in D4H's layout each time it prints, and the equipment table grows with
--- its rows. The team's signer signs it with the team's signature.
+-- its rows. Its signature block is left blank, to sign by hand, as the Task report's and
+-- the Supplement's are (#995): the team's letter signer is the wrong person for a claim.
 --
 -- The rates are EMCR's 5.06 Volunteer Reimbursement and Allowance Rate Chart. Check every
 -- rate against the current chart before the form goes on. The people rules repeat the
@@ -10,7 +11,7 @@
 -- subtotal; App.FormsTest checks the two agree.
 
 form 'Expense reimbursement request'
-about 'The team''s claim for an incident: its equipment, other expenses, and the Supplement''s total. It prints signed by the team''s signer.'
+about 'The team''s claim for an incident: its equipment, other expenses, and the Supplement''s total. Its signature block is left to sign by hand.'
 for activity where kind = 'incident'
 
 report task
@@ -101,12 +102,6 @@ fill
   ohs_label = '{ohs * 100 as number}% Occupational Health and Safety Supplement Allowance'
   ohs_allowance = ohs_total as money
   claim_total = total as money
-  signature = team.signature
-  signed_on = today as date_long
-  signer = team.signer
-  position = team.signer_title
-  phone = team.signer_phone
-  email = team.signer_email
 
 -- Each use's line or two. A blank prints as a dash.
 fill each equipment into items
@@ -282,15 +277,13 @@ layout
 ))
 #v(20pt)
 
-// The team's signer signs it with the team's signature. Without one, the line is
-// left to sign by hand.
-#let signature = if values.signature != none { image(values.signature, height: 30pt) }
+// Left blank, to sign by hand, as the Task report and Supplement are (#995).
 #block(breakable: false, {
-  pair(field("Signature:", signature), field("Date:", values.signed_on))
+  pair(field("Signature:", none), field("Date:", none))
   v(8pt)
-  pair(field("Name:", values.signer), field("Position:", values.position))
+  pair(field("Name:", none), field("Position:", none))
   v(8pt)
-  pair(field("Email:", values.email), field("Telephone:", values.phone))
+  pair(field("Email:", none), field("Telephone:", none))
 })
 #v(18pt)
 

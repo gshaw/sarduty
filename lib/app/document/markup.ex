@@ -441,6 +441,19 @@ defmodule App.Document.Markup do
     {pars, {files, Map.update!(values, key(place), &(&1 ++ lines))}}
   end
 
+  # A typed signature (#995): /s/ and the name in Dancing Script, bold, on a line of its
+  # own with 6 points above and below. A letter the script lacks falls back to Arimo.
+  defp line({{:signature, text}, _i}, place, {files, values}) do
+    i = length(values[key(place)])
+
+    markup =
+      "  block(above: #{pt(6 + gap(place))}, below: 6pt, " <>
+        ~s|text(font: ("Dancing Script", "Arimo"), weight: 700, size: 16pt, fill: black, | <>
+        ~s|top-edge: "ascender", bottom-edge: "descender", v.at("#{key(place)}").at(#{i})))\n|
+
+    {markup, {files, Map.update!(values, key(place), &(&1 ++ lines(text)))}}
+  end
+
   defp line({{:space, count}, _i}, _place, acc),
     do: {List.duplicate("  par(hide[x])\n", count), acc}
 

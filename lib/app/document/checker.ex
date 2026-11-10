@@ -41,10 +41,9 @@ defmodule App.Document.Checker do
   alias App.Report.Expr
   alias App.Report.Query
 
-  # The values only printing reads, never a report: the signature stays out of reports.
+  # The values only printing reads, never a report: the logos and the verify link.
   @print %{
     "team.logo" => :image,
-    "team.signature" => :image,
     "organization.logo" => :image,
     "pdf.verify_link" => :text
   }
@@ -769,7 +768,14 @@ defmodule App.Document.Checker do
     check_condition(condition, types)
 
     if type(expr, types) != :image,
-      do: fail(line, "Write an image after image, such as team.signature.")
+      do: fail(line, "Write an image after image, such as team.logo.")
+  end
+
+  # A typed signature is text: a name, never a picture (#995).
+  defp check_item({:signature, expr, condition, line}, place, types) do
+    if place.across, do: fail(line, "Take out signature: a flow across holds images alone.")
+    check_condition(condition, types)
+    check_text(expr, types, line, place.name)
   end
 
   defp check_item(value, %{across: true} = place, types) do

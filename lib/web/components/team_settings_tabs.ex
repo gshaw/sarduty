@@ -84,7 +84,6 @@ defmodule Web.Components.TeamSettingsTabs do
   nil for one no tab fills.
   """
   def tab_for(name) when name in @general, do: :general
-  def tab_for("team.signature"), do: :signer
   def tab_for("team.signer" <> _rest), do: :signer
   def tab_for(_name), do: nil
 

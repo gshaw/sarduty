@@ -67,10 +67,8 @@ defmodule App.Operation.PrintForm do
             }}
   end
 
-  # Only a published PDF carries the team's signature (#970). A draft leaves it blank,
-  # and its verify link with it.
-  defp sign(values, :draft),
-    do: Map.merge(values, %{"team.signature" => nil, "pdf.verify_link" => nil})
+  # Only a published PDF carries its verify link (#970); a draft prints a grey box there.
+  defp sign(values, :draft), do: Map.put(values, "pdf.verify_link", nil)
 
   defp sign(values, link), do: Map.put(values, "pdf.verify_link", link)
 

@@ -44,7 +44,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
        emailed: nil,
        selected: MapSet.new(),
        choice: nil,
-       # What every letter needs from team settings, such as the signature (#995).
+       # What every letter needs from team settings, such as the signer's title (#995).
        needed: PrintTaxCreditLetter.missing_settings(team, DateTime.utc_now())
      )}
   end
