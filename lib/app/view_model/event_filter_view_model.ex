@@ -9,7 +9,7 @@ defmodule App.ViewModel.EventFilterViewModel do
     field :kind, :string, default: "all"
     field :team, :string, default: "all"
     field :ip, App.Field.TrimmedString
-    field :who, :string
+    field :who, App.Field.TrimmedString
   end
 
   def kinds, do: [{"All", "all"} | Enum.map(Event.kinds(), &{label(&1), Atom.to_string(&1)})]
@@ -70,7 +70,7 @@ defmodule App.ViewModel.EventFilterViewModel do
       |> validate_inclusion(:kind, Enum.map(kinds(), &elem(&1, 1)))
       |> validate_format(:team, ~r/\A(all|\d+)\z/)
       |> validate_format(:ip, ~r/\A[0-9a-fA-F.:\/]{1,45}\z/)
-      |> validate_format(:who, ~r/\A[0-9a-f]{16}\z/)
+      |> validate_length(:who, max: 254)
 
     case apply_action(changeset, :replace) do
       {:ok, filter} -> {:ok, filter, changeset}
@@ -80,15 +80,25 @@ defmodule App.ViewModel.EventFilterViewModel do
 
   @doc """
   The filter as `Event.get_recent/2` takes it. An IP matches as the limits count it, so
-  an IPv6 address or a /64 from Top IPs shows the whole /64.
+  an IPv6 address or a /64 from Top IPs shows the whole /64. `who` is an email, a phone
+  number, or a hash from an event from before emails and numbers were kept.
   """
   def to_query(%__MODULE__{kind: kind, team: team, ip: ip, who: who}) do
     %{
       kind: if(kind != "all", do: Enum.find(Event.kinds(), &(Atom.to_string(&1) == kind))),
       team_id: if(team != "all", do: String.to_integer(team)),
       ip_key: ip && RateLimit.ip_key(ip),
-      who: who
+      who: who && who_hash(who)
     }
+  end
+
+  defp who_hash(who) do
+    cond do
+      who =~ ~r/\A[0-9a-f]{16}\z/ -> who
+      String.contains?(who, "@") -> Event.who(who)
+      e164 = Service.Phone.normalize(who) -> Event.who({:phone, e164})
+      true -> Event.who(who)
+    end
   end
 
   @doc "Query params for a path, leaving out the defaults."

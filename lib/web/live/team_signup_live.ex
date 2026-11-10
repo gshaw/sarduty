@@ -99,11 +99,15 @@ defmodule Web.TeamSignupLive do
   end
 
   def handle_event("save", %{"form" => params}, socket) do
-    who = SecurityEvent.who(params["email"] || "")
+    email = params["email"]
 
     case SignUpTeam.call(params) do
       {:ok, team} ->
-        SecurityEvent.record(socket.assigns, :team_signed_up, team_id: team.id, who: who)
+        SecurityEvent.record(socket.assigns, :team_signed_up,
+          team_id: team.id,
+          email_or_phone: email
+        )
+
         done = %{name: team.name, email: params["email"], api_host: team.d4h_api_host}
         {:noreply, assign(socket, done: done)}
 
@@ -111,7 +115,7 @@ defmodule Web.TeamSignupLive do
         fields = changeset.errors |> Keyword.keys() |> Enum.uniq()
 
         SecurityEvent.record(socket.assigns, :team_signup_failed,
-          who: who,
+          email_or_phone: email,
           data: %{fields: fields}
         )
 

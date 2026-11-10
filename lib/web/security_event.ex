@@ -15,6 +15,4 @@ defmodule Web.SecurityEvent do
 
   def record(%{client_ip: ip, user_agent: user_agent}, kind, attrs),
     do: Event.record!(kind, [ip: ip, user_agent: user_agent] ++ attrs)
-
-  defdelegate who(email_or_phone), to: Event
 end

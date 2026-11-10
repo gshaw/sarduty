@@ -53,33 +53,80 @@ defmodule Web.Admin.EventCollectionLiveTest do
     refute has_element?(lv, "#event-#{miss.id}")
   end
 
-  test "counts an IPv6 /64 as one IP, and lists the accounts with the most misses", %{
+  test "counts an IPv6 /64 as one IP, and lists the emails with the most misses", %{
     conn: conn
   } do
     %{user: user} = user_with_team_fixture()
     admin = make_admin(user)
-    who = Event.who("guessed@example.org")
+    guessed = "guessed@example.org"
 
-    for n <- 1..3, do: Event.record!(:login_code_missed, ip: "2001:db8:1:2::#{n}", who: who)
-    Event.record!(:login_blocked, ip: "2001:db8:1:2::9", who: who, data: %{scope: "account"})
-    other = Event.record!(:login_code_missed, ip: "198.51.100.4", who: Event.who("x@example.org"))
-    Event.record!(:login_code_requested, ip: "198.51.100.4", who: Event.who("y@example.org"))
+    for n <- 1..3,
+        do: Event.record!(:login_code_missed, ip: "2001:db8:1:2::#{n}", email_or_phone: guessed)
+
+    Event.record!(:login_blocked,
+      ip: "2001:db8:1:2::9",
+      email_or_phone: guessed,
+      data: %{scope: "account"}
+    )
+
+    other = Event.record!(:login_code_missed, ip: "198.51.100.4", email_or_phone: "x@example.org")
+    Event.record!(:login_code_requested, ip: "198.51.100.4", email_or_phone: "y@example.org")
 
     {:ok, lv, _html} = live(log_in_user(conn, admin), ~p"/admin/events")
 
     assert has_element?(lv, "#top-ip-1", "2001:db8:1:2::/64")
     assert has_element?(lv, "#top-ip-1", "4")
-    assert has_element?(lv, "#top-account-1", who)
+    assert has_element?(lv, "#top-account-1", guessed)
     assert has_element?(lv, "#top-account-1", "4")
     refute has_element?(lv, "#top-account-3")
 
     lv |> element("#top-account-1 a") |> render_click()
-    assert_patch(lv, ~p"/admin/events?who=#{who}")
+    assert_patch(lv, ~p"/admin/events?who=#{guessed}")
     refute has_element?(lv, "#event-#{other.id}")
 
     {:ok, lv, _html} = live(log_in_user(conn, admin), ~p"/admin/events?ip=2001:db8:1:2::/64")
     assert lv |> element("#events") |> render() =~ "2001:db8:1:2::3"
     refute has_element?(lv, "#event-#{other.id}")
+  end
+
+  test "searches by email or number, however it was typed", %{conn: conn} do
+    %{user: user} = user_with_team_fixture()
+    admin = make_admin(user)
+    texted = Event.record!(:login_code_missed, email_or_phone: {:phone, "+16045550142"})
+    emailed = Event.record!(:login_code_missed, email_or_phone: "Dana@example.org")
+    other = Event.record!(:login_code_missed, email_or_phone: "x@example.org")
+
+    {:ok, lv, _html} = live(log_in_user(conn, admin), ~p"/admin/events")
+    assert has_element?(lv, "#event-#{texted.id}", "+16045550142")
+
+    lv |> form("#event_filter_form", form: %{who: "604 555 0142"}) |> render_change()
+    assert has_element?(lv, "#event-#{texted.id}")
+    refute has_element?(lv, "#event-#{other.id}")
+
+    lv |> form("#event_filter_form", form: %{who: "dana@EXAMPLE.org"}) |> render_change()
+    assert has_element?(lv, "#event-#{emailed.id}")
+    refute has_element?(lv, "#event-#{texted.id}")
+  end
+
+  test "shows the hash for an event from before emails were kept", %{conn: conn} do
+    %{user: user} = user_with_team_fixture()
+    admin = make_admin(user)
+    who = Event.who("old@example.org")
+
+    old =
+      App.Repo.insert!(%Event{
+        kind: :login_code_missed,
+        who: who,
+        occurred_at: DateTime.utc_now()
+      })
+
+    {:ok, lv, _html} = live(log_in_user(conn, admin), ~p"/admin/events")
+    assert has_element?(lv, "#event-#{old.id} a", who)
+    assert has_element?(lv, "#top-account-1 a", who)
+
+    lv |> element("#event-#{old.id} a") |> render_click()
+    assert_patch(lv, ~p"/admin/events?who=#{who}")
+    assert has_element?(lv, "#event-#{old.id}")
   end
 
   test "is for admins only", %{conn: conn} do

@@ -331,13 +331,15 @@ back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
 - **Security events.** Each login code request, the first request over a limit, each
   wrong code until a block, each block, login, and logout is an event with the client's
   IP and user agent, kept 90 days. So are failed sign-ups and the card check limit. The
-  typed email or number is stored only as `who`, a keyed hash (`App.Model.Event.who/1`),
-  so tries on one account group together, and each IP also as `ip_key`, IPv6 by its /64
-  as the limits count it. Both are indexed columns (#974). A team key change and login
-  grants added or removed are kept two years. `/admin/events` lists the IPs (a /64 as
-  one) with the most wrong codes, limits, blocks, and failed sign-ups over the last 7
-  days, and the accounts, by hash, with the most wrong codes and blocks. Each opens the
-  events filtered to it.
+  typed email or number is kept encrypted as `email_or_phone`, since the addresses tried
+  show an attack's shape: one team's roster, role addresses, or a member's typo
+  (2026-11-09). It's also kept as `who`, a keyed hash (`App.Model.Event.who/1`), which
+  groups tries on one account however it was typed, and each IP as `ip_key`, IPv6 by its
+  /64 as the limits count it. Both are indexed columns (#974). A team key change and
+  login grants added or removed are kept two years. `/admin/events` lists the IPs (a /64
+  as one) with the most wrong codes, limits, blocks, and failed sign-ups over the last 7
+  days, and the emails and numbers with the most wrong codes and blocks. Each opens the
+  events filtered to it, and the list searches by email or number.
 - **A bot logs in like any member** (2026-10-30). Not a person changes counts and
   pickers, never access: a team admin marks the team key's account Not a person, and it
   stays on Team admins with its badge, since D4H made it an Owner or Editor.

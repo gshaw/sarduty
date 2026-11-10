@@ -258,7 +258,11 @@ defmodule Web.UserSessionControllerTest do
       earlier = DateTime.add(DateTime.utc_now(), -23, :hour)
 
       for _ <- 1..30 do
-        Event.record!(:login_code_requested, who: who, data: %{via: "text"}, occurred_at: earlier)
+        Event.record!(:login_code_requested,
+          email_or_phone: {:phone, "+16045557788"},
+          data: %{via: "text"},
+          occurred_at: earlier
+        )
       end
 
       for _ <- 1..2 do
@@ -378,19 +382,28 @@ defmodule Web.UserSessionControllerTest do
 
     test "counts misses over the last 24 hours, not since midnight", %{conn: conn} do
       %{user: user} = user_with_team_fixture()
-      who = Event.who(user.email)
       data = %{via: "email", known_browser: false}
       long_ago = DateTime.add(DateTime.utc_now(), -25, :hour)
       recent = DateTime.add(DateTime.utc_now(), -23, :hour)
 
       for _ <- 1..19,
-          do: Event.record!(:login_code_missed, who: who, data: data, occurred_at: long_ago)
+          do:
+            Event.record!(:login_code_missed,
+              email_or_phone: user.email,
+              data: data,
+              occurred_at: long_ago
+            )
 
       code = login_code_fixture(user.email)
       assert conn |> from_ip() |> log_in(user.email, code) |> get_session(:user_token)
 
       for _ <- 1..20,
-          do: Event.record!(:login_code_missed, who: who, data: data, occurred_at: recent)
+          do:
+            Event.record!(:login_code_missed,
+              email_or_phone: user.email,
+              data: data,
+              occurred_at: recent
+            )
 
       Repo.delete_all(UserToken)
       code = login_code_fixture(user.email)
@@ -404,10 +417,15 @@ defmodule Web.UserSessionControllerTest do
       recent = DateTime.add(DateTime.utc_now(), -23, :hour)
 
       for _ <- 1..19,
-          do: Event.record!(:login_code_missed, who: who, data: data, occurred_at: recent)
+          do:
+            Event.record!(:login_code_missed,
+              email_or_phone: user.email,
+              data: data,
+              occurred_at: recent
+            )
 
       Event.record!(:login_blocked,
-        who: who,
+        email_or_phone: user.email,
         data: Map.put(data, :scope, "account"),
         occurred_at: recent
       )
@@ -425,7 +443,11 @@ defmodule Web.UserSessionControllerTest do
       data = %{via: "email", known_browser: false}
 
       for n <- 1..50 do
-        Event.record!(:login_code_missed, ip: "2001:db8:7:7::#{n}", who: "x", data: data)
+        Event.record!(:login_code_missed,
+          ip: "2001:db8:7:7::#{n}",
+          email_or_phone: "x@example.org",
+          data: data
+        )
       end
 
       code = login_code_fixture(user.email)

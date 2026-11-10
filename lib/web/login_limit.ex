@@ -43,7 +43,7 @@ defmodule Web.LoginLimit do
   """
   def request(source, who, ip, via) do
     hash = Event.who(who)
-    attrs = [who: hash, data: %{via: via}]
+    attrs = [email_or_phone: who, data: %{via: via}]
 
     # One writer at a time, so two requests at once can't both be the 30th text.
     {:ok, result} =
@@ -136,7 +136,7 @@ defmodule Web.LoginLimit do
 
     {:ok, blocks} =
       Repo.transaction(fn ->
-        SecurityEvent.record(source, :login_code_missed, who: hash, data: data)
+        SecurityEvent.record(source, :login_code_missed, email_or_phone: who, data: data)
         since = day_ago()
 
         account? =
@@ -151,7 +151,7 @@ defmodule Web.LoginLimit do
           Logger.warning("Login code miss limit reached (#{scope}) from #{ip}")
 
           SecurityEvent.record(source, :login_blocked,
-            who: hash,
+            email_or_phone: who,
             data: Map.put(data, :scope, scope)
           )
 

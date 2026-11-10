@@ -48,7 +48,7 @@ defmodule App.Model.TeamLoginGrant do
       Event.record!(:login_grant_added,
         team_id: team.id,
         user_id: user && user.id,
-        who: Event.who(grant.email)
+        email_or_phone: grant.email
       )
 
       {:ok, grant}
@@ -76,7 +76,7 @@ defmodule App.Model.TeamLoginGrant do
         Event.record!(:login_grant_removed,
           team_id: team.id,
           user_id: user && user.id,
-          who: Event.who(grant.email)
+          email_or_phone: grant.email
         )
 
         {:ok, grant}
