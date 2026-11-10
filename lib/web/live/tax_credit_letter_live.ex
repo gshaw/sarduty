@@ -111,14 +111,6 @@ defmodule Web.TaxCreditLetterLive do
     </.breadcrumbs>
 
     <h1 class="title">{@page_title}</h1>
-    <.out_of_date
-      id="letter-out-of-date"
-      noun="letter"
-      changes={@record.changes}
-      next={"#{email_label(@member)} makes a new one#{if emailed?(@member), do: " and sends it"}."}
-    />
-    <.needed_banner id="letter-needed" what="This letter" needed={@needed} team={@current_team} />
-
     <div class="content-wrapper">
       <aside class="content-1/3">
         <dl>
@@ -151,6 +143,13 @@ defmodule Web.TaxCreditLetterLive do
       </aside>
 
       <main class="content-2/3">
+        <.out_of_date
+          id="letter-out-of-date"
+          noun="letter"
+          changes={@record.changes}
+          next={"#{email_label(@member)} makes a new one#{if emailed?(@member), do: " and sends it"}."}
+        />
+        <.needed_banner id="letter-needed" what="This letter" needed={@needed} team={@current_team} />
         <%= if @letter do %>
           <.published_section
             prefix="letter"
