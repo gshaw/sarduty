@@ -296,7 +296,8 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
 
       check(lv, [avery], "email")
       refute has_element?(lv, "#letters-apply[disabled]")
-      refute has_element?(lv, ~s(#letters-apply[data-confirm*="once the year ends"]))
+      # Nobody confirms a send that can't go: it goes straight to its error.
+      refute has_element?(lv, "#letters-apply[data-confirm]")
       apply_choice(lv, [avery], "email")
 
       assert has_element?(lv, "#flash-error", when_text)

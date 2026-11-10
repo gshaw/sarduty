@@ -288,6 +288,7 @@ defmodule Web.TaxCreditLetterLiveTest do
     attendance_fixture(activity, member)
 
     {:ok, lv, _html} = live(conn, letter_path(team, member, year))
+    refute has_element?(lv, "#email-letter[data-confirm]")
     lv |> element("#email-letter") |> render_click()
 
     assert has_element?(
@@ -318,6 +319,7 @@ defmodule Web.TaxCreditLetterLiveTest do
            )
 
     refute has_element?(lv, "#email-letter[disabled]")
+    refute has_element?(lv, "#email-letter[data-confirm]")
     lv |> element("#email-letter") |> render_click()
 
     assert has_element?(lv, "#flash-error", message)

@@ -221,7 +221,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
           variant={variant(@choice)}
           disabled={@fit == []}
           phx-disable-with={waiting(@choice)}
-          {confirm(@choice, @fit, @filter_options.year)}
+          {if refused?(@choice, @fit, @refusal, @needed), do: %{}, else: confirm(@choice, @fit, @filter_options.year)}
         >
           {button_text(@choice, @fit)}
         </.button>
@@ -341,6 +341,15 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp bar_hint(_checked, _choice), do: nil
 
   # Every Email asks, naming who gets what; Withdraw asks with its box from 1 (#995).
+  # Nobody confirms a send that can't go (/styles/confirm-dialog): while the year isn't
+  # over, or what every letter needs is blank, Email goes straight to its error.
+  defp refused?("email", fit, refusal, needed),
+    do:
+      refusal != nil or
+        (needed != [] and Enum.any?(fit, &EmailTaxCreditLetters.publishes?(&1.email)))
+
+  defp refused?(_choice, _fit, _refusal, _needed), do: false
+
   defp confirm(_choice, [], _year), do: %{}
   defp confirm("email", fit, year), do: TaxCreditLetterConfirm.email(fit, year)
   defp confirm("withdraw", fit, year), do: TaxCreditLetterConfirm.withdraw(fit, year)

@@ -38,6 +38,8 @@ defmodule Web.TaxCreditLetterLive do
      socket
      |> assign(page_title: "#{member.name}'s #{year} tax credit letter")
      |> assign(member: member, year: year)
+     # A year that isn't over can't be emailed yet: the button says so, with no confirm.
+     |> assign(refusal: EmailTaxCreditLetters.refusal(year, team, DateTime.utc_now()))
      |> assign_letter()}
   end
 
@@ -169,7 +171,7 @@ defmodule Web.TaxCreditLetterLive do
               </p>
             </:status>
             <:actions>
-              <.email_button record={@record} />
+              <.email_button record={@record} ask={is_nil(@refusal) and @needed == []} />
             </:actions>
             <:withdraw>
               <.button
@@ -194,7 +196,11 @@ defmodule Web.TaxCreditLetterLive do
             <h2 class="heading">Not published</h2>
             <div class="card">
               <p class="mb-4">No letter for {@year} yet. This is how it prints today.</p>
-              <.email_button record={@record} variant={:primary} />
+              <.email_button
+                record={@record}
+                variant={:primary}
+                ask={is_nil(@refusal) and @needed == []}
+              />
               <p :if={is_nil(@record.email)} id="letter-no-hours" class="hint">
                 {@member.name} has no hours in {@year}, so there is no letter to email.
               </p>
@@ -217,6 +223,7 @@ defmodule Web.TaxCreditLetterLive do
   end
 
   attr :record, :map, required: true
+  attr :ask, :boolean, required: true, doc: "false when it can only refuse: no confirm for that"
   attr :variant, :atom, default: :default
 
   # Email letter, or Publish letter for a member with no email: the same action. It
@@ -229,7 +236,7 @@ defmodule Web.TaxCreditLetterLive do
       variant={@variant}
       phx-click="email"
       phx-disable-with={if emailed?(@record.member), do: "Sending…", else: "Publishing…"}
-      {TaxCreditLetterConfirm.email_one(@record)}
+      {if @ask, do: TaxCreditLetterConfirm.email_one(@record), else: %{}}
     >
       {email_label(@record.member)}
     </.button>
