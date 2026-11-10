@@ -312,7 +312,6 @@ defmodule Web.Components.PublishedPDF do
 
   defp what(:published), do: "Published"
   defp what(:published_again), do: "Published again:"
-  defp what(:emailed), do: "Emailed"
   defp what(:withdrawn), do: "Withdrew"
 
   defp row_id(id, row), do: "#{id}-#{row.what}-#{row.pdf.id}"

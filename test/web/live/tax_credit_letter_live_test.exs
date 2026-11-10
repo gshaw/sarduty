@@ -97,7 +97,8 @@ defmodule Web.TaxCreditLetterLiveTest do
            )
 
     assert has_element?(lv, "#letter-email", "Emailed")
-    assert has_element?(lv, "#letter-history-emailed-#{letter.id}")
+    # Emails aren't History: the Published section says where it went.
+    refute has_element?(lv, "#letter-history-emailed-#{letter.id}")
   end
 
   test "emails an up-to-date letter as it is, and keeps when", %{

@@ -44,7 +44,9 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   drawn when the page asks (`Service.PDFImages.first_page/2`), or the letter as it
   prints today, marked DRAFT, with the team's signature when it has one. The draft is
   only a picture, never a download. History lists every letter for the year from their
-  own dates ([PublishedHistory](../lib/app/view_data/published_history.ex)).
+  own dates ([PublishedHistory](../lib/app/view_data/published_history.ex)): published,
+  published again, and withdrawn. Emails aren't History, since a letter keeps only its
+  last one (`emailed_at`); the Published section says when it last went, and to whom.
 - **The letters list says where each letter is, in a word**: No letter, Emailed, or Not
   emailed, with a badge when it needs a team admin: Out of date, Did not send, or No
   email. Each tile is a to-do. To email is everyone Email would reach that needs it: no
