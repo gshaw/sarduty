@@ -96,6 +96,36 @@ defmodule Web.TaxCreditLetterLive do
     <h1 class="title">{@page_title}</h1>
 
     <div class="content-wrapper">
+      <aside class="content-1/3">
+        <dl>
+          <dt>Member</dt>
+          <dd>
+            <.a navigate={~p"/teams/#{@current_team}/members/#{@member.id}?when=#{@year}"}>{@member.name}</.a>
+            <br /><.email id="letter-member-email" email={@member.email} />
+          </dd>
+          <dt>{if @letter, do: "Hours now", else: "Hours"}</dt>
+          <dd id="letter-hours-now">
+            {Service.Format.duration(@hours.total_minutes)}
+            <span class="hint block">
+              {Service.Format.duration(@hours.primary_minutes)} primary, {Service.Format.duration(
+                @hours.secondary_minutes
+              )} secondary
+            </span>
+          </dd>
+          <dt>Actions</dt>
+          <dd>
+            <ul class="action-list">
+              <li>
+                <.a
+                  id="letter-activities"
+                  navigate={~p"/teams/#{@current_team}/members/#{@member.id}?tag=both&when=#{@year}"}
+                >Activities with tax credit hours</.a>
+              </li>
+            </ul>
+          </dd>
+        </dl>
+      </aside>
+
       <main class="content-2/3">
         <%= if @letter do %>
           <section id="letter-published" class="mb-8">
@@ -189,36 +219,6 @@ defmodule Web.TaxCreditLetterLive do
 
         <.history id="letter-history" rows={@history} team={@current_team} />
       </main>
-
-      <aside class="content-1/3">
-        <dl>
-          <dt>Member</dt>
-          <dd>
-            <.a navigate={~p"/teams/#{@current_team}/members/#{@member.id}?when=#{@year}"}>{@member.name}</.a>
-            <br /><.email id="letter-member-email" email={@member.email} />
-          </dd>
-          <dt>{if @letter, do: "Hours now", else: "Hours"}</dt>
-          <dd id="letter-hours-now">
-            {Service.Format.duration(@hours.total_minutes)}
-            <span class="hint block">
-              {Service.Format.duration(@hours.primary_minutes)} primary, {Service.Format.duration(
-                @hours.secondary_minutes
-              )} secondary
-            </span>
-          </dd>
-          <dt>Actions</dt>
-          <dd>
-            <ul class="action-list">
-              <li>
-                <.a
-                  id="letter-activities"
-                  navigate={~p"/teams/#{@current_team}/members/#{@member.id}?tag=both&when=#{@year}"}
-                >Activities with tax credit hours</.a>
-              </li>
-            </ul>
-          </dd>
-        </dl>
-      </aside>
     </div>
     """
   end
