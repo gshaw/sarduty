@@ -74,13 +74,10 @@ defmodule Web.CardLinkControllerTest do
         do: assert(conn |> get("/cards/not-a-token/#{route}") |> response(404))
   end
 
-  # Nor its PDF. Its picture draws grey, for its page.
+  # Nor a picture of the card, nor its PDF.
   defp assert_no_passes(conn, card) do
-    for route <- ~w(apple-wallet google-wallet pdf),
+    for route <- ~w(apple-wallet google-wallet image pdf),
         do: assert(conn |> get(CardLinks.path(card) <> "/#{route}") |> response(404))
-
-    assert <<0x89, "PNG", _rest::binary>> =
-             conn |> get(CardLinks.path(card) <> "/image") |> response(200)
 
     refute_received {:google, _, _, _}
   end

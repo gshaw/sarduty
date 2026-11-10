@@ -119,81 +119,64 @@
 // draws it, upright in SAR Duty's navy with yellow labels, so a member can show the page
 // or the picture as they would the pass. Issued takes the pass's Status, and there is no
 // Valid until: a saved picture never updates.
-//
-// A card that is replaced, cancelled, or not active (`card.state`) draws grey, its logo
-// and photo dimmed, with the state where the QR code goes, so the page shows it as dead.
 #let yellow = rgb(255, 196, 0)
-#let grey = rgb(75, 85, 99)
-#let pass-label(body, accent) = text(size: 5.4pt, weight: "bold", fill: accent, upper(body))
-#let pass-field(name, value, accent) = [#pass-label(name, accent) \ #text(size: 7pt, value)]
-#let dim(on, size, body) = box({
-  body
-  if on { place(top + left, rect(width: size, height: size, fill: rgb(75, 85, 99, 150))) }
-})
+#let pass-label(body) = text(size: 5.4pt, weight: "bold", fill: yellow, upper(body))
+#let pass-field(name, value) = [#pass-label(name) \ #text(size: 7pt, value)]
 
-#let pass(card) = {
-  let dead = card.state != none
-  let accent = if dead { rgb(209, 213, 219) } else { yellow }
-  block(
-    width: 54mm,
-    height: 74mm,
-    fill: if dead { grey } else { navy },
-    radius: 3mm,
-    clip: true,
-    inset: (x: 3mm, top: 2.4mm, bottom: 2.2mm),
-    spacing: 0pt,
-    {
-      set text(font: "Arimo", size: 6.4pt, fill: white)
-      set par(leading: 0.42em, spacing: 0.5em)
-      // The logo, and the team's name in the width left: 9 pt, 7.4 pt if that doesn't fit
-      // on one line, then wrapped.
-      grid(
-        columns: (7.4mm, 1fr),
-        column-gutter: 2mm,
-        align: horizon,
-        dim(dead, 7.4mm, image("logo.png", height: 7.4mm)),
-        layout(size => {
-          let one = text(size: 9pt, weight: "bold", fill: accent, card.team)
-          if measure(one).width <= size.width { one } else {
-            block(text(size: 7.4pt, weight: "bold", fill: accent, card.team))
-          }
-        }),
-      )
-      v(3mm)
-      grid(
-        columns: (1fr, 12.5mm),
-        column-gutter: 2mm,
-        align: top,
-        {
-          pass-label(if card.name_label != none { card.name_label } else { "Member" }, accent)
-          linebreak()
-          text(size: 12pt, card.name)
-        },
-        dim(dead, 12.5mm, image("photo.png", width: 12.5mm, height: 12.5mm, fit: "cover")),
-      )
-      v(2.6mm)
-      // The pass's three columns, with its third, Valid until, left empty. "Sep 30, 2026"
-      // fills the first.
-      grid(
-        columns: (33%, 40%, 1fr),
-        pass-field("Issued", card.issued, accent),
-        if card.member_since != none { pass-field("Member since", card.member_since, accent) },
-        [],
-      )
-      v(1fr)
-      if dead {
-        align(center, box(width: 23.7mm, height: 26mm, fill: white, radius: 1mm,
-          align(center + horizon, text(size: 10pt, weight: "bold", fill: grey, card.state))))
-      } else {
-        align(center, box(fill: white, radius: 1mm, inset: (x: 1.6mm, top: 1.6mm, bottom: 1.1mm), {
-          image("qr.svg", width: 20.5mm)
-          v(0.6mm)
-          code-text(card.code, 7pt)
-        }))
-      }
-    },
-  )
-}
+#let pass(card) = block(
+  width: 54mm,
+  height: 74mm,
+  fill: navy,
+  radius: 3mm,
+  clip: true,
+  inset: (x: 3mm, top: 2.4mm, bottom: 2.2mm),
+  spacing: 0pt,
+  {
+    set text(font: "Arimo", size: 6.4pt, fill: white)
+    set par(leading: 0.42em, spacing: 0.5em)
+    // The logo, and the team's name in the width left: 9 pt, 7.4 pt if that doesn't fit
+    // on one line, then wrapped.
+    grid(
+      columns: (7.4mm, 1fr),
+      column-gutter: 2mm,
+      align: horizon,
+      image("logo.png", height: 7.4mm),
+      layout(size => {
+        let one = text(size: 9pt, weight: "bold", fill: yellow, card.team)
+        if measure(one).width <= size.width { one } else {
+          block(text(size: 7.4pt, weight: "bold", fill: yellow, card.team))
+        }
+      }),
+    )
+    v(3mm)
+    grid(
+      columns: (1fr, 12.5mm),
+      column-gutter: 2mm,
+      align: top,
+      {
+        pass-label(if card.name_label != none { card.name_label } else { "Member" })
+        linebreak()
+        text(size: 12pt, card.name)
+      },
+      image("photo.png", width: 12.5mm, height: 12.5mm, fit: "cover"),
+    )
+    v(2.6mm)
+    // The pass's three columns, with its third, Valid until, left empty. "Sep 30, 2026"
+    // fills the first.
+    grid(
+      columns: (33%, 40%, 1fr),
+      pass-field("Issued", card.issued),
+      if card.member_since != none { pass-field("Member since", card.member_since) },
+      [],
+    )
+    v(1fr)
+    align(center, box(fill: white, radius: 1mm, inset: (x: 1.6mm, top: 1.6mm, bottom: 1.1mm), {
+      image("qr.svg", width: 20.5mm)
+      v(0.6mm)
+      code-text(card.code, 7pt)
+    }))
+  },
+)
 
 // One Letter page to cut out: whose card, what to do, and both sides at actual size, each
 // cut on its own edge, so the piece is the card's size and fits a card holder.

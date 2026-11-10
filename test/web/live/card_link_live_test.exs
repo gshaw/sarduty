@@ -25,7 +25,7 @@ defmodule Web.CardLinkLiveTest do
     path = member |> member_card_fixture() |> CardLinks.path()
     {:ok, lv, _html} = live(conn, path)
 
-    assert has_element?(lv, "#card-link-intro", "Coast Range SAR")
+    assert has_element?(lv, "#card-link-title", "Your Coast Range SAR ID card")
 
     assert has_element?(
              lv,
@@ -61,7 +61,7 @@ defmodule Web.CardLinkLiveTest do
     assert order == Enum.sort(order)
     assert has_element?(lv, "#card-link-help #card-link-lost", "Ask a team admin")
 
-    assert has_element?(lv, ~s{#card-link-card img[src="#{path}/image?status=active"]})
+    assert has_element?(lv, ~s{#card-link-card img[src="#{path}/image"]})
 
     assert has_element?(
              lv,
@@ -204,7 +204,6 @@ defmodule Web.CardLinkLiveTest do
     {:ok, lv, _html} = live(conn, CardLinks.path(old))
 
     assert has_element?(lv, "#card-link-replaced", "Use the link in your newest email.")
-    assert_grey_card(lv, old, :replaced)
     refute_offers(lv)
   end
 
@@ -218,7 +217,6 @@ defmodule Web.CardLinkLiveTest do
              "This ID card was cancelled. Ask a team admin"
            )
 
-    assert_grey_card(lv, card, :cancelled)
     refute_offers(lv)
   end
 
@@ -228,7 +226,6 @@ defmodule Web.CardLinkLiveTest do
     {:ok, lv, _html} = live(conn, CardLinks.path(card))
 
     assert has_element?(lv, "#card-link-inactive", "This ID card is not active. Ask a team admin")
-    assert_grey_card(lv, card, :inactive)
     refute_offers(lv)
   end
 
@@ -264,18 +261,12 @@ defmodule Web.CardLinkLiveTest do
     assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/cards/not-a-token") end
   end
 
-  # A dead card's page shows its picture, drawn grey with its state, to show it's dead.
-  defp assert_grey_card(lv, card, status) do
-    src = CardLinks.path(card) <> "/image?status=#{status}"
-    assert has_element?(lv, ~s{img#card-link-card[src="#{src}"]})
-  end
-
   defp refute_offers(lv) do
     refute has_element?(lv, "#card-link-wallets")
     refute has_element?(lv, "#card-link-wallets-apple")
     refute has_element?(lv, "#card-link-wallets-google")
     refute has_element?(lv, "#open-on-phone")
-    refute has_element?(lv, "#card-link-card-save")
+    refute has_element?(lv, "#card-link-card")
     refute has_element?(lv, "#card-link-print")
     refute has_element?(lv, "#card-link-verify")
   end

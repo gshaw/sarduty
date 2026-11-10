@@ -50,7 +50,7 @@ defmodule Web.CardLinkLive do
     {:ok,
      socket
      |> assign(
-       page_title: "Your ID card",
+       page_title: "Your #{team.name} ID card",
        token: token,
        team: team,
        url: Web.Endpoint.url() <> ~p"/cards/#{token}",
@@ -167,7 +167,9 @@ defmodule Web.CardLinkLive do
     </.breadcrumbs>
     <div class="md:flex md:gap-8">
       <div class="md:w-2/3 min-w-0">
-        <h1 class="heading">Your ID card</h1>
+        <%!-- The team in the title: a member from the email isn't logged in, so the bar
+        doesn't name it, and a replaced or cancelled card shows no picture. --%>
+        <h1 id="card-link-title" class="heading">Your {@team.name} ID card</h1>
         <.card_state
           status={@status}
           team={@team}
@@ -233,21 +235,18 @@ defmodule Web.CardLinkLive do
   defp card_state(%{status: :replaced} = assigns) do
     ~H"""
     <p id="card-link-replaced">This ID card was replaced. Use the link in your newest email.</p>
-    <.card_picture id="card-link-card" class="mt-4" token={@token} card={@card} status={@status} />
     """
   end
 
   defp card_state(%{status: :cancelled} = assigns) do
     ~H"""
     <p id="card-link-cancelled">This ID card was cancelled. Ask a team admin if you need one.</p>
-    <.card_picture id="card-link-card" class="mt-4" token={@token} card={@card} status={@status} />
     """
   end
 
   defp card_state(%{status: :inactive} = assigns) do
     ~H"""
     <p id="card-link-inactive">This ID card is not active. Ask a team admin if you need one.</p>
-    <.card_picture id="card-link-card" class="mt-4" token={@token} card={@card} status={@status} />
     """
   end
 
@@ -282,7 +281,11 @@ defmodule Web.CardLinkLive do
   defp card_image(assigns) do
     ~H"""
     <div id={@id} class={@class}>
-      <.card_picture token={@token} card={@card} status={:active} />
+      <img
+        src={~p"/cards/#{@token}/image"}
+        alt={"#{@card.member.name}'s ID card"}
+        class="id-card-image"
+      />
       <p class="action mt-2 mb-0">
         <.a
           id={"#{@id}-save"}
@@ -293,26 +296,6 @@ defmodule Web.CardLinkLive do
         >Save image</.a>
       </p>
     </div>
-    """
-  end
-
-  attr :id, :string, default: nil
-  attr :class, :string, default: nil
-  attr :token, :string, required: true
-  attr :card, :map, required: true
-  attr :status, :atom, required: true
-
-  # The picture alone: a replaced, cancelled, or not active card's draws grey, with its
-  # state where the QR code goes. The status in the link keeps a cached live picture off
-  # a card that has since died.
-  defp card_picture(assigns) do
-    ~H"""
-    <img
-      id={@id}
-      src={~p"/cards/#{@token}/image?#{[status: @status]}"}
-      alt={"#{@card.member.name}'s ID card"}
-      class={["id-card-image", @class]}
-    />
     """
   end
 
