@@ -1,8 +1,8 @@
 defmodule App.Operation.BuildDemoTeam do
   @moduledoc """
   Builds a visitor's demo the first time they open its link (#857), the way a team signs
-  up: Coast Range SAR, Silver Basin SAR beside it, and WESARA's copy with both in it
-  (#963). Records makes each team from its cast and picks its ids (App.DemoCast). SAR
+  up: Coast Range SAR, Silver Basin SAR beside it, and WESARA's copy with both in it and
+  its made-up Task report on (#963, App.Operation.AddDemoForms). Records makes each team from its cast and picks its ids (App.DemoCast). SAR
   Duty then adds each team, marked as the demo's before anything can send, refreshes it
   like any team, and adds what only SAR Duty keeps on Coast Range (endorsements, ID
   cards, away periods, chores), matched through Records' ids. Silver Basin never syncs
@@ -31,6 +31,7 @@ defmodule App.Operation.BuildDemoTeam do
   alias App.Model.Tag
   alias App.Model.Team
   alias App.Model.Trip
+  alias App.Operation.AddDemoForms
   alias App.Operation.DeleteTeam
   alias App.Operation.RefreshD4HData
   alias App.Repo
@@ -245,8 +246,9 @@ defmodule App.Operation.BuildDemoTeam do
   defp link_demo(demo, field, team, _now),
     do: demo |> Ecto.Changeset.change([{field, team.id}]) |> Repo.update!()
 
-  # WESARA's copy, with both teams in it, its two organization admins, and a demo's
-  # visitor beside them: the senior manager who opens both Coast Range and its space.
+  # WESARA's copy, with both teams in it, its two organization admins, a demo's visitor
+  # beside them (the senior manager who opens both Coast Range and its space), and its
+  # made-up forms, on.
   defp insert_organization(demo, teams, slug, visitor) do
     {:ok, organization} =
       Repo.transaction(fn ->
@@ -266,6 +268,8 @@ defmodule App.Operation.BuildDemoTeam do
             reason: admin.title
           })
         end
+
+        AddDemoForms.call(organization)
 
         if demo do
           DemoTeam

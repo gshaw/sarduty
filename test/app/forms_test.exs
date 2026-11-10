@@ -88,6 +88,22 @@ defmodule App.FormsTest do
     end
   end
 
+  describe "WESARA's Task report (#963)" do
+    test "its page is the blank its Typst program draws" do
+      {:ok, drawn} = "#{@dir}/wesara/task_report.typ" |> File.read!() |> Service.Typst.compile()
+      assert drawn == File.read!("#{@dir}/wesara/task_report.pdf")
+    end
+
+    # So it prints on any team, Records teams included.
+    test "reads only an activity's own fields, never a custom field" do
+      {:ok, doc} = "#{@dir}/wesara/task_report.txt" |> File.read!() |> Document.parse()
+
+      for report <- doc.reports,
+          field <- report.query.select,
+          do: refute(Query.text(field) =~ "`", Query.text(field))
+    end
+  end
+
   describe "BCSARA's Supplement" do
     setup do
       context = Context.new(SampleRepo.team(), DateTime.utc_now(), repo: SampleRepo)

@@ -10,7 +10,8 @@
 # their addresses, never expire, and show no banner. A site admin joins Coast Range as
 # the demo's visitor: a team admin beside Alex Chen, with an ID card, awards, and Missing
 # hiker attended. SAR Duty admins open every organization; Morgan Ellis and Rowan Pike
-# are WESARA's organization admins, logging in by code from /dev/mailbox.
+# are WESARA's organization admins, logging in by code from /dev/mailbox. WESARA's
+# made-up Task report is on, to try forms and Publish (App.Operation.AddDemoForms).
 #
 #   mise exec -- mix run --no-start tools/dev-teams.exs                        # build, once
 #   mise exec -- mix run --no-start tools/dev-teams.exs --reset                # delete them, then build with today's dates

@@ -63,6 +63,12 @@ BCSARA's are EMCR's Task report (1.01), on EMCR's own page, and its Expense
 reimbursement request and the request's Supplement, in D4H's layout
 ([documents.md](documents.md#preparing-a-form)).
 
+WESARA's is a made-up Task report (`priv/forms/wesara`, #963), on its own two-page page
+drawn by Typst. It reads only an activity's own fields, so it prints on any team, and
+each demo's WESARA and the dev WESARA get it, on (`App.Operation.AddDemoForms`). Saving
+checks a form on every team in the organization, so one that reads an agency's custom
+fields, like EMCR's, fails for a team without them, such as a Records team.
+
 ## What an organization changes today
 
 - **Its verify page**, `verify.sarduty.com/orgs/<slug>`, shows the organization's logo and

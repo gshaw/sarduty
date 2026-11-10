@@ -126,6 +126,10 @@ moment it opens, staged in `App.CoastRange` (its moduledoc has the cases):
   booth.
 - **Whiteboard notes**, one important, and **saved places** for the activity form.
 - Letters have Alex Chen as signer, so only the signature is missing.
+- **A form to publish**: WESARA's Task report (`priv/forms/wesara`), on, so the visitor
+  fills it on an incident and selects Publish; its PDF says SAMPLE. It is made up, and
+  reads only an activity's own fields, since Records teams have no custom fields
+  (`App.Operation.AddDemoForms`). The dev WESARA gets it too.
 
 Not staged: certificates waiting for review (Records has no documents, so accepting one
 can't attach its file), an activity on now for Take attendance (a demo lasts 3 days), and
