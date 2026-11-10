@@ -2,7 +2,8 @@ defmodule App.ViewData.PublishedHistory do
   @moduledoc """
   A subject's published PDFs as History rows, newest first (#970): a letter's for its
   member and year, a form's for its activity. Built from what each PDF keeps, so nothing
-  writes History: published, published again, and withdrawn. Emails aren't History: a
+  writes History: published and withdrawn. A PDF that replaced another is Published too:
+  the one it replaced shows Replaced (#995). Emails aren't History: a
   PDF keeps only its last email, so re-sends would go missing, and the Published section
   says where it went (#995). A member's downloads aren't kept either. Pure: the PDFs,
   with `user` and `withdrawn_by` loaded, and their names in.
@@ -11,24 +12,20 @@ defmodule App.ViewData.PublishedHistory do
   alias App.Model.PublishedPDF
 
   @doc """
-  `[%{at, what, pdf, by}]`: `what` is `:published`, `:published_again`, or `:withdrawn`,
+  `[%{at, what, pdf, by}]`: `what` is `:published` or `:withdrawn`,
   and `by` a name or nil. `names` maps a user's id to the name shown for them.
   """
   def rows(pdfs, names) do
-    replacing = MapSet.new(pdfs, & &1.replaced_by_id)
-
     pdfs
-    |> Enum.flat_map(&pdf_rows(&1, MapSet.member?(replacing, &1.id), names))
+    |> Enum.flat_map(&pdf_rows(&1, names))
     |> Enum.reject(&is_nil/1)
     |> Enum.sort_by(&{&1.at, &1.order}, &newer?/2)
     |> Enum.map(&Map.delete(&1, :order))
   end
 
-  defp pdf_rows(pdf, replaced_another?, names) do
-    published = if replaced_another?, do: :published_again, else: :published
-
+  defp pdf_rows(pdf, names) do
     [
-      row(pdf.inserted_at, published, pdf, name(names, pdf.user_id), 0),
+      row(pdf.inserted_at, :published, pdf, name(names, pdf.user_id), 0),
       withdrawn(pdf, names)
     ]
   end

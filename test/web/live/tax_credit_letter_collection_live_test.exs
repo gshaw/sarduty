@@ -282,44 +282,80 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
              )
     end
 
-    # Its letters would need publishing again once it ends (#995).
-    test "a year that isn't over can't be emailed, and says when it can", %{
+    # Early: its letters have the hours so far, and go out of date as more are added (#995).
+    test "a year that isn't over is emailed early, after a box that says so", %{
       conn: conn,
       team: team
     } do
-      year = Service.YearRange.year_in(DateTime.utc_now(), team.timezone)
+      App.Clock.freeze(~U[2026-11-10 20:00:00Z])
       avery = member_fixture(team, %{name: "Avery"})
-      {start, _finish} = Service.YearRange.bounds(year, team.timezone)
 
       activity =
-        activity_fixture(team, %{started_at: start, finished_at: DateTime.add(start, 90, :minute)})
+        activity_fixture(team, %{
+          started_at: ~U[2026-03-01 17:00:00Z],
+          finished_at: ~U[2026-03-01 18:30:00Z]
+        })
 
       attendance_fixture(activity, avery)
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=#{year}&filter=any")
-      when_text = "#{year} letters can be emailed from January 1, #{year + 1}."
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2026&filter=any")
+      refute has_element?(lv, "#letters-year-open")
+      check(lv, [avery], "email")
 
-      # Nothing can be emailed until the year ends, so nothing can be withdrawn: no boxes,
-      # no choices, and no button.
-      assert has_element?(lv, "#letters-year-open", when_text)
-      refute has_element?(lv, "#letters-select-#{avery.id}")
-      refute has_element?(lv, "#letters-choice")
-      refute has_element?(lv, "#letters-apply")
+      assert has_element?(
+               lv,
+               "#letters-choice",
+               "Emails the 1 checked their latest letter, with their hours so far. 2026 isn't over, so it asks first."
+             )
 
-      # A stale page's submit is refused.
-      lv
-      |> element("#letters-form")
-      |> render_submit(%{"member_ids" => [to_string(avery.id)], "choice" => "email"})
+      assert has_element?(
+               lv,
+               ~s(#letters-apply[data-confirm-check="I know the 2026 tax year isn't over. I'm emailing early to test."])
+             )
 
-      assert has_element?(lv, "#flash-error", when_text)
-      refute Repo.exists?(PublishedPDF)
+      assert has_element?(
+               lv,
+               ~s(#letters-apply[data-confirm-warning="2026 isn't over. Hours added later make this letter out of date, and emailing it again in January replaces it."])
+             )
 
-      # The operation refuses it too.
+      apply_choice(lv, [avery], "email")
+      assert has_element?(lv, "#letters-emailed", "Emailing 1 tax credit letter for 2026.")
+      assert_email_sent(fn email -> assert email.to == [{"", avery.email}] end)
+      [letter] = Repo.all(PublishedPDF)
+
+      # Emailed again with the same hours, the same letter goes: nothing replaces it.
+      check(lv, [avery], "email")
+
+      assert has_element?(
+               lv,
+               ~s(#letters-apply[data-confirm-list='["Avery, their letter again"]'])
+             )
+
+      apply_choice(lv, [avery], "email")
+      assert_email_sent(fn email -> assert email.to == [{"", avery.email}] end)
+      assert [%{id: id, replaced_by_id: nil, withdrawn_at: nil}] = Repo.all(PublishedPDF)
+      assert id == letter.id
+
+      # Once hours are added, it's out of date, and Email publishes a new one in its place.
+      later =
+        activity_fixture(team, %{
+          started_at: ~U[2026-11-01 17:00:00Z],
+          finished_at: ~U[2026-11-01 18:00:00Z]
+        })
+
+      attendance_fixture(later, avery)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2026&filter=any")
+      assert has_element?(lv, "#hours-changed-#{avery.id}", "Out of date")
+      apply_choice(lv, [avery], "email")
+      assert letter |> Repo.reload!() |> PublishedPDF.status() == :replaced
+
+      # Without early: true, the operation refuses it.
+      refused = "2026 isn't over. Email sends its letters only once you tick that it's early."
       user = App.AccountsFixtures.user_fixture()
-      assert EmailTaxCreditLetters.call(team, year, [avery.id], user) == {:error, when_text}
+      assert EmailTaxCreditLetters.call(team, 2026, [avery.id], user) == {:error, refused}
 
-      assert %{refused: [{nil, ^when_text}], published: 0} =
-               EmailTaxCreditLetters.run(team, year, [avery.id], nil)
+      assert %{refused: [{nil, ^refused}], published: 0} =
+               EmailTaxCreditLetters.run(team, 2026, [avery.id], nil)
     end
 
     test "says what letters need to publish, with the tab that fills it (#995)",

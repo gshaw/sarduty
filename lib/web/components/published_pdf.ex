@@ -293,7 +293,7 @@ defmodule Web.Components.PublishedPDF do
           <.a href={~p"/teams/#{@team}/pdfs/#{row.pdf.id}"} target="_blank" class="mono">{PublishedPDF.format_code(
             row.pdf.code
           )}</.a>
-          <.status_badge :if={row.what in [:published, :published_again]} pdf={row.pdf} />
+          <.status_badge :if={row.what == :published} pdf={row.pdf} />
         </:col>
         <:col :let={row} label="By">{row.by}</:col>
       </.table>
@@ -311,7 +311,6 @@ defmodule Web.Components.PublishedPDF do
   end
 
   defp what(:published), do: "Published"
-  defp what(:published_again), do: "Published again:"
   defp what(:withdrawn), do: "Withdrew"
 
   defp row_id(id, row), do: "#{id}-#{row.what}-#{row.pdf.id}"

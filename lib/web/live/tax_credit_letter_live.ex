@@ -18,7 +18,8 @@ defmodule Web.TaxCreditLetterLive do
   # ID, where its email is, Download, Email letter, and Withdraw letter. With none yet,
   # Not published and Email letter. A member with no email gets Publish letter, the same
   # action (App.Operation.EmailTaxCreditLetters), left out while a value the letter needs
-  # to publish is blank. Page 1 shows either way, the draft signed as the letter will
+  # to publish is blank. In a year that isn't over, Email is early, and its confirm waits
+  # on a box that says so. Page 1 shows either way, the draft signed as the letter will
   # be, and History lists every letter for the year.
   def mount(_params, _session, socket), do: {:ok, socket}
 
@@ -39,9 +40,8 @@ defmodule Web.TaxCreditLetterLive do
      socket
      |> assign(page_title: "#{member.name}'s #{year} tax credit letter")
      |> assign(member: member, year: year)
-     # A year that isn't over can't be emailed yet, so nothing can be withdrawn: no
-     # actions, and the page says when (#995).
-     |> assign(refusal: EmailTaxCreditLetters.refusal(year, team, Service.Clock.utc_now()))
+     # A year that isn't over is early (#995): Email asks first.
+     |> assign(early: EmailTaxCreditLetters.early?(year, team, Service.Clock.utc_now()))
      |> assign_letter()}
   end
 
@@ -151,10 +151,7 @@ defmodule Web.TaxCreditLetterLive do
           id="letter-out-of-date"
           noun="letter"
           changes={@record.changes}
-          next={
-            is_nil(@refusal) &&
-              "#{email_label(@member)} makes a new one#{if emailed?(@member), do: " and sends it"}."
-          }
+          next={"#{email_label(@member)} makes a new one#{if emailed?(@member), do: " and sends it"}."}
         />
         <.needed_banner
           id="letter-needed"
@@ -176,10 +173,9 @@ defmodule Web.TaxCreditLetterLive do
               </p>
             </:status>
             <:actions>
-              <.email_button :if={is_nil(@refusal) and @needed == []} record={@record} />
-              <span :if={@refusal} id="letter-year-open" class="hint">{@refusal}</span>
+              <.email_button :if={@needed == []} record={@record} early={if(@early, do: @year)} />
             </:actions>
-            <:withdraw :if={is_nil(@refusal)}>
+            <:withdraw>
               <.button
                 id="withdraw-letter"
                 variant={:danger}
@@ -203,11 +199,11 @@ defmodule Web.TaxCreditLetterLive do
             <div class="card">
               <p class="mb-4">No letter for {@year} yet. This is how it prints today.</p>
               <.email_button
-                :if={is_nil(@refusal) and @needed == []}
+                :if={@needed == []}
                 record={@record}
+                early={if(@early, do: @year)}
                 variant={:primary}
               />
-              <p :if={@refusal} id="letter-year-open" class="hint">{@refusal}</p>
               <p :if={is_nil(@record.email)} id="letter-no-hours" class="hint">
                 {@member.name} has no hours in {@year}, so there is no letter to email.
               </p>
@@ -230,11 +226,12 @@ defmodule Web.TaxCreditLetterLive do
   end
 
   attr :record, :map, required: true
+  attr :early, :any, required: true, doc: "the year when it isn't over, so Email asks first"
   attr :variant, :atom, default: :default
 
   # Email letter, or Publish letter for a member with no email: the same action. It's left
-  # out while a value it needs is blank, as the banner over it says, and in a year that
-  # isn't over, where the page says when it can.
+  # out while a value it needs is blank, as the banner over it says. In a year that isn't
+  # over, its confirm waits on a box that says it's early.
   defp email_button(assigns) do
     ~H"""
     <.button
@@ -243,7 +240,7 @@ defmodule Web.TaxCreditLetterLive do
       variant={@variant}
       phx-click="email"
       phx-disable-with={if emailed?(@record.member), do: "Sending…", else: "Publishing…"}
-      {TaxCreditLetterConfirm.email_one(@record)}
+      {TaxCreditLetterConfirm.email_one(@record, @early)}
     >
       {email_label(@record.member)}
     </.button>
@@ -294,16 +291,11 @@ defmodule Web.TaxCreditLetterLive do
 
   defp code(letter), do: PublishedPDF.format_code(letter.code)
 
-  # A stale page's click in a year that isn't over: nothing can go yet.
-  def handle_event(_event, _params, %{assigns: %{refusal: refusal}} = socket)
-      when is_binary(refusal),
-      do: {:noreply, socket |> put_flash(:error, refusal) |> assign_letter()}
-
   def handle_event("email", _params, socket) do
     %{current_team: team, current_user: user, member: member, year: year} = socket.assigns
 
     socket =
-      case EmailTaxCreditLetters.call_one(team, member, year, user) do
+      case EmailTaxCreditLetters.call_one(team, member, year, user, early: socket.assigns.early) do
         {:ok, result} -> put_email_flash(socket, member, result)
         {:error, message} -> put_flash(socket, :error, message)
       end

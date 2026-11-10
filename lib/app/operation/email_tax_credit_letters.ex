@@ -21,9 +21,10 @@ defmodule App.Operation.EmailTaxCreditLetters do
   gets the letter published, on Your membership only, and one with no hours that year
   gets nothing.
 
-  It refuses a year that isn't over in the team's time zone: its letters would need
-  publishing again once it ends. A letter that needs a value the team left blank isn't
-  published (PublishTaxCreditLetter), and so isn't emailed.
+  A year that isn't over in the team's time zone is early (`early?/3`): its letters have
+  the hours so far, and go out of date as more are added. The pages ask first, and say
+  so with `early: true`; without it, Email refuses. A letter that needs a value the team
+  left blank isn't published (PublishTaxCreditLetter), and so isn't emailed.
 
   One member, from the letter page, publishes and emails at once (`call_one/5`). Many,
   from the letters list, run in a job (App.Worker.EmailTaxCreditLettersWorker), since
@@ -71,30 +72,31 @@ defmodule App.Operation.EmailTaxCreditLetters do
   def emailed?(member), do: member.email not in [nil, ""]
 
   @doc """
-  Why `year`'s letters can't be emailed yet, or nil when they can: its year isn't over
-  in the team's time zone, so they would need publishing again once it ends.
+  Whether Email for `year` is early: the year isn't over in the team's time zone, so a
+  letter has the hours so far and goes out of date as more are added. The pages ask
+  first, with a box (Web.TaxCreditLetterConfirm), and pass `early: true`.
   """
-  def refusal(year, %Team{} = team, now) do
-    if TaxCreditLetter.year_over?(year, now, team.timezone),
-      do: nil,
-      else:
-        "#{year} letters can be emailed from #{Service.Format.date_long(Date.new!(year + 1, 1, 1))}."
+  def early?(year, %Team{} = team, now),
+    do: not TaxCreditLetter.year_over?(year, now, team.timezone)
+
+  @doc "Why Email refuses `year`'s letters, or nil: early, and not asked for with `early: true`."
+  def refusal(year, %Team{} = team, now, early) do
+    if early?(year, team, now) and early != true,
+      do: "#{year} isn't over. Email sends its letters only once you tick that it's early.",
+      else: nil
   end
 
   @doc """
   Email for one member, from their letter page: publishes their letter first when it
   needs to, then emails it at once with `EmailTaxCreditLetter.send_now/2`, so the page
   says whether it went. `{:ok, %{letter, published, email}}`, where `email` is `:ok`,
-  `:no_email`, or `{:error, reason}`, or `{:error, message}` with nothing done.
+  `:no_email`, or `{:error, reason}`, or `{:error, message}` with nothing done. Options:
+  `early: true` for a year that isn't over, and `now`.
   """
-  def call_one(
-        %Team{} = team,
-        %Member{} = member,
-        year,
-        %User{} = user,
-        now \\ Service.Clock.utc_now()
-      ) do
-    case refusal(year, team, now) do
+  def call_one(%Team{} = team, %Member{} = member, year, %User{} = user, opts \\ []) do
+    now = opts[:now] || Service.Clock.utc_now()
+
+    case refusal(year, team, now, opts[:early]) do
       nil -> email_one(team, %{member | team: team}, year, user, now)
       message -> {:error, message}
     end
@@ -131,13 +133,16 @@ defmodule App.Operation.EmailTaxCreditLetters do
   defp not_offered(%{member: member}), do: "#{member.name} has no email."
 
   @doc """
-  Email for many members of the team, from the letters list: refuses a year that isn't
-  over, else queues the job that emails them. `{:ok, count}` or `{:error, message}`.
+  Email for many members of the team, from the letters list: queues the job that emails
+  them. `{:ok, count}`, or `{:error, message}` for a year that isn't over without
+  `early: true`. Options as `call_one/5`'s.
   """
-  def call(%Team{} = team, year, member_ids, %User{} = user, now \\ Service.Clock.utc_now()) do
-    case refusal(year, team, now) do
+  def call(%Team{} = team, year, member_ids, %User{} = user, opts \\ []) do
+    now = opts[:now] || Service.Clock.utc_now()
+
+    case refusal(year, team, now, opts[:early]) do
       nil ->
-        EmailTaxCreditLettersWorker.enqueue(team, year, member_ids, user)
+        EmailTaxCreditLettersWorker.enqueue(team, year, member_ids, user, opts[:early] == true)
         {:ok, length(member_ids)}
 
       message ->
@@ -151,11 +156,13 @@ defmodule App.Operation.EmailTaxCreditLetters do
   still missing. Records the counts as an event, tells the letter list, and returns the
   summary, `%{year, published, emailing, not_emailed, refused, stale}`: `not_emailed` the
   members with no email who got a letter published, and `refused` the messages of those
-  a value they need kept from being published, by member.
+  a value they need kept from being published, by member. Options as `call_one/5`'s.
   """
-  def run(%Team{} = team, year, member_ids, user_id, now \\ Service.Clock.utc_now()) do
+  def run(%Team{} = team, year, member_ids, user_id, opts \\ []) do
+    now = opts[:now] || Service.Clock.utc_now()
+
     summary =
-      case refusal(year, team, now) do
+      case refusal(year, team, now, opts[:early]) do
         nil ->
           team
           |> records(year, member_ids, now)
