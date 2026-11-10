@@ -207,17 +207,19 @@ defmodule App.Model.Event do
   an account with only events from before it was kept.
   """
   def get_top_accounts(kinds, since, limit) do
-    top =
-      kinds
-      |> top(since, limit)
-      |> where([e], not is_nil(e.who))
-      |> group_by([e], e.who)
-      |> select([e], {e.who, count(e.id)})
-      |> order_by([e], asc: e.who)
-      |> Repo.all()
-
+    top = get_top_hashes(kinds, since, limit)
     shown = top |> Enum.map(&elem(&1, 0)) |> get_shown()
     Enum.map(top, fn {who, count} -> {who, shown[who], count} end)
+  end
+
+  defp get_top_hashes(kinds, since, limit) do
+    kinds
+    |> top(since, limit)
+    |> where([e], not is_nil(e.who))
+    |> group_by([e], e.who)
+    |> select([e], {e.who, count(e.id)})
+    |> order_by([e], asc: e.who)
+    |> Repo.all()
   end
 
   # The latest email or number typed for each hash. Each is encrypted with its own IV,
@@ -229,9 +231,8 @@ defmodule App.Model.Event do
         group_by: e.who,
         select: max(e.id)
 
-    from(e in Event, where: e.id in subquery(latest), select: {e.who, e.email_or_phone})
-    |> Repo.all()
-    |> Map.new()
+    query = from e in Event, where: e.id in subquery(latest), select: {e.who, e.email_or_phone}
+    query |> Repo.all() |> Map.new()
   end
 
   defp top(kinds, since, limit) do
