@@ -467,11 +467,16 @@ through the team's organization, so a form that's off or another organization's 
   answer that's the ask's plain default, such as On task's Yes, isn't kept: a choice
   sends one for every row. A report a form only works a value out for on each row, such
   as each equipment use's total, shows too, with no boxes.
-- **Publish**, on a form that's on (App.Operation.PublishDocument): checks, reads the
-  form with the activity's answers, prints with a new ID, the verify code, and the
-  team's signature, and saves in one transaction. When another admin published
-  meanwhile, it says "Someone just published this. Reload to see it." History shows each
-  publish and withdraw (App.ViewData.ChangeHistory, from the PDFs themselves).
+- **Publish**, on a form that's on (App.Operation.PublishDocument), opens its preview
+  at `…/forms/:form_id/publish`: it checks, reads the form with the activity's answers,
+  and prints once with a new ID, the verify code, and the team's signature. The page
+  shows every page as a picture (Service.PDFImages) and what publishing does: its ID,
+  what its verify page shows, what it replaces, and that it isn't sent anywhere.
+  Publish there checks again and saves that same PDF in one transaction, so what's kept
+  is what was looked at. When another admin published meanwhile, it says "Someone just
+  published this. Reload to see it." Publish again goes through the same preview.
+  History shows each publish and withdraw (App.ViewData.ChangeHistory, from the PDFs
+  themselves).
 - **Download draft PDF** posts the answers to Web.ActivityFormPDFController,
   since a LiveView can't send a PDF, and the browser shows it. DRAFT runs across
   each page, the verify code's place is a grey box, and the signature is left blank.

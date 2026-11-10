@@ -1,17 +1,19 @@
 defmodule App.Operation.PublishDocument do
   @moduledoc """
   The one way an organization's form publishes (#970): Publish on an activity's form
-  page. A draft is never saved; publishing prints once, with a new ID, its verify code,
-  and the team's signature, and keeps the PDF, every answer it printed with, the values
-  `keep` names, and what `verify shows` printed (App.Model.PublishedPDF).
+  page opens a preview, and Publish there keeps it. A draft is never saved; the preview
+  prints once, with a new ID, its verify code, and the team's signature, and publishing
+  keeps that PDF, every answer it printed with, the values `keep` names, and what
+  `verify shows` printed (App.Model.PublishedPDF).
 
   1. Checks that the activity is the team's, the form is on for it, and the person is a
      team admin.
   2. Reads the form for the activity, as a draft does, with its saved answers.
-  3. Prints, before the write transaction, as letters do: a print that fails changes
+  3. Prints the preview, before any write, as letters do: a print that fails changes
      nothing.
-  4. Saves, in one transaction. The activity's current one becomes Replaced, and its
-     History says who published it (App.ViewData.ChangeHistory).
+  4. On Publish, checks again and saves the preview, in one transaction. The activity's
+     current one becomes Replaced, and its History says who published it
+     (App.ViewData.ChangeHistory).
 
   `current_id` is the id of the activity's current PDF of this form the person saw, nil
   for none: when another admin published meanwhile, nothing is saved.
@@ -26,7 +28,44 @@ defmodule App.Operation.PublishDocument do
   alias App.Model.Team
   alias App.Operation.PrintForm
 
-  @doc "`{:ok, pdf}` or `{:error, message}` with nothing saved."
+  @doc """
+  The PDF as it would publish, printed and not saved, with the ID it publishes under:
+  `{:ok, preview}` or `{:error, message}`. Its page shows the preview and Publish saves
+  it with `publish/7`, so what's kept is what was looked at.
+  """
+  def preview(%Team{} = team, %Form{} = form, %Activity{} = activity, %User{} = user, now) do
+    with :ok <- check(team, form, activity, user, now),
+         {:ok, doc, context} <- PrintForm.read(team, form.text, now),
+         answers = FormAnswer.starting(activity, doc.asks),
+         code = PublishedPDF.generate_code(),
+         {:ok, printed} <- print(team, form, activity, context, answers, code) do
+      {:ok, %{code: code, answers: answers, printed: printed, form_version: form.version}}
+    end
+  end
+
+  @doc """
+  Saves a preview from `preview/5` as published: `{:ok, pdf}` or `{:error, message}`
+  with nothing saved. It checks again, since the form or the person may have changed
+  since, and refuses a preview of an older version of the form.
+  """
+  def publish(team, form, activity, user, preview, current_id, now \\ DateTime.utc_now()) do
+    with :ok <- same_version(preview, form),
+         :ok <- check(team, form, activity, user, now) do
+      save(
+        %{code: preview.code, answers: preview.answers},
+        {team, form, activity, user},
+        preview.printed,
+        current_id
+      )
+    end
+  end
+
+  defp same_version(%{form_version: version}, %Form{version: version}), do: :ok
+
+  defp same_version(_preview, _form),
+    do: {:error, "The form changed since this preview. Go back and publish again."}
+
+  @doc "Previews and publishes at once, as a test or a mockup does: `{:ok, pdf}` or `{:error, message}`."
   def call(
         %Team{} = team,
         %Form{} = form,
@@ -35,13 +74,8 @@ defmodule App.Operation.PublishDocument do
         current_id,
         now
       ) do
-    with :ok <- check(team, form, activity, user, now),
-         {:ok, doc, context} <- PrintForm.read(team, form.text, now),
-         answers = FormAnswer.starting(activity, doc.asks),
-         code = PublishedPDF.generate_code(),
-         {:ok, printed} <- print(team, form, activity, context, answers, code) do
-      save(%{code: code, answers: answers}, {team, form, activity, user}, printed, current_id)
-    end
+    with {:ok, preview} <- preview(team, form, activity, user, now),
+         do: publish(team, form, activity, user, preview, current_id, now)
   end
 
   defp save(attrs, {team, form, activity, user}, printed, current_id) do

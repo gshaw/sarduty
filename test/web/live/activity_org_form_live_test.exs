@@ -351,8 +351,18 @@ defmodule Web.ActivityOrgFormLiveTest do
       %{form: form |> Ecto.Changeset.change(state: :on) |> Repo.update!()}
     end
 
+    # A preview prints with Typst, which takes longer than render_async's 100ms.
+    @print_wait 5_000
+
     defp publish(lv) do
       lv |> element("#org-form-publish") |> render_click()
+      confirm(lv)
+    end
+
+    # The preview's Publish, once its pages have printed.
+    defp confirm(lv) do
+      render_async(lv, @print_wait)
+      lv |> element("#publish-confirm") |> render_click()
       PublishedPDF |> order_by(desc: :id) |> limit(1) |> Repo.one!()
     end
 
@@ -393,6 +403,42 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert render(history) =~ "Published Task report, #{PublishedPDF.format_code(pdf.code)}"
     end
 
+    test "Publish shows a preview of every page and what publishing does, then keeps it",
+         ctx do
+      %{cast: cast, hiker: hiker, form: form} = ctx
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+
+      lv |> element("#org-form-publish") |> render_click()
+      assert_patch(lv, form_path(hiker, form) <> "/publish")
+      render_async(lv, @print_wait)
+
+      assert has_element?(lv, "#publish-page-1[src^='data:image/png;base64,']")
+      assert has_element?(lv, "#publish-page-2")
+      assert has_element?(lv, "#publish-verify", "Injured")
+      assert has_element?(lv, "#publish-not-sent")
+      refute has_element?(lv, "#publish-replaces")
+      refute Repo.exists?(PublishedPDF)
+
+      # What it keeps is what it showed: the same ID.
+      [shown] =
+        Regex.run(
+          ~r/\w{5}-\w{5}-\w{5}/,
+          lv |> element("#publish-id") |> render()
+        )
+
+      lv |> element("#publish-confirm") |> render_click()
+      assert_patch(lv, form_path(hiker, form))
+      pdf = Repo.one!(PublishedPDF)
+      assert PublishedPDF.format_code(pdf.code) == shown
+      assert has_element?(lv, "#flash-info", "Published Task report, #{shown}.")
+
+      # Back to answers keeps nothing.
+      lv |> element("#org-form-publish-again") |> render_click()
+      render_async(lv, @print_wait)
+      lv |> element("#publish-back") |> render_click()
+      assert Repo.aggregate(PublishedPDF, :count) == 1
+    end
+
     test "out of date names what changed, and Publish again replaces it", ctx do
       %{cast: cast, hiker: hiker, form: form} = ctx
       conn = log_in_user(build_conn(), cast.alex)
@@ -406,7 +452,9 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert has_element?(activity, "#activity-form-#{form.id}-state", "Out of date")
 
       lv |> element("#org-form-publish-again") |> render_click()
-      second = PublishedPDF |> order_by(desc: :id) |> limit(1) |> Repo.one!()
+      render_async(lv, @print_wait)
+      assert has_element?(lv, "#publish-replaces", PublishedPDF.format_code(first.code))
+      second = confirm(lv)
 
       assert second.id != first.id
       assert first |> Repo.reload!() |> PublishedPDF.status() == :replaced
@@ -457,8 +505,10 @@ defmodule Web.ActivityOrgFormLiveTest do
       {:ok, first_page, _html} = live(conn, form_path(hiker, form))
       {:ok, second_page, _html} = live(conn, form_path(hiker, form))
 
-      publish(first_page)
       second_page |> element("#org-form-publish") |> render_click()
+      render_async(second_page, @print_wait)
+      publish(first_page)
+      second_page |> element("#publish-confirm") |> render_click()
 
       assert has_element?(second_page, "#flash-error", "Someone just published this.")
       assert Repo.aggregate(PublishedPDF, :count) == 1
