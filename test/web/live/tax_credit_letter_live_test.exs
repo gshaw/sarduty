@@ -222,7 +222,9 @@ defmodule Web.TaxCreditLetterLiveTest do
     assert_email_sent(fn email -> assert email.to == [{"", member.email}] end)
 
     refute has_element?(lv, "#letter-out-of-date")
-    assert has_element?(lv, "#letter-history-published_again-#{new.id}")
+    # The new one is Published, as any letter; the one it replaced says Replaced.
+    assert has_element?(lv, "#letter-history-published-#{new.id}", "Published")
+    refute has_element?(lv, "#letter-history-table", "again")
     assert has_element?(lv, "#letter-history-published-#{letter.id}", "Replaced")
   end
 

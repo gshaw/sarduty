@@ -15,7 +15,7 @@ defmodule App.ViewData.PublishedHistoryTest do
 
   defp rows(pdfs), do: pdfs |> PublishedHistory.rows(@names) |> Enum.map(&{&1.what, &1.pdf.id})
 
-  test "newest first: published, published again, withdrawn" do
+  test "newest first: published and withdrawn; one that replaced another is Published too" do
     first = pdf(1, ~U[2026-10-10 18:50:00Z], replaced_by_id: 2)
 
     second =
@@ -23,7 +23,7 @@ defmodule App.ViewData.PublishedHistoryTest do
 
     assert rows([second, first]) == [
              {:withdrawn, 2},
-             {:published_again, 2},
+             {:published, 2},
              {:published, 1}
            ]
 

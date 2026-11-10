@@ -461,7 +461,7 @@ defmodule Web.ActivityOrgFormLiveTest do
       refute has_element?(lv, "#org-form-out-of-date")
       # History has both, and page 1 of the new one folds under the box.
       assert has_element?(lv, "#org-form-history-published-#{first.id}", "Replaced")
-      assert has_element?(lv, "#org-form-history-published_again-#{second.id}")
+      assert has_element?(lv, "#org-form-history-published-#{second.id}")
 
       assert has_element?(
                lv,
