@@ -10,12 +10,12 @@ defmodule App.Accounts.UserNotifier do
   # without opening the email. The last line binds the code to this site's domain, in the
   # format of Apple's origin-bound code draft, so Safari can suggest it. The draft's
   # One-Time-Code header would do the same, but Cloudflare rejects headers off its list.
-  # People read the code in groups of 4. The email joins them with an underscore, not
-  # the texts' dash: iOS Mail makes 4829-1375 a phone number, and an underscore keeps the
-  # code one word to copy. The bound line keeps it whole, since a space there would end it.
+  # People read the code in groups of 4. The subject and text keep a space: iOS reads the
+  # code from them to suggest it, and stops at an underscore. The bound line keeps it
+  # whole, since a space there would end it.
   def deliver_login_code(user, code) do
     host = Web.Endpoint.host()
-    shown = UserToken.format_code(code, "_")
+    shown = UserToken.format_code(code)
 
     email =
       new()
@@ -171,8 +171,9 @@ defmodule App.Accounts.UserNotifier do
 
   # cspell:ignore Segoe -- Windows' system font, in the email's font stack
   # The logo is a PNG at 2x, since Gmail won't show SVG (see /styles/logo).
-  # The meta and the style stop iOS Mail making a code that looks like a phone number a
-  # link.
+  # The code people see joins its groups with an underscore, so long-press copies it
+  # whole: iOS Mail makes 4829-1375 or 48291375 a phone number. The meta and the style
+  # stop it making the subject's 4829 1375 a phone-number link.
   # The domain line is hidden: it's for Mail, not people.
   defp login_html(code, host) do
     logo = Web.Endpoint.url() <> "/images/sarduty-logo-96.png"
