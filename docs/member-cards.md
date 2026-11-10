@@ -344,7 +344,8 @@ other way to get the card.
   built, so it shows today's card.
   - **The picture is the front as the iPhone Wallet pass draws it**: upright, 54 × 74 mm,
     in the pass's navy with yellow labels and the team's name in yellow. Issued sits in
-    the pass's Status place and Member since in the middle. "No Wallet? Show this card,
+    the pass's Status place and Member since in the middle, at 7 pt; the third column,
+    the pass's Valid until, stays empty. "No Wallet? Show this card,
     save it as an image, or print it." A member can show the page at the door as they
     would the pass. It draws its own round corners, with clear corners around them.
   - **The code under the QR code is IBM Plex Mono**, the app's font for codes, on the
