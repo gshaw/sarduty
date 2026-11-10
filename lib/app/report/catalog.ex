@@ -345,7 +345,8 @@ defmodule App.Report.Catalog do
   defp activity_rule_fields do
     [
       text(:tracking_number, "Tracking number"),
-      text(:description, "Description"),
+      # D4H's editor writes HTML; a report or a form reads its text (#970).
+      %{text(:description, "Description") | cell: :html},
       %Field{
         name: "duration",
         label: "Duration",

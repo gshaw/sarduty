@@ -30,7 +30,8 @@ defmodule App.Report.Field do
   - `cell`: how its column draws, when not as its type: `:activity_kind` is the kind's
     coloured marker, and the Activity cell beside it leaves its own out (#784); `:email`,
     `:phone`, and `:address` draw as a member's page does, with Copy, Call and Text, and
-    Open in maps (#827); `:link` opens the link it holds.
+    Open in maps (#827); `:link` opens the link it holds; `:html` is HTML, such as an
+    activity's description, read back as its text (Service.DescriptionHTML.text/1).
   """
 
   @enforce_keys [:name, :label, :type]

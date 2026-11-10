@@ -71,7 +71,7 @@ defmodule App.Report.Runner do
   end
 
   defp shape(%Plan{pivot: nil} = plan, rows, _timezone) do
-    types = Enum.map(plan.columns, & &1.type)
+    types = decode_types(plan.columns)
     {rows, more?} = rows |> Enum.map(&decode_row(&1, types)) |> cap(plan.max_rows)
     columns = Enum.map(plan.columns, &Map.put(&1, :pivot, nil))
     {:ok, result(plan, columns, rows, more?)}
@@ -98,7 +98,7 @@ defmodule App.Report.Runner do
   defp pivot_row(row, plan) do
     {cells, rest} = Enum.split(row, length(plan.columns))
     {keys, [pivot | order]} = Enum.split(rest, plan.keys)
-    cells = decode_row(cells, Enum.map(plan.columns, & &1.type))
+    cells = decode_row(cells, decode_types(plan.columns))
     %{cells: cells, keys: keys, pivot: decode(pivot, plan.pivot.type), order: order}
   end
 
@@ -308,6 +308,10 @@ defmodule App.Report.Runner do
   defp cap(rows, max) when length(rows) > max, do: {Enum.take(rows, max), true}
   defp cap(rows, _max), do: {rows, false}
 
+  # A column of HTML reads back as its text; the rest by their type.
+  defp decode_types(columns),
+    do: Enum.map(columns, &if(&1[:cell] == :html, do: :html, else: &1.type))
+
   defp decode_row(row, types),
     do: row |> Enum.zip(types) |> Enum.map(fn {v, t} -> decode(v, t) end)
 
@@ -319,6 +323,7 @@ defmodule App.Report.Runner do
   defp decode(value, :list) when is_binary(value),
     do: value |> Jason.decode!() |> Enum.reject(&is_nil/1) |> Enum.sort_by(&String.downcase/1)
 
+  defp decode(value, :html) when is_binary(value), do: Service.DescriptionHTML.text(value)
   defp decode(value, _type), do: value
 
   defp datetime(text) do
