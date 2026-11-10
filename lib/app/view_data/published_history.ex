@@ -16,28 +16,39 @@ defmodule App.ViewData.PublishedHistory do
   """
   def rows(pdfs, names) do
     replacing = MapSet.new(pdfs, & &1.replaced_by_id)
-    name = fn user_id -> user_id && Map.get(names, user_id) end
 
     pdfs
-    |> Enum.flat_map(fn pdf ->
-      published = if MapSet.member?(replacing, pdf.id), do: :published_again, else: :published
-
-      [
-        row(pdf.inserted_at, pdf.inserted_at, published, pdf, name.(pdf.user_id), 0),
-        emailed(pdf),
-        pdf.withdrawn_at &&
-          row(pdf.withdrawn_at, pdf.withdrawn_at, :withdrawn, pdf, name.(pdf.withdrawn_by_id), 2)
-      ]
-    end)
+    |> Enum.flat_map(&pdf_rows(&1, MapSet.member?(replacing, &1.id), names))
     |> Enum.reject(&is_nil/1)
-    |> Enum.sort_by(&{&1.sort, &1.order}, fn {a, x}, {b, y} ->
-      case DateTime.compare(a, b) do
-        :eq -> x >= y
-        order -> order == :gt
-      end
-    end)
+    |> Enum.sort_by(&{&1.sort, &1.order}, &newer?/2)
     |> Enum.map(&Map.drop(&1, [:sort, :order]))
   end
+
+  defp pdf_rows(pdf, replaced_another?, names) do
+    published = if replaced_another?, do: :published_again, else: :published
+
+    [
+      row(pdf.inserted_at, pdf.inserted_at, published, pdf, name(names, pdf.user_id), 0),
+      emailed(pdf),
+      withdrawn(pdf, names)
+    ]
+  end
+
+  # Newest first; at the same moment, a withdraw before an email before a publish.
+  defp newer?({a, x}, {b, y}) do
+    case DateTime.compare(a, b) do
+      :eq -> x >= y
+      order -> order == :gt
+    end
+  end
+
+  defp name(_names, nil), do: nil
+  defp name(names, user_id), do: Map.get(names, user_id)
+
+  defp withdrawn(%PublishedPDF{withdrawn_at: %DateTime{} = at} = pdf, names),
+    do: row(at, at, :withdrawn, pdf, name(names, pdf.withdrawn_by_id), 2)
+
+  defp withdrawn(_pdf, _names), do: nil
 
   # An email sent before its time was kept went with its letter, so it sorts there.
   defp emailed(%PublishedPDF{emailed_at: %DateTime{} = at} = pdf),

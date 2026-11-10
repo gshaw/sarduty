@@ -21,7 +21,7 @@ defmodule Web.TaxCreditLetterLive do
 
   @doc "The year in the path, or nil when it can't have letters."
   def parse_year(param) do
-    case Integer.parse(to_string(param)) do
+    case param |> to_string() |> Integer.parse() do
       {year, ""} when year >= 2014 -> if year <= Date.utc_today().year + 1, do: year
       _other -> nil
     end
@@ -50,11 +50,7 @@ defmodule Web.TaxCreditLetterLive do
         TaxCreditLetter.subject(member.id, year)
       )
 
-    letter =
-      case Enum.find(pdfs, &(PublishedPDF.status(&1) == :current)) do
-        nil -> nil
-        letter -> %{letter | member: member}
-      end
+    letter = current(pdfs, member)
 
     hours =
       team |> CountTaxCreditHours.call(year, [member.id]) |> CountTaxCreditHours.get(member.id)
@@ -69,6 +65,13 @@ defmodule Web.TaxCreditLetterLive do
       published_by: letter && names[letter.user_id],
       history: PublishedHistory.rows(pdfs, names)
     )
+  end
+
+  defp current(pdfs, member) do
+    case Enum.find(pdfs, &(PublishedPDF.status(&1) == :current)) do
+      nil -> nil
+      letter -> %{letter | member: member}
+    end
   end
 
   # Only a letter for last year or later can be published again (TaxCreditLetter.hours_status/4).
