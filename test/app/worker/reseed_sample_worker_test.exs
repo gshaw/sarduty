@@ -2,10 +2,10 @@ defmodule App.Worker.ReseedSampleWorkerTest do
   # Not async: it rewrites Coast Range SAR's database, which async tests read.
   use ExUnit.Case, async: false
 
+  import Ecto.Query, only: [where: 3]
+
   alias App.Model.Member
   alias App.Worker.ReseedSampleWorker
-
-  import Ecto.Query, only: [where: 3]
 
   test "seeds Coast Range SAR again, with the same ids" do
     team = App.SampleRepo.team()
