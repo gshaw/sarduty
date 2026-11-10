@@ -6,23 +6,21 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
 
   alias App.Model.PublishedPDF
   alias App.Operation.PrintTaxCreditLetter
-  alias App.Operation.PublishTaxCreditLetter
-  alias App.Operation.SaveTeamSignature
 
   setup do
     team = team_fixture()
     %{team: team, member: member_fixture(team)}
   end
 
+  # The letter printed under an ID, as publishing prints it, whatever it needs.
   defp create(team, member) do
-    team
-    |> Repo.reload!()
-    |> PublishTaxCreditLetter.prepare(member.id, 2025, nil)
-    |> PublishTaxCreditLetter.insert!(nil)
+    team = Repo.reload!(team)
+    read = PrintTaxCreditLetter.read(team, member.id, 2025, DateTime.utc_now())
+    {:ok, printed} = PrintTaxCreditLetter.call(team, read, PublishedPDF.generate_code())
+    printed
   end
 
-  # The PDF as it was published.
-  defp print(letter), do: PublishedPDF.attachment(letter)
+  defp print(printed), do: printed.attachment
 
   defp text(team, member) do
     team = Repo.reload!(team)
@@ -46,6 +44,39 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
       assert text(team, member) =~ "Name: #{name}\n"
       assert %{content: "%PDF" <> _rest} = team |> create(member) |> print()
     end
+  end
+
+  # The letters list reads every letter at once (#995); each reads as it does alone.
+  test "reads many members' letters as each reads alone", %{team: team, member: member} do
+    other = member_fixture(team, %{name: "Blake Morrison"})
+    activity = activity_fixture(team, %{started_at: ~U[2025-03-01 17:00:00Z]})
+
+    attendance_fixture(activity, member, %{
+      started_at: ~U[2025-03-01 17:00:00Z],
+      finished_at: ~U[2025-03-01 19:00:00Z],
+      duration_in_minutes: 120
+    })
+
+    now = DateTime.utc_now()
+    each = PrintTaxCreditLetter.read_each(team, [member.id, other.id], 2025, now)
+
+    for m <- [member, other] do
+      alone = PrintTaxCreditLetter.read(team, m.id, 2025, now)
+
+      assert PrintTaxCreditLetter.today(team, each[m.id]) ==
+               PrintTaxCreditLetter.today(team, alone)
+
+      assert Map.delete(each[m.id].values, "today") == Map.delete(alone.values, "today")
+    end
+
+    shows = fn id ->
+      Map.new(PrintTaxCreditLetter.today(team, each[id]).shows, &{&1["label"], &1["text"]})
+    end
+
+    assert shows.(member.id)["Total hours"] == "2 hours"
+    assert shows.(other.id)["Total hours"] == "0 hours"
+    assert shows.(other.id)["Name"] == "Blake Morrison"
+    assert PrintTaxCreditLetter.read_each(team, [], 2025, now) == %{}
   end
 
   test "titles the PDF and locks it print-only", %{team: team, member: member} do
@@ -79,18 +110,39 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
     end
   end
 
+  # A typed signature, /s/ and the name in Dancing Script (#995): never a picture.
   describe "the signature" do
-    test "prints the team's signature", %{team: team, member: member} do
-      {:ok, _team} = SaveTeamSignature.call(team, png_fixture(600, 150))
-
-      assert images(print(create(team, member))) == 1
-      # The picture takes the place of the blank lines left to sign in.
-      refute text(team, member) =~ "\n\n\n\n"
+    defp signed(team) do
+      team |> Ecto.Changeset.change(authorized_by_name: "Pat Lee") |> Repo.update!()
     end
 
-    test "leaves room to sign without one", %{team: team, member: member} do
-      assert images(print(create(team, member))) == 0
-      assert text(team, member) =~ ~r/Certified on .*\.\n\n\n\n\n#{team.legal_name}/
+    defp script?(%{content: pdf}), do: pdf =~ "DancingScript"
+
+    test "signs with the signer's name in a script, and draws no picture",
+         %{team: team, member: member} do
+      team = signed(team)
+      attachment = team |> create(member) |> print()
+
+      assert script?(attachment)
+      assert images(attachment) == 0
+      assert text(team, member) =~ ~r/Certified on .*\.\n\/s\/ Pat Lee\nPat Lee\z/
+    end
+
+    # The letter page's picture of the letter before it's published.
+    test "the draft signs as the letter will", %{team: team, member: member} do
+      draft = fn team ->
+        read = PrintTaxCreditLetter.read(team, member.id, 2025, DateTime.utc_now())
+        {:ok, pdf} = PrintTaxCreditLetter.draft(team, read)
+        %{content: pdf}
+      end
+
+      refute script?(draft.(team))
+      assert team |> signed() |> draft.() |> script?()
+    end
+
+    test "without a signer, no signature and no blank lines", %{team: team, member: member} do
+      refute team |> create(member) |> print() |> script?()
+      assert text(team, member) =~ ~r/Certified on .*\.\n#{team.legal_name}\z/
     end
   end
 
@@ -111,12 +163,14 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
       |> Ecto.Changeset.change(
         mailing_address: nil,
         authorized_by_name: "Pat Lee",
-        signature: nil
+        authorized_by_title: nil
       )
       |> Repo.update!()
 
-    assert PrintTaxCreditLetter.missing_settings(team, DateTime.utc_now()) ==
-             ["mailing address", "signature"]
+    assert [
+             %{name: "team.mailing_address", label: "Mailing address", from: "team"},
+             %{name: "team.signer_title", label: "Signer's title", from: "team"}
+           ] = PrintTaxCreditLetter.missing_settings(team, DateTime.utc_now())
   end
 
   test "a Try a demo team's letter says SAMPLE across it (#857)", %{team: team, member: member} do

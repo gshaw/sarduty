@@ -112,7 +112,7 @@ defmodule App.ViewData.TeamAttentionTest do
             %{year: 2026, primary: 0, secondary: 1, ids: [10]}
           ],
           letters: %{year: 2025, count: 1},
-          letter_settings: ["signature"],
+          letter_settings: [%{name: "team.signer_title", label: "Signer's title"}],
           names: %{name: String.duplicate("a", 21), abbreviated_name: String.duplicate("a", 11)},
           contacts?: false
         })
@@ -388,23 +388,38 @@ defmodule App.ViewData.TeamAttentionTest do
              []
   end
 
-  test "letter settings name what a letter is missing" do
+  test "letter settings name what keeps letters from being emailed (#995)" do
+    missing = [
+      %{name: "team.mailing_address", label: "Mailing address"},
+      %{name: "team.signer", label: "Signer"},
+      %{name: "team.signer_title", label: "Signer's title"}
+    ]
+
     assert [%{key: :letter_settings, level: :warning} = item] =
-             items(%{letter_settings: ["mailing address", "signer", "signature"]}, @march)
+             items(%{letter_settings: missing}, @march)
 
-    assert item.title == "Tax credit letters are missing a mailing address, signer, and signature"
-    assert item.detail =~ "Add them"
+    assert item.title ==
+             "Tax credit letters cannot be emailed until you add the mailing address, signer, and signer's title"
 
-    assert [%{title: "Tax credit letters are missing a signer", detail: "Add it" <> _}] =
-             items(%{letter_settings: ["signer"]}, @march)
+    assert item.detail == "The CRA may question a letter without them."
+    assert item.names == ~w(team.mailing_address team.signer team.signer_title)
 
+    assert [
+             %{
+               title: "Tax credit letters cannot be emailed until you add the signer",
+               detail: detail
+             }
+           ] =
+             items(%{letter_settings: [%{name: "team.signer", label: "Signer"}]}, @march)
+
+    assert detail == "The CRA may question a letter without it."
     assert items(%{letter_settings: []}, @march) == []
   end
 
   test "tax credit letters show from January to April only, in the team's zone" do
     letters = %{letters: %{year: 2025, count: 11}}
 
-    assert [%{key: :letters, year: 2025, title: "11 tax credit letters to send for 2025"}] =
+    assert [%{key: :letters, year: 2025, title: "11 tax credit letters to email for 2025"}] =
              items(letters, @march)
 
     assert items(letters, @october) == []

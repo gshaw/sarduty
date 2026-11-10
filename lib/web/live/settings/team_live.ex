@@ -8,8 +8,9 @@ defmodule Web.Settings.TeamLive do
   alias App.Operation.UpdateTeamSettings
   alias App.Repo
 
-  # Settings' General tab (#153): the team itself, from D4H. The key SAR Duty uses is on
-  # Access key (#727). The team comes from the URL, /teams/:subdomain/settings.
+  # Settings' General tab (#153): the team itself, from D4H, and its address, which
+  # letters and forms print (#995). The key SAR Duty uses is on Access key (#727), and who
+  # signs on Signer. The team comes from the URL, /teams/:subdomain/settings.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
 
@@ -86,6 +87,13 @@ defmodule Web.Settings.TeamLive do
             Team.name_advice(:abbreviated_name)
           )} or fewer.
         </.input>
+        <.input field={@form[:mailing_address]} label="Mailing address" type="textarea" rows="3">
+          Where the CRA or an agency writes to your team. Tax credit letters and forms print it.
+        </.input>
+        <div class="grid md:grid-cols-2 gap-x-6">
+          <.input field={@form[:city]} label="City (optional)" />
+          <.input field={@form[:postal_code]} label="Postal code (optional)" />
+        </div>
         <div class="grid grid-cols-2 gap-x-6">
           <.input field={@form[:lat]} readonly label="Latitude" />
           <.input field={@form[:lng]} readonly label="Longitude" />

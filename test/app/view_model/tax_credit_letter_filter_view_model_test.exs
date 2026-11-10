@@ -4,7 +4,6 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
   import App.DataFixtures
 
   alias App.Model.Activity
-  alias App.Model.PublishedPDF
   alias App.ViewModel.TaxCreditLetterFilterViewModel
 
   setup do
@@ -48,11 +47,27 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
     )
   end
 
+  test "with no year, opens on the team's letter year (#995)", %{team: team} do
+    assert {:ok, %{year: 2026}, _} =
+             TaxCreditLetterFilterViewModel.validate(%{}, team, ~U[2026-11-10 20:00:00Z])
+
+    assert {:ok, %{year: 2026}, _} =
+             TaxCreditLetterFilterViewModel.validate(%{}, team, ~U[2027-03-10 20:00:00Z])
+
+    assert {:ok, %{year: 2024}, _} =
+             TaxCreditLetterFilterViewModel.validate(
+               %{"year" => "2024"},
+               team,
+               ~U[2026-11-10 20:00:00Z]
+             )
+  end
+
   test "a sort that's gone, like the old ID sort, falls back to total" do
-    assert {:ok, %{sort: "total"}, _} = TaxCreditLetterFilterViewModel.validate(%{"sort" => "id"})
+    assert {:ok, %{sort: "total"}, _} =
+             TaxCreditLetterFilterViewModel.validate(%{"sort" => "id"}, team_fixture())
 
     assert {:ok, %{sort: "name"}, _} =
-             TaxCreditLetterFilterViewModel.validate(%{"sort" => "name"})
+             TaxCreditLetterFilterViewModel.validate(%{"sort" => "name"}, team_fixture())
   end
 
   test "lists the same hours the letter counts, overlaps merged", %{team: team, member: member} do
@@ -116,8 +131,8 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
     letter = tax_credit_letter_fixture(member, %{year: 2025})
     _older = tax_credit_letter_fixture(member, %{year: 2024})
 
-    assert [%{tax_credit_letter_id: id, tax_credit_letter_code: code}] = find_all(team, 2025)
-    assert {id, code} == {letter.id, PublishedPDF.format_code(letter.code)}
+    assert [%{tax_credit_letter_id: id, letter_email_state: :not_emailed}] = find_all(team, 2025)
+    assert id == letter.id
   end
 
   describe "chores (#584)" do
@@ -138,7 +153,8 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
     end
   end
 
-  test "marks a current letter whose hours changed", %{team: team, member: member} do
+  test "marks a current letter whose verify page would read differently (#995)",
+       %{team: team, member: member} do
     attend(team, member, ~U[2025-03-01 17:00:00Z], 90)
     tax_credit_letter_fixture(member, %{year: 2025, primary_minutes: 60, secondary_minutes: 0})
 
@@ -148,9 +164,13 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
 
     records = find_all(team, 2025, "any", "name", ~U[2026-01-15 18:00:00Z])
 
-    assert Enum.map(records, &{&1.member.name, &1.letter_hours_status, &1.letter_minutes}) == [
-             {"Avery", :changed, 60},
-             {"Blake", :same, 60}
+    assert Enum.map(records, &{&1.member.name, &1.letter_changes}) == [
+             {"Avery", ["Primary hours: 1 hour → 1h 30m", "Total hours: 1 hour → 1h 30m"]},
+             {"Blake", []}
            ]
+
+    # A closed year's letters stay as published.
+    assert [%{letter_changes: []}, %{letter_changes: []}] =
+             find_all(team, 2025, "any", "name", ~U[2027-01-15 18:00:00Z])
   end
 end

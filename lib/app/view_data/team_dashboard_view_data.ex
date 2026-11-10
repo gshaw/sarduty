@@ -21,6 +21,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.NoShow
   alias App.Model.Standing
   alias App.Model.Tag
+  alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Operation.BuildGroupRulePreview
   alias App.Operation.PrintTaxCreditLetter
@@ -444,6 +445,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   end
 
   # Only counted from January to April, since the hours count reads a year of attendance.
+  # The count is the letters list's To email tile (#995).
   defp letters_row(team, now) do
     if Service.Period.letter_season?(now, team.timezone) do
       year = Service.YearRange.year_in(now, team.timezone) - 1
@@ -452,16 +454,17 @@ defmodule App.ViewData.TeamDashboardViewData do
       count =
         team
         |> TaxCreditLetterFilterViewModel.find_all(filter, now)
-        |> Enum.count(&is_nil(&1.tax_credit_letter_id))
+        |> TaxCreditLetterFilterViewModel.shown(%{filter | letter: "to_email"})
+        |> length()
 
       %{year: year, count: count}
     end
   end
 
-  # What a letter the CRA accepts without question needs from team settings (#918), its
-  # document's `needs` (#970), only in letter season, when letters go out.
+  # What a letter needs from team settings (#918), its document's `needs` (#970), from
+  # December to April, so it's fixed before letters can be emailed (#995).
   defp letter_settings_row(team, now) do
-    if Service.Period.letter_season?(now, team.timezone),
+    if TaxCreditLetter.settings_season?(now, team.timezone),
       do: PrintTaxCreditLetter.missing_settings(team, now),
       else: []
   end

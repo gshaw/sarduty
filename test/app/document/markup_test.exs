@@ -345,7 +345,7 @@ defmodule App.Document.MarkupTest do
       fills = %{
         "who" => ~s|*Sam* #1 "q"|,
         "far" => true,
-        "signature" => {:image, @png},
+        "logo" => {:image, @png},
         "address" => nil,
         "lines" => [%{"km" => "12"}]
       }
@@ -362,12 +362,12 @@ defmodule App.Document.MarkupTest do
                "author" => "Coast Range SAR",
                "who" => ~s|*Sam* #1 "q"|,
                "far" => true,
-               "signature" => "signature.png",
+               "logo" => "logo.png",
                "address" => nil,
                "lines" => [%{"km" => "12"}]
              }
 
-      assert files["signature.png"] == @png
+      assert files["logo.png"] == @png
     end
 
     test "the mark is each page's foreground" do

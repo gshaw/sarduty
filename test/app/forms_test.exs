@@ -175,7 +175,7 @@ defmodule App.FormsTest do
       %{doc: doc, text: text, context: context}
     end
 
-    test "has no page: its layout draws it, and it reads the team's address and signer",
+    test "has no page: its layout draws it, and it reads the team's address, not its signer",
          %{doc: doc} do
       assert doc.layout && !doc.page && doc.places == []
       refute File.exists?("#{@dir}/bcsara/expense_request.pdf")
@@ -190,9 +190,13 @@ defmodule App.FormsTest do
       [team] = for %{name: "team"} = report <- doc.reports, do: report
       fields = Enum.map(team.query.select, &Query.text/1)
 
-      for field <- ~w(legal_name mailing_address city postal_code signer signer_title
-                      signer_phone signer_email),
+      for field <- ~w(legal_name mailing_address city postal_code),
           do: assert(field in fields, field)
+
+      # Its signature block is left to sign by hand: the letter signer is the wrong
+      # person for a claim (#995).
+      for field <- ~w(signer signer_title signer_phone signer_email),
+          do: refute(field in fields, field)
     end
 
     # The Supplement's subtotal is this claim's balance forward, from the same answers

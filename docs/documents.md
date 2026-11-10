@@ -37,7 +37,7 @@ They come in this order. `report`, `const`, `ask`, `compute`, and `expect` can r
 | `keep hours.primary, …`             | Values saved with the PDF: what a report reads, and answers.                                      |
 | `verify code bottom right`          | Where the verify code prints, or `none` ([Verify code](#verify-code)).                            |
 | `verify shows` and values under it  | What the PDF's verify page shows ([Verify code](#verify-code)).                                   |
-| `needs team.signer, …`              | Settings it needs; Needs attention names blank ones ([Needs and email](#needs-and-email)).        |
+| `needs team.signer, …`              | What publishing needs; a draft prints without ([Needs and email](#needs-and-email)).              |
 | `email to member` and lines under   | The email a letter goes out with ([Needs and email](#needs-and-email)).                           |
 | `page`                              | The values print on the form's own page PDF.                                                      |
 | `places`                            | Where each value goes.                                                                            |
@@ -67,20 +67,20 @@ leaves it out. Text compares exactly, case and all, since an expect checks what 
 
 ## Names
 
-| Name                                               | What it is                                                               |
-| -------------------------------------------------- | ------------------------------------------------------------------------ |
-| `hours.total`                                      | A report's column. A record, such as a member, prints its name.          |
-| `team.legal_name`, `organization.name`             | The `team` and `organization` subjects' fields, with no report to write. |
-| `:member`, `:year`, `:activity`                    | What the document starts from.                                           |
-| `:injured`                                         | A form's answer.                                                         |
-| `km_rate`, `total`                                 | A form's const or compute.                                               |
-| `today`                                            | The team's date today.                                                   |
-| `page`, `pages`                                    | In `fill`: which copy of a form's page, and how many ([Rows](#rows)).    |
-| `team.logo`, `organization.logo`, `team.signature` | Pictures only printing reads.                                            |
-| `pdf.verify_link`                                  | The published PDF's verify link, for `verify code none`.                 |
+| Name                                   | What it is                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------ |
+| `hours.total`                          | A report's column. A record, such as a member, prints its name.          |
+| `team.legal_name`, `organization.name` | The `team` and `organization` subjects' fields, with no report to write. |
+| `:member`, `:year`, `:activity`        | What the document starts from.                                           |
+| `:injured`                             | A form's answer.                                                         |
+| `km_rate`, `total`                     | A form's const or compute.                                               |
+| `today`                                | The team's date today.                                                   |
+| `page`, `pages`                        | In `fill`: which copy of a form's page, and how many ([Rows](#rows)).    |
+| `team.logo`, `organization.logo`       | Pictures only printing reads.                                            |
+| `pdf.verify_link`                      | The published PDF's verify link, for `verify code none`.                 |
 
 The pictures and the PDF's values print only. No report reads them, and `keep` refuses
-them, so the signature never reaches a report (#918).
+them (#918). A signature isn't a picture: it's typed (`signature team.signer`, below).
 
 ## Places
 
@@ -93,9 +93,11 @@ places
 A place is `text`, `image`, `flow`, or `tick`, and lengths are in `in`, `pt`, or `mm`
 from the page's edges: `top` or `bottom`, and `left` or `right`. A flow stacks values in
 order, down the page or across it, and leaves out the blank ones. Down, each item is
-text, `space` (a blank line, or `space 4`), or `image value width 3in height 0.75in pad
-6pt`, which fits a picture in that box. Any item can end with `if condition`. Across,
-each item is a picture. `level with letter` puts a place's bottom edge level with a
+text, `space` (a blank line, or `space 4`), `image value width 3in height 0.75in pad
+6pt`, which fits a picture in that box, or `signature team.signer`, a typed signature:
+"/s/" and the name in Dancing Script, bold, 16pt, black, on its own line with 6 points
+above and below, and a blank name drops out (#995). A letter the script lacks prints
+in Arimo. Any item can end with `if condition`. Across, each item is a picture. `level with letter` puts a place's bottom edge level with a
 flow's last line.
 
 A text place's first baseline sits three quarters of its `size` below its `top`, as a
@@ -150,10 +152,23 @@ verify shows
 
 ## Needs and email
 
-`needs` names the team's settings a published PDF shouldn't go out without, such as the
-letter's `needs team.mailing_address, team.signer, team.signature`. Each is a `team` or
-`organization` field or picture. Needs attention lists each blank one in letter season,
-by its catalog name (App.Operation.ReadDocument.settings/2 reads only those).
+`needs` names what publishing needs (#995): any value the document reads, such as a
+team setting or picture, a report's value, or an answer. The letter has `needs
+team.mailing_address, team.signer, team.signer_title`, and a form can wait for its
+activity with `needs task.published` or `needs task.finished`, where `task` is its
+report on `activities`. A blank value counts as missing, and so does a false one, which
+only `needs` reads that way: `keep` and `verify shows` keep false as it is.
+
+While one is missing, publishing refuses with the same words its page's warning banner,
+Needed to publish, shows under the title: "This letter cannot be published without the
+signer's title." The banner names each, with the page that fills it, or says when
+the activity finishes and links its page to publish it in D4H. The check is in the
+operations, `PublishTaxCreditLetter` and `PrintForm` (App.Operation.ReadDocument.needed/3),
+so no page can skip it. A draft prints without them, and a form's Missing section
+leaves them out. Needs attention lists a letter's blank team settings in letter season
+(App.Operation.ReadDocument.settings/2 reads only those). Activities' `finished` is
+true once their finish has passed, as `Activity.state/2` says; `finished_at` is always
+set, so it can't stand in.
 
 `email to member` writes the email a letter goes out with, its PDF attached: a
 `subject`, and a `body` written one item a line, as a flow's, with `space` and `if`.
@@ -291,8 +306,10 @@ running its expects, then prints it there.
   ([equipment.md](equipment.md#the-copy)). An item with both prints a line for each,
   the km on the first. Under the table: miscellaneous expenses (asked), the
   Supplement's subtotal as its balance forward, the subtotal, 15% for occupational
-  health and safety, and the total. The team's signer signs it with the team's
-  signature, dated the day it prints, and EMCR's own boxes are left blank. It repeats
+  health and safety, and the total. Its signature block (signature, date, name,
+  position, email, telephone) and EMCR's own boxes are left blank, to fill by hand,
+  as the Task report's and the Supplement's are (#995): the team's letter signer is the
+  wrong person for a claim. It repeats
   the Supplement's people rules, reading the same answers, and a test checks the two
   agree on Coast Range SAR's claim. The bundle will drop the repeat.
 
@@ -400,7 +417,7 @@ more pages.
 fill
   claimant = team.legal_name
   claim_total = total as money
-  signature = team.signature
+  logo = team.logo
 
 fill each equipment into items
   item = item
@@ -410,7 +427,7 @@ layout
 #set page(paper: "us-letter", margin: 40pt)
 Claimant: #values.claimant
 #for use in values.items [#use.item: #use.total \ ]
-#if values.signature != none { image(values.signature, height: 30pt) }
+#if values.logo != none { image(values.logo, height: 30pt) }
 ```
 
 - **Values reach it as data.** SAR Duty puts them in `values.json`, reads it as
@@ -461,17 +478,24 @@ date, or Not published. Its page is
 `/teams/:subdomain/activities/:id/forms/:form_id` (Web.ActivityOrgFormLive), found
 through the team's organization, so a form that's off or another organization's is a 404. It shows:
 
-- **The Published box**, once one is published: when and who, its ID linking to its
-  verify page, Download PDF, Publish again, and Withdraw. When the form reads
-  differently now (`ActivityForms.changes/3`), it says what changed, each `verify shows`
-  line, or each kept value for a form with none. Earlier ones list under it, marked
-  Replaced or Withdrawn, and still download.
+- **The Published section**, once one is published, the same as a letter's (#995): when
+  and who, its ID linking to its verify page, Download PDF, Publish again, and Withdraw.
+  No button in it is yellow. When its verify page would show something else if it were
+  published today, it's out of date, and a warning banner under the title says what
+  changed (`ActivityForms.changes/3`, from `PublishedPDF.changes/2`): each `verify
+shows` line, or each kept value for a form with none. Page 1 folds under it, drawn from the
+  saved PDF when it's opened (`/pdfs/:id/preview.png`), and History lists every PDF
+  published for the activity, Replaced or Withdrawn ones too, each still downloading
+  (App.ViewData.PublishedHistory). A tax credit letter's page has the same parts.
 
 - **What SAR Duty filled in**: each column of each report, from ReadDocument's `read`.
-- **What's missing**: each one blank, with the page that fixes it, so the fix reaches
+- **Needed to publish**, a warning banner under the title while a value the form `needs`
+  is missing ([Needs and email](#needs-and-email)). Publish stays on and says the same
+  as an error.
+- **What's missing**: each one blank that publishing doesn't need, with the page that fixes it, so the fix reaches
   D4H and every form. An activity's D4H field links to Change fields, its own details to
   Change activity, and the team's to team settings: its names to General, and its
-  address, city, postal code, and signer to Tax credit letters. Fields first, questions second: an
+  address, city, and postal code there too, and its signer to Signer. Fields first, questions second: an
   empty field never becomes a question. The PDF still prints with it blank.
 - **The questions.** Answers save as they change (App.Operation.SaveFormAnswers), in
   `form_answers`: team, activity, name, row, the text typed, who, and when. They're the
@@ -490,9 +514,10 @@ through the team's organization, so a form that's off or another organization's 
   as each equipment use's total, shows too, with no boxes.
 - **Publish**, on a form that's on (App.Operation.PublishDocument), opens its preview
   at `…/forms/:form_id/publish`: it checks, reads the form with the activity's answers,
-  and prints once with a new ID, the verify code, and the team's signature. The page
+  and prints once with a new ID and the verify code. The page
   shows every page as a picture (Service.PDFImages) and what publishing does: its ID,
-  what its verify page shows, what it replaces, and that it isn't sent anywhere.
+  what its verify page shows, that its signature is left blank to sign by hand, what
+  it replaces, and that it isn't sent anywhere.
   Publish there checks again and saves that same PDF in one transaction, so what's kept
   is what was looked at. When another admin published meanwhile, it says "Someone just
   published this. Reload to see it." Publish again goes through the same preview.
@@ -500,7 +525,7 @@ through the team's organization, so a form that's off or another organization's 
   themselves).
 - **Download draft PDF** posts the answers to Web.ActivityFormPDFController,
   since a LiveView can't send a PDF, and the browser shows it. DRAFT runs across
-  each page, the verify code's place is a grey box, and the signature is left blank.
+  each page, and the verify code's place is a grey box.
   App.Operation.CreateFormPDF keeps the answers and prints the form. A draft is never
   saved. An answer that doesn't read makes nothing.
 
@@ -513,7 +538,8 @@ A document is a draft or published, nothing in between (#970). A draft is never 
 says DRAFT on every page, and prints a grey box where its verify code goes. Publishing
 prints once with an ID and the verify code, and keeps the PDF, so a download or email
 serves the same file, whatever the team's logos or the definition say now. Tax credit
-letters publish when made or replaced, or emailed without one; forms on Publish
+letters publish when Email needs one: there's none, or it's out of date
+([tax-credit-letters.md](tax-credit-letters.md)); forms on Publish
 ([On an activity](#on-an-activity)).
 
 [App.Model.PublishedPDF](../lib/app/model/published_pdf.ex) is one table,
@@ -525,6 +551,10 @@ values `keep` names, its answers, and what `verify shows` printed.
 - **The ID** is 15 characters from the ID card alphabet, about 74 bits, stored without
   dashes and shown 5-5-5: `K7Q4M-2XA9H-VB3TN`. Only these verify: each letter from before
   #970 got one, and its PDF printed again, once after part 1 deployed.
+- **Out of date** is one rule for every published PDF (#995): its document, read today,
+  would put different values on its verify page (`PublishedPDF.changes/2`). A team
+  decides what counts by what it puts under `verify shows`. A PDF of a document with no
+  `verify shows`, such as EMCR's forms, compares the values it kept instead.
 - **One current PDF** per subject and definition, held by a unique index. Publishing
   again (`publish/3`) keeps the old one, Replaced. It takes the current PDF's id the
   person saw, and refuses when another took its place meanwhile.

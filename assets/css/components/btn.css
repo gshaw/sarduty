@@ -59,13 +59,6 @@
     --btn-edge: color-mix(in srgb, var(--danger) 55%, #000);
   }
 
-  .btn-warning {
-    --btn-bg: var(--warning);
-    --btn-bg-hover: color-mix(in srgb, var(--warning) 85%, #000);
-    --btn-fg: var(--on-warning);
-    --btn-edge: color-mix(in srgb, var(--warning) 55%, #000);
-  }
-
   .btn-link {
     --btn-bg: transparent;
     --btn-bg-hover: transparent;
@@ -118,7 +111,15 @@
   :root[data-pointer] .btn:focus-visible { background: var(--btn-bg); color: var(--btn-fg); box-shadow: 0 2px 0 var(--btn-edge); }
   :root[data-pointer] .btn-link:focus-visible { box-shadow: none; text-decoration: underline; }
 
-  .btn:disabled, .btn[disabled], .btn-disabled { opacity: 0.5; cursor: not-allowed; }
+  /* Disabled is one look for every kind: flat grey, never a faded red or blue, which reads
+     as broken. A busy button is disabled too, but keeps its kind while it spins. */
+  .btn:is(:disabled, [disabled], .btn-disabled):not(.phx-click-loading, .phx-submit-loading) {
+    --btn-bg: var(--surface-alt);
+    --btn-fg: var(--text-muted);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+  .btn:is(:disabled, [disabled]):is(.phx-click-loading, .phx-submit-loading) { opacity: 0.75; cursor: progress; }
 
   /* Busy: while a phx-disable-with button waits, LiveView gives it its loading class, so it
      spins beside what it is doing (#567). The spinner is .spinner's, in messages.css. */

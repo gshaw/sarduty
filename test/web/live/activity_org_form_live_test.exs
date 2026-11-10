@@ -10,7 +10,6 @@ defmodule Web.ActivityOrgFormLiveTest do
   alias App.Model.FormAnswer
   alias App.Model.PublishedPDF
   alias App.Operation.PublishDocument
-  alias App.Operation.SaveTeamSignature
   alias App.Repo
   alias App.ViewData.Search
   alias Web.MockupSeed
@@ -266,7 +265,7 @@ defmodule Web.ActivityOrgFormLiveTest do
 
       assert has_element?(
                lv,
-               ~s(#org-form-missing-table-team-city a[href="/teams/coastrange/settings/tax-credit-letters"]),
+               ~s(#org-form-missing-table-team-city a[href="/teams/coastrange/settings"]),
                "Team settings"
              )
     end
@@ -281,13 +280,11 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert FormAnswer.for_activity(kayakers)["misc"] == "40"
     end
 
-    # The signature is a picture: a draft leaves it out, and publishing signs (#970).
-    test "a draft prints no signature; publishing signs it", ctx do
+    # Its signature block is left to sign by hand, draft or published (#995).
+    test "prints no signature, draft or published", ctx do
       %{cast: cast, request: request} = ctx
       kayakers = MockupSeed.activity(cast, "Overdue kayakers")
-
-      {:ok, team} = cast.team |> Repo.reload!() |> SaveTeamSignature.call(png_fixture(600, 150))
-
+      team = Repo.reload!(cast.team)
       conn = log_in_user(build_conn(), cast.alex)
 
       draft = conn |> post(form_path(kayakers, request) <> "/pdf", %{}) |> response(200)
@@ -299,9 +296,11 @@ defmodule Web.ActivityOrgFormLiveTest do
         PublishDocument.call(team, request, kayakers, cast.alex, nil, now)
 
       published = PublishedPDF.attachment(pdf).content
-      # The draft's one picture is its DRAFT mark; the published one's is the signature.
+      # The draft's one picture is its DRAFT mark; the published one has none, and
+      # neither is signed in a script.
       assert images(draft) == 1
-      assert images(published) == 1
+      assert images(published) == 0
+      refute published =~ "DancingScript"
     end
   end
 
@@ -416,6 +415,7 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert has_element?(lv, "#publish-page-2")
       assert has_element?(lv, "#publish-verify", "Injured")
       assert has_element?(lv, "#publish-not-sent")
+      assert has_element?(lv, "#publish-signature", "Left blank, to sign by hand")
       refute has_element?(lv, "#publish-replaces")
       refute Repo.exists?(PublishedPDF)
 
@@ -459,7 +459,14 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert second.id != first.id
       assert first |> Repo.reload!() |> PublishedPDF.status() == :replaced
       refute has_element?(lv, "#org-form-out-of-date")
-      assert has_element?(lv, "#org-form-earlier-#{first.id}", "Replaced")
+      # History has both, and page 1 of the new one folds under the box.
+      assert has_element?(lv, "#org-form-history-published-#{first.id}", "Replaced")
+      assert has_element?(lv, "#org-form-history-published_again-#{second.id}")
+
+      assert has_element?(
+               lv,
+               ~s(#org-form-page-1 #org-form-preview[src="/teams/coastrange/pdfs/#{second.id}/preview.png"])
+             )
     end
 
     test "a box that shows an error stops Publish, since it prints what's saved", ctx do
@@ -495,7 +502,9 @@ defmodule Web.ActivityOrgFormLiveTest do
       pdf = Repo.reload!(pdf)
       assert PublishedPDF.status(pdf) == :withdrawn
       assert pdf.withdrawn_by_id == cast.alex.id
-      assert has_element?(lv, "#org-form-earlier-#{pdf.id}", "Withdrawn")
+      assert has_element?(lv, "#org-form-history-published-#{pdf.id}", "Withdrawn")
+      assert has_element?(lv, "#org-form-history-withdrawn-#{pdf.id}")
+      refute has_element?(lv, "#org-form-published")
       assert has_element?(lv, "#org-form-publish")
     end
 
@@ -526,6 +535,67 @@ defmodule Web.ActivityOrgFormLiveTest do
 
       assert PublishDocument.call(team, form, hiker, cast.alex, nil, DateTime.utc_now()) ==
                {:error, "This form is testing. Download a draft PDF instead."}
+    end
+
+    # A form that waits for its activity: what it needs blocks Publish, never a draft (#995).
+    test "needs task.finished and task.published refuse Publish until both hold", ctx do
+      %{cast: cast, hiker: hiker, form: form} = ctx
+
+      text =
+        @text
+        |> String.replace("`Agency File #`\n", "`Agency File #`, finished, published\n")
+        |> String.replace("\nverify shows", "needs task.finished, task.published\n\nverify shows")
+
+      form = form |> Ecto.Changeset.change(text: text) |> Repo.update!()
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      hiker =
+        hiker
+        |> Ecto.Changeset.change(finished_at: DateTime.add(now, 2, :hour), is_published: false)
+        |> Repo.update!()
+
+      conn = log_in_user(build_conn(), cast.alex)
+      {:ok, lv, _html} = live(conn, form_path(hiker, form))
+      refusal = "This form cannot be published until the activity finishes and is published."
+
+      assert has_element?(
+               lv,
+               "#org-form-needed",
+               "This form needs 2 things before it can be published:"
+             )
+
+      assert has_element?(lv, "#org-form-needed li", "Has finished: the activity finishes")
+
+      assert has_element?(
+               lv,
+               ~s(#org-form-needed li a[href="/teams/coastrange/activities/#{hiker.id}"]),
+               "the activity"
+             )
+
+      # The button stays on, and says the same as an error.
+      lv |> element("#org-form-publish") |> render_click()
+      assert has_element?(lv, "#flash-error", refusal)
+
+      team = Repo.reload!(cast.team)
+      assert PublishDocument.call(team, form, hiker, cast.alex, nil, now) == {:error, refusal}
+
+      # A draft prints either way.
+      conn = post(conn, form_path(hiker, form) <> "/pdf", %{"answers" => %{}})
+      assert "%PDF" <> _ = conn.resp_body
+
+      hiker =
+        hiker
+        |> Ecto.Changeset.change(finished_at: DateTime.add(now, -1, :hour))
+        |> Repo.update!()
+
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      assert has_element?(lv, "#org-form-needed", "until the activity is published.")
+      assert has_element?(lv, "#org-form-needed-fix", "the activity")
+
+      hiker |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      refute has_element?(lv, "#org-form-needed")
+      assert %PublishedPDF{name: "Task report"} = publish(lv)
     end
 
     test "downloads for the team's admins, and search finds it by its ID", ctx do

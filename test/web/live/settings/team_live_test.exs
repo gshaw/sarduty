@@ -55,6 +55,20 @@ defmodule Web.Settings.TeamLiveTest do
            } = Team.get!(team.id)
   end
 
+  # Facts about the team, which letters and forms print, beside its legal name (#995).
+  test "saves the team's address, trimmed", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
+
+    address = %{mailing_address: "PO Box 12", city: " Squamish BC ", postal_code: "V8B 0A1"}
+
+    assert lv |> form("#team_settings_form", form: address) |> render_submit() =~
+             "Team settings saved."
+
+    assert %Team{mailing_address: "PO Box 12", city: "Squamish BC", postal_code: "V8B 0A1"} =
+             Team.get!(team.id)
+  end
+
   test "changes the team in the URL, not the one last opened", %{conn: conn} do
     %{user: user, team: first} = user_with_team_fixture()
     second = team_fixture(%{name: "Second SAR"})

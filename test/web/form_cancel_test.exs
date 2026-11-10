@@ -37,12 +37,10 @@ defmodule Web.FormCancelTest do
     "lib/web/live/org/settings_live.ex" => "organization settings tab",
     "lib/web/live/settings/access_key_live.ex" => "team settings tab",
     "lib/web/live/settings/hours_tags_live.ex" => "team settings tab",
-    "lib/web/live/settings/tax_credit_letters_live.ex" => "team settings tab",
+    "lib/web/live/settings/signer_live.ex" => "team settings tab",
     "lib/web/live/settings/members_live.ex" => "team settings tab",
     "lib/web/live/settings/team_live.ex" => "team settings tab",
     "lib/web/live/settings/team_admins_live.ex" => "team settings tab",
-    "lib/web/live/tax_credit_letter_live.ex" =>
-      "Download draft PDF on the letter's page, not a form",
     "lib/web/live/team_signup_live.ex" => "signing up has no page to go back to",
     "lib/web/live/user_login_code_live.ex" => "logging in has no page to go back to",
     "lib/web/live/user_login_live.ex" => "logging in has no page to go back to"

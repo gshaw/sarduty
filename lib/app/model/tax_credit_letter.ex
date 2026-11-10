@@ -2,12 +2,12 @@ defmodule App.Model.TaxCreditLetter do
   @moduledoc """
   A tax credit letter is a published PDF of the definition `Tax credit letter`,
   priv/documents/tax_credit_letter.txt (#918, #970), for a member's year: its subject is
-  `member:45:2026`. Its ID, the hours it printed (`keep`), when it was published, its
-  member's first download, and its email are on its App.Model.PublishedPDF. Publishing
-  again keeps the old one, Replaced, and withdrawing one ends it, so the member lists
-  under No letter again. Letters stay their own feature: the hours rule, the letter list
-  with Send letters, and the settings tab are code; this module is the queries and rules
-  that are only theirs.
+  `member:45:2026`. Its ID, the hours it printed (`keep`), when it was published, and
+  its email are on its App.Model.PublishedPDF. Publishing again keeps the old one,
+  Replaced, and withdrawing one ends it, so the member lists under No letter again.
+  Letters stay their own feature: the hours rule, the letter list with Email and
+  Withdraw (App.Operation.EmailTaxCreditLetters), and the Signer tab are code; this
+  module is the queries and rules that are only theirs.
   """
   import Ecto.Query
 
@@ -65,13 +65,22 @@ defmodule App.Model.TaxCreditLetter do
     |> Repo.one()
   end
 
-  @doc "The members on the team with a current letter for `year`."
-  def member_ids(team_id, year) do
+  @doc "The team's current letters among `ids`, with their members and team, as the list checks them."
+  def get_all_current(%Team{id: team_id}, ids) do
     team_id
     |> query()
     |> current()
-    |> where(year: ^year)
-    |> select([p], p.member_id)
+    |> where([p], p.id in ^ids)
+    |> preload(member: :team)
+    |> Repo.all()
+  end
+
+  @doc "The current letters for `year` of these members of the team."
+  def get_all_current_for(%Team{id: team_id}, member_ids, year) do
+    team_id
+    |> query()
+    |> current()
+    |> where([p], p.year == ^year and p.member_id in ^member_ids)
     |> Repo.all()
   end
 
@@ -91,11 +100,74 @@ defmodule App.Model.TaxCreditLetter do
   def set_email_status!(%PublishedPDF{} = letter, status),
     do: letter |> Ecto.Changeset.change(email_status: status) |> Repo.update!()
 
+  @doc "Records that the letter's email went at `now`."
+  def set_emailed!(%PublishedPDF{} = letter, now) do
+    letter
+    |> Ecto.Changeset.change(
+      email_status: :sent,
+      emailed_at: DateTime.truncate(now, :microsecond)
+    )
+    |> Repo.update!()
+  end
+
   @doc """
-  The year whose letters go out now: last year. Letters for it, or for the year
-  still under way, warn when attendance no longer adds up to their hours (#192).
+  Where the letter's email is, for the list's Letter column and the letter page:
+  `:emailed`, `:sending` while its job waits, `:failed` when the send was refused,
+  `:no_email` when its member has no email, else `:not_emailed`.
+  """
+  def email_state(%PublishedPDF{email_status: :sent}, _member), do: :emailed
+  def email_state(%PublishedPDF{email_status: :sending}, _member), do: :sending
+
+  def email_state(%PublishedPDF{email_status: status}, member) do
+    cond do
+      member.email in [nil, ""] -> :no_email
+      status == :failed -> :failed
+      true -> :not_emailed
+    end
+  end
+
+  @doc """
+  The year whose letters go out now: last year. Its letters, and those for the year
+  still under way, can go out of date; older years' are closed (`closed?/3`).
   """
   def current_year(now, timezone), do: Service.YearRange.year_in(now, timezone) - 1
+
+  @doc """
+  The year the letters list opens on, and the Tax credit letters menu with it (#995):
+  last year from January to April, letter season, while its letters go out and members
+  file; this year from May, while its hours still grow and members can still reach the
+  200-hour mark. Its actions wait for January 1 (`year_over?/3`). In the team's zone.
+  """
+  def list_year(now, timezone) do
+    year = Service.YearRange.year_in(now, timezone)
+    if Service.Period.letter_season?(now, timezone), do: year - 1, else: year
+  end
+
+  @doc """
+  Whether Needs attention names what letters need from team settings, such as the
+  signer's title: December to April, so it's fixed before letters can be emailed on
+  January 1 (#995).
+  """
+  def settings_season?(now, timezone),
+    do:
+      Service.Period.letter_season?(now, timezone) or
+        DateTime.shift_zone!(now, timezone).month == 12
+
+  @doc """
+  Whether `year` is over in the team's time zone, so its letters can be emailed: until it
+  ends, its hours can still grow, and its letters would need publishing again (#995).
+  """
+  def year_over?(year, now, timezone), do: year < Service.YearRange.year_in(now, timezone)
+
+  @doc """
+  Whether `year`'s letters are closed: from August 1 of the next year, in the team's
+  time zone, three months after members file by April 30. A member may have filed one,
+  so it stays as published and never goes out of date (#192, #995).
+  """
+  def closed?(year, now, timezone) do
+    today = Service.Period.today(now, timezone)
+    Date.compare(today, Date.new!(year + 1, 8, 1)) != :lt
+  end
 
   @doc "The minutes the letter printed, `{primary, secondary}`, or nil for one that kept none."
   def minutes(%PublishedPDF{keep: keep}) do
@@ -117,21 +189,11 @@ defmodule App.Model.TaxCreditLetter do
   end
 
   @doc """
-  How the letter's hours compare with `hours`, today's count from
-  `CountTaxCreditHours`:
-
-  - `:unknown`: an old letter with no saved hours.
-  - `:same`: they agree.
-  - `:changed`: they differ, and the letter is for the current year or later, so it
-    may be worth publishing again: it's out of date.
-  - `:changed_old`: they differ on an older letter. It stays as it is.
+  What reads differently on the letter's verify page today, as for every published PDF
+  (PublishedPDF.changes/2), from `today`, PrintTaxCreditLetter.today/2's: `[]` when
+  nothing does, and always for a closed year's letter. A line here makes it out of date.
   """
-  def hours_status(%PublishedPDF{} = letter, hours, now, timezone) do
-    cond do
-      minutes(letter) == nil -> :unknown
-      minutes(letter) == {hours.primary_minutes, hours.secondary_minutes} -> :same
-      letter.year >= current_year(now, timezone) -> :changed
-      true -> :changed_old
-    end
+  def changes(%PublishedPDF{} = letter, today, now, timezone) do
+    if closed?(letter.year, now, timezone), do: [], else: PublishedPDF.changes(letter, today)
   end
 end

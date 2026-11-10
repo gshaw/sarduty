@@ -29,6 +29,7 @@ defmodule Web.TeamDashboardLive do
   alias Web.Components.Reply
   alias Web.Components.ReplyControl
   alias Web.Components.ReportChart
+  alias Web.Components.TeamSettingsTabs
   alias Web.WhiteboardText
 
   # The top half is what needs doing: what's next, and what needs a team admin. The lower
@@ -547,8 +548,9 @@ defmodule Web.TeamDashboardLive do
        when key in [:refresh, :long_name, :long_abbreviated_name],
        do: ~p"/teams/#{team}/settings"
 
-  defp attention_path(team, %{key: :letter_settings}),
-    do: ~p"/teams/#{team}/settings/tax-credit-letters"
+  # The tab that fills the first one missing: General for the address, Signer for the rest.
+  defp attention_path(team, %{key: :letter_settings, names: [name | _rest]}),
+    do: TeamSettingsTabs.tab_path(team, TeamSettingsTabs.tab_for(name) || :general)
 
   defp attention_path(team, %{key: :key_rejected}), do: ~p"/teams/#{team}/settings/access-key"
 
@@ -603,7 +605,7 @@ defmodule Web.TeamDashboardLive do
        do: ~p"/teams/#{team}/activities/#{activity_id}/attendance"
 
   defp attention_path(team, %{key: :letters, year: year}),
-    do: ~p"/teams/#{team}/tax-credit-letters?year=#{year}"
+    do: ~p"/teams/#{team}/tax-credit-letters?#{[year: year, letter: "to_email"]}"
 
   attr :team, :map, required: true
   attr :notes, :list, required: true

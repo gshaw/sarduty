@@ -2,8 +2,8 @@ defmodule Web.Components.TeamSettingsTabs do
   use Web, :function_component
 
   # Team settings is one link in the side navigation (#406); its pages are tabs under one
-  # title, a topic each: the team and what it has turned on, then its members, its
-  # letters, and its activities. Access key is last: it's rarely needed (#727).
+  # title, a topic each: the team and what it has turned on, then its members, who signs
+  # its letters and forms, and its activities. Access key is last: it's rarely needed (#727).
   # Chore categories shows with chores on, and Agents with Agents on. A Try a demo team
   # has no Access key tab: its key is SAR Duty's, and a real key pasted there would make
   # it a real team (#857).
@@ -17,7 +17,7 @@ defmodule Web.Components.TeamSettingsTabs do
       :team_admins,
       :members,
       :features,
-      :tax_credit_letters,
+      :signer,
       :hours_tags,
       :places,
       :chore_categories,
@@ -41,11 +41,8 @@ defmodule Web.Components.TeamSettingsTabs do
       <:tab navigate={~p"/teams/#{@team}/settings/members"} current={@current == :members}>
         Members
       </:tab>
-      <:tab
-        navigate={~p"/teams/#{@team}/settings/tax-credit-letters"}
-        current={@current == :tax_credit_letters}
-      >
-        Tax credit letters
+      <:tab navigate={~p"/teams/#{@team}/settings/signer"} current={@current == :signer}>
+        Signer
       </:tab>
       <:tab navigate={~p"/teams/#{@team}/settings/hours-tags"} current={@current == :hours_tags}>
         Hours tags
@@ -77,4 +74,20 @@ defmodule Web.Components.TeamSettingsTabs do
     </.tabs>
     """
   end
+
+  @general ~w(team.name team.legal_name team.abbreviated_name team.mailing_address team.city
+              team.postal_code)
+
+  @doc """
+  The tab that fills one of the team's values a letter or form reads, by its name, such
+  as `team.signer`: General for its names and address, Signer for who signs (#995), or
+  nil for one no tab fills.
+  """
+  def tab_for(name) when name in @general, do: :general
+  def tab_for("team.signer" <> _rest), do: :signer
+  def tab_for(_name), do: nil
+
+  @doc "The path of team settings' `tab`, as `tab_for/1` names it."
+  def tab_path(team, :general), do: ~p"/teams/#{team}/settings"
+  def tab_path(team, :signer), do: ~p"/teams/#{team}/settings/signer"
 end

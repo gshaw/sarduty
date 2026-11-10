@@ -18,7 +18,10 @@ data?
 - **Edges over happy paths.** Year boundaries, expired awards, empty inputs, a member from
   another team.
 - **Deterministic.** No network, no `DateTime.utc_now()` inside the logic, no order
-  dependence.
+  dependence. A page whose rules turn on the date, such as tax credit letters (a year's
+  wait for January 1 and close on August 1), reads `Service.Clock.utc_now/0`, and its
+  test sets the date with `App.Clock.freeze/1`. That reaches the LiveView and the jobs
+  Oban runs inline in it, and the test stays async.
 
 ## What we deliberately do not test
 

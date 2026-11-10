@@ -32,19 +32,76 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
 - **A letter is its published PDF** (#970): a row in `published_pdfs` named `Tax credit
 letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](../lib/app/model/tax_credit_letter.ex)
   has its queries and rules). Its ID, the hours it kept, its date, who published it, its
-  member's first download, and its email status are on it. Its page shows what its
-  verify page shows, not its text.
-- **Only the current letter verifies as current.** Publish again
-  ([PublishTaxCreditLetter](../lib/app/operation/publish_tax_credit_letter.ex)) prints a
-  new letter with a new ID, and the old one's verify page says Replaced and shows
-  nothing from it, so an old paper copy can't pass for the hours the team stands behind
-  now. Withdraw ([WithdrawDocument](../lib/app/operation/withdraw_document.ex)) ends one
-  with no new one, and its member lists under No letter again. Both ask for a ticked
-  box, since the member may already have the letter. Nothing deletes a letter but its
+  email status, and when its email last went (`emailed_at`) are on it.
+- **A member's year has one page, sent or not** (#970),
+  `/tax-credit-letters/:year/members/:id` ([TaxCreditLetterLive](../lib/web/live/tax_credit_letter_live.ex)),
+  which the name in the letters list opens. Out of date and Needed to publish are
+  warning banners under its title (#995). With a letter it has the Published section a
+  form's page has ([PublishedPDF component](../lib/web/components/published_pdf.ex)):
+  when and who, its ID, where its email is, Download PDF, Email letter, and Withdraw
+  letter. With none, Not published and Email letter. A member with no email gets
+  Publish letter, the same action. Page 1 is open under it either way: the saved PDF,
+  drawn when the page asks (`Service.PDFImages.first_page/2`), or the letter as it
+  prints today, marked DRAFT, signed as the letter will be. The draft is
+  only a picture, never a download. History lists every letter for the year from their
+  own dates ([PublishedHistory](../lib/app/view_data/published_history.ex)): published,
+  published again, and withdrawn. Emails aren't History, since a letter keeps only its
+  last one (`emailed_at`); the Published section says when it last went, and to whom.
+- **The letters list says where each letter is, in a word**: No letter, Emailed, or Not
+  emailed, with a badge when it needs a team admin: Out of date, Did not send, or No
+  email. Two tiles split the members with hours (#995): Emailed, whose letter went by
+  email and is up to date, and To email, everyone else. Nothing in the tiles is special
+  for a member with no email: they stay in To email, with the No email badge.
+- **Letters have two actions, Email and Withdraw** (#995), on the list and the letter
+  page ([EmailTaxCreditLetters](../lib/app/operation/email_tax_credit_letters.ex)).
+  Email sends each member their latest letter as a PDF, publishing a new one first when
+  there's none or it's out of date, so no member keeps a letter that verifies as
+  Replaced. An up-to-date letter goes again. A member with no email gets a published
+  letter on Your membership only, and one with no hours that year gets nothing. "Send"
+  is D4H's word, so letters say email. There's no Publish on letters, and no way to
+  make a letter available without emailing a member who has an email.
+- **The list opens on the letter year** (#995, `TaxCreditLetter.list_year/2`), and the
+  Tax credit letters menu with it: last year from January to April, while its letters
+  go out and members file by April 30; this year from May, while hours still grow and
+  members can still reach the 200-hour mark. It turns over in the team's time zone. Any
+  other year is one Year filter away.
+- **A year that isn't over has no actions** (#995): until it ends in the team's time
+  zone, its hours can grow, and its letters would need publishing again. Only Email
+  publishes a letter, so none can be withdrawn either. The list has no boxes, choices,
+  or button, and says "2026 letters can be emailed from January 1, 2027."; the letter
+  page shows that sentence in place of Email letter and Withdraw letter. The operation
+  refuses Email too. A draft still prints.
+- **Check, then act** (#970, as an activity's Members tab): team admins check members,
+  or a tile then select all, and pick Email letters or Withdraw letters under For the
+  checked members. Each counts only the checked it fits, a choice that fits none greys
+  out and says why, and one button in the action bar does it. Email for many runs in a
+  job, since each new letter prints a PDF, and every email has its own job. On the
+  letter page, Email publishes and emails at once.
+- **Every Email and Withdraw asks first** ([Web.TaxCreditLetterConfirm](../lib/web/tax_credit_letter_confirm.ex)):
+  Email names who gets what, up to 3, then a counted line per group by what happens,
+  with anyone not emailed on their own line, and a box from 10 emails. Withdraw asks
+  for a box from 1, naming the count: nothing takes its place. There's no preview page
+  before emailing a letter: the letter page shows Page 1.
+- **Only the current letter verifies as current.** A new letter
+  ([PublishTaxCreditLetter](../lib/app/operation/publish_tax_credit_letter.ex)) prints
+  with a new ID, and the old one's verify page says Replaced and shows nothing from it,
+  so an old paper copy can't pass for the hours the team stands behind now. Withdraw
+  ([WithdrawDocument](../lib/app/operation/withdraw_document.ex)) ends one with no new
+  one, and its member lists under No letter again. Nothing deletes a letter but its
   team's purge.
-- **Out of date** is the hours rule: while the letter's year is open, attendance no
-  longer adds up to its hours (`TaxCreditLetter.hours_status/4`). It offers Publish
-  again, which is never automatic.
+- **Out of date is what the verify page would show** (#995), as for every published
+  PDF: the letter, read today, would put different `verify shows` values on its verify
+  page, such as its hours or the member's name (`TaxCreditLetter.changes/4`, from
+  `PublishedPDF.changes/2`). A team's postal code or a new signer is not on it, so it
+  changes nothing. A year's letters close on August 1 of the next year, in the
+  team's time zone, three months after members file by April 30: from then they never go
+  out of date, since a member may have filed one (#192). On 2026-11-10, one team's 33
+  letters for 2025, emailed that March, counted fewer hours than they printed. Nothing publishes a new one by itself.
+- **The letters list reads every letter at once** (`PrintTaxCreditLetter.read_each/4`):
+  the document checked once, the team's values and pictures read once, and the year's
+  hours counted once for every member shown, then each member's own reports. On South
+  Fraser's 75 to 87 members a year it takes 72 to 76 ms, where reading each letter alone
+  took 1.6 to 1.9 s (21 to 24 ms each), measured on 2026-11-10.
 - **Letters verify at the verify site's root**, beside cards, so they get the host's
   isolation (no login cookie), its miss limit ([Web.VerifyLimit](../lib/web/verify_limit.ex),
   shared with cards), and an organization's own verify host when that ships. An old
@@ -74,14 +131,32 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   write lock, and a print that fails makes nothing
   ([PublishTaxCreditLetter](../lib/app/operation/publish_tax_credit_letter.ex)).
   Downloads and emails serve the saved file, so a member gets the same file every time.
+  A team admin downloads any published PDF, a letter's or a form's, from `/pdfs/:id`.
 - **The email's words are the letter's** (`email to member` in its document, #970):
-  what it's for, the CRA line, and who answers questions. Send letters gives each
-  letter its own email job, and its status shows in its row; Email letter sends it
-  again. A member with no email gets a letter that isn't emailed.
-- **The team settings a letter needs are the letter's** (`needs`, #943, #970): Needs
-  attention names each blank one from January to April.
-- **The signature is the team's when the PDF is printed**, and the saved PDF keeps it.
-  The letter keeps no copy of its own (#918).
+  what it's for, the CRA line, and who answers questions. Email on the list gives each
+  letter its own email job, and its row says when it went or didn't; on the letter
+  page it sends at once, and a refusal there says Did not send at once.
+- **What a letter needs blocks publishing it, never a draft** (`needs`, #943, #995):
+  `team.mailing_address, team.signer, team.signer_title`. While one is blank, no letter
+  is published, so none is emailed; letters already published stay as they are. The
+  list and the letter page say so in a warning banner, Needed to email (Needed to
+  publish for a member with no email), linking the tab that fills each. Email reaches
+  only letters it sends as they are, never one it would publish first: on the list it
+  leaves those out, and greys out saying why when that's all the checked, and the letter
+  page has no Email letter. Needs attention says "Tax credit letters cannot be emailed until
+  you add the signer's title" from December to April, so it's fixed before January 1.
+  The address is on team settings' General tab, and who signs on Signer.
+- **The signer signs by typing their name** (#995): every letter prints "/s/ Alex Chen"
+  in Dancing Script, bold, under Certified on, then the name, title, phone, and email.
+  BCSARA said the CRA wants a signature, and no team admin has to upload a picture: on
+  2026-11-10 only one of the 10 teams that sent letters had one. The Signer tab
+  ([SignerLive](../lib/web/live/settings/signer_live.ex)) shows the end of every letter
+  as it's typed, and a test checks it against the letter's own text. The signer is one
+  line: the migration that dropped the picture kept the first line, up to a comma, and
+  moved a title, phone, or email it held to its own field. A form is signed by its task
+  leader, by hand, never by the team's letter signer.
+- **Signed by is not on the verify page.** A new signer would make every letter out of
+  date, since out of date is what the verify page would show.
 - **The verify code is a published PDF's** (#970), bottom left: a vector QR code, an
   SVG from `eqrcode`, so it prints sharp, then "Verify this document" and the link. Its
   verify page shows the member's name, the year, and the hours, from the letter's

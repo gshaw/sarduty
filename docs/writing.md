@@ -105,6 +105,8 @@ from group", "Mark 3 as retiring".
 **Links.** The link text says where it goes and makes sense out of context: "tax credit
 letters for 2025". Never "here", "click here", "more", or "this page".
 
+**Published.** Say which record: "This activity is published", "The task report is published". Never a bare "Published" where an activity and its letters or forms could both be meant. D4H's step in a workflow is "Publish in D4H".
+
 **Naming the interface.** Name a button, tab, filter, or option as it reads, capitals and
 all: "Set its hours with Change tags", "select All under Period". Name a page with the
 glossary's words, in lowercase mid-sentence: "Save it in team settings". Never say where a
@@ -141,7 +143,9 @@ its own confirmation, such as a reply's "Signed up".
 
 **Confirmations.** Before a change that cannot be undone, name the thing and what happens:
 "Delete First Aid? It comes off ID cards and the rules of Callout." The buttons are the action
-("Delete endorsement") and "Cancel".
+("Delete endorsement") and "Cancel". For many members, name up to 3; past that, a line for
+each group by what happens to it, with its count, and a line for those it leaves out
+([/styles/confirm-dialog#many](/styles/confirm-dialog#many)).
 
 **Warnings.** The consequence first, then what to do: "Attendance cannot be changed once
 the activity is published. Unpublish it with Change activity first."
@@ -223,7 +227,7 @@ and must not be used for it.
 | event                               | meeting, function                              | An activity that is neither, such as a meeting. Never use "event" for activities in general.         |
 | attendance                          | participation, roll call                       | Which members attended an activity, and for how long.                                                |
 | attended                            | present, participated                          | A member's state on an activity's attendance.                                                        |
-| published                           | locked, closed, finalized                      | An activity out of draft in D4H. D4H does not let SAR Duty change its tags.                          |
+| publish, published                  | locked, closed, finalized, issue               | Made final: an activity out of draft in D4H, or a letter or form PDF with an ID to verify.           |
 | qualification                       | certification, cert, ticket, course, skill     | Something a member holds in D4H, such as a first aid course. It can expire.                          |
 | award                               | held qualification, grant, cert                | One member's hold on a qualification, from its start to its expiry if any. A renewal is a new award. |
 | certificate                         | proof, card, qualification                     | Proof of a course, on paper, in a photo, or as a PDF. A team admin records it in D4H as an award.    |

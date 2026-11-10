@@ -1019,6 +1019,7 @@ defmodule App.Document.Parser do
     case lower(word) do
       "space" -> space(rest, line)
       "image" -> image(rest, line, n)
+      "signature" -> signature(rest, line, n)
       _other -> value(tokens, n)
     end
   end
@@ -1040,6 +1041,13 @@ defmodule App.Document.Parser do
     {options, rest} = image_options(rest, %{}, n)
     {condition, rest} = postfix_if(rest)
     {{:image, strings(expr, n), options, condition, line}, rest}
+  end
+
+  # `signature team.signer`: a typed signature, /s/ and the name in a script (#995).
+  defp signature(tokens, line, n) do
+    {expr, rest} = Parser.expression(tokens)
+    {condition, rest} = postfix_if(rest)
+    {{:signature, strings(expr, n), condition, line}, rest}
   end
 
   defp image_options([{:word, word, _} | rest] = tokens, options, n) do

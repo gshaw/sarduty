@@ -58,7 +58,7 @@ defmodule App.Operation.CountTaxCreditHours do
   hours, each with `member_id`, `year`, and the minutes `count/4` gives, newest year
   first. Each year counts as a letter for that year does. `repo` is the report's.
   `{member_id, year}` counts only that member's year, for a letter, rather than the
-  team's every year.
+  team's every year, and `{member_ids, year}` those members' year, for many letters.
   """
   def by_year(%Team{} = team, now \\ DateTime.utc_now(), repo \\ Repo, only \\ nil) do
     {year, member_ids} = scope(only)
@@ -66,6 +66,7 @@ defmodule App.Operation.CountTaxCreditHours do
     count_years(rows, team.timezone, Activity.hours_tags(team, repo))
   end
 
+  defp scope({member_ids, year}) when is_list(member_ids), do: {year, member_ids}
   defp scope({member_id, year}), do: {year, [member_id]}
   defp scope(nil), do: {nil, nil}
 

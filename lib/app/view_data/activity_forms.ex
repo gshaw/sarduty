@@ -46,10 +46,11 @@ defmodule App.ViewData.ActivityForms do
   end
 
   @doc """
-  One form's page: `{:ok, %{doc, values, timezone, filled, missing, answers, rows}}`,
-  `{:error, :not_shown}` when the form isn't for the activity, or `{:error, reason}` when
-  it doesn't read on the team. `filled` and `missing` are what the form reads, as
-  ReadDocument's `read` lists it, with a value or blank. `answers` is what each question
+  One form's page: `{:ok, %{doc, values, timezone, read, filled, missing, needed,
+  answers, rows}}`, `{:error, :not_shown}` when the form isn't for the activity, or
+  `{:error, reason}` when it doesn't read on the team. `filled` and `missing` are what
+  the form reads, as ReadDocument's `read` lists it, with a value or blank; `missing`
+  leaves out what publishing needs, which is `needed` (`needed/2`). `answers` is what each question
   starts from, `%{name => text}`: the activity's answer, the team's last for one that
   says `remember`, or its default when that's a plain value; an answer on each row is
   `%{row => text}`, the activity's alone. `rows` is `rows/4`'s, from `values`, what the
@@ -67,17 +68,31 @@ defmodule App.ViewData.ActivityForms do
 
   defp page(doc, values, read, starting, timezone) do
     {missing, filled} = Enum.split_with(read, &blank?(&1.value))
+    needs = MapSet.new(doc.needs, &Evaluator.name/1)
     answers = answers(doc, starting)
 
-    %{
+    page = %{
       doc: doc,
       values: values,
       timezone: timezone,
+      read: read,
       filled: filled,
-      missing: missing,
+      missing: Enum.reject(missing, &MapSet.member?(needs, &1.name)),
       answers: answers,
       rows: rows(doc, values, answers, timezone)
     }
+
+    Map.put(page, :needed, needed(page, answers))
+  end
+
+  @doc """
+  What the form needs to publish that's blank with the answers `typed` (#995), each as
+  `read` lists a value (App.Operation.ReadDocument.needed/3). Its page names each with
+  the page that fills it, and Publish refuses while there's one. `page` is `load/4`'s.
+  """
+  def needed(%{doc: doc, values: values, read: read, timezone: timezone}, typed) do
+    worked = Document.values(doc, Map.merge(values, readable(doc, typed)), timezone)
+    ReadDocument.needed(doc, worked, read)
   end
 
   defp shown_on(doc, context, activity) do
@@ -230,50 +245,23 @@ defmodule App.ViewData.ActivityForms do
   defp text(value), do: to_string(value)
 
   @doc """
-  The form's PDFs published for the activity (#970): `%{current, earlier}`, the current
-  one or nil, and the rest, newest first, each Replaced or Withdrawn.
+  The form's PDFs published for the activity (#970): `%{current, all}`, the current one
+  or nil, and every one, newest first, for its History.
   """
   def published(%Team{} = team, %Activity{} = activity, %Form{} = form) do
     all = PublishedPDF.get_all_for(team.id, form.name, PublishDocument.subject(activity))
-    {current, earlier} = Enum.split_with(all, &(PublishedPDF.status(&1) == :current))
-    %{current: List.first(current), earlier: earlier}
+    %{current: Enum.find(all, &(PublishedPDF.status(&1) == :current)), all: all}
   end
 
   @doc """
-  What changed since `pdf` was published, reading the form again with the activity's
-  answers now: `[]` when nothing did, or a line for each value its verify page shows
-  that changed, `"Total claimed: $1,240.00 → $1,310.00"`. A form with nothing its verify
-  page shows names each kept value that changed instead. `page` is `load/4`'s.
+  What reads differently on `pdf`'s verify page if the form were published today, with
+  the activity's answers now (PublishedPDF.changes/2): `[]` when nothing does, or a line
+  for each value, `"Total claimed: $1,240.00 → $1,310.00"`. `page` is `load/4`'s.
   """
   def changes(%{doc: doc, values: values, timezone: timezone}, starting, %PublishedPDF{} = pdf) do
     output = Document.evaluate(doc, Map.merge(values, readable(doc, starting)), timezone)
-
-    case shown_changes(pdf.shows, output.shows) do
-      [] -> kept_changes(pdf.keep, output.keep)
-      changes -> changes
-    end
+    PublishedPDF.changes(pdf, output)
   end
-
-  defp shown_changes(was, now) do
-    now = Map.new(now, &{&1["label"], &1["text"]})
-
-    for %{"label" => label, "text" => text} <- was,
-        Map.get(now, label) != text,
-        do: "#{label}: #{text || "blank"} → #{now[label] || "blank"}"
-  end
-
-  # Kept values come back from the database as JSON, so each side is compared as JSON.
-  defp kept_changes(was, now) do
-    now = now |> Jason.encode!() |> Jason.decode!()
-
-    for {name, value} <- Enum.sort(was),
-        Map.get(now, name) != value,
-        do: "#{name}: #{inspect_kept(value)} → #{inspect_kept(now[name])}"
-  end
-
-  defp inspect_kept(nil), do: "blank"
-  defp inspect_kept(value) when is_binary(value), do: value
-  defp inspect_kept(value), do: inspect(value)
 
   @doc """
   Each form's state on the activity's list (#970): `:testing` for a form that prints

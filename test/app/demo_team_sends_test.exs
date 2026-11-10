@@ -16,7 +16,7 @@ defmodule App.DemoTeamSendsTest do
   alias App.Model.Reminder
   alias App.Operation.BuildApplePass
   alias App.Operation.ChangeOwnPhone
-  alias App.Operation.CreateTaxCreditLetters
+  alias App.Operation.EmailTaxCreditLetters
   alias App.Operation.SendReminders
 
   defp email(team, to) do
@@ -84,6 +84,7 @@ defmodule App.DemoTeamSendsTest do
   describe "sends" do
     setup do
       %{user: user, team: team} = user_with_team_fixture()
+      team = signer_fixture(team)
       demo_team_fixture(team, %{user_id: user.id})
       starts = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
       activity = activity_fixture(team, %{title: "Training night", started_at: starts})
@@ -116,9 +117,12 @@ defmodule App.DemoTeamSendsTest do
 
     test "tax credit letters for 3 members are 3 emails in the Outbox, with the PDF", ctx do
       ids = Enum.map(ctx.members, & &1.id)
-      summary = CreateTaxCreditLetters.call(ctx.team, 2025, ids)
+      # Each has 2025 hours, without which Email offers no letter.
+      training = activity_fixture(ctx.team, %{started_at: ~U[2025-03-01 17:00:00Z]})
+      for member <- ctx.members, do: attendance_fixture(training, member)
+      summary = EmailTaxCreditLetters.run(ctx.team, 2025, ids, nil)
 
-      assert summary.created == 3 and summary.emailing == 3
+      assert summary.published == 3 and summary.emailing == 3
       assert Repo.aggregate(PublishedPDF, :count) == 3
       refute_email_sent()
 

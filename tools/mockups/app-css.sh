@@ -8,4 +8,5 @@ root=$(cd "$kit/../.." && pwd)
 # The app serves fonts from /fonts/; a file:// page needs them beside the CSS.
 sed 's#url("/fonts/#url("fonts/#g' "$root/priv/static/assets/css/app.css" >"$kit/app.css"
 mkdir -p "$kit/fonts"
-cp "$root"/priv/static/fonts/*.woff2 "$kit/fonts/"
+# The web fonts, and the letters' signature script for the Signer tab's preview (#995).
+cp "$root"/priv/static/fonts/*.woff2 "$root"/priv/static/fonts/*.ttf "$kit/fonts/"

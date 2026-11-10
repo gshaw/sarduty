@@ -16,8 +16,23 @@ defmodule App.Operation.EmailTaxCreditLetter do
          email = PrintTaxCreditLetter.email(letter, now),
          attachment = PublishedPDF.attachment(letter),
          {:ok, _metadata} <- TaxCreditLetterMailer.deliver(letter, email, attachment) do
-      TaxCreditLetter.set_email_status!(letter, :sent)
+      TaxCreditLetter.set_emailed!(letter, now)
       :ok
+    end
+  end
+
+  @doc """
+  `call/2` for a team admin's click, with no job to try again: a refused send marks the
+  letter failed at once, so its row and page say Did not send.
+  """
+  def send_now(%PublishedPDF{} = letter, now \\ DateTime.utc_now()) do
+    case call(letter, now) do
+      {:error, reason} when reason != :no_email ->
+        TaxCreditLetter.set_email_status!(letter, :failed)
+        {:error, reason}
+
+      result ->
+        result
     end
   end
 

@@ -38,6 +38,9 @@ config :sarduty, App.Mailer, adapter: Swoosh.Adapters.Test
 # Configure Oban for inline testing
 config :sarduty, Oban, testing: :inline
 
+# A test can freeze Service.Clock with App.Clock.freeze/1 (#995).
+config :sarduty, freezable_clock: true
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 

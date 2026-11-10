@@ -120,6 +120,7 @@ defmodule Web.ChoreLiveTest do
     assert html =~ "1 activity did not go through."
     assert has_element?(lv, "#chores-to-send", "1 activity is out of date.")
 
+    assert has_element?(lv, "#send-changes[data-confirm^='Send changes to 1 activity?']")
     stub_d4h(member)
     html = lv |> element("#send-changes") |> render_click()
     assert html =~ "Chore activities are up to date."

@@ -32,8 +32,9 @@ defmodule App.Document do
   - `title`: `%{text, by, line}`, the PDF's title and author
   - `lock`: `:print` when the PDF can only be printed, or nil
   - `keep`: the values saved with the PDF
-  - `needs`: the team's settings the PDF needs, such as `team.signer`; Needs attention
-    names those that are blank (#970)
+  - `needs`: the values publishing needs, such as `team.signer`, an activity's field, or
+    an answer: a PDF can't be published while one is blank, though a draft prints
+    (#995). Needs attention names a letter's blank team settings (#970)
   - `email`: `%{subject, body, line}`, the email a published PDF goes out with to its
     member, `body` a flow's items; or nil (#970)
   - `verify_code`: where a published PDF's verify code prints on each page, `%{at,
@@ -332,14 +333,20 @@ defmodule App.Document do
   defp format_of(_value, _name), do: nil
 
   @doc """
-  The names of the settings a checked document `needs` that are blank in `values`, in
-  its order, such as `team.mailing_address` (#970).
+  The names of the values a checked document `needs` that are missing from `values`, in
+  its order, such as `team.mailing_address` or `:leader` (#970, #995): blank, or false,
+  so `needs task.published` waits for the activity to be published. Only needs read
+  false as missing; `keep` and `verify shows` keep it. Give `values` with its answers
+  and computes, as `values/3` works them out, when it needs one of those.
   """
   def missing(%__MODULE__{needs: needs}, values) do
     needs
     |> Enum.map(&Evaluator.name/1)
-    |> Enum.filter(&(values |> Map.get(&1) |> Evaluator.blank?()))
+    |> Enum.filter(&missing?(Map.get(values, &1)))
   end
+
+  defp missing?(false), do: true
+  defp missing?(value), do: Evaluator.blank?(value)
 
   @doc "A place's text, as `expect` reads it: a flow's lines, a blank line for each space."
   defdelegate text(output, place), to: Evaluator

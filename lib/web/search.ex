@@ -39,7 +39,7 @@ defmodule Web.Search do
   @doc "Team pages for one record that search leaves out, and why."
   def not_searched,
     do: %{
-      Web.TaxCreditLetterLive => "A letter holds personal text; find the member instead.",
+      Web.TaxCreditLetterLive => "A member's letter for a year: search its ID instead.",
       Web.Settings.ChoreCategoryFormLive => "A setting, found from Team settings.",
       Web.Settings.PlaceFormLive => "A setting, found from Team settings.",
       Web.ReportLive => "Reports lists every report on one page.",
@@ -180,7 +180,7 @@ defmodule Web.Search do
     path =
       cond do
         hit.name == TaxCreditLetter.name() ->
-          ~p"/teams/#{team}/tax-credit-letters/#{hit.id}"
+          ~p"/teams/#{team}/tax-credit-letters/#{hit.year}/members/#{hit.member_id}"
 
         hit.activity_id && hit.form_id ->
           ~p"/teams/#{team}/activities/#{hit.activity_id}/forms/#{hit.form_id}"

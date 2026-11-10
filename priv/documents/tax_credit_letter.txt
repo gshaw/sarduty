@@ -20,9 +20,9 @@ title '{:year} SRVTC {team.legal_name}' by team.legal_name
 lock print
 keep hours.primary, hours.secondary
 
--- What the CRA may question a letter without. Needs attention names each one that's
--- blank in letter season (#943).
-needs team.mailing_address, team.signer, team.signature
+-- What the CRA may question a letter without, so no letter is published while one is
+-- blank (#995). Needs attention names each from December (#943).
+needs team.mailing_address, team.signer, team.signer_title
 
 -- What the letter's verify page shows anyone holding it, beside the team and the date
 -- it was certified.
@@ -76,10 +76,8 @@ fill
       else 'If you have questions, contact me using the details below.'
     space
     'Certified on {today as date_long}.'
-    -- The signature fits in 3 by 3/4 inches, with 6 points above and below. Without
-    -- one, four blank lines leave room to sign.
-    image team.signature width 3in height 0.75in pad 6pt
-    space 4 if team.signature is null
+    -- The signer signs by typing their name (#995): /s/ and the name, in a script.
+    signature team.signer
     coalesce(team.signer, team.legal_name)
     team.signer_title
     team.signer_phone
@@ -127,3 +125,11 @@ expect with today = date '2026-01-15':
 -- the signer.
 expect with team.signer_email = 'president@example.com':
   letter ends with 'president@example.com'
+
+-- The signer signs by name, /s/ in front, above their name and title (#995).
+expect with team.signer = 'Alex Chen', team.signer_title = 'President':
+  letter contains '/s/ Alex Chen' and letter ends with 'President'
+
+-- Without a signer the letter isn't published (needs), and a draft shows no signature.
+expect with team.legal_name = 'Coast Range Search and Rescue Society':
+  letter not contains '/s/'

@@ -34,8 +34,6 @@ defmodule App.Model.Team do
     field :authorized_by_title, TrimmedString
     field :authorized_by_phone, TrimmedString, redact: true
     field :authorized_by_email, TrimmedString, redact: true
-    # A PNG, set by App.Operation.SaveTeamSignature, never cast from a form.
-    field :signature, :binary, redact: true
     field :lat, :float
     field :lng, :float
     field :timezone, :string
@@ -176,11 +174,15 @@ defmodule App.Model.Team do
 
   @watch_standings ~w(active away retiring not_a_person)
 
-  # Settings' General tab. d4h_team_id and the key are not castable here.
+  # Settings' General tab: the team's names and its address, facts about the team that
+  # letters and forms print (#995). d4h_team_id and the key are not castable here.
   def build_settings_changeset(data, params \\ %{}) do
     data
-    |> cast(params, [:name, :legal_name, :abbreviated_name])
+    |> cast(params, [:name, :legal_name, :abbreviated_name, :mailing_address, :city, :postal_code])
     |> validate_names()
+    |> Validate.address(:mailing_address)
+    |> validate_length(:city, max: 100)
+    |> validate_length(:postal_code, max: 20)
   end
 
   # Settings' Access key tab (#727). SaveTeamKey saves the key after checking it with D4H.
@@ -230,21 +232,19 @@ defmodule App.Model.Team do
     end
   end
 
-  @doc "Settings' Tax credit letters tab: the mailing address, city, and postal code, and who signs."
-  def build_letters_changeset(data, params \\ %{}) do
+  @doc """
+  Settings' Signer tab (#995): who signs the team's tax credit letters, one line that
+  letters print as their typed signature, "/s/ Alex Chen", then their title, phone, and
+  email.
+  """
+  def build_signer_changeset(data, params \\ %{}) do
     data
     |> cast(params, [
-      :mailing_address,
-      :city,
-      :postal_code,
       :authorized_by_name,
       :authorized_by_title,
       :authorized_by_phone,
       :authorized_by_email
     ])
-    |> Validate.address(:mailing_address)
-    |> validate_length(:city, max: 100)
-    |> validate_length(:postal_code, max: 20)
     |> validate_length(:authorized_by_name, max: 250)
     |> validate_length(:authorized_by_title, max: 100)
     |> validate_length(:authorized_by_phone, max: 30)

@@ -55,7 +55,7 @@ its nine queries, and Activities took 274 ms where the old page took 10. Attenda
 
 ## The catalog is an allowlist
 
-The fields leave out emergency contacts, letter text, keys, and the signer's signature: `select emergency_contact
+The fields leave out emergency contacts, letter text, and keys: `select emergency_contact
 from members` answers "Reports leave out emergency contacts." A member's `email`,
 `mobile`, and `address` are team admins' fields, as the member's page shows them, and an
 activity's `address` and `place` are everyone's who reads activities (#827). The rule
@@ -79,8 +79,8 @@ each compile, about 240 ms on South Fraser's 37,000 attendances, outside the 2-s
 limit, which only times SQL.
 
 `team` and `organization` are one row each (#918): the team, and what its letters print
-about it, and its organization, or none. They never read the signer's signature or a
-logo, which only a letter prints.
+about it, and its organization, or none. They never read a logo, which only a letter
+prints.
 
 A field with a `query` is a rule's own query of ids (#784): it's true for the rows the
 rule keeps, `id IN (that query)`, so a rule that's already a query needs no twin.

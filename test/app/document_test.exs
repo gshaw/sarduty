@@ -139,8 +139,8 @@ defmodule App.DocumentTest do
       assert output.keep == %{"hours.primary" => 210, "hours.secondary" => 60}
     end
 
-    test "prints the logos in a row and the signature" do
-      values = %{"team.logo" => "team png", "team.signature" => "signature png"}
+    test "prints the logos in a row, and the signer signs by name (#995)" do
+      values = %{"team.logo" => "team png", "team.signer" => "Pat Lee"}
 
       places = Map.new(Document.evaluate(letter(), values, "Etc/UTC").places, &{&1.name, &1})
 
@@ -148,19 +148,21 @@ defmodule App.DocumentTest do
       assert %{across: true, top: 72, right: 72, height: 72, gap: 18.0} = places["letterhead"]
       assert places["letterhead"].value == [{:image, "team png", %{}}]
 
-      # The signature takes the place of the blank lines.
+      # A typed signature, then the name: no picture, and no blank lines to sign in.
       items = places["letter"].value
-      assert {:image, "signature png", %{width: 216, height: 54.0, pad: 6}} in items
 
-      refute Enum.any?(items, &match?({:space, 4}, &1))
+      assert [{:signature, "/s/ Pat Lee"}, {:text, "Pat Lee"} | _rest] =
+               Enum.drop_while(items, &(not match?({:signature, _}, &1)))
+
+      refute Enum.any?(items, &match?({:image, _, _}, &1))
       assert %{size: 12, leading: 14.4, top: 72, left: 72, right: 72} = places["letter"]
     end
 
-    test "has no picture without a logo or a signature" do
+    test "has no picture without a logo, and no signature without a signer" do
       places = Map.new(Document.evaluate(letter(), %{}, "Etc/UTC").places, &{&1.name, &1})
 
       assert places["letterhead"].value == []
-      assert {:space, 4} in places["letter"].value
+      refute Enum.any?(places["letter"].value, &match?({:signature, _}, &1))
     end
 
     test "its email says what the mailer said, and its questions line only with a contact" do
@@ -672,7 +674,7 @@ defmodule App.DocumentTest do
       "fill",
       "  who = team.legal_name",
       "  far = sum(people.km) > 10",
-      "  signature = team.signature",
+      "  logo = team.logo",
       "  address = team.mailing_address",
       "fill each people into lines",
       "  name = member",
@@ -693,7 +695,7 @@ defmodule App.DocumentTest do
 
       values = %{
         "team.legal_name" => "Coast Range Search and Rescue Society",
-        "team.signature" => @png,
+        "team.logo" => @png,
         "people" => [%{key: "member:7", values: %{"member" => "Avery Chen", "km" => 12}}]
       }
 
@@ -705,7 +707,7 @@ defmodule App.DocumentTest do
       assert output.fills == %{
                "who" => "Coast Range Search and Rescue Society",
                "far" => true,
-               "signature" => {:image, @png},
+               "logo" => {:image, @png},
                "address" => nil,
                "lines" => [%{"name" => "Avery Chen", "km" => "12", "far" => true}]
              }
@@ -748,7 +750,7 @@ defmodule App.DocumentTest do
       assert error(layout_form("", ["fill each people into people", "  name = member"])) ==
                "Line 6: Give the value another name: people is used above."
 
-      assert error(layout_form("", ["fill each people into lines", "  pic = team.signature"])) ==
+      assert error(layout_form("", ["fill each people into lines", "  pic = team.logo"])) ==
                "Line 7: Fill pic with text or a condition: a row holds no pictures."
     end
 
@@ -1117,20 +1119,31 @@ defmodule App.DocumentTest do
       assert error(doc("verify shows\n  :year", "'x'")) =~
                "Line 4: Start with the label in quotes"
 
-      assert error(doc("verify shows\n  'Signature' team.signature", "'x'")) ==
-               "Line 4: Show a value a report reads: team.signature only prints."
+      assert error(doc("verify shows\n  'Logo' team.logo", "'x'")) ==
+               "Line 4: Show a value a report reads: team.logo only prints."
     end
 
-    test "needs names the team's settings, and nothing else (#970)" do
-      {:ok, doc} = checked(doc("needs team.signer, team.signature", "'x'"))
+    test "needs names any value it reads: a setting, a picture, a field, or an answer (#995)" do
+      {:ok, doc} = checked(doc("needs team.signer, team.logo", "'x'"))
 
-      assert [{:field, ["team", "signer"], [], 3}, {:field, ["team", "signature"], [], 3}] =
+      assert [{:field, ["team", "signer"], [], 3}, {:field, ["team", "logo"], [], 3}] =
                doc.needs
 
-      assert error(doc("needs :year", "'x'")) ==
-               "Line 3: Write the team's settings after needs, such as team.signer."
+      {:ok, form} = checked(form("ask leader 'Task leader'\nneeds :leader, team.city"))
+      assert [{:value, "leader", _}, {:field, ["team", "city"], [], _}] = form.needs
 
+      assert error(doc("needs :year", "'x'")) ==
+               "Line 3: Write a value it reads after needs, such as team.signer or an answer, not :year."
+
+      assert error(doc("needs pdf.verify_link", "'x'")) =~ "not pdf.verify_link."
       assert error(doc("needs team.signr", "'x'")) =~ "Line 3: team has no field signr."
+    end
+
+    test "Document.missing/2 names each need that's blank (#995)" do
+      {:ok, form} = checked(form("ask leader 'Task leader'\nneeds :leader, team.signer"))
+
+      assert Document.missing(form, %{"team.signer" => " "}) == [":leader", "team.signer"]
+      assert Document.missing(form, %{":leader" => "Sam", "team.signer" => "Alex"}) == []
     end
 
     test "email to member has a subject and a body (#970)" do
@@ -1146,8 +1159,8 @@ defmodule App.DocumentTest do
     end
 
     test "never keep what only printing reads" do
-      assert error(doc("keep team.signature", "'x'")) ==
-               "Line 3: Keep a value a report reads: team.signature only prints."
+      assert error(doc("keep team.logo", "'x'")) ==
+               "Line 3: Keep a value a report reads: team.logo only prints."
     end
 
     test "fill every place, once" do

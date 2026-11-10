@@ -11,6 +11,13 @@ defmodule Service.PDFImages do
   # Sharp on a phone or a Mac's screen at the page's width, and small enough to send.
   @ppi 110
 
+  @doc """
+  `{:ok, png}` of page 1 only, or `{:error, reason}`: the preview on a published PDF's
+  page, drawn when the page asks, so nothing more is saved.
+  """
+  def first_page(pdf, ppi \\ @ppi) when is_binary(pdf),
+    do: 1 |> source() |> Typst.compile(%{"doc.pdf" => pdf}, png: ppi)
+
   @doc "`{:ok, [png]}`, one for each page in order, or `{:error, reason}`."
   def pages(pdf, ppi \\ @ppi) when is_binary(pdf) do
     case PDFPages.count(pdf) do
