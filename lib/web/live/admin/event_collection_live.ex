@@ -123,17 +123,17 @@ defmodule Web.Admin.EventCollectionLive do
       </section>
       <section :if={@top_accounts != []} id="top-accounts-list">
         <h3 class="subheading mb-0">Top accounts</h3>
-        <.hint>Wrong codes and blocks, by each email's or number's hash.</.hint>
+        <.hint>Wrong codes and blocks, for each email or number.</.hint>
         <.table
           id="top-accounts"
           rows={Enum.with_index(@top_accounts, 1)}
-          row_id={fn {_who_count, rank} -> "top-account-#{rank}" end}
+          row_id={fn {_account, rank} -> "top-account-#{rank}" end}
           class="table-striped"
         >
-          <:col :let={{{who, _count}, _rank}} label="Account">
-            <.a patch={~p"/admin/events?#{[who: who]}"} class="font-mono">{who}</.a>
+          <:col :let={{{who, shown, _count}, _rank}} label="Email or number">
+            <.account_link who={who} shown={shown} path={~p"/admin/events?#{[who: shown || who]}"} />
           </:col>
-          <:col :let={{{_who, count}, _rank}} label="Events">{count}</:col>
+          <:col :let={{{_who, _shown, count}, _rank}} label="Events">{count}</:col>
         </.table>
       </section>
     </div>
@@ -146,6 +146,7 @@ defmodule Web.Admin.EventCollectionLive do
       clear={~p"/admin/events"}
       path_fn={&events_path(@filter, &1)}
     >
+      <:search field={@form[:who]} placeholder="Email or number" />
       <:search field={@form[:ip]} placeholder="IP address" />
       <:filter field={@form[:kind]} label="Kind" options={EventFilterViewModel.kinds()} default="all" />
       <:filter
@@ -170,11 +171,28 @@ defmodule Web.Admin.EventCollectionLive do
         <span :if={event.ip} title={event.user_agent}>{event.ip}</span>
       </:col>
       <:col :let={event} label="Details">
-        <.a :if={event.who} patch={events_path(@filter, who: event.who)} class="font-mono">{event.who}</.a>
+        <.account_link
+          :if={event.who}
+          who={event.who}
+          shown={event.email_or_phone}
+          path={events_path(@filter, who: event.email_or_phone || event.who)}
+        />
         {details(event)}
       </:col>
     </.table>
     <.hint :if={length(@events) == @limit}>The newest {@limit}.</.hint>
+    """
+  end
+
+  # The email or number typed, or the hash alone for an event from before they were kept.
+  attr :who, :string, required: true
+  attr :shown, :string, default: nil
+  attr :path, :string, required: true
+
+  defp account_link(assigns) do
+    ~H"""
+    <.a :if={@shown} patch={@path}>{@shown}</.a>
+    <.a :if={!@shown} patch={@path} class="font-mono">{@who}</.a>
     """
   end
 
@@ -190,7 +208,7 @@ defmodule Web.Admin.EventCollectionLive do
     "#{ago}: #{teams} in #{event.duration_ms && Service.Format.run_time(event.duration_ms)}, #{event.data["outcome"]}"
   end
 
-  # After the account's hash, when there is one.
+  # After the email, number, or hash, when there is one.
   defp details(%{who: who, data: data}) when is_binary(who) and data != %{},
     do: "· " <> details(%{who: nil, data: data})
 

@@ -114,7 +114,7 @@ defmodule App.Model.OrganizationAdmin do
     with {:ok, admin} <- Repo.insert(changeset) do
       Event.record!(:organization_admin_added,
         user_id: user.id,
-        who: Event.who(admin.email),
+        email_or_phone: admin.email,
         data: %{organization_id: organization.id}
       )
 
@@ -135,7 +135,7 @@ defmodule App.Model.OrganizationAdmin do
 
         Event.record!(:organization_admin_removed,
           user_id: user.id,
-          who: Event.who(admin.email),
+          email_or_phone: admin.email,
           data: %{organization_id: organization.id}
         )
 

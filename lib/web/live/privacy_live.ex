@@ -28,7 +28,7 @@ defmodule Web.PrivacyLive do
           Your team is responsible for its members' data. SAR Duty handles that data for your team as a service provider.
         </p>
         <p>
-          SAR Duty also keeps the email or phone number you log in with. It keeps records of each login, with the IP address, for 90 days.
+          SAR Duty also keeps the email or phone number you log in with. It keeps records of each login and each try, with the email or number typed and the IP address, for 90 days.
         </p>
         <p id="privacy-certificates">
           SAR Duty keeps a certificate a member sends only until a team admin accepts or declines it.

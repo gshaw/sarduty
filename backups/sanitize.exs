@@ -214,6 +214,7 @@ defmodule Sanitize do
     end
 
     exec(conn, "DELETE FROM users_tokens")
+    exec(conn, "UPDATE events SET email_or_phone = NULL")
     exec(conn, "DELETE FROM oban_jobs")
     exec(conn, "DELETE FROM pass_registrations")
 

@@ -41,10 +41,22 @@ defmodule App.Model.EventTest do
     assert length(Event.get_recent(%{}, 2)) == 2
   end
 
-  test "keeps who and the IP as the limits count it, and counts by each" do
+  test "keeps the email typed, its hash, and the IP as the limits count it" do
     who = Event.who("guessed@example.org")
-    event = Event.record!(:login_code_missed, ip: "2001:db8:1:2::7", who: who, occurred_at: @now)
+
+    event =
+      Event.record!(:login_code_missed,
+        ip: "2001:db8:1:2::7",
+        email_or_phone: " Guessed@example.org ",
+        occurred_at: @now
+      )
+
     assert %Event{ip: "2001:db8:1:2::7", ip_key: "2001:db8:1:2::/64", who: ^who} = event
+    assert Repo.reload!(event).email_or_phone == "Guessed@example.org"
+
+    assert Event.record!(:logged_in, email_or_phone: {:phone, "+16045550100"}).email_or_phone ==
+             "+16045550100"
+
     assert Event.record!(:logged_in, ip: "203.0.113.7").ip_key == "203.0.113.7"
     assert Event.record!(:d4h_sync_round).ip_key == nil
 
@@ -55,7 +67,12 @@ defmodule App.Model.EventTest do
     assert Event.count_since(:login_code_missed, since, ip_key: "2001:db8:1:2::/64") == 2
     assert Event.count_since(:login_code_missed, since, ip_key: "2001:db8:1:3::/64") == 0
 
-    Event.record!(:login_code_missed, who: who, data: %{known_browser: true}, occurred_at: @now)
+    Event.record!(:login_code_missed,
+      email_or_phone: "guessed@example.org",
+      data: %{known_browser: true},
+      occurred_at: @now
+    )
+
     assert Event.count_since(:login_code_missed, since, who: who) == 2
 
     assert Event.count_since(:login_code_missed, since, who: who, data: %{known_browser: true}) ==

@@ -66,8 +66,9 @@ defmodule App.Model.Event do
 
   # Something the app did, kept to answer questions later: how long sync rounds take,
   # which team failed and since when, who is guessing login codes. `data` holds counts
-  # and ids, never names, emails, or phone numbers. A typed email or number goes in the
-  # `who` column as a keyed hash (who/1), so attempts on one account group together, and
+  # and ids, never names, emails, or phone numbers. A typed email or number is kept
+  # twice: encrypted in `email_or_phone`, to show on the Events page, and as `who`, a keyed
+  # hash (who/1) that groups attempts on one account and counts them for the limits. And
   # `ip_key` is the IP as the limits count it (App.RateLimit.ip_key/1, IPv6 by its /64).
   # Both are indexed with kind and time (#974), so counting one account's or one
   # connection's events in a window is one index range. Web.LoginLimit counts wrong codes
@@ -78,6 +79,7 @@ defmodule App.Model.Event do
     belongs_to :team, Team
     belongs_to :user, User
     field :who, :string
+    field :email_or_phone, App.Field.EncryptedString, redact: true
     field :ip, :string
     field :ip_key, :string
     field :user_agent, :string
@@ -89,9 +91,9 @@ defmodule App.Model.Event do
   def kinds, do: @kinds
 
   @doc """
-  Records an event. `attrs` takes `team_id`, `user_id`, `who` (a hash from who/1), `ip`,
-  `user_agent`, `duration_ms`, `data`, and `occurred_at`, which defaults to now.
-  `ip_key` comes from `ip`.
+  Records an event. `attrs` takes `team_id`, `user_id`, `email_or_phone` (an email, or
+  `{:phone, e164}`), `ip`, `user_agent`, `duration_ms`, `data`, and `occurred_at`, which
+  defaults to now. `who` comes from `email_or_phone`, and `ip_key` from `ip`.
   """
   def record!(kind, attrs \\ []) when kind in @kinds do
     attrs = Map.new(attrs)
@@ -100,7 +102,8 @@ defmodule App.Model.Event do
       kind: kind,
       team_id: attrs[:team_id],
       user_id: attrs[:user_id],
-      who: attrs[:who],
+      who: attrs[:email_or_phone] && who(attrs[:email_or_phone]),
+      email_or_phone: attrs[:email_or_phone] && shown(attrs[:email_or_phone]),
       ip: attrs[:ip],
       ip_key: attrs[:ip] && RateLimit.ip_key(attrs[:ip]),
       user_agent: attrs[:user_agent] && String.slice(attrs[:user_agent], 0, 255),
@@ -200,16 +203,35 @@ defmodule App.Model.Event do
 
   @doc """
   The accounts with the most events of these kinds since `since`, most first, as
-  `{who, count}`.
+  `{who, email_or_phone, count}`. `email_or_phone` is the latest one typed, or nil for
+  an account with only events from before it was kept.
   """
   def get_top_accounts(kinds, since, limit) do
-    kinds
-    |> top(since, limit)
-    |> where([e], not is_nil(e.who))
-    |> group_by([e], e.who)
-    |> select([e], {e.who, count(e.id)})
-    |> order_by([e], asc: e.who)
+    top =
+      kinds
+      |> top(since, limit)
+      |> where([e], not is_nil(e.who))
+      |> group_by([e], e.who)
+      |> select([e], {e.who, count(e.id)})
+      |> order_by([e], asc: e.who)
+      |> Repo.all()
+
+    shown = top |> Enum.map(&elem(&1, 0)) |> get_shown()
+    Enum.map(top, fn {who, count} -> {who, shown[who], count} end)
+  end
+
+  # The latest email or number typed for each hash. Each is encrypted with its own IV,
+  # so SQL can't group them; the newest row per hash is enough.
+  defp get_shown(whos) do
+    latest =
+      from e in Event,
+        where: e.who in ^whos and not is_nil(e.email_or_phone),
+        group_by: e.who,
+        select: max(e.id)
+
+    from(e in Event, where: e.id in subquery(latest), select: {e.who, e.email_or_phone})
     |> Repo.all()
+    |> Map.new()
   end
 
   defp top(kinds, since, limit) do
@@ -221,11 +243,15 @@ defmodule App.Model.Event do
 
   @doc """
   A typed email or number as a keyed hash, so attempts on one account group together
-  without storing the address of someone who may not even use SAR Duty. The key comes
-  from the app's secret, so the hash can't be matched against a list of emails.
+  however it was typed, and the limits can count them by an indexed column. The key
+  comes from the app's secret.
   """
   def who({:phone, e164}), do: hash("phone:" <> e164)
   def who(email) when is_binary(email), do: hash(email |> String.trim() |> String.downcase())
+
+  # As typed, trimmed, so a list or a typo shows. Capped like an email address.
+  defp shown({:phone, e164}), do: e164
+  defp shown(email), do: email |> String.trim() |> String.slice(0, 254)
 
   # cspell:ignore hmac -- Erlang's :crypto.mac/4 name for a keyed hash.
   defp hash(value) do
