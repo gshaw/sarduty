@@ -340,19 +340,35 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
                "team settings"
              )
 
-      # Email stays on, and says the same when it would publish.
+      # Email greys out for a letter it would publish, and says why.
       avery = member_fixture(team, %{name: "Avery"})
       attend(team, avery)
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any")
-      apply_choice(lv, [avery], "email")
+      check(lv, [avery], "email")
+      assert has_element?(lv, ~s(#letters-choice input[value="email"][disabled]))
 
       assert has_element?(
                lv,
-               "#flash-error",
+               "#letters-choice",
                "Letters cannot be emailed without the signer's title."
              )
 
-      refute Repo.exists?(PublishedPDF)
+      assert has_element?(lv, "#letters-apply[disabled]")
+      refute has_element?(lv, "#letters-apply[data-confirm]")
+
+      # An up-to-date letter goes again as it is, so Email reaches it.
+      blake = member_fixture(team, %{name: "Blake"})
+      attend(team, blake)
+      tax_credit_letter_fixture(blake, %{year: 2025, email_status: :sent})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any")
+      check(lv, [avery, blake], "email")
+      assert has_element?(lv, "#letters-apply", "Email 1 letter")
+
+      assert has_element?(
+               lv,
+               "#letters-choice",
+               "Emails the 1 checked their latest letter. A missing or out-of-date letter is published first. 1 needs a new letter first. New letters cannot be published without the signer's title."
+             )
 
       # The job refuses it too.
       team = Repo.reload!(team)

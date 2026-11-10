@@ -17,8 +17,9 @@ defmodule Web.TaxCreditLetterLive do
   # (#995). With a letter, the Published section a form's page has: when and who, its
   # ID, where its email is, Download, Email letter, and Withdraw letter. With none yet,
   # Not published and Email letter. A member with no email gets Publish letter, the same
-  # action (App.Operation.EmailTaxCreditLetters). Page 1 shows either way, the draft
-  # with the team's signature, and History lists every letter for the year.
+  # action (App.Operation.EmailTaxCreditLetters), left out while a value the letter needs
+  # to publish is blank. Page 1 shows either way, the draft signed as the letter will
+  # be, and History lists every letter for the year.
   def mount(_params, _session, socket), do: {:ok, socket}
 
   @doc "The year in the path, or nil when it can't have letters."
@@ -172,7 +173,7 @@ defmodule Web.TaxCreditLetterLive do
               </p>
             </:status>
             <:actions>
-              <.email_button :if={is_nil(@refusal)} record={@record} ask={@needed == []} />
+              <.email_button :if={is_nil(@refusal) and @needed == []} record={@record} />
               <span :if={@refusal} id="letter-year-open" class="hint">{@refusal}</span>
             </:actions>
             <:withdraw :if={is_nil(@refusal)}>
@@ -199,10 +200,9 @@ defmodule Web.TaxCreditLetterLive do
             <div class="card">
               <p class="mb-4">No letter for {@year} yet. This is how it prints today.</p>
               <.email_button
-                :if={is_nil(@refusal)}
+                :if={is_nil(@refusal) and @needed == []}
                 record={@record}
                 variant={:primary}
-                ask={@needed == []}
               />
               <p :if={@refusal} id="letter-year-open" class="hint">{@refusal}</p>
               <p :if={is_nil(@record.email)} id="letter-no-hours" class="hint">
@@ -227,12 +227,11 @@ defmodule Web.TaxCreditLetterLive do
   end
 
   attr :record, :map, required: true
-  attr :ask, :boolean, required: true, doc: "false when it can only refuse: no confirm for that"
   attr :variant, :atom, default: :default
 
-  # Email letter, or Publish letter for a member with no email: the same action. It stays
-  # on while a value it needs is blank, and says what as an error, with no confirm. In a
-  # year that isn't over the page has no actions, and says when it can.
+  # Email letter, or Publish letter for a member with no email: the same action. It's left
+  # out while a value it needs is blank, as the banner over it says, and in a year that
+  # isn't over, where the page says when it can.
   defp email_button(assigns) do
     ~H"""
     <.button
@@ -241,7 +240,7 @@ defmodule Web.TaxCreditLetterLive do
       variant={@variant}
       phx-click="email"
       phx-disable-with={if emailed?(@record.member), do: "Sending…", else: "Publishing…"}
-      {if @ask, do: TaxCreditLetterConfirm.email_one(@record), else: %{}}
+      {TaxCreditLetterConfirm.email_one(@record)}
     >
       {email_label(@record.member)}
     </.button>

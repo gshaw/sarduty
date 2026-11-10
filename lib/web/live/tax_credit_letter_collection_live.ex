@@ -6,8 +6,9 @@ defmodule Web.TaxCreditLetterCollectionLive do
   members and act on them under it: For the checked members, Email letters or Withdraw
   letters, and one button in the action bar at the foot of the window, as on an
   activity's Members tab. Each choice counts only the checked it fits, and one that
-  fits none greys out and says why. The ticks are the rows shown: a filter that hides a
-  row unchecks it.
+  fits none greys out and says why. While a value every letter needs is blank, such as
+  the signer's title, Email reaches only letters it sends as they are, never one it would
+  publish first. The ticks are the rows shown: a filter that hides a row unchecks it.
 
   Email runs in a job (App.Operation.EmailTaxCreditLetters), since each new letter
   prints a PDF; each email has its own job, and each row updates as its email goes.
@@ -214,7 +215,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
           name="choice"
           label="For the checked members"
           value={@choice}
-          options={choices(@checked)}
+          options={choices(@checked, @needed)}
         />
       </div>
       <.action_bar :if={is_nil(@refusal)} id="letters-bar" hint={bar_hint(@checked, @choice)}>
@@ -223,7 +224,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
           variant={variant(@choice)}
           disabled={@fit == []}
           phx-disable-with={waiting(@choice)}
-          {if refused?(@choice, @fit, @needed), do: %{}, else: confirm(@choice, @fit, @filter_options.year)}
+          {confirm(@choice, @fit, @filter_options.year)}
         >
           {button_text(@choice, @fit)}
         </.button>
@@ -233,21 +234,30 @@ defmodule Web.TaxCreditLetterCollectionLive do
   end
 
   # Whether a choice reaches a checked row: Email a member it does something for
-  # (EmailTaxCreditLetters.what/1), Withdraw a member with a letter.
-  defp fits?("email", record), do: record.email != nil
-  defp fits?("withdraw", record), do: record.tax_credit_letter_id != nil
-  defp fits?(_choice, _record), do: false
+  # (EmailTaxCreditLetters.what/1), but while a value every letter needs is blank, not
+  # one whose letter it would publish first. Withdraw a member with a letter.
+  defp fits?("email", %{email: nil}, _needed), do: false
+  defp fits?("email", record, needed), do: needed == [] or not publishes?(record)
+  defp fits?("withdraw", record, _needed), do: record.tax_credit_letter_id != nil
+  defp fits?(_choice, _record, _needed), do: false
+
+  defp publishes?(record), do: EmailTaxCreditLetters.publishes?(record.email)
 
   # Each choice with what it does for the checked, or greyed with why it reaches nobody.
-  defp choices(checked), do: Enum.map(@choices, &choice(&1, checked))
+  defp choices(checked, needed), do: Enum.map(@choices, &choice(&1, checked, needed))
 
-  defp choice(choice, checked) do
-    fit = Enum.filter(checked, &fits?(choice, &1))
+  defp choice(choice, checked, needed) do
+    fit = Enum.filter(checked, &fits?(choice, &1, needed))
 
     cond do
-      checked == [] -> {choice_label(choice), choice, choice_hint(choice)}
-      fit == [] -> {choice_label(choice), choice, none(choice, length(checked)), disabled: true}
-      true -> {choice_label(choice), choice, choice_hint(choice, fit, checked)}
+      checked == [] ->
+        {choice_label(choice), choice, choice_hint(choice)}
+
+      fit == [] ->
+        {choice_label(choice), choice, none(choice, checked, needed), disabled: true}
+
+      true ->
+        {choice_label(choice), choice, choice_hint(choice, fit, checked, needed)}
     end
   end
 
@@ -261,7 +271,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp choice_hint("withdraw"),
     do: "Withdraws the letter of each checked member with one. Nothing takes their place."
 
-  defp choice_hint("email", fit, checked) do
+  defp choice_hint("email", fit, checked, needed) do
     {emailed, not_emailed} = Enum.split_with(fit, &EmailTaxCreditLetters.emailed?(&1.member))
 
     [
@@ -272,13 +282,13 @@ defmodule Web.TaxCreditLetterCollectionLive do
           one: "1 with no email gets theirs on Your membership only.",
           many: "%d with no email get theirs on Your membership only."
         ),
-      skipped(checked -- fit)
+      skipped(checked -- fit, needed)
     ]
     |> Enum.filter(&is_binary/1)
     |> Enum.join(" ")
   end
 
-  defp choice_hint("withdraw", fit, checked) do
+  defp choice_hint("withdraw", fit, checked, _needed) do
     without = length(checked) - length(fit)
 
     "Withdraws the #{if length(fit) == 1, do: "letter", else: "letters"} of #{the_checked(length(fit))} with one. " <>
@@ -292,27 +302,51 @@ defmodule Web.TaxCreditLetterCollectionLive do
   end
 
   # Who Email leaves out of the checked, and why.
-  defp skipped([]), do: nil
+  defp skipped([], _needed), do: nil
 
-  defp skipped(records) do
+  defp skipped(records, needed) do
     {no_hours, rest} = Enum.split_with(records, &(&1.total_minutes == 0))
+    {new, rest} = Enum.split_with(rest, &publishes?/1)
 
-    [
-      no_hours != [] && count_of(no_hours, one: "1 has no hours.", many: "%d have no hours."),
-      rest != [] &&
-        count_of(rest,
-          one: "1 has no email, and a letter up to date.",
-          many: "%d have no email, and a letter up to date."
-        )
-    ]
-    |> Enum.filter(&is_binary/1)
+    [skip(:no_hours, no_hours, needed), skip(:new, new, needed), skip(:no_email, rest, needed)]
+    |> Enum.reject(&is_nil/1)
     |> Enum.join(" ")
   end
 
-  defp none("email", 1), do: "The member checked cannot get a letter."
-  defp none("email", n), do: "None of the #{n} checked can get a letter."
-  defp none("withdraw", 1), do: "The member checked has no letter."
-  defp none("withdraw", n), do: "None of the #{n} checked has a letter."
+  defp skip(_why, [], _needed), do: nil
+
+  defp skip(:no_hours, records, _needed),
+    do: count_of(records, one: "1 has no hours.", many: "%d have no hours.")
+
+  defp skip(:new, records, needed),
+    do:
+      count_of(records, one: "1 needs a new letter first.", many: "%d need a new letter first.") <>
+        " " <> ReadDocument.needed_error("New letters", needed)
+
+  defp skip(:no_email, records, _needed),
+    do:
+      count_of(records,
+        one: "1 has no email, and a letter up to date.",
+        many: "%d have no email, and a letter up to date."
+      )
+
+  defp none("email", checked, needed) do
+    cond do
+      needed != [] and Enum.any?(checked, &publishes?/1) ->
+        ReadDocument.needed_error("Letters", needed, "emailed")
+
+      length(checked) == 1 ->
+        "The member checked cannot get a letter."
+
+      true ->
+        "None of the #{length(checked)} checked can get a letter."
+    end
+  end
+
+  defp none("withdraw", [_one], _needed), do: "The member checked has no letter."
+
+  defp none("withdraw", checked, _needed),
+    do: "None of the #{length(checked)} checked has a letter."
 
   defp the_checked(n), do: "the #{n} checked"
 
@@ -343,13 +377,6 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp bar_hint(_checked, _choice), do: nil
 
   # Every Email asks, naming who gets what; Withdraw asks with its box from 1 (#995).
-  # Nobody confirms a send that can't go (/styles/confirm-dialog): while what every letter
-  # needs is blank, an Email that would publish goes straight to its error.
-  defp refused?("email", fit, needed),
-    do: needed != [] and Enum.any?(fit, &EmailTaxCreditLetters.publishes?(&1.email))
-
-  defp refused?(_choice, _fit, _needed), do: false
-
   defp confirm(_choice, [], _year), do: %{}
   defp confirm("email", fit, year), do: TaxCreditLetterConfirm.email(fit, year)
   defp confirm("withdraw", fit, year), do: TaxCreditLetterConfirm.withdraw(fit, year)
@@ -472,17 +499,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
     end
   end
 
-  # What every letter needs says so at once; the job checks again.
-  defp apply_choice(socket, "email", fit) do
-    if refused?("email", fit, socket.assigns.needed),
-      do:
-        put_flash(
-          socket,
-          :error,
-          ReadDocument.needed_error("Letters", socket.assigns.needed, "emailed")
-        ),
-      else: email(socket, fit)
-  end
+  defp apply_choice(socket, "email", fit), do: email(socket, fit)
 
   defp apply_choice(socket, "withdraw", fit) do
     %{current_team: team, current_user: user} = socket.assigns
@@ -541,13 +558,13 @@ defmodule Web.TaxCreditLetterCollectionLive do
 
   # The checked rows among those shown, and those the choice reaches.
   defp assign_checked(socket) do
-    %{records: records, selected: selected, choice: choice} = socket.assigns
+    %{records: records, selected: selected, choice: choice, needed: needed} = socket.assigns
     checked = Enum.filter(records, &MapSet.member?(selected, &1.member.id))
 
     assign(socket,
       selected: MapSet.new(checked, & &1.member.id),
       checked: checked,
-      fit: Enum.filter(checked, &fits?(choice, &1))
+      fit: Enum.filter(checked, &fits?(choice, &1, needed))
     )
   end
 

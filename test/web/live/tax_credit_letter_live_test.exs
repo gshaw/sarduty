@@ -312,7 +312,7 @@ defmodule Web.TaxCreditLetterLiveTest do
     assert_no_email_sent()
   end
 
-  test "what the letter needs is a warning banner, and Email letter says it as an error (#995)",
+  test "what the letter needs is a warning banner, and the page has no Email letter (#995)",
        %{conn: conn, team: team, member: member} do
     attend(team, member, 2025)
     team |> Ecto.Changeset.change(authorized_by_title: nil) |> Repo.update!()
@@ -329,25 +329,34 @@ defmodule Web.TaxCreditLetterLiveTest do
              "team settings"
            )
 
-    refute has_element?(lv, "#email-letter[disabled]")
-    refute has_element?(lv, "#email-letter[data-confirm]")
-    lv |> element("#email-letter") |> render_click()
+    refute has_element?(lv, "#email-letter")
 
+    # A stale page's click is refused by the operation.
+    render_click(lv, "email", %{})
     assert has_element?(lv, "#flash-error", message)
     refute TaxCreditLetter.get_current(member, 2025)
 
-    # With no email the button is Publish letter, and the words follow it.
+    # With no email the words follow Publish letter, the action it would be.
     blake = member_fixture(team, %{name: "Blake Morrison", email: nil})
     attend(team, blake, 2025)
     {:ok, lv, _html} = live(conn, letter_path(team, blake, 2025))
     assert has_element?(lv, "#letter-needed", "Needed to publish")
-    lv |> element("#email-letter", "Publish letter") |> render_click()
 
     assert has_element?(
              lv,
-             "#flash-error",
+             "#letter-needed",
              "This letter cannot be published without the signer's title."
            )
+
+    refute has_element?(lv, "#email-letter")
+
+    # An up-to-date letter goes again as it is, so it needs nothing.
+    casey = member_fixture(team, %{name: "Casey Dhillon"})
+    attend(team, casey, 2025)
+    tax_credit_letter_fixture(casey, %{year: 2025, email_status: :sent})
+    {:ok, lv, _html} = live(conn, letter_path(team, casey, 2025))
+    refute has_element?(lv, "#letter-needed")
+    assert has_element?(lv, "#email-letter[data-confirm]", "Email letter")
   end
 
   test "a year that can't have letters is a 404", %{conn: conn, team: team, member: member} do

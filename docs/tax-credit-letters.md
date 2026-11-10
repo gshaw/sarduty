@@ -138,8 +138,10 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   `team.mailing_address, team.signer, team.signer_title`. While one is blank, no letter
   is published, so none is emailed; letters already published stay as they are. The
   list and the letter page say so in a warning banner, Needed to email (Needed to
-  publish for a member with no email), linking the tab that fills each, and Email says
-  the same as an error. Needs attention says "Tax credit letters cannot be emailed until
+  publish for a member with no email), linking the tab that fills each. Email reaches
+  only letters it sends as they are, never one it would publish first: on the list it
+  leaves those out, and greys out saying why when that's all the checked, and the letter
+  page has no Email letter. Needs attention says "Tax credit letters cannot be emailed until
   you add the signer's title" from December to April, so it's fixed before January 1.
   The address is on team settings' General tab, and who signs on Signer.
 - **The signer signs by typing their name** (#995): every letter prints "/s/ Alex Chen"
