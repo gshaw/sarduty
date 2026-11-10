@@ -104,8 +104,6 @@
   .confirm-dialog-choices { margin: 0 0 var(--sp-6); padding: 0; border: 0; }
   .confirm-dialog-choices legend { padding: 0; margin-bottom: var(--sp-1); font-weight: 700; }
   .confirm-dialog-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-  /* Grey, not a faded red, until the box is ticked or the text matches. */
-  .confirm-dialog-actions .btn:disabled { opacity: 1; --btn-bg: var(--surface-alt); --btn-fg: var(--text-muted); box-shadow: none; }
   @media (max-width: 640px) {
     .confirm-dialog-actions { flex-direction: column; }
     .confirm-dialog-actions .btn { width: 100%; justify-content: center; }

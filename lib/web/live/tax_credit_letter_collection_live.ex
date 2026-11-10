@@ -320,6 +320,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
   end
 
   defp button_text("withdraw", [_ | _] = fit), do: "Withdraw #{letters(length(fit))}"
+  defp button_text("withdraw", []), do: "Withdraw letters"
   defp button_text(_choice, _fit), do: "Change letters"
 
   defp variant("withdraw"), do: :danger
