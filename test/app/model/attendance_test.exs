@@ -196,7 +196,8 @@ defmodule App.Model.AttendanceTest do
     "lib/app/operation/change_attendance.ex" => "a row's status, changed by hand",
     "lib/app/operation/refresh_d4h_data/upsert_attendances.ex" =>
       "a no-show's row changed to attending in D4H",
-    "lib/app/coast_range.ex" => "the made-up team's rows, written as D4H writes them"
+    "lib/app/coast_range.ex" => "the made-up team's rows, written as D4H writes them",
+    "lib/app/silver_basin.ex" => "the second made-up team's rows, written as D4H writes them"
   }
 
   test "only Attendance says what attended means" do
