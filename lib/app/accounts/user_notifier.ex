@@ -10,11 +10,12 @@ defmodule App.Accounts.UserNotifier do
   # without opening the email. The last line binds the code to this site's domain, in the
   # format of Apple's origin-bound code draft, so Safari can suggest it. The draft's
   # One-Time-Code header would do the same, but Cloudflare rejects headers off its list.
-  # People read the code in groups of 4 with a dash, as texts show it; the bound line
-  # keeps it whole, since a space there would end it.
+  # People read the code in groups of 4. The email joins them with an underscore, not
+  # the texts' dash: iOS Mail makes 4829-1375 a phone number, and an underscore keeps the
+  # code one word to copy. The bound line keeps it whole, since a space there would end it.
   def deliver_login_code(user, code) do
     host = Web.Endpoint.host()
-    shown = UserToken.format_code(code, "-")
+    shown = UserToken.format_code(code, "_")
 
     email =
       new()
@@ -170,8 +171,8 @@ defmodule App.Accounts.UserNotifier do
 
   # cspell:ignore Segoe -- Windows' system font, in the email's font stack
   # The logo is a PNG at 2x, since Gmail won't show SVG (see /styles/logo).
-  # The code is one dashed word, as texts show it. The meta and the style stop iOS Mail
-  # making it a phone-number link.
+  # The meta and the style stop iOS Mail making a code that looks like a phone number a
+  # link.
   # The domain line is hidden: it's for Mail, not people.
   defp login_html(code, host) do
     logo = Web.Endpoint.url() <> "/images/sarduty-logo-96.png"
@@ -182,7 +183,7 @@ defmodule App.Accounts.UserNotifier do
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; color: #18181b; max-width: 480px;">
       <img src="#{logo}" width="48" height="48" alt="SAR Duty" style="display: block; border: 0;">
       <p>Your code to log in to SAR Duty:</p>
-      <p style="margin: 24px 0; font-size: 32px; font-weight: 700; letter-spacing: 6px; font-family: ui-monospace, Menlo, monospace;">#{UserToken.format_code(code, "-")}</p>
+      <p style="margin: 24px 0; font-size: 32px; font-weight: 700; letter-spacing: 6px; font-family: ui-monospace, Menlo, monospace;">#{UserToken.format_code(code, "_")}</p>
       <p style="color: #52525b; font-size: 14px;">Enter it on the login page. It works once, for 15 minutes. If you did not ask for it, ignore this email.</p>
       <p style="display: none; font-size: 0; line-height: 0; max-height: 0; overflow: hidden;">@#{host} ##{code}</p>
     </div>
