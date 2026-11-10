@@ -277,7 +277,7 @@ defmodule Web.TaxCreditLetterLiveTest do
            )
   end
 
-  test "a year that isn't over has no Email letter, and says when (#995)",
+  test "a year that isn't over has no actions, and says when (#995)",
        %{conn: conn, team: team, member: member} do
     year = Service.YearRange.year_in(DateTime.utc_now(), team.timezone)
     {start, _finish} = Service.YearRange.bounds(year, team.timezone)
@@ -287,8 +287,11 @@ defmodule Web.TaxCreditLetterLiveTest do
 
     attendance_fixture(activity, member)
 
+    # One published before this rule, by hand: no Withdraw either.
+    tax_credit_letter_fixture(member, %{year: year})
     {:ok, lv, _html} = live(conn, letter_path(team, member, year))
     refute has_element?(lv, "#email-letter")
+    refute has_element?(lv, "#withdraw-letter")
 
     assert has_element?(
              lv,
@@ -305,7 +308,6 @@ defmodule Web.TaxCreditLetterLiveTest do
              "#{year} letters can be emailed from January 1, #{year + 1}."
            )
 
-    refute TaxCreditLetter.get_current(member, year)
     assert_no_email_sent()
   end
 

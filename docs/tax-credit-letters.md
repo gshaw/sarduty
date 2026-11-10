@@ -59,11 +59,12 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   letter on Your membership only, and one with no hours that year gets nothing. "Send"
   is D4H's word, so letters say email. There's no Publish on letters, and no way to
   make a letter available without emailing a member who has an email.
-- **A year that isn't over can't be emailed** (#995): until it ends in the team's time
-  zone, its hours can grow, and its letters would need publishing again. Email letters
-  greys out on the list, as any choice that reaches nobody, with "2026 letters can be
-  emailed from January 1, 2027." as its hint, and the letter page shows that sentence in
-  place of Email letter. The operation refuses it too. A draft still prints.
+- **A year that isn't over has no actions** (#995): until it ends in the team's time
+  zone, its hours can grow, and its letters would need publishing again. Only Email
+  publishes a letter, so none can be withdrawn either. The list has no boxes, choices,
+  or button, and says "2026 letters can be emailed from January 1, 2027."; the letter
+  page shows that sentence in place of Email letter and Withdraw letter. The operation
+  refuses Email too. A draft still prints.
 - **Check, then act** (#970, as an activity's Members tab): team admins check members,
   or a tile then select all, and pick Email letters or Withdraw letters under For the
   checked members. Each counts only the checked it fits, a choice that fits none greys

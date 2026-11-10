@@ -149,10 +149,10 @@ defmodule Web.TaxCreditLetterCollectionLive do
         class="table-striped"
       >
         <:header_row>
-          <th colspan="3"></th>
+          <th colspan={if @refusal, do: 2, else: 3}></th>
           <th colspan="3" class="text-center">Tax credit hours</th>
         </:header_row>
-        <:col :let={record} label="" class="w-px" select_all>
+        <:col :let={record} :if={is_nil(@refusal)} label="" class="w-px" select_all>
           <input
             type="checkbox"
             id={"letters-select-#{record.member.id}"}
@@ -204,17 +204,20 @@ defmodule Web.TaxCreditLetterCollectionLive do
           <.hours_cell minutes={record.total_minutes} />
         </:col>
       </.table>
-      <div id="letters-choice" class="mt-8 mb-6">
+      <%!-- No letter for a year that isn't over can be emailed, so none can be withdrawn:
+      no boxes and no actions until it ends (#995). --%>
+      <p :if={@refusal} id="letters-year-open" class="mt-8">{@refusal}</p>
+      <div :if={is_nil(@refusal)} id="letters-choice" class="mt-8 mb-6">
         <.input
           type="radios"
           id="letters-choice-input"
           name="choice"
           label="For the checked members"
           value={@choice}
-          options={choices(@checked, @refusal)}
+          options={choices(@checked)}
         />
       </div>
-      <.action_bar id="letters-bar" hint={bar_hint(@checked, @choice)}>
+      <.action_bar :if={is_nil(@refusal)} id="letters-bar" hint={bar_hint(@checked, @choice)}>
         <.button
           id="letters-apply"
           variant={variant(@choice)}
@@ -236,13 +239,9 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp fits?(_choice, _record), do: false
 
   # Each choice with what it does for the checked, or greyed with why it reaches nobody.
-  # Email for a year that isn't over reaches nobody, so it greys out and says when it can.
-  defp choices(checked, refusal), do: Enum.map(@choices, &choice(&1, checked, refusal))
+  defp choices(checked), do: Enum.map(@choices, &choice(&1, checked))
 
-  defp choice("email", _checked, refusal) when is_binary(refusal),
-    do: {choice_label("email"), "email", refusal, disabled: true}
-
-  defp choice(choice, checked, _refusal) do
+  defp choice(choice, checked) do
     fit = Enum.filter(checked, &fits?(choice, &1))
 
     cond do
@@ -451,6 +450,9 @@ defmodule Web.TaxCreditLetterCollectionLive do
     socket = socket |> assign_ticks(params) |> assign_checked()
 
     case socket.assigns do
+      %{refusal: refusal} when is_binary(refusal) ->
+        {:noreply, put_flash(socket, :error, refusal)}
+
       %{fit: []} ->
         {:noreply, put_flash(socket, :error, "Check members, then select what to do.")}
 
@@ -470,20 +472,16 @@ defmodule Web.TaxCreditLetterCollectionLive do
     end
   end
 
-  # The year's refusal and what every letter needs say so at once; the job checks again.
+  # What every letter needs says so at once; the job checks again.
   defp apply_choice(socket, "email", fit) do
-    %{refusal: refusal, needed: needed} = socket.assigns
-
-    cond do
-      refusal ->
-        put_flash(socket, :error, refusal)
-
-      needed != [] and Enum.any?(fit, &EmailTaxCreditLetters.publishes?(&1.email)) ->
-        put_flash(socket, :error, ReadDocument.needed_error("Letters", needed, "emailed"))
-
-      true ->
-        email(socket, fit)
-    end
+    if refused?("email", fit, socket.assigns.needed),
+      do:
+        put_flash(
+          socket,
+          :error,
+          ReadDocument.needed_error("Letters", socket.assigns.needed, "emailed")
+        ),
+      else: email(socket, fit)
   end
 
   defp apply_choice(socket, "withdraw", fit) do
@@ -534,11 +532,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         end
       end)
 
-    # A choice that greys out leaves nothing picked.
-    choice =
-      if params["choice"] in @choices and
-           not (params["choice"] == "email" and socket.assigns.refusal != nil),
-         do: params["choice"]
+    choice = if params["choice"] in @choices, do: params["choice"]
 
     assign(socket, selected: MapSet.new(ids), choice: choice)
   end

@@ -292,12 +292,19 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=#{year}&filter=any")
       when_text = "#{year} letters can be emailed from January 1, #{year + 1}."
 
-      # Email reaches nobody until the year ends, so it greys out and says when.
-      check(lv, [avery], "withdraw")
-      assert has_element?(lv, ~s(#letters-choice input[value="email"][disabled]))
-      assert has_element?(lv, "#letters-choice", when_text)
-      refute has_element?(lv, ~s(#letters-choice input[value="email"][checked]))
-      assert has_element?(lv, "#letters-apply[disabled]")
+      # Nothing can be emailed until the year ends, so nothing can be withdrawn: no boxes,
+      # no choices, and no button.
+      assert has_element?(lv, "#letters-year-open", when_text)
+      refute has_element?(lv, "#letters-select-#{avery.id}")
+      refute has_element?(lv, "#letters-choice")
+      refute has_element?(lv, "#letters-apply")
+
+      # A stale page's submit is refused.
+      lv
+      |> element("#letters-form")
+      |> render_submit(%{"member_ids" => [to_string(avery.id)], "choice" => "email"})
+
+      assert has_element?(lv, "#flash-error", when_text)
       refute Repo.exists?(PublishedPDF)
 
       # The operation refuses it too.

@@ -38,7 +38,8 @@ defmodule Web.TaxCreditLetterLive do
      socket
      |> assign(page_title: "#{member.name}'s #{year} tax credit letter")
      |> assign(member: member, year: year)
-     # A year that isn't over can't be emailed yet: no Email letter, and the page says when.
+     # A year that isn't over can't be emailed yet, so nothing can be withdrawn: no
+     # actions, and the page says when (#995).
      |> assign(refusal: EmailTaxCreditLetters.refusal(year, team, DateTime.utc_now()))
      |> assign_letter()}
   end
@@ -171,9 +172,10 @@ defmodule Web.TaxCreditLetterLive do
               </p>
             </:status>
             <:actions>
-              <.email_button record={@record} refusal={@refusal} ask={@needed == []} />
+              <.email_button :if={is_nil(@refusal)} record={@record} ask={@needed == []} />
+              <span :if={@refusal} id="letter-year-open" class="hint">{@refusal}</span>
             </:actions>
-            <:withdraw>
+            <:withdraw :if={is_nil(@refusal)}>
               <.button
                 id="withdraw-letter"
                 variant={:danger}
@@ -197,11 +199,12 @@ defmodule Web.TaxCreditLetterLive do
             <div class="card">
               <p class="mb-4">No letter for {@year} yet. This is how it prints today.</p>
               <.email_button
+                :if={is_nil(@refusal)}
                 record={@record}
-                refusal={@refusal}
                 variant={:primary}
                 ask={@needed == []}
               />
+              <p :if={@refusal} id="letter-year-open" class="hint">{@refusal}</p>
               <p :if={is_nil(@record.email)} id="letter-no-hours" class="hint">
                 {@member.name} has no hours in {@year}, so there is no letter to email.
               </p>
@@ -224,18 +227,16 @@ defmodule Web.TaxCreditLetterLive do
   end
 
   attr :record, :map, required: true
-  attr :refusal, :string, default: nil, doc: "why Email can't go yet: a year not over"
   attr :ask, :boolean, required: true, doc: "false when it can only refuse: no confirm for that"
   attr :variant, :atom, default: :default
 
-  # Email letter, or Publish letter for a member with no email: the same action. In a year
-  # that isn't over it can never go, so the page says when it can instead. It stays on
-  # while a value it needs is blank, and says what as an error, with no confirm.
+  # Email letter, or Publish letter for a member with no email: the same action. It stays
+  # on while a value it needs is blank, and says what as an error, with no confirm. In a
+  # year that isn't over the page has no actions, and says when it can.
   defp email_button(assigns) do
     ~H"""
-    <span :if={@record.email && @refusal} id="letter-year-open" class="hint">{@refusal}</span>
     <.button
-      :if={@record.email && is_nil(@refusal)}
+      :if={@record.email}
       id="email-letter"
       variant={@variant}
       phx-click="email"
@@ -290,6 +291,11 @@ defmodule Web.TaxCreditLetterLive do
   end
 
   defp code(letter), do: PublishedPDF.format_code(letter.code)
+
+  # A stale page's click in a year that isn't over: nothing can go yet.
+  def handle_event(_event, _params, %{assigns: %{refusal: refusal}} = socket)
+      when is_binary(refusal),
+      do: {:noreply, socket |> put_flash(:error, refusal) |> assign_letter()}
 
   def handle_event("email", _params, socket) do
     %{current_team: team, current_user: user, member: member, year: year} = socket.assigns

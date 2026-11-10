@@ -213,7 +213,7 @@ defmodule Web.Components.PublishedPDF do
   attr :team, :map, required: true
   slot :status, doc: "a line on where it went, such as a letter's email"
   slot :actions, doc: "buttons after Download PDF: Email letter, or a form's Publish again"
-  slot :withdraw, required: true
+  slot :withdraw, doc: "Withdraw, apart on the right"
 
   @doc """
   The Published section, the same on a letter and a form (#995): when and who, its ID
