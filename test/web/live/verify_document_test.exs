@@ -42,6 +42,9 @@ defmodule Web.VerifyDocumentTest do
 
     assert_patch(lv, path(letter))
     assert has_element?(lv, "#result-current", "Published by North Shore Rescue")
+    # The definition and year, not the PDF's file title with SRVTC in it.
+    assert has_element?(lv, "#result-title", "Tax credit letter, 2025")
+    refute has_element?(lv, "#result-title", "SRVTC")
     assert has_element?(lv, "#result-team", "North Shore Rescue")
     assert has_element?(lv, "#result-shows", "Mercer, Nadia")
     assert has_element?(lv, "#result-shows", "212h 30m")

@@ -427,6 +427,13 @@ defmodule Web.VerifyLive do
     """
   end
 
+  # The definition's name, and the year it's for, if any: "Tax credit letter, 2026". The
+  # PDF's own title is for files and emails; the team's name shows below it.
+  defp document_heading(%PublishedPDF{name: name, year: year}) when is_integer(year),
+    do: "#{name}, #{year}"
+
+  defp document_heading(%PublishedPDF{name: name}), do: name
+
   defp document_result(%{result: %{status: :current, pdf: pdf}} = assigns) do
     assigns = assign(assigns, pdf: pdf, team: pdf.team)
 
@@ -437,8 +444,7 @@ defmodule Web.VerifyLive do
       </.band>
 
       <.panel>
-        <p class="hint mb-0">{@pdf.name}</p>
-        <h2 id="result-title" class="heading mb-0">{@pdf.title}</h2>
+        <h2 id="result-title" class="heading mb-0">{document_heading(@pdf)}</h2>
         <p id="result-code" class="hint mono mb-0">{PublishedPDF.format_code(@pdf.code)}</p>
 
         <div class="card-section media">
