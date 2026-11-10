@@ -305,8 +305,10 @@ defmodule Web.UserSessionControllerTest do
       assert who == Event.who(" " <> String.upcase(user.email))
       refute who =~ "@"
 
-      assert %Event{ip: ^ip, user_agent: "Firefox/131", data: %{"via" => "email", "who" => ^who}} =
+      assert %Event{ip: ^ip, user_agent: "Firefox/131", who: ^who, data: data} =
                Event.get_last(:login_code_requested)
+
+      assert data == %{"via" => "email"}
 
       assert %Event{ip: ^ip, data: %{"remember" => true, "known_browser" => false}} =
                logged_in = Event.get_last(:logged_in)
@@ -320,8 +322,8 @@ defmodule Web.UserSessionControllerTest do
 
       who = Event.who(email)
       since = DateTime.add(DateTime.utc_now(), -1, :minute)
-      assert Event.count_since(:login_code_requested, since, %{who: who}) == 5
-      assert Event.count_since(:login_code_limited, since, %{who: who}) == 1
+      assert Event.count_since(:login_code_requested, since, who: who) == 5
+      assert Event.count_since(:login_code_limited, since, who: who) == 1
     end
 
     test "records wrong codes until the block, then the block, then nothing", %{conn: conn} do
@@ -332,9 +334,9 @@ defmodule Web.UserSessionControllerTest do
 
       who = Event.who(email)
       since = DateTime.add(DateTime.utc_now(), -1, :minute)
-      assert Event.count_since(:login_code_missed, since, %{who: who}) == 20
+      assert Event.count_since(:login_code_missed, since, who: who) == 20
 
-      assert Event.count_since(:login_blocked, since, %{who: who, scope: "account"}) == 1
+      assert Event.count_since(:login_blocked, since, who: who, data: %{scope: "account"}) == 1
     end
   end
 

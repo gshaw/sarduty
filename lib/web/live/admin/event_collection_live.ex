@@ -9,7 +9,9 @@ defmodule Web.Admin.EventCollectionLive do
 
   @limit 200
 
-  # Signs of someone guessing or flooding, for the top IPs list.
+  # Signs of someone guessing or flooding, for the top IPs list. Top accounts counts the
+  # wrong codes and blocks against one email or number.
+  @account_kinds [:login_code_missed, :login_blocked]
   @attack_kinds [
     :login_code_missed,
     :login_code_limited,
@@ -30,7 +32,9 @@ defmodule Web.Admin.EventCollectionLive do
       |> assign(rate_limited: Event.count_since(:d4h_rate_limited, DateTime.add(now, -1, :day)))
       |> assign(
         sync_failures:
-          Event.count_since(:d4h_team_sync, DateTime.add(now, -1, :day), %{outcome: "failed"})
+          Event.count_since(:d4h_team_sync, DateTime.add(now, -1, :day),
+            data: %{outcome: "failed"}
+          )
       )
       |> assign_logins(DateTime.add(now, -7, :day))
 
@@ -42,7 +46,8 @@ defmodule Web.Admin.EventCollectionLive do
       logins: Event.count_since(:logged_in, since),
       misses: Event.count_since(:login_code_missed, since),
       blocks: Event.count_since(:login_blocked, since),
-      top_ips: Event.get_top_ips(@attack_kinds, since, 10)
+      top_ips: Event.get_top_ips(@attack_kinds, since, 10),
+      top_accounts: Event.get_top_accounts(@account_kinds, since, 10)
     )
   end
 
@@ -100,20 +105,38 @@ defmodule Web.Admin.EventCollectionLive do
         )}, {Service.Format.count(@blocks, one: "%d block", many: "%d blocks")}
       </dd>
     </dl>
-    <.table
-      :if={@top_ips != []}
-      id="top-ips"
-      rows={Enum.with_index(@top_ips, 1)}
-      row_id={fn {_ip_count, rank} -> "top-ip-#{rank}" end}
-      class="mb-8 table-striped"
-    >
-      <:col :let={{{ip, _count}, _rank}} label="IP">
-        <.a navigate={~p"/admin/events?#{[ip: ip]}"}>{ip}</.a>
-      </:col>
-      <:col :let={{{_ip, count}, _rank}} label="Wrong codes, limits, blocks, and failed sign-ups">
-        {count}
-      </:col>
-    </.table>
+    <div class="mb-8 grid items-start gap-8 md:grid-cols-2">
+      <section :if={@top_ips != []} id="top-ips-list">
+        <h3 class="subheading mb-0">Top IPs</h3>
+        <.hint>Wrong codes, limits, blocks, and failed sign-ups. An IPv6 /64 counts as one.</.hint>
+        <.table
+          id="top-ips"
+          rows={Enum.with_index(@top_ips, 1)}
+          row_id={fn {_ip_count, rank} -> "top-ip-#{rank}" end}
+          class="table-striped"
+        >
+          <:col :let={{{ip, _count}, _rank}} label="IP">
+            <.a patch={~p"/admin/events?#{[ip: ip]}"}>{ip}</.a>
+          </:col>
+          <:col :let={{{_ip, count}, _rank}} label="Events">{count}</:col>
+        </.table>
+      </section>
+      <section :if={@top_accounts != []} id="top-accounts-list">
+        <h3 class="subheading mb-0">Top accounts</h3>
+        <.hint>Wrong codes and blocks, by each email's or number's hash.</.hint>
+        <.table
+          id="top-accounts"
+          rows={Enum.with_index(@top_accounts, 1)}
+          row_id={fn {_who_count, rank} -> "top-account-#{rank}" end}
+          class="table-striped"
+        >
+          <:col :let={{{who, _count}, _rank}} label="Account">
+            <.a patch={~p"/admin/events?#{[who: who]}"} class="font-mono">{who}</.a>
+          </:col>
+          <:col :let={{{_who, count}, _rank}} label="Events">{count}</:col>
+        </.table>
+      </section>
+    </div>
 
     <h2 class="heading">Latest events</h2>
     <.filter_bar
@@ -146,7 +169,10 @@ defmodule Web.Admin.EventCollectionLive do
       <:col :let={event} label="From">
         <span :if={event.ip} title={event.user_agent}>{event.ip}</span>
       </:col>
-      <:col :let={event} label="Details">{details(event.data)}</:col>
+      <:col :let={event} label="Details">
+        <.a :if={event.who} patch={events_path(@filter, who: event.who)} class="font-mono">{event.who}</.a>
+        {details(event)}
+      </:col>
     </.table>
     <.hint :if={length(@events) == @limit}>The newest {@limit}.</.hint>
     """
@@ -164,7 +190,11 @@ defmodule Web.Admin.EventCollectionLive do
     "#{ago}: #{teams} in #{event.duration_ms && Service.Format.run_time(event.duration_ms)}, #{event.data["outcome"]}"
   end
 
-  defp details(data) do
+  # After the account's hash, when there is one.
+  defp details(%{who: who, data: data}) when is_binary(who) and data != %{},
+    do: "· " <> details(%{who: nil, data: data})
+
+  defp details(%{data: data}) do
     data
     |> Enum.sort()
     |> Enum.map_join(" · ", fn {key, value} -> "#{key}: #{value(value)}" end)
