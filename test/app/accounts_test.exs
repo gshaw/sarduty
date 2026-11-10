@@ -325,9 +325,7 @@ defmodule App.AccountsTest do
       assert_received {:email, email}
       [code, first, last] = Regex.run(~r/(\d{4}) (\d{4})/, email.subject)
       assert email.text_body =~ code
-
-      assert email.html_body =~
-               ~s(<span>#{first}</span><span style="margin-left: 16px;">#{last}</span>)
+      assert email.html_body =~ ~s(monospace;">#{first}_#{last}</p>)
 
       assert email.html_body =~ ~s(<meta name="format-detection" content="telephone=no">)
 
@@ -347,10 +345,10 @@ defmodule App.AccountsTest do
       assert email.html_body =~ "@#{host} ##{first}#{last}"
     end
 
-    test "the code works typed with a dash, or spaces around it" do
+    test "the code works pasted with its underscore, typed with a dash, or spaces around it" do
       team = team_fixture()
 
-      for {typed, i} <- Enum.with_index([&"#{&1}-#{&2}", &" #{&1}#{&2} "]) do
+      for {typed, i} <- Enum.with_index([&"#{&1}_#{&2}", &"#{&1}-#{&2}", &" #{&1}#{&2} "]) do
         email = "typed#{i}@example.com"
         manager_fixture(team, %{email: email})
         :ok = Accounts.deliver_login_code(email)

@@ -82,8 +82,8 @@ defmodule App.Accounts.UserToken do
     first <> separator <> last
   end
 
-  @doc "A code as typed or pasted, without the spaces and dashes of its groups."
-  def normalize_code(code), do: String.replace(code, ~r/[\s-]/u, "")
+  @doc "A code as typed or pasted, without the spaces, dashes or underscore of its groups."
+  def normalize_code(code), do: String.replace(code, ~r/[\s_-]/u, "")
 
   @doc """
   A code's hash, keyed with the app's secret: a hundred million codes are quick to try
