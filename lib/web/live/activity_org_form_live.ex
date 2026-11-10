@@ -10,11 +10,15 @@ defmodule Web.ActivityOrgFormLive do
   A form that's on publishes (#970, App.Operation.PublishDocument). The Published box
   above the answers says when and who, with Download, the verify link, and Withdraw.
   When the form reads differently now, it says what changed and offers Publish again.
+  Page 1 folds under it, and History lists every PDF published for the activity, as a
+  tax credit letter's page does.
 
   The form is found on for the team's organization, and the activity through the team,
   so another organization's form, one turned off, or one not for this activity is a 404.
   """
   use Web, :live_view_app_layout
+
+  import Web.Components.PublishedPDF
 
   alias App.Model.Activity
   alias App.Model.Form
@@ -25,6 +29,7 @@ defmodule Web.ActivityOrgFormLive do
   alias App.Operation.SaveFormAnswers
   alias App.Operation.WithdrawDocument
   alias App.ViewData.ActivityForms
+  alias App.ViewData.PublishedHistory
   alias Web.Components.ReportTable
 
   def mount(%{"id" => id, "form_id" => form_id}, _session, socket) do
@@ -73,12 +78,16 @@ defmodule Web.ActivityOrgFormLive do
           ),
         else: []
 
-    # Who published it, by their member name, as other "by" lines say.
-    published_by =
-      published.current &&
-        Member.name_for_user(team, published.current.user, DateTime.utc_now())
+    # Who published and withdrew each, by their member names, as other "by" lines say.
+    now = DateTime.utc_now()
+    names = PublishedHistory.names(published.all, &Member.name_for_user(team, &1, now))
 
-    assign(socket, published: published, changes: changes, published_by: published_by)
+    assign(socket,
+      published: published,
+      changes: changes,
+      published_by: published.current && names[published.current.user_id],
+      history: PublishedHistory.rows(published.all, names)
+    )
   end
 
   # Publish opens its preview, /publish: the PDF printed once with the ID it publishes
@@ -335,6 +344,7 @@ defmodule Web.ActivityOrgFormLive do
         form={@form}
         team={@current_team}
       />
+      <.history id="org-form-history" rows={@history} team={@current_team} />
 
       <section :if={@page.missing != []} id="org-form-missing" class="mb-8">
         <h2 class="heading">Missing</h2>
@@ -437,16 +447,13 @@ defmodule Web.ActivityOrgFormLive do
   attr :team, :map, required: true
 
   # The current PDF: when and who, Download, the verify link, Withdraw, and Publish again
-  # with what changed when it's out of date. Earlier ones under it, marked.
+  # with what changed when it's out of date. Page 1 folds under it, since the answers
+  # follow.
   defp published_box(assigns) do
     ~H"""
-    <section
-      :if={@published.current || @published.earlier != []}
-      id="org-form-published"
-      class="mb-8"
-    >
+    <section :if={pdf = @published.current} id="org-form-published" class="mb-8">
       <h2 class="heading">Published</h2>
-      <div :if={pdf = @published.current} id="org-form-current" class="card">
+      <div id="org-form-current" class="card">
         <p class="mb-2">
           {Service.Format.datetime_short(pdf.inserted_at, @team.timezone)}
           <span :if={@published_by}>by {@published_by}</span>
@@ -456,12 +463,7 @@ defmodule Web.ActivityOrgFormLive do
             pdf.code
           )}</.a>
         </p>
-        <div :if={@changes != []} id="org-form-out-of-date" class="callout mb-4">
-          <p class="mb-1"><b>Out of date.</b> The form reads differently now:</p>
-          <ul>
-            <li :for={change <- @changes}>{change}</li>
-          </ul>
-        </div>
+        <.out_of_date id="org-form-out-of-date" noun="form" changes={@changes} />
         <.form_actions>
           <.button
             id="org-form-download-published"
@@ -487,31 +489,21 @@ defmodule Web.ActivityOrgFormLive do
               variant={:danger}
               phx-click="withdraw"
               phx-disable-with="Withdrawing…"
-              data-confirm={"Withdraw #{PublishedPDF.format_code(pdf.code)}? Nothing takes its place."}
-              data-confirm-warning="Its verify page will say Withdrawn."
-              data-confirm-check="I understand anyone holding it will see it was withdrawn."
-              data-confirm-button="Withdraw"
+              {withdraw_confirm(pdf, "Withdraw")}
             >
               Withdraw
             </.button>
           </:trailing>
         </.form_actions>
       </div>
-
-      <ul :if={@published.earlier != []} id="org-form-earlier" class="value-rows mt-4 text-sm">
-        <li :for={pdf <- @published.earlier} id={"org-form-earlier-#{pdf.id}"}>
-          <span>
-            <.a href={~p"/teams/#{@team}/pdfs/#{pdf.id}"} target="_blank" class="mono">{PublishedPDF.format_code(
-              pdf.code
-            )}</.a>
-            <span class="hint">
-              {Service.Format.date_long(pdf.inserted_at, @team.timezone)}
-            </span>
-          </span>
-          <.badge :if={PublishedPDF.status(pdf) == :replaced} kind={:warning}>Replaced</.badge>
-          <.badge :if={PublishedPDF.status(pdf) == :withdrawn} kind={:danger}>Withdrawn</.badge>
-        </li>
-      </ul>
+      <details id="org-form-page-1" class="mt-4">
+        <summary>Page 1</summary>
+        <.preview
+          id="org-form-preview"
+          src={~p"/teams/#{@team}/pdfs/#{pdf.id}/preview.png"}
+          alt={"Page 1 of #{PublishedPDF.format_code(pdf.code)}"}
+        />
+      </details>
     </section>
     """
   end

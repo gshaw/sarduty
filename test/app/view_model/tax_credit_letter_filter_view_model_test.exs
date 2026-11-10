@@ -4,7 +4,6 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
   import App.DataFixtures
 
   alias App.Model.Activity
-  alias App.Model.PublishedPDF
   alias App.ViewModel.TaxCreditLetterFilterViewModel
 
   setup do
@@ -116,8 +115,8 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
     letter = tax_credit_letter_fixture(member, %{year: 2025})
     _older = tax_credit_letter_fixture(member, %{year: 2024})
 
-    assert [%{tax_credit_letter_id: id, tax_credit_letter_code: code}] = find_all(team, 2025)
-    assert {id, code} == {letter.id, PublishedPDF.format_code(letter.code)}
+    assert [%{tax_credit_letter_id: id, letter_email_state: :not_emailed}] = find_all(team, 2025)
+    assert id == letter.id
   end
 
   describe "chores (#584)" do

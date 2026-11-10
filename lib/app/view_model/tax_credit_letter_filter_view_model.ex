@@ -6,7 +6,6 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   alias App.Field
   alias App.Model.Attendance
   alias App.Model.Member
-  alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Operation.CountTaxCreditHours
   alias App.Repo
@@ -22,12 +21,16 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     field :sort, :string
   end
 
-  @doc "The stat switch's parts, which split the members by their letter for the year."
+  @doc """
+  The stat switch's parts, each a to-do for the members' letters for the year (#970):
+  no letter yet, a letter not emailed, a letter out of date. A member can be in two.
+  Emailed letters show under All.
+  """
   def letter_kinds,
     do: [
       {"All", nil},
       {"No letter", "none"},
-      {"Letter", "made"},
+      {"Not emailed", "not_emailed"},
       {"Out of date", "changed"}
     ]
 
@@ -108,22 +111,27 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
   @doc "How many records are in each letter part, keyed as `letter_kinds/0`."
   def letter_counts(records) do
-    records |> Enum.frequencies_by(&letter_kind/1) |> Map.put(nil, length(records))
+    Map.new(letter_kinds(), fn {_label, kind} ->
+      {kind, Enum.count(records, &in_kind?(&1, kind))}
+    end)
   end
 
   @doc "The records in the letter part the filters pick that match the search."
   def shown(records, filter_options) do
     Enum.filter(
       records,
-      &((is_nil(filter_options.letter) or letter_kind(&1) == filter_options.letter) and
+      &(in_kind?(&1, filter_options.letter) and
           (StringHelpers.matches?(&1.member.name, filter_options.q) or
              StringHelpers.matches?(&1.member.ref_id, filter_options.q)))
     )
   end
 
-  defp letter_kind(%{tax_credit_letter_id: nil}), do: "none"
-  defp letter_kind(%{letter_hours_status: :changed}), do: "changed"
-  defp letter_kind(_record), do: "made"
+  defp in_kind?(_record, nil), do: true
+  defp in_kind?(record, "none"), do: is_nil(record.tax_credit_letter_id)
+  defp in_kind?(record, "changed"), do: record.letter_hours_status == :changed
+
+  defp in_kind?(record, "not_emailed"),
+    do: record.letter_email_state in [:not_emailed, :failed, :no_email]
 
   defp build_record(%{member: member, letter: letter}, hours, team, now) do
     letter = if letter && letter.id, do: letter
@@ -131,8 +139,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     hours
     |> Map.put(:member, member)
     |> Map.put(:tax_credit_letter_id, letter && letter.id)
-    |> Map.put(:tax_credit_letter_code, letter && PublishedPDF.format_code(letter.code))
-    |> Map.put(:tax_credit_letter_email_status, letter && letter.email_status)
+    |> Map.put(:letter_email_state, letter && TaxCreditLetter.email_state(letter, member))
     |> Map.put(:letter_minutes, letter && TaxCreditLetter.total_minutes(letter))
     |> Map.put(
       :letter_hours_status,
@@ -155,12 +162,21 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     |> cast(params, [:q, :year, :page, :filter, :letter, :sort])
     |> Field.truncate(:q, max_length: 100)
     |> drop_unknown_sort()
+    |> drop_unknown_letter()
     |> validate_inclusion(:filter, filters() |> Enum.map(fn {_label, value} -> value end))
-    |> validate_inclusion(:letter, letter_kinds() |> Enum.map(fn {_label, value} -> value end))
     |> validate_number(:year,
       greater_than_or_equal_to: 2014,
       less_than_or_equal_to: Date.utc_today().year + 1
     )
+  end
+
+  # An old link may carry a part that's gone, such as ?letter=made; it gets All.
+  defp drop_unknown_letter(changeset) do
+    kinds = Enum.map(letter_kinds(), fn {_label, kind} -> kind end)
+
+    if get_change(changeset, :letter) in kinds,
+      do: changeset,
+      else: delete_change(changeset, :letter)
   end
 
   # An old link may carry a sort that's gone, such as ?sort=id; it gets the default.

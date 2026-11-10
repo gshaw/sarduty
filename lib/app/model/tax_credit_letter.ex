@@ -2,10 +2,9 @@ defmodule App.Model.TaxCreditLetter do
   @moduledoc """
   A tax credit letter is a published PDF of the definition `Tax credit letter`,
   priv/documents/tax_credit_letter.txt (#918, #970), for a member's year: its subject is
-  `member:45:2026`. Its ID, the hours it printed (`keep`), when it was published, its
-  member's first download, and its email are on its App.Model.PublishedPDF. Publishing
-  again keeps the old one, Replaced, and withdrawing one ends it, so the member lists
-  under No letter again. Letters stay their own feature: the hours rule, the letter list
+  `member:45:2026`. Its ID, the hours it printed (`keep`), when it was published, and
+  its email are on its App.Model.PublishedPDF. Publishing again keeps the old one,
+  Replaced, and withdrawing one ends it, so the member lists under No letter again. Letters stay their own feature: the hours rule, the letter list
   with Send letters, and the settings tab are code; this module is the queries and rules
   that are only theirs.
   """
@@ -91,6 +90,32 @@ defmodule App.Model.TaxCreditLetter do
   def set_email_status!(%PublishedPDF{} = letter, status),
     do: letter |> Ecto.Changeset.change(email_status: status) |> Repo.update!()
 
+  @doc "Records that the letter's email went at `now`."
+  def set_emailed!(%PublishedPDF{} = letter, now) do
+    letter
+    |> Ecto.Changeset.change(
+      email_status: :sent,
+      emailed_at: DateTime.truncate(now, :microsecond)
+    )
+    |> Repo.update!()
+  end
+
+  @doc """
+  Where the letter's email is, for the list's Letter column and the letter page:
+  `:emailed`, `:sending` while its job waits, `:failed` when the send was refused,
+  `:no_email` when its member has no email, else `:not_emailed`.
+  """
+  def email_state(%PublishedPDF{email_status: :sent}, _member), do: :emailed
+  def email_state(%PublishedPDF{email_status: :sending}, _member), do: :sending
+
+  def email_state(%PublishedPDF{email_status: status}, member) do
+    cond do
+      member.email in [nil, ""] -> :no_email
+      status == :failed -> :failed
+      true -> :not_emailed
+    end
+  end
+
   @doc """
   The year whose letters go out now: last year. Letters for it, or for the year
   still under way, warn when attendance no longer adds up to their hours (#192).
@@ -113,6 +138,29 @@ defmodule App.Model.TaxCreditLetter do
     case minutes(letter) do
       {primary, secondary} -> primary + secondary
       nil -> nil
+    end
+  end
+
+  @doc """
+  What reads differently now, as forms say it (#970): a line for each of the letter's
+  hours that `hours`, today's count, changes, such as `"Primary hours: 101 hours → 113
+  hours"`. `[]` when none did, or for an old letter that kept no hours.
+  """
+  def changes(%PublishedPDF{} = letter, hours) do
+    case minutes(letter) do
+      {primary, secondary} ->
+        [
+          {"Primary hours", primary, hours.primary_minutes},
+          {"Secondary hours", secondary, hours.secondary_minutes},
+          {"Total hours", primary + secondary, hours.primary_minutes + hours.secondary_minutes}
+        ]
+        |> Enum.reject(fn {_label, was, now} -> was == now end)
+        |> Enum.map(fn {label, was, now} ->
+          "#{label}: #{Service.Format.duration(was)} → #{Service.Format.duration(now)}"
+        end)
+
+      nil ->
+        []
     end
   end
 

@@ -113,12 +113,12 @@ defmodule Web.TaxCreditLetterCollectionLive do
           team={@current_team}
           standing={@standings[record.member.id]}
           path={
-            ~p"/teams/#{@current_team}/members/#{record.member.id}?tag=both&when=#{@filter_options.year}"
+            ~p"/teams/#{@current_team}/tax-credit-letters/#{@filter_options.year}/members/#{record.member.id}"
           }
         />
       </:col>
-      <:col :let={record} label="Email">
-        <.email id={"letter-member-#{record.member.id}-email"} email={record.member.email} />
+      <:col :let={record} label="Letter" class="whitespace-nowrap">
+        <.letter_cell record={record} />
       </:col>
 
       <:col
@@ -148,8 +148,18 @@ defmodule Web.TaxCreditLetterCollectionLive do
       >
         <.hours_cell minutes={record.total_minutes} />
       </:col>
-      <:col :let={record} label="Letter" class="whitespace-nowrap">
-        <.record_actions record={record} current_team={@current_team} />
+      <:col :let={record} label="" class="w-px whitespace-nowrap">
+        <.button
+          :if={is_nil(record.tax_credit_letter_id)}
+          id={"send-letter-#{record.member.id}"}
+          variant={:success}
+          size={:sm}
+          phx-click="create"
+          value={record.member.id}
+          phx-disable-with="Sending…"
+        >
+          Send letter
+        </.button>
       </:col>
     </.table>
     """
@@ -232,49 +242,47 @@ defmodule Web.TaxCreditLetterCollectionLive do
         many: "Emailing %d of them now."
       )
 
-  defp record_actions(assigns) do
+  # Where the member's letter is, in a word, with a badge when it needs a team admin:
+  # Out of date, Did not send, or No email (#970).
+  defp letter_cell(%{record: %{tax_credit_letter_id: nil}} = assigns) do
     ~H"""
-    <%= if @record.tax_credit_letter_id do %>
-      <.a
-        class="mono"
-        navigate={~p"/teams/#{@current_team}/tax-credit-letters/#{@record.tax_credit_letter_id}"}
-      >{@record.tax_credit_letter_code || "Letter"}</.a>
-      <.badge
-        :if={@record.letter_hours_status == :changed}
-        id={"hours-changed-#{@record.tax_credit_letter_id}"}
-        kind={:warning}
-        title={"The letter says #{Service.Format.duration(@record.letter_minutes)}"}
-      >
-        Out of date
-      </.badge>
-      <span
-        :if={@record.tax_credit_letter_email_status == :sending}
-        id={"letter-emailing-#{@record.tax_credit_letter_id}"}
-        class="hint"
-      >
-        Emailing
-      </span>
-      <.badge
-        :if={@record.tax_credit_letter_email_status == :failed}
-        id={"letter-email-failed-#{@record.tax_credit_letter_id}"}
-        kind={:warning}
-        title="Open the letter to email it again"
-      >
-        Email failed
-      </.badge>
-    <% else %>
-      <.button
-        variant={:success}
-        size={:sm}
-        phx-click="create"
-        value={@record.member.id}
-        phx-disable-with="Sending…"
-      >
-        Send letter
-      </.button>
-    <% end %>
+    <span class="hint">No letter</span>
     """
   end
+
+  defp letter_cell(assigns) do
+    ~H"""
+    <span id={"letter-state-#{@record.member.id}"}>{letter_word(@record.letter_email_state)}</span>
+    <.badge
+      :if={@record.letter_email_state == :failed}
+      id={"letter-email-failed-#{@record.member.id}"}
+      kind={:warning}
+      title="Open the letter to email it again"
+    >
+      Did not send
+    </.badge>
+    <.badge
+      :if={@record.letter_email_state == :no_email}
+      id={"letter-no-email-#{@record.member.id}"}
+      kind={:warning}
+      title="Needs attention lists the members with no email"
+    >
+      No email
+    </.badge>
+    <.badge
+      :if={@record.letter_hours_status == :changed}
+      id={"hours-changed-#{@record.member.id}"}
+      kind={:warning}
+      title={"The letter says #{Service.Format.duration(@record.letter_minutes)}"}
+    >
+      Out of date
+    </.badge>
+    """
+  end
+
+  defp letter_word(:emailed), do: "Emailed"
+  defp letter_word(:sending), do: "Emailing"
+  defp letter_word(_not_emailed), do: "Not emailed"
 
   def handle_event("create", %{"value" => member_id}, socket) do
     %{current_team: team, current_user: user, filter_options: filter_options} = socket.assigns
@@ -364,7 +372,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
   end
 
   defp put_email_flash(socket, letter) do
-    case EmailTaxCreditLetter.call(letter) do
+    case EmailTaxCreditLetter.send_now(letter) do
       :ok ->
         put_flash(socket, :info, "Emailed the tax credit letter to #{letter.member.email}.")
 

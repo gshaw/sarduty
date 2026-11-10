@@ -3,8 +3,9 @@ defmodule App.Operation.PrintTaxCreditLetter do
   Prints a tax credit letter from its document, priv/documents/tax_credit_letter.txt
   (#918): runs the document's reports for the member and year, adds the pictures, and
   prints it with Typst (App.Operation.PrintDocument), with the verify code of the ID it's
-  published under (#970). Only App.Operation.PublishTaxCreditLetter prints: everything
-  else serves the saved PDF. The document also writes the letter's email
+  published under (#970). Only App.Operation.PublishTaxCreditLetter prints what's kept:
+  everything else serves the saved PDF. A draft, for the letter page's preview before
+  there's a letter, is never kept. The document also writes the letter's email
   (`email to member`) and says which team settings it needs (`needs`).
   """
 
@@ -55,6 +56,17 @@ defmodule App.Operation.PrintTaxCreditLetter do
          code: code
        }}
     end
+  end
+
+  @doc """
+  The letter from `read/4` as it prints today, marked DRAFT, for the letter page before
+  there's a letter: `{:ok, pdf}` or `{:error, reason}`. As a form's draft, it carries no
+  signature, and a grey box where the verify code goes.
+  """
+  def draft(%Team{} = team, %{doc: doc, values: values}) do
+    values = Map.merge(values, %{"team.signature" => nil, "pdf.verify_link" => nil})
+    output = Document.evaluate(doc, values, team.timezone)
+    PrintDocument.call(output, mark: :draft, verify: :draft)
   end
 
   @doc "The letter's text from `read/4`, as it prints, for a test or a check."

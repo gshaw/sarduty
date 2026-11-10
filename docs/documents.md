@@ -464,8 +464,10 @@ through the team's organization, so a form that's off or another organization's 
 - **The Published box**, once one is published: when and who, its ID linking to its
   verify page, Download PDF, Publish again, and Withdraw. When the form reads
   differently now (`ActivityForms.changes/3`), it says what changed, each `verify shows`
-  line, or each kept value for a form with none. Earlier ones list under it, marked
-  Replaced or Withdrawn, and still download.
+  line, or each kept value for a form with none. Page 1 folds under it, drawn from the
+  saved PDF when it's opened (`/pdfs/:id/preview.png`), and History lists every PDF
+  published for the activity, Replaced or Withdrawn ones too, each still downloading
+  (App.ViewData.PublishedHistory). A tax credit letter's page has the same parts.
 
 - **What SAR Duty filled in**: each column of each report, from ReadDocument's `read`.
 - **What's missing**: each one blank, with the page that fixes it, so the fix reaches

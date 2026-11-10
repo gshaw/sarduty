@@ -45,8 +45,9 @@ defmodule App.Model.PublishedPDF do
     # The values it printed that `keep` names, by name, such as `hours.primary`.
     field :keep, :map, default: %{}, redact: true
     # A letter's: whether its email went, sending while its job waits, then sent or
-    # failed (#970).
+    # failed, and when it last went (#970).
     field :email_status, Ecto.Enum, values: [:sending, :sent, :failed]
+    field :emailed_at, :utc_datetime_usec
     # Every answer it printed with, by name.
     field :answers, :map, default: %{}, redact: true
     # What its verify page shows, `[%{"label", "text"}]`, as `verify shows` printed it.

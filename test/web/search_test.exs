@@ -88,6 +88,17 @@ defmodule Web.SearchTest do
 
       assert path == "/teams/#{team.subdomain}/tax-credit-letters"
     end
+
+    test "a letter's ID opens the member's letter for its year (#970)", %{team: team} do
+      member = member_fixture(team)
+      letter = tax_credit_letter_fixture(member, %{year: 2025, code: "K7Q4M2XA9HVB3TN"})
+
+      assert [%{kind: :document, hits: [hit]}] =
+               search(team, "K7Q4M-2XA9H", team_admin?: true, member?: false)
+
+      assert hit.id == letter.id
+      assert hit.path == "/teams/#{team.subdomain}/tax-credit-letters/2025/members/#{member.id}"
+    end
   end
 
   describe "Get help (#780)" do

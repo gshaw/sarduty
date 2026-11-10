@@ -32,15 +32,27 @@ counted is in #191, #192, and #584, and #594 explains it publicly for anyone who
 - **A letter is its published PDF** (#970): a row in `published_pdfs` named `Tax credit
 letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](../lib/app/model/tax_credit_letter.ex)
   has its queries and rules). Its ID, the hours it kept, its date, who published it, its
-  member's first download, and its email status are on it. Its page shows what its
-  verify page shows, not its text.
+  email status, and when its email last went (`emailed_at`) are on it.
+- **A member's year has one page, sent or not** (#970),
+  `/tax-credit-letters/:year/members/:id` ([TaxCreditLetterLive](../lib/web/live/tax_credit_letter_live.ex)),
+  which the name in the letters list opens. With a letter it has the Published box a
+  form's page has, where its email is, and Out of date with each hour that changed.
+  With none, it shows the letter as it prints today, marked DRAFT, with no signature,
+  and Send letter. Page 1 shows either way, drawn from the PDF when the page asks
+  (`Service.PDFImages.first_page/2`), so nothing more is saved. History lists every
+  letter for the year from their own dates ([PublishedHistory](../lib/app/view_data/published_history.ex)).
+- **The letters list says where each letter is, in a word**: No letter, Emailed, or Not
+  emailed, with a badge when it needs a team admin: Out of date, Did not send, or No
+  email. Each tile is a to-do (No letter, Not emailed, Out of date), and a member can be
+  in two; emailed letters show under All.
 - **Only the current letter verifies as current.** Publish again
   ([PublishTaxCreditLetter](../lib/app/operation/publish_tax_credit_letter.ex)) prints a
   new letter with a new ID, and the old one's verify page says Replaced and shows
   nothing from it, so an old paper copy can't pass for the hours the team stands behind
   now. Withdraw ([WithdrawDocument](../lib/app/operation/withdraw_document.ex)) ends one
-  with no new one, and its member lists under No letter again. Both ask for a ticked
-  box, since the member may already have the letter. Nothing deletes a letter but its
+  with no new one, and its member lists under No letter again; it asks for a ticked box,
+  since the member may already have the letter. Publish again emails the new letter, so
+  the member never keeps one that verifies as Replaced. Nothing deletes a letter but its
   team's purge.
 - **Out of date** is the hours rule: while the letter's year is open, attendance no
   longer adds up to its hours (`TaxCreditLetter.hours_status/4`). It offers Publish
@@ -74,10 +86,12 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   write lock, and a print that fails makes nothing
   ([PublishTaxCreditLetter](../lib/app/operation/publish_tax_credit_letter.ex)).
   Downloads and emails serve the saved file, so a member gets the same file every time.
+  A team admin downloads any published PDF, a letter's or a form's, from `/pdfs/:id`.
 - **The email's words are the letter's** (`email to member` in its document, #970):
   what it's for, the CRA line, and who answers questions. Send letters gives each
-  letter its own email job, and its status shows in its row; Email letter sends it
-  again. A member with no email gets a letter that isn't emailed.
+  letter its own email job, and its row says when it went or didn't; Email letter sends
+  it again, and a refusal there says Did not send at once. A member with no email gets a
+  letter that isn't emailed.
 - **The team settings a letter needs are the letter's** (`needs`, #943, #970): Needs
   attention names each blank one from January to April.
 - **The signature is the team's when the PDF is printed**, and the saved PDF keeps it.

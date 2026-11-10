@@ -459,7 +459,14 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert second.id != first.id
       assert first |> Repo.reload!() |> PublishedPDF.status() == :replaced
       refute has_element?(lv, "#org-form-out-of-date")
-      assert has_element?(lv, "#org-form-earlier-#{first.id}", "Replaced")
+      # History has both, and page 1 of the new one folds under the box.
+      assert has_element?(lv, "#org-form-history-published-#{first.id}", "Replaced")
+      assert has_element?(lv, "#org-form-history-published_again-#{second.id}")
+
+      assert has_element?(
+               lv,
+               ~s(#org-form-page-1 #org-form-preview[src="/teams/coastrange/pdfs/#{second.id}/preview.png"])
+             )
     end
 
     test "a box that shows an error stops Publish, since it prints what's saved", ctx do
@@ -495,7 +502,9 @@ defmodule Web.ActivityOrgFormLiveTest do
       pdf = Repo.reload!(pdf)
       assert PublishedPDF.status(pdf) == :withdrawn
       assert pdf.withdrawn_by_id == cast.alex.id
-      assert has_element?(lv, "#org-form-earlier-#{pdf.id}", "Withdrawn")
+      assert has_element?(lv, "#org-form-history-published-#{pdf.id}", "Withdrawn")
+      assert has_element?(lv, "#org-form-history-withdrawn-#{pdf.id}")
+      refute has_element?(lv, "#org-form-published")
       assert has_element?(lv, "#org-form-publish")
     end
 

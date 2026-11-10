@@ -77,9 +77,11 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/groups/:id/rules/:rule_id",
     "/teams/:subdomain/qualifications/:id",
     "/teams/:subdomain/qualifications/:id/edit",
-    "/teams/:subdomain/tax-credit-letters/:id",
+    # A member's letter for a year (#970): the member is found through the team.
+    "/teams/:subdomain/tax-credit-letters/:year/members/:id",
+    "/teams/:subdomain/tax-credit-letters/:year/members/:id/draft.png",
     "/teams/:subdomain/pdfs/:id",
-    "/teams/:subdomain/tax-credit-letters/:id/pdf",
+    "/teams/:subdomain/pdfs/:id/preview.png",
     # A member's own letter (#156). Web.MeLiveTest covers another member on the same team.
     "/teams/:subdomain/me/tax-credit-letters/:id/pdf",
     "/teams/:subdomain/me/qualifications/:id/certificate",
@@ -373,8 +375,8 @@ defmodule Web.TeamScopingTest do
   defp path_for("/teams/:subdomain/qualifications/:id", s, o),
     do: ~p"/teams/#{s}/qualifications/#{o.qualification.id}"
 
-  defp path_for("/teams/:subdomain/tax-credit-letters/:id", s, o),
-    do: ~p"/teams/#{s}/tax-credit-letters/#{o.letter.id}"
+  defp path_for("/teams/:subdomain/tax-credit-letters/:year/members/:id" <> rest, s, o),
+    do: "/teams/#{s}/tax-credit-letters/#{o.letter.year}/members/#{o.member.id}#{rest}"
 
   defp path_for("/teams/:subdomain/activities/:id/calendar", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/calendar"
@@ -385,8 +387,8 @@ defmodule Web.TeamScopingTest do
   defp path_for("/teams/:subdomain/pdfs/:id", s, o),
     do: ~p"/teams/#{s}/pdfs/#{o.letter.id}"
 
-  defp path_for("/teams/:subdomain/tax-credit-letters/:id/pdf", s, o),
-    do: ~p"/teams/#{s}/tax-credit-letters/#{o.letter.id}/pdf"
+  defp path_for("/teams/:subdomain/pdfs/:id/preview.png", s, o),
+    do: ~p"/teams/#{s}/pdfs/#{o.letter.id}/preview.png"
 
   defp path_for("/teams/:subdomain/whiteboard/:id/edit", s, o),
     do: ~p"/teams/#{s}/whiteboard/#{o.whiteboard_note.id}/edit"

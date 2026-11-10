@@ -295,6 +295,8 @@ defmodule App.ViewData.Search do
       code: p.code,
       activity_id: p.activity_id,
       form_id: p.form_id,
+      member_id: p.member_id,
+      year: p.year,
       replaced_by_id: p.replaced_by_id,
       withdrawn_at: p.withdrawn_at
     })

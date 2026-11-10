@@ -230,13 +230,12 @@ defmodule App.ViewData.ActivityForms do
   defp text(value), do: to_string(value)
 
   @doc """
-  The form's PDFs published for the activity (#970): `%{current, earlier}`, the current
-  one or nil, and the rest, newest first, each Replaced or Withdrawn.
+  The form's PDFs published for the activity (#970): `%{current, all}`, the current one
+  or nil, and every one, newest first, for its History.
   """
   def published(%Team{} = team, %Activity{} = activity, %Form{} = form) do
     all = PublishedPDF.get_all_for(team.id, form.name, PublishDocument.subject(activity))
-    {current, earlier} = Enum.split_with(all, &(PublishedPDF.status(&1) == :current))
-    %{current: List.first(current), earlier: earlier}
+    %{current: Enum.find(all, &(PublishedPDF.status(&1) == :current)), all: all}
   end
 
   @doc """

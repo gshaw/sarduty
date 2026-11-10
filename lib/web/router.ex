@@ -437,7 +437,8 @@ defmodule Web.Router do
       live "/teams/:subdomain/chores/:id", ChoreLive
       live "/teams/:subdomain/chores/:id/edit", ChoreFormLive, :edit
       live "/teams/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive
-      live "/teams/:subdomain/tax-credit-letters/:id", TaxCreditLetterLive
+      # A member's letter for a year, sent or not (#970).
+      live "/teams/:subdomain/tax-credit-letters/:year/members/:id", TaxCreditLetterLive
       live "/teams/:subdomain/settings", Settings.TeamLive
       live "/teams/:subdomain/settings/team-admins", Settings.TeamAdminsLive
       live "/teams/:subdomain/settings/access-key", Settings.AccessKeyLive
@@ -488,11 +489,12 @@ defmodule Web.Router do
       pipe_through :require_authorized_team_subdomain
 
       get "/members/:id/certificates/:award_id", MemberController, :certificate
-      get "/tax-credit-letters/:id/pdf", TaxCreditLetterController, :show
+      get "/tax-credit-letters/:year/members/:id/draft.png", TaxCreditLetterController, :draft
       # An organization's form on an activity (#950): posts its answers, gets the PDF.
       post "/activities/:id/forms/:form_id/pdf", ActivityFormPDFController, :create
       # A published PDF as it was saved, current or not (#970).
       get "/pdfs/:id", PublishedPDFController, :show
+      get "/pdfs/:id/preview.png", PublishedPDFController, :preview
       get "/reports/:id/csv", ReportController, :csv
       post "/members/:id/view-as", ViewAsController, :create
       delete "/view-as", ViewAsController, :delete
