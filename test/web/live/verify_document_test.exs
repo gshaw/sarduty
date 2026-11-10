@@ -52,6 +52,17 @@ defmodule Web.VerifyDocumentTest do
     assert has_element?(lv, "#result-contact", "604-555-0100")
   end
 
+  test "the start page says how to check a document, and its printed link typed works",
+       %{conn: conn, member: member} do
+    letter = letter(member)
+    {:ok, lv, _html} = live(conn, ~p"/")
+    assert has_element?(lv, "#documents-note", "type the link printed under it")
+
+    link = PublishedPDF.verify_link(letter.pdf.code)
+    lv |> form("#check-form", check: %{code: link}) |> render_submit()
+    assert_patch(lv, path(letter))
+  end
+
   test "the verify code's link opens straight to the result", %{conn: conn, member: member} do
     letter = letter(member)
     {:ok, lv, _html} = live(conn, path(letter))
