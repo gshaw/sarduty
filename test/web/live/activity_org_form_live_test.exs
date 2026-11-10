@@ -33,8 +33,8 @@ defmodule Web.ActivityOrgFormLiveTest do
 
     organization =
       organization_fixture([cast.team], %{
-        name: "Pacific Ranges SAR Association",
-        short_name: "PRSARA"
+        name: "Western Search and Rescue Association",
+        short_name: "WESARA"
       })
 
     form = form_fixture(organization, %{text: @text, page: page, state: :testing})
