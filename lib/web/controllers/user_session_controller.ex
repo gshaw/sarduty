@@ -134,6 +134,7 @@ defmodule Web.UserSessionController do
 
     SecurityEvent.record(conn, :logged_in,
       user_id: user.id,
+      email_or_phone: who,
       data: %{via: via(who), known_browser: known?, remember: remember?}
     )
 
@@ -144,7 +145,7 @@ defmodule Web.UserSessionController do
 
   def delete(conn, _params) do
     if user = conn.assigns[:current_user],
-      do: SecurityEvent.record(conn, :logged_out, user_id: user.id)
+      do: SecurityEvent.record(conn, :logged_out, user_id: user.id, email_or_phone: user.email)
 
     conn
     |> put_flash(:info, "Logged out.")

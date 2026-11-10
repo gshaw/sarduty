@@ -313,13 +313,14 @@ defmodule Web.UserSessionControllerTest do
 
       assert redirected_to(conn) == ~p"/"
       refute get_session(conn, :user_token)
-      assert %Event{user_id: user_id} = Event.get_last(:logged_out)
+      assert %Event{user_id: user_id, email_or_phone: email} = Event.get_last(:logged_out)
       assert user_id == user.id
+      assert email == user.email
     end
   end
 
   describe "security events" do
-    test "a request, a login, and their IP and browser, without the email",
+    test "a request, a login, and their IP, browser, and email",
          %{conn: conn} do
       %{user: user} = user_with_team_fixture()
       conn = conn |> from_ip() |> put_req_header("user-agent", "Firefox/131")
@@ -342,6 +343,8 @@ defmodule Web.UserSessionControllerTest do
                logged_in = Event.get_last(:logged_in)
 
       assert logged_in.user_id == user.id
+      assert logged_in.email_or_phone == user.email
+      assert logged_in.who == who
     end
 
     test "records the first request over the limit, and none after", %{conn: conn} do
