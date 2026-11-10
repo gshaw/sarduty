@@ -60,6 +60,11 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   letter on Your membership only, and one with no hours that year gets nothing. "Send"
   is D4H's word, so letters say email. There's no Publish on letters, and no way to
   make a letter available without emailing a member who has an email.
+- **The list opens on the letter year** (#995, `TaxCreditLetter.list_year/2`), and the
+  Tax credit letters menu with it: last year from January to April, while its letters
+  go out and members file by April 30; this year from May, while hours still grow and
+  members can still reach the 200-hour mark. It turns over in the team's time zone. Any
+  other year is one Year filter away.
 - **A year that isn't over has no actions** (#995): until it ends in the team's time
   zone, its hours can grow, and its letters would need publishing again. Only Email
   publishes a letter, so none can be withdrawn either. The list has no boxes, choices,
@@ -134,7 +139,8 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   published, so none is emailed; letters already published stay as they are. The list
   and the letter page say so in a warning banner, Needed to publish, linking the tab
   that fills each, and Email says the same as an error. Needs attention says "Tax credit
-  letters cannot be emailed until you add the signer's signature" from January to April.
+  letters cannot be emailed until you add the signer's signature" from December to April,
+  so it's fixed before January 1.
   The address is on team settings' General tab, and who signs on Signer.
 - **The signature is the team's when the PDF is printed**, and the saved PDF keeps it.
   The letter keeps no copy of its own (#918).

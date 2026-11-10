@@ -21,6 +21,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.NoShow
   alias App.Model.Standing
   alias App.Model.Tag
+  alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.Operation.BuildGroupRulePreview
   alias App.Operation.PrintTaxCreditLetter
@@ -460,10 +461,10 @@ defmodule App.ViewData.TeamDashboardViewData do
     end
   end
 
-  # What a letter the CRA accepts without question needs from team settings (#918), its
-  # document's `needs` (#970), only in letter season, when letters go out.
+  # What a letter needs from team settings (#918), its document's `needs` (#970), from
+  # December to April, so it's fixed before letters can be emailed (#995).
   defp letter_settings_row(team, now) do
-    if Service.Period.letter_season?(now, team.timezone),
+    if TaxCreditLetter.settings_season?(now, team.timezone),
       do: PrintTaxCreditLetter.missing_settings(team, now),
       else: []
   end

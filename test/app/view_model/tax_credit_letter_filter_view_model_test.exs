@@ -47,11 +47,27 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModelTest do
     )
   end
 
+  test "with no year, opens on the team's letter year (#995)", %{team: team} do
+    assert {:ok, %{year: 2026}, _} =
+             TaxCreditLetterFilterViewModel.validate(%{}, team, ~U[2026-11-10 20:00:00Z])
+
+    assert {:ok, %{year: 2026}, _} =
+             TaxCreditLetterFilterViewModel.validate(%{}, team, ~U[2027-03-10 20:00:00Z])
+
+    assert {:ok, %{year: 2024}, _} =
+             TaxCreditLetterFilterViewModel.validate(
+               %{"year" => "2024"},
+               team,
+               ~U[2026-11-10 20:00:00Z]
+             )
+  end
+
   test "a sort that's gone, like the old ID sort, falls back to total" do
-    assert {:ok, %{sort: "total"}, _} = TaxCreditLetterFilterViewModel.validate(%{"sort" => "id"})
+    assert {:ok, %{sort: "total"}, _} =
+             TaxCreditLetterFilterViewModel.validate(%{"sort" => "id"}, team_fixture())
 
     assert {:ok, %{sort: "name"}, _} =
-             TaxCreditLetterFilterViewModel.validate(%{"sort" => "name"})
+             TaxCreditLetterFilterViewModel.validate(%{"sort" => "name"}, team_fixture())
   end
 
   test "lists the same hours the letter counts, overlaps merged", %{team: team, member: member} do

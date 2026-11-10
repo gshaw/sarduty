@@ -49,8 +49,9 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
   def current_year, do: Date.utc_today().year |> Integer.to_string()
 
-  @doc "The year the list opens on: last year, whose letters members need now."
-  def default_year, do: Date.utc_today().year - 1
+  @doc "The year the list opens on for `team` (TaxCreditLetter.list_year/2)."
+  def default_year(team, now \\ DateTime.utc_now()),
+    do: TaxCreditLetter.list_year(now, team.timezone)
 
   defp build_team_year_options(team) do
     current = current_year()
@@ -77,8 +78,9 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
       "Total" => "total"
     }
 
-  def validate(params) do
-    changeset = build_new_changeset(params)
+  @doc "The filters from `params`, with the year `team`'s list opens on as of `now` when none is given."
+  def validate(params, team, now \\ DateTime.utc_now()) do
+    changeset = build_changeset(build_new(default_year(team, now)), params)
 
     case apply_action(changeset, :replace) do
       {:ok, filter_options} -> {:ok, filter_options, changeset}
@@ -179,15 +181,13 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   defp changes(letter, today, team, now),
     do: TaxCreditLetter.changes(letter, today, now, team.timezone)
 
-  defp build_new do
+  defp build_new(year) do
     %__MODULE__{
-      year: default_year(),
+      year: year,
       filter: "any",
       sort: "total"
     }
   end
-
-  defp build_new_changeset(params), do: build_changeset(build_new(), params)
 
   defp build_changeset(data, params) do
     data

@@ -38,4 +38,32 @@ defmodule App.Model.TaxCreditLetterTest do
       assert changes(2025, "1 hour", "2 hours", ~U[2027-01-01 09:00:00Z]) == []
     end
   end
+
+  describe "the letter year (#995)" do
+    # Noon in Vancouver on each date.
+    defp at(date), do: DateTime.new!(date, ~T[12:00:00], @timezone)
+
+    defp list_year(date), do: date |> at() |> TaxCreditLetter.list_year(@timezone)
+    defp settings_season?(date), do: date |> at() |> TaxCreditLetter.settings_season?(@timezone)
+
+    test "the list opens on last year from January to April, and this year from May" do
+      assert list_year(~D[2027-01-02]) == 2026
+      assert list_year(~D[2027-04-30]) == 2026
+      assert list_year(~D[2027-05-01]) == 2027
+      assert list_year(~D[2026-11-10]) == 2026
+    end
+
+    test "it turns over in the team's time zone, not UTC" do
+      # 9 p.m. on December 31, 2026 in Vancouver is already January 1, 2027 in UTC.
+      evening = DateTime.new!(~D[2026-12-31], ~T[21:00:00], @timezone)
+      assert TaxCreditLetter.list_year(evening, @timezone) == 2026
+    end
+
+    test "Needs attention names what letters need from team settings from December to April" do
+      assert settings_season?(~D[2026-12-01])
+      assert settings_season?(~D[2027-04-30])
+      refute settings_season?(~D[2027-05-01])
+      refute settings_season?(~D[2026-11-30])
+    end
+  end
 end

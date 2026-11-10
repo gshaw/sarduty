@@ -133,6 +133,27 @@ defmodule App.Model.TaxCreditLetter do
   def current_year(now, timezone), do: Service.YearRange.year_in(now, timezone) - 1
 
   @doc """
+  The year the letters list opens on, and the Tax credit letters menu with it (#995):
+  last year from January to April, letter season, while its letters go out and members
+  file; this year from May, while its hours still grow and members can still reach the
+  200-hour mark. Its actions wait for January 1 (`year_over?/3`). In the team's zone.
+  """
+  def list_year(now, timezone) do
+    year = Service.YearRange.year_in(now, timezone)
+    if Service.Period.letter_season?(now, timezone), do: year - 1, else: year
+  end
+
+  @doc """
+  Whether Needs attention names what letters need from team settings, such as the
+  signature: December to April, so it's fixed before letters can be emailed on
+  January 1 (#995).
+  """
+  def settings_season?(now, timezone),
+    do:
+      Service.Period.letter_season?(now, timezone) or
+        DateTime.shift_zone!(now, timezone).month == 12
+
+  @doc """
   Whether `year` is over in the team's time zone, so its letters can be emailed: until it
   ends, its hours can still grow, and its letters would need publishing again (#995).
   """

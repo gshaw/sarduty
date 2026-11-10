@@ -50,7 +50,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
   end
 
   def handle_params(params, _uri, socket) do
-    case TaxCreditLetterFilterViewModel.validate(params) do
+    case TaxCreditLetterFilterViewModel.validate(params, socket.assigns.current_team) do
       {:ok, filter_options, changeset} ->
         socket =
           socket
@@ -124,7 +124,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         field={@form[:year]}
         label="Year"
         options={TaxCreditLetterFilterViewModel.years(@current_team)}
-        default={Integer.to_string(TaxCreditLetterFilterViewModel.default_year())}
+        default={Integer.to_string(TaxCreditLetterFilterViewModel.default_year(@current_team))}
       />
       <:filter
         field={@form[:filter]}
@@ -462,7 +462,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
   end
 
   def handle_event("change", %{"form" => form_params}, socket) do
-    case TaxCreditLetterFilterViewModel.validate(form_params) do
+    case TaxCreditLetterFilterViewModel.validate(form_params, socket.assigns.current_team) do
       {:ok, filter_options, _changeset} ->
         path = build_filter_path(socket.assigns.current_team, filter_options)
         {:noreply, push_patch(socket, to: path, replace: true)}
