@@ -1,6 +1,6 @@
 defmodule Web.VerifyLimit do
   @moduledoc """
-  Caps failed card checks per client IP on the verify site, as a backstop: codes
+  Caps failed card and document checks per client IP on the verify site, as a backstop: codes
   are too many to guess. Only misses count, so checking many real cards never trips it,
   and only for input that could be a code: anything else can't guess one. That matters
   at a command post, where everyone shares one IP and an app sees every barcode (#299).
@@ -14,6 +14,7 @@ defmodule Web.VerifyLimit do
 
   alias App.Model.Event
   alias App.Model.MemberCard
+  alias App.Model.PublishedPDF
   alias App.RateLimit
 
   require Logger
@@ -50,17 +51,18 @@ defmodule Web.VerifyLimit do
   end
 
   @doc """
-  Notes a real card found, the sample cards aside. While the alarm is up, a card found
-  from an IP that has missed is recorded with the card's id: it may be a guess that worked.
+  Notes a real card or published PDF found, the sample cards aside. While the alarm is
+  up, one found from an IP that has missed is recorded with its id: it may be a guess
+  that worked.
   """
-  def hit(ip, %MemberCard{} = card) do
-    if alarm?() and ip |> key() |> RateLimit.get(@scale) > 0 do
-      Event.record!(:verify_guess_found,
-        ip: ip,
-        team_id: card.member.team_id,
-        data: %{member_card_id: card.id}
-      )
-    end
+  def hit(ip, %MemberCard{} = card),
+    do: hit(ip, card.member.team_id, %{member_card_id: card.id})
+
+  def hit(ip, %PublishedPDF{} = pdf), do: hit(ip, pdf.team_id, %{published_pdf_id: pdf.id})
+
+  defp hit(ip, team_id, data) do
+    if alarm?() and ip |> key() |> RateLimit.get(@scale) > 0,
+      do: Event.record!(:verify_guess_found, ip: ip, team_id: team_id, data: data)
 
     :ok
   end

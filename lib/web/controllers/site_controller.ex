@@ -24,10 +24,4 @@ defmodule Web.SiteController do
 
   @doc "RFC 9116's legacy path."
   def to_security_txt(conn, _params), do: redirect(conn, to: ~p"/.well-known/security.txt")
-
-  @doc "A verify site path typed on the app's host, such as a letter's /letters/:ref."
-  def to_verify(conn, _params) do
-    query = if conn.query_string == "", do: "", else: "?" <> conn.query_string
-    redirect(conn, external: Web.VerifyHost.url() <> conn.request_path <> query)
-  end
 end

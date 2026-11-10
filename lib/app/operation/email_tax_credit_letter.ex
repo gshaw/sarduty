@@ -1,6 +1,6 @@
 defmodule App.Operation.EmailTaxCreditLetter do
   alias App.Mailer.TaxCreditLetterMailer
-  alias App.Model.SavedPDF
+  alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Operation.SaveTaxCreditLetterPDF
 
@@ -23,7 +23,7 @@ defmodule App.Operation.EmailTaxCreditLetter do
   defp email?(member), do: if(member.email in [nil, ""], do: {:error, :no_email}, else: :ok)
 
   defp pdf(letter) do
-    case SavedPDF.letter_attachment(letter) do
+    case PublishedPDF.letter_attachment(letter) do
       nil -> SaveTaxCreditLetterPDF.publish(letter)
       attachment -> {:ok, attachment}
     end

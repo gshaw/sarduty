@@ -35,8 +35,8 @@ defmodule Web.RequestLog do
   end
 
   @doc """
-  The path with any card code in it replaced by `[FILTERED]`. `host` tells the
-  verify site, where a bare `/K7Q4M2XA9H` is a card code, from the app.
+  The path with any card code or document ID in it replaced by `[FILTERED]`. `host`
+  tells the verify site, where a bare `/K7Q4M2XA9H` is a card code, from the app.
   """
   def filter_path(host, path) when is_binary(path) do
     host |> verify_host?() |> filter_segments(String.split(path, "/")) |> Enum.join("/")

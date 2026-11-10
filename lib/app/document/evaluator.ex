@@ -77,6 +77,9 @@ defmodule App.Document.Evaluator do
       author: title && title.by && text_value(title.by, env),
       lock: doc.lock,
       keep: Map.new(doc.keep, &{name(&1), value(&1, env)}),
+      shows:
+        Enum.map(doc.verify_shows, &%{"label" => &1.label, "text" => text_value(&1.value, env)}),
+      verify_code: doc.verify_code,
       page: doc.page,
       layout: doc.layout,
       fills: fills(doc, env),

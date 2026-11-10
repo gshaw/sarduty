@@ -7,7 +7,7 @@ defmodule App.Operation.DeleteTeamTest do
 
   alias App.Adapter.D4H
   alias App.Model.Event
-  alias App.Model.SavedPDF
+  alias App.Model.PublishedPDF
   alias App.Model.Team
   alias App.Operation.DeleteTeam
   alias App.RecordsStub
@@ -31,9 +31,22 @@ defmodule App.Operation.DeleteTeamTest do
     endorsement_qualification_fixture(endorsement, qualification)
     group_rule_fixture(group, endorsement)
     member_card_fixture(member)
-    letter = tax_credit_letter_fixture(member)
+    # A letter and its published PDF, and one it replaced (#970).
+    %{pdf: old} = letter = tax_credit_letter_fixture(member)
     pdf = %{content: "%PDF-1.7", title: "A PDF", filename: "a.pdf"}
-    SavedPDF.put_letter!(%{letter | member: member}, pdf)
+
+    attrs = %{
+      team_id: team.id,
+      name: old.name,
+      subject: old.subject,
+      tax_credit_letter_id: letter.id
+    }
+
+    {:ok, _pdf} =
+      attrs
+      |> Map.put(:code, PublishedPDF.generate_code())
+      |> PublishedPDF.publish(%{attachment: pdf}, old.id)
+
     item = equipment_item_fixture(team)
     equipment_usage_fixture(activity, item)
     template_fixture(team, "Truck 1", [item])

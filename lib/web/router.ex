@@ -85,9 +85,6 @@ defmodule Web.Router do
       # An organization's own start page, until it has its own verify host. Codes look
       # like K7Q4M-2XA9H, so "orgs" can't be one.
       live "/orgs/:slug", VerifyLive
-      # Tax credit letters (#207). "letters" has an L, which card codes never do.
-      live "/letters", VerifyLetterLive
-      live "/letters/:ref", VerifyLetterLive
       # Sample cards for demos (#854). "samples" has an L too.
       live "/samples", VerifySamplesLive
       live "/:code", VerifyLive
@@ -219,10 +216,6 @@ defmodule Web.Router do
 
     get "/.well-known/security.txt", SiteController, :security_txt
     get "/security.txt", SiteController, :to_security_txt
-    # Letters print the verify host's address; people type it without "verify.".
-    get "/letters", SiteController, :to_verify
-    get "/letters/:ref", SiteController, :to_verify
-
     get "/styles", StyleGuideController, :index
     get "/styles/:page", StyleGuideController, :show
 

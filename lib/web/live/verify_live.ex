@@ -4,15 +4,25 @@ defmodule Web.VerifyLive do
   import Web.Components.Scanner
   import Web.Components.Verify
 
+  alias App.Model.DemoTeam
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.Organization
+  alias App.Model.PublishedPDF
   alias App.Operation.CheckMemberCard
+  alias Service.Format
   alias Web.VerifyLimit
 
-  # Public, on the verify site (Web.VerifyHost). A card's QR code opens /<code> here.
-  # Scanning from this page is the careful check: it takes the code out of a card's link
-  # and flags a link to any other site, which is what a forged card would carry.
+  # Public, on the verify site (Web.VerifyHost). A card's QR code opens /<code> here, and
+  # so does a published PDF's verify code (#970): the length says which, 10 characters
+  # for a card and 15 for a document. Scanning from this page is the careful check: it
+  # takes the code out of the link and flags a link to any other site, which is what a
+  # forged card would carry.
+  #
+  # A document shows what its definition's `verify shows` printed while it's current. One
+  # replaced or withdrawn says so and shows nothing from the PDF. A tax credit letter's
+  # reference number from before #970 is not found, as any unknown code: its letter was
+  # printed again with an ID.
   #
   # Misses count toward a per-IP limit (Web.VerifyLimit). It's checked here rather than in
   # a plug, which would miss checks sent over the open connection. A bad link opened
@@ -80,45 +90,94 @@ defmodule Web.VerifyLive do
   # A scan or a typed code sounds its result. A card's link opened directly stays quiet,
   # since a browser plays nothing before a tap.
   defp scan_sound(%{assigns: %{sound_next: true}} = socket, result) when result != nil do
-    sound = if result.status == :active, do: :ok, else: :error
+    sound = if result.status in [:active, :current], do: :ok, else: :error
     socket |> assign(sound_next: false) |> push_event("scan-sound", %{sound: sound})
   end
 
   defp scan_sound(socket, _result), do: socket
 
-  # A card's own page when the input names one, so the address bar shows its code.
+  # A card's or document's own page when the input names one, so the address bar shows
+  # its code.
   defp path_for(input) do
+    case read(input) do
+      {:card, code} -> ~p"/#{MemberCard.format_code(code)}"
+      {:document, code} -> ~p"/#{PublishedPDF.format_code(code)}"
+      _other -> ~p"/?#{[code: input]}"
+    end
+  end
+
+  # What the input names: `{:card, code}`, `{:document, code}`, `{:other_site, host}`
+  # for a link anywhere else, or nil.
+  defp read(input) do
     case MemberCard.code_from_scan(input, Web.VerifyHost.trusted_hosts()) do
-      code when is_binary(code) -> ~p"/#{MemberCard.format_code(code)}"
-      _ -> ~p"/?#{[code: input]}"
+      code when is_binary(code) ->
+        {:card, code}
+
+      {:other_site, host} ->
+        {:other_site, host}
+
+      nil ->
+        input |> document_code() |> PublishedPDF.parse_code() |> then(&(&1 && {:document, &1}))
+    end
+  end
+
+  defp document_code(input) do
+    input = String.trim(input)
+
+    case URI.parse(input) do
+      %URI{scheme: scheme, path: path} when scheme in ["http", "https", "HTTP", "HTTPS"] ->
+        case Regex.run(~r{^/([^/]+)/?$}, path || "") do
+          [_path, code] -> code
+          nil -> ""
+        end
+
+      _other ->
+        input
     end
   end
 
   defp check("", _ip), do: nil
 
   defp check(input, ip) do
-    if VerifyLimit.limited?(ip) do
-      %{status: :limited}
-    else
-      result = look_up(input)
-
-      cond do
-        result[:sample] -> :ok
-        result.status == :not_found -> VerifyLimit.miss(ip, result[:code])
-        result[:card] -> VerifyLimit.hit(ip, result.card)
-        true -> :ok
-      end
-
-      result
+    cond do
+      VerifyLimit.limited?(ip) -> %{status: :limited}
+      match?({:document, _parsed}, read(input)) -> input |> read() |> elem(1) |> document(ip)
+      true -> card(input, ip)
     end
   end
 
-  defp look_up(input) do
-    case MemberCard.code_from_scan(input, Web.VerifyHost.trusted_hosts()) do
-      {:other_site, host} -> %{status: :other_site, host: host, sample: false}
-      nil -> %{status: :not_found, sample: false}
-      code -> CheckMemberCard.call(code)
+  defp card(input, ip) do
+    result = look_up(input)
+
+    cond do
+      result[:sample] -> :ok
+      result.status == :not_found -> VerifyLimit.miss(ip, result[:code])
+      result[:card] -> VerifyLimit.hit(ip, result.card)
+      true -> :ok
     end
+
+    result
+  end
+
+  defp look_up(input) do
+    case read(input) do
+      {:other_site, host} -> %{status: :other_site, host: host, sample: false}
+      {:card, code} -> CheckMemberCard.call(code)
+      nil -> %{status: :not_found, sample: false}
+    end
+  end
+
+  defp document(code, ip), do: code |> PublishedPDF.find_for_verify() |> document(ip, code)
+
+  defp document(nil, ip, parsed) do
+    VerifyLimit.miss(ip, parsed)
+    %{status: :document_not_found, sample: false}
+  end
+
+  defp document(%PublishedPDF{} = pdf, ip, _parsed) do
+    VerifyLimit.hit(ip, pdf)
+    # A Try a demo team's: a visitor made it (#857).
+    %{status: PublishedPDF.status(pdf), pdf: pdf, sample: DemoTeam.demo?(pdf.team_id)}
   end
 
   defp result_organization(%{card: %MemberCard{member: %{team: team}}}), do: team.organization
@@ -166,7 +225,35 @@ defmodule Web.VerifyLive do
         <p class="action">
           <.a id="samples-link" navigate={~p"/samples"}>Try a sample card</.a>
         </p>
+
+        <%!-- A document's own code opens its result directly; this is for one who typed the
+        bare host. The scanner and the box take its code or link as they do a card's. --%>
+        <h2 class="mt-6">Checking a document?</h2>
+        <p id="documents-note">
+          A tax credit letter or form a team published through SAR Duty has a verify code on
+          each page. Scan its QR code above, or type the link printed under it.
+        </p>
       </section>
+    </div>
+    """
+  end
+
+  def render(%{result: %{pdf: _pdf}} = assigns) do
+    ~H"""
+    <.band
+      :if={@result.sample}
+      id="result-sample"
+      kind={:info}
+      title="Sample"
+      class="mb-4"
+    >
+      Made up for demos. It is not a real team's, so never accept it.
+    </.band>
+    <.document_result result={@result} />
+    <div class="mt-6">
+      <.button id="check-another" navigate={@start_path} size={:lg} class="w-full">
+        Verify another
+      </.button>
     </div>
     """
   end
@@ -216,6 +303,18 @@ defmodule Web.VerifyLive do
       <.panel>
         Codes are 10 letters and numbers, under the QR code. If the code is right, the card is
         not valid.
+      </.panel>
+    </div>
+    """
+  end
+
+  defp result(%{result: %{status: :document_not_found}} = assigns) do
+    ~H"""
+    <div id="result-not-found">
+      <.band kind={:danger} title="No document has this code">Check the code and try again</.band>
+      <.panel>
+        The code is under the QR code on the document, 15 letters and numbers. If the code is
+        right, the document is not one SAR Duty published.
       </.panel>
     </div>
     """
@@ -329,6 +428,122 @@ defmodule Web.VerifyLive do
         From the team's D4H records, last refreshed {last_checked(@team)}.
       </p>
     </div>
+    """
+  end
+
+  # The definition's name, and the year it's for, if any: "Tax credit letter, 2026". The
+  # PDF's own title is for files and emails; the team's name shows below it.
+  defp document_heading(%PublishedPDF{name: name, year: year}) when is_integer(year),
+    do: "#{name}, #{year}"
+
+  defp document_heading(%PublishedPDF{name: name}), do: name
+
+  defp document_result(%{result: %{status: :current, pdf: pdf}} = assigns) do
+    assigns = assign(assigns, pdf: pdf, team: pdf.team)
+
+    ~H"""
+    <div id="result-current">
+      <.band kind={:success} title={"Published by #{team_name(@team)}"}>
+        Verified just now
+      </.band>
+
+      <.panel>
+        <h2 id="result-title" class="heading mb-0">{document_heading(@pdf)}</h2>
+        <p id="result-code" class="hint mono mb-0">{PublishedPDF.format_code(@pdf.code)}</p>
+
+        <div class="card-section media">
+          <img src={logo_src(@team, @result.sample)} alt="" class="logo-md" />
+          <div>
+            <p id="result-team" class="subheading mb-0">{team_name(@team)}</p>
+            <p :if={@team.organization} id="result-organization" class="hint mb-0">
+              {@team.organization.name}
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <.fact label="Published on">{Format.date_long(@pdf.inserted_at, @team.timezone)}</.fact>
+        </div>
+
+        <div :if={@pdf.shows != []} id="result-shows" class="card-section value-rows">
+          <div :for={shown <- @pdf.shows}>
+            <span>{shown["label"]}</span>
+            <strong>{shown["text"]}</strong>
+          </div>
+        </div>
+      </.panel>
+
+      <p id="result-check" class="callout mt-4 text-sm">
+        <b>Compare these with the paper.</b> If they are not the same, contact the team.
+      </p>
+
+      <.contact team={@team} />
+    </div>
+    """
+  end
+
+  defp document_result(%{result: %{status: :replaced, pdf: pdf}} = assigns) do
+    assigns = assign(assigns, pdf: pdf, team: pdf.team)
+
+    ~H"""
+    <div id="result-replaced">
+      <.band kind={:warning} title="Replaced">This is not the current one</.band>
+      <.panel>
+        <h2 id="result-name" class="heading mb-0">{@pdf.name}</h2>
+        <p class="mt-2 mb-0">
+          Replaced on {Format.date_long(@pdf.replaced_by.inserted_at, @team.timezone)}.
+          Ask {team_name(@team)} for the current one.
+        </p>
+      </.panel>
+    </div>
+    """
+  end
+
+  defp document_result(%{result: %{status: :withdrawn, pdf: pdf}} = assigns) do
+    assigns = assign(assigns, pdf: pdf, team: pdf.team)
+
+    ~H"""
+    <div id="result-withdrawn">
+      <.band kind={:danger} title="Withdrawn">It is not valid</.band>
+      <.panel>
+        <h2 id="result-name" class="heading mb-0">{@pdf.name}</h2>
+        <p class="mt-2 mb-0">
+          Withdrawn by {team_name(@team)} on {Format.date_long(@pdf.withdrawn_at, @team.timezone)}.
+        </p>
+      </.panel>
+    </div>
+    """
+  end
+
+  defp team_name(team), do: team.legal_name || team.name
+
+  attr :team, :map, required: true
+
+  defp contact(assigns) do
+    team = assigns.team
+
+    lines =
+      Enum.reject(
+        [
+          team.authorized_by_name,
+          team.authorized_by_title,
+          team.authorized_by_phone,
+          team.authorized_by_email
+        ],
+        &(&1 in [nil, ""])
+      )
+
+    assigns = assign(assigns, :lines, lines)
+
+    ~H"""
+    <section :if={@lines != []} id="result-contact" class="small-print">
+      <h2>Questions about this document</h2>
+      <p>
+        <%= for {line, index} <- Enum.with_index(@lines) do %>
+          <br :if={index > 0} />{line}
+        <% end %>
+      </p>
+    </section>
     """
   end
 

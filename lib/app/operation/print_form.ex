@@ -19,7 +19,8 @@ defmodule App.Operation.PrintForm do
   `{:ok, %{attachment, keep}}` or `{:error, reason}`: the PDF of form `text` on its page
   `page` for `activity_id`, with `answers` as typed by name, and the values it keeps.
   `mark: :sample` marks it SAMPLE, for made-up data, and `mark: :draft` DRAFT
-  (App.Operation.PrintDocument).
+  (App.Operation.PrintDocument). `verify` is the verify link it's published under; without
+  one it prints a draft's grey box where the verify code goes.
   """
   def call(text, page, %Context{} = context, activity_id, answers \\ %{}, opts \\ []) do
     with {:ok, %{doc: doc, values: values}} <-
@@ -28,13 +29,21 @@ defmodule App.Operation.PrintForm do
          :ok <- shown?(doc, context, activity_id),
          {:ok, answered} <- answers(doc, answers) do
       output = Document.evaluate(doc, Map.merge(values, answered), context.timezone)
-      print(output, doc.name, page, Keyword.get(opts, :mark))
+      print(output, doc.name, page, opts)
     end
   end
 
-  defp print(output, name, page, mark) do
-    with {:ok, pdf} <- PrintDocument.call(output, page: page, mark: mark),
-         do: {:ok, %{attachment: attachment(pdf, output.title || name), keep: output.keep}}
+  defp print(output, name, page, opts) do
+    print_opts = [page: page, mark: opts[:mark], verify: Keyword.get(opts, :verify, :draft)]
+
+    with {:ok, pdf} <- PrintDocument.call(output, print_opts),
+         do:
+           {:ok,
+            %{
+              attachment: attachment(pdf, output.title || name),
+              keep: output.keep,
+              shows: output.shows
+            }}
   end
 
   defp form?(%Document{kind: :form}), do: :ok

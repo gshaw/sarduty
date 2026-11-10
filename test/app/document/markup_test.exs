@@ -1,7 +1,7 @@
 defmodule App.Document.MarkupTest do
   use ExUnit.Case, async: true
 
-  # cspell:ignore Łukasz Nowak -- a name past WinAnsi (#917)
+  # cspell:ignore Łukasz Nowak luma -- a name past WinAnsi (#917), and Typst's grey
 
   alias App.Document.Markup
 
@@ -83,7 +83,7 @@ defmodule App.Document.MarkupTest do
       width: 72,
       height: 72,
       level_with: "letter",
-      value: {:qr, "https://verify.sarduty.com/letters/SRVTC-K7Q4M2XA"}
+      value: {:qr, "https://verify.sarduty.com/K7Q4M-2XA9H-VB3TN"}
     }
 
     {markup, files} = typst([%{@flow | value: []}, verify])
@@ -129,6 +129,88 @@ defmodule App.Document.MarkupTest do
     {markup, files} = typst([%{@flow | value: value}])
 
     assert {:ok, "%PDF" <> _rest} = Service.Typst.compile(markup, files)
+  end
+
+  describe "the verify code (#970)" do
+    @link "https://verify.sarduty.com/K7Q4M-2XA9H-VB3TN"
+
+    defp verify_typst(verify_code, verify, opts \\ []) do
+      %{title: "Task report", author: "Coast Range", places: [], verify_code: verify_code}
+      |> Markup.typst(Keyword.put(opts, :verify, verify))
+    end
+
+    test "prints bottom left by default: the link's QR code in capitals, and the link" do
+      {markup, files} = verify_typst(%{at: :bottom_left, show: :both}, @link)
+
+      assert markup =~ "#let verify-code = place(bottom + left, dx: 36pt, dy: -36pt,"
+      assert markup =~ "[Verify this document]"
+      assert markup =~ "#verify-code\n"
+      assert values(files)["verify-link"] == "verify.sarduty.com/K7Q4M-2XA9H-VB3TN"
+
+      qr = "HTTPS://VERIFY.SARDUTY.COM/K7Q4M-2XA9H-VB3TN" |> EQRCode.encode(:m) |> EQRCode.svg()
+      assert files["verify-qr.svg"] == qr
+    end
+
+    test "on every page of a form's page" do
+      {markup, _files} = verify_typst(%{at: :bottom_left, show: :both}, @link, page: {@page, 2})
+      assert markup |> String.split("#verify-code\n") |> length() == 3
+    end
+
+    test "moves to a corner, the QR code in the corner" do
+      {markup, _files} = verify_typst(%{at: :top_right, show: :both}, @link)
+
+      assert markup =~ "place(top + right, dx: -36pt, dy: 36pt,"
+      assert markup =~ ~r/Verify this document.*image\("verify-qr.svg"/s
+    end
+
+    test "prints the link alone, or the QR code alone" do
+      {link, files} = verify_typst(%{at: :bottom_left, show: :link}, @link)
+      refute link =~ "verify-qr.svg"
+      refute files["verify-qr.svg"]
+
+      {qr, _files} = verify_typst(%{at: :bottom_left, show: :qr}, @link)
+      refute qr =~ "Verify this document"
+    end
+
+    test "prints nothing for none, or without a link" do
+      {none, _files} = verify_typst(:none, @link)
+      refute none =~ "verify-code"
+
+      {unpublished, _files} = verify_typst(%{at: :bottom_left, show: :both}, nil)
+      refute unpublished =~ "verify-code"
+    end
+
+    test "a draft prints a grey box in its place" do
+      {markup, files} = verify_typst(%{at: :bottom_left, show: :both}, :draft)
+
+      assert markup =~ "fill: luma(225)"
+      assert markup =~ "The verify code prints here when this is published."
+      refute files["verify-qr.svg"]
+    end
+
+    test "on a layout, it's each page's foreground with the mark" do
+      output = %{
+        title: "Expense request",
+        author: "Coast Range",
+        places: [],
+        layout: %{text: "Hello\n", line: 10},
+        fills: %{},
+        verify_code: %{at: :bottom_left, show: :both}
+      }
+
+      {markup, _files} = Markup.typst(output, verify: @link, mark: @png)
+
+      assert markup =~
+               ~s|#set page(foreground: {verify-code; place(top + left, image("mark.png", width: 100%))})|
+    end
+
+    test "the markup makes a PDF" do
+      {markup, files} = verify_typst(%{at: :bottom_right, show: :both}, @link)
+      assert {:ok, "%PDF" <> _rest} = Service.Typst.compile(markup, files)
+
+      {markup, files} = verify_typst(%{at: :top_left, show: :both}, :draft)
+      assert {:ok, "%PDF" <> _rest} = Service.Typst.compile(markup, files)
+    end
   end
 
   describe "a form's places" do
@@ -292,7 +374,7 @@ defmodule App.Document.MarkupTest do
       {markup, files} = %{} |> layout_output() |> Markup.typst(mark: @png)
 
       assert markup =~
-               ~s|#set page(foreground: place(top + left, image("mark.png", width: 100%)))|
+               ~s|#set page(foreground: {place(top + left, image("mark.png", width: 100%))})|
 
       assert files["mark.png"] == @png
     end

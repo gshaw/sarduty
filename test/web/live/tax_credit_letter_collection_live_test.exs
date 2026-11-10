@@ -89,7 +89,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
 
       query = from l in TaxCreditLetter, where: l.year == 2025, select: l.member_id
       assert query |> Repo.all() |> Enum.sort() == Enum.sort([avery.id, blake.id, casey.id])
-      assert Repo.get!(TaxCreditLetter, had.id).ref_id == had.ref_id
+      assert Repo.get!(TaxCreditLetter, had.id).inserted_at == had.inserted_at
       assert Event.get_last(:tax_credit_letters_sent).data["created"] == 2
 
       # Each email is its own job, which ran inline, and the letter says it went.

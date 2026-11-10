@@ -3,6 +3,7 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
 
   import App.DataFixtures
 
+  alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Operation.CreateTaxCreditLetter
 
@@ -45,14 +46,14 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
     letter = create(team, member)
 
     assert {letter.member_id, letter.year} == {member.id, 2025}
-    assert letter.ref_id =~ ~r/^SRVTC-[A-Z0-9]{8}$/
+    assert PublishedPDF.parse_code(letter.pdf.code)
     assert {letter.primary_minutes, letter.secondary_minutes} == {210, 60}
     assert letter.letter_content =~ "Primary Hours: 3h 30m\nSecondary Hours: 1 hour\n"
     assert letter.letter_content =~ "Total Hours: 4h 30m\n"
     assert TaxCreditLetter.parse_minutes(letter.letter_content) == {210, 60}
 
-    assert letter.letter_content =~
-             "Reference: #{letter.ref_id}\nVerify this letter at verify.sarduty.com/letters"
+    # The verify code prints the ID, so the text has no reference line (#970).
+    refute letter.letter_content =~ "Reference"
   end
 
   test "a member with no hours gets a letter that says 0 hours", %{team: team, member: member} do
@@ -86,14 +87,12 @@ defmodule App.Operation.CreateTaxCreditLetterTest do
       )
       |> Repo.update!()
 
-    assert create(team, member).letter_content =~
-             "Pat Lee\nPresident\npresident@example.com\n\nReference: "
+    assert create(team, member).letter_content =~ ~r/Pat Lee\nPresident\npresident@example.com\z/
   end
 
   test "without a signer, the team's legal name signs", %{team: team, member: member} do
     team = team |> Ecto.Changeset.change(authorized_by_name: nil) |> Repo.update!()
 
-    assert create(team, member).letter_content =~
-             ~r/\n\n\n\n\nNorth Shore Rescue\n\nReference: /
+    assert create(team, member).letter_content =~ ~r/\n\n\n\n\nNorth Shore Rescue\z/
   end
 end

@@ -22,10 +22,10 @@ defmodule App.Document.Parser do
   alias App.Report.Parser
   alias App.Report.Query
 
-  @clauses ~w(document form about for report const ask compute title lock keep page places fill
-               expect layout)
+  @clauses ~w(document form about for report const ask compute title lock keep verify page places
+               fill expect layout)
   @starts ~w(member year)
-  @repeated ~w(report const ask compute fill expect)
+  @repeated ~w(report const ask compute verify fill expect)
   @kinds %{
     "text" => :text,
     "image" => :image,
@@ -36,6 +36,12 @@ defmodule App.Document.Parser do
   @aligns %{"left" => :left, "right" => :right, "center" => :center}
   @lengths ~w(top left right bottom width height size leading gap pad pitch indent)
   @ask_options ~w(remember default choose hint)
+  @corners %{
+    {"top", "left"} => :top_left,
+    {"top", "right"} => :top_right,
+    {"bottom", "left"} => :bottom_left,
+    {"bottom", "right"} => :bottom_right
+  }
   @units %{"in" => 72, "pt" => 1, "mm" => 72 / 25.4}
   @image_options ~w(width height pad)
   # Each option's atom, written out: to_existing_atom fails until some module loads `:pad`.
@@ -317,6 +323,21 @@ defmodule App.Document.Parser do
     end
   end
 
+  # `verify code` and `verify shows`, once each.
+  defp read("verify", [first | _] = block, doc, n) do
+    case line_tokens(first) do
+      [_verify, {:word, word, _} | rest] ->
+        case lower(word) do
+          "code" -> verify_code(rest, doc, n)
+          "shows" -> verify_shows(rest, block, doc, n)
+          _other -> verify_head(n)
+        end
+
+      _other ->
+        verify_head(n)
+    end
+  end
+
   defp read("page", block, doc, n) do
     if tl(tokens(block)) != [],
       do: fail(n, "Write page alone: the values print on the form's own page.")
@@ -364,6 +385,78 @@ defmodule App.Document.Parser do
   end
 
   defp lock(n), do: fail(n, "Write lock print: the PDF can only be printed.")
+
+  defp verify_head(n),
+    do: fail(n, "Write verify code and where it goes, or verify shows and its values under it.")
+
+  # `verify code bottom right`, `verify code link only`, `verify code top left qr only`,
+  # or `verify code none`.
+  defp verify_code(tokens, doc, n) do
+    if doc.verify_code != %Document{}.verify_code, do: fail(n, "Write verify code once.")
+    words = Enum.map(tokens, fn token -> token |> elem(1) |> to_string() |> lower() end)
+
+    if Enum.any?(tokens, &(elem(&1, 0) != :word)), do: verify_code_words(n)
+
+    case words do
+      [] -> fail(n, "Write where the verify code goes after verify code, such as bottom right.")
+      ["none"] -> %{doc | verify_code: :none}
+      words -> %{doc | verify_code: verify_code_at(words, n)}
+    end
+  end
+
+  defp verify_code_at(words, n) do
+    {at, rest} =
+      case words do
+        [edge, side | rest] when is_map_key(@corners, {edge, side}) ->
+          {@corners[{edge, side}], rest}
+
+        rest ->
+          {:bottom_left, rest}
+      end
+
+    show =
+      case rest do
+        [] -> :both
+        ["link", "only"] -> :link
+        ["qr", "only"] -> :qr
+        _other -> verify_code_words(n)
+      end
+
+    %{at: at, show: show}
+  end
+
+  defp verify_code_words(n),
+    do:
+      fail(
+        n,
+        "Write verify code and top or bottom, left or right, then link only or qr only, or none."
+      )
+
+  # Each line under `verify shows` is a label in quotes and a value.
+  defp verify_shows(rest, block, doc, n) do
+    if rest != [], do: fail(n, "Write each value on its own line under verify shows.")
+    if doc.verify_shows != [], do: fail(n, "Write verify shows once.")
+
+    case children(block) do
+      [] ->
+        fail(n, "Write what the verify page shows under verify shows, such as 'Total' total.")
+
+      lines ->
+        %{doc | verify_shows: Enum.map(lines, &shown/1)}
+    end
+  end
+
+  defp shown([{n, _indent, _text} | _] = line) do
+    case tokens(line) do
+      [{:string, label, _} | rest] ->
+        {value, rest} = value(rest, n)
+        done(rest, "Write one value after the label.")
+        %{label: label, value: value, line: n}
+
+      _other ->
+        fail(n, "Start with the label in quotes, then the value, such as 'Total claimed' total.")
+    end
+  end
 
   defp finish(%Document{name: nil}), do: fail(nil, "Start with document 'Its name'.")
 

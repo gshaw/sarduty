@@ -5,7 +5,7 @@ defmodule Web.TaxCreditLetterLiveTest do
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
 
-  alias App.Model.SavedPDF
+  alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Repo
 
@@ -19,27 +19,23 @@ defmodule Web.TaxCreditLetterLiveTest do
       |> log_in_user(user)
       |> live(~p"/teams/#{team}/tax-credit-letters/#{letter.id}")
 
-    assert html =~ letter.ref_id
+    assert html =~ PublishedPDF.format_code(letter.pdf.code)
   end
 
-  test "shows the reference to copy, and a link to verify a current one", %{conn: conn} do
+  test "shows the ID to copy, and a link to verify a current one", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
-    current = tax_credit_letter_fixture(member, %{ref_id: TaxCreditLetter.generate_ref_id()})
-    old = tax_credit_letter_fixture(member, %{ref_id: "SRVTC-M4K11", year: 2020})
+    current = tax_credit_letter_fixture(member, %{code: "K7Q4M2XA9HVB3TN"})
+    old = tax_credit_letter_fixture(member, %{code: "SRVTC-K7Q4M2XA", year: 2020})
     conn = log_in_user(conn, user)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters/#{current.id}")
-    assert has_element?(lv, "#letter-reference[value='#{current.ref_id}']")
+    assert has_element?(lv, "#letter-reference[value='K7Q4M-2XA9H-VB3TN']")
+    assert has_element?(lv, "#letter-verify[href='#{Web.VerifyHost.url()}/K7Q4M-2XA9H-VB3TN']")
 
-    assert has_element?(
-             lv,
-             "#letter-verify[href='#{TaxCreditLetter.verify_url(current, Web.VerifyHost.url())}']"
-           )
-
-    # A reference from before #207 can't verify alone.
+    # A reference number from before #970 verifies nowhere, until it's renewed.
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters/#{old.id}")
-    assert has_element?(lv, "#letter-reference[value='SRVTC-M4K11']")
+    assert has_element?(lv, "#letter-reference[value='SRVTC-K7Q4M2XA']")
     refute has_element?(lv, "#letter-verify")
   end
 
@@ -83,7 +79,7 @@ defmodule Web.TaxCreditLetterLiveTest do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
     letter = tax_credit_letter_fixture(member)
-    SavedPDF.delete_letter!(letter)
+    Repo.delete!(letter.pdf)
 
     {:ok, lv, _html} =
       conn
@@ -92,7 +88,7 @@ defmodule Web.TaxCreditLetterLiveTest do
 
     lv |> element("#email-letter") |> render_click()
 
-    assert %{content: "%PDF" <> _rest} = saved = SavedPDF.letter_attachment(letter)
+    assert %{content: "%PDF" <> _rest} = saved = PublishedPDF.letter_attachment(letter)
 
     assert_email_sent(fn email ->
       assert [%{data: data}] = email.attachments
@@ -134,7 +130,7 @@ defmodule Web.TaxCreditLetterLiveTest do
 
       assert has_element?(
                lv,
-               ~s(#replace-letter[data-confirm-check="I understand #{letter.ref_id} no longer verifies."])
+               ~s(#replace-letter[data-confirm-check="I understand the old letter's verify page says Replaced."])
              )
 
       lv |> element("#replace-letter") |> render_click()
@@ -142,12 +138,12 @@ defmodule Web.TaxCreditLetterLiveTest do
       refute has_element?(lv, "#hours-changed")
       assert has_element?(lv, "#letter-hours", "1h 30m")
 
-      replaced = Repo.get!(TaxCreditLetter, letter.id)
-      assert {:current, _ref_id} = TaxCreditLetter.parse_ref_id(replaced.ref_id)
-      assert replaced.ref_id != letter.ref_id
+      replaced = TaxCreditLetter |> Repo.get!(letter.id) |> Repo.preload(:pdf)
+      assert PublishedPDF.parse_code(replaced.pdf.code)
+      assert replaced.pdf.code != letter.pdf.code
+      assert letter.pdf |> Repo.reload!() |> PublishedPDF.status() == :replaced
       assert replaced.primary_minutes == 90
       assert replaced.letter_content =~ "Primary Hours: 1h 30m\n"
-      assert replaced.letter_content =~ "Reference: #{replaced.ref_id}"
 
       assert_no_email_sent()
     end
@@ -165,7 +161,7 @@ defmodule Web.TaxCreditLetterLiveTest do
 
       assert has_element?(
                lv,
-               ~s(#delete-letter[data-confirm-check="I understand #{letter.ref_id} no longer verifies."])
+               ~s(#delete-letter[data-confirm-check="I understand #{PublishedPDF.format_code(letter.pdf.code)} no longer verifies."])
              )
 
       assert {:error, {:redirect, _}} = lv |> element("#delete-letter") |> render_click()

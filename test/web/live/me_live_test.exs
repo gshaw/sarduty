@@ -6,7 +6,7 @@ defmodule Web.MeLiveTest do
 
   alias App.AccountsFixtures
   alias App.Model.NoShow
-  alias App.Model.SavedPDF
+  alias App.Model.PublishedPDF
   alias App.Operation.SetTeamFeature
   alias App.Repo
   alias Web.Components.WalletBadges
@@ -526,7 +526,7 @@ defmodule Web.MeLiveTest do
       letter = tax_credit_letter_fixture(member)
       conn = get(conn, ~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf")
 
-      assert response(conn, 200) == "%PDF-1.7 test letter #{letter.ref_id}"
+      assert response(conn, 200) == "%PDF-1.7 test letter #{letter.pdf.code}"
       assert [content_type] = get_resp_header(conn, "content-type")
       assert content_type =~ "application/pdf"
     end
@@ -534,13 +534,13 @@ defmodule Web.MeLiveTest do
     test "a letter with no saved PDF is a 404, never printed now",
          %{conn: conn, team: team, member: member} do
       letter = tax_credit_letter_fixture(member)
-      SavedPDF.delete_letter!(letter)
+      Repo.delete!(letter.pdf)
 
       assert_error_sent 404, fn ->
         get(conn, ~p"/teams/#{team}/me/tax-credit-letters/#{letter.id}/pdf")
       end
 
-      refute SavedPDF.letter_attachment(letter)
+      refute PublishedPDF.letter_attachment(letter)
     end
 
     test "another member's letter on the same team is a 404", %{conn: conn, team: team} do

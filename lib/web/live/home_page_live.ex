@@ -64,7 +64,7 @@ defmodule Web.HomePageLive do
                 Make each member's tax credit letter from the hours they gave, and email it to them.
               </p>
               <p>
-                Anyone can verify a letter at <a href={Web.VerifyHost.url() <> "/letters"}>verify.sarduty.com/letters</a>, so the
+                Each letter's QR code opens its page at <a href={Web.VerifyHost.url()}>verify.sarduty.com</a>, so the
                 CRA knows the hours are real.
               </p>
             </div>

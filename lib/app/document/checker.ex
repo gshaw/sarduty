@@ -46,7 +46,6 @@ defmodule App.Document.Checker do
     "team.logo" => :image,
     "team.signature" => :image,
     "organization.logo" => :image,
-    "pdf.reference" => :text,
     "pdf.verify_link" => :text
   }
   @one_row ~w(team organization)
@@ -121,6 +120,7 @@ defmodule App.Document.Checker do
     types = Map.merge(types, check_fill(doc, types))
     check_title(doc.title, types)
     Enum.each(doc.keep, &check_keep(&1, doc.asks, types))
+    Enum.each(doc.verify_shows, &check_shown(&1, types))
     Enum.each(doc.expects, &check_expect(&1, doc, types))
     types
   end
@@ -205,13 +205,16 @@ defmodule App.Document.Checker do
     expects =
       Enum.flat_map(doc.expects, &[&1.check | for({t, _v, _l} <- &1.given, do: t)])
 
-    defaults = Enum.map(doc.asks, & &1.default)
-    computes = Enum.map(doc.computes, & &1.value)
-
-    [title, doc.keep, defaults, computes, fill, expects]
+    [title, doc.keep, named_values(doc), fill, expects]
     |> List.flatten()
     |> Enum.reject(&is_nil/1)
   end
+
+  # The values an ask's default, a compute, and a verify shows line hold.
+  defp named_values(doc),
+    do:
+      Enum.map(doc.asks, & &1.default) ++
+        Enum.map(doc.computes, & &1.value) ++ Enum.map(doc.verify_shows, & &1.value)
 
   defp fill_values(%{value: {:each, _report, fills}}), do: Enum.map(fills, & &1.value)
   defp fill_values(fill), do: [fill.value]
@@ -801,6 +804,16 @@ defmodule App.Document.Checker do
   end
 
   # Only what a report reads is kept: never a value only printing reads, like the signature.
+  # A verify page shows text from what the document reads, never what only prints: the
+  # page shows it to anyone holding the paper, so it's text a reviewer can read.
+  defp check_shown(%{value: value, line: line, label: label}, types) do
+    for {path, at} <- fields(value),
+        Map.has_key?(@print, Enum.join(path, ".")),
+        do: fail(at, "Show a value a report reads: #{Enum.join(path, ".")} only prints.")
+
+    check_text(value, types, line, "'#{label}'")
+  end
+
   defp check_keep({:field, path, [], line}, _asks, types) do
     name = lower_path(Enum.join(path, "."))
 

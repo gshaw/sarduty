@@ -9,13 +9,12 @@ defmodule Web.RouterTest do
   # /teams/ or /orgs/ would block a team or organization with that name.
   @main_top_level ~w(teams orgs admin account signup login logout replies reminders cards wallet styles
                      terms privacy agents agents.md changelog changelog.md maps .well-known
-                     security.txt llms.txt letters csp-reports demo api)
+                     security.txt llms.txt csp-reports demo api)
   @verify_top_level [
     "api",
     ".well-known",
     "security.txt",
     "orgs",
-    "letters",
     "samples",
     ":code",
     "*path"
@@ -152,7 +151,8 @@ defmodule Web.RouterTest do
     {"GET", "/K7Q4M-2XA9H/photo", Web.MemberCardController, :photo},
     {"GET", "/K7Q4M-2XA9H/banner", Web.MemberCardController, :banner},
     {"GET", "/orgs/nsr", Web.VerifyLive, nil},
-    {"GET", "/letters/SRVTC-K7Q4M2XA", Web.VerifyLetterLive, nil},
+    # A published PDF's verify code (#970).
+    {"GET", "/K7Q4M-2XA9H-VB3TN", Web.VerifyLive, nil},
     # Apps that scan cards hold it (#299).
     {"GET", "/api/v1/cards/K7Q4M-2XA9H", Web.CardApiController, :show}
   ]
@@ -217,8 +217,6 @@ defmodule Web.RouterTest do
     "/changelog",
     "/changelog.md",
     "/demo",
-    "/letters",
-    "/letters/:ref",
     "/llms.txt",
     "/login",
     "/login/code",
