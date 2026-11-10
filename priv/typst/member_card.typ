@@ -1,109 +1,118 @@
-// An ID card's two sides, drawn once for the card page's pictures, Save image, and the
-// printed card (App.Operation.DrawMemberCard, #973). Both sides are 54 mm wide, a badge
-// holder's width. The front is always one size; the back is as tall as its list.
+// An ID card's two sides at CR80 size, 85.60 × 53.98 mm with 3.18 mm corners, the size of a
+// plastic ID card, so a printed copy fits any card holder. One drawing for the card page's
+// pictures, Save image, and Print ID card's Letter page (App.Operation.DrawMemberCard). White, under a navy line in SAR Duty's navy, the Wallet
+// passes' colour, so any team logo shows; it prints on any printer.
 //
-// `card` is the dictionary DrawMemberCard writes as card.json. `ink` draws black on
-// white, for printing; otherwise the pass's navy and yellow.
+// `card` is the dictionary DrawMemberCard writes as card.json.
 
 #let navy = rgb(28, 45, 66)
-#let yellow = rgb(255, 196, 0)
+#let ink = rgb(17, 24, 39)
+#let quiet = rgb(75, 85, 99)
+#let hairline = rgb(200, 205, 212)
+#let card-w = 85.60mm
+#let card-h = 53.98mm
+#let card-r = 3.18mm
 
-#let colours(ink) = if ink {
-  (fill: white, text: black, label: black, quiet: black, rule: black)
-} else {
-  (fill: navy, text: white, label: yellow, quiet: rgb(255, 255, 255, 190), rule: rgb(255, 255, 255, 36))
-}
+#let label(body) = text(size: 4.8pt, weight: "bold", fill: navy, upper(body))
 
-#let caps(c, body) = text(size: 4.6pt, weight: "bold", fill: c.label, upper(body))
-
-#let side(c, ink, body) = block(
-  width: 54mm,
-  fill: c.fill,
-  stroke: if ink { 0.6pt + black } else { none },
-  inset: (x: 2.6mm, top: 2.3mm, bottom: 2.6mm),
+// The card's outline: the cut line on the Letter page, and a hairline on screen so a white
+// card shows on a white page.
+#let side(edge, body) = block(
+  width: card-w,
+  height: card-h,
+  fill: white,
+  radius: card-r,
+  clip: true,
+  stroke: if edge != none { edge } else { 0.3pt + hairline },
+  inset: (x: 3mm, top: 2.4mm, bottom: 2.6mm),
   spacing: 0pt,
   {
-    set text(font: "Arimo", size: 6.2pt, fill: c.text)
-    set par(leading: 0.42em, spacing: 0.42em)
+    set text(font: "Arimo", size: 6.4pt, fill: ink)
+    set par(leading: 0.42em, spacing: 0.5em)
+    // "SAR Duty" never breaks, so "Duty." never sits alone.
+    show "SAR Duty": box
     body
   },
 )
 
-#let header(c, card, right: none) = grid(
-  columns: (4.6mm, 1fr, auto),
-  column-gutter: 1.4mm,
-  align: horizon,
-  box(clip: true, radius: 0.9mm, image("logo.png", width: 4.6mm)),
-  text(size: 7.2pt, weight: "bold", card.team),
-  if right != none { text(size: 5.6pt, fill: c.quiet, right) },
-)
-
-#let front(card, ink: false) = {
-  let c = colours(ink)
-  side(c, ink, {
-    header(c, card)
-    v(2.4mm)
-    grid(
-      columns: (1fr, 12.2mm),
-      column-gutter: 2mm,
-      [#caps(c, card.name_label) \ #text(size: 10.4pt, card.name)],
-      box(clip: true, radius: 1.2mm, stroke: if ink { 0.5pt + black } else { none },
-        image("photo.png", width: 12.2mm, height: 12.2mm, fit: "cover")),
-    )
-    v(2mm)
-    grid(
-      columns: (auto, auto),
-      column-gutter: 3mm,
-      [#caps(c, "Status") \ #card.status],
-      if card.member_since != none [#caps(c, "Member since") \ #card.member_since],
-    )
-    v(2.6mm)
-    align(center, box(
-      fill: white,
-      radius: if ink { 0pt } else { 1.2mm },
-      inset: if ink { (bottom: 0.6mm) } else { (x: 1.3mm, top: 1.3mm, bottom: 0.8mm) },
-      {
-        image("qr.svg", width: 19.6mm)
-        v(0.5mm)
-        text(size: 5.8pt, weight: "bold", fill: black, card.code)
-      },
-    ))
-    v(1.9mm)
-    align(center, text(size: 5.2pt, fill: c.quiet, card.made))
-  })
-}
-
-#let back(card, ink: false) = {
-  let c = colours(ink)
-  side(c, ink, {
-    header(c, card, right: card.name)
-    v(2.4mm)
-    caps(c, "Endorsements")
-    v(0.6mm)
-    if card.endorsements.len() == 0 {
-      text(fill: c.quiet, "None")
-    } else {
-      for (i, e) in card.endorsements.enumerate() {
-        if i > 0 { line(length: 100%, stroke: 0.4pt + c.rule) }
-        block(above: 1.1mm, below: 1.1mm, grid(
-          columns: (1fr, auto),
-          column-gutter: 2mm,
-          e.name, text(fill: c.quiet, e.expires),
-        ))
+// Both sides' top: the team's logo, its name in all the width left, and the navy line.
+// A long name drops from 8 pt to 6.6 pt, and wraps only if it still doesn't fit.
+#let card-top(card) = {
+  block(height: 6.4mm, spacing: 0pt, align(horizon, grid(
+    columns: (auto, 1fr),
+    column-gutter: 2mm,
+    align: horizon,
+    image("logo.png", height: 6.4mm),
+    layout(size => {
+      let one = text(size: 8pt, weight: "bold", fill: navy, card.team)
+      if measure(one).width <= size.width { one } else {
+        block(text(size: 6.6pt, weight: "bold", fill: navy, card.team))
       }
-    }
-    for (title, body) in card.notes {
-      v(2.2mm)
-      caps(c, title)
-      v(0.4mm)
-      body
-    }
-  })
+    }),
+  )))
+  v(1.6mm)
+  block(width: 100%, height: 1mm, fill: navy, spacing: 0pt)
 }
 
-// One Letter page to cut out: whose card, what to do, and both sides at actual size,
-// each in a dashed cut line 2 mm out so a crooked cut misses the card.
-#let sheet(card, ink: true) = {
+#let code(card, width, size) = align(center, {
+  image("qr.svg", width: width)
+  v(0.4mm)
+  text(size: size, weight: "bold", tracking: 0.03em, card.code)
+})
+
+#let front(card, edge: none) = side(edge, {
+  card-top(card)
+  v(1fr)
+  grid(
+    columns: (24mm, 1fr, 22mm),
+    column-gutter: 3mm,
+    align: top,
+    box(clip: true, radius: 1mm, stroke: 0.4pt + hairline,
+      image("photo.png", width: 24mm, height: 24mm, fit: "cover")),
+    {
+      if card.name_label != none { label(card.name_label); linebreak() }
+      text(size: 11pt, weight: "bold", card.name)
+      if card.member_since != none {
+        linebreak()
+        text(size: 6.8pt, fill: quiet, [Member since #card.member_since])
+      }
+      v(3.2mm)
+      label("Issued")
+      linebreak()
+      text(size: 7pt, card.issued)
+    },
+    code(card, 22mm, 6.2pt),
+  )
+  v(1fr)
+})
+
+// What the Wallet passes' backs say about verifying and who issued the card, beside the
+// code again, so either side verifies.
+#let back(card, edge: none) = side(edge, {
+  card-top(card)
+  v(1fr)
+  grid(
+    columns: (20mm, 1fr),
+    column-gutter: 3.4mm,
+    align: top,
+    code(card, 20mm, 5.8pt),
+    {
+      text(size: 9pt, weight: "bold", card.name)
+      v(2.2mm)
+      for (i, (title, body)) in card.notes.enumerate() {
+        if i > 0 { v(2mm) }
+        label(title)
+        v(0.3mm)
+        text(size: 6.2pt, body)
+      }
+    },
+  )
+  v(1fr)
+})
+
+// One Letter page to cut out: whose card, what to do, and both sides at actual size, each
+// cut on its own edge, so the piece is the card's size and fits a card holder.
+#let sheet(card) = {
   set document(title: card.sheet_title)
   set page(paper: "us-letter", margin: 0.5in)
   set text(font: "Arimo", size: 9pt)
@@ -111,16 +120,13 @@
   v(1mm)
   card.sheet_help
   v(5mm)
-  let cut(name, body) = stack(
-    spacing: 1.5mm,
-    text(size: 7pt, fill: rgb(80, 80, 80), name),
-    block(stroke: (paint: rgb(120, 120, 120), thickness: 0.4pt, dash: "dashed"), inset: 2mm, body),
-  )
+  let edge = (paint: rgb(120, 120, 120), thickness: 0.4pt, dash: "dashed")
+  let cut(name, body) = stack(spacing: 1.5mm, text(size: 7pt, fill: rgb(80, 80, 80), name), body)
   grid(
     columns: (auto, auto),
-    column-gutter: 10mm,
+    column-gutter: 8mm,
     align: top,
-    cut("Front", front(card, ink: ink)),
-    cut("Back", back(card, ink: ink)),
+    cut("Front", front(card, edge: edge)),
+    cut("Back", back(card, edge: edge)),
   )
 }

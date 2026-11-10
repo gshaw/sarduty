@@ -53,7 +53,7 @@ defmodule Web.CardLinkController do
         send_resp(conn, :not_found, "")
 
       card ->
-        {:ok, bytes} = DrawMemberCard.call(card, side, now)
+        {:ok, bytes} = DrawMemberCard.call(card, side)
 
         conn
         |> put_resp_header("cache-control", "private, max-age=300")

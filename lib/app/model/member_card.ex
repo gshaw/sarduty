@@ -135,9 +135,9 @@ defmodule App.Model.MemberCard do
   def verify_url(code, verify_url), do: "#{verify_url}/#{format_code(code)}"
 
   @doc """
-  The label over the name on a card's front, for its `status/2`: Apple's pass, Google's,
-  and the drawn card (App.Operation.DrawMemberCard). A Try a demo card says it's a sample
-  (#857).
+  The label over the name on a card's front, for its `status/2`: Apple's pass and Google's.
+  The drawn card (App.Operation.DrawMemberCard) shows only a Try a demo card's, which says
+  it's a sample (#857).
   """
   def name_label(:active, true = _sample?), do: "Sample, not real ID"
   def name_label(:active, _sample?), do: "Member"
@@ -162,15 +162,20 @@ defmodule App.Model.MemberCard do
   end
 
   @doc """
-  Who issued the card, for the back of the pass. A team in an organization names it
-  instead of SAR Duty. Expects the team with `:organization` preloaded.
+  Who issued the card, for the back of the pass, which shows a status: `issuer/1`, and
+  where the status comes from. Expects the team with `:organization` preloaded.
   """
-  def issued_by(%Team{organization: %Organization{name: organization}} = team),
-    do:
-      "#{team.legal_name}, a member team of #{organization}. Status comes from the team's records."
+  def issued_by(%Team{} = team), do: issuer(team) <> " Status comes from the team's records."
 
-  def issued_by(%Team{organization: nil} = team),
-    do: "#{team.legal_name} through SAR Duty. Status comes from the team's records."
+  @doc """
+  Who issued the card, for the drawn card's back (#973), which shows no status. A team in an
+  organization names it instead of SAR Duty. Expects the team with `:organization`
+  preloaded.
+  """
+  def issuer(%Team{organization: %Organization{name: organization}} = team),
+    do: "#{team.legal_name}, a member team of #{organization}."
+
+  def issuer(%Team{organization: nil} = team), do: "#{team.legal_name} through SAR Duty."
 
   @doc """
   The code in what a scanner read: a bare code, or a link to a card's page,

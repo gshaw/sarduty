@@ -72,7 +72,7 @@ defmodule Web.CardLinkLiveTest do
     end
 
     assert has_element?(lv, ~s{#card-link-print-link[href="#{path}/pdf"]}, "Print ID card")
-    assert has_element?(lv, "#card-link-print", "in black on white, to cut out")
+    assert has_element?(lv, "#card-link-print", "Your endorsements show when someone verifies")
 
     verify = MemberCard.verify_url(card.code, Web.VerifyHost.url())
     assert has_element?(lv, ~s{#card-link-verify-link[href="#{verify}"]}, "Verify your ID card")

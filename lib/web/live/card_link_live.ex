@@ -225,7 +225,10 @@ defmodule Web.CardLinkLive do
           icon="printer"
         >Print ID card</.a>
       </p>
-      <p class="hint mt-1 mb-0">Both sides at card size, in black on white, to cut out.</p>
+      <p class="hint mt-1 mb-0">
+        Both sides at ID card size, to cut out. Your endorsements show when someone verifies
+        the card.
+      </p>
     </div>
     <.card_side id="card-link-front" class="mt-6" token={@token} side="front" card={@card} />
     <.card_side id="card-link-back" class="mt-6" token={@token} side="back" card={@card} />

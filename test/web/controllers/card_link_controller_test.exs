@@ -38,7 +38,11 @@ defmodule Web.CardLinkControllerTest do
 
     for side <- ~w(front back) do
       conn = get(conn, "#{path}/#{side}")
-      assert <<0x89, "PNG", _rest::binary>> = response(conn, 200)
+      # CR80, 85.60 × 53.98 mm, at 400 pixels an inch.
+      assert <<0x89, "PNG", _::binary-size(12), width::32, height::32, _rest::binary>> =
+               response(conn, 200)
+
+      assert {width, height} == {1348, 850}
       assert ["image/png"] = get_resp_header(conn, "content-type")
 
       assert get_resp_header(conn, "content-disposition") ==
