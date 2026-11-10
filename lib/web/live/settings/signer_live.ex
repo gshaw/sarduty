@@ -87,7 +87,7 @@ defmodule Web.Settings.SignerLive do
           {if @unsaved?,
             do: "Once you save, every letter ends like this",
             else: "Every letter ends like this"}
-          <.badge :if={@unsaved?} id="signer-unsaved">Not saved</.badge>
+          <.badge :if={@unsaved?} id="signer-unsaved" kind={:warning}>Not saved</.badge>
         </h2>
         <div id="signer-letter-end" class="letter-end">
           <%= for {kind, text} <- @lines do %>
