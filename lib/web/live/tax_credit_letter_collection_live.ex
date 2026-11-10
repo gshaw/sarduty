@@ -46,7 +46,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
        selected: MapSet.new(),
        choice: nil,
        # What every letter needs from team settings, such as the signer's title (#995).
-       needed: PrintTaxCreditLetter.missing_settings(team, DateTime.utc_now())
+       needed: PrintTaxCreditLetter.missing_settings(team, Service.Clock.utc_now())
      )}
   end
 
@@ -65,7 +65,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
             EmailTaxCreditLetters.refusal(
               filter_options.year,
               socket.assigns.current_team,
-              DateTime.utc_now()
+              Service.Clock.utc_now()
             )
           )
           |> assign_records()
@@ -504,7 +504,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
   defp apply_choice(socket, "withdraw", fit) do
     %{current_team: team, current_user: user} = socket.assigns
     letters = TaxCreditLetter.get_all_current(team, Enum.map(fit, & &1.tax_credit_letter_id))
-    result = WithdrawDocument.call_all(team, letters, user, DateTime.utc_now())
+    result = WithdrawDocument.call_all(team, letters, user, Service.Clock.utc_now())
     socket |> clear_ticks() |> assign_records() |> put_withdraw_flash(result, length(fit))
   end
 
@@ -583,7 +583,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       |> TaxCreditLetterFilterViewModel.letter_counts()
     )
     |> assign(:records, records)
-    |> assign(:standings, Standing.by_member(team, members, DateTime.utc_now()))
+    |> assign(:standings, Standing.by_member(team, members, Service.Clock.utc_now()))
     |> assign_checked()
   end
 

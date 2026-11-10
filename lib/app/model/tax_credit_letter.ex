@@ -160,10 +160,14 @@ defmodule App.Model.TaxCreditLetter do
   def year_over?(year, now, timezone), do: year < Service.YearRange.year_in(now, timezone)
 
   @doc """
-  Whether `year`'s letters are closed: older than last year. A member may have filed
-  one, so it stays as published and never goes out of date (#192, #995).
+  Whether `year`'s letters are closed: from August 1 of the next year, in the team's
+  time zone, three months after members file by April 30. A member may have filed one,
+  so it stays as published and never goes out of date (#192, #995).
   """
-  def closed?(year, now, timezone), do: year < current_year(now, timezone)
+  def closed?(year, now, timezone) do
+    today = Service.Period.today(now, timezone)
+    Date.compare(today, Date.new!(year + 1, 8, 1)) != :lt
+  end
 
   @doc "The minutes the letter printed, `{primary, secondary}`, or nil for one that kept none."
   def minutes(%PublishedPDF{keep: keep}) do

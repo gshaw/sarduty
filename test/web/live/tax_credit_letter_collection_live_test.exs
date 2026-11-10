@@ -78,6 +78,8 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
 
     test "Email letters emails each checked member their latest letter, publishing first when needed (#995)",
          %{conn: conn, team: team} do
+      # March: 2025's letters are out and still open (TaxCreditLetter.closed?/3).
+      App.Clock.freeze(~U[2026-03-02 20:00:00Z])
       avery = member_fixture(team, %{name: "Avery"})
       blake = member_fixture(team, %{name: "Blake", email: nil})
       casey = member_fixture(team, %{name: "Casey"})
@@ -211,6 +213,8 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
 
     test "each name opens the member's letter for the year, and Letter says where it is (#970)",
          %{conn: conn, team: team} do
+      # March: 2025's letters are out and still open (TaxCreditLetter.closed?/3).
+      App.Clock.freeze(~U[2026-03-02 20:00:00Z])
       avery = member_fixture(team, %{name: "Avery"})
       blake = member_fixture(team, %{name: "Blake", email: nil})
       casey = member_fixture(team, %{name: "Casey"})

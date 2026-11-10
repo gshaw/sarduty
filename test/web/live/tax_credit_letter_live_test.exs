@@ -178,7 +178,9 @@ defmodule Web.TaxCreditLetterLiveTest do
 
   test "out of date: a banner says what changed, and Email letter publishes a new one first",
        %{conn: conn, user: user, team: team, member: member} do
-    year = TaxCreditLetter.current_year(DateTime.utc_now(), team.timezone)
+    # March: last year's letters are out and still open (TaxCreditLetter.closed?/3).
+    App.Clock.freeze(~U[2026-03-02 20:00:00Z])
+    year = 2025
     attend(team, member, year)
 
     letter =
@@ -288,11 +290,15 @@ defmodule Web.TaxCreditLetterLiveTest do
 
     attendance_fixture(activity, member)
 
-    # One published before this rule, by hand: no Withdraw either.
-    tax_credit_letter_fixture(member, %{year: year})
+    # One published before this rule, by hand, and out of date since: no Withdraw either.
+    tax_credit_letter_fixture(member, %{year: year, primary_minutes: 60, secondary_minutes: 0})
     {:ok, lv, _html} = live(conn, letter_path(team, member, year))
     refute has_element?(lv, "#email-letter")
     refute has_element?(lv, "#withdraw-letter")
+
+    # Out of date says what changed, but not what Email would do: there's none yet.
+    assert has_element?(lv, "#letter-out-of-date", "Total hours: 1 hour → 1h 30m")
+    refute has_element?(lv, "#letter-out-of-date", "makes a new one")
 
     assert has_element?(
              lv,

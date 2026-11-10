@@ -92,7 +92,7 @@ defmodule App.Operation.EmailTaxCreditLetters do
         %Member{} = member,
         year,
         %User{} = user,
-        now \\ DateTime.utc_now()
+        now \\ Service.Clock.utc_now()
       ) do
     case refusal(year, team, now) do
       nil -> email_one(team, %{member | team: team}, year, user, now)
@@ -134,7 +134,7 @@ defmodule App.Operation.EmailTaxCreditLetters do
   Email for many members of the team, from the letters list: refuses a year that isn't
   over, else queues the job that emails them. `{:ok, count}` or `{:error, message}`.
   """
-  def call(%Team{} = team, year, member_ids, %User{} = user, now \\ DateTime.utc_now()) do
+  def call(%Team{} = team, year, member_ids, %User{} = user, now \\ Service.Clock.utc_now()) do
     case refusal(year, team, now) do
       nil ->
         EmailTaxCreditLettersWorker.enqueue(team, year, member_ids, user)
@@ -153,7 +153,7 @@ defmodule App.Operation.EmailTaxCreditLetters do
   members with no email who got a letter published, and `refused` the messages of those
   a value they need kept from being published, by member.
   """
-  def run(%Team{} = team, year, member_ids, user_id, now \\ DateTime.utc_now()) do
+  def run(%Team{} = team, year, member_ids, user_id, now \\ Service.Clock.utc_now()) do
     summary =
       case refusal(year, team, now) do
         nil ->

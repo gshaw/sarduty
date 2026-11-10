@@ -50,14 +50,14 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   def current_year, do: Date.utc_today().year |> Integer.to_string()
 
   @doc "The year the list opens on for `team` (TaxCreditLetter.list_year/2)."
-  def default_year(team, now \\ DateTime.utc_now()),
+  def default_year(team, now \\ Service.Clock.utc_now()),
     do: TaxCreditLetter.list_year(now, team.timezone)
 
   defp build_team_year_options(team) do
     current = current_year()
 
     attendance_years =
-      DateTime.utc_now()
+      Service.Clock.utc_now()
       |> Attendance.attended()
       |> where([activity: ac], ac.team_id == ^team.id)
       |> Attendance.years(team.timezone)
@@ -79,7 +79,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
     }
 
   @doc "The filters from `params`, with the year `team`'s list opens on as of `now` when none is given."
-  def validate(params, team, now \\ DateTime.utc_now()) do
+  def validate(params, team, now \\ Service.Clock.utc_now()) do
     changeset = build_changeset(build_new(default_year(team, now)), params)
 
     case apply_action(changeset, :replace) do
@@ -96,7 +96,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   (`PrintTaxCreditLetter.read_each/4`). `shown/2` applies the letter part and the
   search, so the stat switch can count the parts first.
   """
-  def find_all(team, filter_options, now \\ DateTime.utc_now()) do
+  def find_all(team, filter_options, now \\ Service.Clock.utc_now()) do
     year = filter_options.year
     hours = CountTaxCreditHours.call(team, year, nil, now)
 

@@ -32,10 +32,15 @@ defmodule App.Model.TaxCreditLetterTest do
       assert changes(2024, "1 hour", "1h 30m") == []
     end
 
+    test "last year's letters close on August 1, three months after members file" do
+      assert changes(2025, "1 hour", "2 hours", ~U[2026-07-31 19:00:00Z]) != []
+      assert changes(2025, "1 hour", "2 hours", ~U[2026-11-10 19:00:00Z]) == []
+    end
+
     test "the year closes at midnight in the team's time zone" do
-      # The evening of December 31, 2026 in Vancouver: 2025 letters are still open.
-      assert changes(2025, "1 hour", "2 hours", ~U[2027-01-01 05:00:00Z]) != []
-      assert changes(2025, "1 hour", "2 hours", ~U[2027-01-01 09:00:00Z]) == []
+      # 11 p.m. on July 31, 2026 in Vancouver is already August 1 in UTC.
+      assert changes(2025, "1 hour", "2 hours", ~U[2026-08-01 06:00:00Z]) != []
+      assert changes(2025, "1 hour", "2 hours", ~U[2026-08-01 08:00:00Z]) == []
     end
   end
 

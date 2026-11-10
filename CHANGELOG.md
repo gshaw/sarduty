@@ -11,7 +11,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
   uploads a signature picture. The Signer tab shows how every letter ends as you type.
 - A letter or form can't be published while something it needs is blank, such as the
   signer's title. A banner says what's needed and where to add it. Drafts still print.
-- A year's letters can be emailed once the year is over.
+- A year's letters can be emailed once the year is over. From August 1 of the next
+  year they're closed: a member may have filed one, so it never shows Out of date.
 - Team settings: your mailing address is on General, and who signs letters is on a new
   Signer tab. The Expense request's signature block is left blank, to sign by hand.
 - No more yellow buttons. Send changes on Chores asks first and says what it sends.

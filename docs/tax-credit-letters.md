@@ -93,8 +93,10 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   PDF: the letter, read today, would put different `verify shows` values on its verify
   page, such as its hours or the member's name (`TaxCreditLetter.changes/4`, from
   `PublishedPDF.changes/2`). A team's postal code or a new signer is not on it, so it
-  changes nothing. A closed year's letters, older than last year's, never go out of
-  date: a member may have filed one (#192). Nothing publishes a new one by itself.
+  changes nothing. A year's letters close on August 1 of the next year, in the
+  team's time zone, three months after members file by April 30: from then they never go
+  out of date, since a member may have filed one (#192). On 2026-11-10, one team's 33
+  letters for 2025, emailed that March, counted fewer hours than they printed. Nothing publishes a new one by itself.
 - **The letters list reads every letter at once** (`PrintTaxCreditLetter.read_each/4`):
   the document checked once, the team's values and pictures read once, and the year's
   hours counted once for every member shown, then each member's own reports. On South

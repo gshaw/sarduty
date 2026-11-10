@@ -41,13 +41,13 @@ defmodule Web.TaxCreditLetterLive do
      |> assign(member: member, year: year)
      # A year that isn't over can't be emailed yet, so nothing can be withdrawn: no
      # actions, and the page says when (#995).
-     |> assign(refusal: EmailTaxCreditLetters.refusal(year, team, DateTime.utc_now()))
+     |> assign(refusal: EmailTaxCreditLetters.refusal(year, team, Service.Clock.utc_now()))
      |> assign_letter()}
   end
 
   defp assign_letter(socket) do
     %{current_team: team, member: member, year: year} = socket.assigns
-    now = DateTime.utc_now()
+    now = Service.Clock.utc_now()
 
     pdfs =
       PublishedPDF.get_all_for(
@@ -151,7 +151,10 @@ defmodule Web.TaxCreditLetterLive do
           id="letter-out-of-date"
           noun="letter"
           changes={@record.changes}
-          next={"#{email_label(@member)} makes a new one#{if emailed?(@member), do: " and sends it"}."}
+          next={
+            is_nil(@refusal) &&
+              "#{email_label(@member)} makes a new one#{if emailed?(@member), do: " and sends it"}."
+          }
         />
         <.needed_banner
           id="letter-needed"
@@ -311,7 +314,7 @@ defmodule Web.TaxCreditLetterLive do
   def handle_event("withdraw", _params, %{assigns: %{letter: %{} = letter}} = socket) do
     %{current_team: team, current_user: user} = socket.assigns
 
-    case WithdrawDocument.call(team, letter, user, DateTime.utc_now()) do
+    case WithdrawDocument.call(team, letter, user, Service.Clock.utc_now()) do
       {:ok, _letter} ->
         {:noreply,
          socket |> put_flash(:info, "Withdrew letter #{code(letter)}.") |> assign_letter()}
