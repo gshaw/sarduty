@@ -49,10 +49,9 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   last one (`emailed_at`); the Published section says when it last went, and to whom.
 - **The letters list says where each letter is, in a word**: No letter, Emailed, or Not
   emailed, with a badge when it needs a team admin: Out of date, Did not send, or No
-  email. Each tile is a to-do. To email is everyone Email would reach that needs it: no
-  letter, one not emailed, or one out of date. No letter, Not emailed, and Out of date
-  are for looking closer. A member can be in more than one; emailed letters show under
-  All.
+  email. Two tiles split the members with hours (#995): Emailed, whose letter went by
+  email and is up to date, and To email, everyone else. Nothing in the tiles is special
+  for a member with no email: they stay in To email, with the No email badge.
 - **Letters have two actions, Email and Withdraw** (#995), on the list and the letter
   page ([EmailTaxCreditLetters](../lib/app/operation/email_tax_credit_letters.ex)).
   Email sends each member their latest letter as a PDF, publishing a new one first when

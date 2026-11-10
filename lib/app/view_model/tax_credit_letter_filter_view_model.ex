@@ -24,18 +24,15 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   end
 
   @doc """
-  The stat switch's parts, each a to-do for the members' letters for the year (#970):
-  To email, everyone Email would reach that needs it (#995), then no letter yet, a
-  letter not emailed, and a letter out of date, for looking closer. A member can be in
-  more than one. Emailed letters show under All.
+  The stat switch's parts (#995): Emailed, those whose letter went by email and is up to
+  date, and To email, everyone else with hours: no letter, one not emailed, or one out of
+  date. Each member with hours is in one; the Letter column says which case.
   """
   def letter_kinds,
     do: [
       {"All", nil},
       {"To email", "to_email"},
-      {"No letter", "none"},
-      {"Not emailed", "not_emailed"},
-      {"Out of date", "changed"}
+      {"Emailed", "emailed"}
     ]
 
   def filters,
@@ -154,14 +151,13 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   end
 
   defp in_kind?(_record, nil), do: true
-  defp in_kind?(record, "none"), do: is_nil(record.tax_credit_letter_id)
-  defp in_kind?(record, "changed"), do: record.letter_changes != []
-  defp in_kind?(record, "to_email"), do: record.email in [:first, :replace, :failed, :not_emailed]
+  defp in_kind?(record, "emailed"), do: emailed?(record)
+  defp in_kind?(record, "to_email"), do: record.total_minutes > 0 and not emailed?(record)
 
-  defp in_kind?(record, "not_emailed"),
-    do: record.letter_email_state in [:not_emailed, :failed, :no_email]
+  # The letter went by email and reads as it would today: nothing left to do.
+  defp emailed?(record), do: record.letter_email_state == :emailed and record.letter_changes == []
 
-  # What Email does for the member (EmailTaxCreditLetters.what/1) is the To email tile's.
+  # What Email does for the member (EmailTaxCreditLetters.what/1), for the choices.
   defp build_record(%{member: member, letter: letter}, hours, today, team, now) do
     changes = changes(letter, today[member.id], team, now)
 

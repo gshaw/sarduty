@@ -173,7 +173,8 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any")
       assert has_element?(lv, "#letter-state-#{avery.id}", "Not emailed")
       assert has_element?(lv, "#letter-email-failed-#{avery.id}", "Did not send")
-      assert has_element?(lv, "#letter-view-not_emailed", "1")
+      assert has_element?(lv, "#letter-view-to_email", "1")
+      assert has_element?(lv, "#letter-view-emailed", "0")
     end
 
     test "the letter switch counts the search's matches (#935) and lists one part",
@@ -182,7 +183,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       blake = member_fixture(team, %{name: "Blake"})
       casey = member_fixture(team, %{name: "Casey"})
       for member <- [avery, blake, casey], do: attend(team, member)
-      tax_credit_letter_fixture(casey, %{year: 2025})
+      tax_credit_letter_fixture(casey, %{year: 2025, email_status: :sent})
 
       {:ok, lv, _html} =
         live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any&q=ver")
@@ -190,19 +191,23 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       # "ver" finds Avery only, who has no letter yet.
       assert has_element?(lv, "#letter-view-all[aria-current]", "1")
       assert has_element?(lv, "#letter-view-to_email", "1")
-      assert has_element?(lv, "#letter-view-none", "1")
-      assert has_element?(lv, "#letter-view-not_emailed", "0")
-      assert has_element?(lv, "#letter-view-changed", "0")
+      assert has_element?(lv, "#letter-view-emailed", "0")
 
-      lv |> element("#letter-view-none") |> render_click()
-      assert has_element?(lv, "#letter-view-none[aria-current]")
+      lv |> element("#letter-view-to_email") |> render_click()
+      assert has_element?(lv, "#letter-view-to_email[aria-current]")
       assert has_element?(lv, "#member_collection", "Avery")
 
       {:ok, lv, _html} =
+        live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any&letter=emailed")
+
+      assert has_element?(lv, "#member_collection", "Casey")
+      refute has_element?(lv, "#member_collection", "Blake")
+
+      # An old link to a part that's gone, such as No letter, shows All.
+      {:ok, lv, _html} =
         live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025&filter=any&letter=none")
 
-      assert has_element?(lv, "#member_collection", "Blake")
-      refute has_element?(lv, "#member_collection", "Casey")
+      assert has_element?(lv, "#letter-view-all[aria-current]", "3")
     end
 
     test "each name opens the member's letter for the year, and Letter says where it is (#970)",
@@ -230,11 +235,10 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       assert has_element?(lv, "#hours-changed-#{devon.id}", "Out of date")
       refute has_element?(lv, "#member_collection th", "Email")
 
-      # Not emailed is a to-do: Blake and Devon. Devon is out of date too. To email has
-      # Avery and Devon: Blake's letter is up to date, and he has no email.
-      assert has_element?(lv, "#letter-view-not_emailed", "2")
-      assert has_element?(lv, "#letter-view-changed", "1")
-      assert has_element?(lv, "#letter-view-to_email", "2")
+      # Every member with hours is in one tile: Casey's letter went by email and is up to
+      # date; Avery has none, Blake's was never emailed, and Devon's is out of date.
+      assert has_element?(lv, "#letter-view-emailed", "1")
+      assert has_element?(lv, "#letter-view-to_email", "3")
 
       # An old link to the Letter part shows All.
       {:ok, lv, _html} =
@@ -411,7 +415,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       assert has_element?(lv, "#flash-info", "Withdrew 2 letters.")
       assert emailed |> Repo.reload!() |> PublishedPDF.status() == :withdrawn
       assert never |> Repo.reload!() |> PublishedPDF.status() == :withdrawn
-      assert has_element?(lv, "#letter-view-none", "3")
+      assert has_element?(lv, "#letter-view-to_email", "3")
     end
 
     test "Withdraw letters for 4 or more counts a line per group", %{conn: conn, team: team} do
