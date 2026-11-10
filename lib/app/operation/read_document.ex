@@ -31,13 +31,39 @@ defmodule App.Operation.ReadDocument do
   of the team's D4H custom fields. A record's value is its name.
   """
   def call(text, %Context{} = context, starts) when is_binary(text) and is_map(starts) do
+    with {:ok, [read]} <- call_each(text, context, [starts]), do: {:ok, read}
+  end
+
+  @doc """
+  `call/3` for many starts at once, such as each member's letter for a year (#995):
+  `{:ok, [%{doc, values, read}]}` in the order of `starts`, or `{:error, reason}` for
+  the first that doesn't read. The document is parsed and checked once, and the team's
+  pictures and the reports every start shares, `team` and `organization`, read once.
+  The rest run for each start.
+  """
+  def call_each(text, %Context{} = context, starts) when is_binary(text) and is_list(starts) do
+    context = %{context | team: context.repo.preload(context.team, :organization)}
+
     with {:ok, doc} <- Document.parse(text),
          {:ok, doc} <- Document.check(doc, context),
-         {:ok, values, read} <- values(doc, context, starts) do
-      {:ok, %{doc: doc, values: values, read: read}}
+         {:ok, shared} <- shared(doc, context) do
+      each(doc, context, shared, starts)
     else
       {:error, %Error{} = error} -> {:error, Error.text(error)}
       {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp each(doc, context, shared, starts) do
+    Enum.reduce_while(starts, {:ok, []}, fn one, {:ok, reads} ->
+      case values(doc, context, shared, one) do
+        {:ok, values, read} -> {:cont, {:ok, [%{doc: doc, values: values, read: read} | reads]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+    |> case do
+      {:ok, reads} -> {:ok, Enum.reverse(reads)}
+      error -> error
     end
   end
 
@@ -54,44 +80,71 @@ defmodule App.Operation.ReadDocument do
   start from.
   """
   def settings(text, %Context{} = context) when is_binary(text) do
+    context = %{context | team: context.repo.preload(context.team, :organization)}
+
     with {:ok, doc} <- Document.parse(text),
          {:ok, doc} <- Document.check(doc, context) do
-      {:ok, values, read} = doc |> settings_only() |> values(context, %{})
+      {:ok, shared} = shared(doc, context)
+      {:ok, values, read} = values(%{doc | reports: []}, context, shared, %{})
       {:ok, %{doc: doc, values: values, labels: labels(read)}}
     else
       {:error, %Error{} = error} -> {:error, Error.text(error)}
     end
   end
 
-  defp settings_only(doc),
-    do: %{doc | reports: Enum.filter(doc.reports, &(&1.name in ~w(team organization)))}
-
   defp labels(read), do: Map.merge(@picture_labels, Map.new(read, &{&1.name, &1.label}))
 
-  defp values(doc, context, starts) do
-    context = %{context | team: context.repo.preload(context.team, :organization)}
-    given = Map.new(starts, fn {name, value} -> {to_string(name), to_string(value)} end)
+  # The reports every start reads alike: the team's and its organization's one row.
+  @shared ~w(team organization)
 
-    Enum.reduce_while(
-      doc.reports,
-      {:ok, start(context, starts), []},
-      &add_report(&1, &2, context, given)
-    )
+  # The team's pictures and today, and each shared report's values and `read`, by name.
+  defp shared(doc, context) do
+    base = context.team |> pictures() |> Map.put("today", context.today)
+
+    doc.reports
+    |> Enum.filter(&(&1.name in @shared))
+    |> Enum.reduce_while({:ok, %{base: base, reports: %{}}}, fn report, {:ok, shared} ->
+      case put_report(%{}, report, context, %{}) do
+        {:ok, values, read} ->
+          {:cont, {:ok, put_in(shared, [:reports, report.name], {values, read})}}
+
+        {:error, reason} ->
+          {:halt, {:error, reason}}
+      end
+    end)
   end
 
-  defp add_report(report, {:ok, values, read}, context, given) do
-    case put_report(values, report, context, given) do
-      {:ok, values, entries} -> {:cont, {:ok, values, read ++ entries}}
-      {:error, reason} -> {:halt, {:error, reason}}
+  # Each report in order, a shared one from `shared`, on what it starts from as `:name`.
+  # A shared one `settings/2` leaves out of `doc` still adds its values.
+  defp values(doc, context, shared, starts) do
+    given = Map.new(starts, fn {name, value} -> {to_string(name), to_string(value)} end)
+    start = Map.merge(shared.base, Map.new(starts, fn {name, value} -> {":#{name}", value} end))
+    {start, read} = add_unlisted(start, doc, shared)
+
+    Enum.reduce_while(doc.reports, {:ok, start, read}, &add_report(&1, &2, context, given, shared))
+  end
+
+  defp add_unlisted(values, doc, shared) do
+    listed = MapSet.new(doc.reports, & &1.name)
+
+    for {name, {report_values, entries}} <- shared.reports,
+        not MapSet.member?(listed, name),
+        reduce: {values, []} do
+      {values, read} -> {Map.merge(values, report_values), read ++ entries}
     end
   end
 
-  # What it starts from as `:name`, the team's pictures, and today.
-  defp start(context, starts) do
-    context.team
-    |> pictures()
-    |> Map.merge(Map.new(starts, fn {name, value} -> {":#{name}", value} end))
-    |> Map.put("today", context.today)
+  defp add_report(report, {:ok, values, read}, context, given, shared) do
+    case Map.fetch(shared.reports, report.name) do
+      {:ok, {report_values, entries}} ->
+        {:cont, {:ok, Map.merge(values, report_values), read ++ entries}}
+
+      :error ->
+        case put_report(values, report, context, given) do
+          {:ok, values, entries} -> {:cont, {:ok, values, read ++ entries}}
+          {:error, reason} -> {:halt, {:error, reason}}
+        end
+    end
   end
 
   # The report's first row, or every row, added to `values`, and its columns as `read`

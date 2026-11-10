@@ -8,6 +8,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   alias App.Model.Member
   alias App.Model.TaxCreditLetter
   alias App.Operation.CountTaxCreditHours
+  alias App.Operation.PrintTaxCreditLetter
   alias App.Repo
   alias Service.StringHelpers
 
@@ -87,26 +88,49 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
   @doc """
   One record per member the year and hours filters keep: their hours for the year, from
-  `CountTaxCreditHours`, and their letter for the year if they have one, with how its
-  hours compare (`TaxCreditLetter.hours_status/4`). `shown/2` applies the letter part and
-  the search, so the stat switch can count the parts first.
+  `CountTaxCreditHours`, and their letter for the year if they have one, with what its
+  verify page would show differently today (`TaxCreditLetter.changes/4`): out of date
+  when there's a line. Every letter for an open year is read at once
+  (`PrintTaxCreditLetter.read_each/4`). `shown/2` applies the letter part and the
+  search, so the stat switch can count the parts first.
   """
   def find_all(team, filter_options, now \\ DateTime.utc_now()) do
-    hours = CountTaxCreditHours.call(team, filter_options.year, nil, now)
+    year = filter_options.year
+    hours = CountTaxCreditHours.call(team, year, nil, now)
 
-    Member
-    |> Member.scope(team_id: team.id)
-    |> join(
-      :left,
-      [m],
-      l in subquery(team.id |> TaxCreditLetter.query() |> TaxCreditLetter.current()),
-      on: l.member_id == m.id and l.year == ^filter_options.year
-    )
-    |> select([m, l], %{member: m, letter: l})
-    |> Repo.all()
-    |> Enum.map(&build_record(&1, CountTaxCreditHours.get(hours, &1.member.id), team, now))
-    |> filter_records(filter_options.filter)
+    rows =
+      Member
+      |> Member.scope(team_id: team.id)
+      |> join(
+        :left,
+        [m],
+        l in subquery(team.id |> TaxCreditLetter.query() |> TaxCreditLetter.current()),
+        on: l.member_id == m.id and l.year == ^year
+      )
+      |> select([m, l], %{member: m, letter: l})
+      |> Repo.all()
+      |> Enum.map(fn row -> %{row | letter: if(row.letter && row.letter.id, do: row.letter)} end)
+      |> filter_rows(hours, filter_options.filter)
+
+    today = letters_today(team, rows, year, now)
+
+    rows
+    |> Enum.map(&build_record(&1, CountTaxCreditHours.get(hours, &1.member.id), today, team, now))
     |> sort_records(filter_options.sort)
+  end
+
+  # What each letter shown would print today, by member id: none for a closed year, whose
+  # letters never go out of date.
+  defp letters_today(team, rows, year, now) do
+    if TaxCreditLetter.closed?(year, now, team.timezone) do
+      %{}
+    else
+      ids = for %{letter: %{}, member: member} <- rows, do: member.id
+
+      team
+      |> PrintTaxCreditLetter.read_each(ids, year, now)
+      |> Map.new(fn {id, read} -> {id, PrintTaxCreditLetter.today(team, read)} end)
+    end
   end
 
   @doc "How many records are in each letter part, keyed as `letter_kinds/0`."
@@ -128,24 +152,25 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
   defp in_kind?(_record, nil), do: true
   defp in_kind?(record, "none"), do: is_nil(record.tax_credit_letter_id)
-  defp in_kind?(record, "changed"), do: record.letter_hours_status == :changed
+  defp in_kind?(record, "changed"), do: record.letter_changes != []
 
   defp in_kind?(record, "not_emailed"),
     do: record.letter_email_state in [:not_emailed, :failed, :no_email]
 
-  defp build_record(%{member: member, letter: letter}, hours, team, now) do
-    letter = if letter && letter.id, do: letter
-
+  defp build_record(%{member: member, letter: letter}, hours, today, team, now) do
     hours
     |> Map.put(:member, member)
+    |> Map.put(:letter, letter)
     |> Map.put(:tax_credit_letter_id, letter && letter.id)
     |> Map.put(:letter_email_state, letter && TaxCreditLetter.email_state(letter, member))
-    |> Map.put(:letter_minutes, letter && TaxCreditLetter.total_minutes(letter))
-    |> Map.put(
-      :letter_hours_status,
-      letter && TaxCreditLetter.hours_status(letter, hours, now, team.timezone)
-    )
+    |> Map.put(:letter_changes, changes(letter, today[member.id], team, now))
   end
+
+  defp changes(nil, _today, _team, _now), do: []
+  defp changes(_letter, nil, _team, _now), do: []
+
+  defp changes(letter, today, team, now),
+    do: TaxCreditLetter.changes(letter, today, now, team.timezone)
 
   defp build_new do
     %__MODULE__{
@@ -186,17 +211,22 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
       else: delete_change(changeset, :sort)
   end
 
-  defp filter_records(records, "none"), do: Enum.filter(records, &(&1.total_minutes == 0))
-  defp filter_records(records, "any"), do: Enum.filter(records, &(&1.total_minutes > 0))
+  # The Hours filter, before any letter is read.
+  defp filter_rows(rows, _hours, nil), do: rows
 
-  defp filter_records(records, filter) when is_binary(filter) do
-    case Integer.parse(filter) do
-      {hours, ""} -> Enum.filter(records, &(&1.total_minutes >= hours * 60))
-      _ -> records
-    end
+  defp filter_rows(rows, hours, filter) do
+    Enum.filter(rows, &hours_fit?(CountTaxCreditHours.get(hours, &1.member.id), filter))
   end
 
-  defp filter_records(records, nil), do: records
+  defp hours_fit?(hours, "none"), do: hours.total_minutes == 0
+  defp hours_fit?(hours, "any"), do: hours.total_minutes > 0
+
+  defp hours_fit?(hours, filter) do
+    case Integer.parse(filter) do
+      {at_least, ""} -> hours.total_minutes >= at_least * 60
+      _other -> true
+    end
+  end
 
   # Name breaks ties, so the order holds still between page loads.
   defp sort_records(records, "name"), do: Enum.sort_by(records, & &1.member.name)

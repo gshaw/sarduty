@@ -127,10 +127,16 @@ defmodule App.Model.TaxCreditLetter do
   end
 
   @doc """
-  The year whose letters go out now: last year. Letters for it, or for the year
-  still under way, warn when attendance no longer adds up to their hours (#192).
+  The year whose letters go out now: last year. Its letters, and those for the year
+  still under way, can go out of date; older years' are closed (`closed?/3`).
   """
   def current_year(now, timezone), do: Service.YearRange.year_in(now, timezone) - 1
+
+  @doc """
+  Whether `year`'s letters are closed: older than last year. A member may have filed
+  one, so it stays as published and never goes out of date (#192, #995).
+  """
+  def closed?(year, now, timezone), do: year < current_year(now, timezone)
 
   @doc "The minutes the letter printed, `{primary, secondary}`, or nil for one that kept none."
   def minutes(%PublishedPDF{keep: keep}) do
@@ -152,44 +158,11 @@ defmodule App.Model.TaxCreditLetter do
   end
 
   @doc """
-  What reads differently now, as forms say it (#970): a line for each of the letter's
-  hours that `hours`, today's count, changes, such as `"Primary hours: 101 hours → 113
-  hours"`. `[]` when none did, or for an old letter that kept no hours.
+  What reads differently on the letter's verify page today, as for every published PDF
+  (PublishedPDF.changes/2), from `today`, PrintTaxCreditLetter.today/2's: `[]` when
+  nothing does, and always for a closed year's letter. A line here makes it out of date.
   """
-  def changes(%PublishedPDF{} = letter, hours) do
-    case minutes(letter) do
-      {primary, secondary} ->
-        [
-          {"Primary hours", primary, hours.primary_minutes},
-          {"Secondary hours", secondary, hours.secondary_minutes},
-          {"Total hours", primary + secondary, hours.primary_minutes + hours.secondary_minutes}
-        ]
-        |> Enum.reject(fn {_label, was, now} -> was == now end)
-        |> Enum.map(fn {label, was, now} ->
-          "#{label}: #{Service.Format.duration(was)} → #{Service.Format.duration(now)}"
-        end)
-
-      nil ->
-        []
-    end
-  end
-
-  @doc """
-  How the letter's hours compare with `hours`, today's count from
-  `CountTaxCreditHours`:
-
-  - `:unknown`: an old letter with no saved hours.
-  - `:same`: they agree.
-  - `:changed`: they differ, and the letter is for the current year or later, so it
-    may be worth publishing again: it's out of date.
-  - `:changed_old`: they differ on an older letter. It stays as it is.
-  """
-  def hours_status(%PublishedPDF{} = letter, hours, now, timezone) do
-    cond do
-      minutes(letter) == nil -> :unknown
-      minutes(letter) == {hours.primary_minutes, hours.secondary_minutes} -> :same
-      letter.year >= current_year(now, timezone) -> :changed
-      true -> :changed_old
-    end
+  def changes(%PublishedPDF{} = letter, today, now, timezone) do
+    if closed?(letter.year, now, timezone), do: [], else: PublishedPDF.changes(letter, today)
   end
 end

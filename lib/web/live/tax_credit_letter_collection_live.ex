@@ -232,7 +232,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
       record.tax_credit_letter_id != nil and
         record.letter_email_state not in [:no_email, :sending]
 
-  defp fits?("publish", record), do: record.letter_hours_status == :changed
+  defp fits?("publish", record), do: record.letter_changes != []
   defp fits?(_choice, _record), do: false
 
   # Each choice with what it does for the checked, or greyed with why it reaches nobody.
@@ -391,10 +391,10 @@ defmodule Web.TaxCreditLetterCollectionLive do
       No email
     </.badge>
     <.badge
-      :if={@record.letter_hours_status == :changed}
+      :if={@record.letter_changes != []}
       id={"hours-changed-#{@record.member.id}"}
       kind={:warning}
-      title={"The letter says #{Service.Format.duration(@record.letter_minutes)}"}
+      title={Enum.join(@record.letter_changes, ". ")}
     >
       Out of date
     </.badge>

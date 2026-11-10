@@ -8,6 +8,7 @@ defmodule Web.TaxCreditLetterLive do
   alias App.Model.TaxCreditLetter
   alias App.Operation.CountTaxCreditHours
   alias App.Operation.EmailTaxCreditLetter
+  alias App.Operation.PrintTaxCreditLetter
   alias App.Operation.PublishTaxCreditLetter
   alias App.Operation.WithdrawDocument
   alias App.ViewData.PublishedHistory
@@ -60,7 +61,7 @@ defmodule Web.TaxCreditLetterLive do
     assign(socket,
       letter: letter,
       hours: hours,
-      changes: changes(letter, hours, now, team.timezone),
+      changes: changes(letter, team, member, year, now),
       email_state: letter && TaxCreditLetter.email_state(letter, member),
       published_by: letter && names[letter.user_id],
       history: PublishedHistory.rows(pdfs, names)
@@ -74,13 +75,12 @@ defmodule Web.TaxCreditLetterLive do
     end
   end
 
-  # Only a letter for last year or later can be published again (TaxCreditLetter.hours_status/4).
-  defp changes(nil, _hours, _now, _timezone), do: []
+  # What the letter's verify page would show differently today; nothing for a closed year.
+  defp changes(nil, _team, _member, _year, _now), do: []
 
-  defp changes(letter, hours, now, timezone) do
-    if TaxCreditLetter.hours_status(letter, hours, now, timezone) == :changed,
-      do: TaxCreditLetter.changes(letter, hours),
-      else: []
+  defp changes(letter, team, member, year, now) do
+    today = PrintTaxCreditLetter.today(team, PrintTaxCreditLetter.read(team, member.id, year, now))
+    TaxCreditLetter.changes(letter, today, now, team.timezone)
   end
 
   def render(assigns) do

@@ -88,6 +88,38 @@ defmodule App.Model.PublishedPDF do
   """
   def verify_link(code), do: "#{Web.VerifyHost.url()}/#{format_code(code)}"
 
+  @doc """
+  What reads differently on the PDF's verify page if it were published today (#995): a
+  line for each value `verify shows` printed that `today`, `%{shows, keep}` as its
+  document reads now, shows otherwise, such as `"Total hours: 117 hours → 132h 30m"`.
+  `[]` when none does. A line here is what out of date means, for a letter and a form
+  alike: a team decides what counts by what it puts under `verify shows`. A PDF whose
+  document shows nothing there, such as EMCR's forms, compares the values it kept.
+  """
+  def changes(%PublishedPDF{shows: [_ | _] = was}, %{shows: now}), do: shown_changes(was, now)
+  def changes(%PublishedPDF{keep: was}, %{keep: now}), do: kept_changes(was, now)
+
+  defp shown_changes(was, now) do
+    now = Map.new(now, &{&1["label"], &1["text"]})
+
+    for %{"label" => label, "text" => text} <- was,
+        Map.get(now, label) != text,
+        do: "#{label}: #{text || "blank"} → #{now[label] || "blank"}"
+  end
+
+  # Kept values come back from the database as JSON, so each side is compared as JSON.
+  defp kept_changes(was, now) do
+    now = now |> Jason.encode!() |> Jason.decode!()
+
+    for {name, value} <- Enum.sort(was),
+        Map.get(now, name) != value,
+        do: "#{name}: #{kept_text(value)} → #{kept_text(now[name])}"
+  end
+
+  defp kept_text(nil), do: "blank"
+  defp kept_text(value) when is_binary(value), do: value
+  defp kept_text(value), do: inspect(value)
+
   @doc "`:current`, `:replaced`, or `:withdrawn`."
   def status(%PublishedPDF{withdrawn_at: %DateTime{}}), do: :withdrawn
   def status(%PublishedPDF{replaced_by_id: id}) when is_integer(id), do: :replaced

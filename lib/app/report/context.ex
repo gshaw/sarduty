@@ -13,7 +13,10 @@ defmodule App.Report.Context do
 
   `hours_for` is `{member_id, year}` when only that member's year of `tax_credit_hours`
   is read, as a tax credit letter's report reads it (#918), so it doesn't count the
-  whole team's every year. Nil counts them all.
+  whole team's every year, or `{member_ids, year}` for many letters read at once (#995).
+  `tax_credit_hours` holds those counted rows, counted once when the context is made, so
+  each letter's report reads them without counting again. Nil counts them all, when a
+  report reads them.
   """
 
   import Ecto.Query, only: [where: 3]
@@ -21,6 +24,7 @@ defmodule App.Report.Context do
   alias App.Model.Activity
   alias App.Model.Group
   alias App.Model.Team
+  alias App.Operation.CountTaxCreditHours
   alias App.Report.Catalog
   alias App.Report.CustomFields
 
@@ -39,6 +43,7 @@ defmodule App.Report.Context do
     :dates_today,
     custom_fields: %{},
     hours_for: nil,
+    tax_credit_hours: nil,
     repo: App.Repo,
     team_admin?: true
   ]
@@ -62,9 +67,13 @@ defmodule App.Report.Context do
       custom_fields: CustomFields.read(team, repo),
       repo: repo,
       hours_for: Keyword.get(opts, :hours_for),
+      tax_credit_hours: counted_hours(team, now, repo, Keyword.get(opts, :hours_for)),
       team_admin?: Keyword.get(opts, :team_admin?, true)
     }
   end
+
+  defp counted_hours(_team, _now, _repo, nil), do: nil
+  defp counted_hours(team, now, repo, only), do: CountTaxCreditHours.by_year(team, now, repo, only)
 
   @doc "The same context with the query's own dates a year back, for compare year (#826)."
   def year_back(%__MODULE__{} = context) do

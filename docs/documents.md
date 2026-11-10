@@ -462,9 +462,10 @@ date, or Not published. Its page is
 through the team's organization, so a form that's off or another organization's is a 404. It shows:
 
 - **The Published box**, once one is published: when and who, its ID linking to its
-  verify page, Download PDF, Publish again, and Withdraw. When the form reads
-  differently now (`ActivityForms.changes/3`), it says what changed, each `verify shows`
-  line, or each kept value for a form with none. Page 1 folds under it, drawn from the
+  verify page, Download PDF, Publish again, and Withdraw. When its verify page would
+  show something else if it were published today, it's out of date, and it says what
+  changed (`ActivityForms.changes/3`, from `PublishedPDF.changes/2`): each `verify
+  shows` line, or each kept value for a form with none. Page 1 folds under it, drawn from the
   saved PDF when it's opened (`/pdfs/:id/preview.png`), and History lists every PDF
   published for the activity, Replaced or Withdrawn ones too, each still downloading
   (App.ViewData.PublishedHistory). A tax credit letter's page has the same parts.
@@ -473,7 +474,7 @@ through the team's organization, so a form that's off or another organization's 
 - **What's missing**: each one blank, with the page that fixes it, so the fix reaches
   D4H and every form. An activity's D4H field links to Change fields, its own details to
   Change activity, and the team's to team settings: its names to General, and its
-  address, city, postal code, and signer to Tax credit letters. Fields first, questions second: an
+  address, city, and postal code there too, and its signer to Signer. Fields first, questions second: an
   empty field never becomes a question. The PDF still prints with it blank.
 - **The questions.** Answers save as they change (App.Operation.SaveFormAnswers), in
   `form_answers`: team, activity, name, row, the text typed, who, and when. They're the
@@ -527,6 +528,10 @@ values `keep` names, its answers, and what `verify shows` printed.
 - **The ID** is 15 characters from the ID card alphabet, about 74 bits, stored without
   dashes and shown 5-5-5: `K7Q4M-2XA9H-VB3TN`. Only these verify: each letter from before
   #970 got one, and its PDF printed again, once after part 1 deployed.
+- **Out of date** is one rule for every published PDF (#995): its document, read today,
+  would put different values on its verify page (`PublishedPDF.changes/2`). A team
+  decides what counts by what it puts under `verify shows`. A PDF of a document with no
+  `verify shows`, such as EMCR's forms, compares the values it kept instead.
 - **One current PDF** per subject and definition, held by a unique index. Publishing
   again (`publish/3`) keeps the old one, Replaced. It takes the current PDF's id the
   person saw, and refuses when another took its place meanwhile.

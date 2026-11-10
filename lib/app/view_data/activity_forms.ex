@@ -239,40 +239,14 @@ defmodule App.ViewData.ActivityForms do
   end
 
   @doc """
-  What changed since `pdf` was published, reading the form again with the activity's
-  answers now: `[]` when nothing did, or a line for each value its verify page shows
-  that changed, `"Total claimed: $1,240.00 → $1,310.00"`. A form with nothing its verify
-  page shows names each kept value that changed instead. `page` is `load/4`'s.
+  What reads differently on `pdf`'s verify page if the form were published today, with
+  the activity's answers now (PublishedPDF.changes/2): `[]` when nothing does, or a line
+  for each value, `"Total claimed: $1,240.00 → $1,310.00"`. `page` is `load/4`'s.
   """
   def changes(%{doc: doc, values: values, timezone: timezone}, starting, %PublishedPDF{} = pdf) do
     output = Document.evaluate(doc, Map.merge(values, readable(doc, starting)), timezone)
-
-    case shown_changes(pdf.shows, output.shows) do
-      [] -> kept_changes(pdf.keep, output.keep)
-      changes -> changes
-    end
+    PublishedPDF.changes(pdf, output)
   end
-
-  defp shown_changes(was, now) do
-    now = Map.new(now, &{&1["label"], &1["text"]})
-
-    for %{"label" => label, "text" => text} <- was,
-        Map.get(now, label) != text,
-        do: "#{label}: #{text || "blank"} → #{now[label] || "blank"}"
-  end
-
-  # Kept values come back from the database as JSON, so each side is compared as JSON.
-  defp kept_changes(was, now) do
-    now = now |> Jason.encode!() |> Jason.decode!()
-
-    for {name, value} <- Enum.sort(was),
-        Map.get(now, name) != value,
-        do: "#{name}: #{inspect_kept(value)} → #{inspect_kept(now[name])}"
-  end
-
-  defp inspect_kept(nil), do: "blank"
-  defp inspect_kept(value) when is_binary(value), do: value
-  defp inspect_kept(value), do: inspect(value)
 
   @doc """
   Each form's state on the activity's list (#970): `:testing` for a form that prints

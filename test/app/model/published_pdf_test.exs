@@ -5,6 +5,32 @@ defmodule App.Model.PublishedPDFTest do
 
   alias App.Model.PublishedPDF
 
+  describe "changes/2: out of date is what the verify page would show (#995)" do
+    @shows [%{"label" => "Name", "text" => "Avery Chen"}, %{"label" => "Injured", "text" => "0"}]
+
+    test "a line for each value its verify page would show otherwise" do
+      pdf = %PublishedPDF{shows: @shows, keep: %{"hours.primary" => 60}}
+      today = %{shows: [hd(@shows), %{"label" => "Injured", "text" => "2"}], keep: %{}}
+
+      assert PublishedPDF.changes(pdf, today) == ["Injured: 0 → 2"]
+      assert PublishedPDF.changes(pdf, %{shows: @shows, keep: %{"hours.primary" => 90}}) == []
+    end
+
+    test "a value gone reads blank" do
+      pdf = %PublishedPDF{shows: @shows}
+      assert PublishedPDF.changes(pdf, %{shows: [hd(@shows)], keep: %{}}) == ["Injured: 0 → blank"]
+    end
+
+    test "with nothing on its verify page, the values it kept decide" do
+      pdf = %PublishedPDF{shows: [], keep: %{"crew" => 3, "leader" => "Sam"}}
+
+      assert PublishedPDF.changes(pdf, %{shows: [], keep: %{"crew" => 4, "leader" => "Sam"}}) ==
+               ["crew: 3 → 4"]
+
+      assert PublishedPDF.changes(pdf, %{shows: [], keep: %{"crew" => 3, "leader" => "Sam"}}) == []
+    end
+  end
+
   # cspell:ignore ABCDEFGHJKMNPQRSTVWXYZ -- the code alphabet
   describe "IDs" do
     test "a new one is 15 characters from the ID card alphabet, shown 5-5-5" do

@@ -48,6 +48,33 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
     end
   end
 
+  # The letters list reads every letter at once (#995); each reads as it does alone.
+  test "reads many members' letters as each reads alone", %{team: team, member: member} do
+    other = member_fixture(team, %{name: "Blake Morrison"})
+    activity = activity_fixture(team, %{started_at: ~U[2025-03-01 17:00:00Z]})
+
+    attendance_fixture(activity, member, %{
+      started_at: ~U[2025-03-01 17:00:00Z],
+      finished_at: ~U[2025-03-01 19:00:00Z],
+      duration_in_minutes: 120
+    })
+
+    now = DateTime.utc_now()
+    each = PrintTaxCreditLetter.read_each(team, [member.id, other.id], 2025, now)
+
+    for m <- [member, other] do
+      alone = PrintTaxCreditLetter.read(team, m.id, 2025, now)
+      assert PrintTaxCreditLetter.today(team, each[m.id]) == PrintTaxCreditLetter.today(team, alone)
+      assert Map.delete(each[m.id].values, "today") == Map.delete(alone.values, "today")
+    end
+
+    shows = fn id -> Map.new(PrintTaxCreditLetter.today(team, each[id]).shows, &{&1["label"], &1["text"]}) end
+    assert shows.(member.id)["Total hours"] == "2 hours"
+    assert shows.(other.id)["Total hours"] == "0 hours"
+    assert shows.(other.id)["Name"] == "Blake Morrison"
+    assert PrintTaxCreditLetter.read_each(team, [], 2025, now) == %{}
+  end
+
   test "titles the PDF and locks it print-only", %{team: team, member: member} do
     attachment = team |> create(member) |> print()
 

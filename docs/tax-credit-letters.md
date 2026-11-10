@@ -61,9 +61,17 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
   since the member may already have the letter. Publish again emails the new letter, so
   the member never keeps one that verifies as Replaced. Nothing deletes a letter but its
   team's purge.
-- **Out of date** is the hours rule: while the letter's year is open, attendance no
-  longer adds up to its hours (`TaxCreditLetter.hours_status/4`). It offers Publish
-  again, which is never automatic.
+- **Out of date is what the verify page would show** (#995), as for every published
+  PDF: the letter, read today, would put different `verify shows` values on its verify
+  page, such as its hours or the member's name (`TaxCreditLetter.changes/4`, from
+  `PublishedPDF.changes/2`). A team's postal code or a new signer is not on it, so it
+  changes nothing. A closed year's letters, older than last year's, never go out of
+  date: a member may have filed one (#192). Nothing publishes a new one by itself.
+- **The letters list reads every letter at once** (`PrintTaxCreditLetter.read_each/4`):
+  the document checked once, the team's values and pictures read once, and the year's
+  hours counted once for every member shown, then each member's own reports. On South
+  Fraser's 75 to 87 members a year it takes 72 to 76 ms, where reading each letter alone
+  took 1.6 to 1.9 s (21 to 24 ms each), measured on 2026-11-10.
 - **Letters verify at the verify site's root**, beside cards, so they get the host's
   isolation (no login cookie), its miss limit ([Web.VerifyLimit](../lib/web/verify_limit.ex),
   shared with cards), and an organization's own verify host when that ships. An old
