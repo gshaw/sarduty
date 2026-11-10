@@ -6,8 +6,8 @@ defmodule App.Repo.Migrations.LettersArePublishedPdfs do
   # A tax credit letter is its published PDF (#970, part 3): its ID, hours, and date are
   # already there, and its first download and email status move over, onto its current
   # PDF. `tax_credit_letters` goes, with each letter's text: the letter page shows what
-  # its verify page shows instead. A letter with no PDF never left SAR Duty and goes too;
-  # production had none (2026-11-07, 232 letters and 232 PDFs).
+  # its verify page shows instead. A letter with no PDF would go with it, so the migration
+  # refuses while there is one; production had none (2026-11-07, 232 letters and 232 PDFs).
   #
   # SQLite drops no column a foreign key is on, so published_pdfs is rebuilt without
   # `tax_credit_letter_id`. Dropping it with foreign keys on would delete its files by
@@ -25,6 +25,7 @@ defmodule App.Repo.Migrations.LettersArePublishedPdfs do
 
   def up do
     check_codes_renewed()
+    check_letters_have_pdfs()
 
     run([
       table_sql("published_pdfs_new", ~s|"first_opened_at" TEXT, "email_status" TEXT,|),
@@ -94,6 +95,24 @@ defmodule App.Repo.Migrations.LettersArePublishedPdfs do
         raise(
           "#{old} published PDFs still have a code from before #970. " <>
             "Run App.Worker.RenewLetterCodesWorker.enqueue() on part 1 first."
+        )
+  end
+
+  # Dropping the letters table drops a letter with no PDF with it, unseen. Production had
+  # none, but one made since would be lost, so this refuses instead.
+  defp check_letters_have_pdfs do
+    %{rows: [[missing]]} =
+      repo().query!("""
+      SELECT count(*) FROM tax_credit_letters l WHERE NOT EXISTS (
+        SELECT 1 FROM published_pdfs p WHERE p.tax_credit_letter_id = l.id
+        AND p.replaced_by_id IS NULL AND p.withdrawn_at IS NULL)
+      """)
+
+    if missing > 0,
+      do:
+        raise(
+          "#{missing} tax credit letters have no PDF and would be lost. " <>
+            "On part 1, replace or delete each first."
         )
   end
 

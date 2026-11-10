@@ -5,6 +5,7 @@ defmodule Web.TaxCreditLetterLiveTest do
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
 
+  alias App.Model.Member
   alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Repo
@@ -147,6 +148,8 @@ defmodule Web.TaxCreditLetterLiveTest do
       member: member
     } do
       letter = tax_credit_letter_fixture(member, %{year: 2025})
+      # The admin is the team's manager, a member, so "by" lines name them.
+      admin = Member.find_by_email(team, user.email, DateTime.utc_now())
 
       {:ok, lv, _html} =
         conn |> log_in_user(user) |> live(~p"/teams/#{team}/tax-credit-letters/#{letter.id}")
@@ -161,7 +164,8 @@ defmodule Web.TaxCreditLetterLiveTest do
       letter = Repo.reload!(letter)
       assert PublishedPDF.status(letter) == :withdrawn
       assert letter.withdrawn_by_id == user.id
-      assert has_element?(lv, "#letter-withdrawn")
+      assert has_element?(lv, "#letter-withdrawn", "by #{admin.name}")
+      refute has_element?(lv, "#letter-withdrawn", user.email)
       refute has_element?(lv, "#withdraw-letter")
 
       # The member lists under No letter again.

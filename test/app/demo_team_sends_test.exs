@@ -14,7 +14,6 @@ defmodule App.DemoTeamSendsTest do
   alias App.Model.OutboxMessage
   alias App.Model.PublishedPDF
   alias App.Model.Reminder
-  alias App.Model.TaxCreditLetter
   alias App.Operation.BuildApplePass
   alias App.Operation.ChangeOwnPhone
   alias App.Operation.CreateTaxCreditLetters

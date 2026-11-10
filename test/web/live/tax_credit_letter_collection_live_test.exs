@@ -8,7 +8,6 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
 
   alias App.Model.Event
   alias App.Model.PublishedPDF
-  alias App.Model.TaxCreditLetter
   alias App.Operation.CreateTaxCreditLetters
   alias App.Operation.SaveTeamSignature
   alias App.Repo

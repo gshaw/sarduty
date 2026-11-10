@@ -7,7 +7,6 @@ defmodule Web.ViewAsControllerTest do
   alias App.AccountsFixtures
   alias App.Model.Event
   alias App.Model.PublishedPDF
-  alias App.Model.TaxCreditLetter
   alias App.Repo
 
   # A team admin views the team as a member (#425): the member's pages, read-only.

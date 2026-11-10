@@ -3,6 +3,7 @@ defmodule Web.TaxCreditLetterLive do
 
   import Web.Components.CopyButton
 
+  alias App.Model.Member
   alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
   alias App.Operation.CountTaxCreditHours
@@ -38,13 +39,18 @@ defmodule Web.TaxCreditLetterLive do
       |> CountTaxCreditHours.call(letter.year, [letter.member_id])
       |> CountTaxCreditHours.get(letter.member_id)
 
+    now = DateTime.utc_now()
+
     socket
     |> assign(:letter, letter)
+    # Who published and withdrew it, by their member names, as other "by" lines say.
+    |> assign(:published_by, Member.name_for_user(team, letter.user, now))
+    |> assign(:withdrawn_by, Member.name_for_user(team, letter.withdrawn_by, now))
     |> assign(:status, PublishedPDF.status(letter))
     |> assign(:hours, hours)
     |> assign(
       :hours_status,
-      TaxCreditLetter.hours_status(letter, hours, DateTime.utc_now(), team.timezone)
+      TaxCreditLetter.hours_status(letter, hours, now, team.timezone)
     )
   end
 
@@ -108,8 +114,8 @@ defmodule Web.TaxCreditLetterLive do
     <.banner :if={@status == :withdrawn} id="letter-withdrawn" kind={:danger} title="Withdrawn">
       <p>
         Withdrawn on {Service.Format.date_long(@letter.withdrawn_at, @current_team.timezone)}<span :if={
-          @letter.withdrawn_by
-        }> by {@letter.withdrawn_by.email}</span>.
+          @withdrawn_by
+        }> by {@withdrawn_by}</span>.
         Its verify page says so, and {@letter.member.name} lists under No letter again.
       </p>
     </.banner>
@@ -150,7 +156,7 @@ defmodule Web.TaxCreditLetterLive do
           <dt>Published</dt>
           <dd>
             {Service.Format.datetime_short(@letter.inserted_at, @current_team.timezone)}
-            <span :if={@letter.user} class="hint"><br />by {@letter.user.email}</span>
+            <span :if={@published_by} class="hint"><br />by {@published_by}</span>
           </dd>
           <dt>ID</dt>
           <dd>

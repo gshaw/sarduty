@@ -58,7 +58,7 @@ defmodule Web.VerifyDocumentTest do
     {:ok, lv, _html} = live(conn, ~p"/")
     assert has_element?(lv, "#documents-note", "type the link printed under it")
 
-    link = PublishedPDF.verify_link(letter.pdf.code)
+    link = PublishedPDF.verify_link(letter.code)
     lv |> form("#check-form", check: %{code: link}) |> render_submit()
     assert_patch(lv, path(letter))
   end
