@@ -291,7 +291,7 @@ defmodule Web.ActivityOrgFormLive do
             id={"publish-page-#{n}"}
             src={"data:image/png;base64," <> Base.encode64(png)}
             alt={"Page #{n} of #{length(@preview.pages)} of the #{@form.name} as it publishes"}
-            class="w-full border border-border-subtle shadow-sm bg-white"
+            class="w-full border border-border-subtle shadow-sm"
           />
         </div>
       </main>

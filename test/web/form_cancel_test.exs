@@ -34,7 +34,6 @@ defmodule Web.FormCancelTest do
     "lib/web/live/member_standing_live.ex" => "away periods and check-ins on the member's tab",
     "lib/web/live/org/admins_live.ex" => "organization settings tab",
     "lib/web/live/org/hours_tags_live.ex" => "organization settings tab",
-    "lib/web/live/org/form_live.ex" => "a form's Off, Testing, and On act at once",
     "lib/web/live/org/settings_live.ex" => "organization settings tab",
     "lib/web/live/settings/access_key_live.ex" => "team settings tab",
     "lib/web/live/settings/hours_tags_live.ex" => "team settings tab",
