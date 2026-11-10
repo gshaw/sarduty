@@ -8,6 +8,7 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   alias App.Model.Member
   alias App.Model.TaxCreditLetter
   alias App.Operation.CountTaxCreditHours
+  alias App.Operation.EmailTaxCreditLetters
   alias App.Operation.PrintTaxCreditLetter
   alias App.Repo
   alias Service.StringHelpers
@@ -24,12 +25,14 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
 
   @doc """
   The stat switch's parts, each a to-do for the members' letters for the year (#970):
-  no letter yet, a letter not emailed, a letter out of date. A member can be in two.
-  Emailed letters show under All.
+  To email, everyone Email would reach that needs it (#995), then no letter yet, a
+  letter not emailed, and a letter out of date, for looking closer. A member can be in
+  more than one. Emailed letters show under All.
   """
   def letter_kinds,
     do: [
       {"All", nil},
+      {"To email", "to_email"},
       {"No letter", "none"},
       {"Not emailed", "not_emailed"},
       {"Out of date", "changed"}
@@ -153,17 +156,25 @@ defmodule App.ViewModel.TaxCreditLetterFilterViewModel do
   defp in_kind?(_record, nil), do: true
   defp in_kind?(record, "none"), do: is_nil(record.tax_credit_letter_id)
   defp in_kind?(record, "changed"), do: record.letter_changes != []
+  defp in_kind?(record, "to_email"), do: record.email in [:first, :replace, :failed, :not_emailed]
 
   defp in_kind?(record, "not_emailed"),
     do: record.letter_email_state in [:not_emailed, :failed, :no_email]
 
+  # What Email does for the member (EmailTaxCreditLetters.what/1) is the To email tile's.
   defp build_record(%{member: member, letter: letter}, hours, today, team, now) do
-    hours
-    |> Map.put(:member, member)
-    |> Map.put(:letter, letter)
-    |> Map.put(:tax_credit_letter_id, letter && letter.id)
-    |> Map.put(:letter_email_state, letter && TaxCreditLetter.email_state(letter, member))
-    |> Map.put(:letter_changes, changes(letter, today[member.id], team, now))
+    changes = changes(letter, today[member.id], team, now)
+
+    record =
+      Map.merge(hours, %{
+        member: member,
+        letter: letter,
+        tax_credit_letter_id: letter && letter.id,
+        letter_email_state: letter && TaxCreditLetter.email_state(letter, member),
+        letter_changes: changes
+      })
+
+    Map.put(record, :email, EmailTaxCreditLetters.what(Map.put(record, :changes, changes)))
   end
 
   defp changes(nil, _today, _team, _now), do: []

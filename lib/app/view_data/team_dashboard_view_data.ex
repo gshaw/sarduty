@@ -444,6 +444,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   end
 
   # Only counted from January to April, since the hours count reads a year of attendance.
+  # The count is the letters list's To email tile (#995).
   defp letters_row(team, now) do
     if Service.Period.letter_season?(now, team.timezone) do
       year = Service.YearRange.year_in(now, team.timezone) - 1
@@ -452,7 +453,8 @@ defmodule App.ViewData.TeamDashboardViewData do
       count =
         team
         |> TaxCreditLetterFilterViewModel.find_all(filter, now)
-        |> Enum.count(&is_nil(&1.tax_credit_letter_id))
+        |> TaxCreditLetterFilterViewModel.shown(%{filter | letter: "to_email"})
+        |> length()
 
       %{year: year, count: count}
     end

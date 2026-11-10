@@ -21,7 +21,7 @@ defmodule App.Operation.PublishTaxCreditLetterTest do
     %{team: team, member: member_fixture(team, %{name: "Sam Doe", address: "1 Elm St"})}
   end
 
-  # A letter published with nobody publishing it, as Send letters does.
+  # A letter published with nobody publishing it.
   defp create(team, member, current_id \\ nil) do
     {:ok, prepared} = PublishTaxCreditLetter.prepare(team, member.id, 2025, nil)
     PublishTaxCreditLetter.insert!(prepared, current_id)

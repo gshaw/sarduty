@@ -6,18 +6,19 @@ defmodule Web.TaxCreditLetterLive do
   alias App.Model.Member
   alias App.Model.PublishedPDF
   alias App.Model.TaxCreditLetter
-  alias App.Operation.CountTaxCreditHours
-  alias App.Operation.EmailTaxCreditLetter
+  alias App.Operation.EmailTaxCreditLetters
   alias App.Operation.PrintTaxCreditLetter
-  alias App.Operation.PublishTaxCreditLetter
   alias App.Operation.WithdrawDocument
   alias App.ViewData.PublishedHistory
+  alias Web.TaxCreditLetterConfirm
 
   # A member's tax credit letter for a year (#970), sent or not: the letters list's name
-  # opens it. With a letter, the Published box a form's page has: when and who, its ID,
-  # where its email is, Out of date with what changed, Download, Email letter, Publish
-  # again, and Withdraw. With none yet, the letter as it prints today, marked DRAFT, and
-  # Send letter. Page 1 shows either way, and History lists every letter for the year.
+  # opens it. Out of date and Needed to publish are warning banners under the title
+  # (#995). With a letter, the Published section a form's page has: when and who, its
+  # ID, where its email is, Download, Email letter, and Withdraw letter. With none yet,
+  # Not published and Email letter. A member with no email gets Publish letter, the same
+  # action (App.Operation.EmailTaxCreditLetters). Page 1 shows either way, the draft
+  # with the team's signature, and History lists every letter for the year.
   def mount(_params, _session, socket), do: {:ok, socket}
 
   @doc "The year in the path, or nil when it can't have letters."
@@ -52,20 +53,44 @@ defmodule Web.TaxCreditLetterLive do
       )
 
     letter = current(pdfs, member)
-
-    hours =
-      team |> CountTaxCreditHours.call(year, [member.id]) |> CountTaxCreditHours.get(member.id)
-
+    read = PrintTaxCreditLetter.read(team, member.id, year, now)
+    record = record(team, member, letter, read, now)
     names = PublishedHistory.names(pdfs, &Member.name_for_user(team, &1, now))
 
     assign(socket,
       letter: letter,
-      hours: hours,
-      changes: changes(letter, team, member, year, now),
+      record: record,
+      needed: needed(record, read),
       email_state: letter && TaxCreditLetter.email_state(letter, member),
       published_by: letter && names[letter.user_id],
       history: PublishedHistory.rows(pdfs, names)
     )
+  end
+
+  # What publishing needs, while Email would publish (#995).
+  defp needed(record, read) do
+    if EmailTaxCreditLetters.publishes?(record.email),
+      do: PrintTaxCreditLetter.needed(read),
+      else: []
+  end
+
+  # The letter as Email finds it (EmailTaxCreditLetters.what/1), with the hours it reads.
+  defp record(team, member, letter, read, now) do
+    today = PrintTaxCreditLetter.today(team, read)
+    primary = today.keep["hours.primary"] || 0
+    secondary = today.keep["hours.secondary"] || 0
+    changes = if letter, do: TaxCreditLetter.changes(letter, today, now, team.timezone), else: []
+
+    record = %{
+      member: member,
+      letter: letter,
+      changes: changes,
+      primary_minutes: primary,
+      secondary_minutes: secondary,
+      total_minutes: primary + secondary
+    }
+
+    Map.put(record, :email, EmailTaxCreditLetters.what(record))
   end
 
   defp current(pdfs, member) do
@@ -73,16 +98,6 @@ defmodule Web.TaxCreditLetterLive do
       nil -> nil
       letter -> %{letter | member: member}
     end
-  end
-
-  # What the letter's verify page would show differently today; nothing for a closed year.
-  defp changes(nil, _team, _member, _year, _now), do: []
-
-  defp changes(letter, team, member, year, now) do
-    today =
-      PrintTaxCreditLetter.today(team, PrintTaxCreditLetter.read(team, member.id, year, now))
-
-    TaxCreditLetter.changes(letter, today, now, team.timezone)
   end
 
   def render(assigns) do
@@ -99,9 +114,10 @@ defmodule Web.TaxCreditLetterLive do
     <.out_of_date
       id="letter-out-of-date"
       noun="letter"
-      changes={@changes}
-      next="Email letter makes a new one and sends it."
+      changes={@record.changes}
+      next={"#{email_label(@member)} makes a new one#{if emailed?(@member), do: " and sends it"}."}
     />
+    <.needed_banner id="letter-needed" what="This letter" needed={@needed} team={@current_team} />
 
     <div class="content-wrapper">
       <aside class="content-1/3">
@@ -113,10 +129,10 @@ defmodule Web.TaxCreditLetterLive do
           </dd>
           <dt>{if @letter, do: "Hours now", else: "Hours"}</dt>
           <dd id="letter-hours-now">
-            {Service.Format.duration(@hours.total_minutes)}
+            {Service.Format.duration(@record.total_minutes)}
             <span class="hint block">
-              {Service.Format.duration(@hours.primary_minutes)} primary, {Service.Format.duration(
-                @hours.secondary_minutes
+              {Service.Format.duration(@record.primary_minutes)} primary, {Service.Format.duration(
+                @record.secondary_minutes
               )} secondary
             </span>
           </dd>
@@ -136,83 +152,47 @@ defmodule Web.TaxCreditLetterLive do
 
       <main class="content-2/3">
         <%= if @letter do %>
-          <section id="letter-published" class="mb-8">
-            <h2 class="heading">Published</h2>
-            <div class="card">
-              <p class="mb-2">
-                {Service.Format.datetime_short(@letter.inserted_at, @current_team.timezone)}
-                <span :if={@published_by}>by {@published_by}</span>
-              </p>
-              <p class="mono mb-2">
-                <.a id="letter-verify" href={PublishedPDF.verify_link(@letter.code)} external>{code(
-                  @letter
-                )}</.a>
-              </p>
-              <p id="letter-email" class="mb-4">
+          <.published_section
+            prefix="letter"
+            pdf={@letter}
+            published_by={@published_by}
+            team={@current_team}
+          >
+            <:status>
+              <p id="letter-email">
                 <.email_state state={@email_state} letter={@letter} team={@current_team} />
               </p>
-              <.form_actions>
-                <.button
-                  id="letter-download"
-                  href={~p"/teams/#{@current_team}/pdfs/#{@letter.id}"}
-                  variant={:primary}
-                >
-                  Download PDF
-                </.button>
-                <.button
-                  :if={@email_state != :no_email}
-                  id="email-letter"
-                  phx-click="email"
-                  phx-disable-with="Sending…"
-                  {email_confirm(@letter)}
-                >
-                  Email letter
-                </.button>
-                <.button
-                  :if={@changes != []}
-                  id="replace-letter"
-                  phx-click="publish"
-                  phx-disable-with="Publishing…"
-                  {publish_confirm(@member, @hours)}
-                >
-                  Publish again
-                </.button>
-                <:trailing>
-                  <.button
-                    id="withdraw-letter"
-                    variant={:danger}
-                    phx-click="withdraw"
-                    phx-disable-with="Withdrawing…"
-                    {withdraw_confirm(@letter, "Withdraw letter")}
-                  >
-                    Withdraw letter
-                  </.button>
-                </:trailing>
-              </.form_actions>
-            </div>
-          </section>
+            </:status>
+            <:actions>
+              <.email_button record={@record} />
+            </:actions>
+            <:withdraw>
+              <.button
+                id="withdraw-letter"
+                variant={:danger}
+                phx-click="withdraw"
+                phx-disable-with="Withdrawing…"
+                {TaxCreditLetterConfirm.withdraw_one(@letter, @member)}
+              >
+                Withdraw letter
+              </.button>
+            </:withdraw>
+          </.published_section>
           <.page_one
             prefix="letter"
             open
             src={~p"/teams/#{@current_team}/pdfs/#{@letter.id}/preview.png"}
-            alt={"Page 1 of letter #{code(@letter)}"}
+            alt={"Page 1 of letter #{PublishedPDF.format_code(@letter.code)}"}
           />
         <% else %>
           <section id="letter-not-published" class="mb-8">
             <h2 class="heading">Not published</h2>
             <div class="card">
               <p class="mb-4">No letter for {@year} yet. This is how it prints today.</p>
-              <div class="flex flex-wrap items-center gap-4">
-                <.button
-                  id="send-letter"
-                  variant={:success}
-                  phx-click="send"
-                  phx-disable-with="Sending…"
-                >
-                  Send letter
-                </.button>
-                <span class="hint">{send_hint(@member)}</span>
-              </div>
+              <.email_button record={@record} variant={:primary} />
+              <p :if={is_nil(@record.email)} id="letter-no-hours" class="hint">
+                {@member.name} has no hours in {@year}, so there is no letter to email.
+              </p>
             </div>
           </section>
           <.page_one
@@ -230,6 +210,29 @@ defmodule Web.TaxCreditLetterLive do
     </div>
     """
   end
+
+  attr :record, :map, required: true
+  attr :variant, :atom, default: :default
+
+  # Email letter, or Publish letter for a member with no email: the same action. It
+  # stays on while the year is under way or a value it needs is blank, and says why.
+  defp email_button(assigns) do
+    ~H"""
+    <.button
+      :if={@record.email}
+      id="email-letter"
+      variant={@variant}
+      phx-click="email"
+      phx-disable-with={if emailed?(@record.member), do: "Sending…", else: "Publishing…"}
+      {TaxCreditLetterConfirm.email_one(@record)}
+    >
+      {email_label(@record.member)}
+    </.button>
+    """
+  end
+
+  defp emailed?(member), do: EmailTaxCreditLetters.emailed?(member)
+  defp email_label(member), do: if(emailed?(member), do: "Email letter", else: "Publish letter")
 
   attr :state, :atom, required: true
   attr :letter, :map, required: true
@@ -259,7 +262,8 @@ defmodule Web.TaxCreditLetterLive do
 
   defp email_state(%{state: :no_email} = assigns) do
     ~H"""
-    <b>Not emailed</b> <span class="hint">{@letter.member.name} has no email.</span>
+    <b>Not emailed</b>
+    <span class="hint">{@letter.member.name} has no email. It is on Your membership.</span>
     """
   end
 
@@ -271,47 +275,16 @@ defmodule Web.TaxCreditLetterLive do
 
   defp code(letter), do: PublishedPDF.format_code(letter.code)
 
-  defp send_hint(member) do
-    if member.email in [nil, ""],
-      do: "Publishes it. #{member.name} has no email, so it isn't emailed.",
-      else: "Publishes it and emails it to #{member.email}."
-  end
+  def handle_event("email", _params, socket) do
+    %{current_team: team, current_user: user, member: member, year: year} = socket.assigns
 
-  # Publishing again emails the new letter, so the member never keeps one that verifies
-  # as Replaced.
-  defp publish_confirm(member, hours) do
-    emailed =
-      if member.email in [nil, ""],
-        do: "#{member.name} has no email, so it isn't emailed.",
-        else: "The new letter is emailed to #{member.email}."
+    socket =
+      case EmailTaxCreditLetters.call_one(team, member, year, user) do
+        {:ok, result} -> put_email_flash(socket, member, result)
+        {:error, message} -> put_flash(socket, :error, message)
+      end
 
-    %{
-      "data-confirm" =>
-        "Publish this letter again with #{Service.Format.duration(hours.total_minutes)}?",
-      "data-confirm-warning" =>
-        "It gets a new ID, and this one's verify page says Replaced. #{emailed}",
-      "data-confirm-button" => "Publish again"
-    }
-  end
-
-  defp email_confirm(letter) do
-    %{
-      "data-confirm" => "Email letter #{code(letter)} to #{letter.member.email}?",
-      "data-confirm-button" => "Email letter"
-    }
-  end
-
-  def handle_event("email", _params, %{assigns: %{letter: %{} = letter}} = socket) do
-    {:noreply, socket |> put_email_flash(letter, nil) |> assign_letter()}
-  end
-
-  def handle_event("send", _params, %{assigns: %{letter: nil}} = socket),
-    do: {:noreply, publish(socket, nil, "Published the letter")}
-
-  def handle_event("publish", _params, %{assigns: %{letter: %{} = letter}} = socket) do
-    if socket.assigns.changes != [],
-      do: {:noreply, publish(socket, letter.id, "Published the letter again")},
-      else: {:noreply, socket}
+    {:noreply, assign_letter(socket)}
   end
 
   def handle_event("withdraw", _params, %{assigns: %{letter: %{} = letter}} = socket) do
@@ -330,34 +303,23 @@ defmodule Web.TaxCreditLetterLive do
   # The page was out of step with another tab: show what's there now.
   def handle_event(_event, _params, socket), do: {:noreply, assign_letter(socket)}
 
-  defp publish(socket, current_id, done) do
-    %{current_team: team, current_user: user, member: member, year: year} = socket.assigns
+  # What Email did: published first or not, and whether the email went.
+  defp put_email_flash(socket, member, %{letter: letter, published: published, email: email}) do
+    published = if published, do: "Published letter #{code(letter)}"
 
-    case PublishTaxCreditLetter.call(team, member.id, year, user, current_id) do
-      {:ok, letter} ->
-        socket |> put_email_flash(letter, "#{done}, #{code(letter)}") |> assign_letter()
-
-      {:error, message} ->
-        socket |> put_flash(:error, message) |> assign_letter()
-    end
-  end
-
-  # `published` says what was just published, or nil for Email letter alone.
-  defp put_email_flash(socket, letter, published) do
-    %{name: name, email: email} = letter.member
-
-    case {EmailTaxCreditLetter.send_now(letter), published} do
+    case {email, published} do
       {:ok, nil} ->
-        put_flash(socket, :info, "Emailed the letter to #{email}.")
+        put_flash(socket, :info, "Emailed the letter to #{member.email}.")
 
       {:ok, published} ->
-        put_flash(socket, :info, "#{published}, and emailed it to #{email}.")
+        put_flash(socket, :info, "#{published} and emailed it to #{member.email}.")
 
-      {{:error, :no_email}, nil} ->
-        put_flash(socket, :error, "#{name} has no email.")
-
-      {{:error, :no_email}, published} ->
-        put_flash(socket, :info, "#{published}. #{name} has no email, so it wasn't emailed.")
+      {:no_email, published} ->
+        put_flash(
+          socket,
+          :info,
+          "#{published}. #{Member.first_name(member)} has no email, so it is on Your membership only."
+        )
 
       {{:error, _reason}, nil} ->
         put_flash(socket, :error, "The email did not send. Try again.")

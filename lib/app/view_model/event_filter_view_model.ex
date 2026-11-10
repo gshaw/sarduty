@@ -38,7 +38,7 @@ defmodule App.ViewModel.EventFilterViewModel do
   def label(:team_key_changed), do: "D4H access key changed"
   def label(:login_grant_added), do: "Login grant added"
   def label(:login_grant_removed), do: "Login grant removed"
-  def label(:tax_credit_letters_sent), do: "Tax credit letters sent"
+  def label(:tax_credit_letters_sent), do: "Tax credit letters emailed"
   def label(:letter_pdfs_saved), do: "Letter PDFs saved"
   def label(:mcp_turned_on), do: "Agents turned on"
   def label(:mcp_turned_off), do: "Agents turned off"

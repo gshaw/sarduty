@@ -4,6 +4,15 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- Tax credit letters have two actions, Email and Withdraw. Email sends each checked
+  member their latest letter, and publishes a new one first when there's none or it's
+  out of date. A To email tile counts who it would reach.
+- A letter or form can't be published while something it needs is blank, such as the
+  signer's signature. A banner says what's needed and where to add it. Drafts still print.
+- A year's letters can be emailed once the year is over.
+- Team settings: your mailing address is on General, and who signs letters and forms is
+  on a new Signer tab.
+- No more yellow buttons. Send changes on Chores asks first and says what it sends.
 - ⭐ The ID card page shows your card, front and back, under the Wallet buttons. No
   Wallet? Save image puts each side in Photos, and Print ID card prints both at card
   size, in black on white, to cut out for a badge holder.

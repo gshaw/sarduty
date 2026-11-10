@@ -46,59 +46,73 @@ defmodule Web.TaxCreditLetterLiveTest do
 
     assert has_element?(
              lv,
-             ~s(#letter-download[href="/teams/#{team.subdomain}/pdfs/#{letter.id}"])
+             ~s(#letter-download-published[href="/teams/#{team.subdomain}/pdfs/#{letter.id}"])
            )
 
+    # Page 1 is open under the box, as nothing follows it.
     assert has_element?(
              lv,
-             ~s(#letter-preview[src="/teams/#{team.subdomain}/pdfs/#{letter.id}/preview.png"])
+             ~s(#letter-page-1[open] #letter-preview[src="/teams/#{team.subdomain}/pdfs/#{letter.id}/preview.png"])
            )
 
     assert has_element?(lv, "#letter-email", "Not emailed")
     assert has_element?(lv, "#letter-history-published-#{letter.id}", "K7Q4M-2XA9H-VB3TN")
     assert has_element?(lv, "#letter-history-published-#{letter.id}", admin.name)
     refute has_element?(lv, "#letter-out-of-date")
-    refute has_element?(lv, "#replace-letter")
+    # Sam has no hours in 2025, so Email isn't offered.
+    refute has_element?(lv, "#email-letter")
+    assert has_element?(lv, "#withdraw-letter.btn-danger")
   end
 
-  test "no letter yet: the draft, and Send letter publishes and emails it (#970)",
+  test "no letter yet: the draft, and Email letter publishes it, then emails it (#995)",
        %{conn: conn, team: team, member: member} do
     attend(team, member, 2025)
 
     {:ok, lv, _html} = live(conn, letter_path(team, member, 2025))
 
     assert has_element?(lv, "#letter-not-published", "No letter for 2025 yet")
-    assert has_element?(lv, "#letter-not-published", "emails it to #{member.email}")
 
     assert has_element?(
              lv,
-             ~s(#letter-preview[src="/teams/#{team.subdomain}/tax-credit-letters/2025/members/#{member.id}/draft.png"])
+             ~s(#letter-page-1[open] #letter-preview[src="/teams/#{team.subdomain}/tax-credit-letters/2025/members/#{member.id}/draft.png"])
            )
 
     assert has_element?(lv, "#letter-hours-now", "1h 30m")
 
-    lv |> element("#send-letter") |> render_click()
+    assert has_element?(
+             lv,
+             ~s(#email-letter.btn-primary[data-confirm="Email Sam Doe's letter to #{member.email}? There is no letter yet, so one with 1h 30m is published first."])
+           )
+
+    lv |> element("#email-letter") |> render_click()
 
     letter = TaxCreditLetter.get_current(member, 2025)
     assert TaxCreditLetter.minutes(letter) == {90, 0}
     assert_email_sent(fn email -> assert email.to == [{"", member.email}] end)
-    assert render(lv) =~ "and emailed it to #{member.email}"
+
+    assert has_element?(
+             lv,
+             "#flash-info",
+             "Published letter #{PublishedPDF.format_code(letter.code)} and emailed it to #{member.email}."
+           )
+
     assert has_element?(lv, "#letter-email", "Emailed")
     assert has_element?(lv, "#letter-history-emailed-#{letter.id}")
   end
 
-  test "emails the letter to the member, and keeps when", %{
+  test "emails an up-to-date letter as it is, and keeps when", %{
     conn: conn,
     team: team,
     member: member
   } do
+    attend(team, member, 2025)
     letter = tax_credit_letter_fixture(member, %{year: 2025})
 
     {:ok, lv, _html} = live(conn, letter_path(team, member, 2025))
 
     assert has_element?(
              lv,
-             ~s(#email-letter[data-confirm="Email letter #{PublishedPDF.format_code(letter.code)} to #{member.email}?"])
+             ~s(#email-letter[data-confirm="Email Sam Doe's letter to #{member.email}?"])
            )
 
     lv |> element("#email-letter") |> render_click()
@@ -108,14 +122,19 @@ defmodule Web.TaxCreditLetterLiveTest do
       assert [%{data: "%PDF-1.7 test letter " <> _ref}] = email.attachments
     end)
 
-    assert render(lv) =~ "Emailed the letter to #{member.email}"
+    assert has_element?(lv, "#flash-info", "Emailed the letter to #{member.email}.")
     letter = Repo.reload!(letter)
     assert letter.email_status == :sent
     assert letter.emailed_at
+    assert TaxCreditLetter.get_current(member, 2025).id == letter.id
     assert has_element?(lv, "#letter-email", "Emailed")
+
+    # Emailed, it goes again, as it was published.
+    assert has_element?(lv, ~s(#email-letter[data-confirm$="goes again as it was published."]))
   end
 
   test "a refused email says Did not send at once", %{conn: conn, team: team, member: member} do
+    attend(team, member, 2025)
     letter = tax_credit_letter_fixture(member, %{year: 2025})
     refusing_mailer_fixture()
 
@@ -126,37 +145,71 @@ defmodule Web.TaxCreditLetterLiveTest do
     assert has_element?(lv, "#letter-email", "The email did not send")
   end
 
-  test "a member with no email: no Email letter, and the page says why",
+  test "a member with no email gets Publish letter, the same action, on Your membership only",
        %{conn: conn, team: team} do
-    member = member_fixture(team, %{email: nil})
-    tax_credit_letter_fixture(member, %{year: 2025})
+    member = member_fixture(team, %{name: "Blake Morrison", email: nil})
+    attend(team, member, 2025)
 
     {:ok, lv, _html} = live(conn, letter_path(team, member, 2025))
 
+    assert has_element?(
+             lv,
+             ~s(#email-letter[data-confirm="Publish Blake Morrison's letter? Blake has no email, so it goes on Your membership only."]),
+             "Publish letter"
+           )
+
+    lv |> element("#email-letter") |> render_click()
+
+    letter = TaxCreditLetter.get_current(member, 2025)
+    assert letter.email_status == nil
+    assert_no_email_sent()
+
+    assert has_element?(
+             lv,
+             "#flash-info",
+             "Published letter #{PublishedPDF.format_code(letter.code)}. Blake has no email, so it is on Your membership only."
+           )
+
+    # Up to date and no email: nothing more to do.
     refute has_element?(lv, "#email-letter")
-    assert has_element?(lv, "#letter-email", "#{member.name} has no email")
+    assert has_element?(lv, "#letter-email", "Blake Morrison has no email.")
   end
 
-  test "Publish again lists what changed, emails the new letter, and History has both",
+  test "out of date: a banner says what changed, and Email letter publishes a new one first",
        %{conn: conn, user: user, team: team, member: member} do
     year = TaxCreditLetter.current_year(DateTime.utc_now(), team.timezone)
     attend(team, member, year)
 
     letter =
-      tax_credit_letter_fixture(member, %{year: year, primary_minutes: 60, secondary_minutes: 0})
+      tax_credit_letter_fixture(member, %{
+        year: year,
+        primary_minutes: 60,
+        secondary_minutes: 0,
+        email_status: :sent
+      })
 
     {:ok, lv, _html} = live(conn, letter_path(team, member, year))
+
+    assert has_element?(
+             lv,
+             "#letter-out-of-date.banner-warning",
+             "Published today, this letter would read:"
+           )
 
     assert has_element?(lv, "#letter-out-of-date", "Primary hours: 1 hour → 1h 30m")
     assert has_element?(lv, "#letter-out-of-date", "Total hours: 1 hour → 1h 30m")
     refute has_element?(lv, "#letter-out-of-date", "Secondary hours")
+    assert has_element?(lv, "#letter-out-of-date", "Email letter makes a new one and sends it.")
+    refute has_element?(lv, "#replace-letter")
+    # Plain, beside Download PDF: no button is yellow, and its confirm says what it does.
+    refute has_element?(lv, "#email-letter.btn-primary")
 
     assert has_element?(
              lv,
-             ~s(#replace-letter[data-confirm-warning$="The new letter is emailed to #{member.email}."])
+             ~s(#email-letter[data-confirm="Email Sam Doe's letter to #{member.email}? It is out of date, so a new letter with 1h 30m is published first. The old one then verifies as Replaced."])
            )
 
-    lv |> element("#replace-letter") |> render_click()
+    lv |> element("#email-letter") |> render_click()
 
     new = TaxCreditLetter.get_current(member, year)
     assert new.code != letter.code
@@ -170,12 +223,23 @@ defmodule Web.TaxCreditLetterLiveTest do
     assert has_element?(lv, "#letter-history-published-#{letter.id}", "Replaced")
   end
 
-  test "Withdraw ends the letter, and the page offers Send letter again",
+  test "Withdraw ends the letter, and the page offers Email letter again",
        %{conn: conn, user: user, team: team, member: member, admin: admin} do
-    letter = tax_credit_letter_fixture(member, %{year: 2025})
+    attend(team, member, 2025)
+    letter = tax_credit_letter_fixture(member, %{year: 2025, email_status: :sent})
     code = PublishedPDF.format_code(letter.code)
 
     {:ok, lv, _html} = live(conn, letter_path(team, member, 2025))
+
+    assert has_element?(
+             lv,
+             ~s(#withdraw-letter[data-confirm="Withdraw Sam Doe's letter #{code}? Nothing takes its place. Sam lists under No letter again."])
+           )
+
+    assert has_element?(
+             lv,
+             ~s(#withdraw-letter[data-confirm-warning="Sam has it by email. Its verify page will say Withdrawn."])
+           )
 
     assert has_element?(
              lv,
@@ -190,12 +254,13 @@ defmodule Web.TaxCreditLetterLiveTest do
     refute TaxCreditLetter.get_current(member, 2025)
 
     assert has_element?(lv, "#letter-not-published")
+    assert has_element?(lv, "#email-letter", "Email letter")
     assert has_element?(lv, "#letter-history-withdrawn-#{letter.id}", admin.name)
     refute has_element?(lv, "#letter-history-withdrawn-#{letter.id}", user.email)
     assert has_element?(lv, "#letter-history-published-#{letter.id}", "Withdrawn")
   end
 
-  test "an older letter whose hours changed stays as it is",
+  test "a closed year's letter whose hours changed stays as it is, and emails as published",
        %{conn: conn, team: team, member: member} do
     year = TaxCreditLetter.current_year(DateTime.utc_now(), team.timezone) - 1
     attend(team, member, year)
@@ -204,8 +269,59 @@ defmodule Web.TaxCreditLetterLiveTest do
     {:ok, lv, _html} = live(conn, letter_path(team, member, year))
 
     refute has_element?(lv, "#letter-out-of-date")
-    refute has_element?(lv, "#replace-letter")
     assert has_element?(lv, "#letter-hours-now", "1h 30m")
+
+    assert has_element?(
+             lv,
+             ~s(#email-letter[data-confirm="Email Sam Doe's letter to #{member.email}?"])
+           )
+  end
+
+  test "a year that isn't over is refused, with the button on (#995)",
+       %{conn: conn, team: team, member: member} do
+    year = Service.YearRange.year_in(DateTime.utc_now(), team.timezone)
+    {start, _finish} = Service.YearRange.bounds(year, team.timezone)
+
+    activity =
+      activity_fixture(team, %{started_at: start, finished_at: DateTime.add(start, 90, :minute)})
+
+    attendance_fixture(activity, member)
+
+    {:ok, lv, _html} = live(conn, letter_path(team, member, year))
+    lv |> element("#email-letter") |> render_click()
+
+    assert has_element?(
+             lv,
+             "#flash-error",
+             "#{year} letters can be emailed from January 1, #{year + 1}."
+           )
+
+    refute TaxCreditLetter.get_current(member, year)
+    assert_no_email_sent()
+  end
+
+  test "what the letter needs is a warning banner, and Email letter says it as an error (#995)",
+       %{conn: conn, team: team, member: member} do
+    attend(team, member, 2025)
+    team |> Ecto.Changeset.change(signature: nil) |> Repo.update!()
+    message = "This letter cannot be published without the signer's signature."
+
+    {:ok, lv, _html} = live(conn, letter_path(team, member, 2025))
+
+    assert has_element?(lv, "#letter-needed.banner-warning", "Needed to publish")
+    assert has_element?(lv, "#letter-needed", message)
+
+    assert has_element?(
+             lv,
+             ~s(#letter-needed-fix[href="/teams/#{team.subdomain}/settings/signer"]),
+             "team settings"
+           )
+
+    refute has_element?(lv, "#email-letter[disabled]")
+    lv |> element("#email-letter") |> render_click()
+
+    assert has_element?(lv, "#flash-error", message)
+    refute TaxCreditLetter.get_current(member, 2025)
   end
 
   test "a year that can't have letters is a 404", %{conn: conn, team: team, member: member} do

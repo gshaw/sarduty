@@ -533,7 +533,8 @@ A document is a draft or published, nothing in between (#970). A draft is never 
 says DRAFT on every page, and prints a grey box where its verify code goes. Publishing
 prints once with an ID and the verify code, and keeps the PDF, so a download or email
 serves the same file, whatever the team's logos or the definition say now. Tax credit
-letters publish when made or replaced, or emailed without one; forms on Publish
+letters publish when Email needs one: there's none, or it's out of date
+([tax-credit-letters.md](tax-credit-letters.md)); forms on Publish
 ([On an activity](#on-an-activity)).
 
 [App.Model.PublishedPDF](../lib/app/model/published_pdf.ex) is one table,

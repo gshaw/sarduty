@@ -4,9 +4,10 @@ defmodule App.Model.TaxCreditLetter do
   priv/documents/tax_credit_letter.txt (#918, #970), for a member's year: its subject is
   `member:45:2026`. Its ID, the hours it printed (`keep`), when it was published, and
   its email are on its App.Model.PublishedPDF. Publishing again keeps the old one,
-  Replaced, and withdrawing one ends it, so the member lists under No letter again. Letters stay their own feature: the hours rule, the letter list
-  with Send letters, and the settings tab are code; this module is the queries and rules
-  that are only theirs.
+  Replaced, and withdrawing one ends it, so the member lists under No letter again.
+  Letters stay their own feature: the hours rule, the letter list with Email and
+  Withdraw (App.Operation.EmailTaxCreditLetters), and the Signer tab are code; this
+  module is the queries and rules that are only theirs.
   """
   import Ecto.Query
 
@@ -74,13 +75,12 @@ defmodule App.Model.TaxCreditLetter do
     |> Repo.all()
   end
 
-  @doc "The members on the team with a current letter for `year`."
-  def member_ids(team_id, year) do
+  @doc "The current letters for `year` of these members of the team."
+  def get_all_current_for(%Team{id: team_id}, member_ids, year) do
     team_id
     |> query()
     |> current()
-    |> where(year: ^year)
-    |> select([p], p.member_id)
+    |> where([p], p.year == ^year and p.member_id in ^member_ids)
     |> Repo.all()
   end
 
@@ -131,6 +131,12 @@ defmodule App.Model.TaxCreditLetter do
   still under way, can go out of date; older years' are closed (`closed?/3`).
   """
   def current_year(now, timezone), do: Service.YearRange.year_in(now, timezone) - 1
+
+  @doc """
+  Whether `year` is over in the team's time zone, so its letters can be emailed: until it
+  ends, its hours can still grow, and its letters would need publishing again (#995).
+  """
+  def year_over?(year, now, timezone), do: year < Service.YearRange.year_in(now, timezone)
 
   @doc """
   Whether `year`'s letters are closed: older than last year. A member may have filed

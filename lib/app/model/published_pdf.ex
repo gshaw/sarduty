@@ -32,7 +32,7 @@ defmodule App.Model.PublishedPDF do
     # A form's, and the version it printed from: nil once the form is gone.
     belongs_to :form, Form
     field :form_version, :integer
-    # Who published it. Nil for a letter made by Send letters before #970.
+    # Who published it. Nil for a letter made before #970, when none was recorded.
     belongs_to :user, User
     belongs_to :replaced_by, PublishedPDF
     field :withdrawn_at, :utc_datetime_usec

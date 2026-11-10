@@ -605,7 +605,7 @@ defmodule Web.TeamDashboardLive do
        do: ~p"/teams/#{team}/activities/#{activity_id}/attendance"
 
   defp attention_path(team, %{key: :letters, year: year}),
-    do: ~p"/teams/#{team}/tax-credit-letters?year=#{year}"
+    do: ~p"/teams/#{team}/tax-credit-letters?#{[year: year, letter: "to_email"]}"
 
   attr :team, :map, required: true
   attr :notes, :list, required: true

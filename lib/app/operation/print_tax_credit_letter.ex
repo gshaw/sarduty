@@ -88,12 +88,13 @@ defmodule App.Operation.PrintTaxCreditLetter do
   end
 
   @doc """
-  The letter from `read/4` as it prints today, marked DRAFT, for the letter page before
-  there's a letter: `{:ok, pdf}` or `{:error, reason}`. As a form's draft, it carries no
-  signature, and a grey box where the verify code goes.
+  The letter from `read/4` as it prints today, marked DRAFT, for the letter page's
+  picture before there's a letter: `{:ok, pdf}` or `{:error, reason}`. It draws the
+  team's signature when it has one, as the letter will (#995): the picture is never
+  downloaded. A grey box takes the verify code's place.
   """
   def draft(%Team{} = team, %{doc: doc, values: values}) do
-    values = Map.merge(values, %{"team.signature" => nil, "pdf.verify_link" => nil})
+    values = Map.put(values, "pdf.verify_link", nil)
     output = Document.evaluate(doc, values, team.timezone)
     PrintDocument.call(output, mark: :draft, verify: :draft)
   end

@@ -28,6 +28,20 @@ defmodule App.Operation.WithdrawDocument do
     end
   end
 
+  @doc """
+  Withdraws each of `pdfs`, as Withdraw letters on the letters list does (#995):
+  `%{withdrawn: [pdf], refused: [message]}`. One replaced or withdrawn meanwhile is
+  refused alone.
+  """
+  def call_all(%Team{} = team, pdfs, %User{} = user, now) do
+    results = Enum.map(pdfs, &call(team, &1, user, now))
+
+    %{
+      withdrawn: for({:ok, pdf} <- results, do: pdf),
+      refused: for({:error, message} <- results, do: message)
+    }
+  end
+
   defp withdraw(pdf, user, now) do
     case PublishedPDF.withdraw(pdf, user, now) do
       {:ok, pdf} ->

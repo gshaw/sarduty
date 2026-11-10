@@ -120,6 +120,21 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
       refute text(team, member) =~ "\n\n\n\n"
     end
 
+    # The letter page's picture of the letter before it's published (#995).
+    test "the draft draws it too, when the team has one", %{team: team, member: member} do
+      draft = fn team ->
+        team = Repo.reload!(team)
+        read = PrintTaxCreditLetter.read(team, member.id, 2025, DateTime.utc_now())
+        {:ok, pdf} = PrintTaxCreditLetter.draft(team, read)
+        %{content: pdf}
+      end
+
+      # The draft draws a picture of its own; the signature adds one.
+      unsigned = images(draft.(team))
+      {:ok, _team} = SaveTeamSignature.call(team, png_fixture(600, 150))
+      assert images(draft.(team)) == unsigned + 1
+    end
+
     test "leaves room to sign without one", %{team: team, member: member} do
       assert images(print(create(team, member))) == 0
       assert text(team, member) =~ ~r/Certified on .*\.\n\n\n\n\n#{team.legal_name}/
