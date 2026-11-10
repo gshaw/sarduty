@@ -50,7 +50,7 @@ defmodule Web.CardLinkLive do
     {:ok,
      socket
      |> assign(
-       page_title: "Your #{team.name} ID card",
+       page_title: "Your ID card",
        token: token,
        team: team,
        url: Web.Endpoint.url() <> ~p"/cards/#{token}",
@@ -167,9 +167,7 @@ defmodule Web.CardLinkLive do
     </.breadcrumbs>
     <div class="md:flex md:gap-8">
       <div class="md:w-2/3 min-w-0">
-        <%!-- The team in the title: a member from the email isn't logged in, so the bar
-        doesn't name it, and a replaced or cancelled card shows no picture. --%>
-        <h1 id="card-link-title" class="heading">Your {@team.name} ID card</h1>
+        <h1 class="heading">Your ID card</h1>
         <.card_state
           status={@status}
           team={@team}
@@ -234,19 +232,25 @@ defmodule Web.CardLinkLive do
 
   defp card_state(%{status: :replaced} = assigns) do
     ~H"""
-    <p id="card-link-replaced">This ID card was replaced. Use the link in your newest email.</p>
+    <p id="card-link-replaced">
+      Your {@team.name} ID card was replaced. Use the link in your newest email.
+    </p>
     """
   end
 
   defp card_state(%{status: :cancelled} = assigns) do
     ~H"""
-    <p id="card-link-cancelled">This ID card was cancelled. Ask a team admin if you need one.</p>
+    <p id="card-link-cancelled">
+      Your {@team.name} ID card was cancelled. Ask a team admin if you need one.
+    </p>
     """
   end
 
   defp card_state(%{status: :inactive} = assigns) do
     ~H"""
-    <p id="card-link-inactive">This ID card is not active. Ask a team admin if you need one.</p>
+    <p id="card-link-inactive">
+      Your {@team.name} ID card is not active. Ask a team admin if you need one.
+    </p>
     """
   end
 

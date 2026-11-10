@@ -25,7 +25,7 @@ defmodule Web.CardLinkLiveTest do
     path = member |> member_card_fixture() |> CardLinks.path()
     {:ok, lv, _html} = live(conn, path)
 
-    assert has_element?(lv, "#card-link-title", "Your Coast Range SAR ID card")
+    assert has_element?(lv, "#card-link-intro", "a current member of Coast Range SAR")
 
     assert has_element?(
              lv,
@@ -214,7 +214,7 @@ defmodule Web.CardLinkLiveTest do
     assert has_element?(
              lv,
              "#card-link-cancelled",
-             "This ID card was cancelled. Ask a team admin"
+             "Your Coast Range SAR ID card was cancelled. Ask a team admin"
            )
 
     refute_offers(lv)
@@ -225,7 +225,12 @@ defmodule Web.CardLinkLiveTest do
     card = member_card_fixture(retired)
     {:ok, lv, _html} = live(conn, CardLinks.path(card))
 
-    assert has_element?(lv, "#card-link-inactive", "This ID card is not active. Ask a team admin")
+    assert has_element?(
+             lv,
+             "#card-link-inactive",
+             "Your Coast Range SAR ID card is not active. Ask a team admin"
+           )
+
     refute_offers(lv)
   end
 
