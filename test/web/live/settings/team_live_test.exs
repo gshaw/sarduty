@@ -61,7 +61,9 @@ defmodule Web.Settings.TeamLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
 
     address = %{mailing_address: "PO Box 12", city: " Squamish BC ", postal_code: "V8B 0A1"}
-    assert lv |> form("#team_settings_form", form: address) |> render_submit() =~ "Team settings saved."
+
+    assert lv |> form("#team_settings_form", form: address) |> render_submit() =~
+             "Team settings saved."
 
     assert %Team{mailing_address: "PO Box 12", city: "Squamish BC", postal_code: "V8B 0A1"} =
              Team.get!(team.id)

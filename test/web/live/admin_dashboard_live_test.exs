@@ -18,7 +18,10 @@ defmodule Web.AdminDashboardLiveTest do
 
     assert html =~ "Admin"
     # Plain, and asks first: no button is yellow (#995).
-    assert has_element?(lv, "#refresh-all.btn:not(.btn-primary)[data-confirm^='Refresh all teams now?']")
+    assert has_element?(
+             lv,
+             "#refresh-all.btn:not(.btn-primary)[data-confirm^='Refresh all teams now?']"
+           )
   end
 
   test "shows each team's logo from the shared logo route", %{conn: conn} do

@@ -73,7 +73,9 @@ defmodule App.Report.Context do
   end
 
   defp counted_hours(_team, _now, _repo, nil), do: nil
-  defp counted_hours(team, now, repo, only), do: CountTaxCreditHours.by_year(team, now, repo, only)
+
+  defp counted_hours(team, now, repo, only),
+    do: CountTaxCreditHours.by_year(team, now, repo, only)
 
   @doc "The same context with the query's own dates a year back, for compare year (#826)."
   def year_back(%__MODULE__{} = context) do

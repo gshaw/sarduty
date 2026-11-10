@@ -22,7 +22,6 @@ defmodule Web.TeamDashboardLive do
   alias App.ViewData.MemberRecords
   alias App.ViewData.MemberToDo
   alias App.ViewData.TeamAttention
-  alias Web.Components.TeamSettingsTabs
   alias App.ViewData.TeamDashboardViewData
   alias App.Worker.RefreshTeamDataWorker
   alias App.Worker.SyncTeamChangesWorker
@@ -30,6 +29,7 @@ defmodule Web.TeamDashboardLive do
   alias Web.Components.Reply
   alias Web.Components.ReplyControl
   alias Web.Components.ReportChart
+  alias Web.Components.TeamSettingsTabs
   alias Web.WhiteboardText
 
   # The top half is what needs doing: what's next, and what needs a team admin. The lower

@@ -112,13 +112,24 @@ defmodule App.Operation.PrintTaxCreditLetter do
   end
 
   @doc """
-  The settings the letter needs that the team hasn't filled in, the document's `needs`
-  (#943), each `%{name, label}`: `%{name: "team.signature", label: "Signer's signature"}`.
+  What the letter from `read/4` needs to publish that's blank, the document's `needs`
+  (ReadDocument.needed/3): `[]` when it can be published. Publishing refuses while
+  there's one (#995).
+  """
+  def needed(%{doc: doc, values: values, read: read}), do: ReadDocument.needed(doc, values, read)
+
+  @doc """
+  The team's settings the letter needs that it hasn't filled in, the document's `needs`
+  (#943), as `needed/1` names them: `%{name: "team.signature", label: "Signer's
+  signature", …}`. They keep every letter from being published, so Needs attention and
+  the letters list name them.
   """
   def missing_settings(%Team{} = team, now) do
-    {:ok, %{doc: doc, values: values, labels: labels}} =
+    {:ok, %{doc: doc, values: values, read: read}} =
       @document |> Document.read() |> ReadDocument.settings(Context.new(team, now))
 
-    doc |> Document.missing(values) |> Enum.map(&%{name: &1, label: labels[&1] || &1})
+    doc
+    |> ReadDocument.needed(values, read)
+    |> Enum.filter(&(&1.from in ~w(team organization)))
   end
 end

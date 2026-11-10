@@ -404,7 +404,12 @@ defmodule App.ViewData.TeamAttentionTest do
     assert item.detail == "The CRA may question a letter without them."
     assert item.names == ~w(team.mailing_address team.signer team.signature)
 
-    assert [%{title: "Tax credit letters cannot be emailed until you add the signer", detail: detail}] =
+    assert [
+             %{
+               title: "Tax credit letters cannot be emailed until you add the signer",
+               detail: detail
+             }
+           ] =
              items(%{letter_settings: [%{name: "team.signer", label: "Signer"}]}, @march)
 
     assert detail == "The CRA may question a letter without it."

@@ -79,7 +79,9 @@ defmodule Web.TaxCreditLetterLive do
   defp changes(nil, _team, _member, _year, _now), do: []
 
   defp changes(letter, team, member, year, now) do
-    today = PrintTaxCreditLetter.today(team, PrintTaxCreditLetter.read(team, member.id, year, now))
+    today =
+      PrintTaxCreditLetter.today(team, PrintTaxCreditLetter.read(team, member.id, year, now))
+
     TaxCreditLetter.changes(letter, today, now, team.timezone)
   end
 
@@ -94,6 +96,12 @@ defmodule Web.TaxCreditLetterLive do
     </.breadcrumbs>
 
     <h1 class="title">{@page_title}</h1>
+    <.out_of_date
+      id="letter-out-of-date"
+      noun="letter"
+      changes={@changes}
+      next="Email letter makes a new one and sends it."
+    />
 
     <div class="content-wrapper">
       <aside class="content-1/3">
@@ -143,7 +151,6 @@ defmodule Web.TaxCreditLetterLive do
               <p id="letter-email" class="mb-4">
                 <.email_state state={@email_state} letter={@letter} team={@current_team} />
               </p>
-              <.out_of_date id="letter-out-of-date" noun="letter" changes={@changes} />
               <.form_actions>
                 <.button
                   id="letter-download"
@@ -184,8 +191,9 @@ defmodule Web.TaxCreditLetterLive do
               </.form_actions>
             </div>
           </section>
-          <.preview
-            id="letter-preview"
+          <.page_one
+            prefix="letter"
+            open
             src={~p"/teams/#{@current_team}/pdfs/#{@letter.id}/preview.png"}
             alt={"Page 1 of letter #{code(@letter)}"}
           />
@@ -207,8 +215,9 @@ defmodule Web.TaxCreditLetterLive do
               </div>
             </div>
           </section>
-          <.preview
-            id="letter-preview"
+          <.page_one
+            prefix="letter"
+            open
             src={
               ~p"/teams/#{@current_team}/tax-credit-letters/#{@year}/members/#{@member.id}/draft.png"
             }

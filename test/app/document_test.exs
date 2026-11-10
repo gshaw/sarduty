@@ -1121,16 +1121,27 @@ defmodule App.DocumentTest do
                "Line 4: Show a value a report reads: team.signature only prints."
     end
 
-    test "needs names the team's settings, and nothing else (#970)" do
+    test "needs names any value it reads: a setting, a picture, a field, or an answer (#995)" do
       {:ok, doc} = checked(doc("needs team.signer, team.signature", "'x'"))
 
       assert [{:field, ["team", "signer"], [], 3}, {:field, ["team", "signature"], [], 3}] =
                doc.needs
 
-      assert error(doc("needs :year", "'x'")) ==
-               "Line 3: Write the team's settings after needs, such as team.signer."
+      {:ok, form} = checked(form("ask leader 'Task leader'\nneeds :leader, team.city"))
+      assert [{:value, "leader", _}, {:field, ["team", "city"], [], _}] = form.needs
 
+      assert error(doc("needs :year", "'x'")) ==
+               "Line 3: Write a value it reads after needs, such as team.signer or an answer, not :year."
+
+      assert error(doc("needs pdf.verify_link", "'x'")) =~ "not pdf.verify_link."
       assert error(doc("needs team.signr", "'x'")) =~ "Line 3: team has no field signr."
+    end
+
+    test "Document.missing/2 names each need that's blank (#995)" do
+      {:ok, form} = checked(form("ask leader 'Task leader'\nneeds :leader, team.signer"))
+
+      assert Document.missing(form, %{"team.signer" => " "}) == [":leader", "team.signer"]
+      assert Document.missing(form, %{":leader" => "Sam", "team.signer" => "Alex"}) == []
     end
 
     test "email to member has a subject and a body (#970)" do

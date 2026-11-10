@@ -84,6 +84,7 @@ defmodule App.DemoTeamSendsTest do
   describe "sends" do
     setup do
       %{user: user, team: team} = user_with_team_fixture()
+      team = signer_fixture(team)
       demo_team_fixture(team, %{user_id: user.id})
       starts = DateTime.utc_now() |> DateTime.add(3, :day) |> DateTime.truncate(:second)
       activity = activity_fixture(team, %{title: "Training night", started_at: starts})

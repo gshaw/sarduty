@@ -18,7 +18,10 @@ defmodule App.Model.PublishedPDFTest do
 
     test "a value gone reads blank" do
       pdf = %PublishedPDF{shows: @shows}
-      assert PublishedPDF.changes(pdf, %{shows: [hd(@shows)], keep: %{}}) == ["Injured: 0 → blank"]
+
+      assert PublishedPDF.changes(pdf, %{shows: [hd(@shows)], keep: %{}}) == [
+               "Injured: 0 → blank"
+             ]
     end
 
     test "with nothing on its verify page, the values it kept decide" do
@@ -27,7 +30,8 @@ defmodule App.Model.PublishedPDFTest do
       assert PublishedPDF.changes(pdf, %{shows: [], keep: %{"crew" => 4, "leader" => "Sam"}}) ==
                ["crew: 3 → 4"]
 
-      assert PublishedPDF.changes(pdf, %{shows: [], keep: %{"crew" => 3, "leader" => "Sam"}}) == []
+      assert PublishedPDF.changes(pdf, %{shows: [], keep: %{"crew" => 3, "leader" => "Sam"}}) ==
+               []
     end
   end
 

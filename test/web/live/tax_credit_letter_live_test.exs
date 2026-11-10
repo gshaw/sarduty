@@ -12,6 +12,7 @@ defmodule Web.TaxCreditLetterLiveTest do
 
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
+    team = signer_fixture(team)
     member = member_fixture(team, %{name: "Sam Doe"})
     # The admin is the team's manager, a member, so "by" lines name them.
     admin = Member.find_by_email(team, user.email, DateTime.utc_now())

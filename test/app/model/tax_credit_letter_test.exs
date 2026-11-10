@@ -9,7 +9,10 @@ defmodule App.Model.TaxCreditLetterTest do
 
   # A letter for `year` whose verify page shows `total`, against today's `now_total`.
   defp changes(year, total, now_total, now \\ @now) do
-    shows = fn text -> [%{"label" => "Name", "text" => "Avery"}, %{"label" => "Total hours", "text" => text}] end
+    shows = fn text ->
+      [%{"label" => "Name", "text" => "Avery"}, %{"label" => "Total hours", "text" => text}]
+    end
+
     letter = %PublishedPDF{year: year, shows: shows.(total)}
     TaxCreditLetter.changes(letter, %{shows: shows.(now_total), keep: %{}}, now, @timezone)
   end

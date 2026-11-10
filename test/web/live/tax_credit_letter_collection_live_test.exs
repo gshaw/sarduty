@@ -43,7 +43,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
   describe "check, then act (#970)" do
     setup %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
-      %{conn: log_in_user(conn, user), team: team}
+      %{conn: log_in_user(conn, user), team: signer_fixture(team)}
     end
 
     # Checks `members` and picks `choice`, as the person does.
@@ -236,20 +236,25 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       assert has_element?(lv, ~s(#letters-apply[data-confirm-list*="not emailed: Member 1."]))
     end
 
-    test "warns that letters go out unsigned until the team has a signature",
+    test "says what letters need to publish, with the tab that fills it (#995)",
          %{conn: conn, team: team} do
-      member = member_fixture(team)
-      attend(team, member)
-
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025")
-      assert has_element?(lv, "#letters-unsigned")
-      check(lv, [member], "send")
-      assert has_element?(lv, ~s(#letters-apply[data-confirm*="They go out unsigned."]))
+      refute has_element?(lv, "#letters-needed")
 
-      {:ok, _team} = SaveTeamSignature.call(team, png_fixture(600, 150))
-
+      {:ok, _team} = SaveTeamSignature.call(team, nil)
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/tax-credit-letters?year=2025")
-      refute has_element?(lv, "#letters-unsigned")
+
+      assert has_element?(
+               lv,
+               "#letters-needed",
+               "Letters cannot be published without the signer's signature."
+             )
+
+      assert has_element?(
+               lv,
+               ~s(#letters-needed-fix[href="/teams/#{team.subdomain}/settings/signer"]),
+               "team settings"
+             )
     end
 
     test "a choice that fits none of the checked greys out and says why",

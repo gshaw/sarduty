@@ -6,7 +6,6 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
 
   alias App.Model.PublishedPDF
   alias App.Operation.PrintTaxCreditLetter
-  alias App.Operation.PublishTaxCreditLetter
   alias App.Operation.SaveTeamSignature
 
   setup do
@@ -14,15 +13,15 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
     %{team: team, member: member_fixture(team)}
   end
 
+  # The letter printed under an ID, as publishing prints it, whatever it needs.
   defp create(team, member) do
-    team
-    |> Repo.reload!()
-    |> PublishTaxCreditLetter.prepare(member.id, 2025, nil)
-    |> PublishTaxCreditLetter.insert!(nil)
+    team = Repo.reload!(team)
+    read = PrintTaxCreditLetter.read(team, member.id, 2025, DateTime.utc_now())
+    {:ok, printed} = PrintTaxCreditLetter.call(team, read, PublishedPDF.generate_code())
+    printed
   end
 
-  # The PDF as it was published.
-  defp print(letter), do: PublishedPDF.attachment(letter)
+  defp print(printed), do: printed.attachment
 
   defp text(team, member) do
     team = Repo.reload!(team)
@@ -64,11 +63,17 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
 
     for m <- [member, other] do
       alone = PrintTaxCreditLetter.read(team, m.id, 2025, now)
-      assert PrintTaxCreditLetter.today(team, each[m.id]) == PrintTaxCreditLetter.today(team, alone)
+
+      assert PrintTaxCreditLetter.today(team, each[m.id]) ==
+               PrintTaxCreditLetter.today(team, alone)
+
       assert Map.delete(each[m.id].values, "today") == Map.delete(alone.values, "today")
     end
 
-    shows = fn id -> Map.new(PrintTaxCreditLetter.today(team, each[id]).shows, &{&1["label"], &1["text"]}) end
+    shows = fn id ->
+      Map.new(PrintTaxCreditLetter.today(team, each[id]).shows, &{&1["label"], &1["text"]})
+    end
+
     assert shows.(member.id)["Total hours"] == "2 hours"
     assert shows.(other.id)["Total hours"] == "0 hours"
     assert shows.(other.id)["Name"] == "Blake Morrison"
@@ -142,10 +147,10 @@ defmodule App.Operation.PrintTaxCreditLetterTest do
       )
       |> Repo.update!()
 
-    assert PrintTaxCreditLetter.missing_settings(team, DateTime.utc_now()) == [
-             %{name: "team.mailing_address", label: "Mailing address"},
-             %{name: "team.signature", label: "Signer's signature"}
-           ]
+    assert [
+             %{name: "team.mailing_address", label: "Mailing address", from: "team"},
+             %{name: "team.signature", label: "Signer's signature", from: "team"}
+           ] = PrintTaxCreditLetter.missing_settings(team, DateTime.utc_now())
   end
 
   test "a Try a demo team's letter says SAMPLE across it (#857)", %{team: team, member: member} do

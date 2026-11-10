@@ -44,7 +44,7 @@ defmodule App.Operation.CreateTaxCreditLetters do
   # the letters still missing, and no email is lost. Its PDF is drawn first, outside the
   # transaction.
   defp create(team, member, year, user_id) do
-    prepared = PublishTaxCreditLetter.prepare(team, member.id, year, user_id)
+    {:ok, prepared} = PublishTaxCreditLetter.prepare(team, member.id, year, user_id)
 
     {:ok, result} =
       Repo.transaction(fn ->
@@ -82,7 +82,7 @@ defmodule App.Operation.CreateTaxCreditLetters do
   def publish_again(%Team{} = team, year, rows, %User{} = user) do
     results =
       for {member_id, current_id} <- rows do
-        prepared = PublishTaxCreditLetter.prepare(team, member_id, year, user.id)
+        {:ok, prepared} = PublishTaxCreditLetter.prepare(team, member_id, year, user.id)
         Repo.transaction(fn -> publish_and_email(prepared, current_id) end)
       end
 

@@ -5,8 +5,8 @@ defmodule Web.Settings.SignerLive do
   import Web.Components.TeamSettingsTabs
 
   alias App.Model.Team
-  alias App.Operation.SaveTeamSigner
   alias App.Operation.SaveTeamSignature
+  alias App.Operation.SaveTeamSigner
 
   # Settings' Signer tab, /teams/:subdomain/settings/signer (#995): who signs the team's
   # tax credit letters and an organization's forms (#950), with their title, phone, email,

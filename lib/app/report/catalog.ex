@@ -303,6 +303,11 @@ defmodule App.Report.Catalog do
       },
       date(:started_at, "Started"),
       date(:finished_at, "Finished"),
+      bool(
+        :finished,
+        "Has finished",
+        "Whether it has finished: its finish is past. A form can wait for it."
+      ),
       bool(:published, "Published"),
       list(:tags, "Tags", &tag_titles/1),
       number(
@@ -713,7 +718,7 @@ defmodule App.Report.Catalog do
 
   # ABCSize skips what sits inside a select, and these columns were one until #784.
   # credo:disable-for-next-line Credo.Check.Refactor.ABCSize
-  defp activities(%Context{team: team, hours_tags: hours_tags} = context) do
+  defp activities(%Context{team: team, hours_tags: hours_tags, now: now} = context) do
     %Source{
       query:
         Activity
@@ -735,6 +740,8 @@ defmodule App.Report.Catalog do
         kind: dynamic([a], a.activity_kind),
         started_at: dynamic([a], a.started_at),
         finished_at: dynamic([a], a.finished_at),
+        # Activity.state/2's :finished, as of the context's now (#995).
+        finished: dynamic([a], a.finished_at <= ^now),
         published: dynamic([a], a.is_published),
         tags: dynamic([a], a.tags),
         hours_tag_count: Activity.hours_tag_count_dynamic(hours_tags),

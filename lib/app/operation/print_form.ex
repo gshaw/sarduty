@@ -22,17 +22,35 @@ defmodule App.Operation.PrintForm do
   `page` for `activity_id`, with `answers` as typed by name, and the values it keeps.
   `mark: :sample` marks it SAMPLE, for made-up data, and `mark: :draft` DRAFT
   (App.Operation.PrintDocument). `verify` is the verify link it's published under; without
-  one it prints a draft's grey box where the verify code goes.
+  one it prints a draft's grey box where the verify code goes. Published, it refuses
+  while a value the form `needs` is blank (#995); a draft prints without.
   """
   def call(text, page, %Context{} = context, activity_id, answers \\ %{}, opts \\ []) do
-    with {:ok, %{doc: doc, values: values}} <-
-           ReadDocument.call(text, context, %{activity: activity_id}),
+    verify = Keyword.get(opts, :verify, :draft)
+
+    with {:ok, %{doc: doc} = read} <- read_shown(text, context, activity_id),
+         {:ok, answered} <- answers(doc, answers),
+         values = Map.merge(read.values, answered),
+         :ok <- needs(verify, doc, values, read.read, context.timezone) do
+      output = Document.evaluate(doc, sign(values, verify), context.timezone)
+      print(output, doc.name, page, opts)
+    end
+  end
+
+  # The form's values for the activity, once it's sure it's a form that shows there.
+  defp read_shown(text, context, activity_id) do
+    with {:ok, %{doc: doc} = read} <- ReadDocument.call(text, context, %{activity: activity_id}),
          :ok <- form?(doc),
          :ok <- shown?(doc, context, activity_id),
-         {:ok, answered} <- answers(doc, answers) do
-      values = values |> Map.merge(answered) |> sign(Keyword.get(opts, :verify, :draft))
-      output = Document.evaluate(doc, values, context.timezone)
-      print(output, doc.name, page, opts)
+         do: {:ok, read}
+  end
+
+  defp needs(:draft, _doc, _values, _read, _timezone), do: :ok
+
+  defp needs(_link, doc, values, read, timezone) do
+    case ReadDocument.needed(doc, Document.values(doc, values, timezone), read) do
+      [] -> :ok
+      needed -> {:error, ReadDocument.needed_error("This form", needed)}
     end
   end
 

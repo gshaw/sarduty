@@ -16,11 +16,13 @@ defmodule Web.TaxCreditLetterCollectionLive do
 
   import Web.Components.ActionBar
   import Web.Components.FilterBar
+  import Web.Components.PublishedPDF, only: [needed_banner: 1]
   import Web.Components.StatSwitch
 
   alias App.Model.Standing
   alias App.Model.TaxCreditLetter
   alias App.Operation.CreateTaxCreditLetters
+  alias App.Operation.PrintTaxCreditLetter
   alias App.ViewModel.TaxCreditLetterFilterViewModel
   alias App.Worker.CreateTaxCreditLettersWorker
 
@@ -51,6 +53,11 @@ defmodule Web.TaxCreditLetterCollectionLive do
           |> assign(:filter_options, filter_options)
           |> assign(:form, to_form(changeset, as: "form"))
           |> assign(:path_fn, build_path_fn(socket.assigns.current_team, filter_options))
+          # What every letter needs from team settings, such as the signature (#995).
+          |> assign(
+            :needed,
+            PrintTaxCreditLetter.missing_settings(socket.assigns.current_team, DateTime.utc_now())
+          )
           |> assign_records()
 
         {:noreply, socket}
@@ -81,15 +88,7 @@ defmodule Web.TaxCreditLetterCollectionLive do
         )}. This page updates when they are done.
       </p>
     </.banner>
-    <.warning_text
-      :if={!@current_team.signature and Enum.any?(@records, &is_nil(&1.tax_credit_letter_id))}
-      id="letters-unsigned"
-      class="mb-4"
-    >
-      Letters go out unsigned. Add the signer's signature in
-      <.a navigate={~p"/teams/#{@current_team}/settings/signer"}>team settings</.a>
-      first.
-    </.warning_text>
+    <.needed_banner id="letters-needed" what="Letters" needed={@needed} team={@current_team} />
 
     <.stat_switch id="letter-switch" label="Letters">
       <:view
@@ -295,13 +294,11 @@ defmodule Web.TaxCreditLetterCollectionLive do
   # Each confirm counts who gets an email, so it leaves out the members with no email.
   defp confirm(_choice, [], _year, _team), do: %{}
 
-  defp confirm("send", fit, year, team) do
-    unsigned = if team.signature, do: [], else: ["They go out unsigned."]
-
+  defp confirm("send", fit, year, _team) do
     send_confirm(
       emailed(fit),
       "Create and email #{letters(length(fit))} for #{year}?",
-      ["Each member checked with hours and no letter gets one." | unsigned] ++ not_emailed(fit)
+      ["Each member checked with hours and no letter gets one." | not_emailed(fit)]
     )
   end
 

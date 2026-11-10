@@ -7,6 +7,7 @@ defmodule Web.PublishedPDFControllerTest do
 
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
+    team = signer_fixture(team)
     %{conn: log_in_user(conn, user), user: user, team: team, member: member_fixture(team)}
   end
 

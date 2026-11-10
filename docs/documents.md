@@ -37,7 +37,7 @@ They come in this order. `report`, `const`, `ask`, `compute`, and `expect` can r
 | `keep hours.primary, …`             | Values saved with the PDF: what a report reads, and answers.                                      |
 | `verify code bottom right`          | Where the verify code prints, or `none` ([Verify code](#verify-code)).                            |
 | `verify shows` and values under it  | What the PDF's verify page shows ([Verify code](#verify-code)).                                   |
-| `needs team.signer, …`              | Settings it needs; Needs attention names blank ones ([Needs and email](#needs-and-email)).        |
+| `needs team.signer, …`              | What publishing needs; a draft prints without ([Needs and email](#needs-and-email)).              |
 | `email to member` and lines under   | The email a letter goes out with ([Needs and email](#needs-and-email)).                           |
 | `page`                              | The values print on the form's own page PDF.                                                      |
 | `places`                            | Where each value goes.                                                                            |
@@ -150,10 +150,23 @@ verify shows
 
 ## Needs and email
 
-`needs` names the team's settings a published PDF shouldn't go out without, such as the
-letter's `needs team.mailing_address, team.signer, team.signature`. Each is a `team` or
-`organization` field or picture. Needs attention lists each blank one in letter season,
-by its catalog name (App.Operation.ReadDocument.settings/2 reads only those).
+`needs` names what publishing needs (#995): any value the document reads, such as a
+team setting or picture, a report's value, or an answer. The letter has `needs
+team.mailing_address, team.signer, team.signature`, and a form can wait for its
+activity with `needs task.published` or `needs task.finished`, where `task` is its
+report on `activities`. A blank value counts as missing, and so does a false one, which
+only `needs` reads that way: `keep` and `verify shows` keep false as it is.
+
+While one is missing, publishing refuses with the same words its page's warning banner,
+Needed to publish, shows under the title: "This letter cannot be published without the
+signer's signature." The banner names each, with the page that fills it, or says when
+the activity finishes and links its page to publish it in D4H. The check is in the
+operations, `PublishTaxCreditLetter` and `PrintForm` (App.Operation.ReadDocument.needed/3),
+so no page can skip it. A draft prints without them, and a form's Missing section
+leaves them out. Needs attention lists a letter's blank team settings in letter season
+(App.Operation.ReadDocument.settings/2 reads only those). Activities' `finished` is
+true once their finish has passed, as `Activity.state/2` says; `finished_at` is always
+set, so it can't stand in.
 
 `email to member` writes the email a letter goes out with, its PDF attached: a
 `subject`, and a `body` written one item a line, as a flow's, with `space` and `if`.
@@ -461,17 +474,21 @@ date, or Not published. Its page is
 `/teams/:subdomain/activities/:id/forms/:form_id` (Web.ActivityOrgFormLive), found
 through the team's organization, so a form that's off or another organization's is a 404. It shows:
 
-- **The Published box**, once one is published: when and who, its ID linking to its
-  verify page, Download PDF, Publish again, and Withdraw. When its verify page would
-  show something else if it were published today, it's out of date, and it says what
+- **The Published section**, once one is published, the same as a letter's (#995): when
+  and who, its ID linking to its verify page, Download PDF, Publish again, and Withdraw.
+  No button in it is yellow. When its verify page would show something else if it were
+  published today, it's out of date, and a warning banner under the title says what
   changed (`ActivityForms.changes/3`, from `PublishedPDF.changes/2`): each `verify
-  shows` line, or each kept value for a form with none. Page 1 folds under it, drawn from the
+shows` line, or each kept value for a form with none. Page 1 folds under it, drawn from the
   saved PDF when it's opened (`/pdfs/:id/preview.png`), and History lists every PDF
   published for the activity, Replaced or Withdrawn ones too, each still downloading
   (App.ViewData.PublishedHistory). A tax credit letter's page has the same parts.
 
 - **What SAR Duty filled in**: each column of each report, from ReadDocument's `read`.
-- **What's missing**: each one blank, with the page that fixes it, so the fix reaches
+- **Needed to publish**, a warning banner under the title while a value the form `needs`
+  is missing ([Needs and email](#needs-and-email)). Publish stays on and says the same
+  as an error.
+- **What's missing**: each one blank that publishing doesn't need, with the page that fixes it, so the fix reaches
   D4H and every form. An activity's D4H field links to Change fields, its own details to
   Change activity, and the team's to team settings: its names to General, and its
   address, city, and postal code there too, and its signer to Signer. Fields first, questions second: an

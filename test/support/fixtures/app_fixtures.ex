@@ -197,6 +197,16 @@ defmodule App.DataFixtures do
     %{year: year, mid_year: mid_year, now: now}
   end
 
+  @doc """
+  The team with a signer and their signature, which a tax credit letter needs before it
+  can be published (#995). The fixture team has its mailing address already.
+  """
+  def signer_fixture(%Team{} = team) do
+    team
+    |> Ecto.Changeset.change(authorized_by_name: "Alex Chen", signature: png_fixture(600, 150))
+    |> Repo.update!()
+  end
+
   @doc "PNG bytes of a plain image, as D4H sends a photo or logo."
   def png_fixture(width, height) do
     width |> Image.new!(height, color: :steelblue) |> Image.write!(:memory, suffix: ".png")

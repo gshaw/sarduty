@@ -121,7 +121,7 @@ defmodule App.Document.Checker do
     check_title(doc.title, types)
     Enum.each(doc.keep, &check_keep(&1, doc.asks, types))
     Enum.each(doc.verify_shows, &check_shown(&1, types))
-    Enum.each(doc.needs, &check_need(&1, types))
+    Enum.each(doc.needs, &check_need(&1, doc.asks, types))
     check_email(doc.email, types)
     Enum.each(doc.expects, &check_expect(&1, doc, types))
     types
@@ -809,18 +809,34 @@ defmodule App.Document.Checker do
     :ok
   end
 
-  # Only what a report reads is kept: never a value only printing reads, like the signature.
-  # A need is one of the team's or organization's settings, a field or a picture.
-  defp check_need({:field, [subject, _name], [], line} = field, types) do
-    if lower(subject) not in @one_row, do: need_mistake(line)
-    _type = type(field, types)
+  # A need is any value the document reads that can be blank (#995): a team setting or
+  # picture, a report's value such as an activity's field, a compute, or an answer.
+  defp check_need({:field, path, [], line} = field, _asks, types) do
+    name = lower_path(Enum.join(path, "."))
+
+    cond do
+      name == "pdf.verify_link" -> need_mistake(line, name)
+      Map.has_key?(@print, name) -> :ok
+      true -> _type = type(field, types)
+    end
+
     :ok
   end
 
-  defp check_need(expr, _types), do: need_mistake(Query.line(expr))
+  defp check_need({:value, name, line}, asks, _types) do
+    if Enum.any?(asks, &(&1.name == name)),
+      do: :ok,
+      else: need_mistake(line, ":#{name}")
+  end
 
-  defp need_mistake(line),
-    do: fail(line, "Write the team's settings after needs, such as team.signer.")
+  defp check_need(expr, _asks, _types), do: need_mistake(Query.line(expr), text(expr))
+
+  defp need_mistake(line, what),
+    do:
+      fail(
+        line,
+        "Write a value it reads after needs, such as team.signer or an answer, not #{what}."
+      )
 
   defp check_email(nil, _types), do: :ok
 

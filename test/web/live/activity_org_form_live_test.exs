@@ -537,6 +537,67 @@ defmodule Web.ActivityOrgFormLiveTest do
                {:error, "This form is testing. Download a draft PDF instead."}
     end
 
+    # A form that waits for its activity: what it needs blocks Publish, never a draft (#995).
+    test "needs task.finished and task.published refuse Publish until both hold", ctx do
+      %{cast: cast, hiker: hiker, form: form} = ctx
+
+      text =
+        @text
+        |> String.replace("`Agency File #`\n", "`Agency File #`, finished, published\n")
+        |> String.replace("\nverify shows", "needs task.finished, task.published\n\nverify shows")
+
+      form = form |> Ecto.Changeset.change(text: text) |> Repo.update!()
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      hiker =
+        hiker
+        |> Ecto.Changeset.change(finished_at: DateTime.add(now, 2, :hour), is_published: false)
+        |> Repo.update!()
+
+      conn = log_in_user(build_conn(), cast.alex)
+      {:ok, lv, _html} = live(conn, form_path(hiker, form))
+      refusal = "This form cannot be published until the activity finishes and is published."
+
+      assert has_element?(
+               lv,
+               "#org-form-needed",
+               "This form needs 2 things before it can be published:"
+             )
+
+      assert has_element?(lv, "#org-form-needed li", "Has finished: the activity finishes")
+
+      assert has_element?(
+               lv,
+               ~s(#org-form-needed li a[href="/teams/coastrange/activities/#{hiker.id}"]),
+               "the activity"
+             )
+
+      # The button stays on, and says the same as an error.
+      lv |> element("#org-form-publish") |> render_click()
+      assert has_element?(lv, "#flash-error", refusal)
+
+      team = Repo.reload!(cast.team)
+      assert PublishDocument.call(team, form, hiker, cast.alex, nil, now) == {:error, refusal}
+
+      # A draft prints either way.
+      conn = post(conn, form_path(hiker, form) <> "/pdf", %{"answers" => %{}})
+      assert "%PDF" <> _ = conn.resp_body
+
+      hiker =
+        hiker
+        |> Ecto.Changeset.change(finished_at: DateTime.add(now, -1, :hour))
+        |> Repo.update!()
+
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      assert has_element?(lv, "#org-form-needed", "until the activity is published.")
+      assert has_element?(lv, "#org-form-needed-fix", "the activity")
+
+      hiker |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      refute has_element?(lv, "#org-form-needed")
+      assert %PublishedPDF{name: "Task report"} = publish(lv)
+    end
+
     test "downloads for the team's admins, and search finds it by its ID", ctx do
       %{cast: cast, hiker: hiker, form: form} = ctx
       conn = log_in_user(build_conn(), cast.alex)

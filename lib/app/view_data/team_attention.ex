@@ -614,7 +614,8 @@ defmodule App.ViewData.TeamAttention do
       key: :letter_settings,
       level: :warning,
       title: "Tax credit letters cannot be emailed until you add the #{Format.and_list(labels)}",
-      detail: "The CRA may question a letter without #{if length(missing) > 1, do: "them", else: "it"}.",
+      detail:
+        "The CRA may question a letter without #{if length(missing) > 1, do: "them", else: "it"}.",
       action: "Open team settings",
       names: Enum.map(missing, & &1.name)
     }
