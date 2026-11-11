@@ -19,7 +19,8 @@ enforces the top-level list and the held URLs.
   Actions link opens the confirm dialog on the record's page (`Web.DeleteConfirm`,
   decided 2026-10-29), so a delete is one step. An activity's tabs are `/activities/:id` (Overview), `/members`, `/travel`,
   `/equipment`, `/fields`, and `/history` (Members moved off `/activities/:id` on 2026-11-03,
-  with no redirect), a member's and an equipment item's custom fields are `/fields` too;
+  with no redirect), a member's and an equipment item's custom fields are `/fields` too,
+  and an item's history `/history`;
   adding goes under the tab it adds to, `/equipment/add` and `/members/add`, and
   changing too, `/fields/edit`. An organization's form on an activity is
   `/forms/:form_id`, and its PDF a post to `/forms/:form_id/pdf` (#950). A step of the Members tab, on its own LiveView, is under

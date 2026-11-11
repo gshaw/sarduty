@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- Equipment items have a History tab: what you changed in SAR Duty, such as a field
+  or the status, and what changed in D4H, such as a move, a new status, or a cost.
 - The home page keeps Sign up a team and Log in side by side on a phone, and lists your
   teams one per row when you have several.
 - Teams on SAR Duty Records get custom fields: the Fields tab, Change fields, member

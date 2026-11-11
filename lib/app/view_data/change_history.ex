@@ -2,19 +2,23 @@ defmodule App.ViewData.ChangeHistory do
   import Ecto.Query
 
   alias App.Model.ChangeSetRow
+  alias App.Model.CustomField
   alias App.Model.D4HChange
+  alias App.Model.EquipmentItem
   alias App.Model.Member
   alias App.Model.MemberStandingChange
   alias App.Model.PublishedPDF
   alias App.Model.Team
   alias App.Repo
   alias App.ViewModel.ActivityFormViewModel
+  alias App.ViewModel.EquipmentItemFormViewModel
 
-  # A member's or an activity's history (#174, step 3): what SAR Duty changed in D4H,
-  # from applied change set rows, and what the sync saw change in D4H, from `d4h_changes`.
-  # A member's history adds the standing changes team admins made (#366), `by:
-  # :team_admin`; both add the PDFs published and withdrawn for them, such as a member's
-  # tax credit letters and an activity's forms (#970). Each entry is a map: `at`, `by`
+  # A member's, an activity's, or an equipment item's history (#174, step 3, and #1014):
+  # what SAR Duty changed in D4H, from applied change set rows, and what the sync saw
+  # change in D4H, from `d4h_changes`. A member's history adds the standing changes team
+  # admins made (#366), `by: :team_admin`; a member's and an activity's add the PDFs
+  # published and withdrawn for them, such as a member's tax credit letters and an
+  # activity's forms (#970). Each entry is a map: `at`, `by`
   # (`:sar_duty` or `:d4h`), `seen_after` for a D4H change (the last refresh before it),
   # `text`, and for SAR Duty's changes `source`, `applied_by`, and `reason`. Newest first.
   #
@@ -76,6 +80,86 @@ defmodule App.ViewData.ChangeHistory do
     |> Enum.sort_by(& &1.at, {:desc, DateTime})
     |> Enum.take(@limit)
   end
+
+  @doc """
+  An equipment item's history (#1014): SAR Duty's adds and changes, from its change set
+  rows, and what the refresh saw change in D4H. Its use on activities is its Activities
+  tab, so it stays out.
+  """
+  def for_equipment_item(%Team{} = team, %EquipmentItem{team_id: team_id} = item)
+      when team_id == team.id do
+    changes = D4HChange.for_equipment_item(team.id, item.id, @limit)
+    index = CustomField.index(team.id)
+
+    # Keyed by the item's D4H id: change_set_rows has no item column.
+    rows =
+      ChangeSetRow
+      |> where([r], r.team_id == ^team.id and r.d4h_record_id == ^item.d4h_equipment_id)
+      |> where([r], r.action in [:create_equipment_item, :update_equipment_item])
+      |> applied_rows()
+      |> Enum.map(&item_row_words(&1, index, team))
+
+    merge(changes, rows, :equipment_item, team.timezone)
+  end
+
+  # A row's custom field values and place in words, as the refresh keeps them, so one
+  # set of sentences says both.
+  defp item_row_words(%ChangeSetRow{} = row, index, team) do
+    %{
+      row
+      | old_value: item_values_words(row.old_value || %{}, row.new_value, index, team),
+        new_value: item_values_words(row.new_value, row.new_value, index, team)
+    }
+  end
+
+  defp item_values_words(values, new, index, team) do
+    values = if Map.has_key?(new, "place"), do: place_to_where(values, team), else: values
+
+    case new["custom_values"] do
+      %{} = changed ->
+        ids = Map.keys(changed)
+        custom = values["custom_values"] || %{}
+
+        Map.put(
+          values,
+          "custom_values",
+          CustomField.describe_values(index, custom, ids, team.timezone)
+        )
+
+      _none ->
+        values
+    end
+  end
+
+  defp place_to_where(values, team),
+    do: values |> Map.delete("place") |> Map.put("where", place_words(team, values["place"]))
+
+  # A Change item place (EquipmentItemFormViewModel), named as the item page's Where.
+  defp place_words(team, %{"type" => "Equipment", "id" => id}) do
+    EquipmentItem
+    |> where([i], i.team_id == ^team.id and i.d4h_equipment_id == ^id)
+    |> select([i], i.title)
+    |> Repo.one() || "another item"
+  end
+
+  defp place_words(team, %{"type" => "Member", "id" => id}) do
+    Member
+    |> where([m], m.team_id == ^team.id and m.d4h_member_id == ^id)
+    |> select([m], m.name)
+    |> Repo.one() || "a member"
+  end
+
+  defp place_words(team, %{"type" => "EquipmentLocation", "id" => id}) do
+    EquipmentItem
+    |> where([i], i.team_id == ^team.id and i.d4h_location_id == ^id)
+    |> where([i], not is_nil(i.location_title))
+    |> select([i], i.location_title)
+    |> limit(1)
+    |> Repo.one() || "a place"
+  end
+
+  defp place_words(_team, %{"title" => title}), do: title
+  defp place_words(_team, _team_or_none), do: "no location"
 
   # Publishing, and withdrawing when it was. Publishing again replaces with no line of
   # its own: the new one's "Published" says it.
@@ -190,9 +274,10 @@ defmodule App.ViewData.ChangeHistory do
   end
 
   @doc """
-  One D4H change as a sentence, with times in time zone `tz`. `page` is `:member` or
-  `:activity`, the page it shows on, which decides whether it names the activity or the
-  member. The change's `activity` or `member` must be preloaded for attendance.
+  One D4H change as a sentence, with times in time zone `tz`. `page` is `:member`,
+  `:activity`, or `:equipment_item`, the page it shows on, which decides whether
+  attendance names the activity or the member. The change's `activity` or `member` must
+  be preloaded for attendance.
   """
   def describe(%D4HChange{record_kind: :member, action: :added}, _page, _tz),
     do: "Added to the team"
@@ -242,6 +327,77 @@ defmodule App.ViewData.ChangeHistory do
 
   def describe(%D4HChange{record_kind: :group_membership, action: :removed} = c, _page, _tz),
     do: "Removed from the #{group(c)} group"
+
+  def describe(%D4HChange{record_kind: :equipment_item, action: :added}, _page, _tz),
+    do: "Item added"
+
+  def describe(%D4HChange{record_kind: :equipment_item, action: :changed} = c, _page, tz),
+    do: c |> item_lines(c.fields, tz) |> sentences()
+
+  # An item's fields in the item page's order, each with its row keys and D4H change
+  # fields, which are the same names.
+  @item_fields ~w(title item_type kind status where barcode serial expires_at custom_values
+                  cost_per_km_cents cost_per_hour_cents cost_per_use_cents)
+
+  # A sentence for each of `fields` that changed, in the page's order.
+  defp item_lines(%{old_value: old, new_value: new}, fields, tz) do
+    old = old || %{}
+
+    @item_fields
+    |> Enum.filter(&(&1 in fields))
+    |> Enum.flat_map(&item_line(&1, old[&1], new[&1], tz))
+  end
+
+  defp item_line("title", old, new, _tz), do: ["Name changed from #{blank(old)} to #{blank(new)}"]
+
+  defp item_line("item_type", old, new, _tz),
+    do: ["Type changed from #{blank(old)} to #{blank(new)}"]
+
+  defp item_line("kind", old, new, _tz),
+    do: ["Category changed from #{blank(old)} to #{blank(new)}"]
+
+  defp item_line("status", old, new, _tz),
+    do: ["Status changed from #{item_status(old)} to #{item_status(new)}"]
+
+  defp item_line("where", old, new, _tz), do: ["Moved from #{old} to #{new}"]
+  defp item_line("barcode", old, new, _tz), do: [number_line("Barcode", old, new)]
+  defp item_line("serial", old, new, _tz), do: [number_line("Serial number", old, new)]
+  defp item_line("expires_at", _old, nil, _tz), do: ["Expiry cleared"]
+  defp item_line("expires_at", _old, new, tz), do: ["Expiry changed to #{day(new, tz)}"]
+
+  defp item_line("custom_values", _old, %{} = values, _tz) do
+    values
+    |> Enum.sort()
+    |> Enum.map(fn
+      {title, nil} -> "#{title} cleared"
+      {title, value} -> "#{title} changed to #{value}"
+    end)
+  end
+
+  defp item_line("cost_per_km_cents", old, new, _tz), do: [cost_line("Cost per km", old, new)]
+  defp item_line("cost_per_hour_cents", old, new, _tz), do: [cost_line("Cost per hour", old, new)]
+  defp item_line("cost_per_use_cents", old, new, _tz), do: [cost_line("Cost per use", old, new)]
+  defp item_line(_field, _old, _new, _tz), do: []
+
+  # As the Change item form names them, lowercase mid-sentence.
+  defp item_status(nil), do: "none"
+
+  defp item_status(status) do
+    label =
+      Enum.find_value(EquipmentItemFormViewModel.statuses(), status, fn {label, value} ->
+        value == status && label
+      end)
+
+    label |> String.downcase() |> String.replace("_", " ")
+  end
+
+  defp cost_line(label, old, new), do: number_line(label, money(old), money(new))
+
+  # D4H's costs are whole cents.
+  defp money(cents) when is_integer(cents),
+    do: cents |> Decimal.new() |> Decimal.div(100) |> Service.Format.money()
+
+  defp money(_none), do: nil
 
   defp member_field(field, _c, _tz) when field in ~w(email phone address),
     do: "Contact details changed"
@@ -395,6 +551,15 @@ defmodule App.ViewData.ChangeHistory do
     end
   end
 
+  # An item's Change item and Change fields (#1014) say what changed and to what. A row
+  # that changed nothing a sentence names reads "Changed in SAR Duty".
+  def describe_row(%ChangeSetRow{action: :update_equipment_item, new_value: new} = row, page, tz) do
+    case item_lines(row, Map.keys(new), tz) do
+      [] -> describe_row(row, page)
+      lines -> sentences(lines)
+    end
+  end
+
   def describe_row(%ChangeSetRow{} = row, page, _tz), do: describe_row(row, page)
 
   # A sentence for each box the row changed, leaving out a box that changed nothing.
@@ -543,7 +708,9 @@ defmodule App.ViewData.ChangeHistory do
     |> Enum.join(". ")
   end
 
-  def describe_row(%ChangeSetRow{action: :create_member}, _page), do: "Added in SAR Duty"
+  def describe_row(%ChangeSetRow{action: action}, _page)
+      when action in [:create_member, :create_equipment_item],
+      do: "Added in SAR Duty"
 
   # Says what changed, never the values (#423).
   def describe_row(%ChangeSetRow{action: :update_member, new_value: %{} = new}, _page) do
@@ -593,7 +760,6 @@ defmodule App.ViewData.ChangeHistory do
              :delete_qualification,
              :create_group,
              :update_group,
-             :create_equipment_item,
              :update_equipment_item,
              :delete_equipment_item
            ],

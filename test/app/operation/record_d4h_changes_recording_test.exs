@@ -8,9 +8,11 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
   alias App.Model.ChangeSetRow
   alias App.Model.D4HChange
   alias App.Operation.RecordD4HChanges
+  alias App.Operation.RefreshD4HData.Progress
   alias App.Operation.RefreshD4HData.UpsertActivities
   alias App.Operation.RefreshD4HData.UpsertAttendances
   alias App.Operation.RefreshD4HData.UpsertCustomFields
+  alias App.Operation.RefreshD4HData.UpsertEquipmentItems
   alias App.Operation.RefreshD4HData.UpsertGroupMemberships
   alias App.Operation.RefreshD4HData.UpsertMembers
 
@@ -286,6 +288,128 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
       assert change.new_value == %{
                "custom_values" => %{"City – Reporting" => "Delta", "Field 454" => ~s("PROS 1")}
              }
+    end
+  end
+
+  describe "an equipment item (#1014)" do
+    setup ctx do
+      team = team_fixture(%{d4h_access_key: "team-key", d4h_refreshed_at: @synced})
+      holder = member_fixture(team, %{name: "Sam Rivera"})
+
+      truck =
+        equipment_item_fixture(team, %{
+          d4h_equipment_id: 100,
+          title: "Rescue 1",
+          item_type: "vehicle",
+          kind: "Rescue Truck",
+          d4h_location_id: 875,
+          location_title: "Yard",
+          cost_per_km_cents: 67
+        })
+
+      Map.merge(ctx, %{team: team, holder: holder, truck: truck})
+    end
+
+    defp refresh_equipment(ctx, items) do
+      Req.Test.stub(D4H, fn conn ->
+        rows =
+          case List.last(conn.path_info) do
+            "equipment" ->
+              items
+
+            "equipment-kinds" ->
+              [%{"id" => 1, "title" => "Rescue Truck", "costPerDistance" => 70}]
+
+            "equipment-locations" ->
+              [%{"id" => 875, "title" => "Yard"}]
+
+            _other ->
+              []
+          end
+
+        Req.Test.json(conn, %{"results" => rows, "totalSize" => length(rows)})
+      end)
+
+      d4h = D4H.build_context_from_team(ctx.team)
+
+      RecordD4HChanges.recording(ctx.team, @now, fn ->
+        UpsertEquipmentItems.call(d4h, ctx.team, Progress.quiet(ctx.team.id))
+      end)
+    end
+
+    defp truck_row(ctx, attrs) do
+      Map.merge(
+        %{
+          "id" => 100,
+          "ref" => "Rescue 1",
+          "type" => "VEHICLE",
+          "status" => "OPERATIONAL",
+          "kind" => %{"id" => 1},
+          "costPerDistance" => 67,
+          "location" => %{"resourceType" => "EquipmentLocation", "id" => 875}
+        },
+        attrs.(ctx)
+      )
+    end
+
+    test "records a move, a status, and a cost in words, never on the holder's page", ctx do
+      refresh_equipment(ctx, [
+        truck_row(ctx, fn ctx ->
+          %{
+            "status" => "UNSERVICEABLE",
+            "costPerDistance" => nil,
+            "location" => %{"resourceType" => "Member", "id" => ctx.holder.d4h_member_id}
+          }
+        end),
+        %{"id" => 300, "ref" => "Radio 9", "type" => "EQUIPMENT", "status" => "OPERATIONAL"}
+      ])
+
+      truck_id = ctx.truck.id
+      assert [moved] = D4HChange |> where(equipment_item_id: ^truck_id) |> Repo.all()
+      assert moved.fields == ["status", "where", "cost_per_km_cents"]
+      assert moved.member_id == nil
+
+      assert moved.old_value == %{
+               "status" => "operational",
+               "where" => "Yard",
+               "cost_per_km_cents" => 67
+             }
+
+      assert moved.new_value == %{
+               "status" => "unserviceable",
+               "where" => "Sam Rivera",
+               "cost_per_km_cents" => 70
+             }
+
+      assert [%D4HChange{action: :added}] =
+               D4HChange |> where([c], c.equipment_item_id != ^truck_id) |> Repo.all()
+
+      # D4H deleting the item deletes its page, and its history with it.
+      Repo.delete!(ctx.truck)
+      assert D4HChange |> where(equipment_item_id: ^truck_id) |> Repo.all() == []
+    end
+
+    test "an unchanged item records nothing", ctx do
+      refresh_equipment(ctx, [truck_row(ctx, fn _ctx -> %{} end)])
+      assert Repo.all(D4HChange) == []
+    end
+
+    test "Change item is not recorded again by the sync that copies it back", ctx do
+      change_set =
+        ChangeSet.propose!(%ChangeSet{team_id: ctx.team.id, source: :edit}, [
+          %ChangeSetRow{
+            action: :update_equipment_item,
+            d4h_record_id: 100,
+            old_value: %{"status" => "operational"},
+            new_value: %{"status" => "lost"}
+          }
+        ])
+
+      [row] = change_set.rows
+      ChangeSetRow.record!(row, {:applied, 100}, ~U[2026-10-09 17:05:00.000000Z])
+
+      refresh_equipment(ctx, [truck_row(ctx, fn _ctx -> %{"status" => "LOST"} end)])
+      assert Repo.all(D4HChange) == []
     end
   end
 end

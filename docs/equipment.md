@@ -186,6 +186,13 @@ name, type, place, serial, and expiry change in D4H, and the form says so.
   [SaveEquipmentItem](../lib/app/operation/save_equipment_item.ex) and ApplyEdit
   (`ApplyEdit.d4h_takes?/1`). Adding and deleting stay a Records team's only.
 
+## History
+
+An item's History tab, `/equipment/:id/history` (#1014), lists Change item and Change
+fields saves, with what each field became, beside what the refresh saw change in D4H:
+name, category, status, a move, custom fields, and costs. Its use on activities stays on
+its Activities tab. See [change-history.md](change-history.md).
+
 ## Teams on SAR Duty Records
 
 Records serves D4H's equipment endpoints (its `Docs/api.md`), so a Records team gets the

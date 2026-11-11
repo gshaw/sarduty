@@ -3,6 +3,7 @@ defmodule App.Model.D4HChange do
 
   alias App.Model.Activity
   alias App.Model.D4HChange
+  alias App.Model.EquipmentItem
   alias App.Model.Group
   alias App.Model.Member
   alias App.Model.Qualification
@@ -20,9 +21,10 @@ defmodule App.Model.D4HChange do
     belongs_to :activity, Activity
     belongs_to :qualification, Qualification
     belongs_to :group, Group
+    belongs_to :equipment_item, EquipmentItem
 
     field :record_kind, Ecto.Enum,
-      values: [:member, :activity, :attendance, :award, :group_membership]
+      values: [:member, :activity, :attendance, :award, :group_membership, :equipment_item]
 
     field :action, Ecto.Enum, values: [:added, :changed, :removed]
     field :d4h_record_id, :integer
@@ -56,6 +58,14 @@ defmodule App.Model.D4HChange do
     |> where([c], c.team_id == ^team_id and c.activity_id == ^activity_id)
     |> newest_first(limit)
     |> preload(:member)
+    |> Repo.all()
+  end
+
+  @doc "An equipment item's changes, newest first (#1014)."
+  def for_equipment_item(team_id, equipment_item_id, limit) do
+    D4HChange
+    |> where([c], c.team_id == ^team_id and c.equipment_item_id == ^equipment_item_id)
+    |> newest_first(limit)
     |> Repo.all()
   end
 

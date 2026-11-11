@@ -6,12 +6,14 @@ defmodule Web.Components.ChangeHistory do
   alias App.ViewData.ChangeHistory
 
   @doc """
-  A member's or an activity's history, from `App.ViewData.ChangeHistory`: SAR Duty's
-  own changes to D4H, and changes the refresh saw in D4H.
+  A member's, an activity's, or an equipment item's history, from
+  `App.ViewData.ChangeHistory`: SAR Duty's own changes to D4H, and changes the refresh
+  saw in D4H. `since` is the month SAR Duty started keeping the page's history.
   """
   attr :id, :string, required: true
   attr :entries, :list, required: true
   attr :timezone, :string, required: true
+  attr :since, :string, default: "October 2026"
 
   def change_history(assigns) do
     ~H"""
@@ -34,7 +36,7 @@ defmodule Web.Components.ChangeHistory do
       </:col>
     </.table>
     <p :if={@entries == []} id={"#{@id}-empty"}>
-      No changes yet. SAR Duty started keeping history in October 2026.
+      No changes yet. SAR Duty started keeping history in {@since}.
     </p>
     """
   end

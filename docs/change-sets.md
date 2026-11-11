@@ -118,7 +118,7 @@ new kind of write is a new row action there, not a new call from a page or an op
   update `group_members` from the rows that applied. Group rules and hand changes to a
   group log to `group_membership_changes`, which the group page shows.
 
-Applied rows show on each member's and activity's history page, beside what the refresh
-saw change in D4H: see [change-history.md](change-history.md).
+Applied rows show on each member's, activity's, and equipment item's history page, beside
+what the refresh saw change in D4H: see [change-history.md](change-history.md).
 
 Still to come from #174: review settings per source, Oban for big sets, and undo.

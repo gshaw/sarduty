@@ -1,7 +1,8 @@
 # Change history
 
-Every member and activity has a History tab, for team admins only (#174, step 3):
-`/teams/:subdomain/members/:id/history` and `/teams/:subdomain/activities/:id/history`.
+Every member, activity, and equipment item has a History tab, for team admins only
+(#174, step 3, and #1014): `/teams/:subdomain/members/:id/history`,
+`/teams/:subdomain/activities/:id/history`, and `/teams/:subdomain/equipment/:id/history`.
 An activity's is a tab beside Members and Equipment, with the activity's page around it
 ([ActivityHistoryLive](../lib/web/live/activity_history_live.ex) keeps the team admin
 access; [ActivityLive](../lib/web/live/activity_live.ex) draws it).
@@ -63,8 +64,17 @@ process dictionary, so the stages don't each carry it. Outside a run nothing is 
 - **Tracked fields only.** Members: name, position, status, D4H access, joined, left.
   Activities: title, start, end, published, tags, deleted in D4H. Attendance: status,
   times, duration. Qualification awards: start and expiry. Group memberships: added and
-  removed. Anything else D4H changes, such as `updatedAt` or an activity's description, is
-  noise.
+  removed. Equipment items (#1014): name, type, category, status, where it is, barcode,
+  serial, expiry, custom fields, and costs. Anything else D4H changes, such as
+  `updatedAt` or an activity's description, is noise.
+- **An item's place is kept in words.** D4H puts an item inside another item, with a
+  member, or at a location, so its place is three ids. A move keeps one `where` field,
+  "Yard" to "Sam Rivera", named when the refresh sees it, since a container or member
+  can go before the page reads it. An item's change never shows on its holder's page.
+- **An item's history goes with it.** The refresh deletes an item D4H stops listing,
+  and its page, so its `d4h_changes` rows go too and nothing records the removal. Its
+  SAR Duty edits are found by the item's D4H id, since `change_set_rows` has no item
+  column. Its use on activities is the Activities tab, so it stays out.
 - **Contact details** (email, phone, address) are logged as "Contact details changed",
   and emergency contacts as "Emergency contact changed" (#423), with the field names and
   never the values. A member's own save says the same, "… changed in SAR Duty". An
@@ -76,8 +86,9 @@ process dictionary, so the stages don't each carry it. Outside a run nothing is 
   back on the next sync like anyone's change. A change to an attendance row that an
   applied row wrote in the last day, with the same status, is skipped. Group rules update
   the copy as they write, so their changes never reach the recorder. An edit of a team on
-  SAR Duty Records ([records.md](records.md)) is skipped by the sync that copies it back:
-  any change to that record seen since the edit applied.
+  SAR Duty Records ([records.md](records.md)), or of an item's Change item or Change
+  fields on any team, is skipped by the sync that copies it back: any change to that
+  record seen since the edit applied.
 - **Deleted qualifications and groups** take their awards and memberships with them, and
   those are recorded as removed. Each row keeps the qualification's or group's name in
   `label`, since the row it points at is gone.

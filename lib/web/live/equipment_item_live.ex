@@ -2,6 +2,7 @@ defmodule Web.EquipmentItemLive do
   use Web, :live_view_app_layout
 
   import Ecto.Query
+  import Web.Components.ChangeHistory
   import Web.Components.CustomFields
 
   alias App.Adapter.D4H
@@ -10,6 +11,7 @@ defmodule Web.EquipmentItemLive do
   alias App.Model.EquipmentUsage
   alias App.Operation.SaveEquipmentItem
   alias App.Repo
+  alias App.ViewData.ChangeHistory
   alias App.ViewData.EquipmentList
 
   def mount(%{"id" => id}, _session, socket) do
@@ -23,9 +25,10 @@ defmodule Web.EquipmentItemLive do
 
     socket =
       assign(socket,
-        page_title: if(tab == :fields, do: "#{item.title} · Fields", else: item.title),
+        page_title: page_title(item, tab),
         tab: tab,
         item: item,
+        entries: if(tab == :history, do: ChangeHistory.for_equipment_item(team, item), else: []),
         row: row,
         contents: Enum.filter(items, &(&1.d4h_container_id == item.d4h_equipment_id)),
         usages: EquipmentUsage.for_item(item),
@@ -36,6 +39,10 @@ defmodule Web.EquipmentItemLive do
 
     {:ok, socket}
   end
+
+  defp page_title(item, :activities), do: item.title
+  defp page_title(item, :fields), do: "#{item.title} · Fields"
+  defp page_title(item, :history), do: "#{item.title} · History"
 
   # A D4H team deletes its equipment in D4H, so only a Records team's page offers it.
   def handle_event("delete", _params, socket) do
@@ -145,8 +152,8 @@ defmodule Web.EquipmentItemLive do
           </ul>
         </section>
 
-        <%!-- Tabs only when the team has D4H equipment fields (#705): Activities alone isn't a choice. --%>
-        <.tabs :if={@fields? or @tab == :fields} label="Item">
+        <%!-- Fields only when the team has D4H equipment fields (#705). --%>
+        <.tabs label="Item">
           <:tab
             navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}"}
             current={@tab == :activities}
@@ -154,10 +161,17 @@ defmodule Web.EquipmentItemLive do
             Activities
           </:tab>
           <:tab
+            :if={@fields? or @tab == :fields}
             navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/fields"}
             current={@tab == :fields}
           >
             Fields
+          </:tab>
+          <:tab
+            navigate={~p"/teams/#{@current_team}/equipment/#{@item.id}/history"}
+            current={@tab == :history}
+          >
+            History
           </:tab>
         </.tabs>
         <.custom_fields_table :if={@tab == :fields} id="item-fields" rows={@field_rows} />
@@ -183,6 +197,14 @@ defmodule Web.EquipmentItemLive do
           </.table>
           <p :if={@usages == []} class="hint">No activities have this item.</p>
         </section>
+
+        <.change_history
+          :if={@tab == :history}
+          id="item-history"
+          entries={@entries}
+          timezone={@current_team.timezone}
+          since="November 2026"
+        />
       </main>
     </div>
     """
