@@ -11,7 +11,7 @@ defmodule Web.Admin.AdminCollectionLive do
 
     socket =
       socket
-      |> assign(page_title: "Admins", admins: admins, teams: teams, now: DateTime.utc_now())
+      |> assign(page_title: "Admins", admins: admins, teams: teams)
       |> assign(passkeys: UserPasskey.count_by_user())
 
     {:ok, socket}
@@ -33,19 +33,8 @@ defmodule Web.Admin.AdminCollectionLive do
           <.a navigate={~p"/teams/#{team}"}>{team.name}</.a>
         <% end %>
       </:col>
-      <:col :let={admin} label="Last seen" class="whitespace-nowrap">
-        {last_seen(admin, @teams[admin.last_team_id], @now)}
-      </:col>
       <:col :let={admin} label="Passkeys">{Map.get(@passkeys, admin.id, "None")}</:col>
     </.table>
     """
-  end
-
-  # In the zone of the team they last opened, since a user has no zone of their own.
-  defp last_seen(%{last_seen_at: nil}, _team, _now), do: "Never"
-
-  defp last_seen(admin, team, now) do
-    timezone = if team, do: team.timezone, else: "Etc/UTC"
-    Service.Format.days_ago(admin.last_seen_at, now, timezone)
   end
 end
