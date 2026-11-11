@@ -294,9 +294,11 @@ running its expects, then prints it there.
 - **BCSARA's Supplement** ([supplement.txt](../priv/forms/bcsara/supplement.txt)) is
   EMCR's Expense reimbursement request supplement, on a blank page in D4H's layout with
   room for 18 people, which EMCR takes today. It prints the claim's people rules: a
-  row for each person who attended, by name, with their Travel km, the km rate on the
-  day they started, meals, the personal equipment allowance on a response, and their
-  total. It asks meals provided to everyone, and for each person On task and Meals
+  row for each person who attended, by name and when they started and ended, with the
+  end's day too when it's a later one, their Travel km, the km rate on the day they
+  started, meals, the personal equipment allowance on a response, and their total. A
+  person with no end time in D4H ends when the activity does, as every attendance
+  report reads it. It asks meals provided to everyone, and for each person On task and Meals
   provided. The header has the task number and when the task ran, and the footer the
   Task Leader's Name, Date Report Completed, and the page; the task leader signs by
   hand. More than 18 people print another copy of the page, each with its own subtotal.
