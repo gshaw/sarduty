@@ -613,6 +613,16 @@ defmodule App.DocumentTest do
       assert %{align: :right} = second
     end
 
+    test "a row that ends on a later day prints that day too" do
+      [person] = people(1)
+      overnight = put_in(person.values["finished_at"], ~U[2026-06-02 09:30:00Z])
+      values = %{"task.`Response Type`" => "Response", "people" => [overnight]}
+      output = Document.evaluate(supplement(), values, "America/Vancouver")
+
+      assert on_copy(output, 1, "rows.1.who") ==
+               "Person 1: Jun 1, 2026, 08:00 to Jun 2, 2026, 02:30"
+    end
+
     test "more people than fit print another copy, numbered, each with its own subtotal" do
       output = supplement_output(20)
 

@@ -94,10 +94,12 @@ fill
   leader_date = task.`Date Report Completed` as date_long
   page_number = '{page} of {pages}'
 
+-- A row that ends on a later day prints that day too. A person's times fall back to
+-- the activity's, so every row has an end.
 fill each people into rows
-  who = if finished_at is null
-          then '{member}: {started_at as date_short}, {started_at as time}'
-          else '{member}: {started_at as date_short}, {started_at as time} to {finished_at as time}'
+  who = if '{finished_at as date_short}' = '{started_at as date_short}'
+          then '{member}: {started_at as date_short}, {started_at as time} to {finished_at as time}'
+          else '{member}: {started_at as date_short}, {started_at as time} to {finished_at as date_short}, {finished_at as time}'
   km = coalesce(km, 0) as number
   rate = rate as money
   meals = meals * meal as money
