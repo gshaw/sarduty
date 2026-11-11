@@ -8,9 +8,13 @@ defmodule Web.CSP do
   template. Put it in assets/js. Web.CSPTest refuses both. Adding something from another
   site (map tiles, an embed) means adding its origin here, on purpose.
 
-  Enforced since 2026-11-11, after a week as `Content-Security-Policy-Report-Only`
-  reported only browser extensions. Browsers still post what it blocks to /csp-reports
-  (Web.CSPReportController), which logs it and sends Honeybadger all but extensions'.
+  Enforced since #1011. Before that it was `Content-Security-Policy-Report-Only` from
+  #885, until its reports were only browser extensions'. Browsers still post what it
+  blocks to /csp-reports (Web.CSPReportController), which logs it and sends all but
+  browser extensions' reports to Honeybadger.
+
+  This header replaces the default `put_secure_browser_headers/2` sends, so a page has
+  one policy.
 
   - `'wasm-unsafe-eval'`: the barcode reader is WebAssembly (assets/js/barcode_reader.js).
   - `'report-sample'`: a report of blocked inline script carries its first 40

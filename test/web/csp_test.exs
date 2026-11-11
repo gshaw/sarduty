@@ -14,6 +14,15 @@ defmodule Web.CSPTest do
     assert csp(conn) =~ "report-uri #{Web.Endpoint.url()}/csp-reports"
   end
 
+  # put_secure_browser_headers/2 sends its own short policy; ours must replace it, and
+  # nothing may still say report-only.
+  test "a page sends one enforced policy and no report-only one", %{conn: conn} do
+    conn = get(conn, "/styles")
+    assert [policy] = get_resp_header(conn, "content-security-policy")
+    assert policy =~ Web.CSP.policy()
+    assert get_resp_header(conn, "content-security-policy-report-only") == []
+  end
+
   test "a verify page sends the same policy", %{conn: conn} do
     conn =
       conn
