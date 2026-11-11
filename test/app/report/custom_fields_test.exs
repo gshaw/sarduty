@@ -228,11 +228,24 @@ defmodule App.Report.CustomFieldsTest do
     assert shown.(admin, "equipment") == ["`Serviced`"]
   end
 
-  test "a team on Records has no custom fields" do
+  # Records serves custom fields as D4H does (#1003).
+  test "a team on Records reads its custom fields as a D4H team does" do
     %{team: team} = records_team_with_user_fixture()
-    custom_field_fixture(team, %{title: "Task Type"})
 
-    assert error("select `Task Type` from activities", team) =~ "no field `Task Type`"
+    task =
+      custom_field_fixture(team, %{
+        title: "Task Type",
+        field_type: "single_choice",
+        options: choice(200, ["Search", "Rescue"])
+      })
+
+    incident(team, %{id(task) => [201]})
+    incident(team, %{})
+
+    assert [[1]] = run!("select count(id) from activities where `Task Type` = 'Rescue'", team)
+
+    assert run!("select `Task Type` from activities where `Task Type` = 'Rescue'", team) ==
+             [["Rescue"]]
   end
 
   # BCSARA keeps counts and file numbers in text fields.

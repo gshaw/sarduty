@@ -26,8 +26,8 @@ defmodule App.Operation.AddDemoFormsTest do
     assert id == form.id
   end
 
-  # A form reading a custom field fails on a team without it, such as a Records team.
-  test "saves on Silver Basin SAR, a Records-style team with no custom fields" do
+  # Saving a form runs it on every team in the organization, so it passes there.
+  test "saves on Silver Basin SAR, WESARA's second team" do
     organization = organization_fixture([silver_basin()])
 
     for path <- AddDemoForms.paths() do

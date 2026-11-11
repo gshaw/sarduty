@@ -5,6 +5,7 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
 
   alias App.Adapter.D4H
   alias App.Model.Attendance
+  alias App.Model.CustomField
   alias App.Model.Event
   alias App.Model.LocationBookmark
   alias App.Model.MemberCard
@@ -28,13 +29,6 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     team = team_fixture(Map.merge(%{d4h_access_key: "team-key"}, attrs))
     {:ok, at, 0} = DateTime.from_iso8601(@newest)
     heads = Map.new(@lists, &{&1, %{total_size: 10, newest_updated_at: at}})
-
-    # SAR Duty Records has no custom fields, so its head is always empty (#681).
-    heads =
-      if D4H.records?(team),
-        do: Map.put(heads, "custom-fields", %{total_size: 0, newest_updated_at: nil}),
-        else: heads
-
     SyncD4HChanges.save_heads(team, heads, DateTime.utc_now())
   end
 
@@ -46,8 +40,8 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
     check_unchanged_sync(synced_team(), 19)
   end
 
-  test "a SAR Duty Records team's sync reads the open years too, and never asks for custom fields" do
-    check_unchanged_sync(synced_team(%{d4h_api_host: D4H.records_host()}), 18)
+  test "a SAR Duty Records team's sync makes the same checks, custom fields too (#1003)" do
+    check_unchanged_sync(synced_team(%{d4h_api_host: D4H.records_host()}), 19)
   end
 
   # D4H answers every head unchanged and each open year's read empty, telling the test.
@@ -189,6 +183,99 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
         _other_kind -> Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
       end
     end)
+  end
+
+  # Records serves custom fields in D4H's shape (#1003): the team's own, its
+  # organisation's, and their values on each record.
+  test "a SAR Duty Records team's moved fields head copies its fields, and the values arrive" do
+    team = synced_team(%{d4h_api_host: D4H.records_host()})
+    test = self()
+
+    activity =
+      activity_fixture(team, %{
+        activity_kind: "incident",
+        started_at: DateTime.utc_now(),
+        custom_values: %{}
+      })
+
+    owner = %{"resourceType" => "Organisation", "id" => 2_000_000_000}
+
+    fields = [
+      %{
+        "id" => 93,
+        "owner" => owner,
+        "targetResourceType" => "Incident",
+        "title" => "Agency",
+        "type" => "SINGLE_CHOICE",
+        "restricted" => "UNRESTRICTED",
+        "memberPrivacy" => "HIDDEN",
+        "mandatory" => true,
+        "ordering" => 0,
+        "archivedAt" => nil,
+        "options" => [%{"id" => 43, "label" => "Police", "ordering" => 0, "archivedAt" => nil}]
+      },
+      %{
+        "id" => 94,
+        "owner" => %{"resourceType" => "Team", "id" => team.d4h_team_id},
+        "targetResourceType" => "Incident",
+        "title" => "People helped",
+        "type" => "NUMBER",
+        "restricted" => "UNRESTRICTED",
+        "memberPrivacy" => "HIDDEN",
+        "mandatory" => false,
+        "ordering" => 1,
+        "archivedAt" => nil,
+        "options" => []
+      }
+    ]
+
+    incident = %{
+      "id" => activity.d4h_activity_id,
+      "resourceType" => "Incident",
+      "owner" => %{"resourceType" => "Team", "id" => team.d4h_team_id},
+      "reference" => activity.ref_id,
+      "referenceDescription" => activity.title,
+      "published" => false,
+      "startsAt" => DateTime.to_iso8601(activity.started_at),
+      "endsAt" => DateTime.to_iso8601(activity.finished_at),
+      "address" => %{},
+      "tags" => [],
+      "customFieldValues" => [
+        %{"customField" => %{"id" => 93, "type" => "SINGLE_CHOICE"}, "value" => [43]},
+        %{"customField" => %{"id" => 94, "type" => "NUMBER"}, "value" => "3"}
+      ]
+    }
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      conn = Plug.Conn.fetch_query_params(conn)
+      send(test, {:records, list_name(conn), conn.query_params["size"]})
+
+      case {list_name(conn), conn.query_params} do
+        {"custom-fields", %{"size" => "1"}} ->
+          Req.Test.json(conn, head(2, "2026-10-06T09:00:00Z"))
+
+        {"custom-fields", _params} ->
+          Req.Test.json(conn, %{"results" => fields, "totalSize" => 2})
+
+        {"incidents", %{"starts_after" => _}} ->
+          Req.Test.json(conn, %{"results" => [incident], "totalSize" => 1})
+
+        {_list, %{"starts_after" => _}} ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+        _head ->
+          Req.Test.json(conn, head(10))
+      end
+    end)
+
+    assert perform(team) == :ok
+    assert_received {:records, "custom-fields", "1000"}
+
+    assert [%{title: "Agency", owner_type: "Organisation", required: true}, helped] =
+             CustomField.get_all(team.id, "incident")
+
+    assert helped.title == "People helped"
+    assert Repo.reload(activity).custom_values == %{"93" => [43], "94" => "3"}
   end
 
   test "a tag changed in D4H reaches an open year's activity, though no head moved (#358)" do

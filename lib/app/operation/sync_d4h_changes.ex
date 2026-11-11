@@ -19,7 +19,7 @@ defmodule App.Operation.SyncD4HChanges do
   reads as an empty list here, never as a rejected key. While the team's whiteboard is
   off, the sync skips it and the nightly refresh tries again. Location bookmarks (#614)
   are the 15th, and custom fields (#681) the 16th: their definitions only, since the
-  values ride on the activities and equipment. SAR Duty Records has none, and isn't asked.
+  values ride on the activities and equipment. SAR Duty Records serves them as D4H does.
   """
 
   import Ecto.Query
@@ -232,10 +232,6 @@ defmodule App.Operation.SyncD4HChanges do
 
   defp fetch_head(d4h, "location-bookmarks"),
     do: D4H.fetch_list_head(d4h, "/location-bookmarks", D4H.location_bookmark_params())
-
-  defp fetch_head(d4h, "custom-fields") do
-    if D4H.custom_fields?(d4h), do: D4H.fetch_list_head(d4h, "/custom-fields"), else: @empty_head
-  end
 
   defp fetch_head(d4h, list), do: D4H.fetch_list_head(d4h, "/" <> list)
 

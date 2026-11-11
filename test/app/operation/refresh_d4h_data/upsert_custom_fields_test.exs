@@ -40,10 +40,20 @@ defmodule App.Operation.RefreshD4HData.UpsertCustomFieldsTest do
     assert [_] = CustomField.get_all(other_team.id, "incident")
   end
 
-  test "a SAR Duty Records team has no custom fields, and D4H isn't asked" do
+  test "a SAR Duty Records team's fields come from Records, as a D4H team's do (#1003)" do
     team = team_fixture(%{d4h_api_host: D4H.records_host(), d4h_access_key: "key"})
-    Req.Test.stub(App.Adapter.D4H, fn _conn -> flunk("Records was asked for custom fields") end)
 
-    assert team |> D4H.build_context_from_team() |> D4H.fetch_custom_fields() == []
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      assert conn.host == D4H.records_host()
+      assert String.ends_with?(conn.request_path, "/custom-fields")
+
+      Req.Test.json(conn, %{
+        "results" => [%{"id" => 7, "targetResourceType" => "Member", "title" => "Call sign"}],
+        "totalSize" => 1
+      })
+    end)
+
+    assert [%D4H.CustomField{d4h_custom_field_id: 7, target: "member"}] =
+             team |> D4H.build_context_from_team() |> D4H.fetch_custom_fields()
   end
 end

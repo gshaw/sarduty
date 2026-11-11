@@ -24,7 +24,6 @@ defmodule App.Report.CustomFields do
 
   import Ecto.Query, only: [where: 3, order_by: 3]
 
-  alias App.Adapter.D4H
   alias App.Model.CustomField
   alias App.Model.Team
   alias App.Report.Context
@@ -41,9 +40,7 @@ defmodule App.Report.CustomFields do
   `kinds`, `options` as `{id, label}`, and whether it is `restricted`. Read once for a
   Context.
   """
-  def read(%Team{} = team, repo) do
-    if D4H.records?(team), do: %{}, else: team |> live_fields(repo) |> by_subject()
-  end
+  def read(%Team{} = team, repo), do: team |> live_fields(repo) |> by_subject()
 
   defp live_fields(team, repo) do
     CustomField

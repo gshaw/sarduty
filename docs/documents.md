@@ -460,8 +460,8 @@ organization's space, `/orgs/:slug/forms` ([organizations.md](organizations.md#i
   (`PrintDocument.check_layout/1`). An error names the team,
   and the upload page shows it under the file to fix. A team's RESTRICTED fields are left
   out of the check, so a form never reads one ([organizations.md](organizations.md#what-an-organization-never-sees)).
-  A team on SAR Duty Records has no custom fields, so a form that reads BCSARA's fields
-  can't be saved for an organization with one.
+  A team without a field a form reads, such as a Records team outside BCSARA, fails the
+  check, so the form can't be saved for its organization.
 - **Its organization admins set it Off, Testing, or On** for every team
   (App.Operation.SetFormState, #970). Testing, team admins download draft PDFs only,
   under a Testing only banner; on, they publish. Its admins **try it** on Coast Range SAR (App.Operation.TryForm): one of its activities the

@@ -29,6 +29,9 @@ defmodule App.Model.Organization do
     # For dates about the organization, such as an organization admin's Last seen. A
     # team's own dates keep the team's zone.
     field :timezone, :string, default: "America/Vancouver"
+    # Its id in SAR Duty Records, which keeps its custom fields there (#1003): each demo's
+    # WESARA and the dev WESARA. Nil for every other.
+    field :records_organization_id, :integer
     has_many :teams, Team
     timestamps(type: :utc_datetime_usec)
   end

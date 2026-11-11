@@ -16,12 +16,16 @@ organization admins, so they open both Coast Range and the organization's space.
 
 - **WESARA**, Western Search and Rescue Association, said "we-SAR-ah"
   (`CoastRange.organization/0`). Its organization admins are Morgan Ellis, executive
-  director, and Rowan Pike, office manager; neither belongs to a team.
+  director, and Rowan Pike, office manager; neither belongs to a team. It owns BCSARA's
+  27 incident fields (#1003), so a BC form has every line to fill.
 - **Coast Range SAR** has a member for each case (the `App.CoastRange` moduledoc's Who to
   use). Zoë Lefèvre is its accented name, with attended hours, so she gets a tax letter.
+  Its own fields, and their values on every incident, member, and item, are in the cast
+  with each kind's and item's costs. Its Callout template fills four fields.
 - **Silver Basin SAR** (SBSAR, `silverbasin`) has five members, four incidents and two
   trainings in the past year, all with hours tags, so the organization's totals aren't
-  zero and every member gets a letter. Jamie Sato is its team admin. Łukasz Wójcik, Trần
+  zero and every member gets a letter. Its incidents fill WESARA's fields, since a
+  published incident has every required one. Jamie Sato is its team admin. Łukasz Wójcik, Trần
   Minh Châu, and Siobhán O'Connor-Hale are names tax letters once crashed on: a letter
   outside Latin-1, stacked marks, and an apostrophe that breaks HTML, Typst, and CSV
   escaping. No groups, equipment, chores, or cards.
@@ -62,11 +66,14 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
 3. **The build.** `/demo/building` (`Web.DemoBuildLive`) runs
    `App.Operation.BuildDemoTeam` once, behind a spinner, in about two seconds. Records
    makes both teams from their casts (`App.DemoCast`, a `POST /v3/sarduty/demo-teams`
-   each) and picks their ids. SAR Duty adds each team, marked as the demo's in the same
-   transaction, refreshes it like any team, and adds what only it keeps on Coast Range
+   each) and picks their ids. Coast Range's cast makes WESARA in Records too, owning
+   the 27 incident fields, and Silver Basin's joins it (#1003). SAR Duty adds each team,
+   marked as the demo's in the same transaction, refreshes it like any team, picks the
+   member fields Coast Range copies, and adds what only it keeps on Coast Range
    (endorsements, group rules, ID cards with real codes, away periods, chores,
-   templates, and travel), matched through Records' ids. Alex Chen is the team contact.
-   Then WESARA's copy, slug `wesara-<demo id>`, with both teams in it and Morgan Ellis,
+   templates with their field values, and travel), matched through Records' ids. Alex Chen is the team contact.
+   Then WESARA's copy, slug `wesara-<demo id>`, keeping its id in Records
+   (`records_organization_id`), with both teams in it and Morgan Ellis,
    Rowan Pike, and the visitor as its organization admins. One shared WESARA would let
    a visitor change settings other visitors see, and see other demos' totals. A failure
    removes everything, in Records too, and the page offers Try again. A visitor's 3
@@ -102,8 +109,7 @@ Demo teams sync only while someone has one open: a team admin's page marks it se
 demo's teams stay out of the nightly refresh and the sync's team count for Healthchecks
 (`Team.get_all_real/0`). Adminland's team list shows them under Demos, apart from the
 real teams, each demo's Silver Basin after its Coast Range, with whose each is and when
-it goes. 200 live demos are 400 Records teams. Custom fields stay out of the cast:
-Records has none.
+it goes. 200 live demos are 400 Records teams.
 
 /agents/demo (`Web.DemoAgentsDoc`) tells agents how to start one, find their way, the
 organization's space included, and end it.
@@ -128,7 +134,7 @@ moment it opens, staged in `App.CoastRange` (its moduledoc has the cases):
 - Letters have Alex Chen as signer, so only the signature is missing.
 - **A form to publish**: WESARA's Task report (`priv/forms/wesara`), on, so the visitor
   fills it on an incident and selects Publish; its PDF says SAMPLE. It is made up, and
-  reads only an activity's own fields, since Records teams have no custom fields
+  reads only an activity's own fields, so it prints on any team
   (`App.Operation.AddDemoForms`). The dev WESARA gets it too.
 
 Not staged: certificates waiting for review (Records has no documents, so accepting one

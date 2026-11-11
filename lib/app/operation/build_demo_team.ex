@@ -4,9 +4,11 @@ defmodule App.Operation.BuildDemoTeam do
   up: Coast Range SAR, Silver Basin SAR beside it, and WESARA's copy with both in it and
   its made-up Task report on (#963, App.Operation.AddDemoForms). Records makes each team from its cast and picks its ids (App.DemoCast). SAR
   Duty then adds each team, marked as the demo's before anything can send, refreshes it
-  like any team, and adds what only SAR Duty keeps on Coast Range (endorsements, ID
-  cards, away periods, chores), matched through Records' ids. Silver Basin never syncs
-  after this: nobody opens its team pages.
+  like any team, picks the member fields Coast Range copies, and adds what only SAR Duty
+  keeps on Coast Range (endorsements, ID cards, away periods, chores, templates with their
+  field values), matched through Records' ids. Records makes WESARA with Coast Range's
+  cast, owning the incident fields, and SAR Duty keeps its id (#1003). Silver Basin never
+  syncs after this: nobody opens its team pages.
 
   A failure removes whatever was made, in Records too, so the next open starts clean.
   Runs in App.Worker.BuildDemoTeamWorker, and tells the waiting page through topic/1.
@@ -20,6 +22,7 @@ defmodule App.Operation.BuildDemoTeam do
   alias App.CoastRange
   alias App.DemoCast
   alias App.Model.Activity
+  alias App.Model.CustomField
   alias App.Model.DemoTeam
   alias App.Model.EquipmentItem
   alias App.Model.Group
@@ -30,10 +33,13 @@ defmodule App.Operation.BuildDemoTeam do
   alias App.Model.OrganizationAdmin
   alias App.Model.Tag
   alias App.Model.Team
+  alias App.Model.Template
   alias App.Model.Trip
   alias App.Operation.AddDemoForms
   alias App.Operation.DeleteTeam
   alias App.Operation.RefreshD4HData
+  alias App.Operation.RefreshD4HData.Progress
+  alias App.Operation.RefreshD4HData.UpsertMembers
   alias App.Repo
   alias App.SilverBasin
 
@@ -74,10 +80,9 @@ defmodule App.Operation.BuildDemoTeam do
 
   def call(%DemoTeam{} = demo, now) do
     visitor = visitor(demo)
-    casts = [DemoCast.cast(now, visitor), DemoCast.silver_basin(now)]
 
     result =
-      with {:ok, records} <- create_in_records(casts) do
+      with {:ok, records} <- create_in_records(now, visitor) do
         names = %{
           coast_range: %{subdomain: subdomain()},
           silver_basin: %{subdomain: subdomain()},
@@ -98,9 +103,7 @@ defmodule App.Operation.BuildDemoTeam do
   WESARA's. `{:ok, coast_range_team}` or `{:error, reason}`, with nothing left behind.
   """
   def build_dev_teams(%{name: _, email: _} = visitor, now) do
-    casts = [DemoCast.cast(now, visitor), DemoCast.silver_basin(now)]
-
-    with {:ok, records} <- create_in_records(casts) do
+    with {:ok, records} <- create_in_records(now, visitor) do
       names = %{
         coast_range: %{subdomain: "coastrange"},
         silver_basin: %{subdomain: "silverbasin"},
@@ -119,21 +122,28 @@ defmodule App.Operation.BuildDemoTeam do
   defp visitor(demo),
     do: %{name: DemoTeam.visitor_name(demo), email: DemoTeam.visitor_email(demo)}
 
-  # Both teams in Records, or neither.
-  defp create_in_records(casts) do
-    result =
-      Enum.reduce_while(casts, {:ok, []}, fn cast, {:ok, made} ->
-        case D4H.create_demo_team(cast) do
-          {:ok, records} ->
-            {:cont, {:ok, [records | made]}}
+  # Both teams in Records, or neither. Coast Range's cast makes WESARA there, with its
+  # fields, and Silver Basin's joins it, so it is made from Coast Range's answer.
+  defp create_in_records(now, visitor) do
+    with {:ok, coast} <- now |> DemoCast.cast(visitor) |> D4H.create_demo_team() do
+      case create_silver_basin(now, coast) do
+        {:ok, basin} ->
+          {:ok, [coast, basin]}
 
-          {:error, _error} = error ->
-            Enum.each(made, &D4H.delete_records_team(%Team{d4h_team_id: &1.d4h_team_id}))
-            {:halt, error}
-        end
-      end)
+        {:error, _error} = error ->
+          D4H.delete_records_team(%Team{d4h_team_id: coast.d4h_team_id})
+          error
+      end
+    end
+  end
 
-    with {:ok, made} <- result, do: {:ok, Enum.reverse(made)}
+  defp create_silver_basin(now, coast) do
+    now
+    |> DemoCast.silver_basin(%{id: coast.organization_id, ids: coast.ids})
+    |> D4H.create_demo_team()
+  rescue
+    # Records' answer lacked a field Silver Basin has values for.
+    error in KeyError -> {:error, error |> Exception.message() |> D4H.Error.exception()}
   end
 
   # A visitor's days count from now, when they first see it. A test's keeps its hours.
@@ -148,8 +158,10 @@ defmodule App.Operation.BuildDemoTeam do
 
   defp build(demo, [coast, basin] = records, org_visitor, names, now, visitor) do
     visitor = visitor || org_visitor
-    team = insert_team(CoastRange.build(now), demo, :team_id, coast, names.coast_range, now)
+    rows = CoastRange.build(now)
+    team = insert_team(rows, demo, :team_id, coast, names.coast_range, now)
     team = refresh!(team)
+    copy_member_fields(team, rows, coast.ids)
     add_local_rows(team, coast.ids, visitor, now)
     team = put_contact(team, coast.ids)
 
@@ -159,7 +171,7 @@ defmodule App.Operation.BuildDemoTeam do
       |> insert_team(demo, :second_team_id, basin, names.silver_basin, now)
       |> refresh!()
 
-    insert_organization(demo, [team, second], names.slug, org_visitor)
+    insert_organization(demo, [team, second], names.slug, org_visitor, coast.organization_id)
     {:ok, team}
   rescue
     error ->
@@ -249,10 +261,15 @@ defmodule App.Operation.BuildDemoTeam do
   # WESARA's copy, with both teams in it, its two organization admins, a demo's visitor
   # beside them (the senior manager who opens both Coast Range and its space), and its
   # made-up forms, on.
-  defp insert_organization(demo, teams, slug, visitor) do
+  defp insert_organization(demo, teams, slug, visitor, records_organization_id) do
     {:ok, organization} =
       Repo.transaction(fn ->
-        organization = Repo.insert!(%{CoastRange.organization() | slug: slug})
+        organization =
+          Repo.insert!(%{
+            CoastRange.organization()
+            | slug: slug,
+              records_organization_id: records_organization_id
+          })
 
         Team
         |> where([t], t.id in ^Enum.map(teams, & &1.id))
@@ -311,6 +328,21 @@ defmodule App.Operation.BuildDemoTeam do
     :ok
   end
 
+  # The member fields Coast Range copies, picked as a team admin picks them: SAR Duty's
+  # own choice, so set after the sync made the fields, then the members read again for
+  # their values (#1003).
+  defp copy_member_fields(team, rows, ids) do
+    picked =
+      for {:custom_field, id, %{copy_values: true}, []} <- rows,
+          do: Map.fetch!(ids, DemoCast.key({:custom_field, id}))
+
+    CustomField
+    |> where([f], f.team_id == ^team.id and f.d4h_custom_field_id in ^picked)
+    |> Repo.update_all(set: [copy_values: true])
+
+    team |> D4H.build_context_from_team() |> UpsertMembers.call(team, Progress.quiet(team.id))
+  end
+
   # Get help goes to Alex Chen, as a team that picked its contacts has it (#780).
   defp put_contact(team, ids) do
     alex =
@@ -354,6 +386,9 @@ defmodule App.Operation.BuildDemoTeam do
 
   defp localize(%GroupRule{} = row, team, ids),
     do: %{row | team_id: team.id, d4h_group_id: ids[DemoCast.key({:group, row.d4h_group_id})]}
+
+  defp localize(%Template{} = row, team, ids),
+    do: %{row | team_id: team.id, custom_values: DemoCast.local_values(row.custom_values, ids)}
 
   defp localize(%Trip{} = row, team, ids),
     do: %{

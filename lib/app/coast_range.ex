@@ -586,10 +586,14 @@ defmodule App.CoastRange do
         copy_values: true,
         options: options(@areas_options, &area_option/1)
       )
-    ] ++ bcsara_fields()
+    ] ++ organization_fields()
   end
 
-  defp bcsara_fields do
+  @doc """
+  WESARA's 27 incident fields, BCSARA's, as `{:custom_field, id, field, []}` rows owned by
+  the organization, as D4H gives them to each of its teams. Silver Basin SAR has them too.
+  """
+  def organization_fields do
     for {{title, type, required, labels}, i} <- Enum.with_index(@bcsara_fields) do
       id = bcsara_id(title)
       options = for {label, j} <- Enum.with_index(labels), do: {label, id * 100 + j}
@@ -618,6 +622,14 @@ defmodule App.CoastRange do
       nil -> raise ArgumentError, "BCSARA has no field #{title}"
       i -> 9_400_401 + i
     end
+  end
+
+  @doc """
+  Values for WESARA's fields (organization_fields/0), from `{title, value}` pairs: an
+  option's label for a choice, or the text. A nil value is left out.
+  """
+  def organization_values(pairs) do
+    for {title, value} <- pairs, value != nil, into: %{}, do: bcsara_value(title, value)
   end
 
   # A value for BCSARA's field `title`: an option's id in a list, or the text.
@@ -1070,8 +1082,8 @@ defmodule App.CoastRange do
 
     title
     |> bcsara_values(agency, helped, file_number, today |> Date.add(1 - days), n)
-    |> Enum.reject(fn {_title, value} -> is_nil(value) end)
-    |> Enum.into(values, fn {field, value} -> bcsara_value(field, value) end)
+    |> organization_values()
+    |> Map.merge(values)
   end
 
   defp bcsara_values(title, agency, helped, file_number, reported, n) do
@@ -1509,7 +1521,10 @@ defmodule App.CoastRange do
   defp templates do
     for {title, kind, details, tags, groups, items} <- @templates do
       template =
-        struct!(%Template{title: title, activity_kind: kind, custom_values: %{}}, details)
+        struct!(
+          %Template{title: title, activity_kind: kind, custom_values: template_values(title)},
+          details
+        )
 
       [
         {:template, title, template, []},
@@ -1520,6 +1535,15 @@ defmodule App.CoastRange do
     end
     |> List.flatten()
   end
+
+  # Callout fills the fields every callout has the same, so a demo's template shows them.
+  defp template_values("Callout") do
+    [{"Agency", "Police"}, {"Response Type", "Call-Out"}, {"Region", "South West"}]
+    |> organization_values()
+    |> Map.put("#{@agency}", [agency_option("Police")])
+  end
+
+  defp template_values(_title), do: %{}
 
   defp template_tags(title, tags) do
     for tag <- tags,

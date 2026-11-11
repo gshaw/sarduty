@@ -149,12 +149,25 @@ defmodule Web.DemoFlowTest do
     assert_received {:records, "POST", "/v3/sarduty/demo-teams", %{"team" => _team}}
   end
 
+  # Records' answer to a cast: the team, and an id for each key it names, options too.
+  defp made(id, cast) do
+    keys = for row <- cast["rows"], key <- [row["key"] | row["optionKeys"] || []], key, do: key
+
+    {200,
+     %{
+       "id" => id,
+       "key" => "k",
+       "ids" => keys |> Enum.with_index(1) |> Map.new(fn {key, i} -> {key, id * 1000 + i} end),
+       "organizationId" => 2_000_000_000
+     }}
+  end
+
   test "when Records makes only the first team, it deletes that one there (#963)" do
     demo = start!()
 
     reply = fn
-      "POST", _path, %{"team" => %{"title" => "Coast Range SAR"}} ->
-        {200, %{"id" => 41, "key" => "k", "ids" => %{}}}
+      "POST", _path, %{"team" => %{"title" => "Coast Range SAR"}} = cast ->
+        made(41, cast)
 
       "POST", _path, _body ->
         {500, %{"title" => "Down"}}
@@ -170,15 +183,31 @@ defmodule Web.DemoFlowTest do
     assert Repo.aggregate(Team, :count) == 0
   end
 
+  test "an answer without WESARA's field ids sends no second cast, and deletes the first" do
+    demo = start!()
+
+    reply = fn
+      "POST", _path, _cast -> {200, %{"id" => 41, "key" => "k", "ids" => %{}}}
+      "DELETE", _path, _body -> {200, %{}}
+    end
+
+    RecordsStub.stub(reply)
+
+    assert {:error, _reason} = BuildDemoTeam.call(demo, DateTime.utc_now(:second))
+    assert_received {:records, "POST", "/v3/sarduty/demo-teams", _cast}
+    refute_received {:records, "POST", "/v3/sarduty/demo-teams", _cast}
+    assert_received {:records, "DELETE", "/v3/sarduty/teams/41", nil}
+  end
+
   test "a build that fails after Records made both teams keeps nothing, there or here" do
     demo = start!()
 
     reply = fn
-      "POST", _path, %{"team" => %{"title" => "Coast Range SAR"}} ->
-        {200, %{"id" => 41, "key" => "k", "ids" => %{}}}
+      "POST", _path, %{"team" => %{"title" => "Coast Range SAR"}} = cast ->
+        made(41, cast)
 
-      "POST", _path, _body ->
-        {200, %{"id" => 42, "key" => "k", "ids" => %{}}}
+      "POST", _path, %{"team" => %{"organizationId" => 2_000_000_000}} = cast ->
+        made(42, cast)
 
       "DELETE", _path, _body ->
         {200, %{}}

@@ -12,6 +12,8 @@
 # hiker attended. SAR Duty admins open every organization; Morgan Ellis and Rowan Pike
 # are WESARA's organization admins, logging in by code from /dev/mailbox. WESARA's
 # made-up Task report is on, to try forms and Publish (App.Operation.AddDemoForms).
+# Records keeps WESARA too, with its 27 incident fields, and Coast Range's own fields and
+# values come with the cast (#1003): teams built before that have none, so --reset them.
 #
 #   mise exec -- mix run --no-start tools/dev-teams.exs                        # build, once
 #   mise exec -- mix run --no-start tools/dev-teams.exs --reset                # delete them, then build with today's dates
