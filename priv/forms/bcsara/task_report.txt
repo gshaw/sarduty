@@ -13,6 +13,9 @@
 -- Leader's Signature line, and the date signer1 signs on the Date beside it. So the form
 -- leaves both places empty: Acrobat Sign fills them.
 --
+-- Details of Task and Equipment Used/Lost shrink to 8pt, then go on an attached page
+-- with the whole text (#993), rather than below 8pt or past their box.
+--
 -- Left blank for the people who sign by hand: EPC Name, its Signature and Date, and all
 -- of section B.
 
@@ -62,8 +65,8 @@ places
   completed    text top 203.0pt, left 402.0pt, width 191.6pt, fit, align center, size 9pt  -- on the line after 'Task Completed:'
   volunteers   text top 232.4pt, left 112.2pt, width 191.6pt, fit, align center, size 9pt  -- on the line after 'Number of PSLV Volunteers:'
   person_hours text top 232.4pt, left 402.0pt, width 191.6pt, fit, align center, size 9pt  -- on the line after 'Number of Person Hours:'
-  details      text top 263.0pt, left 125.7pt, width 461.0pt, pitch 12pt, lines 10, size 9pt  -- in the box after 'Details of Task:'
-  equipment    text top 399.5pt, left 125.7pt, width 461.0pt, pitch 12pt, lines 4, size 9pt  -- in the box after 'Equipment Used/Lost:'
+  details      text top 263.0pt, left 125.7pt, width 461.0pt, pitch 12pt, lines 10, size 9pt, more 'Details of Task'  -- in the box after 'Details of Task:'
+  equipment    text top 399.5pt, left 125.7pt, width 461.0pt, pitch 12pt, lines 4, size 9pt, more 'Equipment Used/Lost'  -- in the box after 'Equipment Used/Lost:'
   leader       text top 460.4pt, left 112.8pt, width 480.8pt, fit, align center, size 9pt  -- on the line after 'Task Leader's Name:'
 
 fill

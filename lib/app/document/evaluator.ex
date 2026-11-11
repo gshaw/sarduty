@@ -69,12 +69,13 @@ defmodule App.Document.Evaluator do
     do: computes |> Enum.chunk_by(& &1.each) |> Enum.reduce(env, &compute/2)
 
   defp output(env, doc) do
-    title = doc.title
+    title = doc.title && text_value(doc.title.text, env)
+    author = doc.title && doc.title.by && text_value(doc.title.by, env)
     copies = copies(doc, env)
 
     %{
-      title: title && text_value(title.text, env),
-      author: title && title.by && text_value(title.by, env),
+      title: title,
+      author: author,
       lock: doc.lock,
       keep: Map.new(doc.keep, &{name(&1), value(&1, env)}),
       shows:
@@ -85,12 +86,25 @@ defmodule App.Document.Evaluator do
       layout: doc.layout,
       fills: fills(doc, env),
       copies: length(copies),
-      places:
-        copies
-        |> Enum.with_index(1)
-        |> Enum.flat_map(&copy_places(&1, length(copies), doc, env))
+      places: places(copies, doc, env, {author, title})
     }
   end
+
+  defp places(copies, doc, env, names) do
+    copies
+    |> Enum.with_index(1)
+    |> Enum.flat_map(&copy_places(&1, length(copies), doc, env))
+    |> Enum.map(&heading(&1, names))
+  end
+
+  # A place that says `more` heads its attached pages with the team, the title, and its
+  # label: "Coast Range SAR · Task report 26-06613 · Details of Task" (#993).
+  defp heading(%{more: label} = place, {author, title}) do
+    heading = [author, title, label] |> Enum.reject(&blank?/1) |> Enum.join(" · ")
+    Map.put(place, :heading, heading)
+  end
+
+  defp heading(place, _names), do: place
 
   # The email's subject and text, its body's lines with a newline after the last.
   defp email(nil, _env), do: nil

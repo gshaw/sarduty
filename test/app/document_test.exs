@@ -926,6 +926,57 @@ defmodule App.DocumentTest do
                "Line 3: Write page alone: the values print on the form's own page."
     end
 
+    # A text too long for its lines goes on an attached page (#993).
+    test "check more" do
+      details = "body text top 1in, left 1in, width 4in, pitch 12pt, lines 10"
+
+      assert {:ok, doc} = checked(form("title 'Task report'", [details <> ", more 'Details'"]))
+      assert [%{more: "Details", lines: 10}] = doc.places
+
+      assert error(form("", [details <> ", more"])) ==
+               "Line 6: Write what the attached page calls it after more, such as more 'Details of Task'."
+
+      assert error(form("", [details <> ", more ''"])) =~ "Line 6: Write what the attached page"
+      assert error(form("", [details <> ", more 'A', more 'B'"])) == "Line 6: Write more once."
+
+      assert error(form("", ["body text top 1in, left 1in, width 4in, more 'Details'"])) ==
+               "Line 6: Give body lines with more: a text goes on an attached page when it's too long for them."
+
+      assert error(form("", ["body text top 1in, left 1in, width 1in, fit, more 'Details'"])) ==
+               "Line 6: Write fit or more, not both: fit keeps the text on one line."
+
+      tick = "body tick top 1in, left 1in, size 9pt, more 'Details'"
+
+      assert error(form("", [tick], ["body = 1 = 1"])) ==
+               "Line 6: Take out more: only a text place goes on an attached page."
+
+      row = "    who text left 1in, width 2in, pitch 12pt, lines 2, more 'Who'"
+
+      assert error(rows_form(["  rows rows top 2in, pitch 14pt, lines 2", row])) ==
+               "Line 9: Take out more: a row's text stays in its row."
+
+      assert error(rows_form(["  rows rows top 2in, pitch 14pt, lines 2, more 'Who'", row])) ==
+               "Line 8: Take out more: rows take a top, a pitch, lines, and a page."
+    end
+
+    test "a place that says more heads its attached pages with the team, title, and label" do
+      details = "body text top 1in, left 1in, width 4in, pitch 12pt, lines 10, more 'Details'"
+
+      {:ok, doc} =
+        checked(form("title 'Task report {:activity}' by 'Coast Range SAR'", [details]))
+
+      [place] = Document.evaluate(doc, %{":activity" => 7}, "Etc/UTC").places
+      assert place.heading == "Coast Range SAR · Task report 7 · Details"
+
+      {:ok, doc} = checked(form("title 'Task report {:activity}'", [details]))
+      [place] = Document.evaluate(doc, %{":activity" => 7}, "Etc/UTC").places
+      assert place.heading == "Task report 7 · Details"
+
+      {:ok, doc} = checked(form("", [details]))
+      [place] = Document.evaluate(doc, %{}, "Etc/UTC").places
+      assert place.heading == "Details"
+    end
+
     test "check rows and fill each" do
       places = ["  rows rows top 2in, pitch 14pt, lines 2", "    who text left 1in, width 2in"]
 

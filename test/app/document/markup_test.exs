@@ -254,6 +254,75 @@ defmodule App.Document.MarkupTest do
       end
     end
 
+    # Too long at 8pt, a text that says more prints "See attached page" on its lines,
+    # and the whole text on a page at the end (#993). Typst decides, so a short one adds
+    # no page.
+    test "more puts a text too long for its lines on an attached page" do
+      place =
+        text(%{
+          name: "details",
+          width: 300,
+          size: 9,
+          pitch: 12,
+          lines: 2,
+          more: "Details of Task",
+          heading: "Coast Range SAR · Task report 26-06613 · Details of Task"
+        })
+
+      {markup, files} = typst([Map.put(place, :value, "Found.")])
+      assert markup =~ "while s > 8pt"
+      assert markup =~ "[See attached page]"
+      assert markup =~ ~s|state("more-details", false).final()|
+      assert values(files)["details-heading"] == place.heading
+      refute markup =~ "Task report 26-06613"
+      # Each attached page says what it belongs to and which of its pages it is.
+      assert markup =~
+               ~s|header: align(bottom, attached-header(v.at("details-heading"), "more-details"))|
+
+      assert markup =~ ~s|top: 0.75in + attached-top(v.at("details-heading")) + 18pt|
+      assert markup =~ ~s|", page " + str(n) + " of " + str(count)|
+
+      # The verify code prints on it as on every page.
+      {markup, _files} =
+        Markup.typst(
+          %{
+            title: "Task report",
+            author: "Coast Range",
+            places: [Map.put(place, :value, "Found.")],
+            verify_code: %{at: :bottom_left, show: :both}
+          },
+          verify: "https://v.test/K7Q4M"
+        )
+
+      assert markup =~ "foreground: {verify-code}"
+
+      long = String.duplicate("Walked out at dusk with the subject. ", 12)
+      longer = String.duplicate("Walked out at dusk with the subject.\n", 120)
+
+      for {value, pages} <- [{"Found.", 1}, {long, 2}, {longer, 4}] do
+        # DRAFT prints on the attached page too.
+        mark = File.read!("priv/pdf/draft-mark.png")
+        {markup, files} = typst([Map.put(place, :value, value)], mark: mark)
+        assert markup =~ ~s|foreground: {place(top + left, image("mark.png", width: 100%))}|
+        assert {:ok, pdf} = Service.Typst.compile(markup, files)
+        assert Service.PDFPages.count(pdf) == {:ok, pages}
+      end
+    end
+
+    test "attached? guesses from the text's length whether it goes on an attached page" do
+      # 461pt at 8pt holds about 122 letters a line, so 10 lines about 1,220.
+      place = text(%{width: 461, size: 9, pitch: 12, lines: 10, more: "Details of Task"})
+
+      attached? = fn place, text -> place |> Map.put(:value, text) |> Markup.attached?() end
+
+      refute attached?.(place, String.duplicate("x", 1200))
+      assert attached?.(place, String.duplicate("x", 1300))
+      # Each of its own lines starts a new one.
+      assert attached?.(place, String.duplicate("x\n", 11))
+      plain = Map.delete(place, :more)
+      refute attached?.(plain, String.duplicate("x", 1300))
+    end
+
     test "fit keeps one line and shrinks it to the place's width" do
       {markup, files} = typst([text(%{width: 132, size: 10, fit: true, value: "26-7310"})])
 

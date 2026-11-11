@@ -58,13 +58,14 @@ compute each people
 
 -- Each use: its km at the item's cost per km, then its hours or its uses at their rate.
 -- An item's hours bill as D4H records them, to the hour, with no minimum: 0 minutes
--- bills none (#993). An item with a cost per hour and a cost per use prints a line for each, with the km on the first.
+-- bills none and prints dashes, as an item with no cost per hour does (#993). An item
+-- with hours and a cost per use prints a line for each, with the km on the first.
 compute each equipment
   billed   = if item.cost_per_hour > 0 then round(hours(hours)) else 0
   travel   = km * item.cost_per_km
   by_hour  = billed * item.cost_per_hour
   by_use   = quantity * item.cost_per_use
-  use_line = if item.cost_per_hour > 0 then by_use else travel + by_use
+  use_line = if billed > 0 then by_use else travel + by_use
   total    = travel + by_hour + by_use
 
 compute
@@ -113,9 +114,9 @@ fill each equipment into items
   item       = item
   km         = km as number if travel > 0
   km_rate    = item.cost_per_km as money if travel > 0
-  hours      = billed as number if item.cost_per_hour > 0
-  hour_rate  = item.cost_per_hour as money if item.cost_per_hour > 0
-  hour_total = travel + by_hour as money if item.cost_per_hour > 0
+  hours      = billed as number if billed > 0
+  hour_rate  = item.cost_per_hour as money if billed > 0
+  hour_total = travel + by_hour as money if billed > 0
   used       = quantity as number if item.cost_per_use > 0
   use_rate   = item.cost_per_use as money if item.cost_per_use > 0
   use_total  = use_line as money if item.cost_per_use > 0
@@ -134,10 +135,13 @@ expect with equipment km 42, item.cost_per_km 0.67: total = 28.14
 expect with equipment hours 45, item.cost_per_hour 15.00: billed = 1 and total = 15.00
 
 -- South Fraser's Command Rate, 60 minutes at $500. A vehicle's 0 minutes bill no hours,
--- only its 62 km.
+-- only its 62 km, on the uses' line when it has a cost per use.
 expect with equipment hours 60, item.cost_per_hour 500.00: billed = 1 and total = 500.00
 expect with equipment hours 0, item.cost_per_hour 500.00, km 62, item.cost_per_km 0.67:
   billed = 0 and total = 41.54
+expect with equipment hours 0, item.cost_per_hour 500.00, km 62, item.cost_per_km 0.67,
+    quantity 1, item.cost_per_use 10.00:
+  use_line = 51.54
 
 -- 5 hours at $25.00 and one use at $125.00: the km go on the hours' line.
 expect with equipment km 40, item.cost_per_km 0.67, hours 300, item.cost_per_hour 25.00,

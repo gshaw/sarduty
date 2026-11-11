@@ -476,7 +476,19 @@ defmodule App.Document.Checker do
       )
     end
 
-    for key <- [:left, :right, :bottom, :width, :height, :size, :leading, :gap, :pad, :indent],
+    for key <- [
+          :left,
+          :right,
+          :bottom,
+          :width,
+          :height,
+          :size,
+          :leading,
+          :gap,
+          :pad,
+          :indent,
+          :more
+        ],
         Map.has_key?(place, key) do
       fail(place.line, "Take out #{key}: rows take a top, a pitch, lines, and a page.")
     end
@@ -505,6 +517,9 @@ defmodule App.Document.Checker do
           place.line,
           "Give #{place.name} a top in its row, if any: it sits in each of #{rows.name}."
         )
+
+    if Map.has_key?(place, :more),
+      do: fail(place.line, "Take out more: a row's text stays in its row.")
 
     check_text_options(place)
 
@@ -546,7 +561,7 @@ defmodule App.Document.Checker do
   defp check_text_options(%{kind: :text, fit: true} = place) do
     check_align(place)
 
-    for key <- [:pitch, :indent],
+    for key <- [:pitch, :indent, :more],
         Map.has_key?(place, key),
         do: fail(place.line, "Write fit or #{key}, not both: fit keeps the text on one line.")
 
@@ -562,13 +577,21 @@ defmodule App.Document.Checker do
   end
 
   # `indent` starts the first line further in, after a printed label; `lines` caps how
-  # many of the page's lines it wraps on, so a long text shrinks to fit them.
+  # many of the page's lines it wraps on, so a long text shrinks to fit them. With
+  # `more`, one still too long goes on an attached page (#993).
   defp check_text_options(%{kind: :text} = place) do
     check_align(place)
 
     if Map.has_key?(place, :lines) and not Map.has_key?(place, :pitch),
       do:
         fail(place.line, "Give #{place.name} a pitch with lines: lines counts the page's lines.")
+
+    if Map.has_key?(place, :more) and not Map.has_key?(place, :lines),
+      do:
+        fail(
+          place.line,
+          "Give #{place.name} lines with more: a text goes on an attached page when it's too long for them."
+        )
 
     :ok
   end
@@ -582,7 +605,8 @@ defmodule App.Document.Checker do
     for {key, what} <- [
           pitch: "wraps on the page's lines",
           lines: "wraps on the page's lines",
-          indent: "starts further in"
+          indent: "starts further in",
+          more: "goes on an attached page"
         ],
         Map.has_key?(place, key),
         do: fail(place.line, "Take out #{key}: only a text place #{what}.")

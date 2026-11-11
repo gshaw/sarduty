@@ -87,10 +87,15 @@ defmodule Web.ActivityOrgFormLive do
       published: published,
       changes: changes,
       needed: if(page, do: ActivityForms.needed(page, socket.assigns.answers), else: []),
+      attached: attached(page, socket.assigns.answers),
       published_by: published.current && names[published.current.user_id],
       history: PublishedHistory.rows(published.all, names)
     )
   end
+
+  # Each place whose text looks too long for its lines, so it goes on an attached page.
+  defp attached(nil, _answers), do: []
+  defp attached(page, answers), do: ActivityForms.attached(page, answers)
 
   # Publish opens its preview, /publish: the PDF printed once with the ID it publishes
   # under, every page as a picture, and what publishing does. Publish there keeps that
@@ -353,6 +358,17 @@ defmodule Web.ActivityOrgFormLive do
       team={@current_team}
       activity={@activity}
     />
+
+    <.banner
+      :for={place <- @attached}
+      id={"org-form-attached-#{place.name}"}
+      title={"#{place.more} goes on an attached page"}
+      class="mb-6"
+    >
+      <p>
+        It's too long for its {Service.Format.count(place.lines, one: "%d line", many: "%d lines")}, so they say See attached page. The PDF ends with the whole text on a page of its own.
+      </p>
+    </.banner>
 
     <div :if={@page} class="measure">
       <.published_box

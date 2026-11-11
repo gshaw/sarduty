@@ -102,6 +102,26 @@ defmodule App.FormsTest do
       lines = Map.new(doc.places, &{&1.name, &1[:lines]})
       assert lines["details"] == 10 and lines["equipment"] == 4
     end
+
+    # Details of Task and Equipment Used/Lost shrink to 8pt, then go on an attached
+    # page, rather than running past their box (#993).
+    test "a long Details of Task goes on an attached page", %{doc: doc} do
+      more = Map.new(doc.places, &{&1.name, &1[:more]})
+      assert more["details"] == "Details of Task"
+      assert more["equipment"] == "Equipment Used/Lost"
+
+      page = File.read!("#{@dir}/bcsara/task_report.pdf")
+      long = String.duplicate("Teams searched the north ridge and the creek drainage. ", 26)
+
+      for {text, pages, attached} <- [{"Found on the ridge.", 1, []}, {long, 2, ["details"]}] do
+        values = %{"task.tracking_number" => "26-06613", "task.description" => text}
+        output = Document.evaluate(doc, values, "America/Vancouver")
+
+        assert output |> Document.attached() |> Enum.map(& &1.name) == attached
+        assert {:ok, pdf} = PrintDocument.call(output, page: page, mark: :draft)
+        assert Service.PDFPages.count(pdf) == {:ok, pages}
+      end
+    end
   end
 
   describe "BCSARA's claims" do
@@ -304,6 +324,34 @@ defmodule App.FormsTest do
                }
 
       assert output.fills["equipment_subtotal"] == "$276.80"
+    end
+
+    # South Fraser's SOUTH FRASER 1: $500/h, 0 minutes, 62 km (#993). No hours bill, so
+    # its hours print dashes, as an item with no cost per hour does, not "0 × $500.00".
+    test "an item with a cost per hour and 0 minutes prints only its km", %{doc: doc} do
+      use = %{
+        key: "item:1",
+        values: %{
+          "item" => "SOUTH FRASER 1",
+          "km" => 62,
+          "hours" => 0,
+          "item.cost_per_km" => 0.67,
+          "item.cost_per_hour" => 500.0
+        }
+      }
+
+      output = Document.evaluate(doc, %{"equipment" => [use]}, "America/Vancouver")
+      assert [line] = output.fills["items"]
+
+      assert Map.take(line, ~w(km km_rate hours hour_rate hour_total total)) ==
+               %{
+                 "km" => "62",
+                 "km_rate" => "$0.67",
+                 "hours" => nil,
+                 "hour_rate" => nil,
+                 "hour_total" => nil,
+                 "total" => "$41.54"
+               }
     end
 
     # The table grows with its rows, onto another page with its heading again.
