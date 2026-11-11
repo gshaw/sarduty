@@ -19,6 +19,19 @@ defmodule Web.Admin.AdminCollectionLiveTest do
     assert has_element?(lv, "#nav-area", "Adminland")
   end
 
+  test "counts each admin's passkeys (#129)", %{conn: conn} do
+    %{user: user} = user_with_team_fixture()
+    admin = make_admin(user)
+    other_admin = make_admin(user_fixture())
+    App.PasskeyFixtures.passkey_fixture(admin)
+    App.PasskeyFixtures.passkey_fixture(admin)
+
+    {:ok, lv, _html} = live(log_in_user(conn, admin), ~p"/admin/admins")
+
+    assert has_element?(lv, ~s(#admin-#{admin.id} td[data-label=Passkeys]), "2")
+    assert has_element?(lv, ~s(#admin-#{other_admin.id} td[data-label=Passkeys]), "None")
+  end
+
   test "is for admins only", %{conn: conn} do
     %{user: user} = user_with_team_fixture()
 

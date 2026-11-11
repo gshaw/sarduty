@@ -145,6 +145,7 @@ have decided since the page loaded, stays in `call`.
 - [group-rules.md](group-rules.md) — qualification rules for groups: storage, evaluation, and what applying them needs.
 - [member-cards.md](member-cards.md) — member ID cards and the public verify site.
 - [needs-attention.md](needs-attention.md) — the team home's Needs attention list: adding an item, and which can be snoozed.
+- [passkeys.md](passkeys.md) — passkeys: a second way to log in, who can add one, and how a login's length follows where the passkey is.
 - [members.md](members.md) — the members list and its filters, and member logins: members get their own ID card and tax credit letters.
 - [tax-credit-letters.md](tax-credit-letters.md) — verifying a tax credit letter, its ID, and the locked PDF.
 - [urls.md](urls.md) — how paths are named, and the URLs that can never move.

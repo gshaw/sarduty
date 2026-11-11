@@ -28,6 +28,10 @@ words:
   - silverbasin # Silver Basin SAR's subdomain, a made-up team (App.SilverBasin, #963)
   - WESARA # Western Search and Rescue Association, the made-up organization (#963)
   - SBSAR # Silver Basin SAR's abbreviated name (#963)
+  - webauthn # the browser API passkeys use, and its autocomplete token (#129)
+  - aaguid # the id of the authenticator that made a passkey, which names it (#129)
+  - CBOR # the binary format WebAuthn's attestation objects use (#129)
+  - COSE # the key format WebAuthn's public keys use (#129)
   # The made-up cast's names that aren't plain English (#963)
   - Lefèvre
   - Łukasz

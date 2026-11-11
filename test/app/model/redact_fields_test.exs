@@ -12,6 +12,7 @@ defmodule App.Model.RedactFieldsTest do
 
   # Fields whose names match but hold no one's personal data or secret.
   @not_personal %{
+    {App.Accounts.UserPasskey, :public_key} => "a passkey's public key, public by design",
     {App.Model.AttentionSnooze, :key} => "which Needs attention item, like retiring",
     {App.Model.Certificate, :content_type} => "a file's MIME type",
     {App.Model.OutboxAttachment, :content_type} => "a file's MIME type",

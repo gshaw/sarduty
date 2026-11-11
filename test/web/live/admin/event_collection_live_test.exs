@@ -39,10 +39,11 @@ defmodule Web.Admin.EventCollectionLiveTest do
     Event.record!(:login_blocked, ip: "203.0.113.9", data: %{scope: "ip"})
     Event.record!(:login_code_missed, ip: "198.51.100.4")
     login = Event.record!(:logged_in, ip: "198.51.100.4", user_agent: "Safari/18")
+    Event.record!(:logged_in, ip: "198.51.100.5", data: %{via: "passkey"})
 
     {:ok, lv, _html} = live(log_in_user(conn, admin), ~p"/admin/events")
 
-    assert has_element?(lv, "#last-week", "1 login, 4 wrong codes, 1 block")
+    assert has_element?(lv, "#last-week", "2 logins, 1 with a passkey, 4 wrong codes, 1 block")
     assert has_element?(lv, "#top-ip-1", "203.0.113.9")
     assert has_element?(lv, "#top-ip-2", "198.51.100.4")
     assert has_element?(lv, "#event-#{login.id} [title='Safari/18']", "198.51.100.4")

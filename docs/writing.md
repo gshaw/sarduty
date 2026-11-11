@@ -210,6 +210,7 @@ and must not be used for it.
 | account                             | user, login, profile                           | What a person logs in to SAR Duty with.                                                              |
 | your membership                     | member area, your details, profile, my page    | A member's own page on one team: their activities, qualifications, ID card, letters, and details.    |
 | account settings                    | your settings, profile, preferences            | The page for your own login and settings, the same on every team, such as your maps app.             |
+| passkey                             | security key, WebAuthn, FIDO, biometric login  | A second way to log in, saved on a phone, computer, or password manager. Codes still work.           |
 | team settings                       | settings (alone, in the menu), admin settings  | A team's settings, for its team admins: General, Team admins, Members, and more.                     |
 | team admin                          | administrator, manager, superuser              | A person who can change the team's settings. On a D4H team, a member D4H makes an Owner or Editor.   |
 | Owner, Editor                       | owner, editor                                  | D4H's access levels that make a member a team admin. Capitalized, as D4H writes them.                |

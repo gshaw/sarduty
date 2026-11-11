@@ -11,6 +11,29 @@ defmodule Web.UserLoginLiveTest do
     refute has_element?(lv, "#login_form input[type=password]")
   end
 
+  test "offers passkeys in the box and on Use a passkey (#129)", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/login")
+
+    assert has_element?(
+             lv,
+             ~s(#login_form input[name="user[login]"][autocomplete="email webauthn"])
+           )
+
+    assert has_element?(lv, "#passkey-login[phx-hook=PasskeyLogin]")
+    assert has_element?(lv, "#passkey-login-button", "Use a passkey")
+
+    assert has_element?(
+             lv,
+             ~s(#passkey_form[action="/login/passkey"] input[name="passkey[signature]"])
+           )
+  end
+
+  test "says so when the browser could not use a passkey", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/login")
+
+    assert render_hook(lv, "passkey-failed", %{}) =~ "Your browser could not use a passkey."
+  end
+
   test "the bar doesn't repeat Log in on the login pages, and has it elsewhere", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/login")
     refute has_element?(lv, "#nav-login")
@@ -94,7 +117,7 @@ defmodule Web.UserLoginLiveTest do
 
       assert has_element?(
                lv,
-               ~s(#login_form input[name="user[login]"][type=text][autocomplete=username])
+               ~s(#login_form input[name="user[login]"][type=text][autocomplete="username webauthn"])
              )
 
       assert has_element?(lv, "#login_form label", "Email or mobile number")

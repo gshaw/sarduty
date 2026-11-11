@@ -225,6 +225,8 @@ defmodule Web.Router do
 
     post "/login/code", UserSessionController, :request_code
     post "/login", UserSessionController, :create
+    post "/login/passkey/options", PasskeySessionController, :options
+    post "/login/passkey", PasskeySessionController, :create
     delete "/logout", UserSessionController, :delete
   end
 
@@ -275,7 +277,9 @@ defmodule Web.Router do
   scope "/", Web do
     pipe_through [:browser, :require_authenticated_user]
 
+    # The client IP rides in the session for account settings' passkey events.
     live_session :require_authenticated_user_session,
+      session: {Web.VerifyLimit, :session, []},
       on_mount: [{Web.UserAuth, :mount_current_path}, {Web.UserAuth, :ensure_authenticated}] do
       live "/account", AccountLive
       # Builds a visitor's demo the first time its link logs them in (#857).

@@ -58,6 +58,32 @@ defmodule App.Accounts.UserNotifier do
     |> Mailer.deliver()
   end
 
+  # Sent each time a passkey is added (#129), so the owner hears about one they didn't add.
+  def deliver_passkey_added(user, passkey) do
+    added_with = if passkey.added_with, do: ", added on #{passkey.added_with}"
+
+    email =
+      new()
+      |> to(user.email)
+      |> from({"SAR Duty", "noreply@sarduty.com"})
+      |> subject("Passkey added to your SAR Duty account")
+      |> text_body("""
+      A passkey was added to your SAR Duty account:
+
+      #{passkey.name}#{added_with}
+
+      It logs you in without a code. Did not add it? Remove it in account settings, then
+      email support@sarduty.com.
+
+      #{Web.Endpoint.url()}/account
+      """)
+      |> Mailer.for_no_team()
+
+    with {:ok, _metadata} <- Mailer.deliver(email) do
+      {:ok, email}
+    end
+  end
+
   # The last line of a code text is the one-time code format iOS and Android read to
   # offer the code on the page, bound to this site's domain. The code above it has a dash,
   # not a space: Google Messages' Copy button stops at a space and copies half.

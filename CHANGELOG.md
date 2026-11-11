@@ -4,6 +4,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- The login page has Use a passkey: log in with Face ID, Touch ID, or your phone instead
+  of a code. Andrew and I are trying passkeys first, so only we can add one for now.
+  Codes keep working for everyone.
 - Tax credit letters have two actions, Email and Withdraw. Email sends each checked
   member their latest letter, and publishes a new one first when there's none or it's
   out of date. A To email tile counts who it would reach.

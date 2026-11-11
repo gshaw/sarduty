@@ -220,6 +220,8 @@ defmodule Web.RouterTest do
     "/llms.txt",
     "/login",
     "/login/code",
+    "/login/passkey",
+    "/login/passkey/options",
     "/logout",
     "/orgs/:slug/logo",
     "/privacy",

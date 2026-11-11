@@ -44,6 +44,7 @@ defmodule Web.Admin.EventCollectionLive do
   defp assign_logins(socket, since) do
     assign(socket,
       logins: Event.count_since(:logged_in, since),
+      passkey_logins: Event.count_since(:logged_in, since, data: %{via: "passkey"}),
       misses: Event.count_since(:login_code_missed, since),
       blocks: Event.count_since(:login_blocked, since),
       top_ips: Event.get_top_ips(@attack_kinds, since, 10),
@@ -98,7 +99,7 @@ defmodule Web.Admin.EventCollectionLive do
     <dl id="login-summary" class="mb-4 max-w-3xl">
       <dt>In the last 7 days</dt>
       <dd id="last-week">
-        {Service.Format.count(@logins, one: "%d login", many: "%d logins")}, {Service.Format.count(
+        {Service.Format.count(@logins, one: "%d login", many: "%d logins")}, {@passkey_logins} with a passkey, {Service.Format.count(
           @misses,
           one: "%d wrong code",
           many: "%d wrong codes"
