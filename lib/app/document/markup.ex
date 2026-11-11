@@ -44,8 +44,13 @@ defmodule App.Document.Markup do
   @letter_width 612
   @letter_height 792
   # An attached page's header: its heading and which of its pages this is, counted from
-  # the metadata at its text's start and end (#993).
+  # the metadata at its text's start and end (#993). A long team name wraps it, so
+  # attached-top measures it at its longest, "page 99 of 99", and the text starts below.
   @attached_header """
+  #let attached-heading(body) = text(size: 12pt, weight: "bold", body)
+  #let attached-top(heading) = measure(
+    block(width: #{@letter_width - 144}pt, attached-heading(heading + ", page 99 of 99"))
+  ).height
   #let attached-header(heading, more) = context {
     let start = query(metadata.where(value: more + "-start"))
     let end = query(metadata.where(value: more + "-end"))
@@ -55,7 +60,7 @@ defmodule App.Document.Markup do
       n = here().page() - first + 1
       count = end.first().location().page() - first + 1
     }
-    text(size: 12pt, weight: "bold", heading + ", page " + str(n) + " of " + str(count))
+    attached-heading(heading + ", page " + str(n) + " of " + str(count))
   }
   """
 
@@ -145,8 +150,9 @@ defmodule App.Document.Markup do
       markup = [
         ~s|#context if state("#{more}", false).final() {\n|,
         "  page(width: #{pt(@letter_width)}, height: #{pt(@letter_height)}, ",
-        "margin: (x: 1in, top: 1in, bottom: 1.5in), ",
-        ~s|header: attached-header(v.at("#{heading}"), "#{more}"), |,
+        ~s|margin: (x: 1in, top: 0.75in + attached-top(v.at("#{heading}")) + 18pt, |,
+        "bottom: 1.5in), header-ascent: 18pt, ",
+        ~s|header: align(bottom, attached-header(v.at("#{heading}"), "#{more}")), |,
         "foreground: {#{attached_foreground(files, verify?)}}, {\n",
         "    set text(size: 11pt)\n",
         "    set par(spacing: 6pt)\n",

@@ -276,7 +276,10 @@ defmodule App.Document.MarkupTest do
       assert values(files)["details-heading"] == place.heading
       refute markup =~ "Task report 26-06613"
       # Each attached page says what it belongs to and which of its pages it is.
-      assert markup =~ ~s|header: attached-header(v.at("details-heading"), "more-details")|
+      assert markup =~
+               ~s|header: align(bottom, attached-header(v.at("details-heading"), "more-details"))|
+
+      assert markup =~ ~s|top: 0.75in + attached-top(v.at("details-heading")) + 18pt|
       assert markup =~ ~s|", page " + str(n) + " of " + str(count)|
 
       # The verify code prints on it as on every page.
