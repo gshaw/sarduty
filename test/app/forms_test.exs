@@ -8,6 +8,7 @@ defmodule App.FormsTest do
   import App.DataFixtures
 
   alias App.Document
+  alias App.Document.Evaluator
   alias App.Operation.PrintDocument
   alias App.Operation.ReadDocument
   alias App.Operation.SaveForm
@@ -48,43 +49,71 @@ defmodule App.FormsTest do
       %{doc: doc}
     end
 
-    test "is EMCR's 1.01 for an incident, and asks only what BCSARA's fields don't say",
-         %{doc: doc} do
-      assert doc.name == "Task report"
-
-      assert Enum.map(doc.asks, & &1.name) ==
-               ~w(others others_hours injured fatalities still_missing err)
+    # Production's form 1, so uploading it replaces that form (#993).
+    test "is EMBC's Task Report Form for an incident, and asks nothing", %{doc: doc} do
+      assert doc.name == "EMBC Task Report Form"
+      assert doc.asks == []
 
       [task] = doc.reports
       fields = Enum.map(task.query.select, &Query.text/1)
 
       for field <- [
+            "`Agency`",
             "`Agency File #`",
+            "`ASE#`",
             "`Region`",
-            "`Area`",
             "`Task Type`",
-            "`How many people received assistance from SAR?`",
             "`Equipment Used/Lost`",
-            "`Task Leader's Name`",
-            "`Date Report Completed`"
+            "`Task Leader's Name`"
           ],
           do: assert(field in fields, field)
     end
 
-    # find_places.py measured them on EMCR's page: each on its printed line, inside the
-    # page, and no two on the same spot.
-    test "every place is on EMCR's page", %{doc: doc} do
-      assert length(doc.places) == 24
+    # Andrew's filled-in page: what EMCR can't take it without (#993).
+    test "needs what Andrew fills in, and a finished task", %{doc: doc} do
+      assert Enum.map(doc.needs, &Evaluator.name/1) == [
+               "task.tracking_number",
+               "task.`Agency`",
+               "task.`Agency File #`",
+               "task.`Region`",
+               "task.`Task Type`",
+               "task.description",
+               "task.`Task Leader's Name`",
+               "task.finished"
+             ]
+    end
+
+    # Measured from the rules on EMBC's page: each on its line, inside the page, and no
+    # two on the same spot. Details of Task has 10 lines and Equipment Used/Lost 4, at 9pt.
+    test "every place is on EMBC's page", %{doc: doc} do
+      assert length(doc.places) == 14
 
       for place <- doc.places do
-        assert place.left > 72 and place.left + Map.get(place, :width, place[:size]) < 540,
+        assert place.left > 72 and place.left + Map.get(place, :width, place[:size]) < 612,
                place.name
 
         assert place.top > 72 and place.top < 720, place.name
+        assert place.size == 9, place.name
       end
 
       spots = Enum.map(doc.places, &{&1.top, &1.left})
       assert Enum.uniq(spots) == spots
+
+      lines = Map.new(doc.places, &{&1.name, &1[:lines]})
+      assert lines["details"] == 10 and lines["equipment"] == 4
+    end
+  end
+
+  describe "BCSARA's claims" do
+    # Their task number, the task leader who signs, and a finished task (#993).
+    test "the Supplement and the Expense request need the same three" do
+      for name <- ~w(supplement expense_request) do
+        {:ok, doc} = "#{@dir}/bcsara/#{name}.txt" |> File.read!() |> Document.parse()
+
+        assert Enum.map(doc.needs, &Evaluator.name/1) ==
+                 ["task.tracking_number", "task.`Task Leader's Name`", "task.finished"],
+               name
+      end
     end
   end
 
