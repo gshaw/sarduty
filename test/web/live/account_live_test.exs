@@ -116,4 +116,95 @@ defmodule Web.AccountLiveTest do
   test "redirects if user is not logged in", %{conn: conn} do
     assert {:error, {:redirect, %{to: "/login"}}} = live(conn, ~p"/account")
   end
+
+  describe "passkeys (#129)" do
+    import App.PasskeyFixtures
+
+    alias App.Accounts.UserPasskey
+    alias App.Accounts.WebAuthn
+    alias App.Model.Event
+
+    test "only SAR Duty site admins get the section while they try passkeys", %{conn: conn} do
+      {:ok, lv, _html} = conn |> log_in_user(user_fixture()) |> live(~p"/account")
+      refute has_element?(lv, "#passkeys")
+
+      admin = make_admin(user_fixture())
+      {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/account")
+
+      assert has_element?(lv, "#passkeys h2", "Passkeys")
+      assert has_element?(lv, "#passkeys-empty", "No passkeys yet.")
+      assert has_element?(lv, "#passkey-add[phx-hook=PasskeyAdd]", "Add a passkey")
+    end
+
+    test "adds a passkey the browser made, and emails about it", %{conn: conn} do
+      admin = make_admin(user_fixture(%{email: "alex.chen@example.com"}))
+      {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/account")
+
+      render_hook(lv, "passkey-options", %{})
+      assert_reply(lv, %{challenge: text, rp: %{id: rp_id}, excludeCredentials: []})
+      {:ok, bytes} = WebAuthn.decode(text)
+      challenge = %{bytes: bytes, rp_id: rp_id, origin: Web.Endpoint.url()}
+
+      params = create_answer(authenticator(), challenge)
+      html = render_hook(lv, "passkey-created", params)
+
+      assert html =~ "Passkey added."
+      assert [%UserPasskey{id: id, name: "iCloud Keychain"}] = UserPasskey.list_for(admin)
+      assert has_element?(lv, "#passkey-#{id}", "iCloud Keychain")
+      assert has_element?(lv, "#passkey-#{id}", "Never")
+      assert_received {:email, %{subject: "Passkey added to your SAR Duty account"}}
+      assert %Event{data: %{"passkey" => "iCloud Keychain"}} = Event.get_last(:passkey_added)
+
+      # The challenge is used up.
+      render_hook(lv, "passkey-created", params)
+      assert length(UserPasskey.list_for(admin)) == 1
+    end
+
+    test "says why when the browser refused", %{conn: conn} do
+      admin = make_admin(user_fixture())
+      {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/account")
+
+      assert render_hook(lv, "passkey-failed", %{"name" => "InvalidStateError"}) =~
+               "This device already has a passkey for your account."
+
+      assert render_hook(lv, "passkey-failed", %{"name" => "SecurityError"}) =~
+               "Your browser could not make a passkey."
+    end
+
+    test "removes a passkey after asking", %{conn: conn} do
+      admin = make_admin(user_fixture())
+      {passkey, _key} = passkey_fixture(admin)
+      {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/account")
+
+      button = "#passkey-remove-#{passkey.id}"
+
+      assert has_element?(
+               lv,
+               ~s(#{button}[data-confirm="Remove iCloud Keychain? It can no longer log you in."])
+             )
+
+      html = lv |> element(button) |> render_click()
+
+      assert html =~ "Passkey removed."
+      refute has_element?(lv, "#passkey-#{passkey.id}")
+      assert UserPasskey.list_for(admin) == []
+      assert Event.get_last(:passkey_removed)
+    end
+
+    test "the challenge the page made is the one the passkey must answer", %{conn: conn} do
+      admin = make_admin(user_fixture())
+      {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/account")
+      render_hook(lv, "passkey-options", %{})
+
+      html =
+        render_hook(
+          lv,
+          "passkey-created",
+          create_answer(authenticator(), WebAuthn.registration_challenge())
+        )
+
+      assert html =~ "SAR Duty could not add that passkey."
+      assert UserPasskey.list_for(admin) == []
+    end
+  end
 end

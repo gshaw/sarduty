@@ -2,6 +2,7 @@ defmodule Web.Admin.AdminCollectionLive do
   use Web, :live_view_app_layout
 
   alias App.Accounts
+  alias App.Accounts.UserPasskey
   alias App.Model.Team
 
   def mount(_params, _session, socket) do
@@ -11,6 +12,7 @@ defmodule Web.Admin.AdminCollectionLive do
     socket =
       socket
       |> assign(page_title: "Admins", admins: admins, teams: teams, now: DateTime.utc_now())
+      |> assign(passkeys: UserPasskey.count_by_user())
 
     {:ok, socket}
   end
@@ -34,6 +36,7 @@ defmodule Web.Admin.AdminCollectionLive do
       <:col :let={admin} label="Last seen" class="whitespace-nowrap">
         {last_seen(admin, @teams[admin.last_team_id], @now)}
       </:col>
+      <:col :let={admin} label="Passkeys">{Map.get(@passkeys, admin.id, "None")}</:col>
     </.table>
     """
   end

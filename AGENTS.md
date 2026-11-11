@@ -56,7 +56,8 @@
 - **Service**: [lib/service/](lib/service) are stateless helpers — `Service.Format`,
   `Service.Convert`, `Service.PDFLock`. No database, no HTTP.
 - **Accounts**: [lib/app/accounts/](lib/app/accounts) is users who log in with a code,
-  emailed or texted (no passwords), with `phx.gen.auth`-style sessions (`current_user` and
+  emailed or texted, or with a passkey ([docs/passkeys.md](docs/passkeys.md)), and no
+  passwords, with `phx.gen.auth`-style sessions (`current_user` and
   `current_team`, not `current_scope`) and an admin flag. Access comes from D4H: a user
   reaches a team when their email matches a member D4H makes an Owner or Editor
   (`Team.get_managed_by/2`). Admins reach every team. On a team with member logins on,

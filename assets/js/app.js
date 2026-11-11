@@ -24,6 +24,7 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/sarduty"
 import {WebOTP} from "./webotp"
+import {PasskeyAdd, PasskeyLogin} from "./passkey"
 import topbar from "../vendor/topbar"
 import {AskDialog, listenForConfirms} from "./confirm_dialog"
 import {trackPointer} from "./pointer_focus"
@@ -47,7 +48,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, AskDialog, Combobox, DemoBanner, FileDrop, HelpToggle, InsertField, QRScanner, RichText, SaveImage, ScannerInput, Search, SelectAll, SoundSwitch, Toast, WebOTP},
+  hooks: {...colocatedHooks, AskDialog, Combobox, DemoBanner, FileDrop, HelpToggle, InsertField, PasskeyAdd, PasskeyLogin, QRScanner, RichText, SaveImage, ScannerInput, Search, SelectAll, SoundSwitch, Toast, WebOTP},
 })
 
 trackPointer()

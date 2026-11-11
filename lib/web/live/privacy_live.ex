@@ -20,7 +20,7 @@ defmodule Web.PrivacyLive do
     <article id="privacy" class="container mx-auto px-2 pt-8">
       <div class="max-w-prose">
         <h1 class="title">Privacy</h1>
-        <p class="hint">Last changed November 4, 2026.</p>
+        <p class="hint">Last changed November 11, 2026.</p>
         <p>
           SAR Duty copies your team's data from D4H to run its tools for your team. Your team decides what is in D4H.
         </p>
@@ -28,7 +28,7 @@ defmodule Web.PrivacyLive do
           Your team is responsible for its members' data. SAR Duty handles that data for your team as a service provider.
         </p>
         <p>
-          SAR Duty also keeps the email or phone number you log in with. It keeps records of each login and each try, with the email or number typed and the IP address, for 90 days.
+          SAR Duty also keeps the email or phone number you log in with. For each passkey you add, it keeps the passkey's public key, its name, and when you added and last used it. Face ID and fingerprints stay on your device. It keeps records of each login and each try, with the email or number typed and the IP address, for 90 days.
         </p>
         <p id="privacy-certificates">
           SAR Duty keeps a certificate a member sends only until a team admin accepts or declines it.

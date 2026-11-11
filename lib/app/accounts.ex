@@ -1,6 +1,6 @@
 defmodule App.Accounts do
   @moduledoc """
-  Users and their login codes and sessions. A user is an email that may log in: a
+  Users and their login codes, passkeys, and sessions. A user is an email that may log in: a
   manager of some team in D4H (#57), an admin who is a current member of one (#141), a
   member of a team with member logins on (#156), or an organization admin (#512). Which teams they manage is
   App.Model.Team.get_managed_by/2; which they're a member of is
@@ -11,7 +11,9 @@ defmodule App.Accounts do
 
   alias App.Accounts.User
   alias App.Accounts.UserNotifier
+  alias App.Accounts.UserPasskey
   alias App.Accounts.UserToken
+  alias App.Accounts.WebAuthn
   alias App.Adapter.Twilio
   alias App.Model.Member
   alias App.Model.OrganizationAdmin
@@ -144,6 +146,25 @@ defmodule App.Accounts do
     |> UserToken.by_user_and_contexts_query(["login"])
     |> where([t], t.sent_to == ^sent_to and t.inserted_at > ago(60, "second"))
     |> Repo.exists?()
+  end
+
+  @doc """
+  Logs in with a passkey (#129): `params` is what navigator.credentials.get() returned,
+  as App.Accounts.WebAuthn.authenticate/3 reads it, with its `"credential_id"`. The
+  passkey proves who it is; the email must still be one that may log in, like a code's.
+  `{:ok, user}`, or `:error` for an unknown or wrong passkey, an expired challenge, or an
+  email that may no longer log in.
+  """
+  def log_in_with_passkey(challenge, params, now \\ DateTime.utc_now()) do
+    with {:ok, credential_id} <- WebAuthn.decode(params["credential_id"]),
+         %UserPasskey{user: user} = passkey <- UserPasskey.get_by_credential_id(credential_id),
+         {:ok, sign_count} <- WebAuthn.authenticate(challenge, params, passkey),
+         true <- may_log_in?(user.email, now) do
+      UserPasskey.used!(passkey, sign_count, now)
+      {:ok, user}
+    else
+      _ -> :error
+    end
   end
 
   @doc """

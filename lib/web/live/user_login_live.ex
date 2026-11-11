@@ -7,6 +7,10 @@ defmodule Web.UserLoginLive do
   # phx-trigger-action posts the form to the controller, which sends the code. The button
   # stays busy until that POST leaves the page. With Twilio set up, the one field takes an
   # email or a mobile number, and the controller tells them apart.
+  #
+  # Passkeys (#129): the PasskeyLogin hook offers this site's saved passkeys in the box
+  # (its autocomplete names webauthn) and on Use a passkey, then posts the browser's
+  # answer through the hidden passkey form to Web.PasskeySessionController.
   def render(assigns) do
     ~H"""
     <div>
@@ -41,7 +45,7 @@ defmodule Web.UserLoginLive do
           type="text"
           label="Email or mobile number"
           required
-          autocomplete="username"
+          autocomplete="username webauthn"
           autocapitalize="none"
           spellcheck="false"
         >
@@ -53,7 +57,7 @@ defmodule Web.UserLoginLive do
           type="email"
           label="Email"
           required
-          autocomplete="email"
+          autocomplete="email webauthn"
         />
         <.form_actions>
           <.button
@@ -65,6 +69,25 @@ defmodule Web.UserLoginLive do
             {if @trigger_submit, do: "Sending…", else: "Send me a code"}
           </.button>
         </.form_actions>
+      </.form>
+      <div
+        id="passkey-login"
+        phx-hook="PasskeyLogin"
+        data-form="passkey_form"
+        class="mt-8 mb-6 border-t border-border-subtle pt-6"
+      >
+        <p>Have a passkey? Log in with Face ID, Touch ID, or your phone.</p>
+        <.button type="button" id="passkey-login-button">Use a passkey</.button>
+      </div>
+      <.form for={%{}} as={:passkey} id="passkey_form" action={~p"/login/passkey"} class="hidden">
+        <input
+          :for={
+            field <-
+              ~w(credential_id authenticator_data client_data_json signature user_handle attachment)
+          }
+          type="hidden"
+          name={"passkey[#{field}]"}
+        />
       </.form>
       <p class="text-text-muted">
         Team not on SAR Duty yet? <.a navigate={~p"/signup"}>Sign up your team</.a>
@@ -88,5 +111,15 @@ defmodule Web.UserLoginLive do
 
   def handle_event("submit", %{"user" => params}, socket) do
     {:noreply, assign(socket, form: to_form(params, as: "user"), trigger_submit: true)}
+  end
+
+  # The browser refused for a reason other than the person closing its prompt.
+  def handle_event("passkey-failed", _params, socket) do
+    {:noreply,
+     put_flash(
+       socket,
+       :error,
+       "Your browser could not use a passkey. Try again, or use Send me a code."
+     )}
   end
 end

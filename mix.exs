@@ -60,7 +60,8 @@ defmodule App.MixProject do
       {:req, "~> 0.5"},
       {:swoosh, "~> 1.20"},
       {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
-      {:tzdata, "~> 1.1"}
+      {:tzdata, "~> 1.1"},
+      {:wax_, "~> 0.7"}
     ]
   end
 

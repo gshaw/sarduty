@@ -10,9 +10,9 @@ defmodule App.Model.Event do
 
   # Days each kind is kept. App.Worker.PruneEventsWorker deletes older ones each night.
   # Login events carry IPs, which are personal data, so they go after 90 days. Changes to
-  # who can reach a team or an organization, AI agents included, and team admins viewing
-  # as a member are kept two years, as a record. The MCP token kinds are for events from
-  # before agents connected with OAuth (#761).
+  # who can reach a team or an organization, AI agents included, passkeys added and
+  # removed, and team admins viewing as a member are kept two years, as a record. The MCP
+  # token kinds are for events from before agents connected with OAuth (#761).
   @retention_days %{
     d4h_sync_round: 90,
     d4h_refresh_run: 90,
@@ -37,6 +37,8 @@ defmodule App.Model.Event do
     team_key_changed: 730,
     login_grant_added: 730,
     login_grant_removed: 730,
+    passkey_added: 730,
+    passkey_removed: 730,
     tax_credit_letters_sent: 730,
     mcp_turned_on: 730,
     mcp_turned_off: 730,
