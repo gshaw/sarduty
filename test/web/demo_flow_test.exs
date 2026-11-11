@@ -80,7 +80,9 @@ defmodule Web.DemoFlowTest do
 
   test "the home page offers Try a demo once SAR Duty's Records key is set", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/")
-    assert has_element?(lv, "#start-top-demo", "Try a demo")
+    # A link on its own line, so Sign up a team and Log in share the row above it.
+    assert has_element?(lv, "#start-top p.action a#start-top-demo", "Try a demo")
+    refute has_element?(lv, "#start-top .home-cta #start-top-demo")
 
     Application.delete_env(:sarduty, :records_sarduty_key)
     {:ok, lv, _html} = live(conn, ~p"/")

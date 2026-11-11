@@ -54,7 +54,7 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    call `App.Operation.CreateDemo`, which saves the row and a user for it,
    `visitor-<id>@example.com`. A visitor's demo: 5 an hour per IP, 200 live in all.
    Without SAR Duty's own Records key (`RECORDS_SARDUTY_KEY`), Try a demo is off and the
-   home page has no button.
+   home page has no link to it.
 2. **The link.** `/demo/open/<token>` (`Web.DemoController`) logs the browser in as that
    user, remembered, and opens the demo. The token is the demo's id, signed
    (`DemoTeam.link_token/1`), not stored, so the banner can show it again; it stops
