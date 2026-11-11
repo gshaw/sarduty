@@ -106,14 +106,14 @@ defmodule Web.Components.YetToArrive do
     ~H"""
     <li
       id={@id}
-      class="relative grid grid-cols-[1fr_auto] items-center gap-x-3 py-2 border-b border-border-subtle"
+      class="relative flex items-center gap-3 py-2 border-b border-border-subtle"
     >
-      <div class={["min-w-0", @tapped && "invisible"]}>
+      <div class={["flex-1 min-w-0", @tapped && "invisible"]}>
         <div class="font-semibold">{@name}</div>
         <div :if={@detail != []} class="hint">{render_slot(@detail)}</div>
         {render_slot(@below)}
       </div>
-      <div :if={@inner_block != []} class={["flex gap-2", @tapped && "invisible"]}>
+      <div :if={@inner_block != []} class={["flex shrink-0 gap-2", @tapped && "invisible"]}>
         {render_slot(@inner_block)}
       </div>
       <div :if={@tapped} id={"#{@id}-tapped"} class="absolute inset-0 flex items-center gap-3">
