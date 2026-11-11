@@ -1,36 +1,46 @@
--- EMCR's Task report, 1.01 (March 2013), for BCSARA's teams (#950). It prints on
--- EMCR's own page, task_report.pdf, unchanged from
--- www2.gov.bc.ca/assets/gov/public-safety-and-emergency-services/emergency-preparedness-response-recovery/embc/policies/101_task_report_form.pdf
+-- EMBC's Task Report Form, for BCSARA's teams (#950, #993): the page D4H draws, which
+-- EMCR takes today, not the 2013 page on EMCR's website. It prints on the blank page
+-- beside it, task_report.pdf: Andrew's version 4 with every value taken out.
 --
--- Each place's comment names the printed label it sits after. When EMCR changes the
--- page, measure it again: tools/forms/find_places.py rewrites each place's lengths.
--- cspell:ignore embc BCAS -- EMCR's old name in its URL, and BC Ambulance on the page
+-- The page's blanks are drawn rules, not underscores, so tools/forms/find_places.py
+-- can't measure them, and each comment below says "on the line" so the script leaves
+-- the place alone. Each place was measured from the rule under it (pdfplumber, points
+-- from the page's top left): the value's baseline sits 1.5pt above the rule, 2pt in from
+-- each end. The two boxes keep the original's 8.6pt inset.
+--
+-- The Task Leader signs in Acrobat Sign. The page carries two Acrobat Sign text tags in
+-- white, under the line art, so they never show: signer1's signature on the Task
+-- Leader's Signature line, and the date signer1 signs on the Date beside it. So the form
+-- leaves both places empty: Acrobat Sign fills them.
+--
+-- Left blank for the people who sign by hand: EPC Name, its Signature and Date, and all
+-- of section B.
 
-form 'Task report'
-about 'EMCR 1.01. The task leader checks it, signs it by hand, and sends it to the EMCR regional office.'
+form 'EMBC Task Report Form'
+about 'The EMBC task report after an incident. The task leader checks it and signs it in Acrobat Sign as signer1.'
 for activity where kind = 'incident'
 
 report task
-  select ref_id, tracking_number, `Agency File #`, `Region`, `Area`, `Task Type`, started_at,
-    finished_at, attended_count, attended_hours,
-    `How many people received assistance from SAR?`, description, `Equipment Used/Lost`,
-    `Task Leader's Name`, `Date Report Completed`
+  select ref_id, tracking_number, `Agency`, `Agency File #`, `ASE#`, `Region`, `Task Type`,
+    started_at, finished_at, attended_count, attended_hours, description,
+    `Equipment Used/Lost`, `Task Leader's Name`, finished
   from activities
   where id = :activity
 
-ask others 'Other response personnel' default 0 hint 'Police, fire, ambulance, and other agencies.'
-ask others_hours 'Their person hours' default 0 hint 'For example, 5 people for 4 hours is 20.'
-ask injured 'Injured' default 0
-ask fatalities 'Fatalities' default 0
-ask still_missing 'Still missing' default 0
-ask err 'Equipment repair/replacement request attached' choose 'No', 'Yes' default 'No'
+compute
+  total_person_hours = round(hours(task.attended_hours), 1)
 
 title 'Task report {coalesce(task.tracking_number, task.ref_id)}' by team.name
-keep task.tracking_number, task.`Agency File #`, task.attended_count, task.attended_hours,
-  :others, :others_hours, :injured, :fatalities, :still_missing, :err
+keep task.tracking_number, task.`Agency File #`, task.attended_count, task.attended_hours
 
--- No verify code on EMCR's forms for now: Andrew asked that they stay a drop-in
--- replacement for EMCR's current process (#970). Each still gets an ID.
+-- What EMCR can't take the form without, from Andrew's filled-in page (#993), so it
+-- never publishes with one blank. Task Completed must be a time that has passed. ASE #,
+-- the EPC lines, and section B stay optional.
+needs task.tracking_number, task.`Agency`, task.`Agency File #`, task.`Region`,
+  task.`Task Type`, task.description, task.`Task Leader's Name`, task.finished
+
+-- No verify code on EMBC's form for now: Andrew asked that it stay a drop-in
+-- replacement for the current process (#970). Each PDF still gets an ID.
 verify code none
 
 -- What its verify page shows anyone holding it: never a name.
@@ -41,73 +51,46 @@ verify shows
 page
 
 places
-  task_number     text top 91.3pt, left 156.7pt, width 105.7pt, fit, size 10pt  -- after 'Task Number:'
-  file_number     text top 91.3pt, left 408.0pt, width 105.6pt, fit, size 10pt  -- after 'RCC/RCMP/BCAS File Number:'
-  group           text top 147.5pt, left 125.6pt, width 127.5pt, fit, size 10pt  -- after 'Group:'
-  region          text top 147.5pt, left 295.8pt, width 100.1pt, fit, size 10pt  -- after 'Region:'
-  area            text top 147.5pt, left 428.8pt, width 83.7pt, fit, size 10pt  -- after 'Area:'
-  task_type       text top 174.4pt, left 141.5pt, width 368.6pt, fit, size 10pt  -- after 'Task Type:'
-  commenced_date  text top 201.3pt, left 200.0pt, width 89.2pt, fit, size 10pt  -- after 'Date Task Commenced:'
-  commenced_time  text top 201.3pt, left 404.5pt, width 111.2pt, fit, size 10pt  -- after 'Time Task Commenced:'
-  completed_date  text top 228.1pt, left 192.8pt, width 100.2pt, fit, size 10pt  -- after 'Date Task Completed:'
-  completed_time  text top 228.1pt, left 401.1pt, width 116.6pt, fit, size 10pt  -- after 'Time Task Completed:'
-  volunteers      text top 254.9pt, left 288.1pt, width 50.8pt, fit, size 10pt  -- after 'Number of Registered Volunteers Involved:'
-  volunteer_hours text top 254.9pt, left 461.6pt, width 56.3pt, fit, size 10pt  -- after 'Number of Person Hours:'
-  others          text top 281.8pt, left 307.5pt, width 45.4pt, fit, size 10pt  -- after 'Number of Other Response Personnel Involved:'
-  others_hours    text top 281.8pt, left 475.6pt, width 39.8pt, fit, size 10pt  -- after the second 'Number of Person Hours:'
-  victims         text top 308.7pt, left 181.1pt, width 50.9pt, fit, size 10pt  -- after 'Number of Victims:'
-  injured         text top 308.7pt, left 275.9pt, width 45.4pt, fit, size 10pt  -- after 'Injured:'
-  fatalities      text top 308.7pt, left 373.4pt, width 39.8pt, fit, size 10pt  -- after 'Fatalities:'
-  still_missing   text top 308.7pt, left 478.0pt, width 39.9pt, fit, size 10pt  -- after 'Still Missing:'
-  details         text top 335.6pt, left 92.0pt, width 445.3pt, indent 232.8pt, pitch 13.6pt, lines 8, size 10pt  -- after 'Details of Task (attach additional pages if required):' lines 8
-  err_yes         tick top 475.5pt, left 481.2pt, size 7.1pt  -- box after 'YES'
-  err_no          tick top 475.5pt, left 526.2pt, size 7.1pt  -- box after 'NO'
-  equipment       text top 488.1pt, left 92.0pt, width 444.3pt, pitch 14.6pt, lines 4, size 10pt  -- under 'Equipment Used/Lost' lines 4
-  leader          text top 575.2pt, left 186.6pt, width 127.6pt, fit, size 10pt  -- after 'Task Leader’s Name:'
-  leader_date     text top 575.2pt, left 474.5pt, width 61.8pt, fit, size 10pt  -- after 'Date:'
+  task_number  text top 106.4pt, left 88.8pt, width 110.0pt, fit, align center, size 9pt  -- on the line after 'Task:'
+  agency       text top 106.4pt, left 273.6pt, width 64.4pt, fit, align center, size 9pt  -- on the line after 'Agency:'
+  file_number  text top 106.4pt, left 412.8pt, width 64.4pt, fit, align center, size 9pt  -- on the line after 'File Number:'
+  ase          text top 106.4pt, left 552.0pt, width 41.6pt, fit, align center, size 9pt  -- on the line after 'ASE #:'
+  group        text top 164.6pt, left 112.2pt, width 191.6pt, fit, align center, size 9pt  -- on the line after 'PSLV Group:'
+  region       text top 164.6pt, left 402.0pt, width 191.6pt, fit, align center, size 9pt  -- on the line after 'Region:'
+  task_type    text top 183.8pt, left 112.8pt, width 480.8pt, fit, align center, size 9pt  -- on the line after 'Task Type:'
+  commenced    text top 203.0pt, left 112.2pt, width 191.6pt, fit, align center, size 9pt  -- on the line after 'Task Commenced:'
+  completed    text top 203.0pt, left 402.0pt, width 191.6pt, fit, align center, size 9pt  -- on the line after 'Task Completed:'
+  volunteers   text top 232.4pt, left 112.2pt, width 191.6pt, fit, align center, size 9pt  -- on the line after 'Number of PSLV Volunteers:'
+  person_hours text top 232.4pt, left 402.0pt, width 191.6pt, fit, align center, size 9pt  -- on the line after 'Number of Person Hours:'
+  details      text top 263.0pt, left 125.7pt, width 461.0pt, pitch 12pt, lines 10, size 9pt  -- in the box after 'Details of Task:'
+  equipment    text top 399.5pt, left 125.7pt, width 461.0pt, pitch 12pt, lines 4, size 9pt  -- in the box after 'Equipment Used/Lost:'
+  leader       text top 460.4pt, left 112.8pt, width 480.8pt, fit, align center, size 9pt  -- on the line after 'Task Leader's Name:'
 
 fill
   task_number = task.tracking_number
+  agency = task.`Agency`
   file_number = task.`Agency File #`
+  ase = task.`ASE#`
   group = team.name
   region = task.`Region`
-  area = task.`Area`
   task_type = task.`Task Type`
-  commenced_date = task.started_at as date_long
-  commenced_time = task.started_at as time
-  completed_date = task.finished_at as date_long
-  completed_time = task.finished_at as time
+  commenced = '{task.started_at as date_short}, {task.started_at as time}' if task.started_at is not null
+  completed = '{task.finished_at as date_short}, {task.finished_at as time}' if task.finished_at is not null
   volunteers = task.attended_count as number
-  volunteer_hours = task.attended_hours as hours
-  others = :others as number
-  others_hours = :others_hours as number
-  victims = task.`How many people received assistance from SAR?`
-  injured = :injured as number
-  fatalities = :fatalities as number
-  still_missing = :still_missing as number
+  person_hours = total_person_hours
   details = task.description
-  err_yes = :err = 'Yes'
-  err_no = :err = 'No'
   equipment = task.`Equipment Used/Lost`
   leader = task.`Task Leader's Name`
-  leader_date = task.`Date Report Completed` as date_short
 
-expect with task.tracking_number = 'CR-4113', task.`Agency File #` = '26-7310',
-  task.`Task Type` = '021 - Mountain rescue':
-  task_number = 'CR-4113' and file_number = '26-7310' and task_type = '021 - Mountain rescue'
-  and title = 'Task report CR-4113'
+expect with task.tracking_number = '26-06613', task.`Agency` = 'Police',
+  task.`Agency File #` = '26-88481', task.`Task Type` = '002 - Land SAR':
+  task_number = '26-06613' and agency = 'Police' and file_number = '26-88481'
+  and task_type = '002 - Land SAR' and title = 'Task report 26-06613'
 
 -- With no task number yet, the PDF is named for the activity's ID.
 expect with task.ref_id = '01428', task.tracking_number = '': title = 'Task report 01428'
 
--- Person hours are whole hours: 3 volunteers for 4 hours 50 minutes each.
-expect with task.attended_count = 3, task.attended_hours = 870:
-  volunteers = '3' and volunteer_hours = '14'
+-- Person hours to one decimal, as EMBC's form shows them: 9,858 minutes is 164.3 hours.
+expect with task.attended_count = 22, task.attended_hours = 9858:
+  volunteers = '22' and person_hours = '164.3'
 
--- Unanswered, the counts are 0 and no ERR is attached.
-expect others = '0' and injured = '0' and fatalities = '0' and still_missing = '0'
-  and err_no and not err_yes
-expect with :others = 4, :others_hours = 12, :err = 'Yes':
-  others = '4' and others_hours = '12' and err_yes and not err_no
-
-expect with task.`Date Report Completed` = date '2026-06-02': leader_date = 'Jun 2, 2026'

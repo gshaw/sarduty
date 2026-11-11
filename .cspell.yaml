@@ -24,6 +24,7 @@ words:
   - wght # a variable font's weight axis, in DancingScript[wght].ttf, the letters' signature (#995)
   - mult # Decimal.mult, the decimal library's multiply: a form's money and Service.Format.money (#950)
   - EMCR # Emergency Management and Climate Readiness, BC's agency, whose forms teams fill (#950)
+  - EMBC # Emergency Management BC, EMCR's old name, on the Task Report Form (#993)
   - IHDR # a PNG's header chunk, which holds its size
   - silverbasin # Silver Basin SAR's subdomain, a made-up team (App.SilverBasin, #963)
   - WESARA # Western Search and Rescue Association, the made-up organization (#963)

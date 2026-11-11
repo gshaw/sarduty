@@ -14,7 +14,7 @@ for activity where kind = 'incident'
 
 report task
   select ref_id, tracking_number, started_at, finished_at, `Response Type`,
-    `Task Leader's Name`, `Date Report Completed`
+    `Task Leader's Name`, `Date Report Completed`, finished
   from activities
   where id = :activity
 
@@ -50,6 +50,10 @@ compute
 title 'Expense reimbursement request supplement {coalesce(task.tracking_number, task.ref_id)}'
   by team.name
 keep task.tracking_number, personnel, :meals_provided
+
+-- What EMCR can't take the claim without (#993): its task number, the task leader who
+-- signs it, and a task that has finished, since the claim adds up its hours.
+needs task.tracking_number, task.`Task Leader's Name`, task.finished
 
 -- No verify code on EMCR's forms for now: Andrew asked that they stay a drop-in
 -- replacement for EMCR's current process (#970). Each still gets an ID.

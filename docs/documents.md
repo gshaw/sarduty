@@ -283,11 +283,14 @@ Each form's text and page are in `priv/forms/<organization>/`, as uploaded.
 running its expects, then prints it there.
 
 - **BCSARA's Task report** ([task_report.txt](../priv/forms/bcsara/task_report.txt)) is
-  EMCR's 1.01, on EMCR's own page, unchanged. It reads the incident and BCSARA's fields
-  (Agency File #, Region, Area, Task Type, people helped, Equipment Used/Lost, Task
-  Leader's Name, Date Report Completed), and asks 6 things: other response personnel,
-  their person hours, injured, fatalities, still missing, and whether an equipment
-  repair/replacement request is attached. The task leader signs it by hand.
+  EMBC's Task Report Form (#993), the page D4H draws and EMCR takes today, as Andrew's
+  version 4 on production: `form 'EMBC Task Report Form'`, so an upload replaces
+  production's form. It reads the incident and BCSARA's fields (Agency, Agency File #,
+  ASE#, Region, Task Type, Equipment Used/Lost, Task Leader's Name) and asks nothing.
+  Details of Task has 10 lines and Equipment Used/Lost 4, at 9pt. Publishing needs the
+  task number, Agency, Agency File #, Region, Task Type, the description, the Task
+  Leader's Name, and a finished task. The page carries two white Acrobat Sign text tags,
+  for the task leader's signature and date.
 - **BCSARA's Supplement** ([supplement.txt](../priv/forms/bcsara/supplement.txt)) is
   EMCR's Expense reimbursement request supplement, on a blank page in D4H's layout with
   room for 18 people, which EMCR takes today. It prints the claim's people rules: a
@@ -297,6 +300,8 @@ running its expects, then prints it there.
   provided. The header has the task number and when the task ran, and the footer the
   Task Leader's Name, Date Report Completed, and the page; the task leader signs by
   hand. More than 18 people print another copy of the page, each with its own subtotal.
+  Publishing needs the task number, the Task Leader's Name, and a finished task, as the
+  Expense reimbursement request's does.
 - **BCSARA's Expense reimbursement request**
   ([expense_request.txt](../priv/forms/bcsara/expense_request.txt)) is EMCR's, with no
   page: its [layout](#layout) draws it in D4H's layout. The header is the team's legal
