@@ -70,11 +70,12 @@ defmodule App.Document.Evaluator do
 
   defp output(env, doc) do
     title = doc.title && text_value(doc.title.text, env)
+    author = doc.title && doc.title.by && text_value(doc.title.by, env)
     copies = copies(doc, env)
 
     %{
       title: title,
-      author: doc.title && doc.title.by && text_value(doc.title.by, env),
+      author: author,
       lock: doc.lock,
       keep: Map.new(doc.keep, &{name(&1), value(&1, env)}),
       shows:
@@ -85,25 +86,25 @@ defmodule App.Document.Evaluator do
       layout: doc.layout,
       fills: fills(doc, env),
       copies: length(copies),
-      places: places(copies, doc, env, title)
+      places: places(copies, doc, env, {author, title})
     }
   end
 
-  defp places(copies, doc, env, title) do
+  defp places(copies, doc, env, names) do
     copies
     |> Enum.with_index(1)
     |> Enum.flat_map(&copy_places(&1, length(copies), doc, env))
-    |> Enum.map(&heading(&1, title))
+    |> Enum.map(&heading(&1, names))
   end
 
-  # A place that says `more` heads its attached page with the title and its label: "Task
-  # report 26-06613, Details of Task (continued)" (#993).
-  defp heading(%{more: label} = place, title) do
-    heading = [title, label] |> Enum.reject(&blank?/1) |> Enum.join(", ")
-    Map.put(place, :heading, heading <> " (continued)")
+  # A place that says `more` heads its attached pages with the team, the title, and its
+  # label: "Coast Range SAR · Task report 26-06613 · Details of Task" (#993).
+  defp heading(%{more: label} = place, {author, title}) do
+    heading = [author, title, label] |> Enum.reject(&blank?/1) |> Enum.join(" · ")
+    Map.put(place, :heading, heading)
   end
 
-  defp heading(place, _title), do: place
+  defp heading(place, _names), do: place
 
   # The email's subject and text, its body's lines with a newline after the last.
   defp email(nil, _env), do: nil

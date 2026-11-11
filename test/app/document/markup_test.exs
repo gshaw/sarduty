@@ -266,7 +266,7 @@ defmodule App.Document.MarkupTest do
           pitch: 12,
           lines: 2,
           more: "Details of Task",
-          heading: "Task report 26-06613, Details of Task (continued)"
+          heading: "Coast Range SAR · Task report 26-06613 · Details of Task"
         })
 
       {markup, files} = typst([Map.put(place, :value, "Found.")])
@@ -275,6 +275,9 @@ defmodule App.Document.MarkupTest do
       assert markup =~ ~s|state("more-details", false).final()|
       assert values(files)["details-heading"] == place.heading
       refute markup =~ "Task report 26-06613"
+      # Each attached page says what it belongs to and which of its pages it is.
+      assert markup =~ ~s|header: attached-header(v.at("details-heading"), "more-details")|
+      assert markup =~ ~s|", page " + str(n) + " of " + str(count)|
 
       # The verify code prints on it as on every page.
       {markup, _files} =
@@ -291,8 +294,9 @@ defmodule App.Document.MarkupTest do
       assert markup =~ "foreground: {verify-code}"
 
       long = String.duplicate("Walked out at dusk with the subject. ", 12)
+      longer = String.duplicate("Walked out at dusk with the subject.\n", 120)
 
-      for {value, pages} <- [{"Found.", 1}, {long, 2}] do
+      for {value, pages} <- [{"Found.", 1}, {long, 2}, {longer, 4}] do
         # DRAFT prints on the attached page too.
         mark = File.read!("priv/pdf/draft-mark.png")
         {markup, files} = typst([Map.put(place, :value, value)], mark: mark)

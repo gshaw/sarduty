@@ -959,16 +959,22 @@ defmodule App.DocumentTest do
                "Line 8: Take out more: rows take a top, a pitch, lines, and a page."
     end
 
-    test "a place that says more heads its attached page with the title and its label" do
+    test "a place that says more heads its attached pages with the team, title, and label" do
       details = "body text top 1in, left 1in, width 4in, pitch 12pt, lines 10, more 'Details'"
-      {:ok, doc} = checked(form("title 'Task report {:activity}'", [details]))
+
+      {:ok, doc} =
+        checked(form("title 'Task report {:activity}' by 'Coast Range SAR'", [details]))
 
       [place] = Document.evaluate(doc, %{":activity" => 7}, "Etc/UTC").places
-      assert place.heading == "Task report 7, Details (continued)"
+      assert place.heading == "Coast Range SAR · Task report 7 · Details"
+
+      {:ok, doc} = checked(form("title 'Task report {:activity}'", [details]))
+      [place] = Document.evaluate(doc, %{":activity" => 7}, "Etc/UTC").places
+      assert place.heading == "Task report 7 · Details"
 
       {:ok, doc} = checked(form("", [details]))
       [place] = Document.evaluate(doc, %{}, "Etc/UTC").places
-      assert place.heading == "Details (continued)"
+      assert place.heading == "Details"
     end
 
     test "check rows and fill each" do

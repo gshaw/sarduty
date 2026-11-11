@@ -136,9 +136,12 @@ details text top 263pt, left 125.7pt, width 461pt, pitch 12pt, lines 10, size 9p
 ```
 
 - It shrinks to 8pt at the smallest, not 6pt.
-- Still too long, its lines say "See attached page", and the PDF ends with a plain
-  letter page headed with the title and the label, "Task report 26-06613, Details of
-  Task (continued)", then the whole text. Each place that's too long gets its own page.
+- Still too long, its lines say "See attached page", and the PDF ends with the whole
+  text on plain letter pages, a small gap after each line. Every attached page has a
+  header with the title's `by`, the title, the label, and which of its pages it is:
+  "Coast Range SAR · Task report 26-06613 · Details of Task, page 1 of 2". A loose page
+  still says what it belongs to, and the form's own page stays unnumbered. Each place
+  that's too long gets its own pages, counted on their own.
 - Typst decides when it prints, so SAR Duty measures nothing itself: the place sets a
   Typst state when it gives up, and the page prints only when it was set. DRAFT and
   SAMPLE print on it, and the verify code too, unless the form says `verify code none`.

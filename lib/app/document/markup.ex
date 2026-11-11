@@ -43,6 +43,22 @@ defmodule App.Document.Markup do
 
   @letter_width 612
   @letter_height 792
+  # An attached page's header: its heading and which of its pages this is, counted from
+  # the metadata at its text's start and end (#993).
+  @attached_header """
+  #let attached-header(heading, more) = context {
+    let start = query(metadata.where(value: more + "-start"))
+    let end = query(metadata.where(value: more + "-end"))
+    let (n, count) = (1, 1)
+    if start.len() > 0 and end.len() > 0 {
+      let first = start.first().location().page()
+      n = here().page() - first + 1
+      count = end.first().location().page() - first + 1
+    }
+    text(size: 12pt, weight: "bold", heading + ", page " + str(n) + " of " + str(count))
+  }
+  """
+
   # The smallest size a text on its `lines` shrinks to, and one that goes on an attached
   # page when it's still too long (#993): 6pt is too small for a page someone signs.
   @smallest 6
@@ -113,29 +129,39 @@ defmodule App.Document.Markup do
     end)
   end
 
-  # A page at the end for each place that says `more` and was too long for its lines
-  # (#993): its heading, then its whole text, on plain letter paper. The place set its
-  # state when it printed "See attached page", so Typst decides, and a text that fits
-  # adds no page. The verify code and the mark print on it as on every other page.
+  # Pages at the end for each place that says `more` and was too long for its lines
+  # (#993): the whole text on plain letter paper, a line apart from the next, under a
+  # header on every page with its heading and "page 1 of 3", so a loose page still says
+  # what it belongs to. The place set its state when it printed "See attached page", so
+  # Typst decides, and a text that fits adds no page. The verify code and the mark print
+  # on it as on every other page.
   defp attached(places, files, values, verify?) do
     places
     |> Enum.filter(&(Map.has_key?(&1, :more) and copy(&1) == 1 and &1.value not in [nil, ""]))
     |> Enum.map_reduce(values, fn place, values ->
       heading = "#{place.name}-heading"
+      more = more_state(place)
 
       markup = [
-        ~s|#context if state("#{more_state(place)}", false).final() {\n|,
+        ~s|#context if state("#{more}", false).final() {\n|,
         "  page(width: #{pt(@letter_width)}, height: #{pt(@letter_height)}, ",
         "margin: (x: 1in, top: 1in, bottom: 1.5in), ",
+        ~s|header: attached-header(v.at("#{heading}"), "#{more}"), |,
         "foreground: {#{attached_foreground(files, verify?)}}, {\n",
         "    set text(size: 11pt)\n",
-        ~s|    block(below: 12pt, text(size: 12pt, weight: "bold", v.at("#{heading}")))\n|,
-        ~s|    v.at("#{place.name}").join(linebreak())\n|,
+        "    set par(spacing: 6pt)\n",
+        ~s|    metadata("#{more}-start")\n|,
+        ~s|    v.at("#{place.name}").join(parbreak())\n|,
+        ~s|    metadata("#{more}-end")\n|,
         "  })\n",
         "}\n"
       ]
 
       {markup, Map.put(values, heading, place.heading)}
+    end)
+    |> then(fn
+      {[], values} -> {[], values}
+      {markup, values} -> {[@attached_header | markup], values}
     end)
   end
 
