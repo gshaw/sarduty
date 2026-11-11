@@ -398,7 +398,8 @@ The team's Dashboard, `/teams/:subdomain`
   A team admin who is a member sees both For you to do and Needs attention, one above
   the other. A member's page doesn't work out Needs attention at all.
 - **For you to do** comes from [MemberToDo](../lib/app/view_data/member_to_do.ex), pure:
-  add your ID card to Wallet (on a team with ID cards on, until
+  each form a team admin asked you to sign (#993, a team admin without a member login
+  gets these too), add your ID card to Wallet (on a team with ID cards on, until
   `MemberCard.in_wallet?/1`), and each qualification expiring within 60 days (until it's
   renewed). Each leaves once done. A tax credit letter isn't one: its email carries the
   PDF, and a member with no email shows in Needs attention until one is added. With nothing to do, the card

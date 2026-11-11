@@ -29,6 +29,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 - EMCR's forms are signed when they're published. The task leader signs them as
   "/s/ Cameron Ruiz". Another team admin signs in their own name, "/s/ Alex Chen for
   Cameron Ruiz", and the task leader gets the PDF by email.
+- A team admin can ask the task leader to sign an EMCR form instead. They get it in For
+  you to do and by email, and Sign and publish on its page publishes it. The form says
+  who it's waiting for until then, with Cancel request.
 - No more yellow buttons. Send changes on Chores asks first and says what it sends.
 - ⭐ The ID card page shows your card, front and back, under the Wallet buttons. No
   Wallet? Save image puts each side in Photos, and Print ID card prints both at card

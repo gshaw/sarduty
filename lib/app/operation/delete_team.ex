@@ -37,7 +37,7 @@ defmodule App.Operation.DeleteTeam do
                   equipment_usages events group_membership_changes group_rules groups
                   home_coordinates location_bookmarks mcp_calls member_away_periods member_cards
                   member_check_ins member_standing_changes members no_shows outbox_messages qualifications
-                  reminders reports route_distances published_pdfs form_answers tags team_login_grants templates trips
+                  reminders reports route_distances published_pdfs form_answers sign_requests tags team_login_grants templates trips
                   whiteboard_notes)
 
   # Table, its key, and the team table that key points at.

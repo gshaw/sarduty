@@ -69,6 +69,8 @@ defmodule Web.RouterTest do
     "/teams/:subdomain/activities/:id/members/remove",
     "/teams/:subdomain/activities/:id/members/update",
     "/teams/:subdomain/activities/:id/take-attendance",
+    # A form's sign page (#993): only the member a team admin asked to sign opens it.
+    "/teams/:subdomain/activities/:id/forms/:form_id/sign",
     "/teams/:subdomain/certificates/:id/edit",
     "/teams/:subdomain/certificates/:id/file",
     "/teams/:subdomain/certificates/new",

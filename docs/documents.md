@@ -262,6 +262,36 @@ The published PDF keeps `signed_by` and `signed_for`, and its Published box and 
 say "Signed by Alex Chen for Cameron Ruiz". When the task leader's name changed since
 the preview, Publish refuses: "The task leader changed. Go back and publish again."
 
+### Asking the task leader to sign
+
+A team admin who isn't the task leader can ask them to sign instead (#993,
+App.Operation.AskToSign). On the preview, Ask Cameron Ruiz to sign is the main button,
+beside Sign for Cameron Ruiz. It shows only when the task leader can log in: one
+member with an email, who is a team admin or logs in as a member. Otherwise the preview
+says why, such as "Cameron Ruiz has no email, so they cannot log in to sign it." The
+task leader needn't be a team admin.
+
+- **Asking** keeps an App.Model.SignRequest: the team, activity, form, the member asked,
+  who asked and when, and the PDF's title. The task leader gets "Sign Task report
+  26-06613" in For you to do (App.ViewData.MemberToDo) and by email
+  (App.Worker.EmailSignRequestWorker), with a link to the sign page. One request is
+  open per form and activity; asking again replaces it and emails again.
+- **Waiting.** The form page says "Waiting for Cameron Ruiz to sign", when and by whom,
+  with Cancel request. Answers can still change.
+- **The sign page**, `…/forms/:form_id/sign` (Web.SignFormLive), opens only for the
+  member asked, logged in as themselves, a member or a team admin by email. It prints
+  the form as it would publish, signed by them, and shows page 1 with Sign and publish
+  (`PublishDocument.preview_asked/3` and `publish_asked/5`). With a need blank it says
+  so, with no button. Signing publishes, ends the request, and emails the team admin
+  who asked the PDF.
+- **A request ends** when the task leader signs, a team admin cancels it or signs for
+  them, asking again replaces it, or the Task Leader's Name no longer names them. The
+  last is noticed when a page reads the request: the form page, the sign page, or For
+  you to do. An ended request leaves For you to do, and its sign page says "This
+  request has ended."
+- **No Decline.** A task leader who won't sign tells the team, and a team admin signs
+  for them.
+
 ## Checks
 
 `App.Document.check/2` checks each report with `App.Report.Compiler.select_columns/3`,
@@ -613,8 +643,9 @@ shows` line, or each kept value for a form with none. Page 1 folds under it, dra
   shows every page as a picture (Service.PDFImages) and what publishing does: its ID,
   what its verify page shows, who signs it, what it replaces, and that it isn't sent
   anywhere. A form that says `signed by` has Sign and publish for its task leader, and
-  Sign for Cameron Ruiz for any other team admin, which asks first
-  ([Signing](#signing)).
+  Sign for Cameron Ruiz for any other team admin, which asks first, and Ask Cameron
+  Ruiz to sign when the task leader can log in
+  ([Asking the task leader to sign](#asking-the-task-leader-to-sign)).
   Publish there checks again and saves that same PDF in one transaction, so what's kept
   is what was looked at. When another admin published meanwhile, it says "Someone just
   published this. Reload to see it." Publish again goes through the same preview.

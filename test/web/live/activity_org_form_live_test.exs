@@ -9,6 +9,7 @@ defmodule Web.ActivityOrgFormLiveTest do
 
   alias App.Model.FormAnswer
   alias App.Model.PublishedPDF
+  alias App.Model.SignRequest
   alias App.Operation.PublishDocument
   alias App.Repo
   alias App.ViewData.Search
@@ -785,6 +786,147 @@ defmodule Web.ActivityOrgFormLiveTest do
              )
 
       refute Repo.exists?(PublishedPDF)
+    end
+
+    # Alex previews the form Cameron Ruiz leads and asks them to sign (#993).
+    defp ask(%{cast: cast, hiker: hiker, form: form}) do
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      preview(lv, "Cameron Ruiz")
+      lv |> element("#publish-ask") |> render_click()
+      assert_patch(lv, form_path(hiker, form))
+      lv
+    end
+
+    defp sign_path(hiker, form), do: form_path(hiker, form) <> "/sign"
+
+    test "a team admin asks the task leader, who signs from For you to do", ctx do
+      %{cast: cast, hiker: hiker, form: form} = ctx
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      preview(lv, "Cameron Ruiz")
+
+      assert has_element?(lv, "#publish-ask", "Ask Cameron Ruiz to sign")
+      assert has_element?(lv, "#publish-confirm", "Sign for Cameron Ruiz")
+
+      lv |> element("#publish-ask") |> render_click()
+      assert_patch(lv, form_path(hiker, form))
+      assert has_element?(lv, "#flash-info", "Asked Cameron Ruiz to sign.")
+      assert has_element?(lv, "#org-form-waiting", "Waiting for Cameron Ruiz to sign")
+      assert has_element?(lv, "#org-form-waiting", "by Alex Chen")
+      request = Repo.one!(SignRequest)
+      title = "Task report #{hiker.ref_id}"
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Sign #{title}"
+        assert email.to == [{"Cameron Ruiz", "cameron.ruiz@example.com"}]
+        assert email.text_body =~ "Alex Chen asked you to sign #{title} for Missing hiker."
+        assert email.text_body =~ sign_path(hiker, form)
+      end)
+
+      cameron = log_in_user(build_conn(), cast.cameron)
+      {:ok, home, _html} = live(cameron, ~p"/teams/coastrange")
+      assert has_element?(home, "#to-do-sign-#{request.id}", "Sign #{title}")
+      assert has_element?(home, "#to-do-sign-#{request.id}", "Missing hiker · Alex Chen asked")
+
+      {:ok, sign, _html} = live(cameron, sign_path(hiker, form))
+      render_async(sign, 5_000)
+      assert has_element?(sign, "#sign-signature", "/s/ Cameron Ruiz")
+      assert has_element?(sign, "#sign-page-1")
+
+      sign |> element("#sign-confirm") |> render_click()
+      pdf = Repo.one!(PublishedPDF)
+
+      assert {pdf.signed_by, pdf.signed_for, pdf.user_id} ==
+               {"Cameron Ruiz", nil, cast.cameron.id}
+
+      assert %{ended_why: :signed} = Repo.reload!(request)
+      assert has_element?(sign, "#sign-ended", "You signed it")
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Cameron Ruiz signed #{title}"
+        assert email.to == [{"", "alex.chen@example.com"}]
+        assert email.text_body =~ "Cameron Ruiz signed #{title}, Missing hiker, on"
+        assert [%{filename: "Task_report_" <> _}] = email.attachments
+      end)
+
+      {:ok, home, _html} = live(cameron, ~p"/teams/coastrange")
+      refute has_element?(home, "#to-do-sign-#{request.id}")
+    end
+
+    test "only the member asked opens the sign page", ctx do
+      ask(ctx)
+
+      assert_raise Web.Status.NotFound, fn ->
+        live(log_in_user(build_conn(), ctx.cast.alex), sign_path(ctx.hiker, ctx.form))
+      end
+    end
+
+    test "Cancel request ends it, and its link says so", ctx do
+      lv = ask(ctx)
+      lv |> element("#org-form-cancel-request") |> render_click()
+
+      refute has_element?(lv, "#org-form-waiting")
+      assert has_element?(lv, "#flash-info", "Cancelled the request to Cameron Ruiz.")
+      assert %{ended_why: :cancelled} = Repo.one!(SignRequest)
+
+      cameron = log_in_user(build_conn(), ctx.cast.cameron)
+      {:ok, sign, _html} = live(cameron, sign_path(ctx.hiker, ctx.form))
+      assert has_element?(sign, "#sign-ended", "This request has ended.")
+      refute has_element?(sign, "#sign-confirm")
+    end
+
+    test "a team admin who signs for them ends the request", ctx do
+      lv = ask(ctx)
+      lv |> element("#org-form-publish") |> render_click()
+      render_async(lv, 5_000)
+      lv |> element("#publish-confirm") |> render_click()
+
+      assert %{signed_for: "Cameron Ruiz"} = Repo.one!(PublishedPDF)
+      assert %{ended_why: :signed_for} = Repo.one!(SignRequest)
+      refute has_element?(lv, "#org-form-waiting")
+    end
+
+    test "a new task leader ends the request", ctx do
+      lv = ask(ctx)
+      lv |> form("#org-form-answers", answers: %{"leader" => "Harper Nguyen"}) |> render_change()
+
+      refute has_element?(lv, "#org-form-waiting")
+      assert %{ended_why: :leader_changed} = Repo.one!(SignRequest)
+    end
+
+    test "asking again replaces the request and emails again", ctx do
+      ask(ctx)
+      ask(ctx)
+
+      assert [%{ended_why: :replaced}, %{ended_why: nil}] =
+               SignRequest |> order_by(:id) |> Repo.all()
+    end
+
+    test "a task leader with no email can't be asked", ctx do
+      %{cast: cast, hiker: hiker, form: form} = ctx
+      cast["Cameron Ruiz"] |> Ecto.Changeset.change(email: nil) |> Repo.update!()
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      preview(lv, "Cameron Ruiz")
+
+      refute has_element?(lv, "#publish-ask")
+
+      assert has_element?(
+               lv,
+               "#publish-cant-ask",
+               "Cameron Ruiz has no email, so they cannot log in to sign it."
+             )
+    end
+
+    test "with member logins off, only a task leader who's a team admin can be asked", ctx do
+      %{cast: cast, hiker: hiker, form: form} = ctx
+      cast.team |> Ecto.Changeset.change(member_logins: false) |> Repo.update!()
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      preview(lv, "Cameron Ruiz")
+
+      assert has_element?(
+               lv,
+               "#publish-cant-ask",
+               "Member logins are off, so Cameron Ruiz cannot log in to sign it."
+             )
     end
   end
 end

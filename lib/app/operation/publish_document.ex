@@ -22,6 +22,11 @@ defmodule App.Operation.PublishDocument do
   gets an email with the PDF (App.Worker.EmailSignedFormWorker). When the Task Leader's
   Name changed since the preview, Publish refuses.
 
+  A task leader asked to sign (App.Operation.AskToSign) previews and publishes with
+  `preview_asked/3` and `publish_asked/5`, needing the open request, not a team admin.
+  However it's signed, publishing ends the form's open request; signed by the task
+  leader, the team admin who asked gets the PDF (App.Worker.EmailSignRequestWorker).
+
   `current_id` is the id of the activity's current PDF of this form the person saw, nil
   for none: when another admin published meanwhile, nothing is saved.
   """
@@ -34,6 +39,7 @@ defmodule App.Operation.PublishDocument do
   alias App.Model.FormAnswer
   alias App.Model.Member
   alias App.Model.PublishedPDF
+  alias App.Model.SignRequest
   alias App.Model.Team
   alias App.Operation.PrintForm
   alias App.Operation.ReadDocument
@@ -41,6 +47,7 @@ defmodule App.Operation.PublishDocument do
   alias App.Repo
   alias App.Report.Context
   alias App.Worker.EmailSignedFormWorker
+  alias App.Worker.EmailSignRequestWorker
 
   @doc """
   The PDF as it would publish, printed and not saved, with the ID it publishes under:
@@ -53,6 +60,52 @@ defmodule App.Operation.PublishDocument do
          {:ok, signer} <- signer(doc, team, user, now),
          do: print_preview({team, form, activity}, doc, context, signer)
   end
+
+  @doc """
+  `preview/5` for the task leader `request` asks, signed by them: `user` must be the
+  member asked, and the request open. Its team, activity, form, and member are loaded.
+  """
+  def preview_asked(%SignRequest{} = request, %User{} = user, now) do
+    %{team: team, form: form, activity: activity} = request
+
+    with {:ok, member} <- check_asked(request, user, now),
+         {:ok, doc, context} <- PrintForm.read(team, form.text, now),
+         do: print_preview({team, form, activity}, doc, context, member)
+  end
+
+  @doc """
+  `publish/7` for the task leader `request` asks, from `preview_asked/3`'s preview:
+  `{:ok, pdf}` or `{:error, message}`.
+  """
+  def publish_asked(%SignRequest{} = request, %User{} = user, preview, current_id, now) do
+    %{team: team, form: form, activity: activity} = request
+
+    with :ok <- same_version(preview, form),
+         {:ok, _member} <- check_asked(request, user, now),
+         :ok <- same_leader(team, form, activity, preview, now) do
+      save(
+        %{code: preview.code, answers: preview.answers},
+        {team, form, activity, user},
+        preview.printed,
+        current_id
+      )
+    end
+  end
+
+  # The form can publish, the request is open, and `user` is the member it asks.
+  defp check_asked(request, user, now) do
+    %{team: team, form: form, activity: activity} = request
+
+    with :ok <- check_form(team, form, activity),
+         :ok <- if(SignRequest.open?(request), do: :ok, else: {:error, ended()}) do
+      case Member.find_by_email(team, user.email, now) do
+        %Member{id: id} = member when id == request.member_id -> {:ok, member}
+        _someone_else -> {:error, "Only #{request.member.name} can sign this."}
+      end
+    end
+  end
+
+  defp ended, do: "This request has ended."
 
   # Printed once with a new ID, with the activity's answers, signed by `signer`.
   defp print_preview({team, form, activity}, doc, context, signer) do
@@ -101,18 +154,32 @@ defmodule App.Operation.PublishDocument do
     end
   end
 
-  # The signature in the preview names the task leader as they were then (#993).
-  defp same_leader(_team, _form, _activity, %{printed: %{signed: nil}}, _now), do: :ok
+  @doc """
+  `:ok` when the task leader a preview's signature names is still the form's (#993),
+  else `{:error, message}`.
+  """
+  def same_leader(_team, _form, _activity, %{printed: %{signed: nil}}, _now), do: :ok
 
-  defp same_leader(team, form, activity, %{printed: %{signed: signed}}, now) do
+  def same_leader(team, form, activity, %{printed: %{signed: signed}}, now) do
+    with {:ok, name} <- leader_name(team, form, activity, now) do
+      if same_name?(name, signed.leader_name),
+        do: :ok,
+        else: {:error, "The task leader changed. Go back and publish again."}
+    end
+  end
+
+  @doc """
+  The name `form` says signs it for `activity` now, with its saved answers: `{:ok,
+  name}`, nil when it's blank, or `{:error, message}`.
+  """
+  def leader_name(team, form, activity, now) do
     with {:ok, %{doc: doc, values: values}} <-
            ReadDocument.call(form.text, Context.new(team, now), %{activity: activity.id}),
          {:ok, answers} <- Document.answers(doc, FormAnswer.starting(activity, doc.asks)) do
-      values = Map.merge(values, answers)
-
-      if same_name?(Document.signed_by(doc, values, team.timezone), signed.leader_name),
-        do: :ok,
-        else: {:error, "The task leader changed. Go back and publish again."}
+      {:ok, Document.signed_by(doc, Map.merge(values, answers), team.timezone)}
+    else
+      {:error, %{} = _errors} -> {:error, "The answers don't read."}
+      {:error, message} -> {:error, message}
     end
   end
 
@@ -150,14 +217,15 @@ defmodule App.Operation.PublishDocument do
     |> save(printed, current_id)
   end
 
-  # The PDF, and the task leader's email when someone signed for them, in one
-  # transaction.
+  # The PDF, the task leader's email when someone signed for them, and the end of the
+  # form's open request, in one transaction.
   defp save(attrs, printed, current_id) do
     saved =
       Repo.transaction(fn ->
         case PublishedPDF.publish(attrs, printed, current_id) do
           {:ok, pdf} ->
             tell_leader(pdf, printed[:signed])
+            end_request(pdf, printed[:signed])
             pdf
 
           {:error, :stale} ->
@@ -175,6 +243,21 @@ defmodule App.Operation.PublishDocument do
     if SignForm.tells_leader?(signed), do: EmailSignedFormWorker.enqueue(pdf, signed.leader)
   end
 
+  # Signed by the task leader, the team admin who asked gets the PDF.
+  defp end_request(_pdf, nil), do: :ok
+
+  defp end_request(pdf, signed) do
+    why = if signed.signed_for, do: :signed_for, else: :signed
+
+    case SignRequest.end_open(pdf.activity_id, pdf.form_id, why, pdf.inserted_at) do
+      {:ok, %SignRequest{asked_by_id: id} = request} when why == :signed and id != nil ->
+        EmailSignRequestWorker.enqueue_signed(request, pdf)
+
+      {:ok, _none} ->
+        :ok
+    end
+  end
+
   @doc "An activity's subject, which its forms' PDFs are for: `activity:812`."
   def subject(%Activity{id: id}), do: "activity:#{id}"
 
@@ -183,13 +266,21 @@ defmodule App.Operation.PublishDocument do
   The form page asks it before it shows Publish.
   """
   def check(team, form, activity, user, now) do
+    with :ok <- check_form(team, form, activity) do
+      if team_admin?(team, user, now),
+        do: :ok,
+        else: {:error, "Only a team admin can publish a form."}
+    end
+  end
+
+  # The activity is the team's, and the form on for it.
+  defp check_form(team, form, activity) do
     cond do
       activity.team_id != team.id -> {:error, "This activity is not on your team."}
       activity.deleted_at -> {:error, "This activity is deleted. Nothing can be made from it."}
       form.organization_id != team.organization_id -> {:error, off()}
       form.state == :testing -> {:error, "This form is testing. Download a draft PDF instead."}
       form.state != :on -> {:error, off()}
-      not team_admin?(team, user, now) -> {:error, "Only a team admin can publish a form."}
       true -> :ok
     end
   end
