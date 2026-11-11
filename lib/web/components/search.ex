@@ -10,6 +10,7 @@ defmodule Web.Components.Search do
 
   import Web.Components.Core, only: [icon: 1]
 
+  alias App.Model.EquipmentItem
   alias App.Model.PublishedPDF
   alias Phoenix.LiveView.JS
   alias Service.Format
@@ -309,7 +310,7 @@ defmodule Web.Components.Search do
       join([
         hit.barcode,
         hit.location_title,
-        if(!hit.in_service?, do: String.capitalize(hit.status))
+        if(!hit.in_service?, do: EquipmentItem.status_label(hit.status))
       ])
 
   defp line(:chore, hit),

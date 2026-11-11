@@ -81,7 +81,7 @@ defmodule Web.EquipmentItemLive do
         <dl id="item-details">
           <dt>Status</dt>
           <dd>
-            {String.capitalize(@item.status)}
+            {EquipmentItem.status_label(@item.status)}
           </dd>
           <dt>Where</dt>
           <dd>{where(@row)}</dd>

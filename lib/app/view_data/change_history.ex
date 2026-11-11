@@ -11,7 +11,6 @@ defmodule App.ViewData.ChangeHistory do
   alias App.Model.Team
   alias App.Repo
   alias App.ViewModel.ActivityFormViewModel
-  alias App.ViewModel.EquipmentItemFormViewModel
 
   # A member's, an activity's, or an equipment item's history (#174, step 3, and #1014):
   # what SAR Duty changed in D4H, from applied change set rows, and what the sync saw
@@ -379,17 +378,9 @@ defmodule App.ViewData.ChangeHistory do
   defp item_line("cost_per_use_cents", old, new, _tz), do: [cost_line("Cost per use", old, new)]
   defp item_line(_field, _old, _new, _tz), do: []
 
-  # As the Change item form names them, lowercase mid-sentence.
+  # As the item page names them, lowercase mid-sentence.
   defp item_status(nil), do: "none"
-
-  defp item_status(status) do
-    label =
-      Enum.find_value(EquipmentItemFormViewModel.statuses(), status, fn {label, value} ->
-        value == status && label
-      end)
-
-    label |> String.downcase() |> String.replace("_", " ")
-  end
+  defp item_status(status), do: status |> EquipmentItem.status_label() |> String.downcase()
 
   defp cost_line(label, old, new), do: number_line(label, money(old), money(new))
 

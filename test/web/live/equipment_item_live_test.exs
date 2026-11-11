@@ -41,6 +41,7 @@ defmodule Web.EquipmentItemLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/equipment/#{item.id}")
 
     assert has_element?(lv, "#item-activities")
+    assert has_element?(lv, "#item-details dd", "In service")
     assert has_element?(lv, "nav.tabs a[href$='/history']", "History")
     refute has_element?(lv, "nav.tabs a[href$='/fields']")
     refute has_element?(lv, "#item-actions-change-fields")

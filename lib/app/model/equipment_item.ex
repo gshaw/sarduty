@@ -188,6 +188,27 @@ defmodule App.Model.EquipmentItem do
       select: %{id: i.id, d4h_equipment_id: i.d4h_equipment_id, depth: h.depth + 1}
   end
 
+  # D4H's statuses with the words people read (#1014). D4H's operational is In service,
+  # the glossary's word.
+  @statuses [
+    {"In service", "operational"},
+    {"Unserviceable", "unserviceable"},
+    {"Lost", "lost"},
+    {"Retired", "retired"}
+  ]
+
+  @doc "The statuses, as `{label, value}`, in the order forms list them."
+  def statuses, do: @statuses
+
+  @doc """
+  A status as people read it: "In service" for D4H's operational. Every page that names
+  an item's status calls this. A word D4H adds later is capitalized.
+  """
+  def status_label(status) when is_binary(status) do
+    Enum.find_value(@statuses, fn {label, value} -> value == status && label end) ||
+      status |> String.replace("_", " ") |> String.capitalize()
+  end
+
   @doc "Items a person can add to an activity or a template: any but retired and lost ones."
   def in_service?(%EquipmentItem{status: status}), do: status not in ["retired", "lost"]
 
