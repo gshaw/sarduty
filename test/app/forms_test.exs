@@ -326,6 +326,34 @@ defmodule App.FormsTest do
       assert output.fills["equipment_subtotal"] == "$276.80"
     end
 
+    # South Fraser's SOUTH FRASER 1: $500/h, 0 minutes, 62 km (#993). No hours bill, so
+    # its hours print dashes, as an item with no cost per hour does, not "0 × $500.00".
+    test "an item with a cost per hour and 0 minutes prints only its km", %{doc: doc} do
+      use = %{
+        key: "item:1",
+        values: %{
+          "item" => "SOUTH FRASER 1",
+          "km" => 62,
+          "hours" => 0,
+          "item.cost_per_km" => 0.67,
+          "item.cost_per_hour" => 500.0
+        }
+      }
+
+      output = Document.evaluate(doc, %{"equipment" => [use]}, "America/Vancouver")
+      assert [line] = output.fills["items"]
+
+      assert Map.take(line, ~w(km km_rate hours hour_rate hour_total total)) ==
+               %{
+                 "km" => "62",
+                 "km_rate" => "$0.67",
+                 "hours" => nil,
+                 "hour_rate" => nil,
+                 "hour_total" => nil,
+                 "total" => "$41.54"
+               }
+    end
+
     # The table grows with its rows, onto another page with its heading again.
     test "a claim with many uses runs onto a second page", %{doc: doc} do
       uses =
