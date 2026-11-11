@@ -9,21 +9,35 @@ defmodule Web.CSPReport do
   goes to Honeybadger grouped by `fingerprint/1`: the directive, what was blocked (its
   host, or `inline`, `eval`, `data`), and the page with ids, team names, tokens and card
   codes replaced. So a thousand reports of one problem are one fault with a count.
+
+  Each report also says which browser sent it, such as `Safari 15.6 on iOS 15.8`, so a
+  problem that only old devices have shows as theirs. It's never part of the fingerprint.
   """
 
   @noise ~w(chrome-extension moz-extension safari-extension safari-web-extension about)
 
-  defstruct directive: "?", blocked: "?", page: "?", source: nil, sample: nil
+  defstruct directive: "?",
+            blocked: "?",
+            page: "?",
+            source: nil,
+            sample: nil,
+            browser: nil,
+            user_agent: nil
 
-  @doc "The report's fields, from the old `csp-report` shape or the Reporting API's."
-  def new(report) when is_map(report) do
+  @doc """
+  The report's fields, from the old `csp-report` shape or the Reporting API's, and the
+  user agent of the browser that sent it.
+  """
+  def new(report, user_agent \\ nil) when is_map(report) do
     %__MODULE__{
       directive:
         field(report, ["effective-directive", "effectiveDirective", "violated-directive"]),
       blocked: field(report, ["blocked-uri", "blockedURL"]),
       page: report |> field(["document-uri", "documentURL"]) |> page_path(),
       source: report |> field(["source-file", "sourceFile"], nil) |> source(),
-      sample: field(report, ["script-sample", "sample"], nil)
+      sample: field(report, ["script-sample", "sample"], nil),
+      browser: browser(user_agent),
+      user_agent: user_agent && String.slice(user_agent, 0, 255)
     }
   end
 
@@ -31,7 +45,12 @@ defmodule Web.CSPReport do
 
   @doc "The message with where it came from and the script's start, for the log."
   def log_line(%__MODULE__{} = r) do
-    [message(r), r.source && "from #{r.source}", r.sample && "sample #{inspect(r.sample)}"]
+    [
+      message(r),
+      r.source && "from #{r.source}",
+      r.sample && "sample #{inspect(r.sample)}",
+      r.browser && "in #{r.browser}"
+    ]
     |> Enum.reject(&is_nil/1)
     |> Enum.join(", ")
   end
@@ -41,7 +60,69 @@ defmodule Web.CSPReport do
     do: extension?(blocked) or extension?(source)
 
   defp extension?(nil), do: false
-  defp extension?(url), do: Enum.any?(@noise, &String.starts_with?(url, &1 <> ":"))
+  # By scheme alone: Safari sends a bare `about` as the source of script it injects.
+  defp extension?(url), do: hd(String.split(url, ":", parts: 2)) in @noise
+
+  @doc """
+  The browser and its version and system, like `Safari 15.6 on iOS 15.8`, from its user
+  agent. An iPad asks for desktop pages, so it says `macOS`; its Safari version still
+  tells how old it is.
+  """
+  def browser(nil), do: nil
+
+  def browser(user_agent) do
+    case {browser_name(user_agent), system(user_agent)} do
+      {nil, nil} -> nil
+      {name, nil} -> name
+      {nil, system} -> "a browser on #{system}"
+      {name, system} -> "#{name} on #{system}"
+    end
+  end
+
+  # cspell:ignore FBAN FBAV EdgiOS CriOS FxiOS -- browsers' names in their user agents
+  @browsers [
+    {~r/FBAN|FBAV/, "Facebook app"},
+    {~r/Edg(?:e|A|iOS)?\/(\d+)/, "Edge"},
+    {~r/(?:Firefox|FxiOS)\/(\d+)/, "Firefox"},
+    {~r/(?:Chrome|CriOS)\/(\d+)/, "Chrome"},
+    {~r/Version\/(\d+(?:\.\d+)?).*Safari/, "Safari"}
+  ]
+
+  defp browser_name(user_agent) do
+    Enum.find_value(@browsers, fn {pattern, name} ->
+      case Regex.run(pattern, user_agent, capture: :all_but_first) do
+        nil -> nil
+        [] -> name
+        [version] -> "#{name} #{version}"
+      end
+    end)
+  end
+
+  defp system(user_agent) do
+    cond do
+      match = Regex.run(~r/(?:iPhone|CPU) OS (\d+)_(\d+)/, user_agent) ->
+        [_, major, minor] = match
+        "iOS #{major}.#{minor}"
+
+      match = Regex.run(~r/Android (\d+)/, user_agent) ->
+        "Android #{Enum.at(match, 1)}"
+
+      user_agent =~ "Mac OS X" ->
+        "macOS"
+
+      user_agent =~ "Windows" ->
+        "Windows"
+
+      user_agent =~ ~r/CrOS/ ->
+        "ChromeOS"
+
+      user_agent =~ "Linux" ->
+        "Linux"
+
+      true ->
+        nil
+    end
+  end
 
   @doc "What groups reports of the same problem in Honeybadger."
   def fingerprint(%__MODULE__{} = r),

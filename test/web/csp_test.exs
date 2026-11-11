@@ -1,4 +1,5 @@
 defmodule Web.CSPTest do
+  # cspell:ignore KHTML FBAN FBAV FBIOS -- parts of real browsers' user agents
   # The one Content-Security-Policy (Web.CSP): on both hosts' pages, no inline JS in any
   # template, and the reports it sends are logged without tokens.
   use Web.ConnCase
@@ -104,6 +105,30 @@ defmodule Web.CSPTest do
       assert log =~ "CSP would block https://tiles.example/1.png (img-src) on /styles"
     end
 
+    test "logs which browser sent the report", %{conn: conn} do
+      report = %{
+        "csp-report" => %{
+          "document-uri" => "https://sarduty.com/teams/coastrange/equipment",
+          "effective-directive" => "script-src",
+          "blocked-uri" => "wasm-eval"
+        }
+      }
+
+      log =
+        capture_log(fn ->
+          conn
+          |> put_req_header("content-type", "application/csp-report")
+          |> put_req_header(
+            "user-agent",
+            "Mozilla/5.0 (iPad; CPU OS 15_8 like Mac OS X) AppleWebKit/605.1.15 " <>
+              "(KHTML, like Gecko) Version/15.6 Mobile/15E148 Safari/604.1"
+          )
+          |> post("/csp-reports", Jason.encode!(report))
+        end)
+
+      assert log =~ "on /teams/coastrange/equipment, in Safari 15.6 on iOS 15.8"
+    end
+
     test "ignores anything else", %{conn: conn} do
       log =
         capture_log(fn ->
@@ -140,6 +165,52 @@ defmodule Web.CSPTest do
       assert noise?("moz-extension://abc/x.js")
       refute noise?("inline")
       refute noise?("https://tiles.example/1.png")
+    end
+
+    # Safari sent `about`, no colon, for a script it injected on /changelog (2026-11-11).
+    test "script from about, with or without a colon, is noise" do
+      from = fn source ->
+        CSPReport.new(%{
+          "blocked-uri" => "inline",
+          "document-uri" => "https://sarduty.com/changelog",
+          "effective-directive" => "script-src-elem",
+          "source-file" => source
+        })
+      end
+
+      assert "about" |> from.() |> CSPReport.noise?()
+      assert "about:blank" |> from.() |> CSPReport.noise?()
+      refute "aboutface.example" |> from.() |> CSPReport.noise?()
+    end
+
+    test "names the browser, its version and system, from the user agent" do
+      ua = %{
+        old_iphone:
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 15_8 like Mac OS X) AppleWebKit/605.1.15 " <>
+            "(KHTML, like Gecko) Version/15.6 Mobile/15E148 Safari/604.1",
+        ipad:
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 " <>
+            "(KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+        chrome:
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " <>
+            "(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+        edge:
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " <>
+            "(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
+        android_firefox: "Mozilla/5.0 (Android 14; Mobile; rv:132.0) Gecko/132.0 Firefox/132.0",
+        facebook:
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 " <>
+            "(KHTML, like Gecko) Mobile/22B83 [FBAN/FBIOS;FBAV/490.0.0.40.107]"
+      }
+
+      assert CSPReport.browser(ua.old_iphone) == "Safari 15.6 on iOS 15.8"
+      assert CSPReport.browser(ua.ipad) == "Safari 17.4 on macOS"
+      assert CSPReport.browser(ua.chrome) == "Chrome 130 on Windows"
+      assert CSPReport.browser(ua.edge) == "Edge 130 on Windows"
+      assert CSPReport.browser(ua.android_firefox) == "Firefox 132 on Android 14"
+      assert CSPReport.browser(ua.facebook) == "Facebook app on iOS 18.1"
+      assert CSPReport.browser("curl/8.7.1") == nil
+      assert CSPReport.browser(nil) == nil
     end
 
     test "inline script an extension adds is noise, by its source file" do
