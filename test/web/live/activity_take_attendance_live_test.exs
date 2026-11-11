@@ -41,6 +41,14 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
     |> render_submit()
   end
 
+  # A name's button in the list under the name box.
+  defp tap_name(lv, member) do
+    lv
+    |> form("#door-form")
+    |> put_submitter("#tap-#{member.id}")
+    |> render_submit()
+  end
+
   test "a team admin opens it from the activity", %{conn: conn, path: path, activity: activity} do
     {:ok, lv, _html} = live(conn, path)
     assert has_element?(lv, "h1", activity.title)
@@ -425,41 +433,125 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
     assert_push_event(lv, "scan-sound", %{sound: :error})
   end
 
-  describe "yet to arrive" do
-    test "lists who signed up and has not arrived, and drops a member once scanned", %{
-      conn: conn,
-      team: team,
-      path: path,
-      activity: activity,
-      member: member
-    } do
+  describe "the list under the name box" do
+    setup %{team: team, activity: activity, member: member} do
       raj = member_fixture(team, %{name: "Raj Patel", phone: "604 555 1234"})
       attendance_fixture(activity, member, %{status: "attending"})
       attendance_fixture(activity, raj, %{status: "attending"})
       attendance_fixture(activity, member_fixture(team), %{status: "absent"})
       # An invite nobody replied to is not a sign-up.
       attendance_fixture(activity, member_fixture(team), %{status: "requested"})
+      %{raj: raj}
+    end
 
+    test "on Arriving lists who signed up and has not arrived, with numbers", %{
+      conn: conn,
+      path: path,
+      raj: raj
+    } do
       {:ok, lv, _html} = live(conn, path)
-      assert has_element?(lv, "#toggle-yet-to-arrive", "2 of 2 signed up")
-      refute has_element?(lv, "#yet-to-arrive")
 
-      lv |> element("#toggle-yet-to-arrive") |> render_click()
+      assert has_element?(lv, "#arriving-list", "Yet to arrive · 2 of 2 signed up")
       assert has_element?(lv, "#yet-to-arrive-member-#{raj.id}", "604-555-1234")
       assert has_element?(lv, ~s|#yet-to-arrive-#{raj.id}-call[href="tel:+16045551234"]|)
       assert has_element?(lv, ~s|#yet-to-arrive-#{raj.id}-text[href="sms:+16045551234"]|)
-
-      lv |> form("#door-form", %{search: "Raj"}) |> render_change()
-      pick(lv, raj)
-      refute has_element?(lv, "#yet-to-arrive-member-#{raj.id}")
-      assert has_element?(lv, "#yet-to-arrive-member-#{member.id}")
-      assert has_element?(lv, "#toggle-yet-to-arrive", "1 of 2 signed up")
-      assert has_element?(lv, "#yet-to-arrive-count", "1 member arrived.")
+      assert has_element?(lv, "#tap-#{raj.id}", "Record arrival")
     end
 
-    test "shows no button when nobody signed up", %{conn: conn, path: path} do
+    test "a tap records the arrival, says so in the row, then drops the name", %{
+      conn: conn,
+      path: path,
+      activity: activity,
+      member: member,
+      raj: raj
+    } do
       {:ok, lv, _html} = live(conn, path)
-      refute has_element?(lv, "#toggle-yet-to-arrive")
+      tap_name(lv, raj)
+
+      assert [%{member_id: raj_id, kind: "arrived", method: "name"}] = scans(activity)
+      assert raj_id == raj.id
+      assert has_element?(lv, "#yet-to-arrive-member-#{raj.id}-tapped", "Raj Patel arrived at")
+      assert has_element?(lv, "#arriving-list", "1 of 2 signed up")
+      assert has_element?(lv, "#yet-to-arrive-count", "1 member arrived.")
+      # The band above the camera stays away, so nothing moves under a finger.
+      refute has_element?(lv, "#message")
+      assert_push_event(lv, "scan-sound", %{sound: :arrived})
+
+      send(lv.pid, {:clear_tapped, :sys.get_state(lv.pid).socket.assigns.tapped})
+      refute has_element?(lv, "#yet-to-arrive-member-#{raj.id}")
+      assert has_element?(lv, "#yet-to-arrive-member-#{member.id}")
+    end
+
+    test "Undo in the row puts the name back", %{
+      conn: conn,
+      path: path,
+      activity: activity,
+      raj: raj
+    } do
+      {:ok, lv, _html} = live(conn, path)
+      tap_name(lv, raj)
+
+      lv |> element("#yet-to-arrive-member-#{raj.id}-undo") |> render_click()
+      assert scans(activity) == []
+      refute has_element?(lv, "#yet-to-arrive-member-#{raj.id}-tapped")
+      assert has_element?(lv, "#tap-#{raj.id}", "Record arrival")
+      refute has_element?(lv, "#message")
+    end
+
+    test "on Leaving lists who is here, and a tap records the departure", %{
+      conn: conn,
+      path: path,
+      activity: activity,
+      member: member,
+      raj: raj
+    } do
+      {:ok, lv, _html} = live(conn, path)
+      tap_name(lv, raj)
+      lv |> element("#kind-left") |> render_click()
+
+      refute has_element?(lv, "#arriving-list")
+      assert has_element?(lv, "#leaving-list", "Here now · 1")
+      assert has_element?(lv, "#here-now-member-#{raj.id}", "Arrived")
+      refute has_element?(lv, "#here-now-member-#{member.id}")
+
+      tap_name(lv, raj)
+      assert [%{kind: "arrived"}, %{kind: "left"}] = scans(activity)
+      assert has_element?(lv, "#here-now-member-#{raj.id}-tapped", "Raj Patel left at")
+      assert has_element?(lv, "#leaving-list", "Here now · 0")
+    end
+
+    test "a search takes the list's place, with the list's names first", %{
+      conn: conn,
+      team: team,
+      path: path,
+      raj: raj
+    } do
+      walk_in = member_fixture(team, %{name: "Ada Patterson"})
+      {:ok, lv, _html} = live(conn, path)
+
+      lv |> form("#door-form", search: "pat") |> render_change()
+      refute has_element?(lv, "#arriving-list")
+      assert has_element?(lv, "#match-#{raj.id}", "Signed up")
+      assert has_element?(lv, "#match-#{walk_in.id}")
+
+      ids =
+        lv
+        |> render()
+        |> Floki.parse_document!()
+        |> Floki.find("#matches li")
+        |> Floki.attribute("id")
+
+      assert ids == ["match-#{raj.id}", "match-#{walk_in.id}"]
+
+      pick(lv, walk_in)
+      lv |> form("#door-form", search: "pat") |> render_change()
+      assert has_element?(lv, "#match-#{walk_in.id}", "Arrived")
+    end
+
+    test "shows no Yet to arrive when nobody signed up", %{conn: conn, team: team} do
+      activity = activity_fixture(team)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/take-attendance")
+      refute has_element?(lv, "#arriving-list")
     end
   end
 
@@ -484,13 +576,11 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
       assert has_element?(lv, "#controls")
       refute has_element?(lv, "#send-attendance")
 
-      lv |> element("#toggle-yet-to-arrive") |> render_click()
       assert has_element?(lv, "#yet-to-arrive-member-#{raj.id}", "Raj Patel")
       refute has_element?(lv, "#yet-to-arrive-member-#{raj.id}", "604-555-1234")
       refute has_element?(lv, "#yet-to-arrive-#{raj.id}-call")
 
-      lv |> form("#door-form", search: "Raj") |> render_change()
-      pick(lv, raj)
+      tap_name(lv, raj)
       assert [%{member_id: raj_id}] = scans(activity)
       assert raj_id == raj.id
     end
@@ -586,7 +676,6 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
       card = member_card_fixture(raj)
       {:ok, lv, _html} = open_member(conn, team, activity)
 
-      lv |> element("#toggle-yet-to-arrive") |> render_click()
       assert has_element?(lv, "#yet-to-arrive-member-#{raj.id}")
 
       render_hook(lv, "scan_failed", %{})
@@ -607,6 +696,12 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
 
       left = activity |> scans() |> Enum.find(&(&1.kind == "left"))
       lv |> element("#undo-#{left.id}") |> render_click()
+      assert [%{kind: "arrived"}] = scans(activity)
+
+      # A tap from Here now, and Undo in its row.
+      lv |> element("#kind-left") |> render_click()
+      tap_name(lv, raj)
+      lv |> element("#here-now-member-#{raj.id}-undo") |> render_click()
       assert [%{kind: "arrived"}] = scans(activity)
     end
 
@@ -633,7 +728,6 @@ defmodule Web.ActivityTakeAttendanceLiveTest do
       live(conn, ~p"/teams/#{team}/activities/#{activity.id}/take-attendance")
 
     refute has_element?(lv, "#send-attendance")
-    lv |> element("#toggle-yet-to-arrive") |> render_click()
     refute has_element?(lv, "#yet-to-arrive-#{raj.id}-call")
 
     lv |> form("#door-form", search: "Raj") |> render_change()

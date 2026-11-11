@@ -46,6 +46,11 @@ defmodule Web.Components.Phone do
   attr :touch_only, :boolean, default: true, doc: "false shows them everywhere, for /styles"
   attr :class, :any, default: nil
 
+  attr :size, :atom,
+    default: :sm,
+    values: [:sm, :md],
+    doc: ":md beside other default-size buttons, as on Take attendance (#998)"
+
   def call_and_text(assigns) do
     assigns = assign(assigns, :dial, dial(assigns.phone))
 
@@ -54,9 +59,9 @@ defmodule Web.Components.Phone do
       :if={@dial}
       class={[if(@touch_only, do: "hidden pointer-coarse:flex", else: "flex"), "gap-2", @class]}
     >
-      <.button id={"#{@id}-call"} size={:sm} href={"tel:#{@dial}"}>Call</.button>
+      <.button id={"#{@id}-call"} size={@size} href={"tel:#{@dial}"}>Call</.button>
       <%!-- Phoenix's link allows tel: but not sms:, so the scheme goes as a tuple. --%>
-      <.button id={"#{@id}-text"} size={:sm} href={{:sms, @dial}}>Text</.button>
+      <.button id={"#{@id}-text"} size={@size} href={{:sms, @dial}}>Text</.button>
     </span>
     """
   end
