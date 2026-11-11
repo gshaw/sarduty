@@ -21,14 +21,14 @@ defmodule Web.CSPReportController do
 
   # Plug.Parsers already decoded `application/reports+json` (a `+json` type) into `_json`.
   def create(conn, %{"_json" => reports}) when is_list(reports) do
-    reports |> from_list() |> Enum.each(&handle/1)
+    reports |> from_list() |> Enum.each(&handle(&1, user_agent(conn)))
     send_resp(conn, :no_content, "")
   end
 
   def create(conn, _params) do
     case Plug.Conn.read_body(conn, length: @max_body) do
       {:ok, body, conn} ->
-        body |> decode() |> Enum.each(&handle/1)
+        body |> decode() |> Enum.each(&handle(&1, user_agent(conn)))
         send_resp(conn, :no_content, "")
 
       _too_big_or_error ->
@@ -46,8 +46,10 @@ defmodule Web.CSPReportController do
 
   defp from_list(reports), do: for(%{"body" => report} when is_map(report) <- reports, do: report)
 
-  defp handle(raw) do
-    report = CSPReport.new(raw)
+  defp user_agent(conn), do: conn |> get_req_header("user-agent") |> List.first()
+
+  defp handle(raw, user_agent) do
+    report = CSPReport.new(raw, user_agent)
     report |> CSPReport.log_line() |> Logger.warning()
     unless CSPReport.noise?(report), do: notify(report)
   end
