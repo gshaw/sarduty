@@ -581,24 +581,24 @@ defmodule Web.ActivityOrgFormLive do
   defp waiting(assigns) do
     ~H"""
     <section id="org-form-waiting" class="mb-8">
-      <div class="heading-row">
-        <div>
-          <h2 class="heading">Waiting for {@request.member.name} to sign</h2>
-          <p class="hint">
-            Asked {Service.Format.date_short(@request.asked_at, @team.timezone)}{if @asked_by,
-              do: " by #{@asked_by}"}. They get it in For you to do and by email.
-          </p>
-        </div>
-        <.button
-          id="org-form-cancel-request"
-          type="button"
-          size={:sm}
-          phx-click="cancel-request"
-          phx-disable-with="Cancelling…"
-        >
-          Cancel request
-        </.button>
-      </div>
+      <.heading_row>
+        <h2 class="heading">Waiting for {@request.member.name} to sign</h2>
+        <:action>
+          <.button
+            id="org-form-cancel-request"
+            type="button"
+            size={:sm}
+            phx-click="cancel-request"
+            phx-disable-with="Cancelling…"
+          >
+            Cancel request
+          </.button>
+        </:action>
+      </.heading_row>
+      <p class="hint">
+        Asked {Service.Format.date_short(@request.asked_at, @team.timezone)}{if @asked_by,
+          do: " by #{@asked_by}"}. They get it in For you to do and by email.
+      </p>
     </section>
     """
   end

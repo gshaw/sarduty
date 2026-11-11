@@ -35,6 +35,8 @@ defmodule Web.FormCancelTest do
     "lib/web/live/org/admins_live.ex" => "organization settings tab",
     "lib/web/live/org/hours_tags_live.ex" => "organization settings tab",
     "lib/web/live/org/settings_live.ex" => "organization settings tab",
+    "lib/web/live/sign_form_live.ex" =>
+      "one button on the page a request to sign links to, which has no form to leave",
     "lib/web/live/settings/access_key_live.ex" => "team settings tab",
     "lib/web/live/settings/hours_tags_live.ex" => "team settings tab",
     "lib/web/live/settings/signer_live.ex" => "team settings tab",
