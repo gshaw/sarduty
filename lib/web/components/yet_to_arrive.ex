@@ -23,7 +23,7 @@ defmodule Web.Components.YetToArrive do
   attr :contacts?, :boolean, default: false, doc: "mobile numbers with Call and Text"
   attr :tapped, :map, default: nil, doc: "a member just recorded from the list"
   attr :class, :any, default: nil
-  slot :action, doc: "each member's buttons, before Call and Text; given the member"
+  slot :action, doc: "each member's button, at the row's right; given the member"
 
   def yet_to_arrive_list(assigns) do
     assigns =
@@ -48,8 +48,10 @@ defmodule Web.Components.YetToArrive do
           <:detail :if={@contacts?}>
             <.phone id={"#{@id}-#{member.id}"} phone={member.phone} missing="No mobile number" />
           </:detail>
+          <:below :if={@contacts?}>
+            <.call_and_text id={"#{@id}-#{member.id}"} phone={member.phone} class="mt-1" />
+          </:below>
           {render_slot(@action, member)}
-          <.call_and_text :if={@contacts?} id={"#{@id}-#{member.id}"} phone={member.phone} size={:md} />
         </.name_row>
       </ul>
       <p id={"#{@id}-count"} class="mt-2 hint">{arrived_text(@yet_to_arrive)}</p>
@@ -90,27 +92,30 @@ defmodule Web.Components.YetToArrive do
   attr :id, :string, required: true
   attr :name, :string, required: true
   attr :tapped, :map, default: nil, doc: "this member, just recorded"
-  slot :detail, doc: "a hint on the name's line, such as the mobile number"
-  slot :inner_block, doc: "the row's buttons"
+  slot :detail, doc: "a hint under the name, such as the mobile number"
+  slot :below, doc: "more under the hint, such as Call and Text"
+  slot :inner_block, doc: "the row's button"
 
   @doc """
-  A name with a hint on the same line, then its buttons: at the right when the row fits
-  on one line, and under the name when it wraps. Just recorded, it says so over the same
-  space, with Undo at the far end, where a second tap on the button can't reach it.
+  A name with a hint under it, and the row's button at the right, the same in every row
+  at every width, so a column of buttons lines up under a thumb. Just recorded, it says so
+  over the same space, with Undo at the far end, where a second tap on the button can't
+  reach it.
   """
   def name_row(assigns) do
     ~H"""
     <li
       id={@id}
-      class="relative flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2 border-b border-border-subtle"
+      class="relative grid grid-cols-[1fr_auto] items-center gap-x-3 py-2 border-b border-border-subtle"
     >
-      <span class={["flex flex-wrap items-baseline gap-x-2", @tapped && "invisible"]}>
-        <span class="font-semibold">{@name}</span>
-        <span :if={@detail != []} class="hint">{render_slot(@detail)}</span>
-      </span>
-      <span :if={@inner_block != []} class={["flex gap-2", @tapped && "invisible"]}>
+      <div class={["min-w-0", @tapped && "invisible"]}>
+        <div class="font-semibold">{@name}</div>
+        <div :if={@detail != []} class="hint">{render_slot(@detail)}</div>
+        {render_slot(@below)}
+      </div>
+      <div :if={@inner_block != []} class={["flex gap-2", @tapped && "invisible"]}>
         {render_slot(@inner_block)}
-      </span>
+      </div>
       <div :if={@tapped} id={"#{@id}-tapped"} class="absolute inset-0 flex items-center gap-3">
         <span role="status" class="flex items-center gap-2 min-w-0 font-semibold text-success-text">
           <.icon name={@tapped.icon} />{@tapped.text}
