@@ -1,7 +1,8 @@
 defmodule Web.Components.HomeMockups do
   @moduledoc """
   Pictures of SAR Duty for the public home page, drawn in HTML so they follow light and
-  dark. Everything in them is made up: the team, the members, the hours, and the codes.
+  dark. Everything in them is made up: the team, the members, the places, the hours, and
+  the codes.
   Each carries a Sample mark, and the QR codes read "SAMPLE" and open nothing.
   """
   use Phoenix.Component
@@ -41,10 +42,10 @@ defmodule Web.Components.HomeMockups do
       assign(assigns,
         team: @team,
         coming_up: [
-          {"Wed Oct 7", "19:10", :exercise, "Rope rescue, Elfin Lakes"},
-          {"Fri Oct 9", "15:50", :incident, "Lost snowshoers, Britannia Beach"},
-          {"Sat Oct 10", "09:10", :exercise, "Swiftwater refresher, Elfin Lakes"},
-          {"Sat Oct 17", "09:00", :exercise, "First aid scenarios, Alice Lake"}
+          {"Wed Oct 7", "19:00", :exercise, "Rope rescue, Cedar Creek"},
+          {"Fri Oct 9", "15:50", :incident, "Lost snowshoers, Marmot Ridge"},
+          {"Sat Oct 10", "09:10", :exercise, "Swiftwater refresher, Cedar Creek"},
+          {"Sat Oct 17", "09:00", :exercise, "First aid scenarios, Lantern Lake"}
         ],
         attention: [
           {:warning, "2 activities to check", "Still drafts in D4H, so attendance can change."},
@@ -77,11 +78,11 @@ defmodule Web.Components.HomeMockups do
           <div>
             <span class="home-caps">Next up</span>
             <strong>Wed Oct 7</strong>
-            <strong class="home-big">19:10</strong>
+            <strong class="home-big">19:00</strong>
           </div>
           <div>
             <Core.badge kind={:exercise}>Exercise</Core.badge>
-            <strong>Rope rescue, Elfin Lakes</strong>
+            <strong>Rope rescue, Cedar Creek</strong>
             <span class="home-muted">Today</span>
           </div>
           <span class="home-fake-btn is-primary home-hide-sm">Take attendance</span>
@@ -121,10 +122,10 @@ defmodule Web.Components.HomeMockups do
     <figure class="home-letter" aria-label="A sample tax credit letter">
       <div class="home-letter-head">
         <.logo />
-        <div><strong>{@team}</strong><span>PO Box 100, Squamish BC</span></div>
+        <div><strong>{@team}</strong><span>PO Box 100, Cedar Creek BC</span></div>
       </div>
       <p>To whom it may concern:</p>
-      <p>Name: Avery Chen<br />Address: 12 Sample Street, Squamish BC</p>
+      <p>Name: Avery Chen<br />Address: 12 Sample Street, Cedar Creek BC</p>
       <p>
         Avery Chen volunteered with {@team} in 2025. {@team} is an eligible search and
         rescue organization under subsection 118.07(1) of the Income Tax Act.

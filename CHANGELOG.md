@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- The home page keeps Sign up a team and Log in side by side on a phone, and lists your
+  teams one per row when you have several.
 - Teams on SAR Duty Records get custom fields: the Fields tab, Change fields, member
   fields, templates, and reports work as on D4H. Try a demo shows them on every incident.
 - The login page has Use a passkey: log in with Face ID, Touch ID, or your phone instead

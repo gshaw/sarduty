@@ -3,7 +3,8 @@ defmodule App.CoastRange do
   Coast Range SAR (CRSAR), the made-up team (#816): the cast every mockup draws
   (docs/mockups.md), and the team an agent's report runs on (App.SampleRepo). Never a
   real person, team, or number: names, ref ids, and 604-555-01xx phone numbers never
-  change, and every date counts back from `now`.
+  change, and every date counts back from `now`. Its place names are made up too: the
+  team is in Cedar Creek BC. Only the map points are real, so maps and mileage work.
 
   It fills every field a report reads: a year of activities of each kind with tags,
   hours tags, tracking numbers, drafts, and a missing required field; attendance
@@ -531,7 +532,7 @@ defmodule App.CoastRange do
       d4h_team_id: @d4h_team_id,
       d4h_api_host: "api.ca.d4h.org",
       mailing_address: "123 Main St",
-      city: "Vancouver BC",
+      city: "Cedar Creek BC",
       postal_code: "V5K 0A1",
       authorized_by_name: "Alex Chen",
       authorized_by_title: "President",
@@ -1476,7 +1477,7 @@ defmodule App.CoastRange do
   @bookmarks [
     {"!Hall", "100 Example Road", "49.25000,-123.10000"},
     {"Cedar Creek training ground", nil, "49.37000,-123.02000"},
-    {"Grouse ridge trailhead", nil, "49.38000,-123.08000"}
+    {"Ridge trailhead", nil, "49.38000,-123.08000"}
   ]
 
   defp location_bookmarks do

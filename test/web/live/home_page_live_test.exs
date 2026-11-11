@@ -41,9 +41,30 @@ defmodule Web.HomePageLiveTest do
     _member = App.DataFixtures.member_fixture(team, %{email: user.email, d4h_permission: 0})
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/")
 
+    assert has_element?(lv, "#start-top", "Your team")
+    refute has_element?(lv, "#start-top", "Your teams")
     assert has_element?(lv, ~s(#start-top a[href="/teams/#{team.subdomain}"]))
     assert has_element?(lv, ~s(#start-end a[href="/teams/#{team.subdomain}"]))
     assert has_element?(lv, "#home-title")
+  end
+
+  test "several teams each get a row of their own", %{conn: conn} do
+    user = user_fixture()
+
+    teams =
+      for _n <- 1..3 do
+        team = App.DataFixtures.team_fixture()
+        App.DataFixtures.member_fixture(team, %{email: user.email, d4h_permission: 0})
+        team
+      end
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/")
+
+    assert has_element?(lv, "#start-top", "Your teams")
+
+    for team <- teams do
+      assert has_element?(lv, ~s(#start-top .home-teams li a[href="/teams/#{team.subdomain}"]))
+    end
   end
 
   test "the footer links to the terms and privacy pages", %{conn: conn} do

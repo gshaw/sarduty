@@ -12,7 +12,8 @@
   .home-hero { background: linear-gradient(180deg, var(--surface-alt), var(--bg)); padding: var(--sp-16) 0 var(--sp-8); }
   .home-hero-split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--sp-12); align-items: center; }
   .home-lead { font-size: var(--fs-lg); line-height: var(--lh-lg); color: var(--text-muted); margin-bottom: var(--sp-6); }
-  .home-cta { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+  /* Sign up a team and Log in: one row at every width, never wrapping to two. */
+  .home-cta { display: flex; gap: var(--sp-3); }
   .home-section { padding: var(--sp-16) 0; }
   .home-section.is-alt { background: var(--surface-alt); }
 
@@ -28,9 +29,17 @@
   .home-start { padding: var(--sp-4); background: var(--bg); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; box-shadow: 0 2px 8px rgb(0 0 0 / 0.06); }
   .home-start p { color: var(--text-muted); margin-bottom: var(--sp-3); }
   .home-start .home-start-title { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; color: var(--text); margin-bottom: var(--sp-1); }
-  .home-start .home-cta { margin-top: var(--sp-2); }
+  .home-start > :last-child { margin-bottom: 0; }
+  .home-start .home-cta, .home-teams { margin-top: var(--sp-2); }
+  /* Your teams, one to a row however many, each button as wide as the longest name. */
+  .home-teams { display: grid; gap: var(--sp-2); width: fit-content; max-width: 100%; }
+  .home-teams .btn { display: flex; }
   /* A team's own name, up to 50 characters: it wraps rather than run off a phone. */
-  .home-start .home-cta .btn { white-space: normal; text-align: center; }
+  .home-start .btn { white-space: normal; text-align: center; }
+  /* Try a demo, a link on its own line under the buttons. */
+  .home-start .action { margin-top: var(--sp-3); }
+  /* On a touch screen the link takes a 44px tap, without moving. */
+  @media (pointer: coarse) { .home-start .action > a { padding-block: 10px; margin-block: -10px; } }
   .home-end { max-width: 640px; }
   .home-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-8) var(--sp-12); margin-top: var(--sp-8); }
   .home-grid p { color: var(--text-muted); }
@@ -76,7 +85,8 @@
   .home-panel li { display: flex; gap: var(--sp-2); align-items: flex-start; padding: 6px 0; border-top: 1px solid var(--border-subtle); font-size: var(--fs-xs); line-height: var(--lh-xs); }
   .home-when { min-width: 72px; }
   .home-when b { display: block; }
-  .home-link { color: var(--link); text-decoration: underline; }
+  /* A title that wraps breaks into even lines, never one word alone on the second. */
+  .home-link { color: var(--link); text-decoration: underline; text-wrap: balance; }
 
   .home-letter { width: 400px; max-width: 100%; aspect-ratio: 8.5 / 11; padding: 34px 38px; display: flex; flex-direction: column; background: #fff; color: #1b1b1b; font-size: 10.5px; line-height: 15px; box-shadow: 0 12px 40px rgb(0 0 0 / 0.18); border-radius: 2px; }
   .home-letter p { margin-bottom: 10px; color: #1b1b1b; }
@@ -120,10 +130,9 @@
     .home-wrap { padding: 0 var(--sp-4); }
     .home-hero { padding: var(--sp-8) 0 var(--sp-6); }
     .home-section, .home-feature { padding: var(--sp-8) 0; }
-    .home-cta .btn, .home-cta li { flex: 1; }
-    /* Sign up a team gets its own row; Try a demo and Log in share the next (#857). */
-    .home-cta > .btn-primary { flex-basis: 100%; }
-    .home-cta li .btn { width: 100%; }
+    /* The buttons fill the row, each as wide as its words need, and teams fill the box. */
+    .home-cta .btn { flex: 1 1 auto; }
+    .home-teams { width: 100%; }
     .home-hero-art { display: none; }
     .home-hide-sm { display: none; }
     .home-app-cols, .home-next-up, .home-grid { grid-template-columns: minmax(0, 1fr); }

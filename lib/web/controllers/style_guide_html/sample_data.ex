@@ -177,8 +177,8 @@ defmodule Web.StyleGuideHTML.SampleData do
 
   def sample_user, do: %App.Accounts.User{id: 0, email: "avery@example.com", is_admin: false}
 
-  # For the team switcher: Avery is a team admin and a member on Squamish, and only a
-  # member on Pemberton.
+  # For the team switcher: Avery is a team admin and a member on Coast Range, and only a
+  # member on Silver Basin. Both are the made-up teams (App.CoastRange, App.SilverBasin).
   def sample_managed_teams, do: [sample_team()]
 
   def sample_member do
@@ -186,71 +186,71 @@ defmodule Web.StyleGuideHTML.SampleData do
   end
 
   def sample_member_logins do
-    pemberton = %App.Model.Team{id: 1, name: "Pemberton SAR", subdomain: "pemberton"}
-    [sample_member(), %App.Model.Member{id: 1, name: "Avery Lee", team: pemberton}]
+    silver_basin = %App.Model.Team{id: 1, name: "Silver Basin SAR", subdomain: "silverbasin"}
+    [sample_member(), %App.Model.Member{id: 1, name: "Avery Lee", team: silver_basin}]
   end
 
   # Who sees which switcher, for the top bar's examples: `{id, title, bar assigns}`.
   def sample_switchers do
     avery = sample_user()
     admin = %{avery | is_admin: true}
-    squamish = sample_team()
-    [_member, pemberton_member] = sample_member_logins()
-    pemberton = pemberton_member.team
+    coast_range = sample_team()
+    [_member, silver_basin_member] = sample_member_logins()
+    silver_basin = silver_basin_member.team
 
-    on_squamish = %{
-      current_team: squamish,
+    on_coast_range = %{
+      current_team: coast_range,
       current_member: sample_member(),
       team_admin?: true,
-      managed_teams: [squamish],
-      current_path: "/teams/squamish"
+      managed_teams: [coast_range],
+      current_path: "/teams/coastrange"
     }
 
     [
       {"one-team", "On one team",
-       Map.merge(on_squamish, %{current_user: avery, member_logins: [sample_member()]})},
+       Map.merge(on_coast_range, %{current_user: avery, member_logins: [sample_member()]})},
       {"teams", "On two teams",
-       Map.merge(on_squamish, %{current_user: avery, member_logins: sample_member_logins()})},
+       Map.merge(on_coast_range, %{current_user: avery, member_logins: sample_member_logins()})},
       {"admin-one-team", "A SAR Duty site admin on one team",
-       Map.merge(on_squamish, %{current_user: admin, member_logins: [sample_member()]})},
+       Map.merge(on_coast_range, %{current_user: admin, member_logins: [sample_member()]})},
       {"admin-teams", "A SAR Duty site admin on two teams",
-       Map.merge(on_squamish, %{current_user: admin, member_logins: sample_member_logins()})},
+       Map.merge(on_coast_range, %{current_user: admin, member_logins: sample_member_logins()})},
       {"admin-area", "A SAR Duty site admin in Adminland",
        %{
          current_user: admin,
-         current_team: squamish,
-         managed_teams: [squamish],
+         current_team: coast_range,
+         managed_teams: [coast_range],
          member_logins: sample_member_logins(),
          current_path: "/admin"
        }},
       {"admin-other-team", "A SAR Duty site admin on a team that isn't theirs",
        %{
          current_user: admin,
-         current_team: pemberton,
+         current_team: silver_basin,
          team_admin?: true,
-         current_path: "/teams/pemberton"
+         current_path: "/teams/silverbasin"
        }}
     ]
   end
 
-  # Squamish's space on its activities, for a team admin who is a member.
+  # Coast Range's space on its activities, for a team admin who is a member.
   def sample_nav_area,
     do:
       Web.Navigation.area(
-        "/teams/squamish/activities",
+        "/teams/coastrange/activities",
         %{sample_team() | member_logins: true, certificates_enabled: true}
       )
 
   def sample_nav_sections,
     do:
-      Web.Navigation.sections(sample_nav_area(), "/teams/squamish/activities",
+      Web.Navigation.sections(sample_nav_area(), "/teams/coastrange/activities",
         team_admin?: true,
         member?: true
       )
 
-  # Search results for "rope" on Squamish, as Web.Search.run/3 returns them, best first.
+  # Search results for "rope" on Coast Range, as Web.Search.run/3 returns them, best first.
   def sample_search_groups do
-    team = "/teams/squamish"
+    team = "/teams/coastrange"
 
     for group <- [
           %{
@@ -315,9 +315,9 @@ defmodule Web.StyleGuideHTML.SampleData do
         do: %{group | hits: Enum.map(group.hits, &Map.put(&1, :kind, group.kind))}
   end
 
-  # Recent picks on Squamish, newest first, as Web.Search.recent/3 returns them.
+  # Recent picks on Coast Range, newest first, as Web.Search.recent/3 returns them.
   def sample_search_recent do
-    team = "/teams/squamish"
+    team = "/teams/coastrange"
 
     [
       %{
@@ -355,8 +355,8 @@ defmodule Web.StyleGuideHTML.SampleData do
   def sample_team do
     %App.Model.Team{
       id: 0,
-      name: "Squamish SAR",
-      subdomain: "squamish",
+      name: "Coast Range SAR",
+      subdomain: "coastrange",
       timezone: "America/Vancouver"
     }
   end
