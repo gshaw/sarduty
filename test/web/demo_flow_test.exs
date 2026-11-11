@@ -14,8 +14,11 @@ defmodule Web.DemoFlowTest do
   alias App.Accounts.User
   alias App.Adapter.D4H
   alias App.Model.DemoTeam
+  alias App.Model.Organization
+  alias App.Model.OrganizationAdmin
   alias App.Model.OutboxMessage
   alias App.Model.Team
+  alias App.Operation.BuildDemoTeam
   alias App.Operation.CreateDemo
   alias App.RecordsStub
   alias App.Repo
@@ -44,20 +47,35 @@ defmodule Web.DemoFlowTest do
 
   defp link(demo), do: ~p"/demo/open/#{DemoTeam.link_token(demo)}"
 
-  # A demo is a Records team, so its delete goes to Records first.
+  # A demo is two Records teams, so its delete goes to Records first, and WESARA's copy
+  # with the visitor as one of its organization admins (#963).
   defp built_demo(attrs \\ %{}) do
     team = team_fixture(%{d4h_api_host: D4H.records_host()})
+    second = team_fixture(%{name: "Silver Basin SAR", d4h_api_host: D4H.records_host()})
     demo = start!()
     user = Repo.get!(User, demo.user_id)
     manager_fixture(team, %{email: user.email})
     member_fixture(team, %{name: "Cameron Ruiz"})
 
+    organization =
+      Repo.insert!(%{App.CoastRange.organization() | slug: "wesara-#{demo.id}"})
+
+    Repo.insert!(%OrganizationAdmin{organization_id: organization.id, email: user.email})
+
+    for t <- [team, second],
+        do: t |> Ecto.Changeset.change(organization_id: organization.id) |> Repo.update!()
+
     demo =
       demo
-      |> Ecto.Changeset.change(Map.merge(%{team_id: team.id}, attrs))
+      |> Ecto.Changeset.change(
+        Map.merge(
+          %{team_id: team.id, second_team_id: second.id, organization_id: organization.id},
+          attrs
+        )
+      )
       |> Repo.update!()
 
-    %{user: user, team: team, demo: demo}
+    %{user: user, team: team, second: second, organization: organization, demo: demo}
   end
 
   test "the home page offers Try a demo once SAR Duty's Records key is set", %{conn: conn} do
@@ -129,6 +147,55 @@ defmodule Web.DemoFlowTest do
     assert has_element?(lv, "#demo-retry")
     assert Repo.reload!(demo).team_id == nil
     assert_received {:records, "POST", "/v3/sarduty/demo-teams", %{"team" => _team}}
+  end
+
+  test "when Records makes only the first team, it deletes that one there (#963)" do
+    demo = start!()
+
+    reply = fn
+      "POST", _path, %{"team" => %{"title" => "Coast Range SAR"}} ->
+        {200, %{"id" => 41, "key" => "k", "ids" => %{}}}
+
+      "POST", _path, _body ->
+        {500, %{"title" => "Down"}}
+
+      "DELETE", _path, _body ->
+        {200, %{}}
+    end
+
+    RecordsStub.stub(reply)
+
+    assert {:error, _reason} = BuildDemoTeam.call(demo, DateTime.utc_now(:second))
+    assert_received {:records, "DELETE", "/v3/sarduty/teams/41", nil}
+    assert Repo.aggregate(Team, :count) == 0
+  end
+
+  test "a build that fails after Records made both teams keeps nothing, there or here" do
+    demo = start!()
+
+    reply = fn
+      "POST", _path, %{"team" => %{"title" => "Coast Range SAR"}} ->
+        {200, %{"id" => 41, "key" => "k", "ids" => %{}}}
+
+      "POST", _path, _body ->
+        {200, %{"id" => 42, "key" => "k", "ids" => %{}}}
+
+      "DELETE", _path, _body ->
+        {200, %{}}
+    end
+
+    RecordsStub.stub(reply)
+
+    # Records' sync answers no members, so adding Coast Range's cards fails.
+    ExUnit.CaptureLog.capture_log(fn ->
+      assert {:error, :build_failed} = BuildDemoTeam.call(demo, DateTime.utc_now(:second))
+    end)
+
+    assert_received {:records, "DELETE", "/v3/sarduty/teams/41", nil}
+    assert_received {:records, "DELETE", "/v3/sarduty/teams/42", nil}
+    assert Repo.aggregate(Team, :count) == 0
+    assert Repo.aggregate(Organization, :count) == 0
+    assert %DemoTeam{team_id: nil, second_team_id: nil} = Repo.reload!(demo)
   end
 
   test "a forged, expired, or deleted demo's link goes back to /demo", %{conn: conn} do
@@ -240,6 +307,21 @@ defmodule Web.DemoFlowTest do
     refute has_element?(lv, "#demo-signup")
     assert has_element?(lv, "#demo-delete[data-confirm]")
     assert Repo.reload!(demo).seen_at
+
+    # The organization's space, where the visitor is an organization admin (#963).
+    assert has_element?(lv, "#demo-organization", "WESARA")
+
+    assert {:ok, org, _html} =
+             lv |> element("#demo-organization-link") |> render_click() |> follow_redirect(conn)
+
+    assert render(org) =~ "Silver Basin SAR"
+
+    # The banner comes along, with the way back to the team.
+    assert has_element?(org, "#demo-delete[data-confirm]")
+    assert has_element?(org, "#demo-organization", "WESARA is its made-up organization")
+
+    assert {:ok, _team, _html} =
+             org |> element("#demo-team-link") |> render_click() |> follow_redirect(conn)
   end
 
   defp email!(team, subject) do
@@ -418,8 +500,11 @@ defmodule Web.DemoFlowTest do
 
     assert redirected_to(conn) == ~p"/"
     refute Repo.get(Team, team.id)
+    refute Repo.get(Team, demo.second_team_id)
+    refute Repo.get(Organization, demo.organization_id)
     refute Repo.reload(demo)
     refute Accounts.get_user_by_email(user.email)
+    assert_received {:records, "DELETE", "/v3/sarduty/teams/" <> _, nil}
     assert_received {:records, "DELETE", "/v3/sarduty/teams/" <> _, nil}
   end
 
@@ -445,6 +530,8 @@ defmodule Web.DemoFlowTest do
 
     :ok = DateTime.utc_now(:second) |> DateTime.add(4, :day) |> DemoTeamsWorker.run()
     refute Repo.get(Team, team.id)
+    refute Repo.get(Team, demo.second_team_id)
+    refute Repo.get(Organization, demo.organization_id)
     refute Repo.reload(demo)
     refute Repo.reload(unopened)
   end

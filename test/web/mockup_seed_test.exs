@@ -7,6 +7,8 @@ defmodule Web.MockupSeedTest do
 
   # cspell:ignore Priya
 
+  import Ecto.Query, only: [where: 3]
+
   alias Web.MockupSeed
 
   @tag :tmp_dir
@@ -35,8 +37,14 @@ defmodule Web.MockupSeedTest do
 
     assert Enum.sort(names) == Enum.sort(App.CoastRange.names())
 
+    # The sample database has Silver Basin SAR beside it (#963).
+    sample = App.SampleRepo.team()
+
     for schema <- [App.Model.Member, App.Model.Activity, App.Model.EquipmentItem] do
-      assert App.Repo.aggregate(schema, :count) == App.SampleRepo.aggregate(schema, :count)
+      in_sample =
+        schema |> where([r], r.team_id == ^sample.id) |> App.SampleRepo.aggregate(:count)
+
+      assert App.Repo.aggregate(schema, :count) == in_sample
     end
   end
 end

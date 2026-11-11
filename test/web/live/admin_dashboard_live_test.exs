@@ -140,6 +140,24 @@ defmodule Web.AdminDashboardLiveTest do
     assert has_element?(lv, "#team-#{test_demo.id}-demo", "Test · goes Nov 9, 14:17")
   end
 
+  test "a demo's second team follows its first, and says so (#963)", %{conn: conn} do
+    %{user: admin} = user_with_team_fixture()
+    older = team_fixture(%{name: "Coast Range SAR"})
+    coast = team_fixture(%{name: "Coast Range SAR"})
+    basin = team_fixture(%{name: "Silver Basin SAR"})
+    demo_team_fixture(older)
+    demo_team_fixture(coast, %{second_team_id: basin.id})
+
+    {:ok, lv, _html} = conn |> log_in_user(make_admin(admin)) |> live(~p"/admin?view=demos")
+
+    assert has_element?(lv, "#team-view-demos", "3")
+    assert has_element?(lv, "#team-#{basin.id}-demo", "Second team · Visitor, Morgan Visitor")
+    refute has_element?(lv, "#team-#{coast.id}-demo", "Second team")
+
+    ids = lv |> render() |> then(&Regex.scan(~r/id="team-(\d+)"/, &1)) |> Enum.map(&List.last/1)
+    assert ids == Enum.map([coast.id, basin.id, older.id], &to_string/1)
+  end
+
   test "an unknown view, such as an old link, falls back to Teams", %{conn: conn} do
     %{user: admin} = user_with_team_fixture()
     {:ok, lv, _html} = conn |> log_in_user(make_admin(admin)) |> live(~p"/admin?view=mcp-on")

@@ -23,13 +23,22 @@ defmodule App.DemoCastTest do
   end
 
   test "every row points only at rows before it, or at the hours tags Records has" do
-    Enum.reduce(rows(), MapSet.new(["tag:Primary Hours", "tag:Secondary Hours"]), fn row, keys ->
-      for key <- Map.values(row["refs"] || %{}) ++ (row["tags"] || []) do
-        assert key in keys, "#{row["resource"]} points at #{key} before it is made"
-      end
+    for rows <- [rows(), DemoCast.silver_basin(@now)["rows"]] do
+      Enum.reduce(rows, MapSet.new(["tag:Primary Hours", "tag:Secondary Hours"]), fn row, keys ->
+        for key <- Map.values(row["refs"] || %{}) ++ (row["tags"] || []) do
+          assert key in keys, "#{row["resource"]} points at #{key} before it is made"
+        end
 
-      if row["key"], do: MapSet.put(keys, row["key"]), else: keys
-    end)
+        if row["key"], do: MapSet.put(keys, row["key"]), else: keys
+      end)
+    end
+  end
+
+  test "Silver Basin SAR is the second team, with its own five members (#963)" do
+    cast = DemoCast.silver_basin(@now)
+    assert cast["team"]["title"] == "Silver Basin SAR"
+    members = for %{"resource" => "members", "body" => body} <- cast["rows"], do: body["name"]
+    assert members == App.SilverBasin.names()
   end
 
   test "the visitor joins as an Owner beside Alex Chen, who stays" do

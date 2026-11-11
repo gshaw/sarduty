@@ -114,7 +114,8 @@ Every boundary, its credentials, and what breaks without it:
 - D4H tokens are not environment variables. Each team has one key, a D4H personal access
   token pasted into team settings, stored encrypted (Cloak) in the database.
 - The dev server is `https://sarduty.test` through puma-dev, proxying to port 4025.
-  Try and iterate on Dev SAR (`tools/dev-sar.exs`, team `devsar`), never South Fraser.
+  Try and iterate on the dev teams (`tools/dev-teams.exs`): Coast Range SAR (`coastrange`),
+  Silver Basin SAR (`silverbasin`), and WESARA (`/orgs/wesara`), never South Fraser.
 
 ## Shell environment
 

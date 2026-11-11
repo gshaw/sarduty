@@ -6,6 +6,10 @@ A team can belong to one parent organization, like BCSARA (bcsara.com). Its card
 check pages then carry the organization's name and logo instead of SAR Duty's. Issue #87
 has the design of its own verify host.
 
+Western Search and Rescue Association (WESARA) is the made-up one (#963), with Coast
+Range SAR and Silver Basin SAR as its teams: in the reports sample database, the dev
+teams (`/orgs/wesara`), and a copy in every demo ([demo.md](demo.md#the-cast)).
+
 ## Its space and its admins (#512)
 
 Each organization has its own space at `/orgs/:slug`, beside a team's space, SAR Duty
@@ -58,6 +62,12 @@ has its own page.
 BCSARA's are EMCR's Task report (1.01), on EMCR's own page, and its Expense
 reimbursement request and the request's Supplement, in D4H's layout
 ([documents.md](documents.md#preparing-a-form)).
+
+WESARA's is a made-up Task report (`priv/forms/wesara`, #963), on its own two-page page
+drawn by Typst. It reads only an activity's own fields, so it prints on any team, and
+each demo's WESARA and the dev WESARA get it, on (`App.Operation.AddDemoForms`). Saving
+checks a form on every team in the organization, so one that reads an agency's custom
+fields, like EMCR's, fails for a team without them, such as a Records team.
 
 ## What an organization changes today
 

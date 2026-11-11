@@ -2,7 +2,8 @@ defmodule App.DemoCast do
   @moduledoc """
   Try a demo's cast (#857): Coast Range SAR (App.CoastRange) as the JSON SAR Duty
   Records loads into a new demo team (`D4H.create_demo_team/1`), with the visitor as a
-  second Owner beside Alex Chen.
+  second Owner beside Alex Chen. silver_basin/1 is the demo's second team, Silver Basin
+  SAR (App.SilverBasin), in the same shape (#963).
 
   Pure. cast/2 is what Records keeps, in D4H's shape: members, tags, groups,
   qualifications and awards, activities and attendance, equipment and its use, whiteboard
@@ -17,6 +18,7 @@ defmodule App.DemoCast do
 
   alias App.CoastRange
   alias App.Model.Activity
+  alias App.SilverBasin
 
   @records_kinds [
     :tag,
@@ -61,9 +63,14 @@ defmodule App.DemoCast do
   @doc """
   The cast for a visitor `%{name:, email:}` as of `now`: `%{"team" => …, "rows" => […]}`.
   """
-  def cast(%DateTime{} = now, %{name: _name, email: _email} = visitor) do
-    rows = CoastRange.build(now, visitor: visitor)
-    {:team, :coastrange, team, []} = hd(rows)
+  def cast(%DateTime{} = now, %{name: _name, email: _email} = visitor),
+    do: now |> CoastRange.build(visitor: visitor) |> records_cast()
+
+  @doc "Silver Basin SAR as of `now`, in cast/2's shape: a demo's second team."
+  def silver_basin(%DateTime{} = now), do: now |> SilverBasin.build() |> records_cast()
+
+  defp records_cast(rows) do
+    {:team, _key, team, []} = hd(rows)
     records = for {kind, _key, _row, _links} = row <- rows, kind in @records_kinds, do: row
     items = for {:equipment_item, _key, item, _links} <- records, do: item
 

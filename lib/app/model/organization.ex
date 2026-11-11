@@ -132,6 +132,7 @@ defmodule App.Model.Organization do
     |> Repo.all()
   end
 
+  def get(id), do: Repo.get(Organization, id)
   def get!(id), do: Repo.get!(Organization, id)
   def get_by_slug(slug), do: Repo.get_by(Organization, slug: slug)
 

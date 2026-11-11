@@ -2,6 +2,8 @@ defmodule App.Worker.ReseedSampleWorkerTest do
   # Not async: it rewrites Coast Range SAR's database, which async tests read.
   use ExUnit.Case, async: false
 
+  import Ecto.Query, only: [where: 3]
+
   alias App.Model.Member
   alias App.Worker.ReseedSampleWorker
 
@@ -13,6 +15,7 @@ defmodule App.Worker.ReseedSampleWorkerTest do
 
     assert App.SampleRepo.team().id == team.id
     assert App.SampleRepo.get_by!(Member, ref_id: "132").id == cameron.id
-    assert App.SampleRepo.aggregate(Member, :count) == length(App.CoastRange.names())
+    members = Member |> where([m], m.team_id == ^team.id) |> App.SampleRepo.aggregate(:count)
+    assert members == length(App.CoastRange.names())
   end
 end

@@ -65,11 +65,11 @@ defmodule App.Operation.DrawMemberCardTest do
   end
 
   test "a team in an organization names it as issuer" do
-    card = card(%{organization: %Organization{name: "Pacific Ranges SAR Association"}})
+    card = card(%{organization: %Organization{name: "Western Search and Rescue Association"}})
     assert [_verify, ["Issued by", issuer]] = DrawMemberCard.card_data(card, false).notes
 
     assert issuer ==
-             "Coast Range Search and Rescue Society, a member team of Pacific Ranges SAR Association."
+             "Coast Range Search and Rescue Society, a member team of Western Search and Rescue Association."
   end
 
   test "a member with no start date has no Member since (#421)" do

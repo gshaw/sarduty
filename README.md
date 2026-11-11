@@ -38,10 +38,11 @@ Then `mise run server` and open <https://sarduty.test>.
 
 - `mise run server` starts the dev server; `iex -S mix phx.server` starts it inside IEx.
   `tools/dev-server.sh` serves a worktree the same way, on the main checkout's database.
-- `mix run --no-start tools/dev-sar.exs` adds Dev SAR, the made-up Coast Range cast on a
-  local SAR Duty Records, with a site admin as a team admin, to try a branch on without
-  touching a real team's data. `--reset` builds it again with today's dates, and
-  `--photo <file>` sets your photo. It needs `RECORDS_HOST` and `RECORDS_SARDUTY_KEY`
+- `mix run --no-start tools/dev-teams.exs` adds the dev teams on a local SAR Duty Records:
+  Coast Range SAR (`coastrange`), with a site admin as a team admin, Silver Basin SAR
+  (`silverbasin`), and their organization, WESARA (`wesara`). Try a branch on them
+  without touching a real team's data. `--reset` builds them again with today's dates,
+  and `--photo <file>` sets your photo. It needs `RECORDS_HOST` and `RECORDS_SARDUTY_KEY`
   ([records.md](docs/records.md#records-in-dev)).
 - `mise run check` formats, compiles, lints, and spell-checks.
 - `mise run test` runs the tests; `mise run ci` runs checks and tests. Run it before

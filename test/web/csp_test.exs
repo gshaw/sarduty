@@ -175,7 +175,7 @@ defmodule Web.CSPTest do
       b =
         fingerprint(
           "https://tiles.example/9.png?x=1",
-          "https://sarduty.com/teams/devsar/activities/3"
+          "https://sarduty.com/teams/coastrange/activities/3"
         )
 
       assert a == b

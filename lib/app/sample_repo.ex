@@ -1,7 +1,8 @@
 defmodule App.SampleRepo do
   @moduledoc """
   Coast Range SAR's own database (#816): the made-up team an agent's report runs on
-  (`App.Report.run_sample/3`), never a real team's rows. Same migrations as App.Repo,
+  (`App.Report.run_sample/3`), never a real team's rows, with Silver Basin SAR beside it
+  in their organization, WESARA (#963). Same migrations as App.Repo,
   in a SQLite file of its own beside it, rebuilt from `App.CoastRange` at boot and
   again every night (App.Worker.ReseedSampleWorker), so "last 30 days" always has rows.
 
@@ -19,6 +20,7 @@ defmodule App.SampleRepo do
   alias App.CoastRange
   alias App.Model.Team
   alias App.Operation.SeedCoastRange
+  alias App.SilverBasin
 
   require Logger
 
@@ -62,13 +64,11 @@ defmodule App.SampleRepo do
       query!("PRAGMA defer_foreign_keys = ON")
       Enum.each(tables(), &query!(~s(DELETE FROM "#{&1}")))
       query!("DELETE FROM sqlite_sequence")
-      rows = SeedCoastRange.call(__MODULE__, now)
       organization = insert!(CoastRange.organization())
-
+      attrs = %{organization_id: organization.id}
+      rows = SeedCoastRange.call(__MODULE__, now, attrs)
+      SeedCoastRange.insert(__MODULE__, SilverBasin.build(now), attrs)
       rows
-      |> Map.fetch!({:team, :coastrange})
-      |> Ecto.Changeset.change(organization_id: organization.id)
-      |> update!()
     end)
   end
 

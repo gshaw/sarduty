@@ -55,7 +55,7 @@ defmodule Web.CSPReport do
     end
   end
 
-  # /teams/devsar/members/635 → /teams/:name/members/:id
+  # /teams/coastrange/members/635 → /teams/:name/members/:id
   defp page_template(page) do
     page
     |> String.split("/")

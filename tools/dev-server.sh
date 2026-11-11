@@ -6,7 +6,7 @@
 #   tools/dev-server.sh            # in the foreground
 #   tools/dev-server.sh --detach   # in the background, log in tmp/dev-server.log
 #
-# Dev SAR (tools/dev-sar.exs) is the team to try things on. DEV_URL_HOST, such as
+# The dev teams (tools/dev-teams.exs) are the teams to try things on. DEV_URL_HOST, such as
 # sarduty.gshaw.ca, is the app's own URL in QR codes and emailed links, so a phone can
 # open them; sarduty.test otherwise.
 set -euo pipefail
