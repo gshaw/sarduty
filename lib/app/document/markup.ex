@@ -12,7 +12,9 @@ defmodule App.Document.Markup do
     on a form's printed lines, its first line `indent` further in. With `lines` it
     shrinks until it fits that many. With `fit` it's one line, shrunk until it fits. Its first
     baseline is three quarters of its size below its top, as a flow's is, and its text
-    starts at its left edge, wherever the place is anchored.
+    starts at its left edge, wherever the place is anchored. With `more`, it shrinks
+    only to 8pt; still too long, it says "See attached page", and the PDF ends with a
+    letter page of its whole text, headed with its `heading` (#993).
   - A tick is an X across its box, when its condition holds.
   - A flow down is a block of lines, each `leading` below the last. A space is a blank
     line, and a picture is fitted in its box, keeping its shape, with `pad` above and
@@ -41,8 +43,10 @@ defmodule App.Document.Markup do
 
   @letter_width 612
   @letter_height 792
-  # The smallest size a text on its `lines` shrinks to.
+  # The smallest size a text on its `lines` shrinks to, and one that goes on an attached
+  # page when it's still too long (#993): 6pt is too small for a page someone signs.
   @smallest 6
+  @smallest_more 8
 
   @doc """
   `{markup, files}`: the Typst source, and each file it reads by name. `mark` is a
@@ -84,6 +88,7 @@ defmodule App.Document.Markup do
       verify_code(output, Keyword.get(opts, :verify), "v", files, values)
 
     {pages, {files, values}} = pages(output, page, files, values, verify != "")
+    {attached, values} = attached(output.places, files, values, verify != "")
 
     markup =
       IO.iodata_to_binary([
@@ -91,7 +96,8 @@ defmodule App.Document.Markup do
         document("v", values),
         ~s|#set text(font: "Arimo", fallback: false)\n|,
         verify,
-        pages
+        pages,
+        attached
       ])
 
     {markup, Map.put(files, "values.json", Jason.encode!(values))}
@@ -106,6 +112,45 @@ defmodule App.Document.Markup do
       {page_markup(n, page, [body, verify, mark(files)]), acc}
     end)
   end
+
+  # A page at the end for each place that says `more` and was too long for its lines
+  # (#993): its heading, then its whole text, on plain letter paper. The place set its
+  # state when it printed "See attached page", so Typst decides, and a text that fits
+  # adds no page. The verify code and the mark print on it as on every other page.
+  defp attached(places, files, values, verify?) do
+    places
+    |> Enum.filter(&(Map.has_key?(&1, :more) and copy(&1) == 1 and &1.value not in [nil, ""]))
+    |> Enum.map_reduce(values, fn place, values ->
+      heading = "#{place.name}-heading"
+
+      markup = [
+        ~s|#context if state("#{more_state(place)}", false).final() {\n|,
+        "  page(width: #{pt(@letter_width)}, height: #{pt(@letter_height)}, ",
+        "margin: (x: 1in, top: 1in, bottom: 1.5in), ",
+        "foreground: {#{attached_foreground(files, verify?)}}, {\n",
+        "    set text(size: 11pt)\n",
+        ~s|    block(below: 12pt, text(size: 12pt, weight: "bold", v.at("#{heading}")))\n|,
+        ~s|    v.at("#{place.name}").join(linebreak())\n|,
+        "  })\n",
+        "}\n"
+      ]
+
+      {markup, Map.put(values, heading, place.heading)}
+    end)
+  end
+
+  defp attached_foreground(files, verify?) do
+    [
+      if(verify?, do: "verify-code"),
+      if(Map.has_key?(files, "mark.png"),
+        do: ~s|place(top + left, image("mark.png", width: 100%))|
+      )
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join("; ")
+  end
+
+  defp more_state(place), do: "more-#{place.name}"
 
   defp on_page(places, copy, n),
     do: Enum.filter(places, &(Map.get(&1, :page, 1) == n and copy(&1) == copy))
@@ -258,6 +303,31 @@ defmodule App.Document.Markup do
   end
 
   @doc """
+  Whether a text place that says `more` is likely too long for its lines, from its
+  text's length (#993), so a form's page can warn before it prints. Typst decides when
+  it prints; this guesses the same from Arimo's average letter, 0.47 of its size at
+  8pt, and starts a line at each of the text's own line breaks.
+  """
+  def attached?(%{more: _, lines: count, value: text} = place) when is_binary(text) do
+    per_line = max(1, floor(text_width(place) / (@smallest_more * 0.47)))
+    indent = ceil(Map.get(place, :indent, 0) / (@smallest_more * 0.47))
+
+    needed =
+      text
+      |> lines()
+      |> List.update_at(0, &(String.duplicate(" ", indent) <> &1))
+      |> Enum.map(&max(1, ceil(String.length(&1) / per_line)))
+      |> Enum.sum()
+
+    needed > count
+  end
+
+  def attached?(_place), do: false
+
+  defp text_width(%{width: width}), do: width
+  defp text_width(place), do: @letter_width - Map.get(place, :left, 0) - Map.get(place, :right, 0)
+
+  @doc """
   A Typst error on a form's layout, with each `main.typ:12:5:` read as the line of the
   form's text it's on: `Line 140:`. `markup` is what `typst/2` gave.
   """
@@ -381,6 +451,7 @@ defmodule App.Document.Markup do
     # Its height on `count` lines: the first line's ascent, then a pitch for each after.
     height = ascent(place) + (count - 1) * place.pitch + 0.5
     size = pt(size(place))
+    smallest = if Map.has_key?(place, :more), do: @smallest_more, else: @smallest
 
     markup = [
       "#place(#{at(place)}, block(width: #{width(place)}, layout(room => {\n",
@@ -389,10 +460,10 @@ defmodule App.Document.Markup do
       ~s|  let body = #{indent(place)}v.at("#{key(place)}").join(linebreak())\n|,
       "  let sized(s) = text(size: s, top-edge: #{pt(ascent(place))}, bottom-edge: \"baseline\", body)\n",
       "  let s = #{size}\n",
-      "  while s > #{pt(@smallest)} and measure(sized(s), width: room.width).height > #{pt(height)} {\n",
+      "  while s > #{pt(smallest)} and measure(sized(s), width: room.width).height > #{pt(height)} {\n",
       "    s -= 0.25pt\n",
       "  }\n",
-      "  sized(s)\n",
+      more_or_sized(place, height),
       "})))\n"
     ]
 
@@ -411,6 +482,22 @@ defmodule App.Document.Markup do
 
     {markup, {files, Map.put(values, key(place), lines(place.value))}}
   end
+
+  # Still too long at 8pt, a place that says `more` prints "See attached page" on its
+  # first line and sets its state, so the attached page prints at the end (#993).
+  defp more_or_sized(%{more: _} = place, height) do
+    [
+      "  if measure(sized(s), width: room.width).height > #{pt(height)} {\n",
+      ~s|    state("#{more_state(place)}", false).update(true)\n|,
+      "    text(size: #{pt(size(place))}, top-edge: #{pt(ascent(place))}, bottom-edge: \"baseline\", ",
+      "#{indent(place)}[See attached page])\n",
+      "  } else {\n",
+      "    sized(s)\n",
+      "  }\n"
+    ]
+  end
+
+  defp more_or_sized(_place, _height), do: "  sized(s)\n"
 
   # A place's values key and file names: its name, and on a later copy of a form's page,
   # which copy, since each copy fills the same place with its own values.

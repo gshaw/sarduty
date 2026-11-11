@@ -117,12 +117,35 @@ places
 - `indent 233pt` starts its first line further in, after a label printed on that line.
 - `lines 8`, with `pitch`, is as many of the page's lines as it has. A longer text
   shrinks, down to 6pt, until it fits them, so it never runs into the next part.
+- `more 'Details of Task'`, with `lines`, puts a text too long for them on
+  [an attached page](#an-attached-page).
 - `align right` puts each line against its right edge, as a column of money does, and
   `align center` centres it, as on a form's line. Either needs a width, or left and
   right.
 - `tick` draws an X across a box `size` wide when its fill, a condition, holds.
 - `page 2` puts a place on the page PDF's second page. Without it, a place is on page 1.
 - `rows` repeats a row of places down the page ([Rows](#rows)).
+
+### An attached page
+
+6pt is too small for a page someone reads and signs (#993). A text place opts into an
+attached page, as EMCR's form asks, "attach additional pages if required":
+
+```sql
+details text top 263pt, left 125.7pt, width 461pt, pitch 12pt, lines 10, size 9pt, more 'Details of Task'
+```
+
+- It shrinks to 8pt at the smallest, not 6pt.
+- Still too long, its lines say "See attached page", and the PDF ends with a plain
+  letter page headed with the title and the label, "Task report 26-06613, Details of
+  Task (continued)", then the whole text. Each place that's too long gets its own page.
+- Typst decides when it prints, so SAR Duty measures nothing itself: the place sets a
+  Typst state when it gives up, and the page prints only when it was set. DRAFT and
+  SAMPLE print on it, and the verify code too, unless the form says `verify code none`.
+- The form's page warns from the text's length (`App.Document.attached/1`): a line at
+  8pt holds about the place's width over 0.47 of 8pt, and each line break starts a new
+  line. It's a guess; the PDF is what Typst decides.
+- `more` goes on a text place with `lines`, never with `fit` or in a row.
 
 ## Verify code
 
@@ -287,7 +310,10 @@ running its expects, then prints it there.
   version 4 on production: `form 'EMBC Task Report Form'`, so an upload replaces
   production's form. It reads the incident and BCSARA's fields (Agency, Agency File #,
   ASE#, Region, Task Type, Equipment Used/Lost, Task Leader's Name) and asks nothing.
-  Details of Task has 10 lines and Equipment Used/Lost 4, at 9pt. Publishing needs the
+  Details of Task has 10 lines and Equipment Used/Lost 4, at 9pt, and each goes on an
+  attached page when it's too long for them at 8pt
+  ([an attached page](#an-attached-page)). Details of Task is
+  the D4H description word for word. Publishing needs the
   task number, Agency, Agency File #, Region, Task Type, the description, the Task
   Leader's Name, and a finished task. The page carries two white Acrobat Sign text tags,
   for the task leader's signature and date.
@@ -499,6 +525,9 @@ shows` line, or each kept value for a form with none. Page 1 folds under it, dra
 - **Needed to publish**, a warning banner under the title while a value the form `needs`
   is missing ([Needs and email](#needs-and-email)). Publish stays on and says the same
   as an error.
+- **An attached page**, a banner under the title for each place that says `more` and
+  looks too long for its lines: "Details of Task goes on an attached page"
+  ([an attached page](#an-attached-page)). It follows the answers as they change.
 - **What's missing**: each one blank that publishing doesn't need, with the page that fixes it, so the fix reaches
   D4H and every form. An activity's D4H field links to Change fields, its own details to
   Change activity, and the team's to team settings: its names to General, and its

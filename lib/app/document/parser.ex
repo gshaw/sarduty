@@ -868,7 +868,7 @@ defmodule App.Document.Parser do
       "fit" ->
         {%{place | fit: true}, rest}
 
-      word when word in ~w(level page align lines) ->
+      word when word in ~w(level page align lines more) ->
         valued_option(word, place, rest, n)
 
       name when name in @lengths ->
@@ -877,7 +877,7 @@ defmodule App.Document.Parser do
       other ->
         fail(
           n,
-          "Remove #{other}: a place takes #{Enum.join(@lengths, ", ")}, lines, across, fit, align, page, and level with."
+          "Remove #{other}: a place takes #{Enum.join(@lengths, ", ")}, lines, more, across, fit, align, page, and level with."
         )
     end
   end
@@ -889,6 +889,7 @@ defmodule App.Document.Parser do
   defp valued_option("page", place, rest, n), do: page_option(place, rest, n)
   defp valued_option("align", place, rest, n), do: align_option(place, rest, n)
   defp valued_option("lines", place, rest, n), do: lines_option(place, rest, n)
+  defp valued_option("more", place, rest, n), do: more_option(place, rest, n)
 
   # Which page of the form's page it's on, from 1.
   defp page_option(place, [{:number, page, _} | rest], _n) when is_integer(page) and page > 0,
@@ -917,6 +918,18 @@ defmodule App.Document.Parser do
 
   defp lines_option(_place, _tokens, n),
     do: fail(n, "Write how many lines after lines, such as lines 8.")
+
+  # `more 'Details of Task'`: a text too long for its lines goes on an attached page,
+  # headed with this label (#993).
+  defp more_option(place, [{:string, label, _} | rest], n) do
+    if String.trim(label) == "", do: more_option(place, [], n)
+    if Map.has_key?(place, :more), do: fail(n, "Write more once.")
+    {Map.put(place, :more, label), rest}
+  end
+
+  defp more_option(_place, _tokens, n),
+    do:
+      fail(n, "Write what the attached page calls it after more, such as more 'Details of Task'.")
 
   defp level_with(place, [{:word, word, _}, {:word, other, _} | rest], n) do
     if lower(word) != "with", do: fail(n, "Write level with and a flow's name.")

@@ -45,7 +45,8 @@ defmodule App.Document do
   - `places`: `%{name, kind, line, across, level_with, fit, page}` and its lengths in
     points, each a `:text`, an `:image`, a `:tick` (an X in a box), or a `:flow` that
     stacks values down the page, or across it; `page` is which page of the form's page.
-    A text can have `align`. A form's `:rows` repeats its `places`, a row's, `pitch`
+    A text can have `align`, and `more`, the label of the attached page it goes on when
+    it's too long for its `lines` (#993). A form's `:rows` repeats its `places`, a row's, `pitch`
     apart, `lines` to a copy of its page
   - `fill`: `%{place, value, line}`, a flow's value `{:flow, items}`, and a rows place's
     `{:each, report, fills}`, a fill for each of a row's places
@@ -60,6 +61,7 @@ defmodule App.Document do
 
   alias App.Document.Checker
   alias App.Document.Evaluator
+  alias App.Document.Markup
   alias App.Document.Parser
   alias App.Report.Context
   alias App.Report.Query
@@ -347,6 +349,14 @@ defmodule App.Document do
 
   defp missing?(false), do: true
   defp missing?(value), do: Evaluator.blank?(value)
+
+  @doc """
+  The places of what `evaluate/3` gave that likely go on an attached page (#993): each
+  says `more`, and its text looks too long for its lines. Typst decides when it prints,
+  so this is the form page's warning, never what prints.
+  """
+  def attached(%{places: places}),
+    do: Enum.filter(places, &(Map.get(&1, :copy, 1) == 1 and Markup.attached?(&1)))
 
   @doc "A place's text, as `expect` reads it: a flow's lines, a blank line for each space."
   defdelegate text(output, place), to: Evaluator

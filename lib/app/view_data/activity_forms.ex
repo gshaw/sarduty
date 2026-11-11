@@ -95,6 +95,18 @@ defmodule App.ViewData.ActivityForms do
     ReadDocument.needed(doc, worked, read)
   end
 
+  @doc """
+  The places whose text likely goes on an attached page with the answers `typed`
+  (#993), as `App.Document.attached/1` guesses from its length: each `%{more, lines}`,
+  its label and how many lines it has. `page` is `load/4`'s.
+  """
+  def attached(%{doc: doc, values: values, timezone: timezone}, typed) do
+    doc
+    |> Document.evaluate(Map.merge(values, readable(doc, typed)), timezone)
+    |> Document.attached()
+    |> Enum.map(&Map.take(&1, [:name, :more, :lines]))
+  end
+
   defp shown_on(doc, context, activity) do
     case PrintForm.shown?(doc, context, activity.id) do
       :ok -> :ok

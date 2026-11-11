@@ -102,6 +102,26 @@ defmodule App.FormsTest do
       lines = Map.new(doc.places, &{&1.name, &1[:lines]})
       assert lines["details"] == 10 and lines["equipment"] == 4
     end
+
+    # Details of Task and Equipment Used/Lost shrink to 8pt, then go on an attached
+    # page, rather than running past their box (#993).
+    test "a long Details of Task goes on an attached page", %{doc: doc} do
+      more = Map.new(doc.places, &{&1.name, &1[:more]})
+      assert more["details"] == "Details of Task"
+      assert more["equipment"] == "Equipment Used/Lost"
+
+      page = File.read!("#{@dir}/bcsara/task_report.pdf")
+      long = String.duplicate("Teams searched the north ridge and the creek drainage. ", 26)
+
+      for {text, pages, attached} <- [{"Found on the ridge.", 1, []}, {long, 2, ["details"]}] do
+        values = %{"task.tracking_number" => "26-06613", "task.description" => text}
+        output = Document.evaluate(doc, values, "America/Vancouver")
+
+        assert output |> Document.attached() |> Enum.map(& &1.name) == attached
+        assert {:ok, pdf} = PrintDocument.call(output, page: page, mark: :draft)
+        assert Service.PDFPages.count(pdf) == {:ok, pages}
+      end
+    end
   end
 
   describe "BCSARA's claims" do
