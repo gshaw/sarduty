@@ -98,13 +98,23 @@ since toasts stay until tapped and it would cover that line.
   confirmed both sides on #139. A missing scan uses the activity's time and says so.
   Leaving before arriving can't be sent.
 
-## Yet to arrive
+## Yet to arrive and Here now
 
 Take attendance and the Attendance page list members who signed up, D4H's `ATTENDING`,
 and have no scan yet (#245, [BuildYetToArrive](../lib/app/operation/build_yet_to_arrive.ex)).
 Team admins get Call and Text buttons, so they can phone them; members get names. Any scan counts, so a
 member scanned only leaving drops off too. The list reads the copy again on every scan,
 so the sync's changes show on the next update.
+
+On Take attendance the list sits under **Find a member by name**, always open, and
+follows Arriving and Leaving (#998): Arriving shows Yet to arrive, Leaving shows **Here
+now**, everyone whose latest scan is an arrival, walk-ins included. Each name has Record
+arrival or Record departure, so a phone that isn't at the door the whole time records
+someone with one tap, with no card and no typing. A tap says so in its own row for 3
+seconds, with Undo at the far end, and the band above the camera stays away, so the
+names under a finger don't move. Two letters in the box swap the list for a search of
+the whole team, the list's names first, each with where they stand: Signed up, Arrived,
+or Left.
 
 ## The scanner
 

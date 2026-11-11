@@ -5,7 +5,7 @@ defmodule Web.ActivityTakeAttendanceLive do
       {:live_view_narrow_layout,
        size: :tool,
        access: :team,
-       view_events: ~w(set_kind change show_time clear_override toggle_yet_to_arrive scan_failed),
+       view_events: ~w(set_kind change show_time clear_override scan_failed),
        member_events: ~w(scanned pick undo)}
 
   import Web.Components.Scanner
@@ -26,7 +26,8 @@ defmodule Web.ActivityTakeAttendanceLive do
   # records ID card scans and members picked by name, and lists what it has recorded so a
   # mistake can be undone. Every scan and Undo checks again, and so does a tick each
   # minute, so a page left open opens and stops with the window. Nothing reaches D4H
-  # until a team admin sends it from the Attendance page.
+  # until a team admin sends it from the Attendance page. Under the name box, Arriving
+  # lists Yet to arrive and Leaving lists Here now, each name a tap from recorded (#998).
   @max_name_matches 8
   @recent_count 30
   # A good scan's confirmation shows this long, then the page is ready for the next. Every
@@ -72,8 +73,8 @@ defmodule Web.ActivityTakeAttendanceLive do
       matches: [],
       message: nil,
       picture: nil,
-      scan_failed: false,
-      show_yet_to_arrive: false
+      tapped: nil,
+      scan_failed: false
     )
     |> assign_closed(now)
     |> load_scans()
@@ -115,6 +116,12 @@ defmodule Web.ActivityTakeAttendanceLive do
 
   # Only clears the confirmation it was set for, not a newer one. A problem stays in the
   # band until the next read, but leaves the picture.
+  def handle_info({:clear_tapped, tapped}, socket) do
+    if socket.assigns.tapped == tapped,
+      do: {:noreply, assign(socket, tapped: nil)},
+      else: {:noreply, socket}
+  end
+
   def handle_info({:clear_message, message}, socket) do
     %{message: shown, picture: picture} = socket.assigns
     good? = message.kind in [:arrived, :left]
@@ -126,17 +133,15 @@ defmodule Web.ActivityTakeAttendanceLive do
   end
 
   def handle_event("set_kind", %{"kind" => kind}, socket) when kind in ["arrived", "left"],
-    do: {:noreply, assign(socket, kind: kind, message: nil)}
+    do: {:noreply, socket |> assign(kind: kind, message: nil, tapped: nil) |> assign_matches()}
 
   def handle_event("change", params, socket) do
-    search = params["search"] || ""
+    socket =
+      socket
+      |> assign(override: params["override"] || "", search: params["search"] || "")
+      |> assign_matches()
 
-    {:noreply,
-     assign(socket,
-       override: params["override"] || "",
-       search: search,
-       matches: if(card_text?(search), do: [], else: matches(socket.assigns.members, search))
-     )}
+    {:noreply, socket}
   end
 
   def handle_event("show_time", _params, socket), do: {:noreply, assign(socket, show_time: true)}
@@ -155,6 +160,22 @@ defmodule Web.ActivityTakeAttendanceLive do
       record(socket, fn door, now ->
         RecordAttendanceScan.from_card(door, input, hosts, kind, override, now)
       end)
+
+    {:noreply, socket}
+  end
+
+  # A name tapped in the list under the name box (#998) says so in its row, with Undo,
+  # instead of in the band above the camera, so the names under a finger stay put. Like a
+  # pick, it submits the whole form, so it carries the time box as it shows.
+  def handle_event("pick", %{"tap" => member_id} = params, socket) do
+    kind = socket.assigns.kind
+    override = params["override"] || ""
+    row = listed_row(socket.assigns, member_id)
+
+    socket =
+      socket
+      |> assign(override: override)
+      |> record(&RecordAttendanceScan.from_name(&1, member_id, kind, override, &2), row)
 
     {:noreply, socket}
   end
@@ -196,10 +217,14 @@ defmodule Web.ActivityTakeAttendanceLive do
     end
   end
 
+  # Undo on a row just tapped puts the name back in the list, which says enough.
   def handle_event("undo", %{"id" => scan_id}, socket) do
+    tapped? = "#{socket.assigns.tapped[:scan_id]}" == scan_id
+
     socket =
       with_open_door(socket, fn socket, now ->
         case socket |> door() |> RecordAttendanceScan.undo(scan_id, now) do
+          :ok when tapped? -> assign(socket, tapped: nil)
           :ok -> assign(socket, message: %{kind: :info, text: "Scan removed."})
           # Closed between the check and the undo.
           {:error, _reason} -> assign_closed(socket, now)
@@ -209,21 +234,75 @@ defmodule Web.ActivityTakeAttendanceLive do
     {:noreply, socket}
   end
 
-  def handle_event("toggle_yet_to_arrive", _params, socket),
-    do: {:noreply, update(socket, :show_yet_to_arrive, &(!&1))}
-
   def handle_event("scan_failed", _params, socket),
     do: {:noreply, assign(socket, :scan_failed, true)}
 
-  defp record(socket, record) do
+  # `row` is what the list under the name box showed for a tapped name, or nil.
+  defp record(socket, record, row \\ nil) do
     with_open_door(socket, fn socket, now ->
-      message = socket |> door() |> record.(now) |> message(socket.assigns.team)
-      Process.send_after(self(), {:clear_message, message}, @confirm_ms)
+      result = socket |> door() |> record.(now)
+      message = message(result, socket.assigns.team)
+      socket = push_event(socket, "scan-sound", %{sound: message.kind})
 
-      socket
-      |> assign(message: message, picture: message)
-      |> push_event("scan-sound", %{sound: message.kind})
+      case {result, row} do
+        {{:ok, scan}, %{}} -> show_tapped(socket, scan, message, row)
+        _other -> show_message(socket, message)
+      end
     end)
+  end
+
+  defp show_message(socket, message) do
+    Process.send_after(self(), {:clear_message, message}, @confirm_ms)
+    assign(socket, message: message, picture: message)
+  end
+
+  defp show_tapped(socket, scan, message, row) do
+    tapped = %{
+      member_id: scan.member_id,
+      scan_id: scan.id,
+      text: message.text,
+      icon: message_icon(message.kind),
+      row: row
+    }
+
+    Process.send_after(self(), {:clear_tapped, tapped}, @confirm_ms)
+    assign(socket, tapped: tapped)
+  end
+
+  # What the list under the name box shows for a member, so their row stays while it
+  # says they were recorded.
+  defp listed_row(%{kind: "arrived", yet_to_arrive: listed}, member_id),
+    do: Enum.find(listed.yet_to_arrive, &("#{&1.id}" == member_id))
+
+  defp listed_row(%{kind: "left", yet_to_arrive: listed}, member_id),
+    do: Enum.find(listed.here, &("#{&1.member_id}" == member_id))
+
+  # The members in the list under the name box, whom a search finds first.
+  defp listed_ids(%{kind: "arrived", yet_to_arrive: listed}),
+    do: MapSet.new(listed.yet_to_arrive, & &1.id)
+
+  defp listed_ids(%{kind: "left", yet_to_arrive: listed}),
+    do: MapSet.new(listed.here, & &1.member_id)
+
+  # Each name found, with where they stand tonight: signed up, arrived, or left.
+  defp assign_matches(socket) do
+    %{search: search, members: members} = socket.assigns
+
+    found =
+      if card_text?(search), do: [], else: matches(members, search, listed_ids(socket.assigns))
+
+    assign(socket, matches: Enum.map(found, &%{member: &1, hint: match_hint(&1, socket.assigns)}))
+  end
+
+  defp match_hint(member, %{last_scans: last_scans, yet_to_arrive: listed, team: team}) do
+    case last_scans[member.id] do
+      nil ->
+        if Enum.any?(listed.yet_to_arrive, &(&1.id == member.id)), do: "Signed up"
+
+      scan ->
+        time = scan |> AttendanceScan.time() |> Service.Format.time_short(team.timezone)
+        if scan.kind == "arrived", do: "Arrived #{time}", else: "Left #{time}"
+    end
   end
 
   # Runs `action` with the socket read again, while the door may take attendance. A team
@@ -308,13 +387,20 @@ defmodule Web.ActivityTakeAttendanceLive do
     %{team: team, team_admin?: team_admin?} = socket.assigns
     members = Enum.map(scans, & &1.member)
     standings = Standing.visible_by_member(team, members, DateTime.utc_now(), team_admin?)
-    assign(socket, scans: scans, yet_to_arrive: yet_to_arrive, standings: standings)
+
+    socket
+    |> assign(scans: scans, yet_to_arrive: yet_to_arrive, standings: standings)
+    |> assign(last_scans: Map.new(all_scans, &{&1.member_id, &1}))
+    |> assign_matches()
   end
 
-  @doc "Current members whose name contains every word typed, up to #{@max_name_matches}."
-  def matches(_members, search) when byte_size(search) < 2, do: []
+  @doc """
+  Current members whose name contains every word typed, up to #{@max_name_matches}: those
+  in `first`, the ids listed under the name box, before the rest of the team.
+  """
+  def matches(_members, search, _first) when byte_size(search) < 2, do: []
 
-  def matches(members, search) do
+  def matches(members, search, first) do
     words = search |> String.downcase() |> String.split()
 
     members
@@ -322,9 +408,12 @@ defmodule Web.ActivityTakeAttendanceLive do
       name = String.downcase(member.name)
       Enum.all?(words, &String.contains?(name, &1))
     end)
-    |> Enum.sort_by(& &1.name)
+    |> Enum.sort_by(&{&1.id not in first, &1.name})
     |> Enum.take(@max_name_matches)
   end
+
+  # Two letters start a search, which takes the list's place under the name box.
+  defp searching?(search), do: search |> String.trim() |> String.length() >= 2
 
   @doc """
   Whether text in the name box is a card's link or code rather than a name. A printed
@@ -392,24 +481,6 @@ defmodule Web.ActivityTakeAttendanceLive do
       {closed_text(@closed, @activity, @team)}
     </p>
     <div :if={!@closed} id="controls" class="door-controls">
-      <div :if={@yet_to_arrive.signed_up > 0} class="mt-4">
-        <.button
-          id="toggle-yet-to-arrive"
-          type="button"
-          aria-expanded={to_string(@show_yet_to_arrive)}
-          aria-controls="yet-to-arrive"
-          phx-click="toggle_yet_to_arrive"
-        >
-          Yet to arrive · {count_text(@yet_to_arrive)}
-        </.button>
-        <.yet_to_arrive_list
-          :if={@show_yet_to_arrive}
-          yet_to_arrive={@yet_to_arrive}
-          contacts?={@team_admin?}
-          class="mt-2"
-        />
-      </div>
-
       <div id="kind" class="mt-4 flex gap-2" role="group" aria-label="Members are">
         <.button
           :for={{kind, label} <- [{"arrived", "Arriving"}, {"left", "Leaving"}]}
@@ -462,13 +533,22 @@ defmodule Web.ActivityTakeAttendanceLive do
             >
               Or scan an ID card with a plug-in barcode scanner.
             </.input>
-            <ul :if={@matches != []} id="matches" class="-mt-4">
-              <li :for={member <- @matches} class="flex items-center justify-between gap-2 py-1">
-                <span>{member.name}</span>
-                <.button id={"pick-#{member.id}"} type="submit" name="pick" value={member.id}>
-                  {if @kind == "arrived", do: "Record arrival", else: "Record departure"}
+            <ul :if={@matches != []} id="matches" class="-mt-4 mb-4">
+              <.name_row
+                :for={match <- @matches}
+                id={"match-#{match.member.id}"}
+                name={match.member.name}
+              >
+                <:detail :if={match.hint}>{match.hint}</:detail>
+                <.button
+                  id={"pick-#{match.member.id}"}
+                  type="submit"
+                  name="pick"
+                  value={match.member.id}
+                >
+                  {record_text(@kind)}
                 </.button>
-              </li>
+              </.name_row>
             </ul>
             <p
               :if={@matches == [] and String.length(@search) >= 2 and not card_text?(@search)}
@@ -477,6 +557,38 @@ defmodule Web.ActivityTakeAttendanceLive do
             >
               No current member has that name.
             </p>
+            <div
+              :if={@kind == "arrived" and @yet_to_arrive.signed_up > 0 and not searching?(@search)}
+              id="arriving-list"
+              class="-mt-2 mb-4"
+            >
+              <h2 class="subheading mb-0">Yet to arrive · {count_text(@yet_to_arrive)}</h2>
+              <.yet_to_arrive_list
+                yet_to_arrive={@yet_to_arrive}
+                contacts?={@team_admin?}
+                tapped={@tapped}
+              >
+                <:action :let={member}>
+                  <.button id={"tap-#{member.id}"} type="submit" name="tap" value={member.id}>
+                    Record arrival
+                  </.button>
+                </:action>
+              </.yet_to_arrive_list>
+            </div>
+            <div
+              :if={@kind == "left" and not searching?(@search)}
+              id="leaving-list"
+              class="-mt-2 mb-4"
+            >
+              <h2 class="subheading mb-0">Here now · {length(@yet_to_arrive.here)}</h2>
+              <.here_list here={@yet_to_arrive.here} timezone={@team.timezone} tapped={@tapped}>
+                <:action :let={member}>
+                  <.button id={"tap-#{member.id}"} type="submit" name="tap" value={member.id}>
+                    Record departure
+                  </.button>
+                </:action>
+              </.here_list>
+            </div>
           </div>
 
           <div class="door-time">
@@ -546,6 +658,9 @@ defmodule Web.ActivityTakeAttendanceLive do
     </p>
     """
   end
+
+  defp record_text("arrived"), do: "Record arrival"
+  defp record_text("left"), do: "Record departure"
 
   defp when_text(activity, team) do
     "#{Service.Format.day_coming_up(activity.started_at, DateTime.utc_now(), team.timezone)} " <>
