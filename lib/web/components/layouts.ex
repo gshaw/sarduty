@@ -96,11 +96,7 @@ defmodule Web.Layouts do
             team={@current_team}
             team_admin?={@team_admin?}
           />
-          <.demo_banner
-            :if={assigns[:demo] && !assigns[:viewing_as]}
-            demo={@demo}
-            team={@current_team}
-          />
+          <.demo_banner :if={assigns[:demo] && !assigns[:viewing_as]} demo={@demo} />
           <.flash_group
             flash={@flash}
             static_changed_url={assigns[:static_changed_url]}
@@ -117,7 +113,7 @@ defmodule Web.Layouts do
           team={@current_team}
           team_admin?={@team_admin?}
         />
-        <.demo_banner :if={assigns[:demo] && !assigns[:viewing_as]} demo={@demo} team={@current_team} />
+        <.demo_banner :if={assigns[:demo] && !assigns[:viewing_as]} demo={@demo} />
         <.flash_group
           flash={@flash}
           static_changed_url={assigns[:static_changed_url]}
@@ -155,14 +151,16 @@ defmodule Web.Layouts do
   end
 
   attr :demo, :map, required: true
-  attr :team, :map, required: true
 
-  # On every page of a Try a demo team (#857), where View as puts its own: whose it is,
-  # when it goes, its organization's space (#963), its link, its Outbox, with a count after
-  # it of what's new, as tabs show one.
+  # On every page of a Try a demo team (#857), where View as puts its own, and of its
+  # copy of WESARA (#963): whose it is, when it goes, the way between the team and its
+  # organization's space, its link, its Outbox, with a count after it of what's new, as
+  # tabs show one.
   # Delete this demo asks first. Show less folds it to one row with the Outbox and Delete
   # this demo, and Show more opens it again, remembered in this browser (DemoBanner).
   defp demo_banner(assigns) do
+    assigns = assign(assigns, :team, assigns.demo.team)
+
     ~H"""
     <div id="demo-banner" phx-hook="DemoBanner">
       <.banner kind={:info} title="Your demo" id="demo-banner-full" class="demo-banner-full">
@@ -173,12 +171,19 @@ defmodule Web.Layouts do
             @team.timezone
           )}.
         </p>
-        <p :if={@demo.organization} id="demo-organization">
+        <p :if={@demo.organization && !@demo.in_organization?} id="demo-organization">
           It belongs to {@demo.organization.short_name}, a made-up organization, beside a second
           team, Silver Basin SAR. You are one of its organization admins: <.a
             id="demo-organization-link"
             navigate={~p"/orgs/#{@demo.organization}"}
           >open {@demo.organization.short_name}'s space</.a>.
+        </p>
+        <p :if={@demo.organization && @demo.in_organization?} id="demo-organization">
+          {@demo.organization.short_name} is its made-up organization, with {@team.name} and a
+          second team, Silver Basin SAR. You are one of its organization admins: <.a
+            id="demo-team-link"
+            navigate={~p"/teams/#{@team}"}
+          >back to {@team.name}</.a>.
         </p>
         <p id="demo-link">
           <.copy_button

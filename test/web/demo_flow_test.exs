@@ -315,6 +315,13 @@ defmodule Web.DemoFlowTest do
              lv |> element("#demo-organization-link") |> render_click() |> follow_redirect(conn)
 
     assert render(org) =~ "Silver Basin SAR"
+
+    # The banner comes along, with the way back to the team.
+    assert has_element?(org, "#demo-delete[data-confirm]")
+    assert has_element?(org, "#demo-organization", "WESARA is its made-up organization")
+
+    assert {:ok, _team, _html} =
+             org |> element("#demo-team-link") |> render_click() |> follow_redirect(conn)
   end
 
   defp email!(team, subject) do

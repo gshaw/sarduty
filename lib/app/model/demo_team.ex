@@ -93,6 +93,10 @@ defmodule App.Model.DemoTeam do
   def for_team(nil), do: nil
   def for_team(team_id) when is_integer(team_id), do: Repo.get_by(DemoTeam, team_id: team_id)
 
+  @doc "The demo whose copy of WESARA this is (#963), or nil for a real organization."
+  def for_organization(%Organization{id: id}),
+    do: Repo.get_by(DemoTeam, organization_id: id)
+
   @doc "Whether the team is a demo copy: either of a demo's teams."
   def demo?(%Team{id: id}), do: demo?(id)
   def demo?(nil), do: false

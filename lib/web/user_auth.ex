@@ -13,6 +13,7 @@ defmodule Web.UserAuth do
   alias App.Model.OutboxMessage
   alias App.Model.Team
   alias App.Operation.RecordUserSeen
+  alias App.Repo
 
   # Make the remember me cookie valid for 60 days.
   # If you want bump or reduce this value, also change
@@ -279,7 +280,11 @@ defmodule Web.UserAuth do
 
     unless user.is_admin, do: OrganizationAdmin.record_seen(organization.id, user)
 
-    {:cont, Phoenix.Component.assign(socket, current_organization: organization)}
+    {:cont,
+     Phoenix.Component.assign(socket,
+       current_organization: organization,
+       demo: org_demo_banner(organization)
+     )}
   end
 
   # Every page under /admin: a 404 for anyone who isn't a SAR Duty admin, as on team and
@@ -396,27 +401,41 @@ defmodule Web.UserAuth do
   # just arrived. Nil on a real team. Opening a page marks the demo in use, so it syncs.
   defp demo_banner(%{team_admin?: true, current_team: team}) do
     case DemoTeam.for_team(team) do
-      nil ->
-        nil
-
-      demo ->
-        DemoTeam.seen!(demo, DateTime.utc_now())
-
-        %{
-          demo: demo,
-          link: url(~p"/demo/open/#{DemoTeam.link_token(demo)}"),
-          outbox_path: ~p"/teams/#{team}/outbox",
-          organization: demo.organization_id && Organization.get(demo.organization_id),
-          new: OutboxMessage.count_since(team, demo.outbox_seen_at),
-          last_id: OutboxMessage.last_id(team),
-          waiting?: false,
-          burst: 0,
-          arrived: nil
-        }
+      nil -> nil
+      demo -> demo_assign(demo, team, false)
     end
   end
 
   defp demo_banner(_access), do: nil
+
+  # The same banner on the demo's copy of WESARA (#963), so the visitor keeps its Outbox,
+  # link, and Delete there. Its Outbox count is as of the page's load.
+  defp org_demo_banner(organization) do
+    with %DemoTeam{} = demo <- DemoTeam.for_organization(organization),
+         %Team{} = team <- demo.team_id && Repo.get(Team, demo.team_id) do
+      demo_assign(demo, team, true)
+    else
+      _real -> nil
+    end
+  end
+
+  defp demo_assign(demo, team, in_organization?) do
+    DemoTeam.seen!(demo, DateTime.utc_now())
+
+    %{
+      demo: demo,
+      team: team,
+      in_organization?: in_organization?,
+      link: url(~p"/demo/open/#{DemoTeam.link_token(demo)}"),
+      outbox_path: ~p"/teams/#{team}/outbox",
+      organization: demo.organization_id && Organization.get(demo.organization_id),
+      new: OutboxMessage.count_since(team, demo.outbox_seen_at),
+      last_id: OutboxMessage.last_id(team),
+      waiting?: false,
+      burst: 0,
+      arrived: nil
+    }
+  end
 
   # Who sends which events (#440). A team admin sends every event on the pages they open,
   # and a member every event on their own pages. Otherwise only some reach the page's
