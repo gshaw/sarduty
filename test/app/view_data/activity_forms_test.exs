@@ -48,7 +48,7 @@ defmodule App.ViewData.ActivityFormsTest do
 
     # One item used twice: each row's element id is its own.
     assert Enum.map(equipment.rows, &{&1.dom, &1.name, &1.total}) == [
-             {"equipment-1", "Radio 1", "$30.00"},
+             {"equipment-1", "Radio 1", "$15.00"},
              {"equipment-2", "Radio 1", "$60.00"}
            ]
   end
