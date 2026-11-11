@@ -7,8 +7,10 @@ defmodule App.SilverBasin do
 
   Small on purpose: five members, four incidents and two trainings in the past year, all
   with hours tags, so every member gets a tax letter and the organization's totals aren't
-  zero. One qualification, Ground search and rescue. No groups, equipment, chores, cards,
-  or edge cases: those stay on Coast Range.
+  zero. One qualification, Ground search and rescue. WESARA's incident fields, as D4H
+  gives each team its organization's, filled in on every incident, since a published
+  incident has every required one (#1003). No groups, equipment, chores, cards, or edge
+  cases: those stay on Coast Range.
 
   Its names aren't plain English, as tax letters once crashed on: Ł is outside Latin-1,
   Trần Minh Châu has two marks on one letter and three names, and Siobhán
@@ -48,6 +50,24 @@ defmodule App.SilverBasin do
     {252, 18, 7, "Missing angler", "Found on the far bank of the lake."}
   ]
 
+  # Each incident's answers to WESARA's fields: what SAR was tasked to do, the task type,
+  # the subject's activity, the primary cause, and the alert. Only options Coast Range
+  # uses, since WESARA's lists keep only those.
+  @answers %{
+    "Missing snowmobiler" =>
+      {"Search - lost subject(s)", "002 - Land SAR", "Z - Unknown activity", "Lost/disoriented",
+       "Concerned family member"},
+    "Overdue hikers" =>
+      {"Search - lost subject(s)", "002 - Land SAR", "L - Hiking", "Onset of darkness",
+       "Concerned family member"},
+    "Injured rider" =>
+      {"Rescue - injury & medical emergency", "002 - Land SAR",
+       "L - Biking (mountain or trail; pedal powered)", "Injury", "Telephone - cellular"},
+    "Missing angler" =>
+      {"Search - lost subject(s)", "003 - Inland water SAR", "Z - Unknown activity",
+       "Lost/disoriented", "Concerned family member"}
+  }
+
   @trainings [
     {39, 19, 3, "Ground search training"},
     {205, 9, 6, "Tracking day"}
@@ -70,6 +90,7 @@ defmodule App.SilverBasin do
     Enum.concat([
       [{:team, :silverbasin, team(now), []}],
       tags(),
+      CoastRange.organization_fields(),
       Enum.map(@people, &member(&1, now)),
       qualification(today),
       Enum.map(activities, &{:activity, &1.d4h_activity_id, &1, []}),
@@ -162,7 +183,7 @@ defmodule App.SilverBasin do
           ref_id: String.pad_leading("#{800 + i}", 5, "0"),
           hours_kind: "primary",
           is_published: true,
-          custom_values: %{},
+          custom_values: values(activity, i),
           address: "Silver Basin hall, 200 Example Road"
       }
     end)
@@ -185,6 +206,37 @@ defmodule App.SilverBasin do
       )
     end
   end
+
+  defp values(%Activity{activity_kind: "incident", title: title} = activity, i) do
+    {tasked, task_type, activity_type, cause, alert} = Map.fetch!(@answers, title)
+    reported = activity.finished_at |> DateTime.to_date() |> Date.to_iso8601()
+
+    CoastRange.organization_values([
+      {"What was SAR tasked to do?", tasked},
+      {"How many people were in the group that requested help?", "2"},
+      {"How many people received assistance from SAR?", "2"},
+      {"Response Type", "Response"},
+      {"Agency", "Police"},
+      {"Police Department", "RCMP - Royal Canadian Mounted Police"},
+      {"Agency File #", "26-#{5120 - i * 41}"},
+      {"Region", "South West"},
+      {"Area", "Silver Basin"},
+      {"Task Type", task_type},
+      {"Task Leader's Name", if(rem(i, 2) == 0, do: "Jamie Sato", else: "Kai Moreau")},
+      {"Date Report Completed", reported},
+      {"Was RADeMS Discussed?", "YES"},
+      {"Was a Level 2 SAR Manager Activated for this Incident?", "No"},
+      {"SAR Severity",
+       "Category 3 - Assistance required, subject not in grave or Imminent danger or not in distress"},
+      {"Activity", activity_type},
+      {"Primary Cause", cause},
+      {"Was weather a factor in response?", "NO"},
+      {"Alert Type", alert},
+      {"Mutual Aid Requested?", "NO"}
+    ])
+  end
+
+  defp values(_training, _i), do: %{}
 
   defp trainings(today) do
     for {days, hour, hours, title} <- @trainings do

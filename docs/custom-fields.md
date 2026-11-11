@@ -15,8 +15,9 @@ ones, edit them, and fill them from templates (#307).
   the team's own fields and its organization's, for events, exercises, incidents,
   members, and equipment, archived ones too. D4H's other targets (health and safety
   reports, persons involved, the team itself, incident weather) are left out. Choice
-  fields keep their options in `options`. The sync's 16th list head; SAR Duty Records
-  has no custom fields, so it is never asked, and its head is always empty.
+  fields keep their options in `options`. The sync's 16th list head. SAR Duty Records
+  serves them in D4H's shape too (#1003): a Records team does everything a D4H team
+  does with fields.
 - **Values** ride on the records the sync already reads: `activities.custom_values` and
   `equipment_items.custom_values`, a map of the D4H field id, as a string, to a string
   or a list of D4H option ids. They're keyed by D4H ids, not local ones, since the
@@ -41,8 +42,8 @@ name beside its value (decided 2026-10-28, #705). They were in the sidebar, afte
 facts, until a BC incident's 27 ran it 3 screens long and pushed Actions to the bottom.
 So every record's sidebar is its facts, then Actions. The tab shows only when the record
 has a field to show, as a member's Equipment tab shows only when they hold something, or
-for a team admin when its kind has fields to fill in ([below](#changing-them)). A
-Records team, which has no custom fields, sees no change. It's named Fields, not
+for a team admin when its kind has fields to fill in ([below](#changing-them)). It's
+named Fields, not
 "Incident fields": the page already says what the record is, and the name doesn't change
 with the kind.
 
@@ -71,8 +72,8 @@ fields", linking to the built-in report Activities missing required fields
 (`Activity.missing_required_fields/1`, the same rule as a query). A published incident
 got past D4H, so whatever is empty there is optional in practice, and flagging it is
 noise. Exercises and events aren't flagged: D4H's check is tested only on incidents.
-An activity whose values aren't copied yet isn't counted. Records teams have no
-fields, so the filter isn't shown for them.
+An activity whose values aren't copied yet isn't counted. Records refuses to publish
+such an incident with a 409, as D4H does, and the page shows its title (#1003).
 
 Later, a team may pick which fields it requires, as it picks member fields, for the
 fields D4H doesn't enforce.
@@ -114,7 +115,7 @@ values it sent, since the sync after the write may not read them back. History s
 ## How fresh it is
 
 D4H doesn't change a record's `updatedAt` when only its custom field values change
-(tested 2026-10-28). The sync reads the open years' activities whole every 10 minutes,
+(tested 2026-10-28). SAR Duty Records does, so its heads see the change. The sync reads the open years' activities whole every 10 minutes,
 so an incident's fields arrive within 10 minutes. Older activities and equipment wait
 for another change to their list, or the nightly refresh.
 
@@ -150,3 +151,16 @@ Fraser's one is "SFSAR Custom PRIVATE", working notes on a task report. So:
   400 (tested on a member, 2026-10-28).
 - D4H checks required fields when an incident is published or approved, not when it is
   saved: a new incident with them blank saves in D4H.
+
+## SAR Duty Records
+
+Records is the test bed (Gerry, 2026-11-07): a Records team does everything a D4H team
+does with fields, and SAR Duty has no branch for it (#1003). Records serves
+`GET /custom-fields` and the values on each record in D4H's shape, takes the same
+writes, and refuses publishing an incident with a required field empty with a 409, as
+D4H does. Fields match across services by kind and title, never by id: each service
+picks its own.
+
+Records makes no fields over its API yet; its own store does, for Try a demo's cast
+([demo.md](demo.md#the-cast)), the dev teams, and its own sample. A team adds its own
+fields later (#724).

@@ -67,7 +67,8 @@ WESARA's is a made-up Task report (`priv/forms/wesara`, #963), on its own two-pa
 drawn by Typst. It reads only an activity's own fields, so it prints on any team, and
 each demo's WESARA and the dev WESARA get it, on (`App.Operation.AddDemoForms`). Saving
 checks a form on every team in the organization, so one that reads an agency's custom
-fields, like EMCR's, fails for a team without them, such as a Records team.
+fields, like EMCR's, fails for a team without them, D4H or Records. A demo's WESARA
+owns 27 incident fields in Records (#1003), but its form still reads none of them.
 
 ## What an organization changes today
 

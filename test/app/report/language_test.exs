@@ -70,7 +70,7 @@ defmodule App.Report.LanguageTest do
 
     assert text =~ "| `not_seen(days)` | true or false |"
     assert text =~ "Only team admins can read it."
-    assert text =~ "Only teams with custom fields have it."
+    refute text =~ "Only teams with custom fields have it."
     assert text =~ "Only team admins see Away."
     assert text =~ "Kind. One of Incident, Exercise, Event."
   end

@@ -3,8 +3,7 @@ defmodule App.Report.BuiltIn do
   The reports that come with SAR Duty (#768). They live in code and change with the app:
   a team admin runs one, and copies it to change it.
 
-  Each is `%{slug, name, about, query}`, and `teams: :d4h` for one that reads what only a
-  D4H team has, such as required fields. A test runs every one, so a field that goes
+  Each is `%{slug, name, about, query}`. A test runs every one, so a field that goes
   fails the build rather than a team admin's report.
   """
 
@@ -66,7 +65,6 @@ defmodule App.Report.BuiltIn do
       slug: "activities-missing-required-fields",
       name: "Activities missing required fields",
       about: "Draft incidents with a required field left empty, newest first.",
-      teams: :d4h,
       query: """
       select title, started_at
       from activities
@@ -480,15 +478,6 @@ defmodule App.Report.BuiltIn do
 
   @doc "Every built-in report, in the order Reports lists them."
   def all, do: @reports
-
-  @doc "The built-in reports `team` can run: a Records team has no D4H custom fields."
-  def all(team), do: Enum.filter(@reports, &for_team?(&1, team))
-
-  @doc "The built-in report with `slug` that `team` can run, or nil."
-  def get(team, slug), do: team |> all() |> Enum.find(&(&1.slug == slug))
-
-  defp for_team?(%{teams: :d4h}, team), do: not D4H.records?(team)
-  defp for_team?(_report, _team), do: true
 
   @doc "The built-in report with `slug`, or nil."
   def get(slug), do: Enum.find(@reports, &(&1.slug == slug))

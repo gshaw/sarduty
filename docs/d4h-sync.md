@@ -223,8 +223,10 @@ are copied to `location_bookmarks` by
 ## Custom fields
 
 D4H's custom fields (#681) are the sync's 16th list head: their definitions, copied to
-`custom_fields`. Their values ride on activities and equipment. SAR Duty Records has
-none and is never asked. See [custom-fields.md](custom-fields.md).
+`custom_fields`. Their values ride on activities, members, and equipment. SAR Duty
+Records serves them in D4H's shape (#1003), and bumps a record's `updatedAt` when only
+its values change, which D4H doesn't, so the heads see a value change on Records. See
+[custom-fields.md](custom-fields.md).
 
 ## Where the copy drifts
 

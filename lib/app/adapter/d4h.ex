@@ -226,7 +226,8 @@ defmodule App.Adapter.D4H do
 
   @doc """
   Makes a demo team in SAR Duty Records from a cast (#857): `{:ok, %{d4h_team_id:,
-  access_key:, ids:}}`, with `ids` mapping each row's key to its Records id, or
+  access_key:, ids:, organization_id:}}`, with `ids` mapping each row's key to its
+  Records id, and the id of the organization the cast made or joined (#1003), or
   `{:error, %D4H.Error{}}`. Records' `/v3/sarduty` route, with SAR Duty's own key, as
   delete_records_team/1. The cast's format is Records' `CreateDemoTeam`.
   """
@@ -240,8 +241,14 @@ defmodule App.Adapter.D4H do
              retry: false,
              receive_timeout: 60_000
            ) do
-        {:ok, %{status: 200, body: %{"id" => id, "key" => team_key, "ids" => ids}}} ->
-          {:ok, %{d4h_team_id: id, access_key: team_key, ids: ids}}
+        {:ok, %{status: 200, body: %{"id" => id, "key" => team_key, "ids" => ids} = body}} ->
+          {:ok,
+           %{
+             d4h_team_id: id,
+             access_key: team_key,
+             ids: ids,
+             organization_id: body["organizationId"]
+           }}
 
         result ->
           {:error, write_error(result)}
@@ -497,27 +504,12 @@ defmodule App.Adapter.D4H do
 
   @doc """
   The team's custom fields and its organisation's (#681), archived ones too, for the
-  targets SAR Duty copies. SAR Duty Records has no custom fields, so it isn't asked.
+  targets SAR Duty copies. D4H and SAR Duty Records both serve them.
   """
   def fetch_custom_fields(context) do
-    if custom_fields?(context) do
-      context
-      |> fetch_all("/custom-fields", &D4H.CustomField.build/1)
-      |> Enum.reject(&is_nil/1)
-    else
-      []
-    end
-  end
-
-  @doc "Whether the context's service has custom fields: D4H does, SAR Duty Records doesn't."
-  def custom_fields?(context), do: not records?(api_host(context))
-
-  # The host a context calls, with its port unless 443: a dev RECORDS_HOST may have one.
-  defp api_host(context) do
-    case URI.parse(context.options.base_url) do
-      %URI{host: host, port: 443} -> host
-      %URI{host: host, port: port} -> "#{host}:#{port}"
-    end
+    context
+    |> fetch_all("/custom-fields", &D4H.CustomField.build/1)
+    |> Enum.reject(&is_nil/1)
   end
 
   # The team names its own places, so its organization's bookmarks are left out (#614).

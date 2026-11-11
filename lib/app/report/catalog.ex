@@ -16,7 +16,6 @@ defmodule App.Report.Catalog do
 
   import Ecto.Query
 
-  alias App.Adapter.D4H
   alias App.Model.Activity
   alias App.Model.Attendance
   alias App.Model.EquipmentItem
@@ -366,15 +365,12 @@ defmodule App.Report.Catalog do
         "Started in the last 30 days and finished, as Activities' Last 30 days.",
         &recent/2
       ),
-      %{
-        rule(
-          "missing_required_fields",
-          "Missing fields",
-          "A required field of its kind is empty.",
-          &missing_fields/2
-        )
-        | shown: &custom_fields?/1
-      }
+      rule(
+        "missing_required_fields",
+        "Missing fields",
+        "A required field of its kind is empty.",
+        &missing_fields/2
+      )
     ]
   end
 
@@ -1056,9 +1052,6 @@ defmodule App.Report.Catalog do
 
   defp recent(%Context{team: team, now: now, timezone: timezone}, []),
     do: team |> team_activities() |> Activity.finished_recently(now, timezone)
-
-  # Teams on SAR Duty Records have no required fields.
-  defp custom_fields?(%Context{team: team}), do: not D4H.records?(team)
 
   defp missing_fields(%Context{team: team}, []),
     do: team |> team_activities() |> Activity.missing_required_fields()

@@ -10,7 +10,6 @@ defmodule App.Report.Language do
   team, and a field some teams or viewers cannot read says so.
   """
 
-  alias App.Adapter.D4H
   alias App.Model.Team
   alias App.Report.Catalog
   alias App.Report.Compiler
@@ -483,16 +482,14 @@ defmodule App.Report.Language do
 
   defp list_text(_field), do: nil
 
-  # Who may read a field: its `shown` for a member and for a Records team, then the
-  # choices a member doesn't see.
+  # Who may read a field: its `shown` for a member, then the choices a member doesn't
+  # see.
   defp who_text(%Field{} = field) do
     member = context(team_admin?: false)
 
-    cond do
-      not shown?(field, member) -> "Only team admins can read it."
-      not shown?(field, context(records?: true)) -> "Only teams with custom fields have it."
-      true -> hidden_text(field, member)
-    end
+    if shown?(field, member),
+      do: hidden_text(field, member),
+      else: "Only team admins can read it."
   end
 
   defp shown?(%Field{shown: nil}, _context), do: true
@@ -511,10 +508,8 @@ defmodule App.Report.Language do
 
   # A context with no team's data, for what every team's fields hold.
   defp context(opts \\ []) do
-    host = if Keyword.get(opts, :records?, false), do: D4H.records_host()
-
     %Context{
-      team: %Team{d4h_api_host: host},
+      team: %Team{},
       tags: [],
       groups: [],
       years: [],

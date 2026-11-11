@@ -26,8 +26,7 @@ text for agents (#803). No login. `App.Report.Language` builds it from the parse
 clauses, functions, and ranges, the catalog's subjects and fields, and the compiler's
 limits. A new clause, function, range, subject, or field argument fails
 `App.Report.LanguageTest` until it has an entry there, and the test checks every
-example on the page. A field says it's for team admins, or for teams with custom fields, from its
-`shown`; a choice lists its values only when they're the same for every team. The
+example on the page. A field says it's for team admins from its `shown`; a choice lists its values only when they're the same for every team. The
 editor links to it as How to write a report.
 
 ## How a query runs
@@ -118,7 +117,7 @@ reads what a record's Fields tab shows ([custom-fields.md](custom-fields.md#wher
   doesn't copy says so, and where to pick it.
 - **Equipment:** every live field.
 - RESTRICTED activity fields, and every member and item field, are for team admins
-  only. Archived fields aren't fields. Records teams have none.
+  only. Archived fields aren't fields. Records teams read theirs the same way (#1003).
 
 The SQL reads `custom_values` with `json_extract`, and a source selects `custom_values`
 only when a query names a custom field. Field ids come from the copy of D4H's
@@ -287,8 +286,7 @@ but not changed; a test opens every one. A team's own reports are rows in `repor
 is checked again on every run, so a field that goes fails with a message on the
 report's page. `App.ViewData.Reports` treats both the same, by `id` in the URL: a team's
 own report by its row's id, a number, and a built-in one by its slug, never a number.
-A built-in with `teams: :d4h` reads what only a D4H team has, such as required fields,
-so a Records team doesn't see it.
+Every team sees every built-in: Records serves custom fields as D4H does (#1003).
 
 ## Limits
 

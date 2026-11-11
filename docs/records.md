@@ -105,6 +105,13 @@ that title.
   Dashboard card and the Whiteboard page work as for a D4H team. Records always
   serves it, so it shows once the team turns it on in Features, and the Whiteboard page's
   Archived list is the only place a Records team sees old notes.
+- **Custom fields** (#1003): Records serves the team's fields and its organization's,
+  and their values, in D4H's shape, so Fields tabs, Change fields, member fields,
+  templates, reports, and the Missing count work as for a D4H team
+  ([custom-fields.md](custom-fields.md#sar-duty-records)). Publishing an incident with a
+  required field left empty is a 409, as in D4H. Records' organizations hold the shared
+  fields; `organizations.records_organization_id` keeps the id of one SAR Duty knows,
+  such as a demo's WESARA.
 - **Places** (#614): Records serves D4H's `/location-bookmarks`, and a team admin adds,
   changes, and deletes them under Team settings, Places. The sync copies them as it does
   a D4H team's bookmarks, which name places in the activity form. A place past activities

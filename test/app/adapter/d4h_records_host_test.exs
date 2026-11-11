@@ -4,12 +4,6 @@ defmodule App.Adapter.D4HRecordsHostTest do
 
   alias App.Adapter.D4H
 
-  defp custom_fields?(api_host) do
-    [access_key: "key", api_host: api_host, d4h_team_id: 1]
-    |> D4H.build_context()
-    |> D4H.custom_fields?()
-  end
-
   setup do
     host = Application.fetch_env(:sarduty, :records_host)
 
@@ -21,13 +15,13 @@ defmodule App.Adapter.D4HRecordsHostTest do
     end)
   end
 
-  test "a Records team has no custom fields, with or without a port in its host" do
-    refute custom_fields?(D4H.records_host())
-    assert custom_fields?("api.ca.d4h.org")
+  test "a Records host is Records with or without a port, and only with its own" do
+    assert D4H.records?(D4H.records_host())
+    refute D4H.records?("api.ca.d4h.org")
 
     # A local Records in dev, as the dev teams use (docs/records.md).
     Application.put_env(:sarduty, :records_host, "sarduty-records.gshaw.ca:8443")
-    refute custom_fields?("sarduty-records.gshaw.ca:8443")
-    assert custom_fields?("sarduty-records.gshaw.ca")
+    assert D4H.records?("sarduty-records.gshaw.ca:8443")
+    refute D4H.records?("sarduty-records.gshaw.ca")
   end
 end

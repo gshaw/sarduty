@@ -369,6 +369,37 @@ defmodule Web.ActivityFormLiveTest do
     assert Repo.reload!(activity).deleted_at
   end
 
+  # Records keeps D4H's rule: no published incident with a required field left empty
+  # (#1003). Its title is what the page shows.
+  test "publishing an incident with an empty required field shows Records' refusal",
+       %{conn: conn, team: team} do
+    stub(fn
+      "POST", "/incidents/88/publish", _body ->
+        {409, %{"title" => "Fill in Agency File # before publishing."}}
+
+      _method, _path, _body ->
+        {200, RecordsStub.activity_json(88, %{"resourceType" => "Incident"})}
+    end)
+
+    custom_field_fixture(team, %{title: "Agency File #", required: true})
+
+    activity =
+      activity_fixture(team, %{
+        d4h_activity_id: 88,
+        activity_kind: "incident",
+        started_at: ~U[2026-10-01 18:00:00Z],
+        finished_at: ~U[2026-10-01 22:00:00Z],
+        custom_values: %{}
+      })
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/edit")
+    lv |> form("#activity-form", form: %{published: true}) |> render_submit()
+
+    assert_received {:records, "POST", "/incidents/88/publish", %{"published" => true}}
+    assert render(lv) =~ "Fill in Agency File # before publishing."
+    refute Repo.reload!(activity).is_published
+  end
+
   describe "Enough at and Full at (#447)" do
     test "a numbers-only save sends nothing, and History says from what to what",
          %{conn: conn, team: team} do
