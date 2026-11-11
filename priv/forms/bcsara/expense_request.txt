@@ -2,8 +2,9 @@
 -- for an incident, with its equipment, miscellaneous expenses, and the Supplement's
 -- total as its balance forward. There's no page to upload: the layout at the end
 -- draws it in D4H's layout each time it prints, and the equipment table grows with
--- its rows. Its signature block is left blank, to sign by hand, as the Task report's and
--- the Supplement's are (#995): the team's letter signer is the wrong person for a claim.
+-- its rows. The task leader signs it, or a team admin for them (#993), and the
+-- signature block is whoever signed, from their member record: never the team's letter
+-- signer, the wrong person for a claim (#995).
 --
 -- The rates are EMCR's 5.06 Volunteer Reimbursement and Allowance Rate Chart. Check every
 -- rate against the current chart before the form goes on. The people rules repeat the
@@ -11,7 +12,7 @@
 -- subtotal; App.FormsTest checks the two agree.
 
 form 'Expense reimbursement request'
-about 'The team''s claim for an incident: its equipment, other expenses, and the Supplement''s total. Its signature block is left to sign by hand.'
+about 'The team''s claim for an incident: its equipment, other expenses, and the Supplement''s total, signed by the task leader.'
 for activity where kind = 'incident'
 
 report task
@@ -82,6 +83,10 @@ keep task.tracking_number, personnel, subtotal, ohs_total, total, :misc
 -- signs it, and a task that has finished, since the claim adds up its hours.
 needs task.tracking_number, task.`Task Leader's Name`, task.finished
 
+-- The task leader signs it: the one current member with that name, or a team admin for
+-- them (#993). The date is the day it's signed.
+signed by task.`Task Leader's Name`
+
 -- No verify code on EMCR's forms for now: Andrew asked that they stay a drop-in
 -- replacement for EMCR's current process (#970). Each still gets an ID.
 verify code none
@@ -108,6 +113,12 @@ fill
   ohs_label = '{ohs * 100 as number}% Occupational Health and Safety Supplement Allowance'
   ohs_allowance = ohs_total as money
   claim_total = total as money
+  signature = signer.signature
+  signed_on = signer.signed_on as date_short
+  signer_name = signer.name
+  position = 'SAR Manager' if signer.name is not null
+  signer_email = signer.email
+  signer_phone = signer.phone
 
 -- Each use's line or two. A blank prints as a dash.
 fill each equipment into items
@@ -151,6 +162,14 @@ expect with equipment km 40, item.cost_per_km 0.67, hours 300, item.cost_per_hou
 -- With no cost per hour, the km go on the uses' line.
 expect with equipment km 40, item.cost_per_km 0.67, quantity 2, item.cost_per_use 10.00:
   use_line = 46.80
+
+-- Whoever signed fills the signature block, as a SAR Manager; a draft leaves it blank.
+expect with signer.name = 'Alex Chen', signer.signed_for = 'Cameron Ruiz',
+    signer.email = 'alex@example.com', signer.signed_on = 2026-11-11:
+  signature = '/s/ Alex Chen for Cameron Ruiz' and signer_name = 'Alex Chen'
+  and position = 'SAR Manager' and signer_email = 'alex@example.com'
+  and signed_on = 'Nov 11, 2026'
+expect with task.tracking_number = 'CR-4113': signature is null and position is null
 
 -- The totals, from the Supplement's $347.20 and $165.14 of equipment.
 expect with personnel = 347.20, :misc = 0, equipment total 165.14:
@@ -292,13 +311,17 @@ layout
 ))
 #v(20pt)
 
-// Left blank, to sign by hand, as the Task report and Supplement are (#995).
+// Whoever signed (#993): "/s/ Alex Chen for Cameron Ruiz", fit to its line by SAR
+// Duty's signature(), and their name and contact details. A draft leaves it blank.
 #block(breakable: false, {
-  pair(field("Signature:", none), field("Date:", none))
+  pair(
+    field("Signature:", if values.signature != none { signature(values.signature) }),
+    field("Date:", values.signed_on),
+  )
   v(8pt)
-  pair(field("Name:", none), field("Position:", none))
+  pair(field("Name:", values.signer_name), field("Position:", values.position))
   v(8pt)
-  pair(field("Email:", none), field("Telephone:", none))
+  pair(field("Email:", values.signer_email), field("Telephone:", values.signer_phone))
 })
 #v(18pt)
 

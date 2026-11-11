@@ -38,6 +38,7 @@ They come in this order. `report`, `const`, `ask`, `compute`, and `expect` can r
 | `verify code bottom right`          | Where the verify code prints, or `none` ([Verify code](#verify-code)).                            |
 | `verify shows` and values under it  | What the PDF's verify page shows ([Verify code](#verify-code)).                                   |
 | `needs team.signer, …`              | What publishing needs; a draft prints without ([Needs and email](#needs-and-email)).              |
+| `signed by task.…`                  | Who signs a form, such as its task leader ([Signing](#signing)).                                  |
 | `email to member` and lines under   | The email a letter goes out with ([Needs and email](#needs-and-email)).                           |
 | `page`                              | The values print on the form's own page PDF.                                                      |
 | `places`                            | Where each value goes.                                                                            |
@@ -78,9 +79,11 @@ leaves it out. Text compares exactly, case and all, since an expect checks what 
 | `page`, `pages`                        | In `fill`: which copy of a form's page, and how many ([Rows](#rows)).    |
 | `team.logo`, `organization.logo`       | Pictures only printing reads.                                            |
 | `pdf.verify_link`                      | The published PDF's verify link, for `verify code none`.                 |
+| `signer.name`, `signer.signature`      | Who signed a form, once it's published ([Signing](#signing)).            |
 
-The pictures and the PDF's values print only. No report reads them, and `keep` refuses
-them (#918). A signature isn't a picture: it's typed (`signature team.signer`, below).
+The pictures, the PDF's values, and the signer's print only. No report reads them, and
+`keep`, `needs`, and `verify shows` refuse them (#918). A signature isn't a picture:
+it's typed (`signature team.signer`, below, or a form's `signer.signature`).
 
 ## Places
 
@@ -90,7 +93,7 @@ places
   letter     flow down, top 1in, left 1in, right 1in, size 12pt, leading 14.4pt
 ```
 
-A place is `text`, `image`, `flow`, or `tick`, and lengths are in `in`, `pt`, or `mm`
+A place is `text`, `image`, `flow`, `tick`, or `signature`, and lengths are in `in`, `pt`, or `mm`
 from the page's edges: `top` or `bottom`, and `left` or `right`. A flow stacks values in
 order, down the page or across it, and leaves out the blank ones. Down, each item is
 text, `space` (a blank line, or `space 4`), `image value width 3in height 0.75in pad
@@ -123,6 +126,8 @@ places
   `align center` centres it, as on a form's line. Either needs a width, or left and
   right.
 - `tick` draws an X across a box `size` wide when its fill, a condition, holds.
+- `signature` prints a form's `signer.signature` on one line, shrunk to fit its width
+  ([Signing](#signing)).
 - `page 2` puts a place on the page PDF's second page. Without it, a place is on page 1.
 - `rows` repeats a row of places down the page ([Rows](#rows)).
 
@@ -209,6 +214,54 @@ email to member
     'Questions? Contact {team.signer_email}.' if team.signer_email is not null
 ```
 
+## Signing
+
+A form names who signs it (#993): `` signed by task.`Task Leader's Name` ``, the one
+current member with that name, ignoring case and extra spaces
+(App.Operation.SignForm). Whoever publishes it signs it, and a draft is never signed.
+
+- **The task leader** signs in their own name: "/s/ Cameron Ruiz".
+- **Any other team admin** signs in theirs, for the task leader: "/s/ Alex Chen for
+  Cameron Ruiz". The task leader's name never follows "/s/" unless they signed. The
+  task leader gets an email with the PDF (App.Worker.EmailSignedFormWorker), unless
+  their member record has no email.
+- **No member by that name, or two**: it's for the field's text, and nobody is emailed.
+  The form page says "No member is named Ave Chen", with the page that fixes it.
+- **The date** is the day it's signed.
+
+A form that says `signed by` reads the `signer` values, blank on a draft:
+
+| Name                | What it is                                                    |
+| ------------------- | ------------------------------------------------------------- |
+| `signer.name`       | Who signed, from their member record.                         |
+| `signer.email`      | Their email, from their member record.                        |
+| `signer.phone`      | Their phone, as D4H has it.                                   |
+| `signer.signed_on`  | The team's day it was signed.                                 |
+| `signer.signed_for` | The task leader's name, or blank when the task leader signed. |
+| `signer.signature`  | "/s/" and who signed, then "for" and whom, for a `signature`. |
+
+```sql
+places
+  signed    signature top 479.6pt, left 112.2pt, width 191.6pt, size 9pt
+  signed_on text top 479.6pt, left 402pt, width 191.6pt, fit, align center, size 9pt
+
+fill
+  signed = signer.signature
+  signed_on = signer.signed_on as date_short
+```
+
+A `signature` place prints "/s/ Alex Chen" in Dancing Script, bold, a third bigger than
+its `size`, then "for Cameron Ruiz" at its size in the form's type, shrunk together to
+fit its width. It takes `align`, and never `fit`, `lines`, or `more`. A layout fills a
+value with `signer.signature` and prints it with `#signature(values.signature)`, the
+same Typst function the place calls, which SAR Duty defines above the layout's first
+line. An expect reads a signature as its text: `signed = '/s/ Alex Chen for Cameron
+Ruiz'`.
+
+The published PDF keeps `signed_by` and `signed_for`, and its Published box and History
+say "Signed by Alex Chen for Cameron Ruiz". When the task leader's name changed since
+the preview, Publish refuses: "The task leader changed. Go back and publish again."
+
 ## Checks
 
 `App.Document.check/2` checks each report with `App.Report.Compiler.select_columns/3`,
@@ -234,6 +287,8 @@ title, the author, the lock, the kept values, and each place's value.
 place out on letter paper, or on each page of a form's page, in as many copies as its
 rows need, or puts a form's layout after a few lines that read its values. **Values reach Typst as data, never as Typst code**: they go in a
 `values.json` the markup reads by key, so a name with a `*` or a `#` prints as written.
+A signature is `{script, plain}` there, read by the `signature` function above the
+places or the layout.
 `lock print` runs `Service.PDFLock`. A QR code is an SVG from `EQRCode`, and Typst uses
 no packages. `App.Operation.PrintTaxCreditLetter` does all this for a letter, and
 `App.Operation.PrintForm` for a form.
@@ -318,8 +373,8 @@ running its expects, then prints it there.
   ([an attached page](#an-attached-page)). Details of Task is
   the D4H description word for word. Publishing needs the
   task number, Agency, Agency File #, Region, Task Type, the description, the Task
-  Leader's Name, and a finished task. The page carries two white Acrobat Sign text tags,
-  for the task leader's signature and date.
+  Leader's Name, and a finished task. The task leader signs on the Signature line,
+  dated on the Date beside it, or a team admin signs for them ([Signing](#signing)).
 - **BCSARA's Supplement** ([supplement.txt](../priv/forms/bcsara/supplement.txt)) is
   EMCR's Expense reimbursement request supplement, on a blank page in D4H's layout with
   room for 18 people, which EMCR takes today. It prints the claim's people rules: a
@@ -329,8 +384,8 @@ running its expects, then prints it there.
   person with no end time in D4H ends when the activity does, as every attendance
   report reads it. It asks meals provided to everyone, and for each person On task and Meals
   provided. The header has the task number and when the task ran, and the footer the
-  Task Leader's Name, Date Report Completed, and the page; the task leader signs by
-  hand. More than 18 people print another copy of the page, each with its own subtotal.
+  Task Leader's Name, the day it was signed, and the page, with the signature beside the
+  Task Leader. More than 18 people print another copy of the page, each with its own subtotal.
   Publishing needs the task number, the Task Leader's Name, and a finished task, as the
   Expense reimbursement request's does.
 - **BCSARA's Expense reimbursement request**
@@ -342,10 +397,10 @@ running its expects, then prints it there.
   ([equipment.md](equipment.md#the-copy)). An item with both prints a line for each,
   the km on the first. Under the table: miscellaneous expenses (asked), the
   Supplement's subtotal as its balance forward, the subtotal, 15% for occupational
-  health and safety, and the total. Its signature block (signature, date, name,
-  position, email, telephone) and EMCR's own boxes are left blank, to fill by hand,
-  as the Task report's and the Supplement's are (#995): the team's letter signer is the
-  wrong person for a claim. It repeats
+  health and safety, and the total. Its signature block is whoever signed it
+  ([Signing](#signing)): the signature and the day, their name, email, and telephone
+  from their member record, and SAR Manager as their position; never the team's letter
+  signer, the wrong person for a claim (#995). EMCR's own boxes are left blank. It repeats
   the Supplement's people rules, reading the same answers, and a test checks the two
   agree on Coast Range SAR's claim. The bundle will drop the repeat.
 
@@ -468,7 +523,8 @@ Claimant: #values.claimant
 
 - **Values reach it as data.** SAR Duty puts them in `values.json`, reads it as
   `values` above the layout's first line, and sets Arimo. A value is text, `true` or
-  `false` for a condition, or `none` for a blank; a picture is the name of its file.
+  `false` for a condition, or `none` for a blank; a picture is the name of its file,
+  and a signature what `#signature()` prints ([Signing](#signing)).
   It's `values`, not `v`, so the layout keeps Typst's `v()`.
 - **Formats stay in the form.** A value prints as its fill formats it, `total as
 money`, so the layout does no arithmetic and formats nothing.
@@ -555,8 +611,10 @@ shows` line, or each kept value for a form with none. Page 1 folds under it, dra
   at `…/forms/:form_id/publish`: it checks, reads the form with the activity's answers,
   and prints once with a new ID and the verify code. The page
   shows every page as a picture (Service.PDFImages) and what publishing does: its ID,
-  what its verify page shows, that its signature is left blank to sign by hand, what
-  it replaces, and that it isn't sent anywhere.
+  what its verify page shows, who signs it, what it replaces, and that it isn't sent
+  anywhere. A form that says `signed by` has Sign and publish for its task leader, and
+  Sign for Cameron Ruiz for any other team admin, which asks first
+  ([Signing](#signing)).
   Publish there checks again and saves that same PDF in one transaction, so what's kept
   is what was looked at. When another admin published meanwhile, it says "Someone just
   published this. Reload to see it." Publish again goes through the same preview.
@@ -585,7 +643,8 @@ letters publish when Email needs one: there's none, or it's out of date
 `published_pdfs`, with the bytes in `published_pdf_files`, so lists never load them.
 Each row has its team, the definition's name, its subject (`member:45:2026` or
 `activity:812`), its ID, title, filename, size, SHA-256, and when it was published; the
-values `keep` names, its answers, and what `verify shows` printed.
+values `keep` names, its answers, and what `verify shows` printed; and for a signed form,
+who signed it and whom for.
 
 - **The ID** is 15 characters from the ID card alphabet, about 74 bits, stored without
   dashes and shown 5-5-5: `K7Q4M-2XA9H-VB3TN`. Only these verify: each letter from before

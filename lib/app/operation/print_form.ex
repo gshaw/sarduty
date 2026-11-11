@@ -12,6 +12,7 @@ defmodule App.Operation.PrintForm do
   alias App.Model.Team
   alias App.Operation.PrintDocument
   alias App.Operation.ReadDocument
+  alias App.Operation.SignForm
   alias App.Report.Compiler
   alias App.Report.Context
   alias App.Report.Error
@@ -24,6 +25,10 @@ defmodule App.Operation.PrintForm do
   (App.Operation.PrintDocument). `verify` is the verify link it's published under; without
   one it prints a draft's grey box where the verify code goes. Published, it refuses
   while a value the form `needs` is blank (#995); a draft prints without.
+
+  `signer` is the member who signs a published form that says `signed by` (#993),
+  App.Operation.SignForm's rules: the PDF prints their signature, and `signed` says who
+  signed and for whom. A draft is never signed, so it's nil there.
   """
   def call(text, page, %Context{} = context, activity_id, answers \\ %{}, opts \\ []) do
     verify = Keyword.get(opts, :verify, :draft)
@@ -31,11 +36,30 @@ defmodule App.Operation.PrintForm do
     with {:ok, %{doc: doc} = read} <- read_shown(text, context, activity_id),
          {:ok, answered} <- answers(doc, answers),
          values = Map.merge(read.values, answered),
-         :ok <- needs(verify, doc, values, read.read, context.timezone) do
-      output = Document.evaluate(doc, sign(values, verify), context.timezone)
-      print(output, doc.name, page, opts)
-    end
+         :ok <- needs(verify, doc, values, read.read, context.timezone),
+         do: print_signed(doc, values, page, context, opts)
   end
+
+  # Signed by `signer` when it's published, then printed.
+  defp print_signed(doc, values, page, context, opts) do
+    verify = Keyword.get(opts, :verify, :draft)
+    signed = signed(verify, doc, values, context, opts[:signer])
+    output = Document.evaluate(doc, signed_values(values, verify, signed), context.timezone)
+
+    with {:ok, printed} <- print(output, doc.name, page, opts),
+         do: {:ok, Map.put(printed, :signed, signed)}
+  end
+
+  defp signed_values(values, verify, nil), do: sign(values, verify)
+
+  defp signed_values(values, verify, signed),
+    do: values |> sign(verify) |> Map.merge(SignForm.values(signed))
+
+  defp signed(:draft, _doc, _values, _context, _signer), do: nil
+  defp signed(_link, _doc, _values, _context, nil), do: nil
+
+  defp signed(_link, doc, values, context, signer),
+    do: SignForm.call(doc, values, context, signer)
 
   # The form's values for the activity, once it's sure it's a form that shows there.
   defp read_shown(text, context, activity_id) do

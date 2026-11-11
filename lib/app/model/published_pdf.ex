@@ -52,6 +52,10 @@ defmodule App.Model.PublishedPDF do
     field :answers, :map, default: %{}, redact: true
     # What its verify page shows, `[%{"label", "text"}]`, as `verify shows` printed it.
     field :shows, {:array, :map}, default: [], redact: true
+    # A form's signer, and the task leader they signed for, nil when the task leader
+    # signed (#993): names as printed. A letter has neither.
+    field :signed_by, :string
+    field :signed_for, :string
     has_one :file, PublishedPDFFile
     timestamps(type: :utc_datetime_usec, updated_at: false)
   end
@@ -120,6 +124,16 @@ defmodule App.Model.PublishedPDF do
   defp kept_text(value) when is_binary(value), do: value
   defp kept_text(value), do: inspect(value)
 
+  @doc """
+  Who signed it, as its Published box and History say (#993): "Signed by Cameron Ruiz",
+  or "Signed by Alex Chen for Cameron Ruiz". Nil for one nobody signed, such as a letter.
+  """
+  def signed_text(%PublishedPDF{signed_by: by}) when by in [nil, ""], do: nil
+  def signed_text(%PublishedPDF{signed_by: by, signed_for: nil}), do: "Signed by #{by}"
+
+  def signed_text(%PublishedPDF{signed_by: by, signed_for: whom}),
+    do: "Signed by #{by} for #{whom}"
+
   @doc "`:current`, `:replaced`, or `:withdrawn`."
   def status(%PublishedPDF{withdrawn_at: %DateTime{}}), do: :withdrawn
   def status(%PublishedPDF{replaced_by_id: id}) when is_integer(id), do: :replaced
@@ -166,6 +180,8 @@ defmodule App.Model.PublishedPDF do
         answers: attrs[:answers] || %{},
         keep: printed[:keep] || %{},
         shows: printed[:shows] || [],
+        signed_by: get_in(printed, [:signed, :signed_by]),
+        signed_for: get_in(printed, [:signed, :signed_for]),
         title: attachment.title,
         filename: attachment.filename,
         byte_size: byte_size(attachment.content),

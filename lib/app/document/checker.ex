@@ -47,8 +47,17 @@ defmodule App.Document.Checker do
     "organization.logo" => :image,
     "pdf.verify_link" => :text
   }
+  # Who signed a form and when (#993), once it says `signed by`: print only, like @print.
+  @signer %{
+    "signer.name" => :text,
+    "signer.email" => :text,
+    "signer.phone" => :text,
+    "signer.signature" => :signature,
+    "signer.signed_on" => :day,
+    "signer.signed_for" => :text
+  }
   @one_row ~w(team organization)
-  @reserved ~w(team organization pdf today title author page pages)
+  @reserved ~w(team organization pdf signer today title author page pages)
   @functions ~w(coalesce qr hours days floor round)
   @calls ~w(min max sum)
   @numbers [:number, :km, :money]
@@ -65,6 +74,12 @@ defmodule App.Document.Checker do
 
   @doc "The values only printing reads, with their types."
   def print_values, do: @print
+
+  @doc "The values a form that says `signed by` reads once it's signed, with their types (#993)."
+  def signer_values, do: @signer
+
+  # A value that only prints, which no report reads, keeps, or shows.
+  defp print_only?(name), do: Map.has_key?(@print, name) or Map.has_key?(@signer, name)
 
   @doc "The formats a value takes after `as`, each with the types it shows."
   def formats, do: @formats
@@ -118,6 +133,7 @@ defmodule App.Document.Checker do
     check_places(doc, types)
     types = Map.merge(types, check_fill(doc, types))
     check_title(doc.title, types)
+    check_signed_by(doc, types)
     Enum.each(doc.keep, &check_keep(&1, doc.asks, types))
     Enum.each(doc.verify_shows, &check_shown(&1, types))
     Enum.each(doc.needs, &check_need(&1, doc.asks, types))
@@ -211,14 +227,14 @@ defmodule App.Document.Checker do
     |> Enum.reject(&is_nil/1)
   end
 
-  # The values an ask's default, a compute, a verify shows line, a need, and the email
-  # hold.
+  # The values an ask's default, a compute, a verify shows line, a need, who signs, and
+  # the email hold.
   defp named_values(doc) do
     email = if doc.email, do: [doc.email.subject, {:flow, doc.email.body}], else: []
 
     Enum.map(doc.asks, & &1.default) ++
       Enum.map(doc.computes, & &1.value) ++
-      Enum.map(doc.verify_shows, & &1.value) ++ doc.needs ++ email
+      Enum.map(doc.verify_shows, & &1.value) ++ doc.needs ++ List.wrap(doc.signed_by) ++ email
   end
 
   defp fill_values(%{value: {:each, _report, fills}}), do: Enum.map(fills, & &1.value)
@@ -251,8 +267,10 @@ defmodule App.Document.Checker do
       end)
 
     starts = Map.new(doc.for, &{":#{&1}", :number})
+    signer = if doc.signed_by, do: @signer, else: %{}
 
     @print
+    |> Map.merge(signer)
     |> Map.merge(columns)
     |> Map.merge(each)
     |> Map.merge(starts)
@@ -596,6 +614,26 @@ defmodule App.Document.Checker do
     :ok
   end
 
+  # A signature fits its line: `/s/ Alex Chen` in a script, then `for Cameron Ruiz` (#993).
+  defp check_text_options(%{kind: :signature} = place) do
+    check_align(place)
+
+    unless Map.has_key?(place, :width) or
+             (Map.has_key?(place, :left) and Map.has_key?(place, :right)),
+           do:
+             fail(
+               place.line,
+               "Give #{place.name} a width, or left and right: the signature shrinks to fit it."
+             )
+
+    for key <- [:pitch, :lines, :indent, :more],
+        Map.has_key?(place, key),
+        do: fail(place.line, "Take out #{key}: a signature is one line.")
+
+    if place.fit, do: fail(place.line, "Take out fit: a signature always fits its line.")
+    :ok
+  end
+
   defp check_text_options(place) do
     if place.fit, do: fail(place.line, "Take out fit: only a text place shrinks to fit.")
 
@@ -686,8 +724,8 @@ defmodule App.Document.Checker do
 
     Map.new(fills, fn fill ->
       case layout_kind(fill.value, row) do
-        :image ->
-          fail(fill.line, "Fill #{fill.place} with text or a condition: a row holds no pictures.")
+        kind when kind in [:image, :signature] ->
+          fail(fill.line, "Fill #{fill.place} with text or a condition: #{no_row_kind(kind)}")
 
         kind ->
           {{:fill, list, fill.place}, kind}
@@ -698,10 +736,14 @@ defmodule App.Document.Checker do
   defp layout_kinds(%{place: name, value: value}, types),
     do: %{{:fill, name} => layout_kind(value, types)}
 
+  defp no_row_kind(:image), do: "a row holds no pictures."
+  defp no_row_kind(:signature), do: "a row holds no signatures."
+
   defp layout_kind(value, types) do
     case type(value, types) do
       type when type in [:condition, :bool] -> :condition
       :image -> :image
+      :signature -> :signature
       _text -> :text
     end
   end
@@ -782,6 +824,13 @@ defmodule App.Document.Checker do
         fail(line, "Fill #{place.name} with an image, such as team.logo or qr(pdf.verify_link).")
   end
 
+  defp check_filled(%{kind: :signature} = place, value, types, line) do
+    if type(value, types) != :signature,
+      do: fail(line, "Fill #{place.name} with signer.signature: it prints who signed.")
+
+    :ok
+  end
+
   defp check_filled(place, value, types, line), do: check_text(value, types, line, place.name)
 
   defp check_item({:space, _count, condition, _line}, _place, types),
@@ -814,9 +863,37 @@ defmodule App.Document.Checker do
     case type(value, types) do
       :image -> fail(line, "Write image before it: #{place} holds it as a picture, not text.")
       :condition -> fail(line, "Write a value, not a condition: use if … then … else.")
+      :signature -> signature_mistake(line)
       _type -> :ok
     end
   end
+
+  defp signature_mistake(line),
+    do: fail(line, "Put signer.signature in a signature place: it prints its name in a script.")
+
+  # `signed by` names who signs a form, as text (#993).
+  defp check_signed_by(%Document{signed_by: nil}, _types), do: :ok
+
+  defp check_signed_by(%Document{kind: :form, signed_by: value}, types) do
+    line = Query.line(value)
+
+    case type(value, types) do
+      :image ->
+        fail(line, "Write who signs after signed by: a name, not a picture.")
+
+      :condition ->
+        fail(line, "Write who signs after signed by: a name, not a condition.")
+
+      :signature ->
+        fail(line, "Write who signs after signed by, such as task.`Task Leader's Name`.")
+
+      _text ->
+        :ok
+    end
+  end
+
+  defp check_signed_by(%Document{signed_by: value}, _types),
+    do: fail(Query.line(value), "Take out signed by: only a form names who signs it.")
 
   defp check_condition(nil, _types), do: :ok
 
@@ -846,6 +923,7 @@ defmodule App.Document.Checker do
 
     cond do
       name == "pdf.verify_link" -> need_mistake(line, name)
+      Map.has_key?(@signer, name) -> need_mistake(line, name)
       Map.has_key?(@print, name) -> :ok
       true -> _type = type(field, types)
     end
@@ -879,7 +957,7 @@ defmodule App.Document.Checker do
   # page shows it to anyone holding the paper, so it's text a reviewer can read.
   defp check_shown(%{value: value, line: line, label: label}, types) do
     for {path, at} <- fields(value),
-        Map.has_key?(@print, Enum.join(path, ".")),
+        print_only?(Enum.join(path, ".")),
         do: fail(at, "Show a value a report reads: #{Enum.join(path, ".")} only prints.")
 
     check_text(value, types, line, "'#{label}'")
@@ -889,7 +967,7 @@ defmodule App.Document.Checker do
     name = lower_path(Enum.join(path, "."))
 
     cond do
-      Map.has_key?(@print, name) ->
+      print_only?(name) ->
         fail(line, "Keep a value a report reads: #{name} only prints.")
 
       Map.has_key?(types, name) and String.contains?(name, ".") ->
@@ -932,7 +1010,12 @@ defmodule App.Document.Checker do
   end
 
   # A layout's values, each by its kind; a list of rows isn't read.
-  defp layout_outputs(types), do: for({{:fill, name}, kind} <- types, into: %{}, do: {name, kind})
+  defp layout_outputs(types),
+    do: for({{:fill, name}, kind} <- types, into: %{}, do: {name, output_kind(kind)})
+
+  # An expect reads a signature as its text: "/s/ Alex Chen for Cameron Ruiz".
+  defp output_kind(:signature), do: :text
+  defp output_kind(kind), do: kind
 
   # The names an expect's check reads: one that gives one row reads the row first.
   defp given_scope(expect, types) do
@@ -1291,6 +1374,13 @@ defmodule App.Document.Checker do
 
   defp unknown([report | [_ | _]], name, types, line) when is_map_key(types, {:rows, report}),
     do: fail(line, "Add up #{name} with sum(#{name}): #{report} has a row each.")
+
+  defp unknown(["signer" | _], name, types, line) when not is_map_key(types, "signer.name"),
+    do:
+      fail(
+        line,
+        "Write signed by and who signs above, such as signed by task.`Task Leader's Name`, to read #{name}."
+      )
 
   defp unknown(_path, name, types, line) do
     case Expr.closest(name, names(types)) do

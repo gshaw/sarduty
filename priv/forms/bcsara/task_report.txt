@@ -8,10 +8,10 @@
 -- from the page's top left): the value's baseline sits 1.5pt above the rule, 2pt in from
 -- each end. The two boxes keep the original's 8.6pt inset.
 --
--- The Task Leader signs in Acrobat Sign. The page carries two Acrobat Sign text tags in
--- white, under the line art, so they never show: signer1's signature on the Task
--- Leader's Signature line, and the date signer1 signs on the Date beside it. So the form
--- leaves both places empty: Acrobat Sign fills them.
+-- The task leader signs by publishing it, or a team admin signs in their own name for
+-- them (#993): "/s/ Cameron Ruiz", or "/s/ Alex Chen for Cameron Ruiz", on the Task
+-- Leader's Signature line, and the day it was signed on the Date beside it. A draft is
+-- never signed.
 --
 -- Details of Task and Equipment Used/Lost shrink to 8pt, then go on an attached page
 -- with the whole text (#993), rather than below 8pt or past their box.
@@ -20,7 +20,7 @@
 -- of section B.
 
 form 'EMBC Task Report Form'
-about 'The EMBC task report after an incident. The task leader checks it and signs it in Acrobat Sign as signer1.'
+about 'The EMBC task report after an incident, signed by its task leader.'
 for activity where kind = 'incident'
 
 report task
@@ -41,6 +41,9 @@ keep task.tracking_number, task.`Agency File #`, task.attended_count, task.atten
 -- the EPC lines, and section B stay optional.
 needs task.tracking_number, task.`Agency`, task.`Agency File #`, task.`Region`,
   task.`Task Type`, task.description, task.`Task Leader's Name`, task.finished
+
+-- The task leader signs it: the one current member with that name (#993).
+signed by task.`Task Leader's Name`
 
 -- No verify code on EMBC's form for now: Andrew asked that it stay a drop-in
 -- replacement for the current process (#970). Each PDF still gets an ID.
@@ -68,6 +71,8 @@ places
   details      text top 263.0pt, left 125.7pt, width 461.0pt, pitch 12pt, lines 10, size 9pt, more 'Details of Task'  -- in the box after 'Details of Task:'
   equipment    text top 399.5pt, left 125.7pt, width 461.0pt, pitch 12pt, lines 4, size 9pt, more 'Equipment Used/Lost'  -- in the box after 'Equipment Used/Lost:'
   leader       text top 460.4pt, left 112.8pt, width 480.8pt, fit, align center, size 9pt  -- on the line after 'Task Leader's Name:'
+  signed       signature top 479.6pt, left 112.2pt, width 191.6pt, size 9pt  -- on the line after the first 'Signature:'
+  signed_on    text top 479.6pt, left 402.0pt, width 191.6pt, fit, align center, size 9pt  -- on the line after the first 'Date:'
 
 fill
   task_number = task.tracking_number
@@ -84,6 +89,8 @@ fill
   details = task.description
   equipment = task.`Equipment Used/Lost`
   leader = task.`Task Leader's Name`
+  signed = signer.signature
+  signed_on = signer.signed_on as date_short
 
 expect with task.tracking_number = '26-06613', task.`Agency` = 'Police',
   task.`Agency File #` = '26-88481', task.`Task Type` = '002 - Land SAR':
@@ -97,3 +104,13 @@ expect with task.ref_id = '01428', task.tracking_number = '': title = 'Task repo
 expect with task.attended_count = 22, task.attended_hours = 9858:
   volunteers = '22' and person_hours = '164.3'
 
+-- The task leader signs by publishing, dated the day they do (#993).
+expect with signer.name = 'Cameron Ruiz', signer.signed_on = 2026-11-11:
+  signed = '/s/ Cameron Ruiz' and signed_on = 'Nov 11, 2026'
+
+-- A team admin signs in their own name, for the task leader.
+expect with signer.name = 'Alex Chen', signer.signed_for = 'Cameron Ruiz':
+  signed = '/s/ Alex Chen for Cameron Ruiz'
+
+-- A draft is never signed.
+expect with task.`Task Leader's Name` = 'Cameron Ruiz': signed is null and signed_on is null

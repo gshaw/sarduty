@@ -9,12 +9,12 @@
 -- request repeats these rules for its balance forward, reading the same answers.
 
 form 'Expense reimbursement request supplement'
-about 'Each person''s travel, meals, and personal equipment allowance. The task leader signs it by hand and sends it with the Expense reimbursement request.'
+about 'Each person''s travel, meals, and personal equipment allowance, signed by the task leader. It goes with the Expense reimbursement request.'
 for activity where kind = 'incident'
 
 report task
   select ref_id, tracking_number, started_at, finished_at, `Response Type`,
-    `Task Leader's Name`, `Date Report Completed`, finished
+    `Task Leader's Name`, finished
   from activities
   where id = :activity
 
@@ -55,6 +55,10 @@ keep task.tracking_number, personnel, :meals_provided
 -- signs it, and a task that has finished, since the claim adds up its hours.
 needs task.tracking_number, task.`Task Leader's Name`, task.finished
 
+-- The task leader certifies who attended by signing it: the one current member with
+-- that name, or a team admin for them (#993). The date is the day it's signed.
+signed by task.`Task Leader's Name`
+
 -- No verify code on EMCR's forms for now: Andrew asked that they stay a drop-in
 -- replacement for EMCR's current process (#970). Each still gets an ID.
 verify code none
@@ -81,6 +85,7 @@ places
     total     text top 3.6pt, left 524.6pt, width 44.4pt, fit, align right, size 8.5pt
   subtotal    text top 436.6pt, left 524.6pt, width 44.4pt, fit, align right, size 8.5pt
   leader      text top 504.85pt, left 116pt, width 179pt, fit, align center, size 9pt
+  signed      signature top 504.85pt, left 363pt, width 207pt, size 9pt
   leader_date text top 526.85pt, left 68pt, width 227pt, fit, align center, size 9pt
   page_number text top 526.85pt, left 345pt, width 225pt, fit, align center, size 9pt
 
@@ -91,7 +96,8 @@ fill
     if task.finished_at is not null
   subtotal = sum(rows.total) as money
   leader = task.`Task Leader's Name`
-  leader_date = task.`Date Report Completed` as date_long
+  signed = signer.signature
+  leader_date = signer.signed_on as date_long
   page_number = '{page} of {pages}'
 
 -- A row that ends on a later day prints that day too. A person's times fall back to
@@ -120,3 +126,9 @@ expect with task.`Response Type` = 'Training' people hours 6: allowance = 0
 
 -- One copy of the page holds everyone here, and its subtotal is theirs.
 expect with people total 40.10, people total 35: subtotal = '$75.10' and page_number = '1 of 1'
+
+-- Signed, it says who signed and the day; a draft is never signed (#993).
+expect with signer.name = 'Alex Chen', signer.signed_for = 'Cameron Ruiz',
+    signer.signed_on = 2026-11-11:
+  signed = '/s/ Alex Chen for Cameron Ruiz' and leader_date = 'November 11, 2026'
+expect with task.tracking_number = 'CR-4113': signed is null and leader_date is null

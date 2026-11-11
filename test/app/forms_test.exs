@@ -86,7 +86,7 @@ defmodule App.FormsTest do
     # Measured from the rules on EMBC's page: each on its line, inside the page, and no
     # two on the same spot. Details of Task has 10 lines and Equipment Used/Lost 4, at 9pt.
     test "every place is on EMBC's page", %{doc: doc} do
-      assert length(doc.places) == 14
+      assert length(doc.places) == 16
 
       for place <- doc.places do
         assert place.left > 72 and place.left + Map.get(place, :width, place[:size]) < 612,
@@ -120,6 +120,36 @@ defmodule App.FormsTest do
         assert output |> Document.attached() |> Enum.map(& &1.name) == attached
         assert {:ok, pdf} = PrintDocument.call(output, page: page, mark: :draft)
         assert Service.PDFPages.count(pdf) == {:ok, pages}
+      end
+    end
+  end
+
+  describe "BCSARA's forms" do
+    # Who signs each is its Task Leader's Name, and a draft prints with no signature
+    # (#993). Signed, the Task report prints "/s/" and the signer in Dancing Script, with
+    # whom it's for, on its Signature line, and the claim its whole signature block.
+    test "are signed by the task leader, or a team admin for them" do
+      signer =
+        Document.signer(%{
+          name: "Alex Chen",
+          email: "alex@example.com",
+          phone: "604-555-0199",
+          signed_on: ~D[2026-11-11],
+          signed_for: "Cameron Ruiz"
+        })
+
+      context = Context.new(SampleRepo.team(), DateTime.utc_now(), repo: SampleRepo)
+
+      for name <- ~w(task_report supplement expense_request) do
+        {:ok, doc} = "#{@dir}/bcsara/#{name}.txt" |> File.read!() |> Document.parse()
+        {:ok, doc} = Document.check(doc, context)
+        values = %{"task.`Task Leader's Name`" => " Cameron  Ruiz "}
+
+        assert Document.signed_by(doc, values, "America/Vancouver") == "Cameron  Ruiz", name
+
+        page = if name != "expense_request", do: File.read!("#{@dir}/bcsara/#{name}.pdf")
+        output = Document.evaluate(doc, Map.merge(values, signer), "America/Vancouver")
+        assert {:ok, "%PDF" <> _pdf} = PrintDocument.call(output, page: page), name
       end
     end
   end
@@ -258,8 +288,8 @@ defmodule App.FormsTest do
       for field <- ~w(legal_name mailing_address city postal_code),
           do: assert(field in fields, field)
 
-      # Its signature block is left to sign by hand: the letter signer is the wrong
-      # person for a claim (#995).
+      # Its signature block is whoever signed it, never the team's letter signer, the
+      # wrong person for a claim (#995, #993).
       for field <- ~w(signer signer_title signer_phone signer_email),
           do: refute(field in fields, field)
     end

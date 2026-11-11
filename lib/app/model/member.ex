@@ -573,6 +573,26 @@ defmodule App.Model.Member do
     end
   end
 
+  @doc """
+  The team's members in good standing named `name`, ignoring case and extra spaces, read
+  from `repo` (#993): a form's task leader is the one member with the name its Task
+  Leader's Name holds. Leaves out members who aren't a person.
+  """
+  def named(%Team{} = team, name, now, repo \\ Repo) when is_binary(name) do
+    wanted = same_name(name)
+
+    Member
+    |> where([m], m.team_id == ^team.id)
+    |> good_standing_query(now)
+    |> people_query()
+    |> repo.all()
+    |> Enum.filter(&(same_name(&1.name || "") == wanted))
+  end
+
+  @doc "Pure. A name as two spellings of it compare: trimmed, its spaces one, lower case."
+  def same_name(name),
+    do: name |> String.trim() |> String.replace(~r/\s+/u, " ") |> String.downcase()
+
   def find!(team, id), do: Repo.get_by!(Member, id: id, team_id: team.id)
 
   @doc "The team's member with this id, or nil."
