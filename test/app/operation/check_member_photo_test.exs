@@ -8,21 +8,24 @@ defmodule App.Operation.CheckMemberPhotoTest do
 
   defp answer(status), do: Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, status, ""))
 
-  test "a 200 is a photo; a 404 is none" do
+  # D4H answers 204 for a member with no photo, Records 404.
+  test "a 200 is a photo; a 204 or 404 is none" do
     member = team_fixture() |> member_fixture(%{has_photo: false}) |> Repo.preload(:team)
 
-    answer(200)
-    member = CheckMemberPhoto.call(member)
-    assert member.has_photo
-    assert Repo.reload!(member).has_photo
+    for none <- [204, 404] do
+      answer(200)
+      member = CheckMemberPhoto.call(member)
+      assert member.has_photo
+      assert Repo.reload!(member).has_photo
 
-    answer(404)
-    refute CheckMemberPhoto.call(member).has_photo
-    refute Repo.reload!(member).has_photo
+      answer(none)
+      refute CheckMemberPhoto.call(member).has_photo
+      refute Repo.reload!(member).has_photo
+    end
   end
 
   # A rate limit or an outage says nothing about the photo. 401 isn't retried, so it's quick.
-  test "an answer other than 200 or 404 keeps what was stored" do
+  test "an answer other than 200, 204, or 404 keeps what was stored" do
     member = team_fixture() |> member_fixture() |> Repo.preload(:team)
     answer(401)
 
