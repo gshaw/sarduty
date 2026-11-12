@@ -34,6 +34,7 @@ database.
 | View models | `lib/app/view_model/`                 | Embedded schemas that validate filter and form params | Models                                                   |
 | View data   | `lib/app/view_data/`                  | Read-only query bundles for one page                  | Models                                                   |
 | MCP tools   | `lib/app/mcp/`                        | Views of a team's data for agents, and proposals      | Models, operations                                       |
+| Ops         | `lib/app/ops/`                        | Tasks `bin/prod` runs in production, each recorded    | Operations, models, `Repo`                               |
 | Reports     | `lib/app/report/`                     | The report language: parse, check, and run a query    | Models, `Repo`                                           |
 | Documents   | `lib/app/document/`                   | PDFs from a letter's or form's text: parse, check     | Reports' parser and catalog; no `Repo`                   |
 | Service     | `lib/service/`                        | Stateless helpers: formatting, conversion, PDF        | — (no `Repo`, no HTTP)                                   |
@@ -161,6 +162,7 @@ have decided since the page loaded, stays in `call`.
 - [jobs.md](jobs.md) — background jobs: when work is a job, how one is shaped, and how it reports a failure.
 - [external-services.md](external-services.md) — every third-party boundary, its credentials, and what breaks without it.
 - [deployment.md](deployment.md) — Fly, Litestream, migrations, backups, and changing production data.
+- [production.md](production.md) — `bin/prod`, the one way into production: its tasks, the record each run leaves, and adding a task.
 - [testing-strategy.md](testing-strategy.md) — what the test suite covers and why.
 - [writing.md](writing.md) — the rules and glossary for every word a person reads in the app.
 - [mockups.md](mockups.md) — how a design proposal is drawn: real pages, fuchsia marks,

@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# The one way into production (docs/production.md). Runs a task from lib/app/ops/ in
+# the running app, which records it as a prod_task event on /admin/events.
+#
+#   bin/prod list                            the tasks, one line each
+#   bin/prod TASK [ARGS...] --why "..."      a task that reads
+#   bin/prod fix TASK [ARGS...] --why "..."  a task that changes data
+#
+# --why is an issue number or a sentence. You are the SAR Duty admin with
+# `git config sarduty.email`, or `user.email` when that isn't set.
+#
+# Written for macOS's bash 3.2: no associative arrays, and an empty array needs
+# ${a[@]+"${a[@]}"} under set -u.
+# cspell:ignore esac ESOCK libsctp ESSIO: bash's case, and the Erlang VM's startup noise
+
+set -uo pipefail
+
+APP=sarduty
+
+usage() {
+  sed -n '5,7p' "$0" | sed 's/^# //' >&2
+  exit 2
+}
+
+why="" args=()
+while [ $# -gt 0 ]; do
+  case $1 in
+    --why)
+      [ $# -ge 2 ] || usage
+      why=$2
+      shift 2
+      ;;
+    --why=*)
+      why=${1#--why=}
+      shift
+      ;;
+    -h | --help) usage ;;
+    *)
+      args+=("$1")
+      shift
+      ;;
+  esac
+done
+
+fix=false
+if [ ${#args[@]} -gt 0 ] && [ "${args[0]}" = fix ]; then
+  fix=true
+  args=(${args[@]+"${args[@]:1}"})
+fi
+[ ${#args[@]} -gt 0 ] || usage
+task=${args[0]}
+rest=(${args[@]+"${args[@]:1}"})
+
+if [ "$task" != list ] && [ -z "${why// /}" ]; then
+  echo "bin/prod: say why with --why: an issue number or a sentence." >&2
+  exit 2
+fi
+
+command -v jq > /dev/null || {
+  echo "bin/prod: needs jq (brew install jq)." >&2
+  exit 2
+}
+
+email=$(git config sarduty.email || git config user.email || true)
+via=""
+[ "${CLAUDECODE:-}" = 1 ] && via="Claude Code"
+
+# The request goes as base64 JSON, so SQL and arguments need no quoting on the way.
+# Each argument goes to jq on stdin: as an argument, "--minutes" would be jq's option.
+json_args=""
+for arg in ${rest[@]+"${rest[@]}"}; do
+  json=$(printf '%s' "$arg" | jq -Rs .) || exit 2
+  json_args="$json_args${json_args:+,}$json"
+done
+request=$(jq -cn --arg task "$task" --arg why "$why" --arg email "$email" \
+  --arg via "$via" --argjson fix "$fix" --argjson args "[$json_args]" \
+  '{task: $task, why: $why, email: $email, via: (if $via == "" then null else $via end),
+    fix: $fix, args: $args}') || exit 2
+encoded=$(printf '%s' "$request" | base64 | tr -d '\n')
+
+token=$(fnox get FLY_SARDUTY_SSH_TOKEN) || {
+  echo "bin/prod: fnox has no FLY_SARDUTY_SSH_TOKEN." >&2
+  exit 2
+}
+
+out=$(FLY_ACCESS_TOKEN=$token fly ssh console -a "$APP" -q \
+  -C "/app/bin/sarduty rpc 'App.Ops.main(\"$encoded\")'" 2>&1)
+
+# App.Ops prints its answer between markers; the rest is Fly's and the VM's own noise.
+printf '%s\n' "$out" | awk '
+  $0 == "--- bin/prod ---" { on = 1; next }
+  on && $0 == "--- ok ---" { code = 0; done = 1; exit }
+  on && $0 == "--- failed ---" { code = 1; done = 1; exit }
+  on { print }
+  END { exit done ? code : 3 }'
+status=$?
+
+if [ $status -eq 3 ]; then
+  echo "bin/prod: no answer from the app. fly ssh said:" >&2
+  printf '%s\n' "$out" | grep -v -e ESOCK -e libsctp -e UNIX-ESSIO | tail -20 >&2
+fi
+exit $status

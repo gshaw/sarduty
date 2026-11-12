@@ -22,7 +22,8 @@ defmodule Web.Admin.AdminCollectionLive do
     <h1 class="title">Admins</h1>
     <p class="max-w-prose">
       Admins can open every team, refresh any team from D4H, and set up organizations. Add an
-      admin from a production console. See <code>docs/deployment.md</code>.
+      admin with <code>bin/prod fix make-admin EMAIL</code>
+      once they have logged in. See <code>docs/production.md</code>.
     </p>
     <.table id="admins" rows={@admins} row_id={&"admin-#{&1.id}"} class="table-striped">
       <:col :let={admin} label="Email">

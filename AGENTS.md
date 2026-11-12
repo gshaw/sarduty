@@ -35,6 +35,9 @@
   team page for one record (`/teams/:subdomain/…/:id`) needs a kind in
   [Web.Search](lib/web/search.ex) or a reason in its `not_searched/0`; a test fails until
   it has one. See [docs/search.md](docs/search.md).
+- **Production access**: [bin/prod](bin/prod) runs a task from [lib/app/ops/](lib/app/ops)
+  in the running app and records the run there. It's the one way in, for people and
+  agents. See [docs/production.md](docs/production.md).
 - **Operations**: [lib/app/operation/](lib/app/operation) hold side effects and
   orchestration, one module per operation with a `call` entry point:
   `App.Operation.CreateTaxCreditLetter.call(…)`.
@@ -146,8 +149,11 @@ fi
 - **`git push` runs the static checks first**, all but the compile
   (`bin/git-hooks/pre-push`). When it fails, run `mise run check`, commit the fix, and
   push again. Never `--no-verify` to get past a failure.
-- **Deploys are manual**: `fly deploy` from `main`. Never deploy, and never read or write
-  production data, unless asked. The how is in [docs/deployment.md](docs/deployment.md).
+- **Deploys are manual**: `mise run deploy`, only when asked. The how is in
+  [docs/deployment.md](docs/deployment.md).
+- **Production data only through `bin/prod`** ([docs/production.md](docs/production.md)).
+  Read tasks run whenever a question needs production; `bin/prod fix` only when asked.
+  Never `fly ssh` with `rpc` or `eval` for something a task does.
 - Create migrations with `mix ecto.gen.migration name_with_underscores`. Migrations run
   when the app boots (`App.Release.migrate/0` in `App.Application.start/2`), in every
   environment — there is no release command.

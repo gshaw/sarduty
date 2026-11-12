@@ -65,6 +65,7 @@ defmodule App.ViewModel.EventFilterViewModel do
   def label(:form_turned_on), do: "Form turned on"
   def label(:form_turned_off), do: "Form turned off"
   def label(:form_set_testing), do: "Form set to testing"
+  def label(:prod_task), do: "Production task"
 
   def validate(params) do
     changeset =

@@ -11,8 +11,9 @@ defmodule App.Model.Event do
   # Days each kind is kept. App.Worker.PruneEventsWorker deletes older ones each night.
   # Login events carry IPs, which are personal data, so they go after 90 days. Changes to
   # who can reach a team or an organization, AI agents included, passkeys added and
-  # removed, and team admins viewing as a member are kept two years, as a record. The MCP
-  # token kinds are for events from before agents connected with OAuth (#761).
+  # removed, team admins viewing as a member, and tasks run in production (App.Ops) are
+  # kept two years, as a record. The MCP token kinds are for events from before agents
+  # connected with OAuth (#761).
   @retention_days %{
     d4h_sync_round: 90,
     d4h_refresh_run: 90,
@@ -62,14 +63,16 @@ defmodule App.Model.Event do
     form_saved: 730,
     form_turned_on: 730,
     form_turned_off: 730,
-    form_set_testing: 730
+    form_set_testing: 730,
+    prod_task: 730
   }
 
   @kinds Map.keys(@retention_days)
 
   # Something the app did, kept to answer questions later: how long sync rounds take,
   # which team failed and since when, who is guessing login codes. `data` holds counts
-  # and ids, never names, emails, or phone numbers. A typed email or number is kept
+  # and ids, never names, emails, or phone numbers, except a `prod_task`'s arguments: the
+  # record of what was looked at, a query's SQL included. A typed email or number is kept
   # twice: encrypted in `email_or_phone`, to show on the Events page, and as `who`, a keyed
   # hash (who/1) that groups attempts on one account and counts them for the limits. And
   # `ip_key` is the IP as the limits count it (App.RateLimit.ip_key/1, IPv6 by its /64).
@@ -138,7 +141,7 @@ defmodule App.Model.Event do
     |> scope(who: filter[:who])
     |> order_by([e], desc: e.occurred_at, desc: e.id)
     |> limit(^limit)
-    |> preload(:team)
+    |> preload([:team, :user])
     |> Repo.all()
   end
 
