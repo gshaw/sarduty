@@ -25,8 +25,9 @@
      Compare's two small photos side by side, each over its caption. */
   .photo-check .photo-place { max-width: 26rem; }
   .photo-compare { display: flex; gap: var(--sp-4); margin: var(--sp-2) 0 0; }
-  .photo-compare > figure { width: 6rem; margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
-  .photo-compare img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; margin-bottom: var(--sp-1); background: var(--surface-alt); border-radius: var(--radius); }
+  .photo-compare > figure { width: 7rem; margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+  /* All of the photo as taken, tall or wide, on a mat the size of the card's square. */
+  .photo-compare img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; margin-bottom: var(--sp-1); background: var(--surface-alt); border-radius: var(--radius); }
 
   /* The guide: one good example beside its rules, then what does not work, 3 across on
      a phone. The examples are drawn. */
