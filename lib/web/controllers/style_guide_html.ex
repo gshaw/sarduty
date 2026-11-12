@@ -323,6 +323,13 @@ defmodule Web.StyleGuideHTML do
         examples: "Qualified, Letter sent, Active"
       },
       %{
+        kind: :info,
+        sample: "This is you",
+        look: "Solid blue",
+        means: "The person reading, in a list of people.",
+        examples: "This is you, beside your name in Members"
+      },
+      %{
         kind: :warning,
         sample: "12 days",
         look: "Solid amber",

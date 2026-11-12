@@ -20,6 +20,19 @@ defmodule Web.MemberCollectionLiveTest do
     assert html =~ "Members"
   end
 
+  # Like the This is you banner on the member's page, it needs member logins (#645).
+  test "the person reading has a This is you badge beside their name", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    team = team |> Ecto.Changeset.change(member_logins: true) |> Repo.update!()
+    me = Repo.get_by!(App.Model.Member, team_id: team.id, email: user.email)
+    other = member_fixture(team, %{name: "Blake Ground"})
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
+
+    assert has_element?(lv, "#standing-#{me.id}-you.badge-info", "This is you")
+    refute has_element?(lv, "#standing-#{other.id}-you")
+  end
+
   test "the Group filter lists the group's members only", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     rope = group_fixture(team, %{title: "Rope rescue"})

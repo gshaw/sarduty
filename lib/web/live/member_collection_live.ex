@@ -192,6 +192,7 @@ defmodule Web.MemberCollectionLive do
             group_form?={true}
             selected={@selected}
             retired?={retired?(@standing)}
+            current_member={@current_member}
           />
           <.group_choices
             choice={@choice}
@@ -223,6 +224,7 @@ defmodule Web.MemberCollectionLive do
           group_form?={false}
           selected={@selected}
           retired?={retired?(@standing)}
+          current_member={@current_member}
         />
 
         <.empty_state
@@ -332,6 +334,7 @@ defmodule Web.MemberCollectionLive do
   attr :group_form?, :boolean, required: true, doc: "tick boxes for Add to group"
   attr :selected, :any, required: true
   attr :retired?, :boolean, required: true
+  attr :current_member, :any, required: true, doc: "the person reading, for This is you"
 
   defp member_table(assigns) do
     ~H"""
@@ -362,6 +365,7 @@ defmodule Web.MemberCollectionLive do
           team={@team}
           standing={unless_tile(row.standing, @view.switch.picked)}
           path={~p"/teams/#{@team}/members/#{row.member.id}"}
+          you={@current_member != nil and @current_member.id == row.member.id}
         />
       </:col>
       <:col :let={row} label="Role" sorts={[{"↑", "role"}]}>
