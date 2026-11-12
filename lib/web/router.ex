@@ -245,6 +245,8 @@ defmodule Web.Router do
       live "/cards/:token", CardLinkLive
       # An ask for a photo's link (#1030): Add a photo for the member asked.
       live "/photos/:token", MemberPhotoFormLive
+      # An ask for an activity's photos' link (#1034): Add photos, as the member asked.
+      live "/photos/activities/:token", ActivityPhotoFormLive
     end
 
     # The card page's badges: each builds its pass on the tap.
@@ -394,6 +396,8 @@ defmodule Web.Router do
       # An exercise's or an event's photos (#1032), while the team has a file store.
       live "/teams/:subdomain/activities/:id/photos", ActivityPhotosLive, :photos
       live "/teams/:subdomain/activities/:id/photos/new", ActivityPhotoFormLive
+      # A team admin asks everyone who attended for their photos (#1034).
+      live "/teams/:subdomain/activities/:id/photos/ask", ActivityPhotoAskLive
 
       live "/teams/:subdomain/templates", TemplateCollectionLive
       live "/teams/:subdomain/templates/new", TemplateFormLive, :new

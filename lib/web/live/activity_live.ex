@@ -21,6 +21,7 @@ defmodule Web.ActivityLive do
   alias App.Model.Standing
   alias App.Model.Trip
   alias App.Operation.AddActivityPhotos
+  alias App.Operation.AskForActivityPhotos
   alias App.Operation.DeleteActivity
   alias App.Operation.SendReminders
   alias App.Repo
@@ -108,8 +109,23 @@ defmodule Web.ActivityLive do
       photos_waiting: waiting,
       may_add_photos?: photos? and AddActivityPhotos.may_add?(team, activity, who, now)
     )
+    |> assign_photo_ask()
     |> assign_featured()
   end
+
+  # Ask for photos (#1034), for team admins, and on the Photos tab when the team last
+  # asked.
+  defp assign_photo_ask(%{assigns: %{photos?: true, team_admin?: true}} = socket) do
+    %{current_team: team, activity: activity, now: now} = socket.assigns
+    on_tab? = socket.assigns.live_action == :photos
+
+    assign(socket,
+      may_ask_photos?: AskForActivityPhotos.askable?(team, activity, now),
+      photo_ask: if(on_tab?, do: AskForActivityPhotos.last_ask(activity))
+    )
+  end
+
+  defp assign_photo_ask(socket), do: assign(socket, may_ask_photos?: false, photo_ask: nil)
 
   # Overview shows the photos a team admin featured (#1033), and how many the team sees.
   defp assign_featured(%{assigns: %{photos?: true, tab: :overview, activity: activity}} = socket) do
@@ -546,6 +562,8 @@ defmodule Web.ActivityLive do
           ticks={@photo_ticks}
           team_admin?={@team_admin?}
           may_add?={@may_add_photos?}
+          may_ask?={@may_ask_photos?}
+          ask={@photo_ask}
           now={@now}
         />
         <.change_history

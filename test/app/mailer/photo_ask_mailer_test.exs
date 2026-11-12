@@ -31,4 +31,32 @@ defmodule App.Mailer.PhotoAskMailerTest do
     assert List.delete_at(off, 1) == List.delete_at(on, 1)
     assert {:button, "Add a photo", @url} in on
   end
+
+  # The email that asks everyone who attended for their photos (#1034).
+  describe "an ask for an activity's photos" do
+    @activity %{title: "Swiftwater training", started_at: ~U[2026-11-04 03:00:00Z]}
+    @team_tz %{name: "Coast Range SAR", timezone: "America/Vancouver"}
+    @link "https://sarduty.test/photos/activities/token"
+
+    test "with no message it says only who, where, and the button" do
+      assert PhotoAskMailer.activity_subject(@activity) == "Photos from Swiftwater training?"
+
+      assert PhotoAskMailer.activity_paragraphs(@member, @team_tz, @activity, nil, nil, @link) ==
+               [
+                 "Hi Cameron Ruiz,",
+                 "You were at Swiftwater training on Nov 3, 2026. Coast Range SAR would like your photos from it. A team admin looks at them before the team sees them.",
+                 {:button, "Add photos", @link},
+                 "Coast Range SAR, through SAR Duty"
+               ]
+    end
+
+    test "the team admin's message sits under their name" do
+      asker = %{name: "Alex Chen", email: "alex@example.com"}
+
+      paragraphs =
+        PhotoAskMailer.activity_paragraphs(@member, @team_tz, @activity, asker, "Thanks!", @link)
+
+      assert Enum.at(paragraphs, 2) == "Alex Chen: “Thanks!”"
+    end
+  end
 end

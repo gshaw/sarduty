@@ -9,6 +9,10 @@ defmodule Web.AccountLive do
   the user logs in as (`Member.get_logins/2`), looked up again on every tap. A team admin
   viewing a team as a member (#425) sees their own switches, turned off.
 
+  Photo asks (#1034) is a second switch, built the same way, for each of those teams
+  that has activity photos: whether a team admin's ask for their photos from an activity
+  emails them.
+
   Passkeys (#129) are the user's own, so viewing as a member doesn't touch them. The
   PasskeyAdd hook asks for a challenge as the section mounts, runs the browser's prompt,
   and sends back what it made; App.Operation.AddPasskey checks and saves it. Only an
@@ -22,10 +26,12 @@ defmodule Web.AccountLive do
   alias App.Accounts.UserPasskey
   alias App.Accounts.WebAuthn
   alias App.Model.Member
+  alias App.Operation.AddActivityPhotos
   alias App.Operation.AddPasskey
   alias App.Operation.RemovePasskey
   alias App.Operation.SetInvitationReminders
   alias App.Operation.SetMapsApp
+  alias App.Operation.SetPhotoAsks
   alias Web.Components.OpenInMaps
   alias Web.SecurityEvent
   alias Web.UserAuth
@@ -135,6 +141,18 @@ defmodule Web.AccountLive do
         >
           Team admins at {member.team.name} can email you when you have not replied to an activity.
         </.switch>
+        <.switch
+          :for={member <- @member_logins}
+          :if={AddActivityPhotos.available?(member.team)}
+          id={"photo-asks-#{member.team.subdomain}"}
+          label={photo_asks_label(@member_logins, member)}
+          checked={member.photo_asks}
+          disabled={@viewing_as?}
+          phx-click="photo-asks"
+          phx-value-id={member.id}
+        >
+          Emails from a team admin asking for your photos from an activity.
+        </.switch>
       </section>
     </div>
     """
@@ -146,6 +164,9 @@ defmodule Web.AccountLive do
 
   defp reminders_label([_one], _member), do: "Invitation reminders"
   defp reminders_label(_logins, member), do: "Invitation reminders from #{member.team.name}"
+
+  defp photo_asks_label([_one], _member), do: "Photo asks"
+  defp photo_asks_label(_logins, member), do: "Photo asks from #{member.team.name}"
 
   # The browser's options for a new passkey. The challenge stays here for passkey-created.
   def handle_event("passkey-options", _params, socket) do
@@ -211,17 +232,22 @@ defmodule Web.AccountLive do
     end
   end
 
-  def handle_event("reminders", _params, %{assigns: %{viewing_as?: true}} = socket),
-    do: {:noreply, put_flash(socket, :error, "You're viewing as a member, so nothing is saved.")}
+  def handle_event(event, _params, %{assigns: %{viewing_as?: true}} = socket)
+      when event in ["reminders", "photo-asks"],
+      do:
+        {:noreply, put_flash(socket, :error, "You're viewing as a member, so nothing is saved.")}
 
   # The member comes from the user's own logins, never from the id alone.
-  def handle_event("reminders", %{"id" => id}, socket) do
+  def handle_event(event, %{"id" => id}, socket) when event in ["reminders", "photo-asks"] do
     %{current_user: user} = socket.assigns
     now = DateTime.utc_now()
 
     with {id, ""} <- Integer.parse(id),
          %Member{} = member <- Member.get_login(user.email, id, now) do
-      SetInvitationReminders.call(member, not member.invitation_reminders)
+      case event do
+        "reminders" -> SetInvitationReminders.call(member, not member.invitation_reminders)
+        "photo-asks" -> SetPhotoAsks.call(member, not member.photo_asks)
+      end
     end
 
     {:noreply, assign(socket, :member_logins, Member.get_logins(user.email, now))}

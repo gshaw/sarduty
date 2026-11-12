@@ -251,6 +251,41 @@ defmodule Web.ActivityPhotosLiveTest do
       assert has_element?(lv, "#photos-empty", "No photos yet.")
       refute has_element?(lv, "#photos-empty", "Add the first.")
       refute has_element?(lv, "#photos-add")
+      refute has_element?(lv, "#photos-ask")
+    end
+
+    test "Ask for photos sits beside Add photos, and the tab says when the team asked", ctx do
+      %{conn: conn, team: team, activity: activity, cam: cam} = ctx
+      ask = ~p"/teams/#{team}/activities/#{activity.id}/photos/ask"
+
+      {:ok, lv, _html} = live(conn, tab(team, activity))
+      assert has_element?(lv, ~s|#photos-empty #photos-ask[href="#{ask}"]|, "Ask for photos")
+      refute has_element?(lv, "#photos-asked")
+
+      activity_photo_fixture(activity, %{member_id: cam.id, status: :accepted})
+      noor = Repo.get_by!(App.Model.Member, name: "Noor Aziz", team_id: team.id)
+      attendance_fixture(activity, noor)
+      asked_at = ~U[2026-11-09 18:00:00.000000Z]
+
+      for member <- [cam, noor] do
+        Repo.insert!(%App.Model.ActivityPhotoAsk{
+          team_id: team.id,
+          activity_id: activity.id,
+          member_id: member.id,
+          asked_at: asked_at,
+          email_status: :sent
+        })
+      end
+
+      {:ok, lv, _html} = live(conn, tab(team, activity))
+      assert has_element?(lv, ~s|#photos-ask[href="#{ask}"]|, "Ask for photos")
+      assert has_element?(lv, "#photos-add", "Add photos")
+      assert has_element?(lv, "#photos-asked", "Asked 2 members on Nov 9, 2026.")
+
+      # A member sees neither.
+      {:ok, lv, _html} = conn |> as(cam) |> live(tab(team, activity))
+      refute has_element?(lv, "#photos-ask")
+      refute has_element?(lv, "#photos-asked")
     end
 
     test "an incident and an activity with logged time have no Photos tab", ctx do

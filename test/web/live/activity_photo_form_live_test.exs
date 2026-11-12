@@ -5,8 +5,11 @@ defmodule Web.ActivityPhotoFormLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.Activity
   alias App.Model.ActivityPhoto
+  alias App.Operation.AskForActivityPhotos
   alias App.Repo
+  alias Web.PhotoAskLinks
 
   # Add photos (#1032): a member who attended an exercise or an event adds their photos
   # of it, with a caption and permission to post for the send.
@@ -328,5 +331,106 @@ defmodule Web.ActivityPhotoFormLiveTest do
              "viewing as Cameron Ruiz, so nothing is saved"
 
     assert Repo.all(ActivityPhoto) == []
+  end
+
+  # The link in the email that asks everyone who attended for their photos (#1034): no
+  # login, for one member and one activity.
+  describe "from an ask's link" do
+    setup %{team: team, activity: activity} do
+      # Member logins are off, and the link works all the same.
+      team = team |> Ecto.Changeset.change(member_logins: false) |> Repo.update!()
+      asker = user_fixture()
+      manager_fixture(team, %{email: asker.email})
+      activity = Activity.put_logged_minutes(activity)
+      {:ok, [ask]} = AskForActivityPhotos.call(team, activity, asker, nil, DateTime.utc_now())
+      %{conn: build_conn(), team: team, ask: ask, link: PhotoAskLinks.activity_path(ask)}
+    end
+
+    test "opens Add photos for that activity with no login, and nothing else", %{
+      conn: conn,
+      link: link
+    } do
+      {:ok, lv, _html} = live(conn, link)
+
+      assert page_title(lv) =~ "Swiftwater training · Add photos"
+      assert has_element?(lv, "#photos-team", "Coast Range SAR")
+      assert has_element?(lv, "h1", "Add photos")
+      assert has_element?(lv, "#photos-lead", "From Swiftwater training, Nov 3, 2026.")
+      assert has_element?(lv, "#photos-take", "Take a photo")
+      # No trail into the team, and nowhere for Cancel to go.
+      refute has_element?(lv, ".breadcrumbs")
+      refute has_element?(lv, "#photos-cancel")
+    end
+
+    test "a photo added through it is that member's, and waits for a team admin", ctx do
+      %{conn: conn, cam: cam, activity: activity, link: link} = ctx
+      {:ok, lv, _html} = live(conn, link)
+      pick(lv, [entry("river.png"), entry("throw.png")])
+
+      lv |> form("#photos-form", %{"caption" => "Throw bag practice."}) |> render_submit()
+
+      # The page says so, with nowhere to go without a login, and the link still works.
+      assert render_async(lv, @wait) =~ "Photos added"
+      assert has_element?(lv, "#photos-link-done", "A team admin looks at them")
+      assert has_element?(lv, ~s|#photos-more[href="#{link}"]|, "Add more photos")
+      refute has_element?(lv, "#photos-form")
+
+      photos = Repo.all(ActivityPhoto)
+      assert length(photos) == 2
+
+      for photo <- photos do
+        assert %ActivityPhoto{status: :waiting, caption: "Throw bag practice."} = photo
+        assert photo.activity_id == activity.id
+        assert photo.member_id == cam.id
+        assert photo.added_by_user_id == nil
+      end
+
+      {:ok, lv, _html} = live(conn, link)
+      assert has_element?(lv, "#photos-form")
+    end
+
+    test "a link over 30 days old no longer works, and one that was never a link is not found",
+         %{conn: conn, ask: ask} do
+      old =
+        Phoenix.Token.sign(Web.Endpoint, "activity photo ask", ask.id,
+          signed_at: System.system_time(:second) - 31 * 24 * 60 * 60
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/photos/activities/#{old}")
+      assert has_element?(lv, "h1", "This link no longer works")
+      assert has_element?(lv, "#photos-link-ended", "Ask a team admin for a new one.")
+
+      assert_error_sent 404, fn -> live(conn, ~p"/photos/activities/not-a-token") end
+    end
+
+    test "with Photos off, or the member retiring, the link no longer works", ctx do
+      %{conn: conn, team: team, cam: cam, link: link} = ctx
+      leavers = group_fixture(team)
+      group_member_fixture(leavers, cam)
+
+      team
+      |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id)
+      |> Repo.update!()
+
+      {:ok, lv, _html} = live(conn, link)
+      assert has_element?(lv, "h1", "This link no longer works")
+
+      team
+      |> Ecto.Changeset.change(retiring_d4h_group_id: nil, photos_enabled: false)
+      |> Repo.update!()
+
+      {:ok, lv, _html} = live(conn, link)
+      assert has_element?(lv, "h1", "This link no longer works")
+    end
+
+    test "a link that stops while the page is open adds nothing", ctx do
+      %{conn: conn, team: team, link: link} = ctx
+      {:ok, lv, _html} = live(conn, link)
+      pick(lv, [entry("river.png")])
+      team |> Ecto.Changeset.change(photos_enabled: false) |> Repo.update!()
+
+      assert lv |> form("#photos-form") |> render_submit() =~ "This link no longer works"
+      assert Repo.all(ActivityPhoto) == []
+    end
   end
 end

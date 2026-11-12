@@ -35,7 +35,7 @@ defmodule App.Operation.DeleteTeam do
 
   @snapshot_days 7
 
-  @team_tables ~w(activities activity_photo_stars activity_photos activity_updates agent_connections attendance_scans
+  @team_tables ~w(activities activity_photo_asks activity_photo_stars activity_photos activity_updates agent_connections attendance_scans
                   attention_snoozes certificates change_set_rows change_sets chore_categories
                   chore_events chores custom_fields custom_field_bundles d4h_changes demo_teams
                   endorsements equipment_items

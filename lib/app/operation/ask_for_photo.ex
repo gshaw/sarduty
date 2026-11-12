@@ -147,11 +147,12 @@ defmodule App.Operation.AskForPhoto do
 
   @doc """
   Who asked, as `%{name:, email:}`: their member name on the team, or their email when
-  no current member has it. Nil when their login is gone.
+  no current member has it. Nil when their login is gone. Takes any ask with its
+  `asked_by_user` and `team`: an ask for an activity's photos too (#1034).
   """
-  def asker(%PhotoAsk{asked_by_user: nil}, _now), do: nil
+  def asker(%{asked_by_user: nil}, _now), do: nil
 
-  def asker(%PhotoAsk{asked_by_user: user, team: %Team{} = team}, now),
+  def asker(%{asked_by_user: user, team: %Team{} = team}, now),
     do: %{name: Member.name_for_user(team, user, now), email: user.email}
 
   @doc """
