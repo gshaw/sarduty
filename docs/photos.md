@@ -418,6 +418,8 @@ changed**.
 
 ## Export for a post
 
+<!-- cspell:ignore Canva -->
+
 Whoever posts for the team takes a copy of a photo in the shape the post needs (#1032,
 part 9). Nothing is saved: not the box, not the export, and **the photo does not
 change**.
@@ -448,6 +450,7 @@ change**.
   Clean up made. The JPEG has no location or camera data.
 - **The caption**, with its copy button: "{caption} Photo: {name}", or "Photo: {name}"
   with no caption, by who added it (`Web.ActivityPhoto.post_caption/3`).
+
 - **Not here**: text on the image, filters, and blurring belong in Canva. A photo that
   needs a face blurred gets deleted. There is no record of each export, no role for
   members who post, and no video.

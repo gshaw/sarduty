@@ -50,9 +50,7 @@ defmodule Web.ActivityPhoto do
   def post_caption(%ActivityPhoto{caption: caption} = photo, %Team{} = team, now) do
     credit = if name = added_by(photo, team, now), do: "Photo: #{name}"
 
-    [caption && end_sentence(caption), credit]
-    |> Enum.reject(&is_nil/1)
-    |> case do
+    case Enum.reject([caption && end_sentence(caption), credit], &is_nil/1) do
       [] -> nil
       parts -> Enum.join(parts, " ")
     end

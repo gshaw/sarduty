@@ -42,9 +42,7 @@ defmodule Web.ActivityPhotoController do
     team = conn.assigns.current_team
     if !AddActivityPhotos.available?(team) or !integer?(id), do: raise(Web.Status.NotFound)
 
-    placed = if is_map(params["photo"]), do: params["photo"], else: %{}
-    {_turns, box} = Service.MemberPhoto.placement(placed)
-    shape = Service.PhotoExport.shape(params["shape"])
+    {shape, box} = export_params(params)
 
     case ExportActivityPhoto.call(team, id, shape.key, box) do
       {:ok, jpeg} ->
@@ -64,6 +62,13 @@ defmodule Web.ActivityPhotoController do
       {:error, _may_not} ->
         raise Web.Status.NotFound
     end
+  end
+
+  # The shape, and the box as placed: with none sent, the middle, zoomed all the way out.
+  defp export_params(params) do
+    placed = if is_map(params["photo"]), do: params["photo"], else: %{}
+    {_turns, box} = Service.MemberPhoto.placement(placed)
+    {Service.PhotoExport.shape(params["shape"]), box}
   end
 
   # An accepted photo's files never change under one URL, which carries when the photo

@@ -76,7 +76,7 @@ defmodule App.Operation.ExportActivityPhotoTest do
 
     assert {:ok, jpeg} = ExportActivityPhoto.call(ctx.team, ctx.photo.id, "original", @whole)
     assert size(jpeg) == {1600, 2400}
-    assert ExportActivityPhoto.size(Repo.reload(ctx.photo)) == {1600, 2400}
+    assert ctx.photo |> Repo.reload() |> ExportActivityPhoto.size() == {1600, 2400}
   end
 
   test "a cleaned-up photo starts from the cleaned-up copy to show", ctx do

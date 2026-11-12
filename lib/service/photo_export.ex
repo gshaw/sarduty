@@ -59,13 +59,7 @@ defmodule Service.PhotoExport do
   def crop(shape, %{x: x, y: y, side: side}, {width, height})
       when is_integer(width) and width > 0 and is_integer(height) and height > 0 do
     ratio = ratio(shape, {width, height})
-
-    # The largest box of the shape the photo holds, then the share of it placed.
-    max_width = if width / height > ratio, do: height * ratio, else: width
-
-    share = clamp(side, MemberPhoto.min_share(), 1.0)
-    box_width = (share * max_width) |> round() |> max(1) |> min(width)
-    box_height = (box_width / ratio) |> round() |> max(1) |> min(height)
+    {box_width, box_height} = box_size(side, ratio, {width, height})
     {out_width, out_height} = out_size(shape, {box_width, box_height}, ratio)
 
     %{
@@ -76,6 +70,14 @@ defmodule Service.PhotoExport do
       out_width: out_width,
       out_height: out_height
     }
+  end
+
+  # The largest box of the shape the photo holds, then the share of it placed.
+  defp box_size(side, ratio, {width, height}) do
+    max_width = if width / height > ratio, do: height * ratio, else: width
+    share = clamp(side, MemberPhoto.min_share(), 1.0)
+    box_width = (share * max_width) |> round() |> max(1) |> min(width)
+    {box_width, (box_width / ratio) |> round() |> max(1) |> min(height)}
   end
 
   defp out_size(%{size: nil}, box, _ratio), do: box

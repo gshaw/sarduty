@@ -177,8 +177,8 @@ defmodule Web.ActivityPhotoExportLiveTest do
 
       assert response_content_type(conn, :jpeg) =~ "image/jpeg"
 
-      assert get_resp_header(conn, "content-disposition") |> hd() =~
-               "photo-#{ctx.photo.id}-landscape.jpg"
+      assert [disposition] = get_resp_header(conn, "content-disposition")
+      assert disposition =~ "photo-#{ctx.photo.id}-landscape.jpg"
 
       image = conn |> response(200) |> Image.from_binary!()
       # A 60 × 40 original is too small for 1920 × 1080: its whole width, at 16:9.
