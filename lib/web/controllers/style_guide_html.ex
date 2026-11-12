@@ -257,6 +257,7 @@ defmodule Web.StyleGuideHTML do
       {"menu", "Open the top bar's menu on a phone"},
       {"x", "Close a toast, remove a chip, close the phone menu"},
       {"circle-check", "Success banners, toasts, and bands"},
+      {"check", "The example that works, in Add a photo's guide"},
       {"info", "Info banners and bands"},
       {"triangle-alert", "Warning banners, warning text, and bands"},
       {"circle-alert", "Danger banners, error toasts, and bands"},

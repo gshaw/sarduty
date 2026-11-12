@@ -9,7 +9,7 @@ defmodule Web.Settings.FeaturesLive do
 
   # The team's features, /teams/:subdomain/settings/features: one switch each, saved when
   # flipped, A to Z. Certificates and chores need member logins, so they sit under it, A
-  # to Z too. MCP (Agents) and ID
+  # to Z too. Photos (#1028) needs none. MCP (Agents) and ID
   # cards are SAR Duty's to turn on, from /admin/teams/:id (App.Operation.SetTeamMCP,
   # App.Operation.SetTeamIdCards), so they show only as on or off. A team asks for ID
   # cards; MCP isn't offered, so it shows only once on. Every member gets a card (#893)
@@ -17,6 +17,7 @@ defmodule Web.Settings.FeaturesLive do
   def mount(_params, _session, socket) do
     socket
     |> assign(page_title: "Team settings · Features", reading_whiteboard?: false)
+    |> assign(checking_photos?: false)
     |> assign_cards()
     |> then(&{:ok, &1})
   end
@@ -63,8 +64,19 @@ defmodule Web.Settings.FeaturesLive do
     |> assign(current_team: team)
     |> put_flash(:info, message(team, feature))
     |> read_whiteboard(feature)
+    |> check_photos(feature)
     |> then(&{:noreply, &1})
   end
+
+  # Who has a photo comes from the team's records, asked after the switch has answered
+  # (#1028). Each answer is stored as it comes, and the night's check asks again.
+  defp check_photos(%{assigns: %{current_team: %{photos_enabled: true} = team}} = socket, :photos) do
+    socket
+    |> assign(checking_photos?: true)
+    |> start_async(:photos, fn -> SetTeamFeature.check_photos(team, DateTime.utc_now()) end)
+  end
+
+  defp check_photos(socket, _feature), do: socket
 
   # The whiteboard's notes come from D4H, read after the switch has answered.
   defp read_whiteboard(
@@ -89,11 +101,15 @@ defmodule Web.Settings.FeaturesLive do
     end
   end
 
+  def handle_async(:photos, _result, socket),
+    do: {:noreply, assign(socket, checking_photos?: false)}
+
   defp on?(team, :member_logins), do: team.member_logins
   defp on?(team, :chores), do: team.chores_enabled
   defp on?(team, :certificates), do: team.certificates_enabled
   defp on?(team, :whiteboard), do: team.whiteboard_enabled
   defp on?(team, :travel), do: team.travel_enabled
+  defp on?(team, :photos), do: team.photos_enabled
 
   defp message(%{member_logins: true}, :member_logins),
     do: "Member logins turned on. Members can log in now."
@@ -107,6 +123,8 @@ defmodule Web.Settings.FeaturesLive do
   defp message(_team, :whiteboard), do: "Whiteboard turned off."
   defp message(%{travel_enabled: true}, :travel), do: "Travel turned on."
   defp message(_team, :travel), do: "Travel turned off."
+  defp message(%{photos_enabled: true}, :photos), do: "Photos turned on."
+  defp message(_team, :photos), do: "Photos turned off."
 
   defp every_member_card_message(%{every_member_card: false}, _made),
     do: "Every member gets a card turned off. Cards already made stay."
@@ -211,6 +229,20 @@ defmodule Web.Settings.FeaturesLive do
             >Chore categories</.a>
           </.switch>
         </div>
+
+        <.switch
+          id="feature-photos"
+          label="Photos"
+          checked={@current_team.photos_enabled}
+          phx-click="set"
+          phx-value-feature="photos"
+        >
+          Team admins add and change members' photos in SAR Duty.
+          <.a :if={Team.photos?(@current_team)} navigate={~p"/teams/#{@current_team}/photos"}>Photos</.a>
+          <.spinner :if={@checking_photos?} id="photos-checking" class="block">
+            Checking who has a photo…
+          </.spinner>
+        </.switch>
 
         <.switch
           id="feature-travel"

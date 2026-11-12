@@ -14,6 +14,7 @@ defmodule Web.Components.MemberSidebar do
   alias App.Model.EquipmentItem
   alias App.Model.Member
   alias App.Model.Standing
+  alias App.Model.Team
   alias App.ViewData.MemberMilestones
   alias Service.Format
   alias Web.Components.MilestoneList
@@ -78,7 +79,7 @@ defmodule Web.Components.MemberSidebar do
       id="member-head"
       class="mb-6"
       name={@member.name}
-      photo={~p"/teams/#{@member.team}/members/#{@member.id}/image"}
+      photo={Web.MemberPhoto.path(@member.team, @member)}
       standing={@standing}
       facts={facts(@member, @last_attended_at, @member.team.timezone)}
     >
@@ -137,6 +138,14 @@ defmodule Web.Components.MemberSidebar do
       <ul id="member-actions" class="action-list">
         <li>
           <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change member</.a>
+        </li>
+        <%!-- With Photos on (#1028). A member with no photo gets Add a photo on their ID
+          Card tab. --%>
+        <li :if={Team.photos?(@member.team) and @member.has_photo}>
+          <.a
+            id="member-actions-change-photo"
+            navigate={Web.PhotoCollectionLive.add_path(@member.team, @member)}
+          >Change photo</.a>
         </li>
         <li :if={@fields?}>
           <.a

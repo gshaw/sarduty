@@ -8,6 +8,7 @@ defmodule Web.MemberCardLive do
   alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.PassRegistration
+  alias App.Model.Team
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildCardQualifications
   alias App.Operation.BuildGooglePass
@@ -184,9 +185,31 @@ defmodule Web.MemberCardLive do
         revoked_at={@revoked_at}
         every_member_card?={@current_team.every_member_card}
         member_logins?={@current_team.member_logins}
+        photos?={Team.photos?(@current_team)}
         service={@service}
       />
+      <.add_photo
+        :if={!@current_team.id_cards_enabled and Team.photos?(@current_team) and !@member.has_photo}
+        member={@member}
+      />
     </.member_page>
+    """
+  end
+
+  # A member with no photo, on a team with Photos on (#1028): the line, and the button
+  # that opens Add a photo for them.
+  defp add_photo(assigns) do
+    ~H"""
+    <div id="no-photo">
+      <p>{@member.name} has no photo. An ID card needs one.</p>
+      <.button
+        id="add-photo"
+        variant={:primary}
+        navigate={Web.PhotoCollectionLive.add_path(@member.team, @member)}
+      >
+        Add a photo
+      </.button>
+    </div>
     """
   end
 
@@ -198,6 +221,14 @@ defmodule Web.MemberCardLive do
         Their last one was cancelled on {Service.Format.date_short(@revoked_at, @member.team.timezone)}.
       </span>
     </p>
+    """
+  end
+
+  # No card and no photo, with Photos on: Add a photo comes before Issue ID card, which
+  # would only refuse.
+  defp card_content(%{card: nil, photos?: true, member: %{has_photo: false}} = assigns) do
+    ~H"""
+    <.add_photo member={@member} />
     """
   end
 
@@ -285,6 +316,14 @@ defmodule Web.MemberCardLive do
           phx-disable-with="Refreshing…"
         >
           Refresh ID card
+        </.button>
+        <%!-- A card out with the placeholder (#1012): saving a photo refreshes it. --%>
+        <.button
+          :if={@photos? and !@member.has_photo}
+          id="add-photo"
+          navigate={Web.PhotoCollectionLive.add_path(@member.team, @member)}
+        >
+          Add a photo
         </.button>
         <.button
           id="cancel-card"

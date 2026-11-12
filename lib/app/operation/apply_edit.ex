@@ -3,8 +3,9 @@ defmodule App.Operation.ApplyEdit do
   One change a team admin makes to a record: a change set of one row, source `:edit`,
   applied at once like the door's. A team on SAR Duty Records changes any record this way
   (docs/records.md). A D4H team changes its groups and who is in them (#546), adds and
-  changes activities (#585), changes members' details and custom fields (#705), and changes
-  equipment items' status, barcode, and custom fields; every other record it changes in D4H.
+  changes activities (#585), changes members' details and custom fields (#705), sets
+  members' photos (#1028), and changes equipment items' status, barcode, and custom
+  fields; every other record it changes in D4H.
 
   After a group row the caller writes the local copy, as group rules do, and the next
   sync confirms it. After any other row the sync copies what changed, so the page that
@@ -62,6 +63,10 @@ defmodule App.Operation.ApplyEdit do
 
   def d4h_takes?(%ChangeSetRow{action: :update_equipment_item, new_value: new_value}),
     do: only?(new_value, @d4h_item_keys)
+
+  # A member's photo, as a document D4H makes the profile image (#1028). Removing one is
+  # Records' alone.
+  def d4h_takes?(%ChangeSetRow{action: :set_member_photo}), do: true
 
   def d4h_takes?(%ChangeSetRow{}), do: false
 

@@ -435,6 +435,10 @@ defmodule Web.Router do
       live "/teams/:subdomain/qualifications/:id/edit", TitledRecordFormLive, :edit_qualification
 
       live "/teams/:subdomain/milestones", MilestoneCollectionLive
+      # Photos (#1028). A member's photo is under /photos/members, which leaves
+      # /photos/:id for an activity's.
+      live "/teams/:subdomain/photos", PhotoCollectionLive
+      live "/teams/:subdomain/photos/members/new", MemberPhotoFormLive
       live "/teams/:subdomain/certificates", CertificateCollectionLive
       live "/teams/:subdomain/certificates/new", CertificateFormLive, :new
       live "/teams/:subdomain/certificates/:id", CertificateLive

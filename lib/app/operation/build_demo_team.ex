@@ -63,7 +63,8 @@ defmodule App.Operation.BuildDemoTeam do
     :certificates_enabled,
     :id_cards_enabled,
     :whiteboard_enabled,
-    :travel_enabled
+    :travel_enabled,
+    :photos_enabled
   ]
 
   @doc "The settings a demo copies from Coast Range SAR."
@@ -331,7 +332,7 @@ defmodule App.Operation.BuildDemoTeam do
 
   # Demos skip the nightly photo check (#1012), so has_photo comes from the cast: each
   # person has the sample photo but the visitor (DemoCast). The visitor's prebuilt card
-  # still works; their Replace asks for a photo, which Change member adds.
+  # still works; a new one asks for a photo, which Add a photo adds (#1028).
   defp mark_photos(team, ids) do
     query = where(Member, [m], m.team_id == ^team.id and not m.not_a_person)
 

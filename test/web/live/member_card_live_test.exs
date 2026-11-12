@@ -53,6 +53,70 @@ defmodule Web.MemberCardLiveTest do
     assert has_element?(lv, "#issue")
   end
 
+  describe "with Photos on (#1028)" do
+    setup %{team: team} do
+      %{team: team |> Ecto.Changeset.change(photos_enabled: true) |> Repo.update!()}
+    end
+
+    defp add_photo_path(team, member),
+      do: ~p"/teams/#{team}/photos/members/new?#{[member: member.id]}"
+
+    test "a member with no photo gets the line and Add a photo, in Issue ID card's place",
+         %{conn: conn, team: team} do
+      riley = member_fixture(team, %{name: "Riley Okafor", has_photo: false})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{riley.id}/card")
+
+      assert has_element?(lv, "#no-photo", "Riley Okafor has no photo. An ID card needs one.")
+
+      assert has_element?(
+               lv,
+               ~s|#add-photo[href="#{add_photo_path(team, riley)}"]|,
+               "Add a photo"
+             )
+
+      refute has_element?(lv, "#issue")
+      refute has_element?(lv, "#member-actions-change-photo")
+
+      # A card out with the placeholder keeps its facts, and gets the button too.
+      member_card_fixture(riley)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{riley.id}/card")
+      assert has_element?(lv, "#card #add-photo", "Add a photo")
+      refute has_element?(lv, "#no-photo")
+    end
+
+    test "a member with a photo gets Change photo in Actions, with the other changes",
+         %{conn: conn, team: team, member: member} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+
+      assert has_element?(
+               lv,
+               ~s|#member-actions #member-actions-change-photo[href="#{add_photo_path(team, member)}"]|,
+               "Change photo"
+             )
+
+      assert has_element?(lv, "#issue")
+      refute has_element?(lv, "#add-photo")
+    end
+
+    test "a team with ID cards off still gets the line and the button", %{conn: conn, team: team} do
+      team |> Ecto.Changeset.change(id_cards_enabled: false) |> Repo.update!()
+      riley = member_fixture(team, %{name: "Riley Okafor", has_photo: false})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{riley.id}/card")
+
+      assert has_element?(lv, "#id-cards-off")
+      assert has_element?(lv, "#no-photo #add-photo")
+    end
+  end
+
+  test "with Photos off, the tab has no Add a photo or Change photo", %{conn: conn, team: team} do
+    riley = member_fixture(team, %{name: "Riley Okafor", has_photo: false})
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{riley.id}/card")
+
+    assert has_element?(lv, "#issue")
+    refute has_element?(lv, "#add-photo")
+    refute has_element?(lv, "#member-actions-change-photo")
+  end
+
   # A lost phone: Cancel, then Issue, which the tab shows next.
   test "a lost phone: Cancel ID card, then Issue ID card makes a new code and emails it",
        %{conn: conn, team: team, member: member} do

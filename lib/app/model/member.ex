@@ -45,6 +45,9 @@ defmodule App.Model.Member do
     # Whether the team's records had a photo of them at the last check, which an ID card
     # needs (#1012). Set only by App.Operation.CheckMemberPhoto and SetMemberPhoto.
     field :has_photo, :boolean, default: false
+    # When SAR Duty last set or removed their photo (#1028). The photo's URL carries it,
+    # so a browser that cached the old photo loads the new one. Nil until then.
+    field :photo_changed_at, :utc_datetime
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -225,6 +228,19 @@ defmodule App.Model.Member do
   def counted_dynamic,
     do:
       dynamic([m], not m.not_a_person and m.id not in subquery(Standing.all_retiring_ids_query()))
+
+  @doc """
+  The team's current members SAR Duty counts, A to Z by name: who Photos shows and Add a
+  photo lists (#1028).
+  """
+  def get_all_counted(%Team{id: team_id}, now) do
+    Member
+    |> where([m], m.team_id == ^team_id)
+    |> counted_query()
+    |> current_query(now)
+    |> order_by([m], asc: fragment("lower(?)", m.name), asc: m.id)
+    |> Repo.all()
+  end
 
   @doc "Pure. counted_query/1 for one current member, given the team's retiring ids."
   def counted?(%Member{} = member, retiring_ids),

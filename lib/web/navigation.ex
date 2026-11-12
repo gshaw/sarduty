@@ -126,7 +126,7 @@ defmodule Web.Navigation do
 
   defp team_admin_sections(team) do
     [
-      dashboard_links(team),
+      dashboard_links(team) ++ photo_links(team),
       activity_links(team),
       people_links(team),
       [link("equipment", "Equipment", ~p"/teams/#{team}/equipment") | chore_links(team)],
@@ -152,6 +152,14 @@ defmodule Web.Navigation do
         do: [link("whiteboard", "Whiteboard", ~p"/teams/#{team}/whiteboard")],
         else: []
       )
+  end
+
+  # Photos (#1028) ends the first section, after Whiteboard or else Dashboard, and never
+  # moves as the page grows. Team admins' for now: members get it when they add their own.
+  defp photo_links(team) do
+    if Team.photos?(team),
+      do: [link("photos", "Photos", ~p"/teams/#{team}/photos")],
+      else: []
   end
 
   defp activities_link(team), do: link("activities", "Activities", ~p"/teams/#{team}/activities")
