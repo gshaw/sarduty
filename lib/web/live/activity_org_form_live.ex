@@ -7,7 +7,11 @@ defmodule Web.ActivityOrgFormLive do
   they change (App.Operation.SaveFormAnswers), and each row's total follows them. Download draft PDF posts the form to
   Web.ActivityFormPDFController, which keeps the answers and sends a draft PDF, never saved.
 
-  A form that's on publishes (#970, App.Operation.PublishDocument). The Published box
+  A form that's on publishes (#970, App.Operation.PublishDocument). One that says `signed
+  by` is signed by whoever publishes it (#993): its task leader presses Sign and publish,
+  and any other team admin Sign for Cameron Ruiz, which signs it in their own name for
+  the task leader, after a confirm. When no one member has the task leader's name, the
+  page says so, with the page that fixes it. The Published box
   above the answers says when and who, with Download, the verify link, and Withdraw.
   When the form reads differently now, it says what changed and offers Publish again.
   Page 1 folds under it, and History lists every PDF published for the activity, as a
@@ -28,6 +32,7 @@ defmodule Web.ActivityOrgFormLive do
   alias App.Operation.PublishDocument
   alias App.Operation.ReadDocument
   alias App.Operation.SaveFormAnswers
+  alias App.Operation.SignForm
   alias App.Operation.WithdrawDocument
   alias App.ViewData.ActivityForms
   alias App.ViewData.PublishedHistory
@@ -69,21 +74,15 @@ defmodule Web.ActivityOrgFormLive do
     %{current_team: team, activity: activity, form: form, page: page} = socket.assigns
     published = ActivityForms.published(team, activity, form)
 
-    changes =
-      if published.current && page,
-        do:
-          ActivityForms.changes(
-            page,
-            FormAnswer.starting(activity, page.doc.asks),
-            published.current
-          ),
-        else: []
+    changes = changes(published.current, page, activity)
 
     # Who published and withdrew each, by their member names, as other "by" lines say.
     now = DateTime.utc_now()
     names = PublishedHistory.names(published.all, &Member.name_for_user(team, &1, now))
 
-    assign(socket,
+    socket
+    |> assign_leader(now)
+    |> assign(
       published: published,
       changes: changes,
       needed: if(page, do: ActivityForms.needed(page, socket.assigns.answers), else: []),
@@ -91,6 +90,20 @@ defmodule Web.ActivityOrgFormLive do
       published_by: published.current && names[published.current.user_id],
       history: PublishedHistory.rows(published.all, names)
     )
+  end
+
+  defp changes(nil, _page, _activity), do: []
+  defp changes(_current, nil, _activity), do: []
+
+  defp changes(current, page, activity),
+    do: ActivityForms.changes(page, FormAnswer.starting(activity, page.doc.asks), current)
+
+  # The task leader a signed form names with the answers, when it's on (#993), and what
+  # the page says when no one member has that name.
+  defp assign_leader(socket, now) do
+    %{current_team: team, form: form, page: page, answers: answers} = socket.assigns
+    leader = if page && form.state == :on, do: ActivityForms.leader(page, answers, team, now)
+    assign(socket, leader: leader, leader_problem: leader && SignForm.problem(leader))
   end
 
   # Each place whose text looks too long for its lines, so it goes on an attached page.
@@ -268,7 +281,9 @@ defmodule Web.ActivityOrgFormLive do
             </div>
           </dd>
           <dt>Signature</dt>
-          <dd id="publish-signature">Left blank, to sign by hand</dd>
+          <dd id="publish-signature">
+            <.signature signed={@preview.printed.signed} />
+          </dd>
           <%= if @published.current do %>
             <dt>Replaces</dt>
             <dd id="publish-replaces">
@@ -278,7 +293,11 @@ defmodule Web.ActivityOrgFormLive do
           <% end %>
           <dt>Sent to</dt>
           <dd id="publish-not-sent">
-            No one
+            <%= if SignForm.tells_leader?(@preview.printed.signed) do %>
+              {@preview.printed.signed.leader.name}, the task leader
+            <% else %>
+              No one
+            <% end %>
             <span class="hint block">Download it once it's published, and send it yourself.</span>
           </dd>
         </dl>
@@ -290,8 +309,9 @@ defmodule Web.ActivityOrgFormLive do
             phx-click="publish"
             phx-disable-with="Publishing…"
             disabled={!is_map(@preview)}
+            {sign_confirm(@preview)}
           >
-            Publish
+            {publish_label(@preview)}
           </.button>
           <.button
             id="publish-back"
@@ -358,6 +378,21 @@ defmodule Web.ActivityOrgFormLive do
       team={@current_team}
       activity={@activity}
     />
+
+    <.banner
+      :if={@leader_problem}
+      id="org-form-leader"
+      kind={:warning}
+      title={@leader_problem}
+      class="mb-6 measure"
+    >
+      <p>
+        A team admin who signs it signs for {@leader.name}, and nobody gets an email.
+        <%= if fix = @leader.field && fix(@leader.field, @current_team, @activity) do %>
+          Check the {@leader.field.label} with <.a id="org-form-leader-fix" navigate={fix.path}>{fix.in_text}</.a>.
+        <% end %>
+      </p>
+    </.banner>
 
     <.banner
       :for={place <- @attached}
@@ -471,6 +506,62 @@ defmodule Web.ActivityOrgFormLive do
       </.form>
     </div>
     """
+  end
+
+  attr :signed, :map, default: nil, doc: "the preview's App.Operation.SignForm signing, or nil"
+
+  # Who signs the PDF as it publishes (#993): the task leader in their name, or this team
+  # admin in theirs, for the task leader.
+  defp signature(%{signed: nil} = assigns), do: ~H"Left blank, to sign by hand"
+
+  defp signature(%{signed: %{signed_for: nil}} = assigns) do
+    ~H"""
+    /s/ {@signed.signed_by}
+    <span class="hint block">You're the task leader. It's dated today.</span>
+    """
+  end
+
+  defp signature(%{signed: %{leader: nil}} = assigns) do
+    ~H"""
+    {@signed.problem}.
+    <span class="hint block">You sign it in your name: {signed_words(@signed)}.</span>
+    """
+  end
+
+  defp signature(assigns) do
+    ~H"""
+    {@signed.leader.name}, the task leader, signs this form.
+    <span class="hint block">You can sign it in your name: {signed_words(@signed)}.</span>
+    """
+  end
+
+  defp signed_words(signed), do: "/s/ #{signed.signed_by} for #{signed.signed_for}"
+
+  # Publish, or for a signed form who signs it.
+  defp publish_label(%{printed: %{signed: %{signed_for: nil}}}), do: "Sign and publish"
+  defp publish_label(%{printed: %{signed: %{signed_for: whom}}}), do: "Sign for #{whom}"
+  defp publish_label(_preview), do: "Publish"
+
+  # Signing for the task leader asks first (#993): it's in this admin's name, and says
+  # whether the task leader hears.
+  defp sign_confirm(%{printed: %{signed: %{signed_for: whom} = signed} = printed})
+       when is_binary(whom) do
+    %{
+      "data-confirm" =>
+        "Sign #{printed.attachment.title} yourself? It will read #{signed_words(signed)}. #{tells(signed)}",
+      "data-confirm-button" => "Sign for #{whom}"
+    }
+  end
+
+  defp sign_confirm(_preview), do: %{}
+
+  defp tells(%{leader: nil} = signed),
+    do: "#{signed.problem}, so nobody gets an email."
+
+  defp tells(signed) do
+    if SignForm.tells_leader?(signed),
+      do: "#{signed.leader.name} gets an email with the PDF.",
+      else: "#{signed.leader.name} has no email, so they won't hear about it."
   end
 
   attr :published, :map, required: true

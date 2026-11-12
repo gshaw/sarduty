@@ -794,6 +794,61 @@ defmodule App.DocumentTest do
     end
   end
 
+  describe "signed by (#993)" do
+    @signature ["sig signature top 1in, left 1in, width 2in"]
+
+    test "names who signs, and a signature place prints who did and whom for" do
+      {:ok, doc} = checked(form("signed by team.name", @signature, ["sig = signer.signature"]))
+
+      values = %{"team.name" => "  Coast Range SAR "}
+      assert Document.signed_by(doc, values, "Etc/UTC") == "Coast Range SAR"
+
+      signer = Document.signer(%{name: "Alex Chen", signed_for: "Cameron Ruiz"})
+      output = Document.evaluate(doc, Map.merge(values, signer), "Etc/UTC")
+      assert Document.text(output, "sig") == "/s/ Alex Chen for Cameron Ruiz"
+
+      signer = Document.signer(%{name: "Cameron Ruiz"})
+      output = Document.evaluate(doc, Map.merge(values, signer), "Etc/UTC")
+      assert Document.text(output, "sig") == "/s/ Cameron Ruiz"
+
+      # A draft is never signed.
+      assert doc |> Document.evaluate(values, "Etc/UTC") |> Document.text("sig") == nil
+    end
+
+    test "mistakes say how to fix them" do
+      assert error(form("", @signature, ["sig = signer.signature"])) =~
+               "Write signed by and who signs above, such as signed by task.`Task Leader's Name`, to read signer.signature."
+
+      assert error(form("signed by team.name", @signature, ["sig = signer.name"])) =~
+               "Fill sig with signer.signature: it prints who signed."
+
+      assert error(
+               form("signed by team.name", ["body text top 1in, left 1in, width 2in"], [
+                 "body = signer.signature"
+               ])
+             ) =~
+               "Put signer.signature in a signature place"
+
+      assert error(
+               form("signed by team.name", ["sig signature top 1in, left 1in"], [
+                 "sig = signer.signature"
+               ])
+             ) =~
+               "Give sig a width, or left and right"
+
+      assert error(form("keep signer.name\nsigned by team.name")) =~
+               "Keep a value a report reads: signer.name only prints."
+
+      assert error(form("signed by team.name = 'x'")) =~
+               "Write who signs after signed by: a name, not a condition."
+
+      assert error(form("signed team.name")) =~ "Write signed by and who signs"
+
+      assert error(doc("signed by team.name", "'x'")) =~
+               "Take out signed by: only a form names who signs it."
+    end
+  end
+
   describe "mistakes" do
     test "name the line and say how to fix it" do
       assert error("for member") =~ "Start with document"

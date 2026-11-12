@@ -216,7 +216,8 @@ defmodule Web.Components.PublishedPDF do
   slot :withdraw, doc: "Withdraw, apart on the right"
 
   @doc """
-  The Published section, the same on a letter and a form (#995): when and who, its ID
+  The Published section, the same on a letter and a form (#995): when and who, or who
+  signed it and whom for (#993), its ID
   linking to its verify page, Download PDF, the page's own buttons, and Withdraw apart.
   Nothing in it is yellow: Out of date and Needed to publish are banners under the title.
   """
@@ -227,7 +228,11 @@ defmodule Web.Components.PublishedPDF do
       <div id={"#{@prefix}-current"} class="card">
         <p class="mb-2">
           {Service.Format.datetime_short(@pdf.inserted_at, @team.timezone)}
-          <span :if={@published_by}>by {@published_by}</span>
+          <%= if signed = PublishedPDF.signed_text(@pdf) do %>
+            <span id={"#{@prefix}-signed"}>· {signed}</span>
+          <% else %>
+            <span :if={@published_by}>by {@published_by}</span>
+          <% end %>
         </p>
         <p class="mono mb-2">
           <.a id={"#{@prefix}-verify"} href={PublishedPDF.verify_link(@pdf.code)} external>{PublishedPDF.format_code(
@@ -294,6 +299,12 @@ defmodule Web.Components.PublishedPDF do
             row.pdf.code
           )}</.a>
           <.status_badge :if={row.what == :published} pdf={row.pdf} />
+          <span
+            :if={row.what == :published && PublishedPDF.signed_text(row.pdf)}
+            class="hint block"
+          >
+            {PublishedPDF.signed_text(row.pdf)}
+          </span>
         </:col>
         <:col :let={row} label="By">{row.by}</:col>
       </.table>

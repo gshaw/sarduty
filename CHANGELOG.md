@@ -25,7 +25,10 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
   August 1 of the next year a year's letters are closed: a member may have filed one, so
   it never shows Out of date.
 - Team settings: your mailing address is on General, and who signs letters is on a new
-  Signer tab. The Expense request's signature block is left blank, to sign by hand.
+  Signer tab.
+- EMCR's forms are signed when they're published. The task leader signs them as
+  "/s/ Cameron Ruiz". Another team admin signs in their own name, "/s/ Alex Chen for
+  Cameron Ruiz", and the task leader gets the PDF by email.
 - No more yellow buttons. Send changes on Chores asks first and says what it sends.
 - ⭐ The ID card page shows your card, front and back, under the Wallet buttons. No
   Wallet? Save image puts each side in Photos, and Print ID card prints both at card

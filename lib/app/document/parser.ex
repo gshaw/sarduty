@@ -22,8 +22,8 @@ defmodule App.Document.Parser do
   alias App.Report.Parser
   alias App.Report.Query
 
-  @clauses ~w(document form about for report const ask compute title lock keep needs verify email
-               page places fill expect layout)
+  @clauses ~w(document form about for report const ask compute title lock keep needs signed
+               verify email page places fill expect layout)
   @starts ~w(member year)
   @repeated ~w(report const ask compute verify fill expect)
   @kinds %{
@@ -31,6 +31,7 @@ defmodule App.Document.Parser do
     "image" => :image,
     "flow" => :flow,
     "tick" => :tick,
+    "signature" => :signature,
     "rows" => :rows
   }
   @aligns %{"left" => :left, "right" => :right, "center" => :center}
@@ -328,6 +329,21 @@ defmodule App.Document.Parser do
     case tl(tokens(block)) do
       [] -> fail(n, "Write the settings it needs after needs, such as needs team.signer.")
       tokens -> %{doc | needs: expressions(tokens, n)}
+    end
+  end
+
+  # `signed by task.`Task Leader's Name``: who signs a form (#993), the one current member
+  # with that name.
+  defp read("signed", block, doc, n) do
+    case tl(tokens(block)) do
+      [{:word, by, _} | [_ | _] = tokens] ->
+        if lower(by) != "by", do: signed_head(n)
+        {value, rest} = value(tokens, n)
+        done(rest, "Write one value after signed by, such as task.`Task Leader's Name`.")
+        %{doc | signed_by: value}
+
+      _other ->
+        signed_head(n)
     end
   end
 
@@ -822,7 +838,7 @@ defmodule App.Document.Parser do
         kind = lower(kind)
 
         if not Map.has_key?(@kinds, kind),
-          do: fail(n, "Write text, image, flow, or tick after #{name}, not #{kind}.")
+          do: fail(n, "Write text, image, flow, tick, or signature after #{name}, not #{kind}.")
 
         %{name: lower(name), kind: Map.fetch!(@kinds, kind), line: n}
         |> Map.merge(%{across: false, level_with: nil, fit: false, page: 1})
@@ -1227,6 +1243,9 @@ defmodule App.Document.Parser do
   defp done([token | _], message), do: fail(elem(token, 2), message)
 
   defp lower(word), do: String.downcase(word)
+
+  defp signed_head(n),
+    do: fail(n, "Write signed by and who signs, such as signed by task.`Task Leader's Name`.")
 
   defp fail(line, message), do: throw({:report_error, Error.new(line, message)})
 end

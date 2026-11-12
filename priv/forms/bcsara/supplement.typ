@@ -81,7 +81,7 @@
 #at(left-edge + 4, rows-bottom + 4.5, text(size: 6.5pt)[1. Calculated to a maximum of 4 per 24 hour period.#h(8pt)2. Rates as per current 5.06 Volunteer Reimbursement and Allowance Rate Chart.])
 #at(cols.at(4), note-bottom + 4.5, box(width: (cols.at(5) - cols.at(4) - 6) * 1pt, align(right, text(weight: "bold")[SUBTOTAL])))
 
-// The task leader certifies it, and signs by hand.
+// The task leader certifies it, and signs.
 #at(left-edge, subtotal-bottom + 26, text(style: "italic")[I certify that the people listed above attended this task:])
 #label(left-edge, subtotal-bottom + 64)[Task Leader:]
 #across(114, 297, subtotal-bottom + 65.5)

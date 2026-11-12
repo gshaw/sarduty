@@ -35,6 +35,8 @@ defmodule App.Document do
   - `needs`: the values publishing needs, such as `team.signer`, an activity's field, or
     an answer: a PDF can't be published while one is blank, though a draft prints
     (#995). Needs attention names a letter's blank team settings (#970)
+  - `signed_by`: a form's value that names who signs it, such as its task leader, or nil
+    (#993). The caller finds the member, and gives the `signer` values (`signer/1`)
   - `email`: `%{subject, body, line}`, the email a published PDF goes out with to its
     member, `body` a flow's items; or nil (#970)
   - `verify_code`: where a published PDF's verify code prints on each page, `%{at,
@@ -80,6 +82,7 @@ defmodule App.Document do
             lock: nil,
             keep: [],
             needs: [],
+            signed_by: nil,
             email: nil,
             verify_code: %{at: :bottom_left, show: :both},
             verify_shows: [],
@@ -357,6 +360,36 @@ defmodule App.Document do
   """
   def attached(%{places: places}),
     do: Enum.filter(places, &(Map.get(&1, :copy, 1) == 1 and Markup.attached?(&1)))
+
+  @doc """
+  The name a checked form says signs it, `signed by`'s value from `values`, trimmed, or
+  nil when it has none or it's blank (#993).
+  """
+  def signed_by(%__MODULE__{signed_by: nil}, _values, _timezone), do: nil
+
+  def signed_by(%__MODULE__{signed_by: expr} = doc, values, timezone) do
+    env = Evaluator.prepare(doc, values, timezone)
+    name = Evaluator.value(expr, env)
+    if not Evaluator.blank?(name), do: name |> to_string() |> String.trim()
+  end
+
+  @doc """
+  The `signer` values a form reads once it's signed (#993), from `%{name, email, phone,
+  signed_on, signed_for}`: who signed, from their member record, the day, and the task
+  leader's name when they signed for them, nil when the task leader signed.
+  `signer.signature` prints "/s/ Alex Chen" in a script, then "for Cameron Ruiz" in
+  the form's type. A draft is never signed, so it has none and they're blank.
+  """
+  def signer(%{name: name} = signed) do
+    %{
+      "signer.name" => name,
+      "signer.email" => signed[:email],
+      "signer.phone" => signed[:phone],
+      "signer.signed_on" => signed[:signed_on],
+      "signer.signed_for" => signed[:signed_for],
+      "signer.signature" => {:signature, name, signed[:signed_for]}
+    }
+  end
 
   @doc "A place's text, as `expect` reads it: a flow's lines, a blank line for each space."
   defdelegate text(output, place), to: Evaluator

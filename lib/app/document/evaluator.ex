@@ -52,13 +52,22 @@ defmodule App.Document.Evaluator do
 
   @doc "The values worked out, with what reads them. See App.Document.values/3."
   def prepare(%Document{} = doc, values, timezone) do
-    %{values: values, timezone: timezone, row: nil, consts: consts(doc)}
+    %{values: signature(values), timezone: timezone, row: nil, consts: consts(doc)}
     |> defaults(doc.asks)
     |> rows(doc)
     |> computes(doc.computes)
   end
 
   defp consts(doc), do: Map.new(doc.consts, &{&1.name, &1.values})
+
+  # A signed form's signature, from who signed and whom for, when an expect gives those
+  # alone (#993).
+  defp signature(%{"signer.signature" => _} = values), do: values
+
+  defp signature(%{"signer.name" => name} = values),
+    do: Map.put(values, "signer.signature", {:signature, name, values["signer.signed_for"]})
+
+  defp signature(values), do: values
 
   defp defaults(env, asks),
     do: asks |> Enum.filter(&is_nil(&1.each)) |> Enum.reduce(env, &default/2)
@@ -195,6 +204,7 @@ defmodule App.Document.Evaluator do
   end
 
   defp filled(:condition, value, env), do: holds?(value, env)
+  defp filled(:signature, value, env), do: signed(value(value, env))
   defp filled(:text, value, env), do: text_value(value, env)
 
   defp filled(:image, value, env) do
@@ -275,6 +285,11 @@ defmodule App.Document.Evaluator do
   defp place_value(%{kind: :tick}, value, env), do: holds?(value, env)
   defp place_value(%{kind: :image}, value, env), do: value(value, env)
   defp place_value(%{kind: :text}, value, env), do: text_value(value, env)
+  defp place_value(%{kind: :signature}, value, env), do: signed(value(value, env))
+
+  # A signature with a name, or nil: a draft is never signed.
+  defp signed({:signature, name, _for} = signature), do: if(not blank?(name), do: signature)
+  defp signed(_blank), do: nil
 
   defp item({:space, count, condition, _line}, _across?, env),
     do: if(holds?(condition, env), do: {:space, count})
@@ -314,12 +329,14 @@ defmodule App.Document.Evaluator do
   def text(output, place_name) do
     case Enum.find(output.places, &(&1.name == place_name)) do
       %{kind: :text, value: value} -> value
+      %{kind: :signature, value: value} -> if value, do: to_text(value)
       %{kind: :flow, across: false, value: items} -> flow_text(items)
       _other -> layout_text(Map.get(output, :fills, %{})[place_name])
     end
   end
 
   defp layout_text(text) when is_binary(text), do: text
+  defp layout_text({:signature, _name, _for} = signature), do: to_text(signature)
   defp layout_text(_other), do: nil
 
   defp flow_text(items) do
@@ -367,7 +384,7 @@ defmodule App.Document.Evaluator do
     places =
       output
       |> printed_places()
-      |> Map.merge(Map.reject(output.fills, fn {_name, value} -> is_list(value) end))
+      |> Map.merge(layout_read(output.fills))
       |> Map.merge(%{"title" => output.title, "author" => output.author})
 
     row =
@@ -377,6 +394,16 @@ defmodule App.Document.Evaluator do
       end
 
     %{env | values: Map.merge(env.values, places), row: row}
+  end
+
+  # A layout's values as an expect reads them: a signature as its text, and no list.
+  defp layout_read(fills) do
+    for {name, value} <- fills, not is_list(value), into: %{} do
+      case value do
+        {:signature, _name, _for} -> {name, to_text(value)}
+        value -> {name, value}
+      end
+    end
   end
 
   # Each place on the first copy, outside the rows, by name: a tick as whether it's
@@ -659,6 +686,14 @@ defmodule App.Document.Evaluator do
   defp to_text(list) when is_list(list), do: Enum.map_join(list, ", ", &to_text/1)
   defp to_text(%Date{} = date), do: Format.date_long(date)
   defp to_text(%Decimal{} = n), do: Decimal.to_string(n, :normal)
+
+  defp to_text({:signature, name, signed_for}),
+    do:
+      Enum.join(
+        ["/s/ #{name}" | if(blank?(signed_for), do: [], else: ["for #{signed_for}"])],
+        " "
+      )
+
   defp to_text(value), do: to_string(value)
 
   @doc false

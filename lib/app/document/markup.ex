@@ -91,6 +91,7 @@ defmodule App.Document.Markup do
         ~s|#let values = json("values.json")\n|,
         document("values", values),
         ~s|#set text(font: "Arimo", fallback: false)\n|,
+        signature(),
         verify,
         foreground(files, verify),
         layout
@@ -116,6 +117,7 @@ defmodule App.Document.Markup do
         ~s|#let v = json("values.json")\n|,
         document("v", values),
         ~s|#set text(font: "Arimo", fallback: false)\n|,
+        signature(),
         verify,
         pages,
         attached
@@ -329,9 +331,41 @@ defmodule App.Document.Markup do
         file = "#{name}.#{extension(bytes)}"
         {Map.put(values, name, file), Map.put(files, file, bytes)}
 
+      {name, {:signature, _name, _for} = signature}, {values, files} ->
+        {Map.put(values, name, signature_value(signature)), files}
+
       {name, value}, {values, files} ->
         {Map.put(values, name, value), files}
     end)
+  end
+
+  # A typed signature, as Typst's `signature` reads it (#993): "/s/" and who signed, in
+  # the script, then "for" and whom they signed for, in the form's type, or none.
+  defp signature_value({:signature, name, signed_for}) do
+    %{
+      "script" => "/s/ #{name}",
+      "plain" => if(signed_for not in [nil, ""], do: "for #{signed_for}")
+    }
+  end
+
+  # `signature(value, size: 9pt)` prints a signature on one line, shrunk until it fits
+  # the room it's in: "/s/ Alex Chen" in Dancing Script, bold, a third bigger than the
+  # form's type, then "for Cameron Ruiz" in it (#993). A signature place calls it, and
+  # so can a layout, with a fill of signer.signature. A letter the script lacks prints
+  # in Arimo, as a letter's signature does (#995).
+  defp signature do
+    """
+    #let signature(value, size: 9pt) = if value != none {
+      let body(s) = {
+        text(font: ("Dancing Script", "Arimo"), weight: 700, size: s * 4 / 3, fill: black, value.script)
+        if value.plain != none { h(s * 0.3) + text(size: s, value.plain) }
+      }
+      layout(room => {
+        let wide = measure(body(size)).width
+        body(size * calc.min(1, room.width / wide * 0.999))
+      })
+    }
+    """
   end
 
   @doc """
@@ -459,6 +493,20 @@ defmodule App.Document.Markup do
   end
 
   defp place(%{kind: :tick}, acc), do: {"", acc}
+
+  defp place(%{kind: :signature, value: nil}, acc), do: {"", acc}
+
+  defp place(%{kind: :signature} = place, {files, values}) do
+    markup = [
+      "#place(#{at(place)}, block(width: #{width(place)}, {\n",
+      "  set align(#{align(place)})\n",
+      "  set text(size: #{pt(size(place))}, top-edge: #{pt(ascent(place))}, bottom-edge: \"baseline\")\n",
+      ~s|  signature(v.at("#{key(place)}"), size: #{pt(size(place))})\n|,
+      "}))\n"
+    ]
+
+    {markup, {files, Map.put(values, key(place), signature_value(place.value))}}
+  end
 
   defp place(%{kind: :text, value: text}, acc) when text in [nil, ""], do: {"", acc}
 

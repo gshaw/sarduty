@@ -314,8 +314,9 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert FormAnswer.for_activity(kayakers)["misc"] == "40"
     end
 
-    # Its signature block is left to sign by hand, draft or published (#995).
-    test "prints no signature, draft or published", ctx do
+    # Never the team's letter signer (#995): whoever publishes it signs it, and a draft
+    # is never signed (#993).
+    test "is signed when it's published, never as a draft", ctx do
       %{cast: cast, request: request} = ctx
       kayakers = MockupSeed.activity(cast, "Overdue kayakers")
       team = Repo.reload!(cast.team)
@@ -330,11 +331,13 @@ defmodule Web.ActivityOrgFormLiveTest do
         PublishDocument.call(team, request, kayakers, cast.alex, nil, now)
 
       published = PublishedPDF.attachment(pdf).content
-      # The draft's one picture is its DRAFT mark; the published one has none, and
-      # neither is signed in a script.
+      # The draft's one picture is its DRAFT mark; the published one has none, and only
+      # it is signed in a script.
       assert images(draft) == 1
       assert images(published) == 0
-      refute published =~ "DancingScript"
+      refute draft =~ "DancingScript"
+      assert published =~ "DancingScript"
+      assert pdf.signed_by == "Alex Chen"
     end
   end
 
@@ -650,6 +653,138 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert_raise Web.Status.NotFound, fn ->
         build_conn() |> log_in_user(cast.cameron) |> get(~p"/teams/coastrange/pdfs/#{pdf.id}")
       end
+    end
+  end
+
+  describe "signing (#993)" do
+    import Swoosh.TestAssertions
+
+    # The test form, signed by its Task leader answer, on a line under it.
+    setup %{form: form} do
+      text =
+        @text
+        |> String.replace("\nverify shows", "signed by :leader\n\nverify shows")
+        |> String.replace(
+          "  err         tick",
+          "  signed      signature top 362pt, left 164pt, width 232pt, size 10pt\n  err         tick"
+        )
+        |> String.replace("  err = :err", "  signed = signer.signature\n  err = :err")
+
+      %{form: form |> Ecto.Changeset.change(text: text, state: :on) |> Repo.update!()}
+    end
+
+    defp preview(lv, leader) do
+      lv |> form("#org-form-answers", answers: %{"leader" => leader}) |> render_change()
+      lv |> element("#org-form-publish") |> render_click()
+      render_async(lv, 5_000)
+    end
+
+    test "the task leader signs by publishing", %{cast: cast, hiker: hiker, form: form} do
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      preview(lv, "Alex Chen")
+
+      assert has_element?(lv, "#publish-signature", "/s/ Alex Chen")
+      assert has_element?(lv, "#publish-confirm", "Sign and publish")
+      refute has_element?(lv, "#publish-confirm[data-confirm]")
+
+      lv |> element("#publish-confirm") |> render_click()
+      pdf = Repo.one!(PublishedPDF)
+      assert {pdf.signed_by, pdf.signed_for} == {"Alex Chen", nil}
+      assert PublishedPDF.attachment(pdf).content =~ "DancingScript"
+      assert has_element?(lv, "#org-form-signed", "Signed by Alex Chen")
+      assert_no_email_sent()
+    end
+
+    test "another team admin signs in their own name, and the task leader gets the PDF", ctx do
+      %{cast: cast, hiker: hiker, form: form} = ctx
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      # The one member with that name, whatever its case and spaces.
+      preview(lv, " cameron  RUIZ ")
+
+      assert has_element?(
+               lv,
+               "#publish-signature",
+               "Cameron Ruiz, the task leader, signs this form."
+             )
+
+      assert has_element?(lv, "#publish-confirm", "Sign for Cameron Ruiz")
+
+      assert has_element?(
+               lv,
+               ~s(#publish-confirm[data-confirm="Sign Task report #{hiker.ref_id} yourself? It will read /s/ Alex Chen for Cameron Ruiz. Cameron Ruiz gets an email with the PDF."])
+             )
+
+      lv |> element("#publish-confirm") |> render_click()
+      pdf = Repo.one!(PublishedPDF)
+      assert {pdf.signed_by, pdf.signed_for} == {"Alex Chen", "Cameron Ruiz"}
+      assert has_element?(lv, "#org-form-signed", "Signed by Alex Chen for Cameron Ruiz")
+
+      assert has_element?(
+               lv,
+               "#org-form-history-published-#{pdf.id}",
+               "Signed by Alex Chen for Cameron Ruiz"
+             )
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Alex Chen signed Task report #{hiker.ref_id} for you"
+
+        assert email.text_body =~
+                 "Alex Chen signed Task report #{hiker.ref_id}, Missing hiker, for you on"
+
+        assert [%{filename: "Task_report_" <> _}] = email.attachments
+      end)
+    end
+
+    test "with no member by that name, it's for the name as written and nobody hears", ctx do
+      %{cast: cast, hiker: hiker, form: form} = ctx
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      lv |> form("#org-form-answers", answers: %{"leader" => "Ave Chen"}) |> render_change()
+
+      assert has_element?(lv, "#org-form-leader", "No member is named Ave Chen")
+      assert has_element?(lv, ~s(#org-form-leader-fix[href="#org-form-questions"]))
+
+      preview(lv, "Ave Chen")
+
+      assert has_element?(
+               lv,
+               ~s(#publish-confirm[data-confirm$="No member is named Ave Chen, so nobody gets an email."])
+             )
+
+      lv |> element("#publish-confirm") |> render_click()
+      assert %{signed_by: "Alex Chen", signed_for: "Ave Chen"} = Repo.one!(PublishedPDF)
+      assert_no_email_sent()
+    end
+
+    test "a task leader with no email won't hear about it", ctx do
+      %{cast: cast, hiker: hiker, form: form} = ctx
+      cast["Cameron Ruiz"] |> Ecto.Changeset.change(email: nil) |> Repo.update!()
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      preview(lv, "Cameron Ruiz")
+
+      assert has_element?(
+               lv,
+               ~s(#publish-confirm[data-confirm$="Cameron Ruiz has no email, so they won't hear about it."])
+             )
+    end
+
+    test "a task leader changed since the preview refuses Publish", ctx do
+      %{cast: cast, hiker: hiker, form: form} = ctx
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      preview(lv, "Cameron Ruiz")
+
+      FormAnswer
+      |> where(activity_id: ^hiker.id, name: "leader")
+      |> Repo.update_all(set: [value: "Harper Nguyen"])
+
+      lv |> element("#publish-confirm") |> render_click()
+
+      assert has_element?(
+               lv,
+               "#flash-error",
+               "The task leader changed. Go back and publish again."
+             )
+
+      refute Repo.exists?(PublishedPDF)
     end
   end
 end

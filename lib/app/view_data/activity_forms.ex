@@ -16,6 +16,7 @@ defmodule App.ViewData.ActivityForms do
   alias App.Operation.PrintForm
   alias App.Operation.PublishDocument
   alias App.Operation.ReadDocument
+  alias App.Operation.SignForm
   alias App.Report.Context
 
   @doc """
@@ -105,6 +106,29 @@ defmodule App.ViewData.ActivityForms do
     |> Document.evaluate(Map.merge(values, readable(doc, typed)), timezone)
     |> Document.attached()
     |> Enum.map(&Map.take(&1, [:name, :more, :lines]))
+  end
+
+  @doc """
+  The task leader a form that says `signed by` names with the answers `typed` (#993):
+  App.Operation.SignForm.leader/4's `%{name, members}`, and `field`, the value it reads
+  as `read` lists it, or an answer, for the page that fixes it. Nil for a form nobody
+  signs. `page` is `load/4`'s.
+  """
+  def leader(%{doc: %{signed_by: nil}}, _typed, _team, _now), do: nil
+
+  def leader(%{doc: doc, values: values, read: read, timezone: timezone}, typed, team, now) do
+    name = Document.signed_by(doc, Map.merge(values, readable(doc, typed)), timezone)
+
+    field =
+      case doc.signed_by do
+        {:value, ask, _line} ->
+          %{from: :answer, label: Enum.find_value(doc.asks, ask, &(&1.name == ask && &1.label))}
+
+        expr ->
+          Enum.find(read, &(&1.name == Evaluator.name(expr)))
+      end
+
+    name |> SignForm.leader(team, now) |> Map.put(:field, field)
   end
 
   defp shown_on(doc, context, activity) do
