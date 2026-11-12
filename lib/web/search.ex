@@ -45,6 +45,8 @@ defmodule Web.Search do
       Web.ReportLive => "Reports lists every report on one page.",
       Web.GroupRuleLive => "A group rule: find the group, then its rule.",
       Web.MemberPhotoLive => "A photo waiting for a check: Photos lists them under Waiting.",
+      Web.ActivityPhotoLive =>
+        "A photo has no name to search by: Photos and its activity's Photos tab list it.",
       Web.OutboxLive => "Only a demo has an Outbox, and its banner links it."
     }
 

@@ -39,6 +39,33 @@
   .activity-photo-tile { position: relative; aspect-ratio: 3 / 2; margin-bottom: var(--sp-2); overflow: hidden; background: var(--surface-alt); border-radius: var(--radius); }
   .activity-photo-tile > a { display: block; height: 100%; }
   .activity-photo-tile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  /* A photo's star count (#1033), on its corner: a dark chip that shows on any photo.
+     The star is filled and amber when the person looking gave one. */
+  .activity-photo-stars { position: absolute; right: var(--sp-2); bottom: var(--sp-2); display: inline-flex; gap: var(--sp-1); align-items: center; padding: 0 var(--sp-2); border-radius: var(--radius); background: var(--nav); color: var(--on-fill); font-size: var(--fs-sm); line-height: var(--lh-md); font-weight: 600; pointer-events: none; }
+  .activity-photo-stars.is-starred > .icon { color: var(--warning); }
+
+  /* One photo, on its page (#1033): all of it, as tall as most of the screen, then
+     Star with its count. */
+  .activity-photo-show { display: block; background: var(--surface-alt); border-radius: var(--radius); overflow: hidden; }
+  .activity-photo-show > img { display: block; width: 100%; height: auto; max-height: 75vh; object-fit: contain; }
+  .activity-photo-star { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; margin-top: var(--sp-4); }
+  .activity-photo-star-count { margin-left: var(--sp-1); padding: 0 var(--sp-2); border-radius: var(--radius); background: var(--surface-alt); color: var(--text); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+
+  /* An activity's Overview (#1033): the map with the photos a team admin featured
+     beside it, 2 at most, one over the other and as tall as the map. On a phone they
+     sit under it, side by side. Then the link to all the photos, and Add photos. */
+  .activity-featured { display: grid; gap: var(--sp-2); }
+  .activity-featured > ul { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+  .activity-featured .activity-photo-tile { margin-bottom: 0; }
+  @media (width >= 40rem) {
+    .activity-featured.has-map { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+    /* The map alone sets the row's height: the photos fill it, whatever their shape. */
+    .activity-featured.has-map > ul { grid-auto-flow: row; grid-auto-rows: minmax(0, 1fr); contain: size; }
+    .activity-featured.has-map .activity-photo-tile { height: 100%; aspect-ratio: auto; }
+    .activity-featured:not(.has-map) > ul { max-width: 40rem; }
+  }
+  .activity-featured-links { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); align-items: center; justify-content: space-between; }
+
   /* A waiting photo's check box, on its corner, ringed so it shows on any photo. */
   .activity-photo-tile > input[type="checkbox"] { position: absolute; top: var(--sp-2); left: var(--sp-2); box-shadow: 0 0 0 2px var(--bg); }
   /* What is checked, then Accept and Delete, over the waiting tiles. */

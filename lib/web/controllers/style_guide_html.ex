@@ -258,6 +258,8 @@ defmodule Web.StyleGuideHTML do
       {"x", "Close a toast, remove a chip, close the phone menu"},
       {"circle-check", "Success banners, toasts, and bands"},
       {"check", "The example that works, in Add a photo's guide"},
+      {"star", "A photo's stars: before the count on its tile, and on the Star button"},
+      {"star-filled", "A photo you starred, in the star's place"},
       {"info", "Info banners and bands"},
       {"triangle-alert", "Warning banners, warning text, and bands"},
       {"circle-alert", "Danger banners, error toasts, and bands"},

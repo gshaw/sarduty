@@ -34,7 +34,10 @@ enforces the top-level list and the held URLs.
   is `/photos/members/ask`, with `?member=<id>` for one member (#1030).
 - **An activity's photos are a tab, `/activities/:id/photos`** (#1032), and adding goes
   under it, `/activities/:id/photos/new`. One photo's file is `/photos/:id/file`, with
-  `?size=tile`, `show`, or `original`.
+  `?size=tile`, `show`, or `original`. An accepted photo's page is `/photos/:id`
+  (#1033), and `/photos/new` is Add photos from Photos, which asks which activity.
+  Photos' views are `/photos?view=`: `best` with `&year=`, `activities`, `stars`,
+  `yours`, `members`, `no-photo`, and `waiting`. Without it, Photos picks the view.
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
   (`/teams/:subdomain/settings`, `/settings/team-admins`). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.

@@ -89,6 +89,10 @@ defmodule Web.RouterTest do
     "/teams/:subdomain/activities/:id/photos",
     "/teams/:subdomain/activities/:id/photos/new",
     "/teams/:subdomain/photos/:id/file",
+    # An accepted photo's page, where everyone stars it, and Add photos from Photos,
+    # which asks which activity (#1033).
+    "/teams/:subdomain/photos/:id",
+    "/teams/:subdomain/photos/new",
     "/teams/:subdomain/take-attendance",
     "/teams/:subdomain/whiteboard",
     "/teams/:subdomain/help",

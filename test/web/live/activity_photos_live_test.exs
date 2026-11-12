@@ -5,6 +5,7 @@ defmodule Web.ActivityPhotosLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Operation.StarActivityPhoto
   alias App.Repo
 
   # cspell:ignore Noor -- Noor Aziz, of the Coast Range SAR cast
@@ -368,6 +369,196 @@ defmodule Web.ActivityPhotosLiveTest do
                "viewing as Cameron Ruiz, so nothing is saved"
 
       assert status(own) == :waiting
+    end
+  end
+
+  # Stars and featured photos (#1033).
+  describe "stars and featured photos" do
+    defp accepted(ctx, attrs \\ %{}),
+      do:
+        activity_photo_fixture(
+          ctx.activity,
+          Map.merge(%{member_id: ctx.cam.id, status: :accepted}, attrs)
+        )
+
+    defp order(lv) do
+      lv
+      |> render()
+      |> Floki.parse_fragment!()
+      |> Floki.find("#photos-grid > li")
+      |> Enum.flat_map(&Floki.attribute(&1, "id"))
+    end
+
+    test "the tab has the most stars first, each with its count, and yours marked", ctx do
+      %{conn: conn, team: team, activity: activity, admin: admin} = ctx
+      old = accepted(ctx, %{inserted_at: ~U[2026-11-01 20:00:00.000000Z]})
+      new = accepted(ctx, %{inserted_at: ~U[2026-11-03 20:00:00.000000Z]})
+      liked = accepted(ctx, %{inserted_at: ~U[2026-11-02 20:00:00.000000Z]})
+      cam_user = user_fixture(%{email: ctx.cam.email})
+      {:ok, true} = StarActivityPhoto.call(liked, cam_user)
+      {:ok, true} = StarActivityPhoto.call(liked, admin)
+      {:ok, true} = StarActivityPhoto.call(old, admin)
+
+      {:ok, lv, _html} = conn |> log_in_user(cam_user) |> live(tab(team, activity))
+
+      # 2 stars, then 1, then none.
+      assert order(lv) == ["photo-#{liked.id}", "photo-#{old.id}", "photo-#{new.id}"]
+      assert has_element?(lv, "#photo-#{liked.id}-tile-stars.is-starred", "2")
+      assert has_element?(lv, "#photo-#{liked.id}-tile-stars .icon-star-filled")
+      assert has_element?(lv, "#photo-#{old.id}-tile-stars:not(.is-starred)", "1")
+      assert has_element?(lv, "#photo-#{new.id}-tile-stars:not(.is-starred)", "0")
+
+      # A tile opens the photo's page.
+      page = ~p"/teams/#{team}/photos/#{liked.id}"
+      assert has_element?(lv, ~s|#photo-#{liked.id}-tile a[href="#{page}"]|)
+    end
+
+    test "a member's own waiting photo has no stars and no page", ctx do
+      own = activity_photo_fixture(ctx.activity, %{member_id: ctx.cam.id})
+
+      {:ok, lv, _html} = ctx.conn |> as(ctx.cam) |> live(tab(ctx.team, ctx.activity))
+
+      refute has_element?(lv, "#photo-#{own.id}-tile-stars")
+      assert has_element?(lv, ~s|#photo-#{own.id}-tile a[target=_blank]|)
+      refute has_element?(lv, ~s|a[href="#{~p"/teams/#{ctx.team}/photos/#{own.id}"}"]|)
+    end
+
+    test "a team admin features up to 2 from their tiles, and stops featuring one", ctx do
+      %{conn: conn, team: team, activity: activity, admin: admin} = ctx
+      [first, second, third] = for _ <- 1..3, do: accepted(ctx)
+
+      {:ok, lv, _html} = conn |> log_in_user(admin) |> live(tab(team, activity))
+
+      assert has_element?(lv, "#photo-#{first.id}-feature", "Feature")
+      refute has_element?(lv, "#photo-#{first.id}-featured")
+
+      assert lv |> element("#photo-#{first.id}-feature") |> render_click() =~ "Photo featured."
+      lv |> element("#photo-#{second.id}-feature") |> render_click()
+
+      assert has_element?(lv, "#photo-#{first.id}-featured", "Featured")
+      assert has_element?(lv, "#photo-#{first.id}-stop-featuring", "Stop featuring")
+      refute has_element?(lv, "#photo-#{first.id}-feature")
+
+      # A third is refused, and the toast says why.
+      lv |> element("#photo-#{third.id}-feature") |> render_click()
+      assert has_element?(lv, ".toast-error .toast-title", "2 photos are featured already.")
+      assert has_element?(lv, ".toast-error .toast-sub", "Stop featuring one first.")
+      refute Repo.reload(third).featured_at
+
+      assert lv |> element("#photo-#{first.id}-stop-featuring") |> render_click() =~
+               "Photo no longer featured."
+
+      lv |> element("#photo-#{third.id}-feature") |> render_click()
+      assert Repo.reload(third).featured_at
+      refute Repo.reload(first).featured_at
+    end
+
+    test "a waiting photo has no Feature, and a photo of another activity is never featured",
+         ctx do
+      waiting = activity_photo_fixture(ctx.activity, %{member_id: ctx.cam.id})
+      elsewhere = activity_photo_fixture(activity_fixture(ctx.team), %{status: :accepted})
+
+      {:ok, lv, _html} =
+        ctx.conn |> log_in_user(ctx.admin) |> live(tab(ctx.team, ctx.activity))
+
+      refute has_element?(lv, "#photo-#{waiting.id}-feature")
+      render_hook(lv, "feature-photo", %{"id" => to_string(elsewhere.id)})
+      render_hook(lv, "feature-photo", %{"id" => to_string(waiting.id)})
+
+      refute Repo.reload(elsewhere).featured_at
+      refute Repo.reload(waiting).featured_at
+    end
+
+    test "a member sees Featured, and features nothing", ctx do
+      featured = accepted(ctx, %{featured_at: ~U[2026-11-04 20:00:00.000000Z]})
+      plain = accepted(ctx)
+
+      {:ok, lv, _html} = ctx.conn |> as(ctx.noor) |> live(tab(ctx.team, ctx.activity))
+
+      assert has_element?(lv, "#photo-#{featured.id}-featured", "Featured")
+      refute has_element?(lv, "#photo-#{featured.id}-stop-featuring")
+      refute has_element?(lv, "#photo-#{plain.id}-feature")
+
+      render_hook(lv, "feature-photo", %{"id" => to_string(plain.id)})
+      render_hook(lv, "stop-featuring-photo", %{"id" => to_string(featured.id)})
+
+      refute Repo.reload(plain).featured_at
+      assert Repo.reload(featured).featured_at
+    end
+
+    test "the Overview shows the featured photos, a link to them all, and Add photos", ctx do
+      %{team: team, activity: activity} = ctx
+      overview = ~p"/teams/#{team}/activities/#{activity.id}"
+      second = accepted(ctx, %{featured_at: ~U[2026-11-04 21:00:00.000000Z]})
+
+      first =
+        accepted(ctx, %{
+          featured_at: ~U[2026-11-04 20:00:00.000000Z],
+          caption: "Throw bag practice at Cedar Creek."
+        })
+
+      plain = accepted(ctx)
+      # A waiting photo is not counted.
+      activity_photo_fixture(activity, %{member_id: ctx.cam.id})
+
+      # Cameron attended, so they add.
+      {:ok, lv, _html} = ctx.conn |> as(ctx.cam) |> live(overview)
+
+      ids =
+        lv
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.find("#activity-featured > li")
+        |> Enum.flat_map(&Floki.attribute(&1, "id"))
+
+      assert ids == ["featured-#{first.id}", "featured-#{second.id}"]
+      refute has_element?(lv, "#featured-#{plain.id}")
+      page = ~p"/teams/#{team}/photos/#{first.id}"
+
+      assert has_element?(
+               lv,
+               ~s|#featured-#{first.id} a[href="#{page}"] img[alt="Throw bag practice at Cedar Creek."]|
+             )
+
+      assert has_element?(
+               lv,
+               ~s|#activity-photos-all[href="#{tab(team, activity)}"]|,
+               "All 3 photos"
+             )
+
+      assert has_element?(
+               lv,
+               ~s|#activity-photos-add[href="#{add(team, activity)}"]|,
+               "Add photos"
+             )
+
+      # Noor did not attend: the photos and the link, and no button.
+      {:ok, lv, _html} = ctx.conn |> as(ctx.noor) |> live(overview)
+      assert has_element?(lv, "#featured-#{first.id}")
+      assert has_element?(lv, "#activity-photos-all", "All 3 photos")
+      refute has_element?(lv, "#activity-photos-add")
+    end
+
+    test "an Overview with no photos has Add photos alone, for whoever may add", ctx do
+      overview = ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}"
+
+      {:ok, lv, _html} = ctx.conn |> as(ctx.cam) |> live(overview)
+      refute has_element?(lv, "#activity-featured")
+      refute has_element?(lv, "#activity-photos-all")
+      assert has_element?(lv, "#activity-photos-add", "Add photos")
+
+      {:ok, lv, _html} = ctx.conn |> as(ctx.noor) |> live(overview)
+      refute has_element?(lv, "#activity-photos-row")
+
+      # An incident shows none of it.
+      incident = activity_fixture(ctx.team, %{activity_kind: "incident"})
+
+      {:ok, lv, _html} =
+        ctx.conn
+        |> log_in_user(ctx.admin)
+        |> live(~p"/teams/#{ctx.team}/activities/#{incident.id}")
+
+      refute has_element?(lv, "#activity-photos-row")
     end
   end
 end

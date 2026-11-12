@@ -58,6 +58,9 @@ defmodule Web.DeleteConfirm do
     end
   end
 
+  @doc "An activity photo (#1033): the row, its stars, and its files go, and nothing brings them back."
+  def photo, do: simple("Delete this photo? It is gone for good.", "Delete photo")
+
   @doc "A template is SAR Duty's own, so deleting it changes nothing in D4H."
   def template(template) do
     simple(

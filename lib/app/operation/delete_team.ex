@@ -35,7 +35,7 @@ defmodule App.Operation.DeleteTeam do
 
   @snapshot_days 7
 
-  @team_tables ~w(activities activity_photos activity_updates agent_connections attendance_scans
+  @team_tables ~w(activities activity_photo_stars activity_photos activity_updates agent_connections attendance_scans
                   attention_snoozes certificates change_set_rows change_sets chore_categories
                   chore_events chores custom_fields custom_field_bundles d4h_changes demo_teams
                   endorsements equipment_items
@@ -80,9 +80,10 @@ defmodule App.Operation.DeleteTeam do
   @doc false
   def child_tables, do: @child_tables
 
-  # Tables whose rows name files in the file store (#1032). The files go with the team
-  # and no copy keeps them, so App.Operation.RestoreTeam leaves these rows out.
-  @file_tables ~w(activity_photos)
+  # Tables whose rows name files in the file store (#1032), and the rows that hang off
+  # them, such as a photo's stars (#1033). The files go with the team and no copy keeps
+  # them, so App.Operation.RestoreTeam leaves these rows out.
+  @file_tables ~w(activity_photos activity_photo_stars)
 
   @doc false
   def file_tables, do: @file_tables

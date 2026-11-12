@@ -105,7 +105,7 @@ defmodule Web.MemberPhotoLive do
 
     ~H"""
     <.breadcrumbs>
-      <:item label="Photos" path={PhotoCollectionLive.view_path(@current_team, :members)} />
+      <:item label="Photos" path={PhotoCollectionLive.path(@current_team)} />
       <:item label={@page_title} />
     </.breadcrumbs>
     <h1 class="title">Photo from {@photo.member.name}</h1>
