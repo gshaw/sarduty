@@ -796,7 +796,7 @@ defmodule Web.ActivityLive do
         >{row.form.name}</.a>
         <div :if={row.form.about} class="hint">{row.form.about}</div>
       </:col>
-      <:col :let={row} label="State">
+      <:col :let={row} label="State" class="whitespace-nowrap">
         <.form_state id={"activity-form-#{row.form.id}-state"} row={row} timezone={@timezone} />
       </:col>
       <:col :let={row} label="PDF" class="w-px whitespace-nowrap">
