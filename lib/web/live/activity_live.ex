@@ -95,12 +95,23 @@ defmodule Web.ActivityLive do
 
   # The Photos tab (#1032): on an exercise or an event, while the team has activity
   # photos, and not found anywhere else. It counts the photos that wait, for team admins.
+  # Overview shows the photos a team admin featured (#1033), how many the team sees, and
+  # Add photos for whoever may add.
   defp assign_photos(socket) do
-    %{current_team: team, activity: activity, team_admin?: team_admin?} = socket.assigns
+    %{current_team: team, activity: activity, team_admin?: team_admin?, now: now} = socket.assigns
     photos? = AddActivityPhotos.available?(team) and Activity.takes_photos?(activity)
     if socket.assigns.live_action == :photos && !photos?, do: raise(Web.Status.NotFound)
     waiting = if photos? and team_admin?, do: ActivityPhoto.count_waiting_on(activity), else: 0
-    assign(socket, photos?: photos?, photos_waiting: waiting)
+    overview? = photos? and socket.assigns.tab == :overview
+    who = %{team_admin?: team_admin?, member: socket.assigns.replier}
+
+    assign(socket,
+      photos?: photos?,
+      photos_waiting: waiting,
+      may_add_photos?: photos? and AddActivityPhotos.may_add?(team, activity, who, now),
+      featured: if(overview?, do: ActivityPhoto.featured(activity), else: []),
+      photo_count: if(overview?, do: ActivityPhoto.count_accepted_on(activity), else: 0)
+    )
   end
 
   # The Forms tab (#1018): an organization's forms it shows on, for team admins only
@@ -459,6 +470,9 @@ defmodule Web.ActivityLive do
           activity={@activity}
           hours_tags={@hours_tags}
           map={@map}
+          featured={@featured}
+          photo_count={@photo_count}
+          may_add_photos?={@may_add_photos?}
         />
         <.live_component
           :if={@tab == :travel and !@coming? and !@activity.deleted_at}
@@ -725,15 +739,53 @@ defmodule Web.ActivityLive do
   attr :activity, :map, required: true
   attr :hours_tags, :map, required: true
   attr :map, :map, default: nil
+  attr :featured, :list, default: [], doc: "the photos a team admin featured, 2 at most"
+  attr :photo_count, :integer, default: 0, doc: "how many accepted photos it has"
+  attr :may_add_photos?, :boolean, default: false
 
-  # Overview: the tags, the map, and the description.
+  # Overview: the tags, the map with the featured photos beside it (#1033), a link to
+  # all the photos with Add photos, and the description.
   def main_content(assigns) do
     ~H"""
     <div>
       <div class="mb-4"><.activity_tags activity={@activity} hours_tags={@hours_tags} /></div>
 
-      <div :if={@map} class="mb-4">
-        <.activity_map id="activity-map" map={@map} label="Map of activity" />
+      <div
+        :if={@map || @featured != []}
+        class={["activity-featured mb-4", @map && @featured != [] && "has-map"]}
+      >
+        <.activity_map :if={@map} id="activity-map" map={@map} label="Map of activity" />
+        <ul :if={@featured != []} id="activity-featured">
+          <li :for={photo <- @featured} id={"featured-#{photo.id}"}>
+            <Web.ActivityPhoto.tile
+              id={"featured-#{photo.id}-tile"}
+              photo={photo}
+              team={@activity.team}
+              alt={photo.caption || "Photo from #{@activity.title}"}
+            />
+          </li>
+        </ul>
+      </div>
+
+      <div
+        :if={@photo_count > 0 or @may_add_photos?}
+        id="activity-photos-row"
+        class="activity-featured-links mb-4"
+      >
+        <p class="action mb-0">
+          <.a
+            :if={@photo_count > 0}
+            id="activity-photos-all"
+            navigate={Web.ActivityPhoto.tab_path(@activity.team, @activity.id)}
+          >{Service.Format.count(@photo_count, one: "%d photo", many: "All %d photos")}</.a>
+        </p>
+        <.button
+          :if={@may_add_photos?}
+          id="activity-photos-add"
+          navigate={Web.ActivityPhoto.add_path(@activity.team, @activity.id)}
+        >
+          Add photos
+        </.button>
       </div>
 
       <div class="mb-4">

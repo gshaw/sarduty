@@ -14,6 +14,8 @@ defmodule App.Operation.AddActivityPhotos do
   `check/3` the one rule for who may add. Pages ask both, and `call/6` asks again.
   """
 
+  import Ecto.Query
+
   alias App.Accounts.User
   alias App.Adapter.FileStore
   alias App.Model.Activity
@@ -58,6 +60,51 @@ defmodule App.Operation.AddActivityPhotos do
   """
   def may_add?(%Team{} = team, %Activity{} = activity, who, now),
     do: available?(team) and check(activity, attendance(activity, who, now), now) == :ok
+
+  @doc """
+  The activities the person may add photos to at `now`, newest first: what Photos' Add
+  photos asks them to pick from (#1033). For a member, the exercises and events they
+  attended; for a team admin, every one that has started. `who` is as may_add?/4 takes
+  it. Each one passes `check/3`, the same rule the Add photos page asks.
+  """
+  def addable(%Team{} = team, who, %DateTime{} = now) do
+    if available?(team) do
+      attendance = %{team_admin?: who.team_admin?, attended?: not who.team_admin?}
+
+      team
+      |> started(who, now)
+      |> Repo.all()
+      |> Activity.put_logged_minutes(team.id)
+      |> Enum.filter(&(check(&1, attendance, now) == :ok))
+    else
+      []
+    end
+  end
+
+  # The team's exercises and events that have started: all of them for a team admin,
+  # and for a member the ones they attended. Nobody else has any.
+  defp started(%Team{id: team_id}, who, now) do
+    Activity
+    |> where([a], a.team_id == ^team_id and a.activity_kind in ^Activity.photo_kinds())
+    |> where([a], a.started_at <= ^now)
+    |> Activity.not_deleted()
+    |> attended_by(who, now)
+    |> order_by([a], desc: a.started_at, desc: a.id)
+  end
+
+  defp attended_by(query, %{team_admin?: true}, _now), do: query
+
+  defp attended_by(query, %{member: %Member{id: member_id}}, now) do
+    attended =
+      Attendance
+      |> where([r], r.member_id == ^member_id)
+      |> Attendance.attended(now)
+      |> select([r], r.activity_id)
+
+    where(query, [a], a.id in subquery(attended))
+  end
+
+  defp attended_by(query, _nobody, _now), do: where(query, [a], false)
 
   defp attendance(activity, %{team_admin?: team_admin?} = who, now) do
     attended? =

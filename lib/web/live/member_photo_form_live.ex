@@ -148,7 +148,7 @@ defmodule Web.MemberPhotoFormLive do
       member: member,
       members: nil,
       declined: MemberPhoto.declined_for_member(member),
-      back: PhotoCollectionLive.view_path(team, :members)
+      back: PhotoCollectionLive.view_path(team, :yours)
     )
   end
 
@@ -276,7 +276,7 @@ defmodule Web.MemberPhotoFormLive do
 
     socket
     |> put_flash(:info, "Photo added. A team admin checks it.")
-    |> push_navigate(to: PhotoCollectionLive.view_path(team, :members))
+    |> push_navigate(to: PhotoCollectionLive.view_path(team, :yours))
   end
 
   # A team admin's goes as the switch shows it: nothing waits, so nothing else is kept.
@@ -360,7 +360,7 @@ defmodule Web.MemberPhotoFormLive do
 
     ~H"""
     <.breadcrumbs :if={!@token}>
-      <:item label="Photos" path={PhotoCollectionLive.view_path(@team, :members)} />
+      <:item label="Photos" path={PhotoCollectionLive.path(@team)} />
       <:item label="Add a photo" />
     </.breadcrumbs>
     <p :if={@token} id="photo-team" class="hint mb-1">{@team.name}</p>

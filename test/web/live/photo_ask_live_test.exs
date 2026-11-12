@@ -147,7 +147,10 @@ defmodule Web.PhotoAskLiveTest do
       assert has_element?(lv, "#left-out-no_email", "No email: Jordan Lee.")
       assert has_element?(lv, "#left-out-asked-0", "Asked Nov 9: Sam Rivera.")
       assert has_element?(lv, "#ask-send", "Ask 2 members")
-      assert has_element?(lv, ~s|#ask-cancel[href="#{~p"/teams/#{ctx.team}/photos"}"]|)
+      assert has_element?(
+               lv,
+               ~s|#ask-cancel[href="#{~p"/teams/#{ctx.team}/photos?view=members"}"]|
+             )
     end
 
     test "sending asks each of them, and Photos shows the date under each", ctx do
@@ -157,7 +160,7 @@ defmodule Web.PhotoAskLiveTest do
         lv
         |> form("#ask-form")
         |> render_submit()
-        |> follow_redirect(ctx.conn, ~p"/teams/#{ctx.team}/photos")
+        |> follow_redirect(ctx.conn, ~p"/teams/#{ctx.team}/photos?view=members")
 
       assert render(photos) =~ "3 members asked."
 

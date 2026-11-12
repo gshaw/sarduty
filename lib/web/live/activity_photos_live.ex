@@ -5,9 +5,14 @@ defmodule Web.ActivityPhotosLive do
   the page around it, as it does the Members tab; this module owns the tab: the photos
   the viewer sees, and for a team admin the waiting ones checked.
 
-  Everyone on the team sees the accepted photos, newest first, each with who added it
-  and when, and Add photos when they may add. A member also sees their own waiting ones,
-  marked Waiting, and never another member's (App.Model.ActivityPhoto.visible/2).
+  Everyone on the team sees the accepted photos, the most stars first (#1033), each
+  with its star count, the viewer's own marked, who added it and when, and Add photos
+  when they may add. A tile opens the photo's page, where everyone stars it. A member
+  also sees their own waiting ones, marked Waiting, and never another member's
+  (App.Model.ActivityPhoto.visible/2).
+
+  A featured photo says Featured, and a team admin gets Feature or Stop featuring under
+  each accepted one: up to 2 show on the activity's Overview.
 
   A team admin gets a Waiting section over them: every waiting photo as a checked tile,
   with Accept and Delete for the checked ones. They start checked, as review lists do,
@@ -18,8 +23,8 @@ defmodule Web.ActivityPhotosLive do
 
   alias App.Model.ActivityPhoto
   alias App.Operation.AcceptActivityPhotos
-  alias App.Operation.AddActivityPhotos
   alias App.Operation.DeleteActivityPhotos
+  alias App.Operation.FeatureActivityPhoto
   alias Service.Format
   alias Web.ActivityLive
 
@@ -30,11 +35,17 @@ defmodule Web.ActivityPhotosLive do
     {:noreply, load(socket)}
   end
 
-  # The photos the viewer sees, with every waiting one checked, and the tab's count.
+  # The photos the viewer sees, the most stars first, with every waiting one checked,
+  # and the tab's count.
   defp load(socket) do
-    %{current_team: team, activity: activity, team_admin?: team_admin?, now: now} = socket.assigns
+    %{activity: activity, team_admin?: team_admin?, current_user: user} = socket.assigns
     viewer = %{team_admin?: team_admin?, member: socket.assigns.current_member}
-    photos = ActivityPhoto.for_activity(activity, viewer)
+
+    photos =
+      activity
+      |> ActivityPhoto.for_activity(viewer)
+      |> ActivityPhoto.put_stars(user)
+      |> ActivityPhoto.by_stars()
 
     waiting =
       if team_admin?, do: for(%{status: :waiting} = photo <- photos, do: photo.id), else: []
@@ -42,10 +53,17 @@ defmodule Web.ActivityPhotosLive do
     assign(socket,
       photos: photos,
       photo_ticks: MapSet.new(waiting),
-      photos_waiting: length(waiting),
-      may_add_photos?: AddActivityPhotos.may_add?(team, activity, viewer, now)
+      photos_waiting: length(waiting)
     )
   end
+
+  # Feature and Stop featuring, under a tile (#1033). The id comes from the browser:
+  # only a photo the tab shows changes.
+  def handle_event("feature-photo", %{"id" => id}, socket),
+    do: {:noreply, feature(socket, id, true)}
+
+  def handle_event("stop-featuring-photo", %{"id" => id}, socket),
+    do: {:noreply, feature(socket, id, false)}
 
   # The tiles checked, kept so a re-render never checks one again.
   def handle_event("tick-photos", params, socket),
@@ -85,6 +103,23 @@ defmodule Web.ActivityPhotosLive do
 
   defdelegate handle_info(message, socket), to: ActivityLive
   defdelegate render(assigns), to: ActivityLive
+
+  defp feature(socket, id, featured?) do
+    case Enum.find(socket.assigns.photos, &(to_string(&1.id) == id)) do
+      nil ->
+        socket
+
+      photo ->
+        case FeatureActivityPhoto.call(photo, featured?, DateTime.utc_now()) do
+          {:ok, _photo} ->
+            text = if featured?, do: "Photo featured.", else: "Photo no longer featured."
+            socket |> load() |> put_flash(:info, text)
+
+          {:error, reason} ->
+            put_flash(socket, :error, FeatureActivityPhoto.error_text(reason))
+        end
+    end
+  end
 
   defp deleted_text(%{deleted: deleted, kept: 0}),
     do: {:info, Format.count(deleted, one: "%d photo deleted.", many: "%d photos deleted.")}
@@ -220,9 +255,28 @@ defmodule Web.ActivityPhotosLive do
             photo={photo}
             team={@team}
             alt={alt(photo, @team, @now)}
+            stars
           />
           <span class="block">{Web.ActivityPhoto.added_text(photo, @team, @now)}</span>
           <.badge :if={photo.status == :waiting} id={"photo-#{photo.id}-waiting"}>Waiting</.badge>
+          <.badge :if={photo.featured_at} id={"photo-#{photo.id}-featured"}>Featured</.badge>
+          <%!-- A team admin features up to 2 on the Overview (#1033). --%>
+          <.a
+            :if={@team_admin? and photo.status == :accepted and !photo.featured_at}
+            id={"photo-#{photo.id}-feature"}
+            class="block"
+            href="#"
+            phx-click="feature-photo"
+            phx-value-id={photo.id}
+          >Feature</.a>
+          <.a
+            :if={@team_admin? and photo.featured_at}
+            id={"photo-#{photo.id}-stop-featuring"}
+            class="block"
+            href="#"
+            phx-click="stop-featuring-photo"
+            phx-value-id={photo.id}
+          >Stop featuring</.a>
         </li>
       </ul>
 

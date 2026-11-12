@@ -68,6 +68,8 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/activities/:id/photos",
     "/teams/:subdomain/activities/:id/photos/new",
     "/teams/:subdomain/photos/:id/file",
+    # That accepted photo's page (#1033).
+    "/teams/:subdomain/photos/:id",
     "/teams/:subdomain/endorsements/:id",
     "/teams/:subdomain/members/:id",
     "/teams/:subdomain/members/:id/edit",
@@ -381,6 +383,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/photos/:id/file", s, o),
     do: ~p"/teams/#{s}/photos/#{o.activity_photo.id}/file"
+
+  defp path_for("/teams/:subdomain/photos/:id", s, o),
+    do: ~p"/teams/#{s}/photos/#{o.activity_photo.id}"
 
   defp path_for("/teams/:subdomain/members/:id", s, o), do: ~p"/teams/#{s}/members/#{o.member.id}"
 

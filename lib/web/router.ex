@@ -449,6 +449,10 @@ defmodule Web.Router do
       live "/teams/:subdomain/photos/members/new", MemberPhotoFormLive
       live "/teams/:subdomain/photos/members/ask", PhotoAskLive
       live "/teams/:subdomain/photos/members/:id", MemberPhotoLive
+      # An accepted activity photo's page (#1033), and Add photos from Photos, which asks
+      # which activity.
+      live "/teams/:subdomain/photos/new", PhotoAddLive
+      live "/teams/:subdomain/photos/:id", ActivityPhotoLive
       live "/teams/:subdomain/certificates", CertificateCollectionLive
       live "/teams/:subdomain/certificates/new", CertificateFormLive, :new
       live "/teams/:subdomain/certificates/:id", CertificateLive
