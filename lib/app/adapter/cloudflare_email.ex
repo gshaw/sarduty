@@ -7,6 +7,13 @@ defmodule App.Adapter.CloudflareEmail do
 
   Config: `:account_id`, `:api_token` (a token with the Email Sending: Edit permission),
   and `:req_options`, merged into the request so tests can pass a `Req.Test` plug.
+
+  A recipient on the account's suppression list fails the whole send (code 10205). When
+  the block never ends, deliver/2 returns `{:error, {:email_problem, problem}}`, one of
+  `App.Model.Member`'s email problems, so App.Mailer can note it on the member. A block
+  that ends on its own is an ordinary refusal.
+
+  https://developers.cloudflare.com/email-service/concepts/suppressions/
   """
 
   use Swoosh.Adapter, required_config: [:account_id, :api_token]
@@ -15,32 +22,93 @@ defmodule App.Adapter.CloudflareEmail do
 
   @base_url "https://api.cloudflare.com/client/v4"
 
+  # Cloudflare's code for a send refused because a recipient is suppressed.
+  @suppressed 10_205
+
   @impl Swoosh.Adapter
   def deliver(%Email{} = email, config) do
-    response =
-      [
-        url: "#{@base_url}/accounts/#{config[:account_id]}/email/sending/send",
-        auth: {:bearer, config[:api_token]},
-        json: payload(email)
-      ]
-      |> Keyword.merge(config[:req_options] || [])
-      |> Req.post()
+    config
+    |> request("send", json: payload(email))
+    |> Req.post()
+    |> sent(email, config)
+  end
+
+  # The account's Email Sending endpoint `path`, with the token and any test options.
+  defp request(config, path, options) do
+    [
+      url: "#{@base_url}/accounts/#{config[:account_id]}/email/sending/#{path}",
+      auth: {:bearer, config[:api_token]}
+    ]
+    |> Keyword.merge(options)
+    |> Keyword.merge(config[:req_options] || [])
+  end
+
+  defp sent(
+         {:ok, %Req.Response{status: 200, body: %{"success" => true, "result" => result}}},
+         _email,
+         _config
+       ) do
+    {:ok,
+     %{
+       id: result["message_id"],
+       delivered: result["delivered"],
+       queued: result["queued"],
+       permanent_bounces: result["permanent_bounces"]
+     }}
+  end
+
+  defp sent({:ok, %Req.Response{status: status, body: body}}, email, config) do
+    if suppressed?(body),
+      do: suppressed_error(email, config, {status, body}),
+      else: {:error, {status, body}}
+  end
+
+  defp sent({:error, exception}, _email, _config), do: {:error, exception}
+
+  defp suppressed?(%{"errors" => errors}) when is_list(errors),
+    do: Enum.any?(errors, &(&1["code"] == @suppressed))
+
+  defp suppressed?(_body), do: false
+
+  # The refusal doesn't say why, so ask the suppression list. A lookup that fails, or an
+  # email to several people, is `:blocked`: App.Mailer clears it once a send works.
+  defp suppressed_error(email, config, refusal) do
+    with [{_name, address}] <- email.to ++ email.cc ++ email.bcc,
+         {:ok, suppressions} <- suppressions(address, config) do
+      case problem(suppressions) do
+        nil -> {:error, refusal}
+        problem -> {:error, {:email_problem, problem}}
+      end
+    else
+      _several_or_failed -> {:error, {:email_problem, :blocked}}
+    end
+  end
+
+  defp suppressions(address, config) do
+    response = config |> request("suppressions", params: [email: address]) |> Req.get()
 
     case response do
-      {:ok, %Req.Response{status: 200, body: %{"success" => true, "result" => result}}} ->
-        {:ok,
-         %{
-           id: result["message_id"],
-           delivered: result["delivered"],
-           queued: result["queued"],
-           permanent_bounces: result["permanent_bounces"]
-         }}
+      {:ok, %Req.Response{status: 200, body: %{"result" => result}}} when is_list(result) ->
+        {:ok, result}
 
-      {:ok, %Req.Response{status: status, body: body}} ->
-        {:error, {status, body}}
+      _failed ->
+        :error
+    end
+  end
 
-      {:error, exception} ->
-        {:error, exception}
+  # Only a block that never ends is a problem; one that expires clears on its own. A hard
+  # bounce that never ends means the mailbox or its domain does not exist. An empty list
+  # says nothing about why Cloudflare refused it.
+  defp problem([]), do: :blocked
+
+  defp problem(suppressions) do
+    reasons = for %{"expires_at" => nil, "reason" => reason} <- suppressions, do: reason
+
+    cond do
+      reasons == [] -> nil
+      "hard_bounce" in reasons -> :no_such_address
+      "complaint" in reasons -> :spam_report
+      true -> :blocked
     end
   end
 

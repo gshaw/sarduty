@@ -120,7 +120,7 @@ defmodule App.Mailer.ActivityMailer do
 
   defp email(member, team, sender, subject) do
     new()
-    |> to({member.name, member.email})
+    |> Mailer.to_member(member)
     |> from({team.name, "noreply@sarduty.com"})
     |> reply_to({sender.name || "", sender.email})
     |> subject(subject)

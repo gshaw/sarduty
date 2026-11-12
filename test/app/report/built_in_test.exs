@@ -4,6 +4,7 @@ defmodule App.Report.BuiltInTest do
 
   import App.DataFixtures
 
+  alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Report
   alias App.Report.BuiltIn
@@ -61,9 +62,13 @@ defmodule App.Report.BuiltInTest do
     no_phone = member_fixture(team, %{phone: nil})
     neither = member_fixture(team, %{phone: "", email: nil})
     no_address = member_fixture(team, %{address: ""})
+    bounces = member_fixture(team, %{email: "bounces@example.com"})
+    spam = member_fixture(team, %{email: "spam@example.com", address: nil})
     complete = member_fixture(team)
     retired = member_fixture(team, %{phone: nil, left_at: ~U[2025-01-01 00:00:00Z]})
     member_fixture(team_fixture(), %{phone: nil})
+    Member.record_email_problem("bounces@example.com", :no_such_address)
+    Member.record_email_problem("spam@example.com", :spam_report)
 
     missing =
       team |> rows("members-missing-details") |> Map.new(fn [id, _, text] -> {id, text} end)
@@ -71,7 +76,9 @@ defmodule App.Report.BuiltInTest do
     assert missing == %{
              no_phone.id => "Mobile phone",
              neither.id => "Mobile phone, Email",
-             no_address.id => "Address"
+             no_address.id => "Address",
+             bounces.id => "Email (does not exist)",
+             spam.id => "Email (marked as spam), Address"
            }
 
     refute Map.has_key?(missing, complete.id) or Map.has_key?(missing, retired.id)

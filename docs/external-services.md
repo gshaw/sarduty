@@ -88,6 +88,38 @@ didn't send (#155). Sending every eligible member's letter at once runs as an Ob
 (#202) that makes the letters, each with its own email job, retried over about two
 hours. A letter keeps whether its email went, and its row says when it failed (#516).
 
+### Email problems
+
+Cloudflare keeps a suppression list: addresses it won't send to after a bounce or a spam
+complaint. A send to one is refused with code 10205, and the refusal doesn't say why.
+The adapter then reads the address's entries from the list (`GET
+…/email/sending/suppressions?email=`, the same token). A block that never ends becomes
+the member's `email_problem`:
+
+| Cloudflare's reason        | `email_problem`   | Members missing details shows |
+| -------------------------- | ----------------- | ----------------------------- |
+| `hard_bounce`, no expiry   | `no_such_address` | Email (does not exist)        |
+| `complaint`                | `spam_report`     | Email (marked as spam)        |
+| anything else, or no entry | `blocked`         | Email (blocked)               |
+
+A block that expires, such as a soft bounce (24 hours) or a general hard bounce (7
+days), stays an ordinary refusal and nothing is saved.
+
+All of it happens in `App.Mailer.deliver/2`, so no mail feature handles it:
+
+- A refusal saves the problem on every member with that address, on every team, when the
+  email went to that one address.
+- An email built with `Mailer.to_member/2` carries the member's problem; when it goes
+  out, the problem is cleared. This catches a block someone removed in Cloudflare.
+- A new address from D4H clears it (`Member.build_changeset/2`).
+
+The member counts in Needs attention's missing details item, and Members missing details
+names the reason as the hint. Sending isn't blocked: Cloudflare refuses, the job retries
+as usual, and `App.Worker.ErrorReporter` leaves it out of Honeybadger.
+
+On Amazon SES the same two calls move to its bounce, complaint, and delivery events:
+SES accepts a send to a suppressed address and drops it.
+
 ## Twilio
 
 [App.Adapter.Twilio](../lib/app/adapter/twilio.ex) texts login codes, posting to the

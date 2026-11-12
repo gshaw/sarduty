@@ -19,7 +19,7 @@ defmodule App.Mailer.SignedFormMailer do
   def deliver(member, pdf, attachment, url) do
     email =
       new()
-      |> to(member.email)
+      |> Mailer.to_member(member)
       |> from({"SAR Duty", "noreply@sarduty.com"})
       |> subject(subject(pdf))
       |> text_body(body(pdf, url))

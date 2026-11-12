@@ -486,14 +486,16 @@ defmodule App.Report.Catalog do
       rule(
         "details_missing",
         "Details missing",
-        "A current member with no phone, email, or address on file.",
+        "A current member with no phone, working email, or address on file.",
         &details_missing/2
       ),
       %Field{
         name: "missing_details",
         label: "Missing",
         type: :text,
-        about: "Which of mobile phone, email, and address a member has none of.",
+        about:
+          "Which of mobile phone, working email, and address a member has none of, and why " <>
+            "an email does not work.",
         sql: fn table, [], _context -> {Member.missing_details_sql(table), []} end
       },
       rule("holds_items", "Holds items", "Holds any of the team's items.", &holds_items/2),

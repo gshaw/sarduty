@@ -25,6 +25,7 @@ defmodule App.Model.RedactFieldsTest do
     {App.Model.Form, :text} => "an organization's form: what it reads, never values",
     {App.Model.EquipmentItem, :custom_values} => "equipment's own fields",
     {App.Model.GroupMembershipChange, :reason} => "the group rule that made the change",
+    {App.Model.Member, :email_problem} => "why email to a member doesn't arrive, as a code",
     {App.Model.MemberCard, :email_status} => "whether an ID card's email was sent",
     {App.Model.LocationBookmark, :address} => "a team's saved place, like a hall",
     {App.Model.Team, :d4h_access_key_owner} => "the key owner's member name, like any name",

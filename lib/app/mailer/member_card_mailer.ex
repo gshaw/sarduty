@@ -19,7 +19,7 @@ defmodule App.Mailer.MemberCardMailer do
     paragraphs = paragraphs(member, url)
 
     new()
-    |> to({member.name, member.email})
+    |> Mailer.to_member(member)
     |> from({"SAR Duty", "noreply@sarduty.com"})
     |> subject("Your #{team.name} ID card")
     |> text_body(Enum.map_join(paragraphs, "\n\n", &text/1) <> "\n")

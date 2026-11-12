@@ -304,7 +304,8 @@ defmodule App.Report.BuiltIn do
     %{
       slug: "members-missing-details",
       name: "Members missing details",
-      about: "Members with no mobile number, email, or address, and which they're missing.",
+      about:
+        "Members with no mobile number, working email, or address, and which they're missing.",
       query: """
       select name, position, missing_details
       from members

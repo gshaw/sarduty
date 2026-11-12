@@ -86,4 +86,67 @@ defmodule App.Adapter.CloudflareEmailTest do
 
     assert CloudflareEmail.deliver(letter_email(), @config) == {:error, {403, error}}
   end
+
+  describe "a suppressed recipient" do
+    @suppressed %{
+      "success" => false,
+      "errors" => [
+        %{"code" => 10_205, "message" => "email.sending.error.email.recipient_suppressed"}
+      ],
+      "messages" => [],
+      "result" => nil
+    }
+
+    # Refuses the send, and answers the suppression list's lookup with `suppressions`, or
+    # `status` when the lookup fails.
+    defp refuse(suppressions, status \\ 200) do
+      Req.Test.stub(App.Adapter.CloudflareEmail, fn
+        %{method: "POST"} = conn ->
+          conn |> Plug.Conn.put_status(400) |> Req.Test.json(@suppressed)
+
+        %{method: "GET"} = conn ->
+          assert conn.request_path == "/client/v4/accounts/account-1/email/sending/suppressions"
+          assert conn.query_string == "email=member%40example.com"
+          conn |> Plug.Conn.put_status(status) |> Req.Test.json(%{"result" => suppressions})
+      end)
+    end
+
+    defp suppression(reason, expires_at \\ nil),
+      do: %{"email" => "member@example.com", "reason" => reason, "expires_at" => expires_at}
+
+    test "is an email problem when the block never ends, named by its reason" do
+      refuse([suppression("hard_bounce")])
+
+      assert CloudflareEmail.deliver(letter_email(), @config) ==
+               {:error, {:email_problem, :no_such_address}}
+
+      refuse([suppression("complaint")])
+
+      assert CloudflareEmail.deliver(letter_email(), @config) ==
+               {:error, {:email_problem, :spam_report}}
+
+      refuse([suppression("manual")])
+
+      assert CloudflareEmail.deliver(letter_email(), @config) ==
+               {:error, {:email_problem, :blocked}}
+    end
+
+    test "is an ordinary refusal when the block ends on its own" do
+      refuse([suppression("soft_bounce", "2026-11-13T18:00:00Z")])
+
+      assert CloudflareEmail.deliver(letter_email(), @config) == {:error, {400, @suppressed}}
+    end
+
+    test "is blocked when the lookup says nothing about why" do
+      refuse([], 500)
+
+      assert CloudflareEmail.deliver(letter_email(), @config) ==
+               {:error, {:email_problem, :blocked}}
+
+      refuse([])
+
+      assert CloudflareEmail.deliver(letter_email(), @config) ==
+               {:error, {:email_problem, :blocked}}
+    end
+  end
 end

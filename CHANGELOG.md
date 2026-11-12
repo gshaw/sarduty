@@ -4,6 +4,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- Needs attention now counts members whose email bounces, with their missing details.
+  Members missing details says why, such as Email (does not exist), so you know what
+  to fix in D4H.
 - Team settings has a Fields tab: every custom field on your records, with its hint,
   choices, who added it, and when. Member fields' Copy boxes moved there. Fields tabs
   and Change fields now group fields under D4H's headings, such as KMS Data.
