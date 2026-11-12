@@ -118,6 +118,13 @@ defmodule App.Model.Member do
     |> Repo.all()
   end
 
+  @doc """
+  The `v` on the member's photo URL, so a browser that kept the photo for its hour loads
+  a new one at once: SetMemberPhoto moves `updated_at` (#1028).
+  """
+  def photo_version(%{updated_at: %DateTime{} = at}), do: DateTime.to_unix(at, :microsecond)
+  def photo_version(_member), do: 0
+
   @doc "The first word of the member's name, for a line that speaks of them."
   def first_name(%{name: name}), do: name |> String.split(" ", parts: 2) |> hd()
 

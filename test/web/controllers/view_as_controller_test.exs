@@ -48,7 +48,7 @@ defmodule Web.ViewAsControllerTest do
     # Sam's photo, not the team admin's.
     assert has_element?(
              lv,
-             ~s{#member-head-photo[src="/teams/#{team.subdomain}/members/#{sam.id}/image"]}
+             ~s{#member-head-photo[src^="/teams/#{team.subdomain}/members/#{sam.id}/image?v="]}
            )
 
     lv = open(conn, ~p"/teams/#{team}")

@@ -1,18 +1,16 @@
 defmodule Web.MemberFormLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.FileDrop
-
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Operation.SaveMember
-  alias App.Operation.SetMemberPhoto
   alias App.Operation.SetMemberRetired
   alias App.ViewModel.MemberFormViewModel
 
   # Adding and changing members of a team on SAR Duty Records (docs/records.md), and
-  # changing a member's details and photo on a D4H team. D4H adds members, and sets access
-  # and leaving, in its web app, so a D4H team's page has no Team admin box or Retirement.
+  # changing a member's details on a D4H team. D4H adds members, and sets access and
+  # leaving, in its web app, so a D4H team's page has no Team admin box or Retirement.
+  # The photo is Change photo's own page on every team (Web.MemberPhotoLive).
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     unless D4H.records?(team) or params["id"], do: raise(Web.Status.NotFound)
@@ -24,17 +22,9 @@ defmodule Web.MemberFormLive do
     socket =
       socket
       |> assign(page_title: if(member, do: "Change #{member.name}", else: "Add member"))
-      |> assign(member: member, form_data: form, photo_version: 0)
+      |> assign(member: member, form_data: form)
       |> assign(records?: D4H.records?(team), roles: Member.roles(team))
       |> assign_form(MemberFormViewModel.changeset(form))
-      # cspell:ignore webp -- the WebP file extension
-      # SetMemberPhoto shrinks it before it goes. An iPhone's browser sends a JPEG from a
-      # file input, not HEIC.
-      |> allow_upload(:photo,
-        accept: ~w(.jpg .jpeg .png .webp),
-        max_entries: 1,
-        max_file_size: 10_000_000
-      )
 
     {:ok, socket}
   end
@@ -102,55 +92,6 @@ defmodule Web.MemberFormLive do
       </.form_actions>
     </.form>
 
-    <section :if={@member} id="member-photo" class="mt-8 measure">
-      <h2 class="heading">Photo</h2>
-      <%!-- The version changes after a save, so the browser loads the new photo. --%>
-      <p>
-        <img
-          id="member-photo-image"
-          class="photo"
-          src={~p"/teams/#{@current_team}/members/#{@member.id}/image?#{[v: @photo_version]}"}
-          alt={"#{@member.name}'s photo"}
-          data-hide-on-error
-        />
-      </p>
-      <p :if={@member.has_photo}>
-        <.button
-          id="download-photo"
-          size={:sm}
-          href={
-            ~p"/teams/#{@current_team}/members/#{@member.id}/image/original?#{[v: @photo_version]}"
-          }
-        >
-          Download original photo
-        </.button>
-      </p>
-      <form id="photo-form" phx-change="validate-photo" phx-submit="save-photo">
-        <.file_drop
-          id="member-photo-file"
-          upload={@uploads.photo}
-          label="New photo"
-          kinds="a JPEG, PNG, or WebP"
-        >
-          A JPEG, PNG, or WebP of the member's face, under 10 MB. Their ID card shows it.
-        </.file_drop>
-        <.form_actions>
-          <.button id="save-photo" variant={:success} phx-disable-with="Saving…">Save photo</.button>
-          <:trailing>
-            <.button
-              id="remove-photo"
-              type="button"
-              phx-click="remove-photo"
-              phx-disable-with="Removing…"
-              data-confirm={"Remove #{@member.name}'s photo? Their ID card shows a placeholder until you add one."}
-            >
-              Remove photo
-            </.button>
-          </:trailing>
-        </.form_actions>
-      </form>
-    </section>
-
     <section :if={@records? and @member} id="member-retire" class="mt-8 measure">
       <h2 class="heading">Retirement</h2>
       <%= if @member.d4h_status == "RETIRED" do %>
@@ -212,38 +153,6 @@ defmodule Web.MemberFormLive do
 
       {:error, text} ->
         {:noreply, put_flash(socket, :error, text)}
-    end
-  end
-
-  def handle_event("validate-photo", _params, socket), do: {:noreply, socket}
-
-  def handle_event("cancel-upload", %{"ref" => ref}, socket),
-    do: {:noreply, cancel_upload(socket, :photo, ref)}
-
-  def handle_event("save-photo", _params, socket) do
-    case consume_uploaded_entries(socket, :photo, fn %{path: path}, _entry ->
-           {:ok, File.read!(path)}
-         end) do
-      [bytes] -> {:noreply, set_photo(socket, bytes, "Photo saved.")}
-      [] -> {:noreply, put_flash(socket, :error, "Select a photo.")}
-    end
-  end
-
-  def handle_event("remove-photo", _params, socket),
-    do: {:noreply, set_photo(socket, nil, "Photo removed.")}
-
-  defp set_photo(socket, bytes, text) do
-    %{current_team: team, current_user: user, member: member} = socket.assigns
-
-    case SetMemberPhoto.call(team, member, bytes, user, DateTime.utc_now()) do
-      :ok ->
-        socket
-        |> put_flash(:info, text)
-        |> update(:photo_version, &(&1 + 1))
-        |> update(:member, &%{&1 | has_photo: bytes != nil})
-
-      {:error, text} ->
-        put_flash(socket, :error, text)
     end
   end
 

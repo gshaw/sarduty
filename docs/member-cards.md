@@ -179,7 +179,7 @@ matched to the person holding the phone.
   first photo is saved.
 - **Try a demo** skips the nightly refresh, so `BuildDemoTeam` sets `has_photo` from the
   cast: true for each person with the sample photo, false for the visitor. The visitor's
-  prebuilt card works; a new one after Cancel asks for a photo, which Change member adds.
+  prebuilt card works; a new one after Cancel asks for a photo, which Change photo adds.
 - No words name D4H or Records ("has no photo"), so one sentence fits both kinds of team.
 
 ## Refresh ID card
