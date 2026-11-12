@@ -12,7 +12,7 @@ defmodule App.Mailer.TaxCreditLetterMailer do
   def deliver(letter, %{subject: subject, body: body}, attachment) do
     email =
       new()
-      |> to(letter.member.email)
+      |> Mailer.to_member(letter.member)
       |> from({"SAR Duty", "noreply@sarduty.com"})
       |> subject(subject)
       |> text_body(body)

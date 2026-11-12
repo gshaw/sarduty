@@ -23,7 +23,7 @@ defmodule App.Mailer.SignRequestMailer do
     paragraphs = ask_paragraphs(request, asker(request, now), sign_url(request))
 
     new()
-    |> to({member.name, member.email})
+    |> Mailer.to_member(member)
     |> from({"SAR Duty", "noreply@sarduty.com"})
     |> subject(ask_subject(request))
     |> text_body(Enum.map_join(paragraphs, "\n\n", &text/1) <> "\n")

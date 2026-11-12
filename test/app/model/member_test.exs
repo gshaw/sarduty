@@ -34,20 +34,34 @@ defmodule App.Model.MemberTest do
 
     assert Member.missing_details(%{complete | phone: ""}) == [:mobile_phone]
     assert Member.missing_details(%{complete | address: ""}) == [:address]
+    assert complete |> Map.put(:email_problem, :blocked) |> Member.missing_details() == [:email]
   end
 
   test "the missing details query finds the members missing_details/1 does (#213)" do
     team = team_fixture()
     member_fixture(team)
+    bounces = member_fixture(team, %{email: "bounces@example.com"})
+    Member.record_email_problem("bounces@example.com", :no_such_address)
 
     missing =
       for attrs <- [%{phone: ""}, %{email: nil}, %{address: nil}, %{address: ""}],
           do: member_fixture(team, attrs)
 
+    missing = [bounces | missing]
     found = Member |> where(team_id: ^team.id) |> Member.missing_details_query() |> Repo.all()
 
     assert found |> Enum.map(& &1.id) |> Enum.sort() ==
              missing |> Enum.map(& &1.id) |> Enum.sort()
+  end
+
+  test "a new email from D4H clears the email problem, and anything else keeps it" do
+    member = member_fixture(team_fixture(), %{email: "pat@example.com"})
+    Member.record_email_problem("pat@example.com", :no_such_address)
+
+    kept = member |> Repo.reload!() |> Member.update!(%{name: "Pat Lee"})
+    assert kept.email_problem == :no_such_address
+
+    assert Member.update!(kept, %{email: "pat.lee@example.com"}).email_problem == nil
   end
 
   test "looks like not a person with no email, no mobile phone, and no attendance" do

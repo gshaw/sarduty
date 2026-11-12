@@ -12,6 +12,13 @@ defmodule App.Model.Member do
   alias App.Model.Team
   alias App.Repo
 
+  # Why email to a member does not arrive, and how Members missing details says it.
+  @email_problems [
+    no_such_address: "does not exist",
+    spam_report: "marked as spam",
+    blocked: "blocked"
+  ]
+
   schema "members" do
     belongs_to :team, Team
     has_many :group_members, GroupMember
@@ -45,6 +52,10 @@ defmodule App.Model.Member do
     # Whether the team's records had a photo of them at the last check, which an ID card
     # needs (#1012). Set only by App.Operation.CheckMemberPhoto and SetMemberPhoto.
     field :has_photo, :boolean, default: false
+    # Why email to them does not arrive, when the mail service blocks their address for
+    # good; nil while it works. Set and cleared only by App.Mailer, and cleared when the
+    # email changes (docs/external-services.md#email-problems).
+    field :email_problem, Ecto.Enum, values: Keyword.keys(@email_problems)
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -75,6 +86,14 @@ defmodule App.Model.Member do
     ])
     |> unique_constraint([:team_id, :d4h_member_id])
     |> validate_required([:team_id, :d4h_member_id, :name])
+    |> clear_email_problem_on_change()
+  end
+
+  # A new address hasn't been blocked, so its problem goes with the old one.
+  defp clear_email_problem_on_change(changeset) do
+    if changed?(changeset, :email),
+      do: put_change(changeset, :email_problem, nil),
+      else: changeset
   end
 
   def scope(q, team_id: team_id), do: where(q, team_id: ^team_id)
@@ -105,13 +124,14 @@ defmodule App.Model.Member do
   @doc """
   What the member lacks that login, emailed letters, tax credit letters, and the mileage
   report need, in the order the members page shows it: `:mobile_phone`, `:email`,
-  `:address` (#213).
+  `:address` (#213). An email the mail service blocks is missing too: one that works is
+  what counts.
   """
   def missing_details(%{} = member) do
     Enum.filter(
       [
         blank?(member.phone) && :mobile_phone,
-        blank?(member.email) && :email,
+        (blank?(member.email) or Map.get(member, :email_problem) != nil) && :email,
         blank?(member.address) && :address
       ],
       & &1
@@ -123,14 +143,20 @@ defmodule App.Model.Member do
   @doc """
   `missing_details/1` as SQL for the member whose id is `table`'s `id`: the details'
   names, such as "Mobile phone, Address", or "" for none. A report's `missing_details`
-  (#784), which names what's missing and never a detail itself.
+  (#784), which names what's missing and never a detail itself. A blocked email says
+  why, as a hint at the fix: "Email (does not exist)".
   """
   # cspell:ignore rtrim
   def missing_details_sql(table) do
     [
       "(SELECT rtrim(",
       "CASE WHEN COALESCE(m.phone, '') = '' THEN 'Mobile phone, ' ELSE '' END || ",
-      "CASE WHEN COALESCE(m.email, '') = '' THEN 'Email, ' ELSE '' END || ",
+      "CASE WHEN COALESCE(m.email, '') = '' THEN 'Email, ' ",
+      for(
+        {problem, label} <- @email_problems,
+        do: "WHEN m.email_problem = '#{problem}' THEN 'Email (#{label}), ' "
+      ),
+      "ELSE '' END || ",
       "CASE WHEN COALESCE(m.address, '') = '' THEN 'Address' ELSE '' END, ', ') ",
       "FROM members AS m WHERE m.id = ",
       table,
@@ -151,7 +177,7 @@ defmodule App.Model.Member do
       query,
       [m],
       is_nil(m.phone) or m.phone == "" or is_nil(m.email) or m.email == "" or
-        is_nil(m.address) or m.address == ""
+        not is_nil(m.email_problem) or is_nil(m.address) or m.address == ""
     )
   end
 
@@ -574,6 +600,31 @@ defmodule App.Model.Member do
       [member] -> member
       _none_or_shared -> nil
     end
+  end
+
+  @doc """
+  Saves `problem`, why email to `address` does not arrive, on every member with that
+  address, on every team: the mail service blocks the address, not one team's member.
+  Only App.Mailer calls it.
+  """
+  def record_email_problem(address, problem) when is_binary(address) do
+    address |> with_email_query() |> Repo.update_all(set: [email_problem: problem])
+    :ok
+  end
+
+  @doc "Clears what record_email_problem/2 saved, once email to `address` goes out again."
+  def clear_email_problem(address) when is_binary(address) do
+    address
+    |> with_email_query()
+    |> where([m], not is_nil(m.email_problem))
+    |> Repo.update_all(set: [email_problem: nil])
+
+    :ok
+  end
+
+  defp with_email_query(address) do
+    address = address |> String.trim() |> String.downcase()
+    where(Member, [m], fragment("lower(?)", m.email) == ^address)
   end
 
   @doc """

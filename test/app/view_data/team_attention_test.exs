@@ -352,12 +352,12 @@ defmodule App.ViewData.TeamAttentionTest do
 
     assert Enum.map(one, & &1.title) == [
              "1 draft activity",
-             "1 member has no email, mobile phone, or address"
+             "1 member has no working email, mobile phone, or address"
            ]
 
     assert Enum.map(many, & &1.title) == [
              "3 draft activities",
-             "9 members have no email, mobile phone, or address"
+             "9 members have no working email, mobile phone, or address"
            ]
 
     assert [%{title: "6 awards expire within 60 days"}] =

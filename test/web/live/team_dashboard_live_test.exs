@@ -283,7 +283,7 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(
              lv,
              "#attention-missing_details",
-             "3 members have no email, mobile phone, or address"
+             "3 members have no working email, mobile phone, or address"
            )
 
     assert has_element?(

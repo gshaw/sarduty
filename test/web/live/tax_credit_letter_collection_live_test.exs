@@ -132,7 +132,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
       refute has_element?(lv, "#letters-select-#{avery.id}[checked]")
 
       for member <- [avery, casey, eli],
-          do: assert_email_sent(fn email -> assert email.to == [{"", member.email}] end)
+          do: assert_email_sent(fn email -> assert email.to == [{member.name, member.email}] end)
 
       assert_no_email_sent()
 
@@ -320,7 +320,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
 
       apply_choice(lv, [avery], "email")
       assert has_element?(lv, "#letters-emailed", "Emailing 1 tax credit letter for 2026.")
-      assert_email_sent(fn email -> assert email.to == [{"", avery.email}] end)
+      assert_email_sent(fn email -> assert email.to == [{avery.name, avery.email}] end)
       [letter] = Repo.all(PublishedPDF)
 
       # Emailed again with the same hours, the same letter goes: nothing replaces it.
@@ -332,7 +332,7 @@ defmodule Web.TaxCreditLetterCollectionLiveTest do
              )
 
       apply_choice(lv, [avery], "email")
-      assert_email_sent(fn email -> assert email.to == [{"", avery.email}] end)
+      assert_email_sent(fn email -> assert email.to == [{avery.name, avery.email}] end)
       assert [%{id: id, replaced_by_id: nil, withdrawn_at: nil}] = Repo.all(PublishedPDF)
       assert id == letter.id
 

@@ -35,8 +35,8 @@ defmodule App.CastLettersTest do
       messages = OutboxMessage.list(team)
 
       for name <- names do
-        email = rows[{:member, name}].email
-        message = Enum.find(messages, &(&1.to == email)) || flunk("no letter for #{name}")
+        to = "#{name} <#{rows[{:member, name}].email}>"
+        message = Enum.find(messages, &(&1.to == to)) || flunk("no letter for #{name}")
         message = OutboxMessage.get(team, message.id)
         assert [%{content_type: "application/pdf"} = pdf] = message.attachments
         assert "%PDF" <> _rest = OutboxMessage.get_attachment(message, pdf.id).data

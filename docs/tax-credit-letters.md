@@ -168,5 +168,5 @@ letter`, for its member's year, `member:45:2026` ([App.Model.TaxCreditLetter](..
 
 - **No download tracking, and no For you to do item** (#389, dropped in #970): the
   email attaches the PDF, so publishing is the notice. A member with no email shows in
-  Needs attention ("N members have no email, mobile phone, or address") until one is
-  added. The letter stays on Your membership with Download letter all year.
+  Needs attention ("N members have no working email, mobile phone, or address") until
+  one is added. The letter stays on Your membership with Download letter all year.

@@ -238,8 +238,8 @@ defmodule App.ViewData.TeamAttention do
       ids: ids,
       title:
         Format.count(count,
-          one: "%d member has no email, mobile phone, or address",
-          many: "%d members have no email, mobile phone, or address"
+          one: "%d member has no working email, mobile phone, or address",
+          many: "%d members have no working email, mobile phone, or address"
         ),
       detail: missing_details_where(service),
       action: "Show members"

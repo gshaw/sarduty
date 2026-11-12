@@ -88,7 +88,7 @@ defmodule Web.TaxCreditLetterLiveTest do
 
     letter = TaxCreditLetter.get_current(member, 2025)
     assert TaxCreditLetter.minutes(letter) == {90, 0}
-    assert_email_sent(fn email -> assert email.to == [{"", member.email}] end)
+    assert_email_sent(fn email -> assert email.to == [{member.name, member.email}] end)
 
     assert has_element?(
              lv,
@@ -119,7 +119,7 @@ defmodule Web.TaxCreditLetterLiveTest do
     lv |> element("#email-letter") |> render_click()
 
     assert_email_sent(fn email ->
-      assert email.to == [{"", member.email}]
+      assert email.to == [{member.name, member.email}]
       assert [%{data: "%PDF-1.7 test letter " <> _ref}] = email.attachments
     end)
 
@@ -219,7 +219,7 @@ defmodule Web.TaxCreditLetterLiveTest do
     assert new.user_id == user.id
     assert TaxCreditLetter.minutes(new) == {90, 0}
     assert letter |> Repo.reload!() |> PublishedPDF.status() == :replaced
-    assert_email_sent(fn email -> assert email.to == [{"", member.email}] end)
+    assert_email_sent(fn email -> assert email.to == [{member.name, member.email}] end)
 
     refute has_element?(lv, "#letter-out-of-date")
     # The new one is Published, as any letter; the one it replaced says Replaced.
