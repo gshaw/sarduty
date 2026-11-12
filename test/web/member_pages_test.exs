@@ -56,6 +56,9 @@ defmodule Web.MemberPagesTest do
     certificate = certificate_fixture(sam, qualification_fixture(team))
     # A photo of their own that waits (#1029), so Photos shows it and the one on the card.
     member_photo_fixture(sam)
+    # The past activity's photos (#1032): one the team sees, and one of their own that waits.
+    activity_photo_fixture(past, %{member_id: avery.id, status: :accepted})
+    activity_photo_fixture(past, %{member_id: sam.id})
 
     # A request to sign that ended (#993), so its page shows without printing.
     form = form_fixture(organization_fixture([team]), %{state: :on})
@@ -86,6 +89,8 @@ defmodule Web.MemberPagesTest do
       "/teams/#{s}/activities/#{past.id}/members",
       "/teams/#{s}/activities/#{past.id}/equipment",
       "/teams/#{s}/activities/#{past.id}/fields",
+      "/teams/#{s}/activities/#{past.id}/photos",
+      "/teams/#{s}/activities/#{past.id}/photos/new",
       "/teams/#{s}/activities/#{past.id}/forms/#{form.id}/sign",
       "/teams/#{s}/activities/#{coming.id}",
       "/teams/#{s}/activities/#{coming.id}/members",

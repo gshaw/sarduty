@@ -204,6 +204,18 @@ defmodule App.Model.Attendance do
     do: query |> attending() |> where([r], r.started_at <= ^now)
 
   @doc """
+  Whether the member attended the activity by `now`, as attended/2 counts it. Both must
+  be on one team.
+  """
+  def attended?(%Activity{} = activity, %Member{} = member, %DateTime{} = now) do
+    Attendance
+    |> where([r], r.activity_id == ^activity.id and r.member_id == ^member.id)
+    |> attended(now)
+    |> where([activity: a], a.team_id == ^member.team_id)
+    |> Repo.exists?()
+  end
+
+  @doc """
   A row's status in the glossary's words (docs/writing.md), which change when the
   activity starts: `:attended` or `:signed_up` as attended/2 and signed_up/2 count them,
   by the row's start; `:absent`, or `:cant_make_it` before the activity starts; and

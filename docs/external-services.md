@@ -178,6 +178,28 @@ One variable picks the mode, in dev only:
 - `CLEAN_UP` — dev only, optional: `CLEAN_UP=stand-in` turns the stand-in on. Any other
   value, or none, leaves Clean up off. Production and tests never read it.
 
+## File store
+
+[App.Adapter.FileStore](../lib/app/adapter/file_store.ex) keeps files too big for the
+database: an activity's photos today ([photos.md](photos.md#activity-photos), #1032).
+Files never go in SQLite, which Litestream copies whole. Callers put, get, and delete
+by key, and `delete_all/1` takes everything under a prefix. Every key a team owns
+starts `teams/<id>/` (`Team.file_prefix/1`), and deleting the team deletes them all.
+
+**Production has none.** Storage in Canada, an S3 bucket in Calgary, comes in its own
+issue: a clause of each function in the adapter, with its variables, its row in
+Adminland › Integrations, and the privacy page's line then. There is no AWS key,
+library, or account today. Until then whatever needs files is not offered: no team has
+activity photos.
+
+`config :sarduty, App.Adapter.FileStore, dir:` names a folder on disk, and no `dir` is
+no store:
+
+- **Dev**: `db/files`, beside the dev database, so the files stay with the rows that
+  name them (`config/dev.exs`).
+- **Tests**: a scratch folder of the run's own, removed when it ends
+  (`config/test.exs`). A test turns the store off with `App.FileStoreOff`.
+
 ## Litestream and Cloudflare R2
 
 Litestream replicates `/mnt/sarduty/sarduty.db` to the `sarduty-db` R2 bucket in

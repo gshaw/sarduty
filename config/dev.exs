@@ -11,6 +11,11 @@ config :sarduty, App.Repo,
   log: false,
   show_sensitive_data_on_connection_error: true
 
+# The file store (#1032, App.Adapter.FileStore) is a folder beside the database, so an
+# activity's photos stay with the rows that name them. Production has no store yet.
+config :sarduty, App.Adapter.FileStore,
+  dir: Path.expand("../db/files", Path.dirname(__ENV__.file))
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #

@@ -95,7 +95,7 @@ defmodule App.ViewData.TeamAttention do
   defp count_items(rows) do
     [
       refresh_item(rows.refresh, rows.service),
-      photos_item(rows.photo_count),
+      photos_item(rows.photo_count, rows.activity_photo_count),
       drafts_item(rows.draft_ids, rows.service),
       missing_fields_item(rows.missing_fields_ids, rows.service),
       expiring_item(rows.expiring_ids, rows.expiring_days, rows.service),
@@ -413,23 +413,40 @@ defmodule App.ViewData.TeamAttention do
     }
   end
 
-  defp photos_item(0), do: nil
+  defp photos_item(0, 0), do: nil
 
-  # Photos members added of themselves wait for a team admin to check them (#1029). A
-  # member's ID card keeps its old photo until then, so it leads the warnings.
-  defp photos_item(count) do
+  # Photos wait for a team admin to check them: the ones members added of themselves
+  # (#1029), which a team admin accepts or declines, and the ones added to an activity
+  # (#1032), which a team admin accepts or deletes. One row counts both. A member's ID
+  # card keeps its old photo until then, so it leads the warnings.
+  defp photos_item(member_photos, activity_photos) do
+    count = member_photos + activity_photos
+
     %{
       key: :photos,
       level: :warning,
       title: Format.count(count, one: "%d photo waiting", many: "%d photos waiting"),
-      detail:
-        Format.count(count,
-          one: "Check it, then accept or decline it.",
-          many: "Check them, then accept or decline them."
-        ),
+      detail: photos_detail(count, member_photos, activity_photos),
       action: "Check photos"
     }
   end
+
+  defp photos_detail(count, _member_photos, 0),
+    do:
+      Format.count(count,
+        one: "Check it, then accept or decline it.",
+        many: "Check them, then accept or decline them."
+      )
+
+  defp photos_detail(count, 0, _activity_photos),
+    do:
+      Format.count(count,
+        one: "Check it, then accept or delete it.",
+        many: "Check them, then accept or delete them."
+      )
+
+  defp photos_detail(_count, _member_photos, _activity_photos),
+    do: "Check them, then accept them or not."
 
   defp chores_item(0), do: nil
 

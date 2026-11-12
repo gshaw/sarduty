@@ -42,6 +42,29 @@ defmodule Service.Image do
     end
   end
 
+  @doc """
+  A photo as a JPEG at its full size, for the copy SAR Duty keeps as the original
+  (#1032): turned the way the camera held it, flattened onto white, and saved without
+  metadata (GPS, camera), like `jpeg/2`. `{:ok, jpeg}`, `{:error, :too_many_pixels}`,
+  or `{:error, reason}`.
+  """
+  def full_jpeg(bytes) do
+    with {:ok, image} <- Image.from_binary(bytes),
+         :ok <- check_pixels(image),
+         {:ok, {turned, _flags}} <- Image.autorotate(image),
+         {:ok, flat} <- flatten(turned, :white) do
+      Image.write(flat, :memory, suffix: ".jpg", quality: 92, strip_metadata: true)
+    end
+  end
+
+  @doc """
+  Whether a photo's bytes open as one `jpeg/2` would take, from the header alone, with
+  nothing decoded: `:ok`, `{:error, :too_many_pixels}`, or `{:error, reason}`.
+  """
+  def check(bytes) do
+    with {:ok, image} <- Image.from_binary(bytes), do: check_pixels(image)
+  end
+
   defp check_pixels(image) do
     if Image.width(image) * Image.height(image) > @max_pixels,
       do: {:error, :too_many_pixels},

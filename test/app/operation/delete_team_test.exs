@@ -6,6 +6,7 @@ defmodule App.Operation.DeleteTeamTest do
   import Swoosh.TestAssertions
 
   alias App.Adapter.D4H
+  alias App.Adapter.FileStore
   alias App.Model.Event
   alias App.Model.PublishedPDF
   alias App.Model.Team
@@ -46,6 +47,7 @@ defmodule App.Operation.DeleteTeamTest do
     template_fixture(team, "Truck 1", [item])
     chore_fixture(member, chore_category_fixture(team))
     away_period_fixture(member, ~D[2026-01-01], ~D[2026-01-31])
+    activity_photo_fixture(activity, %{member_id: member.id})
     team
   end
 
@@ -69,6 +71,28 @@ defmodule App.Operation.DeleteTeamTest do
     assert DeleteTeam.row_counts(other) == other_counts
     # The sandbox never commits, so check the keys the commit would.
     assert %{rows: []} = Repo.query!("PRAGMA foreign_key_check")
+  end
+
+  # A team's files go with its rows (#1032): its activities' photos, and anything else
+  # under its prefix in the file store, such as a file whose row never saved.
+  test "deletes the team's files, and leaves another team's", %{admin: admin, team: team} do
+    other = full_team("Valley SAR")
+    photo = activity_photo_fixture(activity_fixture(team))
+    accepted = activity_photo_fixture(activity_fixture(team), %{status: :accepted})
+    theirs = activity_photo_fixture(activity_fixture(other))
+    stray = "#{Team.file_prefix(team.id)}/activity-photos/no-row/tile.jpg"
+    :ok = FileStore.put(stray, "bytes")
+
+    assert {:ok, _result} = DeleteTeam.call(team, team.name, admin)
+
+    for gone <- [photo, accepted] do
+      refute Repo.reload(gone)
+      assert gone |> activity_photo_files() |> Enum.all?(&(&1 == {:error, :not_found}))
+    end
+
+    assert FileStore.get(stray) == {:error, :not_found}
+    assert Repo.reload(theirs)
+    assert theirs |> activity_photo_files() |> Enum.all?(&match?({:ok, _bytes}, &1))
   end
 
   test "refuses a name that doesn't match", %{admin: admin, team: team} do

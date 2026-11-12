@@ -25,6 +25,12 @@ config :sarduty, App.Repo,
 config :sarduty, App.SampleRepo,
   database: Path.expand("../db/sarduty_sample_test.db", Path.dirname(__ENV__.file))
 
+# The file store (#1032) is a scratch folder of this run's own, so two runs at once
+# never share files. It goes when the run ends (test/test_helper.exs). A test turns the
+# store off with App.FileStoreOff.
+config :sarduty, App.Adapter.FileStore,
+  dir: Path.join(System.tmp_dir!(), "sarduty-test-files-#{System.pid()}")
+
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :sarduty, Web.Endpoint,

@@ -27,6 +27,7 @@ defmodule App.ViewData.TeamAttentionTest do
         chore_count: 0,
         certificate_count: 0,
         photo_count: 0,
+        activity_photo_count: 0,
         chores_to_send: 0,
         attendance_to_send: [],
         no_shows: [],
@@ -203,6 +204,22 @@ defmodule App.ViewData.TeamAttentionTest do
     assert [many, %{key: :drafts}] = items(%{photo_count: 3, draft_ids: ids(2)}, @october)
     assert many.title == "3 photos waiting"
     assert many.detail == "Check them, then accept or decline them."
+  end
+
+  # An activity's photos wait too (#1032), in the same row: a team admin accepts or
+  # deletes those, so the hint says what the photos waiting take.
+  test "the photos row counts a member's photos and an activity's" do
+    assert [one] = items(%{activity_photo_count: 1}, @october)
+    assert %{key: :photos, level: :warning, title: "1 photo waiting"} = one
+    assert one.detail == "Check it, then accept or delete it."
+
+    assert [many] = items(%{activity_photo_count: 4}, @october)
+    assert many.title == "4 photos waiting"
+    assert many.detail == "Check them, then accept or delete them."
+
+    assert [both] = items(%{photo_count: 1, activity_photo_count: 2}, @october)
+    assert both.title == "3 photos waiting"
+    assert both.detail == "Check them, then accept them or not."
   end
 
   test "a chore activity whose send did not go through is a warning" do
