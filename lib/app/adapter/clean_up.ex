@@ -1,13 +1,16 @@
 defmodule App.Adapter.CleanUp do
   @moduledoc """
-  Clean up (#1031): removes a photo's background and centres the face. It will run on a
+  Clean up (#1031): removes a member photo's background and centres the face, and for
+  an activity photo (#1032, part 8) levels the horizon and fixes the light and colour.
+  It will run on a
   function in Calgary, which does not exist yet, and this module is the only place that
   will know it. `config :sarduty, App.Adapter.CleanUp, mode:` picks one of three modes:
 
   - `:off`, the default and what production runs. Clean up is not available, and no
     page mentions it.
-  - `:stand_in`, for dev and tests, with no AWS: it cuts the photo to a centred square
-    and reports 1 face, where the oval is. A dev turns it on with `CLEAN_UP=stand-in`
+  - `:stand_in`, for dev and tests, with no AWS: it cuts a member photo to a centred
+    square and reports 1 face, where the oval is, and stretches an activity photo's
+    light to its full range and its colour a little further, so dev shows a change. A dev turns it on with `CLEAN_UP=stand-in`
     (config/runtime.exs).
   - The function, later, in its own issue: a clause of `answer/3`, and nothing else
     changes.
@@ -17,8 +20,8 @@ defmodule App.Adapter.CleanUp do
   photo and its kind, and a shorter wait with `timeout:`.
   """
 
-  # What the photo is: a member's, for their ID card. An activity's comes with #1035.
-  @kinds [:member]
+  # What the photo is: a member's, for their ID card, or one from an activity.
+  @kinds [:member, :activity]
   @timeout 30_000
 
   @doc "Whether Clean up runs at all. False in production until the function exists."
@@ -28,7 +31,8 @@ defmodule App.Adapter.CleanUp do
   Cleans up `jpeg`, a photo of `kind`. `{:ok, %{bytes:, faces:, face:}}`: the cleaned-up
   photo as a JPEG, how many faces it found, and where the face is in the cleaned-up
   photo, or nil with none: `x` and `y`, its centre, and `width` and `height`, as shares
-  of the photo's width and height. `{:error, :off}` when Clean up is not available,
+  of the photo's width and height. An activity photo's faces and face are nil: nothing
+  reads them. `{:error, :off}` when Clean up is not available,
   `{:error, :timeout}` after 30 seconds, or `{:error, reason}`.
   """
   def call(jpeg, kind) when is_binary(jpeg) and kind in @kinds do
@@ -52,6 +56,17 @@ defmodule App.Adapter.CleanUp do
            Image.write(square, :memory, suffix: ".jpg", quality: 85, strip_metadata: true) do
       # The face is where Add a photo's oval is, so the square starts whole.
       {:ok, %{bytes: bytes, faces: 1, face: Service.MemberPhoto.oval()}}
+    end
+  end
+
+  # Light and colour only: the stand-in levels no horizon.
+  defp stand_in(jpeg, :activity) do
+    with {:ok, image} <- Image.from_binary(jpeg),
+         {:ok, levelled} <- Image.equalize(image, :luminance),
+         {:ok, livelier} <- Image.modulate(levelled, saturation: 1.15),
+         {:ok, bytes} <-
+           Image.write(livelier, :memory, suffix: ".jpg", quality: 85, strip_metadata: true) do
+      {:ok, %{bytes: bytes, faces: nil, face: nil}}
     end
   end
 

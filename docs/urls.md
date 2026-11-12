@@ -37,7 +37,7 @@ enforces the top-level list and the held URLs.
   `?size=tile`, `show`, or `original`. An accepted photo's page is `/photos/:id`
   (#1033), and `/photos/new` is Add photos from Photos, which asks which activity.
   Ask for photos, which emails everyone who attended, is `/activities/:id/photos/ask`
-  (#1032, part 7).
+  (#1032, part 7). Edit photo, for team admins, is `/photos/:id/edit` (part 8).
   Photos' views are `/photos?view=`: `best` with `&year=`, `activities`, `stars`,
   `yours`, `members`, `no-photo`, and `waiting`. Without it, Photos picks the view.
 - **Team pages live under `/teams/:subdomain`**, including the team's settings

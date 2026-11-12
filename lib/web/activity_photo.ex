@@ -21,6 +21,9 @@ defmodule Web.ActivityPhoto do
   @doc "The photo's own page (#1033), for an accepted photo."
   def page_path(%Team{} = team, %ActivityPhoto{id: id}), do: ~p"/teams/#{team}/photos/#{id}"
 
+  @doc "Edit photo (part 8), for a team admin."
+  def edit_path(%Team{} = team, %ActivityPhoto{id: id}), do: ~p"/teams/#{team}/photos/#{id}/edit"
+
   @doc """
   One of the photo's files, for an `<img>` or a link: `:tile`, `:show`, or `:original`.
   The path carries when the photo last changed, so a browser that kept one file never
@@ -49,6 +52,16 @@ defmodule Web.ActivityPhoto do
 
   def added_by(%ActivityPhoto{added_by_user: user}, %Team{} = team, now),
     do: Member.name_for_user(team, user, now)
+
+  @doc """
+  Who added the photo and on what day, for a page's facts: "Cameron Ruiz, Oct 28, 2026",
+  or the date alone when nobody is left to name.
+  """
+  def added_on(%ActivityPhoto{} = photo, %Team{} = team, now) do
+    [added_by(photo, team, now), Format.date_short(photo.inserted_at, team.timezone)]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(", ")
+  end
 
   @doc """
   Who added the photo and when, under its tile: "Cameron Ruiz · Nov 4". The day alone,
@@ -110,8 +123,8 @@ defmodule Web.ActivityPhoto do
     <img
       src={file_path(@team, @photo, :tile)}
       alt={@alt}
-      width={@photo.width}
-      height={@photo.height}
+      width={elem(ActivityPhoto.shown_size(@photo), 0)}
+      height={elem(ActivityPhoto.shown_size(@photo), 1)}
       loading="lazy"
       decoding="async"
     />

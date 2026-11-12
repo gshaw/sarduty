@@ -141,6 +141,14 @@ defmodule Service.Format do
   defp cents(c),
     do: "$" <> number(div(c, 100)) <> "." <> String.pad_leading("#{rem(c, 100)}", 2, "0")
 
+  @doc ~s(An angle in degrees, to the half degree it is set in: "10°", "2.5°", "−10°", with a true minus.)
+  def degrees(n) when is_number(n) do
+    tenths = round(abs(n) * 10)
+    sign = if tenths > 0 and n < 0, do: "−", else: ""
+    whole = if rem(tenths, 10) == 0, do: number(div(tenths, 10)), else: decimals(tenths / 10, 1)
+    sign <> whole <> "°"
+  end
+
   @doc ~s(A number to one decimal place, for a column whose header names the unit: "1.5", "2.0".)
   def tenths(n) when is_number(n), do: decimals(n, 1)
 

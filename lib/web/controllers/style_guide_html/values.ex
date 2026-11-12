@@ -186,6 +186,8 @@ defmodule Web.StyleGuideHTML.Values do
   defp measures do
     [
       {:km, "A distance", [{"km(42)", Format.km(42)}]},
+      {:degrees, "An angle, such as how far a photo is straightened",
+       [{"degrees(-10)", Format.degrees(-10)}, {"degrees(2.5)", Format.degrees(2.5)}]},
       {:money, "Dollars and cents, exact: half a cent rounds up",
        [
          {"money(0.67)", Format.money(0.67)},
