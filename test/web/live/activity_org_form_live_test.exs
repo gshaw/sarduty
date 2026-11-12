@@ -234,9 +234,9 @@ defmodule Web.ActivityOrgFormLiveTest do
   end
 
   # BCSARA's Task report puts a long Details of Task on an attached page, and its page
-  # warns from the description's length (#993).
+  # says so under the description, from its length (#993).
   describe "a long Details of Task" do
-    test "warns that it goes on an attached page", %{cast: cast, hiker: hiker, form: form} do
+    test "says it goes on an attached page", %{cast: cast, hiker: hiker, form: form} do
       organization = Repo.get!(App.Model.Organization, form.organization_id)
 
       task_report =
@@ -249,7 +249,7 @@ defmodule Web.ActivityOrgFormLiveTest do
 
       conn = log_in_user(build_conn(), cast.alex)
       {:ok, lv, _html} = live(conn, form_path(hiker, task_report))
-      refute has_element?(lv, "#org-form-attached-details")
+      refute has_element?(lv, "#org-form-attached-task-description")
 
       long = String.duplicate("Teams searched the north ridge and the creek drainage. ", 26)
       App.Model.Activity |> where(id: ^hiker.id) |> Repo.update_all(set: [description: long])
@@ -258,12 +258,11 @@ defmodule Web.ActivityOrgFormLiveTest do
 
       assert has_element?(
                lv,
-               "#org-form-attached-details",
-               "Details of Task goes on an attached page"
+               "#org-form-filled-table-task-description #org-form-attached-task-description",
+               "Too long for its 10 lines, so it goes on an attached page."
              )
 
-      assert has_element?(lv, "#org-form-attached-details", "It's too long for its 10 lines")
-      refute has_element?(lv, "#org-form-attached-equipment")
+      refute has_element?(lv, "[id^=org-form-attached-task-Equipment]")
     end
   end
 

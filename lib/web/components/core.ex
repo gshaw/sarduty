@@ -123,7 +123,11 @@ defmodule Web.Components.Core do
 
   attr :size, :atom, default: :md, values: [:sm, :md, :lg]
   attr :navigate, :string, default: nil
-  attr :patch, :string, default: nil, doc: "the same LiveView at another path, such as a step's Cancel"
+
+  attr :patch, :string,
+    default: nil,
+    doc: "the same LiveView at another path, such as a step's Cancel"
+
   attr :href, :string, default: nil
   attr :class, :string, default: nil
   attr :icon, :string, default: nil, values: [nil | @icon_names]

@@ -150,7 +150,7 @@ details text top 263pt, left 125.7pt, width 461pt, pitch 12pt, lines 10, size 9p
 - Typst decides when it prints, so SAR Duty measures nothing itself: the place sets a
   Typst state when it gives up, and the page prints only when it was set. DRAFT and
   SAMPLE print on it, and the verify code too, unless the form says `verify code none`.
-- The form's page warns from the text's length (`App.Document.attached/1`): a line at
+- The form's page notes it from the text's length (`App.Document.attached/1`): a line at
   8pt holds about the place's width over 0.47 of 8pt, and each line break starts a new
   line. It's a guess; the PDF is what Typst decides.
 - `more` goes on a text place with `lines`, never with `fit` or in a row.
@@ -617,9 +617,10 @@ shows` line, or each kept value for a form with none. Page 1 folds under it, dra
 - **Needed to publish**, a warning banner under the title while a value the form `needs`
   is missing ([Needs and email](#needs-and-email)). Publish stays on and says the same
   as an error.
-- **An attached page**, a banner under the title for each place that says `more` and
-  looks too long for its lines: "Details of Task goes on an attached page"
-  ([an attached page](#an-attached-page)). It follows the answers as they change.
+- **An attached page**, a hint under a value in What SAR Duty filled in when a place
+  that says `more` prints it and it looks too long for the place's lines: "Too long for
+  its 10 lines, so it goes on an attached page." ([an attached page](#an-attached-page)).
+  A place that prints an answer or a value worked out gets none; the preview shows it.
 - **What's missing**: each one blank that publishing doesn't need, with the page that fixes it, so the fix reaches
   D4H and every form. An activity's D4H field links to Change fields, its own details to
   Change activity, and the team's to team settings: its names to General, and its

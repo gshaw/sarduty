@@ -123,7 +123,8 @@ defmodule Web.ActivityOrgFormLive do
   defp open_request(%{assigns: %{activity: activity, form: form}}),
     do: SignRequest.open_for(activity, form)
 
-  # Each place whose text looks too long for its lines, so it goes on an attached page.
+  # Each place whose text looks too long for its lines, so it goes on an attached page:
+  # Filled in by SAR Duty says so under the value it prints.
   defp attached(nil, _answers), do: []
   defp attached(page, answers), do: ActivityForms.attached(page, answers)
 
@@ -458,17 +459,6 @@ defmodule Web.ActivityOrgFormLive do
       </p>
     </.banner>
 
-    <.banner
-      :for={place <- @attached}
-      id={"org-form-attached-#{place.name}"}
-      title={"#{place.more} goes on an attached page"}
-      class="mb-6"
-    >
-      <p>
-        It's too long for its {Service.Format.count(place.lines, one: "%d line", many: "%d lines")}, so they say See attached page. The PDF ends with the whole text on a page of its own.
-      </p>
-    </.banner>
-
     <div :if={@page} class="measure">
       <.waiting :if={@request} request={@request} asked_by={@asked_by} team={@current_team} />
       <.published_box
@@ -504,7 +494,16 @@ defmodule Web.ActivityOrgFormLive do
       <section :if={@page.filled != []} id="org-form-filled" class="mb-8">
         <h2 class="heading">Filled in by SAR Duty</h2>
         <.read_table id="org-form-filled-table" rows={@page.filled} team={@current_team}>
-          <:value :let={row}>{ReportTable.value_text(row.value, row.column, @current_team)}</:value>
+          <:value :let={row}>
+            {ReportTable.value_text(row.value, row.column, @current_team)}
+            <span
+              :if={place = Enum.find(@attached, &(&1.read == row.name))}
+              id={"org-form-attached-#{row_id(row)}"}
+              class="hint block mt-1"
+            >
+              Too long for its {Service.Format.count(place.lines, one: "%d line", many: "%d lines")}, so it goes on an attached page.
+            </span>
+          </:value>
         </.read_table>
       </section>
 
