@@ -154,7 +154,8 @@ fi
 - **Production data only through `bin/prod`** ([docs/production.md](docs/production.md)).
   Read tasks run whenever a question needs production; `bin/prod fix` and `backup` only
   when asked. A question no task answers gets a task in a PR. The repo's hook refuses raw
-  `fly ssh` and `bin/prod console`, which is for people.
+  `fly ssh` and `bin/prod console`, which is for people. Run `bin/prod` as one plain
+  command, nothing chained, so a prompt shows only that command.
 - Create migrations with `mix ecto.gen.migration name_with_underscores`. Migrations run
   when the app boots (`App.Release.migrate/0` in `App.Application.start/2`), in every
   environment — there is no release command.

@@ -20,8 +20,6 @@ TEAM_LOGO_PATH = "/path/to/team-logos"
 # TWILIO_API_KEY_SECRET = ""
 # TWILIO_FROM_NUMBER = "+16045550100"
 # DEV_SEND_SMS = "true"
-# For bin/prod backup: the public half of the backup age key (age1...).
-# BACKUP_AGE_RECIPIENT = ""
 # Optional: Healthchecks ping URLs, once per nightly refresh and once per sync round.
 # HEALTHCHECKS_URL = ""
 # HEALTHCHECKS_SYNC_URL = ""
