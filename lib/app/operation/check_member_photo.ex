@@ -2,8 +2,8 @@ defmodule App.Operation.CheckMemberPhoto do
   @moduledoc """
   Whether the team's records have a photo of the member (#1012), stored as
   `members.has_photo`, which an ID card needs. The one place that decides it: one image
-  request, where a 200 is a photo and any other answer is none. D4H and Records both
-  answer 404 for a member with no photo.
+  request, where a 200 is a photo and a 404 is none. D4H and Records both answer 404 for
+  a member with no photo. Any other answer keeps what was stored.
 
   Runs outside any transaction: nightly for each counted, current member
   (App.Worker.RefreshTeamDataWorker), and live before Issue, Replace, and Refresh ID card.
@@ -20,15 +20,23 @@ defmodule App.Operation.CheckMemberPhoto do
 
   @doc """
   Checks and stores, and returns the member with `has_photo` up to date. A request that
-  never got an answer keeps what was stored. `d4h` defaults to the team's context.
+  got no answer, or an answer other than 200 or 404, keeps what was stored. `d4h` defaults to the team's context.
   Expects the member with `:team` preloaded when no context is given.
   """
   def call(%Member{} = member, d4h \\ nil) do
     d4h = d4h || D4H.build_context_from_team(member.team)
 
     case D4H.fetch_member_image(d4h, member.d4h_member_id) do
-      {:ok, _image, _filename} -> store(member, true)
-      {:error, _response} -> store(member, false)
+      {:ok, _image, _filename} ->
+        store(member, true)
+
+      {:error, %{status: 404}} ->
+        store(member, false)
+
+      # A rate limit or an outage says nothing about the photo.
+      {:error, response} ->
+        Logger.warning("photo check failed: HTTP #{response.status}")
+        member
     end
   rescue
     error in Req.TransportError ->

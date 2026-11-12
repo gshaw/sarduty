@@ -150,8 +150,9 @@ matched to the person holding the phone.
 
 - **`members.has_photo`** says whether the team's records had a photo at the last check.
   [CheckMemberPhoto](../lib/app/operation/check_member_photo.ex) decides it with one
-  `GET /members/:id/image`: a 200 is a photo, any other answer none. D4H and Records both
-  answer 404 for a member with none. A request that gets no answer keeps what was stored.
+  `GET /members/:id/image`: a 200 is a photo, a 404 none, as D4H and Records both answer
+  for a member with none. Any other answer, such as a rate limit or an outage, or none at
+  all, keeps what was stored.
 - **Nightly**, after a team's full refresh and before Every member gets a card, it checks
   each counted, current member on a team with ID cards on, card holders too, so the
   report is right for everyone. One request per member, outside any transaction. New

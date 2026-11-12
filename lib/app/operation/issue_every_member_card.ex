@@ -85,13 +85,13 @@ defmodule App.Operation.IssueEveryMemberCard do
   def preview(%Team{} = team, now), do: team |> waiting(now) |> plan()
 
   @doc """
-  The members in good standing with no email, by name: they get a card, which they see on
-  Your membership, but no email. The Features tab names them under the switch.
+  The members in good standing with a photo and no email, by name: they get a card, which
+  they see on Your membership, but no email. The Features tab names them under the switch.
   """
   def without_email(%Team{} = team, now) do
     team
     |> counted_query(now)
-    |> where([m], is_nil(m.email) or m.email == "")
+    |> where([m], m.has_photo and (is_nil(m.email) or m.email == ""))
     |> order_by([m], asc: m.name)
     |> Repo.all()
   end
