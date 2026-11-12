@@ -122,7 +122,6 @@ defmodule Web.Layouts do
         {@inner_content}
       </main>
     <% end %>
-    <.dev_footer />
     """
   end
 
@@ -316,7 +315,8 @@ defmodule Web.Layouts do
 
   attr :size, :atom, values: ~w(wide form tool)a, default: :wide
 
-  # App and login pages have no footer, but in dev the Outbox is where login codes go.
+  # Login and other narrow pages have no footer, but in dev the Outbox is where login codes
+  # go. App pages reach it from the team switcher instead.
   defp dev_footer(assigns) do
     assigns = assign(assigns, outbox?: dev_outbox?())
 
