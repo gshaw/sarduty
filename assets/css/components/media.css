@@ -20,8 +20,12 @@
   /* An ID card as SAR Duty draws it for a screen (#973), on its page: a pass's width on
      a phone. The picture draws its own round corners. */
   .id-card-image { display: block; width: 100%; max-width: 340px; height: auto; }
-  /* Smaller, above the facts on a member's ID Card tab (#1012), for checking the photo. */
-  .id-card-image-sm { max-width: 240px; }
+  /* A member's ID Card tab (#1012): the card beside its facts from a tablet's width,
+     above them on a phone. The buttons go under both. */
+  .id-card-columns { display: grid; gap: var(--sp-6); align-items: start; }
+  @media (min-width: 48rem) {
+    .id-card-columns { grid-template-columns: 340px minmax(0, 1fr); gap: var(--sp-8); }
+  }
 
   /* A picture beside its words: a photo and a name, a logo and a team. */
   .media { display: flex; align-items: center; gap: var(--sp-3); }

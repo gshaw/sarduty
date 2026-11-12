@@ -29,7 +29,8 @@ defmodule App.Operation.IssueMemberCard do
 
   @doc """
   Pure. Why the member can't have a card now, `:not_active` or `:no_photo`, or nil when
-  they can. Replace ID card asks it too, to say Cancel instead (ReplaceMemberCard).
+  they can. Cancel ID card's confirm asks it too, to say whether Every member gets a card
+  gives them a new one.
   """
   def refusal(%Member{} = member, now) do
     cond do

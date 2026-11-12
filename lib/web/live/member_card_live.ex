@@ -11,9 +11,10 @@ defmodule Web.MemberCardLive do
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildCardQualifications
   alias App.Operation.BuildGooglePass
+  alias App.Operation.CancelMemberCard
   alias App.Operation.CheckMemberPhoto
+  alias App.Operation.IssueMemberCard
   alias App.Operation.RefreshMemberCard
-  alias App.Operation.ReplaceMemberCard
   alias App.Operation.SendMemberCard
   alias App.Repo
 
@@ -81,25 +82,18 @@ defmodule Web.MemberCardLive do
     {:noreply, reload_card(socket)}
   end
 
-  # Replace ID card or Cancel ID card, one button (#1012): the card stops working, and a
-  # new one is made only for a member who can have one. `expect` is what the button said
-  # when the team admin confirmed; if the live photo check changes it, nothing happens
-  # and the button changes. A new card shows its Emailed row, so no message.
-  def handle_event("replace", %{"expect" => expect}, socket) do
+  # Cancel ID card (#964, #1012), for any card. A lost phone takes Cancel, then Issue ID
+  # card, which the tab shows next.
+  def handle_event("cancel", _params, socket) do
     %{current_team: team, current_user: user, member: member} = socket.assigns
-    expected = if expect == "cancel", do: :cancel, else: :replace
 
     socket =
-      case ReplaceMemberCard.call(team, member, user, expected, DateTime.utc_now()) do
-        {:ok, :replaced, _card} -> socket
-        {:ok, :cancelled} -> put_flash(socket, :info, "#{member.name}'s ID card cancelled.")
-        {:error, {:changed, action}} -> put_flash(socket, :error, changed(action, member))
-        {:error, :id_cards_off} -> put_flash(socket, :error, id_cards_off(team))
+      case CancelMemberCard.call(team, member, user, DateTime.utc_now()) do
+        {:ok, _cards} -> put_flash(socket, :info, "#{member.name}'s ID card cancelled.")
         {:error, :no_card} -> socket
       end
 
-    member = member |> Repo.reload!() |> Repo.preload(:team)
-    {:noreply, socket |> assign_member(member) |> reload_card()}
+    {:noreply, reload_card(socket)}
   end
 
   def handle_event("email", _params, socket) do
@@ -131,23 +125,9 @@ defmodule Web.MemberCardLive do
   # No words name D4H or Records, so one sentence fits both kinds of team.
   defp no_photo(member), do: "#{member.name} has no photo. Add one, then try again."
 
-  # The live photo check changed what the button does since the page loaded.
-  defp changed(:replace, member),
-    do: "#{member.name} has a photo now, so the card was not cancelled. Select Replace ID card."
-
-  defp changed(:cancel, member),
-    do: "#{member.name} has no photo now, so no new card was made. Add one, then try again."
-
-  # The member, whether they are in good standing, and what Replace ID card does for them.
-  defp assign_member(socket, member) do
-    now = DateTime.utc_now()
-
-    assign(socket,
-      member: member,
-      active?: Member.good_standing?(member, now),
-      card_action: ReplaceMemberCard.action(member, now)
-    )
-  end
+  # The member, and whether they are in good standing.
+  defp assign_member(socket, member),
+    do: assign(socket, member: member, active?: Member.good_standing?(member, DateTime.utc_now()))
 
   defp reload_card(socket) do
     %{current_team: team, member: member} = socket.assigns
@@ -203,7 +183,6 @@ defmodule Web.MemberCardLive do
         image_path={@image_path}
         revoked_at={@revoked_at}
         every_member_card?={@current_team.every_member_card}
-        card_action={@card_action}
         member_logins?={@current_team.member_logins}
         service={@service}
       />
@@ -244,48 +223,50 @@ defmodule Web.MemberCardLive do
   defp card_content(assigns) do
     ~H"""
     <div id="card">
-      <img
-        :if={@active?}
-        id="card-image"
-        src={@image_path}
-        alt={"#{@member.name}'s ID card"}
-        class="id-card-image id-card-image-sm mb-6"
-      />
-      <dl>
-        <dt>Code</dt>
-        <dd class="mono">
-          <.a id="card-verify-link" href={verify_url(@card)}>{Web.VerifyHost.host()}/<span id="card-code">{MemberCard.format_code(
-            @card.code
-          )}</span></.a>
-        </dd>
-        <dt>Status</dt>
-        <dd id="card-status">
-          {if @active?,
-            do: "Active",
-            else: "Not active: #{@member.name} is #{not_active_text(@standing)}"}
-        </dd>
-        <dt>Issued</dt>
-        <dd>{Service.Format.date_short(@card.inserted_at, @member.team.timezone)}</dd>
-        <dt :if={@card.email_status}>Emailed</dt>
-        <dd :if={@card.email_status} id="card-emailed">
-          {emailed_text(@card, @member)}
-        </dd>
-        <dt>Endorsements</dt>
-        <dd id="card-qualifications">
-          <div :for={q <- @qualifications}>
-            {BuildCardQualifications.describe(q, @member.team.timezone)}
-          </div>
-          <div :if={@qualifications == [] and @endorsements_on_card?}>None</div>
-          <div :if={!@endorsements_on_card?}>
-            Your team shows no endorsements on ID cards.
-            <.a navigate={~p"/teams/#{@member.team}/endorsements"}>Select endorsements to show</.a>
-          </div>
-        </dd>
-        <dt :if={wallet?()}>Wallet</dt>
-        <dd :if={wallet?()}>
-          <span id="card-phones">{Web.WalletText.summary(@phones, @card)}</span>
-        </dd>
-      </dl>
+      <div class={@active? && "id-card-columns"}>
+        <img
+          :if={@active?}
+          id="card-image"
+          src={@image_path}
+          alt={"#{@member.name}'s ID card"}
+          class="id-card-image"
+        />
+        <dl>
+          <dt>Code</dt>
+          <dd class="mono">
+            <.a id="card-verify-link" href={verify_url(@card)}>{Web.VerifyHost.host()}/<span id="card-code">{MemberCard.format_code(
+              @card.code
+            )}</span></.a>
+          </dd>
+          <dt>Status</dt>
+          <dd id="card-status">
+            {if @active?,
+              do: "Active",
+              else: "Not active: #{@member.name} is #{not_active_text(@standing)}"}
+          </dd>
+          <dt>Issued</dt>
+          <dd>{Service.Format.date_short(@card.inserted_at, @member.team.timezone)}</dd>
+          <dt :if={@card.email_status}>Emailed</dt>
+          <dd :if={@card.email_status} id="card-emailed">
+            {emailed_text(@card, @member)}
+          </dd>
+          <dt>Endorsements</dt>
+          <dd id="card-qualifications">
+            <div :for={q <- @qualifications}>
+              {BuildCardQualifications.describe(q, @member.team.timezone)}
+            </div>
+            <div :if={@qualifications == [] and @endorsements_on_card?}>None</div>
+            <div :if={!@endorsements_on_card?}>
+              Your team shows no endorsements on ID cards.
+              <.a navigate={~p"/teams/#{@member.team}/endorsements"}>Select endorsements to show</.a>
+            </div>
+          </dd>
+          <dt :if={wallet?()}>Wallet</dt>
+          <dd :if={wallet?()}>
+            <span id="card-phones">{Web.WalletText.summary(@phones, @card)}</span>
+          </dd>
+        </dl>
+      </div>
       <.form_actions>
         <.button
           :if={@active? && @member.email && wallet?()}
@@ -305,57 +286,24 @@ defmodule Web.MemberCardLive do
         >
           Refresh ID card
         </.button>
-        <.replace_button
-          action={@card_action}
-          member={@member}
-          active?={@active?}
-          every_member_card?={@every_member_card?}
-        />
+        <.button
+          id="cancel-card"
+          variant={:danger}
+          phx-click="cancel"
+          phx-disable-with="Cancelling…"
+          data-confirm={cancel_confirm(@member)}
+          data-confirm-warning={cancel_warning(@member, @every_member_card?)}
+        >
+          Cancel ID card
+        </.button>
       </.form_actions>
       <p :if={@active? and wallet?()} id="card-delivery" class="hint">
         {delivery_hint(assigns)}
       </p>
-      <p :if={@card_action == :cancel} id="cancel-card-hint" class="hint">
+      <p :if={!@active? or !@member.has_photo} id="cancel-card-hint" class="hint">
         {cancel_hint(@member, @active?)}
       </p>
     </div>
-    """
-  end
-
-  attr :action, :atom, required: true, values: [:replace, :cancel]
-  attr :member, Member, required: true
-  attr :active?, :boolean, required: true
-  attr :every_member_card?, :boolean, required: true
-
-  # One button, Replace or Cancel, as ReplaceMemberCard.action/2 says (#1012). `expect`
-  # tells the server which the team admin confirmed.
-  defp replace_button(%{action: :replace} = assigns) do
-    ~H"""
-    <.button
-      id="replace"
-      phx-click="replace"
-      phx-value-expect="replace"
-      phx-disable-with="Replacing…"
-      data-confirm={replace_confirm(@member)}
-    >
-      Replace ID card
-    </.button>
-    """
-  end
-
-  defp replace_button(%{action: :cancel} = assigns) do
-    ~H"""
-    <.button
-      id="cancel-card"
-      variant={:danger}
-      phx-click="replace"
-      phx-value-expect="cancel"
-      phx-disable-with="Cancelling…"
-      data-confirm={cancel_confirm(@member)}
-      data-confirm-warning={cancel_warning(@active?, @every_member_card?)}
-    >
-      Cancel ID card
-    </.button>
     """
   end
 
@@ -364,19 +312,32 @@ defmodule Web.MemberCardLive do
       "Cancel #{member.name}'s ID card? Their pass shows Cancelled at once, and " <>
         "#{Web.VerifyHost.host()} says the card was cancelled, with nothing about them."
 
-  # Every member gets a card issues a new one to a member who comes back (#964), or who
-  # gets a photo (#1012).
-  defp cancel_warning(false, true),
-    do: "If they come back, Every member gets a card issues them a new one."
+  # Whether they get a new card, and how (#1012). Every member gets a card is named by
+  # what it does, since the confirm is far from the switch.
+  defp cancel_warning(member, every_member_card?) do
+    case {IssueMemberCard.refusal(member, DateTime.utc_now()), every_member_card?} do
+      {nil, true} ->
+        "Your team gives every current member an ID card, so they get a new one at the next refresh."
 
-  defp cancel_warning(false, false), do: "If they come back, issue them a new card."
+      {nil, false} ->
+        "To give them a new one, select Issue ID card."
 
-  defp cancel_warning(true, true),
-    do: "When they have a photo, Every member gets a card issues them a new one."
+      {:no_photo, true} ->
+        "Your team gives every current member with a photo an ID card, so they get a new one " <>
+          "after a photo is added."
 
-  defp cancel_warning(true, false), do: "When they have a photo, issue them a new card."
+      {:no_photo, false} ->
+        "To give them a new one, add a photo, then select Issue ID card."
 
-  # Why the button says Cancel ID card, not Replace.
+      {:not_active, true} ->
+        "Your team gives every current member an ID card, so they get a new one if they come back."
+
+      {:not_active, false} ->
+        "If they come back, select Issue ID card to give them a new one."
+    end
+  end
+
+  # A card that says Not active, or has no photo to verify against.
   defp cancel_hint(member, false = _active?),
     do:
       "#{member.name} can still show the pass until it expires, and it says Not active. " <>
@@ -385,17 +346,11 @@ defmodule Web.MemberCardLive do
   defp cancel_hint(member, true = _active?),
     do:
       "#{member.name} has no photo, so whoever verifies the card cannot match it to them. " <>
-        "Add one to replace the card, or cancel it."
+        "Add one, then select Refresh ID card."
 
   # Why a member's card is not active, or why they cannot get one.
   defp not_active_text(:retiring), do: "retiring"
   defp not_active_text(_standing), do: "retired"
-
-  defp replace_confirm(%Member{email: email} = member) when email not in [nil, ""],
-    do:
-      "Replace #{member.name}'s ID card? Its code stops working. The new card is emailed to #{email}."
-
-  defp replace_confirm(member), do: "Replace #{member.name}'s ID card? Its code stops working."
 
   defp emailed_text(%MemberCard{email_status: :sending}, member), do: "Sending to #{member.email}"
 

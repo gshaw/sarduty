@@ -73,15 +73,14 @@ organization gets its branding: see [organizations.md](organizations.md).
   the card's id. A published document's ID counts the same way (#970), its hit recorded
   with the document's id.
 - **A cancelled card shows nothing about the member.** The verify site says it was cancelled,
-  and its photo route 404s. Cards are cancelled only by Replace ID card, by Cancel ID
-  card for a retiring or retired member (#964), and by the team's ID cards switch
-  turning off.
+  and its photo route 404s. Cards are cancelled only by Cancel ID card (#964, #1012) and
+  by the team's ID cards switch turning off.
 - **A card that is not active shows no photo.** The page gives the name, the team, and
   "Not active", and the photo and banner routes 404, as for a cancelled card (#176). "Not
   active" is the whole answer a checker needs. A retired member's page says when they
   left; a retiring member's says no more.
-- **One live card per member.** Replacing a card revokes the one before it, and a code is
-  never reused.
+- **One live card per member.** Issue makes a card only for a member with none, and a
+  code is never reused.
 - **Status comes from the local copy of D4H**, so it can be 10 minutes behind, or a day
   for a change D4H doesn't mark ([d4h-sync.md](d4h-sync.md#where-the-copy-drifts)). The result says
   when the team last refreshed.
@@ -95,7 +94,8 @@ weeks (#969).
 1. Check it's guessing, in Adminland's Events: many IPs sending codes that never repeat.
    A few IPs with near-misses is a broken scanner or an app sending stale codes.
 2. Filter Events by Card found during alarm. Each is a card whose name, team, and
-   standing a guesser may have seen. Replace it, and tell the team's admins.
+   standing a guesser may have seen. Cancel it, issue a new one, and tell the team's
+   admins.
 3. If it goes on, block the ranges at the edge. Last resort, a browser challenge on the
    verify page, which breaks apps on the JSON check until they get keys.
 
@@ -163,11 +163,10 @@ matched to the person holding the phone.
   (`RefreshMemberCard.resend_cards/2`), so a card that went out with the placeholder gets
   the photo on the phones that night. A photo swapped for another needs Refresh ID card:
   seeing a change would mean downloading and comparing every photo.
-- **Issue and Replace** check live first, outside the transaction, so a photo added a
-  minute ago counts. `IssueMemberCard` refuses with `:no_photo`, one rule for Issue,
-  Replace, and the switch (`IssueMemberCard.refusal/2`). Issue's toast: "Riley Okafor has
-  no photo. Add one, then try again." For a card holder with no photo, the Replace button
-  says Cancel ID card instead ([Issuing and emailing](#issuing-and-emailing)).
+- **Issue** checks live first, outside the transaction, so a photo added a minute ago
+  counts. `IssueMemberCard` refuses with `:no_photo`, one rule for Issue and the switch
+  (`IssueMemberCard.refusal/2`). The toast: "Riley Okafor has no photo. Add one, then try
+  again."
 - **Stored, not checked per member**, because the switch makes every card in one
   transaction and the Features tab counts them as it loads. A request per member there
   would hold the write lock or slow the page.
@@ -180,7 +179,7 @@ matched to the person holding the phone.
   first photo is saved.
 - **Try a demo** skips the nightly refresh, so `BuildDemoTeam` sets `has_photo` from the
   cast: true for each person with the sample photo, false for the visitor. The visitor's
-  prebuilt card works; their Replace asks for a photo, which Change member adds.
+  prebuilt card works; a new one after Cancel asks for a photo, which Change member adds.
 - No words name D4H or Records ("has no photo"), so one sentence fits both kinds of team.
 
 ## Refresh ID card
@@ -332,45 +331,37 @@ reach a dev server, so dev passes have none. In production:
 
 ## Issuing and emailing
 
-The ID Card tab has three buttons for a member in good standing, and each queues one
-job ([SendMemberCardWorker](../lib/app/worker/send_member_card_worker.ex), on `bulk`)
-that emails the member one button, Get your ID card, to the card's page
+Issue ID card and Email ID card each queue one job
+([SendMemberCardWorker](../lib/app/worker/send_member_card_worker.ex), on `bulk`) that
+emails the member one button, Get your ID card, to the card's page
 ([The card's page](#the-cards-page)). The email builds no pass and attaches nothing
 ([EmailMemberCard](../lib/app/operation/email_member_card.ex)).
 
-- **Issue ID card**, before the member has one, makes the card.
-- **Replace ID card**, for a lost phone, makes a new card with a new code. The old one
-  stops working and its passes void, as above.
+| Member                      | Buttons                          |
+| --------------------------- | -------------------------------- |
+| No card                     | Issue ID card                    |
+| Good standing, with a card  | Email · Refresh · Cancel ID card |
+| Retiring or retired, a card | Cancel ID card                   |
+
+- **Issue ID card**, for a member with no card, makes one. It checks the photo first,
+  live, and makes no card without one ([A photo before a card](#a-photo-before-a-card)).
 - **Email ID card** sends the current card again. No limit.
+- **Refresh ID card**, while Wallet is set up, sends nothing by email
+  ([Refresh ID card](#refresh-id-card)).
+- **Cancel ID card**, red, on any card, makes no new one. A lost phone takes Cancel, then
+  Issue, which the tab shows next (#1012: Replace ID card did both in one click, and it
+  wasn't clear that it did). Its confirm says how they get a new card: "To give them a new
+  one, select Issue ID card", or, with Every member gets a card on, "Your team gives every
+  current member an ID card, so they get a new one at the next refresh." The confirm
+  names the switch by what it does, since the switch's name means little this far from
+  it. Cancel emails nothing, and history says who
+  ([Active and qualifications](#active-and-qualifications)).
 
-Issue and Replace check the photo first, live, and make no card without one
-([A photo before a card](#a-photo-before-a-card)). **Refresh ID card**, between Email and
-Replace while Wallet is set up, sends nothing by email
-([Refresh ID card](#refresh-id-card)). Above the facts, the tab shows the active card as
-the member sees it, from `/cards/:token/image`, about 240 px wide, so a team admin can
-check the photo.
+The card, as the member sees it from `/cards/:token/image`, sits beside its facts from a
+tablet's width and above them on a phone, so a team admin can check the photo. The
+buttons go under both.
 
-**Replace ID card and Cancel ID card are one button** (#1012,
-[ReplaceMemberCard](../lib/app/operation/replace_member_card.ex)). The card always stops
-working; a new one is made only for a member who can have one: in good standing, with a
-photo (`IssueMemberCard.refusal/2`). So the button says Replace ID card for a member who
-can, and Cancel ID card, red, for one who can't: retiring, retired (#964), or with no
-photo. Cancel emails nothing, and history says who
-([Active and qualifications](#active-and-qualifications)).
-
-| Member with a card          | Buttons                           |
-| --------------------------- | --------------------------------- |
-| Good standing, with a photo | Email · Refresh · Replace ID card |
-| Good standing, no photo     | Email · Refresh · Cancel ID card  |
-| Retiring or retired         | Cancel ID card                    |
-
-The button follows the stored photo check, and the click checks live. The button sends
-what it said (`expect`); when the live check changes it, nothing happens, the button
-changes, and a toast says why: "Riley Okafor has a photo now, so the card was not
-cancelled. Select Replace ID card." A member whose card was cancelled for want of a photo
-has no live card, so Every member gets a card issues them one once a photo is found.
-
-Issue and Replace make the card when clicked, mark it `email_status: :sending`, and queue
+Issue makes the card when clicked, mark it `email_status: :sending`, and queue
 the job in the same transaction, so the tab shows the new card at once
 ([SendMemberCard](../lib/app/operation/send_member_card.ex)). The job emails the card only
 while it is marked sending, so a retry, or a second job for the same card, sends one
@@ -483,7 +474,7 @@ other way to get the card.
   retired or retiring member's says it is not active; both send the member to a team admin. None shows a badge or the card,
   and the pass, picture, and PDF routes 404. A member who comes back gets the same card back, so its link works again.
 - **Anyone with the link can add the card,** as anyone could open a forwarded pass. The
-  page says the link is the member's alone, and Replace ID card ends it.
+  page says the link is the member's alone, and Cancel ID card ends it.
 
 ## Every member gets a card
 
@@ -576,13 +567,11 @@ Away and not a person don't change it.
 - **A team admin can cancel one by hand** (#964), for the rare member who shouldn't
   keep a card at all: until it expires, a Not active pass still looks like an official
   ID card, and scanning it shows their name and team. **Cancel ID card** on the ID Card
-  tab shows while the member is retiring or retired, and for a member in good standing
-  only when they have no photo (#1012), so a card a checker can match is replaced,
-  never taken. It is Replace ID card's button for a member who can't have a new card
+  tab works on any card since #1012, which also makes it the first step for a lost phone
   ([Issuing and emailing](#issuing-and-emailing)). It asks first in the app's dialog,
-  then does what Replace does to the old card, with no new one: revokes it and queues
-  `UpdateCancelledCardWorker` to void the Apple pass and expire the Google one
-  ([ReplaceMemberCard](../lib/app/operation/replace_member_card.ex)). The tab then says
+  then revokes the card, makes no new one, and queues `UpdateCancelledCardWorker` to void
+  the Apple pass and expire the Google one
+  ([CancelMemberCard](../lib/app/operation/cancel_member_card.ex)). The tab then says
   when the last card was cancelled, and the member's History says who.
 - **A cancelled member who comes back has no card.** Every member gets a card issues
   them a new one, with a new code, as for anyone without a live card; the confirm says
