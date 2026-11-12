@@ -65,7 +65,8 @@ defmodule App.Operation.AddActivityPhotos do
   The activities the person may add photos to at `now`, newest first: what Photos' Add
   photos asks them to pick from (#1033). For a member, the exercises and events they
   attended; for a team admin, every one that has started. `who` is as may_add?/4 takes
-  it. Each one passes `check/3`, the same rule the Add photos page asks.
+  it. Each one passes `check/3`, the same rule the Add photos page asks, and has only
+  its id, title, kind, and start.
   """
   def addable(%Team{} = team, who, %DateTime{} = now) do
     if available?(team) do
@@ -82,7 +83,10 @@ defmodule App.Operation.AddActivityPhotos do
   end
 
   # The team's exercises and events that have started: all of them for a team admin,
-  # and for a member the ones they attended. Nobody else has any.
+  # and for a member the ones they attended. Nobody else has any. A team admin's list
+  # can run to thousands, so each comes with only what the rule and the box read.
+  @listed [:id, :team_id, :d4h_activity_id, :title, :activity_kind, :started_at, :deleted_at]
+
   defp started(%Team{id: team_id}, who, now) do
     Activity
     |> where([a], a.team_id == ^team_id and a.activity_kind in ^Activity.photo_kinds())
@@ -90,6 +94,7 @@ defmodule App.Operation.AddActivityPhotos do
     |> Activity.not_deleted()
     |> attended_by(who, now)
     |> order_by([a], desc: a.started_at, desc: a.id)
+    |> select([a], struct(a, ^@listed))
   end
 
   defp attended_by(query, %{team_admin?: true}, _now), do: query
