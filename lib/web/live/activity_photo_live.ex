@@ -176,7 +176,10 @@ defmodule Web.ActivityPhotoLive do
                   <.a id="photo-stop-featuring" href="#" phx-click="stop-featuring">Stop featuring</.a>
                 </li>
                 <li :if={@photo.may_post}>
-                  <.a id="photo-export" navigate={Web.ActivityPhoto.export_path(@current_team, @photo)}>Export for a post</.a>
+                  <.a
+                    id="photo-export"
+                    navigate={Web.ActivityPhoto.export_path(@current_team, @photo)}
+                  >Export for a post</.a>
                 </li>
                 <li :if={!@photo.may_post} id="photo-export-off" class="action-off">
                   Export for a post

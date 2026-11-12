@@ -30,7 +30,11 @@ defmodule App.Operation.ExportActivityPhoto do
   downloads at, with the box zoomed all the way out.
   """
   def size(%ActivityPhoto{clean_up: true} = photo),
-    do: photo |> settings() |> Service.ActivityPhoto.edited_size({photo.width, photo.height}) |> Service.ActivityPhoto.show_size()
+    do:
+      photo
+      |> settings()
+      |> Service.ActivityPhoto.edited_size({photo.width, photo.height})
+      |> Service.ActivityPhoto.show_size()
 
   def size(%ActivityPhoto{} = photo),
     do: photo |> settings() |> Service.ActivityPhoto.edited_size({photo.width, photo.height})
