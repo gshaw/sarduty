@@ -216,21 +216,13 @@ defmodule App.Model.Team do
   def name_max(:abbreviated_name), do: @abbreviated_name_max
 
   @doc """
-  The length a name should keep to, or nil for none. Longer is allowed, and shows on
-  Needs attention (#738): Wallet cuts a name over about 23 characters on an ID card's
-  top line, and a text has 100 characters in all.
+  The length a name should keep to, for the hint in team settings (#738). Longer is
+  allowed: Wallet cuts a long name on an ID card's top line, by width rather than
+  count, and a text has 100 characters in all, so a long abbreviated name also shows
+  on Needs attention.
   """
   def name_advice(:name), do: 20
-  def name_advice(:legal_name), do: nil
   def name_advice(:abbreviated_name), do: 10
-
-  @doc "Whether the `field` name in `names`, a team or a map, is longer than name_advice/1 says."
-  def name_too_long?(%{} = names, field) do
-    case name_advice(field) do
-      nil -> false
-      advice -> String.length(Map.fetch!(names, field) || "") > advice
-    end
-  end
 
   @doc """
   Settings' Signer tab (#995): who signs the team's tax credit letters, one line that

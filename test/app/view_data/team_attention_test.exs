@@ -14,7 +14,7 @@ defmodule App.ViewData.TeamAttentionTest do
         timezone: "America/Vancouver",
         service: :d4h,
         refresh: %{state: :ok, message: nil},
-        names: %{name: "Ridge SAR", abbreviated_name: "RIDGE"},
+        abbreviated_name: "RIDGE",
         contacts?: true,
         draft_ids: [],
         missing_fields_ids: [],
@@ -113,7 +113,7 @@ defmodule App.ViewData.TeamAttentionTest do
           ],
           letters: %{year: 2025, count: 1},
           letter_settings: [%{name: "team.signer_title", label: "Signer's title"}],
-          names: %{name: String.duplicate("a", 21), abbreviated_name: String.duplicate("a", 11)},
+          abbreviated_name: String.duplicate("a", 11),
           contacts?: false
         })
 
@@ -127,7 +127,7 @@ defmodule App.ViewData.TeamAttentionTest do
       assert cannot_snooze |> keys() |> Enum.sort() ==
                Enum.sort(~w(refresh retiring_access group_changes chores certificates
                             chores_to_send attendance_to_send no_shows untagged_last_year
-                            two_hours_tags_last_year letters letter_settings long_name
+                            two_hours_tags_last_year letters letter_settings
                             long_abbreviated_name team_contacts)a)
 
       for item <- can_snooze do
@@ -155,28 +155,16 @@ defmodule App.ViewData.TeamAttentionTest do
     assert items(%{untagged: [%{count: 0, year: 2026, ids: ids(0)}]}, @october) == []
   end
 
-  describe "names (#738)" do
-    test "a name too long for ID cards asks for a shorter one" do
-      names = %{name: "York Sunbury Search and Rescue", abbreviated_name: "YSSR"}
-      assert [item] = items(%{names: names}, @october)
-      assert %{key: :long_name, level: :info} = item
-      assert item.title == "Your team's name is too long for ID cards"
-      assert item.detail =~ ~s("York Sunbury Search and Rescue" is cut off)
-      assert item.detail =~ "20 characters or fewer"
-    end
-
-    test "an abbreviated name too long for texts asks for a shorter one" do
-      names = %{name: "York Sunbury SAR", abbreviated_name: "York Sunbury SAR"}
-
+  describe "abbreviated name (#738)" do
+    test "too long for texts asks for a shorter one" do
       assert [%{key: :long_abbreviated_name, level: :info} = item] =
-               items(%{names: names}, @october)
+               items(%{abbreviated_name: "York Sunbury SAR"}, @october)
 
       assert item.detail =~ "10 characters or fewer"
     end
 
-    test "names at the advised lengths need nothing" do
-      names = %{name: String.duplicate("a", 20), abbreviated_name: String.duplicate("a", 10)}
-      assert items(%{names: names}, @october) == []
+    test "at the advised length needs nothing" do
+      assert items(%{abbreviated_name: String.duplicate("a", 10)}, @october) == []
     end
   end
 
