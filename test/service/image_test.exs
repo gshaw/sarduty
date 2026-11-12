@@ -3,6 +3,8 @@ defmodule Service.ImageTest do
 
   import App.DataFixtures, only: [png_fixture: 2]
 
+  alias Vix.Vips.MutableImage
+
   # The PNG signature, so a JPEG passed through unchanged would fail.
   @png_signature <<137, 80, 78, 71, 13, 10, 26, 10>>
 
@@ -52,5 +54,30 @@ defmodule Service.ImageTest do
 
   test "says so when the bytes aren't an image" do
     assert {:error, _} = Service.Image.square("not an image")
+    assert {:error, _} = Service.Image.jpeg("not an image", 1200)
+  end
+
+  describe "jpeg/2" do
+    # cspell:ignore gint -- libvips's integer type
+    test "turns a photo the way the camera held it, then shrinks it" do
+      # 3000 × 1500 as stored, with EXIF orientation 6: the camera was turned a quarter.
+      {:ok, sideways} =
+        3000
+        |> Image.new!(1500, color: :steelblue)
+        |> Image.mutate(&MutableImage.set(&1, "orientation", :gint, 6))
+
+      jpeg = Image.write!(sideways, :memory, suffix: ".jpg", strip_metadata: false)
+
+      assert {:ok, <<0xFF, 0xD8, _rest::binary>> = upright} = Service.Image.jpeg(jpeg, 1200)
+      image = Image.from_binary!(upright)
+      assert {Image.width(image), Image.height(image)} == {600, 1200}
+      assert {:error, _no_exif} = Image.exif(image)
+    end
+
+    test "a small photo keeps its size" do
+      {:ok, jpeg} = 40 |> png_fixture(30) |> Service.Image.jpeg(1200)
+      image = Image.from_binary!(jpeg)
+      assert {Image.width(image), Image.height(image)} == {40, 30}
+    end
   end
 end

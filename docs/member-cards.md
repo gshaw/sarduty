@@ -174,7 +174,7 @@ matched to the person holding the phone.
   later removed, until a team admin selects Cancel ID card. Change member already warns.
   Nothing checks what a photo shows: a photo that is not the person fails at the verify
   page, the same as none.
-- **Records teams:** SetMemberPhoto sets `has_photo` itself, with no download, refreshes
+- **A photo set in SAR Duty:** SetMemberPhoto sets `has_photo` itself, with no download, refreshes
   the card, and runs Every member gets a card, so the switch's card goes out the moment a
   first photo is saved.
 - **Try a demo** skips the nightly refresh, so `BuildDemoTeam` sets `has_photo` from the

@@ -1,37 +1,37 @@
 defmodule Service.Image do
   @moduledoc """
   Shapes member photos and team logos for passes and /verify. Wallet has no CSS, so the
-  server does what `object-cover` does on the site. Every function takes image bytes in
-  any format libvips reads and returns `{:ok, png}` or `{:error, reason}`, except
-  member_photo/1.
+  server does what `object-cover` does on the site. Each shape takes image bytes in any
+  format libvips reads and returns `{:ok, png}` or `{:error, reason}`.
+
+  It also cleans up a photo a phone sent, for a certificate (#493) or a member's photo
+  (#1028): `jpeg/2` makes the JPEG that is kept or sent.
   """
 
-  # An image bigger than this is a mistake or an attack, not a face. Records' limit.
-  @max_pixels 50_000_000
+  # The most pixels a photo can claim. A real photo under 10 MB has at most about 108
+  # million (12000 × 9000, from a 108 MP phone camera). A PNG of a few hundred bytes can
+  # claim 40000 × 40000, 1,600 million, which would take minutes and gigabytes to decode.
+  @max_pixels 120_000_000
 
   @doc """
-  A member's photo as it goes to the team's records: upright, at most 1024 on its longer
-  side, a JPEG on white, with its metadata stripped so a phone photo's location is not
-  sent. D4H keeps what it gets; Records shrinks it again. `{:ok, jpeg}` or
-  `{:error, :not_an_image}`.
+  A photo as a JPEG no larger than `max` on its longer side: turned the way the camera
+  held it, flattened onto white, and saved without metadata (GPS, camera). `{:ok, jpeg}`,
+  `{:error, :too_many_pixels}`, or `{:error, reason}`.
   """
-  def member_photo(bytes) when is_binary(bytes) do
+  # Opening reads only the header, so the size is checked before anything is decoded.
+  def jpeg(bytes, max) do
     with {:ok, image} <- Image.from_binary(bytes),
-         true <- Image.width(image) * Image.height(image) <= @max_pixels,
-         {:ok, {upright, _flags}} <- Image.autorotate(image),
-         {:ok, fitted} <- Image.thumbnail(upright, 1024, resize: :down),
-         # libvips reads lazily, so a file it cannot decode fails here.
-         {:ok, jpeg} <-
-           Image.write(fitted, :memory,
-             suffix: ".jpg",
-             quality: 85,
-             background: :white,
-             strip_metadata: true
-           ) do
-      {:ok, jpeg}
-    else
-      _error -> {:error, :not_an_image}
+         :ok <- check_pixels(image),
+         {:ok, fitted} <- Image.thumbnail(image, max, resize: :down, autorotate: true),
+         {:ok, flat} <- flatten(fitted, :white) do
+      Image.write(flat, :memory, suffix: ".jpg", quality: 85, strip_metadata: true)
     end
+  end
+
+  defp check_pixels(image) do
+    if Image.width(image) * Image.height(image) > @max_pixels,
+      do: {:error, :too_many_pixels},
+      else: :ok
   end
 
   @doc "Crops a photo to the centered square at its shorter side, no larger than `max`."

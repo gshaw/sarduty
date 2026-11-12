@@ -58,9 +58,20 @@ email, mobile phone, address, joined date, and status: Operational, Not operatio
 Observer, D4H's three. Saving is one `update_member` row naming only what changed,
 through [SaveMember](../lib/app/operation/save_member.ex) and ApplyEdit, which sends a D4H
 team only those fields (`ApplyEdit.d4h_takes?/1`). A D4H team's form has no Team admin
-box, photo, or Mark as retired: D4H sets access, photos, and leaving in its web app, and
-Retiring is its own steps ([Retiring](#retiring)). Adding a member is a Records team's
-only ([records.md](records.md#editing-records)).
+box or Mark as retired: D4H sets access and leaving in its web app, and Retiring is its
+own steps ([Retiring](#retiring)). Adding a member is a Records team's only
+([records.md](records.md#editing-records)).
+
+- **Photo** is on every team's form, below the details: Save photo and Remove photo
+  (#1028). [SetMemberPhoto](../lib/app/operation/set_member_photo.ex) makes it a JPEG up
+  to 1200 px on its longer side, upright, with no metadata (a phone photo's GPS), so it
+  looks sharp on a Wallet pass and a printed card. Records takes a `PUT` on the member's
+  image. D4H takes a document on the member with `profile` set: tried live on one South
+  Fraser member on 2026-11-12, the member's image was the new photo at once, byte for
+  byte. D4H keeps the photo it replaces as a plain attachment, so SAR Duty lists the
+  member's profile documents first and deletes them once the new one is in. Removing
+  deletes them: D4H then has no photo for the member and doesn't go back to an older
+  one. A D4H Editor's key is untried; a refusal shows D4H's own words in a toast.
 
 - **Role** is D4H's free-text `position`, so teams drift: South Fraser had 45 roles
   across 93 members. Role is the combobox with `free_text`: it lists the team's roles,

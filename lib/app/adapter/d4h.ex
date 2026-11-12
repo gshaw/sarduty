@@ -150,9 +150,9 @@ defmodule App.Adapter.D4H do
     |> report_rate_limits()
   end
 
-  # Who takes a write D4H and Records take differently, such as a member's photo. D4H's
-  # own form goes only to a D4H region. Any other host speaks Records' API: SAR Duty
-  # Records, a dev one behind RECORDS_HOST, and the throwaway one the Records repo's
+  # Who takes a write D4H and Records take differently, such as a member's photo (#1028).
+  # D4H's own form goes only to a D4H region. Any other host speaks Records' API: SAR
+  # Duty Records, a dev one behind RECORDS_HOST, and the throwaway one the Records repo's
   # bin/check-sarduty runs this adapter against.
   defp write_service(api_host) do
     if api_host in Map.values(regions()), do: :d4h, else: :records
@@ -1397,12 +1397,12 @@ defmodule App.Adapter.D4H do
   defp put_activity_location(json, _attrs), do: json
 
   @doc """
-  Sets a member's photo to `bytes`, a JPEG from Service.Image.member_photo/1.
+  Sets a member's photo to `bytes`, a JPEG (#1028).
 
-  Records takes a PUT on the image, its own. D4H takes a document on the member with
-  `profile` set, which its spec (7.6.1) calls "Whether this document is the profile
-  image". Tried live on a South Fraser member on 2026-11-12: the member's image is the
-  new photo at once, byte for byte.
+  Records takes a PUT on the image, its own, and answers with the member. D4H takes a
+  document on the member with `profile` set, which its spec (7.6.1) calls "Whether this
+  document is the profile image", and answers with the document. Tried live on a real
+  member on 2026-11-12: the member's image is the new photo at once.
 
   D4H keeps the photo it replaces as a plain attachment on the member, so each change
   would leave one behind. The old profile documents are listed first, because once
@@ -1416,32 +1416,37 @@ defmodule App.Adapter.D4H do
         write(context, :put, url, {:body, bytes}, &D4H.Member.build/1)
 
       :d4h ->
-        old_ids =
-          case profile_document_ids(context, d4h_member_id) do
-            {:ok, ids} -> ids
-            {:error, _error} -> []
-          end
+        set_profile_document(context, d4h_member_id, bytes)
+    end
+  end
 
-        form = [
-          title: "Photo",
-          targetResourceType: "Member",
-          targetResourceId: to_string(d4h_member_id),
-          profile: "true",
-          file: {bytes, filename: "photo.jpg", content_type: "image/jpeg"}
-        ]
+  defp set_profile_document(context, d4h_member_id, bytes) do
+    old_ids =
+      case profile_document_ids(context, d4h_member_id) do
+        {:ok, ids} -> ids
+        {:error, _error} -> []
+      end
 
-        with {:ok, document} <-
-               write(context, :post, "/documents", {:form, form}, &D4H.Document.build/1) do
-          Enum.each(old_ids, &Req.delete(context, url: "/documents/#{&1}", retry: false))
-          {:ok, document}
-        end
+    form = [
+      title: "Photo",
+      targetResourceType: "Member",
+      targetResourceId: to_string(d4h_member_id),
+      profile: "true",
+      file: {bytes, filename: "photo.jpg", content_type: "image/jpeg"}
+    ]
+
+    with {:ok, document} <-
+           write(context, :post, "/documents", {:form, form}, &D4H.Document.build/1) do
+      Enum.each(old_ids, &Req.delete(context, url: "/documents/#{&1}", retry: false))
+      {:ok, document}
     end
   end
 
   @doc """
-  Removes a member's photo. Records takes a DELETE on the image, its own. On D4H,
-  deleting the member's profile document leaves no photo; D4H doesn't go back to an
-  older one (tried live, 2026-11-12). `{:ok, _}` or `{:error, %D4H.Error{}}`.
+  Removes a member's photo (#1028). Records takes a DELETE on the image, its own. On
+  D4H, deleting the member's profile document leaves no photo; D4H doesn't go back to an
+  older one (tried live, 2026-11-12). A list that fails is a failed remove, so the page
+  never says a photo went when it didn't. `{:ok, _}` or `{:error, %D4H.Error{}}`.
   """
   def remove_member_photo(context, d4h_member_id) do
     case Req.Request.get_private(context, :write_service) do
@@ -1449,15 +1454,18 @@ defmodule App.Adapter.D4H do
         write(context, :delete, "/members/#{d4h_member_id}/image", nil, &D4H.Member.build/1)
 
       :d4h ->
-        with {:ok, ids} <- profile_document_ids(context, d4h_member_id) do
-          Enum.reduce_while(ids, {:ok, d4h_member_id}, fn id, ok ->
-            case write(context, :delete, "/documents/#{id}", nil, & &1) do
-              {:ok, _body} -> {:cont, ok}
-              error -> {:halt, error}
-            end
-          end)
-        end
+        with {:ok, ids} <- profile_document_ids(context, d4h_member_id),
+             :ok <- delete_documents(context, ids),
+             do: {:ok, d4h_member_id}
     end
+  end
+
+  # Stops at the first refusal, which is the answer.
+  defp delete_documents(_context, []), do: :ok
+
+  defp delete_documents(context, [id | ids]) do
+    with {:ok, _body} <- write(context, :delete, "/documents/#{id}", nil, & &1),
+         do: delete_documents(context, ids)
   end
 
   defp profile_document_ids(context, d4h_member_id) do

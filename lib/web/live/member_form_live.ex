@@ -11,8 +11,8 @@ defmodule Web.MemberFormLive do
   alias App.ViewModel.MemberFormViewModel
 
   # Adding and changing members of a team on SAR Duty Records (docs/records.md), and
-  # changing a member's details on a D4H team. D4H adds members, and sets access, photos,
-  # and leaving, in its web app, so a D4H team's page has only the details.
+  # changing a member's details and photo on a D4H team. D4H adds members, and sets access
+  # and leaving, in its web app, so a D4H team's page has no Team admin box or Retirement.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     unless D4H.records?(team) or params["id"], do: raise(Web.Status.NotFound)
@@ -28,8 +28,8 @@ defmodule Web.MemberFormLive do
       |> assign(records?: D4H.records?(team), roles: Member.roles(team))
       |> assign_form(MemberFormViewModel.changeset(form))
       # cspell:ignore webp -- the WebP file extension
-      # Records takes up to 10 MB and shrinks it. HEIC is refused there, but an iPhone's
-      # browser sends a JPEG from a file input.
+      # SetMemberPhoto shrinks it before it goes. An iPhone's browser sends a JPEG from a
+      # file input, not HEIC.
       |> allow_upload(:photo,
         accept: ~w(.jpg .jpeg .png .webp),
         max_entries: 1,
@@ -102,7 +102,7 @@ defmodule Web.MemberFormLive do
       </.form_actions>
     </.form>
 
-    <section :if={@records? and @member} id="member-photo" class="mt-8 measure">
+    <section :if={@member} id="member-photo" class="mt-8 measure">
       <h2 class="heading">Photo</h2>
       <%!-- The version changes after a save, so the browser loads the new photo. --%>
       <p>

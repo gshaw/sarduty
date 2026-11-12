@@ -49,6 +49,11 @@ defmodule App.Operation.ApplyEditTest do
     refute ApplyEdit.d4h_takes?(%ChangeSetRow{action: :delete_equipment_item, new_value: %{}})
   end
 
+  test "a member's photo is set and removed in D4H (#1028)" do
+    assert ApplyEdit.d4h_takes?(%ChangeSetRow{action: :set_member_photo, new_value: %{}})
+    assert ApplyEdit.d4h_takes?(%ChangeSetRow{action: :remove_member_photo, new_value: %{}})
+  end
+
   test "a D4H team's member row with access goes nowhere and says where to change it" do
     team = %Team{id: 1, d4h_api_host: "api.ca.d4h.org"}
     row = member_row(%{"position" => "MIT", "permission" => 0})

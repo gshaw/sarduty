@@ -7,10 +7,6 @@ defmodule Service.CertificateFile do
 
   @max_bytes 10_000_000
   @max_side 2000
-  # The most pixels a photo can claim. A real photo under 10 MB has at most about 108
-  # million (12000 × 9000, from a 108 MP phone camera). A PNG of a few hundred bytes can
-  # claim 40000 × 40000, 1,600 million, which would take minutes and gigabytes to decode.
-  @max_pixels 120_000_000
 
   @doc "The largest file a member can send."
   def max_bytes, do: @max_bytes
@@ -29,7 +25,7 @@ defmodule Service.CertificateFile do
     do: {:ok, %{bytes: bytes, content_type: "application/pdf", file_name: file_name}}
 
   defp prepare(kind, bytes, file_name) when kind in [:image, :heic] do
-    case to_jpeg(bytes) do
+    case Service.Image.jpeg(bytes, @max_side) do
       {:ok, jpeg} ->
         {:ok, %{bytes: jpeg, content_type: "image/jpeg", file_name: jpeg_name(file_name)}}
 
@@ -71,29 +67,6 @@ defmodule Service.CertificateFile do
       do: :heic
 
   def type(_bytes), do: :unknown
-
-  # Turned the way the camera held it, flattened onto white, and saved without metadata.
-  # Opening reads only the header, so the size is checked before anything is decoded.
-  defp to_jpeg(bytes) do
-    with {:ok, image} <- Image.from_binary(bytes),
-         :ok <- check_pixels(image),
-         {:ok, fitted} <- Image.thumbnail(image, @max_side, resize: :down, autorotate: true),
-         {:ok, flat} <- flatten(fitted) do
-      Image.write(flat, :memory, suffix: ".jpg", quality: 85, strip_metadata: true)
-    end
-  end
-
-  defp check_pixels(image) do
-    if Image.width(image) * Image.height(image) > @max_pixels,
-      do: {:error, :too_many_pixels},
-      else: :ok
-  end
-
-  defp flatten(image) do
-    if Image.has_alpha?(image),
-      do: Image.flatten(image, background: :white),
-      else: {:ok, image}
-  end
 
   defp jpeg_name(file_name) do
     case Path.rootname(file_name || "") do

@@ -113,11 +113,11 @@ defmodule Web.MemberFormLiveTest do
     assert html =~ "Enter a shorter name."
   end
 
-  test "a team admin uploads a photo, which goes to Records and is not kept here",
+  test "a team admin uploads a photo, which goes to Records as a JPEG and is not kept here",
        %{conn: conn, team: team, admin: admin} do
     stub_ok()
     admin |> Ecto.Changeset.change(has_photo: false) |> Repo.update!()
-    photo = png_fixture(40, 30)
+    photo = png_fixture(1600, 1200)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
 
     lv
@@ -127,11 +127,13 @@ defmodule Web.MemberFormLiveTest do
     assert lv |> form("#photo-form") |> render_submit() =~ "Photo saved."
 
     path = "/members/#{admin.d4h_member_id}/image"
-    assert_received {:records, "PUT", ^path, {:bytes, ^photo}}
+    assert_received {:records, "PUT", ^path, {:bytes, <<0xFF, 0xD8, _rest::binary>> = jpeg}}
+    image = Image.from_binary!(jpeg)
+    assert {Image.width(image), Image.height(image)} == {1200, 900}
 
     [row] = Repo.all(ChangeSetRow)
     assert {row.action, row.status} == {:set_member_photo, :applied}
-    assert row.new_value == %{"size" => byte_size(photo)}
+    assert row.new_value == %{"size" => byte_size(jpeg)}
     # Set with no download, so an ID card can follow at once (#1012).
     assert Repo.reload!(admin).has_photo
   end
@@ -145,6 +147,24 @@ defmodule Web.MemberFormLiveTest do
     path = "/members/#{admin.d4h_member_id}/image"
     assert_received {:records, "DELETE", ^path, nil}
     refute Repo.reload!(admin).has_photo
+  end
+
+  test "a file that isn't a photo says so, and nothing is sent",
+       %{conn: conn, team: team, admin: admin} do
+    stub_ok()
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
+
+    lv
+    |> file_input("#photo-form", :photo, [
+      %{name: "face.jpg", content: "not a photo", type: "image/jpeg"}
+    ])
+    |> render_upload("face.jpg")
+
+    lv |> form("#photo-form") |> render_submit()
+    assert has_element?(lv, "#flash-error", "SAR Duty cannot read this photo.")
+
+    refute_received {:records, _method, _path, _body}
+    assert Repo.all(ChangeSetRow) == []
   end
 
   test "saving with no photo selected asks for one", %{conn: conn, team: team, admin: admin} do
@@ -179,7 +199,7 @@ defmodule Web.MemberFormLiveTest do
       assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/members/new") end
     end
 
-    test "Change member has the details D4H takes, without access, photo, or leaving",
+    test "Change member has the details and photo D4H takes, without access or leaving",
          %{conn: conn, team: team} do
       member = member_fixture(team, %{position: "MIT"})
       member_fixture(team, %{position: "GSTL"})
@@ -196,8 +216,67 @@ defmodule Web.MemberFormLiveTest do
       assert has_element?(lv, "#form_position-select option:nth-child(2)[value=MIT]")
       assert has_element?(lv, "#form_position-select option[value=GSTL]")
       refute has_element?(lv, "#form_team_admin")
-      refute has_element?(lv, "#member-photo")
+      assert has_element?(lv, "#member-photo #save-photo")
+      assert has_element?(lv, "#member-photo #remove-photo")
       refute has_element?(lv, "#member-retire")
+    end
+
+    test "a photo goes to D4H as the member's profile document",
+         %{conn: conn, team: team} do
+      RecordsStub.stub(fn _method, _path, _body -> {200, %{"id" => 99}} end, %{
+        "/documents" => [%{"id" => 11}]
+      })
+
+      member = member_fixture(team, %{has_photo: false})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/edit")
+
+      lv
+      |> file_input("#photo-form", :photo, [
+        %{name: "face.png", content: png_fixture(40, 30), type: "image/png"}
+      ])
+      |> render_upload("face.png")
+
+      assert lv |> form("#photo-form") |> render_submit() =~ "Photo saved."
+
+      assert_received {:records, "POST", "/documents", {:multipart, form}}
+      assert form =~ ~s(name="targetResourceId"\r\n\r\n#{member.d4h_member_id})
+      assert form =~ ~s(name="profile"\r\n\r\ntrue)
+      # The photo it replaces would stay on the member as a plain attachment.
+      assert_received {:records, "DELETE", "/documents/11", nil}
+
+      [row] = Repo.all(ChangeSetRow)
+      assert {row.action, row.status} == {:set_member_photo, :applied}
+      assert Repo.reload!(member).has_photo
+    end
+
+    test "Remove photo deletes the member's profile document in D4H",
+         %{conn: conn, team: team} do
+      RecordsStub.stub(fn _method, _path, _body -> {200, %{}} end, %{
+        "/documents" => [%{"id" => 11}]
+      })
+
+      member = member_fixture(team, %{has_photo: true})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/edit")
+
+      assert lv |> element("#remove-photo") |> render_click() =~ "Photo removed."
+      assert_received {:records, "DELETE", "/documents/11", nil}
+      refute Repo.reload!(member).has_photo
+    end
+
+    test "D4H's refusal shows in the toast, and the photo stays", %{conn: conn, team: team} do
+      RecordsStub.stub(fn _method, _path, _body -> {403, %{"title" => "Forbidden"}} end)
+
+      member = member_fixture(team, %{has_photo: true})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/edit")
+
+      lv
+      |> file_input("#photo-form", :photo, [
+        %{name: "face.png", content: png_fixture(40, 30), type: "image/png"}
+      ])
+      |> render_upload("face.png")
+
+      assert lv |> form("#photo-form") |> render_submit() =~ "D4H refused it"
+      assert Repo.reload!(member).has_photo
     end
 
     test "saving sends D4H only what changed", %{conn: conn, team: team} do
