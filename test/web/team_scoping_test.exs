@@ -59,6 +59,10 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/certificates/:id/file",
     # A member's own certificate. Web.CertificateFormLiveTest covers another member's.
     "/teams/:subdomain/certificates/:id/edit",
+    # A photo a member added (#1029): this team has Photos on, so these find the record
+    # through it.
+    "/teams/:subdomain/photos/members/:id",
+    "/teams/:subdomain/photos/members/:id/file",
     "/teams/:subdomain/endorsements/:id",
     "/teams/:subdomain/members/:id",
     "/teams/:subdomain/members/:id/edit",
@@ -106,7 +110,11 @@ defmodule Web.TeamScopingTest do
 
     team =
       team
-      |> Ecto.Changeset.change(member_logins: true, certificates_enabled: true)
+      |> Ecto.Changeset.change(
+        member_logins: true,
+        certificates_enabled: true,
+        photos_enabled: true
+      )
       |> Repo.update!()
 
     other_team = team_fixture()
@@ -134,6 +142,7 @@ defmodule Web.TeamScopingTest do
       award: certificate_award_fixture(other_team, member),
       outbox: OutboxMessage.add_text!("+16045551234", "Theirs"),
       certificate: certificate_fixture(member, qualification_fixture(other_team)),
+      photo: member_photo_fixture(member),
       report:
         Repo.insert!(%App.Model.SavedReport{
           team_id: other_team.id,
@@ -349,6 +358,12 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/certificates/:id/edit", s, o),
     do: ~p"/teams/#{s}/certificates/#{o.certificate.id}/edit"
+
+  defp path_for("/teams/:subdomain/photos/members/:id", s, o),
+    do: ~p"/teams/#{s}/photos/members/#{o.photo.id}"
+
+  defp path_for("/teams/:subdomain/photos/members/:id/file", s, o),
+    do: ~p"/teams/#{s}/photos/members/#{o.photo.id}/file"
 
   defp path_for("/teams/:subdomain/members/:id", s, o), do: ~p"/teams/#{s}/members/#{o.member.id}"
 

@@ -16,7 +16,11 @@ defmodule Web.MemberPagesTest do
 
     team =
       team
-      |> Ecto.Changeset.change(id_cards_enabled: true, certificates_enabled: true)
+      |> Ecto.Changeset.change(
+        id_cards_enabled: true,
+        certificates_enabled: true,
+        photos_enabled: true
+      )
       |> Repo.update!()
 
     admin = App.AccountsFixtures.user_fixture()
@@ -50,6 +54,8 @@ defmodule Web.MemberPagesTest do
     chore = chore_fixture(sam, chore_category_fixture(team))
     tax_credit_letter_fixture(sam)
     certificate = certificate_fixture(sam, qualification_fixture(team))
+    # A photo of their own that waits (#1029), so Photos shows it and the one on the card.
+    member_photo_fixture(sam)
 
     # A request to sign that ended (#993), so its page shows without printing.
     form = form_fixture(organization_fixture([team]), %{state: :on})
@@ -94,6 +100,8 @@ defmodule Web.MemberPagesTest do
       "/teams/#{s}/chores/new",
       "/teams/#{s}/chores/#{chore.id}/edit",
       "/teams/#{s}/whiteboard",
+      "/teams/#{s}/photos",
+      "/teams/#{s}/photos/members/new",
       "/teams/#{s}/help",
       "/teams/#{s}/me",
       "/teams/#{s}/me/activities",

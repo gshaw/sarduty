@@ -15,6 +15,7 @@ defmodule Web.TeamDashboardLive do
   alias App.Model.Chore
   alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Model.MemberPhoto
   alias App.Model.SignRequest
   alias App.Model.Team
   alias App.Model.Trip
@@ -147,11 +148,19 @@ defmodule Web.TeamDashboardLive do
           card,
           in_wallet?,
           qualifications,
-          [chores: chores, certificates: certificates, sign: sign(member, member.team, now)] ++
-            travel(member, now)
+          [
+            chores: chores,
+            certificates: certificates,
+            sign: sign(member, member.team, now),
+            declined_photo: declined_photo(member)
+          ] ++ travel(member, now)
         )
     )
   end
+
+  # The photo they added that a team admin declined (#1029), until they add another.
+  defp declined_photo(member),
+    do: if(Team.photos?(member.team), do: MemberPhoto.declined_for_member(member))
 
   # The forms a team admin asked the member to sign that still ask them (#993).
   defp sign(member, team, now) do
@@ -622,6 +631,9 @@ defmodule Web.TeamDashboardLive do
 
   defp attention_path(team, %{key: :certificates}), do: ~p"/teams/#{team}/certificates"
 
+  defp attention_path(team, %{key: :photos}),
+    do: Web.PhotoCollectionLive.view_path(team, :waiting)
+
   defp attention_path(team, %{key: key}) when key in [:chores, :chores_to_send],
     do: ~p"/teams/#{team}/chores"
 
@@ -764,6 +776,18 @@ defmodule Web.TeamDashboardLive do
         many: "%d of your certificates were declined"
       )}</.a>
       <span class="hint block">{declined_certificate_hint(@item.certificates)}</span>
+    </li>
+    """
+  end
+
+  defp to_do_item(%{item: %{key: :declined_photo}} = assigns) do
+    ~H"""
+    <li id="to-do-declined-photo" class="py-3">
+      <.a
+        navigate={Web.PhotoCollectionLive.add_path(@team, nil)}
+        class="font-semibold"
+      >Your photo was declined: {Web.MemberPhoto.reason(@item.photo)}</.a>
+      <span class="hint block">Add another.</span>
     </li>
     """
   end

@@ -255,6 +255,36 @@ defmodule Web.TeamDashboardLiveTest do
     assert has_element?(lv, "#attention-certificates", "2 certificates to accept")
   end
 
+  # Photos members added of themselves (#1029): one row, for team admins, that opens
+  # Photos on Waiting.
+  test "photos waiting need attention, but not a retiring member's", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture(%{team: %{photos_enabled: true}})
+    leavers = group_fixture(team, %{title: "Leavers"})
+    team |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id) |> Repo.update!()
+    retiring = member_fixture(team, %{name: "Avery Retiring"})
+    group_member_fixture(leavers, retiring)
+    member_photo_fixture(retiring)
+
+    {:ok, lv, _html} = open(conn, user, team)
+    refute has_element?(lv, "#attention-photos")
+
+    member_photo_fixture(member_fixture(team))
+    {:ok, lv, _html} = open(conn, user, team)
+    waiting = ~p"/teams/#{team}/photos?view=waiting"
+    assert has_element?(lv, ~s|#attention-photos a[href="#{waiting}"]|, "1 photo waiting")
+    assert has_element?(lv, "#attention-photos", "Check it, then accept or decline it.")
+
+    member_photo_fixture(member_fixture(team))
+    {:ok, lv, _html} = open(conn, user, team)
+    assert has_element?(lv, "#attention-photos", "2 photos waiting")
+    assert has_element?(lv, "#attention-photos", "Check them, then accept or decline them.")
+
+    # With Photos off, nothing waits.
+    team |> Ecto.Changeset.change(photos_enabled: false) |> Repo.update!()
+    {:ok, lv, _html} = open(conn, user, team)
+    refute has_element?(lv, "#attention-photos")
+  end
+
   test "this team's drafts and members missing details need attention", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, at(-48, %{is_published: false}))
@@ -736,6 +766,41 @@ defmodule Web.TeamDashboardLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
       assert has_element?(lv, "#to-do-declined-chores", "Your chore was declined")
       assert has_element?(lv, "#to-do-declined-chores", "Slept at the hall")
+    end
+
+    test "For you to do: a declined photo opens Add a photo, until they add another (#1029)",
+         %{conn: conn, team: team, member: member} do
+      team = team |> Ecto.Changeset.change(photos_enabled: true) |> Repo.update!()
+
+      member_photo_fixture(member, %{
+        status: :declined,
+        decline_reason: :hat,
+        decided_at: DateTime.utc_now()
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      add = ~p"/teams/#{team}/photos/members/new"
+
+      assert has_element?(
+               lv,
+               ~s|#to-do-declined-photo a[href="#{add}"]|,
+               "Your photo was declined: Hat or helmet"
+             )
+
+      assert has_element?(lv, "#to-do-declined-photo", "Add another.")
+      # Photos waiting are a team admin's to check, never a member's.
+      refute has_element?(lv, "#attention-photos")
+
+      member_photo_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      refute has_element?(lv, "#to-do-declined-photo")
+
+      # With Photos off, nothing asks for one.
+      Repo.delete_all(App.Model.MemberPhoto)
+      member_photo_fixture(member, %{status: :declined, decline_reason: :hat})
+      team |> Ecto.Changeset.change(photos_enabled: false) |> Repo.update!()
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      refute has_element?(lv, "#to-do-declined-photo")
     end
 
     test "For you to do: a qualification expiring within 60 days",

@@ -436,9 +436,11 @@ defmodule Web.Router do
 
       live "/teams/:subdomain/milestones", MilestoneCollectionLive
       # Photos (#1028). A member's photo is under /photos/members, which leaves
-      # /photos/:id for an activity's.
+      # /photos/:id for an activity's. `:id` is a photo a member added, which a team
+      # admin checks (#1029).
       live "/teams/:subdomain/photos", PhotoCollectionLive
       live "/teams/:subdomain/photos/members/new", MemberPhotoFormLive
+      live "/teams/:subdomain/photos/members/:id", MemberPhotoLive
       live "/teams/:subdomain/certificates", CertificateCollectionLive
       live "/teams/:subdomain/certificates/new", CertificateFormLive, :new
       live "/teams/:subdomain/certificates/:id", CertificateLive
@@ -498,6 +500,7 @@ defmodule Web.Router do
       get "/activities/:id/calendar", ActivityCalendarController, :show
       get "/members/:id/image", MemberController, :image
       get "/certificates/:id/file", CertificateController, :file
+      get "/photos/members/:id/file", MemberPhotoController, :file
     end
 
     scope "/teams/:subdomain" do

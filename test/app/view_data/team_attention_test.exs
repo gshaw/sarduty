@@ -26,6 +26,7 @@ defmodule App.ViewData.TeamAttentionTest do
         group_change_count: 0,
         chore_count: 0,
         certificate_count: 0,
+        photo_count: 0,
         chores_to_send: 0,
         attendance_to_send: [],
         no_shows: [],
@@ -103,6 +104,7 @@ defmodule App.ViewData.TeamAttentionTest do
           group_change_count: 1,
           chore_count: 1,
           certificate_count: 1,
+          photo_count: 1,
           chores_to_send: 1,
           attendance_to_send: [%{id: 1, title: "Training"}],
           no_shows: [%{id: 2, title: "Rope", count: 1}],
@@ -125,7 +127,7 @@ defmodule App.ViewData.TeamAttentionTest do
                             retiring_clear untagged two_hours_tags)a)
 
       assert cannot_snooze |> keys() |> Enum.sort() ==
-               Enum.sort(~w(refresh retiring_access group_changes chores certificates
+               Enum.sort(~w(refresh retiring_access group_changes chores certificates photos
                             chores_to_send attendance_to_send no_shows untagged_last_year
                             two_hours_tags_last_year letters letter_settings long_name
                             long_abbreviated_name team_contacts)a)
@@ -188,6 +190,19 @@ defmodule App.ViewData.TeamAttentionTest do
   test "waiting certificates ask a team admin to accept them" do
     assert [item] = items(%{certificate_count: 1}, @october)
     assert %{key: :certificates, level: :info, title: "1 certificate to accept"} = item
+  end
+
+  # Photos members added of themselves (#1029). A member's ID card waits on it, so it
+  # leads the warnings, after a refresh that failed.
+  test "photos waiting ask a team admin to check them" do
+    assert [one] = items(%{photo_count: 1}, @october)
+    assert %{key: :photos, level: :warning, title: "1 photo waiting"} = one
+    assert one.detail == "Check it, then accept or decline it."
+    refute TeamAttention.can_snooze?(one)
+
+    assert [many, %{key: :drafts}] = items(%{photo_count: 3, draft_ids: ids(2)}, @october)
+    assert many.title == "3 photos waiting"
+    assert many.detail == "Check them, then accept or decline them."
   end
 
   test "a chore activity whose send did not go through is a warning" do

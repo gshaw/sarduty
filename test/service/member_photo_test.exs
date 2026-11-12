@@ -67,6 +67,21 @@ defmodule Service.MemberPhotoTest do
     end
   end
 
+  describe "normalize/1" do
+    test "keeps a placement that is in range" do
+      placed = {3, %{x: 0.25, y: 0.4, side: 0.5}}
+      assert MemberPhoto.normalize(placed) == placed
+    end
+
+    test "wraps the turns and pulls the square into range" do
+      assert MemberPhoto.normalize({5, %{x: 7.0, y: -3.0, side: 0.01}}) ==
+               {1, %{x: 1.0, y: 0.0, side: 0.2}}
+
+      assert MemberPhoto.normalize({-1, %{x: 0.5, y: 0.5, side: 9.0}}) ==
+               {3, %{x: 0.5, y: 0.5, side: 1.0}}
+    end
+  end
+
   defp image(width, height, format \\ ".png"),
     do: width |> Image.new!(height, color: :steelblue) |> Image.write!(:memory, suffix: format)
 
@@ -76,12 +91,12 @@ defmodule Service.MemberPhotoTest do
   end
 
   describe "prepare/1" do
-    test "a photo becomes a JPEG up to 2000 px, with its size" do
+    test "a photo becomes a JPEG up to 2048 px, with its size" do
       assert {:ok,
-              %{bytes: <<0xFF, 0xD8, 0xFF, _rest::binary>> = jpeg, width: 2000, height: 1500}} =
+              %{bytes: <<0xFF, 0xD8, 0xFF, _rest::binary>> = jpeg, width: 2048, height: 1536}} =
                2400 |> image(1800) |> MemberPhoto.prepare()
 
-      assert size(jpeg) == {2000, 1500}
+      assert size(jpeg) == {2048, 1536}
     end
 
     test "a file that is not a photo, or is over 10 MB, says what to do" do

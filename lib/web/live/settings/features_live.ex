@@ -237,7 +237,7 @@ defmodule Web.Settings.FeaturesLive do
           phx-click="set"
           phx-value-feature="photos"
         >
-          Team admins add and change members' photos in SAR Duty.
+          Team admins add and change members' photos. Members add their own, and a team admin checks it first.
           <.a :if={Team.photos?(@current_team)} navigate={~p"/teams/#{@current_team}/photos"}>Photos</.a>
           <.spinner :if={@checking_photos?} id="photos-checking" class="block">
             Checking who has a photo…

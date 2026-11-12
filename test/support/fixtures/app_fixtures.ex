@@ -808,4 +808,27 @@ defmodule App.DataFixtures do
     if certificate.status == :waiting, do: CertificateFile.put!(certificate, "%PDF-1.7\n")
     certificate
   end
+
+  @doc """
+  A photo `member` added of themselves (#1029): 800 × 600, placed on the middle square,
+  waiting with its file unless `attrs` say it was decided.
+  """
+  def member_photo_fixture(%Member{} = member, attrs \\ %{}) do
+    photo =
+      %App.Model.MemberPhoto{
+        team_id: member.team_id,
+        member_id: member.id,
+        width: 800,
+        height: 600
+      }
+      |> Map.merge(attrs)
+      |> Repo.insert!()
+
+    if photo.status == :waiting do
+      {:ok, taken} = 800 |> png_fixture(600) |> Service.MemberPhoto.prepare()
+      App.Model.MemberPhotoFile.put!(photo, taken.bytes)
+    end
+
+    photo
+  end
 end

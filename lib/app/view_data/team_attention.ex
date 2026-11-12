@@ -95,6 +95,7 @@ defmodule App.ViewData.TeamAttention do
   defp count_items(rows) do
     [
       refresh_item(rows.refresh, rows.service),
+      photos_item(rows.photo_count),
       drafts_item(rows.draft_ids, rows.service),
       missing_fields_item(rows.missing_fields_ids, rows.service),
       expiring_item(rows.expiring_ids, rows.expiring_days, rows.service),
@@ -409,6 +410,24 @@ defmodule App.ViewData.TeamAttention do
         Format.count(count, one: "%d certificate to accept", many: "%d certificates to accept"),
       detail: "Look at each one, then accept or decline it.",
       action: "Review certificates"
+    }
+  end
+
+  defp photos_item(0), do: nil
+
+  # Photos members added of themselves wait for a team admin to check them (#1029). A
+  # member's ID card keeps its old photo until then, so it leads the warnings.
+  defp photos_item(count) do
+    %{
+      key: :photos,
+      level: :warning,
+      title: Format.count(count, one: "%d photo waiting", many: "%d photos waiting"),
+      detail:
+        Format.count(count,
+          one: "Check it, then accept or decline it.",
+          many: "Check them, then accept or decline them."
+        ),
+      action: "Check photos"
     }
   end
 

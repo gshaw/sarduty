@@ -1,22 +1,30 @@
 defmodule Web.MemberPhotoFormLive do
-  use Web, :live_view_narrow_layout
+  use Web,
+      {:live_view_narrow_layout,
+       access: :team, view_events: ["validate", "take-another"], member_events: ["save"]}
 
   alias App.Model.Member
+  alias App.Model.MemberPhoto, as: WaitingPhoto
   alias App.Model.Team
+  alias App.Operation.AddOwnPhoto
   alias App.Operation.SetMemberPhoto
   alias Service.MemberPhoto
   alias Web.PhotoCollectionLive
 
-  # Add a photo (#1028), /teams/:subdomain/photos/members/new: a team admin takes or
-  # selects a member's photo, places the face in the oval, and saves it. One task with a
-  # phone in hand, so a narrow page. `?member=<id>` names the member; with none, a Member
-  # box lists the current members.
+  # Add a photo, /teams/:subdomain/photos/members/new: someone takes or selects a photo,
+  # places the face in the oval, and saves it. One task with a phone in hand, so a narrow
+  # page.
+  #
+  # A team admin adds any member's (#1028), their own included, and it is the member's
+  # photo at once. `?member=<id>` names the member; with none, a Member box lists the
+  # current members. A member adds their own (#1029): no Member box, and whatever the URL
+  # says the photo is of the person logged in. Theirs waits for a team admin
+  # (AddOwnPhoto), and a decline of their last one shows above the examples.
   #
   # The photo uploads the moment it is picked. Service.MemberPhoto reads it, HEIC too,
   # into a JPEG the page shows for placing, since a browser cannot show every photo a
-  # phone takes. That copy lives in this page's memory alone: SAR Duty keeps no photo.
-  # The PhotoPlace hook (assets/js/photo_place.js) moves it and fills in where it was
-  # placed; Save photo cuts that square and sends it (SetMemberPhoto).
+  # phone takes. That copy lives in this page's memory until it saves. The PhotoPlace
+  # hook (assets/js/photo_place.js) moves it and fills in where it was placed.
   @rules [
     "Head and shoulders, facing the camera",
     "A plain, light wall behind you",
@@ -36,12 +44,10 @@ defmodule Web.MemberPhotoFormLive do
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     if !Team.photos?(team), do: raise(Web.Status.NotFound)
-    member = if id = params["member"], do: Member.find!(team, id)
 
     socket
-    |> assign(page_title: "Add a photo", member: member, photo: nil, photo_count: 0)
-    |> assign(members: if(member, do: nil, else: members(team)))
-    |> assign(back: back(team, member))
+    |> assign(page_title: "Add a photo", photo: nil, photo_count: 0)
+    |> assign_who(params)
     |> allow_upload(:photo,
       accept: ~w(image/*),
       max_entries: 1,
@@ -50,6 +56,30 @@ defmodule Web.MemberPhotoFormLive do
       progress: &handle_progress/3
     )
     |> then(&{:ok, &1})
+  end
+
+  # Who the photo is of. `own?` is a member adding their own, which waits; a team admin's
+  # goes straight to the member's photo.
+  defp assign_who(%{assigns: %{team_admin?: true, current_team: team}} = socket, params) do
+    member = if id = params["member"], do: Member.find!(team, id)
+
+    assign(socket,
+      own?: false,
+      member: member,
+      members: if(member, do: nil, else: members(team)),
+      declined: nil,
+      back: back(team, member)
+    )
+  end
+
+  defp assign_who(%{assigns: %{current_member: member, current_team: team}} = socket, _params) do
+    assign(socket,
+      own?: true,
+      member: member,
+      members: nil,
+      declined: WaitingPhoto.declined_for_member(member),
+      back: PhotoCollectionLive.view_path(team, :members)
+    )
   end
 
   # Where Cancel goes: the member's ID Card tab, where saving lands too, or Photos when
@@ -86,17 +116,31 @@ defmodule Web.MemberPhotoFormLive do
 
   def handle_event("save", params, socket) do
     socket = pick_member(socket, params)
-    %{current_team: team, current_user: user, member: member, photo: photo} = socket.assigns
+    %{member: member, photo: photo} = socket.assigns
 
     cond do
-      is_nil(member) -> {:noreply, put_flash(socket, :error, "Select a member.")}
-      is_nil(photo) -> {:noreply, put_flash(socket, :error, "Take a photo, or select one.")}
-      true -> {:noreply, save(socket, team, member, photo, params["photo"] || %{}, user)}
+      is_nil(member) ->
+        {:noreply, put_flash(socket, :error, "Select a member.")}
+
+      is_nil(photo) ->
+        {:noreply, put_flash(socket, :error, "Take a photo, or select one.")}
+
+      true ->
+        {:noreply, save(socket, member, photo, MemberPhoto.placement(params["photo"] || %{}))}
     end
   end
 
-  defp save(socket, team, member, photo, placed, user) do
-    {turns, square} = MemberPhoto.placement(placed)
+  # A member's own photo waits for a team admin.
+  defp save(%{assigns: %{own?: true, current_team: team}} = socket, member, photo, placed) do
+    {:ok, _waiting} = AddOwnPhoto.call(member, photo, placed)
+
+    socket
+    |> put_flash(:info, "Photo added. A team admin checks it.")
+    |> push_navigate(to: PhotoCollectionLive.view_path(team, :members))
+  end
+
+  defp save(socket, member, photo, {turns, square}) do
+    %{current_team: team, current_user: user} = socket.assigns
 
     with {:ok, jpeg} <- MemberPhoto.place(photo.bytes, turns, square),
          :ok <- SetMemberPhoto.call(team, member, jpeg, user, DateTime.utc_now()) do
@@ -112,7 +156,8 @@ defmodule Web.MemberPhotoFormLive do
     end
   end
 
-  # The Member box picks who the photo is of. With a member in the URL there is no box.
+  # The Member box picks who the photo is of. With a member in the URL, or a member
+  # adding their own, there is no box, and nothing the form sends changes who.
   defp pick_member(%{assigns: %{members: nil}} = socket, _params), do: socket
 
   defp pick_member(socket, %{"member_id" => id}) do
@@ -149,7 +194,7 @@ defmodule Web.MemberPhotoFormLive do
       <:item label="Add a photo" />
     </.breadcrumbs>
     <h1 class="title">Add a photo</h1>
-    <p id="photo-lead" class="lead">{lead(@member)}</p>
+    <p id="photo-lead" class="lead">{lead(@own?, @member, @current_team)}</p>
 
     <form id="photo-form" phx-change="validate" phx-submit="save">
       <.input
@@ -164,6 +209,13 @@ defmodule Web.MemberPhotoFormLive do
       />
 
       <div :if={!@photo} id="photo-pick" phx-hook="PhotoPick">
+        <.warning_text :if={@declined} id="photo-declined" class="mb-6">
+          Your last photo was declined: {Web.MemberPhoto.reason(@declined)}.
+          <span :if={@declined.decline_message} id="photo-declined-message" class="block">
+            {@declined.decline_message}
+          </span>
+        </.warning_text>
+
         <h2 class="subheading">What works</h2>
         <div id="photo-guide-good" class="photo-guide">
           <span class="photo-guide-example">
@@ -203,52 +255,31 @@ defmodule Web.MemberPhotoFormLive do
 
       <div :if={@photo} id="photo-placed">
         <span id="photo-place-label" class="label block">Photo</span>
-        <p id="photo-place-hint" class="hint mb-2">Move or zoom it so the face fills the oval.</p>
-        <%!-- The hook owns everything in here, so a change on the page leaves the photo
-          where it was placed. A new photo is a new element. --%>
-        <div
-          id={"photo-place-wrap-#{@photo_count}"}
-          phx-hook="PhotoPlace"
-          phx-update="ignore"
-          data-min-side={MemberPhoto.min_share()}
-        >
-          <div
-            id={"photo-place-#{@photo_count}"}
-            class="photo-place"
-            tabindex="0"
-            role="group"
-            aria-labelledby="photo-place-label"
-            aria-describedby="photo-place-hint"
-            aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown + -"
-            data-photo-frame
-          >
-            <img
-              src={@photo.src}
-              alt=""
-              width={@photo.width}
-              height={@photo.height}
-              draggable="false"
-            />
-            <svg class="photo-place-oval" viewBox="0 0 100 100" aria-hidden="true">
-              <ellipse class="photo-place-oval-edge" cx="50" cy="40" rx="21" ry="26" />
-              <ellipse class="photo-place-oval-line" cx="50" cy="40" rx="21" ry="26" />
-            </svg>
-          </div>
-          <div class="photo-place-tools">
-            <.button id="photo-rotate" type="button" icon="rotate-cw-square" data-photo-tool="rotate">
-              Rotate
-            </.button>
-            <.button id="photo-zoom-out" type="button" data-photo-tool="zoom-out">Zoom out</.button>
-            <.button id="photo-zoom-in" type="button" data-photo-tool="zoom-in">Zoom in</.button>
-          </div>
-          <input type="hidden" name="photo[turns]" value="0" />
-          <input type="hidden" name="photo[x]" value="0.5" />
-          <input type="hidden" name="photo[y]" value="0.5" />
-          <input type="hidden" name="photo[side]" value="1" />
-        </div>
+        <p id="photo-place-hint" class="hint mb-2">
+          Move or zoom it so {if @own?, do: "your", else: "the"} face fills the oval.
+        </p>
+        <%!-- A new photo is a new element, so it starts again from the middle square. --%>
+        <Web.MemberPhoto.place
+          id={"photo-place-#{@photo_count}"}
+          src={@photo.src}
+          width={@photo.width}
+          height={@photo.height}
+          labelledby="photo-place-label"
+          describedby="photo-place-hint"
+        />
 
         <.form_actions class="mt-6">
-          <.button id="photo-save" variant={:success} phx-disable-with="Saving…">Save photo</.button>
+          <.button
+            :if={@own?}
+            id="photo-save"
+            variant={:success}
+            phx-disable-with="Adding…"
+          >
+            Add photo
+          </.button>
+          <.button :if={!@own?} id="photo-save" variant={:success} phx-disable-with="Saving…">
+            Save photo
+          </.button>
           <.button id="photo-another" type="button" phx-click="take-another">Take another</.button>
           <.button id="photo-cancel" navigate={@back}>Cancel</.button>
         </.form_actions>
@@ -257,6 +288,11 @@ defmodule Web.MemberPhotoFormLive do
     """
   end
 
-  defp lead(nil), do: "It becomes the member's photo, and their ID card shows it."
-  defp lead(member), do: "It becomes #{member.name}'s photo, and their ID card shows it."
+  defp lead(true, _member, team),
+    do: "#{team.name} puts it on your ID card. A team admin checks it first."
+
+  defp lead(false, nil, _team), do: "It becomes the member's photo, and their ID card shows it."
+
+  defp lead(false, member, _team),
+    do: "It becomes #{member.name}'s photo, and their ID card shows it."
 end

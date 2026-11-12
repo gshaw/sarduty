@@ -7,11 +7,13 @@ defmodule Service.MemberPhoto do
   goes to the team's records, up to 1024 × 1024 with no metadata.
 
   Nothing here keeps a photo: Add a photo holds the copy in its own page until it saves.
+  A member's own photo waits for a team admin (#1029), so App.Model.MemberPhoto keeps
+  that copy and where it was placed, `normalize/1`d, until then.
   """
 
   @max_bytes 10_000_000
   # The copy that is placed, on its longer side, and the photo that is saved.
-  @working_side 2000
+  @working_side 2048
   @side 1024
   # The closest zoom: the square is never under a fifth of the photo's shorter side.
   @min_share 0.2
@@ -23,7 +25,7 @@ defmodule Service.MemberPhoto do
   def min_share, do: @min_share
 
   @doc """
-  The photo as Add a photo shows it for placing: a JPEG up to 2000 px, turned the way the
+  The photo as Add a photo shows it for placing: a JPEG up to 2048 px, turned the way the
   camera held it, with its size. `{:ok, %{bytes:, width:, height:}}`, or `{:error, text}`
   saying what to do instead.
   """
@@ -78,6 +80,15 @@ defmodule Service.MemberPhoto do
       {share, ""} -> share
       _other -> default
     end
+  end
+
+  @doc """
+  Pure. A placement fit to keep: the turns as 0 to 3, the centre inside the photo, and
+  the side between the closest zoom and the whole of the shorter side, whatever was sent.
+  """
+  def normalize({turns, %{x: x, y: y, side: side}}) when is_integer(turns) do
+    {Integer.mod(turns, 4),
+     %{x: clamp(x, 0.0, 1.0), y: clamp(y, 0.0, 1.0), side: clamp(side, @min_share, 1.0)}}
   end
 
   @doc """
