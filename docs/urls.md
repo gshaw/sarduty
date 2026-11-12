@@ -18,7 +18,7 @@ enforces the top-level list and the held URLs.
   so its link says Rename, but the path is still `/edit`. Delete has no page: its
   Actions link opens the confirm dialog on the record's page (`Web.DeleteConfirm`,
   decided 2026-10-29), so a delete is one step. An activity's tabs are `/activities/:id` (Overview), `/members`, `/travel`,
-  `/equipment`, `/fields`, `/forms` (#1018), and `/history` (Members moved off `/activities/:id` on 2026-11-03,
+  `/equipment`, `/fields`, `/forms` (#1018), `/history`, and `/photos` (#1032) (Members moved off `/activities/:id` on 2026-11-03,
   with no redirect), a member's and an equipment item's custom fields are `/fields` too,
   and an item's history `/history`;
   adding goes under the tab it adds to, `/equipment/add` and `/members/add`, and
@@ -32,6 +32,9 @@ enforces the top-level list and the held URLs.
   for an activity's photo. A photo a member added is `/photos/members/:id`, its check
   page, and `/photos/members/:id/file` while SAR Duty keeps it (#1029). Ask for a photo
   is `/photos/members/ask`, with `?member=<id>` for one member (#1030).
+- **An activity's photos are a tab, `/activities/:id/photos`** (#1032), and adding goes
+  under it, `/activities/:id/photos/new`. One photo's file is `/photos/:id/file`, with
+  `?size=tile`, `show`, or `original`.
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
   (`/teams/:subdomain/settings`, `/settings/team-admins`). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.

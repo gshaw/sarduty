@@ -91,6 +91,22 @@ defmodule App.Model.ActivityPhotoTest do
     end
   end
 
+  # Never from an incident: an exercise the team's records turn into one keeps its
+  # photos out of sight, for a team admin too.
+  test "an activity that becomes an incident stops showing its photos", ctx do
+    ctx.activity |> Ecto.Changeset.change(activity_kind: "incident") |> Repo.update!()
+    team_admin = viewers(ctx).team_admin
+
+    for photo <- [ctx.waiting, ctx.accepted] do
+      assert_raise Ecto.NoResultsError, fn ->
+        ActivityPhoto.find_visible!(ctx.team, photo.id, team_admin)
+      end
+    end
+
+    assert ActivityPhoto.get_waiting(ctx.team) == []
+    assert ActivityPhoto.count_waiting(ctx.team) == 0
+  end
+
   test "get_waiting/1 and count_waiting/1: the team's waiting photos, by activity", ctx do
     later = activity_fixture(ctx.team, %{started_at: DateTime.add(ctx.activity.started_at, 3600)})
     newer = activity_photo_fixture(later)

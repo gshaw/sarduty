@@ -96,24 +96,33 @@ defmodule App.Model.ActivityPhoto do
 
   @doc """
   One of the team's photos `viewer` sees, with its activity, for the file route. A
-  member never gets one on an activity that is deleted, as they never get its page.
-  Raises when there is none, so the route is not found.
+  member never gets one on an activity that is deleted, as they never get its page, and
+  nobody gets one on an activity that no longer takes photos. Raises when there is
+  none, so the route is not found.
   """
   def find_visible!(%Team{id: team_id}, id, %{team_admin?: team_admin?} = viewer) do
     ActivityPhoto
     |> where([p], p.team_id == ^team_id and p.id == ^id)
-    |> join(:inner, [p], a in assoc(p, :activity), as: :activity)
-    |> where([activity: a], a.team_id == ^team_id)
+    |> join_activity(team_id)
     |> where([activity: a], ^team_admin? or is_nil(a.deleted_at))
     |> visible(viewer)
     |> preload([activity: a], activity: a)
     |> Repo.one!()
   end
 
+  # Each photo's activity as `:activity`: the team's own, and still of a kind that
+  # takes photos. One that D4H turned into an incident keeps its photos out of sight.
+  defp join_activity(query, team_id) do
+    query
+    |> join(:inner, [p], a in assoc(p, :activity), as: :activity)
+    |> where([activity: a], a.team_id == ^team_id)
+    |> where([activity: a], a.activity_kind in ^Activity.photo_kinds())
+  end
+
   @doc """
   The team's photos waiting for a team admin, each with its activity and who added it:
   activities newest first, and in each the oldest photo first. Photos' Waiting view.
-  Never a deleted activity's, which no list shows.
+  Never a deleted activity's, which no list shows, or one that no longer takes photos.
   """
   def get_waiting(%Team{} = team) do
     team
@@ -129,8 +138,8 @@ defmodule App.Model.ActivityPhoto do
   defp waiting_query(%Team{id: team_id}) do
     ActivityPhoto
     |> where([p], p.team_id == ^team_id and p.status == :waiting)
-    |> join(:inner, [p], a in assoc(p, :activity), as: :activity)
-    |> where([activity: a], a.team_id == ^team_id and is_nil(a.deleted_at))
+    |> join_activity(team_id)
+    |> where([activity: a], is_nil(a.deleted_at))
   end
 
   @doc "How many of the activity's photos wait: the count on its Photos tab, for team admins."

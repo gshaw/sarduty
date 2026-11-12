@@ -107,6 +107,11 @@ have decided since the page loaded, stays in `call`.
 - **New D4H data** → a struct in `lib/app/adapter/d4h/` with `build/1`, a fetch function
   in `lib/app/adapter/d4h.ex`, and — if it is stored — an upsert stage in
   `lib/app/operation/refresh_d4h_data/`. See [d4h-sync.md](d4h-sync.md).
+- **New kind of file** (a photo, a video, a document people upload) → the file store,
+  `App.Adapter.FileStore`, under the team's prefix (`Team.file_prefix/1`), never a
+  column in SQLite. The row keeps a random token that names its files, an operation
+  puts and deletes them, and the feature is off where there is no store
+  ([external-services.md](external-services.md#file-store)).
 - **New side effect** → an Operation in `lib/app/operation/`. If it has logic worth
   testing, give it a pure function and test that; see
   [testing-strategy.md](testing-strategy.md).
@@ -145,7 +150,7 @@ have decided since the page loaded, stays in `call`.
 - [templates.md](templates.md) — templates: items, tags, and groups whose members they add, applied to an activity in one step.
 - [group-rules.md](group-rules.md) — qualification rules for groups: storage, evaluation, and what applying them needs.
 - [member-cards.md](member-cards.md) — member ID cards and the public verify site.
-- [photos.md](photos.md) — members' photos: the Photos page, Add a photo, a member's own photo and a team admin's check, and how a photo reaches D4H or Records.
+- [photos.md](photos.md) — members' photos: the Photos page, Add a photo, a member's own photo and a team admin's check, and how a photo reaches D4H or Records. And an activity's photos: who adds them, who sees a waiting one, and where the files are.
 - [needs-attention.md](needs-attention.md) — the team home's Needs attention list: adding an item, and which can be snoozed.
 - [passkeys.md](passkeys.md) — passkeys: a second way to log in, who can add one, and how a login's length follows where the passkey is.
 - [members.md](members.md) — the members list and its filters, and member logins: members get their own ID card and tax credit letters.

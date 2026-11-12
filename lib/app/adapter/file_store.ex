@@ -20,6 +20,8 @@ defmodule App.Adapter.FileStore do
   leave the store's folder.
   """
 
+  # cspell:ignore enoent -- the file system's "no such file", as File's functions name it
+
   @doc "Whether there is a store at all. False in production until storage in Canada exists."
   def available?, do: dir() != nil
 

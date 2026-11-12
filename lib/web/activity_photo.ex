@@ -44,9 +44,13 @@ defmodule Web.ActivityPhoto do
   def added_by(%ActivityPhoto{added_by_user: user}, %Team{} = team, now),
     do: Member.name_for_user(team, user, now)
 
-  @doc ~s(Who added the photo and when, under its tile: "Cameron Ruiz · Nov 4, 2026".)
+  @doc """
+  Who added the photo and when, under its tile: "Cameron Ruiz · Nov 4". The day alone,
+  so it fits a tile's width: a photo is added within days of its activity, whose page
+  says the year.
+  """
   def added_text(%ActivityPhoto{} = photo, %Team{} = team, now) do
-    [added_by(photo, team, now), Service.Format.date_short(photo.inserted_at, team.timezone)]
+    [added_by(photo, team, now), Service.Format.month_day(photo.inserted_at, team.timezone)]
     |> Enum.reject(&is_nil/1)
     |> Enum.join(" · ")
   end
@@ -65,7 +69,7 @@ defmodule Web.ActivityPhoto do
   def tile(assigns) do
     ~H"""
     <div id={@id} class="activity-photo-tile">
-      <a href={file_path(@team, @photo, :show)} target="_blank" rel="noopener">
+      <a href={file_path(@team, @photo, :show)} target="_blank">
         <img
           src={file_path(@team, @photo, :tile)}
           alt={@alt}

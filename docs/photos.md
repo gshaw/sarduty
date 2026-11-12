@@ -9,6 +9,10 @@ team admin checks it first (#1029). A team admin asks a member for one by email 
 function exists: until then it is off, and a stand-in runs in dev. These are parts 1 to
 4 of the photos stack (#1023).
 
+Part 5 starts [activity photos](#activity-photos) (#1032): members add photos to an
+exercise or an event they attended, and a team admin accepts them. They need a file
+store, which production does not have yet, so no team has them today.
+
 ## The switch
 
 `teams.photos_enabled`, off on a new team, set on the Features tab through
@@ -210,3 +214,59 @@ which runs this adapter against a throwaway Records, still checks the `PUT`.
 D4H has no way to remove a photo, so Remove photo stays with Records teams. A refusal
 reaches the team admin as `D4H.error_text/2`, and the photo stays on the page to send
 again.
+
+## Activity photos
+
+Members take photos at every training and event, and they sit on phones. A member adds
+theirs to an activity they attended, with permission to post, and a team admin accepts
+them before the team sees them (#1032). They are SAR Duty's own: nothing goes to the
+team's records.
+
+- **Off without a file store.** The files are in the
+  [file store](external-services.md#file-store), never in SQLite. Production has none
+  until storage in Canada exists, so there a team has no tab, no pages, and no counts.
+  `AddActivityPhotos.available?/1` is the one test: Photos on, and a store.
+- **Which activities.** Exercises and events only, never an incident, and never an
+  activity with logged time, such as chores: `Activity.takes_photos?/1`. An exercise
+  the team's records turn into an incident stops showing its photos: no tab, no file,
+  and no count.
+- **Who adds.** `AddActivityPhotos.check/3`, pure: once the activity has started, a
+  member who attended (`Attendance.attended/2`), or a team admin. Pages ask
+  `may_add?/4`, and the operation asks again.
+- **Add photos**, `/teams/:subdomain/activities/:id/photos/new`, narrow
+  ([ActivityPhotoFormLive](../lib/web/live/activity_photo_form_live.ex)). The rules show
+  above the files, every time. Take a photo and Select photos open one input, as Add a
+  photo's do, here with the camera on the back of the phone. Up to 20 photos a send, 25
+  MB each. Each uploads when picked and is checked on arrival, so one SAR Duty cannot
+  read is refused by name. One caption and one permission to post for the send; the box
+  starts unchecked, and unchecked is kept as no. No tools, and no video.
+- **On arrival** ([Service.ActivityPhoto](../lib/service/activity_photo.ex)): location
+  and camera data go, HEIC becomes JPEG where the server can read it, and three JPEGs are
+  kept: the original at its full size, a copy up to 2048 px to show, and one up to 600
+  px for tiles. The upload as it came is never kept. Reading 20 photos can pass 30
+  seconds, so Add runs in `start_async` ([jobs.md](jobs.md#job-or-inline)): the member
+  waits for it, and the page says Adding… until it lands on the tab.
+- **The row** is [ActivityPhoto](../lib/app/model/activity_photo.ex): Waiting or
+  Accepted, who added it, the send's caption and `may_post`, and `file_token`, a random
+  name for its files under the team's prefix, `teams/12/activity-photos/…`.
+- **The Photos tab**, `/teams/:subdomain/activities/:id/photos`
+  ([ActivityPhotosLive](../lib/web/live/activity_photos_live.ex)), last on an activity
+  that takes photos. Accepted photos, newest first, each with who added it and when. A
+  team admin gets Waiting over them: every waiting photo as a checked tile, then Accept
+  and Delete for the checked ones, and the tab counts them. A team admin's own photos
+  wait too. Delete takes the row and its files for good.
+- **Who sees a waiting photo**: team admins and the member who added it, nobody else, by
+  page and by file. `ActivityPhoto.visible/2` is that rule, for the tab's list and for
+  the file route. A member sees their own on the tab, marked Waiting.
+- **The file route**, `/teams/:subdomain/photos/:id/file`, with `?size=tile`, `show`, or
+  `original`. An accepted photo answers `private, max-age=86400, immutable`, under a
+  path that carries when the photo last changed. A waiting one answers `no-store`.
+- **Waiting, in two more places.** Needs attention's "3 photos waiting" counts both
+  kinds of photo. Photos on Waiting lists the members' photos, then each activity's
+  under its title, which opens its Photos tab.
+- **Deleting a team deletes its files**: everything under its prefix, after its rows
+  (`DeleteTeam`). The copy a delete keeps holds rows only, so a restore leaves the
+  photo rows out.
+
+Stars, featured photos, and Photos' own views are part 6. Asking everyone who attended
+is part 7, Edit photo part 8, and export part 9.

@@ -73,6 +73,7 @@ defmodule Service.ActivityPhotoTest do
                {:error, "Select photos. SAR Duty cannot read this file."}
 
       # A HEIC file's first bytes, with no photo after them.
+      # cspell:ignore ftypheic -- the HEIF box type "ftyp" and its brand "heic", run together
       heic = <<0, 0, 0, 24, "ftypheic", 0, 0, 0, 0, "not a photo">>
 
       assert ActivityPhoto.check(heic) ==

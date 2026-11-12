@@ -6,6 +6,7 @@ defmodule Web.ActivityPhotoControllerTest do
 
   alias App.Repo
 
+  # cspell:ignore Noor -- Noor Aziz, of the Coast Range SAR cast
   # An activity photo's file (#1032): an accepted one is anyone's on the team, and a
   # waiting one a team admin's or the member's who added it. Nobody else gets it.
   setup %{conn: conn} do

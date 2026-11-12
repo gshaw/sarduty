@@ -14,6 +14,7 @@ defmodule App.Model.Activity do
   @number_message "Enter a whole number, 1 or more."
 
   @default_hours_tags %{primary: "Primary Hours", secondary: "Secondary Hours", other: nil}
+  @photo_kinds ["exercise", "event"]
   @hours_kinds [:primary, :secondary, :other]
 
   @doc """
@@ -38,7 +39,13 @@ defmodule App.Model.Activity do
   put_logged_minutes/2. The Photos tab, Add photos, and who may add all follow it.
   """
   def takes_photos?(%{activity_kind: kind} = activity),
-    do: kind in ["exercise", "event"] and not logged?(activity)
+    do: kind in @photo_kinds and not logged?(activity)
+
+  @doc """
+  The kinds takes_photos?/1 allows, for a query. An activity that D4H turns into an
+  incident stops taking photos, and the ones it has are no longer listed or served.
+  """
+  def photo_kinds, do: @photo_kinds
 
   @doc """
   The D4H tags that say which hours an activity counts for, as `%{primary: tag,

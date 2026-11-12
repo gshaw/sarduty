@@ -7,6 +7,7 @@ defmodule Web.ActivityPhotosLiveTest do
 
   alias App.Repo
 
+  # cspell:ignore Noor -- Noor Aziz, of the Coast Range SAR cast
   # An activity's Photos tab (#1032): everyone sees the accepted photos, a member their
   # own waiting ones too, and a team admin accepts or deletes the ones that wait.
   setup %{conn: conn} do
@@ -110,7 +111,7 @@ defmodule Web.ActivityPhotosLiveTest do
       # The accepted ones under their count, each with who added it and when.
       assert has_element?(lv, "#photos-count", "1 photo")
       assert count(lv, "#photos-grid > li") == 1
-      assert has_element?(lv, "#photo-#{accepted.id}", "Cameron Ruiz · Nov 3, 2026")
+      assert has_element?(lv, "#photo-#{accepted.id}", "Cameron Ruiz · Nov 3")
 
       assert has_element?(
                lv,
