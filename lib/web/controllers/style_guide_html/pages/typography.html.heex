@@ -134,6 +134,11 @@
       Add to calendar under a start date, Open in Maps under an address. Every other action keeps the arrow. The external-link
       icon still trails, in the link's colour.
     </li>
+    <li>
+      An action that cannot be taken now stays in its place, greyed with no link, and a hint under it says why:
+      <code>&lt;li class="action-off"&gt;</code>, such as Export for a post on a photo the team may not post.
+      Leave it out instead when nobody could take it.
+    </li>
   </ul>
   <div class="demo">
     <dl class="max-w-sm">
@@ -154,6 +159,10 @@
         <ul class="action-list">
           <li><.a href="#">Change activity</.a></li>
           <li><.a href="#" external={true}>Open in D4H</.a></li>
+          <li class="action-off">
+            Export for a post
+            <span class="hint block">Cameron did not give permission to post this photo.</span>
+          </li>
         </ul>
       </dd>
     </dl>
