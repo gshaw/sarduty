@@ -37,8 +37,8 @@ The [Dockerfile](../Dockerfile) builds a release;
 Each app has its own Fly tokens in fnox, so a script or an agent never needs the full
 login: `FLY_ACCESS_TOKEN=$(fnox get FLY_SARDUTY_DEPLOY_TOKEN) fly deploy`, and
 `FLY_SARDUTY_SSH_TOKEN` for `fly ssh`, which is all it can do. They expire 2027-04-22;
-make new ones with `fly tokens create deploy -a sarduty -x 4320h` (or `ssh`). Who reaches
-production, and how, is #517.
+make new ones with `fly tokens create deploy -a sarduty -x 4320h` (or `ssh`). People and
+agents reach production through `bin/prod` ([production.md](production.md)).
 
 **Logs go back about 7 days.** `fly logs` shows only the last 100 lines, so read a span
 with [bin/fly-logs](../bin/fly-logs), which pages through Fly's logs API with
@@ -113,8 +113,7 @@ through the sync's ping every 10 minutes, still alerts when the app or Oban is d
   (`DeleteTeam.write_copy/3`). No other team's data is ever in it, logins included. If
   the copy fails, nothing is deleted. The admins' email names the file and the
   team's id is in the `team_deleted` event. To put the team back, with every row's own id:
-  `bin/sarduty eval "Application.ensure_all_started(:sarduty); App.Operation.RestoreTeam.call(\"<file>\", <team id>) |> IO.inspect()"`.
-  It refuses when the team signed up again since. Tried on a copy of South Fraser: every
+  `bin/prod fix restore-team <file> <team id> --why "…"`. It refuses when the team signed up again since. Tried on a copy of South Fraser: every
   row came back the same. A Records team is held in Records for the same 7 days: switch
   it on in Records' admin first, then restore.
 - **A dev copy** from a snapshot: `AGE_IDENTITY=<identity file> mise run sanitize
@@ -125,24 +124,6 @@ backups/<snapshot>` writes `db/sarduty_dev.db` with every name, email, phone, ad
 
 ## Changing production data
 
-Only when asked. Every change goes through `bin/sarduty eval` on the machine:
-
-```sh
-fly status --app sarduty    # note the machine id
-fly ssh console -a sarduty --machine <ID> -C 'bin/sarduty eval "<code>"'
-```
-
-- Start the code with `Application.ensure_all_started(:sarduty);` or it fails with
-  "could not lookup Ecto repo".
-- Outer quotes are `"`, inner quotes are `\"`, statements are separated by `;`, and
-  `IO.inspect` shows results. Use bang functions so a miss raises.
-- `import Ecto.Query;` before using `from`.
-- "app has no started VMs" means `fly machines start <ID>`.
-
-For example, making a user an admin:
-
-```sh
-fly ssh console -a sarduty --machine <ID> -C 'bin/sarduty eval "Application.ensure_all_started(:sarduty); user = App.Repo.get_by!(App.Accounts.User, email: \"user@example.com\"); App.Repo.update!(Ecto.Changeset.change(user, is_admin: true)); IO.puts(\"ok\")"'
-```
-
-Read the row first, then change it, and say what changed on the issue or PR.
+Only when asked, through `bin/prod fix` ([production.md](production.md)). A change with
+no task yet gets one first, reviewed in its PR. Read the rows with `bin/prod query`
+before and after, and say what changed on the issue or PR.

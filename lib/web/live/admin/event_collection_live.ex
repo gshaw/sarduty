@@ -209,6 +209,10 @@ defmodule Web.Admin.EventCollectionLive do
     "#{ago}: #{teams} in #{event.duration_ms && Service.Format.run_time(event.duration_ms)}, #{event.data["outcome"]}"
   end
 
+  # A task run in production (App.Ops) starts with the admin who ran it.
+  defp details(%{kind: :prod_task, user: user, data: data}),
+    do: [user && user.email, details(%{data: data})] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
+
   # After the email, number, or hash, when there is one.
   defp details(%{who: who, data: data}) when is_binary(who) and data != %{},
     do: "· " <> details(%{who: nil, data: data})

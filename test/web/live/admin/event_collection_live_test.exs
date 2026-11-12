@@ -130,6 +130,24 @@ defmodule Web.Admin.EventCollectionLiveTest do
     assert has_element?(lv, "#event-#{old.id}")
   end
 
+  test "names the admin who ran a task in production", %{conn: conn} do
+    %{user: user} = user_with_team_fixture()
+    admin = make_admin(user)
+
+    task =
+      Event.record!(:prod_task,
+        user_id: admin.id,
+        duration_ms: 12,
+        data: %{task: "query", args: ["select 1"], why: "#517", outcome: "ok", rows: 1}
+      )
+
+    {:ok, lv, _html} = live(log_in_user(conn, admin), ~p"/admin/events?kind=prod_task")
+
+    assert has_element?(lv, "#event-#{task.id}", "Production task")
+    assert has_element?(lv, "#event-#{task.id}", "#{admin.email} · args: select 1")
+    assert has_element?(lv, "#event-#{task.id}", "why: #517")
+  end
+
   test "is for admins only", %{conn: conn} do
     %{user: user} = user_with_team_fixture()
 
