@@ -159,7 +159,7 @@ matched to the person holding the phone.
   each counted, current member on a team with ID cards on, card holders too, so the
   report is right for everyone. One request per member, outside any transaction. New
   photos are found then, not on the 10-minute sync. A card holder with a photo where
-  there was none gets their card refreshed, all of them in one push and one Google update
+  there was none gets their card refreshed, a job per card spread out
   (`RefreshMemberCard.resend_cards/2`), so a card that went out with the placeholder gets
   the photo on the phones that night. A photo swapped for another needs Refresh ID card:
   seeing a change would mean downloading and comparing every photo.
@@ -233,17 +233,24 @@ member's card on the team admin's phone.
 Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
 `authentication_token`. Wallet registers the phone with
 [WalletController](../lib/web/controllers/wallet_controller.ex), and
-[PushPassUpdates](../lib/app/operation/push_pass_updates.ex) pushes through APNs:
+[PushPassUpdates](../lib/app/operation/push_pass_updates.ex) pushes through APNs.
 
-- **After every team refresh** it rebuilds each registered card's pass and pushes only
-  when its fingerprint changed. The fingerprint leaves out the "last checked" date, or
-  every pass would buzz every day.
+- **Every update is one job per card**
+  ([UpdateCardWorker](../lib/app/worker/update_card_worker.ex)): it pushes the Apple
+  pass's phones and sends the Google pass if it changed. Many cards at once go out 6
+  seconds apart, about 10 a minute, each batch after the jobs already waiting, so teams
+  queued together line up. One card goes now. A push makes each phone download its pass right away,
+  and each download reads the database and fetches the photo from D4H. On 2026-11-12 the
+  first nightly photo check pushed 66 cards at once, and the downloads used up the
+  database pool for 5 minutes.
+- **After every team refresh** `PushPassUpdatesWorker` rebuilds each registered card's
+  pass, and each Google one, and queues a job for each whose fingerprint changed. The
+  fingerprint leaves out the "last checked" date, or every pass would buzz every day.
 - **When a pass is built** for a download or a phone, and its fingerprint
-  changed, it pushes too. Building records the fingerprint, so the next refresh would
-  otherwise see nothing new and the phones would keep the old pass.
-- **On replace, or the ID cards switch turning off,** a job per card
-  (`UpdateCancelledCardWorker`, queued with the cancel) pushes, and Wallet fetches a
-  voided pass that says "Cancelled".
+  changed, it queues a job too. Building records the fingerprint, so the next refresh
+  would otherwise see nothing new and the phones would keep the old pass.
+- **On replace, Cancel, or the ID cards switch turning off,** the cancel queues the jobs,
+  and Wallet fetches a voided pass that says "Cancelled".
 - A phone that APNs says dropped the pass, or whose token is bad, is deleted.
 - **A member keeps one Wallet serial number** across replacements, so a replacement pass
   lands on the existing pass instead of beside it. Each card has its own token, and a
@@ -569,7 +576,7 @@ Away and not a person don't change it.
   ID card, and scanning it shows their name and team. **Cancel ID card** on the ID Card
   tab works on any card since #1012, which also makes it the first step for a lost phone
   ([Issuing and emailing](#issuing-and-emailing)). It asks first in the app's dialog,
-  then revokes the card, makes no new one, and queues `UpdateCancelledCardWorker` to void
+  then revokes the card, makes no new one, and queues `UpdateCardWorker` to void
   the Apple pass and expire the Google one
   ([CancelMemberCard](../lib/app/operation/cancel_member_card.ex)). The tab then says
   when the last card was cancelled, and the member's History says who.

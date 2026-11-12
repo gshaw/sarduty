@@ -3,8 +3,8 @@ defmodule App.Operation.BuildApplePass do
   alias App.Model.MemberCard
   alias App.Operation.BuildCardQualifications
   alias App.Operation.LoadImage
-  alias App.Operation.PushPassUpdates
   alias App.Repo
+  alias App.Worker.UpdateCardWorker
 
   # SAR Duty's navy and yellow, the same on every team's card.
   @background_color "rgb(28, 45, 66)"
@@ -39,7 +39,7 @@ defmodule App.Operation.BuildApplePass do
       json = pass_json(card, status, qualifications, config)
       fingerprint = fingerprint(json)
       MemberCard.record_pass!(card, fingerprint, now)
-      if fingerprint != card.pass_fingerprint, do: PushPassUpdates.push_cards([card])
+      if fingerprint != card.pass_fingerprint, do: UpdateCardWorker.enqueue(card)
 
       files = %{
         "pass.json" => Jason.encode!(json),

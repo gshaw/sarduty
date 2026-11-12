@@ -8,8 +8,13 @@ defmodule App.Operation.PushPassUpdatesTest do
   alias App.Operation.BuildApplePass
   alias App.Operation.IssueMemberCard
   alias App.Operation.PushPassUpdates
+  alias App.Worker.UpdateCardWorker
 
   @now ~U[2026-09-30 12:00:00.000000Z]
+
+  # What PushPassUpdatesWorker does after a refresh, at a fixed time. Jobs run inline.
+  defp refresh(team, now),
+    do: team |> PushPassUpdates.changed_cards(now) |> UpdateCardWorker.enqueue_all()
 
   setup do
     App.ApplePassCredentials.configure()
@@ -30,11 +35,11 @@ defmodule App.Operation.PushPassUpdatesTest do
   test "pushes a changed pass once, then not again until it changes", %{team: team, card: card} do
     expect_pushes(self())
 
-    PushPassUpdates.call(team, @now)
+    refresh(team, @now)
     assert_received {:pushed, "/3/device/push-token-1", ["pass.com.sarduty.member-card"]}
     assert Repo.reload!(card).pass_updated_at == @now
 
-    PushPassUpdates.call(team, @now)
+    refresh(team, @now)
     refute_received {:pushed, _, _}
   end
 
@@ -64,20 +69,20 @@ defmodule App.Operation.PushPassUpdatesTest do
 
   test "doesn't push when only the last-refreshed date moved", %{team: team, card: card} do
     expect_pushes(self())
-    team |> refreshed_at(~U[2026-10-01 13:00:00.000000Z]) |> PushPassUpdates.call(@now)
+    team |> refreshed_at(~U[2026-10-01 13:00:00.000000Z]) |> refresh(@now)
     assert_received {:pushed, _, _}
 
-    team |> refreshed_at(~U[2026-10-02 13:00:00.000000Z]) |> PushPassUpdates.call(@now)
+    team |> refreshed_at(~U[2026-10-02 13:00:00.000000Z]) |> refresh(@now)
     refute_received {:pushed, _, _}
     assert Repo.reload!(card).pass_updated_at == @now
   end
 
   test "pushes once a month as valid until rolls forward", %{team: team} do
     expect_pushes(self())
-    team |> refreshed_at(~U[2026-10-01 13:00:00.000000Z]) |> PushPassUpdates.call(@now)
+    team |> refreshed_at(~U[2026-10-01 13:00:00.000000Z]) |> refresh(@now)
     assert_received {:pushed, _, _}
 
-    team |> refreshed_at(~U[2026-11-01 13:00:00.000000Z]) |> PushPassUpdates.call(@now)
+    team |> refreshed_at(~U[2026-11-01 13:00:00.000000Z]) |> refresh(@now)
     assert_received {:pushed, _, _}
   end
 
@@ -87,7 +92,7 @@ defmodule App.Operation.PushPassUpdatesTest do
        %{team: team, member: member, card: card} do
     expect_pushes(self())
     team = refreshed_at(team, ~U[2026-10-01 13:00:00.000000Z])
-    PushPassUpdates.call(team, @now)
+    refresh(team, @now)
     assert_received {:pushed, _, _}
     expires_at = Repo.reload!(card).expires_at
     assert expires_at == ~U[2027-02-01 06:59:59.000000Z]
@@ -98,10 +103,10 @@ defmodule App.Operation.PushPassUpdatesTest do
       team |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id) |> Repo.update!()
 
     group_member_fixture(leavers, member)
-    PushPassUpdates.call(team, @now)
+    refresh(team, @now)
     assert_received {:pushed, _, _}
 
-    team |> refreshed_at(~U[2026-11-01 13:00:00.000000Z]) |> PushPassUpdates.call(@now)
+    team |> refreshed_at(~U[2026-11-01 13:00:00.000000Z]) |> refresh(@now)
     refute_received {:pushed, _, _}
     assert Repo.reload!(card).expires_at == expires_at
   end
@@ -116,7 +121,7 @@ defmodule App.Operation.PushPassUpdatesTest do
   } do
     expect_pushes(self())
     Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 404, ""))
-    PushPassUpdates.call(team, @now)
+    refresh(team, @now)
     assert_received {:pushed, _, _}
 
     team |> Ecto.Changeset.change(name: "Renamed SAR") |> Repo.update!()
@@ -126,7 +131,7 @@ defmodule App.Operation.PushPassUpdatesTest do
     assert_received {:pushed, "/3/device/push-token-1", _}
 
     card |> Repo.reload!() |> Repo.preload(member: :team) |> BuildApplePass.call(@now)
-    team |> Repo.reload!() |> PushPassUpdates.call(@now)
+    team |> Repo.reload!() |> refresh(@now)
     refute_received {:pushed, _, _}
   end
 
@@ -135,7 +140,7 @@ defmodule App.Operation.PushPassUpdatesTest do
     Req.Test.stub(App.Adapter.APNs, &Plug.Conn.send_resp(&1, 410, ~s({"reason":"Unregistered"})))
     Phoenix.PubSub.subscribe(App.PubSub, MemberCard.pass_topic(card.member_id))
 
-    PushPassUpdates.call(team, @now)
+    refresh(team, @now)
 
     assert PassRegistration.get_all_for_serial(card) == []
     assert_received :wallet_changed
@@ -147,7 +152,7 @@ defmodule App.Operation.PushPassUpdatesTest do
       &Plug.Conn.send_resp(&1, 400, ~s({"reason":"BadDeviceToken"}))
     )
 
-    PushPassUpdates.call(team, @now)
+    refresh(team, @now)
 
     assert PassRegistration.get_all_for_serial(card) == []
   end
@@ -158,7 +163,7 @@ defmodule App.Operation.PushPassUpdatesTest do
       &Plug.Conn.send_resp(&1, 500, ~s({"reason":"InternalServerError"}))
     )
 
-    PushPassUpdates.call(team, @now)
+    refresh(team, @now)
 
     assert [_] = PassRegistration.get_all_for_serial(card)
   end
@@ -174,7 +179,7 @@ defmodule App.Operation.PushPassUpdatesTest do
 
   test "does nothing when Apple Wallet isn't set up", %{team: team} do
     Application.put_env(:sarduty, :apple_pass, [])
-    assert PushPassUpdates.call(team, @now) == :ok
+    assert PushPassUpdates.changed_cards(team, @now) == []
     refute BuildApplePass.configured?()
   end
 
@@ -183,7 +188,7 @@ defmodule App.Operation.PushPassUpdatesTest do
     member_card_fixture(other)
     expect_pushes(self())
 
-    PushPassUpdates.call(team, @now)
+    refresh(team, @now)
 
     assert_received {:pushed, "/3/device/push-token-1", _}
     refute_received {:pushed, _, _}
@@ -209,7 +214,7 @@ defmodule App.Operation.PushPassUpdatesTest do
       team: team,
       replacement: replacement
     } do
-      PushPassUpdates.call(team, @now)
+      refresh(team, @now)
       assert_received {:pushed, "/3/device/push-token-1", _}
       assert Repo.reload!(replacement).pass_fingerprint
     end
