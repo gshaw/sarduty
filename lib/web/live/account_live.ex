@@ -130,29 +130,32 @@ defmodule Web.AccountLive do
         <p :if={@viewing_as?} id="emails-view-as" class="hint">
           You're viewing a team as a member, so nothing is saved. Stop viewing to change these.
         </p>
-        <.switch
-          :for={member <- @member_logins}
-          id={"invitation-reminders-#{member.team.subdomain}"}
-          label={reminders_label(@member_logins, member)}
-          checked={member.invitation_reminders}
-          disabled={@viewing_as?}
-          phx-click="reminders"
-          phx-value-id={member.id}
-        >
-          Team admins at {member.team.name} can email you when you have not replied to an activity.
-        </.switch>
-        <.switch
-          :for={member <- @member_logins}
-          :if={AddActivityPhotos.available?(member.team)}
-          id={"photo-asks-#{member.team.subdomain}"}
-          label={photo_asks_label(@member_logins, member)}
-          checked={member.photo_asks}
-          disabled={@viewing_as?}
-          phx-click="photo-asks"
-          phx-value-id={member.id}
-        >
-          Emails from a team admin asking for your photos from an activity.
-        </.switch>
+        <%!-- A stack, like the Features tab's: a switch per team, and per kind of email. --%>
+        <div class="flex flex-col gap-6">
+          <.switch
+            :for={member <- @member_logins}
+            id={"invitation-reminders-#{member.team.subdomain}"}
+            label={reminders_label(@member_logins, member)}
+            checked={member.invitation_reminders}
+            disabled={@viewing_as?}
+            phx-click="reminders"
+            phx-value-id={member.id}
+          >
+            Team admins at {member.team.name} can email you when you have not replied to an activity.
+          </.switch>
+          <.switch
+            :for={member <- @member_logins}
+            :if={AddActivityPhotos.available?(member.team)}
+            id={"photo-asks-#{member.team.subdomain}"}
+            label={photo_asks_label(@member_logins, member)}
+            checked={member.photo_asks}
+            disabled={@viewing_as?}
+            phx-click="photo-asks"
+            phx-value-id={member.id}
+          >
+            Emails from a team admin asking for your photos from an activity.
+          </.switch>
+        </div>
       </section>
     </div>
     """

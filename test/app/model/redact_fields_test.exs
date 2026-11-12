@@ -33,7 +33,8 @@ defmodule App.Model.RedactFieldsTest do
     {App.Model.Team, :mailing_address} => "the team's own address on its letters",
     {App.Model.Team, :postal_code} => "the team's own postal code on its forms",
     {App.Model.PhotoAsk, :email_status} => "whether an ask for a photo's email was sent",
-    {App.Model.ActivityPhotoAsk, :email_status} => "whether an ask for activity photos' email was sent",
+    {App.Model.ActivityPhotoAsk, :email_status} =>
+      "whether an ask for activity photos' email was sent",
     {App.Model.PublishedPDF, :email_status} => "whether a letter's email was sent",
     {App.Model.Template, :custom_values} => "an activity template's defaults",
     {App.Model.Template, :description} => "a template activity's description, like a training's",
