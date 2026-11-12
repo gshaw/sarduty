@@ -459,6 +459,8 @@ defmodule Web.Router do
       live "/teams/:subdomain/photos/:id", ActivityPhotoLive
       # A team admin edits an accepted photo (#1032, part 8).
       live "/teams/:subdomain/photos/:id/edit", ActivityPhotoEditLive
+      # A team admin exports an accepted photo for a post (#1032, part 9).
+      live "/teams/:subdomain/photos/:id/export", ActivityPhotoExportLive
       live "/teams/:subdomain/certificates", CertificateCollectionLive
       live "/teams/:subdomain/certificates/new", CertificateFormLive, :new
       live "/teams/:subdomain/certificates/:id", CertificateLive
@@ -527,6 +529,8 @@ defmodule Web.Router do
       pipe_through :require_authorized_team_subdomain
 
       get "/members/:id/certificates/:award_id", MemberController, :certificate
+      # Export for a post's JPEG (#1032, part 9): nothing is saved.
+      get "/photos/:id/export/file", ActivityPhotoController, :export
       get "/tax-credit-letters/:year/members/:id/draft.png", TaxCreditLetterController, :draft
       # An organization's form on an activity (#950): posts its answers, gets the PDF.
       post "/activities/:id/forms/:form_id/pdf", ActivityFormPDFController, :create

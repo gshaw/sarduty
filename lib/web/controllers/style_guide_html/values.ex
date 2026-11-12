@@ -188,6 +188,8 @@ defmodule Web.StyleGuideHTML.Values do
       {:km, "A distance", [{"km(42)", Format.km(42)}]},
       {:degrees, "An angle, such as how far a photo is straightened",
        [{"degrees(-10)", Format.degrees(-10)}, {"degrees(2.5)", Format.degrees(2.5)}]},
+      {:image_size, "An image's size in pixels, such as a shape a photo is exported at",
+       [{"image_size({1080, 1350})", Format.image_size({1080, 1350})}]},
       {:money, "Dollars and cents, exact: half a cent rounds up",
        [
          {"money(0.67)", Format.money(0.67)},

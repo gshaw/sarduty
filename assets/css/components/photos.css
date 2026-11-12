@@ -126,4 +126,9 @@
   .photo-edit-switch { max-width: 26rem; margin-top: var(--sp-4); }
   /* The photo as taken, small beside the edit. */
   .photo-edit-taken { display: block; width: 12rem; max-width: 100%; height: auto; margin-top: var(--sp-2); border-radius: var(--radius); }
+
+  /* Export for a post (#1032, part 9): the box, in the post's shape, as wide as fits
+     and no taller than most of the screen, with lines in thirds to place it by. */
+  .photo-export-box { aspect-ratio: var(--photo-place-ratio, 1); width: min(100%, calc(65vh * var(--photo-place-ratio, 1))); max-width: 40rem; }
+  .photo-export-thirds { position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(to right, color-mix(in srgb, var(--paper) 55%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--paper) 55%, transparent) 1px, transparent 1px); background-size: calc(100% / 3) calc(100% / 3); background-position: -1px -1px; }
 }

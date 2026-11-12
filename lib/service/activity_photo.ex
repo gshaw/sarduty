@@ -11,7 +11,7 @@ defmodule Service.ActivityPhoto do
 
   Edit photo (part 8): `plan/2`, pure, turns a team admin's settings into what is done
   to the original, and `edit/3` does it and makes the copies again. The original is
-  never changed.
+  never changed. Export for a post (part 9) starts from `edited/2`.
   """
 
   @max_bytes 25_000_000
@@ -139,14 +139,42 @@ defmodule Service.ActivityPhoto do
   `cleaned?` false. No step is the copies as they came.
   """
   def edit(original, steps, clean_up) when is_binary(original) and is_function(clean_up, 1) do
-    with {:ok, image} <- Image.from_binary(original),
-         {:ok, edited} <- shape(image, steps),
+    with {:ok, edited} <- edited(original, steps),
          {:ok, show} <- show(edited) do
       {show, cleaned?} = cleaned(show, :clean_up in steps, clean_up)
 
       with {:ok, tile} <- Service.Image.jpeg(show, @tile_side),
            do: {:ok, %{show: show, tile: tile, cleaned?: cleaned?}}
     end
+  end
+
+  @doc """
+  Pure. The size of the photo as edited, `{width, height}`: the original's turned, and
+  for an angle, the straightened cut plan/2 makes.
+  """
+  def edited_size(settings, {width, height}) do
+    steps = plan(settings, {width, height})
+
+    case List.keyfind(steps, :straighten, 0) do
+      {:straighten, _angle, size} -> size
+      nil -> turned_size(settings(settings).turns, {width, height})
+    end
+  end
+
+  @doc "Pure. The size of the copy to show of a photo of `{width, height}`: up to 2048 px."
+  def show_size({width, height}) do
+    scale = min(1, @show_side / max(width, height))
+    {round(width * scale), round(height * scale)}
+  end
+
+  @doc """
+  The photo as edited at its full size, for Export for a post (part 9): `original`
+  with the turns and the straightened cut of `steps`, from plan/2, as a
+  `Vix.Vips.Image`. Clean up is not done here: it is made on the copy to show.
+  `{:ok, image}` or `{:error, reason}`.
+  """
+  def edited(original, steps) when is_binary(original) do
+    with {:ok, image} <- Image.from_binary(original), do: shape(image, steps)
   end
 
   defp show(image) do

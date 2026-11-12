@@ -48,6 +48,7 @@ defmodule Service.FormatTest do
     assert Format.degrees(-10) == "−10°"
     assert Format.degrees(2.5) == "2.5°"
     assert Format.degrees(-0.0) == "0°"
+    assert Format.image_size({1080, 1350}) == "1080 × 1350"
     assert Format.money(0.67) == "$0.67"
     assert Format.money(1204.5) == "$1,204.50"
     assert Format.money(12) == "$12.00"

@@ -9,7 +9,8 @@ defmodule Web.ActivityPhotoLive do
   they are. A team admin features it on its activity's Overview, downloads the
   original, and deletes it, which is how a photo is taken down when someone in it asks.
   Edit photo (#1032, part 8) fixes it, and the page then says who edited it and when,
-  with Revert to original.
+  with Revert to original. Export for a post (part 9) takes a copy for a post, on a
+  photo the team may post; on one it may not, the action is greyed and says why.
 
   Members send only `star`. A team admin viewing as a member is told nothing is saved.
   """
@@ -173,6 +174,13 @@ defmodule Web.ActivityPhotoLive do
                 </li>
                 <li :if={@photo.featured_at}>
                   <.a id="photo-stop-featuring" href="#" phx-click="stop-featuring">Stop featuring</.a>
+                </li>
+                <li :if={@photo.may_post}>
+                  <.a id="photo-export" navigate={Web.ActivityPhoto.export_path(@current_team, @photo)}>Export for a post</.a>
+                </li>
+                <li :if={!@photo.may_post} id="photo-export-off" class="action-off">
+                  Export for a post
+                  <span class="hint block">{Web.ActivityPhoto.may_not_post_text(@photo)}</span>
                 </li>
                 <li>
                   <.a

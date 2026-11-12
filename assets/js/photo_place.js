@@ -26,11 +26,17 @@ export const PhotoPick = {
 // What the server gets, in the form's hidden fields: `turns`, quarter turns clockwise,
 // and the square in the turned photo: `x` and `y`, its centre as shares of the width and
 // height, and `side`, as a share of the shorter side (Service.MemberPhoto.crop/3).
+//
+// Export for a post (#1032, part 9, Web.ActivityPhotoExportLive) places a box of the
+// post's shape the same way: `data-ratio` is its width over its height, 1 for the
+// square, and `side` is then a share of the largest box of that shape the photo holds
+// (Service.PhotoExport.crop/3). It has no turns field and no Rotate.
 export const PhotoPlace = {
   mounted() {
     this.frame = this.el.querySelector("[data-photo-frame]")
     this.img = this.frame.querySelector("img")
     this.minSide = parseFloat(this.el.dataset.minSide) || 0.2
+    this.ratio = parseFloat(this.el.dataset.ratio) || 1
     this.state = this.startState()
     this.pointers = new Map()
 
@@ -82,14 +88,23 @@ export const PhotoPlace = {
     return this.state.turns % 2 === 1 ? {width: height, height: width} : {width, height}
   },
 
-  // Keeps the square inside the photo, and no closer than the closest zoom.
+  // The largest box of the frame's shape the turned photo holds: for the square, the
+  // shorter side.
+  largest() {
+    const {width, height} = this.turned()
+    return width / height > this.ratio
+      ? {width: height * this.ratio, height}
+      : {width, height: width / this.ratio}
+  },
+
+  // Keeps the box inside the photo, and no closer than the closest zoom.
   clamp() {
     const state = this.state
     const {width, height} = this.turned()
-    const shorter = Math.min(width, height)
+    const largest = this.largest()
     state.side = Math.min(1, Math.max(this.minSide, state.side))
-    const halfX = (state.side * shorter) / 2 / width
-    const halfY = (state.side * shorter) / 2 / height
+    const halfX = (state.side * largest.width) / 2 / width
+    const halfY = (state.side * largest.height) / 2 / height
     state.x = Math.min(1 - halfX, Math.max(halfX, state.x))
     state.y = Math.min(1 - halfY, Math.max(halfY, state.y))
   },
@@ -100,11 +115,13 @@ export const PhotoPlace = {
     const {turns, x, y, side} = this.state
     const {naturalWidth: w, naturalHeight: h} = this.img
     const {width, height} = this.turned()
-    const sidePx = side * Math.min(width, height)
-    // Screen px per photo px, and the square's corner in the turned photo.
-    const scale = this.frame.clientWidth / sidePx
-    const left = x * width - sidePx / 2
-    const top = y * height - sidePx / 2
+    const largest = this.largest()
+    const boxWidth = side * largest.width
+    const boxHeight = side * largest.height
+    // Screen px per photo px, and the box's corner in the turned photo.
+    const scale = this.frame.clientWidth / boxWidth
+    const left = x * width - boxWidth / 2
+    const top = y * height - boxHeight / 2
     // Each quarter turn clockwise, moved back so the turned photo starts at 0, 0.
     const turn = [
       "",
@@ -118,14 +135,15 @@ export const PhotoPlace = {
     this.img.style.transform = `translate(${-left * scale}px, ${-top * scale}px) scale(${scale}) ${turn}`
 
     for (const [name, value] of Object.entries(this.state)) {
-      this.el.querySelector(`input[name="photo[${name}]"]`).value = value
+      const input = this.el.querySelector(`input[name="photo[${name}]"]`)
+      if (input) input.value = value
     }
   },
 
   // Moves the photo by screen px: the square goes the other way over it.
   move(dx, dy) {
     const {width, height} = this.turned()
-    const scale = this.frame.clientWidth / (this.state.side * Math.min(width, height))
+    const scale = this.frame.clientWidth / (this.state.side * this.largest().width)
     this.state.x -= dx / scale / width
     this.state.y -= dy / scale / height
     this.draw()
