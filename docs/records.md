@@ -49,8 +49,9 @@ it, so SAR Duty shows editing screens for Records teams; a D4H team gets a 404 a
 buttons. The exceptions: every team adds, renames, and deletes groups and changes who is
 in them ([group-rules.md](group-rules.md#groups-kept-by-hand-546)), a D4H team adds and
 changes activities (#585), a D4H team changes a member's details and the custom fields
-of members and items (#705), but not access, photos, or leaving
-([members.md](members.md#changing-a-members-details)), and a D4H team changes an item's
+of members and items (#705), but not access or leaving
+([members.md](members.md#changing-a-members-details)), a D4H team sets a member's photo
+(#1028, [photos.md](photos.md)), and a D4H team changes an item's
 status and barcode ([equipment.md](equipment.md#changing-an-item-on-a-d4h-team)). Each change is a change set of one row, source `:edit`,
 applied at once by [App.Operation.ApplyEdit](../lib/app/operation/apply_edit.ex) through
 `ApplyChangeSet`, then the sync copies it back, except a group's, whose copy is written
@@ -67,9 +68,10 @@ that title.
   only in its web app. Leaving is D4H's `PATCH /members/<id>/retire`. The last team
   admin cannot stop being one or leave, and saving a retired member's details keeps
   them retired.
-- **Photos**: set or remove on the member's Change member page. `PUT` takes the image
-  itself (JPEG, PNG, or WebP, under 10 MB), and Records shrinks it and strips its
-  metadata. The change set row records only the size: the image passes through
+- **Photos**: set on Add a photo, as on any team with Photos on (#1028,
+  [photos.md](photos.md)), and removed on the member's Change member page, which only a
+  Records team can do. `PUT` takes the image itself, the JPEG Add a photo cut, and
+  Records shrinks it and strips its metadata. The change set row records only the size: the image passes through
   `ApplyChangeSet`'s `photo:` option and is never kept in SAR Duty. Reading is D4H's
   `GET /members/<id>/image`, as for any team, so ID cards and pages need nothing new.
   After a change, the member's Apple Wallet pass is nudged to fetch the new photo.

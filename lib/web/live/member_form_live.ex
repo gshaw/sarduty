@@ -131,8 +131,9 @@ defmodule Web.MemberFormLive do
         </:trailing>
       </.form_actions>
       <p :if={!Team.photos?(@current_team)} id="photos-off" class="hint">
-        To add or change a photo, turn on Photos in
-        <.a navigate={~p"/teams/#{@current_team}/settings/features"}>team settings</.a>.
+        To add or change a photo, turn on Photos in <.a navigate={
+          ~p"/teams/#{@current_team}/settings/features"
+        }>team settings</.a>.
       </p>
     </section>
 

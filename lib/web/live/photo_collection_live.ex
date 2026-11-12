@@ -18,7 +18,8 @@ defmodule Web.PhotoCollectionLive do
   end
 
   def handle_params(params, _uri, socket) do
-    view = Enum.find(Keyword.keys(@views), &(view_param(&1) == (params["view"] || "members")))
+    wanted = params["view"] || "members"
+    view = @views |> Keyword.keys() |> Enum.find(&(view_param(&1) == wanted))
     if !view, do: raise(Web.Status.NotFound)
 
     members = Member.get_all_counted(socket.assigns.current_team, DateTime.utc_now())

@@ -146,9 +146,16 @@ defmodule App.Adapter.D4H do
     |> Keyword.merge(test_options())
     |> Req.new()
     |> Req.Request.put_private(:d4h_team_id, d4h_team_id)
-    # For the few writes D4H and Records take differently, such as a member's photo.
-    |> Req.Request.put_private(:service, service(api_host))
+    |> Req.Request.put_private(:write_service, write_service(api_host))
     |> report_rate_limits()
+  end
+
+  # Who takes a write D4H and Records take differently, such as a member's photo (#1028).
+  # D4H's own form goes only to a D4H region. Any other host speaks Records' API: SAR
+  # Duty Records, a dev one behind RECORDS_HOST, and the throwaway one the Records repo's
+  # bin/check-sarduty runs this adapter against.
+  defp write_service(api_host) do
+    if api_host in Map.values(regions()), do: :d4h, else: :records
   end
 
   # D4H sends no rate-limit headers, so a 429 is the only sign of a limit. This step goes
@@ -1398,7 +1405,7 @@ defmodule App.Adapter.D4H do
   nobody had tried it on a real member when this was written.
   """
   def set_member_photo(context, d4h_member_id, bytes) when is_binary(bytes) do
-    case Req.Request.get_private(context, :service) do
+    case Req.Request.get_private(context, :write_service) do
       :records ->
         url = "/members/#{d4h_member_id}/image"
         write(context, :put, url, {:body, bytes}, &D4H.Member.build/1)

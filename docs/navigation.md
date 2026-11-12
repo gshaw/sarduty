@@ -51,6 +51,7 @@ is left out, and so is its divider.
 | Section | Links                                                    | Who         |
 | ------- | -------------------------------------------------------- | ----------- |
 | 1       | Dashboard, Whiteboard                                    | everyone    |
+| 1       | Photos                                                   | team admins |
 | 2       | Activities, Take attendance                              | everyone    |
 | 2       | Templates                                                | team admins |
 | 3       | Members, Milestones                                      | everyone    |
@@ -72,6 +73,10 @@ is left out, and so is its divider.
 - **Whiteboard follows Dashboard** while the team has D4H's whiteboard on (#515). The
   Dashboard shows a line or 2 of its notes; the page has them all, and team admins post
   from it.
+- **Photos ends the first section** while the team has Photos on (#1028), after
+  Whiteboard, or after Dashboard on a team with no Whiteboard. Team admins see it for
+  now. It never moves when the page grows: members' own photos and activity photos join
+  the same link ([photos.md](photos.md)).
 - **Take attendance is always there**, after Activities, for members and team admins
   (#475). Not only while an activity is on: links that come and go with the clock make
   the menu harder to learn. It opens `/teams/:subdomain/take-attendance` in the app
@@ -93,8 +98,8 @@ is left out, and so is its divider.
   Features comes before the tabs it decides on (2026-10-28). General held the letters and the attendance check until then, one long form
   with four topics.
 - **Features is where a team turns things on** (2026-10-28): member logins, with chores
-  and certificates under them, and the whiteboard, one switch each that saves when
-  flipped. ID cards show as on or off; SAR Duty turns them on when a team asks. Every
+  and certificates under them, photos, travel, and the whiteboard, one switch each that
+  saves when flipped. ID cards show as on or off; SAR Duty turns them on when a team asks. Every
   member gets a card sits under ID cards, a team admin's switch (#893). Agents
   isn't offered: it shows only once a SAR Duty admin turns it on. A feature's own
   settings are a tab that shows only while it is on: Chore categories, Agents. A new feature a

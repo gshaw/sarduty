@@ -41,7 +41,11 @@ defmodule App.Operation.ApplyEditTest do
 
   # D4H takes a photo as the member's profile document (#1028), and has no way to remove one.
   test "a D4H team sets a member's photo, and cannot remove one" do
-    assert ApplyEdit.d4h_takes?(%ChangeSetRow{action: :set_member_photo, new_value: %{"size" => 9}})
+    assert ApplyEdit.d4h_takes?(%ChangeSetRow{
+             action: :set_member_photo,
+             new_value: %{"size" => 9}
+           })
+
     refute ApplyEdit.d4h_takes?(%ChangeSetRow{action: :remove_member_photo, new_value: %{}})
   end
 

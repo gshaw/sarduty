@@ -58,8 +58,9 @@ email, mobile phone, address, joined date, and status: Operational, Not operatio
 Observer, D4H's three. Saving is one `update_member` row naming only what changed,
 through [SaveMember](../lib/app/operation/save_member.ex) and ApplyEdit, which sends a D4H
 team only those fields (`ApplyEdit.d4h_takes?/1`). A D4H team's form has no Team admin
-box, photo, or Mark as retired: D4H sets access, photos, and leaving in its web app, and
-Retiring is its own steps ([Retiring](#retiring)). Adding a member is a Records team's
+box or Mark as retired: D4H sets access and leaving in its web app, and Retiring is its
+own steps ([Retiring](#retiring)). A photo is set on Add a photo, on any team
+([photos.md](photos.md)). Adding a member is a Records team's
 only ([records.md](records.md#editing-records)).
 
 - **Role** is D4H's free-text `position`, so teams drift: South Fraser had 45 roles

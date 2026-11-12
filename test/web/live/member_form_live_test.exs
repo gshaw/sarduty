@@ -144,7 +144,10 @@ defmodule Web.MemberFormLiveTest do
     path = "/members/#{admin.d4h_member_id}/image"
     assert_received {:records, "DELETE", ^path, nil}
     refute Repo.reload!(admin).has_photo
-    assert [%ChangeSetRow{action: :remove_member_photo, status: :applied}] = Repo.all(ChangeSetRow)
+
+    assert [%ChangeSetRow{action: :remove_member_photo, status: :applied}] =
+             Repo.all(ChangeSetRow)
+
     refute has_element?(lv, "#member-photo-image")
     refute has_element?(lv, "#remove-photo")
   end

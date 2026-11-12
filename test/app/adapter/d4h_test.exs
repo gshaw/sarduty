@@ -173,6 +173,9 @@ defmodule App.Adapter.D4HTest do
   end
 
   describe "a member's photo (#1028)" do
+    defp photo_context(api_host),
+      do: D4H.build_context(access_key: "key", api_host: api_host, d4h_team_id: 1)
+
     # D4H's spec (7.6.1): a document on the member with `profile` set is the profile image.
     test "a D4H team posts it as the member's profile document" do
       Req.Test.stub(App.Adapter.D4H, fn conn ->
@@ -191,26 +194,32 @@ defmodule App.Adapter.D4HTest do
         Req.Test.json(conn, %{"id" => 9, "targetResource" => %{"id" => 70}})
       end)
 
-      assert {:ok, %D4H.Document{d4h_document_id: 9, d4h_target_id: 70}} =
-               D4H.set_member_photo(context(), 70, "jpeg bytes")
+      for region <- Map.values(D4H.regions()) do
+        assert {:ok, %D4H.Document{d4h_document_id: 9, d4h_target_id: 70}} =
+                 D4H.set_member_photo(photo_context(region), 70, "jpeg bytes")
+      end
     end
 
+    # Any host that is not a D4H region speaks Records' API: SAR Duty Records, and the
+    # throwaway one the Records repo's bin/check-sarduty runs this adapter against.
     test "a Records team still PUTs the image" do
-      records = D4H.build_context(access_key: "key", api_host: D4H.records_host(), d4h_team_id: 1)
-
       Req.Test.stub(App.Adapter.D4H, fn conn ->
         assert {conn.method, conn.request_path} == {"PUT", "/v3/team/1/members/70/image"}
         assert {:ok, "jpeg bytes", conn} = Plug.Conn.read_body(conn)
         Req.Test.json(conn, App.RecordsStub.member_json(70))
       end)
 
-      assert {:ok, %D4H.Member{d4h_member_id: 70}} =
-               D4H.set_member_photo(records, 70, "jpeg bytes")
+      for host <- [D4H.records_host(), "local"] do
+        assert {:ok, %D4H.Member{d4h_member_id: 70}} =
+                 D4H.set_member_photo(photo_context(host), 70, "jpeg bytes")
+      end
     end
 
     test "a refusal comes back as the error" do
       Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 403, ""))
-      assert {:error, %D4H.Error{status: 403}} = D4H.set_member_photo(context(), 70, "jpeg bytes")
+
+      assert {:error, %D4H.Error{status: 403}} =
+               D4H.set_member_photo(photo_context("api.ca.d4h.org"), 70, "jpeg bytes")
     end
   end
 

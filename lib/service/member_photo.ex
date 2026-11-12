@@ -60,7 +60,7 @@ defmodule Service.MemberPhoto do
   """
   def placement(params) when is_map(params) do
     turns =
-      case Integer.parse(to_string(params["turns"])) do
+      case params["turns"] |> to_string() |> Integer.parse() do
         {turns, ""} -> turns
         _other -> 0
       end
@@ -74,7 +74,7 @@ defmodule Service.MemberPhoto do
   end
 
   defp share(text, default) do
-    case Float.parse(to_string(text)) do
+    case text |> to_string() |> Float.parse() do
       {share, ""} -> share
       _other -> default
     end

@@ -24,7 +24,9 @@ defmodule Web.PhotoCollectionLiveTest do
     assert has_element?(lv, "#photos-view-no-photo", "1")
 
     # The team admin from the setup is on the team too.
-    assert lv |> render() |> Floki.parse_fragment!() |> Floki.find("#photos > li") |> length() == 4
+    assert lv |> render() |> Floki.parse_fragment!() |> Floki.find("#photos > li") |> length() ==
+             4
+
     assert render(lv) =~ ~r/alex Chen.*Eli Haddad.*Sam Rivera/s
 
     # A photo comes from the member's image route, loaded as it scrolls into view.

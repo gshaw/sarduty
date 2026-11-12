@@ -27,6 +27,9 @@ enforces the top-level list and the held URLs.
   it too, such as `/members/ask` (#766, #895, #920). The tab and its steps keep its filters
   in the query, `?group=`, `?status=` (the reply tile, such as `no-reply`), and `?q=`
   (the name search), so Cancel opens the tab as it was (#920).
+- **A member's photo is under `/photos/members`** (#1028): Add a photo is
+  `/photos/members/new`, with `?member=<id>` for one member. That leaves `/photos/:id`
+  for an activity's photo.
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
   (`/teams/:subdomain/settings`, `/settings/team-admins`). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.

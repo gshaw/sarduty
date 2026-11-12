@@ -67,7 +67,13 @@ defmodule Web.MemberCardLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{riley.id}/card")
 
       assert has_element?(lv, "#no-photo", "Riley Okafor has no photo. An ID card needs one.")
-      assert has_element?(lv, ~s|#add-photo[href="#{add_photo_path(team, riley)}"]|, "Add a photo")
+
+      assert has_element?(
+               lv,
+               ~s|#add-photo[href="#{add_photo_path(team, riley)}"]|,
+               "Add a photo"
+             )
+
       refute has_element?(lv, "#issue")
       refute has_element?(lv, "#member-actions-change-photo")
 

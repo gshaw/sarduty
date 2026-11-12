@@ -19,12 +19,13 @@ defmodule Web.MemberPhotoFormLiveTest do
     %{conn: log_in_user(conn, user), team: team, riley: riley}
   end
 
-  defp stub_ok do
-    RecordsStub.stub(fn
-      _method, "/documents", _body -> {200, %{"id" => 9, "targetResource" => %{"id" => 70}}}
-      _method, _path, _body -> {200, RecordsStub.member_json(77)}
-    end)
-  end
+  defp stub_ok, do: RecordsStub.stub(&reply/3)
+
+  # D4H answers a photo with its document, Records with the member.
+  defp reply(_method, "/documents", _body),
+    do: {200, %{"id" => 9, "targetResource" => %{"id" => 70}}}
+
+  defp reply(_method, _path, _body), do: {200, RecordsStub.member_json(77)}
 
   defp add_path(team, member), do: ~p"/teams/#{team}/photos/members/new?#{[member: member.id]}"
 
@@ -58,9 +59,21 @@ defmodule Web.MemberPhotoFormLiveTest do
 
     # What works: one good example and 4 rules. What does not: 5 examples.
     assert has_element?(lv, ~s|#photo-guide-good img[src*="photo-guide-good"]|)
-    assert lv |> render() |> Floki.parse_fragment!() |> Floki.find("#photo-guide-good li") |> length() == 4
+
+    assert lv
+           |> render()
+           |> Floki.parse_fragment!()
+           |> Floki.find("#photo-guide-good li")
+           |> length() == 4
+
     assert has_element?(lv, "#photo-guide-good li", "A plain, light wall behind you")
-    assert lv |> render() |> Floki.parse_fragment!() |> Floki.find("#photo-guide-bad > li") |> length() == 5
+
+    assert lv
+           |> render()
+           |> Floki.parse_fragment!()
+           |> Floki.find("#photo-guide-bad > li")
+           |> length() == 5
+
     assert has_element?(lv, "#photo-guide-bad li", "Busy background")
 
     # Both buttons open the one input, which takes images only.
@@ -102,7 +115,9 @@ defmodule Web.MemberPhotoFormLiveTest do
     {:ok, card, html} =
       lv
       |> form("#photo-form")
-      |> render_submit(%{"photo" => %{"turns" => "1", "x" => "0.5", "y" => "0.4", "side" => "0.5"}})
+      |> render_submit(%{
+        "photo" => %{"turns" => "1", "x" => "0.5", "y" => "0.4", "side" => "0.5"}
+      })
       |> follow_redirect(conn, ~p"/teams/#{team}/members/#{riley.id}/card")
 
     assert html =~ "Photo saved."
@@ -169,7 +184,12 @@ defmodule Web.MemberPhotoFormLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/photos/members/new")
 
-    assert has_element?(lv, ~s|select[name=member_id] option[value="#{riley.id}"]|, "Riley Okafor")
+    assert has_element?(
+             lv,
+             ~s|select[name=member_id] option[value="#{riley.id}"]|,
+             "Riley Okafor"
+           )
+
     refute has_element?(lv, ~s|select[name=member_id] option[value="#{retired.id}"]|)
     refute has_element?(lv, ~s|select[name=member_id] option[value="#{truck.id}"]|)
 

@@ -4,6 +4,10 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- ⭐ Photos: turn it on under Features, and a team admin adds or changes any member's
+  photo in SAR Duty. Take one with a phone or select one, place the face in the oval,
+  and save. A Photos page shows every current member's photo and who has none. On a D4H
+  team the photo becomes the member's D4H profile photo.
 - Team settings has a Fields tab: every custom field on your records, with its hint,
   choices, who added it, and when. Member fields' Copy boxes moved there. Fields tabs
   and Change fields now group fields under D4H's headings, such as KMS Data.

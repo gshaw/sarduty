@@ -222,7 +222,13 @@ defmodule Web.MemberPhotoFormLive do
             aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown + -"
             data-photo-frame
           >
-            <img src={@photo.src} alt="" width={@photo.width} height={@photo.height} draggable="false" />
+            <img
+              src={@photo.src}
+              alt=""
+              width={@photo.width}
+              height={@photo.height}
+              draggable="false"
+            />
             <svg class="photo-place-oval" viewBox="0 0 100 100" aria-hidden="true">
               <ellipse class="photo-place-oval-edge" cx="50" cy="40" rx="21" ry="26" />
               <ellipse class="photo-place-oval-line" cx="50" cy="40" rx="21" ry="26" />

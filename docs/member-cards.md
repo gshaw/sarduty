@@ -156,8 +156,8 @@ matched to the person holding the phone.
   Any other answer, such as a rate limit or an outage, or none at all, keeps what was
   stored.
 - **Nightly**, after a team's full refresh and before Every member gets a card, it checks
-  each counted, current member on a team with ID cards on, card holders too, so the
-  report is right for everyone. One request per member, outside any transaction. New
+  each counted, current member on a team with ID cards or Photos on, card holders too, so
+  the report is right for everyone. One request per member, outside any transaction. New
   photos are found then, not on the 10-minute sync. A card holder with a photo where
   there was none gets their card refreshed, all of them in one push and one Google update
   (`RefreshMemberCard.resend_cards/2`), so a card that went out with the placeholder gets
@@ -174,12 +174,14 @@ matched to the person holding the phone.
   later removed, until a team admin selects Cancel ID card. Change member already warns.
   Nothing checks what a photo shows: a photo that is not the person fails at the verify
   page, the same as none.
-- **Records teams:** SetMemberPhoto sets `has_photo` itself, with no download, refreshes
-  the card, and runs Every member gets a card, so the switch's card goes out the moment a
-  first photo is saved.
+- **A photo saved in SAR Duty** (Add a photo, #1028, [photos.md](photos.md)):
+  SetMemberPhoto sets `has_photo` itself, with no download, refreshes the card, and runs
+  Every member gets a card, so the switch's card goes out the moment a first photo is
+  saved. With Photos on, a member with no photo gets Add a photo on the ID Card tab in
+  Issue ID card's place.
 - **Try a demo** skips the nightly refresh, so `BuildDemoTeam` sets `has_photo` from the
   cast: true for each person with the sample photo, false for the visitor. The visitor's
-  prebuilt card works; a new one after Cancel asks for a photo, which Change member adds.
+  prebuilt card works; a new one after Cancel asks for a photo, which Add a photo adds.
 - No words name D4H or Records ("has no photo"), so one sentence fits both kinds of team.
 
 ## Refresh ID card

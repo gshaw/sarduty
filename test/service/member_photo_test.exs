@@ -77,8 +77,9 @@ defmodule Service.MemberPhotoTest do
 
   describe "prepare/1" do
     test "a photo becomes a JPEG up to 2000 px, with its size" do
-      assert {:ok, %{bytes: <<0xFF, 0xD8, 0xFF, _rest::binary>> = jpeg, width: 2000, height: 1500}} =
-               MemberPhoto.prepare(image(2400, 1800))
+      assert {:ok,
+              %{bytes: <<0xFF, 0xD8, 0xFF, _rest::binary>> = jpeg, width: 2000, height: 1500}} =
+               2400 |> image(1800) |> MemberPhoto.prepare()
 
       assert size(jpeg) == {2000, 1500}
     end
@@ -90,14 +91,14 @@ defmodule Service.MemberPhotoTest do
       assert MemberPhoto.prepare(<<0xFF, 0xD8, 0xFF, "not a real photo">>) ==
                {:error, "SAR Duty cannot read this photo. Take another, or select one."}
 
-      assert MemberPhoto.prepare(:binary.copy(<<0>>, 10_000_001)) ==
+      assert <<0>> |> :binary.copy(10_000_001) |> MemberPhoto.prepare() ==
                {:error, "Select a photo under 10 MB."}
     end
   end
 
   describe "place/3" do
     test "cuts the placed square and shrinks it to 1024 px, as a JPEG" do
-      {:ok, photo} = MemberPhoto.prepare(image(2000, 1500))
+      {:ok, photo} = 2000 |> image(1500) |> MemberPhoto.prepare()
 
       assert {:ok, <<0xFF, 0xD8, 0xFF, _rest::binary>> = jpeg} =
                MemberPhoto.place(photo.bytes, 0, %{x: 0.5, y: 0.5, side: 1.0})
@@ -106,7 +107,7 @@ defmodule Service.MemberPhotoTest do
     end
 
     test "a square under 1024 px keeps its size, turned or not" do
-      {:ok, photo} = MemberPhoto.prepare(image(900, 600))
+      {:ok, photo} = 900 |> image(600) |> MemberPhoto.prepare()
 
       for turns <- 0..3 do
         {:ok, jpeg} = MemberPhoto.place(photo.bytes, turns, %{x: 0.5, y: 0.5, side: 0.5})
@@ -119,7 +120,7 @@ defmodule Service.MemberPhotoTest do
       red = Image.new!(400, 800, color: :red)
       blue = Image.new!(400, 800, color: :blue)
       {:ok, joined} = Image.join([red, blue], across: 2)
-      {:ok, photo} = MemberPhoto.prepare(Image.write!(joined, :memory, suffix: ".png"))
+      {:ok, photo} = joined |> Image.write!(:memory, suffix: ".png") |> MemberPhoto.prepare()
 
       {:ok, top} = MemberPhoto.place(photo.bytes, 1, %{x: 0.5, y: 0.0, side: 0.5})
       {:ok, bottom} = MemberPhoto.place(photo.bytes, 1, %{x: 0.5, y: 1.0, side: 0.5})

@@ -170,7 +170,11 @@ defmodule Web.NavigationTest do
                |> team_sections([team_admin?: true], %{team | whiteboard_enabled: false})
                |> keys()
 
-      refute "photos" in (path |> team_sections([member?: true], team) |> keys() |> List.flatten())
+      refute "photos" in (path
+                          |> team_sections([member?: true], team)
+                          |> keys()
+                          |> List.flatten())
+
       refute "photos" in (path |> team_sections(team_admin?: true) |> keys() |> List.flatten())
     end
 
