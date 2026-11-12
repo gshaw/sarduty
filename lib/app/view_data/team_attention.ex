@@ -14,7 +14,6 @@ defmodule App.ViewData.TeamAttention do
   """
 
   alias App.Adapter.D4H
-  alias App.Model.Team
   alias Service.Format
 
   @max_items 7
@@ -57,7 +56,6 @@ defmodule App.ViewData.TeamAttention do
     |> Enum.concat(two_hours_tags_items(rows, this_year))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
     |> Enum.concat([letter_settings_item(rows.letter_settings)])
-    |> Enum.concat(name_items(rows.names))
     |> Enum.concat([contacts_item(rows.contacts?)])
     |> Enum.reject(&is_nil/1)
     |> Enum.sort_by(&level_order/1)
@@ -633,38 +631,6 @@ defmodule App.ViewData.TeamAttention do
       detail: "Members who use Get help have nobody on the team to ask.",
       action: "Pick team contacts"
     }
-  end
-
-  # The team's names start as one, so these nudge until the short ones are short (#738).
-  # By length only: SAR Duty can't tell a right legal name from a wrong one.
-  defp name_items(names), do: [long_name_item(names), long_abbreviated_name_item(names)]
-
-  defp long_name_item(names) do
-    if Team.name_too_long?(names, :name) do
-      %{
-        key: :long_name,
-        level: :info,
-        title: "Your team's name is too long for ID cards",
-        detail:
-          "\"#{names.name}\" is cut off on ID cards and the phone top bar. " <>
-            "A name of #{Format.characters(Team.name_advice(:name))} or fewer fits.",
-        action: "Open team settings"
-      }
-    end
-  end
-
-  defp long_abbreviated_name_item(names) do
-    if Team.name_too_long?(names, :abbreviated_name) do
-      %{
-        key: :long_abbreviated_name,
-        level: :info,
-        title: "Your team's abbreviated name is too long for texts",
-        detail:
-          "Texts to members start with it. " <>
-            "#{Format.characters(Team.name_advice(:abbreviated_name))} or fewer leaves room for the message.",
-        action: "Open team settings"
-      }
-    end
   end
 
   defp letters_item(nil, _now, _timezone), do: nil

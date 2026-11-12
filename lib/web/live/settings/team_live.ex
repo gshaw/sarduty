@@ -74,9 +74,8 @@ defmodule Web.Settings.TeamLive do
           name.
         </p>
         <.input field={@form[:name]} label="Name">
-          Used on most pages, emails, ID cards, and the phone top bar. {Service.Format.characters(
-            Team.name_advice(:name)
-          )} or fewer fits everywhere.
+          Used on most pages, emails, ID cards, and the phone top bar, which may cut off a
+          name over {Service.Format.characters(Team.name_advice(:name))}.
         </.input>
         <.input field={@form[:legal_name]} label="Legal name">
           In full, as registered. Used on tax credit letters, the page that checks them, and
