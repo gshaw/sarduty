@@ -101,6 +101,26 @@ defmodule Web.Settings.FieldsLiveTest do
              team.id |> CustomField.get_all("member") |> Enum.filter(& &1.copy_values)
   end
 
+  test "a long list of choices shows the first 3 and a count that opens the rest",
+       %{conn: conn, team: team} do
+    options = for i <- 1..12, do: option(i, "Activity #{i}", {nil, nil})
+
+    save(team, [], [
+      field(1, "Activity", %{target: "incident", field_type: "single_choice", options: options})
+    ])
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields")
+    [activity] = CustomField.get_all(team.id, "incident")
+
+    assert has_element?(
+             lv,
+             "#field-#{activity.id} details:not([open]) summary",
+             "Choices: Activity 1, Activity 2, Activity 3, and 9 more"
+           )
+
+    assert has_element?(lv, "#field-#{activity.id} details li", "Activity 12")
+  end
+
   test "says when the team has no fields", %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields")
 

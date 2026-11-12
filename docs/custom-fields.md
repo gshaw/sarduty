@@ -94,8 +94,10 @@ live field on the team's records, by what it's on (incidents, exercises, events,
 members, equipment), then by bundle. Each shows its type (Text and Long text apart),
 Needed to publish on an activity's required ones, who added it (the team or its
 organization), its hint, its choices, the ones a team added to an organization's field,
-its archived choices, and when it was added. A RESTRICTED one says only team admins see
-its values. Archived fields wait at the foot, closed. Member fields carry their Copy
+its archived choices, and when it was added. A list of more than 8 choices, such as
+BCSARA's Activity, shows its first 3 and a count, "and 37 more", which opens the rest one
+per line; never a select, since nothing on the page can be changed. A RESTRICTED one says
+only team admins see its values. Archived fields wait at the foot, closed. Member fields carry their Copy
 boxes, saved with Save member fields, which changes only SAR Duty's own setting.
 
 It's read only: fields change in D4H, and editing them here is #724. D4H's web address
