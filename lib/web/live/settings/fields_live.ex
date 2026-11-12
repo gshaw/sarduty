@@ -2,40 +2,48 @@ defmodule Web.Settings.FieldsLive do
   use Web, :live_view_app_layout
 
   import Web.Components.FieldDefinitions
+  import Web.Components.StatSwitch
   import Web.Components.TeamSettingsTabs
 
   alias App.Adapter.D4H
   alias App.Model.CustomField
   alias App.Operation.SaveTeamMemberFields
-  alias App.Repo
 
-  # Settings' Fields tab, /teams/:subdomain/settings/fields (#872): every custom field on
-  # the team's records, by what it's on and then by D4H's bundles, with what D4H says
-  # about each. Read only, except which member fields SAR Duty copies (#681), which only
-  # changes SAR Duty's own setting. Archived fields wait, closed, at the foot.
+  # Settings' Fields tab, /teams/:subdomain/settings/fields (#872): an index of the custom
+  # fields on the team's records, one kind at a time (`?kind=member`), each field a line
+  # that opens its own page, Web.Settings.FieldLive. Read only, except which member
+  # fields SAR Duty copies (#681), which only changes SAR Duty's own setting. A kind's
+  # archived fields wait, closed, at its foot.
   def mount(_params, _session, socket) do
-    team = Repo.preload(socket.assigns.current_team, :organization)
+    team = socket.assigns.current_team
 
     socket =
       socket
       |> assign(page_title: "Team settings · Fields", service: D4H.service_name(team))
-      |> assign(
-        team_names: %{team.d4h_team_id => team.name},
-        organization_name: team.organization && team.organization.short_name
-      )
       |> assign_fields(team)
 
     {:ok, socket}
   end
 
+  def handle_params(params, _uri, socket) do
+    {:noreply, assign(socket, :kind, kind(params["kind"], socket.assigns.counts))}
+  end
+
   defp assign_fields(socket, team) do
-    {archived, live} =
-      team.id |> CustomField.get_all_with_archived() |> Enum.split_with(& &1.archived_at)
+    fields = CustomField.get_all_with_archived(team.id)
+    {archived, live} = Enum.split_with(fields, & &1.archived_at)
 
     assign(socket,
-      by_target: CustomField.by_target(live),
-      archived: CustomField.by_target(archived)
+      counts: CustomField.counts_by_target(fields),
+      live: Enum.group_by(live, & &1.target),
+      archived: Enum.group_by(archived, & &1.target)
     )
+  end
+
+  @doc "The kind to show: the one asked for, or the first with fields."
+  def kind(asked, counts) do
+    targets = Enum.map(counts, &elem(&1, 0))
+    if asked in targets, do: asked, else: List.first(targets)
   end
 
   def handle_event("save_member_fields", params, socket) do
@@ -52,6 +60,13 @@ defmodule Web.Settings.FieldsLive do
   end
 
   def render(assigns) do
+    assigns =
+      assign(assigns,
+        fields: Map.get(assigns.live, assigns.kind, []),
+        archived_fields: Map.get(assigns.archived, assigns.kind, []),
+        path: &~p"/teams/#{assigns.current_team}/settings/fields/#{&1.id}"
+      )
+
     ~H"""
     <.team_settings_tabs team={@current_team} current={:fields} />
     <div class="measure">
@@ -62,62 +77,55 @@ defmodule Web.Settings.FieldsLive do
       <p>Change them in {@service}. SAR Duty refreshes them every 10 minutes.</p>
     </div>
 
-    <.empty_state :if={@by_target == []} id="no-fields" title="No fields yet" class="mt-8">
+    <.empty_state :if={@counts == []} id="no-fields" title="No fields yet" class="mt-8">
       Your team and organization have added no fields to records.
     </.empty_state>
 
-    <section :for={{target, fields} <- @by_target} id={"fields-#{target}"} class="mt-12">
-      <h2 class="heading">{CustomField.target_title(target)}</h2>
-      <p class="hint mb-4">
-        {Service.Format.count(length(fields), one: "%d field.", many: "%d fields.")}
-      </p>
-      <%= if target == "member" do %>
+    <div :if={@counts != []} class="mt-8">
+      <.stat_switch label="Fields">
+        <:view
+          :for={{target, count} <- @counts}
+          id={"fields-kind-#{target}"}
+          patch={~p"/teams/#{@current_team}/settings/fields?kind=#{target}"}
+          current={@kind == target}
+          count={count}
+        >
+          {CustomField.target_title(target)}
+        </:view>
+      </.stat_switch>
+    </div>
+
+    <section :if={@kind} id={"fields-#{@kind}"} class="mt-6">
+      <%= if @kind == "member" do %>
         <p class="measure mb-4">
           SAR Duty copies only the member fields you check. Team admins see them, and each
           member sees their own when the field allows it. Restricted fields stay private.
         </p>
-        <form id="member-fields-form" phx-submit="save_member_fields">
+        <form :if={@fields != []} id="member-fields-form" phx-submit="save_member_fields">
           <input type="hidden" name="fields[]" value="" />
-          <.field_definitions
-            id="fields-member-list"
-            fields={fields}
-            team_names={@team_names}
-            organization_name={@organization_name}
-            timezone={@current_team.timezone}
-            copy?
-          />
+          <.field_list id="fields-member-list" fields={@fields} path={@path} copy? />
           <.form_actions>
             <.button variant={:success} phx-disable-with="Saving…">Save member fields</.button>
           </.form_actions>
         </form>
       <% else %>
-        <.field_definitions
-          id={"fields-#{target}-list"}
-          fields={fields}
-          team_names={@team_names}
-          organization_name={@organization_name}
-          timezone={@current_team.timezone}
-          publish?={target in ~w(incident exercise event)}
-          restricted_text="Only team admins see its values."
+        <.field_list
+          id={"fields-#{@kind}-list"}
+          fields={@fields}
+          path={@path}
+          publish?={@kind in ~w(incident exercise event)}
         />
       <% end %>
-    </section>
 
-    <details :if={@archived != []} id="archived-fields" class="mt-12">
-      <summary class="heading">
-        Archived fields · {@archived |> Enum.flat_map(&elem(&1, 1)) |> length()}
-      </summary>
-      <section :for={{target, fields} <- @archived} id={"archived-#{target}"} class="mt-6">
-        <h3 class="subheading mb-2">{CustomField.target_title(target)}</h3>
-        <.field_definitions
-          id={"archived-#{target}-list"}
-          fields={fields}
-          team_names={@team_names}
-          organization_name={@organization_name}
-          timezone={@current_team.timezone}
-        />
-      </section>
-    </details>
+      <details :if={@archived_fields != []} id="archived-fields" class="mt-8">
+        <summary class="subheading">
+          Archived · {length(@archived_fields)}
+        </summary>
+        <div class="mt-4">
+          <.field_list id={"archived-#{@kind}-list"} fields={@archived_fields} path={@path} />
+        </div>
+      </details>
+    </section>
     """
   end
 end

@@ -412,14 +412,17 @@ defmodule Web.Org.OrgPagesTest do
         end
 
       form = form_fixture(Repo.get_by!(Organization, slug: "wsara"))
+      field = custom_field_fixture(coast, %{owner_type: "Organisation", owner_id: 7})
 
       paths =
         for %{path: "/orgs/:slug" <> _rest = path, plug: Phoenix.LiveView.Plug} <-
               Web.Router.__routes__() do
+          id = if path =~ "/fields/", do: field.id, else: form.id
+
           path
           |> String.replace(":slug", "wsara")
           |> String.replace(":subdomain", coast.subdomain)
-          |> String.replace(":id", to_string(form.id))
+          |> String.replace(":id", to_string(id))
         end
 
       assert "/orgs/wsara" in paths
@@ -484,15 +487,33 @@ defmodule Web.Org.OrgPagesTest do
         now
       )
 
-      {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/settings/fields")
+      conn = log_in_user(conn, dana)
+      {:ok, lv, _html} = live(conn, ~p"/orgs/wsara/settings/fields")
 
       [field] =
         coast.id |> CustomField.get_all("incident") |> Enum.filter(&(&1.title == "Agency"))
 
-      assert has_element?(lv, "#fields-incident", "1 field.")
-      assert has_element?(lv, "#field-#{field.id}", "Choices: Police.")
-      assert has_element?(lv, "#field-#{field.id}", "Valley SAR added: Coast Guard.")
+      assert has_element?(lv, "#fields-kind-incident[aria-current]", "1")
+
+      assert has_element?(
+               lv,
+               "#field-#{field.id} a[href='/orgs/wsara/settings/fields/#{field.id}']"
+             )
+
       refute render(lv) =~ "Team notes"
+
+      {:ok, lv, _html} = live(conn, ~p"/orgs/wsara/settings/fields/#{field.id}")
+      assert has_element?(lv, "#field-choices li", "Police")
+      assert has_element?(lv, "#field-details", "Valley SAR added")
+      assert has_element?(lv, "#field-details li", "Coast Guard")
+    end
+
+    test "a team's own field is not the organization's", %{conn: conn, dana: dana, coast: coast} do
+      own = custom_field_fixture(coast, %{title: "Team notes", owner_type: "Team"})
+
+      assert_raise Ecto.NoResultsError, fn ->
+        conn |> log_in_user(dana) |> live(~p"/orgs/wsara/settings/fields/#{own.id}")
+      end
     end
   end
 

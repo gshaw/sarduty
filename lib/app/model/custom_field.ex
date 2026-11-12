@@ -70,6 +70,11 @@ defmodule App.Model.CustomField do
     |> Repo.all()
   end
 
+  @doc "One of the team's fields by its local id, with its bundle."
+  def get_for_team!(team_id, id) do
+    CustomField |> preload(:bundle) |> Repo.get_by!(id: id, team_id: team_id)
+  end
+
   @doc """
   An organization's own fields, archived ones too, from its teams' copies (#872). D4H
   gives every team its organization's fields, so each one is here once per team; the
@@ -86,6 +91,37 @@ defmodule App.Model.CustomField do
     query
     |> order_by([f], asc: f.ordering, asc: f.title, asc: f.id)
     |> preload(:bundle)
+  end
+
+  @doc """
+  One of an organization's fields, by the local id of one team's copy, folded with its
+  other teams' copies by merge_copies/1. Raises Ecto.NoResultsError when no team in
+  `team_ids` has an organization's field with that id.
+  """
+  def get_organisation!(team_ids, id) do
+    copies = get_all_organisation(team_ids)
+
+    copy =
+      Enum.find(copies, &(to_string(&1.id) == to_string(id))) ||
+        raise Ecto.NoResultsError, queryable: CustomField
+
+    [field] =
+      copies
+      |> Enum.filter(
+        &(&1.owner_id == copy.owner_id and &1.d4h_custom_field_id == copy.d4h_custom_field_id)
+      )
+      |> merge_copies()
+
+    field
+  end
+
+  @doc """
+  How many live fields each target has, `[{target, count}]` in the Fields pages' order.
+  A target with only archived fields counts 0, so its archived ones can still be opened.
+  """
+  def counts_by_target(fields) do
+    for {target, fields} <- by_target(fields),
+        do: {target, Enum.count(fields, &is_nil(&1.archived_at))}
   end
 
   @doc """
