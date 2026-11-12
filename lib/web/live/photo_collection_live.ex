@@ -3,10 +3,12 @@ defmodule Web.PhotoCollectionLive do
 
   import Web.Components.StatSwitch
 
+  alias App.Model.ActivityPhoto
   alias App.Model.Member
   alias App.Model.MemberPhoto
   alias App.Model.PhotoAsk
   alias App.Model.Team
+  alias App.Operation.AddActivityPhotos
   alias Service.Format
 
   # Photos, /teams/:subdomain/photos: one page for everyone on the team (#645).
@@ -16,7 +18,8 @@ defmodule Web.PhotoCollectionLive do
   # grid. Whether a member has a photo is `has_photo`, from the night's check, so only
   # members with one ask for theirs, as each scrolls into view. Waiting lists the photos
   # members added of themselves, oldest first, each opening its check (#1029), and a
-  # member with one waiting has a badge in the grid that opens it too. Ask for photos
+  # member with one waiting has a badge in the grid that opens it too. Then the photos
+  # that wait on an activity (#1032), by activity, each opening its Photos tab. Ask for photos
   # emails everyone with no photo a link to add one (#1030), and a member asked shows the
   # date under their name.
   #
@@ -60,13 +63,35 @@ defmodule Web.PhotoCollectionLive do
     without = Enum.reject(members, & &1.has_photo)
     waiting = MemberPhoto.get_waiting(team, now)
 
-    assign(socket,
+    socket
+    |> assign(
+      now: now,
       counts: %{members: length(members), waiting: length(waiting), no_photo: length(without)},
       members: if(view == :no_photo, do: without, else: members),
       waiting: waiting,
       waiting_by_member: Map.new(waiting, &{&1.member_id, &1}),
       asks_by_member: team |> PhotoAsk.open_for_team() |> Map.new(&{&1.member_id, &1})
     )
+    |> assign_activity_waiting()
+  end
+
+  # An activity's photos wait here too (#1032), after the members', by activity, while
+  # the team has activity photos. The Waiting count takes them in.
+  defp assign_activity_waiting(socket) do
+    team = socket.assigns.current_team
+    available? = AddActivityPhotos.available?(team)
+    photos = if available?, do: ActivityPhoto.get_waiting(team), else: []
+
+    socket
+    |> assign(activity_photos?: available?, activity_waiting: by_activity(photos))
+    |> update(:counts, &Map.update!(&1, :waiting, fn count -> count + length(photos) end))
+  end
+
+  # Each activity with its waiting photos, in the order they came: `{activity, photos}`.
+  defp by_activity(photos) do
+    photos
+    |> Enum.chunk_by(& &1.activity_id)
+    |> Enum.map(fn [first | _] = group -> {first.activity, group} end)
   end
 
   defp view_param(:no_photo), do: "no-photo"
@@ -117,10 +142,24 @@ defmodule Web.PhotoCollectionLive do
     </.stat_switch>
 
     <%= if @view == :waiting do %>
-      <.empty_state :if={@waiting == []} id="no-photos-waiting" title="No photos waiting">
-        Photos members add of themselves show here for you to check.
+      <.empty_state
+        :if={@waiting == [] and @activity_waiting == []}
+        id="no-photos-waiting"
+        title="No photos waiting"
+      >
+        {if @activity_photos?,
+          do: "Photos members add, of themselves or to an activity, show here for you to check.",
+          else: "Photos members add of themselves show here for you to check."}
       </.empty_state>
 
+      <%!-- Members' own photos first, under a heading once an activity's wait too. --%>
+      <h2
+        :if={@waiting != [] and @activity_waiting != []}
+        id="photos-waiting-members"
+        class="subheading"
+      >
+        Member photos
+      </h2>
       <ul :if={@waiting != []} id="photos-waiting" class="photo-grid">
         <li :for={photo <- @waiting} id={"waiting-#{photo.id}"}>
           <.a
@@ -144,6 +183,39 @@ defmodule Web.PhotoCollectionLive do
           </span>
         </li>
       </ul>
+
+      <%!-- Then each activity's (#1032): its title opens its Photos tab, where a team
+        admin accepts or deletes them. --%>
+      <section
+        :for={{activity, photos} <- @activity_waiting}
+        id={"photos-waiting-activity-#{activity.id}"}
+        class="mt-8"
+      >
+        <h2 class="subheading mb-0">
+          <.a
+            id={"photos-waiting-activity-#{activity.id}-link"}
+            navigate={Web.ActivityPhoto.tab_path(@current_team, activity.id)}
+          >{activity.title}</.a>
+        </h2>
+        <p class="hint mb-4">
+          {Format.date_short(activity.started_at, @current_team.timezone)} · {Format.count(
+            length(photos),
+            one: "%d photo waiting",
+            many: "%d photos waiting"
+          )}
+        </p>
+        <ul class="activity-photo-grid">
+          <li :for={photo <- photos} id={"activity-photo-#{photo.id}"}>
+            <Web.ActivityPhoto.tile
+              id={"activity-photo-#{photo.id}-tile"}
+              photo={photo}
+              team={@current_team}
+              alt={photo.caption || "Photo from #{activity.title}"}
+            />
+            {Web.ActivityPhoto.added_text(photo, @current_team, @now)}
+          </li>
+        </ul>
+      </section>
     <% else %>
       <.empty_state :if={@members == []} id="no-photos" title={empty_title(@view)}>
         {empty_text(@view)}

@@ -398,6 +398,12 @@ defmodule App.Model.Team do
   @doc "Whether the team shows Photos (#1028): the setting alone, with or without member logins."
   def photos?(%Team{photos_enabled: enabled}), do: enabled
 
+  @doc """
+  The start of every key the team's files have in the file store (#1032,
+  App.Adapter.FileStore): `teams/12`. Deleting the team deletes everything under it.
+  """
+  def file_prefix(team_id) when is_integer(team_id), do: "teams/#{team_id}"
+
   @doc "The short name of the team's organization, else its name. Nil without one."
   def organization_name(%Team{} = team) do
     case Repo.preload(team, :organization).organization do

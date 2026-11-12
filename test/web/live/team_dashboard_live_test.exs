@@ -287,6 +287,32 @@ defmodule Web.TeamDashboardLiveTest do
     refute has_element?(lv, "#attention-photos")
   end
 
+  # An activity's photos wait in the same row (#1032), which still opens Photos on
+  # Waiting, where both kinds are listed.
+  test "the photos row counts an activity's photos with the members'", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture(%{team: %{photos_enabled: true}})
+    activity = activity_fixture(team)
+    activity_photo_fixture(activity)
+    activity_photo_fixture(activity, %{status: :accepted})
+    # A deleted activity's photos are on no list, so they do not count.
+    activity_photo_fixture(activity_fixture(team, %{deleted_at: ~U[2026-11-04 18:00:00Z]}))
+
+    {:ok, lv, _html} = open(conn, user, team)
+    waiting = ~p"/teams/#{team}/photos?view=waiting"
+    assert has_element?(lv, ~s|#attention-photos a[href="#{waiting}"]|, "1 photo waiting")
+    assert has_element?(lv, "#attention-photos", "Check it, then accept or delete it.")
+
+    member_photo_fixture(member_fixture(team))
+    activity_photo_fixture(activity)
+    {:ok, lv, _html} = open(conn, user, team)
+    assert has_element?(lv, "#attention-photos", "3 photos waiting")
+    assert has_element?(lv, "#attention-photos", "Check them, then accept them or not.")
+
+    team |> Ecto.Changeset.change(photos_enabled: false) |> Repo.update!()
+    {:ok, lv, _html} = open(conn, user, team)
+    refute has_element?(lv, "#attention-photos")
+  end
+
   test "this team's drafts and members missing details need attention", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     activity_fixture(team, at(-48, %{is_published: false}))

@@ -31,6 +31,28 @@
   /* All of the photo as taken, tall or wide, on a mat the size of the card's square. */
   .photo-compare img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; margin-bottom: var(--sp-1); background: var(--surface-alt); border-radius: var(--radius); }
 
+  /* An activity's photos (#1032): tiles 3 wide by 2 tall that fill the row, 2 across on
+     a phone and 3 beside an activity's facts. Under each, who added it and when. */
+  .activity-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: var(--sp-6) var(--sp-4); max-width: 60rem; margin: 0; padding: 0; list-style: none; }
+  .activity-photo-grid > li { min-width: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  .activity-photo-grid label { display: block; cursor: pointer; }
+  .activity-photo-tile { position: relative; aspect-ratio: 3 / 2; margin-bottom: var(--sp-2); overflow: hidden; background: var(--surface-alt); border-radius: var(--radius); }
+  .activity-photo-tile > a { display: block; height: 100%; }
+  .activity-photo-tile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  /* A waiting photo's check box, on its corner, ringed so it shows on any photo. */
+  .activity-photo-tile > input[type="checkbox"] { position: absolute; top: var(--sp-2); left: var(--sp-2); box-shadow: 0 0 0 2px var(--bg); }
+  /* What is checked, then Accept and Delete, over the waiting tiles. */
+  .activity-photo-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); align-items: center; margin: var(--sp-3) 0 var(--sp-4); }
+
+  /* Add photos (#1032): the rules, then each photo picked as a small tile beside its
+     name, its size, and Remove. */
+  .activity-photo-rules { margin: 0 0 var(--sp-6); padding-left: var(--sp-4); list-style: disc; }
+  .activity-photo-rules li + li { margin-top: var(--sp-1); }
+  .activity-photo-files { margin: var(--sp-4) 0 0; padding: 0; list-style: none; }
+  .activity-photo-files > li { display: flex; gap: var(--sp-3); align-items: center; margin-bottom: var(--sp-3); line-height: var(--lh-sm); }
+  .activity-photo-files > li > div { min-width: 0; overflow-wrap: anywhere; }
+  .activity-photo-files .activity-photo-tile { flex: none; width: 5.25rem; margin-bottom: 0; }
+
   /* The guide: one good example beside its rules, then what does not work, 3 across on
      a phone. The examples are drawn. */
   .photo-guide { display: flex; gap: var(--sp-4); align-items: flex-start; margin-bottom: var(--sp-6); }

@@ -32,6 +32,15 @@ defmodule App.Model.Activity do
     do: enabled == true and kind == "incident"
 
   @doc """
+  Whether the activity takes photos (#1032): exercises and events only. Never an
+  incident, whose photos can show a search or the person it was for, and never an
+  activity with logged time, which nobody attended as one occasion. Needs
+  put_logged_minutes/2. The Photos tab, Add photos, and who may add all follow it.
+  """
+  def takes_photos?(%{activity_kind: kind} = activity),
+    do: kind in ["exercise", "event"] and not logged?(activity)
+
+  @doc """
   The D4H tags that say which hours an activity counts for, as `%{primary: tag,
   secondary: tag, other: tag}`. Other is for activities that count for no hours, and is
   nil when nobody names one. A team's organization names each tag (#289); a team names

@@ -52,8 +52,9 @@ defmodule Web.RouterTest do
   # team admins unless a LiveView says `access: :team` or `:member` (Web). MeController
   # serves a member's own downloads, ActivityCalendarController Add to calendar,
   # MemberController's image the photo on a member's page (#440),
-  # CertificateController's file a member's own sent certificate (#645), and
-  # MemberPhotoController's file the photo they added that waits (#1029).
+  # CertificateController's file a member's own sent certificate (#645),
+  # MemberPhotoController's file the photo they added that waits (#1029), and
+  # ActivityPhotoController's file an activity's photo (#1032).
   # Opening a page to members means changing this list on purpose. Web.TeamScopingTest
   # checks every other team route 404s for a member.
   @member_routes [
@@ -83,6 +84,11 @@ defmodule Web.RouterTest do
     "/teams/:subdomain/photos",
     "/teams/:subdomain/photos/members/:id/file",
     "/teams/:subdomain/photos/members/new",
+    # An activity's photos (#1032): its Photos tab, Add photos for a member who attended,
+    # and a photo's file, where a waiting one is only its member's and team admins'.
+    "/teams/:subdomain/activities/:id/photos",
+    "/teams/:subdomain/activities/:id/photos/new",
+    "/teams/:subdomain/photos/:id/file",
     "/teams/:subdomain/take-attendance",
     "/teams/:subdomain/whiteboard",
     "/teams/:subdomain/help",
@@ -121,6 +127,7 @@ defmodule Web.RouterTest do
   defp member_route?(%{plug: Web.MemberController, plug_opts: action}), do: action == :image
   defp member_route?(%{plug: Web.CertificateController, plug_opts: action}), do: action == :file
   defp member_route?(%{plug: Web.MemberPhotoController, plug_opts: action}), do: action == :file
+  defp member_route?(%{plug: Web.ActivityPhotoController, plug_opts: action}), do: action == :file
 
   defp member_route?(%{plug: plug}),
     do: plug in [Web.MeController, Web.ActivityCalendarController]

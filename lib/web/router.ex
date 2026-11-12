@@ -391,6 +391,10 @@ defmodule Web.Router do
       # The task leader signs it there when a team admin asked (#993); members reach it.
       live "/teams/:subdomain/activities/:id/forms/:form_id/sign", SignFormLive
 
+      # An exercise's or an event's photos (#1032), while the team has a file store.
+      live "/teams/:subdomain/activities/:id/photos", ActivityPhotosLive, :photos
+      live "/teams/:subdomain/activities/:id/photos/new", ActivityPhotoFormLive
+
       live "/teams/:subdomain/templates", TemplateCollectionLive
       live "/teams/:subdomain/templates/new", TemplateFormLive, :new
       live "/teams/:subdomain/templates/:id", TemplateLive
@@ -505,6 +509,8 @@ defmodule Web.Router do
       get "/members/:id/image", MemberController, :image
       get "/certificates/:id/file", CertificateController, :file
       get "/photos/members/:id/file", MemberPhotoController, :file
+      # An activity photo's file (#1032). A waiting one is its member's and team admins'.
+      get "/photos/:id/file", ActivityPhotoController, :file
     end
 
     scope "/teams/:subdomain" do

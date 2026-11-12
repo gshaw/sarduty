@@ -9,7 +9,9 @@ defmodule App.Operation.RestoreTeam do
   added since has no rows to restore. Keys are checked at commit, so a row that points
   at something gone since, such as a deleted login, fails the whole restore.
 
-  The team's logo comes back with its next refresh.
+  The team's logo comes back with its next refresh. Its files do not come back: the
+  delete took them from the file store, and the copy holds rows only. So rows that name
+  a file, an activity's photos (DeleteTeam.file_tables/0), are left out (#1032).
   """
 
   alias App.Operation.DeleteTeam
@@ -76,6 +78,7 @@ defmodule App.Operation.RestoreTeam do
 
     for {table, where} <- team_id |> DeleteTeam.scopes("copy") |> Enum.reverse(),
         table in copy_tables,
+        table not in DeleteTeam.file_tables(),
         into: %{} do
       columns = table |> shared_columns() |> Enum.map_join(", ", &~s|"#{&1}"|)
 

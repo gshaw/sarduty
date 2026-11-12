@@ -2,15 +2,17 @@
 // member added (#1029, Web.MemberPhotoLive).
 //
 // PhotoPick: Take a photo and Select a photo open the page's one file input. Take a
-// photo asks for the camera facing the person (capture="user"), which a phone honours
-// and a computer ignores. Select a photo opens the phone's photos, or a file.
+// photo asks for a camera, which a phone honours and a computer ignores: the one facing
+// the person (capture="user") for their own photo, or the one its button names
+// (data-photo-capture="environment") for an activity's (#1032,
+// Web.ActivityPhotoFormLive). Select a photo opens the phone's photos, or a file.
 export const PhotoPick = {
   mounted() {
     this.el.addEventListener("click", event => {
       const button = event.target.closest("[data-photo-pick]")
       const input = this.el.querySelector("input[type=file]")
       if (!button || !input) return
-      if (button.dataset.photoPick === "camera") input.setAttribute("capture", "user")
+      if (button.dataset.photoPick === "camera") input.setAttribute("capture", button.dataset.photoCapture || "user")
       else input.removeAttribute("capture")
       input.click()
     })

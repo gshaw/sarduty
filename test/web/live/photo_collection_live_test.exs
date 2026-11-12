@@ -163,6 +163,78 @@ defmodule Web.PhotoCollectionLiveTest do
       assert has_element?(lv, "#photos-view-waiting", "0")
       refute has_element?(lv, "#waiting-#{photo.id}")
     end
+
+    # An activity's photos wait here too (#1032): after the members', by activity, each
+    # opening the activity's Photos tab, where a team admin accepts or deletes them.
+    test "lists members' photos, then each activity's, and counts both", %{conn: conn, team: team} do
+      eli = member_fixture(team, %{name: "Eli Haddad"})
+      own = member_photo_fixture(eli)
+
+      swiftwater =
+        activity_fixture(team, %{
+          title: "Swiftwater training",
+          started_at: ~U[2026-11-04 03:00:00Z]
+        })
+
+      rope = activity_fixture(team, %{title: "Rope rescue", started_at: ~U[2026-11-10 03:00:00Z]})
+      first = activity_photo_fixture(swiftwater, %{member_id: eli.id})
+      second = activity_photo_fixture(swiftwater, %{member_id: eli.id})
+      third = activity_photo_fixture(rope, %{member_id: eli.id, caption: "On the wall."})
+      accepted = activity_photo_fixture(rope, %{status: :accepted})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/photos?view=waiting")
+
+      # 1 member photo and 3 on activities. An accepted photo waits for nobody.
+      assert has_element?(lv, "#photos-view-waiting[aria-current=page]", "4")
+      assert has_element?(lv, "#photos-waiting-members", "Member photos")
+      assert has_element?(lv, "#waiting-#{own.id}")
+
+      # The later activity first, each under its title.
+      assert lv
+             |> render()
+             |> Floki.parse_fragment!()
+             |> Floki.find("section[id^=photos-waiting-activity-]")
+             |> Floki.attribute("id") ==
+               ["photos-waiting-activity-#{rope.id}", "photos-waiting-activity-#{swiftwater.id}"]
+
+      tab = ~p"/teams/#{team}/activities/#{swiftwater.id}/photos"
+
+      assert has_element?(
+               lv,
+               ~s|#photos-waiting-activity-#{swiftwater.id}-link[href="#{tab}"]|,
+               "Swiftwater training"
+             )
+
+      assert has_element?(
+               lv,
+               "#photos-waiting-activity-#{swiftwater.id}",
+               "Nov 3, 2026 · 2 photos waiting"
+             )
+
+      assert has_element?(lv, "#photos-waiting-activity-#{rope.id}", "1 photo waiting")
+
+      for photo <- [first, second] do
+        assert has_element?(
+                 lv,
+                 ~s|#photos-waiting-activity-#{swiftwater.id} #activity-photo-#{photo.id} img[src*="/photos/#{photo.id}/file?size=tile"]|
+               )
+      end
+
+      assert has_element?(lv, "#activity-photo-#{first.id}", "Eli Haddad")
+      assert has_element?(lv, ~s|#activity-photo-#{third.id} img[alt="On the wall."]|)
+      refute has_element?(lv, "#activity-photo-#{accepted.id}")
+    end
+
+    test "an activity's photos alone need no heading over the members'", %{conn: conn, team: team} do
+      photo = activity_photo_fixture(activity_fixture(team))
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/photos?view=waiting")
+
+      assert has_element?(lv, "#photos-view-waiting", "1")
+      assert has_element?(lv, "#activity-photo-#{photo.id}")
+      refute has_element?(lv, "#photos-waiting-members")
+      refute has_element?(lv, "#no-photos-waiting")
+    end
   end
 
   # A member's own part (#1029): their photo and where it stands, and nothing of the

@@ -9,6 +9,9 @@ defmodule App.Operation.DeleteTeam do
   runs in one transaction with foreign keys checked at commit, so a row missed still
   rolls the whole delete back.
 
+  The team's files in the file store go too (#1032, App.Adapter.FileStore): everything
+  under its prefix, such as its activities' photos, once the rows are gone.
+
   Users stay: a user is only an email and may be on another team (#890 prunes logins
   that reach no team). Nothing in D4H changes. A team on SAR Duty Records goes from
   Records too: Records switches it off at once and deletes it 7 days on, so a Records
@@ -21,6 +24,7 @@ defmodule App.Operation.DeleteTeam do
 
   alias App.Accounts.User
   alias App.Adapter.D4H
+  alias App.Adapter.FileStore
   alias App.Model.Event
   alias App.Model.Team
   alias App.Repo
@@ -31,7 +35,7 @@ defmodule App.Operation.DeleteTeam do
 
   @snapshot_days 7
 
-  @team_tables ~w(activities activity_updates agent_connections attendance_scans
+  @team_tables ~w(activities activity_photos activity_updates agent_connections attendance_scans
                   attention_snoozes certificates change_set_rows change_sets chore_categories
                   chore_events chores custom_fields custom_field_bundles d4h_changes demo_teams
                   endorsements equipment_items
@@ -75,6 +79,13 @@ defmodule App.Operation.DeleteTeam do
 
   @doc false
   def child_tables, do: @child_tables
+
+  # Tables whose rows name files in the file store (#1032). The files go with the team
+  # and no copy keeps them, so App.Operation.RestoreTeam leaves these rows out.
+  @file_tables ~w(activity_photos)
+
+  @doc false
+  def file_tables, do: @file_tables
 
   def snapshot_days, do: @snapshot_days
 
@@ -151,6 +162,7 @@ defmodule App.Operation.DeleteTeam do
       end)
 
     remove_logo(team)
+    remove_files(team)
     Logger.info("Deleted team #{team.id} (#{team.subdomain}), #{reason}; snapshot #{snapshot}")
     {:ok, %{rows: rows, snapshot: snapshot}}
   end
@@ -302,6 +314,20 @@ defmodule App.Operation.DeleteTeam do
         |> Enum.map(&File.rm!/1)
         |> length()
     end
+  end
+
+  # The team's files in the file store (#1032), such as its activities' photos: every
+  # key under its prefix, once its rows are gone. The snapshot holds rows only, so a
+  # restore brings back no file (`file_tables/0`).
+  defp remove_files(%Team{id: team_id}) do
+    if FileStore.available?() do
+      case team_id |> Team.file_prefix() |> FileStore.delete_all() do
+        :ok -> :ok
+        error -> Logger.error("Team #{team_id}'s files did not delete: #{inspect(error)}")
+      end
+    end
+
+    :ok
   end
 
   defp remove_logo(%Team{subdomain: subdomain}) do

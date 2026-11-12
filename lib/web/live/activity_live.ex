@@ -10,6 +10,7 @@ defmodule Web.ActivityLive do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.ActivityPhoto
   alias App.Model.Attendance
   alias App.Model.AttendanceScan
   alias App.Model.Coordinate
@@ -19,6 +20,7 @@ defmodule Web.ActivityLive do
   alias App.Model.Reminder
   alias App.Model.Standing
   alias App.Model.Trip
+  alias App.Operation.AddActivityPhotos
   alias App.Operation.DeleteActivity
   alias App.Operation.SendReminders
   alias App.Repo
@@ -49,7 +51,9 @@ defmodule Web.ActivityLive do
   # (#230), for team admins from the start, next to Members since it's the next job;
   # Equipment what was used; Fields its D4H custom fields, when it has any or a team
   # admin can fill one in, with Change fields (#705); Forms, an organization's forms on
-  # it (#1018); and History. Forms and History are for team admins. The
+  # it (#1018); History; and Photos, Web.ActivityPhotosLive's, on an exercise or an
+  # event while the team has activity photos (#1032). Forms and History are for team
+  # admins. The
   # facts and Actions sit beside every tab, but a phone shows them on Overview only, so
   # the other tabs start with their own content. Team admins also get Take attendance,
   # Actions, and the links to member and equipment pages. A member never gets an
@@ -81,11 +85,22 @@ defmodule Web.ActivityLive do
         map: build_map(activity),
         replier: Reply.replier(socket.assigns, now)
       )
+      |> assign_photos()
       |> assign_fields()
       |> assign_forms()
       |> assign_people()
 
     {:noreply, socket}
+  end
+
+  # The Photos tab (#1032): on an exercise or an event, while the team has activity
+  # photos, and not found anywhere else. It counts the photos that wait, for team admins.
+  defp assign_photos(socket) do
+    %{current_team: team, activity: activity, team_admin?: team_admin?} = socket.assigns
+    photos? = AddActivityPhotos.available?(team) and Activity.takes_photos?(activity)
+    if socket.assigns.live_action == :photos && !photos?, do: raise(Web.Status.NotFound)
+    waiting = if photos? and team_admin?, do: ActivityPhoto.count_waiting_on(activity), else: 0
+    assign(socket, photos?: photos?, photos_waiting: waiting)
   end
 
   # The Forms tab (#1018): an organization's forms it shows on, for team admins only
@@ -106,7 +121,7 @@ defmodule Web.ActivityLive do
     :ok
   end
 
-  @tabs [:overview, :members, :travel, :equipment, :fields, :forms, :history]
+  @tabs [:overview, :members, :travel, :equipment, :fields, :forms, :history, :photos]
 
   defp history(:history, team, activity), do: ChangeHistory.for_activity(team, activity)
   defp history(_tab, _team, _activity), do: []
@@ -121,6 +136,7 @@ defmodule Web.ActivityLive do
   defp page_title(activity, :equipment), do: "#{activity.title} · Equipment"
   defp page_title(activity, :fields), do: "#{activity.title} · Fields"
   defp page_title(activity, :forms), do: "#{activity.title} · Forms"
+  defp page_title(activity, :photos), do: "#{activity.title} · Photos"
   defp page_title(activity, :history), do: "#{activity.title} · History"
 
   @doc """
@@ -420,6 +436,14 @@ defmodule Web.ActivityLive do
       >
         History
       </:tab>
+      <%!-- Last, as the mockup has it (#1032): the tabs before it are the record. --%>
+      <:tab
+        :if={@photos?}
+        navigate={Web.ActivityPhoto.tab_path(@activity.team, @activity.id)}
+        current={@tab == :photos}
+      >
+        Photos<.badge :if={@photos_waiting > 0} kind={:warning}>{@photos_waiting}</.badge>
+      </:tab>
     </.tabs>
     <div class={["activity-columns", @tab == :overview && "is-overview"]}>
       <aside id="activity-facts" class="activity-columns-facts">
@@ -492,6 +516,16 @@ defmodule Web.ActivityLive do
           activity={@activity}
           rows={@form_rows}
           timezone={@current_team.timezone}
+        />
+        <Web.ActivityPhotosLive.photos_tab
+          :if={@tab == :photos}
+          activity={@activity}
+          team={@current_team}
+          photos={@photos}
+          ticks={@photo_ticks}
+          team_admin?={@team_admin?}
+          may_add?={@may_add_photos?}
+          now={@now}
         />
         <.change_history
           :if={@tab == :history}

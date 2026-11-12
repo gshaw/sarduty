@@ -1,7 +1,9 @@
 defmodule App.DataFixtures do
   alias App.AccountsFixtures
   alias App.Adapter.D4H
+  alias App.Adapter.FileStore
   alias App.Model.Activity
+  alias App.Model.ActivityPhoto
   alias App.Model.AgentConnection
   alias App.Model.Attendance
   alias App.Model.Certificate
@@ -845,4 +847,78 @@ defmodule App.DataFixtures do
 
     photo
   end
+
+  @doc """
+  A photo on `activity` (#1032): 60 × 40, with its three files in the file store.
+  Waiting, from nobody, unless `attrs` say otherwise: `member_id:` for who added it,
+  `status: :accepted` for one the team sees.
+  """
+  def activity_photo_fixture(%Activity{} = activity, attrs \\ %{}) do
+    {:ok, files} = 60 |> png_fixture(40) |> Service.ActivityPhoto.prepare()
+
+    photo =
+      %ActivityPhoto{
+        team_id: activity.team_id,
+        activity_id: activity.id,
+        file_token: ActivityPhoto.new_token(),
+        width: files.width,
+        height: files.height
+      }
+      |> Map.merge(attrs)
+      |> Repo.insert!()
+
+    for {size, key} <- ActivityPhoto.keys(photo),
+        do: :ok = FileStore.put(key, Map.fetch!(files, size))
+
+    photo
+  end
+
+  @doc """
+  What the file store has for each of the photo's three files: `{:ok, bytes}`, or
+  `{:error, :not_found}` once they are deleted.
+  """
+  def activity_photo_files(%ActivityPhoto{} = photo),
+    do: for({_size, key} <- ActivityPhoto.keys(photo), do: FileStore.get(key))
+
+  @doc """
+  JPEG bytes of a plain image that says where it was taken and with what, as a phone's
+  photo does: an Exif block with the camera's make, "Canon", and a latitude and
+  longitude near Squamish.
+  """
+  def located_jpeg_fixture(width, height) do
+    <<0xFF, 0xD8, rest::binary>> =
+      width |> Image.new!(height, color: :steelblue) |> Image.write!(:memory, suffix: ".jpg")
+
+    exif = "Exif\0\0" <> tiff_with_location()
+    <<0xFF, 0xD8, 0xFF, 0xE1, byte_size(exif) + 2::16, exif::binary, rest::binary>>
+  end
+
+  # A little-endian TIFF: the first directory names the make and points at the GPS one.
+  defp tiff_with_location do
+    # 8 for the header, 30 for the first directory, and 54 for the GPS one.
+    make_at = 8 + 30 + 54
+    latitude_at = make_at + 6
+    longitude_at = latitude_at + 24
+
+    header = <<"II", 42::little-16, 8::little-32>>
+
+    first =
+      <<2::little-16>> <>
+        entry(0x010F, 2, 6, <<make_at::little-32>>) <>
+        entry(0x8825, 4, 1, <<8 + 30::little-32>>) <> <<0::little-32>>
+
+    gps =
+      <<4::little-16>> <>
+        entry(1, 2, 2, "N\0\0\0") <>
+        entry(2, 5, 3, <<latitude_at::little-32>>) <>
+        entry(3, 2, 2, "W\0\0\0") <>
+        entry(4, 5, 3, <<longitude_at::little-32>>) <> <<0::little-32>>
+
+    header <> first <> gps <> "Canon\0" <> rationals([49, 42, 6]) <> rationals([123, 9, 21])
+  end
+
+  defp entry(tag, type, count, value),
+    do: <<tag::little-16, type::little-16, count::little-32, value::binary>>
+
+  defp rationals(numbers), do: for(n <- numbers, into: <<>>, do: <<n::little-32, 1::little-32>>)
 end
