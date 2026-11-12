@@ -146,4 +146,82 @@ defmodule Service.MemberPhotoTest do
       assert r < 60 and b > 200
     end
   end
+
+  # Where a cleaned-up photo starts (#1031): the square that puts the face in the oval.
+  describe "face_placement/2" do
+    defp close?({turns, placed}, {x, y, side}) do
+      turns == 0 and abs(placed.x - x) < 0.001 and abs(placed.y - y) < 0.001 and
+        abs(placed.side - side) < 0.001
+    end
+
+    test "no face takes the middle square" do
+      assert MemberPhoto.face_placement({800, 600}, nil) == {0, %{x: 0.5, y: 0.5, side: 1.0}}
+    end
+
+    test "a face where the oval is, in a square photo, takes the whole square" do
+      assert close?(MemberPhoto.face_placement({600, 600}, MemberPhoto.oval()), {0.5, 0.5, 1.0})
+    end
+
+    test "a smaller face zooms in until it is as tall as the oval" do
+      # 208 px tall in a 1000 px photo: the oval is 52% of the square, so it is 400 px,
+      # centred a tenth of that below the face.
+      face = %{x: 0.3, y: 0.3, width: 0.1, height: 0.208}
+      assert close?(MemberPhoto.face_placement({1000, 1000}, face), {0.3, 0.34, 0.4})
+    end
+
+    test "a wide face is fitted by its width" do
+      # 210 px wide: the oval is 42% of the square, so it is 500 px.
+      face = %{x: 0.5, y: 0.4, width: 0.21, height: 0.1}
+      assert close?(MemberPhoto.face_placement({1000, 1000}, face), {0.5, 0.45, 0.5})
+    end
+
+    test "the shares are of the photo's own width and height" do
+      # 2000 × 1000: a face 260 px tall asks for a 500 px square, half the shorter side.
+      face = %{x: 0.25, y: 0.4, width: 0.05, height: 0.26}
+      assert close?(MemberPhoto.face_placement({2000, 1000}, face), {0.25, 0.45, 0.5})
+    end
+
+    test "the square is never over the photo, or under the closest zoom" do
+      huge = %{x: 0.5, y: 0.5, width: 0.9, height: 0.9}
+      assert {0, %{side: 1.0}} = MemberPhoto.face_placement({800, 600}, huge)
+
+      tiny = %{x: 0.5, y: 0.5, width: 0.01, height: 0.01}
+      assert close?(MemberPhoto.face_placement({1000, 1000}, tiny), {0.5, 0.52, 0.2})
+    end
+  end
+
+  # A dark photo (#1031): under a fifth of full brightness, over the whole photo.
+  describe "dark?/1" do
+    defp grey(level) do
+      200
+      |> Image.new!(200, color: [level, level, level])
+      |> Image.write!(:memory, suffix: ".jpg")
+    end
+
+    test "a black or nearly black photo is dark" do
+      for level <- [0, 40], do: assert(level |> grey() |> MemberPhoto.dark?())
+    end
+
+    test "a dim photo over a fifth of full brightness is not" do
+      for level <- [64, 128, 255], do: refute(level |> grey() |> MemberPhoto.dark?())
+    end
+
+    test "brightness is as the eye finds it: green counts for more than blue" do
+      blue = 200 |> Image.new!(200, color: [0, 0, 255]) |> Image.write!(:memory, suffix: ".jpg")
+      green = 200 |> Image.new!(200, color: [0, 255, 0]) |> Image.write!(:memory, suffix: ".jpg")
+
+      assert MemberPhoto.dark?(blue)
+      refute MemberPhoto.dark?(green)
+    end
+
+    test "a dark photo with a bright window in it is not dark for sure" do
+      dark = Image.new!(300, 300, color: [20, 20, 20])
+      {:ok, joined} = Image.join([dark, Image.new!(300, 300, color: :white)], across: 2)
+      refute joined |> Image.write!(:memory, suffix: ".jpg") |> MemberPhoto.dark?()
+    end
+
+    test "bytes that are not a photo are not dark" do
+      refute MemberPhoto.dark?("not a photo")
+    end
+  end
 end

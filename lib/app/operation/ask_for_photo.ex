@@ -18,6 +18,7 @@ defmodule App.Operation.AskForPhoto do
   alias App.Model.PhotoAsk
   alias App.Model.Standing
   alias App.Model.Team
+  alias App.Operation.CleanUpPhoto
   alias App.Repo
   alias App.Validate.Message
   alias App.Worker.SendPhotoAskWorker
@@ -131,8 +132,9 @@ defmodule App.Operation.AskForPhoto do
 
   defp send_email(%PhotoAsk{member: member, team: team} = ask, last?, now) do
     url = Web.PhotoAskLinks.url(ask)
+    clean_up? = CleanUpPhoto.available?()
 
-    case PhotoAskMailer.deliver(member, team, asker(ask, now), ask.message, url) do
+    case PhotoAskMailer.deliver(member, team, asker(ask, now), ask.message, url, clean_up?) do
       {:ok, _sent} ->
         PhotoAsk.set_email_status!(ask, :sent)
         :ok

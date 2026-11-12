@@ -15,17 +15,18 @@ defmodule App.Mailer.PhotoAskMailer do
 
   @doc """
   Emails `member` the ask. `asker` is `%{name:, email:}`, the team admin who asked, or
-  nil when their login is gone; `message` their own words, or nil; `url` the link.
+  nil when their login is gone; `message` their own words, or nil; `url` the link; and
+  `clean_up?` whether Clean up is available (#1031), so any background works.
   """
-  def deliver(member, team, asker, message, url) do
+  def deliver(member, team, asker, message, url, clean_up?) do
     member
-    |> build(team, asker, message, url)
+    |> build(team, asker, message, url, clean_up?)
     |> Mailer.for_team(team)
     |> Mailer.deliver()
   end
 
-  defp build(member, team, asker, message, url) do
-    paragraphs = paragraphs(member, team, asker, message, url)
+  defp build(member, team, asker, message, url, clean_up?) do
+    paragraphs = paragraphs(member, team, asker, message, url, clean_up?)
 
     new()
     |> to({member.name, member.email})
@@ -43,11 +44,16 @@ defmodule App.Mailer.PhotoAskMailer do
   Pure. The email as plain paragraphs and `{:button, label, url}`, so its text and HTML
   can't drift apart.
   """
-  def paragraphs(member, team, asker, message, url) do
+  def paragraphs(member, team, asker, message, url, clean_up?) do
+    take_one =
+      if clean_up?,
+        do: "Take one with your phone: it takes a minute, and any background works.",
+        else: "Take one with your phone: it takes a minute."
+
     Enum.reject(
       [
         "Hi #{member.name},",
-        "#{team.name} needs a new photo for your ID card. Take one with your phone: it takes a minute.",
+        "#{team.name} needs a new photo for your ID card. #{take_one}",
         message && "#{(asker && asker.name) || "A team admin"}: “#{message}”",
         {:button, "Add a photo", url},
         "#{team.name}, through SAR Duty"

@@ -9,6 +9,9 @@ defmodule Service.MemberPhoto do
   Nothing here keeps a photo: Add a photo holds the copy in its own page until it saves.
   A member's own photo waits for a team admin (#1029), so App.Model.MemberPhoto keeps
   that copy and where it was placed, `normalize/1`d, until then.
+
+  For Clean up (#1031), `face_placement/2` starts a cleaned-up photo with the face in the
+  oval, and `dark?/1` says when a photo is dark for sure.
   """
 
   @max_bytes 10_000_000
@@ -17,6 +20,16 @@ defmodule Service.MemberPhoto do
   @side 1024
   # The closest zoom: the square is never under a fifth of the photo's shorter side.
   @min_share 0.2
+
+  # The oval Add a photo draws on the square: its centre and size, as shares of the
+  # square (Web.MemberPhoto.place/1 draws it, docs/photos.md).
+  @oval %{x: 0.5, y: 0.4, width: 0.42, height: 0.52}
+  # A photo is dark under a fifth of full brightness: over 2 stops under a camera's own
+  # exposure, so only a photo that is dark for sure.
+  @dark_under 0.2
+
+  @doc "The oval the face goes in: `x`, `y`, `width`, and `height`, as shares of the square."
+  def oval, do: @oval
 
   @doc "The largest photo Add a photo takes."
   def max_bytes, do: @max_bytes
@@ -90,6 +103,50 @@ defmodule Service.MemberPhoto do
     {Integer.mod(turns, 4),
      %{x: clamp(x, 0.0, 1.0), y: clamp(y, 0.0, 1.0), side: clamp(side, @min_share, 1.0)}}
   end
+
+  @doc """
+  Pure. Where a cleaned-up photo starts (#1031): the square that puts `face` in the
+  oval, as `placement/1` gives one. `size` is the photo's `{width, height}`, and `face`
+  where Clean up found the face: `x` and `y`, its centre, and `width` and `height`, as
+  shares of the photo's. With no face, the middle square.
+  """
+  def face_placement({_width, _height}, nil), do: {0, %{x: 0.5, y: 0.5, side: 1.0}}
+
+  def face_placement({width, height}, %{x: x, y: y, width: face_width, height: face_height})
+      when is_integer(width) and width > 0 and is_integer(height) and height > 0 do
+    shorter = min(width, height)
+
+    # The square's side in pixels: the face as wide and as tall as the oval, whichever
+    # asks for more of the photo.
+    side =
+      (face_width * width / @oval.width)
+      |> max(face_height * height / @oval.height)
+      |> clamp(@min_share * shorter, shorter)
+
+    # The oval sits above the square's middle, so the square's centre is below the face's.
+    centre_y = y + (0.5 - @oval.y) * side / height
+    normalize({0, %{x: x, y: centre_y, side: side / shorter}})
+  end
+
+  @doc """
+  Pure. Whether a photo is dark (#1031): its average brightness is under a fifth of
+  full. It measures the whole photo, never the face alone, so it says nothing about
+  skin or hair. A photo that cannot be read is not dark.
+  """
+  def dark?(jpeg) when is_binary(jpeg) do
+    with {:ok, image} <- Image.from_binary(jpeg),
+         [_ | _] = bands <- Image.average(image) do
+      brightness(bands) < @dark_under
+    else
+      _unreadable -> false
+    end
+  end
+
+  # How bright the eye finds a colour, 0 to 1: Rec. 601's weights for red, green, blue.
+  defp brightness([red, green, blue | _]),
+    do: (0.299 * red + 0.587 * green + 0.114 * blue) / 255
+
+  defp brightness([grey | _]), do: grey / 255
 
   @doc """
   Pure. The crop a placed photo asks for: `size` is the photo's `{width, height}`,

@@ -30,10 +30,11 @@ defmodule Web.MemberPhoto do
 
   @doc """
   A waiting photo's file, while SAR Duty keeps it: `:taken`, the photo as the member took
-  it, or `:placed`, the square they placed. The path changes when the photo does.
+  it, `:cleaned`, the cleaned-up photo (#1031), or `:placed`, the square they placed.
+  The path changes when the photo does.
   """
   def waiting_path(%Team{} = team, %MemberPhoto{} = photo, shape)
-      when shape in [:taken, :placed] do
+      when shape in [:taken, :cleaned, :placed] do
     version = DateTime.to_unix(photo.updated_at, :millisecond)
     ~p"/teams/#{team}/photos/members/#{photo.id}/file?#{[shape: shape, v: version]}"
   end

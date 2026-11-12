@@ -321,5 +321,188 @@ defmodule Web.MemberPhotoLiveTest do
 
       assert conn |> get(~p"/teams/#{team}/photos/members/#{photo.id}/file") |> response(404)
     end
+
+    test "has no cleaned-up copy without Clean up", %{conn: conn, team: team, photo: photo} do
+      path = ~p"/teams/#{team}/photos/members/#{photo.id}/file?shape=cleaned"
+      assert conn |> get(path) |> response(404)
+    end
+  end
+
+  # Clean up (#1031): a photo that kept a cleaned-up copy gets the member's switch.
+  describe "with Clean up" do
+    alias App.CleanUpStandIn
+
+    # Cameron's photo with a 500 × 500 cleaned-up copy, placed with the switch `on?`.
+    defp cleaned_photo(cam, on?) do
+      member_photo_fixture(cam, %{
+        clean_up: on?,
+        cleaned_width: 500,
+        cleaned_height: 500,
+        x: 0.4,
+        y: 0.6,
+        side: 0.8
+      })
+    end
+
+    defp sent_size do
+      assert_received {:records, "POST", "/documents", {:multipart, body}}
+
+      [_headers, sent] =
+        body |> String.split(~s|filename="photo.jpg"|) |> List.last() |> split_part()
+
+      size(sent)
+    end
+
+    test "off: no switch on any photo, and Busy background is a reason", %{
+      conn: conn,
+      team: team,
+      cam: cam,
+      photo: photo
+    } do
+      {:ok, lv, _html} = live(conn, check_path(team, photo))
+      refute has_element?(lv, "#photo-clean-up")
+      assert has_element?(lv, "#decline-form label.choice", "Busy background")
+
+      # One added while Clean up ran still shows what the member placed, with no switch.
+      kept = cleaned_photo(cam, true)
+      {:ok, lv, _html} = live(conn, check_path(team, kept))
+      refute has_element?(lv, "#photo-clean-up")
+      file = ~p"/teams/#{team}/photos/members/#{kept.id}/file"
+      assert has_element?(lv, ~s|#accept-form .photo-place img[src^="#{file}?shape=cleaned"]|)
+    end
+
+    test "the switch starts where the member left it, over the photo they placed", %{
+      conn: conn,
+      team: team,
+      cam: cam
+    } do
+      CleanUpStandIn.turn_on()
+      photo = cleaned_photo(cam, true)
+      file = ~p"/teams/#{team}/photos/members/#{photo.id}/file"
+      {:ok, lv, _html} = live(conn, check_path(team, photo))
+
+      assert has_element?(lv, "#accept-form #photo-clean-up[role=switch][checked]")
+      assert has_element?(lv, "label[for=photo-clean-up]", "Clean up")
+
+      assert has_element?(
+               lv,
+               "#photo-clean-up-hint",
+               "Removes the background and centres the face. Turn it off to use the photo as Cameron took it."
+             )
+
+      cleaned = ~s|#accept-form .photo-place img[src^="#{file}?shape=cleaned"]|
+      assert has_element?(lv, cleaned <> ~s|[width="500"][height="500"]|)
+      assert has_element?(lv, ~s|#accept-form input[name="photo[x]"][value="0.4"]|)
+      assert has_element?(lv, ~s|#accept-form input[name="photo[side]"][value="0.8"]|)
+      # Compare still shows the photo as taken.
+      assert has_element?(lv, ~s|#photo-as-taken[src^="#{file}?shape=taken"]|)
+
+      # Off shows the photo as taken, which nobody has placed: the middle square.
+      lv |> element("#photo-clean-up") |> render_click()
+
+      refute has_element?(lv, "#photo-clean-up[checked]")
+      taken = ~s|#accept-form .photo-place img[src^="#{file}?shape=taken"]|
+      assert has_element?(lv, taken <> ~s|[width="800"][height="600"]|)
+      assert has_element?(lv, ~s|#accept-form input[name="photo[x]"][value="0.5"]|)
+      assert has_element?(lv, ~s|#accept-form input[name="photo[side]"][value="1.0"]|)
+
+      # On again is where the member placed it.
+      lv |> element("#photo-clean-up") |> render_click()
+      assert has_element?(lv, cleaned)
+      assert has_element?(lv, ~s|#accept-form input[name="photo[side]"][value="0.8"]|)
+    end
+
+    test "a member who turned it off starts off, where they placed the photo as taken", %{
+      conn: conn,
+      team: team,
+      cam: cam
+    } do
+      CleanUpStandIn.turn_on()
+      photo = cleaned_photo(cam, false)
+      file = ~p"/teams/#{team}/photos/members/#{photo.id}/file"
+      {:ok, lv, _html} = live(conn, check_path(team, photo))
+
+      assert has_element?(lv, "#photo-clean-up[role=switch]")
+      refute has_element?(lv, "#photo-clean-up[checked]")
+      assert has_element?(lv, ~s|#accept-form .photo-place img[src^="#{file}?shape=taken"]|)
+      assert has_element?(lv, ~s|#accept-form input[name="photo[side]"][value="0.8"]|)
+
+      lv |> element("#photo-clean-up") |> render_click()
+      assert has_element?(lv, ~s|#accept-form .photo-place img[src^="#{file}?shape=cleaned"]|)
+      assert has_element?(lv, ~s|#accept-form input[name="photo[side]"][value="1.0"]|)
+    end
+
+    test "a photo with no cleaned-up copy has no switch, and Busy background is not a reason",
+         %{conn: conn, team: team, photo: photo} do
+      CleanUpStandIn.turn_on()
+      {:ok, lv, _html} = live(conn, check_path(team, photo))
+
+      refute has_element?(lv, "#photo-clean-up")
+      refute has_element?(lv, "#decline-form label.choice", "Busy background")
+      assert has_element?(lv, "#decline-form label.choice", "Too dark")
+    end
+
+    test "Accept photo sends the cleaned-up photo with the switch on", %{
+      conn: conn,
+      team: team,
+      cam: cam
+    } do
+      CleanUpStandIn.turn_on()
+      stub_ok()
+      photo = cleaned_photo(cam, true)
+      {:ok, lv, _html} = live(conn, check_path(team, photo))
+
+      lv
+      |> form("#accept-form")
+      |> render_submit(%{"photo" => %{"x" => "0.5", "y" => "0.5", "side" => "1.0"}})
+      |> follow_redirect(conn, ~p"/teams/#{team}/photos?view=waiting")
+
+      # The whole of the 500 × 500 cleaned-up photo.
+      assert sent_size() == {500, 500}
+      assert %{status: :accepted, clean_up: true} = Repo.reload!(photo)
+      assert MemberPhotoFile.bytes(photo, :taken) == nil
+      assert MemberPhotoFile.bytes(photo, :cleaned) == nil
+    end
+
+    test "Accept photo sends the photo as taken with the switch turned off", %{
+      conn: conn,
+      team: team,
+      cam: cam
+    } do
+      CleanUpStandIn.turn_on()
+      stub_ok()
+      photo = cleaned_photo(cam, true)
+      {:ok, lv, _html} = live(conn, check_path(team, photo))
+      lv |> element("#photo-clean-up") |> render_click()
+
+      lv
+      |> form("#accept-form")
+      |> render_submit(%{"photo" => %{"x" => "0.5", "y" => "0.5", "side" => "1.0"}})
+      |> follow_redirect(conn, ~p"/teams/#{team}/photos?view=waiting")
+
+      # The middle square of the 800 × 600 photo as taken.
+      assert sent_size() == {600, 600}
+      assert %{status: :accepted, clean_up: false} = Repo.reload!(photo)
+    end
+
+    test "Accept photo sends the cleaned-up photo when the team admin turns the switch on", %{
+      conn: conn,
+      team: team,
+      cam: cam
+    } do
+      CleanUpStandIn.turn_on()
+      stub_ok()
+      photo = cleaned_photo(cam, false)
+      {:ok, lv, _html} = live(conn, check_path(team, photo))
+      lv |> element("#photo-clean-up") |> render_click()
+
+      lv
+      |> form("#accept-form")
+      |> render_submit(%{"photo" => %{"x" => "0.5", "y" => "0.5", "side" => "1.0"}})
+      |> follow_redirect(conn, ~p"/teams/#{team}/photos?view=waiting")
+
+      assert sent_size() == {500, 500}
+      assert %{status: :accepted, clean_up: true} = Repo.reload!(photo)
+    end
   end
 end

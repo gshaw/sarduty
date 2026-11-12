@@ -5,6 +5,7 @@ defmodule Web.MemberPhotoLive do
   alias App.Model.MemberPhoto
   alias App.Model.Team
   alias App.Operation.AcceptMemberPhoto
+  alias App.Operation.CleanUpPhoto
   alias App.Operation.DeclineMemberPhoto
   alias Service.Format
   alias Web.PhotoCollectionLive
@@ -16,6 +17,12 @@ defmodule Web.MemberPhotoLive do
   # Accept, which sends the square as it is placed now (AcceptMemberPhoto), and Decline,
   # with one reason and a message the member sees (DeclineMemberPhoto). Once decided, the
   # page says who decided and why, and the photo is gone.
+  #
+  # A photo with a cleaned-up copy (#1031) gets the Clean up switch, where the member
+  # left it, while Clean up is available. It picks which of the two photos the square
+  # shows: the one the member placed starts where they placed it, the other from the
+  # middle. Accept sends what the switch shows. Busy background is not a reason to
+  # decline while Clean up is available.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     if !Team.photos?(team), do: raise(Web.Status.NotFound)
@@ -23,6 +30,7 @@ defmodule Web.MemberPhotoLive do
 
     socket
     |> assign(photo: photo, page_title: "Photo from #{photo.member.name}")
+    |> assign(clean_up_available?: CleanUpPhoto.available?(), clean_up?: photo.clean_up)
     |> assign_decline_form(Ecto.Changeset.change(photo))
     |> then(&{:ok, &1})
   end
@@ -30,11 +38,14 @@ defmodule Web.MemberPhotoLive do
   defp assign_decline_form(socket, changeset),
     do: assign(socket, :decline_form, to_form(changeset, as: "decline"))
 
+  def handle_event("clean-up", _params, socket),
+    do: {:noreply, update(socket, :clean_up?, &(!&1))}
+
   def handle_event("accept", params, socket) do
-    %{current_team: team, current_user: user, photo: photo} = socket.assigns
+    %{current_team: team, current_user: user, photo: photo, clean_up?: clean_up?} = socket.assigns
     placed = Service.MemberPhoto.placement(params["photo"] || %{})
 
-    case AcceptMemberPhoto.call(team, photo, placed, user, DateTime.utc_now()) do
+    case AcceptMemberPhoto.call(team, photo, placed, clean_up?, user, DateTime.utc_now()) do
       {:ok, _accepted} ->
         {:noreply, done(socket, :info, "Photo accepted.")}
 
@@ -79,7 +90,19 @@ defmodule Web.MemberPhotoLive do
     )
   end
 
+  # Where the square starts on the photo the switch shows: where the member placed it,
+  # on the photo they placed, and the middle square on the other.
+  defp start(photo, shape) do
+    if shape == MemberPhoto.shape(photo, photo.clean_up),
+      do: MemberPhoto.placed(photo),
+      else: photo |> MemberPhoto.size(shape) |> Service.MemberPhoto.face_placement(nil)
+  end
+
   def render(assigns) do
+    shape = MemberPhoto.shape(assigns.photo, assigns.clean_up?)
+    {width, height} = MemberPhoto.size(assigns.photo, shape)
+    assigns = assign(assigns, shape: shape, width: width, height: height)
+
     ~H"""
     <.breadcrumbs>
       <:item label="Photos" path={PhotoCollectionLive.view_path(@current_team, :members)} />
@@ -93,15 +116,28 @@ defmodule Web.MemberPhotoLive do
         <form :if={@photo.status == :waiting} id="accept-form" phx-submit="accept">
           <span id="photo-place-label" class="sr-only">Photo</span>
           <p id="photo-place-hint" class="hint mb-2">Move or zoom it so the face fills the oval.</p>
+          <%!-- Each side of the Clean up switch is its own element, so it starts again. --%>
           <Web.MemberPhoto.place
-            id={"photo-place-#{@photo.id}"}
-            src={Web.MemberPhoto.waiting_path(@current_team, @photo, :taken)}
-            width={@photo.width}
-            height={@photo.height}
-            placed={MemberPhoto.placed(@photo)}
+            id={"photo-place-#{@photo.id}-#{@shape}"}
+            src={Web.MemberPhoto.waiting_path(@current_team, @photo, @shape)}
+            width={@width}
+            height={@height}
+            placed={start(@photo, @shape)}
             label_id="photo-place-label"
             hint_id="photo-place-hint"
           />
+          <.switch
+            :if={@clean_up_available? and MemberPhoto.cleaned?(@photo)}
+            id="photo-clean-up"
+            label="Clean up"
+            checked={@clean_up?}
+            phx-click="clean-up"
+            class="mt-4"
+          >
+            Removes the background and centres the face. Turn it off to use the photo as {Member.first_name(
+              @photo.member
+            )} took it.
+          </.switch>
         </form>
         <p :if={@photo.status != :waiting} id="photo-file-gone" class="hint">
           SAR Duty deleted its copy of the photo when it was {if @photo.status == :accepted,
@@ -184,7 +220,7 @@ defmodule Web.MemberPhotoLive do
               field={@decline_form[:decline_reason]}
               type="radios"
               label="Why not"
-              options={for {key, text} <- MemberPhoto.reasons(), do: {text, key}}
+              options={for {key, text} <- MemberPhoto.reasons(@clean_up_available?), do: {text, key}}
             >
               {Member.first_name(@photo.member)} sees this beside the examples, and adds another.
             </.input>

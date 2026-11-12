@@ -19,7 +19,7 @@ defmodule App.Model.MemberPhotoTest do
     end
 
     test "takes one reason from the list, and a message of up to 300 characters" do
-      for {key, _text} <- MemberPhoto.reasons() do
+      for {key, _text} <- MemberPhoto.reasons(false) do
         assert errors(Atom.to_string(key), nil) == []
       end
 
@@ -50,7 +50,7 @@ defmodule App.Model.MemberPhotoTest do
   end
 
   test "the reasons read as the check page lists them" do
-    assert Keyword.values(MemberPhoto.reasons()) == [
+    assert false |> MemberPhoto.reasons() |> Keyword.values() == [
              "Sunglasses",
              "Hat or helmet",
              "Too dark",
@@ -61,6 +61,34 @@ defmodule App.Model.MemberPhotoTest do
            ]
 
     assert MemberPhoto.reason_text(:not_you) == "Not a photo of you"
+  end
+
+  # Clean up removes any background (#1031), so nobody declines for one while it runs.
+  test "Busy background leaves the reasons while Clean up is available" do
+    assert true |> MemberPhoto.reasons() |> Keyword.keys() ==
+             [:sunglasses, :hat, :dark, :someone_else, :not_you, :something_else]
+
+    # A photo declined for it before still says so.
+    assert MemberPhoto.reason_text(:busy_background) == "Busy background"
+  end
+
+  describe "the photo the Clean up switch shows" do
+    @taken_only %MemberPhoto{width: 800, height: 600}
+    @both %MemberPhoto{width: 800, height: 600, cleaned_width: 600, cleaned_height: 600}
+
+    test "is the cleaned-up one with the switch on, for a photo that has it" do
+      assert MemberPhoto.cleaned?(@both)
+      assert MemberPhoto.shape(@both, true) == :cleaned
+      assert MemberPhoto.shape(@both, false) == :taken
+      assert MemberPhoto.size(@both, :cleaned) == {600, 600}
+      assert MemberPhoto.size(@both, :taken) == {800, 600}
+    end
+
+    test "is the photo as taken when there is no cleaned-up copy, whatever the switch" do
+      refute MemberPhoto.cleaned?(@taken_only)
+      assert MemberPhoto.shape(@taken_only, true) == :taken
+      assert MemberPhoto.shape(@taken_only, false) == :taken
+    end
   end
 
   describe "unanswered?/2" do

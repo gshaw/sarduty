@@ -24,6 +24,8 @@
   /* A photo a team admin checks (#1029): the square at the certificate's width, and
      Compare's two small photos side by side, each over its caption. */
   .photo-check .photo-place { max-width: 26rem; }
+  /* The Clean up switch (#1031) ends where the square does. */
+  .photo-check .switch-row { max-width: 26rem; }
   .photo-compare { display: flex; gap: var(--sp-4); margin: var(--sp-2) 0 0; }
   .photo-compare > figure { width: 7rem; margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
   /* All of the photo as taken, tall or wide, on a mat the size of the card's square. */
