@@ -28,6 +28,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/activities/:id/tags",
     # An organization's form on an activity (#950): the activity is found through the
     # team first. Web.ActivityOrgFormLiveTest covers a form that's off.
+    "/teams/:subdomain/activities/:id/forms",
     "/teams/:subdomain/activities/:id/forms/:form_id",
     "/teams/:subdomain/activities/:id/forms/:form_id/pdf",
     "/teams/:subdomain/activities/:id/forms/:form_id/publish",
@@ -229,6 +230,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/activities/:id", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}"
+
+  defp path_for("/teams/:subdomain/activities/:id/forms", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/forms"
 
   defp path_for("/teams/:subdomain/activities/:id/forms/:form_id", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/forms/#{o.form.id}"

@@ -377,6 +377,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/activities/:id/templates", ActivityTemplateLive
       live "/teams/:subdomain/activities/:id/members/add", ActivityAddMembersLive
       live "/teams/:subdomain/activities/:id/tags", ActivityTagsLive
+      live "/teams/:subdomain/activities/:id/forms", ActivityFormsLive, :forms
       live "/teams/:subdomain/activities/:id/forms/:form_id", ActivityOrgFormLive
       # Its preview before Publish keeps it (#970).
       live "/teams/:subdomain/activities/:id/forms/:form_id/publish",
