@@ -79,7 +79,7 @@ fill
   agency = task.`Agency`
   file_number = task.`Agency File #`
   ase = task.`ASE#`
-  group = team.name
+  group = team.legal_name
   region = task.`Region`
   task_type = task.`Task Type`
   commenced = '{task.started_at as date_short}, {task.started_at as time}' if task.started_at is not null
