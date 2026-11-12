@@ -471,10 +471,10 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert PublishedPDF.format_code(pdf.code) == shown
       assert has_element?(lv, "#flash-info", "Published Task report, #{shown}.")
 
-      # Back to answers keeps nothing.
+      # Cancel keeps nothing.
       lv |> element("#org-form-publish-again") |> render_click()
       render_async(lv, @print_wait)
-      lv |> element("#publish-back") |> render_click()
+      lv |> element("#publish-cancel") |> render_click()
       assert Repo.aggregate(PublishedPDF, :count) == 1
     end
 

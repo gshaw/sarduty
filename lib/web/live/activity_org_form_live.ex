@@ -378,10 +378,10 @@ defmodule Web.ActivityOrgFormLive do
             {publish_label(@preview)}
           </.button>
           <.button
-            id="publish-back"
+            id="publish-cancel"
             patch={~p"/teams/#{@current_team}/activities/#{@activity.id}/forms/#{@form.id}"}
           >
-            Back to answers
+            Cancel
           </.button>
         </.form_actions>
       </aside>

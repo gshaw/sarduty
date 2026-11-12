@@ -805,7 +805,7 @@ defmodule Web.ActivityMembersLiveTest do
       assert has_element?(lv, "#ask-message", "We need 4 more people.")
     end
 
-    test "Back opens the tab with the filter and the ticks as they were", ctx do
+    test "Cancel opens the tab with the filter and the ticks as they were", ctx do
       leaders = group_fixture(ctx.team, %{title: "Team leaders"})
       for m <- [ctx.casey, ctx.riley], do: group_member_fixture(leaders, m)
 
@@ -815,7 +815,7 @@ defmodule Web.ActivityMembersLiveTest do
       assert has_element?(lv, "#update-to-#{ctx.casey.id}")
       refute has_element?(lv, "#update-to-#{ctx.cameron.id}")
 
-      lv |> element("#update-back") |> render_click()
+      lv |> element("#update-cancel") |> render_click()
       assert_patch(lv, path(ctx) <> "?group=#{leaders.id}")
       assert has_element?(lv, "#members-select-#{ctx.casey.id}[checked]")
       assert has_element?(lv, "#members-select-#{ctx.riley.id}[checked]")
@@ -1143,10 +1143,10 @@ defmodule Web.ActivityMembersLiveTest do
       refute has_element?(lv, ".field-error")
     end
 
-    test "Back opens the tab with the ticks as they were", ctx do
+    test "Cancel opens the tab with the ticks as they were", ctx do
       lv = open_remove(ctx, [ctx.harper, ctx.drew])
 
-      lv |> element("#remove-back") |> render_click()
+      lv |> element("#remove-cancel") |> render_click()
       assert_patch(lv, path(ctx))
       assert has_element?(lv, "#members-select-#{ctx.harper.id}[checked]")
       assert has_element?(lv, "#members-select-#{ctx.drew.id}[checked]")

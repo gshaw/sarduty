@@ -11,14 +11,6 @@ defmodule Web.FormCancelTest do
   @in_place %{
     "lib/web/live/activity_attendance_live.ex" =>
       "the review step's Cancel returns to the list on the same page",
-    "lib/web/live/activity_org_form_live.ex" =>
-      "answers save as they change; Download draft PDF makes the PDF",
-    "lib/web/live/activity_members_live/ask.ex" =>
-      "a step of the Members tab: Back patches to the tab and keeps the ticks",
-    "lib/web/live/activity_members_live/remove_before_start.ex" =>
-      "a step of the Members tab: Back patches to the tab and keeps the ticks",
-    "lib/web/live/activity_members_live/update.ex" =>
-      "a step of the Members tab: Back patches to the tab and keeps the ticks",
     "lib/web/live/agent_authorize_live.ex" =>
       "Allow and Cancel both post, so Cancel can send the agent access denied",
     "lib/web/live/admin/team_live.ex" => "login grants are added on the team's admin page",
@@ -53,7 +45,7 @@ defmodule Web.FormCancelTest do
       for file <- @root |> Path.join("lib/web/live/**/*.ex") |> Path.wildcard(),
           source = File.read!(file),
           source =~ "<.form_actions",
-          not (source =~ ~r/<\.button\b[^>]*\bnavigate=[^>]*>\s*Cancel\s*<\/\.button>/s),
+          not (source =~ ~r/<\.button\b[^>]*\b(?:navigate|patch)=[^>]*>\s*Cancel\s*<\/\.button>/s),
           do: Path.relative_to(file, @root)
 
     unlisted = Enum.reject(found, &Map.has_key?(@in_place, &1))

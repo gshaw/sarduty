@@ -489,7 +489,7 @@ activity starts.
   gets one, with the dates they were emailed before, then everyone else checked who gets
   none and why, a line each: replied already (a count of signed up and can't make it),
   retiring, turned off invitation reminders, or no email in D4H. Then the email itself,
-  from the mailer's own HTML, Send 3 emails, and Back to the tab with the ticks kept. A message (optional, up to 300 characters, #609) adds the team
+  from the mailer's own HTML, Send 3 emails, and Cancel back to the tab with the ticks kept. A message (optional, up to 300 characters, #609) adds the team
   admin's own words under the date and place; the preview shows it as they type, at a
   phone's width, so they see whether it pushes the buttons off the first screen. Each
   send starts with no message, so an old one never goes out again by mistake. Members who replied never get one. There is no limit per

@@ -227,7 +227,7 @@ defmodule Web.ActivityMembersLive.Ask do
           >
             {Format.count(@count, one: "Send 1 email", many: "Send %d emails")}
           </.button>
-          <.button id="ask-back" patch={@back}>Back</.button>
+          <.button id="ask-cancel" patch={@back}>Cancel</.button>
         </.form_actions>
       </.form>
     </div>
