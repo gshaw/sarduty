@@ -732,9 +732,9 @@ defmodule Web.ActivityOrgFormLiveTest do
         assert email.text_body =~
                  "Alex Chen signed Task report #{hiker.ref_id}, Missing hiker, for you on"
 
-        assert [%{filename: "Task_report_" <> _}] = email.attachments
         # Cameron is a member, who can't open the form's page.
         refute email.text_body =~ "Open it in SAR Duty"
+        assert [%{filename: "Task_report_" <> _}] = email.attachments
       end)
     end
 
