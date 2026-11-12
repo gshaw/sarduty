@@ -1,7 +1,7 @@
 defmodule App.Worker.EmailSignedFormWorker do
   @moduledoc """
   Tells a task leader, at their email, that a team admin signed a form for them (#993),
-  with the PDF attached. Queued with the PDF; nobody waits for it, and a refusal is tried
+  with the PDF attached, and a link to the form's page when they're a team admin. Queued with the PDF; nobody waits for it, and a refusal is tried
   again over a few hours. A rare second email is fine.
   """
 
@@ -10,6 +10,7 @@ defmodule App.Worker.EmailSignedFormWorker do
   alias App.Mailer.SignedFormMailer
   alias App.Model.Member
   alias App.Model.PublishedPDF
+  alias App.Model.Team
   alias App.Repo
 
   @doc "Queues the email. Call it in the transaction that publishes the PDF."
@@ -28,11 +29,20 @@ defmodule App.Worker.EmailSignedFormWorker do
     case {pdf, member} do
       {%PublishedPDF{}, %Member{email: email}} when email not in [nil, ""] ->
         with {:ok, _metadata} <-
-               SignedFormMailer.deliver(member, pdf, PublishedPDF.attachment(pdf)),
+               SignedFormMailer.deliver(
+                 member,
+                 pdf,
+                 PublishedPDF.attachment(pdf),
+                 url(pdf, email)
+               ),
              do: :ok
 
       _gone_or_no_email ->
         {:cancel, "no PDF, or no member with an email"}
     end
+  end
+
+  defp url(pdf, email) do
+    if Team.managed_by?(pdf.team, email, DateTime.utc_now()), do: SignedFormMailer.form_url(pdf)
   end
 end

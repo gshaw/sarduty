@@ -6,6 +6,7 @@ defmodule App.Mailer.SignRequestMailer do
   import Swoosh.Email
 
   alias App.Mailer
+  alias App.Mailer.SignedFormMailer
   alias App.Model.Member
 
   # A text link styled as a button, inline since Gmail strips classes, as the ID card's
@@ -58,14 +59,15 @@ defmodule App.Mailer.SignRequestMailer do
 
   @doc """
   Emails the team admin who asked the PDF the task leader signed. Expects `request`
-  with its member and asked_by, and `pdf` with its team and activity.
+  with its member and asked_by, and `pdf` with its team and activity. `url` is the
+  form's page, or nil when they're no longer a team admin.
   """
-  def deliver_signed(request, pdf, attachment) do
+  def deliver_signed(request, pdf, attachment, url) do
     new()
     |> to(request.asked_by.email)
     |> from({"SAR Duty", "noreply@sarduty.com"})
     |> subject(signed_subject(pdf))
-    |> text_body(signed_body(pdf))
+    |> text_body(signed_body(pdf, url))
     |> attachment(
       Swoosh.Attachment.new(
         {:data, attachment.content},
@@ -82,13 +84,14 @@ defmodule App.Mailer.SignRequestMailer do
 
   @doc """
   Pure. "Cameron Ruiz signed Task report 26-06613, Missing hiker, on Nov 11, 2026.
-  It's published, and attached."
+  It's published, and attached.", then a link to the form's page when there's `url`.
   """
-  def signed_body(pdf) do
+  def signed_body(pdf, url) do
     day = Service.Format.date_short(pdf.inserted_at, pdf.team.timezone)
     what = Enum.reject([pdf.title, pdf.activity && pdf.activity.title], &(&1 in [nil, ""]))
 
-    "#{pdf.signed_by} signed #{Enum.join(what, ", ")}, on #{day}. It's published, and attached.\n"
+    "#{pdf.signed_by} signed #{Enum.join(what, ", ")}, on #{day}. It's published, and attached."
+    |> SignedFormMailer.with_link(url)
   end
 
   defp text({:button, label, url}), do: "#{label}:\n#{url}"

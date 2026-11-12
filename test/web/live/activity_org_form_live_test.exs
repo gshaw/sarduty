@@ -10,6 +10,7 @@ defmodule Web.ActivityOrgFormLiveTest do
   alias App.Model.FormAnswer
   alias App.Model.PublishedPDF
   alias App.Model.SignRequest
+  alias App.Model.TeamLoginGrant
   alias App.Operation.PublishDocument
   alias App.Repo
   alias App.ViewData.Search
@@ -733,6 +734,23 @@ defmodule Web.ActivityOrgFormLiveTest do
                  "Alex Chen signed Task report #{hiker.ref_id}, Missing hiker, for you on"
 
         assert [%{filename: "Task_report_" <> _}] = email.attachments
+        # Cameron is a member, who can't open the form's page.
+        refute email.text_body =~ "Open it in SAR Duty"
+      end)
+    end
+
+    test "a task leader who's a team admin also gets a link to the form's page", ctx do
+      %{cast: cast, hiker: hiker, form: form} = ctx
+      TeamLoginGrant.grant!(cast.team, "cameron.ruiz@example.com", "test")
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      preview(lv, "Cameron Ruiz")
+      lv |> element("#publish-confirm") |> render_click()
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Alex Chen signed Task report #{hiker.ref_id} for you"
+        assert email.text_body =~ "Open it in SAR Duty:\n"
+        assert email.text_body =~ form_path(hiker, form) <> "\n"
+        assert [%{filename: "Task_report_" <> _}] = email.attachments
       end)
     end
 
@@ -845,6 +863,8 @@ defmodule Web.ActivityOrgFormLiveTest do
         assert email.subject == "Cameron Ruiz signed #{title}"
         assert email.to == [{"", "alex.chen@example.com"}]
         assert email.text_body =~ "Cameron Ruiz signed #{title}, Missing hiker, on"
+        assert email.text_body =~ "Open it in SAR Duty:\n"
+        assert email.text_body =~ form_path(hiker, form) <> "\n"
         assert [%{filename: "Task_report_" <> _}] = email.attachments
       end)
 

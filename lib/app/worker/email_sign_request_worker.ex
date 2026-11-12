@@ -10,10 +10,12 @@ defmodule App.Worker.EmailSignRequestWorker do
   use Oban.Worker, queue: :default, max_attempts: 5
 
   alias App.Accounts.User
+  alias App.Mailer.SignedFormMailer
   alias App.Mailer.SignRequestMailer
   alias App.Model.Member
   alias App.Model.PublishedPDF
   alias App.Model.SignRequest
+  alias App.Operation.PublishDocument
   alias App.Repo
 
   @doc "Queues the task leader's email. Call it in the transaction that asks."
@@ -35,7 +37,8 @@ defmodule App.Worker.EmailSignRequestWorker do
 
     case {request, pdf} do
       {%SignRequest{asked_by: %User{}}, %PublishedPDF{}} ->
-        sent(SignRequestMailer.deliver_signed(request, pdf, PublishedPDF.attachment(pdf)))
+        url = if asker_admin?(request, pdf), do: SignedFormMailer.form_url(pdf)
+        sent(SignRequestMailer.deliver_signed(request, pdf, PublishedPDF.attachment(pdf), url))
 
       _gone ->
         {:cancel, "no request, asker, or PDF"}
@@ -53,6 +56,9 @@ defmodule App.Worker.EmailSignRequestWorker do
         {:cancel, "the request ended, or the member has no email"}
     end
   end
+
+  defp asker_admin?(request, pdf),
+    do: PublishDocument.team_admin?(pdf.team, request.asked_by, DateTime.utc_now())
 
   defp sent({:ok, _metadata}), do: :ok
   defp sent({:error, reason}), do: {:error, reason}
