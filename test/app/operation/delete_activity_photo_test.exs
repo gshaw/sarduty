@@ -18,26 +18,31 @@ defmodule App.Operation.DeleteActivityPhotoTest do
   end
 
   defp stars(photo),
-    do: Repo.aggregate(where(ActivityPhotoStar, activity_photo_id: ^photo.id), :count)
+    do: ActivityPhotoStar |> where(activity_photo_id: ^photo.id) |> Repo.aggregate(:count)
 
-  defp files(photo), do: activity_photo_files(photo)
+  defp files_gone?(photo),
+    do: photo |> activity_photo_files() |> Enum.all?(&(&1 == {:error, :not_found}))
+
+  defp files_kept?(photo),
+    do: photo |> activity_photo_files() |> Enum.all?(&match?({:ok, _bytes}, &1))
 
   test "the row, its stars, and its files go, and another photo keeps its own", ctx do
     other = activity_photo_fixture(ctx.activity, %{status: :accepted})
     user = user_fixture()
 
-    for photo <- [ctx.photo, other], starrer <- [user, user_fixture()],
-        do: {:ok, true} = StarActivityPhoto.call(photo, starrer)
+    for photo <- [ctx.photo, other],
+        person <- [user, user_fixture()],
+        do: {:ok, true} = StarActivityPhoto.call(photo, person)
 
     assert DeleteActivityPhoto.call(ctx.team, ctx.photo) == :ok
 
     assert Repo.reload(ctx.photo) == nil
     assert stars(ctx.photo) == 0
-    assert Enum.all?(files(ctx.photo), &(&1 == {:error, :not_found}))
+    assert files_gone?(ctx.photo)
 
     assert Repo.reload(other)
     assert stars(other) == 2
-    assert Enum.all?(files(other), &match?({:ok, _bytes}, &1))
+    assert files_kept?(other)
   end
 
   test "a waiting photo goes the same way", ctx do
@@ -45,6 +50,7 @@ defmodule App.Operation.DeleteActivityPhotoTest do
 
     assert DeleteActivityPhoto.call(ctx.team, waiting) == :ok
     assert Repo.reload(waiting) == nil
+    assert files_gone?(waiting)
   end
 
   test "another team's photo is never touched", ctx do
@@ -55,7 +61,7 @@ defmodule App.Operation.DeleteActivityPhotoTest do
 
     assert Repo.reload(ctx.photo)
     assert stars(ctx.photo) == 1
-    assert Enum.all?(files(ctx.photo), &match?({:ok, _bytes}, &1))
+    assert files_kept?(ctx.photo)
   end
 
   test "one that is gone already is done", ctx do

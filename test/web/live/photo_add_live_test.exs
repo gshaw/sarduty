@@ -22,7 +22,11 @@ defmodule Web.PhotoAddLiveTest do
       activity_fixture(
         team,
         Map.merge(
-          %{title: title, started_at: started_at, finished_at: DateTime.add(started_at, 2, :hour)},
+          %{
+            title: title,
+            started_at: started_at,
+            finished_at: DateTime.add(started_at, 2, :hour)
+          },
           attrs
         )
       )
@@ -55,7 +59,7 @@ defmodule Web.PhotoAddLiveTest do
     |> render()
     |> Floki.parse_fragment!()
     |> Floki.find("select[name=activity_id] option")
-    |> Enum.map(&String.trim(Floki.text(&1)))
+    |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
     |> Enum.reject(&(&1 in ["", "Select an activity"]))
   end
 
@@ -94,7 +98,8 @@ defmodule Web.PhotoAddLiveTest do
   end
 
   test "a team admin picks from every exercise and event that has started", ctx do
-    {:ok, lv, _html} = ctx.conn |> log_in_user(ctx.admin) |> live(~p"/teams/#{ctx.team}/photos/new")
+    {:ok, lv, _html} =
+      ctx.conn |> log_in_user(ctx.admin) |> live(~p"/teams/#{ctx.team}/photos/new")
 
     assert render(lv) =~ "Every exercise and event that has started."
 

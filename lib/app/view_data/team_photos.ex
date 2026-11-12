@@ -107,6 +107,6 @@ defmodule App.ViewData.TeamPhotos do
       |> Repo.one()
 
     # An activity moved to next year after its photos were added still leaves this year.
-    YearRange.years(Enum.min([first || now, now], DateTime), now, team.timezone)
+    [first || now, now] |> Enum.min(DateTime) |> YearRange.years(now, team.timezone)
   end
 end

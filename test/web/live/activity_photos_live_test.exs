@@ -5,6 +5,7 @@ defmodule Web.ActivityPhotosLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Operation.StarActivityPhoto
   alias App.Repo
 
   # cspell:ignore Noor -- Noor Aziz, of the Coast Range SAR cast
@@ -394,9 +395,9 @@ defmodule Web.ActivityPhotosLiveTest do
       new = accepted(ctx, %{inserted_at: ~U[2026-11-03 20:00:00.000000Z]})
       liked = accepted(ctx, %{inserted_at: ~U[2026-11-02 20:00:00.000000Z]})
       cam_user = user_fixture(%{email: ctx.cam.email})
-      {:ok, true} = App.Operation.StarActivityPhoto.call(liked, cam_user)
-      {:ok, true} = App.Operation.StarActivityPhoto.call(liked, admin)
-      {:ok, true} = App.Operation.StarActivityPhoto.call(old, admin)
+      {:ok, true} = StarActivityPhoto.call(liked, cam_user)
+      {:ok, true} = StarActivityPhoto.call(liked, admin)
+      {:ok, true} = StarActivityPhoto.call(old, admin)
 
       {:ok, lv, _html} = conn |> log_in_user(cam_user) |> live(tab(team, activity))
 
@@ -519,7 +520,11 @@ defmodule Web.ActivityPhotosLiveTest do
                ~s|#featured-#{first.id} a[href="#{page}"] img[alt="Throw bag practice at Cedar Creek."]|
              )
 
-      assert has_element?(lv, ~s|#activity-photos-all[href="#{tab(team, activity)}"]|, "All 3 photos")
+      assert has_element?(
+               lv,
+               ~s|#activity-photos-all[href="#{tab(team, activity)}"]|,
+               "All 3 photos"
+             )
 
       assert has_element?(
                lv,

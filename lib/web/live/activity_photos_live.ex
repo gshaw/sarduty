@@ -105,19 +105,14 @@ defmodule Web.ActivityPhotosLive do
   defdelegate render(assigns), to: ActivityLive
 
   defp feature(socket, id, featured?) do
-    case Enum.find(socket.assigns.photos, &(to_string(&1.id) == id)) do
-      nil ->
-        socket
-
-      photo ->
-        case FeatureActivityPhoto.call(photo, featured?, DateTime.utc_now()) do
-          {:ok, _photo} ->
-            text = if featured?, do: "Photo featured.", else: "Photo no longer featured."
-            socket |> load() |> put_flash(:info, text)
-
-          {:error, reason} ->
-            put_flash(socket, :error, FeatureActivityPhoto.error_text(reason))
-        end
+    with %ActivityPhoto{} = photo <-
+           Enum.find(socket.assigns.photos, &(to_string(&1.id) == id)),
+         {:ok, _photo} <- FeatureActivityPhoto.call(photo, featured?, DateTime.utc_now()) do
+      text = if featured?, do: "Photo featured.", else: "Photo no longer featured."
+      socket |> load() |> put_flash(:info, text)
+    else
+      nil -> socket
+      {:error, reason} -> put_flash(socket, :error, FeatureActivityPhoto.error_text(reason))
     end
   end
 

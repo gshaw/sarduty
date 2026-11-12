@@ -434,7 +434,9 @@ hidden data makes people suspicious).
   (#705), History for team admins (`/history`), and Photos (`/photos`) on an exercise or
   an event, while the team has activity photos (#1032,
   [photos.md](photos.md#activity-photos)): members see the accepted photos and their own
-  waiting ones, and add theirs when they attended. Take
+  waiting ones, and add theirs when they attended. Overview shows the photos a team admin
+  featured beside the map (#1033), and each accepted photo has a page members open and
+  star ([photos.md](photos.md#the-teams-photos)). Take
   attendance is under the title for team admins, and for members from 2 hours before the
   start until 2 hours after the end; a member's Yet to arrive there shows names only.
   Team admins also get the History tab, which can hold contact details and addresses,

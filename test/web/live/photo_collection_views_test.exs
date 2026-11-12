@@ -5,6 +5,7 @@ defmodule Web.PhotoCollectionViewsTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.Member
   alias App.Operation.StarActivityPhoto
 
   # cspell:ignore Noor -- Noor Aziz, of the Coast Range SAR cast
@@ -34,7 +35,9 @@ defmodule Web.PhotoCollectionViewsTest do
 
   # Logged in as the member: their email is their login.
   defp as(conn, %{email: email}), do: log_in_user(conn, user(%{email: email}))
-  defp user(%{email: email}), do: App.Accounts.get_user_by_email(email) || user_fixture(%{email: email})
+
+  defp user(%{email: email}),
+    do: App.Accounts.get_user_by_email(email) || user_fixture(%{email: email})
 
   defp accepted(ctx, attrs \\ %{}),
     do:
@@ -114,7 +117,7 @@ defmodule Web.PhotoCollectionViewsTest do
     test "lists the starred photos, the most stars first, each naming its activity", ctx do
       top = accepted(ctx, %{caption: "Throw bag practice at Cedar Creek."})
       next = accepted(ctx)
-      unstarred = accepted(ctx)
+      plain = accepted(ctx)
       {:ok, true} = StarActivityPhoto.call(top, ctx.admin)
       {:ok, true} = StarActivityPhoto.call(top, user(ctx.cam))
       {:ok, true} = StarActivityPhoto.call(next, ctx.admin)
@@ -130,7 +133,7 @@ defmodule Web.PhotoCollectionViewsTest do
              )
 
       assert ids(lv, "#photos-best") == ["photo-#{top.id}", "photo-#{next.id}"]
-      refute has_element?(lv, "#photo-#{unstarred.id}")
+      refute has_element?(lv, "#photo-#{plain.id}")
 
       # A tile is the photo, which opens its page, its stars, and its activity's name.
       page = ~p"/teams/#{ctx.team}/photos/#{top.id}"
@@ -163,7 +166,9 @@ defmodule Web.PhotoCollectionViewsTest do
     end
 
     test "Year picks another year's, and a year with no photos is not found", ctx do
-      old = activity_fixture(ctx.team, %{title: "Rope rescue", started_at: ~U[2024-05-05 02:00:00Z]})
+      old =
+        activity_fixture(ctx.team, %{title: "Rope rescue", started_at: ~U[2024-05-05 02:00:00Z]})
+
       older = activity_photo_fixture(old, %{member_id: ctx.cam.id, status: :accepted})
       {:ok, true} = StarActivityPhoto.call(older, ctx.admin)
       this_year = accepted(ctx)
@@ -238,9 +243,17 @@ defmodule Web.PhotoCollectionViewsTest do
 
       assert has_element?(lv, "#photos-view-yours[aria-current=page]", "2")
       assert has_element?(lv, "#your-photo h2", "Your photo")
-      assert has_element?(lv, "#your-photo-add[href='/teams/#{ctx.team.subdomain}/photos/members/new']")
+
+      assert has_element?(
+               lv,
+               "#your-photo-add[href='/teams/#{ctx.team.subdomain}/photos/members/new']"
+             )
+
       assert has_element?(lv, "#photos-added h2", "Photos you added")
-      assert Enum.sort(ids(lv, "#photos-list")) == Enum.sort(["photo-#{mine.id}", "photo-#{waiting.id}"])
+
+      assert lv |> ids("#photos-list") |> Enum.sort() ==
+               Enum.sort(["photo-#{mine.id}", "photo-#{waiting.id}"])
+
       assert has_element?(lv, "#photo-#{waiting.id}-waiting", "Waiting")
       refute has_element?(lv, "#photo-#{mine.id}-waiting")
       # A waiting photo has no page and no stars yet.
@@ -249,7 +262,7 @@ defmodule Web.PhotoCollectionViewsTest do
     end
 
     test "a team admin's Yours has their own photo, with a link that names them", ctx do
-      alex = App.Model.Member.find_by_email(ctx.team, ctx.admin.email, DateTime.utc_now())
+      alex = Member.find_by_email(ctx.team, ctx.admin.email, DateTime.utc_now())
       own = activity_photo_fixture(ctx.activity, %{member_id: alex.id})
 
       {:ok, lv, _html} =

@@ -58,7 +58,8 @@ defmodule Web.PhotoCollectionLive do
        activity_photos?: activity_photos?,
        views: views(team_admin?, activity_photos?),
        who: %{member: member, user: user, team_admin?: team_admin?},
-       may_add?: AddActivityPhotos.addable(team, %{team_admin?: team_admin?, member: member}, now) != []
+       may_add?:
+         AddActivityPhotos.addable(team, %{team_admin?: team_admin?, member: member}, now) != []
      )}
   end
 
@@ -141,28 +142,30 @@ defmodule Web.PhotoCollectionLive do
     %{current_team: team, view: view, now: now} = socket.assigns
     members = Member.get_all_counted(team, now)
     without = Enum.reject(members, & &1.has_photo)
-    waiting = MemberPhoto.get_waiting(team, now)
-
-    # An activity's photos wait here too (#1032), after the members', by activity.
-    activity_waiting =
-      if socket.assigns.activity_photos?, do: ActivityPhoto.get_waiting(team), else: []
 
     socket
     |> assign(
       members: if(view == :no_photo, do: without, else: members),
-      waiting: waiting,
-      waiting_by_member: Map.new(waiting, &{&1.member_id, &1}),
-      activity_waiting: by_activity(activity_waiting),
       asks_by_member: team |> PhotoAsk.open_for_team() |> Map.new(&{&1.member_id, &1})
     )
-    |> update(
-      :counts,
-      &Map.merge(&1, %{
-        members: length(members),
-        no_photo: length(without),
-        waiting: length(waiting) + length(activity_waiting)
-      })
+    |> update(:counts, &Map.merge(&1, %{members: length(members), no_photo: length(without)}))
+    |> load_waiting()
+  end
+
+  # What waits for a team admin: the photos members added of themselves, then an
+  # activity's (#1032), by activity. Waiting counts both.
+  defp load_waiting(socket) do
+    %{current_team: team, now: now, activity_photos?: activity_photos?} = socket.assigns
+    waiting = MemberPhoto.get_waiting(team, now)
+    activity_waiting = if activity_photos?, do: ActivityPhoto.get_waiting(team), else: []
+
+    socket
+    |> assign(
+      waiting: waiting,
+      waiting_by_member: Map.new(waiting, &{&1.member_id, &1}),
+      activity_waiting: by_activity(activity_waiting)
     )
+    |> update(:counts, &Map.put(&1, :waiting, length(waiting) + length(activity_waiting)))
   end
 
   # Yours starts with the person's own member photo and where it stands. A team admin
@@ -187,7 +190,9 @@ defmodule Web.PhotoCollectionLive do
   end
 
   def handle_event("year", %{"year" => year}, socket),
-    do: {:noreply, push_patch(socket, to: view_path(socket.assigns.current_team, :best, year: year))}
+    do:
+      {:noreply,
+       push_patch(socket, to: view_path(socket.assigns.current_team, :best, year: year))}
 
   defp view_param(:no_photo), do: "no-photo"
   defp view_param(view), do: Atom.to_string(view)
@@ -201,7 +206,9 @@ defmodule Web.PhotoCollectionLive do
   list's page.
   """
   def view_path(team, view, opts \\ []) do
-    query = [view: view_param(view)] ++ Keyword.reject(opts, fn {_key, value} -> is_nil(value) end)
+    query =
+      [view: view_param(view)] ++ Keyword.reject(opts, fn {_key, value} -> is_nil(value) end)
+
     ~p"/teams/#{team}/photos?#{query}"
   end
 

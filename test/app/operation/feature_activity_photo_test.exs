@@ -60,7 +60,7 @@ defmodule App.Operation.FeatureActivityPhotoTest do
 
       assert {:ok, %{featured_at: nil}} = FeatureActivityPhoto.call(first, false, @now)
       assert {:ok, _photo} = FeatureActivityPhoto.call(third, true, @now)
-      assert Enum.sort(featured(ctx.activity)) == Enum.sort([second.id, third.id])
+      assert ctx.activity |> featured() |> Enum.sort() == Enum.sort([second.id, third.id])
     end
 
     test "another activity's featured photos take none of its room", ctx do
@@ -71,7 +71,8 @@ defmodule App.Operation.FeatureActivityPhotoTest do
         {:ok, _photo} = FeatureActivityPhoto.call(photo, true, @now)
       end
 
-      assert {:ok, _photo} = FeatureActivityPhoto.call(hd(ctx.photos), true, @now)
+      [first | _rest] = ctx.photos
+      assert {:ok, _photo} = FeatureActivityPhoto.call(first, true, @now)
     end
 
     test "a waiting photo is refused, and nothing changes", ctx do

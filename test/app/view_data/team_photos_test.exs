@@ -8,6 +8,7 @@ defmodule App.ViewData.TeamPhotosTest do
   alias App.Operation.StarActivityPhoto
   alias App.ViewData.TeamPhotos
 
+  # cspell:ignore Noor -- Noor Aziz, of the Coast Range SAR cast
   # Toronto, whose winter is always 5 hours behind UTC, so a year's edge is a known time.
   @zone "America/Toronto"
 

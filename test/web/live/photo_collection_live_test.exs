@@ -264,7 +264,9 @@ defmodule Web.PhotoCollectionLiveTest do
       assert has_element?(lv, ~s|#your-photo-add[href="#{add}"]|, "Add a photo")
 
       # None of the views of members' photos: no grid, no other member.
-      for view <- ~w(members no-photo waiting), do: refute(has_element?(lv, "#photos-view-#{view}"))
+      for view <- ~w(members no-photo waiting),
+          do: refute(has_element?(lv, "#photos-view-#{view}"))
+
       refute has_element?(lv, "#photo-ask")
       refute has_element?(lv, "#photo-add")
       refute has_element?(lv, "#photos")

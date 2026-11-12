@@ -10,8 +10,10 @@ function exists: until then it is off, and a stand-in runs in dev. These are par
 4 of the photos stack (#1023).
 
 Part 5 starts [activity photos](#activity-photos) (#1032): members add photos to an
-exercise or an event they attended, and a team admin accepts them. They need a file
-store, which production does not have yet, so no team has them today.
+exercise or an event they attended, and a team admin accepts them. Part 6 makes the
+accepted ones [the team's photos](#the-teams-photos) (#1033): a page for each, stars,
+featured photos on the activity's Overview, and Best of the year on Photos. They need a
+file store, which production does not have yet, so no team has them today.
 
 ## The switch
 
@@ -24,9 +26,11 @@ so a Try a demo visitor adds their own photo.
 
 - **Photos**, `/teams/:subdomain/photos`, one page for everyone
   ([navigation.md](navigation.md#where-a-feature-goes)). A team admin sees every
-  counted, current member (`Member.get_all_counted/2`) A to Z, with Members, Waiting,
-  and No photo counts that filter. A member sees only [their own](#a-members-own-photo).
-  It is the last link of the side navigation's first section and never moves.
+  counted, current member (`Member.get_all_counted/2`) A to Z, with Members, No photo,
+  and Waiting counts that filter. A member sees only [their own](#a-members-own-photo).
+  It is the last link of the side navigation's first section and never moves. On a
+  team with activity photos, [the team's photos](#the-teams-photos) lead: four more
+  counts, for everyone.
 - **Add a photo**, `/teams/:subdomain/photos/members/new`, narrow: `?member=<id>` names
   the member, and without it a Member box lists them. Change photo opens the same page.
   A member's photo is under `/photos/members`, which leaves `/photos/:id` for an
@@ -251,10 +255,10 @@ team's records.
   name for its files under the team's prefix, `teams/12/activity-photos/…`.
 - **The Photos tab**, `/teams/:subdomain/activities/:id/photos`
   ([ActivityPhotosLive](../lib/web/live/activity_photos_live.ex)), last on an activity
-  that takes photos. Accepted photos, newest first, each with who added it and when. A
-  team admin gets Waiting over them: every waiting photo as a checked tile, then Accept
-  and Delete for the checked ones, and the tab counts them. A team admin's own photos
-  wait too. Delete takes the row and its files for good.
+  that takes photos. Accepted photos, the most stars first (#1033), each with who added
+  it and when. A team admin gets Waiting over them: every waiting photo as a checked
+  tile, then Accept and Delete for the checked ones, and the tab counts them. A team
+  admin's own photos wait too. Delete takes the row and its files for good.
 - **Who sees a waiting photo**: team admins and the member who added it, nobody else, by
   page and by file. `ActivityPhoto.visible/2` is that rule, for the tab's list and for
   the file route. A member sees their own on the tab, marked Waiting.
@@ -268,5 +272,64 @@ team's records.
   (`DeleteTeam`). The copy a delete keeps holds rows only, so a restore leaves the
   photo rows out.
 
-Stars, featured photos, and Photos' own views are part 6. Asking everyone who attended
-is part 7, Edit photo part 8, and export part 9.
+## The team's photos
+
+An accepted photo is the team's (#1033). Everything here is off without a file store,
+as activity photos are.
+
+- **One photo**, `/teams/:subdomain/photos/:id`
+  ([ActivityPhotoLive](../lib/web/live/activity_photo_live.ex)), for everyone on the
+  team: the photo, who added it and when, its activity, its caption, and Posting,
+  "Coast Range SAR may post it." or "For the team only." A waiting photo has no page:
+  its tile opens its file. `ActivityPhoto.find_accepted!/3` is who opens one, so a
+  photo on an activity that became an incident is not found. A photo has no name, so
+  search leaves it out (`Web.Search.not_searched/0`).
+- **Stars.** Star on the photo's page, for everyone, one each: a row of
+  [ActivityPhotoStar](../lib/app/model/activity_photo_star.ex) for the login, and
+  starring again takes it back
+  ([StarActivityPhoto](../lib/app/operation/star_activity_photo.ex)). The button
+  counts them. A tile shows the count, with the star filled when the person looking gave
+  one (`ActivityPhoto.put_stars/2`). **Who starred is never shown**, to anyone. A team
+  admin viewing as a member sees their own stars, never the member's, and stars nothing.
+- **Featured photos.** A team admin features up to 2 on an activity, from the photo's
+  page or under its tile on the Photos tab: `activity_photos.featured_at`.
+  `FeatureActivityPhoto.check/2`, pure, is the limit, and a third is refused with a
+  toast, "2 photos are featured already. Stop featuring one first." The activity's
+  Overview shows them beside the map, the first featured first, with "All 12 photos"
+  and Add photos for whoever may add. Everyone sees a Featured tag on the tile and the
+  page.
+- **Photos' views**, the counts that filter, in
+  [TeamPhotos](../lib/app/view_data/team_photos.ex). Each tile is the photo, which opens
+  its page, its stars, and its activity's name, which opens the activity's Photos tab.
+  - **Best of 2026**: the 24 accepted photos with the most stars from activities that
+    started that year, in the team's time zone, the most first and the newest photo
+    first among equals (`TeamPhotos.best_of/3`, pure). A photo with no star is not in
+    it. A Year menu, `?year=`, runs from the first activity with an accepted photo to
+    this year.
+  - **Activities**: every accepted photo, newest first.
+  - **Your stars**: the accepted photos you starred.
+  - **Yours**: your [member photo](#a-members-own-photo) and where it stands, then the
+    photos you added, waiting ones included and marked. A team admin with no member row
+    has the photos their login added.
+  - Team admins keep Members, No photo, and Waiting after them.
+  - The lists show 50 a page, `?page=`.
+- **The view it opens on.** `/photos` with no `?view=` opens Best of this year once the
+  team has an accepted photo. Until then it opens as before: Members for a team admin,
+  and Yours for a member. Every count's link names its view, so a link from another
+  page, such as Needs attention's to Waiting, never depends on it.
+- **The buttons.** On the views of members' photos, Ask for photos and Add a photo. On
+  the others, Add photos, for whoever may add to some activity. It opens
+  `/teams/:subdomain/photos/new` ([PhotoAddLive](../lib/web/live/photo_add_live.ex)),
+  narrow, which asks which activity: the ones `AddActivityPhotos.addable/3` lists,
+  newest first. For a member, the exercises and events they attended; for a team admin,
+  every one that has started. Picking one opens its Add photos page.
+- **Team admin actions**, on the photo's page: Feature or Stop featuring, Download
+  original, and Delete photo, behind a confirm.
+- **Take-downs.** Anyone in a photo can ask a team admin to remove it. Delete photo is
+  that ([DeleteActivityPhoto](../lib/app/operation/delete_activity_photo.ex)): the
+  files go first, then the row, and its stars with it, for good. Deleting the photos
+  that wait on a tab goes through the same operation.
+- **Deleting a team** takes the stars with the photos, and a restore leaves both out
+  (`DeleteTeam.file_tables/0`).
+
+Asking everyone who attended is part 7, Edit photo part 8, and export part 9.

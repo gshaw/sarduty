@@ -174,7 +174,10 @@ defmodule Web.ActivityPhotoLive do
 
   # "Cameron Ruiz, Oct 28, 2026", or the date alone when nobody is left to name.
   defp added(photo, team, now) do
-    [Web.ActivityPhoto.added_by(photo, team, now), Format.date_short(photo.inserted_at, team.timezone)]
+    [
+      Web.ActivityPhoto.added_by(photo, team, now),
+      Format.date_short(photo.inserted_at, team.timezone)
+    ]
     |> Enum.reject(&is_nil/1)
     |> Enum.join(", ")
   end

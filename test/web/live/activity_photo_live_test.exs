@@ -37,7 +37,15 @@ defmodule Web.ActivityPhotoLiveTest do
         inserted_at: ~U[2026-10-29 03:00:00.000000Z]
       })
 
-    %{conn: conn, team: team, admin: admin, cam: cam, noor: noor, activity: activity, photo: photo}
+    %{
+      conn: conn,
+      team: team,
+      admin: admin,
+      cam: cam,
+      noor: noor,
+      activity: activity,
+      photo: photo
+    }
   end
 
   # Logged in as the member: their email is their login.
@@ -45,8 +53,9 @@ defmodule Web.ActivityPhotoLiveTest do
     do: log_in_user(conn, App.Accounts.get_user_by_email(email) || user_fixture(%{email: email}))
 
   defp page(team, photo), do: ~p"/teams/#{team}/photos/#{photo.id}"
+
   defp stars(photo),
-    do: Repo.aggregate(where(ActivityPhotoStar, activity_photo_id: ^photo.id), :count)
+    do: ActivityPhotoStar |> where(activity_photo_id: ^photo.id) |> Repo.aggregate(:count)
 
   describe "for a member" do
     test "the page shows the photo, who added it, its activity, and what it is for", ctx do
@@ -224,7 +233,9 @@ defmodule Web.ActivityPhotoLiveTest do
       {:ok, lv, _html} = live(ctx.conn, page(ctx.team, ctx.photo))
 
       tab = ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}/photos"
-      {:ok, _lv, html} = lv |> element("#photo-delete") |> render_click() |> follow_redirect(ctx.conn, tab)
+
+      {:ok, _lv, html} =
+        lv |> element("#photo-delete") |> render_click() |> follow_redirect(ctx.conn, tab)
 
       assert html =~ "Photo deleted."
       refute Repo.reload(ctx.photo)

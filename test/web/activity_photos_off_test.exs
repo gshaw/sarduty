@@ -93,7 +93,10 @@ defmodule Web.ActivityPhotosOffTest do
 
     {:ok, lv, _html} = live(ctx.admin, ~p"/teams/#{team}/photos")
     assert has_element?(lv, "#photos-view-members[aria-current=page]")
-    for view <- ~w(best activities stars yours), do: refute(has_element?(lv, "#photos-view-#{view}"))
+
+    for view <- ~w(best activities stars yours),
+        do: refute(has_element?(lv, "#photos-view-#{view}"))
+
     assert has_element?(lv, "#photo-add", "Add a photo")
     refute has_element?(lv, "#photos-add")
 

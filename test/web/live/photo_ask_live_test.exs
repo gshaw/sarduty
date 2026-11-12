@@ -147,6 +147,7 @@ defmodule Web.PhotoAskLiveTest do
       assert has_element?(lv, "#left-out-no_email", "No email: Jordan Lee.")
       assert has_element?(lv, "#left-out-asked-0", "Asked Nov 9: Sam Rivera.")
       assert has_element?(lv, "#ask-send", "Ask 2 members")
+
       assert has_element?(
                lv,
                ~s|#ask-cancel[href="#{~p"/teams/#{ctx.team}/photos?view=members"}"]|

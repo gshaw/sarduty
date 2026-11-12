@@ -275,20 +275,22 @@ defmodule App.Operation.AddActivityPhotosTest do
       team = team_fixture(%{photos_enabled: true})
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      at = fn days ->
+      # An activity that starts so many days from now.
+      activity = fn days, attrs ->
         started_at = DateTime.add(now, days, :day)
-        %{started_at: started_at, finished_at: DateTime.add(started_at, 2, :hour)}
+        times = %{started_at: started_at, finished_at: DateTime.add(started_at, 2, :hour)}
+        activity_fixture(team, Map.merge(times, attrs))
       end
 
       %{
         team: team,
         now: now,
         cam: member_fixture(team),
-        last_week: activity_fixture(team, Map.put(at.(-7), :activity_kind, "exercise")),
-        yesterday: activity_fixture(team, Map.put(at.(-1), :activity_kind, "event")),
-        coming: activity_fixture(team, at.(3)),
-        incident: activity_fixture(team, Map.put(at.(-2), :activity_kind, "incident")),
-        deleted: activity_fixture(team, Map.put(at.(-3), :deleted_at, now)),
+        last_week: activity.(-7, %{activity_kind: "exercise"}),
+        yesterday: activity.(-1, %{activity_kind: "event"}),
+        coming: activity.(3, %{}),
+        incident: activity.(-2, %{activity_kind: "incident"}),
+        deleted: activity.(-3, %{deleted_at: now}),
         chores: chore_activity_fixture(team, [60])
       }
     end

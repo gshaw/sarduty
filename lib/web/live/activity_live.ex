@@ -95,24 +95,31 @@ defmodule Web.ActivityLive do
 
   # The Photos tab (#1032): on an exercise or an event, while the team has activity
   # photos, and not found anywhere else. It counts the photos that wait, for team admins.
-  # Overview shows the photos a team admin featured (#1033), how many the team sees, and
-  # Add photos for whoever may add.
   defp assign_photos(socket) do
     %{current_team: team, activity: activity, team_admin?: team_admin?, now: now} = socket.assigns
     photos? = AddActivityPhotos.available?(team) and Activity.takes_photos?(activity)
     if socket.assigns.live_action == :photos && !photos?, do: raise(Web.Status.NotFound)
     waiting = if photos? and team_admin?, do: ActivityPhoto.count_waiting_on(activity), else: 0
-    overview? = photos? and socket.assigns.tab == :overview
     who = %{team_admin?: team_admin?, member: socket.assigns.replier}
 
-    assign(socket,
+    socket
+    |> assign(
       photos?: photos?,
       photos_waiting: waiting,
-      may_add_photos?: photos? and AddActivityPhotos.may_add?(team, activity, who, now),
-      featured: if(overview?, do: ActivityPhoto.featured(activity), else: []),
-      photo_count: if(overview?, do: ActivityPhoto.count_accepted_on(activity), else: 0)
+      may_add_photos?: photos? and AddActivityPhotos.may_add?(team, activity, who, now)
+    )
+    |> assign_featured()
+  end
+
+  # Overview shows the photos a team admin featured (#1033), and how many the team sees.
+  defp assign_featured(%{assigns: %{photos?: true, tab: :overview, activity: activity}} = socket) do
+    assign(socket,
+      featured: ActivityPhoto.featured(activity),
+      photo_count: ActivityPhoto.count_accepted_on(activity)
     )
   end
+
+  defp assign_featured(socket), do: assign(socket, featured: [], photo_count: 0)
 
   # The Forms tab (#1018): an organization's forms it shows on, for team admins only
   # (#950), each with its state (#970). The tab counts the out-of-date ones.
