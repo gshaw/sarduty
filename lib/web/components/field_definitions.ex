@@ -1,6 +1,7 @@
 defmodule Web.Components.FieldDefinitions do
   use Web, :function_component
 
+  import Web.Components.A
   import Web.Components.Table
 
   alias App.Model.CustomField
@@ -31,7 +32,7 @@ defmodule Web.Components.FieldDefinitions do
       <h3 :if={bundle} class="subheading mb-2">{bundle.title}</h3>
       <.table id={"#{group_id(@id, bundle)}-table"} rows={fields} row_id={&"field-#{&1.id}"}>
         <:col :let={field} label="Field" class="w-1/3">
-          <.link navigate={@path.(field)}>{field.title}</.link>
+          <.a navigate={@path.(field)}>{field.title}</.a>
         </:col>
         <:col :let={field} label="What it means">
           <span class="hint line-clamp-1">{field.hint}</span>
