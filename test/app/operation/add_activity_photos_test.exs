@@ -269,6 +269,68 @@ defmodule App.Operation.AddActivityPhotosTest do
     end
   end
 
+  # What Photos' Add photos lists (#1033): the same rule as may_add?/4, over the team.
+  describe "addable/3" do
+    setup do
+      team = team_fixture(%{photos_enabled: true})
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      at = fn days ->
+        started_at = DateTime.add(now, days, :day)
+        %{started_at: started_at, finished_at: DateTime.add(started_at, 2, :hour)}
+      end
+
+      %{
+        team: team,
+        now: now,
+        cam: member_fixture(team),
+        last_week: activity_fixture(team, Map.put(at.(-7), :activity_kind, "exercise")),
+        yesterday: activity_fixture(team, Map.put(at.(-1), :activity_kind, "event")),
+        coming: activity_fixture(team, at.(3)),
+        incident: activity_fixture(team, Map.put(at.(-2), :activity_kind, "incident")),
+        deleted: activity_fixture(team, Map.put(at.(-3), :deleted_at, now)),
+        chores: chore_activity_fixture(team, [60])
+      }
+    end
+
+    defp addable(ctx, who),
+      do: ctx.team |> AddActivityPhotos.addable(who, ctx.now) |> Enum.map(& &1.id)
+
+    test "a member has the exercises and events they attended, newest first", ctx do
+      member = %{team_admin?: false, member: ctx.cam}
+      assert addable(ctx, member) == []
+
+      for activity <- [ctx.last_week, ctx.yesterday, ctx.incident, ctx.deleted, ctx.chores],
+          do: attendance_fixture(activity, ctx.cam)
+
+      # Signed up for one that has not started: not attended.
+      attendance_fixture(ctx.coming, ctx.cam)
+      # On another team's exercise, by a member there.
+      other = team_fixture(%{photos_enabled: true})
+      attendance_fixture(activity_fixture(other), member_fixture(other))
+
+      assert addable(ctx, member) == [ctx.yesterday.id, ctx.last_week.id]
+    end
+
+    test "a member marked absent, and someone who is no member, have none", ctx do
+      attendance_fixture(ctx.yesterday, ctx.cam, %{status: "absent"})
+
+      assert addable(ctx, %{team_admin?: false, member: ctx.cam}) == []
+      assert addable(ctx, %{team_admin?: false, member: nil}) == []
+    end
+
+    test "a team admin has every exercise and event that has started", ctx do
+      assert addable(ctx, %{team_admin?: true, member: nil}) ==
+               [ctx.yesterday.id, ctx.last_week.id]
+    end
+
+    test "a team with Photos off has none", ctx do
+      team = ctx.team |> Ecto.Changeset.change(photos_enabled: false) |> Repo.update!()
+
+      assert AddActivityPhotos.addable(team, %{team_admin?: true, member: nil}, ctx.now) == []
+    end
+  end
+
   describe "result_text/1" do
     test "says what was added, and that a team admin checks it" do
       assert AddActivityPhotos.result_text(%{added: 1, unread: 0, unsaved: 0}) ==

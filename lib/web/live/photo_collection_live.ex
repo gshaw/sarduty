@@ -45,7 +45,8 @@ defmodule Web.PhotoCollectionLive do
     %{current_team: team, team_admin?: team_admin?, current_user: user} = socket.assigns
     if !Team.photos?(team), do: raise(Web.Status.NotFound)
 
-    now = DateTime.utc_now()
+    # Best of opens on this year, so the page's clock is one a test can set.
+    now = Service.Clock.utc_now()
     activity_photos? = AddActivityPhotos.available?(team)
     # Who they are on the team: the member logged in, or a team admin's own member row.
     member = Reply.replier(socket.assigns, now)

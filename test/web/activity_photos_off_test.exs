@@ -85,4 +85,47 @@ defmodule Web.ActivityPhotosOffTest do
     assert has_element?(lv, "#attention-photos", "1 photo waiting")
     assert has_element?(lv, "#attention-photos", "Check it, then accept or decline it.")
   end
+
+  # Photos as it was before activity photos (#1033): the members' three views for a team
+  # admin, and a member's own photo alone, with no counts.
+  test "Photos has none of the activity photo views, and opens as before", ctx do
+    %{team: team} = ctx
+
+    {:ok, lv, _html} = live(ctx.admin, ~p"/teams/#{team}/photos")
+    assert has_element?(lv, "#photos-view-members[aria-current=page]")
+    for view <- ~w(best activities stars yours), do: refute(has_element?(lv, "#photos-view-#{view}"))
+    assert has_element?(lv, "#photo-add", "Add a photo")
+    refute has_element?(lv, "#photos-add")
+
+    {:ok, lv, _html} = live(ctx.member, ~p"/teams/#{team}/photos")
+    assert has_element?(lv, "#your-photo h2", "Your photo")
+    refute has_element?(lv, "#photos-switch")
+    refute has_element?(lv, "#photos-added")
+    refute has_element?(lv, "#photos-add")
+
+    for conn <- [ctx.admin, ctx.member], view <- ~w(best activities stars) do
+      assert_raise Web.Status.NotFound, fn ->
+        live(conn, ~p"/teams/#{team}/photos?#{[view: view]}")
+      end
+    end
+  end
+
+  test "a photo's page and Add photos are not found", ctx do
+    %{team: team} = ctx
+
+    for conn <- [ctx.admin, ctx.member] do
+      assert_error_sent 404, fn -> get(conn, ~p"/teams/#{team}/photos/#{ctx.accepted.id}") end
+      assert_error_sent 404, fn -> get(conn, ~p"/teams/#{team}/photos/new") end
+    end
+  end
+
+  test "an activity's Overview shows no photos, no link, and no Add photos", ctx do
+    ctx.accepted |> Ecto.Changeset.change(featured_at: DateTime.utc_now()) |> App.Repo.update!()
+
+    for conn <- [ctx.admin, ctx.member] do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{ctx.team}/activities/#{ctx.activity.id}")
+      refute has_element?(lv, "#activity-featured")
+      refute has_element?(lv, "#activity-photos-row")
+    end
+  end
 end
