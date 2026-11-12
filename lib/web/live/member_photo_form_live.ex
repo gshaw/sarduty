@@ -247,7 +247,7 @@ defmodule Web.MemberPhotoFormLive do
           <input type="hidden" name="photo[side]" value="1" />
         </div>
 
-        <.form_actions>
+        <.form_actions class="mt-6">
           <.button id="photo-save" variant={:success} phx-disable-with="Saving…">Save photo</.button>
           <.button id="photo-another" type="button" phx-click="take-another">Take another</.button>
           <.button id="photo-cancel" navigate={@back}>Cancel</.button>

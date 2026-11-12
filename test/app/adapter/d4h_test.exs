@@ -196,7 +196,7 @@ defmodule App.Adapter.D4HTest do
 
       for region <- Map.values(D4H.regions()) do
         assert {:ok, %D4H.Document{d4h_document_id: 9, d4h_target_id: 70}} =
-                 D4H.set_member_photo(photo_context(region), 70, "jpeg bytes")
+                 region |> photo_context() |> D4H.set_member_photo(70, "jpeg bytes")
       end
     end
 
@@ -211,7 +211,7 @@ defmodule App.Adapter.D4HTest do
 
       for host <- [D4H.records_host(), "local"] do
         assert {:ok, %D4H.Member{d4h_member_id: 70}} =
-                 D4H.set_member_photo(photo_context(host), 70, "jpeg bytes")
+                 host |> photo_context() |> D4H.set_member_photo(70, "jpeg bytes")
       end
     end
 
@@ -219,7 +219,7 @@ defmodule App.Adapter.D4HTest do
       Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 403, ""))
 
       assert {:error, %D4H.Error{status: 403}} =
-               D4H.set_member_photo(photo_context("api.ca.d4h.org"), 70, "jpeg bytes")
+               "api.ca.d4h.org" |> photo_context() |> D4H.set_member_photo(70, "jpeg bytes")
     end
   end
 
