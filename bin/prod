@@ -5,9 +5,12 @@
 #   bin/prod list                            the tasks, one line each
 #   bin/prod TASK [ARGS...] --why "..."      a task that reads
 #   bin/prod fix TASK [ARGS...] --why "..."  a task that changes data
+#   bin/prod backup --why "..."              an encrypted copy in backups/
+#   bin/prod console --why "..."             a shell on the machine, for people
 #
 # --why is an issue number or a sentence. You are the SAR Duty admin with
-# `git config sarduty.email`, or `user.email` when that isn't set.
+# `git config sarduty.email`, or `user.email` when that isn't set. Agents are kept off
+# console, and asked before fix and backup, by .claude/hooks/prod-guard.
 #
 # Written for macOS's bash 3.2: no associative arrays, and an empty array needs
 # ${a[@]+"${a[@]}"} under set -u.
@@ -16,9 +19,12 @@
 set -uo pipefail
 
 APP=sarduty
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+# App.Ops.Backup writes the copy here, and backup tars it.
+SNAPSHOT=tmp/backup.db
 
 usage() {
-  sed -n '5,7p' "$0" | sed 's/^# //' >&2
+  sed -n '5,9p' "$0" | sed 's/^# //' >&2
   exit 2
 }
 
@@ -61,6 +67,11 @@ command -v jq > /dev/null || {
   exit 2
 }
 
+if [ "$task" = backup ] && [ -z "${BACKUP_AGE_RECIPIENT:-}" ]; then
+  echo "bin/prod: backup needs BACKUP_AGE_RECIPIENT, from .mise.local.toml." >&2
+  exit 2
+fi
+
 email=$(git config sarduty.email || git config user.email || true)
 via=""
 [ "${CLAUDECODE:-}" = 1 ] && via="Claude Code"
@@ -99,4 +110,28 @@ if [ $status -eq 3 ]; then
   echo "bin/prod: no answer from the app. fly ssh said:" >&2
   printf '%s\n' "$out" | grep -v -e ESOCK -e libsctp -e UNIX-ESSIO | tail -20 >&2
 fi
+
+export FLY_ACCESS_TOKEN=$token
+
+case $task:$status in
+  # A shell is for when the app can't help, so it opens even when the app didn't answer.
+  console:0 | console:3)
+    [ $status -eq 0 ] || echo "bin/prod: this shell isn't recorded. Say what you do on the issue." >&2
+    exec fly ssh console -a "$APP"
+    ;;
+  # The copy comes down encrypted, so no plain copy lands on disk. Decrypt with the
+  # identity from the password manager: age -d -i <identity file> <backup> | tar xz
+  backup:0)
+    file="$ROOT/backups/data_backup_$(date +%F-%H%M).tar.gz.age"
+    if fly ssh console -a "$APP" -q \
+      -C "sh -c 'tar cz -C / $SNAPSHOT mnt/sarduty/team-logos && rm /$SNAPSHOT'" |
+      age -r "$BACKUP_AGE_RECIPIENT" > "$file"; then
+      echo "$file"
+    else
+      rm -f "$file"
+      echo "bin/prod: the copy didn't come down." >&2
+      exit 1
+    fi
+    ;;
+esac
 exit $status

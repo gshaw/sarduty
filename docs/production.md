@@ -12,6 +12,8 @@ bin/prod list                                       # the tasks, one line each
 bin/prod query "select count(*) from teams" --why "#970 who signs"
 bin/prod jobs RenewLetterCodes --minutes 15 --why "#970 backfill after v491"
 bin/prod fix make-admin someone@example.org --why "new admin"
+bin/prod backup --why "dev copy for #584"
+bin/prod console --why "app won't boot"
 ```
 
 - **`--why` is required**: an issue number or a sentence. It's what makes the record
@@ -49,9 +51,24 @@ reviewed in its PR like any code, before it ever runs.
 - A task that changes data says `write: true`, so it runs only through `bin/prod fix`.
 - A one-off fix is a task deleted after it ran; git keeps it.
 
-## Not yet through bin/prod
+## backup and console
 
-Rolling back a migration, `backups/backup.sh`, reading `repo_slow.log`, and letting an
-admin back in when D4H drops both admins still use `fly ssh` directly ([deployment.md](deployment.md)). They move into `bin/prod` as
-`console` and `backup`, along with a hook that keeps agents off raw `fly ssh`, `rpc`, and
-`eval` (#517).
+`backup` has the app write a consistent copy of the database (`App.Ops.Backup`), then
+`bin/prod` tars it with the team logos over `fly ssh`, encrypts it to
+`BACKUP_AGE_RECIPIENT`, and saves it in `backups/`. No plain copy lands on disk.
+
+`console` records that a shell opened, then opens one on the machine. It's for people,
+when no task does the job: rolling back a migration, reading `repo_slow.log`, or letting
+an admin back in when D4H drops both admins. It opens even when the app doesn't answer,
+since that's when it's needed. What's done in the shell isn't recorded, so say it on the
+issue. Anything done there twice becomes a task.
+
+## The hook
+
+[.claude/hooks/prod-guard](../.claude/hooks/prod-guard) runs before every Bash command an
+agent runs in this repo. It refuses `fly ssh`, `fly console`, `fly machine exec`,
+reading `FLY_SARDUTY_SSH_TOKEN`, and `bin/prod console`. It asks you before `bin/prod fix`
+and `bin/prod backup`. It checks the command's text, so it stops habits, not a
+determined person. The token is the boundary.
+
+Records gets the same shape in its own repo.

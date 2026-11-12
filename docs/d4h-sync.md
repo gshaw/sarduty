@@ -328,7 +328,7 @@ Editor who isn't retired and hasn't left
 Owner or Editor in D4H loses access at the next sync, within 10 minutes. Admins reach every team, but
 an admin logs in only while D4H lists their email as a current member of some team, any
 permission (`App.Model.Member.current_email?/2`, #141). If D4H drops both admins, the way
-back in is `bin/sarduty eval` ([deployment.md](deployment.md)).
+back in is `bin/prod console` ([production.md](production.md)).
 
 - **Security events.** Each login code request, the first request over a limit, each
   wrong code until a block, each block, login, and logout is an event with the client's

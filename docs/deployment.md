@@ -68,7 +68,8 @@ For a PR with a migration:
   and load the changed schema through Ecto after each up.
 - To go back, deploy the previous release first. Roll the migration back afterwards, and
   only if you have to, with `App.Release.rollback(App.Repo, <previous version>)` through
-  `bin/sarduty eval`. The other order leaves the new code reading a column that is gone.
+  `bin/sarduty eval` in `bin/prod console`. The other order leaves the new code reading a
+  column that is gone.
 
 ## Health check
 
@@ -101,12 +102,13 @@ through the sync's ping every 10 minutes, still alerts when the app or Oban is d
   it holds it: the transaction's process and what it is running, and which OS process
   holds the lock (this app, Litestream, or another). It also reports statements over
   5 s, lock errors, and a stalled VM. Reports go to `/mnt/sarduty/repo_slow.log` first
-  (`fly ssh console -C "tail -50 /mnt/sarduty/repo_slow.log"`), then to the log and a
+  (`tail -50 /mnt/sarduty/repo_slow.log` in `bin/prod console`), then to the log and a
   `repo.slow` event in Honeybadger Insights, which drops events during a lock burst. It
   stays after #416: a 5 s hold is worth knowing about.
-- **Snapshots** by hand: [backups/backup.sh](../backups/backup.sh) has the app write a
-  consistent copy with `VACUUM INTO`, then tars it and the logos over `fly ssh` into
-  `backups/` (gitignored), encrypted with age and stamped to the minute.
+- **Snapshots** by hand: `bin/prod backup --why "…"` has the app write a consistent copy
+  with `VACUUM INTO` (`App.Ops.Backup`), then tars it and the logos over `fly ssh` into
+  `backups/` (gitignored), encrypted with age and stamped to the minute
+  ([production.md](production.md)).
 - **Deleting a team** (a SAR Duty admin's team page, `App.Operation.DeleteTeam`) first
   copies the team's rows to `/mnt/sarduty/deleted-teams/`, kept 7 days: a new file with
   every table and only that team's rows, written on its own connection with no write lock

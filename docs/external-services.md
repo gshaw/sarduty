@@ -174,8 +174,8 @@ Litestream 0.5 has no client-side encryption, so the replica holds readable data
 encrypts it at rest; reading it takes the bucket token or the Cloudflare account.
 
 - `BACKUP_AGE_RECIPIENT` — in `.mise.local.toml`, the public half of an
-  [age](https://age-encryption.org) key. [backups/backup.sh](../backups/backup.sh)
-  encrypts each local snapshot to it. The private half is in the password manager, and
+  [age](https://age-encryption.org) key. `bin/prod backup` encrypts each local snapshot
+  to it. The private half is in the password manager, and
   nothing decrypts a snapshot without it.
 
 ## Healthchecks
