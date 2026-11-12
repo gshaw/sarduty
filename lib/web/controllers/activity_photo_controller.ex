@@ -3,6 +3,7 @@ defmodule Web.ActivityPhotoController do
 
   alias App.Model.ActivityPhoto
   alias App.Operation.AddActivityPhotos
+  alias App.Operation.ExportActivityPhoto
   alias App.Operation.LoadActivityPhoto
 
   # An activity photo's file (#1032): one URL for everyone on the team, as a member's
@@ -32,6 +33,42 @@ defmodule Web.ActivityPhotoController do
       :error ->
         send_resp(conn, :not_found, "")
     end
+  end
+
+  # Export for a post (#1032, part 9), for team admins: the box's part of the photo as
+  # edited, at the shape's size, as a JPEG to save. `shape` and `photo[x]`, `photo[y]`,
+  # and `photo[side]` come from Web.ActivityPhotoExportLive's form. Nothing is saved.
+  def export(conn, %{"id" => id} = params) do
+    team = conn.assigns.current_team
+    if !AddActivityPhotos.available?(team) or !integer?(id), do: raise(Web.Status.NotFound)
+
+    {shape, box} = export_params(params)
+
+    case ExportActivityPhoto.call(team, id, shape.key, box) do
+      {:ok, jpeg} ->
+        conn
+        |> put_resp_header("cache-control", "private, no-store")
+        |> send_download({:binary, jpeg},
+          filename: "photo-#{id}-#{shape.key}.jpg",
+          content_type: "image/jpeg"
+        )
+
+      {:error, :files} ->
+        conn
+        |> put_flash(:error, "The photo did not export. Download it again.")
+        |> redirect(to: ~p"/teams/#{team}/photos/#{id}/export")
+
+      # The page never offers one the team may not post.
+      {:error, _may_not} ->
+        raise Web.Status.NotFound
+    end
+  end
+
+  # The shape, and the box as placed: with none sent, the middle, zoomed all the way out.
+  defp export_params(params) do
+    placed = if is_map(params["photo"]), do: params["photo"], else: %{}
+    {_turns, box} = Service.MemberPhoto.placement(placed)
+    {Service.PhotoExport.shape(params["shape"]), box}
   end
 
   # An accepted photo's files never change under one URL, which carries when the photo

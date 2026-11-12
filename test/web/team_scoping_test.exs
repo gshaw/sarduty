@@ -69,9 +69,12 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/activities/:id/photos/new",
     "/teams/:subdomain/activities/:id/photos/ask",
     "/teams/:subdomain/photos/:id/file",
-    # That accepted photo's page (#1033), and Edit photo (#1032, part 8).
+    # That accepted photo's page (#1033), Edit photo (#1032, part 8), and Export for a
+    # post with its JPEG (part 9).
     "/teams/:subdomain/photos/:id",
     "/teams/:subdomain/photos/:id/edit",
+    "/teams/:subdomain/photos/:id/export",
+    "/teams/:subdomain/photos/:id/export/file",
     "/teams/:subdomain/endorsements/:id",
     "/teams/:subdomain/members/:id",
     "/teams/:subdomain/members/:id/edit",
@@ -394,6 +397,12 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/photos/:id/edit", s, o),
     do: ~p"/teams/#{s}/photos/#{o.activity_photo.id}/edit"
+
+  defp path_for("/teams/:subdomain/photos/:id/export", s, o),
+    do: ~p"/teams/#{s}/photos/#{o.activity_photo.id}/export"
+
+  defp path_for("/teams/:subdomain/photos/:id/export/file", s, o),
+    do: ~p"/teams/#{s}/photos/#{o.activity_photo.id}/export/file"
 
   defp path_for("/teams/:subdomain/members/:id", s, o), do: ~p"/teams/#{s}/members/#{o.member.id}"
 

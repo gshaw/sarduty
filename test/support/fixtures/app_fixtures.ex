@@ -854,7 +854,9 @@ defmodule App.DataFixtures do
   `status: :accepted` for one the team sees.
   """
   def activity_photo_fixture(%Activity{} = activity, attrs \\ %{}) do
-    {:ok, files} = 60 |> png_fixture(40) |> Service.ActivityPhoto.prepare()
+    # `bytes:` is the photo as it came from the phone: a plain 60 × 40 PNG unless given.
+    {bytes, attrs} = Map.pop_lazy(attrs, :bytes, fn -> png_fixture(60, 40) end)
+    {:ok, files} = Service.ActivityPhoto.prepare(bytes)
 
     photo =
       %ActivityPhoto{

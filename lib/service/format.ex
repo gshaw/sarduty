@@ -149,6 +149,10 @@ defmodule Service.Format do
     sign <> whole <> "°"
   end
 
+  @doc ~s(An image's size in pixels, width first: "1080 × 1350".)
+  def image_size({width, height}) when is_integer(width) and is_integer(height),
+    do: "#{width} × #{height}"
+
   @doc ~s(A number to one decimal place, for a column whose header names the unit: "1.5", "2.0".)
   def tenths(n) when is_number(n), do: decimals(n, 1)
 

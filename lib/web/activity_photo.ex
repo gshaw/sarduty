@@ -11,7 +11,7 @@ defmodule Web.ActivityPhoto do
     router: Web.Router,
     statics: Web.static_paths()
 
-  import Web.Components.Core, only: [icon: 1]
+  import Web.Components.Core, only: [button: 1, icon: 1]
 
   alias App.Model.ActivityPhoto
   alias App.Model.Member
@@ -23,6 +23,41 @@ defmodule Web.ActivityPhoto do
 
   @doc "Edit photo (part 8), for a team admin."
   def edit_path(%Team{} = team, %ActivityPhoto{id: id}), do: ~p"/teams/#{team}/photos/#{id}/edit"
+
+  @doc "Export for a post (part 9), for a team admin."
+  def export_path(%Team{} = team, %ActivityPhoto{id: id}),
+    do: ~p"/teams/#{team}/photos/#{id}/export"
+
+  @doc "The export's JPEG, which Export for a post's form asks for (part 9)."
+  def export_file_path(%Team{} = team, %ActivityPhoto{id: id}),
+    do: ~p"/teams/#{team}/photos/#{id}/export/file"
+
+  @doc """
+  Why a photo cannot be exported for a post: "Cameron did not give permission to post
+  this photo.", by the first name of the member who added it.
+  """
+  def may_not_post_text(%ActivityPhoto{member: %Member{} = member}),
+    do: "#{Member.first_name(member)} did not give permission to post this photo."
+
+  def may_not_post_text(%ActivityPhoto{}),
+    do: "Whoever added it did not give permission to post this photo."
+
+  @doc """
+  A photo's caption for a post, with credit to who took it: "Throw bag practice at
+  Cedar Creek. Photo: Cameron Ruiz", or "Photo: Cameron Ruiz" with no caption. A caption
+  with no stop at its end gets one. Nil when there is neither a caption nor a name.
+  """
+  def post_caption(%ActivityPhoto{caption: caption} = photo, %Team{} = team, now) do
+    credit = if name = added_by(photo, team, now), do: "Photo: #{name}"
+
+    case Enum.reject([caption && end_sentence(caption), credit], &is_nil/1) do
+      [] -> nil
+      parts -> Enum.join(parts, " ")
+    end
+  end
+
+  defp end_sentence(text),
+    do: if(String.ends_with?(text, [".", "!", "?"]), do: text, else: text <> ".")
 
   @doc """
   One of the photo's files, for an `<img>` or a link: `:tile`, `:show`, or `:original`.
@@ -80,6 +115,62 @@ defmodule Web.ActivityPhoto do
   """
   def alt(%ActivityPhoto{caption: caption}) when is_binary(caption), do: caption
   def alt(%ActivityPhoto{activity: %{title: title}}), do: "Photo from #{title}"
+
+  attr :id, :string, required: true, doc: "changes with the shape, so a new one starts afresh"
+  attr :team, Team, required: true
+  attr :photo, ActivityPhoto, required: true
+  attr :ratio, :float, required: true, doc: "the box's width over its height"
+  attr :hint_id, :string, required: true, doc: "the element that says how to place it"
+
+  @doc """
+  Export for a post's box (part 9): the photo as edited, the copy to show, under a box
+  of the post's shape, with lines in thirds to place it by, and Zoom out and Zoom in.
+  The PhotoPlace hook that places a member's photo owns everything in here
+  (Web.MemberPhoto.place/1), and fills the form's `photo[x]`, `photo[y]`, and
+  `photo[side]`.
+  """
+  def export_box(assigns) do
+    {width, height} = ActivityPhoto.shown_size(assigns.photo)
+    assigns = assign(assigns, width: width, height: height)
+
+    ~H"""
+    <div
+      id={"#{@id}-wrap"}
+      phx-hook="PhotoPlace"
+      phx-update="ignore"
+      data-min-side={Service.MemberPhoto.min_share()}
+      data-ratio={@ratio}
+    >
+      <div
+        id={@id}
+        class="photo-place photo-export-box"
+        style={"--photo-place-ratio: #{@ratio}"}
+        tabindex="0"
+        role="group"
+        aria-label="The part of the photo to download"
+        aria-describedby={@hint_id}
+        aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown + -"
+        data-photo-frame
+      >
+        <img
+          src={file_path(@team, @photo, :show)}
+          alt=""
+          width={@width}
+          height={@height}
+          draggable="false"
+        />
+        <div class="photo-export-thirds" aria-hidden="true"></div>
+      </div>
+      <div class="photo-place-tools">
+        <.button id="photo-zoom-out" type="button" data-photo-tool="zoom-out">Zoom out</.button>
+        <.button id="photo-zoom-in" type="button" data-photo-tool="zoom-in">Zoom in</.button>
+      </div>
+      <input type="hidden" name="photo[x]" value="0.5" />
+      <input type="hidden" name="photo[y]" value="0.5" />
+      <input type="hidden" name="photo[side]" value="1.0" />
+    </div>
+    """
+  end
 
   attr :id, :string, required: true
   attr :photo, ActivityPhoto, required: true

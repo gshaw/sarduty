@@ -13,8 +13,10 @@ Part 5 starts [activity photos](#activity-photos) (#1032): members add photos to
 exercise or an event they attended, and a team admin accepts them. Part 6 makes the
 accepted ones [the team's photos](#the-teams-photos) (#1033): a page for each, stars,
 featured photos on the activity's Overview, and Best of the year on Photos. In part 7 a
-team admin [asks everyone who attended](#asking-everyone-who-attended). They need a
-file store, which production does not have yet, so no team has them today.
+team admin [asks everyone who attended](#asking-everyone-who-attended). In part 8 a
+team admin [edits one](#edit-photo), and in part 9 [exports it for a
+post](#export-for-a-post). They need a file store, which production does not have yet,
+so no team has them today.
 
 ## The switch
 
@@ -414,4 +416,41 @@ changed**.
 - **Files' URLs** carry `updated_at`, and saving always moves it, so no browser keeps the
   old copies.
 
-Export for a post is part 9.
+## Export for a post
+
+<!-- cspell:ignore Canva -->
+
+Whoever posts for the team takes a copy of a photo in the shape the post needs (#1032,
+part 9). Nothing is saved: not the box, not the export, and **the photo does not
+change**.
+
+- **The page**, `/teams/:subdomain/photos/:id/export`
+  ([ActivityPhotoExportLive](../lib/web/live/activity_photo_export_live.ex)), for team
+  admins, from the photo's Actions, on the certificate review layout. Only for an
+  accepted photo the team may post: on one it may not, the action is greyed with
+  "Cameron did not give permission to post this photo.", and the page opens the photo's
+  page with the same words.
+- **The shapes** are `Service.PhotoExport.shapes/0`: Square 1:1 at 1080 × 1080,
+  Portrait 4:5 at 1080 × 1350, Landscape 16:9 at 1920 × 1080, Story 9:16 at
+  1080 × 1920, and Original, the photo as edited at its own size. Square is picked at
+  the start.
+- **The box** is Add a photo's PhotoPlace hook, with `data-ratio` for the shape: the
+  photo moves under a frame of the post's shape, with lines in thirds. It fills
+  `photo[x]`, `photo[y]`, and `photo[side]`, where `side` is a share of the largest box
+  of that shape the photo holds. A new shape starts a new box.
+- **The crop** is `Service.PhotoExport.crop/3`, pure: the shape, the box, and the
+  photo's size in; the crop and the size it downloads at out. The box keeps the shape
+  and stays inside the photo. It downloads at the shape's size, or smaller at the same
+  shape when the box has fewer pixels: never enlarged.
+- **Download JPEG** is a plain GET of the page's form to `/photos/:id/export/file`
+  (`ActivityPhotoController.export`), so the browser saves the file and the page stays.
+  [ExportActivityPhoto](../lib/app/operation/export_activity_photo.ex) starts from the
+  photo as edited: the original at its full size with the turns and the straightened
+  cut, or, with Clean up on, the cleaned-up copy to show, up to 2048 px, the only copy
+  Clean up made. The JPEG has no location or camera data.
+- **The caption**, with its copy button: "{caption} Photo: {name}", or "Photo: {name}"
+  with no caption, by who added it (`Web.ActivityPhoto.post_caption/3`).
+
+- **Not here**: text on the image, filters, and blurring belong in Canva. A photo that
+  needs a face blurred gets deleted. There is no record of each export, no role for
+  members who post, and no video.
