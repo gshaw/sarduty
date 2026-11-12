@@ -6,8 +6,13 @@ defmodule App.Operation.UpdateGooglePassesTest do
   alias App.Operation.BuildGooglePass
   alias App.Operation.IssueMemberCard
   alias App.Operation.UpdateGooglePasses
+  alias App.Worker.UpdateCardWorker
 
   @now ~U[2026-09-30 12:00:00.000000Z]
+
+  # What PushPassUpdatesWorker does after a refresh, at a fixed time. Jobs run inline.
+  defp refresh(team, now),
+    do: team |> UpdateGooglePasses.changed_cards(now) |> UpdateCardWorker.enqueue_all()
 
   setup do
     App.GoogleWalletCredentials.configure()
@@ -38,18 +43,18 @@ defmodule App.Operation.UpdateGooglePassesTest do
        %{team: team, member: member} do
     card = card_on_google(member)
 
-    UpdateGooglePasses.call(team, @now)
+    refresh(team, @now)
     assert_received {:google, "PUT", "/walletobjects/v1/genericClass/" <> _, _class}
     assert_received {:google, "PUT", "/walletobjects/v1/genericObject/" <> _, _object}
     refute Repo.reload!(card).google_pass_fingerprint == "old"
 
-    UpdateGooglePasses.call(team, @now)
+    refresh(team, @now)
     refute_received {:google, _, _, _}
   end
 
   test "leaves alone cards Google has no pass for", %{team: team, member: member} do
     member_card_fixture(member)
-    UpdateGooglePasses.call(team, @now)
+    refresh(team, @now)
     refute_received {:google, _, _, _}
   end
 
@@ -66,7 +71,7 @@ defmodule App.Operation.UpdateGooglePassesTest do
     card_on_google(member)
     Application.put_env(:sarduty, :google_wallet, [])
 
-    UpdateGooglePasses.call(team, @now)
+    refresh(team, @now)
     refute_received {:google, _, _, _}
   end
 end

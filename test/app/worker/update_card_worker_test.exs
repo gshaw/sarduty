@@ -1,10 +1,11 @@
-defmodule App.Worker.UpdateCancelledCardWorkerTest do
+defmodule App.Worker.UpdateCardWorkerTest do
   use App.DataCase
+  use Oban.Testing, repo: App.Repo, engine: Oban.Engines.Lite
 
   import App.DataFixtures
 
   alias App.Operation.IssueMemberCard
-  alias App.Worker.UpdateCancelledCardWorker
+  alias App.Worker.UpdateCardWorker
 
   setup do
     App.GoogleWalletCredentials.configure()
@@ -15,7 +16,19 @@ defmodule App.Worker.UpdateCancelledCardWorkerTest do
   end
 
   defp perform(card),
-    do: UpdateCancelledCardWorker.perform(%Oban.Job{args: %{"member_card_id" => card.id}})
+    do: UpdateCardWorker.perform(%Oban.Job{args: %{"member_card_id" => card.id}})
+
+  test "many cards go out 6 seconds apart, the first now", %{team: team} do
+    cards = for _ <- 1..3, do: team |> member_fixture() |> member_card_fixture()
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      UpdateCardWorker.enqueue_all(cards)
+      jobs = all_enqueued(worker: UpdateCardWorker)
+      first = jobs |> Enum.map(& &1.scheduled_at) |> Enum.min(DateTime)
+      gaps = jobs |> Enum.map(&DateTime.diff(&1.scheduled_at, first)) |> Enum.sort()
+      assert gaps == [0, 6, 12]
+    end)
+  end
 
   test "a Google refusal fails the job, so the cancelled pass is sent again", ctx do
     test = self()
@@ -45,9 +58,14 @@ defmodule App.Worker.UpdateCancelledCardWorkerTest do
     refute Repo.reload!(ctx.card).google_pass_fingerprint == "old"
   end
 
-  test "a live card is left alone", ctx do
+  test "a live card's changed pass is sent", ctx do
     App.GoogleWalletCredentials.stub(self())
-    assert {:cancel, _reason} = perform(ctx.card)
-    refute_received {:google, _, _, _}
+    assert perform(ctx.card) == :ok
+    assert_received {:google, "PUT", _path, %{"state" => "ACTIVE"}}
+  end
+
+  test "a card that's gone is cancelled", ctx do
+    assert {:cancel, _reason} =
+             UpdateCardWorker.perform(%Oban.Job{args: %{"member_card_id" => ctx.card.id + 1000}})
   end
 end

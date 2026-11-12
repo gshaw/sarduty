@@ -23,7 +23,7 @@ defmodule App.Operation.SetTeamIdCards do
   alias App.Model.OrganizationAdmin
   alias App.Model.Team
   alias App.Repo
-  alias App.Worker.UpdateCancelledCardWorker
+  alias App.Worker.UpdateCardWorker
 
   def call(%Team{} = team, enabled, %User{} = user, now \\ DateTime.utc_now())
       when is_boolean(enabled) do
@@ -47,7 +47,7 @@ defmodule App.Operation.SetTeamIdCards do
       Repo.transaction(fn ->
         team = team |> Ecto.Changeset.change(changes(enabled)) |> Repo.update!()
         revoked = if enabled, do: [], else: MemberCard.revoke_team!(team, now)
-        UpdateCancelledCardWorker.enqueue_all(revoked)
+        UpdateCardWorker.enqueue_all(revoked)
         kind = if enabled, do: :id_cards_turned_on, else: :id_cards_turned_off
 
         Event.record!(kind,

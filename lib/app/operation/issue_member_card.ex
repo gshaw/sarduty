@@ -3,7 +3,7 @@ defmodule App.Operation.IssueMemberCard do
   alias App.Model.MemberCard
   alias App.Model.Team
   alias App.Repo
-  alias App.Worker.UpdateCancelledCardWorker
+  alias App.Worker.UpdateCardWorker
 
   @doc """
   Gives the member a new card with a new code and token, under their existing Wallet
@@ -44,7 +44,7 @@ defmodule App.Operation.IssueMemberCard do
     {:ok, card} =
       Repo.transaction(fn ->
         serial_number = MemberCard.next_serial_number(team, member)
-        team |> MemberCard.revoke_all!(member, now) |> UpdateCancelledCardWorker.enqueue_all()
+        team |> MemberCard.revoke_all!(member, now) |> UpdateCardWorker.enqueue_all()
 
         MemberCard.insert!(%MemberCard{
           team_id: team.id,

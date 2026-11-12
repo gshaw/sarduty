@@ -9,18 +9,23 @@ defmodule App.Operation.UpdateGooglePasses do
   require Logger
 
   @doc """
-  After a D4H refresh: sends Google each of the team's passes that changed. Google
-  updates every saved copy.
+  After a D4H refresh: the team's cards on Google whose pass changed, for
+  UpdateCardWorker to send. Google updates every saved copy.
   """
-  def call(%Team{} = team, now) do
-    if BuildGooglePass.configured?(),
-      do: team |> MemberCard.get_all_on_google() |> send_changed(now)
+  def changed_cards(%Team{} = team, now) do
+    if BuildGooglePass.configured?() do
+      config = BuildGooglePass.config()
 
-    :ok
+      team
+      |> MemberCard.get_all_on_google()
+      |> Enum.filter(&changed?(&1, object(&1, config, now)))
+    else
+      []
+    end
   end
 
   @doc """
-  Sends these cards' passes, as for a cancelled card, if Google has them. `:ok`, or
+  Sends these cards' passes if Google has them and they changed. `:ok`, or
   `{:error, reason}` when Google refused one, for the job to try again.
   """
   def update_cards(cards, now) do
@@ -40,13 +45,13 @@ defmodule App.Operation.UpdateGooglePasses do
     changed =
       for card <- cards,
           object = object(card, config, now),
-          BuildGooglePass.fingerprint(object) != card.google_pass_fingerprint,
+          changed?(card, object),
           do: {card, object}
 
     if changed == [], do: :ok, else: send_objects(changed, config, now)
   rescue
-    # A refresh's failed update goes after the next refresh, since the fingerprint didn't
-    # change, and a cancelled card's job tries again. Log it rather than fail either.
+    # The job tries again; failing that, the next refresh still sees the change, since
+    # the fingerprint wasn't recorded.
     error ->
       Logger.warning("Google pass update failed: #{Exception.message(error)}")
       {:error, Exception.message(error)}
@@ -68,6 +73,9 @@ defmodule App.Operation.UpdateGooglePasses do
 
     Enum.find(results, :ok, &(&1 != :ok))
   end
+
+  defp changed?(card, object),
+    do: BuildGooglePass.fingerprint(object) != card.google_pass_fingerprint
 
   defp object(card, config, now) do
     status = MemberCard.status(card, now)

@@ -12,10 +12,9 @@ defmodule App.Operation.RefreshMemberCard do
   alias App.Model.MemberCard
   alias App.Model.Team
   alias App.Operation.CheckMemberPhoto
-  alias App.Operation.PushPassUpdates
-  alias App.Operation.UpdateGooglePasses
   alias App.Repo
   alias App.Worker.SyncTeamChangesWorker
+  alias App.Worker.UpdateCardWorker
 
   @doc "Checks the photo, then `resend/3`. `{:ok, card}` or `{:error, :no_card}`."
   def call(%Team{} = team, %Member{team_id: team_id} = member, now) when team_id == team.id do
@@ -40,16 +39,13 @@ defmodule App.Operation.RefreshMemberCard do
   end
 
   @doc """
-  Marks these cards' passes changed and sends them to the phones again, in one Apple push
-  and one Google update, for the nightly check's first photos (CheckMemberPhoto). Returns
-  the cards.
+  Marks these cards' passes changed and queues a job per card to send them to the phones
+  again (UpdateCardWorker), as for the nightly check's first photos (CheckMemberPhoto).
+  Returns the cards.
   """
-  def resend_cards([], _now), do: []
-
   def resend_cards(cards, now) do
-    cards = Enum.map(cards, &MemberCard.touch_pass_updated!(&1, now))
-    PushPassUpdates.push_cards(cards)
-    UpdateGooglePasses.update_cards(cards, now)
     cards
+    |> Enum.map(&MemberCard.touch_pass_updated!(&1, now))
+    |> UpdateCardWorker.enqueue_all()
   end
 end

@@ -2,7 +2,7 @@ defmodule App.Operation.CancelMemberCard do
   @moduledoc """
   Cancel ID card (#964, #1012): a team admin takes a member's card. It revokes it, its job
   pushes the voided Apple pass and expires the Google one
-  (App.Worker.UpdateCancelledCardWorker), and the member's history says who. It makes no
+  (App.Worker.UpdateCardWorker), and the member's history says who. It makes no
   new card: Issue ID card does, for a lost phone, and Every member gets a card does at the
   next refresh for a member who can have one (App.Operation.IssueEveryMemberCard), so the
   confirm says which.
@@ -17,7 +17,7 @@ defmodule App.Operation.CancelMemberCard do
   alias App.Model.MemberStandingChange
   alias App.Model.Team
   alias App.Repo
-  alias App.Worker.UpdateCancelledCardWorker
+  alias App.Worker.UpdateCardWorker
 
   @doc "`{:ok, cards}`, the cards it cancelled, or `{:error, :no_card}` when they have none."
   def call(%Team{} = team, %Member{team_id: team_id} = member, %User{} = user, now)
@@ -29,7 +29,7 @@ defmodule App.Operation.CancelMemberCard do
             Repo.rollback(:no_card)
 
           cards ->
-            UpdateCancelledCardWorker.enqueue_all(cards)
+            UpdateCardWorker.enqueue_all(cards)
 
             MemberStandingChange.insert!(%MemberStandingChange{
               team_id: team.id,
