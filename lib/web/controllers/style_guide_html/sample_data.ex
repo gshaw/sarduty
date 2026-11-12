@@ -68,12 +68,20 @@ defmodule Web.StyleGuideHTML.SampleData do
       ),
       field.(1, "Primary Cause", "single_choice",
         bundle: kms,
-        options: [
-          option(10, "Lost", 0),
-          option(11, "Slip or fall", 1),
-          option(12, "Avalanche", 2, archived: true),
-          option(13, "Stuck in mud", 3, owner: {"Team", 11})
-        ]
+        options:
+          [
+            option(10, "Lost", 0),
+            option(11, "Slip or fall", 1),
+            option(12, "Avalanche", 2, archived: true),
+            option(13, "Stuck in mud", 3, owner: {"Team", 11})
+          ] ++
+            for(
+              {label, i} <-
+                Enum.with_index(
+                  ~w(Injury Stranded Darkness Weather Separation Fatigue Overdue Unknown)
+                ),
+              do: option(20 + i, label, 4 + i)
+            )
       )
     ]
   end
