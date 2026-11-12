@@ -11,6 +11,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 - Members add their own photo from Photos, on a team with member logins. A team admin
   checks it first: fix the framing, then accept or decline it with a reason. Needs
   attention counts the photos waiting.
+- Ask a member for a photo, or everyone with no photo at once, from Photos or their ID
+  Card tab. Each gets an email with a link to add one, no login needed.
 - Team settings has a Fields tab: every custom field on your records, with its hint,
   choices, who added it, and when. Member fields' Copy boxes moved there. Fields tabs
   and Change fields now group fields under D4H's headings, such as KMS Data.

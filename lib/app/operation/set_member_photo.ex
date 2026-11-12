@@ -14,6 +14,7 @@ defmodule App.Operation.SetMemberPhoto do
   alias App.Accounts.User
   alias App.Model.ChangeSetRow
   alias App.Model.Member
+  alias App.Model.PhotoAsk
   alias App.Model.Team
   alias App.Operation.ApplyEdit
   alias App.Operation.CheckMemberPhoto
@@ -26,6 +27,8 @@ defmodule App.Operation.SetMemberPhoto do
     with {:ok, _d4h_member_id} <-
            ApplyEdit.call(team, user, plan(member, bytes), now, photo: bytes) do
       member = CheckMemberPhoto.store(member, bytes != nil, now)
+      # A photo set answers a team admin's ask for one (#1030).
+      if bytes, do: PhotoAsk.close_for_member(member, now)
       RefreshMemberCard.resend(team, member, now)
       IssueEveryMemberCard.call(team, now)
       :ok

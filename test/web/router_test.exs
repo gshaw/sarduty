@@ -7,7 +7,7 @@ defmodule Web.RouterTest do
   # Every top-level path on the main site. A new one fails here until it's added on
   # purpose: a fixed word at the top could block a future section, and one under
   # /teams/ or /orgs/ would block a team or organization with that name.
-  @main_top_level ~w(teams orgs admin account signup login logout replies reminders cards wallet styles
+  @main_top_level ~w(teams orgs admin account signup login logout replies reminders cards photos wallet styles
                      terms privacy agents agents.md changelog changelog.md maps .well-known
                      security.txt llms.txt csp-reports demo api)
   @verify_top_level [
@@ -141,6 +141,8 @@ defmodule Web.RouterTest do
     {"GET", "/cards/token", Web.CardLinkLive, nil},
     {"GET", "/cards/token/apple-wallet", Web.CardLinkController, :apple_pass},
     {"GET", "/cards/token/google-wallet", Web.CardLinkController, :google_pass},
+    # An email that asks for a photo holds it for 30 days (#1030).
+    {"GET", "/photos/token", Web.MemberPhotoFormLive, nil},
     {"POST", "/reminders/token", Web.InvitationRemindersController, :unsubscribe},
     {"GET", "/teams/nsr/logo", Web.TeamController, :logo},
     {"GET", "/teams/nsr/take-attendance", Web.TakeAttendanceLive, nil},
@@ -207,7 +209,7 @@ defmodule Web.RouterTest do
   # Search vs agents (#824). Every route is hidden from search, behind a login, or public,
   # and exactly one. Hidden routes send X-Robots-Tag: noindex through the :noindex
   # pipeline; public ones never do. robots.txt blocks nothing either way.
-  @hidden_prefixes ~w(/wallet/ /replies/ /reminders/ /cards/ /maps/ /.well-known/oauth- /csp-reports
+  @hidden_prefixes ~w(/wallet/ /replies/ /reminders/ /cards/ /photos/ /maps/ /.well-known/oauth- /csp-reports
                        /demo/open /api/)
   @hidden_team_routes ~w(/teams/:subdomain/mcp /teams/:subdomain/oauth/register
                          /teams/:subdomain/oauth/token)

@@ -6,7 +6,9 @@ defmodule Web.TeamDashboardLiveTest do
 
   alias App.AttendanceStub
   alias App.Model.AttendanceScan
+  alias App.Model.PhotoAsk
   alias App.Model.Team
+  alias App.Operation.AskForPhoto
   alias App.Repo
 
   defp open(conn, user, team), do: conn |> log_in_user(user) |> live(~p"/teams/#{team}")
@@ -766,6 +768,38 @@ defmodule Web.TeamDashboardLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
       assert has_element?(lv, "#to-do-declined-chores", "Your chore was declined")
       assert has_element?(lv, "#to-do-declined-chores", "Slept at the hall")
+    end
+
+    test "For you to do: a team admin's ask for a photo, until they add one (#1030)",
+         %{conn: conn, team: team, member: member} do
+      team = team |> Ecto.Changeset.change(photos_enabled: true) |> Repo.update!()
+      asker = App.AccountsFixtures.user_fixture()
+      manager_fixture(team, %{email: asker.email, name: "Alex Chen"})
+      now = DateTime.utc_now()
+
+      {:ok, [_ask]} = AskForPhoto.call(team, asker, member, "The one we have is old.", now)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      add = ~p"/teams/#{team}/photos/members/new"
+
+      assert has_element?(
+               lv,
+               ~s|#to-do-photo-ask a[href="#{add}"]|,
+               "Add a photo for your ID card"
+             )
+
+      assert has_element?(lv, "#to-do-photo-ask", "Alex Chen asked: “The one we have is old.”")
+
+      # Asked again with no message.
+      {:ok, [_ask]} = AskForPhoto.call(team, asker, member, nil, now)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      assert has_element?(lv, "#to-do-photo-ask .hint", "Alex Chen asked.")
+
+      # They add one, and it goes.
+      member_photo_fixture(member)
+      PhotoAsk.close_for_member(member, now)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      refute has_element?(lv, "#to-do-photo-ask")
     end
 
     test "For you to do: a declined photo opens Add a photo, until they add another (#1029)",

@@ -15,6 +15,7 @@ defmodule App.Operation.CheckMemberPhoto do
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Model.PhotoAsk
   alias App.Model.Team
   alias App.Operation.RefreshMemberCard
   alias App.Repo
@@ -32,6 +33,9 @@ defmodule App.Operation.CheckMemberPhoto do
 
     case D4H.fetch_member_image(d4h, member.d4h_member_id) do
       {:ok, _image, _filename} ->
+        # A photo where there was none, added in the team's records, answers an ask for
+        # one (#1030).
+        if !member.has_photo, do: PhotoAsk.close_for_member(member, DateTime.utc_now())
         store(member, true)
 
       {:error, %{status: status}} when status in [204, 404] ->

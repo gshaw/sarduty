@@ -5,6 +5,7 @@ defmodule Web.PhotoCollectionLive do
 
   alias App.Model.Member
   alias App.Model.MemberPhoto
+  alias App.Model.PhotoAsk
   alias App.Model.Team
   alias Service.Format
 
@@ -15,7 +16,9 @@ defmodule Web.PhotoCollectionLive do
   # grid. Whether a member has a photo is `has_photo`, from the night's check, so only
   # members with one ask for theirs, as each scrolls into view. Waiting lists the photos
   # members added of themselves, oldest first, each opening its check (#1029), and a
-  # member with one waiting has a badge in the grid that opens it too.
+  # member with one waiting has a badge in the grid that opens it too. Ask for photos
+  # emails everyone with no photo a link to add one (#1030), and a member asked shows the
+  # date under their name.
   #
   # A member sees only their own part (#1029): their photo and where it stands, with Add
   # a photo or Change photo. None of the team's views open for them. A team admin who is
@@ -61,7 +64,8 @@ defmodule Web.PhotoCollectionLive do
       counts: %{members: length(members), waiting: length(waiting), no_photo: length(without)},
       members: if(view == :no_photo, do: without, else: members),
       waiting: waiting,
-      waiting_by_member: Map.new(waiting, &{&1.member_id, &1})
+      waiting_by_member: Map.new(waiting, &{&1.member_id, &1}),
+      asks_by_member: team |> PhotoAsk.open_for_team() |> Map.new(&{&1.member_id, &1})
     )
   end
 
@@ -90,6 +94,9 @@ defmodule Web.PhotoCollectionLive do
     <.heading_row>
       <h1 class="title">Photos</h1>
       <:action>
+        <.button id="photo-ask" navigate={Web.PhotoAskLive.path(@current_team, nil)}>
+          Ask for photos
+        </.button>
         <.button id="photo-add" variant={:success} navigate={add_path(@current_team, nil)}>
           Add a photo
         </.button>
@@ -169,12 +176,26 @@ defmodule Web.PhotoCollectionLive do
             class="block"
             navigate={Web.MemberPhoto.check_path(@current_team, waiting)}
           ><.badge kind={:warning}>New photo waiting</.badge></.a>
+          <%!-- Asked (#1030): the date, in place of the links. Their ID Card tab asks again. --%>
+          <span
+            :if={!@waiting_by_member[member.id] && @asks_by_member[member.id]}
+            id={"photo-#{member.id}-asked"}
+            class="hint block"
+          >
+            Asked {Format.month_day(@asks_by_member[member.id].asked_at, @current_team.timezone)}
+          </span>
           <.a
-            :if={!member.has_photo and !@waiting_by_member[member.id]}
+            :if={add_links?(member, @waiting_by_member, @asks_by_member)}
             id={"photo-#{member.id}-add"}
             class="block"
             navigate={add_path(@current_team, member)}
           >Add a photo</.a>
+          <.a
+            :if={add_links?(member, @waiting_by_member, @asks_by_member)}
+            id={"photo-#{member.id}-ask"}
+            class="block"
+            navigate={Web.PhotoAskLive.path(@current_team, member)}
+          >Ask for a photo</.a>
         </li>
       </ul>
     <% end %>
@@ -248,6 +269,11 @@ defmodule Web.PhotoCollectionLive do
     </section>
     """
   end
+
+  # Add a photo and Ask for a photo, under a member with no photo, none waiting, and no
+  # ask still open.
+  defp add_links?(member, waiting, asks),
+    do: !member.has_photo and !waiting[member.id] and !asks[member.id]
 
   defp empty_title(:members), do: "No current members"
   defp empty_title(:no_photo), do: "Every current member has a photo"
