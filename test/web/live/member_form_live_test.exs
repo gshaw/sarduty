@@ -201,7 +201,7 @@ defmodule Web.MemberFormLiveTest do
 
     test "Change member has the details and photo D4H takes, without access or leaving",
          %{conn: conn, team: team} do
-      member = member_fixture(team, %{position: "MIT"})
+      member = member_fixture(team, %{position: "MIT", has_photo: true})
       member_fixture(team, %{position: "GSTL"})
       member_fixture(team, %{position: "MIT"})
 
@@ -218,6 +218,9 @@ defmodule Web.MemberFormLiveTest do
       refute has_element?(lv, "#form_team_admin")
       assert has_element?(lv, "#member-photo #save-photo")
       assert has_element?(lv, "#member-photo #remove-photo")
+
+      original = ~p"/teams/#{team}/members/#{member.id}/image/original?v=0"
+      assert has_element?(lv, ~s|#download-photo[href="#{original}"]|)
       refute has_element?(lv, "#member-retire")
     end
 
@@ -258,9 +261,12 @@ defmodule Web.MemberFormLiveTest do
       member = member_fixture(team, %{has_photo: true})
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/edit")
 
+      assert has_element?(lv, "#download-photo")
       assert lv |> element("#remove-photo") |> render_click() =~ "Photo removed."
       assert_received {:records, "DELETE", "/documents/11", nil}
       refute Repo.reload!(member).has_photo
+      # Nothing left to download.
+      refute has_element?(lv, "#download-photo")
     end
 
     test "D4H's refusal shows in the toast, and the photo stays", %{conn: conn, team: team} do

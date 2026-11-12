@@ -114,6 +114,17 @@ defmodule Web.MemberFormLive do
           data-hide-on-error
         />
       </p>
+      <p :if={@member.has_photo}>
+        <.button
+          id="download-photo"
+          size={:sm}
+          href={
+            ~p"/teams/#{@current_team}/members/#{@member.id}/image/original?#{[v: @photo_version]}"
+          }
+        >
+          Download original photo
+        </.button>
+      </p>
       <form id="photo-form" phx-change="validate-photo" phx-submit="save-photo">
         <.file_drop
           id="member-photo-file"
@@ -225,8 +236,14 @@ defmodule Web.MemberFormLive do
     %{current_team: team, current_user: user, member: member} = socket.assigns
 
     case SetMemberPhoto.call(team, member, bytes, user, DateTime.utc_now()) do
-      :ok -> socket |> put_flash(:info, text) |> update(:photo_version, &(&1 + 1))
-      {:error, text} -> put_flash(socket, :error, text)
+      :ok ->
+        socket
+        |> put_flash(:info, text)
+        |> update(:photo_version, &(&1 + 1))
+        |> update(:member, &%{&1 | has_photo: bytes != nil})
+
+      {:error, text} ->
+        put_flash(socket, :error, text)
     end
   end
 

@@ -17,6 +17,36 @@ defmodule Web.MemberControllerTest do
     assert {Image.width(image), Image.height(image)} == {480, 480}
   end
 
+  test "sends the original photo, uncropped, as a download named for the member (#1028)",
+       %{conn: conn, team: team, member: member} do
+    photo = png_fixture(2400, 1800)
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      conn = Plug.Conn.fetch_query_params(conn)
+      assert conn.query_params["size"] == "ORIGINAL"
+
+      conn
+      |> Plug.Conn.put_resp_content_type("image/png", nil)
+      |> Plug.Conn.send_resp(200, photo)
+    end)
+
+    conn = get(conn, ~p"/teams/#{team}/members/#{member.id}/image/original")
+
+    assert response(conn, 200) == photo
+    assert get_resp_header(conn, "content-type") == ["image/png"]
+
+    assert get_resp_header(conn, "content-disposition") == [
+             ~s(attachment; filename="#{member.name}.png")
+           ]
+  end
+
+  test "the original is a 404 when D4H has no photo (a 204)",
+       %{conn: conn, team: team, member: member} do
+    Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 204, ""))
+
+    assert conn |> get(~p"/teams/#{team}/members/#{member.id}/image/original") |> response(404)
+  end
+
   test "sends a member's certificate", %{conn: conn, team: team, member: member} do
     award = certificate_award_fixture(team, member)
 

@@ -312,6 +312,25 @@ defmodule App.Adapter.D4H do
     end
   end
 
+  @doc """
+  A member's photo at D4H's ORIGINAL size, as D4H or Records keeps it, uncropped: up to
+  2400 px when SAR Duty set it (#1028). `{:ok, bytes, content_type}`, or
+  `{:error, response}` when there is none (D4H answers 204, Records 404).
+  """
+  def fetch_member_original(context, member_id) do
+    response =
+      Req.get!(context, url: "/members/#{member_id}/image", params: [size: "ORIGINAL"])
+
+    case response do
+      %{status: 200, body: <<_::binary-size(1), _::binary>> = bytes} ->
+        content_type = response |> Req.Response.get_header("content-type") |> List.first()
+        {:ok, bytes, content_type || "image/jpeg"}
+
+      response ->
+        {:error, response}
+    end
+  end
+
   def fetch_member_image(context, member_id) do
     response =
       Req.get!(context, url: "/members/#{member_id}/image", params: [size: "PREVIEW"])

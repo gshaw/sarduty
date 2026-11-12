@@ -74,6 +74,12 @@ own steps ([Retiring](#retiring)). Adding a member is a Records team's only
   member's profile documents first and deletes them once the new one is in. Removing
   deletes them: D4H then has no photo for the member and doesn't go back to an older
   one. A D4H Editor's key is untried; a refusal shows D4H's own words in a toast.
+- **Two photo routes**, both open to members, who already see the photo on member
+  pages. `/members/:id/image` is the everyday one: D4H's `PREVIEW` cut to its middle
+  square, about 480 px, for pages, ID cards, and Wallet. `/members/:id/image/original` is
+  the photo as the team's records keep it, full size and uncropped, as a download named
+  for the member. Change member's **Download original photo** links to it when the
+  member has a photo. Neither keeps a copy.
 
 - **Role** is D4H's free-text `position`, so teams drift: South Fraser had 45 roles
   across 93 members. Role is the combobox with `free_text`: it lists the team's roles,
