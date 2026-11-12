@@ -79,6 +79,7 @@ defmodule Web.MemberPhotoLive do
             <.button
               id="remove-photo"
               type="button"
+              variant={:danger}
               phx-click="remove-photo"
               phx-disable-with="Removing…"
               data-confirm={"Remove #{@member.name}'s photo? Their ID card shows a placeholder until you add one."}

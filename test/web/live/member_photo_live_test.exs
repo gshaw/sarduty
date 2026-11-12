@@ -117,7 +117,8 @@ defmodule Web.MemberPhotoLiveTest do
       original = ~p"/teams/#{team}/members/#{member.id}/image/original"
       assert has_element?(lv, ~s|#member-photo-image[src="#{photo}"]|)
       assert has_element?(lv, ~s|#download-photo[href="#{original}"]|)
-      assert has_element?(lv, "#remove-photo")
+      # Red: it deletes the photo from the team's records.
+      assert has_element?(lv, "#remove-photo.btn-danger")
       refute has_element?(lv, "#member-photo-none")
     end
 
