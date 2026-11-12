@@ -8,14 +8,18 @@ defmodule Web.ActivityPhotoLive do
   post it. Everyone stars it, once: the button counts the stars and never says whose
   they are. A team admin features it on its activity's Overview, downloads the
   original, and deletes it, which is how a photo is taken down when someone in it asks.
+  Edit photo (#1032, part 8) fixes it, and the page then says who edited it and when,
+  with Revert to original.
 
   Members send only `star`. A team admin viewing as a member is told nothing is saved.
   """
   use Web, {:live_view_app_layout, access: :team, member_events: ["star"]}
 
   alias App.Model.ActivityPhoto
+  alias App.Model.Member
   alias App.Operation.AddActivityPhotos
   alias App.Operation.DeleteActivityPhoto
+  alias App.Operation.EditActivityPhoto
   alias App.Operation.FeatureActivityPhoto
   alias App.Operation.StarActivityPhoto
   alias Service.Format
@@ -46,6 +50,19 @@ defmodule Web.ActivityPhotoLive do
 
   def handle_event("feature", _params, socket), do: {:noreply, feature(socket, true)}
   def handle_event("stop-featuring", _params, socket), do: {:noreply, feature(socket, false)}
+
+  def handle_event("revert", _params, socket) do
+    %{current_team: team, photo: photo} = socket.assigns
+
+    case EditActivityPhoto.revert(team, photo, DateTime.utc_now()) do
+      {:ok, _photo} ->
+        {:noreply,
+         socket |> load(photo.id) |> put_flash(:info, "Photo reverted to the original.")}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "The photo did not revert. Revert it again.")}
+    end
+  end
 
   def handle_event("delete", _params, socket) do
     %{current_team: team, photo: photo} = socket.assigns
@@ -95,10 +112,17 @@ defmodule Web.ActivityPhotoLive do
             id="photo-image"
             src={Web.ActivityPhoto.file_path(@current_team, @photo, :show)}
             alt={Web.ActivityPhoto.alt(@photo)}
-            width={@photo.width}
-            height={@photo.height}
+            width={elem(ActivityPhoto.shown_size(@photo), 0)}
+            height={elem(ActivityPhoto.shown_size(@photo), 1)}
           />
         </a>
+        <p :if={@photo.edited_at} id="photo-edited" class="hint mt-2">
+          {edited_text(@photo, @current_team, @now)}
+          <span :if={@team_admin?}>
+            ·
+            <.a id="photo-revert" href="#" phx-click="revert" phx-disable-with="Reverting…">Revert to original</.a>
+          </span>
+        </p>
         <div class="activity-photo-star">
           <.button
             id="photo-star"
@@ -118,7 +142,7 @@ defmodule Web.ActivityPhotoLive do
       <aside class="cert-layout-panel">
         <dl id="photo-details">
           <dt>Added by</dt>
-          <dd id="photo-added">{added(@photo, @current_team, @now)}</dd>
+          <dd id="photo-added">{Web.ActivityPhoto.added_on(@photo, @current_team, @now)}</dd>
           <dt>Activity</dt>
           <dd>
             <.a
@@ -141,6 +165,9 @@ defmodule Web.ActivityPhotoLive do
             <dt>Actions</dt>
             <dd>
               <ul id="photo-actions" class="action-list">
+                <li>
+                  <.a id="photo-edit" navigate={Web.ActivityPhoto.edit_path(@current_team, @photo)}>Edit photo</.a>
+                </li>
                 <li :if={!@photo.featured_at}>
                   <.a id="photo-feature" href="#" phx-click="feature">Feature</.a>
                 </li>
@@ -172,14 +199,14 @@ defmodule Web.ActivityPhotoLive do
     """
   end
 
-  # "Cameron Ruiz, Oct 28, 2026", or the date alone when nobody is left to name.
-  defp added(photo, team, now) do
-    [
-      Web.ActivityPhoto.added_by(photo, team, now),
-      Format.date_short(photo.inserted_at, team.timezone)
-    ]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join(", ")
+  # "Edited by Alex Chen, Nov 12, 2026", or with nobody left to name, "Edited Nov 12, 2026".
+  defp edited_text(photo, team, now) do
+    date = Format.date_short(photo.edited_at, team.timezone)
+
+    case Member.name_for_user(team, photo.edited_by_user, now) do
+      nil -> "Edited #{date}"
+      name -> "Edited by #{name}, #{date}"
+    end
   end
 
   # The file's name on the team admin's disk.

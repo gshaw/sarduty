@@ -110,4 +110,20 @@
   .photo-place-oval-edge { stroke: var(--nav); stroke-width: 4.5; opacity: 0.45; }
   .photo-place-oval-line { stroke: var(--paper); stroke-width: 2.5; stroke-dasharray: 7 5; }
   .photo-place-tools { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+
+  /* Edit photo (#1032, part 8): the photo as the team will see it, in a frame of the
+     turned photo's shape, no taller than most of the screen. The page sets the turn and
+     the zoom that cuts the empty corners; the browser draws them on the original. */
+  .photo-edit { position: relative; width: min(100%, calc(70vh * var(--photo-ratio))); aspect-ratio: var(--photo-ratio); overflow: hidden; background: var(--surface-alt); border-radius: var(--radius); }
+  .photo-edit > img { position: absolute; top: 50%; left: 50%; width: var(--photo-width); max-width: none; height: auto; transform: translate(-50%, -50%) rotate(var(--photo-turn)) scale(var(--photo-zoom)); transition: transform 0.15s; }
+  /* Lines to straighten against: 8 across and 6 down, light over a dark edge. */
+  .photo-edit-grid { position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(to right, color-mix(in srgb, var(--paper) 55%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--paper) 55%, transparent) 1px, transparent 1px); background-size: calc(100% / 8) calc(100% / 6); }
+  .photo-edit-tools { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-4); }
+  /* Straighten: its ends either side of the slider. */
+  .photo-edit-straighten { max-width: 26rem; margin-top: var(--sp-4); }
+  .photo-edit-straighten > div { display: flex; gap: var(--sp-3); align-items: center; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+  .photo-edit-straighten input[type="range"] { flex: 1; min-height: 44px; accent-color: var(--primary); }
+  .photo-edit-switch { max-width: 26rem; margin-top: var(--sp-4); }
+  /* The photo as taken, small beside the edit. */
+  .photo-edit-taken { display: block; width: 12rem; max-width: 100%; height: auto; margin-top: var(--sp-2); border-radius: var(--radius); }
 }

@@ -457,6 +457,8 @@ defmodule Web.Router do
       # which activity.
       live "/teams/:subdomain/photos/new", PhotoAddLive
       live "/teams/:subdomain/photos/:id", ActivityPhotoLive
+      # A team admin edits an accepted photo (#1032, part 8).
+      live "/teams/:subdomain/photos/:id/edit", ActivityPhotoEditLive
       live "/teams/:subdomain/certificates", CertificateCollectionLive
       live "/teams/:subdomain/certificates/new", CertificateFormLive, :new
       live "/teams/:subdomain/certificates/:id", CertificateLive

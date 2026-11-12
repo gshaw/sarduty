@@ -59,4 +59,20 @@ defmodule App.Adapter.CleanUpTest do
     CleanUpStandIn.turn_on(answer: fn _jpeg, :member -> raise "no function" end)
     assert {:error, %RuntimeError{message: "no function"}} = CleanUp.call("jpeg", :member)
   end
+
+  test "for an activity photo, the stand-in fixes the light and colour, and keeps the shape" do
+    CleanUpStandIn.turn_on()
+
+    # A dull photo: greys close together. Fixed, they stretch to dark and light.
+    strips = for grey <- 100..145//5, do: Image.new!(40, 100, color: [grey, grey, grey])
+    {:ok, joined} = Image.join(strips, across: 10)
+    photo = Image.write!(joined, :memory, suffix: ".jpg")
+
+    assert {:ok, %{bytes: cleaned, faces: nil, face: nil}} = CleanUp.call(photo, :activity)
+    assert size(cleaned) == {400, 100}
+    image = Image.from_binary!(cleaned)
+    [left | _rest] = Image.get_pixel!(image, 5, 50)
+    [right | _rest] = Image.get_pixel!(image, 395, 50)
+    assert left < 60 and right > 200
+  end
 end

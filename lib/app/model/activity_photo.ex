@@ -29,6 +29,12 @@ defmodule App.Model.ActivityPhoto do
   # many it has and whether the person looking gave one. A team admin features up to
   # `max_featured/0` on its activity's Overview: `featured_at` is when, and nil for a
   # photo that is not featured.
+  #
+  # A team admin edits an accepted photo once, or not at all (part 8): `turns`, `angle`,
+  # and `clean_up` are the settings Service.ActivityPhoto.plan/2 turns into what is done
+  # to the original, and `edited_by_user` and `edited_at` who saved them and when. The
+  # original never changes: App.Operation.EditActivityPhoto makes the copies to show and
+  # for tiles again from it.
   @sizes [:original, :show, :tile]
   @max_featured 2
 
@@ -49,6 +55,11 @@ defmodule App.Model.ActivityPhoto do
     field :may_post, :boolean, default: false
     field :accepted_at, :utc_datetime_usec
     field :featured_at, :utc_datetime_usec
+    field :turns, :integer, default: 0
+    field :angle, :float, default: 0.0
+    field :clean_up, :boolean, default: false
+    belongs_to :edited_by_user, User
+    field :edited_at, :utc_datetime_usec
     field :stars, :integer, virtual: true, default: 0
     field :starred, :boolean, virtual: true, default: false
     timestamps(type: :utc_datetime_usec)
@@ -62,6 +73,14 @@ defmodule App.Model.ActivityPhoto do
   2048 px; and `:tile`, up to 600 px. Each is a JPEG with no location or camera data.
   """
   def sizes, do: @sizes
+
+  @doc """
+  The shape of the photo the team sees, `{width, height}`: the original's, turned a
+  quarter for each odd turn. Straightening cuts it at the same shape, so for a page's
+  `<img>` this is the size to hold.
+  """
+  def shown_size(%ActivityPhoto{width: width, height: height, turns: turns}),
+    do: Service.ActivityPhoto.turned_size(turns, {width, height})
 
   @doc "A new `file_token`: random, so a key says nothing and is never used twice."
   def new_token, do: 16 |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower)
@@ -123,7 +142,8 @@ defmodule App.Model.ActivityPhoto do
   end
 
   @doc """
-  One of the team's accepted photos, with its activity and who added it, for its page
+  One of the team's accepted photos, with its activity, who added it, and who edited it,
+  for its page
   (#1033): anyone on the team opens it. A waiting photo has no page, and the rest is as
   find_visible!/3 has it. Raises when there is none, so the page is not found.
   """
@@ -131,7 +151,7 @@ defmodule App.Model.ActivityPhoto do
     team
     |> one(id, viewer)
     |> where([p], p.status == :accepted)
-    |> preload([activity: a], [:member, :added_by_user, activity: a])
+    |> preload([activity: a], [:member, :added_by_user, :edited_by_user, activity: a])
     |> Repo.one!()
   end
 

@@ -324,8 +324,8 @@ as activity photos are.
   narrow, which asks which activity: the ones `AddActivityPhotos.addable/3` lists,
   newest first. For a member, the exercises and events they attended; for a team admin,
   every one that has started. Picking one opens its Add photos page.
-- **Team admin actions**, on the photo's page: Feature or Stop featuring, Download
-  original, and Delete photo, behind a confirm.
+- **Team admin actions**, on the photo's page: Edit photo, Feature or Stop featuring,
+  Download original, and Delete photo, behind a confirm.
 - **Take-downs.** Anyone in a photo can ask a team admin to remove it. Delete photo is
   that ([DeleteActivityPhoto](../lib/app/operation/delete_activity_photo.ex)): the
   files go first, then the row, and its stars with it, for good. Deleting the photos
@@ -373,4 +373,45 @@ Nothing asks by itself: a team admin asks, and asks again later.
   team's records. Off, they get no ask for activity photos. An ask for their member
   photo still comes: the team needs that one.
 
-Edit photo is part 8, and export part 9.
+## Edit photo
+
+Most photos never need cropping. They need to be upright and not muddy. A team admin
+fixes an accepted photo on one page (#1032, part 8), and **the original is never
+changed**.
+
+- **The page**, `/teams/:subdomain/photos/:id/edit`
+  ([ActivityPhotoEditLive](../lib/web/live/activity_photo_edit_live.ex)), for team
+  admins, on the certificate review layout a member photo is checked on. A waiting
+  photo opens its activity's Photos tab with "Accept the photo first.".
+- **The tools.** Rotate left and Rotate right, in quarter turns; Straighten, from −10°
+  to 10° in steps of 0.5°; and Clean up, a switch, while
+  [Clean up](#clean-up) is available. No crop, and no sliders for light or colour: the
+  photo keeps its shape until it is exported.
+- **What it shows.** The photo as the team will see it, under a grid to straighten
+  against, and the photo as taken beside it. The browser turns and zooms the original
+  with CSS, so nothing is made until Save. Clean up is the one change it cannot draw:
+  turning the switch on fetches the cleaned-up photo once, in `start_async`
+  (`EditActivityPhoto.preview/1`), and the turns apply to it the same way.
+- **What is saved** is settings on the row: `turns`, `angle`, and `clean_up`, with
+  `edited_by_user` and `edited_at`. Never a new original. One edit, or none: saving
+  replaces the last, and there is no history.
+  [EditActivityPhoto](../lib/app/operation/edit_activity_photo.ex) makes the copies to
+  show and for tiles again from the original.
+- **The plan** is `Service.ActivityPhoto.plan/2`, pure: the quarter turns, then the
+  angle with the cut that leaves no empty corners (`cut_scale/2`, at the photo's own
+  shape), then Clean up. `edit/3` does it at full size, shrinks it to the copy to show,
+  and hands that to Clean up, then makes the tile from the result.
+- **Clean up** uses the same adapter as member photos, with the kind `:activity`. For
+  this kind the function will level the horizon and fix the light and colour. The
+  stand-in stretches the light to its full range and the colour a little, so dev shows
+  a change. When it does not answer, the photo saves without it, `clean_up` false, and
+  the toast says "Clean up did not answer. The photo is saved without it."
+- **The photo's page** gets Edit photo first in Actions, and once edited, "Edited by
+  Alex Chen, Nov 12, 2026" under the photo, with Revert to original for team admins.
+  Revert clears the settings and makes the copies again as they came.
+- **Download original** still gives the original, unedited. A page holds the edited
+  shape: `ActivityPhoto.shown_size/1` turns the original's size.
+- **Files' URLs** carry `updated_at`, and saving always moves it, so no browser keeps the
+  old copies.
+
+Export for a post is part 9.

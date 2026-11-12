@@ -157,7 +157,9 @@ don't collide.
 ## Clean up
 
 [App.Adapter.CleanUp](../lib/app/adapter/clean_up.ex) removes a photo's background and
-centres the face, for Add a photo ([photos.md](photos.md#clean-up), #1031). It will call
+centres the face, for Add a photo ([photos.md](photos.md#clean-up), #1031). For an
+activity photo it will level the horizon and fix the light and colour, for Edit photo
+([photos.md](photos.md#edit-photo), #1032). It will call
 a function on AWS in Calgary, which does not exist yet: SAR Duty will send it one photo
 and what kind it is, and get back the cleaned-up photo, how many faces it found, and
 where the face is. The call is made while the person waits, and gives up after 30
@@ -168,8 +170,9 @@ is cleaned up. The adapter has three modes, set by `config :sarduty, App.Adapter
 mode:`:
 
 - `:off`, the default.
-- `:stand_in`, for dev and tests: it cuts the photo to a centred square and reports 1
-  face, with no AWS, so the whole flow can be tried.
+- `:stand_in`, for dev and tests: it cuts a member photo to a centred square and reports
+  1 face, and stretches an activity photo's light and colour, with no AWS, so the whole
+  flow can be tried.
 - The function, in its own issue. It gets its variables, its row in Adminland ›
   Integrations, and the privacy page's line then.
 
