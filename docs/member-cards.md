@@ -238,7 +238,8 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
 - **Every update is one job per card**
   ([UpdateCardWorker](../lib/app/worker/update_card_worker.ex)): it pushes the Apple
   pass's phones and sends the Google pass if it changed. Many cards at once go out 6
-  seconds apart, about 10 a minute. A push makes each phone download its pass right away,
+  seconds apart, about 10 a minute, each batch after the jobs already waiting, so teams
+  queued together line up. One card goes now. A push makes each phone download its pass right away,
   and each download reads the database and fetches the photo from D4H. On 2026-11-12 the
   first nightly photo check pushed 66 cards at once, and the downloads used up the
   database pool for 5 minutes.

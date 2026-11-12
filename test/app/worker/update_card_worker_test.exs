@@ -30,6 +30,26 @@ defmodule App.Worker.UpdateCardWorkerTest do
     end)
   end
 
+  test "a second batch lines up behind the first; one card goes now", %{team: team} do
+    cards = for _ <- 1..4, do: team |> member_fixture() |> member_card_fixture()
+    {first, second} = Enum.split(cards, 2)
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      UpdateCardWorker.enqueue_all(first)
+      UpdateCardWorker.enqueue_all(second)
+      jobs = all_enqueued(worker: UpdateCardWorker)
+      start = jobs |> Enum.map(& &1.scheduled_at) |> Enum.min(DateTime)
+      gaps = jobs |> Enum.map(&DateTime.diff(&1.scheduled_at, start)) |> Enum.sort()
+      assert gaps == [0, 6, 12, 18]
+
+      card = team |> member_fixture() |> member_card_fixture()
+      UpdateCardWorker.enqueue(card)
+
+      [single] = all_enqueued(worker: UpdateCardWorker, args: %{member_card_id: card.id})
+      assert DateTime.diff(single.scheduled_at, start) < 2
+    end)
+  end
+
   test "a Google refusal fails the job, so the cancelled pass is sent again", ctx do
     test = self()
 
