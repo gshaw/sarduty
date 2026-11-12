@@ -310,7 +310,7 @@ defmodule Web.Components.Search do
       join([
         hit.barcode,
         hit.location_title,
-        if(!hit.in_service?, do: EquipmentItem.status_label(hit.status))
+        if(!hit.usable?, do: EquipmentItem.status_label(hit.status))
       ])
 
   defp line(:chore, hit),

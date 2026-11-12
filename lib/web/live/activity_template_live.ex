@@ -276,7 +276,7 @@ defmodule Web.ActivityTemplateLive do
     template = Template.find!(socket.assigns.current_team, id)
 
     new =
-      for line <- template.template_items, EquipmentItem.in_service?(line.equipment_item) do
+      for line <- template.template_items, EquipmentItem.usable?(line.equipment_item) do
         {line.equipment_item, line.minutes}
       end
 

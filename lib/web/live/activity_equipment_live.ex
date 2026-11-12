@@ -410,7 +410,7 @@ defmodule Web.ActivityEquipmentLive do
   """
   def item_state(%EquipmentItem{} = item, lines, used) do
     cond do
-      not EquipmentItem.in_service?(item) -> :out
+      not EquipmentItem.usable?(item) -> :out
       MapSet.member?(used, item.id) -> :used
       Enum.any?(lines, &(&1.item.id == item.id)) -> :listed
       true -> :add

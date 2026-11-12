@@ -120,10 +120,10 @@ defmodule App.ViewData.SearchTest do
       equipment_item_fixture(team, %{title: "Rescue truck", barcode: "R1"})
       equipment_item_fixture(team, %{title: "Old truck", status: "retired"})
 
-      assert [%{hits: [%{title: "Rescue truck", in_service?: true}]}] =
+      assert [%{hits: [%{title: "Rescue truck", usable?: true}]}] =
                Search.run(team, "r1", kinds: [:equipment], now: @now)
 
-      assert [%{hits: [%{in_service?: true}, %{title: "Old truck", in_service?: false}]}] =
+      assert [%{hits: [%{usable?: true}, %{title: "Old truck", usable?: false}]}] =
                Search.run(team, "truck", kinds: [:equipment], now: @now)
     end
 

@@ -36,7 +36,7 @@ defmodule App.Model.EquipmentItemTest do
       assert EquipmentItem.find_by_code(other.id, "SF0119") == nil
     end
 
-    test "prefers an item in service to a retired one with the same barcode", %{team: team} do
+    test "prefers a usable item to a retired one with the same barcode", %{team: team} do
       equipment_item_fixture(team, %{barcode: "65#01", status: "retired"})
       current = equipment_item_fixture(team, %{barcode: "65#01"})
 

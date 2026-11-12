@@ -199,7 +199,7 @@ defmodule App.ViewData.Search do
   defp tiebreak(:activity, %{started_at: nil}, _now), do: :infinity
 
   defp tiebreak(:activity, hit, now), do: abs(DateTime.diff(hit.started_at, now))
-  defp tiebreak(:equipment, hit, _now), do: if(hit.in_service?, do: 0, else: 1)
+  defp tiebreak(:equipment, hit, _now), do: if(hit.usable?, do: 0, else: 1)
   defp tiebreak(:chore, hit, _now), do: -Date.to_gregorian_days(hit.date)
   defp tiebreak(:certificate, hit, _now), do: if(hit.status == :waiting, do: 0, else: 1)
   defp tiebreak(_kind, _hit, _now), do: 0
@@ -406,7 +406,7 @@ defmodule App.ViewData.Search do
   end
 
   defp describe(:equipment, hits, _team, _now),
-    do: Enum.map(hits, &Map.put(&1, :in_service?, &1.status not in ["retired", "lost"]))
+    do: Enum.map(hits, &Map.put(&1, :usable?, EquipmentItem.usable?(&1)))
 
   defp describe(_kind, hits, _team, _now), do: hits
 

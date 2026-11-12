@@ -375,7 +375,7 @@ defmodule Web.ActivityFormLive do
         ),
       items:
         template.template_items
-        |> Enum.filter(&EquipmentItem.in_service?(&1.equipment_item))
+        |> Enum.filter(&EquipmentItem.usable?(&1.equipment_item))
         |> Enum.sort_by(&String.downcase(&1.equipment_item.title)),
       tags: Template.tags(template),
       groups: Template.groups(template)

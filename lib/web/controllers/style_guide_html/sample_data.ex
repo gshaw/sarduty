@@ -305,7 +305,7 @@ defmodule Web.StyleGuideHTML.SampleData do
                 title: "Rope rescue kit 2",
                 barcode: "SQ-0142",
                 location_title: "Hall",
-                in_service?: true,
+                usable?: true,
                 status: "operational",
                 path: "#{team}/equipment/4"
               }

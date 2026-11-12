@@ -209,8 +209,12 @@ defmodule App.Model.EquipmentItem do
       status |> String.replace("_", " ") |> String.capitalize()
   end
 
-  @doc "Items a person can add to an activity or a template: any but retired and lost ones."
-  def in_service?(%EquipmentItem{status: status}), do: status not in ["retired", "lost"]
+  @doc """
+  Whether a person can add the item to an activity or a template, and search ranks it
+  first: any but retired and lost ones, so unserviceable too. Not "in service", which is
+  D4H's operational alone (status_label/1).
+  """
+  def usable?(%{status: status}), do: status not in ["retired", "lost"]
 
   @doc "Whether D4H takes hours for a usage of the item. Vehicles take km, supplies a count."
   def takes_hours?(%EquipmentItem{item_type: "equipment"}), do: true
