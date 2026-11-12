@@ -553,7 +553,7 @@ defmodule Web.Layouts do
   # The switcher's rows, in the bar's menu or the phone's panel: your places on top, Your
   # teams then Your organizations (#512), and SAR Duty's own rows in a navy band at the
   # foot (#779): its home page, the wordmark in its colours, then Adminland with its
-  # key and the style guide, so they never read as one more team.
+  # key, the style guide, and a dev server's Outbox, so they never read as one more team.
   defp switch_menu(assigns) do
     groups = Enum.group_by(assigns.rows, & &1.kind)
 
@@ -562,7 +562,7 @@ defmodule Web.Layouts do
         teams: groups[:team] || [],
         orgs: groups[:org] || [],
         home: groups[:home] || [],
-        admin: (groups[:admin] || []) ++ (groups[:styles] || [])
+        admin: (groups[:admin] || []) ++ (groups[:styles] || []) ++ (groups[:outbox] || [])
       )
 
     ~H"""
@@ -603,15 +603,16 @@ defmodule Web.Layouts do
   defp switch_link(assigns) do
     ~H"""
     <.link
-      navigate={@row.kind != :styles && @row.path}
-      href={@row.kind == :styles && @row.path}
+      navigate={@row.kind not in [:styles, :outbox] && @row.path}
+      href={@row.kind in [:styles, :outbox] && @row.path}
       id={@id_prefix <> @row.key}
       aria-current={@row.current && "page"}
-      class={["nav-link", @row.kind in [:admin, :styles] && "switch-admin"]}
+      class={["nav-link", @row.kind in [:admin, :styles, :outbox] && "switch-admin"]}
     >
       <.icon :if={@row.kind == :admin} name="key" size={:sm} />
       <.icon :if={@row.kind == :org} name="building-complex" size={:sm} />
       <.icon :if={@row.kind == :styles} name="palette" size={:sm} />
+      <.icon :if={@row.kind == :outbox} name="inbox" size={:sm} />
       {@row.label}
     </.link>
     """
