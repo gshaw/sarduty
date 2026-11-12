@@ -37,7 +37,7 @@ defmodule App.Operation.DeleteTeam do
                   endorsements equipment_items
                   equipment_usages events group_membership_changes group_rules groups
                   home_coordinates location_bookmarks mcp_calls member_away_periods member_cards
-                  member_check_ins member_standing_changes members no_shows outbox_messages qualifications
+                  member_check_ins member_photos member_standing_changes members no_shows outbox_messages qualifications
                   reminders reports route_distances published_pdfs form_answers sign_requests tags team_login_grants templates trips
                   whiteboard_notes)
 
@@ -64,6 +64,7 @@ defmodule App.Operation.DeleteTeam do
     {"template_tags", "tag_id", "tags"},
     {"template_tags", "template_id", "templates"},
     {"certificate_files", "certificate_id", "certificates"},
+    {"member_photo_files", "member_photo_id", "member_photos"},
     {"pass_registrations", "member_card_id", "member_cards"},
     {"report_versions", "report_id", "reports"},
     {"outbox_attachments", "outbox_message_id", "outbox_messages"}

@@ -65,19 +65,9 @@ defmodule Web.Navigation do
 
     team_sections =
       cond do
-        team_admin? ->
-          team_admin_sections(team)
-
-        member? ->
-          [
-            dashboard_links(team),
-            [activities_link(team), take_attendance_link(team)],
-            member_links(team),
-            chore_links(team)
-          ]
-
-        true ->
-          []
+        team_admin? -> team_admin_sections(team)
+        member? -> member_sections(team)
+        true -> []
       end
 
     # Your membership, then Get help (#780) for everyone on the team.
@@ -135,6 +125,16 @@ defmodule Web.Navigation do
     ]
   end
 
+  # What a member who is not a team admin sees: the pages both roles open.
+  defp member_sections(team) do
+    [
+      dashboard_links(team) ++ photo_links(team),
+      [activities_link(team), take_attendance_link(team)],
+      member_links(team),
+      chore_links(team)
+    ]
+  end
+
   # Activities' pages for team admins, each its own link so Templates is easy to find.
   defp activity_links(team) do
     [
@@ -155,7 +155,8 @@ defmodule Web.Navigation do
   end
 
   # Photos (#1028) ends the first section, after Whiteboard or else Dashboard, and never
-  # moves as the page grows. Team admins' for now: members get it when they add their own.
+  # moves as the page grows. One link for everyone (#1029): team admins see the team's
+  # photos, and members their own.
   defp photo_links(team) do
     if Team.photos?(team),
       do: [link("photos", "Photos", ~p"/teams/#{team}/photos")],

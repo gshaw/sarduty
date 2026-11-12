@@ -1,5 +1,5 @@
 /* Photos (#1028): the grid of members' photos, Add a photo's guide, and the square a
-   photo is placed in. */
+   photo is placed in. A member's own photo and a team admin's check of it (#1029). */
 @layer components {
   /* Every current member's photo, as their ID card shows it: square tiles that fill the
      row, 2 across on a phone. */
@@ -13,6 +13,21 @@
   /* No photo: a dashed edge says something is missing. */
   .photo-tile-none { border: 1px dashed var(--border); }
   .photo-tile-name { display: block; font-weight: 600; overflow-wrap: anywhere; }
+  /* The photo on a member's ID card now, small under the one that waits (#1029). */
+  .photo-tile-small { width: 6rem; }
+
+  /* A member's own photo beside where it stands (#1029): under it on a narrow phone. */
+  .photo-yours { display: flex; flex-wrap: wrap; gap: var(--sp-4) var(--sp-6); align-items: flex-start; }
+  .photo-yours > .photo-tile { flex: none; width: 12rem; margin-bottom: 0; }
+  .photo-yours > div { flex: 1; min-width: 14rem; }
+
+  /* A photo a team admin checks (#1029): the square at the certificate's width, and
+     Compare's two small photos side by side, each over its caption. */
+  .photo-check .photo-place { max-width: 26rem; }
+  .photo-compare { display: flex; gap: var(--sp-4); margin: var(--sp-2) 0 0; }
+  .photo-compare > figure { width: 7rem; margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+  /* All of the photo as taken, tall or wide, on a mat the size of the card's square. */
+  .photo-compare img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; margin-bottom: var(--sp-1); background: var(--surface-alt); border-radius: var(--radius); }
 
   /* The guide: one good example beside its rules, then what does not work, 3 across on
      a phone. The examples are drawn. */

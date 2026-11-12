@@ -6,6 +6,8 @@ defmodule Web.MemberPhotoFormLiveTest do
 
   alias App.Adapter.D4H
   alias App.Model.ChangeSetRow
+  alias App.Model.MemberPhoto
+  alias App.Model.MemberPhotoFile
   alias App.RecordsStub
   alias App.Repo
 
@@ -266,5 +268,182 @@ defmodule Web.MemberPhotoFormLiveTest do
     assert has_element?(lv, "#photo-placed")
     refute Repo.reload!(riley).has_photo
     assert [%ChangeSetRow{status: :failed}] = Repo.all(ChangeSetRow)
+  end
+
+  # A member adds their own photo (#1029): it waits for a team admin, and nothing
+  # reaches the team's records until one accepts it.
+  describe "a member adding their own" do
+    setup %{conn: conn} do
+      %{team: team, member: cam, user: user} =
+        member_with_login_fixture(%{name: "Cameron Ruiz", has_photo: true})
+
+      team =
+        team
+        |> Ecto.Changeset.change(photos_enabled: true, name: "Coast Range SAR")
+        |> Repo.update!()
+
+      %{conn: log_in_user(conn, user), team: team, cam: cam}
+    end
+
+    defp add(conn, team, placed \\ %{}) do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/photos/members/new")
+      pick(lv, png_fixture(800, 600))
+
+      lv
+      |> form("#photo-form")
+      |> render_submit(%{"photo" => placed})
+      |> follow_redirect(conn, ~p"/teams/#{team}/photos")
+    end
+
+    test "the page is theirs: no Member box, and their own words", %{conn: conn, team: team} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/photos/members/new")
+
+      refute has_element?(lv, "#photo-member")
+      refute has_element?(lv, "#photo-declined")
+
+      assert has_element?(
+               lv,
+               "#photo-lead",
+               "Coast Range SAR puts it on your ID card. A team admin checks it first."
+             )
+
+      assert has_element?(lv, ~s|#photo-cancel[href="#{~p"/teams/#{team}/photos"}"]|)
+
+      pick(lv, png_fixture(800, 600))
+      assert has_element?(lv, "#photo-place-hint", "Move or zoom it so your face fills the oval.")
+      assert has_element?(lv, "#photo-save", "Add photo")
+    end
+
+    test "it waits with where they placed it, and their ID card keeps the old photo", %{
+      conn: conn,
+      team: team,
+      cam: cam
+    } do
+      {:ok, lv, html} =
+        add(conn, team, %{"turns" => "1", "x" => "0.5", "y" => "0.4", "side" => "0.5"})
+
+      # The toast: its first sentence, then the rest under it.
+      assert html =~ "Photo added."
+      assert has_element?(lv, "#flash-info", "A team admin checks it.")
+      assert has_element?(lv, "#your-photo-status .badge", "Waiting")
+
+      assert [%{status: :waiting} = photo] = Repo.all(MemberPhoto)
+      assert {photo.team_id, photo.member_id} == {team.id, cam.id}
+      assert {photo.turns, photo.x, photo.y, photo.side} == {1, 0.5, 0.4, 0.5}
+      # The photo as taken is kept, with its size, for a team admin to place again.
+      assert {photo.width, photo.height} == {800, 600}
+      assert photo |> MemberPhotoFile.bytes() |> size() == {800, 600}
+
+      # Nothing went to the team's records: the member's photo is as it was.
+      refute_received {:records, _method, _path, _body}
+      assert Repo.all(ChangeSetRow) == []
+      cam = Repo.reload!(cam)
+      assert cam.has_photo
+      refute cam.photo_changed_at
+    end
+
+    test "a second one replaces the first, file and all", %{conn: conn, team: team} do
+      add(conn, team)
+      [first] = Repo.all(MemberPhoto)
+
+      add(conn, team, %{"turns" => "2"})
+
+      assert [%{status: :waiting, turns: 2} = second] = Repo.all(MemberPhoto)
+      assert second.id != first.id
+      assert MemberPhotoFile.bytes(first) == nil
+      assert Repo.aggregate(MemberPhotoFile, :count) == 1
+    end
+
+    test "a decline of their last photo shows above the examples, with its message", %{
+      conn: conn,
+      team: team,
+      cam: cam
+    } do
+      member_photo_fixture(cam, %{
+        status: :declined,
+        decline_reason: :sunglasses,
+        decline_message: "Try by the hall's white wall.",
+        decided_at: DateTime.utc_now()
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/photos/members/new")
+
+      assert has_element?(lv, "#photo-declined", "Your last photo was declined: Sunglasses.")
+      assert has_element?(lv, "#photo-declined-message", "Try by the hall's white wall.")
+
+      # It goes once they add another.
+      add(conn, team)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/photos/members/new")
+      refute has_element?(lv, "#photo-declined")
+    end
+
+    test "the photo is always of the person logged in, whatever the URL or the form says", %{
+      conn: conn,
+      team: team,
+      cam: cam
+    } do
+      other = member_fixture(team, %{name: "Sam Rivera"})
+
+      {:ok, lv, _html} = live(conn, add_path(team, other))
+      assert has_element?(lv, "#photo-lead", "puts it on your ID card")
+      pick(lv, png_fixture(600, 600))
+      render_submit(lv, "save", %{"member_id" => to_string(other.id)})
+
+      assert [%{member_id: member_id}] = Repo.all(MemberPhoto)
+      assert member_id == cam.id
+    end
+
+    # The events a member may send are the page's listed ones (docs/members.md).
+    test "the page lists the events a member sends" do
+      assert Web.UserAuth.page_access(Web.MemberPhotoFormLive) == :team
+      assert Web.UserAuth.view_events(Web.MemberPhotoFormLive) == ["validate", "take-another"]
+      assert Web.UserAuth.member_events(Web.MemberPhotoFormLive) == ["save"]
+    end
+  end
+
+  test "a team admin viewing as a member sees the member's page, and nothing is saved", %{
+    conn: conn,
+    team: team,
+    riley: riley
+  } do
+    conn = conn |> post(~p"/teams/#{team}/members/#{riley}/view-as") |> recycle()
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/photos/members/new")
+    assert has_element?(lv, "#photo-lead", "A team admin checks it first.")
+    pick(lv, png_fixture(600, 600))
+
+    lv |> form("#photo-form") |> render_submit()
+
+    assert has_element?(
+             lv,
+             "#flash-error",
+             "You're viewing as Riley Okafor, so nothing is saved."
+           )
+
+    assert Repo.all(MemberPhoto) == []
+  end
+
+  test "a team admin's own photo still needs no check", %{conn: conn} do
+    %{team: team, member: alex, user: user} =
+      member_with_login_fixture(%{name: "Alex Chen", d4h_permission: 0, has_photo: false})
+
+    team =
+      team
+      |> Ecto.Changeset.change(photos_enabled: true, d4h_access_key: "team-key")
+      |> Repo.update!()
+
+    stub_ok()
+    conn = log_in_user(conn, user)
+
+    {:ok, lv, _html} = live(conn, add_path(team, alex))
+    pick(lv, png_fixture(600, 600))
+
+    lv
+    |> form("#photo-form")
+    |> render_submit()
+    |> follow_redirect(conn, ~p"/teams/#{team}/members/#{alex.id}/card")
+
+    assert Repo.reload!(alex).has_photo
+    assert Repo.all(MemberPhoto) == []
   end
 end

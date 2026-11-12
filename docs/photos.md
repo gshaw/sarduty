@@ -3,8 +3,9 @@
 A member's photo is on their ID card, and a checker compares it with the person holding
 the card ([member-cards.md](member-cards.md#a-photo-before-a-card)). D4H's web app was
 the only way to set one. Photos (#1028) lets a team admin add or change any member's
-photo in SAR Duty, on a D4H team and on a Records team. It is part 1 of the photos stack
-(#1023): members adding their own, asking for one, and Clean up come next.
+photo in SAR Duty, on a D4H team and on a Records team. A member adds their own, and a
+team admin checks it first (#1029). These are parts 1 and 2 of the photos stack (#1023):
+asking a member for one and Clean up come next.
 
 ## The switch
 
@@ -15,13 +16,17 @@ so a Try a demo visitor adds their own photo.
 
 ## The pages
 
-- **Photos**, `/teams/:subdomain/photos`, for team admins: every counted, current member
-  (`Member.get_all_counted/2`) A to Z, with Members and No photo counts that filter. It
-  is the last link of the side navigation's first section and never moves.
+- **Photos**, `/teams/:subdomain/photos`, one page for everyone
+  ([navigation.md](navigation.md#where-a-feature-goes)). A team admin sees every
+  counted, current member (`Member.get_all_counted/2`) A to Z, with Members, Waiting,
+  and No photo counts that filter. A member sees only [their own](#a-members-own-photo).
+  It is the last link of the side navigation's first section and never moves.
 - **Add a photo**, `/teams/:subdomain/photos/members/new`, narrow: `?member=<id>` names
   the member, and without it a Member box lists them. Change photo opens the same page.
   A member's photo is under `/photos/members`, which leaves `/photos/:id` for an
-  activity's.
+  activity's. For a member the page is always their own, whatever the URL says.
+- **Check a photo**, `/teams/:subdomain/photos/members/:id`, for team admins: a photo a
+  member added, on the certificate review layout.
 - The member's ID Card tab has Add a photo for a member with none, and Actions has
   Change photo for a member with one. A Records team's Change member page links to it
   and keeps Remove photo, which only Records can do.
@@ -50,9 +55,10 @@ shows within the hour.
 2. **Read.** The photo uploads at once.
    [Service.MemberPhoto.prepare/1](../lib/service/member_photo.ex) reads it the way a
    certificate's photo is read (`Service.Image.jpeg/2`): HEIC too, turned the way the
-   camera held it, up to 2000 px, with no metadata. The page shows that copy, since a
-   browser cannot show every photo a phone takes. It lives in the page's memory alone:
-   SAR Duty keeps no photo. A page that reconnects starts again from the guide.
+   camera held it, up to 2048 px, with no metadata. The page shows that copy, since a
+   browser cannot show every photo a phone takes. It lives in the page's memory until it
+   saves: SAR Duty keeps no photo a team admin adds. A page that reconnects starts again
+   from the guide.
 3. **Place.** The `PhotoPlace` hook moves the copy under the oval: drag, pinch, the
    wheel, Zoom in and Zoom out, Rotate in quarter turns, and the arrow keys. The oval is
    an ellipse centred 50% across and 40% down the square, 42% wide and 52% tall. The hook
@@ -64,6 +70,44 @@ shows within the hour.
    [SetMemberPhoto](../lib/app/operation/set_member_photo.ex) sends it as one
    `:set_member_photo` change set row, sets `has_photo`, and refreshes the member's ID
    card.
+
+## A member's own photo
+
+As Brad asks in #1023, a member never changes their own photo without a team admin
+(#1029). On a team with member logins and Photos on, a member's Photos shows **Your
+photo**: the photo, or "You have no photo yet.", where it stands, and Add a photo or
+Change photo. A team admin who is also a member sees the team's views, and their own Add
+a photo needs no check.
+
+- **It waits.** [AddOwnPhoto](../lib/app/operation/add_own_photo.ex) makes a
+  `member_photos` row, [MemberPhoto](../lib/app/model/member_photo.ex): Waiting, with
+  where the member placed it (`turns`, `x`, `y`, `side`). The photo as taken, the 2048 px
+  copy from step 2, is a `member_photo_files` row, kept the way a certificate's file
+  is. Nothing reaches the team's records, and the ID card keeps its photo: while one
+  waits, On your ID card now shows it. A new photo replaces a waiting one.
+- **A team admin checks it.** Photos counts them under Waiting, oldest first, and badges
+  the member in the grid, New photo waiting. Needs attention has one row, "1 photo
+  waiting", that opens Waiting. Only a counted, current member's count
+  (`MemberPhoto.get_waiting/2`), so a retiring member's does not. The check page shows
+  the square where the member placed it, with step 3's tools, so the team admin fixes
+  the framing rather than declining for it. Compare shows the photo as taken and the
+  one on the card now.
+- **Accept photo** ([AcceptMemberPhoto](../lib/app/operation/accept_member_photo.ex))
+  cuts the square as it is placed now and sends it through SetMemberPhoto, as step 4
+  does. A refusal leaves the photo waiting and says why (`D4H.error_text/2`).
+- **Decline photo** ([DeclineMemberPhoto](../lib/app/operation/decline_member_photo.ex))
+  takes one reason from `MemberPhoto.reasons/0` and an optional message, up to 300
+  characters. The member's Dashboard says "Your photo was declined: Too dark" under For
+  you to do, and Add a photo shows the reason and the message above the examples. Both
+  go when they add another, or when a team admin sets their photo
+  (`MemberPhoto.declined_for_member/1`). No email goes out.
+- **What is kept.** The file is deleted when the photo is accepted or declined. The row
+  stays, with who decided, when, and why. While it waits,
+  `/photos/members/:id/file` serves it to team admins and to its own member only:
+  `?shape=placed` is the square the member placed, and without it the photo as taken.
+- **One at a time.** The member adding another, an accept, and a decline take one lock
+  for the member (`MemberPhoto.locked/2`), so an accept that is sending never loses the
+  photo under it.
 
 ## Sending it
 

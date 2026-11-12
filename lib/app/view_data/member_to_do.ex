@@ -10,6 +10,8 @@ defmodule App.ViewData.MemberToDo do
     certificate for it waits (#493).
   - `:declined_chores`: their declined chores (#341), until they delete them.
   - `:declined_certificates`: their declined certificates (#493), until they delete them.
+  - `:declined_photo`: the photo they added that a team admin declined (#1029), until
+    they add another (`MemberPhoto.declined_for_member/1`).
   - `:travel`: each activity whose travel a team admin set for them (#230), until they
     check it, or that they attended with no travel set, until they set it. Either way
     only until the activity is published.
@@ -21,8 +23,9 @@ defmodule App.ViewData.MemberToDo do
   `extras` may hold `chores:` their chores, `certificates:` the certificates they sent and
   haven't deleted, `trips:` their unchecked trips on open activities, each with its
   activity (`Trip.unchecked_for_member/1`), `unset:` their attended rows with no trip
-  (`Trip.unset_for_member/2`), and `sign:` their open requests to sign, oldest first,
-  each `%{request, asked_by}`: the request with its activity, and who asked's name.
+  (`Trip.unset_for_member/2`), `sign:` their open requests to sign, oldest first,
+  each `%{request, asked_by}`: the request with its activity, and who asked's name, and
+  `declined_photo:` their declined photo or nil.
   """
   def items(card, in_wallet?, rows, extras \\ []) do
     chores = Keyword.get(extras, :chores, [])
@@ -36,8 +39,12 @@ defmodule App.ViewData.MemberToDo do
       qualification_items(rows, certificates) ++
       declined_items(chores) ++
       declined_certificate_items(certificates) ++
+      declined_photo_items(Keyword.get(extras, :declined_photo)) ++
       travel_items(trips, unset)
   end
+
+  defp declined_photo_items(nil), do: []
+  defp declined_photo_items(photo), do: [%{key: :declined_photo, photo: photo}]
 
   # One per activity, oldest first: `trips` a team admin set to check, and `unset` rows
   # with nothing set.

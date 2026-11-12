@@ -50,8 +50,7 @@ is left out, and so is its divider.
 
 | Section | Links                                                    | Who         |
 | ------- | -------------------------------------------------------- | ----------- |
-| 1       | Dashboard, Whiteboard                                    | everyone    |
-| 1       | Photos                                                   | team admins |
+| 1       | Dashboard, Whiteboard, Photos                            | everyone    |
 | 2       | Activities, Take attendance                              | everyone    |
 | 2       | Templates                                                | team admins |
 | 3       | Members, Milestones                                      | everyone    |
@@ -65,8 +64,9 @@ is left out, and so is its divider.
 
 - A team admin who is a member sees all seven. A SAR Duty site admin who opened a team
   from Adminland and is not a member there sees 1 to 6, then Get help. A member sees
-  Dashboard and Whiteboard, Activities and Take attendance, Members and Milestones,
-  Chores, and Your membership and Get help, each in its own section (#440, #645).
+  Dashboard, Whiteboard, and Photos, Activities and Take attendance, Members and
+  Milestones, Chores, and Your membership and Get help, each in its own section (#440,
+  #645).
 - Get help (#780) is in the side navigation, not the team picker: on two teams, a row
   in the picker couldn't say which team it asks. Its link carries the page it was
   opened on, `?from=`, for its email.
@@ -74,9 +74,9 @@ is left out, and so is its divider.
   Dashboard shows a line or 2 of its notes; the page has them all, and team admins post
   from it.
 - **Photos ends the first section** while the team has Photos on (#1028), after
-  Whiteboard, or after Dashboard on a team with no Whiteboard. Team admins see it for
-  now. It never moves when the page grows: members' own photos and activity photos join
-  the same link ([photos.md](photos.md)).
+  Whiteboard, or after Dashboard on a team with no Whiteboard. One link for everyone
+  (#1029): team admins see the team's photos, and a member their own. It never moves
+  when the page grows: activity photos join the same link ([photos.md](photos.md)).
 - **Take attendance is always there**, after Activities, for members and team admins
   (#475). Not only while an activity is on: links that come and go with the clock make
   the menu harder to learn. It opens `/teams/:subdomain/take-attendance` in the app

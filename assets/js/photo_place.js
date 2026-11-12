@@ -1,4 +1,5 @@
-// Add a photo (#1028, Web.MemberPhotoFormLive).
+// Add a photo (#1028, Web.MemberPhotoFormLive), and a team admin's check of a photo a
+// member added (#1029, Web.MemberPhotoLive).
 //
 // PhotoPick: Take a photo and Select a photo open the page's one file input. Take a
 // photo asks for the camera facing the person (capture="user"), which a phone honours
@@ -28,10 +29,9 @@ export const PhotoPlace = {
     this.frame = this.el.querySelector("[data-photo-frame]")
     this.img = this.frame.querySelector("img")
     this.minSide = parseFloat(this.el.dataset.minSide) || 0.2
-    this.state = {turns: 0, x: 0.5, y: 0.5, side: 1}
+    this.state = this.startState()
     this.pointers = new Map()
 
-    // It starts as the middle square, zoomed all the way out.
     if (this.img.complete && this.img.naturalWidth) this.draw()
     else this.img.addEventListener("load", () => this.draw(), {once: true})
 
@@ -59,6 +59,19 @@ export const PhotoPlace = {
 
   destroyed() {
     this.resize?.disconnect()
+  },
+
+  // Where the photo starts, from the hidden fields: the middle square, zoomed all the
+  // way out, on Add a photo, or where the member placed it, for a team admin's check
+  // (#1029). A field that is not a number takes the middle square's.
+  startState() {
+    const start = {turns: 0, x: 0.5, y: 0.5, side: 1}
+    for (const name of Object.keys(start)) {
+      const value = parseFloat(this.el.querySelector(`input[name="photo[${name}]"]`)?.value)
+      if (Number.isFinite(value)) start[name] = value
+    }
+    start.turns = ((Math.round(start.turns) % 4) + 4) % 4
+    return start
   },
 
   // The photo's size once turned.

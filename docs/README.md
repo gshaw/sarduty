@@ -145,7 +145,7 @@ have decided since the page loaded, stays in `call`.
 - [templates.md](templates.md) — templates: items, tags, and groups whose members they add, applied to an activity in one step.
 - [group-rules.md](group-rules.md) — qualification rules for groups: storage, evaluation, and what applying them needs.
 - [member-cards.md](member-cards.md) — member ID cards and the public verify site.
-- [photos.md](photos.md) — members' photos: the Photos page, Add a photo, and how a photo reaches D4H or Records.
+- [photos.md](photos.md) — members' photos: the Photos page, Add a photo, a member's own photo and a team admin's check, and how a photo reaches D4H or Records.
 - [needs-attention.md](needs-attention.md) — the team home's Needs attention list: adding an item, and which can be snoozed.
 - [passkeys.md](passkeys.md) — passkeys: a second way to log in, who can add one, and how a login's length follows where the passkey is.
 - [members.md](members.md) — the members list and its filters, and member logins: members get their own ID card and tax credit letters.
