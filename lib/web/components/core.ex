@@ -233,7 +233,6 @@ defmodule Web.Components.Core do
       :primary,
       :secondary,
       :success,
-      :info,
       :warning,
       :danger,
       :incident,

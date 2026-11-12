@@ -48,7 +48,7 @@ defmodule Web.Components.Columns do
         <.a :if={!@label_for and @link} navigate={@path || ~p"/teams/#{@team}/members/#{@member.id}"}>{@member.name}</.a>
       </span>
       <.standing_badge id={@id} standing={@standing || :active} />
-      <.badge :if={@you} id={@id && "#{@id}-you"} kind={:info}>This is you</.badge>
+      <.badge :if={@you} id={@id && "#{@id}-you"} kind={:primary}>This is you</.badge>
     </span>
     """
   end

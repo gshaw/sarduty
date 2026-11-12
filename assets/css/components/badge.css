@@ -21,8 +21,6 @@
 
   .badge-primary { --c: var(--link); }
   .badge-success { --c: var(--success-text); }
-  /* Solid blue, like the This is you banner's title: points at the person reading. */
-  .badge-info { background: var(--info); color: var(--on-fill); }
   .badge-warning { background: var(--warning); color: var(--on-warning); }
   .badge-danger { background: var(--danger); color: var(--on-fill); }
   .badge-incident, .badge-exercise, .badge-event, .badge-chores { color: var(--on-fill); }

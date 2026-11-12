@@ -29,7 +29,7 @@ defmodule Web.MemberCollectionLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/members")
 
-    assert has_element?(lv, "#standing-#{me.id}-you.badge-info", "This is you")
+    assert has_element?(lv, "#standing-#{me.id}-you.badge-primary", "This is you")
     refute has_element?(lv, "#standing-#{other.id}-you")
   end
 

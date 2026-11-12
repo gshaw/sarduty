@@ -313,7 +313,7 @@ defmodule Web.StyleGuideHTML do
         sample: "Refreshed",
         look: "Tinted blue",
         means: "Worth knowing, not a problem.",
-        examples: "New, Refreshed, Team admin"
+        examples: "New, Refreshed, Team admin, This is you"
       },
       %{
         kind: :success,
@@ -321,13 +321,6 @@ defmodule Web.StyleGuideHTML do
         look: "Tinted green",
         means: "Good, done, or meets the rule.",
         examples: "Qualified, Letter sent, Active"
-      },
-      %{
-        kind: :info,
-        sample: "This is you",
-        look: "Solid blue",
-        means: "The person reading, in a list of people.",
-        examples: "This is you, beside your name in Members"
       },
       %{
         kind: :warning,
