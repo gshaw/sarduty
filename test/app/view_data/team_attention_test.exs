@@ -14,6 +14,7 @@ defmodule App.ViewData.TeamAttentionTest do
         timezone: "America/Vancouver",
         service: :d4h,
         refresh: %{state: :ok, message: nil},
+        abbreviated_name: "RIDGE",
         contacts?: true,
         draft_ids: [],
         missing_fields_ids: [],
@@ -112,6 +113,7 @@ defmodule App.ViewData.TeamAttentionTest do
           ],
           letters: %{year: 2025, count: 1},
           letter_settings: [%{name: "team.signer_title", label: "Signer's title"}],
+          abbreviated_name: String.duplicate("a", 11),
           contacts?: false
         })
 
@@ -126,7 +128,7 @@ defmodule App.ViewData.TeamAttentionTest do
                Enum.sort(~w(refresh retiring_access group_changes chores certificates
                             chores_to_send attendance_to_send no_shows untagged_last_year
                             two_hours_tags_last_year letters letter_settings
-                            team_contacts)a)
+                            long_abbreviated_name team_contacts)a)
 
       for item <- can_snooze do
         assert TeamAttention.back_sooner(item) =~ ~r/^It comes back sooner if another .+\.$/
@@ -151,6 +153,19 @@ defmodule App.ViewData.TeamAttentionTest do
   test "nothing to do means no items" do
     assert items(%{}, @october) == []
     assert items(%{untagged: [%{count: 0, year: 2026, ids: ids(0)}]}, @october) == []
+  end
+
+  describe "abbreviated name (#738)" do
+    test "too long for texts asks for a shorter one" do
+      assert [%{key: :long_abbreviated_name, level: :info} = item] =
+               items(%{abbreviated_name: "York Sunbury SAR"}, @october)
+
+      assert item.detail =~ "10 characters or fewer"
+    end
+
+    test "at the advised length needs nothing" do
+      assert items(%{abbreviated_name: String.duplicate("a", 10)}, @october) == []
+    end
   end
 
   test "waiting chores ask a team admin to accept them" do

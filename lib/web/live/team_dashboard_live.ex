@@ -569,7 +569,8 @@ defmodule Web.TeamDashboardLive do
     if by, do: "Snoozed by #{by} until #{until}", else: "Snoozed until #{until}"
   end
 
-  defp attention_path(team, %{key: :refresh}), do: ~p"/teams/#{team}/settings"
+  defp attention_path(team, %{key: key}) when key in [:refresh, :long_abbreviated_name],
+    do: ~p"/teams/#{team}/settings"
 
   # The tab that fills the first one missing: General for the address, Signer for the rest.
   defp attention_path(team, %{key: :letter_settings, names: [name | _rest]}),

@@ -14,6 +14,7 @@ defmodule App.ViewData.TeamAttention do
   """
 
   alias App.Adapter.D4H
+  alias App.Model.Team
   alias Service.Format
 
   @max_items 7
@@ -56,6 +57,7 @@ defmodule App.ViewData.TeamAttention do
     |> Enum.concat(two_hours_tags_items(rows, this_year))
     |> Enum.concat([letters_item(rows.letters, now, rows.timezone)])
     |> Enum.concat([letter_settings_item(rows.letter_settings)])
+    |> Enum.concat([abbreviated_name_item(rows.abbreviated_name)])
     |> Enum.concat([contacts_item(rows.contacts?)])
     |> Enum.reject(&is_nil/1)
     |> Enum.sort_by(&level_order/1)
@@ -631,6 +633,24 @@ defmodule App.ViewData.TeamAttention do
       detail: "Members who use Get help have nobody on the team to ask.",
       action: "Pick team contacts"
     }
+  end
+
+  # The abbreviated name starts as the full one (#738), and an admin may never see a text
+  # to notice it crowds the message. The name itself is a team's to judge.
+  defp abbreviated_name_item(abbreviated_name) do
+    advice = Team.name_advice(:abbreviated_name)
+
+    if String.length(abbreviated_name || "") > advice do
+      %{
+        key: :long_abbreviated_name,
+        level: :info,
+        title: "Your team's abbreviated name is too long for texts",
+        detail:
+          "Texts to members start with it. " <>
+            "#{Format.characters(advice)} or fewer leaves room for the message.",
+        action: "Open team settings"
+      }
+    end
   end
 
   defp letters_item(nil, _now, _timezone), do: nil

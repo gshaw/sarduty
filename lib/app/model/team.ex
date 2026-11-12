@@ -218,7 +218,8 @@ defmodule App.Model.Team do
   @doc """
   The length a name should keep to, for the hint in team settings (#738). Longer is
   allowed: Wallet cuts a long name on an ID card's top line, by width rather than
-  count, and a text has 100 characters in all.
+  count, and a text has 100 characters in all, so a long abbreviated name also shows
+  on Needs attention.
   """
   def name_advice(:name), do: 20
   def name_advice(:abbreviated_name), do: 10

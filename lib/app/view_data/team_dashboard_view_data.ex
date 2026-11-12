@@ -104,6 +104,7 @@ defmodule App.ViewData.TeamDashboardViewData do
       timezone: team.timezone,
       service: D4H.service(team),
       refresh: refresh_row(team, refresh_result),
+      abbreviated_name: team.abbreviated_name,
       contacts?: Member.get_team_contacts(team, now) != [],
       draft_ids: recent_draft_ids(team, now),
       missing_fields_ids: missing_fields_ids(team, now),
