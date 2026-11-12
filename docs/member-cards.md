@@ -165,14 +165,16 @@ matched to the person holding the phone.
   seeing a change would mean downloading and comparing every photo.
 - **Issue and Replace** check live first, outside the transaction, so a photo added a
   minute ago counts. `IssueMemberCard` refuses with `:no_photo`, one rule for Issue,
-  Replace, and the switch. The toast: "Riley Okafor has no photo. Add one, then try
-  again." A member with a lost phone and no photo adds a photo first.
+  Replace, and the switch (`IssueMemberCard.refusal/2`). Issue's toast: "Riley Okafor has
+  no photo. Add one, then try again." For a card holder with no photo, the Replace button
+  says Cancel ID card instead ([Issuing and emailing](#issuing-and-emailing)).
 - **Stored, not checked per member**, because the switch makes every card in one
   transaction and the Features tab counts them as it loads. A request per member there
   would hold the write lock or slow the page.
 - **Cards already out stay**, with or without a photo, and so does a card whose photo is
-  later removed. Change member already warns. Nothing checks what a photo shows: a photo
-  that is not the person fails at the verify page, the same as none.
+  later removed, until a team admin selects Cancel ID card. Change member already warns.
+  Nothing checks what a photo shows: a photo that is not the person fails at the verify
+  page, the same as none.
 - **Records teams:** SetMemberPhoto sets `has_photo` itself, with no download, refreshes
   the card, and runs Every member gets a card, so the switch's card goes out the moment a
   first photo is saved.
@@ -348,8 +350,25 @@ Replace while Wallet is set up, sends nothing by email
 the member sees it, from `/cards/:token/image`, about 240 px wide, so a team admin can
 check the photo.
 
-A retiring or retired member's card has one button instead, **Cancel ID card** (#964),
-which emails nothing ([Active and qualifications](#active-and-qualifications)).
+**Replace ID card and Cancel ID card are one button** (#1012,
+[ReplaceMemberCard](../lib/app/operation/replace_member_card.ex)). The card always stops
+working; a new one is made only for a member who can have one: in good standing, with a
+photo (`IssueMemberCard.refusal/2`). So the button says Replace ID card for a member who
+can, and Cancel ID card, red, for one who can't: retiring, retired (#964), or with no
+photo. Cancel emails nothing, and history says who
+([Active and qualifications](#active-and-qualifications)).
+
+| Member with a card          | Buttons                           |
+| --------------------------- | --------------------------------- |
+| Good standing, with a photo | Email · Refresh · Replace ID card |
+| Good standing, no photo     | Email · Refresh · Cancel ID card  |
+| Retiring or retired         | Cancel ID card                    |
+
+The button follows the stored photo check, and the click checks live. The button sends
+what it said (`expect`); when the live check changes it, nothing happens, the button
+changes, and a toast says why: "Riley Okafor has a photo now, so the card was not
+cancelled. Select Replace ID card." A member whose card was cancelled for want of a photo
+has no live card, so Every member gets a card issues them one once a photo is found.
 
 Issue and Replace make the card when clicked, mark it `email_status: :sending`, and queue
 the job in the same transaction, so the tab shows the new card at once
@@ -557,11 +576,13 @@ Away and not a person don't change it.
 - **A team admin can cancel one by hand** (#964), for the rare member who shouldn't
   keep a card at all: until it expires, a Not active pass still looks like an official
   ID card, and scanning it shows their name and team. **Cancel ID card** on the ID Card
-  tab shows only while the member is retiring or retired, so an active member's card
-  can only be replaced, never taken. It asks first in the app's dialog, then does what
-  Replace does to the old card, with no new one: revokes it and queues
+  tab shows while the member is retiring or retired, and for a member in good standing
+  only when they have no photo (#1012), so a card a checker can match is replaced,
+  never taken. It is Replace ID card's button for a member who can't have a new card
+  ([Issuing and emailing](#issuing-and-emailing)). It asks first in the app's dialog,
+  then does what Replace does to the old card, with no new one: revokes it and queues
   `UpdateCancelledCardWorker` to void the Apple pass and expire the Google one
-  ([CancelMemberCard](../lib/app/operation/cancel_member_card.ex)). The tab then says
+  ([ReplaceMemberCard](../lib/app/operation/replace_member_card.ex)). The tab then says
   when the last card was cancelled, and the member's History says who.
 - **A cancelled member who comes back has no card.** Every member gets a card issues
   them a new one, with a new code, as for anyone without a live card; the confirm says
