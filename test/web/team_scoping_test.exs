@@ -48,6 +48,7 @@ defmodule Web.TeamScopingTest do
     # Web.ChoreCollectionLiveTest, and Web.Settings.ChoreCategoryLiveTest cover another team's
     # records with them on.
     "/teams/:subdomain/settings/chore-categories/:id",
+    "/teams/:subdomain/settings/fields/:id",
     "/teams/:subdomain/chores/:id",
     "/teams/:subdomain/chores/:id/edit",
     "/teams/:subdomain/whiteboard/:id/edit",
@@ -126,6 +127,7 @@ defmodule Web.TeamScopingTest do
       item: equipment_item_fixture(other_team),
       template: template_fixture(other_team),
       chore_category: chore_category_fixture(other_team),
+      field: custom_field_fixture(other_team),
       chore: chore_fixture(member, chore_category_fixture(other_team)),
       endorsement: endorsement,
       whiteboard_note: whiteboard_note_fixture(other_team),
@@ -332,6 +334,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/settings/chore-categories/:id", s, o),
     do: ~p"/teams/#{s}/settings/chore-categories/#{o.chore_category.id}"
+
+  defp path_for("/teams/:subdomain/settings/fields/:id", s, o),
+    do: ~p"/teams/#{s}/settings/fields/#{o.field.id}"
 
   defp path_for("/teams/:subdomain/settings/places/:id", s, o),
     do: ~p"/teams/#{s}/settings/places/#{o.place.id}"

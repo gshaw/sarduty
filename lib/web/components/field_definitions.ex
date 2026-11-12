@@ -1,80 +1,44 @@
 defmodule Web.Components.FieldDefinitions do
   use Web, :function_component
 
-  import Web.Components.Columns, only: [date_cell: 1, date_fit: 1]
+  import Web.Components.A
   import Web.Components.Table
 
   alias App.Model.CustomField
 
   # What each custom field is (#872), on team settings' and organization settings' Fields
-  # pages: its title, hint, and choices, its type, who added it, and when. Never a value.
-  # One table per bundle, each bundle's title over its own, with the same column widths
-  # so they line up down the page. The style guide's Field definitions page shows it.
+  # pages, never a value. The list is an index to scan: one line per field, its name and
+  # the first line of its hint, each bundle under its title. Everything else, its type,
+  # choices, who added it, and when, is on the field's own page, in field_details/1. The
+  # style guide's Field definitions page shows both.
 
   attr :id, :string, required: true
   attr :fields, :list, required: true, doc: "one target's fields, with their bundles preloaded"
-  attr :timezone, :string, required: true
-
-  attr :team_names, :map,
-    required: true,
-    doc: ~s(who added a team's field or choice, by the team's D4H id: %{11 => "Coast Range SAR"})
-
-  attr :organization_name, :string,
-    default: nil,
-    doc: "who added an organization's field: D4H names it by an id SAR Duty doesn't keep"
-
-  attr :from?, :boolean, default: true, doc: "a From column naming who added each field"
+  attr :path, :any, required: true, doc: "a function from a field to its own page"
 
   attr :publish?, :boolean,
     default: false,
     doc: "an activity's: a required one says Needed to publish"
 
-  attr :restricted_text, :string,
-    default: nil,
-    doc: "what a RESTRICTED field says about its values"
-
   attr :copy?, :boolean,
     default: false,
     doc: "member fields: who sees them, and a Copy check box named `fields[]`, or Stays private"
 
-  def field_definitions(assigns) do
-    names = {assigns.team_names, assigns.organization_name}
-
-    assigns =
-      assign(assigns,
-        names: names,
-        groups: CustomField.grouped(assigns.fields),
-        added_fit: date_fit(assigns.timezone),
-        from_fit:
-          Enum.uniq([owner_name(names, {"Organisation", nil}) | Map.values(assigns.team_names)])
-      )
+  def field_list(assigns) do
+    assigns = assign(assigns, :groups, CustomField.grouped(assigns.fields))
 
     ~H"""
     <div :for={{bundle, fields} <- @groups} id={group_id(@id, bundle)} class="mb-6">
       <h3 :if={bundle} class="subheading mb-2">{bundle.title}</h3>
       <.table id={"#{group_id(@id, bundle)}-table"} rows={fields} row_id={&"field-#{&1.id}"}>
-        <:col :let={field} label="Field">
-          {field.title}
-          <span :if={@publish? and field.required} class="ml-2"><.badge>Needed to publish</.badge></span>
-          <%= for line <- about(field, @names, @restricted_text) do %>
-            <span :if={is_binary(line)} class="hint block">{line}</span>
-            <details :if={is_map(line)} class="hint">
-              <summary>
-                {line.label}: {Enum.join(line.first, ", ")}, {more_text(
-                  length(line.all) - length(line.first)
-                )}
-              </summary>
-              <ul class="list-disc pl-6">
-                <li :for={label <- line.all}>{label}</li>
-              </ul>
-            </details>
-          <% end %>
+        <:col :let={field} label="Field" class="w-1/3">
+          <.a navigate={@path.(field)}>{field.title}</.a>
         </:col>
-        <:col :let={field} label="Type" fit={["Date and time", "Long text", "One choice"]}>
-          {CustomField.type_label(field.field_type)}
+        <:col :let={field} label="What it means">
+          <span class="hint line-clamp-1">{field.hint}</span>
         </:col>
-        <:col :let={field} :if={@from?} label="From" fit={@from_fit}>
-          {owner_name(@names, owner(field))}
+        <:col :let={field} :if={@publish?} label="Needed" fit={["Needed to publish"]}>
+          <.badge :if={field.required}>Needed to publish</.badge>
         </:col>
         <:col :let={field} :if={@copy?} label="Members" fit={["Change their own", "See their own"]}>
           {CustomField.member_privacy_label(field.member_privacy)}
@@ -93,9 +57,6 @@ defmodule Web.Components.FieldDefinitions do
             aria-label={"Copy #{field.title}"}
           />
         </:col>
-        <:col :let={field} label="Added" fit={@added_fit}>
-          <.date_cell value={field.d4h_created_at} timezone={@timezone} />
-        </:col>
       </.table>
     </div>
     """
@@ -104,37 +65,110 @@ defmodule Web.Components.FieldDefinitions do
   defp group_id(id, nil), do: "#{id}-fields"
   defp group_id(id, bundle), do: "#{id}-bundle-#{bundle.d4h_bundle_id}"
 
+  attr :field, CustomField, required: true, doc: "with its bundle preloaded"
+  attr :timezone, :string, required: true
+
+  attr :team_names, :map,
+    required: true,
+    doc: ~s(who added a team's field or choice, by the team's D4H id: %{11 => "Coast Range SAR"})
+
+  attr :organization_name, :string,
+    default: nil,
+    doc: "who added an organization's field: D4H names it by an id SAR Duty doesn't keep"
+
+  attr :restricted_text, :string, default: nil, doc: "what a RESTRICTED field says"
+
+  @doc """
+  One field on its own page: what it means, its type, what it's on, who added it and
+  when, and every choice, one per line, with the ones a team added and the archived ones
+  apart.
+  """
+  def field_details(assigns) do
+    names = {assigns.team_names, assigns.organization_name}
+    {own, added, archived} = split_options(assigns.field)
+
+    assigns =
+      assign(assigns,
+        names: names,
+        own: own,
+        added:
+          added |> Enum.group_by(&owner_name(names, owner(&1))) |> Enum.sort_by(&elem(&1, 0)),
+        archived: archived
+      )
+
+    ~H"""
+    <dl id="field-details" class="measure">
+      <div :if={@field.hint not in [nil, ""]} id="field-hint">
+        <dt>What it means</dt>
+        <dd>{@field.hint}</dd>
+      </div>
+      <div id="field-type">
+        <dt>Type</dt>
+        <dd>
+          {CustomField.type_label(@field.field_type)}
+          <span :if={@field.value_units}>, in {@field.value_units}</span>
+          <span :if={@field.required and @field.target in ~w(incident exercise event)} class="ml-2">
+            <.badge>Needed to publish</.badge>
+          </span>
+        </dd>
+      </div>
+      <div id="field-on">
+        <dt>On</dt>
+        <dd>
+          {CustomField.target_title(@field.target)}<span :if={@field.bundle}>, under {@field.bundle.title}</span>
+        </dd>
+      </div>
+      <div id="field-from">
+        <dt>Added by</dt>
+        <dd>
+          {owner_name(@names, owner(@field))}<span :if={@field.d4h_created_at}>, {Service.Format.date_short(
+            @field.d4h_created_at,
+            @timezone
+          )}</span>
+        </dd>
+      </div>
+      <div :if={@field.target == "member"} id="field-members">
+        <dt>Members</dt>
+        <dd>{CustomField.member_privacy_label(@field.member_privacy)}</dd>
+      </div>
+      <div :if={@field.restricted and @restricted_text} id="field-restricted">
+        <dt>Restricted</dt>
+        <dd>{@restricted_text}</dd>
+      </div>
+      <div :if={@own != []} id="field-choices">
+        <dt>Choices</dt>
+        <dd>
+          <ul class="list-disc pl-6">
+            <li :for={option <- @own}>{option["label"]}</li>
+          </ul>
+        </dd>
+      </div>
+      <div :for={{name, options} <- @added}>
+        <dt>{name} added</dt>
+        <dd>
+          <ul class="list-disc pl-6">
+            <li :for={option <- options}>{option["label"]}</li>
+          </ul>
+        </dd>
+      </div>
+      <div :if={@archived != []} id="field-archived-choices">
+        <dt>Archived choices</dt>
+        <dd>
+          <ul class="list-disc pl-6">
+            <li :for={option <- @archived}>{option["label"]}</li>
+          </ul>
+        </dd>
+      </div>
+    </dl>
+    """
+  end
+
   # A team's name, or the organization's. Every Organisation owner is the team's
   # organization, since D4H gives a team only its own organization's fields.
   defp owner_name({team_names, _organization}, {"Team", id}),
     do: Map.get(team_names, id, "A team")
 
   defp owner_name({_team_names, organization}, _owner), do: organization || "Your organization"
-
-  @doc """
-  The lines under a field's title: its hint, its choices, the choices each team added to
-  an organization's field, its archived choices, and what a RESTRICTED one means. `names`
-  is `{team_names, organization_name}`. A list of more than 8 choices is a map,
-  `%{label:, first:, all:}`: the page shows its first 3 and a count that opens the rest.
-  """
-  def about(field, names, restricted_text) do
-    {own, added, archived} = split_options(field)
-
-    [
-      field.hint,
-      choices_line("Choices", own),
-      added_lines(added, names),
-      choices_line("Archived choices", archived),
-      field.restricted && restricted_text
-    ]
-    |> List.flatten()
-    |> Enum.filter(&(is_map(&1) or (is_binary(&1) and &1 != "")))
-  end
-
-  @short 8
-  @first 3
-
-  defp more_text(count), do: Service.Format.count(count, one: "and %d more", many: "and %d more")
 
   # The field's live choices from whoever added the field, the live ones a team added to
   # an organization's field, and the archived ones, each in D4H's order. A choice with no
@@ -147,26 +181,6 @@ defmodule Web.Components.FieldDefinitions do
     {own, added, archived}
   end
 
-  defp choices_line(_label, []), do: nil
-
-  defp choices_line(label, options) when length(options) <= @short,
-    do: "#{label}: #{labels(options)}."
-
-  defp choices_line(label, options) do
-    all = Enum.map(options, & &1["label"])
-    %{label: label, first: Enum.take(all, @first), all: all}
-  end
-
-  # One line per team that added choices to an organization's field, by team name.
-  defp added_lines(options, names) do
-    options
-    |> Enum.group_by(&owner_name(names, owner(&1)))
-    |> Enum.sort_by(&elem(&1, 0))
-    |> Enum.map(fn {name, options} -> choices_line("#{name} added", options) end)
-  end
-
   defp owner(%CustomField{owner_type: type, owner_id: id}), do: {type, id}
   defp owner(option), do: {option["owner_type"], option["owner_id"]}
-
-  defp labels(options), do: Enum.map_join(options, ", ", & &1["label"])
 end

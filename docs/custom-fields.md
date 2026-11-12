@@ -89,24 +89,33 @@ with the kind.
 
 What each field means lives in its hint and its bundle, not its title: "If unknown,
 enter 999" on a number field changes how a report sums it. So team settings has a
-**Fields** tab, `/teams/:subdomain/settings/fields`, after Members (#872). It lists every
-live field on the team's records, by what it's on (incidents, exercises, events,
-members, equipment), then by bundle. Each shows its type (Text and Long text apart),
-Needed to publish on an activity's required ones, who added it (the team or its
-organization), its hint, its choices, the ones a team added to an organization's field,
-its archived choices, and when it was added. A list of more than 8 choices, such as
-BCSARA's Activity, shows its first 3 and a count, "and 37 more", which opens the rest one
-per line; never a select, since nothing on the page can be changed. A RESTRICTED one says
-only team admins see its values. Archived fields wait at the foot, closed. Member fields carry their Copy
-boxes, saved with Save member fields, which changes only SAR Duty's own setting.
+**Fields** tab, `/teams/:subdomain/settings/fields`, after Members (#872).
+
+The tab is an index to scan, one kind at a time: counts for incidents, exercises,
+events, members, and equipment switch between them (`?kind=member`). Each field is one
+line, by bundle: its name, the first line of its hint, and Needed to publish on an
+activity's required ones. A kind's archived fields wait at its foot, closed. Member
+fields carry their Copy boxes, saved with Save member fields, which changes only SAR
+Duty's own setting.
+
+A field's name opens **its own page**, `/teams/:subdomain/settings/fields/:id`: what it
+means, its type (Text and Long text apart), what it's on and its bundle, who added it
+and when, and every choice one per line, with the ones a team added to an
+organization's field under the team's name and the archived ones apart. A RESTRICTED
+one says only team admins see its values.
+
+Decided 2026-11-12: the first version put every field's hint and choices on the tab,
+and with BCSARA's 40-odd Activity choices it read as a wall of text. Folding long lists
+wasn't enough. Never a select for choices either: nothing on the page can be changed.
 
 It's read only: fields change in D4H, and editing them here is #724. D4H's web address
 for its fields page isn't known, so the page names D4H without a link.
 
 **An organization's Fields tab**, `/orgs/:slug/settings/fields`, after Hours tags, is
-for its organization admins: its own fields, laid out the same way, read from its
-teams' copies (`CustomField.merge_copies/1`). D4H gives every team its organization's
-fields, so there's no column of teams; a choice a team added names the team. A
+for its organization admins: its own fields, laid out the same way, each with its own
+page, `/orgs/:slug/settings/fields/:id`, read from its teams' copies
+(`CustomField.merge_copies/1`). D4H gives every team its organization's fields, so
+there's no list of teams; a choice a team added names the team. A
 RESTRICTED field shows what it is, never values: the page shows no values at all.
 
 The report editor's Custom fields, the Agents tab, and an empty Fields tab link to the

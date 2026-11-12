@@ -64,19 +64,58 @@ defmodule Web.Settings.FieldsLiveTest do
     [agency, cause, notes, old] =
       team.id |> CustomField.get_all_with_archived() |> Enum.sort_by(& &1.d4h_custom_field_id)
 
-    assert has_element?(lv, "#fields-incident", "3 fields.")
+    # One kind at a time, incidents first; each field a line that opens its own page.
+    assert has_element?(lv, "#fields-kind-incident[aria-current]", "3")
+    assert has_element?(lv, "#fields-kind-equipment", "0")
     assert has_element?(lv, "#field-#{agency.id}", "Needed to publish")
     assert has_element?(lv, "#field-#{agency.id}", "The agency that asked for SAR.")
-    assert has_element?(lv, "#field-#{agency.id}", "Choices: Police.")
-    assert has_element?(lv, "#field-#{agency.id}", "#{team.name} added: Coast Guard.")
-    assert has_element?(lv, "#field-#{agency.id}", "Mar 4, 2024")
-    assert has_element?(lv, "#field-#{notes.id}", "Long text")
-    assert has_element?(lv, "#field-#{notes.id}", team.name)
-    assert has_element?(lv, "#field-#{notes.id}", "Only team admins see its values.")
+    refute has_element?(lv, "#field-#{agency.id}", "Police")
+
+    assert has_element?(
+             lv,
+             "#field-#{agency.id} a[href='/teams/#{team.subdomain}/settings/fields/#{agency.id}']"
+           )
+
     assert has_element?(lv, "#fields-incident-list-bundle-43", "KMS Data")
     assert has_element?(lv, "#fields-incident-list-bundle-43 #field-#{cause.id}")
-    refute has_element?(lv, "#fields-equipment")
+    refute has_element?(lv, "#field-#{old.id}")
+
+    lv |> element("#fields-kind-equipment") |> render_click()
+    assert_patch(lv, ~p"/teams/#{team}/settings/fields?kind=equipment")
     assert has_element?(lv, "#archived-fields:not([open]) #field-#{old.id}")
+    refute has_element?(lv, "#field-#{agency.id}")
+
+    # A field's own page: everything about it, every choice one per line.
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{agency.id}")
+    assert has_element?(lv, "h1", "Agency")
+    assert has_element?(lv, "#field-hint", "The agency that asked for SAR.")
+    assert has_element?(lv, "#field-type", "One choice")
+    assert has_element?(lv, "#field-type", "Needed to publish")
+    assert has_element?(lv, "#field-on", "Incidents")
+    assert has_element?(lv, "#field-from", "Mar 4, 2024")
+    assert has_element?(lv, "#field-choices li", "Police")
+    refute has_element?(lv, "#field-choices li", "Coast Guard")
+    assert has_element?(lv, "#field-details", "#{team.name} added")
+    assert has_element?(lv, "#field-details li", "Coast Guard")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{notes.id}")
+    assert has_element?(lv, "#field-type", "Long text")
+    assert has_element?(lv, "#field-from", team.name)
+    assert has_element?(lv, "#field-restricted", "Only team admins see its values.")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{cause.id}")
+    assert has_element?(lv, "#field-on", "under KMS Data")
+  end
+
+  test "another team's field is not found", %{conn: conn} do
+    other = team_fixture()
+    field = custom_field_fixture(other, %{title: "Theirs"})
+
+    %{user: user, team: team} = user_with_team_fixture()
+
+    assert_raise Ecto.NoResultsError, fn ->
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/fields/#{field.id}")
+    end
   end
 
   test "member fields: who sees them, and a Copy box for each unrestricted one (#681)",
@@ -99,26 +138,6 @@ defmodule Web.Settings.FieldsLiveTest do
 
     assert [%{d4h_custom_field_id: 630}] =
              team.id |> CustomField.get_all("member") |> Enum.filter(& &1.copy_values)
-  end
-
-  test "a long list of choices shows the first 3 and a count that opens the rest",
-       %{conn: conn, team: team} do
-    options = for i <- 1..12, do: option(i, "Activity #{i}", {nil, nil})
-
-    save(team, [], [
-      field(1, "Activity", %{target: "incident", field_type: "single_choice", options: options})
-    ])
-
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields")
-    [activity] = CustomField.get_all(team.id, "incident")
-
-    assert has_element?(
-             lv,
-             "#field-#{activity.id} details:not([open]) summary",
-             "Choices: Activity 1, Activity 2, Activity 3, and 9 more"
-           )
-
-    assert has_element?(lv, "#field-#{activity.id} details li", "Activity 12")
   end
 
   test "says when the team has no fields", %{conn: conn, team: team} do

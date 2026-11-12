@@ -95,7 +95,7 @@ defmodule Web.StyleGuideHTML do
          {:empty_state, "Empty state", "Why a list is empty and what to do."},
          {:error_summary, "Error summary", "What to fix in a form after a failed save."},
          {:field_definitions, "Field definitions",
-          "What each custom field is, by kind and named group."},
+          "An index of custom fields, and one field's page."},
          {:file_drop, "File drop", "Drop, paste, or select a file to upload."},
          {:filter_bar, "Filter bar", "Search and filters above a long list."},
          {:forms, "Forms",

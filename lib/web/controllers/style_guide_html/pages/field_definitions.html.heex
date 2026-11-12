@@ -2,24 +2,36 @@
   <h1>Field definitions</h1>
   <p class="lead">What each custom field on a team's records is, never its values.</p>
 
+  <h2>The list</h2>
   <div class="demo">
-    <.field_definitions
+    <.field_list
       id="field-definitions-sample"
       fields={custom_field_definitions()}
+      path={fn _field -> "#" end}
+      publish?
+    />
+  </div>
+
+  <h2>One field</h2>
+  <div class="demo">
+    <.field_details
+      field={custom_field_definitions() |> List.last()}
+      timezone="America/Vancouver"
       team_names={%{11 => "Coast Range SAR"}}
       organization_name="WESARA"
-      timezone="America/Vancouver"
-      publish?
       restricted_text="Only team admins see its values."
     />
   </div>
 
   <h2>When to use</h2>
   <p>
-    A Fields page in settings, for a team or an organization (#872). Each field shows its hint, its choices, who added it,
-    and when. More than 8 choices show the first 3 and a count, which opens the rest, one per line. A choice a team
-    added to its organization's field names the team. The fields in no group come first.
-    Then each named group of fields follows under its title, as on a record's Fields tab.
+    The Fields pages in settings, for a team or an organization (#872). The list is an index to scan: each field's
+    name, the first line of what it means, and Needed to publish. The fields in no group come first. Then each named
+    group of fields follows under its title, as on a record's Fields tab.
+  </p>
+  <p>
+    The name opens the field's own page: what it means, its type, what it's on, who added it and when, and every
+    choice, one per line. A choice a team added to its organization's field is listed under the team's name.
   </p>
 
   <h2>When not to use</h2>
@@ -29,12 +41,10 @@
 
   <h2>In the app</h2>
   <p>
-    <code>&lt;.field_definitions&gt;</code>
-    takes one kind's fields, with their groups preloaded. Every column but Field fits
-    its longest values, so each group's table lines up with the next. <code>copy?</code>
-    adds who sees a member field and
-    its Copy check box; <code>from?=&#123;false&#125;</code>
-    drops the From column on an organization's page, where
-    every field is its own.
+    <code>&lt;.field_list&gt;</code>
+    takes one kind's fields, with their groups preloaded, and a <code>path</code>
+    function to each field's page. <code>copy?</code>
+    adds who sees a member field and its Copy check box. <code>&lt;.field_details&gt;</code>
+    is the field's own page.
   </p>
 </.shell>

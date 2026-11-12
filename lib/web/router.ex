@@ -332,6 +332,7 @@ defmodule Web.Router do
       live "/orgs/:slug/settings/admins", Org.AdminsLive
       live "/orgs/:slug/settings/hours-tags", Org.HoursTagsLive
       live "/orgs/:slug/settings/fields", Org.FieldsLive
+      live "/orgs/:slug/settings/fields/:id", Org.FieldLive
       live "/orgs/:slug/forms", Org.FormCollectionLive
       live "/orgs/:slug/forms/new", Org.FormUploadLive, :new
       live "/orgs/:slug/forms/:id", Org.FormLive
@@ -454,6 +455,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings/access-key", Settings.AccessKeyLive
       live "/teams/:subdomain/settings/members", Settings.MembersLive
       live "/teams/:subdomain/settings/fields", Settings.FieldsLive
+      live "/teams/:subdomain/settings/fields/:id", Settings.FieldLive
       live "/teams/:subdomain/settings/features", Settings.FeaturesLive
       live "/teams/:subdomain/settings/signer", Settings.SignerLive
       live "/teams/:subdomain/settings/hours-tags", Settings.HoursTagsLive

@@ -42,6 +42,7 @@ defmodule Web.Search do
       Web.TaxCreditLetterLive => "A member's letter for a year: search its ID instead.",
       Web.Settings.ChoreCategoryFormLive => "A setting, found from Team settings.",
       Web.Settings.PlaceFormLive => "A setting, found from Team settings.",
+      Web.Settings.FieldLive => "A field's details, found from Team settings' Fields tab.",
       Web.ReportLive => "Reports lists every report on one page.",
       Web.GroupRuleLive => "A group rule: find the group, then its rule.",
       Web.OutboxLive => "Only a demo has an Outbox, and its banner links it."

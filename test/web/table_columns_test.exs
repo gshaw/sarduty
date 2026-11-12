@@ -4,8 +4,8 @@ defmodule Web.TableColumnsTest do
   # A filter changes a table's rows, not its columns (/styles/table). A column with :if
   # needs its reason here: the viewer may not see it, or no row in the view has a value.
   @hidden %{
-    {"lib/web/components/field_definitions.ex", "@from?"} =>
-      "an organization's Fields page, where every field is the organization's own",
+    {"lib/web/components/field_definitions.ex", "@publish?"} =>
+      "only an activity's fields are needed to publish",
     {"lib/web/components/field_definitions.ex", "@copy?"} =>
       "who sees a field and its Copy box are only for member fields",
     {"lib/web/live/group_live.ex", "!@ruled?"} =>
