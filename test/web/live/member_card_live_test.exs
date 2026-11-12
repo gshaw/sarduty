@@ -6,7 +6,6 @@ defmodule Web.MemberCardLiveTest do
   import Swoosh.TestAssertions
 
   alias App.Model.MemberCard
-  alias App.Model.MemberStandingChange
   alias App.Model.PassRegistration
   alias App.Operation.IssueEveryMemberCard
   alias App.Operation.IssueMemberCard
@@ -35,17 +34,59 @@ defmodule Web.MemberCardLiveTest do
     refute Repo.reload!(member).has_photo
   end
 
-  test "Replace ID card checks the photo live, so one added a minute ago counts",
+  # Cancel ID card works on any card, and its confirm says how they get a new one (#1012).
+  test "a card holder with no photo can have it cancelled, and the hint says why",
        %{conn: conn, team: team} do
-    member = member_fixture(team, %{has_photo: false})
+    member = member_fixture(team, %{name: "Riley Okafor", has_photo: false})
     old = member_card_fixture(member)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
 
-    lv |> element("#replace") |> render_click()
+    assert has_element?(lv, "#cancel-card-hint", "Riley Okafor has no photo")
+    button = element(lv, "#cancel-card")
+    assert render(button) =~ "To give them a new one, add a photo, then select Issue ID card."
+
+    render_click(button)
 
     assert Repo.reload!(old).revoked_at
-    assert MemberCard.find_current(team, member)
-    assert Repo.reload!(member).has_photo
+    assert MemberCard.find_current(team, member) == nil
+    assert has_element?(lv, "#flash-info", "Riley Okafor's ID card cancelled.")
+    assert has_element?(lv, "#issue")
+  end
+
+  # A lost phone: Cancel, then Issue, which the tab shows next.
+  test "a lost phone: Cancel ID card, then Issue ID card makes a new code and emails it",
+       %{conn: conn, team: team, member: member} do
+    old = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+    refute has_element?(lv, "#cancel-card-hint")
+    button = element(lv, "#cancel-card")
+    assert render(button) =~ "To give them a new one, select Issue ID card."
+
+    render_click(button)
+    lv |> element("#issue") |> render_click()
+
+    assert Repo.reload!(old).revoked_at
+    card = MemberCard.find_current(team, member)
+    assert card.code != old.code
+    assert has_element?(lv, "#card-code", MemberCard.format_code(card.code))
+    assert_email_sent(&(emailed_card_id(&1) == card.id))
+  end
+
+  # The switch's name means little this far from it, so the confirm says what it does.
+  test "with Every member gets a card on, the confirm says they get a new one",
+       %{conn: conn, team: team, member: member} do
+    team |> Ecto.Changeset.change(every_member_card: true) |> Repo.update!()
+    member_card_fixture(member)
+    no_photo = member_fixture(team, %{has_photo: false})
+    member_card_fixture(no_photo)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+
+    assert render(element(lv, "#cancel-card")) =~
+             "Your team gives every current member an ID card, so they get a new one at the next refresh."
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{no_photo.id}/card")
+    assert render(element(lv, "#cancel-card")) =~ "so they get a new one after a photo is added."
   end
 
   test "shows the card as the member sees it", %{conn: conn, team: team, member: member} do
@@ -82,20 +123,6 @@ defmodule Web.MemberCardLiveTest do
     assert has_element?(lv, "#card-emailed", "to #{member.email}")
   end
 
-  test "replaces a card: a new code, the old one stops working, and the new card is emailed",
-       %{conn: conn, team: team, member: member} do
-    old = member_card_fixture(member)
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
-    refute has_element?(lv, "#revoke")
-
-    lv |> element("#replace") |> render_click()
-
-    assert Repo.reload!(old).revoked_at
-    card = MemberCard.find_current(team, member)
-    assert has_element?(lv, "#card-code", MemberCard.format_code(card.code))
-    assert_email_sent(&(emailed_card_id(&1) == card.id))
-  end
-
   test "says when the card's email did not send", %{conn: conn, team: team, member: member} do
     member_card_fixture(member, %{email_status: :failed})
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
@@ -116,7 +143,7 @@ defmodule Web.MemberCardLiveTest do
     member_card_fixture(member)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
     assert has_element?(lv, "#card-status", "Not active")
-    refute has_element?(lv, "#replace")
+    assert has_element?(lv, "#cancel-card")
     refute has_element?(lv, "#email-pass")
   end
 
@@ -133,7 +160,7 @@ defmodule Web.MemberCardLiveTest do
     member_card_fixture(member)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
     assert has_element?(lv, "#card-status", "Not active: #{member.name} is retiring")
-    refute has_element?(lv, "#replace")
+    refute has_element?(lv, "#refresh-card")
   end
 
   describe "Cancel ID card (#964)" do
@@ -148,17 +175,6 @@ defmodule Web.MemberCardLiveTest do
       %{team: team, leavers: leavers, member: member}
     end
 
-    test "only for a member who isn't active: an active member's card can only be replaced",
-         %{conn: conn, team: team, member: member} do
-      card = member_card_fixture(member)
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
-      refute has_element?(lv, "#cancel-card")
-
-      render_click(lv, "cancel", %{})
-      refute Repo.reload!(card).revoked_at
-      assert MemberStandingChange |> Repo.all() == []
-    end
-
     test "cancels a retiring member's card, says when, and history says who",
          %{conn: conn, user: user, team: team, leavers: leavers, member: member} do
       group_member_fixture(leavers, member)
@@ -168,7 +184,7 @@ defmodule Web.MemberCardLiveTest do
       assert has_element?(lv, "#cancel-card-hint", "Cancel it if they should not have it at all")
       button = element(lv, "#cancel-card")
       assert render(button) =~ "Cancel #{member.name}&#39;s ID card?"
-      assert render(button) =~ "If they come back, issue them a new card."
+      assert render(button) =~ "If they come back, select Issue ID card to give them a new one."
 
       render_click(button)
 
@@ -196,7 +212,7 @@ defmodule Web.MemberCardLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{retired.id}/card")
       button = element(lv, "#cancel-card")
-      assert render(button) =~ "Every member gets a card issues them a new one."
+      assert render(button) =~ "so they get a new one if they come back."
 
       render_click(button)
       assert IssueEveryMemberCard.call(team, DateTime.utc_now()) == 0
@@ -267,6 +283,19 @@ defmodule Web.MemberCardLiveTest do
 
       assert render(lv) =~ "Sending the ID card to #{member.email}"
       assert has_element?(lv, "#card-emailed", "to #{member.email}")
+    end
+
+    # Their card is live until someone cancels it (#1012).
+    test "a card holder with no photo still gets Email and Refresh, beside Cancel",
+         %{conn: conn, team: team} do
+      member = member_fixture(team, %{has_photo: false})
+      member_card_fixture(member)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+
+      assert has_element?(lv, "#email-pass")
+      assert has_element?(lv, "#refresh-card")
+      assert has_element?(lv, "#cancel-card")
+      refute has_element?(lv, "#replace")
     end
 
     test "offers no email button when D4H has no email", %{conn: conn, team: team} do

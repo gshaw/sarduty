@@ -21,10 +21,22 @@ defmodule App.Operation.IssueMemberCard do
   def call(%Team{id_cards_enabled: false}, %Member{}, _now), do: {:error, :id_cards_off}
 
   def call(%Team{} = team, %Member{team_id: team_id} = member, now) when team_id == team.id do
+    case refusal(member, now) do
+      nil -> issue(team, member, now)
+      reason -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Pure. Why the member can't have a card now, `:not_active` or `:no_photo`, or nil when
+  they can. Cancel ID card's confirm asks it too, to say whether Every member gets a card
+  gives them a new one.
+  """
+  def refusal(%Member{} = member, now) do
     cond do
-      not Member.good_standing?(member, now) -> {:error, :not_active}
-      not member.has_photo -> {:error, :no_photo}
-      true -> issue(team, member, now)
+      not Member.good_standing?(member, now) -> :not_active
+      not member.has_photo -> :no_photo
+      true -> nil
     end
   end
 

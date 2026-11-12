@@ -329,6 +329,13 @@ defmodule App.Model.MemberCard do
     |> Repo.one()
   end
 
+  @doc "The live cards of these members of the team."
+  def get_all_current(%Team{} = team, member_ids) do
+    MemberCard
+    |> where([c], c.team_id == ^team.id and c.member_id in ^member_ids and is_nil(c.revoked_at))
+    |> Repo.all()
+  end
+
   @doc """
   When the member's last card stopped working, for a member with no live card: cancelled
   on the ID Card tab or by the team's ID cards switch. Nil when they never had one.

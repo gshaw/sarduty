@@ -14,15 +14,18 @@ defmodule App.Operation.CheckMemberPhoto do
 
   alias App.Adapter.D4H
   alias App.Model.Member
+  alias App.Model.MemberCard
   alias App.Model.Team
+  alias App.Operation.RefreshMemberCard
   alias App.Repo
 
   require Logger
 
   @doc """
   Checks and stores, and returns the member with `has_photo` up to date. A request that
-  got no answer, or an answer other than 200, 204, or 404, keeps what was stored. `d4h` defaults to the team's context.
-  Expects the member with `:team` preloaded when no context is given.
+  got no answer, or an answer other than 200, 204, or 404, keeps what was stored. `d4h`
+  defaults to the team's context. Expects the member with `:team` preloaded when no
+  context is given.
   """
   def call(%Member{} = member, d4h \\ nil) do
     d4h = d4h || D4H.build_context_from_team(member.team)
@@ -48,16 +51,24 @@ defmodule App.Operation.CheckMemberPhoto do
   @doc """
   The nightly check, for a team with ID cards on: each counted, current member, card
   holders too, so Members without a photo lists a card already out with the placeholder.
+  A card holder with a photo where there was none gets their card refreshed
+  (RefreshMemberCard), so the placeholder leaves their phones the same night.
   """
   def check_team(%Team{id_cards_enabled: true} = team, now) do
     d4h = D4H.build_context_from_team(team)
 
-    Member
-    |> where([m], m.team_id == ^team.id)
-    |> Member.counted_query()
-    |> Member.current_query(now)
-    |> Repo.all()
-    |> Enum.each(&call(&1, d4h))
+    found =
+      Member
+      |> where([m], m.team_id == ^team.id)
+      |> Member.counted_query()
+      |> Member.current_query(now)
+      |> Repo.all()
+      |> Enum.map(&{&1.has_photo, call(&1, d4h)})
+      |> Enum.filter(fn {had_photo, member} -> not had_photo and member.has_photo end)
+      |> Enum.map(fn {_had_photo, member} -> member.id end)
+
+    team |> MemberCard.get_all_current(found) |> RefreshMemberCard.resend_cards(now)
+    :ok
   end
 
   def check_team(%Team{}, _now), do: :ok

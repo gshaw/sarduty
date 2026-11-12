@@ -1,15 +1,14 @@
 defmodule App.Operation.CancelMemberCard do
   @moduledoc """
-  Cancel ID card (#964): a team admin takes the card of a retiring or retired member who
-  shouldn't keep one at all. It does what Replace does to the old card, with no new one:
-  revokes it, and its job pushes the voided Apple pass and expires the Google one
-  (App.Worker.UpdateCancelledCardWorker). The member's history says who.
+  Cancel ID card (#964, #1012): a team admin takes a member's card. It revokes it, its job
+  pushes the voided Apple pass and expires the Google one
+  (App.Worker.UpdateCancelledCardWorker), and the member's history says who. It makes no
+  new card: Issue ID card does, for a lost phone, and Every member gets a card does at the
+  next refresh for a member who can have one (App.Operation.IssueEveryMemberCard), so the
+  confirm says which.
 
-  Not active stays the default for everyone else (#893): it says the true thing and comes
-  back by itself. An active member's card can only be replaced, so this never becomes a
-  casual way to take someone's card. A member who comes back has no live card, so Every
-  member gets a card issues them a new one, as for anyone else
-  (App.Operation.IssueEveryMemberCard).
+  It works on any card. A retiring member's card otherwise stays and says Not active,
+  which comes back by itself; Cancel is for one who shouldn't keep it at all.
   """
 
   alias App.Accounts.User
@@ -20,18 +19,9 @@ defmodule App.Operation.CancelMemberCard do
   alias App.Repo
   alias App.Worker.UpdateCancelledCardWorker
 
-  @doc """
-  `{:ok, cards}`, the cards it cancelled; `{:error, :active}` for a member in good
-  standing, or `{:error, :no_card}` when they have none.
-  """
+  @doc "`{:ok, cards}`, the cards it cancelled, or `{:error, :no_card}` when they have none."
   def call(%Team{} = team, %Member{team_id: team_id} = member, %User{} = user, now)
       when team_id == team.id do
-    if Member.good_standing?(member, now),
-      do: {:error, :active},
-      else: cancel(team, member, user, now)
-  end
-
-  defp cancel(team, member, user, now) do
     result =
       Repo.transaction(fn ->
         case MemberCard.revoke_all!(team, member, now) do
