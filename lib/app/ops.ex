@@ -12,7 +12,14 @@ defmodule App.Ops do
   alias App.Model.Event
 
   # A new task is a module in lib/app/ops/ and a line here.
-  @tasks [App.Ops.Query, App.Ops.Jobs, App.Ops.MakeAdmin, App.Ops.RestoreTeam]
+  @tasks [
+    App.Ops.Query,
+    App.Ops.Jobs,
+    App.Ops.MakeAdmin,
+    App.Ops.RestoreTeam,
+    App.Ops.Backup,
+    App.Ops.Console
+  ]
 
   # bin/prod prints only what's between these, so Fly's and the VM's own lines stay out.
   @start "--- bin/prod ---"

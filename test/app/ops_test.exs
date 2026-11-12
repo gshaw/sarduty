@@ -6,6 +6,7 @@ defmodule App.OpsTest do
 
   alias App.Model.Event
   alias App.Ops
+  alias App.Ops.Backup
   alias App.Ops.Query
 
   setup do
@@ -123,6 +124,17 @@ defmodule App.OpsTest do
 
     assert {:error, ["No login for new@example.org. They log in once first.", _summary]} =
              admin |> request("make-admin", ["new@example.org"], fix) |> Ops.run()
+  end
+
+  test "records a console before bin/prod opens it", %{admin: admin} do
+    assert {:ok, ["Opening a shell. Say what you do in it on the issue.", _summary]} =
+             admin |> request("console", []) |> Ops.run()
+
+    assert [%Event{data: %{"task" => "console", "why" => "#517"}}] = events()
+  end
+
+  test "backup takes no arguments, so its copy can't go anywhere else" do
+    assert {:error, "Usage: backup"} = Backup.run(["/etc/passwd"])
   end
 
   test "main prints the answer between the markers bin/prod reads", %{admin: admin} do

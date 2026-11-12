@@ -1,7 +1,7 @@
 # cspell:ignore Exqlite phash southfrasersar -- the SQLite driver, the Erlang hash, SFSAR's subdomain
 # Turns a production snapshot into a dev database with personal data replaced by
 # realistic fakes. Run with `mise run sanitize <backup>`, where <backup> is a
-# data_backup_*.tar.gz.age from backup.sh (needs AGE_IDENTITY, the path to the backup
+# data_backup_*.tar.gz.age from bin/prod backup (needs AGE_IDENTITY, the path to the backup
 # identity file) or a plain .db file. Writes db/sarduty_dev.db, keeping the old one
 # beside it. No network, no AI: the same snapshot gives the same fakes every run.
 #

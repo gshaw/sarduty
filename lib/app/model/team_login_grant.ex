@@ -56,7 +56,7 @@ defmodule App.Model.TeamLoginGrant do
   end
 
   @doc """
-  The same from `bin/sarduty rpc`, raising on a bad email:
+  The same, raising on a bad email:
   `App.Model.TeamLoginGrant.grant!(App.Model.Team.get_by(subdomain: "x"), "office@example.org", "why")`.
   """
   def grant!(%Team{} = team, email, reason) do

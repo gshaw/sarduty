@@ -152,8 +152,9 @@ fi
 - **Deploys are manual**: `mise run deploy`, only when asked. The how is in
   [docs/deployment.md](docs/deployment.md).
 - **Production data only through `bin/prod`** ([docs/production.md](docs/production.md)).
-  Read tasks run whenever a question needs production; `bin/prod fix` only when asked.
-  Never `fly ssh` with `rpc` or `eval` for something a task does.
+  Read tasks run whenever a question needs production; `bin/prod fix` and `backup` only
+  when asked. A question no task answers gets a task in a PR. The repo's hook refuses raw
+  `fly ssh` and `bin/prod console`, which is for people.
 - Create migrations with `mix ecto.gen.migration name_with_underscores`. Migrations run
   when the app boots (`App.Release.migrate/0` in `App.Application.start/2`), in every
   environment — there is no release command.

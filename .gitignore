@@ -43,7 +43,10 @@ npm-debug.log
 .mise.local.toml
 
 /backups/*
-!/backups/*.sh
 !/backups/*.exs
 
-.claude/
+# Claude Code's local files stay out; the repo's hooks and their settings are shared.
+!.claude/
+.claude/*
+!.claude/settings.json
+!.claude/hooks/

@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Keeps agents on bin/prod, the one way into production (docs/production.md). Claude
+# Code runs it before every Bash command, with the call as JSON on stdin.
+#
+#   refused: fly ssh, fly console, fly machine exec, fnox get FLY_SARDUTY_SSH_TOKEN,
+#            and bin/prod console (people only)
+#   asked:   bin/prod fix and bin/prod backup
+#
+# It matches a command where one starts: at the start, or after a space, ; & | ( or $(.
+# So `grep "fly ssh" docs` passes and `FLY_ACCESS_TOKEN=… fly ssh …` doesn't. It stops
+# habits, not a determined person: the ssh token is the boundary.
+# cspell:ignore flyctl
+
+command=$(jq -r '.tool_input.command // empty' 2> /dev/null) || exit 0
+[ -n "$command" ] || exit 0
+
+at='(^|[;&|([:space:]]|\$\()([^[:space:];&|()]*/)?'
+end='([[:space:]]|$)'
+
+decide() {
+  jq -cn --arg decision "$1" --arg reason "$2" \
+    '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: $decision,
+      permissionDecisionReason: $reason}}'
+  exit 0
+}
+
+matches() { printf '%s' "$command" | grep -Eq -- "$1"; }
+
+if matches "${at}fly(ctl)?[[:space:]]+(ssh|console|machines?[[:space:]]+exec)${end}" ||
+  matches "${at}fnox[[:space:]]+get[[:space:]]+FLY_SARDUTY_SSH_TOKEN${end}"; then
+  decide deny "Production goes through bin/prod (docs/production.md). bin/prod list shows the tasks. If none does the job, add one in a PR, or ask Gerry to run bin/prod console."
+fi
+
+if matches "${at}bin/prod[[:space:]]+console${end}"; then
+  decide deny "bin/prod console is for people only. Ask Gerry to run it, or add a task in a PR."
+fi
+
+if matches "${at}bin/prod[[:space:]]+(fix|backup)${end}"; then
+  decide ask "bin/prod fix changes production data, and backup copies all of it to this Mac. Run it?"
+fi
+
+exit 0
