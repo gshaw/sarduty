@@ -332,7 +332,7 @@ defmodule Web.ActivityMembersLive.Update do
           >
             {Format.count(@count, one: "Send 1 email", many: "Send %d emails")}
           </.button>
-          <.button id="update-back" patch={@back}>Back</.button>
+          <.button id="update-cancel" patch={@back}>Cancel</.button>
         </.form_actions>
       </.form>
     </div>

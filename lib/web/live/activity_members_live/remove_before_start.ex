@@ -285,7 +285,7 @@ defmodule Web.ActivityMembersLive.RemoveBeforeStart do
           >
             {button_text(length(@rows))}
           </.button>
-          <.button id="remove-back" patch={@back}>Back</.button>
+          <.button id="remove-cancel" patch={@back}>Cancel</.button>
         </.form_actions>
       </.form>
     </div>

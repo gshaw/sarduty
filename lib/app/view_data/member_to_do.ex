@@ -3,6 +3,8 @@ defmodule App.ViewData.MemberToDo do
   "For you to do" on the Dashboard (#389, #406): each item stays until it's done. Pure:
   what SAR Duty knows about the member in, items out.
 
+  - `:sign`: each form a team admin asked them to sign (#993), until they sign or the
+    request ends.
   - `:card`: their ID card, until it's in Wallet (`MemberCard.in_wallet?/1`).
   - `:qualification`: each one expiring within 60 days, until it's renewed, or while a
     certificate for it waits (#493).
@@ -18,16 +20,19 @@ defmodule App.ViewData.MemberToDo do
   qualifications from `MemberRecords.qualification_rows/2`.
   `extras` may hold `chores:` their chores, `certificates:` the certificates they sent and
   haven't deleted, `trips:` their unchecked trips on open activities, each with its
-  activity (`Trip.unchecked_for_member/1`), and `unset:` their attended rows with no trip
-  (`Trip.unset_for_member/2`).
+  activity (`Trip.unchecked_for_member/1`), `unset:` their attended rows with no trip
+  (`Trip.unset_for_member/2`), and `sign:` their open requests to sign, oldest first,
+  each `%{request, asked_by}`: the request with its activity, and who asked's name.
   """
   def items(card, in_wallet?, rows, extras \\ []) do
     chores = Keyword.get(extras, :chores, [])
     certificates = Keyword.get(extras, :certificates, [])
     trips = Keyword.get(extras, :trips, [])
     unset = Keyword.get(extras, :unset, [])
+    sign = Keyword.get(extras, :sign, [])
 
-    card_items(card, in_wallet?) ++
+    Enum.map(sign, &Map.put(&1, :key, :sign)) ++
+      card_items(card, in_wallet?) ++
       qualification_items(rows, certificates) ++
       declined_items(chores) ++
       declined_certificate_items(certificates) ++

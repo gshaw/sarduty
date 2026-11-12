@@ -383,6 +383,9 @@ defmodule Web.Router do
            ActivityOrgFormLive,
            :publish
 
+      # The task leader signs it there when a team admin asked (#993); members reach it.
+      live "/teams/:subdomain/activities/:id/forms/:form_id/sign", SignFormLive
+
       live "/teams/:subdomain/templates", TemplateCollectionLive
       live "/teams/:subdomain/templates/new", TemplateFormLive, :new
       live "/teams/:subdomain/templates/:id", TemplateLive

@@ -51,6 +51,20 @@ defmodule Web.MemberPagesTest do
     tax_credit_letter_fixture(sam)
     certificate = certificate_fixture(sam, qualification_fixture(team))
 
+    # A request to sign that ended (#993), so its page shows without printing.
+    form = form_fixture(organization_fixture([team]), %{state: :on})
+
+    Repo.insert!(%App.Model.SignRequest{
+      team_id: team.id,
+      activity_id: past.id,
+      form_id: form.id,
+      member_id: sam.id,
+      title: "Task report 26-00001",
+      asked_at: DateTime.add(now, -1, :day),
+      ended_at: now,
+      ended_why: :cancelled
+    })
+
     viewing_as =
       build_conn()
       |> log_in_user(admin)
@@ -66,6 +80,7 @@ defmodule Web.MemberPagesTest do
       "/teams/#{s}/activities/#{past.id}/members",
       "/teams/#{s}/activities/#{past.id}/equipment",
       "/teams/#{s}/activities/#{past.id}/fields",
+      "/teams/#{s}/activities/#{past.id}/forms/#{form.id}/sign",
       "/teams/#{s}/activities/#{coming.id}",
       "/teams/#{s}/activities/#{coming.id}/members",
       "/teams/#{s}/take-attendance",

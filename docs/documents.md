@@ -150,7 +150,7 @@ details text top 263pt, left 125.7pt, width 461pt, pitch 12pt, lines 10, size 9p
 - Typst decides when it prints, so SAR Duty measures nothing itself: the place sets a
   Typst state when it gives up, and the page prints only when it was set. DRAFT and
   SAMPLE print on it, and the verify code too, unless the form says `verify code none`.
-- The form's page warns from the text's length (`App.Document.attached/1`): a line at
+- The form's page notes it from the text's length (`App.Document.attached/1`): a line at
   8pt holds about the place's width over 0.47 of 8pt, and each line break starts a new
   line. It's a guess; the PDF is what Typst decides.
 - `more` goes on a text place with `lines`, never with `fit` or in a row.
@@ -261,6 +261,36 @@ Ruiz'`.
 The published PDF keeps `signed_by` and `signed_for`, and its Published box and History
 say "Signed by Alex Chen for Cameron Ruiz". When the task leader's name changed since
 the preview, Publish refuses: "The task leader changed. Go back and publish again."
+
+### Asking the task leader to sign
+
+A team admin who isn't the task leader can ask them to sign instead (#993,
+App.Operation.AskToSign). On the preview, Ask Cameron Ruiz to sign is the main button,
+beside Sign for Cameron Ruiz. It shows only when the task leader can log in: one
+member with an email, who is a team admin or logs in as a member. Otherwise the preview
+says why, such as "Cameron Ruiz has no email, so they cannot log in to sign it." The
+task leader needn't be a team admin.
+
+- **Asking** keeps an App.Model.SignRequest: the team, activity, form, the member asked,
+  who asked and when, and the PDF's title. The task leader gets "Sign Task report
+  26-06613" in For you to do (App.ViewData.MemberToDo) and by email
+  (App.Worker.EmailSignRequestWorker), with a link to the sign page. One request is
+  open per form and activity; asking again replaces it and emails again.
+- **Waiting.** The form page says "Waiting for Cameron Ruiz to sign", when and by whom,
+  with Cancel request. Answers can still change.
+- **The sign page**, `…/forms/:form_id/sign` (Web.SignFormLive), opens only for the
+  member asked, logged in as themselves, a member or a team admin by email. It prints
+  the form as it would publish, signed by them, and shows page 1 with Sign and publish
+  (`PublishDocument.preview_asked/3` and `publish_asked/5`). With a need blank it says
+  so, with no button. Signing publishes, ends the request, and emails the team admin
+  who asked the PDF.
+- **A request ends** when the task leader signs, a team admin cancels it or signs for
+  them, asking again replaces it, or the Task Leader's Name no longer names them. The
+  last is noticed when a page reads the request: the form page, the sign page, or For
+  you to do. An ended request leaves For you to do, and its sign page says "This
+  request has ended."
+- **No Decline.** A task leader who won't sign tells the team, and a team admin signs
+  for them.
 
 ## Checks
 
@@ -495,6 +525,9 @@ fill each people into rows
 - **Evaluating** gives `copies`, and each place with its `copy`. A row's places are
   named for the row, `rows.19.who`, and placed on it. An expect reads the first copy,
   and no row's places: what the rows work out, it checks with `compute each`'s values.
+- **Zero is a dash.** In a row, an amount of 0 prints `-`, and so does its rate:
+  `km = if km > 0 then '{km as number}' else '-'`. A total and a subtotal always print
+  their amount, $0.00 too. A layout's table prints its blanks as dashes (#993).
 
 ### Layout
 
@@ -584,9 +617,10 @@ shows` line, or each kept value for a form with none. Page 1 folds under it, dra
 - **Needed to publish**, a warning banner under the title while a value the form `needs`
   is missing ([Needs and email](#needs-and-email)). Publish stays on and says the same
   as an error.
-- **An attached page**, a banner under the title for each place that says `more` and
-  looks too long for its lines: "Details of Task goes on an attached page"
-  ([an attached page](#an-attached-page)). It follows the answers as they change.
+- **An attached page**, a hint under a value in What SAR Duty filled in when a place
+  that says `more` prints it and it looks too long for the place's lines: "Too long for
+  its 10 lines, so it goes on an attached page." ([an attached page](#an-attached-page)).
+  A place that prints an answer or a value worked out gets none; the preview shows it.
 - **What's missing**: each one blank that publishing doesn't need, with the page that fixes it, so the fix reaches
   D4H and every form. An activity's D4H field links to Change fields, its own details to
   Change activity, and the team's to team settings: its names to General, and its
@@ -613,8 +647,9 @@ shows` line, or each kept value for a form with none. Page 1 folds under it, dra
   shows every page as a picture (Service.PDFImages) and what publishing does: its ID,
   what its verify page shows, who signs it, what it replaces, and that it isn't sent
   anywhere. A form that says `signed by` has Sign and publish for its task leader, and
-  Sign for Cameron Ruiz for any other team admin, which asks first
-  ([Signing](#signing)).
+  Sign for Cameron Ruiz for any other team admin, which asks first, and Ask Cameron
+  Ruiz to sign when the task leader can log in
+  ([Asking the task leader to sign](#asking-the-task-leader-to-sign)).
   Publish there checks again and saves that same PDF in one transaction, so what's kept
   is what was looked at. When another admin published meanwhile, it says "Someone just
   published this. Reload to see it." Publish again goes through the same preview.

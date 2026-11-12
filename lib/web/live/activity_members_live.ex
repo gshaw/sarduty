@@ -18,7 +18,7 @@ defmodule Web.ActivityMembersLive do
   The tiles, a name search, and the filter bar's Group, before and after the start, pick
   the rows shown (#895, #920), in the URL as `?status=`, `?q=`, and `?group=`. The ticks
   are the rows shown: changing a filter unchecks the rows it hides, so a button never
-  reaches someone off the screen. The tab's and the steps' paths keep them, so Back
+  reaches someone off the screen. The tab's and the steps' paths keep them, so Cancel
   opens the tab as it was.
 
   Each change is a module in `@actions`, with Web.ActivityMembersLive.Action: its label,
@@ -29,7 +29,7 @@ defmodule Web.ActivityMembersLive do
   drawn in the tab's place, so the ticks never leave the page:
 
   - The button patches to the step's route, and the step takes the page under its own
-    title. Back patches to the tab, and the ticks are still there.
+    title. Cancel patches to the tab, and the ticks are still there.
   - A step opened with nothing it changes, such as after a refresh, lands on the tab
     with a toast, since the ticks live only in this page.
   - The step sends `{:step_done, kind, text}` once it's done: the tab reloads, clears
@@ -303,7 +303,7 @@ defmodule Web.ActivityMembersLive do
     """
   end
 
-  # The tab, and a step, keep the filter, so Back opens the tab as it was.
+  # The tab, and a step, keep the filter, so Cancel opens the tab as it was.
   defp tab_path(%{current_team: team, activity: activity, filter: filter}),
     do: members_path(team, activity, filter)
 

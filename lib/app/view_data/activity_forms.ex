@@ -98,14 +98,24 @@ defmodule App.ViewData.ActivityForms do
 
   @doc """
   The places whose text likely goes on an attached page with the answers `typed`
-  (#993), as `App.Document.attached/1` guesses from its length: each `%{more, lines}`,
-  its label and how many lines it has. `page` is `load/4`'s.
+  (#993), as `App.Document.attached/1` guesses from its length: each `%{read, lines}`,
+  the name of the value it prints, as `read` lists it, and how many lines it has. A place
+  that prints anything else, such as an answer or a value worked out, has `read` nil.
+  `page` is `load/4`'s.
   """
   def attached(%{doc: doc, values: values, timezone: timezone}, typed) do
     doc
     |> Document.evaluate(Map.merge(values, readable(doc, typed)), timezone)
     |> Document.attached()
-    |> Enum.map(&Map.take(&1, [:name, :more, :lines]))
+    |> Enum.map(&%{read: reads(doc, &1.name), lines: &1.lines})
+  end
+
+  # The value a place prints, when its fill is one value read straight from a report.
+  defp reads(doc, place) do
+    case Enum.find(doc.fill, &(&1.place == place)) do
+      %{value: {:field, _path, [], _line} = field} -> Evaluator.name(field)
+      _other -> nil
+    end
   end
 
   @doc """

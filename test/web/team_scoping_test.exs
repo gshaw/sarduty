@@ -31,6 +31,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/activities/:id/forms/:form_id",
     "/teams/:subdomain/activities/:id/forms/:form_id/pdf",
     "/teams/:subdomain/activities/:id/forms/:form_id/publish",
+    "/teams/:subdomain/activities/:id/forms/:form_id/sign",
     "/teams/:subdomain/equipment/:id",
     "/teams/:subdomain/equipment/:id/fields",
     "/teams/:subdomain/equipment/:id/fields/edit",
@@ -234,6 +235,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/activities/:id/forms/:form_id/publish", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/forms/#{o.form.id}/publish"
+
+  defp path_for("/teams/:subdomain/activities/:id/forms/:form_id/sign", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.activity.id}/forms/#{o.form.id}/sign"
 
   defp path_for("/teams/:subdomain/activities/:id/forms/:form_id/pdf", s, o),
     do: ~p"/teams/#{s}/activities/#{o.activity.id}/forms/#{o.form.id}/pdf"

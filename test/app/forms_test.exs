@@ -245,6 +245,55 @@ defmodule App.FormsTest do
       assert Decimal.eq?(supplement["personnel"], claimed["personnel"])
     end
 
+    # A dash where a cell doesn't apply, as on the Expense request; a total always prints.
+    test "a person with no km, meals, or allowance prints dashes, and their total",
+         %{doc: doc} do
+      person = fn key, km, hours ->
+        from = ~U[2026-06-01 15:00:00Z]
+
+        %{
+          key: key,
+          values: %{
+            "member" => key,
+            "km" => km,
+            "started_at" => from,
+            "finished_at" => DateTime.add(from, hours, :hour)
+          }
+        }
+      end
+
+      values = %{
+        "task.`Response Type`" => "Training",
+        "people" => [person.("member:1", 30, 7), person.("member:2", nil, 2)]
+      }
+
+      output = Document.evaluate(doc, values, "America/Vancouver")
+
+      value = fn row, cell ->
+        Enum.find(output.places, &(&1.name == "rows.#{row}.#{cell}")).value
+      end
+
+      cells =
+        for row <- 1..2, do: Map.new(~w(km rate meals allowance total), &{&1, value.(row, &1)})
+
+      assert cells == [
+               %{
+                 "km" => "30",
+                 "rate" => "$0.67",
+                 "meals" => "$30.00",
+                 "allowance" => "-",
+                 "total" => "$50.10"
+               },
+               %{
+                 "km" => "-",
+                 "rate" => "-",
+                 "meals" => "-",
+                 "allowance" => "-",
+                 "total" => "$0.00"
+               }
+             ]
+    end
+
     test "20 people print two copies of its page, numbered", %{doc: doc} do
       people =
         for i <- 1..20,

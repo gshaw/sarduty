@@ -11,7 +11,10 @@ defmodule Web.ActivityOrgFormLive do
   by` is signed by whoever publishes it (#993): its task leader presses Sign and publish,
   and any other team admin Sign for Cameron Ruiz, which signs it in their own name for
   the task leader, after a confirm. When no one member has the task leader's name, the
-  page says so, with the page that fixes it. The Published box
+  page says so, with the page that fixes it. Another team admin may instead ask the task
+  leader to sign (App.Operation.AskToSign), the preview's main button when the task
+  leader can log in; the page then says who it's waiting for, with Cancel request,
+  until they sign. The Published box
   above the answers says when and who, with Download, the verify link, and Withdraw.
   When the form reads differently now, it says what changed and offers Publish again.
   Page 1 folds under it, and History lists every PDF published for the activity, as a
@@ -29,6 +32,8 @@ defmodule Web.ActivityOrgFormLive do
   alias App.Model.FormAnswer
   alias App.Model.Member
   alias App.Model.PublishedPDF
+  alias App.Model.SignRequest
+  alias App.Operation.AskToSign
   alias App.Operation.PublishDocument
   alias App.Operation.ReadDocument
   alias App.Operation.SaveFormAnswers
@@ -50,7 +55,8 @@ defmodule Web.ActivityOrgFormLive do
         activity: activity,
         form: form,
         errors: %{},
-        preview: nil
+        preview: nil,
+        ask: :none
       )
 
     case ActivityForms.load(team, activity, form, DateTime.utc_now()) do
@@ -98,15 +104,27 @@ defmodule Web.ActivityOrgFormLive do
   defp changes(current, page, activity),
     do: ActivityForms.changes(page, FormAnswer.starting(activity, page.doc.asks), current)
 
-  # The task leader a signed form names with the answers, when it's on (#993), and what
-  # the page says when no one member has that name.
+  # The task leader a signed form names with the answers, when it's on (#993), what the
+  # page says when no one member has that name, and the open request to sign, which ends
+  # once the name no longer names who it asks.
   defp assign_leader(socket, now) do
     %{current_team: team, form: form, page: page, answers: answers} = socket.assigns
     leader = if page && form.state == :on, do: ActivityForms.leader(page, answers, team, now)
-    assign(socket, leader: leader, leader_problem: leader && SignForm.problem(leader))
+    request = leader && socket |> open_request() |> AskToSign.check_leader(leader, now)
+
+    assign(socket,
+      leader: leader,
+      leader_problem: leader && SignForm.problem(leader),
+      request: request,
+      asked_by: request && Member.name_for_user(team, request.asked_by, now)
+    )
   end
 
-  # Each place whose text looks too long for its lines, so it goes on an attached page.
+  defp open_request(%{assigns: %{activity: activity, form: form}}),
+    do: SignRequest.open_for(activity, form)
+
+  # Each place whose text looks too long for its lines, so it goes on an attached page:
+  # Filled in by SAR Duty says so under the value it prints.
   defp attached(nil, _answers), do: []
   defp attached(page, answers), do: ActivityForms.attached(page, answers)
 
@@ -138,7 +156,7 @@ defmodule Web.ActivityOrgFormLive do
     current = socket.assigns.published.current
 
     socket
-    |> assign(preview: :printing, preview_current_id: current && current.id)
+    |> assign(preview: :printing, preview_current_id: current && current.id, ask: :none)
     |> start_async(:preview, fn ->
       with {:ok, preview} <-
              PublishDocument.preview(team, form, activity, user, DateTime.utc_now()),
@@ -148,8 +166,13 @@ defmodule Web.ActivityOrgFormLive do
     end)
   end
 
-  def handle_async(:preview, {:ok, {:ok, preview}}, socket),
-    do: {:noreply, assign(socket, preview: preview)}
+  # Whether the preview's task leader can be asked to sign, or why not.
+  def handle_async(:preview, {:ok, {:ok, preview}}, socket) do
+    ask =
+      AskToSign.askable(preview.printed.signed, socket.assigns.current_team, DateTime.utc_now())
+
+    {:noreply, assign(socket, preview: preview, ask: ask)}
+  end
 
   def handle_async(:preview, {:ok, {:error, message}}, socket),
     do: {:noreply, back(socket, :error, message)}
@@ -219,6 +242,38 @@ defmodule Web.ActivityOrgFormLive do
 
   def handle_event("publish", _params, socket), do: {:noreply, socket}
 
+  def handle_event("ask", _params, %{assigns: %{preview: %{code: _code} = preview}} = socket) do
+    %{current_team: team, form: form, activity: activity, current_user: user} = socket.assigns
+
+    case AskToSign.call(team, form, activity, user, preview) do
+      {:ok, _request} ->
+        name = preview.printed.signed.leader.name
+        {:noreply, socket |> assign_published() |> back(:info, "Asked #{name} to sign.")}
+
+      {:error, message} ->
+        {:noreply, put_flash(socket, :error, message)}
+    end
+  end
+
+  def handle_event("ask", _params, socket), do: {:noreply, socket}
+
+  def handle_event("cancel-request", _params, %{assigns: %{request: %{} = request}} = socket) do
+    %{current_team: team, current_user: user} = socket.assigns
+
+    case AskToSign.cancel(team, request, user) do
+      {:ok, _ended} ->
+        {:noreply,
+         socket
+         |> assign_published()
+         |> put_flash(:info, "Cancelled the request to #{request.member.name}.")}
+
+      {:error, message} ->
+        {:noreply, socket |> assign_published() |> put_flash(:error, message)}
+    end
+  end
+
+  def handle_event("cancel-request", _params, socket), do: {:noreply, assign_published(socket)}
+
   def handle_event("withdraw", _params, socket) do
     %{current_team: team, current_user: user, published: %{current: pdf}} = socket.assigns
 
@@ -282,7 +337,7 @@ defmodule Web.ActivityOrgFormLive do
           </dd>
           <dt>Signature</dt>
           <dd id="publish-signature">
-            <.signature signed={@preview.printed.signed} />
+            <.signature signed={@preview.printed.signed} ask={@ask} />
           </dd>
           <%= if @published.current do %>
             <dt>Replaces</dt>
@@ -303,9 +358,19 @@ defmodule Web.ActivityOrgFormLive do
         </dl>
         <.form_actions>
           <.button
-            id="publish-confirm"
+            :if={@ask == :ok}
+            id="publish-ask"
             type="button"
             variant={:primary}
+            phx-click="ask"
+            phx-disable-with="Asking…"
+          >
+            Ask {@preview.printed.signed.leader.name} to sign
+          </.button>
+          <.button
+            id="publish-confirm"
+            type="button"
+            variant={if @ask == :ok, do: :secondary, else: :primary}
             phx-click="publish"
             phx-disable-with="Publishing…"
             disabled={!is_map(@preview)}
@@ -314,10 +379,10 @@ defmodule Web.ActivityOrgFormLive do
             {publish_label(@preview)}
           </.button>
           <.button
-            id="publish-back"
+            id="publish-cancel"
             patch={~p"/teams/#{@current_team}/activities/#{@activity.id}/forms/#{@form.id}"}
           >
-            Back to answers
+            Cancel
           </.button>
         </.form_actions>
       </aside>
@@ -394,18 +459,8 @@ defmodule Web.ActivityOrgFormLive do
       </p>
     </.banner>
 
-    <.banner
-      :for={place <- @attached}
-      id={"org-form-attached-#{place.name}"}
-      title={"#{place.more} goes on an attached page"}
-      class="mb-6"
-    >
-      <p>
-        It's too long for its {Service.Format.count(place.lines, one: "%d line", many: "%d lines")}, so they say See attached page. The PDF ends with the whole text on a page of its own.
-      </p>
-    </.banner>
-
     <div :if={@page} class="measure">
+      <.waiting :if={@request} request={@request} asked_by={@asked_by} team={@current_team} />
       <.published_box
         published={@published}
         published_by={@published_by}
@@ -439,7 +494,16 @@ defmodule Web.ActivityOrgFormLive do
       <section :if={@page.filled != []} id="org-form-filled" class="mb-8">
         <h2 class="heading">Filled in by SAR Duty</h2>
         <.read_table id="org-form-filled-table" rows={@page.filled} team={@current_team}>
-          <:value :let={row}>{ReportTable.value_text(row.value, row.column, @current_team)}</:value>
+          <:value :let={row}>
+            {ReportTable.value_text(row.value, row.column, @current_team)}
+            <span
+              :if={place = Enum.find(@attached, &(&1.read == row.name))}
+              id={"org-form-attached-#{row_id(row)}"}
+              class="hint block mt-1"
+            >
+              Too long for its {Service.Format.count(place.lines, one: "%d line", many: "%d lines")}, so it goes on an attached page.
+            </span>
+          </:value>
         </.read_table>
       </section>
 
@@ -508,10 +572,41 @@ defmodule Web.ActivityOrgFormLive do
     """
   end
 
+  attr :request, :map, required: true
+  attr :asked_by, :string, default: nil
+  attr :team, :map, required: true
+
+  # The open request to sign (#993): who it waits for, and Cancel request.
+  defp waiting(assigns) do
+    ~H"""
+    <section id="org-form-waiting" class="mb-8">
+      <.heading_row>
+        <h2 class="heading">Waiting for {@request.member.name} to sign</h2>
+        <:action>
+          <.button
+            id="org-form-cancel-request"
+            type="button"
+            size={:sm}
+            phx-click="cancel-request"
+            phx-disable-with="Cancelling…"
+          >
+            Cancel request
+          </.button>
+        </:action>
+      </.heading_row>
+      <p class="hint">
+        Asked {Service.Format.date_short(@request.asked_at, @team.timezone)}{if @asked_by,
+          do: " by #{@asked_by}"}. They get it in For you to do and by email.
+      </p>
+    </section>
+    """
+  end
+
   attr :signed, :map, default: nil, doc: "the preview's App.Operation.SignForm signing, or nil"
+  attr :ask, :any, default: :none, doc: "App.Operation.AskToSign.askable/3's"
 
   # Who signs the PDF as it publishes (#993): the task leader in their name, or this team
-  # admin in theirs, for the task leader.
+  # admin in theirs, for the task leader, or the task leader once asked.
   defp signature(%{signed: nil} = assigns), do: ~H"Left blank, to sign by hand"
 
   defp signature(%{signed: %{signed_for: nil}} = assigns) do
@@ -531,7 +626,15 @@ defmodule Web.ActivityOrgFormLive do
   defp signature(assigns) do
     ~H"""
     {@signed.leader.name}, the task leader, signs this form.
-    <span class="hint block">You can sign it in your name: {signed_words(@signed)}.</span>
+    <span :if={@ask == :ok} class="hint block">
+      Ask them, and they sign it from an email. Or sign it in your name: {signed_words(@signed)}.
+    </span>
+    <span :if={@ask != :ok} class="hint block">
+      You can sign it in your name: {signed_words(@signed)}.
+    </span>
+    <span :if={match?({:error, _}, @ask)} id="publish-cant-ask" class="hint block">
+      {elem(@ask, 1)}
+    </span>
     """
   end
 

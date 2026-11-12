@@ -398,7 +398,8 @@ The team's Dashboard, `/teams/:subdomain`
   A team admin who is a member sees both For you to do and Needs attention, one above
   the other. A member's page doesn't work out Needs attention at all.
 - **For you to do** comes from [MemberToDo](../lib/app/view_data/member_to_do.ex), pure:
-  add your ID card to Wallet (on a team with ID cards on, until
+  each form a team admin asked you to sign (#993, a team admin without a member login
+  gets these too), add your ID card to Wallet (on a team with ID cards on, until
   `MemberCard.in_wallet?/1`), and each qualification expiring within 60 days (until it's
   renewed). Each leaves once done. A tax credit letter isn't one: its email carries the
   PDF, and a member with no email shows in Needs attention until one is added. With nothing to do, the card
@@ -488,7 +489,7 @@ activity starts.
   gets one, with the dates they were emailed before, then everyone else checked who gets
   none and why, a line each: replied already (a count of signed up and can't make it),
   retiring, turned off invitation reminders, or no email in D4H. Then the email itself,
-  from the mailer's own HTML, Send 3 emails, and Back to the tab with the ticks kept. A message (optional, up to 300 characters, #609) adds the team
+  from the mailer's own HTML, Send 3 emails, and Cancel back to the tab with the ticks kept. A message (optional, up to 300 characters, #609) adds the team
   admin's own words under the date and place; the preview shows it as they type, at a
   phone's width, so they see whether it pushes the buttons off the first screen. Each
   send starts with no message, so an old one never goes out again by mistake. Members who replied never get one. There is no limit per

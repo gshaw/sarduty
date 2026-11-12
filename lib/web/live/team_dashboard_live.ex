@@ -13,10 +13,13 @@ defmodule Web.TeamDashboardLive do
   alias App.Model.Attendance
   alias App.Model.Certificate
   alias App.Model.Chore
+  alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Model.SignRequest
   alias App.Model.Team
   alias App.Model.Trip
   alias App.Model.WhiteboardNote
+  alias App.Operation.AskToSign
   alias App.Operation.SnoozeAttentionItem
   alias App.ViewData.ActivityTravel
   alias App.ViewData.MemberRecords
@@ -104,7 +107,21 @@ defmodule Web.TeamDashboardLive do
     )
   end
 
-  # What a member has to do, from Your membership's records.
+  # What a member has to do, from Your membership's records. A team admin who doesn't
+  # log in as a member still gets the forms they're asked to sign (#993), as their own
+  # member by email.
+  defp assign_member(%{assigns: %{current_member: nil, team_admin?: true}} = socket, now) do
+    %{current_team: team, current_user: user} = socket.assigns
+
+    case Member.find_by_email(team, user.email, now) do
+      nil ->
+        assign(socket, to_do: [])
+
+      member ->
+        assign(socket, to_do: MemberToDo.items(nil, false, [], sign: sign(member, team, now)))
+    end
+  end
+
   defp assign_member(%{assigns: %{current_member: nil}} = socket, _now),
     do: assign(socket, to_do: [])
 
@@ -130,9 +147,17 @@ defmodule Web.TeamDashboardLive do
           card,
           in_wallet?,
           qualifications,
-          [chores: chores, certificates: certificates] ++ travel(member, now)
+          [chores: chores, certificates: certificates, sign: sign(member, member.team, now)] ++
+            travel(member, now)
         )
     )
+  end
+
+  # The forms a team admin asked the member to sign that still ask them (#993).
+  defp sign(member, team, now) do
+    for request <- SignRequest.open_for_member(member),
+        request = AskToSign.current(%{request | team: team}, now),
+        do: %{request: request, asked_by: Member.name_for_user(team, request.asked_by, now)}
   end
 
   # Travel to confirm or set, only on the activities that have travel (#230).
@@ -229,7 +254,7 @@ defmodule Web.TeamDashboardLive do
           show_more?={@show_more_attention?}
           snoozed={@view_data.snoozed}
         />
-        <.to_do :if={@current_member} team={@current_team} items={@to_do} />
+        <.to_do :if={@current_member || @to_do != []} team={@current_team} items={@to_do} />
       </div>
     </div>
 
@@ -669,6 +694,26 @@ defmodule Web.TeamDashboardLive do
 
   attr :team, :map, required: true
   attr :item, :map, required: true
+
+  # A form a team admin asked them to sign (#993), opening its sign page.
+  defp to_do_item(%{item: %{key: :sign}} = assigns) do
+    ~H"""
+    <li id={"to-do-sign-#{@item.request.id}"} class="py-3">
+      <.a
+        navigate={
+          ~p"/teams/#{@team}/activities/#{@item.request.activity_id}/forms/#{@item.request.form_id}/sign"
+        }
+        class="font-semibold"
+      >Sign {@item.request.title}</.a>
+      <span class="hint block">
+        {@item.request.activity.title} · {@item.asked_by || "A team admin"} asked {Format.month_day(
+          @item.request.asked_at,
+          @team.timezone
+        )}
+      </span>
+    </li>
+    """
+  end
 
   defp to_do_item(%{item: %{key: :card}} = assigns) do
     ~H"""
