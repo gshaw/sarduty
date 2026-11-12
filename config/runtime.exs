@@ -33,6 +33,13 @@ if key = System.get_env("RECORDS_SARDUTY_KEY") do
   config :sarduty, :records_sarduty_key, key
 end
 
+# Clean up (#1031, App.Adapter.CleanUp) is off until its function exists. Dev can run
+# the stand-in, which needs no AWS: it cuts a photo to a centred square. Production and
+# tests never read this.
+if config_env() == :dev and System.get_env("CLEAN_UP") == "stand-in" do
+  config :sarduty, App.Adapter.CleanUp, mode: :stand_in
+end
+
 # The key a script sends to make a test demo, for checking SAR Duty on a live server
 # (docs/demo.md). Without it, only visitors' demos can be made.
 config :sarduty, :demo_test_key, System.get_env("DEMO_TEST_KEY")

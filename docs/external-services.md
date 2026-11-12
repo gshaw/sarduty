@@ -154,6 +154,30 @@ Until Google grants publishing access, passes say "[TEST ONLY]" and only the con
 users can save them. Dev and production share the issuer; ids carry the host, so they
 don't collide.
 
+## Clean up
+
+[App.Adapter.CleanUp](../lib/app/adapter/clean_up.ex) removes a photo's background and
+centres the face, for Add a photo ([photos.md](photos.md#clean-up), #1031). It will call
+a function on AWS in Calgary, which does not exist yet: SAR Duty will send it one photo
+and what kind it is, and get back the cleaned-up photo, how many faces it found, and
+where the face is. The call is made while the person waits, and gives up after 30
+seconds. Nothing calls out today, and there is no key, library, or account.
+
+**It is off.** Production runs with it off, so no page mentions Clean up, and no photo
+is cleaned up. The adapter has three modes, set by `config :sarduty, App.Adapter.CleanUp,
+mode:`:
+
+- `:off`, the default.
+- `:stand_in`, for dev and tests: it cuts the photo to a centred square and reports 1
+  face, with no AWS, so the whole flow can be tried.
+- The function, in its own issue. It gets its variables, its row in Adminland ›
+  Integrations, and the privacy page's line then.
+
+One variable picks the mode, in dev only:
+
+- `CLEAN_UP` — dev only, optional: `CLEAN_UP=stand-in` turns the stand-in on. Any other
+  value, or none, leaves Clean up off. Production and tests never read it.
+
 ## Litestream and Cloudflare R2
 
 Litestream replicates `/mnt/sarduty/sarduty.db` to the `sarduty-db` R2 bucket in

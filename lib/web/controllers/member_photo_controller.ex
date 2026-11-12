@@ -8,8 +8,9 @@ defmodule Web.MemberPhotoController do
   # A photo a member added (#1029), while it waits and SAR Duty keeps it: one URL for
   # everyone, as a certificate's file has. A team admin gets any of the team's; anyone
   # else only their own, so a team admin viewing as a member gets the member's.
-  # `?shape=placed` is the square the member placed, as their ID card would show it;
-  # without it, the photo as taken.
+  # `?shape=placed` is the square the member placed, as their ID card would show it,
+  # cut from the photo their Clean up switch showed (#1031); `?shape=cleaned` the
+  # cleaned-up photo, for one that has it; and without either, the photo as taken.
   def file(conn, %{"id" => id} = params) do
     %{current_team: team, current_member: member, team_admin?: team_admin?} = conn.assigns
     if !Team.photos?(team), do: raise(Web.Status.NotFound)
@@ -33,17 +34,16 @@ defmodule Web.MemberPhotoController do
     end
   end
 
-  defp jpeg(photo, shape) do
-    case MemberPhotoFile.bytes(photo) do
-      nil ->
-        :gone
-
-      bytes when shape == "placed" ->
-        {turns, square} = MemberPhoto.placed(photo)
-        Service.MemberPhoto.place(bytes, turns, square)
-
-      bytes ->
-        {:ok, bytes}
+  defp jpeg(photo, "placed") do
+    with bytes when is_binary(bytes) <-
+           MemberPhotoFile.bytes(photo, MemberPhoto.shape(photo, photo.clean_up)) do
+      {turns, square} = MemberPhoto.placed(photo)
+      Service.MemberPhoto.place(bytes, turns, square)
     end
+  end
+
+  defp jpeg(photo, shape) do
+    shape = if shape == "cleaned", do: :cleaned, else: :taken
+    with bytes when is_binary(bytes) <- MemberPhotoFile.bytes(photo, shape), do: {:ok, bytes}
   end
 end

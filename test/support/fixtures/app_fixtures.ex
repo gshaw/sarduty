@@ -813,7 +813,8 @@ defmodule App.DataFixtures do
 
   @doc """
   A photo `member` added of themselves (#1029): 800 × 600, placed on the middle square,
-  waiting with its file unless `attrs` say it was decided.
+  waiting with its file unless `attrs` say it was decided. With a `cleaned_width` and
+  `cleaned_height` it keeps a cleaned-up photo that size too (#1031).
   """
   def member_photo_fixture(%Member{} = member, attrs \\ %{}) do
     photo =
@@ -828,7 +829,18 @@ defmodule App.DataFixtures do
 
     if photo.status == :waiting do
       {:ok, taken} = 800 |> png_fixture(600) |> Service.MemberPhoto.prepare()
-      MemberPhotoFile.put!(photo, taken.bytes)
+
+      cleaned =
+        if photo.cleaned_width do
+          {:ok, cleaned} =
+            photo.cleaned_width
+            |> png_fixture(photo.cleaned_height)
+            |> Service.MemberPhoto.prepare()
+
+          cleaned.bytes
+        end
+
+      MemberPhotoFile.put!(photo, taken.bytes, cleaned)
     end
 
     photo

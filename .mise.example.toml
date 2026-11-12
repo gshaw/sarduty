@@ -25,6 +25,9 @@ TEAM_LOGO_PATH = "/path/to/team-logos"
 # HEALTHCHECKS_SYNC_URL = ""
 # Optional: point SAR Duty at a local SAR Duty Records instead of records.sarduty.com.
 # RECORDS_HOST = ""
+# Optional: Clean up's stand-in on Add a photo, with no AWS. Dev only. Without it Clean
+# up is off, as in production.
+# CLEAN_UP = "stand-in"
 # Optional: sign Apple Wallet passes for member ID cards. PEM text. Set all four.
 # APPLE_PASS_TYPE_ID = "pass.com.sarduty.member-card"
 # APPLE_TEAM_ID = ""

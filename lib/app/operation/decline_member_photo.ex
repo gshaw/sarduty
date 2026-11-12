@@ -1,7 +1,7 @@
 defmodule App.Operation.DeclineMemberPhoto do
   @moduledoc """
   A team admin declines a photo a member added (#1029), with one reason from
-  App.Model.MemberPhoto.reasons/0 and, if they like, a message in their own words. The
+  App.Model.MemberPhoto.reasons/1 and, if they like, a message in their own words. The
   member sees both on their Dashboard and on Add a photo, and adds another. SAR Duty
   deletes its copy of the photo; the row stays, with who declined it, when, and why.
   Nothing reaches the team's records, and no email goes out.

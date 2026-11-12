@@ -15,6 +15,10 @@ defmodule App.Model.MemberPhoto do
   # quarter turns clockwise, and the square `x`, `y`, `side`, as Service.MemberPhoto
   # reads them. The photo as taken is a MemberPhotoFile, `width` × `height`, kept only
   # while the photo waits. The row stays, with who decided, when, and why.
+  #
+  # With Clean up (#1031) the file keeps the cleaned-up photo too, `cleaned_width` ×
+  # `cleaned_height`, and `clean_up` is whether the Clean up switch was on: on, the
+  # square is placed on the cleaned-up photo, and off, on the photo as taken.
   @reasons [
     sunglasses: "Sunglasses",
     hat: "Hat or helmet",
@@ -37,6 +41,9 @@ defmodule App.Model.MemberPhoto do
     field :x, :float, default: 0.5
     field :y, :float, default: 0.5
     field :side, :float, default: 1.0
+    field :clean_up, :boolean, default: false
+    field :cleaned_width, :integer
+    field :cleaned_height, :integer
     field :decline_reason, Ecto.Enum, values: Keyword.keys(@reasons), redact: true
     # The team admin's own words for the member, under the reason.
     field :decline_message, TrimmedString, redact: true
@@ -44,8 +51,14 @@ defmodule App.Model.MemberPhoto do
     timestamps(type: :utc_datetime_usec)
   end
 
-  @doc "Why a team admin declines a photo, in the order the check page lists them: `{key, text}`."
-  def reasons, do: @reasons
+  @doc """
+  Why a team admin declines a photo, in the order the check page lists them:
+  `{key, text}`. While Clean up is available it removes any background, so Busy
+  background is not one of them (#1031).
+  """
+  def reasons(clean_up_available?) when is_boolean(clean_up_available?) do
+    if clean_up_available?, do: Keyword.delete(@reasons, :busy_background), else: @reasons
+  end
 
   @doc ~s(A decline reason as people read it: "Too dark".)
   def reason_text(reason), do: Keyword.fetch!(@reasons, reason)
@@ -53,6 +66,22 @@ defmodule App.Model.MemberPhoto do
   @doc "Where the photo is placed, as Service.MemberPhoto.placement/1 gives it."
   def placed(%MemberPhoto{turns: turns, x: x, y: y, side: side}),
     do: {turns, %{x: x, y: y, side: side}}
+
+  @doc "Whether the photo has a cleaned-up copy: Clean up answered when it was added."
+  def cleaned?(%MemberPhoto{cleaned_width: width}), do: is_integer(width)
+
+  @doc """
+  Which of the photo's two files the square is placed on with the Clean up switch at
+  `clean_up?`: `:cleaned`, or `:taken` with the switch off or no cleaned-up copy.
+  """
+  def shape(%MemberPhoto{} = photo, clean_up?),
+    do: if(clean_up? and cleaned?(photo), do: :cleaned, else: :taken)
+
+  @doc "The `{width, height}` of one of the photo's files, `:taken` or `:cleaned`."
+  def size(%MemberPhoto{width: width, height: height}, :taken), do: {width, height}
+
+  def size(%MemberPhoto{cleaned_width: width, cleaned_height: height}, :cleaned),
+    do: {width, height}
 
   @doc """
   A team admin's decline: `reason`, one of `reasons/0` as the form sends it, and

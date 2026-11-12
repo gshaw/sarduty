@@ -5,7 +5,9 @@ the card ([member-cards.md](member-cards.md#a-photo-before-a-card)). D4H's web a
 the only way to set one. Photos (#1028) lets a team admin add or change any member's
 photo in SAR Duty, on a D4H team and on a Records team. A member adds their own, and a
 team admin checks it first (#1029). A team admin asks a member for one by email (#1030).
-These are parts 1 to 3 of the photos stack (#1023): Clean up comes next.
+[Clean up](#clean-up) removes the background and centres the face (#1031), once its
+function exists: until then it is off, and a stand-in runs in dev. These are parts 1 to
+4 of the photos stack (#1023).
 
 ## The switch
 
@@ -96,7 +98,7 @@ a photo needs no check.
   cuts the square as it is placed now and sends it through SetMemberPhoto, as step 4
   does. A refusal leaves the photo waiting and says why (`D4H.error_text/2`).
 - **Decline photo** ([DeclineMemberPhoto](../lib/app/operation/decline_member_photo.ex))
-  takes one reason from `MemberPhoto.reasons/0` and an optional message, up to 300
+  takes one reason from `MemberPhoto.reasons/1` and an optional message, up to 300
   characters. The member's Dashboard says "Your photo was declined: Too dark" under For
   you to do, and Add a photo shows the reason and the message above the examples. Both
   go when they add another, or when a team admin sets their photo
@@ -142,6 +144,53 @@ Duty asks nobody by itself and sends no reminders: a team admin asks again.
   For you to do, with who asked and their message. Their ID Card tab says who asked and
   when, so two team admins do not both ask. Photos shows "Asked Nov 9" under the member
   in place of Add a photo and Ask for a photo.
+
+## Clean up
+
+Clean up removes a photo's background and centres the face (#1031). It will run on a
+function in Calgary that does not exist yet, so it is **off in production**, and with it
+off no page mentions it: everything above is how Photos works today.
+[App.Adapter.CleanUp](../lib/app/adapter/clean_up.ex) is the only module that will know
+the function. Its modes, and the variable that turns the stand-in on in dev, are in
+[external-services.md](external-services.md#clean-up). `CleanUpPhoto.available?/0` is
+the one test pages ask.
+
+While Clean up is available:
+
+- **The guide** takes any background: the plain wall rule becomes "Any background. SAR
+  Duty removes it.", the Busy background example goes, and a line under the buttons says
+  what Clean up does. The email that asks for a photo says any background works.
+- **It runs by itself** on the photo picked, after step 2, in `start_async`, since the
+  person waits for it ([jobs.md](jobs.md#job-or-inline)). The page says "Cleaning up…".
+  [CleanUpPhoto](../lib/app/operation/clean_up_photo.ex) asks the adapter, which gives
+  up after 30 seconds.
+- **The result arrives placed.** `Service.MemberPhoto.face_placement/2`, pure, starts the
+  square where it puts the face the function found in the oval. Step 3's tools still
+  work.
+- **The Clean up switch** is on. Off shows the photo as taken, placed by hand. Each side
+  starts from its own place, and saving sends the one the switch shows.
+- **SAR Duty warns, and never blocks** (`CleanUpPhoto.warnings/2`, pure): more than 1
+  face, no face, or a dark photo. With a warning, Take another is the leading button,
+  and Add photo still works: a team admin decides, not SAR Duty. Sunglasses and hats get
+  no warning, since SAR Duty cannot tell for sure.
+- **Dark** is `Service.MemberPhoto.dark?/1`, pure, worked out in the app: the photo as
+  taken averages under a fifth of full brightness. It measures the whole photo, never
+  the face alone, so it says nothing about skin or hair.
+- **When it does not answer**, an error or 30 seconds, a toast says "Clean up did not
+  answer. Place your photo yourself." and the page goes on as with Clean up off.
+- **A waiting photo keeps both**: `member_photo_files.cleaned_bytes` beside the photo as
+  taken, its size on the row, and `member_photos.clean_up`, whether the switch was on,
+  which says which photo `x`, `y`, and `side` are on. `?shape=cleaned` serves the
+  cleaned-up photo, and `?shape=placed` cuts the square from the one the switch showed.
+  A team admin's own Add a photo waits for nobody, so it keeps neither.
+- **Check a photo** gets the switch, where the member left it, for a photo with a
+  cleaned-up copy. The photo the member placed starts where they placed it, and the other
+  from the middle square. Accept photo sends what the switch shows. Busy background is
+  not a reason to decline (`MemberPhoto.reasons/1`).
+
+The stand-in cuts the photo to a centred square and reports 1 face, where the oval is,
+so dev shows every step but removes no background. A test gives it another answer
+through `App.CleanUpStandIn`, to try each warning, an error, and a timeout.
 
 ## Sending it
 
