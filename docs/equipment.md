@@ -58,7 +58,8 @@ place, with the chain of items holding each one. A search, or a filter other tha
 service", lists items from every place.
 
 The stat switch (2026-10-29): All, In service (D4H's operational, as the item form names
-it), Unserviceable, Lost, and Retired. Only All shows the status badge: each other tile
+it), Unserviceable, Lost, and Retired. Every page names a status with
+`EquipmentItem.status_label/1`, so "In service" is the one word (#1014). Only All shows the status badge: each other tile
 names its rows' status. Expires is a filter, not a tile: it cuts across every status, so
 with In service it lists what to renew. It reads `BuildGroupRulePreview.expiry/2`, the
 app's one expiry rule.
@@ -185,6 +186,13 @@ name, type, place, serial, and expiry change in D4H, and the form says so.
 - Saving is one `update_equipment_item` row naming only what changed, through
   [SaveEquipmentItem](../lib/app/operation/save_equipment_item.ex) and ApplyEdit
   (`ApplyEdit.d4h_takes?/1`). Adding and deleting stay a Records team's only.
+
+## History
+
+An item's History tab, `/equipment/:id/history` (#1014), lists Change item and Change
+fields saves, with what each field became, beside what the refresh saw change in D4H:
+name, category, status, a move, custom fields, and costs. Its use on activities stays on
+its Activities tab. See [change-history.md](change-history.md).
 
 ## Teams on SAR Duty Records
 

@@ -15,6 +15,7 @@ defmodule Web.Components.Columns do
   import Web.Components.Standing, only: [standing_badge: 1]
 
   alias App.Model.Activity
+  alias App.Model.EquipmentItem
   alias App.Operation.BuildGroupRulePreview
   alias Service.Format
   alias Web.Components.ActivityPanel
@@ -110,13 +111,13 @@ defmodule Web.Components.Columns do
   defp item_status(%{item: %{status: status}} = assigns)
        when status in ["unserviceable", "lost"] do
     ~H"""
-    <.badge kind={:danger}>{String.capitalize(@item.status)}</.badge>
+    <.badge kind={:danger}>{EquipmentItem.status_label(@item.status)}</.badge>
     """
   end
 
   defp item_status(assigns) do
     ~H"""
-    <.badge>{String.capitalize(@item.status)}</.badge>
+    <.badge>{EquipmentItem.status_label(@item.status)}</.badge>
     """
   end
 

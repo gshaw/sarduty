@@ -61,7 +61,7 @@ defmodule App.Operation.ApplyTemplate do
   """
   def adds(%Template{} = template, %Activity{} = activity, custom_fields) do
     lines =
-      for line <- template.template_items, EquipmentItem.in_service?(line.equipment_item) do
+      for line <- template.template_items, EquipmentItem.usable?(line.equipment_item) do
         %{item: line.equipment_item, minutes: line.minutes, km: nil}
       end
 

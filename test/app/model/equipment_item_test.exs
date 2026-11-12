@@ -36,11 +36,19 @@ defmodule App.Model.EquipmentItemTest do
       assert EquipmentItem.find_by_code(other.id, "SF0119") == nil
     end
 
-    test "prefers an item in service to a retired one with the same barcode", %{team: team} do
+    test "prefers a usable item to a retired one with the same barcode", %{team: team} do
       equipment_item_fixture(team, %{barcode: "65#01", status: "retired"})
       current = equipment_item_fixture(team, %{barcode: "65#01"})
 
       assert EquipmentItem.find_by_code(team.id, "65#01").id == current.id
     end
+  end
+
+  # One word on every page (#1014): the glossary's "in service", never D4H's operational.
+  test "status_label/1 names D4H's statuses as people read them" do
+    assert EquipmentItem.status_label("operational") == "In service"
+    assert EquipmentItem.status_label("unserviceable") == "Unserviceable"
+    assert EquipmentItem.status_label("retired") == "Retired"
+    assert EquipmentItem.status_label("out_for_repair") == "Out for repair"
   end
 end

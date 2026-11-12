@@ -340,4 +340,86 @@ defmodule App.ViewData.ChangeHistoryTest do
              :activity
            ) == "Finish changed to Nov 7, 2026, 14:00"
   end
+
+  describe "an equipment item (#1014)" do
+    defp item_change(fields, old, new) do
+      describe_change(
+        %{
+          record_kind: :equipment_item,
+          action: :changed,
+          fields: fields,
+          old_value: old,
+          new_value: new
+        },
+        :equipment_item
+      )
+    end
+
+    defp item_row(old, new) do
+      ChangeHistory.describe_row(
+        %ChangeSetRow{
+          action: :update_equipment_item,
+          old_value: old,
+          new_value: new,
+          change_set: %{source: :edit}
+        },
+        :equipment_item,
+        @tz
+      )
+    end
+
+    test "a change seen in D4H says each field in the page's order" do
+      assert item_change(
+               ["status", "title", "where", "cost_per_km_cents"],
+               %{
+                 "title" => "Rescue 1",
+                 "status" => "operational",
+                 "where" => "Yard",
+                 "cost_per_km_cents" => 67
+               },
+               %{
+                 "title" => "Rescue 1 (old)",
+                 "status" => "unserviceable",
+                 "where" => "Sam Rivera",
+                 "cost_per_km_cents" => 70
+               }
+             ) ==
+               "Name changed from Rescue 1 to Rescue 1 (old). " <>
+                 "Status changed from in service to unserviceable. " <>
+                 "Moved from Yard to Sam Rivera. Cost per km changed from $0.67 to $0.70"
+    end
+
+    test "a category, cost, and custom field set or cleared" do
+      assert item_change(
+               ["kind", "cost_per_hour_cents", "custom_values"],
+               %{"kind" => nil, "cost_per_hour_cents" => 2500, "custom_values" => %{}},
+               %{
+                 "kind" => "Radio",
+                 "cost_per_hour_cents" => nil,
+                 "custom_values" => %{"Last serviced" => "Nov 3, 2026", "Notes" => nil}
+               }
+             ) ==
+               "Category changed from none to Radio. Last serviced changed to Nov 3, 2026. " <>
+                 "Notes cleared. Cost per hour cleared"
+    end
+
+    test "an item added in D4H" do
+      assert describe_change(%{record_kind: :equipment_item, action: :added}, :equipment_item) ==
+               "Item added"
+    end
+
+    test "Change item says what changed and to what" do
+      assert item_row(
+               %{"status" => "operational", "barcode" => nil},
+               %{"status" => "lost", "barcode" => "SF0119"}
+             ) == "Status changed from in service to lost. Barcode set to SF0119"
+
+      assert item_row(%{"expires_at" => nil}, %{"expires_at" => "2027-01-31T08:00:00Z"}) ==
+               "Expiry changed to Jan 31, 2027"
+    end
+
+    test "a row with nothing a sentence names keeps its line" do
+      assert item_row(%{}, %{"notes" => "Dented"}) == "Changed in SAR Duty"
+    end
+  end
 end

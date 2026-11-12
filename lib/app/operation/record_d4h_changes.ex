@@ -4,17 +4,20 @@ defmodule App.Operation.RecordD4HChanges do
   alias App.Model.ChangeSetRow
   alias App.Model.CustomField
   alias App.Model.D4HChange
+  alias App.Model.EquipmentItem
   alias App.Model.Group
+  alias App.Model.Member
   alias App.Model.Qualification
   alias App.Model.Team
   alias App.Repo
 
   # Keeps what each D4H refresh and sync changed in the local copy as `d4h_changes`, the
-  # history on member and activity pages (#174, step 3). The upsert stages call record/4
-  # and removed/3 as they write. They only record inside recording/3, which the full
-  # refresh and the sync wrap around their run. It lives in the process dictionary so
-  # the stages, shared by both runs and called from many places, don't each pass it on.
-  # Writes run in the caller's process; only D4H fetches run in tasks.
+  # history on member, activity, and equipment item pages (#174, step 3). The upsert
+  # stages call record/4 and removed/3 as they write. They only record inside
+  # recording/3, which the full refresh and the sync wrap around their run. It lives in
+  # the process dictionary so the stages, shared by both runs and called from many
+  # places, don't each pass it on. Writes run in the caller's process; only D4H fetches
+  # run in tasks.
 
   @key {__MODULE__, :run}
 
@@ -24,16 +27,25 @@ defmodule App.Operation.RecordD4HChanges do
     activity: ~w(title started_at finished_at is_published tags custom_values deleted_at)a,
     attendance: ~w(status started_at finished_at duration_in_minutes)a,
     award: ~w(starts_at ends_at)a,
-    group_membership: []
+    group_membership: [],
+    # Where it is is three ids, kept in words as `where` (#1014): see describe_where/4.
+    equipment_item:
+      ~w(title item_type kind status d4h_container_id member_id d4h_location_id barcode serial
+         expires_at custom_values cost_per_km_cents cost_per_hour_cents cost_per_use_cents)a
   }
 
-  # The change set actions that write each kind, for a team on SAR Duty Records.
+  # The change set actions that write each kind: a Records team's edits, and an item's
+  # Change item and Change fields on any team.
   @edit_actions %{
     member: ~w(create_member update_member retire_member rejoin_member)a,
     activity: ~w(create_activity update_activity delete_activity)a,
     award: ~w(award_qualification remove_award)a,
-    group_membership: ~w(add_group_member remove_group_member)a
+    group_membership: ~w(add_group_member remove_group_member)a,
+    equipment_item: ~w(create_equipment_item update_equipment_item delete_equipment_item)a
   }
+
+  # An item's place: inside another item, with a member, or at a D4H location.
+  @place_fields ~w(d4h_container_id member_id d4h_location_id)
 
   # Named in `fields` when they change, but their values are never kept.
   @contact_fields ~w(email phone address primary_emergency_contact secondary_emergency_contact)a
@@ -129,6 +141,43 @@ defmodule App.Operation.RecordD4HChanges do
 
   defp describe(index, values, ids, tz), do: CustomField.describe_values(index, values, ids, tz)
 
+  # An item moved (#1014): its 3 place ids become one `where`, kept in words, since a
+  # container or member can go before the page reads it. "Rescue 1", "Sam Rivera", "Yard".
+  defp describe_where(%{action: :changed, fields: fields} = change, :equipment_item, old, new) do
+    if Enum.any?(fields, &(&1 in @place_fields)) do
+      %{
+        change
+        | fields:
+            fields |> Enum.map(&if(&1 in @place_fields, do: "where", else: &1)) |> Enum.uniq(),
+          old_value:
+            change.old_value |> Map.drop(@place_fields) |> Map.put("where", place_words(old)),
+          new_value:
+            change.new_value |> Map.drop(@place_fields) |> Map.put("where", place_words(new))
+      }
+    else
+      change
+    end
+  end
+
+  defp describe_where(change, _kind, _old, _new), do: change
+
+  defp place_words(%{d4h_container_id: id, team_id: team_id}) when is_integer(id) do
+    EquipmentItem
+    |> where([i], i.team_id == ^team_id and i.d4h_equipment_id == ^id)
+    |> select([i], i.title)
+    |> Repo.one() || "another item"
+  end
+
+  defp place_words(%{member_id: id, team_id: team_id}) when is_integer(id) do
+    Member
+    |> where([m], m.team_id == ^team_id and m.id == ^id)
+    |> select([m], m.name)
+    |> Repo.one() || "a member"
+  end
+
+  defp place_words(%{location_title: title}) when is_binary(title), do: title
+  defp place_words(_item), do: "no location"
+
   defp changed?(field, nil, _new) when field in @filled_later, do: false
   defp changed?(_field, old, new), do: old != new
 
@@ -157,8 +206,10 @@ defmodule App.Operation.RecordD4HChanges do
          %{} = change <- diff(kind, old, new),
          record = new || old,
          false <- own_write?(run, kind, change, record) do
+      change = kind |> describe_custom_values(change, old, new) |> describe_where(kind, old, new)
+
       run
-      |> build(kind, describe_custom_values(kind, change, old, new), record, opts)
+      |> build(kind, change, record, opts)
       |> D4HChange.insert!()
     end
 
@@ -185,6 +236,7 @@ defmodule App.Operation.RecordD4HChanges do
       activity_id: activity_id(kind, record),
       qualification_id: Map.get(record, :qualification_id),
       group_id: Map.get(record, :group_id),
+      equipment_item_id: if(kind == :equipment_item, do: record.id),
       d4h_record_id: d4h_id(kind, record),
       label: opts[:label] || label(kind, record)
     }
@@ -192,6 +244,8 @@ defmodule App.Operation.RecordD4HChanges do
 
   defp member_id(:member, record), do: record.id
   defp member_id(:activity, _record), do: nil
+  # The member who holds it: the item's history isn't theirs.
+  defp member_id(:equipment_item, _record), do: nil
   defp member_id(_kind, record), do: record.member_id
 
   defp activity_id(:activity, record), do: record.id
@@ -203,6 +257,7 @@ defmodule App.Operation.RecordD4HChanges do
   defp d4h_id(:attendance, r), do: r.d4h_attendance_id
   defp d4h_id(:award, r), do: r.d4h_award_id
   defp d4h_id(:group_membership, r), do: r.d4h_group_membership_id
+  defp d4h_id(:equipment_item, r), do: r.d4h_equipment_id
 
   # Qualifications and groups can be deleted by a later refresh, so their name is kept.
   defp label(:award, %{qualification_id: id}) when is_integer(id),
@@ -239,8 +294,9 @@ defmodule App.Operation.RecordD4HChanges do
     |> Repo.exists?()
   end
 
-  # An edit of a team on SAR Duty Records (docs/records.md) is on the page from its row,
-  # so the sync that copies it back doesn't record it again as seen in D4H.
+  # An edit, such as one of a team on SAR Duty Records (docs/records.md) or an item's
+  # Change item, is on the page from its row, so the sync that copies it back doesn't
+  # record it again as seen in D4H.
   defp own_write?(run, kind, _change, record) when is_map_key(@edit_actions, kind) do
     ChangeSetRow
     |> where([r], r.team_id == ^run.team_id and r.status == :applied)

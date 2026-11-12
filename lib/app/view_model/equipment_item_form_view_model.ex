@@ -6,13 +6,6 @@ defmodule App.ViewModel.EquipmentItemFormViewModel do
 
   @types [{"Equipment", "equipment"}, {"Vehicle", "vehicle"}, {"Supply", "supply"}]
 
-  @statuses [
-    {"In service", "operational"},
-    {"Unserviceable", "unserviceable"},
-    {"Lost", "lost"},
-    {"Retired", "retired"}
-  ]
-
   # Adding or changing an equipment item of a team on SAR Duty Records (#271). `place`
   # is where it is, as a value from places/3: "Team", "EquipmentLocation:<id>",
   # "Equipment:<id>", "Member:<id>", or "new" for `new_place`, a location by title.
@@ -34,11 +27,11 @@ defmodule App.ViewModel.EquipmentItemFormViewModel do
   @d4h_statuses ~w(operational unserviceable lost)
 
   def types, do: @types
-  def statuses, do: @statuses
+  def statuses, do: EquipmentItem.statuses()
 
   @doc "The statuses a team in `service` sets from the form."
-  def statuses(:records), do: @statuses
-  def statuses(:d4h), do: Enum.filter(@statuses, &(elem(&1, 1) in @d4h_statuses))
+  def statuses(:records), do: statuses()
+  def statuses(:d4h), do: Enum.filter(statuses(), &(elem(&1, 1) in @d4h_statuses))
 
   @doc "Whether the form changes `item`'s status, which D4H does only from these."
   def status_changes?(_item, :records), do: true
@@ -52,7 +45,10 @@ defmodule App.ViewModel.EquipmentItemFormViewModel do
       title: item.title,
       item_type: item.item_type,
       status:
-        if(item.status in Enum.map(@statuses, &elem(&1, 1)), do: item.status, else: "operational"),
+        if(item.status in Enum.map(statuses(), &elem(&1, 1)),
+          do: item.status,
+          else: "operational"
+        ),
       place: place(item),
       barcode: item.barcode,
       serial: item.serial,
@@ -120,7 +116,7 @@ defmodule App.ViewModel.EquipmentItemFormViewModel do
     |> validate_required([:title], message: "Enter a name.")
     |> validate_length(:title, max: 100)
     |> validate_inclusion(:item_type, Enum.map(@types, &elem(&1, 1)))
-    |> validate_inclusion(:status, Enum.map(@statuses, &elem(&1, 1)))
+    |> validate_inclusion(:status, Enum.map(statuses(), &elem(&1, 1)))
     |> validate_length(:barcode, max: 80)
     |> validate_length(:serial, max: 100)
     |> validate_format(:place, ~r/^(Team|new|(EquipmentLocation|Equipment|Member):\d+)$/)

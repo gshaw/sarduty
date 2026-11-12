@@ -4,6 +4,7 @@ defmodule App.Operation.RefreshD4HData.UpsertEquipmentItems do
   alias App.Adapter.D4H
   alias App.Model.EquipmentItem
   alias App.Model.Member
+  alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData.Progress
   alias App.Operation.RefreshD4HData.StaleRows
   alias App.Repo
@@ -39,7 +40,8 @@ defmodule App.Operation.RefreshD4HData.UpsertEquipmentItems do
 
   defp fetch(d4h), do: no_equipment(fn -> D4H.fetch_equipment_items(d4h) end)
 
-  # An item D4H deleted takes its usages and its place in templates with it.
+  # An item D4H deleted takes its usages, its place in templates, and its history with it:
+  # nothing shows the history of an item that has no page.
   def delete_stale(team_id, synced_d4h_ids) do
     stale_ids =
       EquipmentItem
@@ -60,10 +62,14 @@ defmodule App.Operation.RefreshD4HData.UpsertEquipmentItems do
         member_id: item.d4h_member_id && members[item.d4h_member_id]
       })
 
-    case existing[item.d4h_equipment_id] do
-      nil -> %EquipmentItem{} |> EquipmentItem.build_changeset(params) |> Repo.insert!()
-      record -> record |> EquipmentItem.build_changeset(params) |> Repo.update!()
-    end
+    record = existing[item.d4h_equipment_id]
+
+    saved =
+      (record || %EquipmentItem{})
+      |> EquipmentItem.build_changeset(params)
+      |> Repo.insert_or_update!()
+
+    RecordD4HChanges.record(:equipment_item, record, saved)
   end
 
   defp existing(team_id) do
