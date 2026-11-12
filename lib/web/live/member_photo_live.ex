@@ -53,7 +53,6 @@ defmodule Web.MemberPhotoLive do
         <p>
           <.button
             id="download-photo"
-            size={:sm}
             href={~p"/teams/#{@current_team}/members/#{@member.id}/image/original"}
           >
             Download original photo
