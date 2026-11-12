@@ -54,8 +54,8 @@ defmodule Web.MemberPhoto do
     default: {0, %{x: 0.5, y: 0.5, side: 1.0}},
     doc: "where it starts: the middle square, or where the member placed it"
 
-  attr :labelledby, :string, required: true
-  attr :describedby, :string, default: nil
+  attr :label_id, :string, required: true, doc: "the element that names the square"
+  attr :hint_id, :string, default: nil, doc: "the element that says what to do with it"
 
   @doc """
   The square the ID card shows, with the photo under the oval and the tools: Rotate, Zoom
@@ -80,8 +80,8 @@ defmodule Web.MemberPhoto do
         class="photo-place"
         tabindex="0"
         role="group"
-        aria-labelledby={@labelledby}
-        aria-describedby={@describedby}
+        aria-labelledby={@label_id}
+        aria-describedby={@hint_id}
         aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown + -"
         data-photo-frame
       >

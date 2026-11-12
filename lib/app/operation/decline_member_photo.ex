@@ -19,29 +19,23 @@ defmodule App.Operation.DeclineMemberPhoto do
   """
   def call(%Team{} = team, %MemberPhoto{team_id: team_id} = photo, reason, message, user, now)
       when team_id == team.id and is_struct(user, User) do
-    MemberPhoto.locked(photo.member_id, fn ->
-      Repo.transaction(fn ->
-        case decline(team, photo, reason, message, user, now) do
-          {:ok, declined} -> declined
-          {:error, error} -> Repo.rollback(error)
-        end
-      end)
-    end)
+    decline = fn -> decline(team, photo, reason, message, user, now) end
+    MemberPhoto.locked(photo.member_id, fn -> Repo.transaction(decline) end)
   end
 
+  # Inside the transaction: an error rolls it back, and is what `call/6` returns.
   defp decline(team, photo, reason, message, user, now) do
-    case Repo.get_by(MemberPhoto, id: photo.id, team_id: team.id) do
-      %MemberPhoto{status: :waiting} = current ->
-        with {:ok, declined} <-
-               current
-               |> MemberPhoto.decline_changeset(reason, message, user, now)
-               |> Repo.update() do
-          MemberPhotoFile.delete!(declined)
-          {:ok, declined}
-        end
-
-      _decided ->
-        {:error, :decided}
+    with %MemberPhoto{status: :waiting} = current <-
+           Repo.get_by(MemberPhoto, id: photo.id, team_id: team.id),
+         {:ok, declined} <-
+           current
+           |> MemberPhoto.decline_changeset(reason, message, user, now)
+           |> Repo.update() do
+      MemberPhotoFile.delete!(declined)
+      declined
+    else
+      {:error, changeset} -> Repo.rollback(changeset)
+      _decided -> Repo.rollback(:decided)
     end
   end
 end

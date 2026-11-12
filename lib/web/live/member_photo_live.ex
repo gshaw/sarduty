@@ -99,8 +99,8 @@ defmodule Web.MemberPhotoLive do
             width={@photo.width}
             height={@photo.height}
             placed={MemberPhoto.placed(@photo)}
-            labelledby="photo-place-label"
-            describedby="photo-place-hint"
+            label_id="photo-place-label"
+            hint_id="photo-place-hint"
           />
         </form>
         <p :if={@photo.status != :waiting} id="photo-file-gone" class="hint">

@@ -6,6 +6,8 @@ defmodule Web.MemberPhotoFormLiveTest do
 
   alias App.Adapter.D4H
   alias App.Model.ChangeSetRow
+  alias App.Model.MemberPhoto
+  alias App.Model.MemberPhotoFile
   alias App.RecordsStub
   alias App.Repo
 
@@ -325,12 +327,12 @@ defmodule Web.MemberPhotoFormLiveTest do
       assert has_element?(lv, "#flash-info", "A team admin checks it.")
       assert has_element?(lv, "#your-photo-status .badge", "Waiting")
 
-      assert [%{status: :waiting} = photo] = Repo.all(App.Model.MemberPhoto)
+      assert [%{status: :waiting} = photo] = Repo.all(MemberPhoto)
       assert {photo.team_id, photo.member_id} == {team.id, cam.id}
       assert {photo.turns, photo.x, photo.y, photo.side} == {1, 0.5, 0.4, 0.5}
       # The photo as taken is kept, with its size, for a team admin to place again.
       assert {photo.width, photo.height} == {800, 600}
-      assert photo |> App.Model.MemberPhotoFile.bytes() |> size() == {800, 600}
+      assert photo |> MemberPhotoFile.bytes() |> size() == {800, 600}
 
       # Nothing went to the team's records: the member's photo is as it was.
       refute_received {:records, _method, _path, _body}
@@ -342,14 +344,14 @@ defmodule Web.MemberPhotoFormLiveTest do
 
     test "a second one replaces the first, file and all", %{conn: conn, team: team} do
       add(conn, team)
-      [first] = Repo.all(App.Model.MemberPhoto)
+      [first] = Repo.all(MemberPhoto)
 
       add(conn, team, %{"turns" => "2"})
 
-      assert [%{status: :waiting, turns: 2} = second] = Repo.all(App.Model.MemberPhoto)
+      assert [%{status: :waiting, turns: 2} = second] = Repo.all(MemberPhoto)
       assert second.id != first.id
-      assert App.Model.MemberPhotoFile.bytes(first) == nil
-      assert Repo.aggregate(App.Model.MemberPhotoFile, :count) == 1
+      assert MemberPhotoFile.bytes(first) == nil
+      assert Repo.aggregate(MemberPhotoFile, :count) == 1
     end
 
     test "a decline of their last photo shows above the examples, with its message", %{
@@ -387,7 +389,7 @@ defmodule Web.MemberPhotoFormLiveTest do
       pick(lv, png_fixture(600, 600))
       render_submit(lv, "save", %{"member_id" => to_string(other.id)})
 
-      assert [%{member_id: member_id}] = Repo.all(App.Model.MemberPhoto)
+      assert [%{member_id: member_id}] = Repo.all(MemberPhoto)
       assert member_id == cam.id
     end
 
@@ -418,7 +420,7 @@ defmodule Web.MemberPhotoFormLiveTest do
              "You're viewing as Riley Okafor, so nothing is saved."
            )
 
-    assert Repo.all(App.Model.MemberPhoto) == []
+    assert Repo.all(MemberPhoto) == []
   end
 
   test "a team admin's own photo still needs no check", %{conn: conn} do
@@ -442,6 +444,6 @@ defmodule Web.MemberPhotoFormLiveTest do
     |> follow_redirect(conn, ~p"/teams/#{team}/members/#{alex.id}/card")
 
     assert Repo.reload!(alex).has_photo
-    assert Repo.all(App.Model.MemberPhoto) == []
+    assert Repo.all(MemberPhoto) == []
   end
 end

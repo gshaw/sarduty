@@ -32,19 +32,7 @@ defmodule Web.PhotoCollectionLive do
     view = @views |> Keyword.keys() |> Enum.find(&(view_param(&1) == wanted))
     if !view, do: raise(Web.Status.NotFound)
 
-    team = socket.assigns.current_team
-    now = DateTime.utc_now()
-    members = Member.get_all_counted(team, now)
-    without = Enum.reject(members, & &1.has_photo)
-    waiting = MemberPhoto.get_waiting(team, now)
-
-    counts = %{members: length(members), waiting: length(waiting), no_photo: length(without)}
-
-    socket
-    |> assign(view: view, counts: counts, own: nil)
-    |> assign(members: if(view == :no_photo, do: without, else: members))
-    |> assign(waiting: waiting, waiting_by_member: Map.new(waiting, &{&1.member_id, &1}))
-    |> then(&{:noreply, &1})
+    {:noreply, socket |> assign(view: view, own: nil) |> load_team()}
   end
 
   # A member's own part. A URL that names one of the team's views is not found.
@@ -59,6 +47,22 @@ defmodule Web.PhotoCollectionLive do
     }
 
     {:noreply, assign(socket, own: own)}
+  end
+
+  # The team's views: the members the grid shows, the photos that wait, and the counts.
+  defp load_team(socket) do
+    %{current_team: team, view: view} = socket.assigns
+    now = DateTime.utc_now()
+    members = Member.get_all_counted(team, now)
+    without = Enum.reject(members, & &1.has_photo)
+    waiting = MemberPhoto.get_waiting(team, now)
+
+    assign(socket,
+      counts: %{members: length(members), waiting: length(waiting), no_photo: length(without)},
+      members: if(view == :no_photo, do: without, else: members),
+      waiting: waiting,
+      waiting_by_member: Map.new(waiting, &{&1.member_id, &1})
+    )
   end
 
   defp view_param(:no_photo), do: "no-photo"

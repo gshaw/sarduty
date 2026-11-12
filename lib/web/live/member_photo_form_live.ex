@@ -4,11 +4,10 @@ defmodule Web.MemberPhotoFormLive do
        access: :team, view_events: ["validate", "take-another"], member_events: ["save"]}
 
   alias App.Model.Member
-  alias App.Model.MemberPhoto, as: WaitingPhoto
+  alias App.Model.MemberPhoto
   alias App.Model.Team
   alias App.Operation.AddOwnPhoto
   alias App.Operation.SetMemberPhoto
-  alias Service.MemberPhoto
   alias Web.PhotoCollectionLive
 
   # Add a photo, /teams/:subdomain/photos/members/new: someone takes or selects a photo,
@@ -51,7 +50,7 @@ defmodule Web.MemberPhotoFormLive do
     |> allow_upload(:photo,
       accept: ~w(image/*),
       max_entries: 1,
-      max_file_size: MemberPhoto.max_bytes(),
+      max_file_size: Service.MemberPhoto.max_bytes(),
       auto_upload: true,
       progress: &handle_progress/3
     )
@@ -77,7 +76,7 @@ defmodule Web.MemberPhotoFormLive do
       own?: true,
       member: member,
       members: nil,
-      declined: WaitingPhoto.declined_for_member(member),
+      declined: MemberPhoto.declined_for_member(member),
       back: PhotoCollectionLive.view_path(team, :members)
     )
   end
@@ -97,7 +96,7 @@ defmodule Web.MemberPhotoFormLive do
   defp handle_progress(:photo, %{done?: true} = entry, socket) do
     bytes = consume_uploaded_entry(socket, entry, fn %{path: path} -> {:ok, File.read!(path)} end)
 
-    case MemberPhoto.prepare(bytes) do
+    case Service.MemberPhoto.prepare(bytes) do
       {:ok, photo} ->
         photo = Map.put(photo, :src, "data:image/jpeg;base64," <> Base.encode64(photo.bytes))
         {:noreply, socket |> assign(photo: photo) |> update(:photo_count, &(&1 + 1))}
@@ -126,7 +125,8 @@ defmodule Web.MemberPhotoFormLive do
         {:noreply, put_flash(socket, :error, "Take a photo, or select one.")}
 
       true ->
-        {:noreply, save(socket, member, photo, MemberPhoto.placement(params["photo"] || %{}))}
+        placed = Service.MemberPhoto.placement(params["photo"] || %{})
+        {:noreply, save(socket, member, photo, placed)}
     end
   end
 
@@ -142,7 +142,7 @@ defmodule Web.MemberPhotoFormLive do
   defp save(socket, member, photo, {turns, square}) do
     %{current_team: team, current_user: user} = socket.assigns
 
-    with {:ok, jpeg} <- MemberPhoto.place(photo.bytes, turns, square),
+    with {:ok, jpeg} <- Service.MemberPhoto.place(photo.bytes, turns, square),
          :ok <- SetMemberPhoto.call(team, member, jpeg, user, DateTime.utc_now()) do
       socket
       |> put_flash(:info, "Photo saved.")
@@ -264,8 +264,8 @@ defmodule Web.MemberPhotoFormLive do
           src={@photo.src}
           width={@photo.width}
           height={@photo.height}
-          labelledby="photo-place-label"
-          describedby="photo-place-hint"
+          label_id="photo-place-label"
+          hint_id="photo-place-hint"
         />
 
         <.form_actions class="mt-6">

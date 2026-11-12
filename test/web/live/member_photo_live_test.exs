@@ -8,6 +8,8 @@ defmodule Web.MemberPhotoLiveTest do
   alias App.Model.ChangeSetRow
   alias App.Model.MemberPhoto
   alias App.Model.MemberPhotoFile
+  alias App.Operation.AddOwnPhoto
+  alias App.Operation.DeclineMemberPhoto
   alias App.RecordsStub
   alias App.Repo
 
@@ -267,7 +269,7 @@ defmodule Web.MemberPhotoLiveTest do
   } do
     {:ok, lv, _html} = live(conn, check_path(team, photo))
     {:ok, taken} = 400 |> png_fixture(400) |> Service.MemberPhoto.prepare()
-    {:ok, newer} = App.Operation.AddOwnPhoto.call(cam, taken, {0, %{x: 0.5, y: 0.5, side: 1.0}})
+    {:ok, newer} = AddOwnPhoto.call(cam, taken, {0, %{x: 0.5, y: 0.5, side: 1.0}})
 
     {:ok, _list, html} =
       lv
@@ -315,7 +317,7 @@ defmodule Web.MemberPhotoLiveTest do
 
     test "is gone once the photo is decided", %{conn: conn, team: team, photo: photo, user: user} do
       {:ok, _declined} =
-        App.Operation.DeclineMemberPhoto.call(team, photo, "dark", nil, user, DateTime.utc_now())
+        DeclineMemberPhoto.call(team, photo, "dark", nil, user, DateTime.utc_now())
 
       assert conn |> get(~p"/teams/#{team}/photos/members/#{photo.id}/file") |> response(404)
     end

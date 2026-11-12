@@ -401,8 +401,9 @@ The team's Dashboard, `/teams/:subdomain`
 - **For you to do** comes from [MemberToDo](../lib/app/view_data/member_to_do.ex), pure:
   each form a team admin asked you to sign (#993, a team admin without a member login
   gets these too), add your ID card to Wallet (on a team with ID cards on, until
-  `MemberCard.in_wallet?/1`), and each qualification expiring within 60 days (until it's
-  renewed). Each leaves once done. A tax credit letter isn't one: its email carries the
+  `MemberCard.in_wallet?/1`), each qualification expiring within 60 days (until it's
+  renewed), and a photo of theirs a team admin declined (#1029, until they add another:
+  [photos.md](photos.md#a-members-own-photo)). Each leaves once done. A tax credit letter isn't one: its email carries the
   PDF, and a member with no email shows in Needs attention until one is added. With nothing to do, the card
   says so in one line.
 - `"refresh"` is a team admin's event: the team pages' hook refuses it from a member

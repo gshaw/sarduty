@@ -65,19 +65,9 @@ defmodule Web.Navigation do
 
     team_sections =
       cond do
-        team_admin? ->
-          team_admin_sections(team)
-
-        member? ->
-          [
-            dashboard_links(team) ++ photo_links(team),
-            [activities_link(team), take_attendance_link(team)],
-            member_links(team),
-            chore_links(team)
-          ]
-
-        true ->
-          []
+        team_admin? -> team_admin_sections(team)
+        member? -> member_sections(team)
+        true -> []
       end
 
     # Your membership, then Get help (#780) for everyone on the team.
@@ -132,6 +122,16 @@ defmodule Web.Navigation do
       [link("equipment", "Equipment", ~p"/teams/#{team}/equipment") | chore_links(team)],
       [link("reports", "Reports", ~p"/teams/#{team}/reports")],
       [link("settings", "Team settings", ~p"/teams/#{team}/settings")]
+    ]
+  end
+
+  # What a member who is not a team admin sees: the pages both roles open.
+  defp member_sections(team) do
+    [
+      dashboard_links(team) ++ photo_links(team),
+      [activities_link(team), take_attendance_link(team)],
+      member_links(team),
+      chore_links(team)
     ]
   end
 

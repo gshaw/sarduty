@@ -1,5 +1,5 @@
 /* Photos (#1028): the grid of members' photos, Add a photo's guide, and the square a
-   photo is placed in. */
+   photo is placed in. A member's own photo and a team admin's check of it (#1029). */
 @layer components {
   /* Every current member's photo, as their ID card shows it: square tiles that fill the
      row, 2 across on a phone. */

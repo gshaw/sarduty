@@ -29,7 +29,8 @@ enforces the top-level list and the held URLs.
   (the name search), so Cancel opens the tab as it was (#920).
 - **A member's photo is under `/photos/members`** (#1028): Add a photo is
   `/photos/members/new`, with `?member=<id>` for one member. That leaves `/photos/:id`
-  for an activity's photo.
+  for an activity's photo. A photo a member added is `/photos/members/:id`, its check
+  page, and `/photos/members/:id/file` while SAR Duty keeps it (#1029).
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
   (`/teams/:subdomain/settings`, `/settings/team-admins`). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.
