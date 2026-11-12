@@ -56,7 +56,7 @@ defmodule Web.Components.FieldDefinitions do
         <:col :let={field} label="Field">
           {field.title}
           <span :if={@publish? and field.required} class="ml-2"><.badge>Needed to publish</.badge></span>
-          <p :for={line <- about(field, @names, @restricted_text)} class="hint">{line}</p>
+          <span :for={line <- about(field, @names, @restricted_text)} class="hint block">{line}</span>
         </:col>
         <:col :let={field} label="Type" fit={["Date and time", "Long text", "One choice"]}>
           {CustomField.type_label(field.field_type)}
