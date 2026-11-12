@@ -301,6 +301,7 @@ defmodule Web.ActivityOrgFormLive do
         label={@activity.ref_id || @activity.title}
         path={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
       />
+      <:item label="Forms" path={~p"/teams/#{@current_team}/activities/#{@activity.id}/forms"} />
       <:item
         label={@form.name}
         path={~p"/teams/#{@current_team}/activities/#{@activity.id}/forms/#{@form.id}"}
@@ -409,6 +410,7 @@ defmodule Web.ActivityOrgFormLive do
         label={@activity.ref_id || @activity.title}
         path={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
       />
+      <:item label="Forms" path={~p"/teams/#{@current_team}/activities/#{@activity.id}/forms"} />
       <:item label={@form.name} />
     </.breadcrumbs>
     <.banner

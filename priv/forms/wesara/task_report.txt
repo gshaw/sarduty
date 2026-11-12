@@ -2,6 +2,10 @@
 -- teams try forms and Publish. It reads only an activity's own fields, never a custom
 -- field, so it prints on any team, Records teams included. Its page is two pages,
 -- drawn by task_report.typ, with the verify code bottom left on each.
+--
+-- The task leader signs it as BCSARA's does (#993), named by the Task leader answer:
+-- they sign by publishing, a team admin asks them to, or a team admin signs for them.
+-- A draft is never signed.
 
 form 'Task report'
 about 'WESARA''s report after each incident. Made up, for trying SAR Duty: never send it.'
@@ -12,13 +16,16 @@ report task
   from activities
   where id = :activity
 
-ask leader 'Task leader' remember hint 'They sign it by hand.'
+ask leader 'Task leader' remember hint 'The member who signs it.'
 ask injured 'Injured' default 0
 ask notes 'Notes' hint 'Anything the description leaves out.'
 ask err 'ERR attached' choose 'Yes', 'No' default 'No'
 
 title 'Task report {task.ref_id}' by team.legal_name
 keep :leader, :injured, :err, task.attended_hours
+
+needs :leader
+signed by :leader
 
 verify shows
   'Task' task.ref_id
@@ -35,6 +42,8 @@ places
   injured     text top 202pt, left 294pt, width 42pt, fit, size 10pt
   description text top 248pt, left 76pt, width 460pt, pitch 18pt, size 10pt
   leader      text top 342pt, left 164pt, width 232pt, fit, size 10pt
+  signed      signature top 374pt, left 164pt, width 232pt, size 10pt
+  signed_on   text top 374pt, left 464pt, width 72pt, fit, size 10pt
   err         tick top 110pt, left 160pt, size 9pt, page 2
   prepared    text top 926pt, right 72pt, width 210pt, fit, size 10pt, page 2
 
@@ -46,5 +55,18 @@ fill
   injured = :injured as number
   description = if :notes is null then task.description else '{task.description} {:notes}'
   leader = :leader
+  signed = signer.signature
+  signed_on = signer.signed_on as date_short
   err = :err = 'Yes'
   prepared = team.legal_name
+
+-- The task leader signs by publishing, dated the day they do.
+expect with signer.name = 'Cameron Ruiz', signer.signed_on = 2026-11-11:
+  signed = '/s/ Cameron Ruiz' and signed_on = 'Nov 11, 2026'
+
+-- A team admin signs in their own name, for the task leader.
+expect with signer.name = 'Alex Chen', signer.signed_for = 'Cameron Ruiz':
+  signed = '/s/ Alex Chen for Cameron Ruiz'
+
+-- A draft is never signed.
+expect with :leader = 'Cameron Ruiz': signed is null and signed_on is null

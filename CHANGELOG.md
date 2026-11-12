@@ -4,6 +4,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- An activity's forms moved from the sidebar to a Forms tab. Each form says what it's
+  for, its state, and when it was published, with Download PDF. The tab counts the
+  forms that are out of date.
 - Equipment items have a History tab: what you changed in SAR Duty, such as a field
   or the status, and what changed in D4H, such as a move, a new status, or a cost.
 - The home page keeps Sign up a team and Log in side by side on a phone, and lists your

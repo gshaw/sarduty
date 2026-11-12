@@ -1,7 +1,7 @@
 defmodule App.ViewData.ActivityForms do
   @moduledoc """
   An organization's forms on an activity (#950), for its team admins: which forms show on
-  it, above Actions, and for one form's page what SAR Duty filled in, what's missing, and
+  its Forms tab (#1018), and for one form's page what SAR Duty filled in, what's missing, and
   what each question starts from. Read-only: App.Operation.SaveFormAnswers keeps answers
   and App.Operation.CreateFormPDF makes the PDF.
   """
@@ -11,8 +11,11 @@ defmodule App.ViewData.ActivityForms do
   alias App.Model.Activity
   alias App.Model.Form
   alias App.Model.FormAnswer
+  alias App.Model.Member
   alias App.Model.PublishedPDF
+  alias App.Model.SignRequest
   alias App.Model.Team
+  alias App.Operation.AskToSign
   alias App.Operation.PrintForm
   alias App.Operation.PublishDocument
   alias App.Operation.ReadDocument
@@ -310,25 +313,56 @@ defmodule App.ViewData.ActivityForms do
   end
 
   @doc """
-  Each form's state on the activity's list (#970): `:testing` for a form that prints
-  drafts only, else `:published`, `:out_of_date`, or `:not_published`.
+  The Forms tab's rows (#1018), one per form, in order: `%{form, state, pdf, waiting}`.
+  `state` is `:testing` for a form that prints drafts only, `:waiting` while a request
+  to sign it is open (#993), else `:published`, `:out_of_date`, or `:not_published`.
+  `pdf` is the current published PDF, or nil, and `waiting` the member asked to sign.
+  A request whose Task Leader's Name no longer names who it asks isn't waiting: the
+  form's page ends it.
   """
-  def states(%Team{} = team, %Activity{} = activity, forms, now) do
-    Map.new(forms, &{&1.id, state(team, activity, &1, now)})
+  def list(%Team{} = team, %Activity{} = activity, forms, now) do
+    Enum.map(forms, &row(team, activity, &1, now))
   end
 
-  defp state(_team, _activity, %Form{state: :testing}, _now), do: :testing
+  defp row(_team, _activity, %Form{state: :testing} = form, _now),
+    do: %{form: form, state: :testing, pdf: nil, waiting: nil}
 
-  defp state(team, activity, form, now) do
-    with %PublishedPDF{} = pdf <- published(team, activity, form).current,
-         {:ok, page} <- load(team, activity, form, now) do
-      starting = FormAnswer.starting(activity, page.doc.asks)
-      if changes(page, starting, pdf) == [], do: :published, else: :out_of_date
-    else
-      nil -> :not_published
-      {:error, _reason} -> :published
+  defp row(team, activity, form, now) do
+    pdf = published(team, activity, form).current
+    request = SignRequest.open_for(activity, form)
+
+    page = if pdf || request, do: loaded(team, activity, form, now)
+    waiting = waiting(request, page, team, now)
+    %{form: form, state: state(pdf, page, activity, waiting), pdf: pdf, waiting: waiting}
+  end
+
+  # The form's page, or nil when it doesn't read on the team.
+  defp loaded(team, activity, form, now) do
+    case load(team, activity, form, now) do
+      {:ok, page} -> page
+      {:error, _reason} -> nil
     end
   end
+
+  defp waiting(nil, _page, _team, _now), do: nil
+  defp waiting(_request, nil, _team, _now), do: nil
+
+  defp waiting(request, page, team, now) do
+    found = leader(page, page.answers, team, now)
+    if found && not AskToSign.leader_changed?(request, found), do: request.member
+  end
+
+  defp state(_pdf, _page, _activity, %Member{}), do: :waiting
+  defp state(nil, _page, _activity, nil), do: :not_published
+  defp state(_pdf, nil, _activity, nil), do: :published
+
+  defp state(pdf, page, activity, nil) do
+    starting = FormAnswer.starting(activity, page.doc.asks)
+    if changes(page, starting, pdf) == [], do: :published, else: :out_of_date
+  end
+
+  @doc "How many of `list/4`'s rows are out of date: the Forms tab's count."
+  def out_of_date(rows), do: Enum.count(rows, &(&1.state == :out_of_date))
 
   @doc "The asks the page shows, one answer each."
   def questions(%Document{asks: asks}), do: Enum.filter(asks, &is_nil(&1.each))

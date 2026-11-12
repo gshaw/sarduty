@@ -44,6 +44,8 @@
 #rule(160, 400, 352)
 #at(72, 374)[Signature]
 #rule(160, 400, 384)
+#at(420, 374)[Date]
+#rule(460, 540, 384)
 
 #pagebreak()
 #set page(width: 612pt, height: 1008pt, margin: 0pt)

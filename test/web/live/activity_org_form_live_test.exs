@@ -52,25 +52,42 @@ defmodule Web.ActivityOrgFormLiveTest do
   defp form_path(activity, form),
     do: ~p"/teams/coastrange/activities/#{activity.id}/forms/#{form.id}"
 
-  describe "Forms above Actions" do
+  defp forms_path(activity), do: ~p"/teams/coastrange/activities/#{activity.id}/forms"
+
+  describe "the Forms tab" do
     test "lists each form that's on and shows on the activity, for team admins", ctx do
       %{cast: cast, form: form, hiker: hiker, training: training} = ctx
       conn = log_in_user(build_conn(), cast.alex)
 
       {:ok, lv, _html} = live(conn, ~p"/teams/coastrange/activities/#{hiker.id}")
-      assert has_element?(lv, "#activity-form-#{form.id}", "Task report")
+      assert has_element?(lv, "nav a[href='#{forms_path(hiker)}']", "Forms")
+      # Its one home is the tab: the sidebar has no list.
+      refute has_element?(lv, "#activity-forms")
+
+      {:ok, lv, _html} = live(conn, forms_path(hiker))
+      assert has_element?(lv, "#activity-form-#{form.id}[href='#{form_path(hiker, form)}']")
+      assert has_element?(lv, "#activity-forms-#{form.id}", "A made-up agency's task report")
+      assert has_element?(lv, "#activity-form-#{form.id}-state", "Testing")
+      refute has_element?(lv, "#activity-form-#{form.id}-pdf")
+      assert page_title(lv) =~ "Missing hiker · Forms"
 
       # An exercise isn't an incident, so the form's where leaves it out.
       {:ok, lv, _html} = live(conn, ~p"/teams/coastrange/activities/#{training.id}")
-      refute has_element?(lv, "#activity-forms")
+      refute has_element?(lv, "nav a[href='#{forms_path(training)}']")
+    end
+
+    test "a form's page links back to the tab", %{cast: cast, hiker: hiker, form: form} do
+      {:ok, lv, _html} = live(log_in_user(build_conn(), cast.alex), form_path(hiker, form))
+      assert has_element?(lv, "ol.breadcrumbs a[href='#{forms_path(hiker)}']", "Forms")
     end
 
     test "members never see them", %{cast: cast, hiker: hiker, form: form} do
       conn = log_in_user(build_conn(), cast.cameron)
 
       {:ok, lv, _html} = live(conn, ~p"/teams/coastrange/activities/#{hiker.id}")
-      refute has_element?(lv, "#activity-forms")
+      refute has_element?(lv, "nav a[href='#{forms_path(hiker)}']")
 
+      assert_raise Web.Status.NotFound, fn -> live(conn, forms_path(hiker)) end
       assert_raise Web.Status.NotFound, fn -> live(conn, form_path(hiker, form)) end
     end
 
@@ -79,7 +96,7 @@ defmodule Web.ActivityOrgFormLiveTest do
       conn = log_in_user(build_conn(), cast.alex)
 
       {:ok, lv, _html} = live(conn, ~p"/teams/coastrange/activities/#{hiker.id}")
-      refute has_element?(lv, "#activity-forms")
+      refute has_element?(lv, "nav a[href='#{forms_path(hiker)}']")
 
       assert_raise Web.Status.NotFound, fn -> live(conn, form_path(hiker, form)) end
     end
@@ -433,8 +450,11 @@ defmodule Web.ActivityOrgFormLiveTest do
       refute has_element?(lv, "#org-form-out-of-date")
       refute has_element?(lv, "#org-form-publish")
 
-      {:ok, activity, _html} = live(conn, ~p"/teams/coastrange/activities/#{hiker.id}")
-      assert has_element?(activity, "#activity-form-#{form.id}-state", "Published")
+      {:ok, tab, _html} = live(conn, forms_path(hiker))
+      assert has_element?(tab, "#activity-form-#{form.id}-state", "Published")
+      assert has_element?(tab, "#activity-form-#{form.id}-pdf[href$='/pdfs/#{pdf.id}']")
+      # Only out of date counts on the tab.
+      refute has_element?(tab, "nav a[href='#{forms_path(hiker)}'] .badge")
 
       {:ok, history, _html} = live(conn, ~p"/teams/coastrange/activities/#{hiker.id}/history")
       assert render(history) =~ "Published Task report, #{PublishedPDF.format_code(pdf.code)}"
@@ -486,8 +506,9 @@ defmodule Web.ActivityOrgFormLiveTest do
       lv |> form("#org-form-answers", answers: %{"injured" => "3"}) |> render_change()
       assert has_element?(lv, "#org-form-out-of-date", "Injured: 0 → 3")
 
-      {:ok, activity, _html} = live(conn, ~p"/teams/coastrange/activities/#{hiker.id}")
-      assert has_element?(activity, "#activity-form-#{form.id}-state", "Out of date")
+      {:ok, tab, _html} = live(conn, forms_path(hiker))
+      assert has_element?(tab, "#activity-form-#{form.id}-state", "Out of date")
+      assert has_element?(tab, "nav a[href='#{forms_path(hiker)}'] .badge", "1")
 
       lv |> element("#org-form-publish-again") |> render_click()
       render_async(lv, @print_wait)
@@ -830,6 +851,15 @@ defmodule Web.ActivityOrgFormLiveTest do
       assert has_element?(lv, "#org-form-waiting", "Waiting for Cameron Ruiz to sign")
       assert has_element?(lv, "#org-form-waiting", "by Alex Chen")
       request = Repo.one!(SignRequest)
+
+      {:ok, tab, _html} = live(log_in_user(build_conn(), cast.alex), forms_path(hiker))
+
+      assert has_element?(
+               tab,
+               "#activity-form-#{form.id}-state",
+               "Waiting for Cameron Ruiz to sign"
+             )
+
       title = "Task report #{hiker.ref_id}"
 
       assert_email_sent(fn email ->
@@ -910,6 +940,17 @@ defmodule Web.ActivityOrgFormLiveTest do
 
       refute has_element?(lv, "#org-form-waiting")
       assert %{ended_why: :leader_changed} = Repo.one!(SignRequest)
+    end
+
+    test "the Forms tab stops waiting once the Task Leader's Name names someone else", ctx do
+      ask(ctx)
+
+      FormAnswer
+      |> where(activity_id: ^ctx.hiker.id, name: "leader")
+      |> Repo.update_all(set: [value: "Harper Nguyen"])
+
+      {:ok, tab, _html} = live(log_in_user(build_conn(), ctx.cast.alex), forms_path(ctx.hiker))
+      assert has_element?(tab, "#activity-form-#{ctx.form.id}-state", "Not published")
     end
 
     test "asking again replaces the request and emails again", ctx do

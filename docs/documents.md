@@ -596,12 +596,19 @@ organization's space, `/orgs/:slug/forms` ([organizations.md](organizations.md#i
 
 ### On an activity
 
-Testing or on, a form shows in a **Forms** section above Actions on each activity its
-`where` shows it on, for team admins only, never members, and never on a deleted
-activity (App.ViewData.ActivityForms), each with its state: Testing, Published, Out of
-date, or Not published. Its page is
-`/teams/:subdomain/activities/:id/forms/:form_id` (Web.ActivityOrgFormLive), found
-through the team's organization, so a form that's off or another organization's is a 404. It shows:
+Testing or on, a form shows on the **Forms tab** of each activity its `where` shows it
+on (#1018), `/teams/:subdomain/activities/:id/forms` (Web.ActivityFormsLive), for team
+admins only, never members, and never on a deleted activity
+(`ActivityForms.list/4`). The tab shows only when the activity has a form, after
+Fields. Its table has a row per form: its name, linking to its page, with its `about`
+line under it; its state, Testing, Not published, Waiting for Cameron Ruiz to sign,
+Published, or Out of date, with the date it was published; and Download PDF for the
+published one. Waiting is an open request to sign whose Task Leader's Name still names
+who it asks. The tab counts out-of-date forms only, in amber: nothing else needs a
+team admin. Its page is
+`/teams/:subdomain/activities/:id/forms/:form_id` (Web.ActivityOrgFormLive), with Forms
+in its trail, found through the team's organization, so a form that's off or another
+organization's is a 404. It shows:
 
 - **The Published section**, once one is published, the same as a letter's (#995): when
   and who, its ID linking to its verify page, Download PDF, Publish again, and Withdraw.

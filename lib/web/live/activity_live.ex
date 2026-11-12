@@ -48,7 +48,8 @@ defmodule Web.ActivityLive do
   # they replied, and their attendance from the start (#766); Travel
   # (#230), for team admins from the start, next to Members since it's the next job;
   # Equipment what was used; Fields its D4H custom fields, when it has any or a team
-  # admin can fill one in, with Change fields (#705); and History, for team admins. The
+  # admin can fill one in, with Change fields (#705); Forms, an organization's forms on
+  # it (#1018); and History. Forms and History are for team admins. The
   # facts and Actions sit beside every tab, but a phone shows them on Overview only, so
   # the other tabs start with their own content. Team admins also get Take attendance,
   # Actions, and the links to member and equipment pages. A member never gets an
@@ -59,7 +60,8 @@ defmodule Web.ActivityLive do
 
     travel? = Activity.travel?(team, activity)
     opens!(activity, travel?, team_admin?, socket.assigns.live_action)
-    # The History tab is Web.ActivityHistoryLive's route, for team admins only.
+    # The Forms and History tabs are Web.ActivityFormsLive's and Web.ActivityHistoryLive's
+    # routes, for team admins only.
     tab = tab(socket.assigns.live_action)
 
     now = DateTime.utc_now()
@@ -86,15 +88,15 @@ defmodule Web.ActivityLive do
     {:noreply, socket}
   end
 
-  # An organization's forms it shows on, above Actions, for team admins only (#950),
-  # each with whether it's published for the activity (#970).
+  # The Forms tab (#1018): an organization's forms it shows on, for team admins only
+  # (#950), each with its state (#970). The tab counts the out-of-date ones.
   defp assign_forms(%{assigns: %{team_admin?: false}} = socket),
-    do: assign(socket, forms: [], form_states: %{})
+    do: assign(socket, form_rows: [], forms_out_of_date: 0)
 
   defp assign_forms(socket) do
     %{current_team: team, activity: activity, now: now} = socket.assigns
-    forms = ActivityForms.on(team, activity, now)
-    assign(socket, forms: forms, form_states: ActivityForms.states(team, activity, forms, now))
+    rows = ActivityForms.list(team, activity, ActivityForms.on(team, activity, now), now)
+    assign(socket, form_rows: rows, forms_out_of_date: ActivityForms.out_of_date(rows))
   end
 
   # A member never gets a deleted activity. Travel is a feature, on incidents only.
@@ -104,7 +106,7 @@ defmodule Web.ActivityLive do
     :ok
   end
 
-  @tabs [:overview, :members, :travel, :equipment, :fields, :history]
+  @tabs [:overview, :members, :travel, :equipment, :fields, :forms, :history]
 
   defp history(:history, team, activity), do: ChangeHistory.for_activity(team, activity)
   defp history(_tab, _team, _activity), do: []
@@ -118,6 +120,7 @@ defmodule Web.ActivityLive do
   defp page_title(activity, :travel), do: "#{activity.title} · Travel"
   defp page_title(activity, :equipment), do: "#{activity.title} · Equipment"
   defp page_title(activity, :fields), do: "#{activity.title} · Fields"
+  defp page_title(activity, :forms), do: "#{activity.title} · Forms"
   defp page_title(activity, :history), do: "#{activity.title} · History"
 
   @doc """
@@ -404,6 +407,13 @@ defmodule Web.ActivityLive do
         </.badge>
       </:tab>
       <:tab
+        :if={@form_rows != [] or @tab == :forms}
+        navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/forms"}
+        current={@tab == :forms}
+      >
+        Forms<.badge :if={@forms_out_of_date > 0} kind={:warning}>{@forms_out_of_date}</.badge>
+      </:tab>
+      <:tab
         :if={@team_admin?}
         navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/history"}
         current={@tab == :history}
@@ -476,6 +486,12 @@ defmodule Web.ActivityLive do
             navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/fields/edit"}
           >Change fields</.a>
         </p>
+        <.forms_table
+          :if={@tab == :forms}
+          activity={@activity}
+          rows={@form_rows}
+          timezone={@current_team.timezone}
+        />
         <.change_history
           :if={@tab == :history}
           id="activity-history"
@@ -490,8 +506,6 @@ defmodule Web.ActivityLive do
           change_fields?={@change_fields?}
           send_attendance?={@send_attendance?}
           delete_confirm={@delete_confirm}
-          forms={@forms}
-          form_states={@form_states}
         />
       </aside>
     </div>
@@ -597,11 +611,9 @@ defmodule Web.ActivityLive do
   attr :change_fields?, :boolean, default: false, doc: "whether its kind has custom fields"
   attr :send_attendance?, :boolean, default: false, doc: "whether anyone has scanned"
   attr :delete_confirm, :any, default: false, doc: "Delete's confirm dialog, or false for none"
-  attr :forms, :list, default: [], doc: "the organization's forms it shows on (#950)"
-  attr :form_states, :map, default: %{}, doc: "each form's state, ActivityForms.states/4's"
 
-  # Every record's sidebar ends the same way: Actions. Custom fields are a tab (#705). An
-  # organization's forms come just above, for team admins (#950).
+  # Every record's sidebar ends the same way: Actions. Custom fields (#705) and an
+  # organization's forms (#1018) are tabs.
   def sidebar_end(assigns) do
     # A team admin's actions read or write the activity in D4H, which no longer has a
     # deleted one. A Records team has no D4H to open.
@@ -613,18 +625,6 @@ defmodule Web.ActivityLive do
 
     ~H"""
     <dl>
-      <dt :if={@forms != []}>Forms</dt>
-      <dd :if={@forms != []}>
-        <ul id="activity-forms" class="action-list">
-          <li :for={form <- @forms}>
-            <.a
-              id={"activity-form-#{form.id}"}
-              navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/forms/#{form.id}"}
-            >{form.name}</.a>
-            <.form_state id={"activity-form-#{form.id}-state"} state={@form_states[form.id]} />
-          </li>
-        </ul>
-      </dd>
       <dt :if={@admin_actions? or @d4h?}>Actions</dt>
       <dd :if={@admin_actions? or @d4h?}>
         <ul id="activity-actions" class="action-list">
@@ -775,26 +775,78 @@ defmodule Web.ActivityLive do
   defp format_activity_duration(activity),
     do: activity |> Activity.duration_minutes() |> Service.Format.duration()
 
-  attr :id, :string, required: true
-  attr :state, :atom, default: nil
+  attr :activity, :map, required: true
+  attr :rows, :list, required: true, doc: "ActivityForms.list/4's"
+  attr :timezone, :string, required: true
 
-  # Whether a form is published for the activity (#970): a testing form only prints drafts.
-  defp form_state(%{state: nil} = assigns), do: ~H""
-
-  defp form_state(%{state: :out_of_date} = assigns) do
+  # The Forms tab (#1018): each form, what it is for, its state, and its published PDF.
+  defp forms_table(%{rows: []} = assigns) do
     ~H"""
-    <.badge id={@id} kind={:warning} class="ml-1">{form_state_text(@state)}</.badge>
+    <p id="activity-forms-none" class="hint">No forms show on this activity.</p>
+    """
+  end
+
+  defp forms_table(assigns) do
+    ~H"""
+    <.table id="activity-forms" rows={@rows} row_id={&"activity-forms-#{&1.form.id}"}>
+      <:col :let={row} label="Form">
+        <.a
+          id={"activity-form-#{row.form.id}"}
+          navigate={~p"/teams/#{@activity.team}/activities/#{@activity.id}/forms/#{row.form.id}"}
+        >{row.form.name}</.a>
+        <div :if={row.form.about} class="hint">{row.form.about}</div>
+      </:col>
+      <:col :let={row} label="State" class="whitespace-nowrap">
+        <.form_state id={"activity-form-#{row.form.id}-state"} row={row} timezone={@timezone} />
+      </:col>
+      <:col :let={row} label="PDF" class="w-px whitespace-nowrap">
+        <.a
+          :if={row.pdf}
+          id={"activity-form-#{row.form.id}-pdf"}
+          href={~p"/teams/#{@activity.team}/pdfs/#{row.pdf.id}"}
+          target="_blank"
+        >Download PDF</.a>
+      </:col>
+    </.table>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :row, :map, required: true
+  attr :timezone, :string, required: true
+
+  # A form's state on the activity (#970): only Out of date is amber, the one the tab
+  # counts. A testing form only prints drafts.
+  defp form_state(%{row: %{state: :out_of_date}} = assigns) do
+    ~H"""
+    <div id={@id}>
+      <.badge kind={:warning}>Out of date</.badge>
+      <div>Published {Service.Format.date_short(@row.pdf.inserted_at, @timezone)}</div>
+    </div>
+    """
+  end
+
+  defp form_state(%{row: %{state: :published}} = assigns) do
+    ~H"""
+    <div id={@id}>
+      Published
+      <div>{Service.Format.date_short(@row.pdf.inserted_at, @timezone)}</div>
+    </div>
+    """
+  end
+
+  defp form_state(%{row: %{state: :waiting}} = assigns) do
+    ~H"""
+    <div id={@id}>Waiting for {@row.waiting.name} to sign</div>
     """
   end
 
   defp form_state(assigns) do
     ~H"""
-    <span id={@id} class="hint ml-1">{form_state_text(@state)}</span>
+    <div id={@id} class="hint">{form_state_text(@row.state)}</div>
     """
   end
 
-  defp form_state_text(:published), do: "Published"
-  defp form_state_text(:out_of_date), do: "Out of date"
   defp form_state_text(:not_published), do: "Not published"
   defp form_state_text(:testing), do: "Testing"
 end

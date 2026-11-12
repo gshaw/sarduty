@@ -133,7 +133,9 @@ moment it opens, staged in `App.CoastRange` (its moduledoc has the cases):
 - **Whiteboard notes**, one important, and **saved places** for the activity form.
 - Letters have Alex Chen as signer, so only the signature is missing.
 - **A form to publish**: WESARA's Task report (`priv/forms/wesara`), on, so the visitor
-  fills it on an incident and selects Publish; its PDF says SAMPLE. It is made up, and
+  fills it on an incident and selects Publish; its PDF says SAMPLE. Its Task leader
+  answer names who signs it, so the visitor tries signing too: Alex Chen signs for the
+  task leader, or asks them to sign ([Signing](documents.md#signing)). It is made up, and
   reads only an activity's own fields, so it prints on any team
   (`App.Operation.AddDemoForms`). The dev WESARA gets it too.
 
