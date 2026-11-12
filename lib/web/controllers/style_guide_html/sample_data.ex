@@ -2,6 +2,7 @@ defmodule Web.StyleGuideHTML.SampleData do
   @moduledoc false
 
   alias App.Model.CustomField
+  alias App.Model.CustomFieldBundle
   alias App.Model.Team
   alias App.ViewData.Milestones
   alias Service.Format
@@ -12,28 +13,82 @@ defmodule Web.StyleGuideHTML.SampleData do
 
   @doc """
   An incident's custom fields (#681), as the activity page shows them to a team admin:
-  two with values and a required one left empty.
+  two with values, one under its bundle (#872), and a required one left empty.
   """
   def custom_field_rows do
-    field = fn id, title, type, options ->
-      %CustomField{
-        d4h_custom_field_id: id,
-        title: title,
-        field_type: type,
-        required: true,
-        options: options
-      }
-    end
-
-    fields = [
-      field.(1, "Primary Cause", "single_choice", [%{"id" => 10, "label" => "Lost"}]),
-      field.(2, "Agency File #", "text", []),
-      field.(3, "Was weather a factor in response?", "single_choice", [])
-    ]
-
-    CustomField.rows(fields, %{"1" => [10], "2" => "2026-123456"}, "America/Vancouver",
+    CustomField.rows(
+      custom_field_definitions(),
+      %{"1" => [10], "2" => "2026-123456", "4" => "3"},
+      "America/Vancouver",
       missing: true
     )
+  end
+
+  @doc """
+  The same incident fields as definitions, for the Field definitions page: the team's
+  own, its organization's, and one in the organization's KMS Data bundle.
+  """
+  def custom_field_definitions do
+    kms = %CustomFieldBundle{
+      d4h_bundle_id: 43,
+      title: "KMS Data",
+      target: "incident",
+      owner_type: "Organisation",
+      owner_id: 7
+    }
+
+    field = fn id, title, type, attrs ->
+      struct!(
+        %CustomField{
+          id: id,
+          d4h_custom_field_id: id,
+          target: "incident",
+          title: title,
+          field_type: type,
+          required: true,
+          owner_type: "Organisation",
+          owner_id: 7,
+          d4h_created_at: ~U[2024-03-04 18:00:00Z],
+          bundle: nil
+        },
+        attrs
+      )
+    end
+
+    [
+      field.(2, "Agency File #", "text", hint: "The requesting agency's file number."),
+      field.(3, "Was weather a factor in response?", "single_choice",
+        options: [option(30, "Yes", 0), option(31, "No", 1)]
+      ),
+      field.(4, "People helped", "number",
+        required: false,
+        owner_type: "Team",
+        owner_id: 11,
+        d4h_created_at: ~U[2025-01-12 18:00:00Z]
+      ),
+      field.(1, "Primary Cause", "single_choice",
+        bundle: kms,
+        options: [
+          option(10, "Lost", 0),
+          option(11, "Slip or fall", 1),
+          option(12, "Avalanche", 2, archived: true),
+          option(13, "Stuck in mud", 3, owner: {"Team", 11})
+        ]
+      )
+    ]
+  end
+
+  defp option(id, label, ordering, opts \\ []) do
+    {owner_type, owner_id} = Keyword.get(opts, :owner, {"Organisation", 7})
+
+    %{
+      "id" => id,
+      "label" => label,
+      "ordering" => ordering,
+      "archived" => Keyword.get(opts, :archived, false),
+      "owner_type" => owner_type,
+      "owner_id" => owner_id
+    }
   end
 
   @doc """

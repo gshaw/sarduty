@@ -2,6 +2,7 @@ defmodule App.Model.CustomFieldTest do
   use ExUnit.Case, async: true
 
   alias App.Model.CustomField
+  alias App.Model.CustomFieldBundle
 
   @tz "America/Vancouver"
 
@@ -56,5 +57,103 @@ defmodule App.Model.CustomFieldTest do
              [{"City", "Surrey", false}, {"Area", nil, true}, {"Notes", "Found", false}]
 
     assert CustomField.rows([notes], nil, @tz) == []
+  end
+
+  defp bundle(id, attrs),
+    do:
+      struct(
+        %CustomFieldBundle{
+          d4h_bundle_id: id,
+          title: "Bundle #{id}",
+          owner_type: "Organisation",
+          owner_id: 7
+        },
+        attrs
+      )
+
+  test "grouped: fields in no bundle first, then bundles by ordering and id, each in order (#872)" do
+    kms = bundle(43, %{title: "KMS Data"})
+    disasters = bundle(179, %{title: "Natural disasters"})
+    assistance = bundle(199, %{title: "Assistance Provided"})
+
+    fields = [
+      field(%{title: "Tasked to do", bundle: assistance}),
+      field(%{title: "City", bundle: nil}),
+      field(%{title: "SAR Severity", bundle: kms}),
+      field(%{title: "Evacuations", bundle: disasters}),
+      field(%{title: "Agency", bundle: nil}),
+      field(%{title: "Activity", bundle: kms})
+    ]
+
+    titles = fn groups ->
+      Enum.map(groups, fn {bundle, fields} ->
+        {bundle && bundle.title, Enum.map(fields, & &1.title)}
+      end)
+    end
+
+    assert fields |> CustomField.grouped() |> titles.() == [
+             {nil, ["City", "Agency"]},
+             {"KMS Data", ["SAR Severity", "Activity"]},
+             {"Natural disasters", ["Evacuations"]},
+             {"Assistance Provided", ["Tasked to do"]}
+           ]
+
+    late = bundle(1, %{title: "Late", ordering: 2})
+    early = bundle(500, %{title: "Early", ordering: 0})
+    reordered = [field(%{title: "X", bundle: late}), field(%{title: "Y", bundle: early})]
+
+    assert reordered |> CustomField.grouped() |> titles.() == [{"Early", ["Y"]}, {"Late", ["X"]}]
+    assert CustomField.grouped([]) == []
+  end
+
+  test "grouped: rows by their field, and one bundle from several teams' copies stays one group" do
+    one_team = bundle(43, %{id: 1})
+    other_team = bundle(43, %{id: 2})
+
+    rows = [
+      %{field: field(%{title: "A", bundle: one_team})},
+      %{field: field(%{title: "B", bundle: other_team})}
+    ]
+
+    assert [{%{d4h_bundle_id: 43}, [_a, _b]}] = CustomField.grouped(rows, & &1.field)
+  end
+
+  test "merge_copies: an organization's field once, with every choice its teams added" do
+    option = fn id, owner ->
+      %{"id" => id, "label" => "#{id}", "owner_type" => "Team", "owner_id" => owner}
+    end
+
+    copy = fn team_id, options ->
+      field(%{
+        id: team_id,
+        team_id: team_id,
+        d4h_custom_field_id: 5,
+        title: "Agency",
+        owner_type: "Organisation",
+        owner_id: 7,
+        options: options
+      })
+    end
+
+    assert [agency] =
+             CustomField.merge_copies([
+               copy.(1, [option.(1, nil), option.(2, 11)]),
+               copy.(2, [option.(1, nil), option.(3, 12)])
+             ])
+
+    assert Enum.map(agency.options, & &1["id"]) == [1, 2, 3]
+  end
+
+  test "by_target: in the Fields pages' order, leaving out targets with none" do
+    fields = [
+      field(%{target: "member"}),
+      field(%{target: "incident"}),
+      field(%{target: "member"})
+    ]
+
+    assert fields
+           |> CustomField.by_target()
+           |> Enum.map(fn {target, fields} -> {target, length(fields)} end) ==
+             [{"incident", 1}, {"member", 2}]
   end
 end

@@ -479,6 +479,7 @@ defmodule Web.ActivityLive do
           id="activity-fields"
           rows={@field_rows}
           required={@required_fields}
+          fields_path={@team_admin? && ~p"/teams/#{@current_team}/settings/fields"}
         />
         <p :if={@tab == :fields and @change_fields?} class="action">
           <.a

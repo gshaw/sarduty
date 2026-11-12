@@ -4,6 +4,10 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- Team settings has a Fields tab: every custom field on your records, with its hint,
+  choices, who added it, and when. Member fields' Copy boxes moved there. Fields tabs
+  and Change fields now group fields under D4H's headings, such as KMS Data.
+  Organization settings has a Fields tab for the organization's own.
 - An activity's forms moved from the sidebar to a Forms tab. Each form says what it's
   for, its state, and when it was published, with Download PDF. The tab counts the
   forms that are out of date.

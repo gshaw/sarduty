@@ -631,6 +631,24 @@ defmodule App.DataFixtures do
     App.Model.CustomField |> struct!(params) |> Repo.insert!()
   end
 
+  @doc "One of D4H's resource bundles (#872), for a custom field's `bundle_id`."
+  def custom_field_bundle_fixture(%Team{} = team, attrs \\ %{}) do
+    params =
+      Map.merge(
+        %{
+          team_id: team.id,
+          d4h_bundle_id: System.unique_integer([:positive]),
+          target: "incident",
+          title: "KMS Data",
+          owner_type: "Organisation",
+          owner_id: 7
+        },
+        attrs
+      )
+
+    App.Model.CustomFieldBundle |> struct!(params) |> Repo.insert!()
+  end
+
   def equipment_item_fixture(%Team{} = team, attrs \\ %{}) do
     unique = System.unique_integer([:positive])
 

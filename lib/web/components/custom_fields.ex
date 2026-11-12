@@ -7,8 +7,10 @@ defmodule Web.Components.CustomFields do
 
   # A record's D4H custom fields (#681), from App.Model.CustomField.rows/4: a table on the
   # record's Fields tab, or a detail list under a heading on a page with no tabs, such as
-  # Your membership's Contact details. A required field with no value says Missing. The
-  # style guide's Detail list page shows both.
+  # Your membership's Contact details. A required field with no value says Missing. Every
+  # list groups its fields by D4H's bundles (#872), each bundle's title over its fields,
+  # after the fields in none: CustomField.grouped/2. The style guide's Detail list page
+  # shows them.
 
   attr :id, :string, required: true
   attr :title, :string, required: true
@@ -17,21 +19,30 @@ defmodule Web.Components.CustomFields do
 
   @doc "The rows as a detail list under a heading, or nothing when there are none."
   def custom_fields(assigns) do
+    assigns = assign(assigns, :groups, CustomField.grouped(assigns.rows, & &1.field))
+
     ~H"""
     <section :if={@rows != []} id={@id} class={@class}>
       <h2 class="heading">{@title}</h2>
-      <dl class="measure">
-        <div :for={row <- @rows} id={"#{@id}-#{row.field.d4h_custom_field_id}"}>
-          <dt>{row.field.title}</dt>
-          <dd :if={!row.missing?}>{row.text}</dd>
-          <dd :if={row.missing?}>
-            <.badge kind={:warning}>Missing</.badge>
-          </dd>
-        </div>
-      </dl>
+      <div :for={{bundle, rows} <- @groups} id={group_id(@id, bundle)}>
+        <h3 :if={bundle} class="subheading mt-6">{bundle.title}</h3>
+        <dl class="measure">
+          <div :for={row <- rows} id={"#{@id}-#{row.field.d4h_custom_field_id}"}>
+            <dt>{row.field.title}</dt>
+            <dd :if={!row.missing?}>{row.text}</dd>
+            <dd :if={row.missing?}>
+              <.badge kind={:warning}>Missing</.badge>
+            </dd>
+          </div>
+        </dl>
+      </div>
     </section>
     """
   end
+
+  # A group's id: the list's, then its bundle's D4H id.
+  defp group_id(id, nil), do: "#{id}-fields"
+  defp group_id(id, bundle), do: "#{id}-bundle-#{bundle.d4h_bundle_id}"
 
   attr :id, :string, required: true
   attr :rows, :list, required: true
@@ -40,13 +51,19 @@ defmodule Web.Components.CustomFields do
     default: 0,
     doc: "how many of the fields D4H needs to publish, for the count over the missing ones"
 
+  attr :fields_path, :string,
+    default: nil,
+    doc: "the team's Fields page in settings, linked when nothing is filled in; team admins only"
+
   @doc """
   A record's Fields tab: a table of each field and its value. The missing ones come
-  first, under a count, then the rest in D4H's order.
+  first, under a count, in one list so the required ones aren't spread across headings.
+  Then the rest in D4H's order, each bundle under its title.
   """
   def custom_fields_table(assigns) do
     {missing, filled} = Enum.split_with(assigns.rows, & &1.missing?)
-    assigns = assign(assigns, missing: missing, filled: filled)
+    groups = CustomField.grouped(filled, & &1.field)
+    assigns = assign(assigns, missing: missing, groups: groups)
 
     ~H"""
     <section id={@id}>
@@ -56,11 +73,22 @@ defmodule Web.Components.CustomFields do
         </p>
         <.fields_table id={"#{@id}-missing"} prefix={@id} rows={@missing} />
       </div>
-      <.fields_table :if={@filled != []} id={"#{@id}-filled"} prefix={@id} rows={@filled} />
-      <p :if={@rows == []} class="hint">No fields filled in.</p>
+      <div :for={{{bundle, rows}, index} <- Enum.with_index(@groups)} class={index > 0 && "mt-8"}>
+        <h2 :if={bundle} class="heading">{bundle.title}</h2>
+        <.fields_table id={table_id(@id, bundle)} prefix={@id} rows={rows} />
+      </div>
+      <p :if={@rows == []} class="hint">
+        No fields filled in.
+        <.link :if={@fields_path} id={"#{@id}-meanings"} navigate={@fields_path}>
+          What each field means
+        </.link>
+      </p>
     </section>
     """
   end
+
+  defp table_id(id, nil), do: "#{id}-filled"
+  defp table_id(id, bundle), do: "#{id}-bundle-#{bundle.d4h_bundle_id}"
 
   attr :id, :string, required: true
   attr :prefix, :string, required: true, doc: "each row's id starts with it"
@@ -97,18 +125,30 @@ defmodule Web.Components.CustomFields do
 
   @doc """
   A record's fields as inputs on its Change fields page (#705), each as its type's input,
-  named `fields[<D4H field id>]`. On an activity a required one is tagged Needed to
-  publish, and on a draft incident one left empty is tagged Missing, with an amber bar.
-  Never an error: D4H saves them blank and checks them only when it publishes.
+  named `fields[<D4H field id>]`, each bundle's under its title. On an activity a
+  required one is tagged Needed to publish, and on a draft incident one left empty is
+  tagged Missing, with an amber bar. Never an error: D4H saves them blank and checks them
+  only when it publishes.
   """
   def custom_field_inputs(assigns) do
+    assigns = assign(assigns, :groups, CustomField.grouped(assigns.fields))
+
     ~H"""
-    <.custom_input
-      :for={field <- @fields}
-      field={field}
-      value={form_value(@values[Integer.to_string(field.d4h_custom_field_id)])}
-      mark={mark(field, @values, @publish?, @flag_missing?)}
-    />
+    <%= for {{bundle, fields}, index} <- Enum.with_index(@groups) do %>
+      <h2
+        :if={bundle}
+        id={"custom-field-bundle-#{bundle.d4h_bundle_id}"}
+        class={["heading", index > 0 && "mt-8"]}
+      >
+        {bundle.title}
+      </h2>
+      <.custom_input
+        :for={field <- fields}
+        field={field}
+        value={form_value(@values[Integer.to_string(field.d4h_custom_field_id)])}
+        mark={mark(field, @values, @publish?, @flag_missing?)}
+      />
+    <% end %>
     """
   end
 

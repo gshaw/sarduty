@@ -802,6 +802,33 @@ defmodule Web.ActivityLiveTest do
       refute has_element?(lv, "#activity-actions-change-fields")
     end
 
+    test "a bundle's fields show under its title, after the fields in none (#872)", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      kms = custom_field_bundle_fixture(team, %{d4h_bundle_id: 43, title: "KMS Data"})
+      custom_field_fixture(team, %{d4h_custom_field_id: 1, title: "Agency"})
+      custom_field_fixture(team, %{d4h_custom_field_id: 2, title: "Activity", bundle_id: kms.id})
+
+      activity =
+        activity_fixture(team, %{
+          activity_kind: "incident",
+          custom_values: %{"1" => "Police", "2" => "Climbing"}
+        })
+
+      conn = log_in_user(conn, user)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/fields")
+      assert has_element?(lv, "#activity-fields-filled #activity-fields-1", "Police")
+      refute has_element?(lv, "#activity-fields-filled #activity-fields-2")
+      assert has_element?(lv, "#activity-fields h2", "KMS Data")
+      assert has_element?(lv, "#activity-fields-bundle-43 #activity-fields-2", "Climbing")
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/fields/edit")
+      assert has_element?(lv, "#custom-fields-form #custom-field-bundle-43", "KMS Data")
+      position = &(lv |> render() |> :binary.match(&1) |> elem(0))
+      assert position.(~s(id="custom-field-1")) < position.(~s(id="custom-field-bundle-43"))
+      assert position.(~s(id="custom-field-bundle-43")) < position.(~s(id="custom-field-2"))
+    end
+
     test "with every field empty, a team admin gets the tab to fill one in", %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
       custom_field_fixture(team, %{d4h_custom_field_id: 577, title: "ASE#"})
@@ -812,6 +839,11 @@ defmodule Web.ActivityLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{activity.id}/fields")
       assert has_element?(lv, "#activity-fields", "No fields filled in.")
       assert has_element?(lv, "#activity-fields-change")
+
+      assert has_element?(
+               lv,
+               "#activity-fields-meanings[href='/teams/#{team.subdomain}/settings/fields']"
+             )
 
       # No exercise fields at all.
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/activities/#{exercise.id}/members")

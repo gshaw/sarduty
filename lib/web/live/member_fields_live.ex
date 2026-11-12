@@ -44,7 +44,11 @@ defmodule Web.MemberFieldsLive do
       maps_app={@current_user.maps_app}
       team_admin?={@team_admin?}
     >
-      <.custom_fields_table id="member-fields" rows={@field_rows} />
+      <.custom_fields_table
+        id="member-fields"
+        rows={@field_rows}
+        fields_path={~p"/teams/#{@current_team}/settings/fields"}
+      />
       <p class="action">
         <.a
           id="member-fields-change"

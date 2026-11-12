@@ -5,7 +5,7 @@ defmodule Web.Components.OrgSettingsTabs do
   # under one title, as Team settings' are.
 
   attr :organization, :map, required: true
-  attr :current, :atom, required: true, values: [:general, :admins, :hours_tags]
+  attr :current, :atom, required: true, values: [:general, :admins, :hours_tags, :fields]
 
   def org_settings_tabs(assigns) do
     ~H"""
@@ -22,6 +22,9 @@ defmodule Web.Components.OrgSettingsTabs do
         current={@current == :hours_tags}
       >
         Hours tags
+      </:tab>
+      <:tab navigate={~p"/orgs/#{@organization}/settings/fields"} current={@current == :fields}>
+        Fields
       </:tab>
     </.tabs>
     """

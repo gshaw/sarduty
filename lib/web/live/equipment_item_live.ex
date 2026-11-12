@@ -174,7 +174,12 @@ defmodule Web.EquipmentItemLive do
             History
           </:tab>
         </.tabs>
-        <.custom_fields_table :if={@tab == :fields} id="item-fields" rows={@field_rows} />
+        <.custom_fields_table
+          :if={@tab == :fields}
+          id="item-fields"
+          rows={@field_rows}
+          fields_path={~p"/teams/#{@current_team}/settings/fields"}
+        />
         <p :if={@tab == :fields and @fields?} class="action">
           <.a
             id="item-fields-change"

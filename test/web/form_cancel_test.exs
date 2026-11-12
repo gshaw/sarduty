@@ -33,6 +33,7 @@ defmodule Web.FormCancelTest do
     "lib/web/live/settings/hours_tags_live.ex" => "team settings tab",
     "lib/web/live/settings/signer_live.ex" => "team settings tab",
     "lib/web/live/settings/members_live.ex" => "team settings tab",
+    "lib/web/live/settings/fields_live.ex" => "team settings tab",
     "lib/web/live/settings/team_live.ex" => "team settings tab",
     "lib/web/live/settings/team_admins_live.ex" => "team settings tab",
     "lib/web/live/team_signup_live.ex" => "signing up has no page to go back to",

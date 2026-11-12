@@ -512,6 +512,16 @@ defmodule App.Adapter.D4H do
     |> Enum.reject(&is_nil/1)
   end
 
+  @doc """
+  The resource bundles that group the team's custom fields and its organisation's
+  (#872), for the targets SAR Duty copies. D4H and SAR Duty Records both serve them.
+  """
+  def fetch_resource_bundles(context) do
+    context
+    |> fetch_all("/resource-bundles", &D4H.ResourceBundle.build/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
   # The team names its own places, so its organization's bookmarks are left out (#614).
   @location_bookmarks [exclude_org_data: true]
 

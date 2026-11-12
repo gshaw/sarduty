@@ -48,7 +48,8 @@
     would push Actions 3 screens down. They're the record's Fields <a href={page_path(:tabs)}>tab</a>, a table with each
     field's name beside its value (decided 2026-10-28, #705). A required field left empty shows Missing to team admins on a
     draft incident, which can't be published until it's filled in. The missing ones come first, under a count, and the tab
-    counts them too.
+    counts them too. The rest follow in their own order, and each named group of fields, such as BCSARA's KMS Data, gets its
+    title over its own table (#872). A team with no groups sees one table.
   </p>
   <div class="demo">
     <.custom_fields_table id="detail-list-fields" rows={custom_field_rows()} required={19} />

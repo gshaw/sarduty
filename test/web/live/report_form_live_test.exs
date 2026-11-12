@@ -70,6 +70,12 @@ defmodule Web.ReportFormLiveTest do
            )
 
     assert has_element?(lv, "#report-custom-fields", "One of 'Search' or 'Rescue'.")
+
+    assert has_element?(
+             lv,
+             "#report-field-meanings[href='/teams/#{team.subdomain}/settings/fields']"
+           )
+
     refute has_element?(lv, "#report-field-table", "Task type")
 
     lv

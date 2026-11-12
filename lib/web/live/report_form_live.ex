@@ -462,6 +462,11 @@ defmodule Web.ReportFormLive do
                 <span class="hint block mt-1">{field.about}</span>
               </:col>
             </.table>
+            <p class="mt-2">
+              <.link id="report-field-meanings" navigate={~p"/teams/#{@current_team}/settings/fields"}>
+                What each field means
+              </.link>
+            </p>
           </div>
         </div>
         <p class="hint mt-4">

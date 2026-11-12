@@ -15,19 +15,29 @@ ones, edit them, and fill them from templates (#307).
   the team's own fields and its organization's, for events, exercises, incidents,
   members, and equipment, archived ones too. D4H's other targets (health and safety
   reports, persons involved, the team itself, incident weather) are left out. Choice
-  fields keep their options in `options`. The sync's 16th list head. SAR Duty Records
-  serves them in D4H's shape too (#1003): a Records team does everything a D4H team
-  does with fields.
+  fields keep their options in `options`, each with the team or organization that
+  added it: a team can add choices to its organization's field. Each field also keeps
+  when it was added (`d4h_created_at`), and D4H's `searchable` and `frozen`, which
+  #724 needs. The sync's 16th list head. SAR Duty Records serves them in D4H's shape
+  too (#1003): a Records team does everything a D4H team does with fields.
+- **Bundles** are D4H's resource bundles, named groups of one kind's fields, such as
+  BCSARA's KMS Data on incidents (#872). A field is in one bundle or none, and a
+  bundle holds one kind's. They're copied to `custom_field_bundles` with the fields,
+  from `GET /resource-bundles`, and a field points at its own with `bundle_id`. A team's
+  list holds its organization's bundles too. A bundle D4H deleted goes, and its fields
+  join none. A bundle has no hint, and D4H's API can create one but never rename or
+  delete it. The bundles are read with the fields, so a renamed bundle waits for a field
+  change or the nightly refresh.
 - **Values** ride on the records the sync already reads: `activities.custom_values` and
   `equipment_items.custom_values`, a map of the D4H field id, as a string, to a string
   or a list of D4H option ids. They're keyed by D4H ids, not local ones, since the
   values are D4H option ids too and the copy can be rebuilt from D4H at any time. Empty
   values are left out of the map. Nil means not copied yet.
-- **Member values are copied only for the fields a team admin picks**, on team
-  settings' Members tab, none at first. Member fields hold year of birth, gender,
-  ethnicity, medical notes, and licence numbers, and the team's key reads every one,
-  RESTRICTED ones included. RESTRICTED member fields are never offered: the tab counts
-  them and says they stay private. `members.custom_values` holds only the picked
+- **Member values are copied only for the fields a team admin picks**, with each member
+  field's Copy box on team settings' [Fields page](#the-fields-page), none at first.
+  Member fields hold year of birth, gender, ethnicity, medical notes, and licence
+  numbers, and the team's key reads every one, RESTRICTED ones included. RESTRICTED
+  member fields are never offered: the page lists them with "Stays private" for a box. `members.custom_values` holds only the picked
   fields ([SaveTeamMemberFields](../lib/app/operation/save_team_member_fields.ex)).
   Saving clears every member's values and reads the members at once, so the copy after
   a change is a new baseline and an unpicked field leaves nothing behind.
@@ -36,6 +46,19 @@ ones, edit them, and fill them from templates (#307).
 
 [CustomField.rows/4](../lib/app/model/custom_field.ex) picks what a page shows, and
 [CustomFields](../lib/web/components/custom_fields.ex) shows it.
+
+Every list of fields groups them by bundle, through one function,
+`CustomField.grouped/2`: the fields in no bundle first, with no heading, then each
+bundle under its title, by D4H's `ordering` and then its id. Fields keep D4H's
+`ordering` inside each group. With no bundles a list looks as it did before. The
+Fields tabs, Change fields, a template's fields, and Your membership's member fields
+all use it; so will #875's field picker. The Missing block stays one list at the top of
+a Fields tab, so the required fields aren't spread across four headings.
+
+D4H's own order is unknown: all 8 of BCSARA's bundles have `ordering` 0, and D4H
+numbers an organization's fields in one run across its bundles while a team's own
+start again at 0 (read on South Fraser, 2026-11-12). So the order above is a fallback
+until someone matches D4H's incident form.
 
 A record's custom fields are its **Fields tab**, `/fields`, a table with each field's
 name beside its value (decided 2026-10-28, #705). They were in the sidebar, after the
@@ -61,6 +84,31 @@ with the kind.
 - **Reports** read the same fields as the Fields tab, by title in backticks:
   `` `Primary Cause` `` (#840, [reports.md](reports.md#custom-fields)). Members read an
   activity's unrestricted ones; a member's and an item's are for team admins.
+
+## The Fields page
+
+What each field means lives in its hint and its bundle, not its title: "If unknown,
+enter 999" on a number field changes how a report sums it. So team settings has a
+**Fields** tab, `/teams/:subdomain/settings/fields`, after Members (#872). It lists every
+live field on the team's records, by what it's on (incidents, exercises, events,
+members, equipment), then by bundle. Each shows its type (Text and Long text apart),
+Needed to publish on an activity's required ones, who added it (the team or its
+organization), its hint, its choices, the ones a team added to an organization's field,
+its archived choices, and when it was added. A RESTRICTED one says only team admins see
+its values. Archived fields wait at the foot, closed. Member fields carry their Copy
+boxes, saved with Save member fields, which changes only SAR Duty's own setting.
+
+It's read only: fields change in D4H, and editing them here is #724. D4H's web address
+for its fields page isn't known, so the page names D4H without a link.
+
+**An organization's Fields tab**, `/orgs/:slug/settings/fields`, after Hours tags, is
+for its organization admins: its own fields, laid out the same way, read from its
+teams' copies (`CustomField.merge_copies/1`). D4H gives every team its organization's
+fields, so there's no column of teams; a choice a team added names the team. A
+RESTRICTED field shows what it is, never values: the page shows no values at all.
+
+The report editor's Custom fields, the Agents tab, and an empty Fields tab link to the
+team's page with "What each field means", for team admins.
 
 ## Missing required fields
 
@@ -144,7 +192,11 @@ Fraser's one is "SFSAR Custom PRIVATE", working notes on a task report. So:
 ## D4H's API
 
 - `GET /custom-fields` lists the team's fields and its organization's, with `owner`
-  saying which.
+  saying which. Each has `bundle: {id}` or null, `createdAt`, `searchable`, and
+  `frozen`, and each option its own `owner` (all filled on South Fraser, 2026-11-12).
+- `GET /resource-bundles` lists the bundles: `id`, `title`, `owner`, `ordering`, and
+  `target.subResourceType`, the kind of record its fields are on. South Fraser sees 8,
+  all BCSARA's: 3 on incidents, 1 on members, 4 on health and safety reports.
 - Writes are `customFieldValues: [{id, value}]` on create and PATCH of events,
   exercises, and incidents, and on PATCH of members and equipment. A PATCH that sends
   one field keeps the others. `value: null` clears a text or choice field; `[]` gets a
@@ -156,7 +208,8 @@ Fraser's one is "SFSAR Custom PRIVATE", working notes on a task report. So:
 
 Records is the test bed (Gerry, 2026-11-07): a Records team does everything a D4H team
 does with fields, and SAR Duty has no branch for it (#1003). Records serves
-`GET /custom-fields` and the values on each record in D4H's shape, takes the same
+`GET /custom-fields`, `GET /resource-bundles` (#872), and the values on each record in
+D4H's shape, takes the same
 writes, and refuses publishing an incident with a required field empty with a 409, as
 D4H does. Fields match across services by kind and title, never by id: each service
 picks its own.

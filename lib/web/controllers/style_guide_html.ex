@@ -10,6 +10,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.CopyButton
   import Web.Components.CustomFields
   import Web.Components.D4H
+  import Web.Components.FieldDefinitions
   import Web.Components.EmailPreview
   import Web.Components.FileDrop
   import Web.Components.FilterBar
@@ -93,6 +94,8 @@ defmodule Web.StyleGuideHTML do
          {:email_preview, "Email preview", "An email or text as members get it."},
          {:empty_state, "Empty state", "Why a list is empty and what to do."},
          {:error_summary, "Error summary", "What to fix in a form after a failed save."},
+         {:field_definitions, "Field definitions",
+          "What each custom field is, by kind and named group."},
          {:file_drop, "File drop", "Drop, paste, or select a file to upload."},
          {:filter_bar, "Filter bar", "Search and filters above a long list."},
          {:forms, "Forms",
@@ -422,6 +425,7 @@ defmodule Web.StyleGuideHTML do
 
   defdelegate chart_columns(), to: SampleData
   defdelegate custom_field_rows(), to: SampleData
+  defdelegate custom_field_definitions(), to: SampleData
   defdelegate chart_hours(), to: SampleData
   defdelegate chart_days(), to: SampleData
   defdelegate chart_week(), to: SampleData

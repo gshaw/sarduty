@@ -50,7 +50,7 @@ defmodule Web.Org.OrgPagesTest do
       conn = log_in_user(conn, dana)
 
       for path <- ~w(/orgs/wsara /orgs/wsara/settings /orgs/wsara/settings/admins
-                     /orgs/wsara/settings/hours-tags) do
+                     /orgs/wsara/settings/hours-tags /orgs/wsara/settings/fields) do
         assert {:ok, _lv, _html} = live(conn, path)
       end
     end
@@ -432,6 +432,67 @@ defmodule Web.Org.OrgPagesTest do
           refute html =~ value, "#{path} shows #{value}"
         end
       end
+    end
+  end
+
+  describe "Fields (#872)" do
+    alias App.Adapter.D4H
+    alias App.Model.CustomField
+    alias App.Operation.RefreshD4HData.UpsertCustomFields
+
+    defp agency(options),
+      do: %D4H.CustomField{
+        d4h_custom_field_id: 5,
+        target: "incident",
+        title: "Agency",
+        field_type: "single_choice",
+        owner_type: "Organisation",
+        owner_id: 7,
+        options: options
+      }
+
+    defp option(id, label, owner_type, owner_id),
+      do: %{
+        "id" => id,
+        "label" => label,
+        "ordering" => id,
+        "archived" => false,
+        "owner_type" => owner_type,
+        "owner_id" => owner_id
+      }
+
+    test "lists the organization's fields once, and names the team that added a choice",
+         %{conn: conn, dana: dana, coast: coast, other_team: other_team} do
+      now = DateTime.utc_now()
+      police = option(1, "Police", "Organisation", 7)
+
+      own = %D4H.CustomField{
+        d4h_custom_field_id: 9,
+        target: "incident",
+        title: "Team notes",
+        field_type: "text",
+        owner_type: "Team",
+        owner_id: coast.d4h_team_id
+      }
+
+      UpsertCustomFields.save(coast.id, [], [agency([police]), own], now)
+
+      UpsertCustomFields.save(
+        other_team.id,
+        [],
+        [agency([police, option(2, "Coast Guard", "Team", other_team.d4h_team_id)])],
+        now
+      )
+
+      {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/settings/fields")
+
+      [field] =
+        coast.id |> CustomField.get_all("incident") |> Enum.filter(&(&1.title == "Agency"))
+
+      assert has_element?(lv, "#fields-incident", "1 field.")
+      assert has_element?(lv, "#field-#{field.id}", "Choices: Police.")
+      assert has_element?(lv, "#field-#{field.id}", "Valley SAR added: Coast Guard.")
+      refute render(lv) =~ "Team notes"
     end
   end
 
