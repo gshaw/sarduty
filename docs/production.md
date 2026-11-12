@@ -54,8 +54,9 @@ reviewed in its PR like any code, before it ever runs.
 ## backup and console
 
 `backup` has the app write a consistent copy of the database (`App.Ops.Backup`), then
-`bin/prod` tars it with the team logos over `fly ssh`, encrypts it to
-`BACKUP_AGE_RECIPIENT`, and saves it in `backups/`. No plain copy lands on disk.
+`bin/prod` tars it with the team logos over `fly ssh`, encrypts it to the backup key's
+public half, and saves it in `backups/`. No plain copy lands on disk, and it needs no
+setup beyond `age`, which mise installs.
 
 `console` records that a shell opened, then opens one on the machine. It's for people,
 when no task does the job: rolling back a migration, reading `repo_slow.log`, or letting
@@ -67,8 +68,14 @@ issue. Anything done there twice becomes a task.
 
 [.claude/hooks/prod-guard](../.claude/hooks/prod-guard) runs before every Bash command an
 agent runs in this repo. It refuses `fly ssh`, `fly console`, `fly machine exec`,
-reading `FLY_SARDUTY_SSH_TOKEN`, and `bin/prod console`. It asks you before `bin/prod fix`
-and `bin/prod backup`. It checks the command's text, so it stops habits, not a
+reading `FLY_SARDUTY_SSH_TOKEN`, and `bin/prod console`. It asks you before `bin/prod fix`,
+naming the task and why. `backup` runs without asking: it changes nothing, comes down
+encrypted, and is recorded. The hook checks the command's text, so it stops habits, not a
 determined person. The token is the boundary.
+
+An agent runs `bin/prod` as one plain command, with nothing chained before or after it,
+so a prompt shows only that command. The hook reads the whole command text, so a commit
+message or heredoc that names a refused command is refused too: write that text with a
+file tool and pass the file.
 
 Records gets the same shape in its own repo.

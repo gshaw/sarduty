@@ -10,7 +10,7 @@
 #
 # --why is an issue number or a sentence. You are the SAR Duty admin with
 # `git config sarduty.email`, or `user.email` when that isn't set. Agents are kept off
-# console, and asked before fix and backup, by .claude/hooks/prod-guard.
+# console, and asked before fix, by .claude/hooks/prod-guard.
 #
 # Written for macOS's bash 3.2: no associative arrays, and an empty array needs
 # ${a[@]+"${a[@]}"} under set -u.
@@ -22,6 +22,10 @@ APP=sarduty
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 # App.Ops.Backup writes the copy here, and backup tars it.
 SNAPSHOT=tmp/backup.db
+# The public half of the backup age key: it can only encrypt, so it lives here. The
+# private half is in the password manager and fnox (SARDUTY_BACKUP_AGE_IDENTITY).
+# cspell:disable-next-line
+BACKUP_RECIPIENT=age197jas6vrlj6m79mrpjzp63faa8m3rdz2uvsu0xukgsxkpw2dk4rq5u5scf
 
 usage() {
   sed -n '5,9p' "$0" | sed 's/^# //' >&2
@@ -66,11 +70,6 @@ command -v jq > /dev/null || {
   echo "bin/prod: needs jq (brew install jq)." >&2
   exit 2
 }
-
-if [ "$task" = backup ] && [ -z "${BACKUP_AGE_RECIPIENT:-}" ]; then
-  echo "bin/prod: backup needs BACKUP_AGE_RECIPIENT, from .mise.local.toml." >&2
-  exit 2
-fi
 
 email=$(git config sarduty.email || git config user.email || true)
 via=""
@@ -125,7 +124,7 @@ case $task:$status in
     file="$ROOT/backups/data_backup_$(date +%F-%H%M).tar.gz.age"
     if fly ssh console -a "$APP" -q \
       -C "sh -c 'tar cz -C / $SNAPSHOT mnt/sarduty/team-logos && rm /$SNAPSHOT'" |
-      age -r "$BACKUP_AGE_RECIPIENT" > "$file"; then
+      age -r "$BACKUP_RECIPIENT" > "$file"; then
       echo "$file"
     else
       rm -f "$file"

@@ -173,10 +173,10 @@ minutes, not every 15 and 30 seconds (#810). Syncs stay every second.
 Litestream 0.5 has no client-side encryption, so the replica holds readable data. R2
 encrypts it at rest; reading it takes the bucket token or the Cloudflare account.
 
-- `BACKUP_AGE_RECIPIENT` — in `.mise.local.toml`, the public half of an
-  [age](https://age-encryption.org) key. `bin/prod backup` encrypts each local snapshot
-  to it. The private half is in the password manager, and
-  nothing decrypts a snapshot without it.
+- The backup [age](https://age-encryption.org) key: `bin/prod backup` encrypts each
+  local snapshot to its public half, written in `bin/prod`. The private half is in the
+  password manager and fnox (`SARDUTY_BACKUP_AGE_IDENTITY`), and nothing decrypts a
+  snapshot without it.
 
 ## Healthchecks
 
