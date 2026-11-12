@@ -37,7 +37,7 @@ defmodule App.Operation.DeleteTeam do
                   endorsements equipment_items
                   equipment_usages events group_membership_changes group_rules groups
                   home_coordinates location_bookmarks mcp_calls member_away_periods member_cards
-                  member_check_ins member_photos member_standing_changes members no_shows outbox_messages qualifications
+                  member_check_ins member_photos member_standing_changes members no_shows outbox_messages photo_asks qualifications
                   reminders reports route_distances published_pdfs form_answers sign_requests tags team_login_grants templates trips
                   whiteboard_notes)
 

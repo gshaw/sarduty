@@ -8,8 +8,11 @@ defmodule Web.MemberPhotoFormLiveTest do
   alias App.Model.ChangeSetRow
   alias App.Model.MemberPhoto
   alias App.Model.MemberPhotoFile
+  alias App.Model.PhotoAsk
+  alias App.Operation.AskForPhoto
   alias App.RecordsStub
   alias App.Repo
+  alias Web.PhotoAskLinks
 
   # Add a photo (#1028): a team admin takes or selects a member's photo, places it, and
   # saves it, on a D4H team and on a Records team.
@@ -445,5 +448,127 @@ defmodule Web.MemberPhotoFormLiveTest do
 
     assert Repo.reload!(alex).has_photo
     assert Repo.all(MemberPhoto) == []
+  end
+
+  # The link in the email that asks for a photo (#1030): no login, for one member.
+  describe "from an ask's link" do
+    setup %{team: team, riley: riley} do
+      # Member logins are off on this team, and the link works all the same.
+      refute team.member_logins
+      team = team |> Ecto.Changeset.change(name: "Coast Range SAR") |> Repo.update!()
+      asker = App.AccountsFixtures.user_fixture()
+      {:ok, [ask]} = AskForPhoto.call(team, asker, riley, nil, DateTime.utc_now())
+      %{conn: build_conn(), team: team, ask: ask, link: PhotoAskLinks.path(ask)}
+    end
+
+    test "opens Add a photo for the member with no login, and nothing else", %{
+      conn: conn,
+      link: link
+    } do
+      {:ok, lv, _html} = live(conn, link)
+
+      assert has_element?(lv, "h1", "Add a photo")
+      assert has_element?(lv, "#photo-team", "Coast Range SAR")
+
+      assert has_element?(
+               lv,
+               "#photo-lead",
+               "Coast Range SAR puts it on your ID card. A team admin checks it first."
+             )
+
+      assert has_element?(lv, "#photo-take", "Take a photo")
+      # No Member box, no trail into the team, and nowhere for Cancel to go.
+      refute has_element?(lv, "#photo-member")
+      refute has_element?(lv, ".breadcrumbs")
+      refute has_element?(lv, "#photo-cancel")
+    end
+
+    test "the photo waits for a team admin, is that member's whatever the form says, and the ask closes",
+         %{conn: conn, team: team, riley: riley, ask: ask, link: link} do
+      other = member_fixture(team, %{has_photo: false})
+      {:ok, lv, _html} = live(conn, link)
+      pick(lv, png_fixture(800, 600))
+      assert has_element?(lv, "#photo-save", "Add photo")
+
+      html =
+        lv
+        |> form("#photo-form")
+        |> render_submit(%{"member_id" => to_string(other.id), "photo" => %{"turns" => "1"}})
+
+      assert html =~ "Photo added"
+      assert has_element?(lv, "#photo-link-done", "A team admin checks it")
+      refute has_element?(lv, "#photo-form")
+
+      assert [%MemberPhoto{status: :waiting, turns: 1} = waiting] = Repo.all(MemberPhoto)
+      assert waiting.member_id == riley.id
+      assert Repo.get_by(MemberPhotoFile, member_photo_id: waiting.id)
+      refute Repo.reload!(riley).has_photo
+      assert Repo.reload!(ask).closed_at
+
+      # The ask closed, so the link stops.
+      {:ok, lv, _html} = live(conn, link)
+      assert has_element?(lv, "h1", "This link no longer works")
+      assert has_element?(lv, "#photo-link-ended", "Ask a team admin for a new one.")
+      refute has_element?(lv, "#photo-form")
+    end
+
+    test "a team admin adding the photo closes the ask, and the link stops", %{
+      conn: conn,
+      team: team,
+      riley: riley,
+      ask: ask,
+      link: link
+    } do
+      stub_ok()
+      %{user: admin} = user_with_team_fixture()
+      manager_fixture(team, %{email: admin.email})
+      admin_conn = log_in_user(build_conn(), admin)
+
+      {:ok, lv, _html} = live(admin_conn, add_path(team, riley))
+      pick(lv, png_fixture(600, 600))
+
+      lv
+      |> form("#photo-form")
+      |> render_submit()
+      |> follow_redirect(admin_conn, ~p"/teams/#{team}/members/#{riley.id}/card")
+
+      assert Repo.reload!(ask).closed_at
+      {:ok, lv, _html} = live(conn, link)
+      assert has_element?(lv, "h1", "This link no longer works")
+    end
+
+    test "an ask that closes while the page is open saves nothing", %{
+      conn: conn,
+      riley: riley,
+      link: link
+    } do
+      {:ok, lv, _html} = live(conn, link)
+      pick(lv, png_fixture(800, 600))
+      PhotoAsk.close_for_member(riley, DateTime.utc_now())
+
+      html = lv |> form("#photo-form") |> render_submit()
+
+      assert html =~ "This link no longer works"
+      assert Repo.all(MemberPhoto) == []
+    end
+
+    test "a link over 30 days old no longer works, and one that was never a link is not found",
+         %{conn: conn, ask: ask} do
+      old =
+        Phoenix.Token.sign(Web.Endpoint, "photo ask", ask.id,
+          signed_at: System.system_time(:second) - 31 * 24 * 60 * 60
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/photos/#{old}")
+      assert has_element?(lv, "h1", "This link no longer works")
+
+      assert_error_sent 404, fn -> live(conn, ~p"/photos/not-a-token") end
+    end
+
+    test "with Photos off the link no longer works", %{conn: conn, team: team, link: link} do
+      team |> Ecto.Changeset.change(photos_enabled: false) |> Repo.update!()
+      {:ok, lv, _html} = live(conn, link)
+      assert has_element?(lv, "h1", "This link no longer works")
+    end
   end
 end

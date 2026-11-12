@@ -30,7 +30,8 @@ enforces the top-level list and the held URLs.
 - **A member's photo is under `/photos/members`** (#1028): Add a photo is
   `/photos/members/new`, with `?member=<id>` for one member. That leaves `/photos/:id`
   for an activity's photo. A photo a member added is `/photos/members/:id`, its check
-  page, and `/photos/members/:id/file` while SAR Duty keeps it (#1029).
+  page, and `/photos/members/:id/file` while SAR Duty keeps it (#1029). Ask for a photo
+  is `/photos/members/ask`, with `?member=<id>` for one member (#1030).
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
   (`/teams/:subdomain/settings`, `/settings/team-admins`). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.
@@ -68,7 +69,8 @@ enforces the top-level list and the held URLs.
   the app in production only (`Web.FlyHostRedirect`, exact hosts).
 - **Search vs agents** (#824): nothing is blocked. Routes kept out of search pipe
   through `:noindex`, which sends `X-Robots-Tag: noindex`: the whole verify host,
-  `/replies/:token`, `/reminders/:token`, `/cards/:token`, MCP, OAuth, wallet, and
+  `/replies/:token`, `/reminders/:token`, `/cards/:token`, `/photos/:token`, MCP, OAuth,
+  wallet, and
   `/maps`. Public pages, `/agents` and `/styles` included, stay indexable. The router
   test puts every route in one group, hidden, logged in, or public, and fails on a new
   one until it's classified.
@@ -93,6 +95,8 @@ Devices, Google, Apple, and shared links hold these. They don't move.
 - `/cards/:token`: an ID card email's link to the card's page (#952), with
   `/cards/:token/apple-wallet` and `/cards/:token/google-wallet` behind its badges, and
   `/cards/:token/image` and `/pdf`, the card it draws (#973).
+- `/photos/:token`: the link in an email that asks for a photo (#1030), which opens Add
+  a photo for the member asked. It works for 30 days.
 - `/teams/:subdomain/logo`: Google Wallet objects fetch it.
 - `/teams/:subdomain/take-attendance`: teams print a QR code of it for the hall (#475).
 - `/teams/:subdomain/mcp`: agents' MCP configs hold it ([mcp.md](mcp.md)).

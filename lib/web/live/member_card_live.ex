@@ -9,6 +9,7 @@ defmodule Web.MemberCardLive do
   alias App.Model.MemberCard
   alias App.Model.PassRegistration
   alias App.Model.Team
+  alias App.Operation.AskForPhoto
   alias App.Operation.BuildApplePass
   alias App.Operation.BuildCardQualifications
   alias App.Operation.BuildGooglePass
@@ -42,6 +43,8 @@ defmodule Web.MemberCardLive do
       |> assign_card(MemberCard.find_current(team, member))
       |> assign(:qualifications, BuildCardQualifications.call(team, member, now))
       |> assign(:endorsements_on_card?, Endorsement.any_on_card?(team.id))
+      # The member's open ask for a photo (#1030), so two team admins do not both ask.
+      |> assign(:ask, AskForPhoto.open_for(team, member, now))
 
     {:noreply, socket}
   end
@@ -192,23 +195,37 @@ defmodule Web.MemberCardLive do
         :if={!@current_team.id_cards_enabled and Team.photos?(@current_team) and !@member.has_photo}
         member={@member}
       />
+      <p :if={@ask} id="photo-asked" class="hint mt-4">
+        {@ask.asked_by} asked on {Service.Format.date_short(
+          @ask.ask.asked_at,
+          @current_team.timezone
+        )}. No photo yet.
+        <span :if={@ask.ask.email_status == :failed} id="photo-ask-failed">
+          The email did not send. Ask again.
+        </span>
+      </p>
     </.member_page>
     """
   end
 
-  # A member with no photo, on a team with Photos on (#1028): the line, and the button
-  # that opens Add a photo for them.
+  # A member with no photo, on a team with Photos on (#1028): the line, and the buttons
+  # that open Add a photo and Ask for a photo (#1030) for them.
   defp add_photo(assigns) do
     ~H"""
     <div id="no-photo">
       <p>{@member.name} has no photo. An ID card needs one.</p>
-      <.button
-        id="add-photo"
-        variant={:primary}
-        navigate={Web.PhotoCollectionLive.add_path(@member.team, @member)}
-      >
-        Add a photo
-      </.button>
+      <div class="flex flex-wrap gap-2">
+        <.button
+          id="add-photo"
+          variant={:primary}
+          navigate={Web.PhotoCollectionLive.add_path(@member.team, @member)}
+        >
+          Add a photo
+        </.button>
+        <.button id="ask-photo" navigate={Web.PhotoAskLive.path(@member.team, @member)}>
+          Ask for a photo
+        </.button>
+      </div>
     </div>
     """
   end
@@ -324,6 +341,13 @@ defmodule Web.MemberCardLive do
           navigate={Web.PhotoCollectionLive.add_path(@member.team, @member)}
         >
           Add a photo
+        </.button>
+        <.button
+          :if={@photos? and !@member.has_photo}
+          id="ask-photo"
+          navigate={Web.PhotoAskLive.path(@member.team, @member)}
+        >
+          Ask for a photo
         </.button>
         <.button
           id="cancel-card"

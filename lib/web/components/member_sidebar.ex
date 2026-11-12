@@ -153,6 +153,14 @@ defmodule Web.Components.MemberSidebar do
             navigate={~p"/teams/#{@member.team}/members/#{@member.id}/fields/edit"}
           >Change fields</.a>
         </li>
+        <%!-- For a new one (#1030). A member with no photo is asked from their ID Card
+          tab. --%>
+        <li :if={Team.photos?(@member.team) and @member.has_photo}>
+          <.a
+            id="member-actions-ask-photo"
+            navigate={Web.PhotoAskLive.path(@member.team, @member)}
+          >Ask for a photo</.a>
+        </li>
         <li :if={!D4H.records?(@member.team)}>
           <.a external={true} href={D4H.member_url(@member)}>Open in {D4H.service_name(@member.team)}</.a>
         </li>

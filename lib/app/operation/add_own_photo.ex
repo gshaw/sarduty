@@ -7,7 +7,8 @@ defmodule App.Operation.AddOwnPhoto do
 
   SAR Duty keeps the photo as taken, the copy Service.MemberPhoto.prepare/1 made, and
   where the member placed it, so a team admin can place it again. A member has one
-  waiting photo: a new one replaces it.
+  waiting photo: a new one replaces it. Adding one closes a team admin's ask for it
+  (App.Operation.AskForPhoto).
   """
 
   import Ecto.Query
@@ -15,6 +16,7 @@ defmodule App.Operation.AddOwnPhoto do
   alias App.Model.Member
   alias App.Model.MemberPhoto
   alias App.Model.MemberPhotoFile
+  alias App.Model.PhotoAsk
   alias App.Repo
 
   @doc """
@@ -42,6 +44,8 @@ defmodule App.Operation.AddOwnPhoto do
         delete_waiting(member)
         photo = Repo.insert!(row)
         MemberPhotoFile.put!(photo, bytes)
+        # They answered a team admin's ask (#1030), so its link stops working.
+        PhotoAsk.close_for_member(member, DateTime.utc_now())
         photo
       end)
     end)

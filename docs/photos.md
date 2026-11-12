@@ -4,8 +4,8 @@ A member's photo is on their ID card, and a checker compares it with the person 
 the card ([member-cards.md](member-cards.md#a-photo-before-a-card)). D4H's web app was
 the only way to set one. Photos (#1028) lets a team admin add or change any member's
 photo in SAR Duty, on a D4H team and on a Records team. A member adds their own, and a
-team admin checks it first (#1029). These are parts 1 and 2 of the photos stack (#1023):
-asking a member for one and Clean up come next.
+team admin checks it first (#1029). A team admin asks a member for one by email (#1030).
+These are parts 1 to 3 of the photos stack (#1023): Clean up comes next.
 
 ## The switch
 
@@ -108,6 +108,40 @@ a photo needs no check.
 - **One at a time.** The member adding another, an accept, and a decline take one lock
   for the member (`MemberPhoto.locked/2`), so an accept that is sending never loses the
   photo under it.
+
+## Asking for a photo
+
+A team admin asks a member for a photo, or everyone with no photo at once (#1030). SAR
+Duty asks nobody by itself and sends no reminders: a team admin asks again.
+
+- **The page.** Ask for a photo, `/teams/:subdomain/photos/members/ask`, built like Ask
+  for a reply: who gets an email, why the rest do not, an optional message of up to 300
+  characters, and one send. `?member=<id>` asks that member, from their ID Card tab, their
+  tile on Photos, or Actions when they have a photo: for a first photo, a new one, or
+  again. Without it, Ask for photos on Photos asks every counted, current member with no
+  photo, an email, and no ask still open.
+- **Who is asked** is [AskForPhoto.plan/4](../lib/app/operation/ask_for_photo.ex), pure,
+  with the reason for each member left out. Sending plans again.
+- **The ask** is a `photo_asks` row, [PhotoAsk](../lib/app/model/photo_ask.ex): who
+  asked, when, and the message. A member has one open ask. Asking again moves its date
+  and sends another email.
+- **It closes** when the member's photo is added: by them (AddOwnPhoto), by a team admin
+  (SetMemberPhoto), or in the team's records, when the night's check finds a photo where
+  there was none (CheckMemberPhoto). A decline does not open it again: the member's
+  Dashboard asks for another, and that needs a login, or a team admin asks again.
+- **The email** is one `SendPhotoAskWorker` job per ask, queued in the ask's
+  transaction, with the ask's id as its args. It comes from SAR Duty, and a reply goes to
+  the team admin who asked, under the team's name. A send that fails every try marks the
+  ask, and the member's ID Card tab says "The email did not send. Ask again."
+- **The link** is `/photos/:token` ([Web.PhotoAskLinks](../lib/web/photo_ask_links.ex)),
+  a signed token naming the ask. It opens Add a photo for that member with no login, on
+  a team with member logins off too, and nothing else. It works for 30 days from its
+  email, and only while the ask is open, so once. After that it says "This link no
+  longer works".
+- **What people see.** The member's Dashboard has "Add a photo for your ID card" under
+  For you to do, with who asked and their message. Their ID Card tab says who asked and
+  when, so two team admins do not both ask. Photos shows "Asked Nov 9" under the member
+  in place of Add a photo and Ask for a photo.
 
 ## Sending it
 

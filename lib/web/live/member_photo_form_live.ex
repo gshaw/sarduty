@@ -5,9 +5,12 @@ defmodule Web.MemberPhotoFormLive do
 
   alias App.Model.Member
   alias App.Model.MemberPhoto
+  alias App.Model.PhotoAsk
   alias App.Model.Team
   alias App.Operation.AddOwnPhoto
   alias App.Operation.SetMemberPhoto
+  alias Web.Navigation
+  alias Web.PhotoAskLinks
   alias Web.PhotoCollectionLive
 
   # Add a photo, /teams/:subdomain/photos/members/new: someone takes or selects a photo,
@@ -19,6 +22,11 @@ defmodule Web.MemberPhotoFormLive do
   # current members. A member adds their own (#1029): no Member box, and whatever the URL
   # says the photo is of the person logged in. Theirs waits for a team admin
   # (AddOwnPhoto), and a decline of their last one shows above the examples.
+  #
+  # The email that asks a member for a photo (#1030) opens the same page at
+  # /photos/:token, with no login: the token names the ask, and so the member. Nothing
+  # the session or the form says changes who. Their photo waits too, and adding it
+  # closes the ask, so the link works once. One too old, or whose ask closed, says so.
   #
   # The photo uploads the moment it is picked. Service.MemberPhoto reads it, HEIC too,
   # into a JPEG the page shows for placing, since a browser cannot show every photo a
@@ -40,13 +48,30 @@ defmodule Web.MemberPhotoFormLive do
     {"photo-guide-busy-background.svg", "Busy background"}
   ]
 
+  # The ask's link. A token that was never one is not found.
+  def mount(%{"token" => token}, _session, socket) do
+    case PhotoAskLinks.find_ask(token) do
+      {:ok, ask} ->
+        {:ok, socket |> assign(token: token) |> assign_asked(ask) |> assign_page()}
+
+      :ended ->
+        {:ok, assign(socket, page_title: "This link no longer works", ended?: true)}
+
+      :error ->
+        raise Web.Status.NotFound
+    end
+  end
+
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     if !Team.photos?(team), do: raise(Web.Status.NotFound)
 
+    {:ok, socket |> assign(team: team, token: nil) |> assign_who(params) |> assign_page()}
+  end
+
+  defp assign_page(socket) do
     socket
-    |> assign(page_title: "Add a photo", photo: nil, photo_count: 0)
-    |> assign_who(params)
+    |> assign(page_title: "Add a photo", photo: nil, photo_count: 0, ended?: false, done?: false)
     |> allow_upload(:photo,
       accept: ~w(image/*),
       max_entries: 1,
@@ -54,7 +79,24 @@ defmodule Web.MemberPhotoFormLive do
       auto_upload: true,
       progress: &handle_progress/3
     )
-    |> then(&{:ok, &1})
+  end
+
+  # The member the ask names, adding their own. Logged in to the ask's team, the bar
+  # names it, as the reply links do.
+  defp assign_asked(socket, %PhotoAsk{team: team, member: member}) do
+    socket =
+      if Navigation.opens_team?(socket.assigns, team),
+        do: assign(socket, current_team: team),
+        else: socket
+
+    assign(socket,
+      team: team,
+      own?: true,
+      member: member,
+      members: nil,
+      declined: MemberPhoto.declined_for_member(member),
+      back: nil
+    )
   end
 
   # Who the photo is of. `own?` is a member adding their own, which waits; a team admin's
@@ -130,8 +172,21 @@ defmodule Web.MemberPhotoFormLive do
     end
   end
 
+  # From the ask's link: the ask is read again, since it may have closed while the page
+  # was open. The photo waits, and the page says so, with nowhere to go without a login.
+  defp save(%{assigns: %{token: token}} = socket, _member, photo, placed) when is_binary(token) do
+    case PhotoAskLinks.find_ask(token) do
+      {:ok, ask} ->
+        {:ok, _waiting} = AddOwnPhoto.call(ask.member, photo, placed)
+        assign(socket, page_title: "Photo added", done?: true, photo: nil)
+
+      _ended ->
+        assign(socket, page_title: "This link no longer works", ended?: true, photo: nil)
+    end
+  end
+
   # A member's own photo waits for a team admin.
-  defp save(%{assigns: %{own?: true, current_team: team}} = socket, member, photo, placed) do
+  defp save(%{assigns: %{own?: true, team: team}} = socket, member, photo, placed) do
     {:ok, _waiting} = AddOwnPhoto.call(member, photo, placed)
 
     socket
@@ -140,7 +195,7 @@ defmodule Web.MemberPhotoFormLive do
   end
 
   defp save(socket, member, photo, {turns, square}) do
-    %{current_team: team, current_user: user} = socket.assigns
+    %{team: team, current_user: user} = socket.assigns
 
     with {:ok, jpeg} <- Service.MemberPhoto.place(photo.bytes, turns, square),
          :ok <- SetMemberPhoto.call(team, member, jpeg, user, DateTime.utc_now()) do
@@ -162,7 +217,7 @@ defmodule Web.MemberPhotoFormLive do
 
   defp pick_member(socket, %{"member_id" => id}) do
     known? = Enum.any?(socket.assigns.members, fn {_name, value} -> value == id end)
-    assign(socket, member: if(known?, do: Member.find!(socket.assigns.current_team, id)))
+    assign(socket, member: if(known?, do: Member.find!(socket.assigns.team, id)))
   end
 
   defp pick_member(socket, _params), do: socket
@@ -185,16 +240,31 @@ defmodule Web.MemberPhotoFormLive do
     end
   end
 
+  def render(%{ended?: true} = assigns) do
+    ~H"""
+    <h1 class="title">This link no longer works</h1>
+    <p id="photo-link-ended">Ask a team admin for a new one.</p>
+    """
+  end
+
+  def render(%{done?: true} = assigns) do
+    ~H"""
+    <h1 class="title">Photo added</h1>
+    <p id="photo-link-done">A team admin checks it before your ID card shows it.</p>
+    """
+  end
+
   def render(assigns) do
     assigns = assign(assigns, rules: @rules, bad: @bad)
 
     ~H"""
-    <.breadcrumbs>
-      <:item label="Photos" path={PhotoCollectionLive.view_path(@current_team, :members)} />
+    <.breadcrumbs :if={!@token}>
+      <:item label="Photos" path={PhotoCollectionLive.view_path(@team, :members)} />
       <:item label="Add a photo" />
     </.breadcrumbs>
+    <p :if={@token} id="photo-team" class="hint mb-1">{@team.name}</p>
     <h1 class="title">Add a photo</h1>
-    <p id="photo-lead" class="lead">{lead(@own?, @member, @current_team)}</p>
+    <p id="photo-lead" class="lead">{lead(@own?, @member, @team)}</p>
 
     <form id="photo-form" phx-change="validate" phx-submit="save">
       <.input
@@ -243,7 +313,7 @@ defmodule Web.MemberPhotoFormLive do
             Take a photo
           </.button>
           <.button id="photo-select" type="button" data-photo-pick="file">Select a photo</.button>
-          <.button id="photo-cancel" navigate={@back}>Cancel</.button>
+          <.button :if={@back} id="photo-cancel" navigate={@back}>Cancel</.button>
         </.form_actions>
         <.spinner :if={@uploads.photo.entries != []} id="photo-reading" class="block mt-4">
           Reading the photo…
@@ -281,7 +351,7 @@ defmodule Web.MemberPhotoFormLive do
             Save photo
           </.button>
           <.button id="photo-another" type="button" phx-click="take-another">Take another</.button>
-          <.button id="photo-cancel" navigate={@back}>Cancel</.button>
+          <.button :if={@back} id="photo-cancel" navigate={@back}>Cancel</.button>
         </.form_actions>
       </div>
     </form>
