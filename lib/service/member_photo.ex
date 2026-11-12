@@ -42,7 +42,7 @@ defmodule Service.MemberPhoto do
         {:error, "SAR Duty cannot read a photo this large. Select a smaller photo."}
 
       {:error, _reason} when kind == :heic ->
-        {:error, "SAR Duty cannot read this photo. Select it as a JPEG."}
+        {:error, "SAR Duty cannot read this photo. Select a JPEG."}
 
       {:error, _reason} ->
         {:error, "SAR Duty cannot read this photo. Take another, or select one."}
