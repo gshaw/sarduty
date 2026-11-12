@@ -48,6 +48,8 @@ defmodule App.DataFixtures do
     {whiteboard_enabled, attrs} = Map.pop(attrs, :whiteboard_enabled, true)
     {travel_enabled, attrs} = Map.pop(attrs, :travel_enabled, true)
     {every_member_card, attrs} = Map.pop(attrs, :every_member_card, false)
+    # Off, as on a new team: the Photos tests turn it on (#1028).
+    {photos_enabled, attrs} = Map.pop(attrs, :photos_enabled, false)
 
     name = Map.get(attrs, :name, "Team #{unique}")
 
@@ -74,7 +76,8 @@ defmodule App.DataFixtures do
       id_cards_enabled: id_cards_enabled,
       whiteboard_enabled: whiteboard_enabled,
       travel_enabled: travel_enabled,
-      every_member_card: every_member_card
+      every_member_card: every_member_card,
+      photos_enabled: photos_enabled
     )
     |> Repo.update!()
   end

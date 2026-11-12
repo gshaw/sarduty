@@ -78,6 +78,9 @@ defmodule App.Model.Team do
     # Travel (#230): the Travel tab, Your travel, and the Dashboard's travel to-do, on
     # incidents only (App.Model.Activity.travel?/2). Set by App.Operation.SetTeamFeature.
     field :travel_enabled, :boolean, default: false
+    # Photos (#1028): the Photos page, and team admins adding a member's photo. It needs
+    # no member logins. Set by App.Operation.SetTeamFeature.
+    field :photos_enabled, :boolean, default: false
     # The hours tags the team's organization leaves blank (#323); see
     # App.Model.Activity.hours_tags/1. Set on the team's hours tags settings page.
     field :primary_hours_tag, TrimmedString
@@ -391,6 +394,9 @@ defmodule App.Model.Team do
 
   @doc "Whether the team shows its whiteboard (#515): turned on, and D4H answers for it."
   def whiteboard?(%Team{whiteboard_enabled: enabled, d4h_whiteboard: d4h}), do: enabled and d4h
+
+  @doc "Whether the team shows Photos (#1028): the setting alone, with or without member logins."
+  def photos?(%Team{photos_enabled: enabled}), do: enabled
 
   @doc "The short name of the team's organization, else its name. Nil without one."
   def organization_name(%Team{} = team) do

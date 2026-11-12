@@ -113,27 +113,26 @@ defmodule Web.MemberFormLiveTest do
     assert html =~ "Enter a shorter name."
   end
 
-  test "a team admin uploads a photo, which goes to Records and is not kept here",
+  # One way to set a photo (#1028): Add a photo. The upload that was here is gone.
+  test "Change photo opens Add a photo for the member, with Photos on",
        %{conn: conn, team: team, admin: admin} do
-    stub_ok()
-    admin |> Ecto.Changeset.change(has_photo: false) |> Repo.update!()
-    photo = png_fixture(40, 30)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
+    refute has_element?(lv, "#member-photo input[type=file]")
+    refute has_element?(lv, "#change-photo")
+    assert has_element?(lv, ~s|#photos-off a[href="#{~p"/teams/#{team}/settings/features"}"]|)
+
+    team |> Ecto.Changeset.change(photos_enabled: true) |> Repo.update!()
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
 
-    lv
-    |> file_input("#photo-form", :photo, [%{name: "face.png", content: photo, type: "image/png"}])
-    |> render_upload("face.png")
+    add = ~p"/teams/#{team}/photos/members/new?#{[member: admin.id]}"
+    assert has_element?(lv, ~s|#change-photo[href="#{add}"]|, "Change photo")
+    refute has_element?(lv, "#photos-off")
 
-    assert lv |> form("#photo-form") |> render_submit() =~ "Photo saved."
-
-    path = "/members/#{admin.d4h_member_id}/image"
-    assert_received {:records, "PUT", ^path, {:bytes, ^photo}}
-
-    [row] = Repo.all(ChangeSetRow)
-    assert {row.action, row.status} == {:set_member_photo, :applied}
-    assert row.new_value == %{"size" => byte_size(photo)}
-    # Set with no download, so an ID card can follow at once (#1012).
-    assert Repo.reload!(admin).has_photo
+    admin |> Ecto.Changeset.change(has_photo: false) |> Repo.update!()
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
+    assert has_element?(lv, ~s|#change-photo[href="#{add}"]|, "Add a photo")
+    assert has_element?(lv, "#member-no-photo")
+    refute has_element?(lv, "#remove-photo")
   end
 
   test "a team admin removes a photo", %{conn: conn, team: team, admin: admin} do
@@ -145,11 +144,9 @@ defmodule Web.MemberFormLiveTest do
     path = "/members/#{admin.d4h_member_id}/image"
     assert_received {:records, "DELETE", ^path, nil}
     refute Repo.reload!(admin).has_photo
-  end
-
-  test "saving with no photo selected asks for one", %{conn: conn, team: team, admin: admin} do
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
-    assert lv |> form("#photo-form") |> render_submit() =~ "Select a photo."
+    assert [%ChangeSetRow{action: :remove_member_photo, status: :applied}] = Repo.all(ChangeSetRow)
+    refute has_element?(lv, "#member-photo-image")
+    refute has_element?(lv, "#remove-photo")
   end
 
   test "a name is needed, and the error summary lists it", %{conn: conn, team: team} do

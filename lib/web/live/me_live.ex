@@ -109,7 +109,7 @@ defmodule Web.MeLive do
     <.person_head
       id="member-head"
       name={@member.name}
-      photo={~p"/teams/#{@team}/members/#{@member}/image"}
+      photo={Web.MemberPhoto.path(@team, @member)}
       standing={@standing}
       facts={facts(@member, @last_attended_at, @team.timezone)}
     />

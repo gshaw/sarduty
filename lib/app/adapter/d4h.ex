@@ -146,6 +146,8 @@ defmodule App.Adapter.D4H do
     |> Keyword.merge(test_options())
     |> Req.new()
     |> Req.Request.put_private(:d4h_team_id, d4h_team_id)
+    # For the few writes D4H and Records take differently, such as a member's photo.
+    |> Req.Request.put_private(:service, service(api_host))
     |> report_rate_limits()
   end
 
@@ -1388,15 +1390,33 @@ defmodule App.Adapter.D4H do
   defp put_activity_location(json, _attrs), do: json
 
   @doc """
-  Sets a member's photo to `bytes`, a JPEG, PNG, or WebP. PUT on the image is Records'
-  own; D4H takes photos only in its web app. Records shrinks it and strips its metadata.
+  Sets a member's photo to `bytes`, a JPEG (#1028).
+
+  Records takes a PUT on the image, its own, and answers with the member. D4H takes a
+  document on the member with `profile` set, which its spec (7.6.1) calls "Whether this
+  document is the profile image", and answers with the document. Built from the spec:
+  nobody had tried it on a real member when this was written.
   """
   def set_member_photo(context, d4h_member_id, bytes) when is_binary(bytes) do
-    url = "/members/#{d4h_member_id}/image"
-    write(context, :put, url, {:body, bytes}, &D4H.Member.build/1)
+    case Req.Request.get_private(context, :service) do
+      :records ->
+        url = "/members/#{d4h_member_id}/image"
+        write(context, :put, url, {:body, bytes}, &D4H.Member.build/1)
+
+      :d4h ->
+        form = [
+          title: "Photo",
+          targetResourceType: "Member",
+          targetResourceId: to_string(d4h_member_id),
+          profile: "true",
+          file: {bytes, filename: "photo.jpg", content_type: "image/jpeg"}
+        ]
+
+        write(context, :post, "/documents", {:form, form}, &D4H.Document.build/1)
+    end
   end
 
-  @doc "Removes a member's photo. DELETE on the image is Records' own."
+  @doc "Removes a member's photo. DELETE on the image is Records' own; D4H has no way."
   def remove_member_photo(context, d4h_member_id),
     do: write(context, :delete, "/members/#{d4h_member_id}/image", nil, &D4H.Member.build/1)
 

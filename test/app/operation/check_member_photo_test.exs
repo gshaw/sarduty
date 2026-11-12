@@ -63,6 +63,30 @@ defmodule App.Operation.CheckMemberPhotoTest do
     assert Repo.reload!(member).has_photo
   end
 
+  # Photos shows who has one (#1028), so a team with it on is checked with or without ID cards.
+  test "the nightly check covers a team with Photos on and ID cards off" do
+    team = team_fixture(%{id_cards_enabled: false, photos_enabled: true})
+    member = member_fixture(team)
+    answer(204)
+
+    CheckMemberPhoto.check_team(team, DateTime.utc_now())
+
+    refute Repo.reload!(member).has_photo
+  end
+
+  test "a photo SAR Duty set or removed stores its time; a check does not" do
+    member = team_fixture() |> member_fixture(%{has_photo: false}) |> Repo.preload(:team)
+
+    assert %{has_photo: true, photo_changed_at: ~U[2026-11-12 08:00:00Z]} =
+             CheckMemberPhoto.store(member, true, ~U[2026-11-12 08:00:00.123456Z])
+
+    assert Repo.reload!(member).photo_changed_at == ~U[2026-11-12 08:00:00Z]
+
+    answer(404)
+    CheckMemberPhoto.call(member)
+    assert %{has_photo: false, photo_changed_at: ~U[2026-11-12 08:00:00Z]} = Repo.reload!(member)
+  end
+
   # A card that went out with the placeholder gets the photo on the phones that night.
   # The pass marked changed is what makes phones fetch it (RefreshMemberCard); the push
   # itself is tested with Refresh ID card.

@@ -1,11 +1,14 @@
 defmodule App.Operation.SetMemberPhoto do
   @moduledoc """
-  A team admin sets or removes the photo of a member of a team on SAR Duty Records
-  (docs/records.md). One change set row through App.Operation.ApplyEdit. The row says
-  only that the photo changed: the image goes to Records and is never kept here. Then
-  `has_photo` is set with no download, the member's card goes to their phones again
-  (RefreshMemberCard), and Every member gets a card makes theirs the moment a first photo
-  is saved (#1012). A photo removed leaves a card already out.
+  A team admin sets a member's photo, on any team (#1028), or removes it on a team on SAR
+  Duty Records (docs/records.md): D4H has no way to remove one. One change set row
+  through App.Operation.ApplyEdit. The row says only that the photo changed: the image
+  goes to the team's records and is never kept here. Then `has_photo` is set with no
+  download, the member's card goes to their phones again (RefreshMemberCard), and Every
+  member gets a card makes theirs the moment a first photo is saved (#1012). A photo
+  removed leaves a card already out.
+
+  `bytes` is the photo as it goes: Add a photo's JPEG, from Service.MemberPhoto.
   """
 
   alias App.Accounts.User
@@ -22,7 +25,7 @@ defmodule App.Operation.SetMemberPhoto do
       when team_id == team.id do
     with {:ok, _d4h_member_id} <-
            ApplyEdit.call(team, user, plan(member, bytes), now, photo: bytes) do
-      member = CheckMemberPhoto.store(member, bytes != nil)
+      member = CheckMemberPhoto.store(member, bytes != nil, now)
       RefreshMemberCard.resend(team, member, now)
       IssueEveryMemberCard.call(team, now)
       :ok

@@ -176,8 +176,13 @@ defmodule App.Operation.ApplyChangeSet do
       nil ->
         {:failed, "Upload the photo again."}
 
+      # Records answers with the member and D4H with a document (#1028), so the row keeps
+      # the member's id. A refusal goes to failure_text/3, which names who refused.
       bytes ->
-        d4h |> D4H.set_member_photo(row.d4h_record_id, bytes) |> record_result(& &1.d4h_member_id)
+        case D4H.set_member_photo(d4h, row.d4h_record_id, bytes) do
+          {:ok, _record} -> {:applied, row.d4h_record_id}
+          {:error, error} -> {:failed, error}
+        end
     end
   end
 

@@ -49,12 +49,14 @@ defmodule App.Operation.CheckMemberPhoto do
   end
 
   @doc """
-  The nightly check, for a team with ID cards on: each counted, current member, card
-  holders too, so Members without a photo lists a card already out with the placeholder.
-  A card holder with a photo where there was none gets their card refreshed
-  (RefreshMemberCard), so the placeholder leaves their phones the same night.
+  The nightly check, for a team with ID cards or Photos on (#1028): each counted, current
+  member, card holders too, so Members without a photo lists a card already out with the
+  placeholder. A card holder with a photo where there was none gets their card refreshed
+  (RefreshMemberCard), so the placeholder leaves their phones the same night. Turning
+  Photos on runs it too (SetTeamFeature.check_photos/2).
   """
-  def check_team(%Team{id_cards_enabled: true} = team, now) do
+  def check_team(%Team{id_cards_enabled: cards, photos_enabled: photos} = team, now)
+      when cards or photos do
     d4h = D4H.build_context_from_team(team)
 
     found =
@@ -73,10 +75,25 @@ defmodule App.Operation.CheckMemberPhoto do
 
   def check_team(%Team{}, _now), do: :ok
 
-  @doc "Stores `has_photo` without a check, for a photo SAR Duty just set or removed."
+  @doc """
+  Stores `has_photo` without a check. With `now`, for a photo SAR Duty just set or
+  removed, it stores `photo_changed_at` too, which the photo's URL carries (#1028).
+  """
   # By id, so a struct read before the last check still writes.
-  def store(%Member{id: id} = member, has_photo) when is_boolean(has_photo) do
+  def store(member, has_photo, now \\ nil)
+
+  def store(%Member{id: id} = member, has_photo, nil) when is_boolean(has_photo) do
     Member |> where([m], m.id == ^id) |> Repo.update_all(set: [has_photo: has_photo])
     %{member | has_photo: has_photo}
+  end
+
+  def store(%Member{id: id} = member, has_photo, %DateTime{} = now) when is_boolean(has_photo) do
+    changed_at = DateTime.truncate(now, :second)
+
+    Member
+    |> where([m], m.id == ^id)
+    |> Repo.update_all(set: [has_photo: has_photo, photo_changed_at: changed_at])
+
+    %{member | has_photo: has_photo, photo_changed_at: changed_at}
   end
 end

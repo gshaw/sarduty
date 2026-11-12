@@ -155,6 +155,25 @@ defmodule Web.NavigationTest do
       end
     end
 
+    # Photos (#1028) ends the first section, for team admins, with or without Whiteboard.
+    test "Photos follows Whiteboard, or Dashboard, for team admins once the team turns it on" do
+      team = %{@team | photos_enabled: true}
+      path = "/teams/squamish/photos/members/new"
+
+      assert [["dashboard", "whiteboard", "photos"] | _rest] =
+               path |> team_sections([team_admin?: true], team) |> keys()
+
+      assert path |> team_sections([team_admin?: true], team) |> current() == ["photos"]
+
+      assert [["dashboard", "photos"] | _rest] =
+               path
+               |> team_sections([team_admin?: true], %{team | whiteboard_enabled: false})
+               |> keys()
+
+      refute "photos" in (path |> team_sections([member?: true], team) |> keys() |> List.flatten())
+      refute "photos" in (path |> team_sections(team_admin?: true) |> keys() |> List.flatten())
+    end
+
     test "someone who is neither sees nothing" do
       assert team_sections("/teams/squamish", []) == []
     end

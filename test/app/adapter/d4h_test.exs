@@ -172,6 +172,48 @@ defmodule App.Adapter.D4HTest do
              D4H.upload_document(context(), 55, file)
   end
 
+  describe "a member's photo (#1028)" do
+    # D4H's spec (7.6.1): a document on the member with `profile` set is the profile image.
+    test "a D4H team posts it as the member's profile document" do
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        assert {conn.method, conn.request_path} == {"POST", "/v3/team/1/documents"}
+        conn = Plug.Parsers.call(conn, Plug.Parsers.init(parsers: [:multipart]))
+
+        assert %{
+                 "title" => "Photo",
+                 "targetResourceType" => "Member",
+                 "targetResourceId" => "70",
+                 "profile" => "true",
+                 "file" => %Plug.Upload{filename: "photo.jpg", content_type: "image/jpeg"} = file
+               } = conn.body_params
+
+        assert File.read!(file.path) == "jpeg bytes"
+        Req.Test.json(conn, %{"id" => 9, "targetResource" => %{"id" => 70}})
+      end)
+
+      assert {:ok, %D4H.Document{d4h_document_id: 9, d4h_target_id: 70}} =
+               D4H.set_member_photo(context(), 70, "jpeg bytes")
+    end
+
+    test "a Records team still PUTs the image" do
+      records = D4H.build_context(access_key: "key", api_host: D4H.records_host(), d4h_team_id: 1)
+
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        assert {conn.method, conn.request_path} == {"PUT", "/v3/team/1/members/70/image"}
+        assert {:ok, "jpeg bytes", conn} = Plug.Conn.read_body(conn)
+        Req.Test.json(conn, App.RecordsStub.member_json(70))
+      end)
+
+      assert {:ok, %D4H.Member{d4h_member_id: 70}} =
+               D4H.set_member_photo(records, 70, "jpeg bytes")
+    end
+
+    test "a refusal comes back as the error" do
+      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 403, ""))
+      assert {:error, %D4H.Error{status: 403}} = D4H.set_member_photo(context(), 70, "jpeg bytes")
+    end
+  end
+
   test "reads one member's awards" do
     Req.Test.stub(App.Adapter.D4H, fn conn ->
       conn = Plug.Conn.fetch_query_params(conn)

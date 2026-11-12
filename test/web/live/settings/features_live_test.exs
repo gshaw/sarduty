@@ -131,6 +131,36 @@ defmodule Web.Settings.FeaturesLiveTest do
     end
   end
 
+  describe "Photos (#1028)" do
+    test "is off on a new team, and needs no member logins" do
+      refute %Team{}.photos_enabled
+      assert Team.photos?(%Team{photos_enabled: true, member_logins: false})
+    end
+
+    # A team without ID cards has never had its photos checked, so the switch asks.
+    test "turning it on shows the link and checks who has a photo", %{conn: conn, team: team} do
+      member = member_fixture(team, %{has_photo: true})
+      Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 204, ""))
+
+      {:ok, lv, _html} = open(conn, team)
+      refute has_element?(lv, "#feature-photos[checked]")
+      refute has_element?(lv, "#side-nav-photos")
+
+      assert flip(lv, "photos") =~ "Photos turned on."
+      render_async(lv)
+
+      assert Repo.reload!(team).photos_enabled
+      assert %{data: %{"feature" => "photos"}} = Event.get_last(:feature_turned_on)
+      assert has_element?(lv, "#side-nav-photos")
+      refute has_element?(lv, "#photos-checking")
+      refute Repo.reload!(member).has_photo
+
+      assert flip(lv, "photos") =~ "Photos turned off."
+      refute Repo.reload!(team).photos_enabled
+      refute has_element?(lv, "#side-nav-photos")
+    end
+  end
+
   describe "Every member gets a card (#893)" do
     setup %{team: team} do
       # The team admin from the setup has a card from the pilot.

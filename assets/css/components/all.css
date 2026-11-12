@@ -13,6 +13,7 @@
 @import "./media";
 @import "./messages";
 @import "./navigation";
+@import "./photos";
 @import "./rich_text";
 @import "./row_link";
 @import "./scanner";

@@ -1,18 +1,18 @@
 defmodule Web.MemberFormLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.FileDrop
-
   alias App.Adapter.D4H
   alias App.Model.Member
+  alias App.Model.Team
   alias App.Operation.SaveMember
   alias App.Operation.SetMemberPhoto
   alias App.Operation.SetMemberRetired
   alias App.ViewModel.MemberFormViewModel
 
   # Adding and changing members of a team on SAR Duty Records (docs/records.md), and
-  # changing a member's details on a D4H team. D4H adds members, and sets access, photos,
-  # and leaving, in its web app, so a D4H team's page has only the details.
+  # changing a member's details on a D4H team. D4H adds members, and sets access and
+  # leaving, in its web app, so a D4H team's page has only the details. A photo is set
+  # on Add a photo, on any team (#1028); a Records team removes one here.
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     unless D4H.records?(team) or params["id"], do: raise(Web.Status.NotFound)
@@ -24,17 +24,9 @@ defmodule Web.MemberFormLive do
     socket =
       socket
       |> assign(page_title: if(member, do: "Change #{member.name}", else: "Add member"))
-      |> assign(member: member, form_data: form, photo_version: 0)
+      |> assign(member: member, form_data: form)
       |> assign(records?: D4H.records?(team), roles: Member.roles(team))
       |> assign_form(MemberFormViewModel.changeset(form))
-      # cspell:ignore webp -- the WebP file extension
-      # Records takes up to 10 MB and shrinks it. HEIC is refused there, but an iPhone's
-      # browser sends a JPEG from a file input.
-      |> allow_upload(:photo,
-        accept: ~w(.jpg .jpeg .png .webp),
-        max_entries: 1,
-        max_file_size: 10_000_000
-      )
 
     {:ok, socket}
   end
@@ -104,40 +96,44 @@ defmodule Web.MemberFormLive do
 
     <section :if={@records? and @member} id="member-photo" class="mt-8 measure">
       <h2 class="heading">Photo</h2>
-      <%!-- The version changes after a save, so the browser loads the new photo. --%>
-      <p>
+      <p :if={@member.has_photo}>
         <img
           id="member-photo-image"
           class="photo"
-          src={~p"/teams/#{@current_team}/members/#{@member.id}/image?#{[v: @photo_version]}"}
+          src={Web.MemberPhoto.path(@current_team, @member)}
           alt={"#{@member.name}'s photo"}
           data-hide-on-error
         />
       </p>
-      <form id="photo-form" phx-change="validate-photo" phx-submit="save-photo">
-        <.file_drop
-          id="member-photo-file"
-          upload={@uploads.photo}
-          label="New photo"
-          kinds="a JPEG, PNG, or WebP"
+      <p :if={!@member.has_photo} id="member-no-photo">
+        {@member.name} has no photo. An ID card needs one.
+      </p>
+      <%!-- One way to set a photo (#1028): Add a photo, with Photos on. Removing one is
+        only here, since only SAR Duty Records can. --%>
+      <.form_actions>
+        <.button
+          :if={Team.photos?(@current_team)}
+          id="change-photo"
+          navigate={Web.PhotoCollectionLive.add_path(@current_team, @member)}
         >
-          A JPEG, PNG, or WebP of the member's face, under 10 MB. Their ID card shows it.
-        </.file_drop>
-        <.form_actions>
-          <.button id="save-photo" variant={:success} phx-disable-with="Saving…">Save photo</.button>
-          <:trailing>
-            <.button
-              id="remove-photo"
-              type="button"
-              phx-click="remove-photo"
-              phx-disable-with="Removing…"
-              data-confirm={"Remove #{@member.name}'s photo? Their ID card shows a placeholder until you add one."}
-            >
-              Remove photo
-            </.button>
-          </:trailing>
-        </.form_actions>
-      </form>
+          {if @member.has_photo, do: "Change photo", else: "Add a photo"}
+        </.button>
+        <:trailing :if={@member.has_photo}>
+          <.button
+            id="remove-photo"
+            type="button"
+            phx-click="remove-photo"
+            phx-disable-with="Removing…"
+            data-confirm={"Remove #{@member.name}'s photo? Their ID card shows a placeholder until you add one."}
+          >
+            Remove photo
+          </.button>
+        </:trailing>
+      </.form_actions>
+      <p :if={!Team.photos?(@current_team)} id="photos-off" class="hint">
+        To add or change a photo, turn on Photos in
+        <.a navigate={~p"/teams/#{@current_team}/settings/features"}>team settings</.a>.
+      </p>
     </section>
 
     <section :if={@records? and @member} id="member-retire" class="mt-8 measure">
@@ -204,29 +200,16 @@ defmodule Web.MemberFormLive do
     end
   end
 
-  def handle_event("validate-photo", _params, socket), do: {:noreply, socket}
-
-  def handle_event("cancel-upload", %{"ref" => ref}, socket),
-    do: {:noreply, cancel_upload(socket, :photo, ref)}
-
-  def handle_event("save-photo", _params, socket) do
-    case consume_uploaded_entries(socket, :photo, fn %{path: path}, _entry ->
-           {:ok, File.read!(path)}
-         end) do
-      [bytes] -> {:noreply, set_photo(socket, bytes, "Photo saved.")}
-      [] -> {:noreply, put_flash(socket, :error, "Select a photo.")}
-    end
-  end
-
-  def handle_event("remove-photo", _params, socket),
-    do: {:noreply, set_photo(socket, nil, "Photo removed.")}
-
-  defp set_photo(socket, bytes, text) do
+  def handle_event("remove-photo", _params, socket) do
     %{current_team: team, current_user: user, member: member} = socket.assigns
 
-    case SetMemberPhoto.call(team, member, bytes, user, DateTime.utc_now()) do
-      :ok -> socket |> put_flash(:info, text) |> update(:photo_version, &(&1 + 1))
-      {:error, text} -> put_flash(socket, :error, text)
+    case SetMemberPhoto.call(team, member, nil, user, DateTime.utc_now()) do
+      :ok ->
+        member = team |> Member.find!(member.id) |> Map.put(:team, team)
+        {:noreply, socket |> put_flash(:info, "Photo removed.") |> assign(member: member)}
+
+      {:error, text} ->
+        {:noreply, put_flash(socket, :error, text)}
     end
   end
 
