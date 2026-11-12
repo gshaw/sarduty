@@ -213,14 +213,22 @@ which runs this adapter against a throwaway Records, still checks the `PUT`.
 - **D4H:** `POST /documents`, multipart, with `title: "Photo"`,
   `targetResourceType: "Member"`, `targetResourceId`, `profile: "true"`, and the JPEG.
   D4H's spec (7.6.1) says of `profile`: "Whether this document is the profile image".
-  **Built from the spec and tested with a stub. Nobody had tried it on a real member
-  when it shipped.** Still to learn from a live test: whether it replaces what
-  `GET /members/{id}/image` returns, whether the old profile document stays behind,
-  whether an Editor's key works, and whether D4H crops or shrinks it.
 
-D4H has no way to remove a photo, so Remove photo stays with Records teams. A refusal
-reaches the team admin as `D4H.error_text/2`, and the photo stays on the page to send
-again.
+Tried live on one South Fraser member on 2026-11-12, with the team's key:
+
+- `GET /members/{id}/image` returns the new JPEG at once, byte for byte: no crop or
+  shrink.
+- D4H keeps the replaced photo on the member as a plain attachment (`profile: 0`).
+  So `set_member_photo/3` lists the member's profile documents
+  (`GET /documents?profile=true`) before the POST and deletes them after it succeeds.
+- A document PATCH can't set `profile`.
+- Deleting the profile document leaves the member with no photo (204); D4H doesn't go
+  back to an older one. So D4H could remove a photo, but SAR Duty doesn't send that, and
+  Remove photo stays with Records teams.
+- Not tried: an Editor's key.
+
+A refusal reaches the team admin as `D4H.error_text/2`, and the photo stays on the page
+to send again.
 
 ## Activity photos
 

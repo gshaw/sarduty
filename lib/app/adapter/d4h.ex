@@ -1401,8 +1401,13 @@ defmodule App.Adapter.D4H do
 
   Records takes a PUT on the image, its own, and answers with the member. D4H takes a
   document on the member with `profile` set, which its spec (7.6.1) calls "Whether this
-  document is the profile image", and answers with the document. Built from the spec:
-  nobody had tried it on a real member when this was written.
+  document is the profile image", and answers with the document. Tried live on a real
+  member on 2026-11-12: the member's image is the new photo at once.
+
+  D4H keeps the photo it replaces as a plain attachment on the member, so each change
+  would leave one behind. The old profile documents are listed first, because once
+  replaced they look like any other file on the member, and deleted after the new one
+  is in. A failed list or delete only leaves the old photo attached.
   """
   def set_member_photo(context, d4h_member_id, bytes) when is_binary(bytes) do
     case Req.Request.get_private(context, :write_service) do
@@ -1411,6 +1416,8 @@ defmodule App.Adapter.D4H do
         write(context, :put, url, {:body, bytes}, &D4H.Member.build/1)
 
       :d4h ->
+        old_ids = profile_document_ids(context, d4h_member_id)
+
         form = [
           title: "Photo",
           targetResourceType: "Member",
@@ -1419,11 +1426,27 @@ defmodule App.Adapter.D4H do
           file: {bytes, filename: "photo.jpg", content_type: "image/jpeg"}
         ]
 
-        write(context, :post, "/documents", {:form, form}, &D4H.Document.build/1)
+        with {:ok, document} <-
+               write(context, :post, "/documents", {:form, form}, &D4H.Document.build/1) do
+          Enum.each(old_ids, &Req.delete(context, url: "/documents/#{&1}", retry: false))
+          {:ok, document}
+        end
     end
   end
 
-  @doc "Removes a member's photo. DELETE on the image is Records' own; D4H has no way."
+  defp profile_document_ids(context, d4h_member_id) do
+    params = [target_resource_type: "Member", target_resource_id: d4h_member_id, profile: true]
+
+    case Req.get(context, url: "/documents", params: params, retry: false) do
+      {:ok, %{status: 200, body: %{"results" => results}}} -> Enum.map(results, & &1["id"])
+      _ -> []
+    end
+  end
+
+  @doc """
+  Removes a member's photo: DELETE on the image, Records' own. On D4H, deleting the
+  profile document does it (tried live, 2026-11-12), but SAR Duty doesn't send that.
+  """
   def remove_member_photo(context, d4h_member_id),
     do: write(context, :delete, "/members/#{d4h_member_id}/image", nil, &D4H.Member.build/1)
 

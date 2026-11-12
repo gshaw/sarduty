@@ -177,27 +177,71 @@ defmodule App.Adapter.D4HTest do
       do: D4H.build_context(access_key: "key", api_host: api_host, d4h_team_id: 1)
 
     # D4H's spec (7.6.1): a document on the member with `profile` set is the profile image.
-    test "a D4H team posts it as the member's profile document" do
+    # D4H keeps the one it replaces as a plain attachment, so that one is deleted after.
+    test "a D4H team posts it as the member's profile document and deletes the old one" do
+      test_pid = self()
+
       Req.Test.stub(App.Adapter.D4H, fn conn ->
-        assert {conn.method, conn.request_path} == {"POST", "/v3/team/1/documents"}
-        conn = Plug.Parsers.call(conn, Plug.Parsers.init(parsers: [:multipart]))
+        send(test_pid, {conn.method, conn.request_path})
 
-        assert %{
-                 "title" => "Photo",
-                 "targetResourceType" => "Member",
-                 "targetResourceId" => "70",
-                 "profile" => "true",
-                 "file" => %Plug.Upload{filename: "photo.jpg", content_type: "image/jpeg"} = file
-               } = conn.body_params
+        case {conn.method, conn.request_path} do
+          {"GET", "/v3/team/1/documents"} ->
+            conn = Plug.Conn.fetch_query_params(conn)
 
-        assert File.read!(file.path) == "jpeg bytes"
-        Req.Test.json(conn, %{"id" => 9, "targetResource" => %{"id" => 70}})
+            assert %{
+                     "target_resource_type" => "Member",
+                     "target_resource_id" => "70",
+                     "profile" => "true"
+                   } = conn.query_params
+
+            Req.Test.json(conn, %{"results" => [%{"id" => 5, "profile" => 1}]})
+
+          {"POST", "/v3/team/1/documents"} ->
+            conn = Plug.Parsers.call(conn, Plug.Parsers.init(parsers: [:multipart]))
+
+            assert %{
+                     "title" => "Photo",
+                     "targetResourceType" => "Member",
+                     "targetResourceId" => "70",
+                     "profile" => "true",
+                     "file" =>
+                       %Plug.Upload{filename: "photo.jpg", content_type: "image/jpeg"} = file
+                   } = conn.body_params
+
+            assert File.read!(file.path) == "jpeg bytes"
+            Req.Test.json(conn, %{"id" => 9, "targetResource" => %{"id" => 70}})
+
+          {"DELETE", "/v3/team/1/documents/5"} ->
+            Req.Test.json(conn, %{"deleted" => true})
+        end
       end)
 
       for region <- Map.values(D4H.regions()) do
         assert {:ok, %D4H.Document{d4h_document_id: 9, d4h_target_id: 70}} =
                  region |> photo_context() |> D4H.set_member_photo(70, "jpeg bytes")
+
+        assert_received {"GET", "/v3/team/1/documents"}
+        assert_received {"POST", "/v3/team/1/documents"}
+        assert_received {"DELETE", "/v3/team/1/documents/5"}
       end
+    end
+
+    test "a refused photo deletes nothing" do
+      test_pid = self()
+
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        send(test_pid, conn.method)
+
+        case conn.method do
+          "GET" -> Req.Test.json(conn, %{"results" => [%{"id" => 5, "profile" => 1}]})
+          "POST" -> Plug.Conn.send_resp(conn, 403, "")
+        end
+      end)
+
+      assert {:error, %D4H.Error{status: 403}} =
+               "api.ca.d4h.org" |> photo_context() |> D4H.set_member_photo(70, "jpeg bytes")
+
+      refute_received "DELETE"
     end
 
     # Any host that is not a D4H region speaks Records' API: SAR Duty Records, and the
