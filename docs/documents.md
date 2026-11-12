@@ -525,6 +525,9 @@ fill each people into rows
 - **Evaluating** gives `copies`, and each place with its `copy`. A row's places are
   named for the row, `rows.19.who`, and placed on it. An expect reads the first copy,
   and no row's places: what the rows work out, it checks with `compute each`'s values.
+- **Zero is a dash.** In a row, an amount of 0 prints `-`, and so does its rate:
+  `km = if km > 0 then '{km as number}' else '-'`. A total and a subtotal always print
+  their amount, $0.00 too. A layout's table prints its blanks as dashes (#993).
 
 ### Layout
 
