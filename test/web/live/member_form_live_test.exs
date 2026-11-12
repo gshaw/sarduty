@@ -117,7 +117,7 @@ defmodule Web.MemberFormLiveTest do
        %{conn: conn, team: team, admin: admin} do
     stub_ok()
     admin |> Ecto.Changeset.change(has_photo: false) |> Repo.update!()
-    photo = png_fixture(1600, 1200)
+    photo = png_fixture(3200, 2400)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
 
     lv
@@ -129,7 +129,7 @@ defmodule Web.MemberFormLiveTest do
     path = "/members/#{admin.d4h_member_id}/image"
     assert_received {:records, "PUT", ^path, {:bytes, <<0xFF, 0xD8, _rest::binary>> = jpeg}}
     image = Image.from_binary!(jpeg)
-    assert {Image.width(image), Image.height(image)} == {1200, 900}
+    assert {Image.width(image), Image.height(image)} == {2400, 1800}
 
     [row] = Repo.all(ChangeSetRow)
     assert {row.action, row.status} == {:set_member_photo, :applied}

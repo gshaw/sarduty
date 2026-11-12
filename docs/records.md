@@ -69,7 +69,7 @@ that title.
   them retired.
 - **Photos**: set or remove on the member's Change member page, on every team
   ([members.md](members.md#changing-a-members-details)). `PUT` takes the image itself,
-  which SAR Duty has already made a JPEG up to 1200 px with no metadata. The change set
+  which SAR Duty has already made a JPEG up to 2400 px with no metadata. The change set
   row records only the size: the image passes through
   `ApplyChangeSet`'s `photo:` option and is never kept in SAR Duty. Reading is D4H's
   `GET /members/<id>/image`, as for any team, so ID cards and pages need nothing new.
