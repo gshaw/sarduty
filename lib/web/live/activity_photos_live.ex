@@ -14,6 +14,9 @@ defmodule Web.ActivityPhotosLive do
   A featured photo says Featured, and a team admin gets Feature or Stop featuring under
   each accepted one: up to 2 show on the activity's Overview.
 
+  A team admin also gets Ask for photos beside Add photos (#1034), which emails everyone
+  who attended, and a line under the heading says when the team last asked.
+
   A team admin gets a Waiting section over them: every waiting photo as a checked tile,
   with Accept and Delete for the checked ones. They start checked, as review lists do,
   and a cleared tile stays cleared. Members send none of its events: the team pages'
@@ -154,6 +157,12 @@ defmodule Web.ActivityPhotosLive do
   attr :ticks, :any, required: true, doc: "the waiting photos checked, by id"
   attr :team_admin?, :boolean, default: false
   attr :may_add?, :boolean, default: false, doc: "whether the viewer may add photos now"
+  attr :may_ask?, :boolean, default: false, doc: "whether the viewer asks for photos (#1034)"
+
+  attr :ask, :any,
+    default: nil,
+    doc: "the team's last ask, AskForActivityPhotos.last_ask/1's, for a team admin"
+
   attr :now, :any, required: true
 
   @doc """
@@ -237,12 +246,18 @@ defmodule Web.ActivityPhotosLive do
         <h2 id="photos-count" class="subheading">
           {Format.count(length(@shown), one: "%d photo", many: "%d photos")}
         </h2>
-        <:action :if={@may_add?}>
-          <.button id="photos-add" navigate={Web.ActivityPhoto.add_path(@team, @activity.id)}>
+        <:action :if={@may_ask? or @may_add?}>
+          <.ask_button :if={@may_ask?} team={@team} activity={@activity} />
+          <.button
+            :if={@may_add?}
+            id="photos-add"
+            navigate={Web.ActivityPhoto.add_path(@team, @activity.id)}
+          >
             Add photos
           </.button>
         </:action>
       </.heading_row>
+      <.asked :if={@shown != []} ask={@ask} team={@team} />
       <ul :if={@shown != []} id="photos-grid" class="activity-photo-grid">
         <li :for={photo <- @shown} id={"photo-#{photo.id}"}>
           <Web.ActivityPhoto.tile
@@ -279,15 +294,46 @@ defmodule Web.ActivityPhotosLive do
         <p class="hint">
           {if @may_add?, do: "No photos yet. Add the first.", else: "No photos yet."}
         </p>
-        <.button
-          :if={@may_add?}
-          id="photos-add"
-          navigate={Web.ActivityPhoto.add_path(@team, @activity.id)}
-        >
-          Add photos
-        </.button>
+        <.asked ask={@ask} team={@team} />
+        <div :if={@may_ask? or @may_add?} class="flex flex-wrap gap-2">
+          <.ask_button :if={@may_ask?} team={@team} activity={@activity} />
+          <.button
+            :if={@may_add?}
+            id="photos-add"
+            navigate={Web.ActivityPhoto.add_path(@team, @activity.id)}
+          >
+            Add photos
+          </.button>
+        </div>
       </div>
     </section>
+    """
+  end
+
+  attr :team, :any, required: true
+  attr :activity, :map, required: true
+
+  # Ask for photos (#1034), beside Add photos, for a team admin.
+  defp ask_button(assigns) do
+    ~H"""
+    <.button id="photos-ask" navigate={Web.ActivityPhotoAskLive.path(@team, @activity.id)}>
+      Ask for photos
+    </.button>
+    """
+  end
+
+  attr :ask, :any, required: true
+  attr :team, :any, required: true
+
+  # When the team last asked, and how many members: "Asked 10 members on Nov 9, 2026."
+  defp asked(assigns) do
+    ~H"""
+    <p :if={@ask} id="photos-asked" class="hint mb-4">
+      Asked {Format.count(@ask.count, one: "%d member", many: "%d members")} on {Format.date_short(
+        @ask.asked_at,
+        @team.timezone
+      )}.
+    </p>
     """
   end
 

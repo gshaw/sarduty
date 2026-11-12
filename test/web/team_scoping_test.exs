@@ -67,6 +67,7 @@ defmodule Web.TeamScopingTest do
     # its accepted photo, which anyone on its own team sees.
     "/teams/:subdomain/activities/:id/photos",
     "/teams/:subdomain/activities/:id/photos/new",
+    "/teams/:subdomain/activities/:id/photos/ask",
     "/teams/:subdomain/photos/:id/file",
     # That accepted photo's page (#1033).
     "/teams/:subdomain/photos/:id",
@@ -380,6 +381,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/activities/:id/photos/new", s, o),
     do: ~p"/teams/#{s}/activities/#{o.exercise.id}/photos/new"
+
+  defp path_for("/teams/:subdomain/activities/:id/photos/ask", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.exercise.id}/photos/ask"
 
   defp path_for("/teams/:subdomain/photos/:id/file", s, o),
     do: ~p"/teams/#{s}/photos/#{o.activity_photo.id}/file"

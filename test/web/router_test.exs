@@ -154,6 +154,8 @@ defmodule Web.RouterTest do
     {"GET", "/cards/token/google-wallet", Web.CardLinkController, :google_pass},
     # An email that asks for a photo holds it for 30 days (#1030).
     {"GET", "/photos/token", Web.MemberPhotoFormLive, nil},
+    # And one that asks for an activity's photos (#1034).
+    {"GET", "/photos/activities/token", Web.ActivityPhotoFormLive, nil},
     {"POST", "/reminders/token", Web.InvitationRemindersController, :unsubscribe},
     {"GET", "/teams/nsr/logo", Web.TeamController, :logo},
     {"GET", "/teams/nsr/take-attendance", Web.TakeAttendanceLive, nil},

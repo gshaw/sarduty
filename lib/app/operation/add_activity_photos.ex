@@ -123,15 +123,16 @@ defmodule App.Operation.AddActivityPhotos do
 
   @doc """
   Adds the photos at `paths`, files the page already holds, to the activity. `who` is
-  `%{user:, member:, team_admin?:}`, and `send` the send's `%{caption:, may_post:}`.
+  `%{user:, member:, team_admin?:}`, and `send` the send's `%{caption:, may_post:}`. The
+  user is nil for a member adding through an ask's link, with no login (#1034).
 
   `{:ok, %{added:, unread:, unsaved:}}`, counts: the photos added, the files SAR Duty
   could not read, and the ones the file store did not take. `{:error, reason}` with
   nothing added: `check/3`'s reasons, `:off`, `:none` for no photo, `:too_many`, or
   `:caption` for one too long.
   """
-  def call(%Team{} = team, %Activity{} = activity, %{user: %User{}} = who, paths, send, now)
-      when is_list(paths) do
+  def call(%Team{} = team, %Activity{} = activity, %{user: user} = who, paths, send, now)
+      when is_list(paths) and (is_struct(user, User) or is_nil(user)) do
     caption = caption(send[:caption])
 
     with :ok <- check_send(team, paths, caption),
@@ -147,7 +148,7 @@ defmodule App.Operation.AddActivityPhotos do
       team_id: activity.team_id,
       activity_id: activity.id,
       member_id: member && member.id,
-      added_by_user_id: user.id
+      added_by_user_id: user && user.id
     }
   end
 

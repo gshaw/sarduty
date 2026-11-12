@@ -3,15 +3,26 @@ defmodule Web.ActivityPhotoFormLive do
       {:live_view_narrow_layout,
        access: :team, view_events: ["validate", "remove"], member_events: ["save"]}
 
+  alias App.Model.Activity
+  alias App.Model.ActivityPhotoAsk
   alias App.Operation.AddActivityPhotos
   alias Service.Format
   alias Web.ActivityLive
   alias Web.Components.Reply
+  alias Web.Navigation
+  alias Web.PhotoAskLinks
 
   # Add photos, /teams/:subdomain/activities/:id/photos/new (#1032): someone who was at
   # an exercise or an event adds their photos of it, with a phone in hand, so a narrow
   # page. It opens only for whoever may add now (AddActivityPhotos.may_add?/4): a member
   # who attended, or a team admin. Anyone else gets a 404.
+  #
+  # The email that asks everyone who attended for their photos (#1034) opens the same
+  # page at /photos/activities/:token, with no login: the token names the ask, and so
+  # the activity and the member. Nothing the session or the form says changes who. The
+  # link works for 30 days, as often as they like. One too old, or whose member may no
+  # longer add, says so. `team` is the page's team either way: `current_team` is only
+  # set for someone logged in to it.
   #
   # The rules show above the files, every time. Take a photo opens the camera, and
   # Select photos the phone's photos, for many at once. Each photo uploads the moment it
@@ -29,6 +40,20 @@ defmodule Web.ActivityPhotoFormLive do
     "Ask a member before you add a close-up of them."
   ]
 
+  # The ask's link (#1034). A token that was never one is not found.
+  def mount(%{"token" => token}, _session, socket) do
+    case PhotoAskLinks.find_activity_ask(token, DateTime.utc_now()) do
+      {:ok, ask} ->
+        {:ok, socket |> assign(token: token) |> assign_asked(ask) |> assign_page()}
+
+      :ended ->
+        {:ok, assign_ended(socket)}
+
+      :error ->
+        raise Web.Status.NotFound
+    end
+  end
+
   def mount(%{"id" => id}, _session, socket) do
     %{current_team: team, team_admin?: team_admin?, current_user: user} = socket.assigns
     activity = ActivityLive.fetch_activity(team, id)
@@ -37,23 +62,44 @@ defmodule Web.ActivityPhotoFormLive do
     who = %{user: user, team_admin?: team_admin?, member: Reply.replier(socket.assigns, now)}
     if !AddActivityPhotos.may_add?(team, activity, who, now), do: raise(Web.Status.NotFound)
 
-    {:ok,
-     socket
-     |> assign(
-       page_title: "#{activity.title} · Add photos",
-       activity: activity,
-       who: who,
-       caption: "",
-       may_post?: false,
-       adding: nil
-     )
-     |> allow_upload(:photos,
-       accept: ~w(image/*),
-       max_entries: Service.ActivityPhoto.max_photos(),
-       max_file_size: Service.ActivityPhoto.max_bytes(),
-       auto_upload: true,
-       progress: &handle_progress/3
-     )}
+    {:ok, socket |> assign(token: nil, team: team, activity: activity, who: who) |> assign_page()}
+  end
+
+  # The member the ask names adds to its activity, whoever is logged in: no login is
+  # theirs to use. Logged in to the ask's team, the bar names it, as the reply links do.
+  defp assign_asked(socket, %ActivityPhotoAsk{team: team, member: member, activity: activity}) do
+    socket =
+      if Navigation.opens_team?(socket.assigns, team),
+        do: assign(socket, current_team: team),
+        else: socket
+
+    assign(socket,
+      team: team,
+      activity: Activity.put_logged_minutes(activity),
+      who: %{user: nil, team_admin?: false, member: member}
+    )
+  end
+
+  defp assign_ended(socket),
+    do: assign(socket, page_title: "This link no longer works", ended?: true, done?: false)
+
+  defp assign_page(socket) do
+    socket
+    |> assign(
+      page_title: "#{socket.assigns.activity.title} · Add photos",
+      caption: "",
+      may_post?: false,
+      adding: nil,
+      ended?: false,
+      done?: false
+    )
+    |> allow_upload(:photos,
+      accept: ~w(image/*),
+      max_entries: Service.ActivityPhoto.max_photos(),
+      max_file_size: Service.ActivityPhoto.max_bytes(),
+      auto_upload: true,
+      progress: &handle_progress/3
+    )
   end
 
   # A photo has uploaded: check it reads, and leave it with the upload until Add. One
@@ -107,9 +153,15 @@ defmodule Web.ActivityPhotoFormLive do
         {:noreply, put_flash(socket, :error, AddActivityPhotos.error_text(:caption))}
 
       true ->
-        {:noreply, add(socket)}
+        {:noreply, if(link_open?(socket), do: add(socket), else: assign_ended(socket))}
     end
   end
+
+  # From the ask's link, it is read again: it may have stopped while the page was open.
+  defp link_open?(%{assigns: %{token: nil}}), do: true
+
+  defp link_open?(%{assigns: %{token: token}}),
+    do: match?({:ok, _ask}, PhotoAskLinks.find_activity_ask(token, DateTime.utc_now()))
 
   # The caption and the permission box, kept so a re-render never clears them.
   defp assign_send(socket, params) do
@@ -122,7 +174,7 @@ defmodule Web.ActivityPhotoFormLive do
   # The uploads move to a folder of this send's own, and the photos are read beside the
   # page. The folder goes when the reading ends, whatever it did.
   defp add(socket) do
-    %{current_team: team, activity: activity, who: who, caption: caption, may_post?: may_post?} =
+    %{team: team, activity: activity, who: who, caption: caption, may_post?: may_post?} =
       socket.assigns
 
     dir = Path.join(System.tmp_dir!(), "sarduty-add-photos-#{Ecto.UUID.generate()}")
@@ -151,13 +203,14 @@ defmodule Web.ActivityPhotoFormLive do
 
   # Some were added: the Photos tab shows them, and says what was left out.
   def handle_async(:add, {:ok, {:ok, %{added: added} = result}}, socket) when added > 0 do
-    %{current_team: team, activity: activity} = socket.assigns
+    %{team: team, activity: activity, token: token} = socket.assigns
     {kind, text} = AddActivityPhotos.result_text(result)
+    socket = put_flash(socket, kind, text)
 
-    {:noreply,
-     socket
-     |> put_flash(kind, text)
-     |> push_navigate(to: Web.ActivityPhoto.tab_path(team, activity.id))}
+    # From the ask's link the page says so, with nowhere to go without a login.
+    if token,
+      do: {:noreply, assign(socket, page_title: "Photos added", done?: true, adding: nil)},
+      else: {:noreply, push_navigate(socket, to: Web.ActivityPhoto.tab_path(team, activity.id))}
   end
 
   def handle_async(:add, {:ok, {:ok, result}}, socket) do
@@ -207,27 +260,44 @@ defmodule Web.ActivityPhotoFormLive do
     |> put_flash(:error, "#{entry.client_name}: #{upload_error(error, upload, "photos")}")
   end
 
+  def render(%{ended?: true} = assigns) do
+    ~H"""
+    <h1 class="title">This link no longer works</h1>
+    <p id="photos-link-ended">Ask a team admin for a new one.</p>
+    """
+  end
+
+  # Added through the ask's link. The link still works, for the photos they find later.
+  def render(%{done?: true} = assigns) do
+    ~H"""
+    <p id="photos-team" class="hint mb-1">{@team.name}</p>
+    <h1 class="title">Photos added</h1>
+    <p id="photos-link-done" class="lead">
+      From {@activity.title}. A team admin looks at them before the team sees them.
+    </p>
+    <.button id="photos-more" href={~p"/photos/activities/#{@token}"}>Add more photos</.button>
+    """
+  end
+
   def render(assigns) do
     assigns =
       assign(assigns,
         rules: @rules,
         entries: picked(assigns.uploads.photos),
-        back: Web.ActivityPhoto.tab_path(assigns.current_team, assigns.activity.id)
+        back: Web.ActivityPhoto.tab_path(assigns.team, assigns.activity.id)
       )
 
     ~H"""
-    <.breadcrumbs>
-      <:item label="Activities" path={~p"/teams/#{@current_team}/activities"} />
-      <:item
-        label={@activity.ref_id}
-        path={~p"/teams/#{@current_team}/activities/#{@activity.id}"}
-      />
+    <.breadcrumbs :if={!@token}>
+      <:item label="Activities" path={~p"/teams/#{@team}/activities"} />
+      <:item label={@activity.ref_id} path={~p"/teams/#{@team}/activities/#{@activity.id}"} />
       <:item label="Photos" path={@back} />
       <:item label="Add photos" />
     </.breadcrumbs>
+    <p :if={@token} id="photos-team" class="hint mb-1">{@team.name}</p>
     <h1 class="title">Add photos</h1>
     <p id="photos-lead" class="lead">
-      From {@activity.title}, {Format.date_short(@activity.started_at, @current_team.timezone)}. A team admin looks at them before the team sees them.
+      From {@activity.title}, {Format.date_short(@activity.started_at, @team.timezone)}. A team admin looks at them before the team sees them.
     </p>
 
     <h2 class="subheading">Before you add</h2>
@@ -308,7 +378,7 @@ defmodule Web.ActivityPhotoFormLive do
         type="checkbox"
         id="photos-may-post"
         name="may_post"
-        label={"#{@current_team.name} may post these on its website and social media."}
+        label={"#{@team.name} may post these on its website and social media."}
         checked={@may_post?}
       >
         You keep them. Ask a team admin to take one down at any time.
@@ -323,7 +393,8 @@ defmodule Web.ActivityPhotoFormLive do
         >
           {save_text(@adding, length(@entries))}
         </.button>
-        <.button id="photos-cancel" navigate={@back}>Cancel</.button>
+        <%!-- The ask's link has nowhere to go back to without a login. --%>
+        <.button :if={!@token} id="photos-cancel" navigate={@back}>Cancel</.button>
       </.form_actions>
     </form>
     """

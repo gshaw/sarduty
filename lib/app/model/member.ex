@@ -42,6 +42,10 @@ defmodule App.Model.Member do
     # Whether team admins can email reminders to reply (#444). Set by the member in SAR
     # Duty, never from D4H, so build_changeset/2 leaves it out too.
     field :invitation_reminders, :boolean, default: true
+    # Whether team admins can email them an ask for their photos from an activity
+    # (#1034). The member's own setting, as invitation_reminders is. An ask for a photo
+    # of them, for their ID card, is not covered.
+    field :photo_asks, :boolean, default: true
     # Whether the team's records had a photo of them at the last check, which an ID card
     # needs (#1012). Set only by App.Operation.CheckMemberPhoto and SetMemberPhoto.
     field :has_photo, :boolean, default: false

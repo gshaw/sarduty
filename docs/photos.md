@@ -12,7 +12,8 @@ function exists: until then it is off, and a stand-in runs in dev. These are par
 Part 5 starts [activity photos](#activity-photos) (#1032): members add photos to an
 exercise or an event they attended, and a team admin accepts them. Part 6 makes the
 accepted ones [the team's photos](#the-teams-photos) (#1033): a page for each, stars,
-featured photos on the activity's Overview, and Best of the year on Photos. They need a
+featured photos on the activity's Overview, and Best of the year on Photos. In part 7 a
+team admin [asks everyone who attended](#asking-everyone-who-attended). They need a
 file store, which production does not have yet, so no team has them today.
 
 ## The switch
@@ -332,4 +333,44 @@ as activity photos are.
 - **Deleting a team** takes the stars with the photos, and a restore leaves both out
   (`DeleteTeam.file_tables/0`).
 
-Asking everyone who attended is part 7, Edit photo part 8, and export part 9.
+## Asking everyone who attended
+
+A team admin asks everyone who attended an activity for their photos (#1032, part 7).
+Each gets an email whose button opens Add photos for that activity, as them, with no
+login. It reuses [Asking for a photo](#asking-for-a-photo)'s page, job, and link.
+Nothing asks by itself: a team admin asks, and asks again later.
+
+- **The button.** Ask for photos, beside Add photos on the activity's Photos tab, for
+  team admins, once the activity has started (`AskForActivityPhotos.askable?/3`).
+  Under the heading, "Asked 10 members on Nov 9, 2026.": how many the last send
+  asked, and when (`ActivityPhotoAsk.last/1`, pure).
+- **The page**, `/teams/:subdomain/activities/:id/photos/ask`
+  ([ActivityPhotoAskLive](../lib/web/live/activity_photo_ask_live.ex)): who gets an
+  email, who attended and gets none and why (Added photos, No email, Turned photo asks
+  off), an optional message of up to 300 characters, and Ask 10 members.
+- **Who is asked** is [AskForActivityPhotos.plan/4](../lib/app/operation/ask_for_activity_photos.ex),
+  pure: the team's current members on the activity who attended
+  (`Attendance.attended/2`), are not retiring, have added no photo to it, waiting ones
+  included, have an email, and take these emails. Asking again later reaches whoever
+  still has added none.
+- **The ask** is an `activity_photo_asks` row,
+  [ActivityPhotoAsk](../lib/app/model/activity_photo_ask.ex): one per member and
+  activity, with who asked, when, and the message. Asking again moves its date. It
+  never closes.
+- **The email** is one `SendPhotoAskWorker` job per ask, as for a member photo, queued in
+  the ask's transaction: "Photos from Swiftwater training?", from SAR Duty, with the team
+  admin who asked as Reply-To under the team's name. The job sends nothing to a member
+  who turned the emails off since, has no email, or may no longer add.
+- **The link** is `/photos/activities/:token` (`Web.PhotoAskLinks.activity_path/1`): Add
+  photos for that activity as the member asked, with no login, on a team with member
+  logins off too. It works for 30 days from its email, as often as the member likes:
+  photos turn up on other phones for days. It stops early when the member may no longer
+  add (`AskForActivityPhotos.may_add?/2`): the team has no activity photos, the activity
+  stopped taking them, or the member left, is retiring, or no longer attended. Photos
+  added through it are the member's and wait for a team admin, with no login on the row.
+- **Photo asks**, a switch in account settings beside Invitation reminders, for each
+  team with activity photos: `members.photo_asks`, the member's own, never from the
+  team's records. Off, they get no ask for activity photos. An ask for their member
+  photo still comes: the team needs that one.
+
+Edit photo is part 8, and export part 9.

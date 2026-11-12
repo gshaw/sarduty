@@ -36,6 +36,8 @@ enforces the top-level list and the held URLs.
   under it, `/activities/:id/photos/new`. One photo's file is `/photos/:id/file`, with
   `?size=tile`, `show`, or `original`. An accepted photo's page is `/photos/:id`
   (#1033), and `/photos/new` is Add photos from Photos, which asks which activity.
+  Ask for photos, which emails everyone who attended, is `/activities/:id/photos/ask`
+  (#1032, part 7).
   Photos' views are `/photos?view=`: `best` with `&year=`, `activities`, `stars`,
   `yours`, `members`, `no-photo`, and `waiting`. Without it, Photos picks the view.
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
@@ -75,7 +77,8 @@ enforces the top-level list and the held URLs.
   the app in production only (`Web.FlyHostRedirect`, exact hosts).
 - **Search vs agents** (#824): nothing is blocked. Routes kept out of search pipe
   through `:noindex`, which sends `X-Robots-Tag: noindex`: the whole verify host,
-  `/replies/:token`, `/reminders/:token`, `/cards/:token`, `/photos/:token`, MCP, OAuth,
+  `/replies/:token`, `/reminders/:token`, `/cards/:token`, `/photos/:token`,
+  `/photos/activities/:token`, MCP, OAuth,
   wallet, and
   `/maps`. Public pages, `/agents` and `/styles` included, stay indexable. The router
   test puts every route in one group, hidden, logged in, or public, and fails on a new
@@ -103,6 +106,9 @@ Devices, Google, Apple, and shared links hold these. They don't move.
   `/cards/:token/image` and `/pdf`, the card it draws (#973).
 - `/photos/:token`: the link in an email that asks for a photo (#1030), which opens Add
   a photo for the member asked. It works for 30 days.
+- `/photos/activities/:token`: the link in an email that asks for photos from an
+  activity (#1032, part 7), which opens Add photos for it as the member asked. It works
+  for 30 days.
 - `/teams/:subdomain/logo`: Google Wallet objects fetch it.
 - `/teams/:subdomain/take-attendance`: teams print a QR code of it for the hall (#475).
 - `/teams/:subdomain/mcp`: agents' MCP configs hold it ([mcp.md](mcp.md)).
