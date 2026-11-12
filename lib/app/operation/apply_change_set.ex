@@ -176,8 +176,12 @@ defmodule App.Operation.ApplyChangeSet do
       nil ->
         {:failed, "Upload the photo again."}
 
+      # Records answers with the member and D4H with a document, so the row keeps the
+      # member's id.
       bytes ->
-        d4h |> D4H.set_member_photo(row.d4h_record_id, bytes) |> record_result(& &1.d4h_member_id)
+        d4h
+        |> D4H.set_member_photo(row.d4h_record_id, bytes)
+        |> record_result(fn _record -> row.d4h_record_id end)
     end
   end
 
@@ -421,8 +425,11 @@ defmodule App.Operation.ApplyChangeSet do
   defp write(d4h, %ChangeSetRow{action: :rejoin_member} = row),
     do: d4h |> D4H.rejoin_member(row.d4h_record_id) |> record_result(& &1.d4h_member_id)
 
-  defp write(d4h, %ChangeSetRow{action: :remove_member_photo} = row),
-    do: d4h |> D4H.remove_member_photo(row.d4h_record_id) |> record_result(& &1.d4h_member_id)
+  defp write(d4h, %ChangeSetRow{action: :remove_member_photo} = row) do
+    d4h
+    |> D4H.remove_member_photo(row.d4h_record_id)
+    |> record_result(fn _record -> row.d4h_record_id end)
+  end
 
   # An activity's kind is in a create's new_value, and in the old_value of a change.
   defp write(d4h, %ChangeSetRow{action: :create_activity, new_value: new_value}) do

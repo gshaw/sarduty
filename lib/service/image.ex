@@ -2,8 +2,37 @@ defmodule Service.Image do
   @moduledoc """
   Shapes member photos and team logos for passes and /verify. Wallet has no CSS, so the
   server does what `object-cover` does on the site. Every function takes image bytes in
-  any format libvips reads and returns `{:ok, png}` or `{:error, reason}`.
+  any format libvips reads and returns `{:ok, png}` or `{:error, reason}`, except
+  member_photo/1.
   """
+
+  # An image bigger than this is a mistake or an attack, not a face. Records' limit.
+  @max_pixels 50_000_000
+
+  @doc """
+  A member's photo as it goes to the team's records: upright, at most 1024 on its longer
+  side, a JPEG on white, with its metadata stripped so a phone photo's location is not
+  sent. D4H keeps what it gets; Records shrinks it again. `{:ok, jpeg}` or
+  `{:error, :not_an_image}`.
+  """
+  def member_photo(bytes) when is_binary(bytes) do
+    with {:ok, image} <- Image.from_binary(bytes),
+         true <- Image.width(image) * Image.height(image) <= @max_pixels,
+         {:ok, {upright, _flags}} <- Image.autorotate(image),
+         {:ok, fitted} <- Image.thumbnail(upright, 1024, resize: :down),
+         # libvips reads lazily, so a file it cannot decode fails here.
+         {:ok, jpeg} <-
+           Image.write(fitted, :memory,
+             suffix: ".jpg",
+             quality: 85,
+             background: :white,
+             strip_metadata: true
+           ) do
+      {:ok, jpeg}
+    else
+      _error -> {:error, :not_an_image}
+    end
+  end
 
   @doc "Crops a photo to the centered square at its shorter side, no larger than `max`."
   def square(bytes, max \\ 660) do

@@ -63,6 +63,11 @@ defmodule App.Operation.ApplyEdit do
   def d4h_takes?(%ChangeSetRow{action: :update_equipment_item, new_value: new_value}),
     do: only?(new_value, @d4h_item_keys)
 
+  # A member's photo, as D4H's profile document on the member (tried live, 2026-11-12).
+  def d4h_takes?(%ChangeSetRow{action: action})
+      when action in [:set_member_photo, :remove_member_photo],
+      do: true
+
   def d4h_takes?(%ChangeSetRow{}), do: false
 
   defp only?(new_value, keys),

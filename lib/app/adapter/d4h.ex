@@ -146,7 +146,16 @@ defmodule App.Adapter.D4H do
     |> Keyword.merge(test_options())
     |> Req.new()
     |> Req.Request.put_private(:d4h_team_id, d4h_team_id)
+    |> Req.Request.put_private(:write_service, write_service(api_host))
     |> report_rate_limits()
+  end
+
+  # Who takes a write D4H and Records take differently, such as a member's photo. D4H's
+  # own form goes only to a D4H region. Any other host speaks Records' API: SAR Duty
+  # Records, a dev one behind RECORDS_HOST, and the throwaway one the Records repo's
+  # bin/check-sarduty runs this adapter against.
+  defp write_service(api_host) do
+    if api_host in Map.values(regions()), do: :d4h, else: :records
   end
 
   # D4H sends no rate-limit headers, so a 429 is the only sign of a limit. This step goes
@@ -1388,17 +1397,80 @@ defmodule App.Adapter.D4H do
   defp put_activity_location(json, _attrs), do: json
 
   @doc """
-  Sets a member's photo to `bytes`, a JPEG, PNG, or WebP. PUT on the image is Records'
-  own; D4H takes photos only in its web app. Records shrinks it and strips its metadata.
+  Sets a member's photo to `bytes`, a JPEG from Service.Image.member_photo/1.
+
+  Records takes a PUT on the image, its own. D4H takes a document on the member with
+  `profile` set, which its spec (7.6.1) calls "Whether this document is the profile
+  image". Tried live on a South Fraser member on 2026-11-12: the member's image is the
+  new photo at once, byte for byte.
+
+  D4H keeps the photo it replaces as a plain attachment on the member, so each change
+  would leave one behind. The old profile documents are listed first, because once
+  replaced they look like any other file on the member, and deleted after the new one
+  is in. A failed list or delete only leaves the old photo attached.
   """
   def set_member_photo(context, d4h_member_id, bytes) when is_binary(bytes) do
-    url = "/members/#{d4h_member_id}/image"
-    write(context, :put, url, {:body, bytes}, &D4H.Member.build/1)
+    case Req.Request.get_private(context, :write_service) do
+      :records ->
+        url = "/members/#{d4h_member_id}/image"
+        write(context, :put, url, {:body, bytes}, &D4H.Member.build/1)
+
+      :d4h ->
+        old_ids =
+          case profile_document_ids(context, d4h_member_id) do
+            {:ok, ids} -> ids
+            {:error, _error} -> []
+          end
+
+        form = [
+          title: "Photo",
+          targetResourceType: "Member",
+          targetResourceId: to_string(d4h_member_id),
+          profile: "true",
+          file: {bytes, filename: "photo.jpg", content_type: "image/jpeg"}
+        ]
+
+        with {:ok, document} <-
+               write(context, :post, "/documents", {:form, form}, &D4H.Document.build/1) do
+          Enum.each(old_ids, &Req.delete(context, url: "/documents/#{&1}", retry: false))
+          {:ok, document}
+        end
+    end
   end
 
-  @doc "Removes a member's photo. DELETE on the image is Records' own."
-  def remove_member_photo(context, d4h_member_id),
-    do: write(context, :delete, "/members/#{d4h_member_id}/image", nil, &D4H.Member.build/1)
+  @doc """
+  Removes a member's photo. Records takes a DELETE on the image, its own. On D4H,
+  deleting the member's profile document leaves no photo; D4H doesn't go back to an
+  older one (tried live, 2026-11-12). `{:ok, _}` or `{:error, %D4H.Error{}}`.
+  """
+  def remove_member_photo(context, d4h_member_id) do
+    case Req.Request.get_private(context, :write_service) do
+      :records ->
+        write(context, :delete, "/members/#{d4h_member_id}/image", nil, &D4H.Member.build/1)
+
+      :d4h ->
+        with {:ok, ids} <- profile_document_ids(context, d4h_member_id) do
+          Enum.reduce_while(ids, {:ok, d4h_member_id}, fn id, ok ->
+            case write(context, :delete, "/documents/#{id}", nil, & &1) do
+              {:ok, _body} -> {:cont, ok}
+              error -> {:halt, error}
+            end
+          end)
+        end
+    end
+  end
+
+  defp profile_document_ids(context, d4h_member_id) do
+    params = [target_resource_type: "Member", target_resource_id: d4h_member_id, profile: true]
+
+    case Req.get(context, url: "/documents", params: params, retry: false) do
+      {:ok, %{status: 200, body: %{"results" => results}}} ->
+        {:ok, Enum.map(results, & &1["id"])}
+
+      result ->
+        {:error, write_error(result)}
+    end
+  end
 
   defp member_json(attrs) do
     attrs
