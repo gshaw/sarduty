@@ -14,14 +14,18 @@ defmodule App.Operation.IssueMemberCard do
 
   `{:error, :id_cards_off}` unless a SAR Duty admin turned ID cards on for the team, and
   `{:error, :not_active}` for a member not in good standing (retired or retiring), whose
-  card would only verify as not active.
+  card would only verify as not active. `{:error, :no_photo}` for a member with no photo
+  at the last check (#1012): a checker compares the photo, so a card without one proves
+  nothing. The ID Card tab checks live first (App.Operation.CheckMemberPhoto).
   """
   def call(%Team{id_cards_enabled: false}, %Member{}, _now), do: {:error, :id_cards_off}
 
   def call(%Team{} = team, %Member{team_id: team_id} = member, now) when team_id == team.id do
-    if Member.good_standing?(member, now),
-      do: issue(team, member, now),
-      else: {:error, :not_active}
+    cond do
+      not Member.good_standing?(member, now) -> {:error, :not_active}
+      not member.has_photo -> {:error, :no_photo}
+      true -> issue(team, member, now)
+    end
   end
 
   defp issue(team, member, now) do

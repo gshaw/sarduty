@@ -302,12 +302,12 @@ defmodule Web.Navigation do
   @doc """
   The team switcher's rows: each team where you're a team admin or a member, A to Z, one
   row per team, then each organization you're an organization admin of (#512), then SAR
-  Duty's home page (#779), then "Adminland" and "Style guide" last for SAR Duty
-  admins, which the switcher sets apart. SAR Duty admins reach other organizations from
+  Duty's home page (#779), then "Adminland", "Style guide", and on a dev server "Outbox"
+  last for SAR Duty admins, which the switcher sets apart. SAR Duty admins reach other organizations from
   Admin › Organizations. The area you're in is current; a team or organization opened as
   a SAR Duty admin that isn't yours marks nothing. The home page is always somewhere to
   go, so everyone logged in gets the switcher, even on one team.
-  `[%{kind: :team | :org | :home | :admin | :styles, key:, label:, path:, current:}]`.
+  `[%{kind: :team | :org | :home | :admin | :styles | :outbox, key:, label:, path:, current:}]`.
   """
   def switch_rows(is_admin, managed_teams, member_logins, organizations \\ [], area) do
     teams = for team <- teams(managed_teams, member_logins), do: team_row(team, area)
@@ -316,7 +316,7 @@ defmodule Web.Navigation do
       for organization <- Enum.sort_by(organizations, &String.downcase(&1.name)),
           do: org_row(organization, area)
 
-    admin = if is_admin, do: [admin_row(area), styles_row()], else: []
+    admin = if is_admin, do: [admin_row(area), styles_row()] ++ outbox_row(), else: []
 
     teams ++ orgs ++ [home_row()] ++ admin
   end
@@ -359,6 +359,13 @@ defmodule Web.Navigation do
   # The style guide is no area, so it is never current.
   defp styles_row do
     %{kind: :styles, key: "styles", label: "Style guide", path: "/styles", current: false}
+  end
+
+  # The dev server's Outbox (docs/outbox.md), under the style guide. Never current.
+  defp outbox_row do
+    if Web.Layouts.dev_outbox?(),
+      do: [%{kind: :outbox, key: "outbox", label: "Outbox", path: "/dev/outbox", current: false}],
+      else: []
   end
 
   # Every team you manage or log in to as a member, once each, A to Z.

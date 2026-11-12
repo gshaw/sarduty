@@ -463,7 +463,12 @@ defmodule App.Report.Catalog do
             text(:id_card_link, "ID card link", "The page their ID card's QR code opens.")
             | cell: :link
           },
-          %{date(:id_card_issued, "ID card issued") | about: "When their ID card was issued."}
+          %{date(:id_card_issued, "ID card issued") | about: "When their ID card was issued."},
+          bool(
+            :has_photo,
+            "Photo",
+            "Whether the team's records had a photo of them at the last check. An ID card needs one."
+          )
         ],
         do: %{field | shown: &id_cards?/1}
   end
@@ -861,6 +866,7 @@ defmodule App.Report.Catalog do
         id_card_link:
           dynamic([card: c], fragment("? || '/' || ?", ^Web.VerifyHost.url(), c.code)),
         id_card_issued: dynamic([card: c], c.issued_at),
+        has_photo: dynamic([m], m.has_photo),
         custom_values: dynamic([m], m.custom_values)
       }
     }

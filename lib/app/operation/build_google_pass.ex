@@ -216,9 +216,22 @@ defmodule App.Operation.BuildGooglePass do
 
   defp put_banner(object, card, _status) do
     Map.put(object, :heroImage, %{
-      sourceUri: %{uri: Web.VerifyHost.url() <> ~p"/#{card.code}/banner"},
+      sourceUri: %{
+        uri: Web.VerifyHost.url() <> ~p"/#{card.code}/banner?v=#{banner_version(card)}"
+      },
       contentDescription: localized("Photo of #{card.member.name}")
     })
+  end
+
+  # Google keeps an image until its URL changes (#1012). The version moves on Refresh ID
+  # card (pass_updated_at) and when the pass's expiry rolls each month, so a new photo
+  # reaches Google Wallet then too.
+  defp banner_version(card) do
+    [card.pass_updated_at, card.expires_at]
+    |> Enum.map_join(".", fn
+      nil -> 0
+      at -> DateTime.to_unix(at)
+    end)
   end
 
   # Text module ids are letters, digits, and underscores, so qualifications go by

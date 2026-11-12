@@ -116,6 +116,7 @@ defmodule Web.MemberFormLiveTest do
   test "a team admin uploads a photo, which goes to Records and is not kept here",
        %{conn: conn, team: team, admin: admin} do
     stub_ok()
+    admin |> Ecto.Changeset.change(has_photo: false) |> Repo.update!()
     photo = png_fixture(40, 30)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
 
@@ -131,6 +132,8 @@ defmodule Web.MemberFormLiveTest do
     [row] = Repo.all(ChangeSetRow)
     assert {row.action, row.status} == {:set_member_photo, :applied}
     assert row.new_value == %{"size" => byte_size(photo)}
+    # Set with no download, so an ID card can follow at once (#1012).
+    assert Repo.reload!(admin).has_photo
   end
 
   test "a team admin removes a photo", %{conn: conn, team: team, admin: admin} do
@@ -141,6 +144,7 @@ defmodule Web.MemberFormLiveTest do
 
     path = "/members/#{admin.d4h_member_id}/image"
     assert_received {:records, "DELETE", ^path, nil}
+    refute Repo.reload!(admin).has_photo
   end
 
   test "saving with no photo selected asks for one", %{conn: conn, team: team, admin: admin} do

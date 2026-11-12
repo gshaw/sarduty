@@ -22,20 +22,14 @@ defmodule Web.WalletTextTest do
     end
   end
 
-  test "summary/3 puts both on one line for the ID Card tab, with the device count" do
-    assert WalletText.summary(0, %MemberCard{}, "America/Vancouver") == "Not in Wallet yet"
+  test "summary/2 puts both on one line for the ID Card tab, with the device count" do
+    assert WalletText.summary(0, %MemberCard{}) == "Not in Wallet yet"
 
-    assert WalletText.summary(1, %MemberCard{in_wallet_at: @saved}, "America/Vancouver") ==
+    assert WalletText.summary(1, %MemberCard{in_wallet_at: @saved}) ==
              "In Apple Wallet on 1 device · In Google Wallet"
 
-    assert WalletText.summary(2, %MemberCard{}, "America/Vancouver") ==
+    # No last download (#1012): Google Wallet has nothing like it.
+    assert WalletText.summary(2, %MemberCard{pass_fetched_at: @saved}) ==
              "In Apple Wallet on 2 devices"
-  end
-
-  test "apple/3 adds when a device last downloaded the pass" do
-    card = %MemberCard{pass_fetched_at: @saved}
-
-    assert WalletText.apple(2, card, "America/Vancouver") ==
-             "In Apple Wallet on 2 devices · last downloaded Nov 7, 13:00"
   end
 end

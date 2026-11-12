@@ -21,17 +21,20 @@ defmodule Web.Settings.FeaturesLive do
     |> then(&{:ok, &1})
   end
 
-  # What turning on Every member gets a card would do, and who gets no email.
+  # What turning on Every member gets a card would do, who gets no email, and how many
+  # get no card for want of a photo.
   defp assign_cards(%{assigns: %{current_team: %Team{id_cards_enabled: true} = team}} = socket) do
     now = DateTime.utc_now()
 
     assign(socket,
       card_plan: IssueEveryMemberCard.preview(team, now),
-      without_email: IssueEveryMemberCard.without_email(team, now)
+      without_email: IssueEveryMemberCard.without_email(team, now),
+      without_photo: IssueEveryMemberCard.count_without_photo(team, now)
     )
   end
 
-  defp assign_cards(socket), do: assign(socket, card_plan: nil, without_email: [])
+  defp assign_cards(socket),
+    do: assign(socket, card_plan: nil, without_email: [], without_photo: 0)
 
   def handle_event("set", %{"feature" => "every_member_card"}, socket) do
     %{current_team: team, current_user: user} = socket.assigns
@@ -148,10 +151,17 @@ defmodule Web.Settings.FeaturesLive do
             phx-value-feature="every_member_card"
             {turn_on_cards_confirm(@current_team, @card_plan)}
           >
-            Every current member gets an ID card, emailed to them. New members get theirs at
-            the next refresh.
+            Every current member with a photo gets an ID card, emailed to them. Members who
+            join or add a photo get theirs at the next refresh.
             <span :if={!@current_team.id_cards_enabled} class="block">
               Works once ID cards are on.
+            </span>
+            <span :if={@without_photo > 0} id="every-member-card-no-photo" class="block">
+              {no_photo_text(@without_photo)}
+              <.a
+                id="every-member-card-no-photo-link"
+                navigate={~p"/teams/#{@current_team}/reports/members-without-a-photo"}
+              >Members without a photo</.a>
             </span>
             <span :if={@without_email != []} id="every-member-card-no-email" class="block">
               {no_email_text(@without_email, @service)}
@@ -293,6 +303,12 @@ defmodule Web.Settings.FeaturesLive do
         Service.Format.count(no_email, one: "%d has no email.", many: "%d have no email.")
 
     Enum.filter([created <> emailed, without], & &1)
+  end
+
+  # "3 members have no photo, so they get no card yet." Hidden at 0 (#1012).
+  defp no_photo_text(count) do
+    Service.Format.count(count, one: "%d member has", many: "%d members have") <>
+      " no photo, so they get no card yet."
   end
 
   defp no_email_text(members, service) do

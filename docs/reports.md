@@ -286,7 +286,9 @@ but not changed; a test opens every one. A team's own reports are rows in `repor
 is checked again on every run, so a field that goes fails with a message on the
 report's page. `App.ViewData.Reports` treats both the same, by `id` in the URL: a team's
 own report by its row's id, a number, and a built-in one by its slug, never a number.
-Every team sees every built-in: Records serves custom fields as D4H does (#1003).
+Every team sees every built-in, since Records serves custom fields as D4H does (#1003),
+except one marked `needs: :id_cards`, such as Members without a photo (#1012), which
+only a team with ID cards on lists or opens (`BuiltIn.runs?/2`).
 
 ## Limits
 

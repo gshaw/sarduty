@@ -366,6 +366,8 @@ defmodule App.DataFixtures do
   def member_fixture(%Team{} = team, attrs \\ %{}) do
     unique = System.unique_integer([:positive])
     {not_a_person, attrs} = Map.pop(attrs, :not_a_person, false)
+    # Most tests issue cards, which need a photo (#1012).
+    {has_photo, attrs} = Map.pop(attrs, :has_photo, true)
 
     params =
       Map.merge(
@@ -383,11 +385,10 @@ defmodule App.DataFixtures do
         attrs
       )
 
-    member = Member.insert!(params)
-
-    if not_a_person,
-      do: member |> Ecto.Changeset.change(not_a_person: true) |> Repo.update!(),
-      else: member
+    params
+    |> Member.insert!()
+    |> Ecto.Changeset.change(not_a_person: not_a_person, has_photo: has_photo)
+    |> Repo.update!()
   end
 
   # The row starts and ends with its activity, as D4H's do unless someone edits them.

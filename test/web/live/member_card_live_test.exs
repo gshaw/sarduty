@@ -16,7 +16,43 @@ defmodule Web.MemberCardLiveTest do
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
+    # Issue and Replace check the photo first (#1012). The team's records have one.
+    Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 200, png_fixture(640, 480)))
     %{conn: log_in_user(conn, user), user: user, team: team, member: member}
+  end
+
+  test "Issue ID card with no photo makes no card and says why", %{conn: conn, team: team} do
+    # The stored photo is gone from the team's records by the click.
+    member = member_fixture(team, %{name: "Riley Okafor"})
+    Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 404, ""))
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+
+    lv |> element("#issue") |> render_click()
+
+    assert MemberCard.find_current(team, member) == nil
+    assert has_element?(lv, "#flash-error", "Riley Okafor has no photo.")
+    assert has_element?(lv, "#flash-error", "Add one, then try again.")
+    refute Repo.reload!(member).has_photo
+  end
+
+  test "Replace ID card checks the photo live, so one added a minute ago counts",
+       %{conn: conn, team: team} do
+    member = member_fixture(team, %{has_photo: false})
+    old = member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+
+    lv |> element("#replace") |> render_click()
+
+    assert Repo.reload!(old).revoked_at
+    assert MemberCard.find_current(team, member)
+    assert Repo.reload!(member).has_photo
+  end
+
+  test "shows the card as the member sees it", %{conn: conn, team: team, member: member} do
+    member_card_fixture(member)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+
+    assert has_element?(lv, ~s{#card-image[src^="/cards/"][src*="/image?v="]})
   end
 
   test "a member's first card gets their Wallet serial, and cards made before keep theirs",
@@ -271,21 +307,41 @@ defmodule Web.MemberCardLiveTest do
       assert has_element?(lv, "#card-phones", "Not in Wallet yet")
     end
 
-    test "shows the phones and the last fetch, and ticks over when a phone fetches",
+    test "shows the phones, and ticks over when a phone fetches",
          %{conn: conn, team: team, member: member, card: card} do
       PassRegistration.register!(card, "device-1", "push-token-1")
-      PassRegistration.register!(card, "device-2", "push-token-2")
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
-      assert has_element?(lv, "#card-phones", "In Apple Wallet on 2 devices")
-      refute render(lv) =~ "last downloaded"
+      assert has_element?(lv, "#card-phones", "In Apple Wallet on 1 device")
 
+      PassRegistration.register!(card, "device-2", "push-token-2")
       MemberCard.record_pass_fetched!(card, ~U[2026-09-30 22:42:00.000000Z])
 
-      assert has_element?(
-               lv,
-               "#card-phones",
-               "In Apple Wallet on 2 devices · last downloaded Sep 30, 15:42"
-             )
+      assert has_element?(lv, "#card-phones", "In Apple Wallet on 2 devices")
+      # Google Wallet has nothing like it (#1012).
+      refute render(lv) =~ "last downloaded"
+    end
+
+    test "Refresh ID card tells the phones to download it again, with no email",
+         %{conn: conn, team: team, member: member, card: card} do
+      test_pid = self()
+      PassRegistration.register!(card, "device-1", "push-token-1")
+
+      Req.Test.stub(App.Adapter.APNs, fn conn ->
+        send(test_pid, {:pushed, conn.request_path})
+        Plug.Conn.send_resp(conn, 200, "")
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/card")
+      lv |> element("#refresh-card[phx-disable-with]") |> render_click()
+
+      assert_received {:pushed, "/3/device/push-token-1"}
+      assert Repo.reload!(card).pass_updated_at != card.pass_updated_at
+      refute Repo.reload!(member).has_photo
+
+      assert has_element?(lv, "#flash-info", "#{member.name}'s ID card refreshed.")
+      assert has_element?(lv, "#flash-info", "Phones that hold it get it within a minute.")
+
+      assert_no_email_sent()
     end
   end
 

@@ -272,6 +272,7 @@ defmodule Web.StyleGuideHTML do
       {"life-buoy", "Incidents milestones"},
       {"key", "Adminland, in the team picker"},
       {"palette", "Style guide, in the team switcher"},
+      {"inbox", "A dev server's Outbox, in the team switcher"},
       {"building-complex", "An organization, in the team switcher"},
       {"scan-line", "Start scanning, on the QR scanner"},
       {"rotate-ccw-square", "Rotate left, a certificate photo"},
