@@ -158,7 +158,11 @@ matched to the person holding the phone.
 - **Nightly**, after a team's full refresh and before Every member gets a card, it checks
   each counted, current member on a team with ID cards on, card holders too, so the
   report is right for everyone. One request per member, outside any transaction. New
-  photos are found then, not on the 10-minute sync.
+  photos are found then, not on the 10-minute sync. A card holder with a photo where
+  there was none gets their card refreshed, all of them in one push and one Google update
+  (`RefreshMemberCard.resend_cards/2`), so a card that went out with the placeholder gets
+  the photo on the phones that night. A photo swapped for another needs Refresh ID card:
+  seeing a change would mean downloading and comparing every photo.
 - **Issue and Replace** check live first, outside the transaction, so a photo added a
   minute ago counts. `IssueMemberCard` refuses with `:no_photo`, one rule for Issue,
   Replace, and the switch. The toast: "Riley Okafor has no photo. Add one, then try
@@ -189,7 +193,8 @@ just made reaches the card in the same minute. The toast: "Cameron Ruiz's ID car
 refreshed. Phones that hold it get it within a minute." The team admin checks the card
 picture on the tab; the member checks Wallet.
 
-Where a new photo shows:
+Where a new photo shows, for a photo that replaces another. A first photo, where the
+card had the placeholder, reaches Wallet that night too ([nightly](#a-photo-before-a-card)).
 
 | Where                                    | Without Refresh ID card                                           | With it         |
 | ---------------------------------------- | ----------------------------------------------------------------- | --------------- |

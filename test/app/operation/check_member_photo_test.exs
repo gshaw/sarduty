@@ -62,4 +62,22 @@ defmodule App.Operation.CheckMemberPhotoTest do
     CheckMemberPhoto.check_team(off, DateTime.utc_now())
     assert Repo.reload!(member).has_photo
   end
+
+  # A card that went out with the placeholder gets the photo on the phones that night.
+  # The pass marked changed is what makes phones fetch it (RefreshMemberCard); the push
+  # itself is tested with Refresh ID card.
+  test "the nightly check refreshes the card of a holder whose first photo it finds" do
+    team = team_fixture(%{id_cards_enabled: true})
+    found = member_fixture(team, %{has_photo: false})
+    found_card = member_card_fixture(found)
+    had = member_fixture(team)
+    had_card = member_card_fixture(had)
+    answer(200)
+
+    CheckMemberPhoto.check_team(team, DateTime.utc_now())
+
+    assert Repo.reload!(found).has_photo
+    assert Repo.reload!(found_card).pass_updated_at != found_card.pass_updated_at
+    assert Repo.reload!(had_card).pass_updated_at == had_card.pass_updated_at
+  end
 end

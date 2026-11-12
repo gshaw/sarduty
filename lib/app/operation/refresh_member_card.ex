@@ -33,11 +33,23 @@ defmodule App.Operation.RefreshMemberCard do
         {:error, :no_card}
 
       card ->
-        card = MemberCard.touch_pass_updated!(card, now)
-        PushPassUpdates.push_cards([card])
-        UpdateGooglePasses.update_cards([card], now)
+        [card] = resend_cards([card], now)
         if SyncTeamChangesWorker.syncs?(team), do: SyncTeamChangesWorker.enqueue(team)
         {:ok, card}
     end
+  end
+
+  @doc """
+  Marks these cards' passes changed and sends them to the phones again, in one Apple push
+  and one Google update, for the nightly check's first photos (CheckMemberPhoto). Returns
+  the cards.
+  """
+  def resend_cards([], _now), do: []
+
+  def resend_cards(cards, now) do
+    cards = Enum.map(cards, &MemberCard.touch_pass_updated!(&1, now))
+    PushPassUpdates.push_cards(cards)
+    UpdateGooglePasses.update_cards(cards, now)
+    cards
   end
 end
