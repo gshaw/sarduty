@@ -4,6 +4,7 @@ defmodule App.Model.CustomField do
   alias App.Field.TrimmedString
   alias App.Model.Activity
   alias App.Model.CustomField
+  alias App.Model.CustomFieldBundle
   alias App.Model.Team
   alias App.Repo
 
@@ -38,16 +39,126 @@ defmodule App.Model.CustomField do
     # SAR Duty's own, never D4H's: a member field a team admin picked to copy. Never set
     # on a RESTRICTED one.
     field :copy_values, :boolean, default: false
+    # D4H's resource bundle, a named group of one kind's fields, or nil (#872).
+    belongs_to :bundle, CustomFieldBundle
+    # When D4H says the field was added.
+    field :d4h_created_at, :utc_datetime
+    # D4H's own flags, copied for #724: searchable in D4H, and frozen, which a key can't
+    # change.
+    field :searchable, :boolean, default: false
+    field :frozen, :boolean, default: false
     timestamps(type: :utc_datetime_usec)
   end
+
+  @targets ~w(incident exercise event member equipment)
 
   @doc "A team's fields for one target, in D4H's order. Archived ones are left out."
   def get_all(team_id, target) do
     CustomField
     |> where([f], f.team_id == ^team_id and f.target == ^target and is_nil(f.archived_at))
-    |> order_by([f], asc: f.ordering, asc: f.title, asc: f.id)
+    |> ordered()
     |> Repo.all()
   end
+
+  @doc """
+  Every field a team has, archived ones too, in D4H's order, for its Fields page (#872).
+  """
+  def get_all_with_archived(team_id) do
+    CustomField
+    |> where([f], f.team_id == ^team_id)
+    |> ordered()
+    |> Repo.all()
+  end
+
+  @doc """
+  An organization's own fields, archived ones too, from its teams' copies (#872). D4H
+  gives every team its organization's fields, so each one is here once per team; the
+  Fields page folds them with `merge_copies/2`.
+  """
+  def get_all_organisation(team_ids) do
+    CustomField
+    |> where([f], f.team_id in ^team_ids and f.owner_type == "Organisation")
+    |> ordered()
+    |> Repo.all()
+  end
+
+  defp ordered(query) do
+    query
+    |> order_by([f], asc: f.ordering, asc: f.title, asc: f.id)
+    |> preload(:bundle)
+  end
+
+  @doc """
+  Each of an organization's fields once, from its teams' copies, in D4H's order: one
+  team's copy, with every choice any team's copy has. A choice a team added keeps its
+  owner, so the page can say which team added it.
+  """
+  def merge_copies(copies) do
+    copies
+    |> Enum.group_by(&{&1.owner_id, &1.d4h_custom_field_id})
+    |> Enum.map(fn {_key, [first | _rest] = same} ->
+      options = same |> Enum.flat_map(& &1.options) |> Enum.uniq_by(& &1["id"])
+      %{first | options: options}
+    end)
+    |> Enum.sort_by(&{&1.ordering, &1.title, &1.id})
+  end
+
+  @doc """
+  `items` in groups, as the pages show them (#872): `[{nil, items}, {bundle, items}, …]`.
+  The ones in no bundle come first, then each bundle by D4H's ordering and its id. Each
+  group keeps the order `items` came in, and empty groups are left out. `to_field` finds
+  the field in an item, such as a row from `rows/4`; its bundle must be preloaded.
+  """
+  def grouped(items, to_field \\ & &1) do
+    # By D4H's id, so an organization's fields from several teams' copies share one group.
+    groups = Enum.group_by(items, &bundle_key(to_field.(&1)))
+
+    groups
+    |> Enum.map(fn {key, [first | _rest] = group} ->
+      {key && to_field.(first).bundle, group}
+    end)
+    |> Enum.sort_by(fn
+      {nil, _group} -> {0, 0, 0}
+      {bundle, _group} -> {1, bundle.ordering, bundle.d4h_bundle_id}
+    end)
+  end
+
+  defp bundle_key(%CustomField{bundle: nil}), do: nil
+
+  defp bundle_key(%CustomField{bundle: %CustomFieldBundle{} = bundle}),
+    do: {bundle.owner_type, bundle.owner_id, bundle.d4h_bundle_id}
+
+  @doc """
+  `fields` by what they're on, as `[{target, fields}]` in the order the Fields pages list
+  them. Each keeps the order it came in, and targets with none are left out.
+  """
+  def by_target(fields) do
+    groups = Enum.group_by(fields, & &1.target)
+    for target <- @targets, Map.has_key?(groups, target), do: {target, groups[target]}
+  end
+
+  @doc "A target's heading on the Fields pages."
+  def target_title("incident"), do: "Incidents"
+  def target_title("exercise"), do: "Exercises"
+  def target_title("event"), do: "Events"
+  def target_title("member"), do: "Members"
+  def target_title("equipment"), do: "Equipment"
+
+  @doc ~s(What a field holds, in words: "Long text", "One choice", and so on.)
+  def type_label("text"), do: "Text"
+  def type_label("text_area"), do: "Long text"
+  def type_label("number"), do: "Number"
+  def type_label("date"), do: "Date"
+  def type_label("datetime"), do: "Date and time"
+  def type_label("time"), do: "Time"
+  def type_label("single_choice"), do: "One choice"
+  def type_label("multiple_choice"), do: "Choices"
+  def type_label(type), do: type |> String.replace("_", " ") |> String.capitalize()
+
+  @doc ~s(What a member may do with their own value of a member field, in words.)
+  def member_privacy_label("viewable"), do: "See their own"
+  def member_privacy_label("editable"), do: "Change their own"
+  def member_privacy_label(_hidden), do: "Hidden"
 
   @doc "A team's fields by D4H id, archived ones too, for naming stored values."
   def index(team_id) do

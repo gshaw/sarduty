@@ -1,7 +1,7 @@
 defmodule App.Operation.SaveTeamMemberFields do
   @moduledoc """
   Saves which of D4H's member custom fields a team copies (#681), from team settings'
-  Members tab. Only fields CustomField.member_choices/1 offers can be picked: never a
+  Fields tab (#872). Only fields CustomField.member_choices/1 offers can be picked: never a
   RESTRICTED one.
 
   Saving clears every member's copied values, so the next copy is the baseline and

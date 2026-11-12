@@ -18,8 +18,18 @@ defmodule App.Adapter.D4H.CustomFieldTest do
     "mandatory" => true,
     "archivedAt" => nil,
     "valueUnits" => nil,
+    "bundle" => nil,
+    "createdAt" => "2020-07-29T20:25:34.000Z",
+    "searchable" => true,
+    "frozen" => false,
     "options" => [
-      %{"id" => 1, "ordering" => 0, "label" => "Surrey", "archivedAt" => nil},
+      %{
+        "id" => 1,
+        "ordering" => 0,
+        "label" => "Surrey",
+        "archivedAt" => nil,
+        "owner" => %{"id" => 422, "resourceType" => "Team"}
+      },
       %{"id" => 2, "ordering" => 1, "label" => "Delta", "archivedAt" => "2026-01-01T00:00:00Z"}
     ]
   }
@@ -35,11 +45,34 @@ defmodule App.Adapter.D4H.CustomFieldTest do
     assert field.member_privacy == "hidden"
     assert field.hint == nil
     assert {field.owner_type, field.owner_id} == {"Team", 422}
+    assert {field.d4h_bundle_id, field.searchable, field.frozen} == {nil, true, false}
+    assert field.d4h_created_at == ~U[2020-07-29 20:25:34Z]
 
     assert field.options == [
-             %{"id" => 1, "label" => "Surrey", "ordering" => 0, "archived" => false},
-             %{"id" => 2, "label" => "Delta", "ordering" => 1, "archived" => true}
+             %{
+               "id" => 1,
+               "label" => "Surrey",
+               "ordering" => 0,
+               "archived" => false,
+               "owner_type" => "Team",
+               "owner_id" => 422
+             },
+             %{
+               "id" => 2,
+               "label" => "Delta",
+               "ordering" => 1,
+               "archived" => true,
+               "owner_type" => nil,
+               "owner_id" => nil
+             }
            ]
+  end
+
+  test "a field in a bundle keeps the bundle's id (#872)" do
+    field =
+      CustomField.build(%{@city | "bundle" => %{"id" => 43, "resourceType" => "ResourceBundle"}})
+
+    assert field.d4h_bundle_id == 43
   end
 
   test "an organisation's member field, unrestricted" do

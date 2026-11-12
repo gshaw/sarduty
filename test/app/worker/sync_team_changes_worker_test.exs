@@ -257,6 +257,9 @@ defmodule App.Worker.SyncTeamChangesWorkerTest do
         {"custom-fields", _params} ->
           Req.Test.json(conn, %{"results" => fields, "totalSize" => 2})
 
+        {"resource-bundles", _params} ->
+          Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
         {"incidents", %{"starts_after" => _}} ->
           Req.Test.json(conn, %{"results" => [incident], "totalSize" => 1})
 

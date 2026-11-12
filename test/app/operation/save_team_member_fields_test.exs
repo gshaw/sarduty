@@ -42,6 +42,7 @@ defmodule App.Operation.SaveTeamMemberFieldsTest do
 
     UpsertCustomFields.save(
       team.id,
+      [],
       [field(630, "Radio Call Sign", false), field(855, "Date of Birth", true)],
       @now
     )
@@ -63,7 +64,7 @@ defmodule App.Operation.SaveTeamMemberFieldsTest do
   test "picking none clears every copied value" do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team, %{custom_values: %{"630" => "SF 12"}})
-    UpsertCustomFields.save(team.id, [field(630, "Radio Call Sign", false)], @now)
+    UpsertCustomFields.save(team.id, [], [field(630, "Radio Call Sign", false)], @now)
 
     assert :ok = SaveTeamMemberFields.call(team, [], user)
 
@@ -74,7 +75,7 @@ defmodule App.Operation.SaveTeamMemberFieldsTest do
   test "a member's field changes are named in history, never their values" do
     team = team_fixture(%{d4h_refreshed_at: @now, d4h_synced_at: @now})
     member = member_fixture(team, %{custom_values: %{"630" => "SF 12"}})
-    UpsertCustomFields.save(team.id, [field(630, "Radio Call Sign", false)], @now)
+    UpsertCustomFields.save(team.id, [], [field(630, "Radio Call Sign", false)], @now)
     changed = %{member | custom_values: %{"630" => "SF 13"}}
 
     RecordD4HChanges.recording(team, @now, fn ->

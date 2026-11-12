@@ -83,6 +83,9 @@ defmodule Web.Settings.MCPLive do
       <p class="action">
         <.a id="agents-how" navigate={~p"/agents"}>How agents work with SAR Duty</.a>
       </p>
+      <p class="action">
+        <.a id="agents-fields" navigate={~p"/teams/#{@current_team}/settings/fields"}>What each custom field means</.a>
+      </p>
       <p>
         Each connection is yours. It stops working when you disconnect it, or when you are
         no longer a team admin.

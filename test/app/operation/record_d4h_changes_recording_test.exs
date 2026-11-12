@@ -258,7 +258,7 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
         options: [%{"id" => 1, "label" => "Surrey"}, %{"id" => 2, "label" => "Delta"}]
       }
 
-      UpsertCustomFields.save(team.id, [city], @now)
+      UpsertCustomFields.save(team.id, [], [city], @now)
     end
 
     test "the first copy is the baseline; a change after it is recorded by title", ctx do

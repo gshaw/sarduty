@@ -1,0 +1,39 @@
+<.shell current={:field_definitions}>
+  <h1>Field definitions</h1>
+  <p class="lead">What each custom field on a team's records is, never its values.</p>
+
+  <div class="demo">
+    <.field_definitions
+      id="field-definitions-sample"
+      fields={custom_field_definitions()}
+      team_names={%{11 => "Coast Range SAR"}}
+      organization_name="WESARA"
+      timezone="America/Vancouver"
+      publish?
+      restricted_text="Only team admins see its values."
+    />
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    A Fields page in settings, for a team or an organization (#872). Each field shows its hint, its choices, who added it,
+    and when. A choice a team added to its organization's field names the team. The fields in no group come first.
+    Then each named group of fields follows under its title, as on a record's Fields tab.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    A record's own values. Those are the record's Fields tab, a <a href={page_path(:detail_list)}>detail list</a>.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.field_definitions&gt;</code>
+    takes one kind's fields, with their groups preloaded. Every column but Field fits
+    its longest values, so each group's table lines up with the next. <code>copy?</code>
+    adds who sees a member field and
+    its Copy check box; <code>from?=&#123;false&#125;</code>
+    drops the From column on an organization's page, where
+    every field is its own.
+  </p>
+</.shell>
