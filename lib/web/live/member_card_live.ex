@@ -12,6 +12,8 @@ defmodule Web.MemberCardLive do
   alias App.Operation.BuildCardQualifications
   alias App.Operation.BuildGooglePass
   alias App.Operation.CancelMemberCard
+  alias App.Operation.CheckMemberPhoto
+  alias App.Operation.RefreshMemberCard
   alias App.Operation.SendMemberCard
   alias App.Repo
 
@@ -44,15 +46,40 @@ defmodule Web.MemberCardLive do
   end
 
   # Issue ID card, or Replace ID card once there is one: a new code, and its email
-  # queued. The page shows the new card and its Emailed row, so no message.
+  # queued. The page shows the new card and its Emailed row, so no message. The photo is
+  # checked live first, so one added a minute ago counts (#1012).
   def handle_event("issue", _params, socket) do
     %{current_team: team, member: member} = socket.assigns
+    member = CheckMemberPhoto.call(member)
+    socket = assign(socket, :member, member)
 
     case SendMemberCard.issue(team, member, DateTime.utc_now()) do
       {:ok, _card} -> {:noreply, reload_card(socket)}
       {:error, :id_cards_off} -> {:noreply, put_flash(socket, :error, id_cards_off(team))}
+      {:error, :no_photo} -> {:noreply, put_flash(socket, :error, no_photo(member))}
       {:error, :not_active} -> {:noreply, socket}
     end
+  end
+
+  # Refresh ID card (#1012): the phones holding the card download it again, with the
+  # photo, name, and standing as the team's records have them now.
+  def handle_event("refresh", _params, socket) do
+    %{current_team: team, member: member} = socket.assigns
+
+    socket =
+      case RefreshMemberCard.call(team, member, DateTime.utc_now()) do
+        {:ok, _card} ->
+          put_flash(
+            socket,
+            :info,
+            "#{member.name}'s ID card refreshed. Phones that hold it get it within a minute."
+          )
+
+        {:error, :no_card} ->
+          socket
+      end
+
+    {:noreply, reload_card(socket)}
   end
 
   # Cancel ID card (#964), for a retiring or retired member who shouldn't keep one.
@@ -94,6 +121,9 @@ defmodule Web.MemberCardLive do
 
   defp id_cards_off(_team), do: "Your organization admins turn them on. Ask one to turn them on."
 
+  # No words name D4H or Records, so one sentence fits both kinds of team.
+  defp no_photo(member), do: "#{member.name} has no photo. Add one, then try again."
+
   defp reload_card(socket) do
     %{current_team: team, member: member} = socket.assigns
     assign_card(socket, MemberCard.find_current(team, member))
@@ -104,7 +134,12 @@ defmodule Web.MemberCardLive do
     phones = if card, do: PassRegistration.count_holding(card), else: 0
     revoked_at = if !card, do: MemberCard.last_revoked_at(team, member)
 
-    assign(socket, card: card, phones: phones, revoked_at: revoked_at)
+    assign(socket,
+      card: card,
+      phones: phones,
+      revoked_at: revoked_at,
+      image_path: card && card_image_path(card)
+    )
   end
 
   defp wallet?, do: BuildApplePass.configured?() or BuildGooglePass.configured?()
@@ -140,6 +175,7 @@ defmodule Web.MemberCardLive do
         qualifications={@qualifications}
         endorsements_on_card?={@endorsements_on_card?}
         phones={@phones}
+        image_path={@image_path}
         revoked_at={@revoked_at}
         every_member_card?={@current_team.every_member_card}
         member_logins?={@current_team.member_logins}
@@ -182,6 +218,13 @@ defmodule Web.MemberCardLive do
   defp card_content(assigns) do
     ~H"""
     <div id="card">
+      <img
+        :if={@active?}
+        id="card-image"
+        src={@image_path}
+        alt={"#{@member.name}'s ID card"}
+        class="id-card-image id-card-image-sm mb-6"
+      />
       <dl>
         <dt>Code</dt>
         <dd class="mono">
@@ -214,7 +257,7 @@ defmodule Web.MemberCardLive do
         </dd>
         <dt :if={wallet?()}>Wallet</dt>
         <dd :if={wallet?()}>
-          <span id="card-phones">{Web.WalletText.summary(@phones, @card, @member.team.timezone)}</span>
+          <span id="card-phones">{Web.WalletText.summary(@phones, @card)}</span>
         </dd>
       </dl>
       <.form_actions :if={@active?}>
@@ -227,6 +270,14 @@ defmodule Web.MemberCardLive do
           data-confirm={"Email the ID card to #{@member.email}?"}
         >
           Email ID card
+        </.button>
+        <.button
+          :if={wallet?()}
+          id="refresh-card"
+          phx-click="refresh"
+          phx-disable-with="Refreshing…"
+        >
+          Refresh ID card
         </.button>
         <.button
           id="replace"
@@ -302,6 +353,14 @@ defmodule Web.MemberCardLive do
 
   defp delivery_hint(%{member: member}),
     do: "Email it so #{member.name} can add it to Wallet."
+
+  # The card as the member sees it (#1012), drawn from the team's records. Signed once
+  # per load, since each signing makes a new link the browser fetches again. The version
+  # moves on Refresh ID card, past the picture's 5-minute browser cache.
+  defp card_image_path(card) do
+    version = if card.pass_updated_at, do: DateTime.to_unix(card.pass_updated_at), else: 0
+    Web.CardLinks.path(card) <> "/image?v=#{version}"
+  end
 
   # The card's page on the verify site, the same one its QR code opens.
   defp verify_url(card), do: MemberCard.verify_url(card.code, Web.VerifyHost.url())

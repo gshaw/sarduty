@@ -19,7 +19,7 @@ defmodule App.ViewData.Reports do
   def list(%Team{} = team, now) do
     %{
       saved: team |> SavedReport.get_all() |> Enum.map(&from_saved(&1, team, now)),
-      built_in: Enum.map(BuiltIn.all(), &from_built_in/1),
+      built_in: team |> BuiltIn.for_team() |> Enum.map(&from_built_in/1),
       deleted: team |> SavedReport.get_deleted() |> Enum.map(&from_saved(&1, team, now))
     }
   end
@@ -42,7 +42,7 @@ defmodule App.ViewData.Reports do
   def find(%Team{} = team, id, now) do
     case Integer.parse(id) do
       {n, ""} -> team |> SavedReport.get(n) |> then(&(&1 && from_saved(&1, team, now)))
-      _slug -> id |> BuiltIn.get() |> then(&(&1 && from_built_in(&1)))
+      _slug -> id |> BuiltIn.get() |> built_in_for(team)
     end
   end
 
@@ -52,6 +52,11 @@ defmodule App.ViewData.Reports do
   """
   def possessive("An AI agent"), do: "an AI agent's"
   def possessive(name), do: "#{name}'s"
+
+  defp built_in_for(nil, _team), do: nil
+
+  defp built_in_for(report, team),
+    do: if(BuiltIn.runs?(report, team), do: from_built_in(report))
 
   defp from_saved(report, team, now) do
     %{

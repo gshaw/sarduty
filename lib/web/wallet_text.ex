@@ -9,20 +9,14 @@ defmodule Web.WalletText do
   """
   alias App.Model.MemberCard
 
-  @doc "The Apple pass's phones and last download, or nil when no phone holds it."
-  def apple(0, %MemberCard{}, _timezone), do: nil
+  @doc """
+  How many devices hold the Apple pass, or nil when none does. No last download: Google
+  Wallet has nothing like it (#1012).
+  """
+  def apple(0), do: nil
 
-  def apple(phones, %MemberCard{} = card, timezone) do
-    on = "In Apple Wallet on #{Service.Format.count(phones, one: "1 device", many: "%d devices")}"
-
-    case card.pass_fetched_at do
-      nil ->
-        on
-
-      fetched_at ->
-        "#{on} · last downloaded #{Service.Format.month_day_time(fetched_at, timezone)}"
-    end
-  end
+  def apple(phones),
+    do: "In Apple Wallet on #{Service.Format.count(phones, one: "1 device", many: "%d devices")}"
 
   @doc "In Google Wallet, or nil when Google hasn't said it was saved."
   def google(%MemberCard{in_wallet_at: nil}), do: nil
@@ -44,8 +38,8 @@ defmodule Web.WalletText do
   end
 
   @doc "Both on one line, for the ID Card tab."
-  def summary(phones, %MemberCard{} = card, timezone) do
-    case Enum.reject([apple(phones, card, timezone), google(card)], &is_nil/1) do
+  def summary(phones, %MemberCard{} = card) do
+    case Enum.reject([apple(phones), google(card)], &is_nil/1) do
       [] -> "Not in Wallet yet"
       parts -> Enum.join(parts, " · ")
     end

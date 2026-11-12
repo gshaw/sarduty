@@ -673,7 +673,8 @@ defmodule App.CoastRange do
   defp agency_option("Ambulance"), do: 9_400_102
   defp agency_option("Fire"), do: 9_400_103
 
-  defp members(people, visitor, now), do: Enum.map(people, &member(&1, visitor, now))
+  defp members(people, visitor, now),
+    do: Enum.map(people, &(&1 |> member(visitor, now) |> put_photo()))
 
   defp member({key, ref_id, phone, days, position, marks}, visitor, now) do
     person? = :not_a_person not in marks
@@ -698,6 +699,12 @@ defmodule App.CoastRange do
 
     {:member, key, member, []}
   end
+
+  # Each person has the sample photo but the visitor, as DemoCast sends them (#1012).
+  defp put_photo({:member, :visitor, _member, _links} = row), do: row
+
+  defp put_photo({:member, key, member, links}),
+    do: {:member, key, %{member | has_photo: not member.not_a_person}, links}
 
   defp address(ref_id, marks) do
     if :not_a_person in marks or :no_address in marks, do: nil, else: "#{ref_id} Example Road"

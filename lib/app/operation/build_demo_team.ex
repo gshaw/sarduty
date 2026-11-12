@@ -163,6 +163,7 @@ defmodule App.Operation.BuildDemoTeam do
     team = refresh!(team)
     copy_member_fields(team, rows, coast.ids)
     add_local_rows(team, coast.ids, visitor, now)
+    mark_photos(team, coast.ids)
     team = put_contact(team, coast.ids)
 
     second =
@@ -326,6 +327,21 @@ defmodule App.Operation.BuildDemoTeam do
       end)
 
     :ok
+  end
+
+  # Demos skip the nightly photo check (#1012), so has_photo comes from the cast: each
+  # person has the sample photo but the visitor (DemoCast). The visitor's prebuilt card
+  # still works; their Replace asks for a photo, which Change member adds.
+  defp mark_photos(team, ids) do
+    query = where(Member, [m], m.team_id == ^team.id and not m.not_a_person)
+
+    query =
+      case ids[DemoCast.key({:member, :visitor})] do
+        nil -> query
+        visitor_id -> where(query, [m], m.d4h_member_id != ^visitor_id)
+      end
+
+    Repo.update_all(query, set: [has_photo: true])
   end
 
   # The member fields Coast Range copies, picked as a team admin picks them: SAR Duty's

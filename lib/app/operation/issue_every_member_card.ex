@@ -2,7 +2,7 @@ defmodule App.Operation.IssueEveryMemberCard do
   @moduledoc """
   Every member gets a card (#893): a team admin's switch on the Features tab, under ID
   cards. Turning it on makes a card, at once, for each member who needs one: counted (a
-  person, not retiring), current, and with no live card. Each with an email gets one
+  person, not retiring), current, with a photo (#1012), and with no live card. Each with an email gets one
   App.Worker.SendMemberCardWorker job to email it. While it's on, each refresh and each
   sync that changed something does the same for members new since, through call/2.
 
@@ -96,11 +96,26 @@ defmodule App.Operation.IssueEveryMemberCard do
     |> Repo.all()
   end
 
-  defp waiting(team, now),
-    do: team |> waiting_query(now) |> order_by([m], asc: m.name, asc: m.id) |> Repo.all()
+  @doc """
+  How many members would get a card but for a photo (#1012): counted, current, no live
+  card, and no photo at the last check. The Features tab says so under the switch.
+  """
+  def count_without_photo(%Team{} = team, now) do
+    team |> cardless_query(now) |> where([m], not m.has_photo) |> Repo.aggregate(:count)
+  end
+
+  # Counted and current members of the team with no live card and a photo, which a card
+  # needs (IssueMemberCard).
+  defp waiting(team, now) do
+    team
+    |> cardless_query(now)
+    |> where([m], m.has_photo)
+    |> order_by([m], asc: m.name, asc: m.id)
+    |> Repo.all()
+  end
 
   # Counted and current members of the team with no live card.
-  defp waiting_query(team, now) do
+  defp cardless_query(team, now) do
     carded =
       MemberCard
       |> where([c], c.team_id == ^team.id and is_nil(c.revoked_at))

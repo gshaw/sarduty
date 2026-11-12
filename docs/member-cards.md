@@ -137,6 +137,63 @@ codes into another app, such as SCA. A copied code goes stale when a card is rep
 an app that matches it offline skips the Active check. There is no expiry field: Valid
 until is the team's, not the card's ([Valid until](#valid-until)).
 
+`has_photo` ("Photo") sits with them (#1012), and the built-in report
+`members-without-a-photo` lists counted, current members without one, with their card's
+code, so a card already out with the placeholder shows too. Reports lists it only for a
+team with ID cards on (`BuiltIn.runs?/2`).
+
+## A photo before a card
+
+A member gets an ID card only once their team's records have a photo of them (#1012). A
+checker compares the photo on the verify page, so a card with the placeholder can't be
+matched to the person holding the phone.
+
+- **`members.has_photo`** says whether the team's records had a photo at the last check.
+  [CheckMemberPhoto](../lib/app/operation/check_member_photo.ex) decides it with one
+  `GET /members/:id/image`: a 200 is a photo, any other answer none. D4H and Records both
+  answer 404 for a member with none. A request that gets no answer keeps what was stored.
+- **Nightly**, after a team's full refresh and before Every member gets a card, it checks
+  each counted, current member on a team with ID cards on, card holders too, so the
+  report is right for everyone. One request per member, outside any transaction. New
+  photos are found then, not on the 10-minute sync.
+- **Issue and Replace** check live first, outside the transaction, so a photo added a
+  minute ago counts. `IssueMemberCard` refuses with `:no_photo`, one rule for Issue,
+  Replace, and the switch. The toast: "Riley Okafor has no photo. Add one, then try
+  again." A member with a lost phone and no photo adds a photo first.
+- **Stored, not checked per member**, because the switch makes every card in one
+  transaction and the Features tab counts them as it loads. A request per member there
+  would hold the write lock or slow the page.
+- **Cards already out stay**, with or without a photo, and so does a card whose photo is
+  later removed. Change member already warns. Nothing checks what a photo shows: a photo
+  that is not the person fails at the verify page, the same as none.
+- **Records teams:** SetMemberPhoto sets `has_photo` itself, with no download, refreshes
+  the card, and runs Every member gets a card, so the switch's card goes out the moment a
+  first photo is saved.
+- **Try a demo** skips the nightly refresh, so `BuildDemoTeam` sets `has_photo` from the
+  cast: true for each person with the sample photo, false for the visitor. The visitor's
+  prebuilt card works; their Replace asks for a photo, which Change member adds.
+- No words name D4H or Records ("has no photo"), so one sentence fits both kinds of team.
+
+## Refresh ID card
+
+**Refresh ID card** on the ID Card tab puts a fixed photo, name, or standing on the
+member's phones within a minute, for an active card while Wallet is set up (#1012). It
+needs no confirm and sends no email: it changes nothing but the phones' copy.
+[RefreshMemberCard](../lib/app/operation/refresh_member_card.ex) checks the photo, marks
+the Apple pass changed (`touch_pass_updated!`) and pushes to every phone holding it,
+sends the Google object again with a new photo URL, and queues the team's sync, so a fix
+just made reaches the card in the same minute. The toast: "Cameron Ruiz's ID card
+refreshed. Phones that hold it get it within a minute." The team admin checks the card
+picture on the tab; the member checks Wallet.
+
+Where a new photo shows:
+
+| Where                                    | Without Refresh ID card                                           | With it         |
+| ---------------------------------------- | ----------------------------------------------------------------- | --------------- |
+| The ID Card tab, the card's page, verify | At once: drawn from the team's records                            | At once         |
+| Apple Wallet                             | With the monthly expiry update: the fingerprint is pass.json only | Within a minute |
+| Google Wallet                            | With the monthly expiry update, which moves the photo URL         | Within a minute |
+
 ## Sample cards
 
 `verify.sarduty.com/samples` ([VerifySamplesLive](../lib/web/live/verify_samples_live.ex))
@@ -196,14 +253,15 @@ Passes update. Each pass carries a `webServiceURL` of `/wallet` and the card's
   nudges arrived on a real iPhone from the dev server (2026-11-07).
 
 The ID Card tab's Wallet row shows how many devices hold the pass (an iPhone and a paired
-Apple Watch count as 2) and when one last fetched it (`pass_fetched_at`), and whether the
-member saved it to Google Wallet (`in_wallet_at`). A phone's fetch broadcasts on PubSub,
-so the tab ticks over without a reload. Under the buttons it says how the card reaches the
-member: from Your membership on a team with member logins, otherwise by email.
+Apple Watch count as 2), and whether the member saved it to Google Wallet
+(`in_wallet_at`). A phone's fetch broadcasts on PubSub, so the tab ticks over without a
+reload. It no longer shows when a phone last downloaded the pass (#1012): Google Wallet
+has nothing like it, and it added little. `pass_fetched_at` is still kept, for
+`PassRegistration.holding/2`. Under the buttons it says how the card reaches the member:
+from Your membership on a team with member logins, otherwise by email.
 
-There is no test button. "Last downloaded" shows a phone fetched the pass after a change,
-and a failed push logs "APNs pass push failed". To see a stale pass update, change
-something it shows, such as the team's endorsements.
+A failed push logs "APNs pass push failed". To push a pass now, select Refresh ID card
+([Refresh ID card](#refresh-id-card)).
 
 Wallet has no CSS and shows images only as PNG, so
 [LoadImage](../lib/app/operation/load_image.ex) shapes them with
@@ -257,7 +315,10 @@ reach a dev server, so dev passes have none. In production:
   pages and Google share one image. It's public, like the logo on the team's D4H pages.
 - **The photo** sits in the banner under the QR code (`heroImage`), from
   `/:code/banner` on the verify site, always SAR Duty's verify host: the square photo centered on the pass's navy. Google has no
-  picture spot beside the name, so this is the only place on the front for both.
+  picture spot beside the name, so this is the only place on the front for both. Google
+  keeps an image until its URL changes, so the URL carries `?v=`, from the card's
+  `pass_updated_at` and `expires_at` (#1012). It moves on Refresh ID card and when the
+  expiry rolls each month, and Google fetches the photo again.
 
 ## Issuing and emailing
 
@@ -271,6 +332,13 @@ that emails the member one button, Get your ID card, to the card's page
 - **Replace ID card**, for a lost phone, makes a new card with a new code. The old one
   stops working and its passes void, as above.
 - **Email ID card** sends the current card again. No limit.
+
+Issue and Replace check the photo first, live, and make no card without one
+([A photo before a card](#a-photo-before-a-card)). **Refresh ID card**, between Email and
+Replace while Wallet is set up, sends nothing by email
+([Refresh ID card](#refresh-id-card)). Above the facts, the tab shows the active card as
+the member sees it, from `/cards/:token/image`, about 240 px wide, so a team admin can
+check the photo.
 
 A retiring or retired member's card has one button instead, **Cancel ID card** (#964),
 which emails nothing ([Active and qualifications](#active-and-qualifications)).
@@ -400,8 +468,11 @@ cards (#893). It shows only as off, and can't be turned on, while ID cards are o
 - **Turning it on asks first, with the counts**: "Creates 40 cards and emails 38 members.
   2 have no email." From 10 emails up it waits on a check box, as every send to many
   members does (`send_confirm/3`). It then makes a card, in one transaction, for each
-  member who is counted (a person, not retiring), current, and has no live card, and
-  queues a `SendMemberCardWorker` job to email each one with an address.
+  member who is counted (a person, not retiring), current, has a photo, and has no live
+  card, and queues a `SendMemberCardWorker` job to email each one with an address.
+- **Members with no photo get no card yet** (#1012). Under the switch, "3 members have no
+  photo, so they get no card yet." links to the built-in report Members without a photo.
+  Hidden at 0. Each gets theirs at the first refresh after a photo is added.
 - **Cards at once, emails after.** Making a card is database rows alone, so the ID Card
   tab and Your membership show it straight away. Each email job sends one email with a
   link and builds no pass (#952): passes are built as members tap, spread over days, so

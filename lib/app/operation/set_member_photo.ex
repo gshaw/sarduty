@@ -3,23 +3,28 @@ defmodule App.Operation.SetMemberPhoto do
   A team admin sets or removes the photo of a member of a team on SAR Duty Records
   (docs/records.md). One change set row through App.Operation.ApplyEdit. The row says
   only that the photo changed: the image goes to Records and is never kept here. Then
-  the member's Apple Wallet pass is nudged, so the phone fetches the new photo.
+  `has_photo` is set with no download, the member's card goes to their phones again
+  (RefreshMemberCard), and Every member gets a card makes theirs the moment a first photo
+  is saved (#1012). A photo removed leaves a card already out.
   """
 
   alias App.Accounts.User
   alias App.Model.ChangeSetRow
   alias App.Model.Member
-  alias App.Model.MemberCard
   alias App.Model.Team
   alias App.Operation.ApplyEdit
-  alias App.Operation.PushPassUpdates
+  alias App.Operation.CheckMemberPhoto
+  alias App.Operation.IssueEveryMemberCard
+  alias App.Operation.RefreshMemberCard
 
   @doc "Sets the photo to `bytes`, or removes it for nil. `:ok` or `{:error, text}`."
   def call(%Team{} = team, %Member{team_id: team_id} = member, bytes, %User{} = user, now)
       when team_id == team.id do
     with {:ok, _d4h_member_id} <-
            ApplyEdit.call(team, user, plan(member, bytes), now, photo: bytes) do
-      team |> MemberCard.find_current(member) |> List.wrap() |> PushPassUpdates.push_cards()
+      member = CheckMemberPhoto.store(member, bytes != nil)
+      RefreshMemberCard.resend(team, member, now)
+      IssueEveryMemberCard.call(team, now)
       :ok
     end
   end

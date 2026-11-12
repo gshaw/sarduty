@@ -30,7 +30,7 @@ defmodule App.MCP.Tool.ListReports do
 
   @impl App.MCP.Tool
   def call(%Team{} = team, _args, _now, _connection) do
-    output = build(BuiltIn.all(), SavedReport.get_all(team), Lists.all())
+    output = build(BuiltIn.for_team(team), SavedReport.get_all(team), Lists.all())
     {:ok, output, length(output["reports"])}
   end
 

@@ -178,6 +178,35 @@ defmodule Web.Settings.FeaturesLiveTest do
       assert MemberCard.find_current(team, cameron).revoked_at == nil
     end
 
+    test "a member with no photo gets no card yet, and the tab says how many (#1012)",
+         %{conn: conn, team: team} do
+      riley = member_fixture(team, %{name: "Riley Okafor", has_photo: false})
+      {:ok, lv, _html} = open(conn, team)
+
+      assert has_element?(lv, "#feature-every-member-card[data-confirm-button='Create 2 cards']")
+
+      assert has_element?(
+               lv,
+               "#every-member-card-no-photo",
+               "1 member has no photo, so they get no card yet."
+             )
+
+      assert has_element?(
+               lv,
+               ~s{#every-member-card-no-photo-link[href="/teams/#{team.subdomain}/reports/members-without-a-photo"]}
+             )
+
+      flip(lv, "every-member-card")
+      assert MemberCard.find_current(team, riley) == nil
+      # Members who would get a card count; none wait now but Riley.
+      assert IssueEveryMemberCard.count_without_photo(team, DateTime.utc_now()) == 1
+
+      riley |> Ecto.Changeset.change(has_photo: true) |> Repo.update!()
+      assert team |> Repo.reload!() |> IssueEveryMemberCard.call(DateTime.utc_now()) == 1
+      {:ok, lv, _html} = open(conn, team)
+      refute has_element?(lv, "#every-member-card-no-photo")
+    end
+
     test "waits on ID cards", %{conn: conn, team: team, user: user} do
       team = team |> Ecto.Changeset.change(id_cards_enabled: false) |> Repo.update!()
 

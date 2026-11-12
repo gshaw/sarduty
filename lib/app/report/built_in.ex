@@ -3,11 +3,13 @@ defmodule App.Report.BuiltIn do
   The reports that come with SAR Duty (#768). They live in code and change with the app:
   a team admin runs one, and copies it to change it.
 
-  Each is `%{slug, name, about, query}`. A test runs every one, so a field that goes
-  fails the build rather than a team admin's report.
+  Each is `%{slug, name, about, query}`, and `needs: :id_cards` for one only a team with
+  ID cards runs (runs?/2). A test runs every one, so a field that goes fails the build
+  rather than a team admin's report.
   """
 
   alias App.Adapter.D4H
+  alias App.Model.Team
 
   @reports [
     %{
@@ -352,6 +354,21 @@ defmodule App.Report.BuiltIn do
       sort name 'Member' name
       """
     },
+    # The Features tab links here, under Every member gets a card (#1012).
+    %{
+      slug: "members-without-a-photo",
+      name: "Members without a photo",
+      about: "Current members with no photo, who get no ID card until they have one.",
+      needs: :id_cards,
+      query: """
+      select name, position, id_card
+      from members
+      where current = true and counted = true and has_photo = false
+      order by name
+      search name, position
+      sort name 'Member' name
+      """
+    },
     %{
       slug: "members-by-standing",
       name: "Members by standing",
@@ -479,8 +496,18 @@ defmodule App.Report.BuiltIn do
   @doc "Every built-in report, in the order Reports lists them."
   def all, do: @reports
 
+  @doc "The built-in reports the team can run, in the order Reports lists them."
+  def for_team(%Team{} = team), do: Enum.filter(@reports, &runs?(&1, team))
+
   @doc "The built-in report with `slug`, or nil."
   def get(slug), do: Enum.find(@reports, &(&1.slug == slug))
+
+  @doc """
+  Whether the team can run the report. One with `needs: :id_cards` reads ID card fields,
+  which only a team with ID cards on has.
+  """
+  def runs?(%{needs: :id_cards}, %Team{} = team), do: team.id_cards_enabled
+  def runs?(_report, %Team{}), do: true
 
   @doc """
   How to fix a row, for a report a team admin opens to fix what it lists: where its

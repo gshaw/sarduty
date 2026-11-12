@@ -4,8 +4,10 @@ defmodule App.Report.BuiltInTest do
 
   import App.DataFixtures
 
+  alias App.Model.MemberCard
   alias App.Report
   alias App.Report.BuiltIn
+  alias App.ViewData.Reports
 
   @now ~U[2026-06-15 19:00:00Z]
 
@@ -124,6 +126,29 @@ defmodule App.Report.BuiltInTest do
 
     assert ids(team, "members-who-can-log-in", params) == MapSet.new([can.id])
     refute bot.id in ids(team, "members-who-can-log-in")
+  end
+
+  test "Members without a photo lists current members, with a card already out too (#1012)" do
+    team = team_fixture()
+    waiting = member_fixture(team, %{has_photo: false})
+    carded = member_fixture(team, %{has_photo: false})
+    card = member_card_fixture(carded)
+    member_fixture(team)
+    member_fixture(team, %{has_photo: false, left_at: ~U[2020-01-01 00:00:00Z]})
+    member_fixture(team, %{has_photo: false, not_a_person: true})
+
+    rows = rows(team, "members-without-a-photo")
+    assert rows |> Enum.map(&hd/1) |> MapSet.new() == MapSet.new([waiting.id, carded.id])
+    assert [carded.id, carded.position, MemberCard.format_code(card.code)] in rows
+  end
+
+  test "only a team with ID cards runs Members without a photo" do
+    report = BuiltIn.get("members-without-a-photo")
+    assert BuiltIn.runs?(report, team_fixture())
+    off = team_fixture(%{id_cards_enabled: false})
+    refute BuiltIn.runs?(report, off)
+    refute report in BuiltIn.for_team(off)
+    assert Reports.find(off, report.slug, @now) == nil
   end
 
   test "Activities missing required fields keeps the past ones with a required field empty" do

@@ -98,11 +98,21 @@ defmodule App.Operation.BuildGooglePassTest do
   test "the team logo is by the name, the photo is under the code, and dev has neither" do
     object = object(card())
     assert object.logo.sourceUri.uri =~ "/teams/example/logo"
-    assert object.heroImage.sourceUri.uri == Web.VerifyHost.url() <> "/K7Q4M2XA9H/banner"
+    assert object.heroImage.sourceUri.uri == Web.VerifyHost.url() <> "/K7Q4M2XA9H/banner?v=0.0"
 
     dev = BuildGooglePass.pass_object(card(), :active, [], %{@config | images: false})
     refute Map.has_key?(dev, :logo)
     refute Map.has_key?(dev, :heroImage)
+  end
+
+  # Google keeps an image until its URL changes (#1012).
+  test "the photo's URL moves on Refresh ID card and when the expiry rolls" do
+    uri = &object(card(&1)).heroImage.sourceUri.uri
+    refreshed = uri.(pass_updated_at: ~U[2026-11-11 20:00:00Z])
+    rolled = uri.(pass_updated_at: ~U[2026-11-11 20:00:00Z], expires_at: ~U[2027-03-01 08:00:00Z])
+
+    assert refreshed =~ "/K7Q4M2XA9H/banner?v=1794427200."
+    assert [uri.([]), refreshed, rolled] |> Enum.uniq() |> length() == 3
   end
 
   test "a cancelled card expires and shows no QR code or photo" do
