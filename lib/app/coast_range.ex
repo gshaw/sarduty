@@ -375,6 +375,51 @@ defmodule App.CoastRange do
     {"Evacuation notices delivered", "number", false, []},
     {"Households evacuated", "number", false, []}
   ]
+  # BCSARA's own hints, as D4H gives them, so the fields read as a real team's do.
+  # cspell:ignore RADeMS
+  @bcsara_hints %{
+    "What was SAR tasked to do?" =>
+      "Rescue for a 'lost' subject does not require a SAR search.\nSearch for a lost subject requires SAR to search.",
+    "How many people were in the group that requested help?" => "If unknown, enter 999",
+    "How many people received assistance from SAR?" =>
+      "Assistance may be first aid, evacuation, supplies (e.g., warm clothes, a headlamp, food), directions to the trail, etc.\n\nIf unknown, enter 999.",
+    "Response Type" =>
+      "'Call-out' -> when the SAR Group was activated, but did NOT deploy resources into the field. This includes instances where members/vehicles where en route to a staging point, but were stood down BEFORE a command post was established.\n\n'Response' -> SAR resources deployed into the Field.",
+    "Agency" => "Choose an approved 'requesting agency' from the list",
+    "Police Department" =>
+      "If 'Police' was selected under 'Agency', please select which department was the requesting agency.",
+    "Agency File #" => "The file # of the requesting agency",
+    "ASE#" =>
+      "ASE# is issued by EMBC to approve use of an aircraft, typically a helicopter. See EMBC policy for restrictions on use of helicopters.",
+    "Region" => "Select the EMBC region (not the BCSARA region) that the incident occurred in.",
+    "Area" =>
+      "'Area' means location of incident. Enter general description of the location. e.g. 'Fraser River, near Hope'",
+    "Task Type" => "Select one task type",
+    "Equipment Used/Lost" =>
+      "Enter a brief description of equipment used, lost and/or damaged. For damaged or lost equipment complete a separate 'Equipment Repair/Replacement' (ERR) form and submit to EMBC",
+    "Task Leader's Name" => "The Task Leader is the point of contact for the Task Report",
+    "Date Report Completed" => "Enter the date that this report was completed",
+    "Was a Level 2 SAR Manager Activated for this Incident?" =>
+      "Only to be used if the incident moves into multi-operational periods requiring a Level 2 SAR manager. Only the initiating team selects 'Yes'. If a Level 2 was not required select No. If you are a mutual aid group, or the level 2 SAR manager from a mutual aid group select N/A.",
+    "SAR Severity" =>
+      "Category 1: Highest urgency. Subject's life is at imminent risk and will not survive if SAR does not intervene.\n\nCategory 2: Urgent. Subject is in grave or imminent danger requiring SAR intervention.\n\nCategory 3: Least urgent. Situation is objectively not presenting imminent or grave danger to the subject. Subject requires assistance to resolve their situation and/or may be personally experiencing distress (e.g., frightened, anxious).",
+    "Activity" =>
+      "The activity that was taking place when the incident occurred. Organized by Air, Land, Marine, or Working. Select the activity in which the subject was engaged when the incident occurred. For example: if the subject became lost hiking to a campsite, the activity is hiking.",
+    ~s(If Activity = "Other" or "N/A" Describe:) =>
+      "To help identify gaps in data options, please provide additional information if no suitable activity types are available.",
+    "Primary Cause" => "The primary cause of the incident.",
+    "Secondary Cause" => "The secondary cause of the incident.",
+    ~s(If either cause = "Other" or "N/A" Describe:) =>
+      "To support identification of data gaps, please provide additional information about the cause if no suitable options exist.",
+    "Was weather a factor in response?" =>
+      "Indicates whether the weather was a significant factor in the response",
+    "Alert Type" =>
+      "What prompted the task initially (e.g. how was the subjects situation made known to tasking agency?).",
+    "Mutual Aid Requested?" =>
+      "Only answer 'YES' or 'NO' if you were the PRIMARY SAR Group that responded to the incident.\n\nIf you responded as a 'Mutual Assistance' SAR group, select 'N/A - Mutual Assistance Only'",
+    "Evacuation notices delivered" => "How many households were delivered evacuation notices?",
+    "Households evacuated" => "How many households were evacuated?"
+  }
   # Each incident's answers to BCSARA's fields: what SAR was tasked to do, the task type,
   # the subject's activity, the primary cause, the alert, and the severity's category.
   @bcsara_incidents %{
@@ -570,20 +615,38 @@ defmodule App.CoastRange do
         %{"id" => agency_option(label), "label" => label, "ordering" => i, "archived" => false}
       end
 
+    # Hints in the style of a real team's, South Fraser SAR's.
     [
       custom_field(@agency, "incident", "Requesting agency", "single_choice",
         required: true,
+        hint: "The agency that asked for SAR. Choose one from the list.",
         options: agency_options
       ),
-      custom_field(@call_sign, "member", "Radio call sign", "text", member_privacy: "viewable"),
-      custom_field(@serviced, "equipment", "Last serviced", "date", []),
-      custom_field(@people_helped, "incident", "People helped", "number", []),
-      custom_field(@team_notes, "incident", "Team notes", "text_area", restricted: true),
+      custom_field(@call_sign, "member", "Radio call sign", "text",
+        member_privacy: "viewable",
+        hint: "Radio call sign (if assigned own radio)"
+      ),
+      custom_field(@serviced, "equipment", "Last serviced", "date",
+        hint: "The date this item was last serviced or inspected."
+      ),
+      custom_field(@people_helped, "incident", "People helped", "number",
+        hint: "For the team's year-end report. If unknown, enter 999.",
+        value_units: "people"
+      ),
+      custom_field(@team_notes, "incident", "Team notes", "text_area",
+        restricted: true,
+        hint: "For private notes etc. Does not roll up to WESARA."
+      ),
       # The same title on two kinds: a report reads it as one field.
-      custom_field(@exercise_leader, "exercise", "Event leader", "text", []),
-      custom_field(@event_leader, "event", "Event leader", "text", []),
+      custom_field(@exercise_leader, "exercise", "Event leader", "text",
+        hint: "The member running the training, for the training record."
+      ),
+      custom_field(@event_leader, "event", "Event leader", "text",
+        hint: "The member running the event, who answers questions about it."
+      ),
       custom_field(@areas, "member", "Areas of assistance", "multiple_choice",
         member_privacy: "editable",
+        hint: "Please fill this out with areas you can help with",
         options: options(@areas_options, &area_option/1)
       ),
       custom_field(@birth_year, "member", "Year of birth", "number",
@@ -630,6 +693,7 @@ defmodule App.CoastRange do
       field =
         custom_field(id, "incident", title, type,
           required: required,
+          hint: @bcsara_hints[title],
           ordering: 100 + i,
           owner_type: "Organisation",
           owner_id: @bcsara_owner
