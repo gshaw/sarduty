@@ -114,7 +114,9 @@ config :sarduty, Oban,
   pruner: [max_age: {7, :days}],
   cron: [
     crontab: [
-      {"0 6 * * *", App.Worker.ScheduleTeamRefreshesWorker},
+      # Queues the full refresh of each team not refreshed since 06:00 UTC, so a missed or
+      # failed one heals within the hour rather than the next day.
+      {"*/10 * * * *", App.Worker.ScheduleTeamRefreshesWorker},
       # The sync every 10 minutes (#163). The nightly full refresh is its safety net.
       {"*/10 * * * *", App.Worker.ScheduleTeamSyncsWorker},
       {"30 5 * * *", App.Worker.PruneEventsWorker},

@@ -51,8 +51,9 @@ data?
   come from, is checked for both the sync's month and activity fetches.
 - The sync every 10 minutes: what it fetches when lists move, and the deletes it finds
   (`test/app/operation/sync_d4h_changes_test.exs`,
-  `test/app/worker/sync_team_changes_worker_test.exs`), and the nightly run's Healthchecks
-  pings (`finish_run_worker_test.exs`).
+  `test/app/worker/sync_team_changes_worker_test.exs`), and its Healthchecks pings
+  (`finish_run_worker_test.exs`). Which teams the full refresh queues, and when it pages
+  (`schedule_team_refreshes_worker_test.exs`).
 - Change sets: `test/app/operation/apply_change_set_test.exs` fails when anything but the
   applier calls a D4H write function, and checks a row D4H changed first is skipped.
 - Attendance at the door: the times a send uses (`build_attendance_times_test.exs`), the

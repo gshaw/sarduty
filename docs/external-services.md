@@ -212,10 +212,10 @@ encrypts it at rest; reading it takes the bucket token or the Cloudflare account
 
 ## Healthchecks
 
-Both optional. Each is pinged once per run, at its start and when its last team job
-ends: see [d4h-sync.md](d4h-sync.md#monitoring).
+Both optional. See [d4h-sync.md](d4h-sync.md#monitoring).
 
-- `HEALTHCHECKS_URL` — the nightly full refresh.
+- `HEALTHCHECKS_URL` — the full refresh: every 10 minutes, whether each team has
+  refreshed since 06:00 UTC.
 - `HEALTHCHECKS_SYNC_URL` — the sync every 10 minutes.
 
 ## Honeybadger

@@ -1,9 +1,10 @@
 defmodule App.Adapter.Healthchecks do
   @moduledoc """
-  Pings Healthchecks.io, which emails when a run is late or failed. Optional: without a
-  check's URL, nothing is sent. Each run pings `/start` when it is queued and success or
-  `/fail` once its last job finishes, so Healthchecks also alerts on a run that takes too
-  long. See docs/d4h-sync.md.
+  Pings Healthchecks.io, which emails when a check is late or failed. Optional: without a
+  check's URL, nothing is sent. Each sync round pings `/start` when it is queued and
+  success or `/fail` once its last job finishes, so Healthchecks also alerts on a round
+  that takes too long. The refresh pings every 10 minutes whether every team is up to
+  date. See docs/d4h-sync.md.
   """
 
   require Logger
