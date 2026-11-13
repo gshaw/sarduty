@@ -137,12 +137,22 @@ or **Retired**. Decided 2026-10-18; the issue has the reasons. Retired was added
 - **Not a person** is the old toggle, unchanged in `members.not_a_person`. It wins over
   an away period. **Active** is the absence of the others and is never stored. What it
   does is under [Not a person](#not-a-person).
-- The member's **Standing** tab lists away periods, past ones too, with a form to add one
-  and buttons to end one today or delete it. Any team admin can. With a Retiring group it
-  has **Mark as retiring** or **Mark as not retiring**, one
-  `add_group_member` or `remove_group_member` row through `SetGroupMember`, as the
-  Groups tab sends, and the line "Avery Chen holds 3 items. Retire them in D4H once
-  every item is back." The header on every member tab badges a standing other than
+- The member's **Standing** tab is the one place a team admin changes standing (#1053).
+  It lists away periods, past ones too, with buttons to end one today or delete it, and
+  check-ins. Any team admin can. **Add away period** and **Record check-in** open their
+  own pages (`Web.MemberStandingFormLive`) and come back to the tab, so the tab reads as
+  the member's standing rather than two empty forms. With a Retiring group it has **Mark as
+  retiring** or **Mark as not retiring**, one `add_group_member` or `remove_group_member`
+  row through `SetGroupMember`, as the Groups tab sends, and the line "Avery Chen holds 3
+  items. Get them back and move them in D4H before you retire them." Every member but a
+  retired one has **Mark as retired**, and a retired one **Mark as rejoined**: see
+  [Retiring](#retiring). **Mark as not a person** is the tab's last section, with a
+  heading; a bot's **Mark as a person** is in Standing. Every button asks first.
+- **The tab shows only what fits the standing.** A bot's tab is the Standing section
+  alone: Away periods, Check-ins, and No-shows show for it only when they hold rows, and
+  never a form. A retired member has no away period form and no check-in form, since
+  they have no attendance clock to restart; their past rows still show. `AddAwayPeriod`
+  and `RecordCheckIn` refuse both. The header on every member tab badges a standing other than
   Active: amber for Away until a date and Retiring, grey for Retired and Not a person. Each change goes in the member's history, from
   `member_standing_changes`, which keeps the reason and dates.
 - A member away sees the same Away badge on Your membership, as a reminder. Members never
@@ -165,7 +175,7 @@ skip more than that; see [Retiring](#retiring).
 
 ### Not a person
 
-One rule, decided 2026-10-30, and the switch's hint says it: **a bot or shared account
+One rule, decided 2026-10-30, and the Standing tab's hint says it: **a bot or shared account
 logs in, gets email, and has the access D4H gives it, like any member. SAR Duty never
 counts it as one of the team's people or offers it when you pick people.**
 
@@ -230,10 +240,20 @@ admin through them.
 3. **Get the items back.** Needs attention's "1 retiring member holds 3 items" opens
    Equipment's With retiring members. Gear can take weeks to come back, so a team admin
    can snooze this item; see [needs-attention.md](needs-attention.md#snoozing-an-item).
-4. **Retire them in D4H.** Needs attention's "2 retiring members hold no items" opens
-   Members holding items with `standing=retiring&items=none`, and its hint, "Retire them in D4H.", is what stops a
-   member staying Retiring for good. D4H sets No access when it retires someone, and
-   they become Retired.
+4. **Mark as retired** on the Standing tab (#1053), on D4H and Records teams alike:
+   D4H's retire, through `SetMemberRetired`. Needs attention's "2 retiring members hold
+   no items" opens Members holding items with `standing=retiring&items=none`, and its
+   hint, "Retire them on their Standing tab.", is what stops a member staying Retiring
+   for good. They become Retired, and the tab says the day. **Mark as rejoined** is
+   D4H's unretire.
+
+**Holding any item blocks a retire** (tested on D4H 2026-11-12). D4H refuses with a 409
+that says nothing about items, for an item In service, Lost, Inactive, or Unserviceable
+alike. `SetMemberRetired` counts what `EquipmentItem.held_by/2` counts, retired items
+and items inside a held kit too, and refuses first with a toast: "Sam Rivera still holds
+1 item. Get it back and move it in D4H first." The only way through is D4H's web app:
+its API can't move an item. Retiring first is the usual path when items are out, but an
+active member retires in one step. D4H's retire takes a reason; SAR Duty sends none.
 
 **Guards.** Mark as retiring refuses the team's only team admin, who would lock the team
 out. The Retiring group can't have group rules, since "Standing is Active" on it would
@@ -251,7 +271,9 @@ Retiring group, decided 2026-10-18: no live summary.
   (`teams.not_seen_days`).
 - **Watch**: all current members, or one group (`teams.watch_d4h_group_id`, a D4H id like
   group rules). Anything more complex is a group with group rules.
-- **Standing**: which standings to watch (`teams.watch_standings`), Active by default.
+- **Standing**: which standings to watch (`teams.watch_standings`), Active by default:
+  Active, Away, or Retiring. Never Not a person (#1053): a bot never attends and gets
+  no check-ins, so nothing could clear it from the list.
 
 The home item is "4 members of Callout have not attended an activity in 90 days", linking
 to `/members?attended=90&group=<id>&standing=active`. Its count runs the Members report

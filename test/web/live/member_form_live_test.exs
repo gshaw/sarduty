@@ -49,24 +49,17 @@ defmodule Web.MemberFormLiveTest do
              Repo.preload(change_set, :rows).rows
   end
 
-  test "the only team admin cannot stop being one or leave", %{
-    conn: conn,
-    team: team,
-    admin: admin
-  } do
+  test "the only team admin cannot stop being one", %{conn: conn, team: team, admin: admin} do
     stub_ok()
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
 
     html = lv |> form("#member-form", form: %{team_admin: "false"}) |> render_submit()
     assert html =~ "Make another member a team admin first."
 
-    assert lv |> element("#member-retire-button") |> render_click() =~
-             "Make another member a team admin first."
-
     refute_received {:records, _method, _path, _body}
   end
 
-  test "a change sends only what changed, and leaving is a retire",
+  test "a change sends only what changed, and retiring is on Standing (#1053)",
        %{conn: conn, team: team, admin: admin} do
     stub_ok()
     manager_fixture(team)
@@ -83,21 +76,7 @@ defmodule Web.MemberFormLiveTest do
     assert map_size(body) == 1
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
-    lv |> element("#member-retire-button") |> render_click()
-
-    retire = "/members/#{admin.d4h_member_id}/retire"
-    assert_received {:records, "PATCH", ^retire, %{"direction" => "RETIRE"}}
-  end
-
-  test "a retired member is marked as rejoined", %{conn: conn, team: team} do
-    stub_ok()
-    member = member_fixture(team, %{d4h_status: "RETIRED", left_at: ~U[2026-01-01 08:00:00Z]})
-
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/edit")
-    lv |> element("#member-rejoin") |> render_click()
-
-    retire = "/members/#{member.d4h_member_id}/retire"
-    assert_received {:records, "PATCH", ^retire, %{"direction" => "UNRETIRE"}}
+    refute has_element?(lv, "#member-retire")
   end
 
   test "Records' refusal shows as the error", %{conn: conn, team: team} do

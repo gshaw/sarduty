@@ -413,6 +413,12 @@ defmodule Web.Router do
       live "/teams/:subdomain/members/:id/equipment", MemberEquipmentLive
       live "/teams/:subdomain/members/:id/qualifications", MemberQualificationsLive
       live "/teams/:subdomain/members/:id/standing", MemberStandingLive
+      live "/teams/:subdomain/members/:id/standing/away/new", MemberStandingFormLive, :away
+
+      live "/teams/:subdomain/members/:id/standing/check-ins/new",
+           MemberStandingFormLive,
+           :check_in
+
       live "/teams/:subdomain/members/:id/card", MemberCardLive
       live "/teams/:subdomain/members/:id/fields", MemberFieldsLive
       live "/teams/:subdomain/members/:id/fields/edit", CustomFieldsFormLive, :member

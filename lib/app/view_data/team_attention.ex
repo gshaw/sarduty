@@ -293,7 +293,7 @@ defmodule App.ViewData.TeamAttention do
       retiring_missing_item(retiring),
       retiring_access_item(retiring, service),
       retiring_holding_item(retiring),
-      retiring_clear_item(retiring, service)
+      retiring_clear_item(retiring)
     ]
 
   defp retiring_missing_item(%{missing_group: true}) do
@@ -348,7 +348,7 @@ defmodule App.ViewData.TeamAttention do
 
   defp retiring_holding_item(_none_or_missing), do: nil
 
-  defp retiring_clear_item(%{clear_ids: [_ | _] = ids}, service) do
+  defp retiring_clear_item(%{clear_ids: [_ | _] = ids}) do
     count = length(ids)
 
     %{
@@ -360,17 +360,12 @@ defmodule App.ViewData.TeamAttention do
           one: "%d retiring member holds no items",
           many: "%d retiring members hold no items"
         ),
-      detail: retire_them(service),
+      detail: "Retire them on their Standing tab.",
       action: "Show members"
     }
   end
 
-  defp retiring_clear_item(_none_or_missing, _service), do: nil
-
-  @doc ~s{What to do with a retiring member who holds nothing: "Retire them in D4H." On a Records team, members retire on their Change member page in SAR Duty.}
-  def retire_them(:records), do: "Retire them."
-  def retire_them(service), do: "Retire them in #{D4H.service_name(service)}."
-
+  defp retiring_clear_item(_none_or_missing), do: nil
   @doc ~s(How `not_seen_days` reads in text: "90 days", or "a year".)
   def period(365), do: "a year"
   def period(days), do: Format.days(days)

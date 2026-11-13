@@ -4,13 +4,12 @@ defmodule Web.MemberFormLive do
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Operation.SaveMember
-  alias App.Operation.SetMemberRetired
   alias App.ViewModel.MemberFormViewModel
 
   # Adding and changing members of a team on SAR Duty Records (docs/records.md), and
-  # changing a member's details on a D4H team. D4H adds members, and sets access and
-  # leaving, in its web app, so a D4H team's page has no Team admin box or Retirement.
-  # The photo is Change photo's own page on every team (Web.MemberPhotoLive).
+  # changing a member's details on a D4H team. D4H adds members and sets access in its
+  # web app, so a D4H team's page has no Team admin box. The photo is Change photo's own
+  # page, and retiring is on the Standing tab, on every team (#1053).
   def mount(params, _session, socket) do
     team = socket.assigns.current_team
     unless D4H.records?(team) or params["id"], do: raise(Web.Status.NotFound)
@@ -91,36 +90,6 @@ defmodule Web.MemberFormLive do
         </.button>
       </.form_actions>
     </.form>
-
-    <section :if={@records? and @member} id="member-retire" class="mt-8 measure">
-      <h2 class="heading">Retirement</h2>
-      <%= if @member.d4h_status == "RETIRED" do %>
-        <p>
-          {@member.name} retired on {Service.Format.date_long(@member.left_at, @current_team.timezone)}.
-        </p>
-        <.button
-          id="member-rejoin"
-          type="button"
-          phx-click="rejoin"
-          phx-disable-with="Marking as rejoined…"
-        >Mark as rejoined</.button>
-      <% else %>
-        <p>
-          A retired member keeps their attendance and letters. They no longer count as a team
-          admin or a current member.
-        </p>
-        <.button
-          id="member-retire-button"
-          type="button"
-          variant={:danger}
-          phx-click="retire"
-          phx-disable-with="Marking as retired…"
-          data-confirm={"Mark #{@member.name} as retired today?"}
-        >
-          Mark as retired
-        </.button>
-      <% end %>
-    </section>
     """
   end
 
@@ -140,19 +109,6 @@ defmodule Web.MemberFormLive do
       {:ok, saved} -> {:noreply, saved(socket, saved, "Saved #{params["name"]}.")}
       {:error, %Ecto.Changeset{} = changeset} -> {:noreply, assign_form(socket, changeset)}
       {:error, text} -> {:noreply, put_flash(socket, :error, text)}
-    end
-  end
-
-  def handle_event(event, _params, socket) when event in ["retire", "rejoin"] do
-    %{current_team: team, current_user: user, member: member} = socket.assigns
-
-    case SetMemberRetired.call(team, member, event == "retire", user, DateTime.utc_now()) do
-      {:ok, saved} ->
-        text = if event == "retire", do: "Marked as retired.", else: "Marked as rejoined."
-        {:noreply, saved(socket, saved, "#{member.name}: #{text}")}
-
-      {:error, text} ->
-        {:noreply, put_flash(socket, :error, text)}
     end
   end
 

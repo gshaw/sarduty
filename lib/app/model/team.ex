@@ -165,14 +165,15 @@ defmodule App.Model.Team do
       [
         {"Active", "active"},
         {"Away", "away"},
-        {"Retiring", "retiring"},
-        {"Not a person", "not_a_person"}
+        {"Retiring", "retiring"}
       ],
       &(elem(&1, 1) == "retiring" and not retiring?(team))
     )
   end
 
-  @watch_standings ~w(active away retiring not_a_person)
+  # Never Not a person: a bot never attends and gets no check-ins, so nothing could
+  # clear it from the list (#1053).
+  @watch_standings ~w(active away retiring)
 
   # Settings' General tab: the team's names and its address, facts about the team that
   # letters and forms print (#995). d4h_team_id and the key are not castable here.

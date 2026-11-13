@@ -56,17 +56,21 @@ applied at once by [App.Operation.ApplyEdit](../lib/app/operation/apply_edit.ex)
 `ApplyChangeSet`, then the sync copies it back, except a group's, whose copy is written
 from the answer. The row names only the fields that changed, with their old values, so it
 shows in the record's history. ApplyEdit refuses a D4H team every row but a group's, an
-activity's create and update, a member's details, custom fields, and photo, and an item's status,
+activity's create and update, a member's details, custom fields, photo, retire, and rejoin,
+and an item's status,
 barcode, and custom fields (`ApplyEdit.d4h_takes?/1`).
 
 Records refuses a bad write with a 400 whose `title` says what is wrong; the page shows
 that title.
 
-- **Members**: add, change details, team admin or not, mark as retired or rejoined.
-  `POST /members` and `permission` are Records' own; D4H adds members and sets access
-  only in its web app. Leaving is D4H's `PATCH /members/<id>/retire`. The last team
-  admin cannot stop being one or leave, and saving a retired member's details keeps
-  them retired.
+- **Members**: add, change details, team admin or not. `POST /members` and `permission`
+  are Records' own; D4H adds members and sets access only in its web app. Retiring and
+  rejoining are on the member's Standing tab, on every team
+  ([members.md](members.md#retiring)): D4H's `PATCH /members/<id>/retire`. The last
+  team admin cannot stop being one or leave, and saving a retired member's details keeps
+  them retired. D4H refuses to retire a member who holds any of the team's items with a
+  409, code `errors:members:cantBeRetired`, title "Conflict". SAR Duty refuses first,
+  on both, and Records is to copy D4H's 409 in its own repo (#1053).
 - **Photos**: set or remove on the member's Change photo page, on every team
   ([members.md](members.md#changing-a-members-photo)). `PUT` takes the image itself,
   which SAR Duty has already made a JPEG up to 2400 px with no metadata. The change set

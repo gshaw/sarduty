@@ -4,12 +4,12 @@ defmodule App.Operation.ApplyEdit do
   applied at once like the door's. A team on SAR Duty Records changes any record this way
   (docs/records.md). A D4H team changes its groups and who is in them (#546), adds and
   changes activities (#585), changes members' details and custom fields (#705), sets and
-  removes members' photos (#1028), and changes equipment items' status, barcode, and
+  removes members' photos (#1028), retires and rejoins members (#1053), and changes equipment items' status, barcode, and
   custom fields; every other record it changes in D4H.
 
-  After a group row the caller writes the local copy, as group rules do, and the next
-  sync confirms it. After any other row the sync copies what changed, so the page that
-  follows shows it.
+  After a group row, a retire, or a rejoin the caller writes the local copy, as group
+  rules do, and the next sync confirms it. After any other row the sync copies what
+  changed, so the page that follows shows it.
 
   `{:ok, d4h_record_id}`, or `{:error, text}` to show the person.
   """
@@ -33,6 +33,10 @@ defmodule App.Operation.ApplyEdit do
     :add_group_member,
     :remove_group_member
   ]
+
+  # The caller writes these rows' local copy, and the next sync confirms it: a sync after
+  # a retire took about 10 seconds on South Fraser (#1053).
+  @local_copy_actions @group_actions ++ [:retire_member, :rejoin_member]
 
   def call(team, user, row, now, opts \\ [])
 
@@ -64,9 +68,10 @@ defmodule App.Operation.ApplyEdit do
   def d4h_takes?(%ChangeSetRow{action: :update_equipment_item, new_value: new_value}),
     do: only?(new_value, @d4h_item_keys)
 
-  # A member's photo, as a document D4H makes the profile image (#1028).
+  # A member's photo, as a document D4H makes the profile image (#1028), and retiring or
+  # rejoining a member (#1053).
   def d4h_takes?(%ChangeSetRow{action: action})
-      when action in [:set_member_photo, :remove_member_photo],
+      when action in [:set_member_photo, :remove_member_photo, :retire_member, :rejoin_member],
       do: true
 
   def d4h_takes?(%ChangeSetRow{}), do: false
@@ -89,7 +94,7 @@ defmodule App.Operation.ApplyEdit do
 
     case ApplyChangeSet.call(team, change_set, user, now, Keyword.take(opts, [:photo, :document])) do
       {:ok, [%ChangeSetRow{status: :applied} = applied]} ->
-        if applied.action not in @group_actions, do: sync(team)
+        if applied.action not in @local_copy_actions, do: sync(team)
         {:ok, applied.d4h_record_id}
 
       {:ok, [%ChangeSetRow{error: error}]} ->
