@@ -229,7 +229,7 @@ defmodule Web.AdminDashboardLive do
   end
 
   def handle_event("refresh-all", _params, socket) do
-    ScheduleTeamRefreshesWorker.enqueue()
+    ScheduleTeamRefreshesWorker.enqueue_all()
 
     {:noreply, put_flash(socket, :info, "Refreshes scheduled for all teams.")}
   end

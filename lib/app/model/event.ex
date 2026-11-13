@@ -16,6 +16,8 @@ defmodule App.Model.Event do
   # connected with OAuth (#761).
   @retention_days %{
     d4h_sync_round: 90,
+    # No longer recorded since the refresh runs every 10 minutes; kept until the last
+    # rows age out, in February 2027.
     d4h_refresh_run: 90,
     d4h_team_sync: 90,
     d4h_team_refresh: 90,

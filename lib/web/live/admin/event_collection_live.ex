@@ -6,6 +6,7 @@ defmodule Web.Admin.EventCollectionLive do
   alias App.Model.Event
   alias App.Model.Team
   alias App.ViewModel.EventFilterViewModel
+  alias App.Worker.ScheduleTeamRefreshesWorker
 
   @limit 200
 
@@ -28,7 +29,7 @@ defmodule Web.Admin.EventCollectionLive do
       socket
       |> assign(page_title: "Events", teams: Team.get_all_real(), now: now, limit: @limit)
       |> assign(last_round: Event.get_last(:d4h_sync_round))
-      |> assign(last_run: Event.get_last(:d4h_refresh_run))
+      |> assign(refresh: ScheduleTeamRefreshesWorker.plan(now))
       |> assign(rate_limited: Event.count_since(:d4h_rate_limited, DateTime.add(now, -1, :day)))
       |> assign(
         sync_failures:
@@ -83,8 +84,8 @@ defmodule Web.Admin.EventCollectionLive do
     <dl id="sync-summary" class="mb-8 max-w-3xl">
       <dt>Last sync round</dt>
       <dd id="last-round">{run_summary(@last_round, @now)}</dd>
-      <dt>Last nightly refresh</dt>
-      <dd id="last-run">{run_summary(@last_run, @now)}</dd>
+      <dt>Full refresh since 06:00 UTC</dt>
+      <dd id="refresh-today">{refresh_summary(@refresh)}</dd>
       <dt>In the last 24 hours</dt>
       <dd id="last-day">
         {Service.Format.count(@sync_failures, one: "%d failed sync", many: "%d failed syncs")}, {Service.Format.count(
@@ -207,6 +208,14 @@ defmodule Web.Admin.EventCollectionLive do
     ago = Service.Format.minutes_ago(event.occurred_at, now, "Etc/UTC")
 
     "#{ago}: #{teams} in #{event.duration_ms && Service.Format.run_time(event.duration_ms)}, #{event.data["outcome"]}"
+  end
+
+  # "15 of 17 teams, 2 overdue"
+  defp refresh_summary(%{teams: teams, due: due, overdue: overdue}) do
+    done =
+      "#{teams - length(due)} of #{Service.Format.count(teams, one: "%d team", many: "%d teams")}"
+
+    if overdue == [], do: done, else: "#{done}, #{length(overdue)} overdue"
   end
 
   # A task run in production (App.Ops) starts with the admin who ran it.

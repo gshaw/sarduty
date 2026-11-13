@@ -97,7 +97,8 @@ if config_env() == :prod do
 
   config :sarduty, App.Repo,
     database: System.fetch_env!("DATABASE_PATH"),
-    pool_size: String.to_integer(System.get_env("DATABASE_POOL_SIZE") || "5")
+    # As many as Oban's job slots, so busy jobs can't leave pages without one.
+    pool_size: String.to_integer(System.get_env("DATABASE_POOL_SIZE") || "10")
 
   # Beside the database on the volume, so a deploy runs only new migrations on it. Not in
   # litestream.yml: it is rebuilt at every boot.

@@ -18,7 +18,7 @@ defmodule Web.Admin.EventCollectionLiveTest do
     {:ok, lv, _html} = live(log_in_user(conn, admin), ~p"/admin/events")
 
     assert has_element?(lv, "#last-round", "12 teams in 4.2 s, success")
-    assert has_element?(lv, "#last-run", "None yet")
+    assert has_element?(lv, "#refresh-today", "of 2 teams")
     assert has_element?(lv, "#last-day", "1 failed sync")
     assert has_element?(lv, "#event-#{sync.id}")
 

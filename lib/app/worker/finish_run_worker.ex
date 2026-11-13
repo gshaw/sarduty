@@ -1,13 +1,10 @@
 defmodule App.Worker.FinishRunWorker do
   @moduledoc """
-  Tells Healthchecks when a run of team jobs is over: the sync every 10 minutes, or the
-  nightly refresh. The scheduler queues it beside the team jobs, and it waits until none
-  are left, so one ping covers every team and a slow run shows as late.
-
-  The refresh fails when any team's job ran out of attempts. A missing or rejected key
-  cancels the job instead, so it doesn't count: only the team can fix it, and the
-  dashboards already say so. A sync never fails the run, since a failed sync is
-  cancelled and the next is 10 minutes away.
+  Tells Healthchecks when a sync round is over. The scheduler queues it beside the team
+  jobs, and it waits until none are left, so one ping covers every team and a slow round
+  shows as late. A round fails only when a team's sync crashed; a sync that fails at D4H
+  is cancelled, and the next is 10 minutes away. The full refresh pings on its own
+  (App.Worker.ScheduleTeamRefreshesWorker).
 
   It also records the run as an event: how long it took, how many teams, and what the
   team events since it started say, for the admin events page.
@@ -24,7 +21,6 @@ defmodule App.Worker.FinishRunWorker do
   alias App.Adapter.Healthchecks
   alias App.Model.Event
   alias App.Repo
-  alias App.Worker.RefreshTeamDataWorker
   alias App.Worker.SyncTeamChangesWorker
 
   @runs %{
@@ -34,13 +30,6 @@ defmodule App.Worker.FinishRunWorker do
       wait: 5,
       event: :d4h_sync_round,
       team_event: :d4h_team_sync
-    },
-    "refresh" => %{
-      check: :refresh,
-      worker: RefreshTeamDataWorker,
-      wait: 60,
-      event: :d4h_refresh_run,
-      team_event: :d4h_team_refresh
     }
   }
 

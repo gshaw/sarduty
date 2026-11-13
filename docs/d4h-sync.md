@@ -60,23 +60,27 @@ refresh once a night as the safety net (#163).
 
 ### The full refresh every night
 
-- Oban cron runs [ScheduleTeamRefreshesWorker](../lib/app/worker/schedule_team_refreshes_worker.ex)
-  at 06:00 UTC daily (`config/config.exs`). It enqueues one
-  [RefreshTeamDataWorker](../lib/app/worker/refresh_team_data_worker.ex) per team that has
-  a `d4h_team_id`.
+- Each team on D4H comes due at 06:00 UTC. Oban cron runs
+  [ScheduleTeamRefreshesWorker](../lib/app/worker/schedule_team_refreshes_worker.ex)
+  every 10 minutes (`config/config.exs`). It enqueues one
+  [RefreshTeamDataWorker](../lib/app/worker/refresh_team_data_worker.ex) for each team
+  not refreshed since (`teams.d4h_refreshed_at`), unless one is already waiting to retry.
+  So a refresh that crashed, ran out of attempts, or was skipped by a deploy over 06:00
+  runs again within 10 minutes, not the next day. Nothing carries over between runs.
 - The team dashboard's refresh button and the admin dashboard enqueue the same jobs.
 - The `refresh` queue has a limit of 1, so one team refreshes at a time. A failed job
-  retries after 15 minutes, then 30 (`max_attempts: 3`), before waiting for the next day.
+  retries after 15 minutes, then 30 (`max_attempts: 3`). If all three fail, the next
+  run queues it again, so a failing team is tried about once an hour until it works.
 - It records the list heads it saw before its first stage, so the next sync picks up
   whatever changed while it ran. At the end it counts the rows it wrote that the syncs
   missed, in its `d4h_team_refresh` event. If that stays at zero for a month, run it
   weekly.
-- The run pings `HEALTHCHECKS_URL` once: see [Monitoring](#monitoring). A failed team
+- Each run pings `HEALTHCHECKS_URL`: see [Monitoring](#monitoring). A failed team
   writes `Error: …` to `teams.d4h_refresh_result`, which both dashboards show. When the last attempt fails, the
   error goes to Honeybadger.
 - A missing key, or one D4H rejects with 401 or 403, is not an app error. The job writes
   `Error: No D4H key…` or `Error: D4H rejected the team key (401)…` and cancels, so it is
-  neither retried nor sent to Honeybadger. It tries again the next night.
+  neither retried nor sent to Honeybadger. It tries again after the next 06:00.
 
 ### What changed
 
@@ -91,30 +95,31 @@ door's, leaves it as it was (`Attendance.replied_at/4`).
 
 ## Monitoring
 
-- **Healthchecks, once per run.** Each scheduler pings its check's `/start` and queues
-  [FinishRunWorker](../lib/app/worker/finish_run_worker.ex), which waits until no team job
-  is left (retries included) and then pings success. The nightly run pings `/fail`
-  instead when a team's job ran out of attempts; a missing or rejected key cancels the job,
-  so it doesn't count. Healthchecks emails when a run is missing or runs past its grace.
-  Only jobs queued since the run started count. Oban's Lifeline puts a job left
-  executing by a restart back after an hour, and its Pruner drops finished jobs after a
-  week (`config/config.exs`). Before both, a job orphaned on 2026-06-09 held the first
-  run open until it was cancelled by hand.
-  - `sarduty-sync` (`HEALTHCHECKS_SYNC_URL`): period 10 minutes, grace 5 minutes. A late
-    ping means a round no longer fits in 10 minutes. A round was about 1 s per team in
-    October 2026.
-  - The nightly check (`HEALTHCHECKS_URL`): period 1 day, grace 2 hours. A full refresh
-    was 26 s per team.
+- **Healthchecks.** Healthchecks emails when a check is down or its ping is late.
+  - `sarduty-sync` (`HEALTHCHECKS_SYNC_URL`): once per round. The scheduler pings
+    `/start` and queues [FinishRunWorker](../lib/app/worker/finish_run_worker.ex), which
+    waits until no team job is left and then pings success, or `/fail` when a team's sync
+    crashed. Only jobs queued since the round started count. Period 10 minutes, grace 20
+    minutes. A late ping means a round no longer fits in 10 minutes. A round was about
+    1 s per team in October 2026.
+  - `sarduty` (`HEALTHCHECKS_URL`), the full refresh: every run pings success, or `/fail`
+    when a team is still due 2 hours after 06:00 UTC. A team cancelled for its key
+    doesn't count. Period 10 minutes, grace 20 minutes. The check is down only while a
+    team is behind, and comes back up within 10 minutes of its refresh. Until
+    2026-11-13 it was one ping pair a night, and on 2026-11-12 a crashed finish job left
+    it down 21 hours with every team refreshed. A full refresh was 26 s per team.
+  - Oban's Lifeline puts a job left executing by a restart back after an hour, and its
+    Pruner drops finished jobs after a week (`config/config.exs`).
 - **D4H rate limits.** D4H sends no rate-limit headers. Every 429 is logged, recorded
   as a `d4h_rate_limited` event, and sent to Honeybadger as one grouped error
   (`d4h-429`), before Req's retry hides it. The first one is the cue to sync less often
   or fetch fewer pages at once.
 - **Events, for looking back.** The `events` table ([Event](../lib/app/model/event.ex))
-  records each run (`d4h_sync_round`, `d4h_refresh_run`: how long, how many teams,
-  changed, failed, rejected keys, 429s), each team refresh, and each team sync that
-  changed something, failed, or found its key rejected. Quiet syncs record nothing.
-  `/admin/events` shows the last round and night, the last day's failures and 429s, and
-  the events by kind and team. Events are kept 90 days. They don't alert; Healthchecks
+  records each sync round (`d4h_sync_round`: how long, how many teams, changed, failed,
+  rejected keys, 429s), each team refresh attempt, and each team sync that changed
+  something, failed, or found its key rejected. Quiet syncs record nothing.
+  `/admin/events` shows the last round, how many teams have refreshed since 06:00, the
+  last day's failures and 429s, and the events by kind and team. Events are kept 90 days. They don't alert; Healthchecks
   and Honeybadger do.
 
 ## Which key
