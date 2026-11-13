@@ -1,5 +1,5 @@
 #!/bin/sh
-# Mockup kit: dump a round's real pages with its dump test (docs/mockups.md).
+# Mockups (redline adapter): dump a round's real pages with its dump test (docs/mockups.md).
 #   tools/mockups/dump.sh <round>/dump_test.exs
 # Copies the test into test/mockups/ for the run only, and writes the pages to
 # <round>/real/.

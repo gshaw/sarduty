@@ -1,5 +1,5 @@
 #!/bin/sh
-# Mockup kit: build the app's CSS into tools/mockups/app.css, with its fonts, so mockups
+# Mockups (redline adapter): build the app's CSS into tools/mockups/app.css, with its fonts, so mockups
 # draw with today's styles. Run it before each round.
 set -eu
 kit=$(cd "$(dirname "$0")" && pwd)

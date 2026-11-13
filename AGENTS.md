@@ -354,8 +354,9 @@ change, read the relevant doc:
 - **New routes and URL rules** → [docs/urls.md](docs/urls.md).
 - **Words in the UI, emails, and PDFs** → [docs/writing.md](docs/writing.md).
 - **Mockups for an issue, and screenshots on a PR** → [docs/mockups.md](docs/mockups.md).
-  Draw on real pages with the kit in `tools/mockups/`, marking what changed; never redraw
-  a page by hand. Plain screenshots only when asked.
+  Draw on real pages with redline and SAR Duty's adapter in `tools/mockups/`, marking
+  what changed; never redraw a page by hand. Shown inline, never a Claude Artifact. Plain
+  screenshots only when asked.
 
 Recurring maintenance prompts for agents are in
 [agent_prompts/](agent_prompts/README.md).

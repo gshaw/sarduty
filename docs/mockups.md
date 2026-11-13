@@ -2,48 +2,27 @@
 
 <!-- cspell:ignore CRSAR Kowal Priya VSAR -->
 
-A design proposal on an issue is shown with mockups made by the kit in
-[tools/mockups/](../tools/mockups). Every round looks the same and reads in seconds: real
-pages from the app, with what changes marked in fuchsia and numbered.
+A design proposal on an issue is shown with mockups, and a finished feature on its PR with
+marked screenshots. Both are made with [redline](https://github.com/gshaw/redline), Gerry's
+mockup kit for every project, in `~/Developer/redline`. Every round looks the same and
+reads in seconds: real pages from the app, with what changes marked in fuchsia and
+numbered. Plain screenshots only when someone asks for them, and those are PNG too,
+through `mise exec -- oxipng -o 2 --strip safe <file>`.
 
-Screenshots of a finished feature on its PR come from the kit too, marked the same way;
-see [Screenshots on a PR](#screenshots-on-a-pr). Plain screenshots only when someone asks
-for them, and those are PNG too, through `mise exec -- oxipng -o 2 --strip safe <file>`.
+redline's [README](https://github.com/gshaw/redline#readme) holds the marks, pins,
+labels, frames, crops, diagrams, the review page, and posting. This page holds what is
+SAR Duty's own: the dump, the cast, widths, and words. The kit started here
+(#741, 2026-10-29) and moved to redline on 2026-11-13 (#1069).
 
-## The rules
+## SAR Duty's rules
+
+On top of redline's rules:
 
 1. **Draw on the real app.** Every screen starts as a real page, dumped from this checkout
    with the made-up cast, and the proposal is spliced in. Never redraw a page by hand, and
    never draw a card that stands in for one. What the app can't render (a text thread, an
-   email in a mail app) uses the kit's frames.
-2. **Mark only what changes, in fuchsia.** The app never uses fuchsia, so a mark can't be
-   mistaken for design. Three kinds:
-   - **New**: dashed outline with a faint fill. `new(html, pin)`
-   - **Changed**: dotted outline, no fill. `changed(html, pin)`, or
-     `mark(s, '<li id="x"', pin, "changed")` on an element already in the page
-   - **Removed**: thin outline, faded, struck through. `removed(html, pin)`
-3. **Every mark gets a numbered pin, and every pin a caption.** Captions live in
-   `shots.json`, start with the kind in bold ("**New.**"), and say what it does or why in
-   one sentence. Numbers restart on each shot, so a pin is named with its shot's label:
-   B2 is pin 2 on shot B. One pin may mark two places that are the same change.
-4. **Every shot has a label**, a letter set by hand in `shots.json` (`"id": "B"`). The
-   kit draws it above the frame, on the review page's tab, and in the issue body, so
-   anyone can say "B" and mean one picture. A label belongs to the screen, not its place:
-   - Moving shots around changes no label.
-   - A new shot takes the next unused letter, wherever it sits.
-   - A split shot keeps its letter on the part that is still the same screen; the new
-     part takes the next unused letter. Never "B2", which reads as a pin.
-   - A dropped shot's letter is retired for that issue, so an old comment can't point at
-     the wrong picture.
-   - Pins may renumber between rounds; "round 2's B3" is precise enough.
-5. **Marks hug their content.** A block mark shrinks to fit; add `cls="fill"` only for
-   full-width rows such as switches. Mark a heading's text, not a wrapper around the
-   heading. Never nest marks: mark the parts.
-6. **Crop to the change, and keep where you are.** A shot ends below its last mark
-   (`"crop": "marks"`, the default). A change far down a long page crops between
-   selectors (`{"top": "#activity-sidebar-end", "bottom": "#member-row-7"}`), and a cut
-   edge fades. The browser frame shows the page's real URL.
-7. **One cast.** Coast Range SAR (CRSAR; legal name Coast Range Search and Rescue Society),
+   email in a mail app) uses redline's `sms()` and `mail()` frames.
+2. **One cast.** Coast Range SAR (CRSAR; legal name Coast Range Search and Rescue Society),
    team admin Alex Chen, member Cameron Ruiz, and the cast in
    [App.CoastRange](../lib/app/coast_range.ex): a year of activities, attendance,
    groups, qualifications, equipment, and chores. It is the team agents' reports run on
@@ -52,21 +31,15 @@ for them, and those are PNG too, through `mise exec -- oxipng -o 2 --strip safe 
    use" says who, and a test keeps it true. A dump test picks the records it shows from
    the cast by that list, such as `MockupSeed.activity(cast, "Missing hiker")`, rather
    than making its own; it adds only what the cast lacks, and a new case gets a new
-   member. A second team is Valley SAR (VSAR),
-   for mockups only. Phone numbers are 604-555-01xx; SAR Duty's own number is
-   604-555-0100. Never a real person, team, or number: issues are public.
-8. **Desktop first, phones for phone tasks.** Desktop at 1280 (1024 for a narrow settings
-   page), phones at 390 in an iPhone frame.
-9. **Words follow [writing.md](writing.md).** Mock copy is proposed copy: glossary words,
+   member. A second team is Valley SAR (VSAR), for mockups only. Phone numbers are
+   604-555-01xx; SAR Duty's own number is 604-555-0100. Never a real person, team, or
+   number: issues are public.
+3. **Desktop first, phones for phone tasks.** Desktop at 1280 (1024 for a narrow settings
+   page), phones at 390 in an iPhone frame. iPad means the mini, at 744×1133.
+4. **Words follow [writing.md](writing.md).** Mock copy is proposed copy: glossary words,
    short sentences, values as `Service.Format` writes them.
-10. **Light mode, 2x, PNG.** Every screenshot is a PNG, never a JPG, which blurs text.
-    `shots.mjs` runs each through oxipng (pinned in `.mise.toml`), which takes about 30%
-    off without changing a pixel: a desktop shot is about 100–300 KB. Screenshots are
-    attached to the issue or PR, never committed.
-11. **Phone shots are 320 wide in GitHub.** A phone-width shot is `<img width="320">`,
-    never `![…]()`: GitHub draws every image as wide as the column, and a 2x phone shot
-    runs about five screens tall. `body.py` writes it that way, so post its Markdown
-    rather than writing image tags by hand.
+5. **Light mode.** The browser frame shows the page's real URL: `shots.json` sets
+   `"host": "sarduty.com"`, and each shot its `url`.
 
 ## A round
 
@@ -77,20 +50,12 @@ switch on Account settings, the text on a phone, and two diagrams.
 mkdir -p tmp/mockups && cp -R tools/mockups/example tmp/mockups/<topic>
 tools/mockups/app-css.sh                                  # today's CSS and fonts
 tools/mockups/dump.sh tmp/mockups/<topic>/dump_test.exs   # real/*.html
-python3 -I tmp/mockups/<topic>/build.py                   # the mockup pages
-node tools/mockups/shots.mjs tmp/mockups/<topic>          # shots/*.png, optimized
-python3 -I tools/mockups/review.py tmp/mockups/<topic> > tmp/mockups/<topic>/review.html
-python3 -I tools/mockups/body.py tmp/mockups/<topic> > tmp/mockups/<topic>/body.md
+redline all tmp/mockups/<topic>                           # pages, shots, review, body
 ```
 
-The first time, install Puppeteer into `tmp/`; `shots.mjs` drives the Chrome in
-`/Applications`:
-
-```sh
-npm install --prefix tmp/puppeteer puppeteer-core@24
-```
-
-A round's files:
+`redline` is `~/Developer/redline/bin/redline`, on PATH through `~/.local/bin`. It runs
+on its own pinned node, Python, oxipng, and Puppeteer, so this repo needs none of them
+for mockups.
 
 | File            | What                                                                       |
 | --------------- | -------------------------------------------------------------------------- |
@@ -98,106 +63,63 @@ A round's files:
 | `build.py`      | Splices the proposal into `real/` pages and writes one page per shot.      |
 | `shots.json`    | Each shot's `id`, `page`, `title`, `lead`, `pins`, and its frame and crop. |
 | `intro.html`    | The review page's Overview tab: verdict, what changed, open questions.     |
+| `lead.md`       | The issue's or PR's words, put at the top of `body.md`.                    |
 
 `dump_test.exs` calls `MockupSeed.team()` and ends with `MockupSeed.dump/1`, which writes
 to `real/`. The cast it returns has each member by name (`cast["Priya Nair"]`), and every
 row by kind and key in `cast.rows`; `MockupSeed.activity(cast, title)` is the latest
-activity with that title. It dumps LiveViews and controller pages, such as the style guide, alike.
-`dump.sh` copies the test into `test/mockups/` for the run only. Times the
+activity with that title. It dumps LiveViews and controller pages, such as the style
+guide, alike. `dump.sh` copies the test into `test/mockups/` for the run only. Times the
 seed makes change every run, so splice around them with `cut(s, start, end, new)`, not
 `sub` on the exact text.
 
-A `shots.json` entry may also set `frame` (`browser`, the default; `phone`; `sheet` for a
-diagram; or `none` for a page that draws its own frames, such as `sms()` or `mail()`),
-`url`, `width`, `crop` (`marks`, `full`, or `{top, bottom}` selectors), and `pad`. A
-`frame: none` page of one phone sets `"width": 454`, so the shot is phone-width. At the
-top, `"contact": true` adds `shots/contact`: every shot small, with its label, for a
-round of four shots or more.
+`build.py` starts with `from sarduty import *` and `m = SarDuty(__file__)`.
+[sarduty.py](../tools/mockups/sarduty.py) is SAR Duty's adapter: the app's CSS, the
+LiveView clean-up, and the app's pieces as its components render them (`btn`, `link`,
+`banner`, `warning`, `hint`, `switch`, `table`, `checkbox`, `marker`). Everything else,
+from `sub` and `mark` to `sms`, `diagram`, and `flow`, is redline's.
 
-## The Overview and diagrams
-
-The **Overview** is text: `intro.html`, with the verdict first, then what changed since
-the last round, then open questions. It becomes the start of the issue body. Never make
-it an image: an image can't be searched, quoted, or changed.
-
-A **diagram** is a shot for what a page can't show:
-
-- **A flow**, what leads to what: `flow([(title, text), …])`.
-- **A timeline**, times and reminders: `timeline([(when, text), …])`.
-- **A comparison**, example rows with each option's result beside today's: `table()`.
-- **Data**, real counts behind a choice, such as how many templates use fields.
-
-Wrap it in `diagram(body, lead)` and give its shot `"frame": "sheet"`: a plain card, no
-browser bar, so nobody takes it for a page. Diagrams use the app's CSS and the cast's
-names, times, and numbers, never empty boxes. One idea per diagram. Fuchsia stays for
-marks: a diagram of a proposal is new as a whole, so it needs pins only where a caption
-explains a row. It gets a label, a title, and a lead like any shot, and in the issue it
-sits in the section it explains, above that section's mockups.
-
-## The kit
-
-| File                                  | What                                                                   |
-| ------------------------------------- | ---------------------------------------------------------------------- |
-| [mock.py](../tools/mockups/mock.py)   | Splicing (`sub`, `cut`, `before`, `after`), marks, app pieces, frames. |
-| [mock.css](../tools/mockups/mock.css) | Marks, pins, the browser and iPhone frames, Messages, mail.            |
-| [mock.js](../tools/mockups/mock.js)   | What hooks would do on a live page, such as Select all's state.        |
-| `shots.mjs`                           | Shoots each page in `shots.json`: 2x, cropped, framed, labelled.       |
-| `review.py`                           | The review page: an Overview tab, then a tab per shot with its pins.   |
-| `body.py`                             | The issue body: each shot under its label, with its pin captions.      |
-| `dump.sh`, `app-css.sh`               | Dump a round's pages; build the app's CSS for file:// pages.           |
+| File                                      | What                                                |
+| ----------------------------------------- | --------------------------------------------------- |
+| [sarduty.py](../tools/mockups/sarduty.py) | `SarDuty` rounds and the app's pieces.              |
+| [dump.sh](../tools/mockups/dump.sh)       | Dumps a round's pages with its dump test.           |
+| [app-css.sh](../tools/mockups/app-css.sh) | Builds the app's CSS and fonts for `file://` pages. |
+| [example/](../tools/mockups/example)      | The round to copy.                                  |
 
 [Web.MockupSeedTest](../test/web/mockup_seed_test.exs) seeds the cast and dumps two
-pages, so a change that breaks the kit fails in CI rather than in the next round.
+pages, so a change that breaks the dump fails in CI rather than in the next round.
 
 ## Showing and posting
 
-Show `review.html` for review (in T3 Code, with `html_render`). Once a design is picked,
-rewrite the issue body: the Overview's words, then `body.md` (the contact sheet, then
-each shot under its label with its pin captions). From the round's folder:
+Show `review.html` inline for review (in T3 Code, `html_preview` then `html_render`),
+never as a Claude Artifact. Once a design is picked, write the Overview's words in
+`lead.md` and post the round from this checkout:
 
 ```sh
-eval "gh issue edit <n> --body-file body.md $(python3 -I ../../../tools/mockups/body.py . --attach)"
-gh issue view <n> --json body -q .body | python3 -I ../../../tools/mockups/body.py --attached > posted.md
-gh issue edit <n> --body-file posted.md
+redline body tmp/mockups/<topic>
+redline post tmp/mockups/<topic> issue <n>
 ```
 
-`gh` swaps each `![…](./shots/x.png)` for its upload but leaves an `<img>` tag alone and
-adds the upload to the end, so the second step moves those back into their phone shots'
-tags. Check the body afterwards: every image is a `user-attachments` URL. Later edits
-start from the posted body, never from `body.md`, or its `./shots/` paths break the
-uploaded images. `gh pr edit` works the same way.
+It uploads the shots, makes phone shots 320 wide, and saves `posted.md`. Later edits
+start from `posted.md`, never from `body.md`.
 
 ## Screenshots on a PR
 
-A PR for something people see shows it with the kit: the finished pages, marked with
-what the PR changed. The round is the same as for a proposal, with three differences.
-
-- **Nothing is spliced in.** `dump_test.exs` dumps the pages from the PR's branch, so the
-  feature is already there. `build.py` only marks it: `mark(s, '<section id="x"', 1)` for
-  new, `mark(…, kind="changed")` for changed. Something the PR removed is gone from the
-  page, so splice it back in as `removed(html, pin)` where it was.
-- **Marked shots replace before and after.** A struck-through mark shows what went, so
-  one shot per screen says what a before-and-after pair says. Add a before shot only when
-  the page is redone too much to mark.
-- **No review page.** Put a sentence or two on what the PR does at the top of `body.md`,
-  then post it straight to the PR:
-
-```sh
-eval "gh pr create --title … --body-file body.md $(python3 -I ../../../tools/mockups/body.py . --attach)"
-gh pr view <n> --json body -q .body | python3 -I ../../../tools/mockups/body.py --attached > posted.md
-gh pr edit <n> --body-file posted.md
-```
-
-Captions say what changed for the person using the page, in the PR's words: "**New.**
-Text reminders, one switch per team." Desktop first; a phone shot only for a phone task.
+A PR for something people see shows it with marked shots: the PR branch's real pages,
+dumped and marked with what changed. Nothing is spliced in: `build.py` only marks it
+(`mark(s, '<section id="x"', 1)`), and splices back what the PR removed as
+`removed(html, pin)`. One marked shot replaces a before-and-after pair. No review page:
+`lead.md` says what the PR does, then `redline post tmp/mockups/<topic> pr <n>`, or
+`pr new --title "…"` to open it. Captions say what changed for the person using the page,
+in the PR's words: "**New.** Text reminders, one switch per team."
 
 ## Gotchas
 
+- `mark()` keeps the element's own width; pass `hug=True` to shrink it to its content. A
+  bare `new()` hugs; one given a `cls`, such as `mt-4`, keeps the width its class sets.
 - A pin at a narrow page's left edge falls off the screen: `right="inset"` pulls it
-  inside, and `right=True` puts it on the right corner.
-- A table clips anything outside its scroll box, so a pin on a header cell vanishes.
-  `right="in"` (class `pin-in`) puts the pin inside the mark, on its right.
+  inside, and `right=True` puts it on the right corner. In a table, `right="in"`.
 - The dump logs every query: `tools/mockups/dump.sh … | grep -E "Result|was not dumped"`.
 - `app-css.sh` rewrites `/fonts/` to `fonts/` so file:// pages load IBM Plex.
-- LiveView's reconnect toasts are dropped by `Mock.page`; a page with other hidden
+- LiveView's reconnect toasts are dropped by `SarDuty.page`; a page with other hidden
   elements that show without the app's JS needs them removed in `build.py`.
