@@ -48,5 +48,34 @@ defmodule Web.TeamControllerTest do
     test "404s for a team that doesn't exist" do
       assert build_conn() |> get(~p"/teams/no-such-team/logo") |> response(404)
     end
+
+    test "caches a versioned URL for a year, and one without for 5 minutes", %{team: team} do
+      versioned = get(build_conn(), ~p"/teams/#{team}/logo?v=1763028000")
+      plain = get(build_conn(), ~p"/teams/#{team}/logo")
+
+      assert get_resp_header(versioned, "cache-control") == [
+               "public, max-age=31536000, immutable"
+             ]
+
+      assert get_resp_header(plain, "cache-control") == ["public, max-age=300"]
+    end
+  end
+
+  describe "logo_url/2" do
+    test "carries the shape, and a version once the team has a logo", %{team: team} do
+      host = Web.Endpoint.url()
+      assert Web.TeamController.logo_url(team) == "#{host}/teams/#{team.subdomain}/logo"
+
+      assert Web.TeamController.logo_url(team, :square) ==
+               "#{host}/teams/#{team.subdomain}/logo?shape=square"
+
+      team = %{team | logo_at: ~U[2025-11-13 08:00:00.000000Z]}
+
+      assert Web.TeamController.logo_url(team, :fit) ==
+               "#{host}/teams/#{team.subdomain}/logo?shape=fit&v=1763020800"
+
+      assert Web.TeamController.logo_url(team) ==
+               "#{host}/teams/#{team.subdomain}/logo?v=1763020800"
+    end
   end
 end

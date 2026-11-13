@@ -118,7 +118,7 @@ defmodule Web.Org.TeamCollectionLive do
       <:col :let={team} label="Team">
         <div class="media">
           <img
-            src={~p"/teams/#{team}/logo?shape=square"}
+            src={Web.TeamController.logo_url(team, :square)}
             width="32"
             height="32"
             class="size-8 rounded"

@@ -200,7 +200,7 @@ defmodule Web.TeamDashboardLive do
         <img
           :if={@has_logo}
           id="team-logo"
-          src={~p"/teams/#{@current_team}/logo?shape=fit"}
+          src={Web.TeamController.logo_url(@current_team, :fit)}
           class="team-head-logo"
           alt="Team logo"
         />

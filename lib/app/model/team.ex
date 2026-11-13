@@ -49,6 +49,9 @@ defmodule App.Model.Team do
     field :new_d4h_access_key, TrimmedString, virtual: true, redact: true
     field :d4h_refresh_result, :string
     field :d4h_refreshed_at, :utc_datetime_usec
+    # When the logo saved from D4H last changed, or nil for none. Its URL carries it
+    # (Web.TeamController.logo_url/2), so a new logo shows at once. Set only by the refresh.
+    field :logo_at, :utc_datetime_usec
     # The sync every 10 minutes (#163). The state holds each D4H list's last total and
     # newest change, and how long syncs have been failing. App.Operation.SyncD4HChanges.
     field :d4h_synced_at, :utc_datetime_usec
@@ -463,4 +466,7 @@ defmodule App.Model.Team do
     path = logo_path(team_subdomain)
     if File.regular?(path), do: path
   end
+
+  def put_logo_at!(%Team{} = team, logo_at),
+    do: team |> change(logo_at: logo_at) |> Repo.update!()
 end

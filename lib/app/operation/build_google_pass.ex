@@ -196,7 +196,9 @@ defmodule App.Operation.BuildGooglePass do
   # Google loads images from URLs it can reach, so dev passes have none. The team logo
   # sits in the round spot beside the team name, and the photo in the banner under the
   # QR code, from the verify site. Always SAR Duty's verify host, even for an organization
-  # with its own, since Google holds the URL. A cancelled card's photo URL 404s.
+  # with its own, since Google holds the URL. A cancelled card's photo URL 404s. The logo
+  # URL changes with the logo, which changes the fingerprint, so a new logo reaches every
+  # pass on the next refresh and Google loads it fresh.
   defp put_images(object, _card, _status, %{images: false}), do: object
 
   defp put_images(object, card, status, _config) do
@@ -204,7 +206,7 @@ defmodule App.Operation.BuildGooglePass do
 
     object
     |> Map.put(:logo, %{
-      sourceUri: %{uri: Web.Endpoint.url() <> ~p"/teams/#{team}/logo"},
+      sourceUri: %{uri: Web.TeamController.logo_url(team)},
       contentDescription: localized("#{team.name} logo")
     })
     |> put_banner(card, status)

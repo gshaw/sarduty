@@ -153,6 +153,8 @@ it only if the key's member is on this team.
 process, **without a transaction** — a failure halfway leaves the earlier stages written:
 
 1. Team logo, saved to `$TEAM_LOGO_PATH/<subdomain>.png` (disk, not the database).
+   `teams.logo_at` moves only when the bytes change, and the logo's URL carries it
+   (`Web.TeamController.logo_url/2`), so a new logo shows at once.
 2. Members.
 3. Tags, copied to `tags` for templates (#162), and kept in memory to turn activity tag
    references into titles. The sync saves the list each time it fetches it for

@@ -68,7 +68,7 @@ defmodule Web.Org.TeamLive do
     </.breadcrumbs>
     <div class="media mb-6">
       <img
-        src={~p"/teams/#{@team}/logo?shape=square"}
+        src={Web.TeamController.logo_url(@team, :square)}
         width="48"
         height="48"
         class="size-12 rounded"

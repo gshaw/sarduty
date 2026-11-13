@@ -143,7 +143,7 @@ defmodule Web.AdminDashboardLive do
         <div class="media">
           <img
             id={"team-#{team.id}-logo"}
-            src={~p"/teams/#{team}/logo?shape=square"}
+            src={Web.TeamController.logo_url(team, :square)}
             width="32"
             height="32"
             class="size-8 rounded"

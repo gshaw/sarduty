@@ -199,19 +199,32 @@ defmodule App.Operation.RefreshD4HData do
   end
 
   defp save_team_logo(d4h, team) do
-    logo_path = Team.logo_path(team.subdomain)
-
     case D4H.fetch_team_image(d4h) do
-      {:ok, data, _filename} ->
-        logo_path |> Path.dirname() |> File.mkdir_p!()
-        File.write!(logo_path, data)
-
-      # The team removed its image in D4H, so drop the one saved before.
-      :none ->
-        File.rm(logo_path)
-
-      {:error, response} ->
-        raise D4H.Error, response
+      {:error, response} -> raise D4H.Error, response
+      image -> save_logo(team, image, DateTime.utc_now())
     end
+  end
+
+  @doc """
+  Saves the team's logo from D4H's answer, `{:ok, bytes, filename}` or `:none`. Moves
+  `logo_at` only when the saved bytes change, so the logo's URL stays put until then. A
+  team with a logo from before `logo_at` gets one on its first refresh.
+  """
+  def save_logo(%Team{} = team, {:ok, bytes, _filename}, now) do
+    path = Team.logo_path(team.subdomain)
+
+    if team.logo_at == nil or File.read(path) != {:ok, bytes} do
+      path |> Path.dirname() |> File.mkdir_p!()
+      File.write!(path, bytes)
+      Team.put_logo_at!(team, now)
+    else
+      team
+    end
+  end
+
+  # The team removed its image in D4H, so drop the one saved before.
+  def save_logo(%Team{} = team, :none, _now) do
+    _ignored = team.subdomain |> Team.logo_path() |> File.rm()
+    if team.logo_at, do: Team.put_logo_at!(team, nil), else: team
   end
 end

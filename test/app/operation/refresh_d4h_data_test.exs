@@ -3,10 +3,50 @@ defmodule App.Operation.RefreshD4HDataTest do
 
   import App.DataFixtures
 
+  alias App.Model.Team
   alias App.Operation.RefreshD4HData
 
   test "a team without a key isn't refreshed" do
     assert RefreshD4HData.call(team_fixture()) == {:error, :no_key}
+  end
+
+  describe "save_logo/3" do
+    setup do
+      team = team_fixture()
+      on_exit(fn -> team.subdomain |> Team.logo_path() |> File.rm() end)
+      %{team: team}
+    end
+
+    test "moves logo_at only when the bytes change", %{team: team} do
+      first = ~U[2026-11-13 10:00:00.000000Z]
+      later = ~U[2026-11-14 10:00:00.000000Z]
+
+      team = RefreshD4HData.save_logo(team, {:ok, "logo one", "logo.png"}, first)
+      assert team.logo_at == first
+      assert team.subdomain |> Team.logo_file() |> File.read!() == "logo one"
+
+      team = RefreshD4HData.save_logo(team, {:ok, "logo one", "logo.png"}, later)
+      assert Repo.reload!(team).logo_at == first
+
+      team = RefreshD4HData.save_logo(team, {:ok, "logo two", "logo.png"}, later)
+      assert Repo.reload!(team).logo_at == later
+    end
+
+    test "gives a logo saved before logo_at its first one", %{team: team} do
+      team_logo_fixture(team, "old logo")
+      now = ~U[2026-11-13 10:00:00.000000Z]
+
+      assert RefreshD4HData.save_logo(team, {:ok, "old logo", "logo.png"}, now).logo_at == now
+    end
+
+    test "a logo removed in D4H removes the file and clears logo_at", %{team: team} do
+      team = RefreshD4HData.save_logo(team, {:ok, "logo", "logo.png"}, DateTime.utc_now())
+
+      team = RefreshD4HData.save_logo(team, :none, DateTime.utc_now())
+
+      assert Repo.reload!(team).logo_at == nil
+      assert Team.logo_file(team.subdomain) == nil
+    end
   end
 
   test "a key D4H rejects comes back as an error for a person to fix" do

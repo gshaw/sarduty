@@ -78,7 +78,7 @@ defmodule Web.Admin.TeamLive do
     <.heading_row>
       <div class="media">
         <img
-          src={~p"/teams/#{@team}/logo?shape=square"}
+          src={Web.TeamController.logo_url(@team, :square)}
           width="48"
           height="48"
           class="size-12 rounded"
