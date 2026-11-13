@@ -25,7 +25,10 @@ defmodule Web.Settings.FieldsLive do
         page_title: "Team settings · Fields",
         service: D4H.service_name(team),
         can_change: Team.d4h_can?(team, :custom_fields),
-        organization_name: team.organization && team.organization.short_name
+        organization_name: team.organization && team.organization.short_name,
+        # A logo beside each owner's heading, so its fields are told apart; none, no picture.
+        team_logo: Team.logo_file(team.subdomain) && ~p"/teams/#{team}/logo?shape=square",
+        organization_logo: organization_logo(team.organization)
       )
       |> assign_fields(team)
 
@@ -35,6 +38,11 @@ defmodule Web.Settings.FieldsLive do
   def handle_params(params, _uri, socket) do
     {:noreply, assign(socket, :kind, kind(params["kind"], socket.assigns.counts))}
   end
+
+  defp organization_logo(%{logo: logo} = organization) when is_binary(logo),
+    do: ~p"/orgs/#{organization}/logo?#{[v: DateTime.to_unix(organization.updated_at)]}"
+
+  defp organization_logo(_none), do: nil
 
   defp assign_fields(socket, team) do
     fields = CustomField.get_all_with_archived(team.id)
@@ -82,26 +90,19 @@ defmodule Web.Settings.FieldsLive do
           <.a navigate={~p"/teams/#{@current_team}/settings/access-key"}>Change the access key</.a>
         </p>
       </div>
-      <:action :if={@can_change}>
-        <.button
-          :if={@own_count > 1}
-          id="field-order"
-          navigate={~p"/teams/#{@current_team}/settings/fields/order?kind=#{@kind}"}
-        >
-          Change order
-        </.button>
-        <.button
-          id="field-add"
-          variant={:success}
-          navigate={~p"/teams/#{@current_team}/settings/fields/new?kind=#{@kind || "incident"}"}
-        >
-          Add field
-        </.button>
-      </:action>
     </.heading_row>
 
     <.empty_state :if={@counts == []} id="no-fields" title="No fields yet" class="mt-8">
       Your team and organization have added no fields to records.
+      <:action :if={@can_change}>
+        <.button
+          id="field-add"
+          variant={:success}
+          navigate={~p"/teams/#{@current_team}/settings/fields/new?kind=incident"}
+        >
+          Add field
+        </.button>
+      </:action>
     </.empty_state>
 
     <div :if={@counts != []} class="mt-8">
@@ -118,7 +119,8 @@ defmodule Web.Settings.FieldsLive do
       </.stat_switch>
     </div>
 
-    <section :if={@kind} id={"fields-#{@kind}"} class="mt-6">
+    <%!-- A reader's width, so each row's chevron sits by its words. --%>
+    <section :if={@kind} id={"fields-#{@kind}"} class="mt-6 max-w-3xl">
       <p :if={@kind == "member"} id="member-fields-who" class="measure mb-6">
         Team admins see every member's answers. A member sees their own when the field allows it.
       </p>
@@ -133,7 +135,26 @@ defmodule Web.Settings.FieldsLive do
         path={@path}
         team_name={@current_team.name}
         organization_name={@organization_name}
-      />
+        team_logo={@team_logo}
+        organization_logo={@organization_logo}
+      >
+        <:team_action :if={@can_change}>
+          <.button
+            :if={@own_count > 1}
+            id="field-order"
+            navigate={~p"/teams/#{@current_team}/settings/fields/order?kind=#{@kind}"}
+          >
+            Change order
+          </.button>
+          <.button
+            id="field-add"
+            variant={:success}
+            navigate={~p"/teams/#{@current_team}/settings/fields/new?kind=#{@kind}"}
+          >
+            Add field
+          </.button>
+        </:team_action>
+      </.field_list>
 
       <details :if={@archived_fields != []} id="archived-fields" class="mt-8">
         <summary class="subheading">
