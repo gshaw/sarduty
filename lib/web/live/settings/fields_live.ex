@@ -39,8 +39,8 @@ defmodule Web.Settings.FieldsLive do
     {:noreply, assign(socket, :kind, kind(params["kind"], socket.assigns.counts))}
   end
 
-  defp organization_logo(%{logo: logo} = organization) when is_binary(logo),
-    do: ~p"/orgs/#{organization}/logo?#{[v: DateTime.to_unix(organization.updated_at)]}"
+  defp organization_logo(%{logo_at: %DateTime{} = logo_at} = organization),
+    do: ~p"/orgs/#{organization}/logo?#{[v: DateTime.to_unix(logo_at)]}"
 
   defp organization_logo(_none), do: nil
 
