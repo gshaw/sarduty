@@ -82,7 +82,7 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
     team = %{ctx.team | d4h_refreshed_at: nil}
 
     RecordD4HChanges.recording(team, @now, fn ->
-      UpsertMembers.mark_retired(team.id, MapSet.new(), @now)
+      UpsertMembers.mark_retired(team, MapSet.new(), @now)
     end)
 
     assert Repo.all(D4HChange) == []
@@ -90,13 +90,14 @@ defmodule App.Operation.RecordD4HChangesRecordingTest do
 
   test "records a member D4H stopped listing as having left", ctx do
     RecordD4HChanges.recording(ctx.team, @now, fn ->
-      UpsertMembers.mark_retired(ctx.team.id, MapSet.new(), DateTime.truncate(@now, :second))
+      UpsertMembers.mark_retired(ctx.team, MapSet.new(), DateTime.truncate(@now, :second))
     end)
 
     assert [change] = Repo.all(D4HChange)
     assert change.record_kind == :member
     assert change.fields == ["left_at"]
-    assert change.new_value == %{"left_at" => "2026-10-09T17:10:00Z"}
+    # The day they vanished, Oct 9 on the team's clock, as every leave date is kept.
+    assert change.new_value == %{"left_at" => "2026-10-09T07:00:00Z"}
   end
 
   test "records removed group memberships with the group's name", ctx do

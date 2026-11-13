@@ -194,8 +194,7 @@ defmodule Web.MemberStandingLive do
         <%!-- The answer, not an intro: body colour, not .lead's muted grey. --%>
         <p id="standing-now" class="text-lg font-semibold mb-4">{Standing.text(@standing)}</p>
         <p :if={@standing == :retired and @member.left_at} id="retired-on">
-          <%!-- D4H keeps the day at 00:00 UTC; in Vancouver time it reads a day early. --%>
-          {@member.name} retired on {Service.Format.date_long(DateTime.to_date(@member.left_at))}.
+          {@member.name} retired on {Service.Format.date_long(@member.left_at, @member.team.timezone)}.
         </p>
         <p :if={@standing == :retiring} id="retiring-items">
           {held_text(@member, @equipment, @service)}

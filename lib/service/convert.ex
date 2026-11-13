@@ -124,6 +124,14 @@ defmodule Service.Convert do
     end
   end
 
+  @doc """
+  The start of `date` on the wall clock in `timezone`, in UTC: how SAR Duty stores a day
+  that D4H keeps without a time, such as a member's join date (docs/d4h-sync.md). nil
+  for nil.
+  """
+  def day_start(nil, _timezone), do: nil
+  def day_start(%Date{} = date, timezone), do: local_to_utc(date, ~T[00:00:00], timezone)
+
   @doc "A UTC time as `{date, time}` on the wall clock in `timezone`."
   def utc_to_local(%DateTime{} = datetime, timezone) do
     local = DateTime.shift_zone!(datetime, timezone)

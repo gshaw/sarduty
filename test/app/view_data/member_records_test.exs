@@ -39,19 +39,28 @@ defmodule App.ViewData.MemberRecordsTest do
       assert MemberRecords.qualification_rows([], @now) == []
     end
 
-    test "expiring holds an award ending on the window's last second, and one ending now is expired" do
+    # An award is good through its expiry day (#1058): it counts until a day after its
+    # ends_at, the start of that day.
+    test "expiring holds an award expiring 60 days on, and one whose day started is good today" do
       sixty = DateTime.add(@now, 60, :day)
 
       awards = [
         award(1, "At 60", sixty),
         award(2, "Past 60", DateTime.add(sixty, 1)),
-        award(3, "Now", @now)
+        award(3, "Today", @now),
+        award(4, "Yesterday", DateTime.add(@now, -1, :day))
       ]
 
       rows = MemberRecords.qualification_rows(awards, @now)
 
-      assert titles(rows) == [expiring: "At 60", current: "Past 60", expired: "Now"]
-      assert Enum.map(rows, & &1.days_left) == [60, 61, 0]
+      assert titles(rows) == [
+               expiring: "Today",
+               expiring: "At 60",
+               current: "Past 60",
+               expired: "Yesterday"
+             ]
+
+      assert Enum.map(rows, & &1.days_left) == [0, 60, 61, 0]
     end
 
     test "a renewal is one row, carrying the awards it replaced" do

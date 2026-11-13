@@ -14,6 +14,7 @@ defmodule App.Operation.RefreshD4HData.UpsertQualificationAwards do
 
   def call(d4h, team, progress) when is_map(d4h) when is_map(team) do
     context = %{
+      timezone: team.timezone,
       d4h_member_index: build_d4h_member_index(team.id),
       d4h_qualification_index: build_d4h_qualification_index(team.id)
     }
@@ -67,19 +68,19 @@ defmodule App.Operation.RefreshD4HData.UpsertQualificationAwards do
   defp upsert_award(context, d4h_award) do
     member_id = context.d4h_member_index[d4h_award.d4h_member_id]
     qualification_id = context.d4h_qualification_index[d4h_award.d4h_qualification_id]
-    upsert_award(member_id, qualification_id, d4h_award)
+    upsert_award(member_id, qualification_id, d4h_award, context.timezone)
   end
 
-  defp upsert_award(nil, _qualification_id, _d4h_award), do: :skip
-  defp upsert_award(_member_id, nil, _d4h_award), do: :skip
+  defp upsert_award(nil, _qualification_id, _d4h_award, _timezone), do: :skip
+  defp upsert_award(_member_id, nil, _d4h_award, _timezone), do: :skip
 
-  defp upsert_award(member_id, qualification_id, d4h_award) do
+  defp upsert_award(member_id, qualification_id, d4h_award, timezone) do
     params = %{
       member_id: member_id,
       qualification_id: qualification_id,
       d4h_award_id: d4h_award.d4h_award_id,
-      starts_at: d4h_award.starts_at,
-      ends_at: d4h_award.ends_at
+      starts_at: Service.Convert.day_start(d4h_award.starts_on, timezone),
+      ends_at: Service.Convert.day_start(d4h_award.ends_on, timezone)
     }
 
     award =

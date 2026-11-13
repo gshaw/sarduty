@@ -41,7 +41,8 @@ defmodule Web.MemberFormLiveTest do
     assert body["name"] == "Casey New"
     assert body["email"] == "casey@example.com"
     assert body["permission"] == 2
-    assert body["startsAt"] == "2026-01-15T08:00:00Z"
+    # The day, as D4H keeps it (#1058).
+    assert body["startsAt"] == "2026-01-15T00:00:00Z"
 
     change_set = Repo.get_by!(ChangeSet, team_id: team.id, source: :edit)
 

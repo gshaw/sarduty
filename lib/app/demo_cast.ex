@@ -19,6 +19,7 @@ defmodule App.DemoCast do
   answered Coast Range's cast (`customFieldValues`), since its cast never made them.
   """
 
+  alias App.Adapter.D4H.Parse
   alias App.CoastRange
   alias App.Model.Activity
   alias App.Model.CustomField
@@ -229,8 +230,8 @@ defmodule App.DemoCast do
         "phone" => %{"mobile" => member.phone},
         "deprecatedAddress" => member.address,
         "status" => member.d4h_status,
-        "startsAt" => iso(member.joined_at),
-        "endsAt" => iso(member.left_at),
+        "startsAt" => Parse.day_text(member.joined_at),
+        "endsAt" => Parse.day_text(member.left_at),
         "permission" => member.d4h_permission
       }
       |> Map.reject(fn {_field, value} -> is_nil(value) end)
@@ -262,7 +263,10 @@ defmodule App.DemoCast do
   end
 
   defp rows({:award, _key, award, links}) do
-    body = %{"startsAt" => iso(award.starts_at), "endsAt" => iso(award.ends_at)}
+    body = %{
+      "startsAt" => Parse.day_text(award.starts_at),
+      "endsAt" => Parse.day_text(award.ends_at)
+    }
 
     [
       ref_row("member-qualification-awards", body,

@@ -71,13 +71,25 @@ defmodule App.Operation.BuildGroupRulePreviewTest do
     defp expiry_in(amount, unit),
       do: @now |> DateTime.add(amount, unit) |> BuildGroupRulePreview.expiry(@now)
 
-    test "past is expired, within 60 days counts the days left, later is nothing" do
+    # `ends_at` is the start of the expiry day, and it is good through that day (#1058).
+    test "past its day is expired, within 60 days counts the days to it, later is nothing" do
       assert BuildGroupRulePreview.expiry(nil, @now) == nil
-      assert expiry_in(-1, :second) == :expired
-      assert expiry_in(0, :second) == :expired
+      assert expiry_in(-1, :day) == :expired
+      assert expiry_in(-25, :hour) == :expired
+      assert expiry_in(-23, :hour) == 0
+      assert expiry_in(0, :second) == 0
       assert expiry_in(3, :hour) == 1
       assert expiry_in(60, :day) == 60
       assert expiry_in(61, :day) == nil
+    end
+
+    test "a Pacific award expiring Nov 12, kept as that day's start, is good all Nov 12" do
+      ends_at = Service.Convert.day_start(~D[2031-11-12], "America/Vancouver")
+
+      # 11:59 pm on Nov 11, then 11:59 pm on Nov 12, then midnight starting Nov 13.
+      assert BuildGroupRulePreview.expiry(ends_at, DateTime.add(ends_at, -1)) == 1
+      assert BuildGroupRulePreview.expiry(ends_at, DateTime.add(ends_at, 86_399)) == 0
+      assert BuildGroupRulePreview.expiry(ends_at, DateTime.add(ends_at, 1, :day)) == :expired
     end
   end
 

@@ -19,13 +19,15 @@ defmodule App.Operation.BuildGroupRulePreview do
 
   @doc """
   Pure. The app's one expiry rule, for awards and equipment alike: whether something
-  ending at `ends_at` has expired by `now` (`:expired`), ends within #{@expiring_days}
-  days (the days left), or neither (nil, also for no end).
+  expiring on the day `ends_at` starts has expired by `now` (`:expired`), expires within
+  #{@expiring_days} days (the days until its expiry day, 0 on the day itself), or neither
+  (nil, also for no end). It is good through its expiry day
+  (`MemberQualificationAward.good_until/1`).
   """
   def expiry(nil, _now), do: nil
 
   def expiry(ends_at, now) do
-    days = Service.Convert.days_until(ends_at, now)
+    days = days_left(ends_at, now)
 
     cond do
       MemberQualificationAward.expired?(%{ends_at: ends_at}, now) -> :expired
@@ -33,6 +35,13 @@ defmodule App.Operation.BuildGroupRulePreview do
       true -> nil
     end
   end
+
+  @doc """
+  Pure. Days until the expiry day that `ends_at` starts, as the date beside it reads: 1
+  the day before, 0 on the day itself, while it still counts. Format it with
+  `Service.Format.days_left/1`.
+  """
+  def days_left(ends_at, now), do: max(Service.Convert.days_until(ends_at, now), 0)
 
   # A group's rules are a list, and a member must meet every one (#334). An In rule is met
   # by being in any of its groups or holding any of its endorsements, and a Not in rule by
@@ -512,7 +521,7 @@ defmodule App.Operation.BuildGroupRulePreview do
   defp expiring_row(award, describe, now) do
     %{
       reason: describe.({:expires, award.d4h_qualification_id, award.ends_at}),
-      days: Service.Convert.days_until(award.ends_at, now)
+      days: days_left(award.ends_at, now)
     }
   end
 

@@ -140,7 +140,7 @@ defmodule App.SilverBasin do
       phone: phone,
       address: "#{ref_id} Example Road",
       position: position,
-      joined_at: DateTime.add(now, -days, :day),
+      joined_at: now |> Service.Period.today(@timezone) |> Date.add(-days) |> day_start(),
       d4h_permission: if(name == "Jamie Sato", do: 0, else: 3),
       d4h_status: "OPERATIONAL",
       custom_values: %{}
@@ -159,7 +159,7 @@ defmodule App.SilverBasin do
       for {{name, _, _, days, _}, i} <- Enum.with_index(@people, 1) do
         row = %MemberQualificationAward{
           d4h_award_id: 962_000_100 + i,
-          starts_at: today |> Date.add(60 - days) |> noon()
+          starts_at: today |> Date.add(60 - days) |> day_start()
         }
 
         {:award, {9_620_001, name}, row,
@@ -286,6 +286,7 @@ defmodule App.SilverBasin do
      member_id: {:member, name}, activity_id: {:activity, activity.d4h_activity_id}}
   end
 
-  defp noon(date), do: DateTime.new!(date, ~T[12:00:00], "Etc/UTC")
+  # A day D4H keeps without a time, as the copy stores it (docs/d4h-sync.md).
+  defp day_start(date), do: Service.Convert.day_start(date, @timezone)
   defp usec(datetime), do: %{datetime | microsecond: {0, 6}}
 end

@@ -743,7 +743,7 @@ defmodule Web.TeamDashboardLive do
             else: ~p"/teams/#{@team}/me"
         }
         class="font-semibold"
-      >Your {@item.award.qualification.title} expires in {Format.days(@item.days)}</.a>
+      >Your {@item.award.qualification.title} {expires_in(@item.days)}</.a>
       <span :if={@certificates?} class="hint block">Renewed it? Add the new certificate.</span>
       <span :if={!@certificates?} class="hint block">
         Renewed it? Give the new certificate to a team admin.
@@ -999,4 +999,8 @@ defmodule Web.TeamDashboardLive do
   end
 
   defp refreshing?(view_data), do: Team.refresh_state(view_data.refresh_result) == :refreshing
+
+  # Good through its expiry day (#1058), so 0 days is today.
+  defp expires_in(0), do: "expires today"
+  defp expires_in(days), do: "expires in #{Format.days(days)}"
 end

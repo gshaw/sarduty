@@ -20,8 +20,8 @@ defmodule App.Adapter.D4H.Member do
             address: nil,
             primary_emergency_contact: nil,
             secondary_emergency_contact: nil,
-            joined_at: nil,
-            left_at: nil,
+            joined_on: nil,
+            left_on: nil,
             permission: nil,
             status: nil,
             custom_values: %{}
@@ -38,8 +38,8 @@ defmodule App.Adapter.D4H.Member do
       address: record["deprecatedAddress"],
       primary_emergency_contact: contact(record["primaryEmergencyContact"]),
       secondary_emergency_contact: contact(record["secondaryEmergencyContact"]),
-      joined_at: Parse.optional_datetime(record["startsAt"]),
-      left_at: Parse.optional_datetime(record["endsAt"]),
+      joined_on: Parse.optional_day(record["startsAt"]),
+      left_on: Parse.optional_day(record["endsAt"]),
       permission: record["permission"],
       status: record["status"],
       custom_values: Parse.custom_values(record["customFieldValues"])

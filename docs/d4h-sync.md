@@ -376,3 +376,23 @@ back in is `bin/prod console` ([production.md](production.md)).
 - Other calls read the body without checking the status. A bad key there surfaces as a
   `MatchError` in the refresh's error. #33 covers them.
 - `Parse.datetime/1` expects D4H timestamps in UTC and raises on any other offset.
+
+## Days without a time
+
+D4H keeps four dates as a bare day at 00:00 UTC, whatever it is sent: a member's join
+and leave dates (`startsAt`, `endsAt`) and an award's start and end. Read as a time,
+that is the evening before on a Canadian clock (#1058). The adapter hands them over as
+`Date`s (`Parse.optional_day/1`), and the copy stores each as the start of that day on
+the team's clock (`Service.Convert.day_start/2`): 07:00 or 08:00 UTC in Vancouver. So
+`joined_at`, `left_at`, and an award's `starts_at` and `ends_at` work like every other
+time: show them in the team's zone, and compare them with `now`. A member stops counting
+at midnight starting their leave day. Writes send the day back at 00:00 UTC
+(`Parse.day_text/1`). D4H keeps an item's expiry as local midnight already.
+
+- The database holds 08:00 UTC where D4H's API says 00:00 UTC. Same day.
+- An award or item is good through its expiry day:
+  `MemberQualificationAward.good_until/1` is its `ends_at` plus 24 hours.
+- A new D4H field that is a day needs the same: a `Date` from the adapter, and
+  `day_start/2` in its upsert.
+- If a team's time zone changes (Refresh in team settings), the next refresh rewrites
+  these dates, with a history row for each.

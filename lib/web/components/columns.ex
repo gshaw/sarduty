@@ -219,7 +219,7 @@ defmodule Web.Components.Columns do
     ~H"""
     <span class="with-badge">
       <span>{if @expiry == :expired, do: "Expired "}{date(@value, @timezone)}</span>
-      <.badge :if={is_integer(@expiry)} kind={:warning}>{Format.days(@expiry)}</.badge>
+      <.badge :if={is_integer(@expiry)} kind={:warning}>{Format.days_left(@expiry)}</.badge>
     </span>
     """
   end
@@ -281,10 +281,11 @@ defmodule Web.Components.Columns do
 
   @doc ~s(Expires' fit: "Expired" with a date, and a date with the most days left that has a badge.)
   def expires_fit(timezone) do
+    # Good through its day, so expired from the next.
     for day <- widest_days(),
-        ends = DateTime.new!(day, ~T[12:00:00], timezone),
+        ends = Service.Convert.day_start(day, timezone),
         now <- [
-          DateTime.add(ends, 1, :day),
+          DateTime.add(ends, 2, :day),
           DateTime.add(ends, -BuildGroupRulePreview.expiring_days(), :day)
         ] do
       expires_cell(%{__changed__: nil, value: ends, now: now, timezone: timezone})

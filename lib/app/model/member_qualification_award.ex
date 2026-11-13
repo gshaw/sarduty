@@ -55,23 +55,37 @@ defmodule App.Model.MemberQualificationAward do
   defp active_only(query, now), do: where(query, ^active_dynamic(now))
 
   @doc "active?/2 in SQL, on the query's first binding."
-  def active_dynamic(now),
-    do:
-      dynamic(
-        [a],
-        (is_nil(a.starts_at) or a.starts_at <= ^now) and (is_nil(a.ends_at) or a.ends_at > ^now)
-      )
+  def active_dynamic(now) do
+    ended = ended_by(now)
+
+    dynamic(
+      [a],
+      (is_nil(a.starts_at) or a.starts_at <= ^now) and (is_nil(a.ends_at) or a.ends_at > ^ended)
+    )
+  end
 
   defp current_members_only(query, now),
     do: where(query, ^Member.current_dynamic(now, :member))
 
   def active?(%{starts_at: starts_at, ends_at: ends_at}, now) do
     (is_nil(starts_at) or not DateTime.after?(starts_at, now)) and
-      (is_nil(ends_at) or DateTime.after?(ends_at, now))
+      (is_nil(ends_at) or ends_at |> good_until() |> DateTime.after?(now))
   end
 
   def expired?(%{ends_at: ends_at}, now),
-    do: not is_nil(ends_at) and not DateTime.after?(ends_at, now)
+    do: not is_nil(ends_at) and not (ends_at |> good_until() |> DateTime.after?(now))
+
+  @doc """
+  When something that expires on the day `ends_at` starts stops counting: it is good
+  through its expiry day (#1058), so a day later. An award's or an item's expiry is a day
+  D4H keeps, stored as the start of that day on the team's clock (docs/d4h-sync.md). A
+  day is 24 hours here, an hour out on the two days the clocks change. nil for nil.
+  """
+  def good_until(nil), do: nil
+  def good_until(%DateTime{} = ends_at), do: DateTime.add(ends_at, 1, :day)
+
+  # Whatever ends at or before this has stopped counting at `now`: good_until/1 in SQL.
+  defp ended_by(now), do: now |> DateTime.add(-1, :day) |> DateTime.truncate(:second)
 
   @doc """
   A qualification's awards as its members, `{active, expired}`, one award each: a member
@@ -92,9 +106,9 @@ defmodule App.Model.MemberQualificationAward do
   end
 
   @doc """
-  Each current member's latest award of a qualification, when it ends between `now` and
-  `until`, soonest first. A renewal pushes the latest end past `until`, and an award with
-  no end never expires, so either takes the member off the list.
+  Each current member's latest award of a qualification, when it still counts at `now`
+  and ends before `until`, soonest first. A renewal pushes the latest end past `until`,
+  and an award with no end never expires, so either takes the member off the list.
   """
   def expiring(team_id, now, until) do
     # Whole seconds, as stored, so text comparisons in SQLite line up.
@@ -103,7 +117,7 @@ defmodule App.Model.MemberQualificationAward do
 
     team_id
     |> current_members_awards(now)
-    |> latest_ending_between(now, until)
+    |> latest_ending_between(ended_by(now), until)
     |> select_soonest_first()
     |> Repo.all()
     |> Enum.map(&Map.update!(&1, :ends_at, fn ends_at -> to_datetime(ends_at) end))
@@ -123,11 +137,11 @@ defmodule App.Model.MemberQualificationAward do
     |> order_by([aw, m], asc: max(aw.ends_at), asc: m.name)
   end
 
-  defp latest_ending_between(query, now, until) do
+  defp latest_ending_between(query, ended, until) do
     query
     |> group_by([aw, m, q], [m.id, q.id])
     |> having([aw], fragment("count(?) = count(?)", aw.id, aw.ends_at))
-    |> having([aw], max(aw.ends_at) >= ^now and max(aw.ends_at) < ^until)
+    |> having([aw], max(aw.ends_at) > ^ended and max(aw.ends_at) < ^until)
   end
 
   defp current_members_awards(team_id, now) do

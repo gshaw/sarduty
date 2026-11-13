@@ -991,9 +991,9 @@ defmodule App.Adapter.D4H do
     do:
       write(context, :patch, "/members/#{d4h_member_id}", member_json(attrs), &D4H.Member.build/1)
 
-  @doc "Marks a member as left on `left_at`, as D4H's retire does."
+  @doc "Marks a member as left on the day `left_at` starts, as D4H's retire does."
   def retire_member(context, d4h_member_id, left_at) do
-    json = %{date: left_at, direction: "RETIRE"}
+    json = %{date: D4H.Parse.day_text(left_at), direction: "RETIRE"}
     write(context, :patch, "/members/#{d4h_member_id}/retire", json, &D4H.Member.build/1)
   end
 
@@ -1130,13 +1130,16 @@ defmodule App.Adapter.D4H do
     write(context, :delete, url, nil, fn _body -> d4h_qualification_id end)
   end
 
-  @doc "Awards a qualification from `starts_at` to `ends_at`, nil for no expiry."
+  @doc """
+  Awards a qualification from the day `starts_at` starts to the day `ends_at` starts, nil
+  for no expiry.
+  """
   def award_qualification(context, d4h_qualification_id, d4h_member_id, starts_at, ends_at) do
     json = %{
       qualificationId: d4h_qualification_id,
       memberId: d4h_member_id,
-      startsAt: starts_at,
-      endsAt: ends_at
+      startsAt: D4H.Parse.day_text(starts_at),
+      endsAt: D4H.Parse.day_text(ends_at)
     }
 
     write(context, :post, "/member-qualification-awards", json, &D4H.QualificationAward.build/1)
@@ -1502,6 +1505,7 @@ defmodule App.Adapter.D4H do
   defp member_json(attrs) do
     attrs
     |> rename(@member_fields)
+    |> put_day("startsAt")
     |> then(fn json ->
       if Map.has_key?(attrs, "phone"),
         do: Map.put(json, "phone", %{mobile: attrs["phone"]}),
@@ -1510,6 +1514,10 @@ defmodule App.Adapter.D4H do
     |> put_contact(attrs, "primary_emergency_contact", "primaryEmergencyContact")
     |> put_contact(attrs, "secondary_emergency_contact", "secondaryEmergencyContact")
     |> put_custom_values(attrs)
+  end
+
+  defp put_day(json, key) do
+    if Map.has_key?(json, key), do: Map.update!(json, key, &D4H.Parse.day_text/1), else: json
   end
 
   # D4H merges the contact it gets with the one it has, so a cleared field goes as "".

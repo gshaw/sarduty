@@ -16,6 +16,12 @@ defmodule Service.ConvertTest do
     assert Convert.local_to_utc(~D[2026-11-01], ~T[01:30:00], @tz) == ~U[2026-11-01 08:30:00Z]
   end
 
+  test "a day starts at midnight on the team's clock, in winter and in summer" do
+    assert Convert.day_start(~D[2026-01-15], @tz) == ~U[2026-01-15 08:00:00Z]
+    assert Convert.day_start(~D[2026-07-15], @tz) == ~U[2026-07-15 07:00:00Z]
+    assert Convert.day_start(nil, @tz) == nil
+  end
+
   test "a UTC time reads back as the date and time on the team's clock" do
     assert Convert.utc_to_local(~U[2026-07-16 01:30:00Z], @tz) == {~D[2026-07-15], ~T[18:30:00]}
   end

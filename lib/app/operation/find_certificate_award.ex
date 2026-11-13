@@ -29,8 +29,8 @@ defmodule App.Operation.FindCertificateAward do
       {:ok,
        %{
          d4h_award_id: award.d4h_award_id,
-         starts_at: award.starts_at,
-         ends_at: award.ends_at,
+         starts_at: Service.Convert.day_start(award.starts_on, team.timezone),
+         ends_at: Service.Convert.day_start(award.ends_on, team.timezone),
          certificate?: documents != []
        }}
     else

@@ -418,7 +418,7 @@ defmodule Web.GroupLive do
         <:col :let={row} label="Why">
           {row.reason}
           <.badge :if={row[:days]} kind={:warning}>
-            {Service.Format.days(row.days)}
+            {Service.Format.days_left(row.days)}
           </.badge>
         </:col>
       </.table>
