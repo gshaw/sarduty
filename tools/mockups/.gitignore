@@ -2,8 +2,10 @@
 /app.css
 /fonts/
 __pycache__/
-# What a round makes from its sources.
+# What a round makes from its sources, if one is ever run in place.
 real/
 shots/
 review.html
+body.md
+posted.md
 /example/[0-9]*.html
