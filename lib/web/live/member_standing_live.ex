@@ -269,7 +269,8 @@ defmodule Web.MemberStandingLive do
     >
       <section id="standing">
         <h2 class="heading">Standing</h2>
-        <p id="standing-now" class="lead">{Standing.text(@standing)}</p>
+        <%!-- The answer, not an intro: body colour, not .lead's muted grey. --%>
+        <p id="standing-now" class="text-lg font-semibold mb-4">{Standing.text(@standing)}</p>
         <p :if={@standing == :retired and @member.left_at} id="retired-on">
           {@member.name} retired on {Service.Format.date_long(@member.left_at, @member.team.timezone)}.
         </p>
