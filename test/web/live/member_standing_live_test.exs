@@ -626,7 +626,7 @@ defmodule Web.MemberStandingLiveTest do
 
       # Written here at once, with no sync, so the tab says it.
       assert has_element?(lv, "#standing-now", "Retired")
-      date = Service.Format.date_long(today(team))
+      date = team |> today() |> Service.Format.date_long()
       assert has_element?(lv, "#retired-on", "Casey Dhillon retired on #{date}.")
     end
 
