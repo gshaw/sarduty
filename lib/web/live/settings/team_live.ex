@@ -36,7 +36,7 @@ defmodule Web.Settings.TeamLive do
         <li :if={@organization} id="settings-organization" class="py-2">
           <div class="media">
             <img
-              :if={@organization.logo}
+              :if={@organization.logo_at}
               src={Web.OrganizationController.logo_url(@organization)}
               width="32"
               height="32"

@@ -52,7 +52,7 @@ defmodule Web.Org.SettingsLive do
         errors={for {message, _opts} <- @form[:logo].errors, do: message}
       >
         PNG or JPEG, square or wide. Shown on its verify page, never on a team's ID card.
-        <:current :if={@current_organization.logo}>
+        <:current :if={@current_organization.logo_at}>
           <img
             id="organization-logo"
             src={Web.OrganizationController.logo_url(@current_organization)}
@@ -63,7 +63,7 @@ defmodule Web.Org.SettingsLive do
       </.file_drop>
 
       <.form_actions>
-        <.button variant={:success}>Save settings</.button>
+        <.button variant={:success} phx-disable-with="Saving…">Save settings</.button>
       </.form_actions>
     </.form>
 

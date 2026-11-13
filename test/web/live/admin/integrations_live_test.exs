@@ -4,6 +4,9 @@ defmodule Web.Admin.IntegrationsLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.FileStoreOff
+  alias App.Model.Event
+
   setup %{conn: conn} do
     %{user: user} = user_with_team_fixture()
     admin = make_admin(user)
@@ -51,11 +54,24 @@ defmodule Web.Admin.IntegrationsLiveTest do
   test "a service this server doesn't have says so, and offers no test", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/admin/integrations")
 
-    # The test server has no Honeybadger reports and no Wallet keys.
-    for key <- ["errors", "apple", "google"] do
+    # The test server has no Honeybadger reports, no Wallet keys, and files on disk.
+    for key <- ["errors", "apple", "google", "files"] do
       assert has_element?(lv, "#integration-#{key}-last", "Not set up here")
       refute has_element?(lv, "#test-#{key}")
     end
+  end
+
+  test "Files says how long its last round trip took", %{conn: conn} do
+    FileStoreOff.use_s3()
+
+    :integration_tested
+    |> Event.record!(data: %{service: "files", outcome: "running"})
+    |> Event.put_outcome!("works", 412)
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/integrations")
+    assert has_element?(lv, "#integration-files", "Amazon S3, sarduty-files-test")
+    assert has_element?(lv, "#integration-files-last-took", "412 ms")
+    assert has_element?(lv, "#test-files", "Check files")
   end
 
   test "a failed Wallet test goes back to the page with its reason", %{conn: conn} do

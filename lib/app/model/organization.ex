@@ -1,6 +1,7 @@
 defmodule App.Model.Organization do
   use App, :model
 
+  alias App.Adapter.FileStore
   alias App.Field.TrimmedString
   alias App.Model.Activity
   alias App.Model.Organization
@@ -17,8 +18,11 @@ defmodule App.Model.Organization do
     field :short_name, TrimmedString
     field :slug, :string
     field :website, TrimmedString
-    # A PNG, already sized by Service.Image.png/2 when it was uploaded.
+    # The logo is a PNG in the file store, at logo_key/1, sized by Service.Image.png/2
+    # when it was uploaded (#1067). logo_at is when, or nil for none. The logo column is
+    # the old copy, read only by App.Ops.CopyOrganizationLogos; a later PR drops it.
     field :logo, :binary, redact: true
+    field :logo_at, :utc_datetime_usec
     # The D4H tags its teams count as primary and secondary hours (#289). Blank means
     # "Primary Hours" and "Secondary Hours"; see App.Model.Activity.hours_tags/1.
     field :primary_hours_tag, TrimmedString
@@ -139,8 +143,12 @@ defmodule App.Model.Organization do
   def get!(id), do: Repo.get!(Organization, id)
   def get_by_slug(slug), do: Repo.get_by(Organization, slug: slug)
 
-  def put_logo!(%Organization{} = record, png),
-    do: record |> change(logo: png) |> Repo.update!()
+  @doc "Where its logo is in the file store."
+  def logo_key(%Organization{id: id}), do: FileStore.key(:orgs, id, :logo, nil, "logo.png")
+
+  @doc "Marks the logo saved at logo_key/1 at `now`."
+  def put_logo_at!(%Organization{} = record, now),
+    do: record |> change(logo_at: now) |> Repo.update!()
 
   @doc "The ids of the organization's teams."
   def team_ids(%Organization{id: id}) do

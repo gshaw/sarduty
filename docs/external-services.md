@@ -210,6 +210,19 @@ encrypts it at rest; reading it takes the bucket token or the Cloudflare account
   password manager and fnox (`SARDUTY_BACKUP_AGE_IDENTITY`), and nothing decrypts a
   snapshot without it.
 
+## Amazon S3
+
+Files: organization logos today, photos next. The bucket is `sarduty-files` in Calgary,
+`ca-west-1`, with its own IAM user that reaches only that bucket. Layout, kinds, and
+lifecycle are in [files.md](files.md); the bucket and user are in the private
+`sarduty-ops` repo.
+
+- `FILES_BUCKET`, `FILES_ACCESS_KEY_ID`, and `FILES_SECRET_ACCESS_KEY` — Fly secrets,
+  from fnox `AWS_SARDUTY_FILES_*`. `FILES_REGION` defaults to `ca-west-1`. Without
+  them production has no file store: organization logos don't show, a new one isn't
+  saved, and Integrations says Files is not set up here. Dev uses `sarduty-files-dev`
+  when they're set, and `db/files/` when not.
+
 ## Healthchecks
 
 Both optional. See [d4h-sync.md](d4h-sync.md#monitoring).

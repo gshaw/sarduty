@@ -6,6 +6,7 @@ defmodule App.Operation.DeleteDemo do
   """
 
   alias App.Accounts.User
+  alias App.Adapter.FileStore
   alias App.Model.DemoTeam
   alias App.Model.Organization
   alias App.Model.Team
@@ -37,11 +38,15 @@ defmodule App.Operation.DeleteDemo do
     end
   end
 
-  # Its admins go with it.
+  # Its admins go with it, and its files, such as a logo a visitor added (#1067).
   defp delete_organization(nil), do: :ok
 
   defp delete_organization(id) do
-    if organization = Repo.get(Organization, id), do: Repo.delete!(organization)
+    if organization = Repo.get(Organization, id) do
+      FileStore.delete_all(:orgs, organization.id)
+      Repo.delete!(organization)
+    end
+
     :ok
   end
 

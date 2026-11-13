@@ -6,6 +6,7 @@ defmodule App.Operation.LoadImage do
   """
 
   alias App.Adapter.D4H
+  alias App.Adapter.FileStore
   alias App.Model.Member
   alias App.Model.Organization
   alias App.Model.Team
@@ -64,9 +65,41 @@ defmodule App.Operation.LoadImage do
     shape_or_default(bytes, &shape_logo(&1, shape), default_logo())
   end
 
-  @doc "The organization's logo, shaped like a team's. Expects one that has a logo."
-  def organization_logo(%Organization{logo: logo}, shape) when is_binary(logo),
-    do: shape!(logo, &shape_logo(&1, shape))
+  @doc """
+  The organization's logo from the file store, shaped like a team's, or nil when it has
+  none or the store can't give it.
+  """
+  def organization_logo(%Organization{logo_at: nil}, _shape), do: nil
+
+  def organization_logo(%Organization{} = organization, shape) do
+    case organization_logo_bytes(organization) do
+      {:ok, bytes} ->
+        shape!(bytes, &shape_logo(&1, shape))
+
+      {:error, reason} ->
+        Logger.warning("organization logo not read: #{inspect(reason)}")
+        nil
+    end
+  end
+
+  # Read from the file store once per logo, then from memory: the team dashboard and
+  # every form on an activity read it (#1067). Keyed by logo_at, so a new logo is read
+  # anew. A few organizations, each logo at most 480 pixels wide.
+  defp organization_logo_bytes(%Organization{id: id, logo_at: logo_at} = organization) do
+    cache_key = {__MODULE__, :organization_logo, id}
+
+    case :persistent_term.get(cache_key, nil) do
+      {^logo_at, bytes} -> {:ok, bytes}
+      _missing_or_old -> fetch_organization_logo(organization, cache_key)
+    end
+  end
+
+  defp fetch_organization_logo(organization, cache_key) do
+    with {:ok, bytes} <- organization |> Organization.logo_key() |> FileStore.get() do
+      :persistent_term.put(cache_key, {organization.logo_at, bytes})
+      {:ok, bytes}
+    end
+  end
 
   defp shape_or_default(nil, fun, default), do: shape!(default, fun)
 

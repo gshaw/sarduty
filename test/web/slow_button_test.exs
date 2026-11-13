@@ -18,8 +18,9 @@ defmodule Web.SlowButtonTest do
   # Functions that wait. A function is slow when it calls one of these, or a slow function.
   @slow [{Req, :_}, {App.Mailer, :_}, {Service.LetterPDF, :_}, {System, :cmd}]
 
-  # Req functions that only build a request.
-  @not_slow [{Req, :new}, {Req, :merge}]
+  # Req functions that only build a request, and functions that wait only the first
+  # time: an organization's logo comes from S3 once, then from memory (#1067).
+  @not_slow [{Req, :new}, {Req, :merge}, {App.Operation.LoadImage, :fetch_organization_logo}]
 
   # Work these run after the event has answered, so the page shows its own progress.
   # The macros expand to Phoenix.LiveView.Async.
@@ -127,6 +128,7 @@ defmodule Web.SlowButtonTest do
     more =
       for {function, calls} <- graph,
           not Map.has_key?(slow, function),
+          function not in @not_slow,
           call = Enum.find(calls, &Map.has_key?(slow, &1)),
           into: %{},
           do: {function, call}

@@ -120,6 +120,9 @@ have decided since the page loaded, stays in `call`.
   layout (AGENTS.md has the rules).
 - **New MCP tool** → a module in `lib/app/mcp/tool/` with the `App.MCP.Tool` behaviour,
   listed in `App.MCP.Tools`. See [mcp.md](mcp.md).
+- **New kind of file** (a logo, a photo, a document people upload) → the file store,
+  `App.Adapter.FileStore`, with its key from `FileStore.key/5`, never a column in
+  SQLite. See [files.md](files.md#adding-a-kind).
 - **New displayed value** → a function in `Service.Format`, not arithmetic in a template.
 - **New thing to do with members a team admin checks** → pick them on the tab, then act
   in place or on a step of the same LiveView, never a page of its own that picks them
@@ -160,6 +163,7 @@ have decided since the page loaded, stays in `call`.
 - [sar-command-assist.md](sar-command-assist.md) — SAR Command Assist, the incident tool many teams run beside SAR Duty, and where the two meet.
 - [organizations.md](organizations.md) — parent organizations like BCSARA, their branding, and giving one its own verify host.
 - [jobs.md](jobs.md) — background jobs: when work is a job, how one is shaped, and how it reports a failure.
+- [files.md](files.md) — the file store: S3 in Calgary, the key's shape, every kind of file and how long it's kept, and adding a kind.
 - [external-services.md](external-services.md) — every third-party boundary, its credentials, and what breaks without it.
 - [deployment.md](deployment.md) — Fly, Litestream, migrations, backups, and changing production data.
 - [production.md](production.md) — `bin/prod`, the one way into production: its tasks, the record each run leaves, and adding a task.

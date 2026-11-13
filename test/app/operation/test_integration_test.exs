@@ -80,6 +80,69 @@ defmodule App.Operation.TestIntegrationTest do
     assert last_event("errors") == nil
   end
 
+  describe "files" do
+    test "isn't set up on a store on disk, or with none", %{user: user} do
+      refute TestIntegration.set_up?("files")
+
+      assert {:error, "failed", "Files not checked. This server does not keep files in S3."} =
+               TestIntegration.call("files", %{}, user)
+    end
+
+    test "puts a file tagged expires=2d, reads it back, checks the tag, and deletes it", %{
+      user: user
+    } do
+      App.FileStoreOff.use_s3()
+      test = self()
+
+      Req.Test.stub(App.Adapter.FileStore, fn conn ->
+        conn = Plug.Conn.fetch_query_params(conn)
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+        if body != "", do: Process.put(:file, body)
+        send(test, {conn.method, conn.request_path, conn.query_params, conn.req_headers})
+
+        case {conn.method, conn.query_params} do
+          {"GET", %{"tagging" => _}} ->
+            Plug.Conn.send_resp(
+              conn,
+              200,
+              "<Tagging><TagSet><Tag><Key>expires</Key><Value>2d</Value></Tag></TagSet></Tagging>"
+            )
+
+          {"GET", _params} ->
+            Plug.Conn.send_resp(conn, 200, Process.get(:file))
+
+          {"PUT", _params} ->
+            Plug.Conn.send_resp(conn, 200, "")
+
+          {"DELETE", _params} ->
+            Plug.Conn.send_resp(conn, 204, "")
+        end
+      end)
+
+      assert {:ok, "works", message} = TestIntegration.call("files", %{}, user)
+      assert message =~ "Files work. A test file went to sarduty-files-test and back in"
+
+      assert_received {"PUT", "/site/integration-test/" <> _ = path, _, headers}
+      assert {"x-amz-tagging", "expires=2d"} in headers
+      assert_received {"GET", ^path, params, _} when params == %{}
+      assert_received {"GET", ^path, %{"tagging" => _}, _}
+      assert_received {"DELETE", ^path, _, _}
+
+      assert last_event("files").data["outcome"] == "works"
+    end
+
+    test "says what failed, as S3 put it", %{user: user} do
+      App.FileStoreOff.use_s3()
+
+      Req.Test.stub(App.Adapter.FileStore, fn conn ->
+        Plug.Conn.send_resp(conn, 403, "<Error><Code>AccessDenied</Code></Error>")
+      end)
+
+      assert {:error, "failed", "Test file not saved. S3 answered 403 AccessDenied."} =
+               TestIntegration.call("files", %{}, user)
+    end
+  end
+
   test "website: fetches /health", %{user: user} do
     Req.Test.stub(App.Adapter.Website, fn conn ->
       assert conn.request_path == "/health"

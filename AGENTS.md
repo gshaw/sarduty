@@ -246,6 +246,8 @@ fi
 - **Scope every team query, including joins and deletes.** Filter the member's or
   qualification's `team_id`, not just the row you started from, and look a record up
   through the current team before changing it — never by a bare id from the client.
+- **Files go in the file store, never SQLite**: `App.Adapter.FileStore`, with keys only
+  from `FileStore.key/5`. See [docs/files.md](docs/files.md).
 - **Cloak is for credentials**: D4H access keys and pass tokens use
   `App.Field.EncryptedString`. Personal data such as member contact details and letter
   text is plain. R2 encrypts the replica at rest and local backups use age (#111). Give
