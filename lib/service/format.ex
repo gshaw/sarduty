@@ -99,6 +99,10 @@ defmodule Service.Format do
   @doc ~s(A count of days: "1 day", "30 days", "1,095 days". Work days out with `Service.Convert`.)
   def days(n) when is_integer(n), do: count(n, one: "1 day", many: "%d days")
 
+  @doc ~s(Days until an expiry day, as days/1, with "Today" on the day itself: "Today", "1 day", "30 days".)
+  def days_left(0), do: "Today"
+  def days_left(n) when is_integer(n), do: days(n)
+
   @doc ~s(A length in months, as whole years when it is some: "6 months", "1 year", "3 years", "18 months".)
   def months(n) when is_integer(n) and n > 0 and rem(n, 12) == 0,
     do: count(div(n, 12), one: "1 year", many: "%d years")

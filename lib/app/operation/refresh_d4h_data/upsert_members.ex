@@ -30,19 +30,23 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
 
     if d4h_members != [] do
       synced_d4h_ids = MapSet.new(d4h_members, & &1.d4h_member_id)
-      mark_retired(team.id, synced_d4h_ids, DateTime.utc_now(:second))
+      mark_retired(team, synced_d4h_ids, DateTime.utc_now(:second))
     end
 
     {total_count, progress}
   end
 
   # D4H leaves deleted members out of `GET /members`. Attendance and letters point at
-  # them, so they stay, marked as left. If D4H lists one again, the upsert takes its
-  # `endsAt` back. An empty list is never a real team, so `call` skips this for one.
-  def mark_retired(team_id, synced_d4h_ids, now) do
+  # them, so they stay, marked as left today, a day like every leave date. If D4H lists
+  # one again, the upsert takes its `endsAt` back. An empty list is never a real team, so
+  # `call` skips this for one.
+  def mark_retired(team, synced_d4h_ids, now) do
+    left_at =
+      now |> Service.Period.today(team.timezone) |> Service.Convert.day_start(team.timezone)
+
     stale_ids =
       Member
-      |> where([m], m.team_id == ^team_id and is_nil(m.left_at))
+      |> where([m], m.team_id == ^team.id and is_nil(m.left_at))
       |> StaleRows.ids(:d4h_member_id, synced_d4h_ids)
 
     retired = Member |> where([m], m.id in ^stale_ids) |> Repo.all()
@@ -50,11 +54,11 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
     {count, _} =
       Member
       |> where([m], m.id in ^stale_ids)
-      |> Repo.update_all(set: [left_at: now, updated_at: DateTime.utc_now()])
+      |> Repo.update_all(set: [left_at: left_at, updated_at: DateTime.utc_now()])
 
-    Enum.each(retired, &RecordD4HChanges.record(:member, &1, %{&1 | left_at: now}))
+    Enum.each(retired, &RecordD4HChanges.record(:member, &1, %{&1 | left_at: left_at}))
 
-    Logger.info("Marked #{count} members D4H no longer lists as retired for team #{team_id}")
+    Logger.info("Marked #{count} members D4H no longer lists as retired for team #{team.id}")
   end
 
   # Only the member fields a team admin picked are kept (#681); D4H sends them all.
@@ -70,8 +74,8 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
       primary_emergency_contact: d4h_member.primary_emergency_contact,
       secondary_emergency_contact: d4h_member.secondary_emergency_contact,
       position: d4h_member.position,
-      joined_at: d4h_member.joined_at,
-      left_at: d4h_member.left_at,
+      joined_at: Service.Convert.day_start(d4h_member.joined_on, team.timezone),
+      left_at: Service.Convert.day_start(d4h_member.left_on, team.timezone),
       d4h_permission: d4h_member.permission,
       d4h_status: d4h_member.status,
       custom_values: Map.take(d4h_member.custom_values, MapSet.to_list(copied))

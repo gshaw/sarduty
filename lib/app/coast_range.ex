@@ -689,7 +689,7 @@ defmodule App.CoastRange do
       phone: phone,
       address: address(ref_id, marks),
       position: position,
-      joined_at: DateTime.add(now, -days, :day),
+      joined_at: day_start(now, -days),
       d4h_permission: permission(marks),
       d4h_status: if(retired?, do: "RETIRED", else: "OPERATIONAL"),
       left_at: if(retired?, do: left_at(now)),
@@ -730,7 +730,14 @@ defmodule App.CoastRange do
     "#{local}@example.com"
   end
 
-  defp left_at(now), do: DateTime.add(now, -120, :day)
+  defp left_at(now), do: day_start(now, -120)
+
+  # A day D4H keeps without a time, `days` from today, as the copy stores it: the start
+  # of that day on the team's clock (docs/d4h-sync.md).
+  defp day_start(now, days),
+    do: now |> Service.Period.today(@timezone) |> Date.add(days) |> day_start()
+
+  defp day_start(%Date{} = date), do: Service.Convert.day_start(date, @timezone)
 
   defp member_values(name, ref_id) do
     values = %{"#{@call_sign}" => "CR #{ref_id}"}
@@ -835,8 +842,8 @@ defmodule App.CoastRange do
   defp award(d4h_id, name, i, starts, ends) do
     row = %MemberQualificationAward{
       d4h_award_id: d4h_id * 100 + i,
-      starts_at: noon(starts),
-      ends_at: ends && noon(ends)
+      starts_at: day_start(starts),
+      ends_at: ends && day_start(ends)
     }
 
     {:award, {d4h_id, name}, row,
@@ -909,7 +916,6 @@ defmodule App.CoastRange do
 
   defp ref_id(people, name), do: people |> person(name) |> elem(1)
 
-  # D4H's whole-day dates, at noon UTC so they read as the same day in Vancouver.
   defp noon(date), do: DateTime.new!(date, ~T[12:00:00], "Etc/UTC")
 
   defp local(date, hour),
@@ -1281,7 +1287,7 @@ defmodule App.CoastRange do
         serial: "SN-#{id}",
         location_title: if(holder, do: nil, else: "Hall"),
         # The AED's pads.
-        expires_at: if(title == "AED", do: noon(Date.add(today, 45))),
+        expires_at: if(title == "AED", do: today |> Date.add(45) |> day_start()),
         custom_values: %{"#{@serviced}" => today |> Date.add(-30 * n) |> Date.to_iso8601()}
       }
 

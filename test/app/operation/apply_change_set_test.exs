@@ -133,8 +133,8 @@ defmodule App.Operation.ApplyChangeSetTest do
       new_value: %{"d4h_qualification_id" => 4, "starts_at" => "2026-10-01T07:00:00Z"}
     }
 
-    same = %QualificationAward{d4h_qualification_id: 4, starts_at: ~U[2026-10-01 00:00:00Z]}
-    earlier = %{same | starts_at: ~U[2025-10-01 00:00:00Z]}
+    same = %QualificationAward{d4h_qualification_id: 4, starts_on: ~D[2026-10-01]}
+    earlier = %{same | starts_on: ~D[2025-10-01]}
     other = %{same | d4h_qualification_id: 5}
 
     assert ApplyChangeSet.check(row, {:awards, [earlier, other]}) == :ok

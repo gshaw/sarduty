@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- Join dates, leave dates, and qualification dates no longer show a day early. A
+  qualification or item now counts through its expiry day, with Today on that day.
 - Needs attention now counts members whose email bounces, with their missing details.
   Members missing details says why, such as Email (does not exist), so you know what
   to fix in D4H.

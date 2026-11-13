@@ -45,4 +45,29 @@ defmodule App.Model.MemberQualificationAwardTest do
       assert {[^b, ^a], []} = MemberQualificationAward.split_by_member([b, a], @now)
     end
   end
+
+  # D4H keeps an award's end as a day. The copy keeps its start on the team's clock, and
+  # the award is good through that day (#1058).
+  describe "an award expiring Nov 12 on a Pacific team" do
+    setup do
+      ends_at = Service.Convert.day_start(~D[2026-11-12], "America/Vancouver")
+      %{award: %{starts_at: ~U[2021-11-12 08:00:00Z], ends_at: ends_at}, ends_at: ends_at}
+    end
+
+    test "is good through the evening of Nov 12, and expired from midnight", ctx do
+      evening = DateTime.add(ctx.ends_at, 86_399)
+      midnight = DateTime.add(ctx.ends_at, 1, :day)
+
+      assert MemberQualificationAward.active?(ctx.award, evening)
+      refute MemberQualificationAward.expired?(ctx.award, evening)
+      refute MemberQualificationAward.active?(ctx.award, midnight)
+      assert MemberQualificationAward.expired?(ctx.award, midnight)
+    end
+
+    test "is good on the evening of Nov 11, when it is already Nov 12 in UTC", ctx do
+      evening = DateTime.add(ctx.ends_at, -3600)
+      assert DateTime.to_date(evening) == ~D[2026-11-12]
+      assert MemberQualificationAward.active?(ctx.award, evening)
+    end
+  end
 end

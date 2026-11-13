@@ -322,7 +322,8 @@ defmodule Web.CertificateLiveTest do
     refute_received {:post, "/member-qualification-awards"}
     assert %{status: :accepted, d4h_award_id: 77} = Repo.reload!(ctx.certificate)
 
-    assert %{d4h_document_id: 901, starts_at: ~U[2026-10-18 00:00:00Z]} =
+    # D4H's day, Oct 18, kept as its start on the team's clock (#1058).
+    assert %{d4h_document_id: 901, starts_at: ~U[2026-10-18 07:00:00Z]} =
              MemberQualificationAward.get_by(d4h_award_id: 77)
   end
 

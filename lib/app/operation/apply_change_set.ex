@@ -284,7 +284,8 @@ defmodule App.Operation.ApplyChangeSet do
   def check(%ChangeSetRow{action: action}, nil) when action in @whiteboard, do: :ok
 
   # The same qualification from the same day: D4H can't remove an award, so a second
-  # would stay (#493).
+  # would stay (#493). The row starts at midnight on the team's clock, which falls on the
+  # same UTC date, the day D4H keeps (D4H.Parse.day_text/1).
   def check(%ChangeSetRow{action: :award_qualification, new_value: new_value}, {:awards, awards}) do
     starts_on = new_value["starts_at"] |> time() |> DateTime.to_date()
 

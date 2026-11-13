@@ -69,7 +69,7 @@ defmodule App.Operation.SignUpTeam do
          {:email,
           "Enter the email your team has for you. No member of #{d4h_team.name} uses this one."}}
 
-      not manager?(signer, now) ->
+      not manager?(signer, Service.Period.today(now, d4h_team.timezone)) ->
         {:error, {:email, "Use the email of an Owner or Editor of #{d4h_team.name}."}}
 
       true ->
@@ -77,9 +77,9 @@ defmodule App.Operation.SignUpTeam do
     end
   end
 
-  defp manager?(member, now) do
+  defp manager?(member, today) do
     member.permission in @manager_permissions and member.status != "RETIRED" and
-      (is_nil(member.left_at) or DateTime.after?(member.left_at, now))
+      (is_nil(member.left_on) or Date.after?(member.left_on, today))
   end
 
   defp fetch_whoami(view_model) do
@@ -158,8 +158,8 @@ defmodule App.Operation.SignUpTeam do
           phone: signer.phone,
           address: signer.address,
           position: signer.position,
-          joined_at: signer.joined_at,
-          left_at: signer.left_at,
+          joined_at: Service.Convert.day_start(signer.joined_on, team.timezone),
+          left_at: Service.Convert.day_start(signer.left_on, team.timezone),
           d4h_permission: signer.permission,
           d4h_status: signer.status
         })

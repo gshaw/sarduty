@@ -125,8 +125,8 @@ defmodule Web.TitledRecordFormLiveTest do
     assert body == %{
              "qualificationId" => 99,
              "memberId" => member.d4h_member_id,
-             "startsAt" => "2026-05-01T07:00:00Z",
-             "endsAt" => "2029-05-01T07:00:00Z"
+             "startsAt" => "2026-05-01T00:00:00Z",
+             "endsAt" => "2029-05-01T00:00:00Z"
            }
 
     award = qualification_award_fixture(qualification, member)

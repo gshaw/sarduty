@@ -48,10 +48,10 @@ defmodule Web.CardApiDoc do
       "sample": false,
       "member": {
         "name": "Cameron Ruiz",
-        "joined_at": "2023-10-31T03:06:10Z",
+        "joined_at": "2023-10-30T07:00:00Z",
         "photo_url": "#{verify}/K7Q4M-2XA9H/photo",
         "qualifications": [
-          {"name": "First aid", "ends_at": "2027-11-18T12:00:00Z"},
+          {"name": "First aid", "ends_at": "2027-11-18T08:00:00Z"},
           {"name": "Ground search and rescue", "ends_at": null}
         ]
       },
@@ -76,6 +76,7 @@ defmodule Web.CardApiDoc do
     - `qualifications` are the ones the team lists on its cards. `ends_at` is null when one doesn't expire.
     - `refreshed_at` is when SAR Duty last copied the team's records, so a status can be that far behind.
     - Times are ISO 8601, in UTC, to the second. `joined_at` and `organization` can be null.
+    - `joined_at`, `left_at`, and `ends_at` are days: the start of that day on the team's clock. A qualification is good through its `ends_at` day.
 
     A retiring or retired member's card gives `member.name`, `member.left_at`, and `team`: no photo, no qualifications, and no `records`. `left_at` is when D4H retired them, and null while they are retiring or when the team gave no date.
 

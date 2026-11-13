@@ -69,6 +69,33 @@ defmodule App.Adapter.D4H.Parse do
   def optional_datetime(value), do: datetime(value)
 
   @doc """
+  A day D4H keeps without a time, as a `Date`, or nil. D4H sends a member's join and
+  leave dates and an award's start and end as the day at 00:00 UTC, so the day is the
+  UTC date. The copy stores it as the start of that day on the team's clock
+  (`Service.Convert.day_start/2`).
+  """
+  def optional_day(nil), do: nil
+  def optional_day(value), do: value |> datetime() |> DateTime.to_date()
+
+  @doc """
+  A day for D4H, from the start of a day on the team's clock as the copy holds it. Every
+  team is west of Greenwich, where that start falls on the same UTC date. nil for nil.
+  """
+  def day_text(nil), do: nil
+
+  def day_text(value) when is_binary(value) do
+    {:ok, datetime, 0} = DateTime.from_iso8601(value)
+    day_text(datetime)
+  end
+
+  def day_text(%DateTime{} = value),
+    do:
+      value
+      |> DateTime.to_date()
+      |> DateTime.new!(~T[00:00:00], "Etc/UTC")
+      |> DateTime.to_iso8601()
+
+  @doc """
   A record's custom field values (#681) as a map of the D4H field id, a string, to its
   value: a string, or a list of option ids for a choice field. Empty values are left
   out, so a field D4H clears drops out of the map.

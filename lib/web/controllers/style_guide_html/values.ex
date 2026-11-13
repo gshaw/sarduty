@@ -177,6 +177,8 @@ defmodule Web.StyleGuideHTML.Values do
          {:tenths, "One decimal place, under a label that names the unit",
           [{"tenths(1.5)", Format.tenths(1.5)}]},
          {:days, "A count of days", [{"days(1)", Format.days(1)}, {"days(30)", Format.days(30)}]},
+         {:days_left, "Days until an expiry day, beside its date",
+          [{"days_left(0)", Format.days_left(0)}, {"days_left(30)", Format.days_left(30)}]},
          {:months, "How long a qualification lasts",
           [{"months(6)", Format.months(6)}, {"months(36)", Format.months(36)}]}
        ] ++ measures()}

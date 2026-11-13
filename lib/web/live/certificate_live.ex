@@ -172,8 +172,7 @@ defmodule Web.CertificateLive do
       <p :if={error = attach_error(@certificate)} class="hint">{error}</p>
     </.banner>
 
-    <%!-- The award starts the certificate's day (QualificationAward.starts_on?/2). D4H
-      keeps it at midnight UTC, the day before on a Canadian clock. --%>
+    <%!-- The award starts the certificate's day (QualificationAward.starts_on?/2). --%>
     <.banner
       :if={@existing}
       id="certificate-existing"

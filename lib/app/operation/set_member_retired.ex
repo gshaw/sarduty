@@ -23,20 +23,14 @@ defmodule App.Operation.SetMemberRetired do
   @doc "`{:ok, member}` or `{:error, text}`."
   def call(%Team{} = team, %Member{team_id: team_id} = member, retired?, %User{} = user, now)
       when team_id == team.id do
-    left_at = left_on(team, now)
+    left_at =
+      now |> Service.Period.today(team.timezone) |> Service.Convert.day_start(team.timezone)
 
     with :ok <- check(team, member, retired?, now),
          {:ok, _d4h_member_id} <-
            ApplyEdit.call(team, user, plan(member, retired?, left_at), now) do
       {:ok, save_copy(member, retired?, left_at)}
     end
-  end
-
-  # D4H keeps a leave date as the day at 00:00 UTC (tested 2026-11-12). Send the team's
-  # own day, so a retire at 5 pm in Vancouver, already tomorrow in UTC, keeps today.
-  defp left_on(team, now) do
-    today = Service.Period.today(now, team.timezone)
-    DateTime.new!(today, ~T[00:00:00], "Etc/UTC")
   end
 
   # What D4H now has, so the tab shows it at once; the next sync confirms it.

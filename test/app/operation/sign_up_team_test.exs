@@ -5,7 +5,7 @@ defmodule App.Operation.SignUpTeamTest do
   alias App.Operation.SignUpTeam
 
   @now ~U[2026-10-04 12:00:00Z]
-  @d4h_team %D4H.Team{name: "Ridge SAR"}
+  @d4h_team %D4H.Team{name: "Ridge SAR", timezone: "America/Vancouver"}
 
   defp member(attrs) do
     struct(
@@ -36,8 +36,14 @@ defmodule App.Operation.SignUpTeamTest do
   test "a manager who is retired, or has a leave date, may not" do
     assert {:error, {:email, _}} = check("pat@example.com", [member(%{status: "RETIRED"})])
 
-    left = member(%{left_at: ~U[2026-01-01 00:00:00Z]})
+    left = member(%{left_on: ~D[2026-01-01]})
     assert {:error, {:email, _}} = check("pat@example.com", [left])
+  end
+
+  # @now is 5 am on Oct 4 in Vancouver: a leave day of Oct 4 has started, Oct 5 hasn't.
+  test "a manager leaving on a later day may still sign up, and one leaving today may not" do
+    assert {:ok, _} = check("pat@example.com", [member(%{left_on: ~D[2026-10-05]})])
+    assert {:error, {:email, _}} = check("pat@example.com", [member(%{left_on: ~D[2026-10-04]})])
   end
 
   test "an email no member has may not" do
