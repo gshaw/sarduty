@@ -17,7 +17,6 @@ defmodule App.Ops do
     App.Ops.Jobs,
     App.Ops.MakeAdmin,
     App.Ops.RestoreTeam,
-    App.Ops.CopyOrganizationLogos,
     App.Ops.Backup,
     App.Ops.Console
   ]

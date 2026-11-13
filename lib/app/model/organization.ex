@@ -19,9 +19,7 @@ defmodule App.Model.Organization do
     field :slug, :string
     field :website, TrimmedString
     # The logo is a PNG in the file store, at logo_key/1, sized by Service.Image.png/2
-    # when it was uploaded (#1067). logo_at is when, or nil for none. The logo column is
-    # the old copy, read only by App.Ops.CopyOrganizationLogos; a later PR drops it.
-    field :logo, :binary, redact: true
+    # when it was uploaded (#1067). logo_at is when, or nil for none.
     field :logo_at, :utc_datetime_usec
     # The D4H tags its teams count as primary and secondary hours (#289). Blank means
     # "Primary Hours" and "Secondary Hours"; see App.Model.Activity.hours_tags/1.
