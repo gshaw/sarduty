@@ -8,6 +8,7 @@ defmodule Web.MeDetailsLiveTest do
   alias App.Model.ChangeSet
   alias App.Model.ChangeSetRow
   alias App.Repo
+  alias App.ViewData.ChangeHistory
 
   setup %{conn: conn} do
     %{team: team, member: member, user: user} =
@@ -133,11 +134,9 @@ defmodule Web.MeDetailsLiveTest do
     refute has_element?(lv, "[id^=invitation-reminders]")
   end
 
-  test "shows the member fields a member may see, restricted ones too, never hidden ones", %{
-    conn: conn,
-    team: team,
-    member: member
-  } do
+  # Radio Call Sign is editable, Year of birth viewable and restricted, Heritage restricted
+  # and hidden, and Category hidden.
+  defp member_fields(team, member) do
     custom_field_fixture(team, %{
       d4h_custom_field_id: 630,
       target: "member",
@@ -173,13 +172,107 @@ defmodule Web.MeDetailsLiveTest do
       custom_values: %{"630" => "SF 12", "1361" => [5], "855" => "1988", "856" => "Irish"}
     )
     |> Repo.update!()
+  end
+
+  test "a field to change is an input, one to see is read only, a hidden one never shows", %{
+    conn: conn,
+    team: team,
+    member: member
+  } do
+    member_fields(team, member)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
+
+    assert has_element?(lv, "#details-form #custom-field-630[value='SF 12']")
+    refute has_element?(lv, "#own-fields-630")
+    assert has_element?(lv, "#details-form #own-fields-855", "1988")
+    refute has_element?(lv, "#custom-field-855")
+    refute has_element?(lv, "#own-fields-1361")
+    refute has_element?(lv, "#custom-field-1361")
+    refute has_element?(lv, "#own-fields-856")
+    refute render(lv) =~ "Irish"
+  end
+
+  test "Save details sends a changed field on the details' row, and history names no value",
+       %{conn: conn, team: team, member: member} do
+    member = member_fields(team, member)
+    stub_d4h(team, member)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
+
+    lv
+    |> form("#details-form", details: %{address: "2 Oak Ave"}, fields: %{"630" => "SF 7"})
+    |> render_submit()
+
+    assert_redirect(lv, ~p"/teams/#{team}/me/details")
+
+    assert_received {:patch, _path, body}
+    assert body["deprecatedAddress"] == "2 Oak Ave"
+    assert body["customFieldValues"] == [%{"id" => 630, "value" => "SF 7"}]
+
+    [row] = Repo.all(ChangeSetRow)
+
+    assert row.new_value == %{
+             "address" => "2 Oak Ave",
+             "custom_values" => %{"630" => "SF 7"}
+           }
+
+    assert ChangeHistory.describe_row(row, :member) ==
+             "Contact details changed in SAR Duty. Fields changed in SAR Duty"
+
+    member = Repo.reload!(member)
+    assert member.custom_values["630"] == "SF 7"
+    assert member.custom_values["856"] == "Irish"
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
+    assert has_element?(lv, "#custom-field-630[value='SF 7']")
+  end
+
+  test "a field the member only sees, or never sees, is never sent", %{
+    conn: conn,
+    team: team,
+    member: member
+  } do
+    member = member_fields(team, member)
+    stub_d4h(team, member)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
+
+    lv
+    |> form("#details-form")
+    |> render_submit(%{"fields" => %{"855" => "1990", "856" => "Scots", "1361" => ["6"]}})
+
+    assert_redirect(lv, ~p"/teams/#{team}/me/details")
+    refute_received {:patch, _path, _body}
+    assert Repo.all(ChangeSet) == []
+    assert Repo.reload!(member).custom_values["855"] == "1988"
+  end
+
+  test "another member's values never show", %{conn: conn, team: team, member: member} do
+    member_fields(team, member)
+
+    team
+    |> member_fixture(%{custom_values: %{"630" => "SF 99", "855" => "1950"}})
+    |> Repo.preload(:team)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
 
+    refute render(lv) =~ "SF 99"
+    refute render(lv) =~ "1950"
+  end
+
+  test "a key that cannot fill in fields shows them read only", %{
+    conn: conn,
+    team: team,
+    member: member
+  } do
+    member_fields(team, member)
+
+    team
+    |> Ecto.Changeset.change(d4h_permissions: %{"Member" => %{"UPDATE" => true}})
+    |> Repo.update!()
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
+
+    refute has_element?(lv, "#custom-field-630")
     assert has_element?(lv, "#own-fields-630", "SF 12")
     assert has_element?(lv, "#own-fields-855", "1988")
-    refute has_element?(lv, "#own-fields-1361")
-    refute has_element?(lv, "#own-fields-856")
-    refute render(lv) =~ "Irish"
   end
 end

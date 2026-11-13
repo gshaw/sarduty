@@ -216,6 +216,9 @@ defmodule App.Model.CustomField do
   @doc "Whether a member sees their own value of a member field: D4H's member privacy."
   def member_sees?(%CustomField{member_privacy: privacy}), do: privacy in ~w(viewable editable)
 
+  @doc "Whether a member changes their own value of a member field: D4H's `editable`."
+  def member_changes?(%CustomField{member_privacy: privacy}), do: privacy == "editable"
+
   def organisation?(%CustomField{owner_type: owner_type}), do: owner_type == "Organisation"
 
   def choice?(%CustomField{field_type: type}), do: type in ~w(single_choice multiple_choice)
