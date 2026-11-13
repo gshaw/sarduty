@@ -1,6 +1,7 @@
 defmodule Web.Admin.IntegrationsLive do
   use Web, :live_view_app_layout
 
+  alias App.Adapter.FileStore
   alias App.Adapter.Twilio
   alias App.Model.Event
   alias App.Model.Team
@@ -15,7 +16,21 @@ defmodule Web.Admin.IntegrationsLive do
   # up here and offers no test. The Wallet tests are links to
   # Web.Admin.IntegrationPassController, and so is the Typst test letter (#918).
   @asks ["email", "texts", "d4h"]
-  @runs ["website", "jobs", "backups", "email", "texts", "errors", "d4h", "maps", "health"]
+  @runs [
+    "website",
+    "jobs",
+    "backups",
+    "email",
+    "texts",
+    "errors",
+    "d4h",
+    "maps",
+    "health",
+    "files"
+  ]
+
+  # Rows whose last test says how long it took: the Files round trip (#1067).
+  @timed ["files"]
 
   # Times on this page are SAR Duty's own, in BC.
   @timezone "America/Vancouver"
@@ -67,6 +82,7 @@ defmodule Web.Admin.IntegrationsLive do
          {"maps", "Maps", "Mapbox", "Maps on activities and places, and place search"},
          {"health", "Health checks", "Healthchecks.io",
           "Alerts when the nightly refresh or the D4H sync is late"},
+         {"files", "Files", files_detail(), "Organization logos, and photos next"},
          {"apple", "Apple Wallet", apple_detail(), "ID cards on iPhones"},
          {"google", "Google Wallet", "Google", "ID cards on Android phones"}
        ]}
@@ -102,6 +118,7 @@ defmodule Web.Admin.IntegrationsLive do
               set_up={@set_up[key]}
               event={@last[key]}
               now={@now}
+              timed={timed?(key)}
             />
             <div class="integration-test">
               <.test_button :if={@set_up[key]} key={key} running={key in @running} />
@@ -121,12 +138,15 @@ defmodule Web.Admin.IntegrationsLive do
     """
   end
 
+  defp timed?(key), do: key in @timed
+
   defp group_id(group), do: group |> String.downcase() |> String.replace(" ", "-")
 
   attr :id, :string, required: true
   attr :set_up, :boolean, required: true
   attr :event, :any, required: true
   attr :now, DateTime, required: true
+  attr :timed, :boolean, default: false
 
   defp last_test(%{set_up: false} = assigns) do
     ~H"""
@@ -155,6 +175,13 @@ defmodule Web.Admin.IntegrationsLive do
     >
       <span class={["marker", marker_class(@outcome), failed?(@outcome) && "text-danger-text"]}>
         {outcome_label(@outcome)}
+      </span>
+      <span
+        :if={@timed and @outcome == "works" and @event.duration_ms}
+        id={"#{@id}-took"}
+        class="text-text-muted"
+      >
+        · {Service.Format.run_time(@event.duration_ms)}
       </span>
       <span class="text-text-muted">
         · {Service.Format.time_ago(@event.occurred_at, @now, timezone())}
@@ -236,6 +263,7 @@ defmodule Web.Admin.IntegrationsLive do
   defp button_label("d4h"), do: "Check key…"
   defp button_label("maps"), do: "Check token"
   defp button_label("health"), do: "Send test ping"
+  defp button_label("files"), do: "Check files"
 
   defp busy_label(key) when key in ["email", "texts", "errors", "health"], do: "Sending…"
   defp busy_label("jobs"), do: "Running…"
@@ -331,6 +359,13 @@ defmodule Web.Admin.IntegrationsLive do
     case Twilio.from_number() do
       nil -> "It comes from SAR Duty's login number."
       from -> "It comes from #{Service.Phone.format(from)}, SAR Duty's login number."
+    end
+  end
+
+  defp files_detail do
+    case FileStore.bucket() do
+      nil -> "Amazon S3"
+      bucket -> "Amazon S3, #{bucket}"
     end
   end
 

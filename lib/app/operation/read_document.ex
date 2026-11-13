@@ -299,7 +299,7 @@ defmodule App.Operation.ReadDocument do
     }
   end
 
-  defp organization_logo(%Organization{logo: logo} = organization) when is_binary(logo),
+  defp organization_logo(%Organization{} = organization),
     do: LoadImage.organization_logo(organization, :square)
 
   defp organization_logo(_organization), do: nil

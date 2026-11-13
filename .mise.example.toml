@@ -23,6 +23,11 @@ TEAM_LOGO_PATH = "/path/to/team-logos"
 # Optional: Healthchecks ping URLs, once per nightly refresh and once per sync round.
 # HEALTHCHECKS_URL = ""
 # HEALTHCHECKS_SYNC_URL = ""
+# Optional: keep files in the dev bucket instead of db/files (docs/files.md). Set all
+# three; the key is in fnox (sarduty-ops runbooks/files-keys.md).
+# FILES_BUCKET = "sarduty-files-dev"
+# FILES_ACCESS_KEY_ID = { value = "{{ exec(command='fnox get AWS_SARDUTY_FILES_DEV_ACCESS_KEY_ID') }}", tools = true, redact = true }
+# FILES_SECRET_ACCESS_KEY = { value = "{{ exec(command='fnox get AWS_SARDUTY_FILES_DEV_SECRET_ACCESS_KEY') }}", tools = true, redact = true }
 # Optional: point SAR Duty at a local SAR Duty Records instead of records.sarduty.com.
 # RECORDS_HOST = ""
 # Optional: sign Apple Wallet passes for member ID cards. PEM text. Set all four.

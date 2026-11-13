@@ -33,6 +33,16 @@ if key = System.get_env("RECORDS_SARDUTY_KEY") do
   config :sarduty, :records_sarduty_key, key
 end
 
+# The file store in S3 (docs/files.md): sarduty-files in production, sarduty-files-dev
+# in dev when its key is set. Tests never read these; they use a scratch folder.
+if config_env() != :test and System.get_env("FILES_BUCKET") not in [nil, ""] do
+  config :sarduty, App.Adapter.FileStore,
+    bucket: System.fetch_env!("FILES_BUCKET"),
+    region: System.get_env("FILES_REGION", "ca-west-1"),
+    access_key_id: System.fetch_env!("FILES_ACCESS_KEY_ID"),
+    secret_access_key: System.fetch_env!("FILES_SECRET_ACCESS_KEY")
+end
+
 # The key a script sends to make a test demo, for checking SAR Duty on a live server
 # (docs/demo.md). Without it, only visitors' demos can be made.
 config :sarduty, :demo_test_key, System.get_env("DEMO_TEST_KEY")

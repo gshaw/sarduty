@@ -7,6 +7,8 @@ defmodule Web.Org.OrgPagesTest do
   import Phoenix.LiveViewTest
 
   alias App.Accounts.User
+  alias App.Adapter.FileStore
+  alias App.FileStoreOff
   alias App.Model.Event
   alias App.Model.Organization
   alias App.Model.OrganizationAdmin
@@ -148,8 +150,52 @@ defmodule Web.Org.OrgPagesTest do
       render_upload(logo, "logo.png")
       lv |> form("#organization-form") |> render_submit()
 
-      assert {:ok, image} = Image.from_binary(Repo.reload!(organization).logo)
+      # In the file store (#1067), and logo_at moves the logo's URL on.
+      saved = Repo.reload!(organization)
+      assert DateTime.after?(saved.logo_at, organization.logo_at)
+      assert {:ok, png} = saved |> Organization.logo_key() |> FileStore.get()
+      assert {:ok, image} = Image.from_binary(png)
       assert Image.width(image) == 480
+    end
+
+    test "a logo the file store refuses saves nothing", %{conn: conn, dana: dana} do
+      {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/settings")
+
+      logo =
+        file_input(lv, "#organization-form", :logo, [
+          %{name: "logo.png", content: png_fixture(900, 300), type: "image/png"}
+        ])
+
+      render_upload(logo, "logo.png")
+      FileStoreOff.turn_off()
+
+      html =
+        lv
+        |> form("#organization-form", organization: %{name: "Renamed"})
+        |> render_submit()
+
+      assert html =~ "Logo not saved. Try again."
+      assert Repo.get_by!(Organization, slug: "wsara").name != "Renamed"
+    end
+
+    test "a form that fails keeps the old logo", %{
+      conn: conn,
+      dana: dana,
+      organization: organization
+    } do
+      {:ok, before} = organization |> Organization.logo_key() |> FileStore.get()
+      {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/settings")
+
+      logo =
+        file_input(lv, "#organization-form", :logo, [
+          %{name: "logo.png", content: png_fixture(900, 300), type: "image/png"}
+        ])
+
+      render_upload(logo, "logo.png")
+      lv |> form("#organization-form", organization: %{name: ""}) |> render_submit()
+
+      assert Repo.reload!(organization).logo_at == organization.logo_at
+      assert {:ok, ^before} = organization |> Organization.logo_key() |> FileStore.get()
     end
 
     test "a time zone not on the list is refused", %{conn: conn, dana: dana} do

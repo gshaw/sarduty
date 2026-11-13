@@ -8,6 +8,7 @@ defmodule App.Operation.TestIntegration do
 
   alias App.Accounts.User
   alias App.Adapter.D4H
+  alias App.Adapter.FileStore
   alias App.Adapter.GoogleWallet
   alias App.Adapter.Healthchecks
   alias App.Adapter.Litestream
@@ -31,7 +32,7 @@ defmodule App.Operation.TestIntegration do
   @jobs_wait_ms 30_000
   @poll_ms 500
 
-  @services ~w(website jobs backups typst email texts errors d4h maps health apple google)
+  @services ~w(website jobs backups typst email texts errors d4h maps health files apple google)
 
   def services, do: @services
 
@@ -48,6 +49,8 @@ defmodule App.Operation.TestIntegration do
   def set_up?("apple"), do: BuildApplePass.configured?()
   def set_up?("google"), do: BuildGooglePass.configured?()
   def set_up?("typst"), do: Service.Typst.executable() != nil
+  # The test is S3's round trip; a folder on disk has no tags to check.
+  def set_up?("files"), do: FileStore.store() == :s3
   def set_up?(service) when service in @services, do: true
 
   @doc """
@@ -93,6 +96,7 @@ defmodule App.Operation.TestIntegration do
   defp not_set_up("apple"), do: "Test pass not made. Apple Wallet isn't set up on this server."
   defp not_set_up("google"), do: "Test pass not made. Google Wallet isn't set up on this server."
   defp not_set_up("typst"), do: "Test letter not made. Typst isn't installed on this server."
+  defp not_set_up("files"), do: "Files not checked. This server does not keep files in S3."
 
   defp team_id("d4h", %{"team_id" => id}), do: parse_id(id)
   defp team_id(_service, _params), do: nil
@@ -220,6 +224,25 @@ defmodule App.Operation.TestIntegration do
     end
   end
 
+  # A small file under site/integration-test/, tagged to expire in 2 days, read back
+  # byte for byte, its tag checked, then deleted. One the test can't delete goes in 2 days.
+  defp run("files", _params, _user, _now) do
+    key = FileStore.key(:site, nil, :integration_test, FileStore.new_token(), "check.txt")
+    bytes = "SAR Duty file test " <> (16 |> :crypto.strong_rand_bytes() |> Base.encode16())
+    started = System.monotonic_time(:millisecond)
+
+    case files_round_trip(key, bytes) do
+      :ok ->
+        took = Service.Format.run_time(System.monotonic_time(:millisecond) - started)
+
+        {:ok, "works",
+         "Files work. A test file went to #{FileStore.bucket()} and back in #{took}."}
+
+      {:error, message} ->
+        {:error, "failed", message}
+    end
+  end
+
   defp run("typst", _params, _user, _now) do
     case CheckTypst.call() do
       {:ok, message, pdf} -> {:ok, "works", message, pdf}
@@ -290,6 +313,32 @@ defmodule App.Operation.TestIntegration do
   defp sync_errors(n),
     do:
       "#{Service.Format.count(n, one: "%d sync error", many: "%d sync errors")} since Litestream started."
+
+  defp files_round_trip(key, bytes) do
+    with :ok <- files_step(FileStore.put(key, bytes, "text/plain"), "Test file not saved"),
+         {:ok, read} <- files_step(FileStore.get(key), "Test file not read"),
+         :ok <- same_bytes(read, bytes),
+         {:ok, tags} <- files_step(FileStore.tags(key), "Test file's tags not read"),
+         :ok <- expires_tag(tags) do
+      files_step(FileStore.delete(key), "Test file not deleted. It expires in 2 days")
+    end
+  end
+
+  defp files_step(:ok, _failed), do: :ok
+  defp files_step({:ok, value}, _failed), do: {:ok, value}
+  defp files_step({:error, reason}, failed), do: {:error, "#{failed}. #{error_text(reason)}."}
+
+  defp same_bytes(bytes, bytes), do: :ok
+
+  defp same_bytes(_read, _bytes),
+    do: {:error, "Test file came back different. Check the bucket's settings."}
+
+  defp expires_tag(%{"expires" => "2d"}), do: :ok
+
+  defp expires_tag(_tags),
+    do:
+      {:error,
+       "Test file has no expires=2d tag, so S3 would keep it. Check the key's tagging rights."}
 
   defp seconds(ms) when ms < 1000, do: "under a second"
 

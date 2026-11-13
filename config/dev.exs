@@ -11,6 +11,11 @@ config :sarduty, App.Repo,
   log: false,
   show_sensitive_data_on_connection_error: true
 
+# The file store (App.Adapter.FileStore, docs/files.md) is a folder beside the database,
+# unless FILES_BUCKET points dev at sarduty-files-dev (config/runtime.exs).
+config :sarduty, App.Adapter.FileStore,
+  dir: Path.expand("../db/files", Path.dirname(__ENV__.file))
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #

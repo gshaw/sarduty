@@ -1,6 +1,7 @@
 defmodule App.DataFixtures do
   alias App.AccountsFixtures
   alias App.Adapter.D4H
+  alias App.Adapter.FileStore
   alias App.Model.Activity
   alias App.Model.AgentConnection
   alias App.Model.Attendance
@@ -79,19 +80,30 @@ defmodule App.DataFixtures do
     |> Repo.update!()
   end
 
-  @doc "An organization with a logo, and these teams as members."
+  @doc """
+  An organization with a logo in the file store, and these teams as members.
+  `logo: nil` in `attrs` gives it none.
+  """
   def organization_fixture(teams \\ [], attrs \\ %{}) do
     unique = System.unique_integer([:positive])
+    {logo, attrs} = Map.pop(attrs, :logo, png_fixture(200, 200))
 
     organization =
       %Organization{
         name: "Example Association #{unique}",
         short_name: "EXA",
-        slug: "exa-#{unique}",
-        logo: png_fixture(200, 200)
+        slug: "exa-#{unique}"
       }
       |> Map.merge(attrs)
       |> Repo.insert!()
+
+    organization =
+      if logo do
+        :ok = organization |> Organization.logo_key() |> FileStore.put(logo, "image/png")
+        Organization.put_logo_at!(organization, DateTime.utc_now())
+      else
+        organization
+      end
 
     ids = Enum.map(teams, & &1.id)
 

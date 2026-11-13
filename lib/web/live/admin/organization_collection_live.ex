@@ -42,7 +42,7 @@ defmodule Web.Admin.OrganizationCollectionLive do
       <:col :let={organization} label="Organization">
         <div class="media">
           <img
-            :if={organization.logo}
+            :if={organization.logo_at}
             src={Web.OrganizationController.logo_url(organization)}
             width="32"
             height="32"

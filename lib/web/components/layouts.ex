@@ -263,7 +263,7 @@ defmodule Web.Layouts do
           class="flex items-center gap-2 font-semibold"
         >
           <img
-            :if={@organization.logo}
+            :if={@organization.logo_at}
             src={Web.OrganizationController.logo_url(@organization)}
             alt=""
             class="size-8 shrink-0"
