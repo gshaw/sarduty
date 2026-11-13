@@ -120,8 +120,10 @@ Decided 2026-11-12: the first version put every field's hint and choices on the 
 and with BCSARA's 40-odd Activity choices it read as a wall of text. Folding long lists
 wasn't enough. Never a select for choices either: nothing on the page can be changed.
 
-It's read only: fields change in D4H, and editing them here is #724. D4H's web address
-for its fields page isn't known, so the page names D4H without a link.
+It's read only for now. The operations that change a team's own fields are built
+([below](#adding-and-changing-fields)), and the pages that call them come in step 4's
+next PR (#1056). D4H's web address for its fields page isn't known, so the page names D4H
+without a link.
 
 **An organization's Fields tab**, `/orgs/:slug/settings/fields`, after Hours tags, is
 for its organization admins: its own fields, laid out the same way, each with its own
@@ -201,6 +203,55 @@ values sent, as for a team admin's change. History says "Fields changed in SAR D
 never the values. A team admin viewing as the member can't save, as for the rest of the
 form.
 
+## Adding and changing fields
+
+A team admin adds, changes, archives, restores, deletes, and reorders the team's own
+fields (#1056 step 4). The organization's stay read only: D4H gives a team's key no way
+to change them. Every write is a change set ([change-sets.md](change-sets.md)), and the
+copy takes what D4H answers with, so the next page shows it without waiting for the
+sync. The pages come in the next PR; these are the operations they call.
+
+- **Who.** `CustomField.team_changes?/2`: the team's own field, not `frozen`, with a key
+  that can change fields (`Team.d4h_can?(team, :custom_fields)`). An Editor's D4H key
+  can't; a Records team always can.
+- **Adding** is one operation,
+  [CreateCustomField](../lib/app/operation/create_custom_field.ex), which Add field and
+  #875's import templates both call. The rules are
+  [CustomFieldFormViewModel](../lib/app/view_model/custom_field_form_view_model.ex)'s:
+  a name of 1 to 150 characters with no `|`, that no other live field of the kind has,
+  the team's or its organization's, ignoring case; one of D4H's 8 types; at least 1
+  live choice on a choice field, each named once; units of up to 10 characters, sent on
+  a number only. A new field goes after the team's others of its kind.
+- **Settings by kind.** Needed to publish goes on incidents, exercises, and events only.
+  Restricted is the team admin's choice on an activity field, and always sent, since
+  D4H's default is RESTRICTED: RESTRICTED on a member field, the safer choice inside
+  D4H, and UNRESTRICTED on equipment (decided 2026-11-13). Neither changes anything in
+  SAR Duty, and changing a member or equipment field never changes it. A new member
+  field starts hidden from members, D4H's default.
+- **Bundles.** A field goes in one of the team's own bundles of its kind, by title, or a
+  new name, which adds the bundle first in the same set. D4H's API adds a bundle but
+  can't rename or delete one, so SAR Duty doesn't either, on Records too.
+- **Changing**, [ChangeCustomField](../lib/app/operation/change_custom_field.ex), sends
+  only what changed. Kind and type never change: D4H's PATCH takes neither. Choices are
+  renamed, reordered, archived, restored, and added, a row each; D4H has no DELETE for
+  one. A choice id the field doesn't have is ignored. Archive keeps every answer.
+- **Deleting**, [DeleteCustomField](../lib/app/operation/delete_custom_field.ex), only
+  when no record has an answer: `CustomField.answer_count/1` counts the kind's records in
+  the copy, and one whose values aren't copied yet (nil) counts as having one. Otherwise
+  Archive.
+- **Order**, [ReorderCustomFields](../lib/app/operation/reorder_custom_fields.ex), is
+  the team's own live fields of one kind, numbered from 0 into D4H's `ordering`: one set
+  with a row for each field that moved. Where they sit among the organization's on a
+  record stays the fallback [above](#where-they-show).
+
+The adapter's calls, under `/v3/team/{id}/`, on D4H and Records alike:
+`create_custom_field/2` (`POST /custom-fields`), `update_custom_field/3` (`PATCH`, never
+with `type`, `targetResourceType`, or `options`), `delete_custom_field/2` (`DELETE`, a
+404 counting as deleted), `create_custom_field_option/3` and
+`update_custom_field_option/3` (`/custom-field-options`), and
+`create_resource_bundle/4` (`POST /resource-bundles`). Records' `bin/check-sarduty`
+checks each.
+
 ## How fresh it is
 
 D4H doesn't change a record's `updatedAt` when only its custom field values change
@@ -257,6 +308,8 @@ writes, and refuses publishing an incident with a required field empty with a 40
 D4H does. Fields match across services by kind and title, never by id: each service
 picks its own.
 
-Records makes no fields over its API yet; its own store does, for Try a demo's cast
-([demo.md](demo.md#the-cast)), the dev teams, and its own sample. A team adds its own
-fields later (#724).
+Records takes the same field, choice, and bundle writes as D4H
+(gshaw/sarduty-records#36 and #37), so a Records team adds and changes its own fields
+as a D4H team does ([above](#adding-and-changing-fields)). Its own store also makes
+fields for Try a demo's cast ([demo.md](demo.md#the-cast)), the dev teams, and its own
+sample.

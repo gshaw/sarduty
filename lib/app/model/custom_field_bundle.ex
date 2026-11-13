@@ -2,7 +2,9 @@ defmodule App.Model.CustomFieldBundle do
   use App, :model
 
   alias App.Field.TrimmedString
+  alias App.Model.CustomFieldBundle
   alias App.Model.Team
+  alias App.Repo
 
   # A copy of one of D4H's resource bundles (#872): a named group of one kind's custom
   # fields, such as BCSARA's "KMS Data" on incidents. The team's own or its
@@ -19,5 +21,20 @@ defmodule App.Model.CustomFieldBundle do
     field :owner_type, :string
     field :owner_id, :integer
     timestamps(type: :utc_datetime_usec)
+  end
+
+  @doc "Every bundle the team has, its organisation's too."
+  def get_all(team_id), do: CustomFieldBundle |> where(team_id: ^team_id) |> Repo.all()
+
+  @doc """
+  Where a new bundle of the team's own on `target` goes: after its others. D4H takes 0
+  to 255.
+  """
+  def next_ordering(bundles, target) do
+    bundles
+    |> Enum.filter(&(&1.owner_type == "Team" and &1.target == target))
+    |> Enum.map(&(&1.ordering + 1))
+    |> Enum.max(fn -> 0 end)
+    |> min(255)
   end
 end

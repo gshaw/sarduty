@@ -110,7 +110,9 @@ defmodule App.Operation.ApplyChangeSetTest do
              update_equipment_item delete_equipment_item delete_attendance publish_activity
              upload_document create_whiteboard_note update_whiteboard_note
              delete_whiteboard_note create_location_bookmark update_location_bookmark
-             delete_location_bookmark)
+             delete_location_bookmark create_custom_field update_custom_field
+             delete_custom_field create_custom_field_option update_custom_field_option
+             create_resource_bundle)
   @applier "lib/app/operation/apply_change_set.ex"
 
   test "only the applier calls D4H's write functions" do
@@ -152,6 +154,20 @@ defmodule App.Operation.ApplyChangeSetTest do
     assert {:failed, _text} = ApplyChangeSet.check(row, {:awards, []})
     filled = put_in(row.new_value["d4h_award_id"], 3)
     assert ApplyChangeSet.check(filled, {:awards, []}) == :ok
+  end
+
+  test "a field goes in the bundle its set adds, or is not sent (#1056)" do
+    row = %ChangeSetRow{
+      action: :create_custom_field,
+      new_value: %{"title" => "Debrief held", "created_in_set" => true}
+    }
+
+    assert {:failed, "The bundle was not added, so the field was not sent."} =
+             ApplyChangeSet.check(row, nil)
+
+    filled = put_in(row.new_value["d4h_bundle_id"], 6)
+    assert ApplyChangeSet.check(filled, nil) == :ok
+    assert ApplyChangeSet.check(%{row | new_value: %{"title" => "Debrief"}}, nil) == :ok
   end
 
   test "a tags row goes only when D4H has the tags the page opened with" do

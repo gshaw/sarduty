@@ -221,6 +221,63 @@ defmodule App.Model.CustomField do
 
   def organisation?(%CustomField{owner_type: owner_type}), do: owner_type == "Organisation"
 
+  @activity_targets ~w(incident exercise event)
+
+  @doc "Whether `target` is an activity's kind: incidents, exercises, and events."
+  def activity_target?(target), do: target in @activity_targets
+
+  @doc "Every target a team adds a field to, in the Fields pages' order."
+  def targets, do: @targets
+
+  @doc """
+  Whether a team admin changes `field` in SAR Duty (#1056 step 4): the team's own, not
+  `frozen`, with a key that can change fields. An organization's field is read only.
+  """
+  def team_changes?(%Team{} = team, %CustomField{} = field),
+    do: Team.d4h_can?(team, :custom_fields) and field.owner_type == "Team" and not field.frozen
+
+  @doc """
+  How many of the team's records hold an answer to `field`, read from the copy, for
+  Delete (#1056). A record whose values aren't copied yet (nil) counts as one, since it
+  may hold one. A deleted activity doesn't count.
+  """
+  def answer_count(%CustomField{team_id: team_id, target: target} = field) do
+    key = ~s($."#{field.d4h_custom_field_id}")
+
+    target
+    |> answer_query(team_id)
+    |> where(
+      [r],
+      is_nil(r.custom_values) or not is_nil(fragment("json_extract(?, ?)", r.custom_values, ^key))
+    )
+    |> Repo.aggregate(:count)
+  end
+
+  defp answer_query("member", team_id), do: where(App.Model.Member, team_id: ^team_id)
+  defp answer_query("equipment", team_id), do: where(App.Model.EquipmentItem, team_id: ^team_id)
+
+  defp answer_query(kind, team_id) when kind in @activity_targets do
+    Activity
+    |> where(team_id: ^team_id, activity_kind: ^kind)
+    |> Activity.not_deleted()
+  end
+
+  @doc """
+  Whether `title` names another live field of `target`, the team's or its
+  organization's, ignoring case and spaces at either end. `except` is the field being
+  changed, which keeps its own name.
+  """
+  def title_taken?(fields, target, title, except \\ nil) do
+    wanted = comparable(title)
+
+    Enum.any?(fields, fn field ->
+      field.target == target and is_nil(field.archived_at) and field.id != (except && except.id) and
+        comparable(field.title) == wanted
+    end)
+  end
+
+  defp comparable(title), do: title |> to_string() |> String.trim() |> String.downcase()
+
   def choice?(%CustomField{field_type: type}), do: type in ~w(single_choice multiple_choice)
 
   @doc """

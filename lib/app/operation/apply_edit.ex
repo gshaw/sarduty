@@ -4,8 +4,9 @@ defmodule App.Operation.ApplyEdit do
   applied at once like the door's. A team on SAR Duty Records changes any record this way
   (docs/records.md). A D4H team changes its groups and who is in them (#546), adds and
   changes activities (#585), changes members' details and custom fields (#705), sets and
-  removes members' photos (#1028) and the team's logo (#1075), retires and rejoins members (#1053), and changes equipment items' status, barcode, and
-  custom fields; every other record it changes in D4H.
+  removes members' photos (#1028) and the team's logo (#1075), retires and rejoins members
+  (#1053), changes equipment items' status, barcode, and custom fields, and adds and
+  changes its own fields and their bundles (#1056); every other record it changes in D4H.
 
   After a group row, a retire, or a rejoin the caller writes the local copy, as group
   rules do, and the next sync confirms it. After any other row the sync copies what
@@ -34,10 +35,22 @@ defmodule App.Operation.ApplyEdit do
     :remove_group_member
   ]
 
+  # A team's own fields, their choices, and bundles (#1056). The caller updates the copy
+  # from D4H's answer on each row.
+  @field_actions [
+    :create_custom_field,
+    :update_custom_field,
+    :delete_custom_field,
+    :create_custom_field_option,
+    :update_custom_field_option,
+    :create_resource_bundle
+  ]
+
   # The caller writes these rows' local copy, and the next sync confirms it: a sync after
   # a retire took about 10 seconds on South Fraser (#1053).
   # A team logo's copy is saved by SetTeamLogo, and the sync never reads logos (#1075).
   @local_copy_actions @group_actions ++
+                        @field_actions ++
                         [:retire_member, :rejoin_member, :set_team_logo, :remove_team_logo]
 
   def call(team, user, row, now, opts \\ [])
@@ -82,31 +95,33 @@ defmodule App.Operation.ApplyEdit do
   ]
   def d4h_takes?(%ChangeSetRow{action: action}) when action in @d4h_actions, do: true
 
+  def d4h_takes?(%ChangeSetRow{action: action}) when action in @field_actions, do: true
+
   def d4h_takes?(%ChangeSetRow{}), do: false
 
   defp only?(new_value, keys),
     do: new_value != %{} and new_value |> Map.keys() |> Enum.all?(&(&1 in keys))
 
-  defp apply_row(team, user, row, now, opts) do
-    change_set =
-      ChangeSet.propose!(
-        %ChangeSet{
-          team_id: team.id,
-          source: :edit,
-          activity_id: opts[:activity_id],
-          group_id: opts[:group_id],
-          proposed_by_user_id: user.id
-        },
-        [row]
-      )
+  @doc """
+  One change made of several rows, sent in order as one set: a field and the bundle it
+  goes in, or a team's fields in a new order (#1056). Only rows whose caller writes the
+  local copy, so no sync follows. `{:ok, rows}` with each row as recorded, D4H's answer
+  in `answer` on an applied one; or `{:error, text}` when nothing was sent.
+  """
+  def call_rows(%Team{} = team, %User{} = user, [_ | _] = rows, now) do
+    unless Enum.all?(rows, &(&1.action in @local_copy_actions)),
+      do: raise(ArgumentError, "call_rows/4 takes only rows whose caller writes the copy")
 
-    case ApplyChangeSet.call(
-           team,
-           change_set,
-           user,
-           now,
-           Keyword.take(opts, [:photo, :logo, :document])
-         ) do
+    if D4H.records?(team) or Enum.all?(rows, &d4h_takes?/1),
+      do: team |> send_set(user, rows, now, []) |> described(team),
+      else: {:error, "Change this in #{D4H.service_name(team)}."}
+  end
+
+  defp described({:ok, rows}, _team), do: {:ok, rows}
+  defp described({:error, reason}, team), do: {:error, describe(team, reason)}
+
+  defp apply_row(team, user, row, now, opts) do
+    case send_set(team, user, [row], now, opts) do
       {:ok, [%ChangeSetRow{status: :applied} = applied]} ->
         if applied.action not in @local_copy_actions, do: sync(team)
         {:ok, applied.d4h_record_id}
@@ -117,6 +132,28 @@ defmodule App.Operation.ApplyEdit do
       {:error, reason} ->
         {:error, describe(team, reason)}
     end
+  end
+
+  defp send_set(team, user, rows, now, opts) do
+    change_set =
+      ChangeSet.propose!(
+        %ChangeSet{
+          team_id: team.id,
+          source: :edit,
+          activity_id: opts[:activity_id],
+          group_id: opts[:group_id],
+          proposed_by_user_id: user.id
+        },
+        rows
+      )
+
+    ApplyChangeSet.call(
+      team,
+      change_set,
+      user,
+      now,
+      Keyword.take(opts, [:photo, :logo, :document])
+    )
   end
 
   # The edit is saved either way; a failed sync leaves the copy for the next one.

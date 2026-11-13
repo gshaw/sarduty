@@ -13,7 +13,8 @@ defmodule App.Model.ChangeSetRow do
   # until it's applied, fails with D4H's error, or is skipped because D4H changed first.
   # A row on an activity the same set creates (#341) has `"created_in_set" => true` in
   # `new_value` and no activity id until the create applies. So does a certificate's
-  # row on the award its set makes (#493), with no award id until the award applies.
+  # row on the award its set makes (#493), with no award id until the award applies, and
+  # a custom field's row in the bundle its set adds (#1056).
   schema "change_set_rows" do
     belongs_to :change_set, ChangeSet
     belongs_to :team, Team
@@ -59,7 +60,13 @@ defmodule App.Model.ChangeSetRow do
         :delete_whiteboard_note,
         :create_location_bookmark,
         :update_location_bookmark,
-        :delete_location_bookmark
+        :delete_location_bookmark,
+        :create_custom_field,
+        :update_custom_field,
+        :delete_custom_field,
+        :create_custom_field_option,
+        :update_custom_field_option,
+        :create_resource_bundle
       ]
 
     field :d4h_record_id, :integer
@@ -69,6 +76,9 @@ defmodule App.Model.ChangeSetRow do
     field :status, Ecto.Enum, values: [:proposed, :applied, :failed, :skipped]
     field :error, :string
     field :applied_at, :utc_datetime_usec
+    # What D4H answered an applied write with, built by the adapter, for a caller that
+    # updates its copy from it (#1056). Never stored.
+    field :answer, :any, virtual: true
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -78,6 +88,9 @@ defmodule App.Model.ChangeSetRow do
     |> change(status: :applied, d4h_record_id: d4h_record_id, error: nil, applied_at: now)
     |> Repo.update!()
   end
+
+  def record!(%ChangeSetRow{} = row, {:applied, d4h_record_id, answer}, now),
+    do: %{record!(row, {:applied, d4h_record_id}, now) | answer: answer}
 
   def record!(%ChangeSetRow{} = row, {status, error}, _now) when status in [:failed, :skipped] do
     row |> change(status: status, error: error) |> Repo.update!()
@@ -101,7 +114,13 @@ defmodule App.Model.ChangeSetRow do
     row |> change(new_value: new_value) |> Repo.update!()
   end
 
-  @doc "Whether the row goes on an activity or an award the same set creates."
+  @doc "Fills in the bundle a `created_in_set` field row goes in (#1056)."
+  def fill_bundle!(%ChangeSetRow{} = row, d4h_bundle_id) do
+    new_value = Map.put(row.new_value, "d4h_bundle_id", d4h_bundle_id)
+    row |> change(new_value: new_value) |> Repo.update!()
+  end
+
+  @doc "Whether the row goes on an activity, an award, or a bundle the same set creates."
   def created_in_set?(%ChangeSetRow{new_value: %{"created_in_set" => true}}), do: true
   def created_in_set?(%ChangeSetRow{}), do: false
 
