@@ -113,4 +113,13 @@ defmodule Web.PasskeySessionControllerTest do
     assert redirected_to(conn) == ~p"/login"
     refute get_session(conn, :user_token)
   end
+
+  test "refuses a passkey field that isn't a form, rather than crashing", %{conn: conn} do
+    {conn, _challenge} = options(conn)
+
+    conn = post(conn, ~p"/login/passkey", %{"passkey" => "x"})
+
+    assert redirected_to(conn) == ~p"/login"
+    refute get_session(conn, :user_token)
+  end
 end
