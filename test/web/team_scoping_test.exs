@@ -49,6 +49,7 @@ defmodule Web.TeamScopingTest do
     # records with them on.
     "/teams/:subdomain/settings/chore-categories/:id",
     "/teams/:subdomain/settings/fields/:id",
+    "/teams/:subdomain/settings/fields/:id/edit",
     "/teams/:subdomain/chores/:id",
     "/teams/:subdomain/chores/:id/edit",
     "/teams/:subdomain/whiteboard/:id/edit",
@@ -344,6 +345,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/settings/fields/:id", s, o),
     do: ~p"/teams/#{s}/settings/fields/#{o.field.id}"
+
+  defp path_for("/teams/:subdomain/settings/fields/:id/edit", s, o),
+    do: ~p"/teams/#{s}/settings/fields/#{o.field.id}/edit"
 
   defp path_for("/teams/:subdomain/settings/places/:id", s, o),
     do: ~p"/teams/#{s}/settings/places/#{o.place.id}"

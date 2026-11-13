@@ -117,7 +117,7 @@ defmodule Web.Settings.FieldsLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{notes.id}")
     assert has_element?(lv, "#field-type", "Long text")
     assert has_element?(lv, "#field-from", team.name)
-    assert has_element?(lv, "#field-from", "Only your team has this field.")
+    assert has_element?(lv, "#field-from", "Only #{team.name} has this field.")
     refute has_element?(lv, "#field-required")
     assert has_element?(lv, "#field-restricted", "Only team admins see its values.")
 

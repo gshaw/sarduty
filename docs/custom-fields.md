@@ -120,10 +120,13 @@ Decided 2026-11-12: the first version put every field's hint and choices on the 
 and with BCSARA's 40-odd Activity choices it read as a wall of text. Folding long lists
 wasn't enough. Never a select for choices either: nothing on the page can be changed.
 
-It's read only for now. The operations that change a team's own fields are built
-([below](#adding-and-changing-fields)), and the pages that call them come in step 4's
-next PR (#1056). D4H's web address for its fields page isn't known, so the page names D4H
-without a link.
+With a key that can change fields, the tab says the team adds and changes its own
+fields here, and has **Add field** beside it; a team's own field's page has **Change
+field**, or **Restore field** when it's archived ([below](#adding-and-changing-fields)).
+An organization's field, a `frozen` one, and a key that can't get neither. A D4H key
+that can't (an Editor's) keeps the read-only tab, with one paragraph saying to change
+them in D4H or save an Owner's key, linking the Access key tab. D4H's web address for
+its fields page isn't known, so the page names D4H without a link.
 
 **An organization's Fields tab**, `/orgs/:slug/settings/fields`, after Hours tags, is
 for its organization admins: its own fields, laid out the same way, each with its own
@@ -209,7 +212,24 @@ A team admin adds, changes, archives, restores, deletes, and reorders the team's
 fields (#1056 step 4). The organization's stay read only: D4H gives a team's key no way
 to change them. Every write is a change set ([change-sets.md](change-sets.md)), and the
 copy takes what D4H answers with, so the next page shows it without waiting for the
-sync. The pages come in the next PR; these are the operations they call.
+sync. Change order, with dragging, comes in step 4's last PR.
+
+- **Add field**, `/teams/:subdomain/settings/fields/new?kind=incident`, opens on the
+  kind in view: On, Name, Type (the combobox chore categories use, with a line under each
+  type), Choices on One choice and Several choices, Units on a Number, What it means (the
+  hint), and Bundle, a combobox of the team's own bundles of the kind that takes a new
+  name. Needed to publish and Restricted show on activity kinds only, and Each member's
+  own answer (Hidden from them, They see it, They see and change it) on members only.
+- **Change field**, `/teams/:subdomain/settings/fields/:id/edit`, is the same form
+  without On and Type, which are facts in the lead with how many records have an answer:
+  "One choice, on incidents. 38 incidents have an answer." A choice the field has is
+  archived or restored, shown greyed while archived; a new one is removed. Archive field
+  keeps every answer; a field no record has answered offers Delete field in its place,
+  red with a confirm. Both pages are
+  [FieldFormLive](../lib/web/live/settings/field_form_live.ex), and refuse a field the
+  team can't change.
+
+These are the operations they call.
 
 - **Who.** `CustomField.team_changes?/2`: the team's own field, not `frozen`, with a key
   that can change fields (`Team.d4h_can?(team, :custom_fields)`). An Editor's D4H key

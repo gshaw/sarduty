@@ -7,12 +7,15 @@ defmodule Web.Settings.FieldsLive do
 
   alias App.Adapter.D4H
   alias App.Model.CustomField
+  alias App.Model.Team
   alias App.Repo
 
   # Settings' Fields tab, /teams/:subdomain/settings/fields (#872): an index of the custom
   # fields on the team's records, one kind at a time (`?kind=member`), each field a row
   # link to its own page, Web.Settings.FieldLive: the team's own first, then its
-  # organization's (#1056). Read only. A kind's archived fields wait, closed, at its foot.
+  # organization's (#1056). A team admin adds the team's own fields here, with a key that
+  # can (#1056 step 4); one that can't says why. A kind's archived fields wait, closed, at
+  # its foot.
   def mount(_params, _session, socket) do
     team = Repo.preload(socket.assigns.current_team, :organization)
 
@@ -21,6 +24,7 @@ defmodule Web.Settings.FieldsLive do
       |> assign(
         page_title: "Team settings · Fields",
         service: D4H.service_name(team),
+        can_change: Team.d4h_can?(team, :custom_fields),
         organization_name: team.organization && team.organization.short_name
       )
       |> assign_fields(team)
@@ -59,13 +63,31 @@ defmodule Web.Settings.FieldsLive do
 
     ~H"""
     <.team_settings_tabs team={@current_team} current={:fields} />
-    <div class="measure">
-      <p class="lead">
-        The fields on your team's records, from your team and your organization. Reports,
-        forms, and agents read them by title.
-      </p>
-      <p>Change them in {@service}. SAR Duty refreshes them every 10 minutes.</p>
-    </div>
+    <.heading_row>
+      <div class="measure">
+        <p class="lead">
+          The fields on your team's records, from your team and your organization. Reports,
+          forms, and agents read them by title.
+        </p>
+        <p :if={@can_change} id="fields-who-changes">
+          Add and change your team's own fields here.
+          <span :if={@organization_name}>Only {@organization_name} can change its fields.</span>
+        </p>
+        <p :if={!@can_change} id="fields-key-cannot">
+          Your team's access key cannot add or change fields, so change them in {@service}. To change them here, save a key from a {@service} Owner.
+          <.a navigate={~p"/teams/#{@current_team}/settings/access-key"}>Change the access key</.a>
+        </p>
+      </div>
+      <:action :if={@can_change}>
+        <.button
+          id="field-add"
+          variant={:success}
+          navigate={~p"/teams/#{@current_team}/settings/fields/new?kind=#{@kind || "incident"}"}
+        >
+          Add field
+        </.button>
+      </:action>
+    </.heading_row>
 
     <.empty_state :if={@counts == []} id="no-fields" title="No fields yet" class="mt-8">
       Your team and organization have added no fields to records.

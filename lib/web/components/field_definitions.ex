@@ -126,6 +126,10 @@ defmodule Web.Components.FieldDefinitions do
   attr :service, :string, default: "D4H", doc: "where the field changes: D4H.service_name/1"
   attr :restricted_text, :string, default: nil, doc: "what a RESTRICTED field means here"
 
+  attr :changes, :boolean,
+    default: false,
+    doc: "whether the team changes this field in SAR Duty: CustomField.team_changes?/2"
+
   @doc """
   One field on its own page (#1056), a detail list in one order, leaving out what a field
   lacks: what it means, its type, what it's on, who added it, needed to publish, what
@@ -171,7 +175,9 @@ defmodule Web.Components.FieldDefinitions do
             @field.d4h_created_at,
             @timezone
           )}</span>
-          <span class="hint block">{added_by_text(@field, @org, @team_name, @service)}</span>
+          <span class="hint block">
+            {added_by_text(@field, @org, @team_name, if(@changes, do: nil, else: @service))}
+          </span>
         </dd>
       </div>
       <div :if={@field.required and @field.target in ~w(incident exercise event)} id="field-required">
@@ -185,7 +191,8 @@ defmodule Web.Components.FieldDefinitions do
         <dd>
           {members_text(@field.member_privacy)}
           <span class="hint block">
-            {if @team_name, do: "Team admins", else: "Each team's admins"} see every member's answer. Change this setting in {@service}.
+            {if @team_name, do: "Team admins", else: "Each team's admins"} see every member's answer.
+            <span :if={!@changes}>Change this setting in {@service}.</span>
           </span>
         </dd>
       </div>
@@ -233,6 +240,9 @@ defmodule Web.Components.FieldDefinitions do
 
     if team_name, do: "#{why} Only #{org} can change it.", else: "#{why} Change it in #{service}."
   end
+
+  # A service of nil: the team changes the field here.
+  defp added_by_text(_field, _org, team_name, nil), do: "Only #{team_name} has this field."
 
   defp added_by_text(_field, _org, _team_name, service),
     do: "Only your team has this field. Change it in #{service}."
