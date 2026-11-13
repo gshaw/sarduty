@@ -28,6 +28,9 @@ defmodule Web.PasskeySessionController do
     |> json(WebAuthn.request_options(challenge))
   end
 
+  # A passkey field that isn't a form, as from a hand-made request.
+  def create(conn, %{"passkey" => params}) when not is_map(params), do: refuse(conn)
+
   def create(conn, %{"passkey" => params}) do
     kept = get_session(conn, @challenge)
     conn = delete_session(conn, @challenge)
