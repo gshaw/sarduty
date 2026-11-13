@@ -1,0 +1,30 @@
+/* Rows people put in order (drag_list.ex, drag_list.js). See /styles/drag-list. */
+@layer components {
+  .drag-rows { list-style: none; padding: 0; margin: 0; }
+  .drag-row {
+    display: flex; align-items: center; gap: var(--sp-2); min-height: 44px;
+    padding-block: var(--sp-1); border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg);
+  }
+  .drag-row:last-child { border-bottom: 0; }
+  .drag-row-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-2); }
+
+  /* The handle takes the finger as well as the mouse: no scrolling or text selection
+     starts on it, and on a touch screen its target is 44px. */
+  .drag-handle {
+    flex: none; display: inline-flex; padding: var(--sp-1); border: 0; border-radius: var(--radius);
+    background: none; color: var(--text-muted); cursor: grab;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  .drag-handle:focus-visible { outline: 3px solid transparent; background: var(--focus); color: #0b0c0c; }
+  @media (pointer: coarse) { .drag-handle { padding: 12px; } }
+  @media (hover: hover) { .drag-handle:hover { color: var(--text); background: var(--surface-alt); } }
+
+  /* The row being dragged lifts off the list and follows the pointer. */
+  .drag-row.dragging {
+    position: relative; z-index: 1; cursor: grabbing;
+    background: var(--surface-alt); box-shadow: 0 4px 12px rgb(0 0 0 / 0.2);
+  }
+  .drag-list.is-dragging { user-select: none; -webkit-user-select: none; }
+  .drag-list.is-dragging .drag-handle { cursor: grabbing; }
+}

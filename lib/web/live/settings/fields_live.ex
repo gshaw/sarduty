@@ -58,6 +58,10 @@ defmodule Web.Settings.FieldsLive do
       assign(assigns,
         fields: Map.get(assigns.live, assigns.kind, []),
         archived_fields: Map.get(assigns.archived, assigns.kind, []),
+        own_count:
+          assigns.live
+          |> Map.get(assigns.kind, [])
+          |> Enum.count(&CustomField.team_changes?(assigns.current_team, &1)),
         path: &~p"/teams/#{assigns.current_team}/settings/fields/#{&1.id}"
       )
 
@@ -79,6 +83,13 @@ defmodule Web.Settings.FieldsLive do
         </p>
       </div>
       <:action :if={@can_change}>
+        <.button
+          :if={@own_count > 1}
+          id="field-order"
+          navigate={~p"/teams/#{@current_team}/settings/fields/order?kind=#{@kind}"}
+        >
+          Change order
+        </.button>
         <.button
           id="field-add"
           variant={:success}

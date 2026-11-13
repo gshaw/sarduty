@@ -186,6 +186,39 @@ defmodule Web.Settings.FieldFormLiveTest do
     assert_received {:records, "PATCH", "/custom-field-options/44", %{"archived" => true}}
   end
 
+  test "dragging choices sends their new order", %{conn: conn, team: team} do
+    field = own_field(team)
+
+    RecordsStub.stub(fn "PATCH", "/custom-field-options/" <> id, _ ->
+      {200, %{"id" => String.to_integer(id), "label" => "x", "ordering" => 0}}
+    end)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{field.id}/edit")
+
+    assert has_element?(lv, "#field-choice-list-row-option-43 [data-drag-handle]")
+    assert has_element?(lv, "#field-choice-list-row-option-43 [aria-label='Move Yes']")
+
+    lv
+    |> element("#field-choice-list")
+    |> render_hook("reorder-choices", %{"keys" => ["option-44", "option-43", "option-45"]})
+
+    assert has_element?(lv, "#field-choice-0-label[value=No]")
+    assert has_element?(lv, "#field-choice-1-label[value=Yes]")
+
+    # Keys that don't name each choice once change nothing.
+    lv
+    |> element("#field-choice-list")
+    |> render_hook("reorder-choices", %{"keys" => ["option-43"]})
+
+    assert has_element?(lv, "#field-choice-0-label[value=No]")
+
+    lv |> form("#field-form") |> render_submit()
+
+    assert_received {:records, "PATCH", "/custom-field-options/44", %{"ordering" => 0}}
+    assert_received {:records, "PATCH", "/custom-field-options/43", %{"ordering" => 1}}
+    refute_received {:records, "PATCH", "/custom-field-options/45", _}
+  end
+
   test "a field no record has answered offers Delete in place of Archive",
        %{conn: conn, team: team} do
     field = own_field(team)

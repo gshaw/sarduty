@@ -212,7 +212,7 @@ A team admin adds, changes, archives, restores, deletes, and reorders the team's
 fields (#1056 step 4). The organization's stay read only: D4H gives a team's key no way
 to change them. Every write is a change set ([change-sets.md](change-sets.md)), and the
 copy takes what D4H answers with, so the next page shows it without waiting for the
-sync. Change order, with dragging, comes in step 4's last PR.
+sync.
 
 - **Add field**, `/teams/:subdomain/settings/fields/new?kind=incident`, opens on the
   kind in view: On, Name, Type (the combobox chore categories use, with a line under each
@@ -220,12 +220,19 @@ sync. Change order, with dragging, comes in step 4's last PR.
   hint), and Bundle, a combobox of the team's own bundles of the kind that takes a new
   name. Needed to publish and Restricted show on activity kinds only, and Each member's
   own answer (Hidden from them, They see it, They see and change it) on members only.
+- **Change order**, `/teams/:subdomain/settings/fields/order?kind=incident`, lists the
+  team's own live fields of one kind, from Change order on the Fields tab when the kind
+  has 2 or more. Drag a row by its grip, or use Move up and Move down; Save order sends
+  it. The organization's fields keep their own order.
+  [FieldOrderLive](../lib/web/live/settings/field_order_live.ex) and the choices on Add
+  field and Change field share the drag list, `/styles/drag-list`, which equipment
+  checklists (#407) can reuse.
 - **Change field**, `/teams/:subdomain/settings/fields/:id/edit`, is the same form
   without On and Type, which are facts in the lead with how many records have an answer:
   "One choice, on incidents. 38 incidents have an answer." A choice the field has is
-  archived or restored, shown greyed while archived; a new one is removed. Archive field
-  keeps every answer; a field no record has answered offers Delete field in its place,
-  red with a confirm. Both pages are
+  dragged into a new order, and archived or restored, shown greyed while archived; a new
+  one is removed. Archive field keeps every answer; a field no record has answered
+  offers Delete field in its place, red with a confirm. Both pages are
   [FieldFormLive](../lib/web/live/settings/field_form_live.ex), and refuse a field the
   team can't change.
 

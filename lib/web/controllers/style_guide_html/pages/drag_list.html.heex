@@ -1,0 +1,92 @@
+<.shell current={:drag_list}>
+  <h1>Drag list</h1>
+  <p class="lead">Rows people put in order: drag a row, or move it with the keyboard.</p>
+
+  <div class="demo max-w-xl">
+    <.drag_list
+      :let={{_key, title}}
+      id="drag-list-demo"
+      rows={[
+        {"1", "People helped"},
+        {"2", "Requesting agency"},
+        {"3", "Team notes"},
+        {"4", "Debrief held"}
+      ]}
+      key={&elem(&1, 0)}
+      label={&elem(&1, 1)}
+      event="reorder"
+      moves
+    >
+      {title}
+    </.drag_list>
+  </div>
+
+  <h3>Inside a form</h3>
+  <p>Each row holds its own inputs and buttons, such as a field's choices.</p>
+  <div class="demo max-w-xl">
+    <.drag_list
+      :let={{key, label}}
+      id="drag-list-demo-choices"
+      rows={[{"1", "Police"}, {"2", "Ambulance"}, {"3", "Fire"}]}
+      key={&elem(&1, 0)}
+      label={&elem(&1, 1)}
+      event="reorder"
+    >
+      <input
+        type="text"
+        id={"drag-list-demo-choice-#{key}"}
+        value={label}
+        aria-label={"Choice #{key}"}
+        class="grow"
+      />
+      <.button type="button" size={:sm}>Archive</.button>
+    </.drag_list>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    A short list whose order people choose and others see, such as a team's fields on Change order or a field's choices. Changing the order is the point of the list, or one part of a form.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    A list people read in an order they don't set, such as members by name. Use a <a href={
+      page_path(:table)
+    }>table</a>, sorted by a column. A long list, past about 20 rows, where a number or a date sets the order better than dragging.
+  </p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>
+      <strong>Drag.</strong>
+      The grip handle drags its row, with a mouse, a finger, or a pen. On a touch screen the handle takes the drag rather than scrolling the page, and its target is 44px. Near the top or bottom of the window the page scrolls.
+    </li>
+    <li>
+      <strong>Keyboard.</strong>
+      The handle is a button, Move and the row's name. With it focused, the up and down arrows move the row one place, and focus stays on it.
+    </li>
+    <li>
+      <strong>Move up and Move down.</strong>
+      Where ordering is the whole page, each row has both buttons too. The first row's Move up and the last row's Move down grey out.
+    </li>
+    <li>
+      <strong>Screen readers</strong> hear where the row went: "Team notes, 2 of 4".
+    </li>
+  </ul>
+  <p>
+    Nothing is saved as rows move. The page's own button saves the order, such as Save order, or Save field for choices.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.drag_list id="…" rows=&#123;@fields&#125; key=&#123;&amp;to_string(&amp;1.id)&#125; label=&#123;&amp; &amp;1.title&#125; event="reorder" moves :let=&#123;field&#125;&gt;</code>
+    draws a row for each, with the row's content from its block. <code>key</code>
+    gives a row's key, a string, and <code>label</code>
+    its name for the handle. The <code>DragList</code>
+    hook moves the row at once and sends <code>event</code>
+    with <code>%&#123;"keys" =&gt; keys&#125;</code>, every key in the new order. The LiveView puts its list in that order with
+    <code>Web.Components.DragList.reorder/3</code>
+    and renders it. Leave out <code>moves</code>
+    for the handle alone.
+  </p>
+</.shell>

@@ -466,6 +466,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings/members", Settings.MembersLive
       live "/teams/:subdomain/settings/fields", Settings.FieldsLive
       live "/teams/:subdomain/settings/fields/new", Settings.FieldFormLive, :new
+      live "/teams/:subdomain/settings/fields/order", Settings.FieldOrderLive
       live "/teams/:subdomain/settings/fields/:id", Settings.FieldLive
       live "/teams/:subdomain/settings/fields/:id/edit", Settings.FieldFormLive, :edit
       live "/teams/:subdomain/settings/features", Settings.FeaturesLive
