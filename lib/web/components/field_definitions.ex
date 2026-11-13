@@ -39,7 +39,7 @@ defmodule Web.Components.FieldDefinitions do
           <li :for={field <- fields} id={"field-#{field.id}"}>
             <.row_link navigate={@path.(field)}>
               <strong class="text-link">{field.title}</strong>
-              <span class="hint">{about(field)}</span>
+              <span class="hint ml-1">{about(field)}</span>
               <.field_tag field={field} />
               <span :if={first_line(field.hint)} class="hint block line-clamp-1">
                 {first_line(field.hint)}
@@ -86,14 +86,14 @@ defmodule Web.Components.FieldDefinitions do
   defp field_tag(%{field: %{target: target, required: true}} = assigns)
        when target in @activity_kinds do
     ~H"""
-    <.badge kind={:primary}>Needed to publish</.badge>
+    <.badge kind={:primary} class="ml-1">Needed to publish</.badge>
     """
   end
 
   defp field_tag(%{field: %{target: target, restricted: true}} = assigns)
        when target != "member" do
     ~H"""
-    <.badge>Restricted</.badge>
+    <.badge class="ml-1">Restricted</.badge>
     """
   end
 
