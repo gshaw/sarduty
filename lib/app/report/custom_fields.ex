@@ -5,8 +5,8 @@ defmodule App.Report.CustomFields do
   A query names one by its title in backticks, as Sheets' QUERY language quotes a name
   with spaces: `` `Primary Cause` ``, or ``activity.`Task Type` `` from a parent. Titles
   match whatever their case. A report reads what a record's Fields tab shows: live fields
-  only, an activity's for its kind, a member's only when the team copies it, never a
-  RESTRICTED one for a member.
+  only, an activity's for its kind, and every member field, since RESTRICTED changes
+  nothing on one (#1056).
 
   The values are `custom_values`, a map of D4H field id to a string or a list of option
   ids (docs/custom-fields.md), read with SQLite's `json_extract`. Field ids come from the
@@ -52,24 +52,15 @@ defmodule App.Report.CustomFields do
   defp by_subject(fields) do
     %{
       "activities" => fields |> Enum.filter(&(&1.target in @kinds)) |> defs(),
-      "members" => fields |> Enum.filter(&(&1.target == "member" and &1.copy_values)) |> defs(),
-      "equipment" => fields |> Enum.filter(&(&1.target == "equipment")) |> defs(),
-      # D4H's member fields the team doesn't copy, so a query naming one hears why.
-      uncopied: fields |> Enum.filter(&(&1.target == "member")) |> uncopied_titles()
+      "members" => fields |> Enum.filter(&(&1.target == "member")) |> defs(),
+      "equipment" => fields |> Enum.filter(&(&1.target == "equipment")) |> defs()
     }
-  end
-
-  defp uncopied_titles(member_fields) do
-    for f <- member_fields, f.restricted or not f.copy_values, into: %{} do
-      {String.downcase(f.title), if(f.restricted, do: :restricted, else: :uncopied)}
-    end
   end
 
   # One def per title. Fields that share a title on different kinds are one field, read
   # from whichever the activity's kind has; on the same kind they're a mistake to name.
   defp defs(fields) do
     fields
-    |> Enum.reject(&(&1.restricted and &1.target == "member"))
     |> Enum.group_by(&String.downcase(&1.title))
     |> Enum.map(fn {_key, same} -> definition(same) end)
     |> Enum.sort_by(& &1.order)
@@ -92,7 +83,7 @@ defmodule App.Report.CustomFields do
     %{
       kinds: same |> Enum.map(& &1.target) |> Enum.uniq(),
       duplicate?: duplicate_kind?(same),
-      restricted?: Enum.any?(same, & &1.restricted),
+      restricted?: Enum.any?(same, &(&1.restricted and &1.target != "member")),
       units: Enum.find_value(same, & &1.value_units)
     }
   end
@@ -119,11 +110,6 @@ defmodule App.Report.CustomFields do
   def type("single_choice"), do: :choice
   def type("multiple_choice"), do: :list
   def type(_other), do: :text
-
-  @doc "`:restricted` or `:uncopied` for a member field D4H has and the team doesn't copy."
-  def uncopied(%Context{custom_fields: custom}, "`" <> _ = name),
-    do:
-      custom |> Map.get(:uncopied, %{}) |> Map.get(name |> String.trim("`") |> String.downcase())
 
   @doc "The defs `context`'s viewer may read in `subject_name`."
   def all(%Context{custom_fields: custom}, subject_name), do: Map.get(custom, subject_name, [])

@@ -133,7 +133,7 @@ defmodule Web.MeDetailsLiveTest do
     refute has_element?(lv, "[id^=invitation-reminders]")
   end
 
-  test "shows the member fields a member may see, and not the hidden ones (#681)", %{
+  test "shows the member fields a member may see, restricted ones too, never hidden ones", %{
     conn: conn,
     team: team,
     member: member
@@ -142,25 +142,44 @@ defmodule Web.MeDetailsLiveTest do
       d4h_custom_field_id: 630,
       target: "member",
       title: "Radio Call Sign",
-      copy_values: true,
       member_privacy: "editable"
+    })
+
+    custom_field_fixture(team, %{
+      d4h_custom_field_id: 855,
+      target: "member",
+      title: "Year of birth",
+      restricted: true,
+      member_privacy: "viewable"
+    })
+
+    custom_field_fixture(team, %{
+      d4h_custom_field_id: 856,
+      target: "member",
+      title: "Heritage",
+      restricted: true,
+      member_privacy: "hidden"
     })
 
     custom_field_fixture(team, %{
       d4h_custom_field_id: 1361,
       target: "member",
       title: "Category",
-      copy_values: true,
       member_privacy: "hidden"
     })
 
     member
-    |> Ecto.Changeset.change(custom_values: %{"630" => "SF 12", "1361" => [5]})
+    |> Ecto.Changeset.change(
+      custom_values: %{"630" => "SF 12", "1361" => [5], "855" => "1988", "856" => "Irish"}
+    )
     |> Repo.update!()
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
 
     assert has_element?(lv, "#own-fields-630", "SF 12")
+    assert has_element?(lv, "#own-fields-855", "1988")
     refute has_element?(lv, "#own-fields-1361")
+    refute has_element?(lv, "#own-fields-856")
+    refute render(lv) =~ "Irish"
   end
 end

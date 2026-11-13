@@ -273,6 +273,7 @@ defmodule App.CoastRange do
   @exercise_leader 9_400_008
   @event_leader 9_400_009
   @areas 9_400_010
+  @birth_year 9_400_011
 
   # Each incident's people helped, and a team admin's notes (RESTRICTED).
   @helped %{
@@ -427,6 +428,8 @@ defmodule App.CoastRange do
     "Noor Aziz" => ["Vehicle care"],
     "Casey Dhillon" => ["Fundraising"]
   }
+  # A RESTRICTED member field, which SAR Duty keeps like any other (#1056).
+  @birth_years %{"Cameron Ruiz" => "1988", "Priya Nair" => "1979", "Alex Chen" => "1975"}
   @leaders ["Alex Chen", "Harper Nguyen", "Avery Chen"]
 
   @doc "Coast Range SAR's time zone."
@@ -572,10 +575,7 @@ defmodule App.CoastRange do
         required: true,
         options: agency_options
       ),
-      custom_field(@call_sign, "member", "Radio call sign", "text",
-        member_privacy: "viewable",
-        copy_values: true
-      ),
+      custom_field(@call_sign, "member", "Radio call sign", "text", member_privacy: "viewable"),
       custom_field(@serviced, "equipment", "Last serviced", "date", []),
       custom_field(@people_helped, "incident", "People helped", "number", []),
       custom_field(@team_notes, "incident", "Team notes", "text_area", restricted: true),
@@ -584,8 +584,12 @@ defmodule App.CoastRange do
       custom_field(@event_leader, "event", "Event leader", "text", []),
       custom_field(@areas, "member", "Areas of assistance", "multiple_choice",
         member_privacy: "editable",
-        copy_values: true,
         options: options(@areas_options, &area_option/1)
+      ),
+      custom_field(@birth_year, "member", "Year of birth", "number",
+        member_privacy: "editable",
+        restricted: true,
+        hint: "In what year were you born?"
       )
     ] ++ organization_fields()
   end
@@ -741,6 +745,12 @@ defmodule App.CoastRange do
 
   defp member_values(name, ref_id) do
     values = %{"#{@call_sign}" => "CR #{ref_id}"}
+
+    values =
+      case @birth_years[name] do
+        nil -> values
+        year -> Map.put(values, "#{@birth_year}", year)
+      end
 
     case @member_areas[name] do
       nil -> values

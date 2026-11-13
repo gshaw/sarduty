@@ -9,7 +9,7 @@ defmodule Web.Settings.MembersLive do
 
   # Settings' Members tab, /teams/:subdomain/settings/members: the Retiring group (#514)
   # and the attendance check (#366), the two settings that decide which members SAR Duty
-  # counts and watches. Which member fields it copies is on the Fields tab (#872).
+  # counts and watches.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
 

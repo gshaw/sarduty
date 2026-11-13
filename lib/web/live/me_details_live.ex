@@ -154,12 +154,12 @@ defmodule Web.MeDetailsLive do
     end
   end
 
-  # The member fields the team copies that D4H lets a member see (#681), read only.
+  # The member fields D4H lets a member see (#681), read only.
   defp own_field_rows(member) do
     team = member.team
 
     team.id
-    |> CustomField.copied_member_fields(:self)
+    |> CustomField.member_fields(:self)
     |> CustomField.rows(member.custom_values, team.timezone)
   end
 

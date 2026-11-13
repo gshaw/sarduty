@@ -351,9 +351,18 @@ defmodule Web.MCPControllerTest do
 
       custom_field_fixture(team, %{target: "event", title: "Event leader"})
       custom_field_fixture(team, %{target: "exercise", title: "Event leader"})
-      custom_field_fixture(team, %{target: "member", title: "Call sign", copy_values: true})
-      custom_field_fixture(team, %{target: "member", title: "Allergies"})
-      custom_field_fixture(team, %{target: "member", title: "Heritage", restricted: true})
+      call_sign = custom_field_fixture(team, %{target: "member", title: "Call sign"})
+
+      heritage =
+        custom_field_fixture(team, %{target: "member", title: "Heritage", restricted: true})
+
+      # A member's values never reach an agent (#1056), a restricted field's included.
+      member_fixture(team, %{
+        custom_values: %{
+          "#{call_sign.d4h_custom_field_id}" => "CR 7",
+          "#{heritage.d4h_custom_field_id}" => "Secret heritage"
+        }
+      })
 
       custom_field_fixture(team, %{
         target: "incident",
@@ -382,8 +391,24 @@ defmodule Web.MCPControllerTest do
                  "write" => "`Call sign`",
                  "on" => "members",
                  "type" => "text"
+               },
+               %{
+                 "title" => "Heritage",
+                 "write" => "`Heritage`",
+                 "on" => "members",
+                 "type" => "text"
                }
              ]
+
+      refute text =~ "Secret heritage"
+      refute text =~ "CR 7"
+
+      for tool <- ["try_report", "check_report"] do
+        {_result, text} =
+          call_tool(conn, token, team, tool, %{"query" => "select name, `Heritage` from members"})
+
+        refute text =~ "Secret heritage"
+      end
     end
 
     test "check_report links a saved report to Change report", ctx do

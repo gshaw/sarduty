@@ -4,12 +4,16 @@ defmodule App.Operation.RefreshD4HData.UpsertMembersTest do
   import App.DataFixtures
 
   alias App.Adapter.D4H
+  alias App.Model.D4HChange
   alias App.Model.Member
+  alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData.Progress
+  alias App.Operation.RefreshD4HData.UpsertCustomFields
   alias App.Operation.RefreshD4HData.UpsertMembers
 
   # 11 pm on Sep 30 in Vancouver.
   @now ~U[2026-10-01 06:00:00Z]
+  @saved_at ~U[2026-10-01 06:00:00.000000Z]
 
   test "marks this team's members D4H no longer lists as retired, as of today" do
     team = team_fixture()
@@ -58,5 +62,72 @@ defmodule App.Operation.RefreshD4HData.UpsertMembersTest do
     assert member.left_at == ~U[2026-07-15 07:00:00Z]
     assert Service.Format.date_short(member.joined_at, team.timezone) =~ "Jan 1, 2018"
     assert Service.YearRange.year_in(member.joined_at, team.timezone) == 2018
+  end
+
+  defp member_field(id, title, restricted),
+    do: %D4H.CustomField{
+      d4h_custom_field_id: id,
+      title: title,
+      target: "member",
+      field_type: "text",
+      restricted: restricted
+    }
+
+  defp d4h_member(member, values) do
+    %{
+      "id" => member.d4h_member_id,
+      "name" => member.name,
+      "owner" => %{"resourceType" => "Team", "id" => 1},
+      "email" => %{"value" => member.email},
+      "mobile" => %{"phone" => nil},
+      "customFieldValues" =>
+        Enum.map(values, fn {id, value} -> %{"customField" => %{"id" => id}, "value" => value} end)
+    }
+  end
+
+  defp read_members(team, values_for) do
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      rows = Enum.map(values_for, fn {member, values} -> d4h_member(member, values) end)
+      Req.Test.json(conn, %{"results" => rows, "totalSize" => length(rows)})
+    end)
+
+    RecordD4HChanges.recording(team, @saved_at, fn ->
+      team |> D4H.build_context_from_team() |> UpsertMembers.call(team, Progress.quiet(team.id))
+    end)
+  end
+
+  # The migration that keeps every member field (#1056) clears each member's values, so
+  # the next read is a baseline: every field it brings, restricted ones too, and no
+  # history for any of them.
+  test "keeps every member field's values, and a read after the clear records nothing" do
+    team = team_fixture(%{d4h_access_key: "key", d4h_refreshed_at: @now, d4h_synced_at: @now})
+    member = member_fixture(team, %{custom_values: nil})
+
+    UpsertCustomFields.save(
+      team.id,
+      [],
+      [member_field(630, "Radio Call Sign", false), member_field(855, "Year of birth", true)],
+      @saved_at
+    )
+
+    read_members(team, [{member, %{630 => "SF 12", 855 => "1970"}}])
+
+    assert Repo.get!(Member, member.id).custom_values == %{"630" => "SF 12", "855" => "1970"}
+    # The fixture's other details differ from D4H's row; only the fields matter here.
+    changes = Repo.all(D4HChange)
+    refute Enum.any?(changes, &Map.has_key?(&1.new_value, "custom_values"))
+  end
+
+  test "a member's field changes are named in history, never their values" do
+    team = team_fixture(%{d4h_access_key: "key", d4h_refreshed_at: @now, d4h_synced_at: @now})
+    member = member_fixture(team, %{custom_values: %{"855" => "1970"}})
+    UpsertCustomFields.save(team.id, [], [member_field(855, "Year of birth", true)], @saved_at)
+
+    read_members(team, [{member, %{855 => "1971"}}])
+
+    assert [change] = Repo.all(D4HChange)
+    assert change.new_value["custom_values"] == ["Year of birth"]
+    refute Map.has_key?(change.old_value, "custom_values")
+    refute inspect({change.old_value, change.new_value}) =~ "197"
   end
 end

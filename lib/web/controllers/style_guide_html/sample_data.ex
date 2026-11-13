@@ -26,7 +26,8 @@ defmodule Web.StyleGuideHTML.SampleData do
 
   @doc """
   The same incident fields as definitions, for the Field definitions page: the team's
-  own, its organization's, and one in the organization's KMS Data bundle.
+  own, one of them restricted, its organization's, and one in the organization's KMS
+  Data bundle.
   """
   def custom_field_definitions do
     kms = %CustomFieldBundle{
@@ -66,24 +67,33 @@ defmodule Web.StyleGuideHTML.SampleData do
         owner_id: 11,
         d4h_created_at: ~U[2025-01-12 18:00:00Z]
       ),
+      field.(5, "Team notes", "text_area",
+        required: false,
+        restricted: true,
+        hint: "Working notes for team admins.",
+        owner_type: "Team",
+        owner_id: 11,
+        d4h_created_at: ~U[2025-02-03 18:00:00Z]
+      ),
       field.(1, "Primary Cause", "single_choice",
         bundle: kms,
-        options:
-          [
-            option(10, "Lost", 0),
-            option(11, "Slip or fall", 1),
-            option(12, "Avalanche", 2, archived: true),
-            option(13, "Stuck in mud", 3, owner: {"Team", 11})
-          ] ++
-            for(
-              {label, i} <-
-                Enum.with_index(
-                  ~w(Injury Stranded Darkness Weather Separation Fatigue Overdue Unknown)
-                ),
-              do: option(20 + i, label, 4 + i)
-            )
+        options: cause_options()
       )
     ]
+  end
+
+  defp cause_options do
+    [
+      option(10, "Lost", 0),
+      option(11, "Slip or fall", 1),
+      option(12, "Avalanche", 2, archived: true),
+      option(13, "Stuck in mud", 3, owner: {"Team", 11})
+    ] ++
+      for {label, i} <-
+            Enum.with_index(
+              ~w(Injury Stranded Darkness Weather Separation Fatigue Overdue Unknown)
+            ),
+          do: option(20 + i, label, 4 + i)
   end
 
   defp option(id, label, ordering, opts \\ []) do

@@ -1,7 +1,7 @@
 defmodule App.Operation.SaveCustomFields do
   @moduledoc """
   A team admin changes a record's D4H custom fields on its Change fields page (#705): an
-  activity's, a member's copied ones, or an equipment item's. plan/3 turns the form into
+  activity's, a member's, or an equipment item's. plan/3 turns the form into
   one change set row naming only the fields that changed; call/5 applies it through
   App.Operation.ApplyEdit, then writes what it sent to the copy, since D4H doesn't change
   a record's updatedAt for its custom fields and the sync may not read them back (#681).
@@ -22,13 +22,12 @@ defmodule App.Operation.SaveCustomFields do
 
   @doc """
   The fields `record`'s Change fields page offers, in D4H's order: its kind's for an
-  activity, the ones the team copies for a member, and every one for an item.
+  activity, and every one for a member or an item.
   """
   def fields(%Team{} = team, %Activity{activity_kind: kind}),
     do: CustomField.get_all(team.id, kind)
 
-  def fields(%Team{} = team, %Member{}),
-    do: CustomField.copied_member_fields(team.id, :team_admin)
+  def fields(%Team{} = team, %Member{}), do: CustomField.member_fields(team.id, :team_admin)
 
   def fields(%Team{} = team, %EquipmentItem{}), do: CustomField.get_all(team.id, "equipment")
 

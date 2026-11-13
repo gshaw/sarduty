@@ -1,6 +1,6 @@
 defmodule Web.MemberFieldsLive do
   @moduledoc """
-  A member's Fields tab (#705): the D4H member fields the team copies (#681), team admins
+  A member's Fields tab (#705): every D4H member field (#1056), team admins
   only, as the member's contact details are, with Change fields. A member sees their own
   on Your membership.
   """

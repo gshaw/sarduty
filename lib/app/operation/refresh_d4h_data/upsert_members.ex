@@ -2,7 +2,6 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
   import Ecto.Query
 
   alias App.Adapter.D4H
-  alias App.Model.CustomField
   alias App.Model.Member
   alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData.Progress
@@ -20,11 +19,10 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
     progress = Progress.update_stage(progress, "Members", total_count)
 
     chunks = Enum.chunk_every(d4h_members, @chunk_size)
-    copied = CustomField.copied_member_ids(team.id)
 
     progress =
       Enum.reduce(chunks, progress, fn chunk, progress_acc ->
-        Enum.each(chunk, &upsert_member(team, &1, copied))
+        Enum.each(chunk, &upsert_member(team, &1))
         Progress.add_page(progress_acc, Enum.count(chunk))
       end)
 
@@ -61,8 +59,8 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
     Logger.info("Marked #{count} members D4H no longer lists as retired for team #{team.id}")
   end
 
-  # Only the member fields a team admin picked are kept (#681); D4H sends them all.
-  defp upsert_member(team, d4h_member, copied) do
+  # Every member field's values are kept (#1056), RESTRICTED ones too.
+  defp upsert_member(team, d4h_member) do
     params = %{
       team_id: team.id,
       d4h_member_id: d4h_member.d4h_member_id,
@@ -78,7 +76,7 @@ defmodule App.Operation.RefreshD4HData.UpsertMembers do
       left_at: Service.Convert.day_start(d4h_member.left_on, team.timezone),
       d4h_permission: d4h_member.permission,
       d4h_status: d4h_member.status,
-      custom_values: Map.take(d4h_member.custom_values, MapSet.to_list(copied))
+      custom_values: d4h_member.custom_values
     }
 
     member = Member.get_by(team_id: team.id, d4h_member_id: d4h_member.d4h_member_id)

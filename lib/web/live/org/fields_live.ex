@@ -90,12 +90,7 @@ defmodule Web.Org.FieldsLive do
     </div>
 
     <section :if={@kind} id={"fields-#{@kind}"} class="mt-6">
-      <.field_list
-        id={"fields-#{@kind}-list"}
-        fields={@fields}
-        path={@path}
-        publish?={@kind in ~w(incident exercise event)}
-      />
+      <.field_list id={"fields-#{@kind}-list"} fields={@fields} path={@path} />
       <details :if={@archived_fields != []} id="archived-fields" class="mt-8">
         <summary class="subheading">
           Archived · {length(@archived_fields)}

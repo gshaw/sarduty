@@ -28,19 +28,22 @@ ones, edit them, and fill them from templates (#307).
   join none. A bundle has no hint, and D4H's API can create one but never rename or
   delete it. The bundles are read with the fields, so a renamed bundle waits for a field
   change or the nightly refresh.
-- **Values** ride on the records the sync already reads: `activities.custom_values` and
-  `equipment_items.custom_values`, a map of the D4H field id, as a string, to a string
+- **Values** ride on the records the sync already reads: `activities.custom_values`,
+  `members.custom_values`, and `equipment_items.custom_values`, a map of the D4H field id, as a string, to a string
   or a list of D4H option ids. They're keyed by D4H ids, not local ones, since the
   values are D4H option ids too and the copy can be rebuilt from D4H at any time. Empty
   values are left out of the map. Nil means not copied yet.
-- **Member values are copied only for the fields a team admin picks**, with each member
-  field's Copy box on team settings' [Fields page](#the-fields-page), none at first.
-  Member fields hold year of birth, gender, ethnicity, medical notes, and licence
-  numbers, and the team's key reads every one, RESTRICTED ones included. RESTRICTED
-  member fields are never offered: the page lists them with "Stays private" for a box. `members.custom_values` holds only the picked
-  fields ([SaveTeamMemberFields](../lib/app/operation/save_team_member_fields.ex)).
-  Saving clears every member's values and reads the members at once, so the copy after
-  a change is a new baseline and an unpicked field leaves nothing behind.
+- **Every member field's values are copied**, RESTRICTED ones too (decided 2026-11-12,
+  #1056): SAR Duty copies everything the access key reads and doesn't judge which data a
+  team should have. A key that can't read a restricted value brings none. Until #1056 a
+  team admin picked which member fields to copy with a Copy box, and RESTRICTED ones
+  never were. The migration that dropped the box cleared every member's values and
+  forgot the members list head, so the next sync, within 10 minutes, read the members
+  whole as a baseline and history didn't call every newly kept field a change.
+- **Who sees a member's values** has one home, `CustomField.member_fields/2`: a team
+  admin gets every live member field; a member gets their own where `member_privacy` is
+  viewable or editable. Restricted is never asked on a member field. Nothing an
+  organization or an AI agent sees reads a member's values.
 
 ## Where they show
 
@@ -77,13 +80,14 @@ with the kind.
   tab's name carries the count in amber. Members see the rest, as they see tags.
 - **An equipment item's**, for team admins: its page gets Activities and Fields tabs,
   in the main column under what's inside it.
-- **A member's**, for team admins, before History.
-  A member sees their own on Your membership's Contact details, only the ones D4H lets
-  a member see (`member_privacy` viewable or editable). Members never see another
+- **A member's**, for team admins, before History: every member field, restricted ones
+  too. A member sees their own on Your membership's Contact details, only the ones D4H
+  lets a member see (`member_privacy` viewable or editable). Members never see another
   member's.
 - **Reports** read the same fields as the Fields tab, by title in backticks:
   `` `Primary Cause` `` (#840, [reports.md](reports.md#custom-fields)). Members read an
-  activity's unrestricted ones; a member's and an item's are for team admins.
+  activity's unrestricted ones; a member's and an item's are for team admins, every
+  member field included.
 
 ## The Fields page
 
@@ -92,17 +96,25 @@ enter 999" on a number field changes how a report sums it. So team settings has 
 **Fields** tab, `/teams/:subdomain/settings/fields`, after Members (#872).
 
 The tab is an index to scan, one kind at a time: counts for incidents, exercises,
-events, members, and equipment switch between them (`?kind=member`). Each field is one
-line, by bundle: its name, the first line of its hint, and Needed to publish on an
-activity's required ones. A kind's archived fields wait at its foot, closed. Member
-fields carry their Copy boxes, saved with Save member fields, which changes only SAR
-Duty's own setting.
+events, members, and equipment switch between them (`?kind=member`). The team's own
+fields come first, under "Coast Range SAR's fields", then its organization's, under
+"WESARA's fields", so step 4 of #1056 can let a team change its own. Each is a row link,
+by bundle (decided 2026-11-12, #1056): the name, its type in grey, at most one tag, and
+the first line of its hint. On a member field the grey text adds who sees it: Team
+admins only, Members see their own, or Members change their own. The tag is Needed to
+publish on an activity's required field, else Restricted on an activity or equipment
+field; a restricted member field is a normal row. A kind's archived fields wait at its
+foot, closed. Nothing on the tab is a setting: #1056 took out the member fields' Copy
+boxes.
 
-A field's name opens **its own page**, `/teams/:subdomain/settings/fields/:id`: what it
-means, its type (Text and Long text apart), what it's on and its bundle, who added it
-and when, and every choice one per line, with the ones a team added to an
-organization's field under the team's name and the archived ones apart. A RESTRICTED
-one says only team admins see its values.
+A row opens **its own page**, `/teams/:subdomain/settings/fields/:id`, a detail list in
+one order that leaves out what a field lacks: What it means, Type (Text and Long text
+apart), On with its bundle, Added by, Needed to publish, Members, Restricted, Choices,
+the choices a team added to an organization's field under the team's name, and Archived
+choices. Added by, Needed to publish, Members, and Restricted each carry a line on what
+they mean: an organization's field is on every team so its reports read it the same way,
+and only the organization changes it. A RESTRICTED activity field says only team admins
+see its values; on a member field it says restricted changes nothing in SAR Duty.
 
 Decided 2026-11-12: the first version put every field's hint and choices on the tab,
 and with BCSARA's 40-odd Activity choices it read as a wall of text. Folding long lists
@@ -150,7 +162,7 @@ them (#307, [templates.md](templates.md#fields)).
 
 - **An activity's**, for team admins, its kind's fields. A published one is locked, as
   for its other details.
-- **A member's**, the fields the team copies.
+- **A member's**, every member field, restricted ones too.
 - **An equipment item's**, every equipment field.
 
 Each field is its type's input: text, a box for text areas, a number, a date or time, a
@@ -198,7 +210,9 @@ Fraser's one is "SFSAR Custom PRIVATE", working notes on a task report. So:
   ([organizations.md](organizations.md)), org reports such as unique file numbers
   (#363), and the MCP. A report across an organization's teams uses its own,
   unrestricted fields, which mean the same thing on every team.
-- Member fields are different: a RESTRICTED member field is never copied at all.
+- Member fields are different: RESTRICTED changes nothing on one in SAR Duty. Team
+  admins see every member's values, members their own as member privacy allows, and an
+  organization never a person's (#1056).
 
 ## D4H's API
 

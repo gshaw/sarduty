@@ -7,19 +7,22 @@ defmodule Web.Settings.FieldsLive do
 
   alias App.Adapter.D4H
   alias App.Model.CustomField
-  alias App.Operation.SaveTeamMemberFields
+  alias App.Repo
 
   # Settings' Fields tab, /teams/:subdomain/settings/fields (#872): an index of the custom
-  # fields on the team's records, one kind at a time (`?kind=member`), each field a line
-  # that opens its own page, Web.Settings.FieldLive. Read only, except which member
-  # fields SAR Duty copies (#681), which only changes SAR Duty's own setting. A kind's
-  # archived fields wait, closed, at its foot.
+  # fields on the team's records, one kind at a time (`?kind=member`), each field a row
+  # link to its own page, Web.Settings.FieldLive: the team's own first, then its
+  # organization's (#1056). Read only. A kind's archived fields wait, closed, at its foot.
   def mount(_params, _session, socket) do
-    team = socket.assigns.current_team
+    team = Repo.preload(socket.assigns.current_team, :organization)
 
     socket =
       socket
-      |> assign(page_title: "Team settings · Fields", service: D4H.service_name(team))
+      |> assign(
+        page_title: "Team settings · Fields",
+        service: D4H.service_name(team),
+        organization_name: team.organization && team.organization.short_name
+      )
       |> assign_fields(team)
 
     {:ok, socket}
@@ -44,19 +47,6 @@ defmodule Web.Settings.FieldsLive do
   def kind(asked, counts) do
     targets = Enum.map(counts, &elem(&1, 0))
     if asked in targets, do: asked, else: List.first(targets)
-  end
-
-  def handle_event("save_member_fields", params, socket) do
-    %{current_team: team, current_user: user} = socket.assigns
-    ids = params |> Map.get("fields", []) |> Enum.reject(&(&1 == ""))
-    :ok = SaveTeamMemberFields.call(team, ids, user)
-
-    socket =
-      socket
-      |> assign_fields(team)
-      |> put_flash(:info, "Member fields saved.")
-
-    {:noreply, socket}
   end
 
   def render(assigns) do
@@ -96,26 +86,16 @@ defmodule Web.Settings.FieldsLive do
     </div>
 
     <section :if={@kind} id={"fields-#{@kind}"} class="mt-6">
-      <%= if @kind == "member" do %>
-        <p class="measure mb-4">
-          SAR Duty copies only the member fields you check. Team admins see them, and each
-          member sees their own when the field allows it. Restricted fields stay private.
-        </p>
-        <form :if={@fields != []} id="member-fields-form" phx-submit="save_member_fields">
-          <input type="hidden" name="fields[]" value="" />
-          <.field_list id="fields-member-list" fields={@fields} path={@path} copy? />
-          <.form_actions>
-            <.button variant={:success} phx-disable-with="Saving…">Save member fields</.button>
-          </.form_actions>
-        </form>
-      <% else %>
-        <.field_list
-          id={"fields-#{@kind}-list"}
-          fields={@fields}
-          path={@path}
-          publish?={@kind in ~w(incident exercise event)}
-        />
-      <% end %>
+      <p :if={@kind == "member"} id="member-fields-who" class="measure mb-6">
+        Team admins see every member's answers. A member sees their own when the field allows it.
+      </p>
+      <.field_list
+        id={"fields-#{@kind}-list"}
+        fields={@fields}
+        path={@path}
+        team_name={@current_team.name}
+        organization_name={@organization_name}
+      />
 
       <details :if={@archived_fields != []} id="archived-fields" class="mt-8">
         <summary class="subheading">

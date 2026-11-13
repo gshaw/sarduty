@@ -3,6 +3,7 @@ defmodule Web.Settings.FieldLive do
 
   import Web.Components.FieldDefinitions
 
+  alias App.Adapter.D4H
   alias App.Model.CustomField
   alias App.Repo
 
@@ -41,11 +42,20 @@ defmodule Web.Settings.FieldLive do
       timezone={@current_team.timezone}
       team_names={@team_names}
       organization_name={@organization_name}
+      team_name={@current_team.name}
+      service={D4H.service_name(@current_team)}
       restricted_text={restricted_text(@field)}
     />
     """
   end
 
-  defp restricted_text(%{target: "member"}), do: "SAR Duty never copies its values."
-  defp restricted_text(_field), do: "Only team admins see its values."
+  defp restricted_text(%{target: "member"}),
+    do:
+      "On a member field, restricted changes nothing in SAR Duty. Team admins see every member's answer, as for any member field."
+
+  defp restricted_text(%{target: "equipment"}),
+    do: "Only team admins see its values, as for any equipment field."
+
+  defp restricted_text(_field),
+    do: "Only team admins see its values. Members and your organization never do."
 end

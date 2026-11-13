@@ -41,7 +41,7 @@ defmodule App.Operation.RefreshD4HData.UpsertCustomFields do
         })
       end)
 
-    upsert(CustomField, rows, [:id, :team_id, :d4h_custom_field_id, :copy_values, :inserted_at], [
+    upsert(CustomField, rows, [:id, :team_id, :d4h_custom_field_id, :inserted_at], [
       :team_id,
       :d4h_custom_field_id
     ])

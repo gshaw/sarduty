@@ -4,6 +4,7 @@ defmodule Web.Org.FieldLive do
   import Ecto.Query
   import Web.Components.FieldDefinitions
 
+  alias App.Adapter.D4H
   alias App.Model.CustomField
   alias App.Model.Team
   alias App.Repo
@@ -24,6 +25,7 @@ defmodule Web.Org.FieldLive do
       assign(socket,
         page_title: field.title,
         field: field,
+        teams: teams,
         team_names: Map.new(teams, &{&1.d4h_team_id, &1.name})
       )
 
@@ -47,8 +49,15 @@ defmodule Web.Org.FieldLive do
       timezone={@current_organization.timezone}
       team_names={@team_names}
       organization_name={@current_organization.short_name}
-      restricted_text="Only its teams' admins see its values."
+      service={D4H.service_name(hd(@teams))}
+      restricted_text={restricted_text(@field)}
     />
     """
   end
+
+  defp restricted_text(%{target: "member"}),
+    do:
+      "On a member field, restricted changes nothing. Its teams' admins see every member's answer."
+
+  defp restricted_text(_field), do: "Only its teams' admins see its values."
 end

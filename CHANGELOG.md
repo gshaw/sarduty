@@ -11,6 +11,10 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
   ID cards, letters, and the Dashboard show it at once.
 - A new team logo in D4H shows as soon as the next refresh saves it, Google Wallet
   passes included. Before, browsers kept the old one for up to an hour.
+- SAR Duty now keeps every member field, restricted ones too, so team admins see each
+  member's answers without picking fields first. The Copy boxes are gone. Team
+  settings' Fields tab lists your team's own fields, then your organization's, and each
+  field's page says what its settings mean.
 - Join dates, leave dates, and qualification dates no longer show a day early. A
   qualification or item now counts through its expiry day, with Today on that day.
 - Needs attention now counts members whose email bounces, with their missing details.

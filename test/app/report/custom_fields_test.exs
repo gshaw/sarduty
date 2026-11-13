@@ -180,33 +180,22 @@ defmodule App.Report.CustomFieldsTest do
     assert error("select `Old cause` from activities", ctx.team) =~ "no field `Old cause`"
   end
 
-  test "a member field is one the team copies, and never a restricted one", %{team: team} do
-    copied =
-      custom_field_fixture(team, %{target: "member", title: "Call sign", copy_values: true})
+  test "every member field reads, a restricted one too (#1056)", %{team: team} do
+    call_sign = custom_field_fixture(team, %{target: "member", title: "Call sign"})
+    gender = custom_field_fixture(team, %{target: "member", title: "Gender", restricted: true})
 
-    custom_field_fixture(team, %{target: "member", title: "Allergies"})
-
-    custom_field_fixture(team, %{
-      target: "member",
-      title: "Gender",
-      restricted: true,
-      copy_values: true
+    member_fixture(team, %{
+      name: "Ana",
+      custom_values: %{id(call_sign) => "CR 7", id(gender) => "Woman"}
     })
 
-    member_fixture(team, %{name: "Ana", custom_values: %{id(copied) => "CR 7"}})
-
-    assert [[_ana, "CR 7"]] = run!("select name, `Call sign` from members", team)
-
-    assert error("select `Allergies` from members", team) =~
-             "The team does not copy `Allergies`. Pick it on team settings' Members tab."
-
-    assert error("select `Gender` from members", team) =~
-             "SAR Duty never copies `Gender`: it is restricted."
+    assert [[_ana, "CR 7", "Woman"]] =
+             run!("select name, `Call sign`, `Gender` from members", team)
   end
 
   test "a member reads an activity's fields, but no restricted one, member, or item", ctx do
     custom_field_fixture(ctx.team, %{title: "Debrief", restricted: true})
-    custom_field_fixture(ctx.team, %{target: "member", title: "Call sign", copy_values: true})
+    custom_field_fixture(ctx.team, %{target: "member", title: "Call sign", restricted: true})
     custom_field_fixture(ctx.team, %{target: "equipment", title: "Serviced"})
     member = Context.new(ctx.team, @now, team_admin?: false)
     admin = Context.new(ctx.team, @now)

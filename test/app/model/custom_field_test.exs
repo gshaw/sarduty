@@ -42,6 +42,14 @@ defmodule App.Model.CustomFieldTest do
              %{"City" => "Surrey", "Field 5" => ~s("x"), "Field 6" => nil}
   end
 
+  test "rows: a restricted member field shows like any other (#1056)" do
+    birth = field(%{d4h_custom_field_id: 1, target: "member", restricted: true})
+    notes = field(%{d4h_custom_field_id: 2, target: "equipment", restricted: true})
+    values = %{"1" => "1988", "2" => "Serviced"}
+
+    assert [%{field: ^birth, text: "1988"}] = CustomField.rows([birth, notes], values, @tz)
+  end
+
   test "rows: values in order, required ones missing on request, restricted ones on request" do
     city = field(%{d4h_custom_field_id: 1, title: "City", restricted: true})
     area = field(%{d4h_custom_field_id: 2, title: "Area", required: true})

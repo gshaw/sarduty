@@ -446,14 +446,26 @@ defmodule Web.Org.OrgPagesTest do
   # emails, and phones seeded: none of them shows. A new org page joins with no change
   # here.
   describe "no people" do
-    test "no org page shows a member's name, email, or phone",
+    test "no org page shows a member's name, email, phone, or member field value",
          %{conn: conn, dana: dana, coast: coast, other_team: other_team} do
+      # A restricted member field of the organization's: SAR Duty keeps its values for
+      # team admins (#1056), and the organization never sees one.
       people =
         for team <- [coast, other_team] do
+          birth =
+            custom_field_fixture(team, %{
+              target: "member",
+              title: "Year of birth",
+              restricted: true,
+              owner_type: "Organisation",
+              owner_id: 7
+            })
+
           member_fixture(team, %{
             name: "Quill Ostrander",
             email: "quill@example.com",
-            phone: "604-555-0199"
+            phone: "604-555-0199",
+            custom_values: %{"#{birth.d4h_custom_field_id}" => "Born 1931"}
           })
         end
 
@@ -477,7 +489,7 @@ defmodule Web.Org.OrgPagesTest do
       for user <- [dana, sar_duty_admin()], path <- paths, person <- people do
         html = page_html(log_in_user(conn, user), path)
 
-        for value <- [person.name, person.email, person.phone], html do
+        for value <- [person.name, person.email, person.phone, "Born 1931"], html do
           refute html =~ value, "#{path} shows #{value}"
         end
       end

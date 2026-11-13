@@ -64,20 +64,33 @@ defmodule Web.Settings.FieldsLiveTest do
     [agency, cause, notes, old] =
       team.id |> CustomField.get_all_with_archived() |> Enum.sort_by(& &1.d4h_custom_field_id)
 
-    # One kind at a time, incidents first; each field a line that opens its own page.
+    # One kind at a time, incidents first; each field a row link to its own page, the
+    # team's own first, then its organization's (#1056).
     assert has_element?(lv, "#fields-kind-incident[aria-current]", "3")
     assert has_element?(lv, "#fields-kind-equipment", "0")
-    assert has_element?(lv, "#field-#{agency.id}", "Needed to publish")
+    assert has_element?(lv, "#fields-incident-list-team h2", "#{team.name}'s fields")
+    assert has_element?(lv, "#fields-incident-list-team #field-#{notes.id}", "Long text")
+    assert has_element?(lv, "#field-#{notes.id} .badge", "Restricted")
+    assert has_element?(lv, "#fields-incident-list-organization h2", "Your organization's fields")
+
+    assert has_element?(
+             lv,
+             "#fields-incident-list-organization #field-#{agency.id}",
+             "One choice"
+           )
+
+    assert has_element?(lv, "#field-#{agency.id} .badge-primary", "Needed to publish")
+    refute has_element?(lv, "table")
     assert has_element?(lv, "#field-#{agency.id}", "The agency that asked for SAR.")
     refute has_element?(lv, "#field-#{agency.id}", "Police")
 
     assert has_element?(
              lv,
-             "#field-#{agency.id} a[href='/teams/#{team.subdomain}/settings/fields/#{agency.id}']"
+             "#field-#{agency.id} a.row-link[href='/teams/#{team.subdomain}/settings/fields/#{agency.id}']"
            )
 
-    assert has_element?(lv, "#fields-incident-list-bundle-43", "KMS Data")
-    assert has_element?(lv, "#fields-incident-list-bundle-43 #field-#{cause.id}")
+    assert has_element?(lv, "#fields-incident-list-team-bundle-43", "KMS Data")
+    assert has_element?(lv, "#fields-incident-list-team-bundle-43 #field-#{cause.id}")
     refute has_element?(lv, "#field-#{old.id}")
 
     lv |> element("#fields-kind-equipment") |> render_click()
@@ -90,17 +103,22 @@ defmodule Web.Settings.FieldsLiveTest do
     assert has_element?(lv, "h1", "Agency")
     assert has_element?(lv, "#field-hint", "The agency that asked for SAR.")
     assert has_element?(lv, "#field-type", "One choice")
-    assert has_element?(lv, "#field-type", "Needed to publish")
+    refute has_element?(lv, "#field-type", "Needed to publish")
+    assert has_element?(lv, "#field-required", "Fill it in before you publish the incident.")
     assert has_element?(lv, "#field-on", "Incidents")
     assert has_element?(lv, "#field-from", "Mar 4, 2024")
+    assert has_element?(lv, "#field-from", "Only Your organization can change it.")
     assert has_element?(lv, "#field-choices li", "Police")
     refute has_element?(lv, "#field-choices li", "Coast Guard")
     assert has_element?(lv, "#field-details", "#{team.name} added")
     assert has_element?(lv, "#field-details li", "Coast Guard")
+    assert has_element?(lv, "#field-details", "Your team added these choices.")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{notes.id}")
     assert has_element?(lv, "#field-type", "Long text")
     assert has_element?(lv, "#field-from", team.name)
+    assert has_element?(lv, "#field-from", "Only your team has this field.")
+    refute has_element?(lv, "#field-required")
     assert has_element?(lv, "#field-restricted", "Only team admins see its values.")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{cause.id}")
@@ -118,26 +136,44 @@ defmodule Web.Settings.FieldsLiveTest do
     end
   end
 
-  test "member fields: who sees them, and a Copy box for each unrestricted one (#681)",
+  test "member fields: who sees each one's answers, a restricted one a normal row (#1056)",
        %{conn: conn, team: team} do
     save(team, [], [
       field(630, "Radio Call Sign", %{target: "member", member_privacy: "viewable"}),
-      field(855, "Date of Birth", %{target: "member", restricted: true})
+      field(631, "Areas", %{target: "member", member_privacy: "editable"}),
+      field(855, "Year of birth", %{
+        target: "member",
+        restricted: true,
+        member_privacy: "editable"
+      }),
+      field(856, "Notes", %{target: "member", member_privacy: "hidden"})
     ])
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields")
+    [call_sign, areas, birth, notes] =
+      team.id |> CustomField.get_all("member") |> Enum.sort_by(& &1.d4h_custom_field_id)
 
-    assert has_element?(lv, "#fields-member", "See their own")
-    assert has_element?(lv, "#member-field-630")
-    refute has_element?(lv, "#member-field-855")
-    assert has_element?(lv, "#member-field-855-private", "Stays private")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields?kind=member")
 
-    lv |> form("#member-fields-form", %{"fields" => ["", "630"]}) |> render_submit()
+    assert has_element?(lv, "#member-fields-who", "Team admins see every member's answers.")
+    assert has_element?(lv, "#field-#{call_sign.id}", "Text · Members see their own")
+    assert has_element?(lv, "#field-#{areas.id}", "Members change their own")
+    assert has_element?(lv, "#field-#{birth.id}", "Members change their own")
+    refute has_element?(lv, "#field-#{birth.id} .badge")
+    assert has_element?(lv, "#field-#{notes.id}", "Team admins only")
+    refute has_element?(lv, "input[type=checkbox]")
+    refute has_element?(lv, "#member-fields-form")
 
-    assert has_element?(lv, "#member-field-630[checked]")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{birth.id}")
 
-    assert [%{d4h_custom_field_id: 630}] =
-             team.id |> CustomField.get_all("member") |> Enum.filter(& &1.copy_values)
+    assert has_element?(
+             lv,
+             "#field-members",
+             "Each member sees their own answer and can change it."
+           )
+
+    assert has_element?(lv, "#field-members", "Team admins see every member's answer.")
+    assert has_element?(lv, "#field-restricted", "restricted changes nothing in SAR Duty")
+    refute render(lv) =~ "never copies"
   end
 
   test "says when the team has no fields", %{conn: conn, team: team} do
