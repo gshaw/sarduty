@@ -10,10 +10,9 @@ defmodule Web.PasskeySessionControllerTest do
   alias App.Model.Event
   alias App.Repo
 
-  # A site admin who is a current member, so they may log in, with a passkey.
-  defp admin_with_passkey do
+  # A current member, so they may log in, with a passkey.
+  defp member_with_passkey do
     %{user: user, team: team} = user_with_team_fixture()
-    user = make_admin(user)
     {passkey, key} = passkey_fixture(user)
     %{user: user, team: team, passkey: passkey, key: key}
   end
@@ -40,7 +39,7 @@ defmodule Web.PasskeySessionControllerTest do
   end
 
   test "logs in with a passkey on the device, remembered for 60 days", %{conn: conn} do
-    %{user: user, team: team, passkey: passkey, key: key} = admin_with_passkey()
+    %{user: user, team: team, passkey: passkey, key: key} = member_with_passkey()
     {conn, challenge} = options(conn)
 
     conn = log_in(conn, get_answer(key, challenge, user))
@@ -59,7 +58,7 @@ defmodule Web.PasskeySessionControllerTest do
 
   test "a passkey from a phone at another computer lasts until the browser closes",
        %{conn: conn} do
-    %{user: user, key: key} = admin_with_passkey()
+    %{user: user, key: key} = member_with_passkey()
     {conn, challenge} = options(conn)
 
     conn = log_in(conn, get_answer(key, challenge, user, attachment: "cross-platform"))
@@ -69,7 +68,7 @@ defmodule Web.PasskeySessionControllerTest do
   end
 
   test "a challenge works once, right or wrong", %{conn: conn} do
-    %{user: user, key: key} = admin_with_passkey()
+    %{user: user, key: key} = member_with_passkey()
     {conn, challenge} = options(conn)
 
     wrong = log_in(conn, get_answer(authenticator(), challenge, user))
@@ -81,7 +80,7 @@ defmodule Web.PasskeySessionControllerTest do
   end
 
   test "refuses a passkey SAR Duty doesn't know, or one removed", %{conn: conn} do
-    %{user: user, passkey: passkey} = admin_with_passkey()
+    %{user: user, passkey: passkey} = member_with_passkey()
     {conn, challenge} = options(conn)
 
     conn = log_in(conn, get_answer(authenticator(), challenge, user))
@@ -95,7 +94,7 @@ defmodule Web.PasskeySessionControllerTest do
   end
 
   test "refuses someone D4H no longer lists, passkey or not", %{conn: conn} do
-    user = make_admin(user_fixture())
+    user = user_fixture()
     {_passkey, key} = passkey_fixture(user)
     {conn, challenge} = options(conn)
 
@@ -106,7 +105,7 @@ defmodule Web.PasskeySessionControllerTest do
   end
 
   test "refuses an answer with no challenge in the session", %{conn: conn} do
-    %{user: user, key: key} = admin_with_passkey()
+    %{user: user, key: key} = member_with_passkey()
     challenge = WebAuthn.authentication_challenge()
 
     conn = log_in(conn, get_answer(key, challenge, user))
