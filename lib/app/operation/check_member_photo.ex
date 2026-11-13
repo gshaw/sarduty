@@ -7,7 +7,8 @@ defmodule App.Operation.CheckMemberPhoto do
   answer keeps what was stored.
 
   Runs outside any transaction: nightly for each counted, current member
-  (App.Worker.RefreshTeamDataWorker), and live before Issue, Replace, and Refresh ID card.
+  (App.Worker.RefreshTeamDataWorker), live before Issue, Replace, and Refresh ID card, and
+  as Change photo opens (#1028).
   """
 
   import Ecto.Query, only: [where: 3]

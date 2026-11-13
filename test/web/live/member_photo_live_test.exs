@@ -15,6 +15,10 @@ defmodule Web.MemberPhotoLiveTest do
     |> render_upload(name)
   end
 
+  # The page asks the team's records for the photo as it opens.
+  defp stub_photo(status, body \\ ""),
+    do: Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, status, body))
+
   describe "on a Records team" do
     setup %{conn: conn} do
       %{user: user, team: team} = records_team_with_user_fixture(%{d4h_access_key: "sdr_key"})
@@ -34,11 +38,8 @@ defmodule Web.MemberPhotoLiveTest do
     test "a photo goes to Records as a JPEG up to 2400 px, and back to the member's page",
          %{conn: conn, team: team, admin: admin} do
       stub_ok()
-      admin |> Ecto.Changeset.change(has_photo: false) |> Repo.update!()
       photo = png_fixture(3200, 2400)
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/photo")
-      assert has_element?(lv, "#member-photo-none")
-      refute has_element?(lv, "#remove-photo")
       upload(lv, "face.png", photo, "image/png")
 
       {:ok, _page, html} =
@@ -89,6 +90,7 @@ defmodule Web.MemberPhotoLiveTest do
     end
 
     test "saving with no photo selected asks for one", %{conn: conn, team: team, admin: admin} do
+      stub_photo(404)
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/photo")
       assert lv |> form("#photo-form") |> render_submit() =~ "Select a photo."
     end
@@ -108,8 +110,11 @@ defmodule Web.MemberPhotoLiveTest do
       %{conn: log_in_user(conn, user), team: team}
     end
 
-    test "the page has the photo, its original, and Remove photo", %{conn: conn, team: team} do
-      member = member_fixture(team, %{has_photo: true})
+    # has_photo is false on a team with ID cards off, so the page asks D4H.
+    test "the page asks D4H for the photo, then has its original and Remove photo",
+         %{conn: conn, team: team} do
+      stub_photo(200, png_fixture(640, 480))
+      member = member_fixture(team, %{has_photo: false})
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/photo")
 
       version = Member.photo_version(member)
@@ -120,6 +125,18 @@ defmodule Web.MemberPhotoLiveTest do
       # Red: it deletes the photo from the team's records.
       assert has_element?(lv, "#remove-photo.btn-danger")
       refute has_element?(lv, "#member-photo-none")
+      assert Repo.reload!(member).has_photo
+    end
+
+    test "a photo removed in D4H's web app shows as none", %{conn: conn, team: team} do
+      stub_photo(204)
+      member = member_fixture(team, %{has_photo: true})
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/photo")
+
+      assert has_element?(lv, "#member-photo-none", "#{member.name} has no photo.")
+      refute has_element?(lv, "#download-photo")
+      refute has_element?(lv, "#remove-photo")
+      refute Repo.reload!(member).has_photo
     end
 
     test "a photo goes to D4H as the member's profile document", %{conn: conn, team: team} do

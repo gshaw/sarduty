@@ -76,7 +76,9 @@ A team admin sets or removes a member's photo on every team, from **Change photo
 the member's Actions (`/members/:id/photo`, #1028), a narrow page of its own: the photo,
 **Download original photo**, a drop box for a new one, Save photo, Cancel, and Remove
 photo apart on the right. A member with no photo gets "Cameron Ruiz has no photo." in
-place of the first two and no Remove photo. Saving or removing goes back to the member's
+place of the first two and no Remove photo. The page asks the team's records as it
+opens ([CheckMemberPhoto](../lib/app/operation/check_member_photo.ex)), since the nightly
+check runs only on teams with ID cards on. Saving or removing goes back to the member's
 page with the toast; a refusal stays on the page.
 
 - **What goes.** [SetMemberPhoto](../lib/app/operation/set_member_photo.ex) makes it a

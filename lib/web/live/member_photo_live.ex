@@ -4,14 +4,18 @@ defmodule Web.MemberPhotoLive do
   import Web.Components.FileDrop
 
   alias App.Model.Member
+  alias App.Operation.CheckMemberPhoto
   alias App.Operation.SetMemberPhoto
 
   # Change photo, from the member's Actions, on every team (#1028): the photo, the
   # original to download, a new one to save, and Remove photo. The photo goes to the
   # team's records, D4H or Records (SetMemberPhoto); SAR Duty keeps no copy.
+  #
+  # Whether there's a photo is asked as the page opens: the nightly check runs only on
+  # teams with ID cards on, and a photo set in D4H's web app lands there first.
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
-    member = team |> Member.find!(id) |> Map.put(:team, team)
+    member = team |> Member.find!(id) |> Map.put(:team, team) |> CheckMemberPhoto.call()
 
     socket =
       socket
