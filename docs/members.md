@@ -58,9 +58,10 @@ email, mobile phone, address, joined date, and status: Operational, Not operatio
 Observer, D4H's three. Saving is one `update_member` row naming only what changed,
 through [SaveMember](../lib/app/operation/save_member.ex) and ApplyEdit, which sends a D4H
 team only those fields (`ApplyEdit.d4h_takes?/1`). A D4H team's form has no Team admin
-box, photo, or Mark as retired: D4H sets access, photos, and leaving in its web app, and
-Retiring is its own steps ([Retiring](#retiring)). Adding a member is a Records team's
-only ([records.md](records.md#editing-records)).
+box or Mark as retired: D4H sets access and leaving in its web app, and Retiring is its
+own steps ([Retiring](#retiring)). Adding a member is a Records team's only
+([records.md](records.md#editing-records)). The photo is its own page, Change photo
+([below](#changing-a-members-photo)).
 
 - **Role** is D4H's free-text `position`, so teams drift: South Fraser had 45 roles
   across 93 members. Role is the combobox with `free_text`: it lists the team's roles,
@@ -68,6 +69,38 @@ only ([records.md](records.md#editing-records)).
   still takes a new one. D4H's structured `roleId` is not copied.
 - **Email** decides who can log in: SAR Duty matches a login to a member by email, so
   its hint says so. Changing it moves the login to the new address.
+
+## Changing a member's photo
+
+A team admin sets or removes a member's photo on every team, from **Change photo** in
+the member's Actions (`/members/:id/photo`, #1028), a narrow page of its own: the photo,
+**Download original photo**, a drop box for a new one, Save photo, Cancel, and Remove
+photo apart on the right. A member with no photo gets "Cameron Ruiz has no photo." in
+place of the first two and no Remove photo. The page asks the team's records as it
+opens ([CheckMemberPhoto](../lib/app/operation/check_member_photo.ex)), since the nightly
+check runs only on teams with ID cards on. Saving or removing goes back to the member's
+page with the toast; a refusal stays on the page.
+
+- **What goes.** [SetMemberPhoto](../lib/app/operation/set_member_photo.ex) makes it a
+  JPEG up to 2400 px on its longer side, upright, with no metadata (a phone photo's
+  GPS): big enough for a print or a re-crop later, kept by the team's records and never
+  by SAR Duty.
+- **Records** takes a `PUT` on the member's image. **D4H** takes a document on the
+  member with `profile` set: tried live on one South Fraser member on 2026-11-12, the
+  member's image was the new photo at once, byte for byte. D4H keeps the photo it
+  replaces as a plain attachment, so SAR Duty lists the member's profile documents
+  first and deletes them once the new one is in. Removing deletes them: D4H then has no
+  photo for the member and doesn't go back to an older one. A D4H Editor's key is
+  untried; a refusal shows D4H's own words in a toast.
+- **Two photo routes**, both open to members, who already see the photo on member
+  pages. `/members/:id/image` is the everyday one: `PREVIEW` (640 px, which D4H makes
+  itself and Records makes on the read) cut to its middle square, about 480 px, for
+  pages, ID cards, and Wallet. `/members/:id/image/original` is the photo as the team's
+  records keep it, full size and uncropped, as a download named for the member. Neither
+  keeps a copy.
+- **A new photo shows at once.** A browser keeps the everyday photo for an hour, so
+  pages add `?v=` from `Member.photo_version/1`, the member's `updated_at`, which
+  SetMemberPhoto moves.
 
 ## Standing
 

@@ -408,6 +408,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/members/new", MemberFormLive, :new
       live "/teams/:subdomain/members/:id", MemberLive
       live "/teams/:subdomain/members/:id/edit", MemberFormLive, :edit
+      live "/teams/:subdomain/members/:id/photo", MemberPhotoLive
       live "/teams/:subdomain/members/:id/groups", MemberGroupsLive
       live "/teams/:subdomain/members/:id/equipment", MemberEquipmentLive
       live "/teams/:subdomain/members/:id/qualifications", MemberQualificationsLive
@@ -489,12 +490,14 @@ defmodule Web.Router do
       get "/qualifications/:id/certificate", MeController, :certificate
     end
 
-    # Team routes members reach too, like a LiveView with access: :team.
+    # Team routes members reach too, like a LiveView with access: :team. A member's photo,
+    # square or original, is the same photo members already see on member pages.
     scope "/teams/:subdomain" do
       pipe_through :require_team_access
 
       get "/activities/:id/calendar", ActivityCalendarController, :show
       get "/members/:id/image", MemberController, :image
+      get "/members/:id/image/original", MemberController, :original_image
       get "/certificates/:id/file", CertificateController, :file
     end
 

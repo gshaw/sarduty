@@ -78,7 +78,9 @@ defmodule Web.Components.MemberSidebar do
       id="member-head"
       class="mb-6"
       name={@member.name}
-      photo={~p"/teams/#{@member.team}/members/#{@member.id}/image"}
+      photo={
+        ~p"/teams/#{@member.team}/members/#{@member.id}/image?#{[v: Member.photo_version(@member)]}"
+      }
       standing={@standing}
       facts={facts(@member, @last_attended_at, @member.team.timezone)}
     >
@@ -128,8 +130,8 @@ defmodule Web.Components.MemberSidebar do
   attr :member, :map, required: true
   attr :fields?, :boolean, required: true
 
-  # Details change here on every team, and custom fields on every team that has them
-  # (#705). A team on SAR Duty Records has no D4H to open.
+  # Details and the photo (#1028) change here on every team, and custom fields on every
+  # team that has them (#705). A team on SAR Duty Records has no D4H to open.
   defp member_actions(assigns) do
     ~H"""
     <dt>Actions</dt>
@@ -137,6 +139,12 @@ defmodule Web.Components.MemberSidebar do
       <ul id="member-actions" class="action-list">
         <li>
           <.a id="member-edit" navigate={~p"/teams/#{@member.team}/members/#{@member.id}/edit"}>Change member</.a>
+        </li>
+        <li>
+          <.a
+            id="member-change-photo"
+            navigate={~p"/teams/#{@member.team}/members/#{@member.id}/photo"}
+          >Change photo</.a>
         </li>
         <li :if={@fields?}>
           <.a

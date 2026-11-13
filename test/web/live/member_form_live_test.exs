@@ -113,43 +113,10 @@ defmodule Web.MemberFormLiveTest do
     assert html =~ "Enter a shorter name."
   end
 
-  test "a team admin uploads a photo, which goes to Records and is not kept here",
+  test "Change member has no photo: Change photo is its own page (#1028)",
        %{conn: conn, team: team, admin: admin} do
-    stub_ok()
-    admin |> Ecto.Changeset.change(has_photo: false) |> Repo.update!()
-    photo = png_fixture(40, 30)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
-
-    lv
-    |> file_input("#photo-form", :photo, [%{name: "face.png", content: photo, type: "image/png"}])
-    |> render_upload("face.png")
-
-    assert lv |> form("#photo-form") |> render_submit() =~ "Photo saved."
-
-    path = "/members/#{admin.d4h_member_id}/image"
-    assert_received {:records, "PUT", ^path, {:bytes, ^photo}}
-
-    [row] = Repo.all(ChangeSetRow)
-    assert {row.action, row.status} == {:set_member_photo, :applied}
-    assert row.new_value == %{"size" => byte_size(photo)}
-    # Set with no download, so an ID card can follow at once (#1012).
-    assert Repo.reload!(admin).has_photo
-  end
-
-  test "a team admin removes a photo", %{conn: conn, team: team, admin: admin} do
-    stub_ok()
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
-
-    assert lv |> element("#remove-photo") |> render_click() =~ "Photo removed."
-
-    path = "/members/#{admin.d4h_member_id}/image"
-    assert_received {:records, "DELETE", ^path, nil}
-    refute Repo.reload!(admin).has_photo
-  end
-
-  test "saving with no photo selected asks for one", %{conn: conn, team: team, admin: admin} do
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{admin.id}/edit")
-    assert lv |> form("#photo-form") |> render_submit() =~ "Select a photo."
+    refute has_element?(lv, "#member-photo")
   end
 
   test "a name is needed, and the error summary lists it", %{conn: conn, team: team} do
@@ -179,7 +146,7 @@ defmodule Web.MemberFormLiveTest do
       assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/members/new") end
     end
 
-    test "Change member has the details D4H takes, without access, photo, or leaving",
+    test "Change member has the details D4H takes, without access or leaving",
          %{conn: conn, team: team} do
       member = member_fixture(team, %{position: "MIT"})
       member_fixture(team, %{position: "GSTL"})
@@ -196,7 +163,6 @@ defmodule Web.MemberFormLiveTest do
       assert has_element?(lv, "#form_position-select option:nth-child(2)[value=MIT]")
       assert has_element?(lv, "#form_position-select option[value=GSTL]")
       refute has_element?(lv, "#form_team_admin")
-      refute has_element?(lv, "#member-photo")
       refute has_element?(lv, "#member-retire")
     end
 

@@ -51,7 +51,8 @@ defmodule Web.RouterTest do
   # Every team route a member who is not a team admin reaches (#406). Team pages are for
   # team admins unless a LiveView says `access: :team` or `:member` (Web). MeController
   # serves a member's own downloads, ActivityCalendarController Add to calendar,
-  # MemberController's image the photo on a member's page (#440), and
+  # MemberController's image the photo on a member's page (#440) and original_image the
+  # same photo at full size (#1028), and
   # CertificateController's file a member's own sent certificate (#645).
   # Opening a page to members means changing this list on purpose. Web.TeamScopingTest
   # checks every other team route 404s for a member.
@@ -91,6 +92,7 @@ defmodule Web.RouterTest do
     "/teams/:subdomain/members/:id",
     "/teams/:subdomain/members/:id/groups",
     "/teams/:subdomain/members/:id/image",
+    "/teams/:subdomain/members/:id/image/original",
     "/teams/:subdomain/members/:id/qualifications",
     "/teams/:subdomain/milestones"
   ]
@@ -112,7 +114,9 @@ defmodule Web.RouterTest do
   defp member_route?(%{metadata: %{phoenix_live_view: {view, _action, _opts, _extra}}}),
     do: Web.UserAuth.page_access(view) in [:team, :member]
 
-  defp member_route?(%{plug: Web.MemberController, plug_opts: action}), do: action == :image
+  defp member_route?(%{plug: Web.MemberController, plug_opts: action}),
+    do: action in [:image, :original_image]
+
   defp member_route?(%{plug: Web.CertificateController, plug_opts: action}), do: action == :file
 
   defp member_route?(%{plug: plug}),

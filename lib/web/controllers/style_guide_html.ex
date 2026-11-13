@@ -313,7 +313,7 @@ defmodule Web.StyleGuideHTML do
         sample: "Refreshed",
         look: "Tinted blue",
         means: "Worth knowing, not a problem.",
-        examples: "New, Refreshed, Team admin"
+        examples: "New, Refreshed, Team admin, This is you"
       },
       %{
         kind: :success,

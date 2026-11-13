@@ -372,4 +372,80 @@ defmodule App.Adapter.D4HTest do
       assert Enum.map(rows, & &1.d4h_attendance_id) == [3, 2]
     end
   end
+
+  describe "a member's photo on D4H (#1028)" do
+    defp d4h_context,
+      do: D4H.build_context(access_key: "key", api_host: "api.ca.d4h.org", d4h_team_id: 1)
+
+    # Each request goes to the test as {method, path, query, body}. The list of profile
+    # documents answers `old_ids`, and `reply` answers every write.
+    defp stub_documents(old_ids, reply) do
+      test = self()
+
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        conn = Plug.Conn.fetch_query_params(conn)
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+        send(test, {conn.method, conn.request_path, conn.query_params, body})
+
+        case conn.method do
+          "GET" ->
+            results = Enum.map(old_ids, &%{"id" => &1})
+            Req.Test.json(conn, %{"results" => results, "totalSize" => length(results)})
+
+          method ->
+            {status, json} = reply.(method)
+            conn |> Plug.Conn.put_status(status) |> Req.Test.json(json)
+        end
+      end)
+    end
+
+    test "a new photo is a profile document, and the old ones go once it is in" do
+      stub_documents([11, 12], fn _method -> {200, %{"id" => 99}} end)
+
+      assert {:ok, %D4H.Document{d4h_document_id: 99}} =
+               D4H.set_member_photo(d4h_context(), 70, "jpeg bytes")
+
+      assert_received {"GET", "/v3/team/1/documents", query, ""}
+
+      assert query == %{
+               "target_resource_type" => "Member",
+               "target_resource_id" => "70",
+               "profile" => "true"
+             }
+
+      assert_received {"POST", "/v3/team/1/documents", _query, form}
+      assert form =~ ~s(name="targetResourceType"\r\n\r\nMember)
+      assert form =~ ~s(name="targetResourceId"\r\n\r\n70)
+      assert form =~ ~s(name="profile"\r\n\r\ntrue)
+      assert form =~ "jpeg bytes"
+
+      assert_received {"DELETE", "/v3/team/1/documents/11", _query, _body}
+      assert_received {"DELETE", "/v3/team/1/documents/12", _query, _body}
+    end
+
+    test "a refused photo deletes nothing, so the old one stays" do
+      stub_documents([11], fn _method -> {403, %{"title" => "Forbidden"}} end)
+
+      assert {:error, %D4H.Error{status: 403}} =
+               D4H.set_member_photo(d4h_context(), 70, "jpeg bytes")
+
+      refute_received {"DELETE", _path, _query, _body}
+    end
+
+    test "removing deletes every profile document" do
+      stub_documents([11, 12], fn _method -> {200, %{}} end)
+
+      assert {:ok, 70} = D4H.remove_member_photo(d4h_context(), 70)
+      assert_received {"DELETE", "/v3/team/1/documents/11", _query, _body}
+      assert_received {"DELETE", "/v3/team/1/documents/12", _query, _body}
+    end
+
+    test "a refused remove stops at the first refusal and says so" do
+      stub_documents([11, 12], fn _method -> {403, %{"title" => "Forbidden"}} end)
+
+      assert {:error, %D4H.Error{status: 403}} = D4H.remove_member_photo(d4h_context(), 70)
+      assert_received {"DELETE", "/v3/team/1/documents/11", _query, _body}
+      refute_received {"DELETE", "/v3/team/1/documents/12", _query, _body}
+    end
+  end
 end

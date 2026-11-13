@@ -63,6 +63,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/endorsements/:id",
     "/teams/:subdomain/members/:id",
     "/teams/:subdomain/members/:id/edit",
+    "/teams/:subdomain/members/:id/photo",
     "/teams/:subdomain/members/:id/groups",
     "/teams/:subdomain/members/:id/equipment",
     "/teams/:subdomain/members/:id/qualifications",
@@ -72,6 +73,7 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/members/:id/fields/edit",
     "/teams/:subdomain/members/:id/standing",
     "/teams/:subdomain/members/:id/image",
+    "/teams/:subdomain/members/:id/image/original",
     "/teams/:subdomain/members/:id/certificates/:award_id",
     # View as member (#425), a POST.
     "/teams/:subdomain/members/:id/view-as",
@@ -220,6 +222,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/members/:id/edit", s, o),
     do: ~p"/teams/#{s}/members/#{o.member.id}/edit"
+
+  defp path_for("/teams/:subdomain/members/:id/photo", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/photo"
 
   defp path_for("/teams/:subdomain/groups/:id/rules/:rule_id", s, o),
     do: ~p"/teams/#{s}/groups/#{o.group.id}/rules/#{o.rule.id}"
@@ -383,6 +388,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/members/:id/image", s, o),
     do: ~p"/teams/#{s}/members/#{o.member.id}/image"
+
+  defp path_for("/teams/:subdomain/members/:id/image/original", s, o),
+    do: ~p"/teams/#{s}/members/#{o.member.id}/image/original"
 
   defp path_for("/teams/:subdomain/groups/:id", s, o), do: ~p"/teams/#{s}/groups/#{o.group.id}"
 
