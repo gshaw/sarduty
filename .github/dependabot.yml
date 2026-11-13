@@ -1,0 +1,18 @@
+# One grouped PR a month per ecosystem. Security updates come as their own
+# PRs as soon as an advisory lands, whatever this schedule says.
+version: 2
+updates:
+  - package-ecosystem: mix
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      hex:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
