@@ -19,6 +19,7 @@ defmodule App.Operation.BuildDemoTeam do
   import Ecto.Query, only: [where: 2, where: 3]
 
   alias App.Adapter.D4H
+  alias App.Adapter.FileStore
   alias App.CoastRange
   alias App.DemoCast
   alias App.Model.Activity
@@ -168,7 +169,10 @@ defmodule App.Operation.BuildDemoTeam do
       |> insert_team(demo, :second_team_id, basin, names.silver_basin, now)
       |> refresh!()
 
-    insert_organization(demo, [team, second], names.slug, org_visitor, coast.organization_id)
+    demo
+    |> insert_organization([team, second], names.slug, org_visitor, coast.organization_id)
+    |> put_logo(now)
+
     {:ok, team}
   rescue
     error ->
@@ -295,6 +299,17 @@ defmodule App.Operation.BuildDemoTeam do
       end)
 
     organization
+  end
+
+  # WESARA's made-up logo, beside its name on its teams' pages. A store that refuses it
+  # leaves the demo without one rather than unbuilt.
+  defp put_logo(organization, now) do
+    png = File.read!(CoastRange.organization_logo_file())
+
+    case organization |> Organization.logo_key() |> FileStore.put(png, "image/png") do
+      :ok -> Organization.put_logo_at!(organization, now)
+      {:error, reason} -> Logger.error("WESARA's demo logo not saved: #{inspect(reason)}")
+    end
   end
 
   # Never a real team's: "demo" and 8 random letters and digits.

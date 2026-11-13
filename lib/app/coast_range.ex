@@ -559,6 +559,9 @@ defmodule App.CoastRange do
     }
   end
 
+  @doc "WESARA's made-up logo, a 480-pixel PNG: mountains and an orange cross."
+  def organization_logo_file, do: Application.app_dir(:sarduty, "priv/demo/wesara-logo.png")
+
   @doc """
   WESARA's organization admins, `%{name:, title:, email:}`: neither belongs to a team. Not
   Taylor Brooks, a demo visitor's default name.
