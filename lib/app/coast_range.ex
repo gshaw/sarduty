@@ -699,11 +699,14 @@ defmodule App.CoastRange do
           owner_id: @bcsara_owner
         )
 
-      if options == [],
-        do: field,
-        else: put_elem(field, 2, %{elem(field, 2) | options: option_maps(options)})
+      with_options(field, options)
     end
   end
+
+  defp with_options(field, []), do: field
+
+  defp with_options(field, options),
+    do: put_elem(field, 2, %{elem(field, 2) | options: option_maps(options)})
 
   defp option_maps(options) do
     for {{label, id}, i} <- Enum.with_index(options),
