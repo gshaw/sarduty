@@ -35,8 +35,6 @@ defmodule App.Operation.ApplyEditTest do
              action: :create_member,
              new_value: %{"name" => "A"}
            })
-
-    refute ApplyEdit.d4h_takes?(%ChangeSetRow{action: :retire_member, new_value: %{}})
   end
 
   test "an item sends only its status, barcode, and custom fields" do
@@ -52,6 +50,11 @@ defmodule App.Operation.ApplyEditTest do
   test "a member's photo is set and removed in D4H (#1028)" do
     assert ApplyEdit.d4h_takes?(%ChangeSetRow{action: :set_member_photo, new_value: %{}})
     assert ApplyEdit.d4h_takes?(%ChangeSetRow{action: :remove_member_photo, new_value: %{}})
+  end
+
+  test "a member is retired and rejoined in D4H (#1053)" do
+    assert ApplyEdit.d4h_takes?(%ChangeSetRow{action: :retire_member, new_value: %{}})
+    assert ApplyEdit.d4h_takes?(%ChangeSetRow{action: :rejoin_member, new_value: %{}})
   end
 
   test "a D4H team's member row with access goes nowhere and says where to change it" do

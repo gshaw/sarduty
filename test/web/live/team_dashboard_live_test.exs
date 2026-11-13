@@ -896,7 +896,7 @@ defmodule Web.TeamDashboardLiveTest do
       refute has_element?(lv, "#attention-missing_details")
       assert has_element?(lv, "#attention-retiring", "1 retiring member holds 2 items")
       assert has_element?(lv, "#attention-retiring_clear", "1 retiring member holds no items")
-      assert has_element?(lv, "#attention-retiring_clear", "Retire them in D4H.")
+      assert has_element?(lv, "#attention-retiring_clear", "Retire them on their Standing tab.")
 
       assert has_element?(
                lv,

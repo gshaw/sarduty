@@ -4,6 +4,7 @@ defmodule Web.MemberStandingLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Model.ChangeSetRow
   alias App.Model.GroupMember
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
@@ -16,6 +17,7 @@ defmodule Web.MemberStandingLiveTest do
   alias App.Operation.EndAwayPeriod
   alias App.Operation.RecordCheckIn
   alias App.Operation.SetGroupMembers
+  alias App.RecordsStub
   alias App.Repo
 
   defp today(team), do: Service.Period.today(DateTime.utc_now(), team.timezone)
@@ -159,36 +161,76 @@ defmodule Web.MemberStandingLiveTest do
     assert has_element?(lv, "#standing-now", "Not a person")
   end
 
-  test "a member marked not a person cannot get an away period", %{conn: conn} do
+  test "a bot's tab is the Standing section alone, and it gets no away period or check-in (#1053)",
+       %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
-    member = member_fixture(team, %{not_a_person: true})
+    member = member_fixture(team, %{name: "Duty pager", not_a_person: true})
 
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
 
-    refute has_element?(lv, "#away-form")
-    assert has_element?(lv, "#away-not-a-person")
+    assert has_element?(lv, "#standing", "A bot or a shared account.")
+    assert has_element?(lv, "#mark-person[data-confirm*='Mark Duty pager as a person?']")
+    assert has_element?(lv, "#mark-retired")
+    refute has_element?(lv, "#retire-hint")
+
+    for id <- ~w(away-periods check-ins no-shows not-a-person),
+        do: refute(has_element?(lv, "##{id}"))
 
     params = %{"starts_on" => today(team), "ends_on" => day(team, 10), "reason" => "Leave"}
     assert AddAwayPeriod.call(team, member.id, user, params) == :not_a_person
     assert Repo.all(MemberAwayPeriod) == []
+
+    check_in = %{"checked_in_on" => today(team)}
+    assert RecordCheckIn.call(team, member.id, user, check_in) == :not_a_person
+    assert Repo.all(MemberCheckIn) == []
   end
 
-  test "a retired member reads Retired and cannot get an away period", %{conn: conn} do
+  test "a bot's rows still show, without the forms", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
-    member = member_fixture(team, %{left_at: ~U[2025-06-01 00:00:00Z]})
+    member = member_fixture(team)
+    away_period_fixture(member, day(team, -20), day(team, -10))
+
+    {:ok, _check_in} =
+      RecordCheckIn.call(team, member.id, user, %{"checked_in_on" => today(team)})
+
+    member |> Ecto.Changeset.change(not_a_person: true) |> Repo.update!()
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+
+    assert has_element?(lv, "#away-period-list")
+    assert has_element?(lv, "#check-in-list")
+    refute has_element?(lv, "#away-form")
+    refute has_element?(lv, "#check-in-form")
+    refute has_element?(lv, "#no-shows")
+  end
+
+  test "a retired member reads Retired and gets no away period or check-in", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team, %{name: "Robin Tse", left_at: ~U[2025-06-01 19:00:00Z]})
 
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
 
     assert has_element?(lv, "#standing-now", "Retired")
+    assert has_element?(lv, "#retired-on", "Robin Tse retired on June 1, 2025.")
     assert has_element?(lv, "#member-head-standing", "Retired")
     refute has_element?(lv, "#away-form")
     assert has_element?(lv, "#away-retired")
+    assert has_element?(lv, "#check-ins")
+    refute has_element?(lv, "#check-in-form")
+    assert has_element?(lv, "#mark-rejoined")
+    refute has_element?(lv, "#mark-retired")
+    refute has_element?(lv, "#mark-retiring")
 
     params = %{"starts_on" => today(team), "ends_on" => day(team, 10), "reason" => "Leave"}
     assert AddAwayPeriod.call(team, member.id, user, params) == :retired
     assert Repo.all(MemberAwayPeriod) == []
+
+    check_in = %{"checked_in_on" => today(team)}
+    assert RecordCheckIn.call(team, member.id, user, check_in) == :retired
+    assert Repo.all(MemberCheckIn) == []
   end
 
   test "deleting an away period someone else deleted first says so", %{conn: conn} do
@@ -312,26 +354,45 @@ defmodule Web.MemberStandingLiveTest do
     assert Repo.reload(check_in)
   end
 
-  test "suggests marking a bot, and the switch marks it not a person", %{conn: conn} do
+  test "suggests marking a bot, and the buttons mark it not a person and back", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     bot = member_fixture(team, %{name: "Roster Bot", phone: nil, email: nil})
 
     {:ok, lv, _html} =
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{bot.id}/standing")
 
+    assert has_element?(lv, "#not-a-person h2", "Not a person")
     assert has_element?(lv, "#not-a-person-suggestion")
-    refute has_element?(lv, "#not-a-person-switch[checked]")
 
-    lv |> element("#not-a-person-switch") |> render_click()
+    assert has_element?(
+             lv,
+             "#mark-not-a-person[data-confirm*='Mark Roster Bot as not a person?']"
+           )
 
-    assert has_element?(lv, "#not-a-person-switch[checked]")
-    refute has_element?(lv, "#not-a-person-suggestion")
+    assert lv |> element("#mark-not-a-person") |> render_click() =~
+             "Marked Roster Bot as not a person."
+
     assert Repo.reload!(bot).not_a_person
     assert has_element?(lv, "#standing-now", "Not a person")
+    refute has_element?(lv, "#not-a-person")
+    assert [%{action: :not_a_person}] = Repo.all(MemberStandingChange)
 
-    lv |> element("#not-a-person-switch") |> render_click()
+    assert lv |> element("#mark-person") |> render_click() =~ "Marked Roster Bot as a person."
 
     refute Repo.reload!(bot).not_a_person
+    assert has_element?(lv, "#mark-not-a-person")
+  end
+
+  test "a retired bot is marked as a person at the end of the tab", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    bot = member_fixture(team, %{not_a_person: true, left_at: ~U[2025-06-01 00:00:00Z]})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{bot.id}/standing")
+
+    assert has_element?(lv, "#standing-now", "Retired")
+    assert has_element?(lv, "#not-a-person #mark-person")
+    refute has_element?(lv, "#mark-not-a-person")
   end
 
   test "does not suggest marking a member with attendance", %{conn: conn} do
@@ -385,7 +446,8 @@ defmodule Web.MemberStandingLiveTest do
       assert_received {:d4h, "POST", _path}
       assert has_element?(lv, "#standing-now", "Retiring")
       assert has_element?(lv, "#member-head-standing", "Retiring")
-      assert has_element?(lv, "#retiring-items", "Avery Chen holds no items. Retire them in D4H.")
+      assert has_element?(lv, "#retiring-items", "Avery Chen holds no items.")
+      assert has_element?(lv, "#unmark-retiring + #mark-retired")
       assert GroupMember.get_by(group_id: leavers.id, member_id: member.id)
 
       lv |> element("#unmark-retiring", "Mark as not retiring") |> render_click()
@@ -469,11 +531,11 @@ defmodule Web.MemberStandingLiveTest do
       assert has_element?(
                lv,
                "#retiring-items",
-               "Avery Chen holds 3 items. Retire them in D4H once every item is back."
+               "Avery Chen holds 3 items. Get them back and move them in D4H before you retire them."
              )
     end
 
-    test "no buttons without a Retiring group, or for a member not a person", %{
+    test "no retiring buttons without a Retiring group, or for a member not a person", %{
       conn: conn,
       user: user,
       team: team
@@ -492,6 +554,86 @@ defmodule Web.MemberStandingLiveTest do
         conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
 
       refute has_element?(lv, "#mark-retiring")
+    end
+  end
+
+  # D4H's retire and unretire, from the Standing tab on every team (#1053).
+  describe "Mark as retired" do
+    setup %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: "key"}})
+      RecordsStub.stub(fn _method, _path, _body -> {200, RecordsStub.member_json(77)} end)
+      %{conn: log_in_user(conn, user), user: user, team: team}
+    end
+
+    test "retires an active member in D4H in one step", %{conn: conn, team: team} do
+      member = member_fixture(team, %{name: "Casey Dhillon"})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/standing")
+
+      assert has_element?(lv, "#retire-hint", "Mark as retired retires them in D4H too.")
+
+      assert has_element?(
+               lv,
+               "#mark-retired[data-confirm='Mark Casey Dhillon as retired today?']"
+             )
+
+      assert lv |> element("#mark-retired") |> render_click() =~
+               "Marked Casey Dhillon as retired."
+
+      path = "/members/#{member.d4h_member_id}/retire"
+      assert_received {:records, "PATCH", ^path, %{"direction" => "RETIRE", "date" => _date}}
+      assert [%{action: :retire_member, status: :applied}] = Repo.all(ChangeSetRow)
+    end
+
+    test "refuses a member who holds any item, whatever its status, and says why",
+         %{conn: conn, team: team} do
+      member = member_fixture(team, %{name: "Sam Rivera"})
+      equipment_item_fixture(team, %{title: "Radio 2", member_id: member.id, status: "lost"})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/standing")
+
+      html = lv |> element("#mark-retired") |> render_click()
+      assert html =~ "Sam Rivera still holds 1 item."
+      assert html =~ "Get it back and move it in D4H first."
+
+      refute_received {:records, _method, _path, _body}
+      assert Repo.all(ChangeSetRow) == []
+    end
+
+    test "refuses the team's only team admin", %{conn: conn, user: user, team: team} do
+      me = Member.get_by(team_id: team.id, email: user.email)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{me.id}/standing")
+
+      assert lv |> element("#mark-retired") |> render_click() =~
+               "Make another member a team admin first."
+
+      refute_received {:records, _method, _path, _body}
+    end
+
+    test "Mark as rejoined sends D4H's undo of a retire", %{conn: conn, team: team} do
+      member = member_fixture(team, %{name: "Robin Tse", d4h_status: "RETIRED"})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/standing")
+
+      assert lv |> element("#mark-rejoined") |> render_click() =~ "Marked Robin Tse as rejoined."
+
+      path = "/members/#{member.d4h_member_id}/retire"
+      assert_received {:records, "PATCH", ^path, %{"direction" => "UNRETIRE"}}
+    end
+
+    test "a SAR Duty Records team retires the same way", %{conn: conn} do
+      %{user: user, team: team} = records_team_with_user_fixture(%{d4h_access_key: "sdr_key"})
+      member = member_fixture(team)
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+
+      assert has_element?(lv, "#retire-hint", "retires them in SAR Duty Records too.")
+      lv |> element("#mark-retired") |> render_click()
+
+      path = "/members/#{member.d4h_member_id}/retire"
+      assert_received {:records, "PATCH", ^path, %{"direction" => "RETIRE"}}
     end
   end
 end

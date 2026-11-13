@@ -35,6 +35,9 @@ defmodule Web.Settings.MembersLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/members")
 
     assert has_element?(lv, "#watch-standing-active[checked]")
+    # A bot never attends, so nothing would clear it from the list (#1053).
+    refute has_element?(lv, "#watch-standing-not_a_person")
+    refute Team.build_members_changeset(team, %{"watch_standings" => ["not_a_person"]}).valid?
 
     lv
     |> form("#member-settings-form",

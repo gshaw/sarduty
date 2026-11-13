@@ -3,7 +3,6 @@ defmodule Web.MemberStandingLive do
 
   import Web.Components.MemberPage
 
-  alias App.Adapter.D4H
   alias App.Model.EquipmentItem
   alias App.Model.Group
   alias App.Model.GroupMember
@@ -18,16 +17,20 @@ defmodule Web.MemberStandingLive do
   alias App.Operation.EndAwayPeriod
   alias App.Operation.RecordCheckIn
   alias App.Operation.SetGroupMember
+  alias App.Operation.SetMemberNotAPerson
+  alias App.Operation.SetMemberRetired
   alias App.Repo
   alias App.ViewData.MemberMilestones
   alias Web.Components.MemberSidebar
-  alias Web.Components.NotAPersonSwitch
 
-  # A member's standing (#366): Active, away for a dated period, retiring, or not a
-  # person, and the team's check-ins with them. Away periods, check-ins, and Not a person
-  # are SAR Duty's own, never sent. Retiring is the team's Retiring group (#514), so
-  # marking a member retiring adds them to it, through SetGroupMember like the Groups
-  # tab. Members don't see this page.
+  # A member's standing (#366), and the one place a team admin changes it (#1053): Active,
+  # away for a dated period, retiring, retired, or not a person, and the team's check-ins
+  # with them. Away periods, check-ins, and Not a person are SAR Duty's own, never sent.
+  # Retiring is the team's Retiring group (#514), so marking a member retiring adds them
+  # to it, through SetGroupMember like the Groups tab. Mark as retired and Mark as
+  # rejoined are D4H's retire and unretire. The tab shows only what fits the standing: a
+  # bot's is the Standing section, plus any rows it already has. Members don't see this
+  # page.
   def mount(_params, _session, socket) do
     {:ok, socket}
   end
@@ -41,6 +44,7 @@ defmodule Web.MemberStandingLive do
      |> assign(:member, member)
      |> assign(:last_attended_at, Member.last_attended_at(member))
      |> assign(:equipment, EquipmentItem.held_by(member.team, member))
+     |> assign(:attended?, Member.attended?(member))
      |> assign(:fields?, MemberSidebar.fields?(member, true))
      |> load_standing()
      |> assign_new_form()}
@@ -67,7 +71,7 @@ defmodule Web.MemberStandingLive do
         {:noreply, assign(socket, :away_form, to_form(changeset, as: "away"))}
 
       :not_a_person ->
-        {:noreply, put_flash(socket, :error, "Turn off Not a person to add an away period.")}
+        {:noreply, put_flash(socket, :error, "Mark them as a person to add an away period.")}
 
       :retired ->
         {:noreply, put_flash(socket, :error, "Retired members get no away periods.")}
@@ -96,6 +100,13 @@ defmodule Web.MemberStandingLive do
 
       {:error, changeset} ->
         {:noreply, assign(socket, :check_in_form, to_form(changeset, as: "check_in"))}
+
+      # The form is gone for them; this is a page left open while someone changed it.
+      :not_a_person ->
+        {:noreply, put_flash(socket, :error, "Mark them as a person to record a check-in.")}
+
+      :retired ->
+        {:noreply, put_flash(socket, :error, "Retired members get no check-ins.")}
     end
   end
 
@@ -164,9 +175,39 @@ defmodule Web.MemberStandingLive do
     end
   end
 
-  def handle_info({:not_a_person_changed, not_a_person}, socket) do
-    member = %{socket.assigns.member | not_a_person: not_a_person}
-    {:noreply, socket |> assign(:member, member) |> load_standing()}
+  # D4H's retire and unretire, on every team (#1053). SetMemberRetired refuses a member
+  # who holds items, in words D4H's own refusal leaves out.
+  def handle_event(event, _params, socket) when event in ["mark-retired", "mark-rejoined"] do
+    %{current_team: team, current_user: user, member: member} = socket.assigns
+    retired? = event == "mark-retired"
+
+    case SetMemberRetired.call(team, member, retired?, user, DateTime.utc_now()) do
+      {:ok, saved} ->
+        text = if retired?, do: "retired", else: "rejoined"
+
+        {:noreply,
+         socket
+         |> assign(:member, %{saved | team: member.team})
+         |> put_flash(:info, "Marked #{member.name} as #{text}.")
+         |> load_standing()}
+
+      {:error, text} ->
+        {:noreply, socket |> load_standing() |> put_flash(:error, text)}
+    end
+  end
+
+  def handle_event(event, _params, socket) when event in ["mark-not-a-person", "mark-person"] do
+    %{current_team: team, current_user: user, member: member} = socket.assigns
+    not_a_person = event == "mark-not-a-person"
+
+    {:ok, saved} = SetMemberNotAPerson.call(team, member.id, user, not_a_person)
+    text = if not_a_person, do: "not a person", else: "a person"
+
+    {:noreply,
+     socket
+     |> assign(:member, %{member | not_a_person: saved.not_a_person})
+     |> put_flash(:info, "Marked #{member.name} as #{text}.")
+     |> load_standing()}
   end
 
   defp load_standing(socket) do
@@ -185,6 +226,9 @@ defmodule Web.MemberStandingLive do
       periods: periods,
       check_ins: MemberCheckIn.for_member(member),
       standing: Standing.of(member, periods, retiring?, today, now),
+      looks_like_bot?:
+        not member.not_a_person and
+          Member.looks_like_not_a_person?(member, socket.assigns.attended?),
       retiring_group:
         team.retiring_d4h_group_id &&
           Group.get_by(team_id: team.id, d4h_group_id: team.retiring_d4h_group_id),
@@ -226,15 +270,16 @@ defmodule Web.MemberStandingLive do
       <section id="standing">
         <h2 class="heading">Standing</h2>
         <p id="standing-now" class="lead">{Standing.text(@standing)}</p>
-        <p :if={@standing == :retiring} id="retiring-items">
-          {held_text(@member, @equipment)}
-          <%= if D4H.records?(@current_team) do %>
-            <.a navigate={~p"/teams/#{@current_team}/members/#{@member.id}/edit"}>Retire them</.a>
-          <% else %>
-            {retire_text(@equipment, @service)}
-          <% end %>
+        <p :if={@standing == :retired and @member.left_at} id="retired-on">
+          {@member.name} retired on {Service.Format.date_long(@member.left_at, @member.team.timezone)}.
         </p>
-        <p class="hint">
+        <p :if={@standing == :retiring} id="retiring-items">
+          {held_text(@member, @equipment, @service)}
+        </p>
+        <p :if={@standing == :not_a_person} class="hint">
+          A bot or a shared account. {not_a_person_rule()}
+        </p>
+        <p :if={@standing != :not_a_person} class="hint">
           Active unless the member is away, retiring, or not a person. A member away sees
           when they're back on Your membership, never the reason.
           <span :if={@retiring_group}>
@@ -243,9 +288,13 @@ defmodule Web.MemberStandingLive do
             and Take attendance.
           </span>
         </p>
-        <.form_actions :if={@retiring_group && @standing not in [:retired, :not_a_person]}>
+        <p :if={@standing not in [:retired, :not_a_person]} id="retire-hint" class="hint mt-2">
+          Mark as retired retires them in {@service} too. They keep their attendance and
+          letters, and leave the member counts.
+        </p>
+        <.form_actions>
           <.button
-            :if={@standing != :retiring}
+            :if={@retiring_group && @standing not in [:retired, :not_a_person, :retiring]}
             id="mark-retiring"
             type="button"
             phx-click="mark-retiring"
@@ -255,7 +304,7 @@ defmodule Web.MemberStandingLive do
             Mark as retiring
           </.button>
           <.button
-            :if={@standing == :retiring}
+            :if={@retiring_group && @standing == :retiring}
             id="unmark-retiring"
             type="button"
             phx-click="unmark-retiring"
@@ -264,10 +313,42 @@ defmodule Web.MemberStandingLive do
           >
             Mark as not retiring
           </.button>
+          <.button
+            :if={@standing == :not_a_person}
+            id="mark-person"
+            type="button"
+            phx-click="mark-person"
+            phx-disable-with="Marking as a person…"
+            data-confirm={"Mark #{@member.name} as a person? SAR Duty counts it again and offers it when you pick people."}
+          >
+            Mark as a person
+          </.button>
+          <.button
+            :if={@standing != :retired}
+            id="mark-retired"
+            type="button"
+            variant={:danger}
+            phx-click="mark-retired"
+            phx-disable-with="Marking as retired…"
+            data-confirm={"Mark #{@member.name} as retired today?"}
+          >
+            Mark as retired
+          </.button>
+          <.button
+            :if={@standing == :retired}
+            id="mark-rejoined"
+            type="button"
+            phx-click="mark-rejoined"
+            phx-disable-with="Marking as rejoined…"
+            data-confirm={"Mark #{@member.name} as rejoined? #{@service} makes them a current member again."}
+          >
+            Mark as rejoined
+          </.button>
         </.form_actions>
       </section>
 
-      <section id="away-periods" class="mt-8">
+      <%!-- A bot's tab is the Standing section, and any rows it already has (#1053). --%>
+      <section :if={not bot?(@standing) or @periods != []} id="away-periods" class="mt-8">
         <h2 class="heading">Away periods</h2>
         <.table
           :if={@periods != []}
@@ -312,9 +393,6 @@ defmodule Web.MemberStandingLive do
           No away periods.
         </p>
 
-        <p :if={@standing == :not_a_person} id="away-not-a-person" class="hint mt-6">
-          Turn off Not a person to add an away period.
-        </p>
         <p :if={@standing == :retired} id="away-retired" class="hint mt-6">
           Retired members get no away periods.
         </p>
@@ -341,9 +419,9 @@ defmodule Web.MemberStandingLive do
         </.form>
       </section>
 
-      <section id="check-ins" class="mt-8">
+      <section :if={not bot?(@standing) or @check_ins != []} id="check-ins" class="mt-8">
         <h2 class="heading">Check-ins</h2>
-        <p class="hint">
+        <p :if={check_in?(@standing)} class="hint">
           Record when you reach a member who has not been coming. It restarts their attendance
           clock. The next team admin sees who called and what they heard.
         </p>
@@ -376,7 +454,9 @@ defmodule Web.MemberStandingLive do
         </.table>
         <p :if={@check_ins == []} id="no-check-ins" class="text-text-muted">No check-ins yet.</p>
 
+        <%!-- A retired member or a bot has no attendance clock to restart. --%>
         <.form
+          :if={check_in?(@standing)}
           for={@check_in_form}
           id="check-in-form"
           phx-change="validate-check-in"
@@ -398,7 +478,7 @@ defmodule Web.MemberStandingLive do
       </section>
 
       <%!-- Team admins only: Your membership never shows a tally (#650). --%>
-      <section id="no-shows" class="mt-8">
+      <section :if={not bot?(@standing) or @no_shows != []} id="no-shows" class="mt-8">
         <h2 class="heading">No-shows</h2>
         <p class="hint">
           Activities {@member.name} signed up for and did not arrive at. Following one up
@@ -431,30 +511,60 @@ defmodule Web.MemberStandingLive do
         </.table>
       </section>
 
-      <section id="not-a-person-section" class="mt-8">
-        <.live_component
-          module={NotAPersonSwitch}
-          id="not-a-person"
-          member={@member}
-          user={@current_user}
-        />
+      <%!-- A bot's own Mark as a person is in Standing. A retired bot's is here. --%>
+      <section :if={not bot?(@standing)} id="not-a-person" class="mt-8">
+        <h2 class="heading">Not a person</h2>
+        <p class="hint">For a bot or a shared account. {not_a_person_rule()}</p>
+        <p :if={@looks_like_bot?} id="not-a-person-suggestion" class="hint mt-2">
+          This looks like a bot: no email, no mobile phone, and no attendance.
+        </p>
+        <.form_actions>
+          <.button
+            :if={not @member.not_a_person}
+            id="mark-not-a-person"
+            type="button"
+            phx-click="mark-not-a-person"
+            phx-disable-with="Marking as not a person…"
+            data-confirm={"Mark #{@member.name} as not a person? SAR Duty stops counting them and offering them when you pick people."}
+          >
+            Mark as not a person
+          </.button>
+          <.button
+            :if={@member.not_a_person}
+            id="mark-person"
+            type="button"
+            phx-click="mark-person"
+            phx-disable-with="Marking as a person…"
+            data-confirm={"Mark #{@member.name} as a person? SAR Duty counts it again and offers it when you pick people."}
+          >
+            Mark as a person
+          </.button>
+        </.form_actions>
       </section>
     </.member_page>
     """
   end
 
-  # "Avery Chen holds 3 items." The Equipment tab lists them.
-  defp held_text(member, equipment) do
-    items = equipment |> length() |> Service.Format.count(one: "%d item", many: "%d items")
+  # "Avery Chen holds 3 items. Get them back …" The Equipment tab lists them. D4H refuses
+  # to retire a member who holds any (#1053), and only its web app moves an item.
+  defp held_text(member, [], _service), do: "#{member.name} holds no items."
 
-    if equipment == [],
-      do: "#{member.name} holds no items.",
-      else: "#{member.name} holds #{items}."
-  end
+  defp held_text(member, [_item], service),
+    do:
+      "#{member.name} holds 1 item. Get it back and move it in #{service} before you retire them."
 
-  # D4H refuses to retire a member who holds the team's items (#490), so it waits for them.
-  defp retire_text([], service), do: "Retire them in #{service}."
-  defp retire_text(_equipment, service), do: "Retire them in #{service} once every item is back."
+  defp held_text(member, equipment, service),
+    do:
+      "#{member.name} holds #{length(equipment)} items. Get them back and move them in #{service} before you retire them."
+
+  # What Not a person means, under both its buttons.
+  defp not_a_person_rule,
+    do:
+      "It logs in and gets email like any member, as a team admin if it has that access. SAR Duty never counts it or offers it when you pick people."
+
+  defp bot?(standing), do: standing == :not_a_person
+
+  defp check_in?(standing), do: standing not in [:not_a_person, :retired]
 
   # "away period from Sep 8, 2026 (Parental leave)", for a confirmation that names it.
   defp period_name(period),

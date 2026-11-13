@@ -249,8 +249,8 @@ its values change, which D4H doesn't, so the heads see a value change on Records
   members out, so the members stage sets `left_at` to the refresh time on any active
   member it didn't see (#72). It skips this when D4H returns no members at all. If D4H
   lists the member again, the next refresh copies D4H's `endsAt` back.
-- **"Not a person" is SAR Duty's own field.** A team admin turns it on from the member
-  page for a bot or a shared D4H account, and the members stage never writes it.
+- **"Not a person" is SAR Duty's own field.** A team admin marks it on the member's
+  Standing tab for a bot or a shared D4H account, and the members stage never writes it.
   `Member.people_query/1` leaves those members out of the dashboard's member counts and
   missing-details check, and the members list's missing-details filter.
   Take attendance's member list leaves them out as well. Logins and Team admins don't.
