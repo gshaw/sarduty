@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- A new team logo in D4H shows as soon as the next refresh saves it, Google Wallet
+  passes included. Before, browsers kept the old one for up to an hour.
 - Join dates, leave dates, and qualification dates no longer show a day early. A
   qualification or item now counts through its expiry day, with Today on that day.
 - Needs attention now counts members whose email bounces, with their missing details.

@@ -32,7 +32,7 @@ defmodule Web.AdminDashboardLiveTest do
 
     assert has_element?(
              lv,
-             ~s(#team-#{team.id}-logo[src="/teams/#{team.subdomain}/logo?shape=square"])
+             ~s(#team-#{team.id}-logo[src="#{Web.TeamController.logo_url(team, :square)}"])
            )
   end
 

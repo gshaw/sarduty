@@ -550,8 +550,7 @@ defmodule Web.VerifyLive do
   # Coast Range SAR is only in the sample database, so the app has no logo for it.
   defp logo_src(_team, true = _sample), do: ~p"/images/sarduty-logo-square.png"
 
-  defp logo_src(team, false),
-    do: "#{Web.Endpoint.url()}/teams/#{team.subdomain}/logo?shape=square"
+  defp logo_src(team, false), do: Web.TeamController.logo_url(team, :square)
 
   defp expiry_text(%{ends_at: nil}, _timezone), do: "No expiry"
 
