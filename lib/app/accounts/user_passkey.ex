@@ -31,12 +31,6 @@ defmodule App.Accounts.UserPasskey do
     timestamps(type: :utc_datetime)
   end
 
-  @doc """
-  Whether `user` may add a passkey. SAR Duty site admins try passkeys first (#129); every
-  account gets them once they have. Anyone who has one can log in with it.
-  """
-  def allowed?(%User{is_admin: admin?}), do: admin?
-
   @doc "The user's passkeys, oldest first."
   def list_for(%User{id: user_id}) do
     UserPasskey

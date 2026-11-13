@@ -14,11 +14,10 @@ defmodule App.Operation.AddPasskey do
   @doc """
   `challenge` is the registration challenge the page made, `params` what the browser
   returned (App.Accounts.WebAuthn.register/2), and `user_agent` the browser's, to say
-  what added it. `{:ok, passkey}`, or `{:error, :not_allowed | :invalid | :taken}`.
+  what added it. `{:ok, passkey}`, or `{:error, :invalid | :taken}`.
   """
   def call(%User{} = user, challenge, params, user_agent) do
-    with true <- UserPasskey.allowed?(user) || {:error, :not_allowed},
-         {:ok, attrs} <- register(challenge, params) do
+    with {:ok, attrs} <- register(challenge, params) do
       attrs = Map.put(attrs, :added_with, Service.UserAgent.describe(user_agent))
       insert(user, attrs)
     end

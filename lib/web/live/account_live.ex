@@ -11,8 +11,7 @@ defmodule Web.AccountLive do
 
   Passkeys (#129) are the user's own, so viewing as a member doesn't touch them. The
   PasskeyAdd hook asks for a challenge as the section mounts, runs the browser's prompt,
-  and sends back what it made; App.Operation.AddPasskey checks and saves it. Only an
-  account App.Accounts.UserPasskey.allowed?/1 lets in sees the section.
+  and sends back what it made; App.Operation.AddPasskey checks and saves it.
   """
 
   use Web, :live_view_app_layout
@@ -36,7 +35,6 @@ defmodule Web.AccountLive do
      |> assign(
        page_title: "Account settings",
        viewing_as?: UserAuth.viewing_as?(session),
-       passkeys?: UserPasskey.allowed?(socket.assigns.current_user),
        passkey_challenge: nil,
        client_ip: session["client_ip"],
        user_agent: get_connect_info(socket, :user_agent),
@@ -56,7 +54,7 @@ defmodule Web.AccountLive do
       <p id="account-email">
         Logged in as {@current_user.email}. Your email and your teams come from each team's records.
       </p>
-      <section :if={@passkeys?} id="passkeys" class="mt-8">
+      <section id="passkeys" class="mt-8">
         <h2 class="subheading">Passkeys</h2>
         <p class="hint">
           Log in with Face ID, Touch ID, or your phone instead of a code. Codes still work.

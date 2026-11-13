@@ -5,10 +5,8 @@ add one, and codes keep working for everyone. A passkey proves who someone is; w
 they reach still comes from D4H, so a passkey login needs the same current member as a
 code (`App.Accounts.may_log_in?/2`).
 
-SAR Duty site admins try passkeys first: only they see Passkeys in account settings
-(`App.Accounts.UserPasskey.allowed?/1`). The login page offers passkeys to everyone,
-since it can't tell who is there. Opening passkeys to every account is that one function.
-The follow-ups, an offer after a code login, Passkeys only, and a passkey login for
+Every account can add passkeys in account settings. Site admins tried them first, and
+they opened to everyone on 2026-11-12. The follow-ups, an offer after a code login, Passkeys only, and a passkey login for
 Adminland, wait on #1002.
 
 ## How it fits together
