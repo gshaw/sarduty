@@ -178,6 +178,26 @@ defmodule Web.Org.OrgPagesTest do
       assert Repo.get_by!(Organization, slug: "wsara").name != "Renamed"
     end
 
+    test "a form that fails keeps the old logo", %{
+      conn: conn,
+      dana: dana,
+      organization: organization
+    } do
+      {:ok, before} = organization |> Organization.logo_key() |> FileStore.get()
+      {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/settings")
+
+      logo =
+        file_input(lv, "#organization-form", :logo, [
+          %{name: "logo.png", content: png_fixture(900, 300), type: "image/png"}
+        ])
+
+      render_upload(logo, "logo.png")
+      lv |> form("#organization-form", organization: %{name: ""}) |> render_submit()
+
+      assert Repo.reload!(organization).logo_at == organization.logo_at
+      assert {:ok, ^before} = organization |> Organization.logo_key() |> FileStore.get()
+    end
+
     test "a time zone not on the list is refused", %{conn: conn, dana: dana} do
       {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/settings")
 

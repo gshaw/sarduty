@@ -17,8 +17,10 @@ defmodule App.Operation.SaveOrganization do
     changeset = Organization.build_changeset(organization, params)
 
     # The logo goes to the file store before the row changes (#1067), so a store that
-    # refuses it saves nothing.
+    # refuses it saves nothing, and only once the fields are valid, so a form that fails
+    # never replaces it.
     with {:ok, logo} <- shape_logo(logo_bytes),
+         {:ok, _valid} <- Ecto.Changeset.apply_action(changeset, :update),
          :ok <- put_logo(organization, logo),
          changeset = if(logo, do: Ecto.Changeset.change(changeset, logo_at: now), else: changeset),
          {:ok, organization} <- Repo.update(changeset) do
