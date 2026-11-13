@@ -40,7 +40,9 @@ defmodule App.Operation.ApplyChangeSet do
     :delete_equipment_item,
     :create_location_bookmark,
     :update_location_bookmark,
-    :delete_location_bookmark
+    :delete_location_bookmark,
+    # The team's own field values (#1056 step 5), on D4H or Records.
+    :update_team
   ]
 
   # A team's own custom fields, their choices, and bundles (#1056), on D4H or Records.
@@ -455,6 +457,9 @@ defmodule App.Operation.ApplyChangeSet do
       d4h
       |> D4H.update_member(row.d4h_record_id, row.new_value)
       |> record_result(& &1.d4h_member_id)
+
+  defp write(d4h, %ChangeSetRow{action: :update_team} = row),
+    do: d4h |> D4H.update_team(row.new_value) |> record_result(& &1.d4h_team_id)
 
   defp write(d4h, %ChangeSetRow{action: :retire_member} = row),
     do:

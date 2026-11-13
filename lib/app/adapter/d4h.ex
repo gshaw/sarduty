@@ -436,6 +436,17 @@ defmodule App.Adapter.D4H do
     end
   end
 
+  @doc """
+  Changes the team's own field values (#1056 step 5): `attrs` has only `custom_values`,
+  as a member's Change fields sends them. `{:ok, %D4H.Team{}}`. Records takes nothing
+  else on the team; D4H's PATCH /teams/{id} is untried beyond its custom fields.
+  """
+  def update_team(context, %{"custom_values" => _values} = attrs) do
+    d4h_team_id = Req.Request.get_private(context, :d4h_team_id)
+    json = put_custom_values(%{}, attrs)
+    write(context, :patch, "/teams/#{d4h_team_id}", json, &D4H.Team.build/1)
+  end
+
   def fetch_team_members(context) do
     context
     |> fetch_all("/members", &D4H.Member.build/1)

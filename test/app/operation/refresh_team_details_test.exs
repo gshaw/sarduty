@@ -7,15 +7,21 @@ defmodule App.Operation.RefreshTeamDetailsTest do
 
   @team %Team{name: "Old name", lat: 49.1, lng: -122.6, timezone: "America/Vancouver"}
 
-  test "takes D4H's place and time zone, and leaves the team's names (#738)" do
+  test "takes D4H's place, time zone, and field values, and leaves the team's names (#738)" do
     d4h_team = %D4H.Team{
       name: "New name",
       coordinate: {49.2, -122.8},
-      timezone: "America/Toronto"
+      timezone: "America/Toronto",
+      custom_values: %{"7" => "604-555-0101"}
     }
 
     assert RefreshTeamDetails.plan(@team, d4h_team) ==
-             %{lat: 49.2, lng: -122.8, timezone: "America/Toronto"}
+             %{
+               lat: 49.2,
+               lng: -122.8,
+               timezone: "America/Toronto",
+               custom_values: %{"7" => "604-555-0101"}
+             }
   end
 
   test "a team with no place in D4H keeps its own" do

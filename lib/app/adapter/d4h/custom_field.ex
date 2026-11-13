@@ -28,7 +28,9 @@ defmodule App.Adapter.D4H.CustomField do
     "Exercise" => "exercise",
     "Incident" => "incident",
     "Member" => "member",
-    "Equipment" => "equipment"
+    "Equipment" => "equipment",
+    # Fields on the team itself, such as BCSARA's Duty Phone (#1056 step 5).
+    "Team" => "team"
   }
 
   def targets, do: Map.values(@targets)

@@ -9,20 +9,21 @@ defmodule App.Model.CustomField do
   alias App.Repo
 
   # A copy of one of D4H's custom fields (#681), kept by the sync: the team's own or its
-  # organisation's, for activities, members, and equipment. Values live on the records,
-  # in `custom_values`, keyed by the D4H field id as a string. Choice values are lists
-  # of D4H option ids, which `options` names. See docs/custom-fields.md.
+  # organisation's, for activities, members, equipment, and the team itself (#1056 step
+  # 5). Values live on the records, the team's on the team, in `custom_values`, keyed by
+  # the D4H field id as a string. Choice values are lists of D4H option ids, which
+  # `options` names. See docs/custom-fields.md.
   schema "custom_fields" do
     belongs_to :team, Team
     field :d4h_custom_field_id, :integer
-    # "event", "exercise", "incident", "member", or "equipment".
+    # "event", "exercise", "incident", "member", "equipment", or "team".
     field :target, :string
     field :title, TrimmedString
     # D4H's type, lowercased: "text", "text_area", "number", "date", "datetime", "time",
     # "single_choice", or "multiple_choice".
     field :field_type, :string
     field :required, :boolean, default: false
-    # D4H's RESTRICTED. On an activity or equipment field it keeps the value from its
+    # D4H's RESTRICTED. On an activity, equipment, or team field it keeps the value from its
     # organisation: team admins see it, never members or anything an organisation sees.
     # On a member field it changes nothing in SAR Duty (#1056).
     field :restricted, :boolean, default: false
@@ -48,7 +49,7 @@ defmodule App.Model.CustomField do
     timestamps(type: :utc_datetime_usec)
   end
 
-  @targets ~w(incident exercise event member equipment)
+  @targets ~w(incident exercise event member equipment team)
 
   @doc "A team's fields for one target, in D4H's order. Archived ones are left out."
   def get_all(team_id, target) do
@@ -177,6 +178,7 @@ defmodule App.Model.CustomField do
   def target_title("event"), do: "Events"
   def target_title("member"), do: "Members"
   def target_title("equipment"), do: "Equipment"
+  def target_title("team"), do: "Team"
 
   @doc ~s(What a field holds, in words: "Long text", "One choice", and so on.)
   def type_label("text"), do: "Text"
@@ -226,6 +228,13 @@ defmodule App.Model.CustomField do
   @doc "Whether `target` is an activity's kind: incidents, exercises, and events."
   def activity_target?(target), do: target in @activity_targets
 
+  @doc """
+  Whether RESTRICTED changes who sees a `target`'s values, so a team admin picks it: on an
+  activity's or the team's own field it keeps them from members and the organization
+  (#1056). On a member or equipment field it changes nothing in SAR Duty.
+  """
+  def restricted_matters?(target), do: activity_target?(target) or target == "team"
+
   @doc "Every target a team adds a field to, in the Fields pages' order."
   def targets, do: @targets
 
@@ -255,6 +264,7 @@ defmodule App.Model.CustomField do
 
   defp answer_query("member", team_id), do: where(App.Model.Member, team_id: ^team_id)
   defp answer_query("equipment", team_id), do: where(App.Model.EquipmentItem, team_id: ^team_id)
+  defp answer_query("team", team_id), do: where(Team, id: ^team_id)
 
   defp answer_query(kind, team_id) when kind in @activity_targets do
     Activity

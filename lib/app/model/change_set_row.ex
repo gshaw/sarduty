@@ -66,7 +66,8 @@ defmodule App.Model.ChangeSetRow do
         :delete_custom_field,
         :create_custom_field_option,
         :update_custom_field_option,
-        :create_resource_bundle
+        :create_resource_bundle,
+        :update_team
       ]
 
     field :d4h_record_id, :integer

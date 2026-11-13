@@ -38,6 +38,9 @@ defmodule App.Model.Team do
     field :lat, :float
     field :lng, :float
     field :timezone, :string
+    # The team's own custom field values (#1056 step 5): D4H field id, as a string, to a
+    # string or a list of option ids, as on a member. Nil until the first copy.
+    field :custom_values, :map, redact: true
     field :d4h_access_key, EncryptedString, redact: true
     field :d4h_access_key_saved_at, :utc_datetime_usec
     field :d4h_access_key_owner, :string
@@ -299,7 +302,8 @@ defmodule App.Model.Team do
       :authorized_by_name,
       :lat,
       :lng,
-      :timezone
+      :timezone,
+      :custom_values
     ])
     |> validate_required([
       :subdomain,

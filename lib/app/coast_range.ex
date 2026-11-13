@@ -594,11 +594,35 @@ defmodule App.CoastRange do
     ] ++ organization_fields()
   end
 
+  # BCSARA's 5 fields on each of its teams (#1056 step 5), with made-up hints, from
+  # 9_400_501 in this order. No team has values: a team admin fills them in on General.
+  @team_fields [
+    {"Duty Phone", "text", "The number an agency calls to reach the team."},
+    {"Mailing Address", "text_area", nil},
+    {"City/Town", "text", nil},
+    {"Postal Code", "text", nil},
+    {"Team Email Contact", "text", "Where the association writes to the team."}
+  ]
+
   @doc """
-  WESARA's 27 incident fields, BCSARA's, as `{:custom_field, id, field, []}` rows owned by
-  the organization, as D4H gives them to each of its teams. Silver Basin SAR has them too.
+  WESARA's 27 incident fields, BCSARA's, and its 5 on the team itself, as `{:custom_field,
+  id, field, []}` rows owned by the organization, as D4H gives them to each of its teams.
+  Silver Basin SAR has them too.
   """
-  def organization_fields do
+  def organization_fields, do: incident_fields() ++ team_fields()
+
+  defp team_fields do
+    for {{title, type, hint}, i} <- Enum.with_index(@team_fields) do
+      custom_field(9_400_501 + i, "team", title, type,
+        hint: hint,
+        ordering: i,
+        owner_type: "Organisation",
+        owner_id: @bcsara_owner
+      )
+    end
+  end
+
+  defp incident_fields do
     for {{title, type, required, labels}, i} <- Enum.with_index(@bcsara_fields) do
       id = bcsara_id(title)
       options = for {label, j} <- Enum.with_index(labels), do: {label, id * 100 + j}

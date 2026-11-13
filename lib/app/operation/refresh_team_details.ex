@@ -1,8 +1,8 @@
 defmodule App.Operation.RefreshTeamDetails do
   @moduledoc """
-  The team's place and time zone again from D4H or Records, on every full refresh
-  (App.Operation.RefreshD4HData, #1076). The names are the team's own, so it leaves
-  them (#738).
+  The team's place, time zone, and own field values (#1056) again from D4H or Records,
+  on every full refresh (App.Operation.RefreshD4HData, #1076). The names are the team's
+  own, so it leaves them (#738).
   `{:ok, team}`, `{:error, text}` when D4H refuses or doesn't answer, or
   `{:error, changeset}`.
   """
@@ -20,6 +20,6 @@ defmodule App.Operation.RefreshTeamDetails do
   @doc "The team's new fields. A team with no place on its D4H record keeps the one it has."
   def plan(%Team{} = team, %D4H.Team{} = d4h_team) do
     {lat, lng} = d4h_team.coordinate || {team.lat, team.lng}
-    %{lat: lat, lng: lng, timezone: d4h_team.timezone}
+    %{lat: lat, lng: lng, timezone: d4h_team.timezone, custom_values: d4h_team.custom_values}
   end
 end

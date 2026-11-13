@@ -42,7 +42,7 @@ defmodule Web.Settings.FieldOrderLive do
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
     <p class="lead measure">
-      The order of your team's {kind_text(@target)} fields on {record_text(@target)}.
+      {lead_text(@target)}
       <span :if={@organization_name}>{@organization_name}'s fields keep their own order.</span>
     </p>
 
@@ -74,7 +74,11 @@ defmodule Web.Settings.FieldOrderLive do
     """
   end
 
-  defp kind_text("equipment"), do: "equipment"
+  defp lead_text("team"), do: "The order of your team's own fields on the team itself."
+
+  defp lead_text(target),
+    do: "The order of your team's #{kind_text(target)} fields on #{record_text(target)}."
+
   defp kind_text(target), do: target
 
   defp record_text("incident"), do: "an incident"

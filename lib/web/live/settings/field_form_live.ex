@@ -201,7 +201,7 @@ defmodule Web.Settings.FieldFormLive do
         An {noun(@target)} cannot be published while this is empty. A draft can leave it empty.
       </.input>
       <.input
-        :if={CustomField.activity_target?(@target)}
+        :if={CustomField.restricted_matters?(@target)}
         field={@form[:restricted]}
         type="checkbox"
         label="Restricted"
@@ -262,7 +262,7 @@ defmodule Web.Settings.FieldFormLive do
             type="button"
             variant={:danger}
             phx-click="delete"
-            data-confirm={"Delete #{@field.title}? No #{noun(@target)} has an answer to it."}
+            data-confirm={"Delete #{@field.title}? #{answers_text(@target, 0)}"}
             data-confirm-button="Delete field"
             data-confirm-warning={"#{D4H.service_name(@current_team)} cannot bring it back."}
             phx-disable-with="Deleting…"
@@ -388,8 +388,12 @@ defmodule Web.Settings.FieldFormLive do
   defp noun("exercise"), do: "exercise"
   defp noun("event"), do: "event"
   defp noun("member"), do: "member"
+  defp noun("team"), do: "team"
   defp noun(_equipment), do: "item"
 
+  # The team is one record.
+  defp answers_text("team", 0), do: "The team has no answer."
+  defp answers_text("team", _count), do: "The team has an answer."
   defp answers_text(target, 0), do: "No #{noun(target)} has an answer."
 
   defp answers_text(target, count),

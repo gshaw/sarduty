@@ -93,8 +93,14 @@ defmodule App.Adapter.D4H.CustomFieldTest do
     assert field.owner_type == "Organisation"
   end
 
+  test "a field on the team itself is built (#1056 step 5)" do
+    field = CustomField.build(%{@city | "targetResourceType" => "Team"})
+    assert field.target == "team"
+    assert CustomField.d4h_target("team") == "Team"
+  end
+
   test "a target SAR Duty doesn't copy builds nothing" do
-    for target <- ~w(HealthSafetyReport PersonInvolved Team IncidentWeather) do
+    for target <- ~w(HealthSafetyReport PersonInvolved IncidentWeather) do
       assert CustomField.build(%{@city | "targetResourceType" => target}) == nil
     end
   end

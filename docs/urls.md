@@ -24,7 +24,9 @@ enforces the top-level list and the held URLs.
   with no redirect), a member's and an equipment item's custom fields are `/fields` too,
   and an item's history `/history`;
   adding goes under the tab it adds to, `/equipment/add` and `/members/add`, and
-  changing too, `/fields/edit`. An organization's form on an activity is
+  changing too, `/fields/edit`. The team's own field values change at
+  `/teams/:subdomain/settings/fields/edit`, under General, `/settings` (#1056); the
+  router puts it before the Fields tab's `/settings/fields/:id`. An organization's form on an activity is
   `/forms/:form_id`, and its PDF a post to `/forms/:form_id/pdf` (#950). A step of the Members tab, on its own LiveView, is under
   it too, such as `/members/ask` (#766, #895, #920). The tab and its steps keep its filters
   in the query, `?group=`, `?status=` (the reply tile, such as `no-reply`), and `?q=`

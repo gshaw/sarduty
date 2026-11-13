@@ -101,6 +101,35 @@ defmodule App.Adapter.D4HTest do
     end
   end
 
+  test "reads the team's own field values, and PATCHes only them (#1056)" do
+    values = [%{"customField" => %{"id" => 701}, "value" => "604-555-0101"}]
+    test = self()
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      assert conn.request_path == "/v3/team/1/teams/1"
+      {:ok, body, conn} = Plug.Conn.read_body(conn)
+      send(test, {conn.method, body})
+
+      Req.Test.json(conn, %{
+        "id" => 1,
+        "title" => "Coast Range SAR",
+        "customFieldValues" => values
+      })
+    end)
+
+    assert {:ok, %D4H.Team{custom_values: %{"701" => "604-555-0101"}}} =
+             D4H.fetch_team(context())
+
+    assert {:ok, %D4H.Team{d4h_team_id: 1}} =
+             D4H.update_team(context(), %{"custom_values" => %{"701" => "604-555-0101"}})
+
+    assert_received {"PATCH", body}
+
+    assert Jason.decode!(body) == %{
+             "customFieldValues" => [%{"id" => 701, "value" => "604-555-0101"}]
+           }
+  end
+
   test "a team with no profile image has no logo to fetch" do
     Req.Test.stub(App.Adapter.D4H, fn conn ->
       assert conn.request_path == "/v3/team/1/documents"

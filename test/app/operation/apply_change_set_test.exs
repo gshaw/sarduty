@@ -112,7 +112,7 @@ defmodule App.Operation.ApplyChangeSetTest do
              delete_whiteboard_note create_location_bookmark update_location_bookmark
              delete_location_bookmark create_custom_field update_custom_field
              delete_custom_field create_custom_field_option update_custom_field_option
-             create_resource_bundle)
+             create_resource_bundle update_team)
   @applier "lib/app/operation/apply_change_set.ex"
 
   test "only the applier calls D4H's write functions" do

@@ -122,6 +122,11 @@ defmodule Web.Settings.FieldsLive do
       <p :if={@kind == "member"} id="member-fields-who" class="measure mb-6">
         Team admins see every member's answers. A member sees their own when the field allows it.
       </p>
+      <p :if={@kind == "team"} id="team-fields-who" class="measure mb-6">
+        Facts about the team itself. Team admins fill them in on <.a navigate={
+          ~p"/teams/#{@current_team}/settings"
+        }>General</.a>.
+      </p>
       <.field_list
         id={"fields-#{@kind}-list"}
         fields={@fields}

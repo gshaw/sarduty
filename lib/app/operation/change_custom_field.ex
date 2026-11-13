@@ -94,7 +94,8 @@ defmodule App.Operation.ChangeCustomField do
   defp keys(%CustomField{target: target, field_type: type}) do
     ~w(title hint d4h_bundle_id) ++
       if(type == "number", do: ["value_units"], else: []) ++
-      if(CustomField.activity_target?(target), do: ~w(required restricted), else: []) ++
+      if(CustomField.activity_target?(target), do: ["required"], else: []) ++
+      if(CustomField.restricted_matters?(target), do: ["restricted"], else: []) ++
       if(target == "member", do: ["member_privacy"], else: [])
   end
 

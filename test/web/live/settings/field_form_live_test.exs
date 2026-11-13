@@ -129,6 +129,28 @@ defmodule Web.Settings.FieldFormLiveTest do
     refute_received {:records, _, _, _}
   end
 
+  test "adds a field on the team itself, with Restricted and no Needed to publish (#1056)",
+       %{conn: conn, team: team} do
+    json = field_json(%{"targetResourceType" => "Team", "type" => "TEXT", "options" => []})
+    RecordsStub.stub(fn "POST", "/custom-fields", _ -> {200, json} end)
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/new?kind=team")
+
+    assert has_element?(lv, "#field_target option[selected][value=team]", "Team")
+    assert has_element?(lv, "#field_restricted")
+    refute has_element?(lv, "#field_required")
+    refute has_element?(lv, "#field_member_privacy")
+
+    lv
+    |> form("#field-form", field: %{title: "Duty Phone", field_type: "text", restricted: "true"})
+    |> render_submit()
+
+    assert_received {:records, "POST", "/custom-fields", body}
+    assert body["targetResourceType"] == "Team"
+    assert body["restricted"] == "RESTRICTED"
+    refute body["mandatory"]
+    assert Repo.get_by!(CustomField, team_id: team.id, d4h_custom_field_id: 93).target == "team"
+  end
+
   test "a member field asks what members do; no Needed to publish or Restricted",
        %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/new?kind=member")

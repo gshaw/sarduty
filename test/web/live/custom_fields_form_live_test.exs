@@ -5,6 +5,7 @@ defmodule Web.CustomFieldsFormLiveTest do
   import Phoenix.LiveViewTest
 
   alias App.Model.ChangeSet
+  alias App.Model.Team
   alias App.RecordsStub
   alias App.Repo
 
@@ -19,6 +20,7 @@ defmodule Web.CustomFieldsFormLiveTest do
     do: {200, id |> String.to_integer() |> RecordsStub.member_json()}
 
   defp reply(_method, "/equipment/" <> id, _body), do: {200, %{"id" => String.to_integer(id)}}
+  defp reply(_method, "/teams/" <> id, _body), do: {200, %{"id" => String.to_integer(id)}}
   defp reply(_method, _path, _body), do: {200, RecordsStub.activity_json(88)}
 
   # D4H's writes, in the order they were made.
@@ -173,5 +175,48 @@ defmodule Web.CustomFieldsFormLiveTest do
     assert [{"PATCH", ^path, body} | _rest] = writes()
     assert body == %{"customFieldValues" => [%{"id" => 603, "value" => "Orange dry bag"}]}
     assert Repo.reload(item).custom_values == %{"603" => "Orange dry bag"}
+  end
+
+  test "the team's own fields go to D4H from General, and the copy takes them (#1056)",
+       %{conn: conn, team: team} do
+    stub()
+
+    custom_field_fixture(team, %{
+      d4h_custom_field_id: 701,
+      target: "team",
+      title: "Duty Phone",
+      owner_type: "Organisation"
+    })
+
+    custom_field_fixture(team, %{d4h_custom_field_id: 702, target: "team", title: "Postal Code"})
+    {:ok, team} = Team.update(team, %{custom_values: %{"702" => "V5K 0A1"}})
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
+    assert has_element?(lv, "#team-fields-team-702", "V5K 0A1")
+
+    assert has_element?(
+             lv,
+             ~s(#team-fields-change[href="/teams/#{team.subdomain}/settings/fields/edit"])
+           )
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/edit")
+    assert page_title(lv) =~ "Change fields for #{team.name}"
+
+    {:ok, lv, _html} =
+      lv
+      |> form("#custom-fields-form", fields: %{"701" => "604-555-0101"})
+      |> render_submit()
+      |> follow_redirect(conn, ~p"/teams/#{team}/settings")
+
+    path = "/teams/#{team.d4h_team_id}"
+    assert [{"PATCH", ^path, body} | _rest] = writes()
+    assert body == %{"customFieldValues" => [%{"id" => 701, "value" => "604-555-0101"}]}
+    assert Repo.reload(team).custom_values == %{"701" => "604-555-0101", "702" => "V5K 0A1"}
+    assert has_element?(lv, "#team-fields-organization-701", "604-555-0101")
+
+    [row] =
+      ChangeSet |> Repo.all(team_id: team.id) |> Repo.preload(:rows) |> Enum.flat_map(& &1.rows)
+
+    assert %{action: :update_team, status: :applied} = row
   end
 end
