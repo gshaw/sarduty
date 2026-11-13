@@ -138,8 +138,10 @@ or **Retired**. Decided 2026-10-18; the issue has the reasons. Retired was added
   an away period. **Active** is the absence of the others and is never stored. What it
   does is under [Not a person](#not-a-person).
 - The member's **Standing** tab is the one place a team admin changes standing (#1053).
-  It lists away periods, past ones too, with a form to add one and buttons to end one
-  today or delete it. Any team admin can. With a Retiring group it has **Mark as
+  It lists away periods, past ones too, with buttons to end one today or delete it, and
+  check-ins. Any team admin can. **Add away period** and **Record check-in** open their
+  own pages (`Web.MemberStandingFormLive`) and come back to the tab, so the tab reads as
+  the member's standing rather than two empty forms. With a Retiring group it has **Mark as
   retiring** or **Mark as not retiring**, one `add_group_member` or `remove_group_member`
   row through `SetGroupMember`, as the Groups tab sends, and the line "Avery Chen holds 3
   items. Get them back and move them in D4H before you retire them." Every member but a

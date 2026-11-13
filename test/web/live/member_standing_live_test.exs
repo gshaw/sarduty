@@ -41,18 +41,27 @@ defmodule Web.MemberStandingLiveTest do
     member = member_fixture(team)
     ends_on = day(team, 30)
 
-    {:ok, lv, _html} =
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+    conn = log_in_user(conn, user)
+    {:ok, tab, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/standing")
+    refute has_element?(tab, "#away-form")
 
-    lv
-    |> form("#away-form",
-      away: %{
-        starts_on: today(team),
-        ends_on: ends_on,
-        reason: "  Parental leave  "
-      }
-    )
-    |> render_submit()
+    # Its own page, from the tab (#1053), and back.
+    {:ok, page, _html} = tab |> element("#add-away") |> render_click() |> follow_redirect(conn)
+    assert has_element?(page, "h1", "Add an away period for #{member.name}")
+
+    {:ok, lv, html} =
+      page
+      |> form("#away-form",
+        away: %{
+          starts_on: today(team),
+          ends_on: ends_on,
+          reason: "  Parental leave  "
+        }
+      )
+      |> render_submit()
+      |> follow_redirect(conn, ~p"/teams/#{team}/members/#{member.id}/standing")
+
+    assert html =~ "Away period added."
 
     assert has_element?(
              lv,
@@ -84,7 +93,7 @@ defmodule Web.MemberStandingLiveTest do
     member = member_fixture(team)
 
     {:ok, lv, _html} =
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing/away/new")
 
     away = %{starts_on: today(team), ends_on: day(team, 30)}
 
@@ -105,7 +114,7 @@ defmodule Web.MemberStandingLiveTest do
     member = member_fixture(team)
 
     {:ok, lv, _html} =
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing/away/new")
 
     html =
       lv
@@ -201,8 +210,8 @@ defmodule Web.MemberStandingLiveTest do
 
     assert has_element?(lv, "#away-period-list")
     assert has_element?(lv, "#check-in-list")
-    refute has_element?(lv, "#away-form")
-    refute has_element?(lv, "#check-in-form")
+    refute has_element?(lv, "#add-away")
+    refute has_element?(lv, "#record-check-in")
     refute has_element?(lv, "#no-shows")
   end
 
@@ -216,10 +225,9 @@ defmodule Web.MemberStandingLiveTest do
     assert has_element?(lv, "#standing-now", "Retired")
     assert has_element?(lv, "#retired-on", "Robin Tse retired on June 1, 2025.")
     assert has_element?(lv, "#member-head-standing", "Retired")
-    refute has_element?(lv, "#away-form")
-    assert has_element?(lv, "#away-retired")
+    refute has_element?(lv, "#add-away")
     assert has_element?(lv, "#check-ins")
-    refute has_element?(lv, "#check-in-form")
+    refute has_element?(lv, "#record-check-in")
     assert has_element?(lv, "#mark-rejoined")
     refute has_element?(lv, "#mark-retired")
     refute has_element?(lv, "#mark-retiring")
@@ -230,6 +238,26 @@ defmodule Web.MemberStandingLiveTest do
 
     check_in = %{"checked_in_on" => today(team)}
     assert RecordCheckIn.call(team, member.id, user, check_in) == :retired
+    assert Repo.all(MemberCheckIn) == []
+  end
+
+  test "a form page left open while the member retired goes back and says so",
+       %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    member = member_fixture(team, %{name: "Robin Tse"})
+    conn = log_in_user(conn, user)
+    standing = ~p"/teams/#{team}/members/#{member.id}/standing"
+
+    {:ok, lv, _html} = live(conn, standing <> "/check-ins/new")
+    member |> Ecto.Changeset.change(left_at: ~U[2025-06-01 19:00:00Z]) |> Repo.update!()
+
+    {:ok, _tab, html} =
+      lv
+      |> form("#check-in-form", check_in: %{checked_in_on: today(team)})
+      |> render_submit()
+      |> follow_redirect(conn, standing)
+
+    assert html =~ "Robin Tse is retired."
     assert Repo.all(MemberCheckIn) == []
   end
 
@@ -291,17 +319,24 @@ defmodule Web.MemberStandingLiveTest do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
 
-    {:ok, lv, _html} =
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+    conn = log_in_user(conn, user)
+    {:ok, tab, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/standing")
+    assert has_element?(tab, "#no-check-ins")
 
-    assert has_element?(lv, "#no-check-ins")
+    {:ok, page, _html} =
+      tab |> element("#record-check-in") |> render_click() |> follow_redirect(conn)
 
-    lv
-    |> form("#check-in-form",
-      check_in: %{checked_in_on: day(team, -2), note: "Busy with school, back in January."}
-    )
-    |> render_submit()
+    assert has_element?(page, "h1", "Record a check-in with #{member.name}")
 
+    {:ok, lv, html} =
+      page
+      |> form("#check-in-form",
+        check_in: %{checked_in_on: day(team, -2), note: "Busy with school, back in January."}
+      )
+      |> render_submit()
+      |> follow_redirect(conn, ~p"/teams/#{team}/members/#{member.id}/standing")
+
+    assert html =~ "Check-in recorded."
     assert [check_in] = Repo.all(MemberCheckIn)
     assert check_in.user_id == user.id
     assert check_in.checked_in_on == day(team, -2)
@@ -329,7 +364,9 @@ defmodule Web.MemberStandingLiveTest do
     member = member_fixture(team)
 
     {:ok, lv, _html} =
-      conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{member.id}/standing")
+      conn
+      |> log_in_user(user)
+      |> live(~p"/teams/#{team}/members/#{member.id}/standing/check-ins/new")
 
     html =
       lv |> form("#check-in-form", check_in: %{checked_in_on: day(team, 1)}) |> render_submit()

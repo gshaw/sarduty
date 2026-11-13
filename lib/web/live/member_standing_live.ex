@@ -11,11 +11,9 @@ defmodule Web.MemberStandingLive do
   alias App.Model.MemberCheckIn
   alias App.Model.NoShow
   alias App.Model.Standing
-  alias App.Operation.AddAwayPeriod
   alias App.Operation.DeleteAwayPeriod
   alias App.Operation.DeleteCheckIn
   alias App.Operation.EndAwayPeriod
-  alias App.Operation.RecordCheckIn
   alias App.Operation.SetGroupMember
   alias App.Operation.SetMemberNotAPerson
   alias App.Operation.SetMemberRetired
@@ -29,8 +27,9 @@ defmodule Web.MemberStandingLive do
   # Retiring is the team's Retiring group (#514), so marking a member retiring adds them
   # to it, through SetGroupMember like the Groups tab. Mark as retired and Mark as
   # rejoined are D4H's retire and unretire. The tab shows only what fits the standing: a
-  # bot's is the Standing section, plus any rows it already has. Members don't see this
-  # page.
+  # bot's is the Standing section, plus any rows it already has. Adding an away period or
+  # a check-in is its own page (Web.MemberStandingFormLive), so the tab reads as the
+  # member's standing. Members don't see this page.
   def mount(_params, _session, socket) do
     {:ok, socket}
   end
@@ -46,68 +45,7 @@ defmodule Web.MemberStandingLive do
      |> assign(:equipment, EquipmentItem.held_by(member.team, member))
      |> assign(:attended?, Member.attended?(member))
      |> assign(:fields?, MemberSidebar.fields?(member, true))
-     |> load_standing()
-     |> assign_new_form()}
-  end
-
-  def handle_event("validate-away", %{"away" => params}, socket) do
-    changeset =
-      %MemberAwayPeriod{}
-      |> MemberAwayPeriod.build_changeset(params)
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, :away_form, to_form(changeset, as: "away"))}
-  end
-
-  def handle_event("add-away", %{"away" => params}, socket) do
-    %{current_team: team, current_user: user, member: member} = socket.assigns
-
-    case AddAwayPeriod.call(team, member.id, user, params) do
-      {:ok, _period} ->
-        {:noreply,
-         socket |> put_flash(:info, "Away period added.") |> load_standing() |> assign_new_form()}
-
-      {:error, changeset} ->
-        {:noreply, assign(socket, :away_form, to_form(changeset, as: "away"))}
-
-      :not_a_person ->
-        {:noreply, put_flash(socket, :error, "Mark them as a person to add an away period.")}
-
-      :retired ->
-        {:noreply, put_flash(socket, :error, "Retired members get no away periods.")}
-    end
-  end
-
-  def handle_event("validate-check-in", %{"check_in" => params}, socket) do
-    changeset =
-      %MemberCheckIn{}
-      |> MemberCheckIn.build_changeset(params, socket.assigns.today)
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, :check_in_form, to_form(changeset, as: "check_in"))}
-  end
-
-  def handle_event("check-in", %{"check_in" => params}, socket) do
-    %{current_team: team, current_user: user, member: member} = socket.assigns
-
-    case RecordCheckIn.call(team, member.id, user, params) do
-      {:ok, _check_in} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Check-in recorded.")
-         |> load_standing()
-         |> assign_new_form()}
-
-      {:error, changeset} ->
-        {:noreply, assign(socket, :check_in_form, to_form(changeset, as: "check_in"))}
-
-      # The form is gone for them; this is a page left open while someone changed it.
-      :not_a_person ->
-        {:noreply, put_flash(socket, :error, "Mark them as a person to record a check-in.")}
-
-      :retired ->
-        {:noreply, put_flash(socket, :error, "Retired members get no check-ins.")}
-    end
+     |> load_standing()}
   end
 
   def handle_event("delete-check-in", %{"id" => id}, socket) do
@@ -237,22 +175,6 @@ defmodule Web.MemberStandingLive do
     )
   end
 
-  defp assign_new_form(socket) do
-    changeset =
-      MemberAwayPeriod.build_changeset(%MemberAwayPeriod{starts_on: socket.assigns.today})
-
-    check_in =
-      MemberCheckIn.build_changeset(
-        %MemberCheckIn{checked_in_on: socket.assigns.today},
-        %{},
-        socket.assigns.today
-      )
-
-    socket
-    |> assign(:away_form, to_form(changeset, as: "away"))
-    |> assign(:check_in_form, to_form(check_in, as: "check_in"))
-  end
-
   def render(assigns) do
     ~H"""
     <.member_page
@@ -280,16 +202,12 @@ defmodule Web.MemberStandingLive do
         <p :if={@standing == :not_a_person} class="hint">
           A bot or a shared account. {not_a_person_rule()}
         </p>
-        <p :if={@standing != :not_a_person} class="hint">
-          Active unless the member is away, retiring, or not a person. A member away sees
-          when they're back on Your membership, never the reason.
+        <%!-- One line per button, only with its button. --%>
+        <p :if={@standing not in [:retired, :not_a_person]} id="retire-hint" class="hint">
           <span :if={@retiring_group}>
             Retiring members are in your {@retiring_group.title} group in {@service}. They
-            can't log in to SAR Duty, and it leaves them out of counts, invites, reminders,
-            and Take attendance.
+            can't log in to SAR Duty, and SAR Duty stops counting and contacting them.
           </span>
-        </p>
-        <p :if={@standing not in [:retired, :not_a_person]} id="retire-hint" class="hint mt-2">
           Mark as retired retires them in {@service} too. They keep their attendance and
           letters, and leave the member counts.
         </p>
@@ -351,6 +269,10 @@ defmodule Web.MemberStandingLive do
       <%!-- A bot's tab is the Standing section, and any rows it already has (#1053). --%>
       <section :if={not bot?(@standing) or @periods != []} id="away-periods" class="mt-8">
         <h2 class="heading">Away periods</h2>
+        <p :if={can_add?(@standing)} class="hint">
+          Time away the team knows about, such as parental leave. The member is Away until
+          the last day, and sees the day they are back on Your membership, never the reason.
+        </p>
         <.table
           :if={@periods != []}
           id="away-period-list"
@@ -394,35 +316,19 @@ defmodule Web.MemberStandingLive do
           No away periods.
         </p>
 
-        <p :if={@standing == :retired} id="away-retired" class="hint mt-6">
-          Retired members get no away periods.
-        </p>
-        <.form
-          :if={@standing not in [:not_a_person, :retired]}
-          for={@away_form}
-          id="away-form"
-          phx-change="validate-away"
-          phx-submit="add-away"
-          class="measure mt-6"
-        >
-          <h3 class="subheading">Add an away period</h3>
-          <.error_summary form={@away_form} />
-          <div class="grid md:grid-cols-2 gap-x-6">
-            <.input field={@away_form[:starts_on]} type="date" label="First day" />
-            <.input field={@away_form[:ends_on]} type="date" label="Last day" />
-          </div>
-          <.input field={@away_form[:reason]} label="Reason" maxlength="60">
-            For example, Parental leave or Moving. Leave out medical details.
-          </.input>
-          <.form_actions>
-            <.button variant={:success}>Add away period</.button>
-          </.form_actions>
-        </.form>
+        <.form_actions :if={can_add?(@standing)}>
+          <.button
+            id="add-away"
+            navigate={~p"/teams/#{@current_team}/members/#{@member.id}/standing/away/new"}
+          >
+            Add away period
+          </.button>
+        </.form_actions>
       </section>
 
       <section :if={not bot?(@standing) or @check_ins != []} id="check-ins" class="mt-8">
         <h2 class="heading">Check-ins</h2>
-        <p :if={check_in?(@standing)} class="hint">
+        <p :if={can_add?(@standing)} class="hint">
           Record when you reach a member who has not been coming. It restarts their attendance
           clock. The next team admin sees who called and what they heard.
         </p>
@@ -456,26 +362,14 @@ defmodule Web.MemberStandingLive do
         <p :if={@check_ins == []} id="no-check-ins" class="text-text-muted">No check-ins yet.</p>
 
         <%!-- A retired member or a bot has no attendance clock to restart. --%>
-        <.form
-          :if={check_in?(@standing)}
-          for={@check_in_form}
-          id="check-in-form"
-          phx-change="validate-check-in"
-          phx-submit="check-in"
-          class="measure mt-6"
-        >
-          <h3 class="subheading">Record a check-in</h3>
-          <.error_summary form={@check_in_form} />
-          <.input field={@check_in_form[:checked_in_on]} type="date" label="Day you reached them" />
-          <.input
-            field={@check_in_form[:note]}
-            type="textarea"
-            label="What you heard (optional)"
-          />
-          <.form_actions>
-            <.button variant={:success}>Record check-in</.button>
-          </.form_actions>
-        </.form>
+        <.form_actions :if={can_add?(@standing)}>
+          <.button
+            id="record-check-in"
+            navigate={~p"/teams/#{@current_team}/members/#{@member.id}/standing/check-ins/new"}
+          >
+            Record check-in
+          </.button>
+        </.form_actions>
       </section>
 
       <%!-- Team admins only: Your membership never shows a tally (#650). --%>
@@ -565,7 +459,9 @@ defmodule Web.MemberStandingLive do
 
   defp bot?(standing), do: standing == :not_a_person
 
-  defp check_in?(standing), do: standing not in [:not_a_person, :retired]
+  # Whether the member can get an away period or a check-in: AddAwayPeriod and
+  # RecordCheckIn refuse the rest.
+  defp can_add?(standing), do: standing not in [:not_a_person, :retired]
 
   # "away period from Sep 8, 2026 (Parental leave)", for a confirmation that names it.
   defp period_name(period),
