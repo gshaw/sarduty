@@ -194,7 +194,8 @@ defmodule Web.MemberStandingLive do
         <%!-- The answer, not an intro: body colour, not .lead's muted grey. --%>
         <p id="standing-now" class="text-lg font-semibold mb-4">{Standing.text(@standing)}</p>
         <p :if={@standing == :retired and @member.left_at} id="retired-on">
-          {@member.name} retired on {Service.Format.date_long(@member.left_at, @member.team.timezone)}.
+          <%!-- D4H keeps the day at 00:00 UTC; in Vancouver time it reads a day early. --%>
+          {@member.name} retired on {Service.Format.date_long(DateTime.to_date(@member.left_at))}.
         </p>
         <p :if={@standing == :retiring} id="retiring-items">
           {held_text(@member, @equipment, @service)}
@@ -409,6 +410,10 @@ defmodule Web.MemberStandingLive do
       <%!-- A bot's own Mark as a person is in Standing. A retired bot's is here. --%>
       <section :if={not bot?(@standing)} id="not-a-person" class="mt-8">
         <h2 class="heading">Not a person</h2>
+        <%!-- A retired bot: Retired wins the badge, so say what it still is. --%>
+        <p :if={@member.not_a_person} id="still-not-a-person">
+          {@member.name} is marked as not a person.
+        </p>
         <p class="hint">For a bot or a shared account. {not_a_person_rule()}</p>
         <p :if={@looks_like_bot?} id="not-a-person-suggestion" class="hint mt-2">
           This looks like a bot: no email, no mobile phone, and no attendance.

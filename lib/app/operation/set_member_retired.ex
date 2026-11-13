@@ -18,15 +18,33 @@ defmodule App.Operation.SetMemberRetired do
   alias App.Model.Team
   alias App.Operation.ApplyEdit
   alias App.Operation.SaveMember
+  alias App.Repo
 
   @doc "`{:ok, member}` or `{:error, text}`."
   def call(%Team{} = team, %Member{team_id: team_id} = member, retired?, %User{} = user, now)
       when team_id == team.id do
+    left_at = left_on(team, now)
+
     with :ok <- check(team, member, retired?, now),
-         {:ok, _d4h_member_id} <- ApplyEdit.call(team, user, plan(member, retired?, now), now) do
-      {:ok, Member.find!(team, member.id)}
+         {:ok, _d4h_member_id} <-
+           ApplyEdit.call(team, user, plan(member, retired?, left_at), now) do
+      {:ok, save_copy(member, retired?, left_at)}
     end
   end
+
+  # D4H keeps a leave date as the day at 00:00 UTC (tested 2026-11-12). Send the team's
+  # own day, so a retire at 5 pm in Vancouver, already tomorrow in UTC, keeps today.
+  defp left_on(team, now) do
+    today = Service.Period.today(now, team.timezone)
+    DateTime.new!(today, ~T[00:00:00], "Etc/UTC")
+  end
+
+  # What D4H now has, so the tab shows it at once; the next sync confirms it.
+  defp save_copy(member, true = _retired?, left_at),
+    do: member |> Ecto.Changeset.change(d4h_status: "RETIRED", left_at: left_at) |> Repo.update!()
+
+  defp save_copy(member, false = _retired?, _left_at),
+    do: member |> Ecto.Changeset.change(d4h_status: "OPERATIONAL", left_at: nil) |> Repo.update!()
 
   defp check(team, member, true = _retired?, now) do
     held = team |> EquipmentItem.held_by(member) |> length()
@@ -52,16 +70,13 @@ defmodule App.Operation.SetMemberRetired do
     "#{member.name} still holds #{items}. Get it back and move it in #{service} first."
   end
 
-  def plan(%Member{} = member, true = _retired?, now) do
+  def plan(%Member{} = member, true = _retired?, left_at) do
     %ChangeSetRow{
       action: :retire_member,
       member_id: member.id,
       d4h_record_id: member.d4h_member_id,
       old_value: %{"status" => member.d4h_status},
-      new_value: %{
-        "status" => "RETIRED",
-        "left_at" => now |> DateTime.truncate(:second) |> DateTime.to_iso8601()
-      }
+      new_value: %{"status" => "RETIRED", "left_at" => DateTime.to_iso8601(left_at)}
     }
   end
 

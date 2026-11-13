@@ -428,6 +428,7 @@ defmodule Web.MemberStandingLiveTest do
       conn |> log_in_user(user) |> live(~p"/teams/#{team}/members/#{bot.id}/standing")
 
     assert has_element?(lv, "#standing-now", "Retired")
+    assert has_element?(lv, "#still-not-a-person", "is marked as not a person.")
     assert has_element?(lv, "#not-a-person #mark-person")
     refute has_element?(lv, "#mark-not-a-person")
   end
@@ -617,9 +618,16 @@ defmodule Web.MemberStandingLiveTest do
       assert lv |> element("#mark-retired") |> render_click() =~
                "Marked Casey Dhillon as retired."
 
+      # The team's own day at 00:00 UTC, as D4H keeps it.
+      day = "#{today(team)}T00:00:00Z"
       path = "/members/#{member.d4h_member_id}/retire"
-      assert_received {:records, "PATCH", ^path, %{"direction" => "RETIRE", "date" => _date}}
+      assert_received {:records, "PATCH", ^path, %{"direction" => "RETIRE", "date" => ^day}}
       assert [%{action: :retire_member, status: :applied}] = Repo.all(ChangeSetRow)
+
+      # Written here at once, with no sync, so the tab says it.
+      assert has_element?(lv, "#standing-now", "Retired")
+      date = Service.Format.date_long(today(team))
+      assert has_element?(lv, "#retired-on", "Casey Dhillon retired on #{date}.")
     end
 
     test "refuses a member who holds any item, whatever its status, and says why",
@@ -657,6 +665,7 @@ defmodule Web.MemberStandingLiveTest do
 
       path = "/members/#{member.d4h_member_id}/retire"
       assert_received {:records, "PATCH", ^path, %{"direction" => "UNRETIRE"}}
+      assert has_element?(lv, "#standing-now", "Active")
     end
 
     test "a SAR Duty Records team retires the same way", %{conn: conn} do

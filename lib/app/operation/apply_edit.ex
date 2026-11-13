@@ -7,9 +7,9 @@ defmodule App.Operation.ApplyEdit do
   removes members' photos (#1028), retires and rejoins members (#1053), and changes equipment items' status, barcode, and
   custom fields; every other record it changes in D4H.
 
-  After a group row the caller writes the local copy, as group rules do, and the next
-  sync confirms it. After any other row the sync copies what changed, so the page that
-  follows shows it.
+  After a group row, a retire, or a rejoin the caller writes the local copy, as group
+  rules do, and the next sync confirms it. After any other row the sync copies what
+  changed, so the page that follows shows it.
 
   `{:ok, d4h_record_id}`, or `{:error, text}` to show the person.
   """
@@ -33,6 +33,10 @@ defmodule App.Operation.ApplyEdit do
     :add_group_member,
     :remove_group_member
   ]
+
+  # The caller writes these rows' local copy, and the next sync confirms it: a sync after
+  # a retire took about 10 seconds on South Fraser (#1053).
+  @local_copy_actions @group_actions ++ [:retire_member, :rejoin_member]
 
   def call(team, user, row, now, opts \\ [])
 
@@ -90,7 +94,7 @@ defmodule App.Operation.ApplyEdit do
 
     case ApplyChangeSet.call(team, change_set, user, now, Keyword.take(opts, [:photo, :document])) do
       {:ok, [%ChangeSetRow{status: :applied} = applied]} ->
-        if applied.action not in @group_actions, do: sync(team)
+        if applied.action not in @local_copy_actions, do: sync(team)
         {:ok, applied.d4h_record_id}
 
       {:ok, [%ChangeSetRow{error: error}]} ->
