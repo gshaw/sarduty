@@ -41,13 +41,31 @@ member who logs in finds activities; a team admin finds every kind. Chores are f
 on a team with chores on (`Team.chores?/1`), as their pages open only there, and
 certificates only on a team with them on (`Team.certificates?/1`).
 
-Pages come from the side navigation the person sees, from `Web.Navigation.sections/3`, so
-a page added there is found with no change here. `Web.Search` adds Admins and Change team
-contacts for team admins, which aren't in it (#780, #1076). A page matches only where a word of its name starts, so "ali" finds
-Alice but not Qualifications, or where one of the link's other `words` starts: help, support,
-contact, question, problem, bug, and feedback find Get help, and contacts finds Change
-team contacts. Never "admin", which team admins search for the admin pages, or "report", which
-is for reports (#768).
+## Which pages
+
+Search finds the pages people go to by name, and never the steps reached from one:
+
+- **The side navigation the person sees**, from `Web.Navigation.sections/3`, so a page
+  added there is found with no change here.
+- **Team settings' tabs**, for team admins, from `Web.Components.TeamSettingsTabs.list/1`,
+  the list the tabs draw. Each says "Team settings" under its name, as "Members" is also
+  a page of its own. General is the side navigation's Team settings.
+- **Not a step**: a page reached from another, such as Change logo, Change access key,
+  Add activity, or a member's Change contact details. Its words find the page that holds
+  it instead: "logo" finds Team settings, whose General tab shows the logo and has
+  Change logo in its Actions. The page shows the value first, which is what most
+  searches want, and some values, like the time zone, have no Change page at all. It is
+  the record rule too: search finds a member, not Change member.
+- **Not another area's pages.** Search is on a team's pages only, so the organization's
+  space, Adminland, and Account settings have none.
+
+A page matches only where a word of its name starts, so "ali" finds Alice but not
+Qualifications, or where one of its `words` starts. The words are the ones people search
+for it by, beside its link or tab: help, support, contact, question, problem, bug, and
+feedback find Get help (#780); logo, access key, time zone, address, and contacts find
+Team settings; card, phone, address, and emergency contacts find Your membership. Never
+"admin", which team admins search for the admin pages, or "report", which is for reports
+(#768). A word match ranks below a name match, so "chores" lists Chores before Features.
 
 ## Recent picks
 

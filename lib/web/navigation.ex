@@ -201,14 +201,15 @@ defmodule Web.Navigation do
 
   # Your membership. A member's certificate form is under /certificates (#645), a page
   # members have no link to, so for them Your membership is current there too, as its
-  # breadcrumbs say.
-  defp me_link(team, true), do: link("me", "Your membership", ~p"/teams/#{team}/me")
+  # breadcrumbs say. Its words find it in search (docs/search.md): what it shows, and
+  # Change contact details, which is reached from it.
+  defp me_link(team, team_admin?) do
+    also = if team_admin?, do: [], else: [~p"/teams/#{team}/certificates"]
 
-  defp me_link(team, false),
-    do:
-      link("me", "Your membership", ~p"/teams/#{team}/me",
-        also: [~p"/teams/#{team}/certificates"]
-      )
+    "me"
+    |> link("Your membership", ~p"/teams/#{team}/me", also: also)
+    |> Map.put(:words, ~w(id card details mobile phone address emergency contacts))
+  end
 
   # Get help's link carries the page it was opened on, `?from=`, for its email; `path`
   # stays bare, so it is current on its own page and search finds it. Its words are the
