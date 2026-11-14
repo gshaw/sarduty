@@ -3,6 +3,7 @@ defmodule Web.Settings.TeamLive do
 
   import Web.Components.OpenInMaps
   import Web.Components.PersonHead
+  import Web.Components.OrgLogo
   import Web.Components.TeamSettingsTabs
 
   alias App.Adapter.D4H
@@ -108,7 +109,7 @@ defmodule Web.Settings.TeamLive do
       <dt>Organization</dt>
       <dd id="settings-organization">
         <div class="media mt-2">
-          <.settings_logo
+          <.org_logo
             id="settings-organization-logo"
             src={@organization.logo_at && Web.OrganizationController.logo_url(@organization)}
             name={@organization.name}

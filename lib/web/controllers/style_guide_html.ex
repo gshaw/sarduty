@@ -21,6 +21,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.MilestoneList
   import Web.Components.OpenInMaps
   import Web.Components.OpenOnDevice
+  import Web.Components.OrgLogo
   import Web.Components.PageActions
   import Web.Components.Pagination
   import Web.Components.PersonHead
@@ -107,6 +108,7 @@ defmodule Web.StyleGuideHTML do
          {:open_in_maps, "Open in maps", "A place in the account's maps app."},
          {:open_on_device, "Open on device",
           "A QR code beside a page, to open it on a phone or iPad."},
+         {:org_logo, "Org logo", "A team's or organization's logo, or its initials."},
          {:page_actions, "Page actions", "A page's own actions, when it has no sidebar."},
          {:pagination, "Pagination", "Pages under a long table."},
          {:person_head, "Person head", "A member's photo, name, standing, and facts."},

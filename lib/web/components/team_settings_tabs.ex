@@ -70,23 +70,6 @@ defmodule Web.Components.TeamSettingsTabs do
     """
   end
 
-  attr :id, :string, required: true
-  attr :src, :string, default: nil, doc: "the logo's URL, or nil for the initials"
-  attr :name, :string, required: true, doc: "whose logo, for the initials"
-
-  @doc """
-  A team's or organization's logo at 32px, or its initials when it has none: by the
-  organization on General, and by each heading on Admins (#1076).
-  """
-  def settings_logo(assigns) do
-    ~H"""
-    <img :if={@src} id={@id} src={@src} width="32" height="32" class="size-8 rounded" alt="" />
-    <span :if={!@src} id={@id} class="logo-initials size-8">
-      {Web.Navigation.team_initials(@name)}
-    </span>
-    """
-  end
-
   @general ~w(team.name team.legal_name team.abbreviated_name team.mailing_address team.city
               team.postal_code)
 

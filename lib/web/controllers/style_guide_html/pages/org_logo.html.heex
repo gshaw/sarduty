@@ -1,0 +1,38 @@
+<.shell current={:org_logo}>
+  <h1>Org logo</h1>
+  <p class="lead">A team's or organization's logo at 32px, or its initials when it has none.</p>
+
+  <div class="demo">
+    <h2 class="heading media">
+      <.org_logo id="org-logo-demo" src={~p"/images/sarduty-logo-square.svg"} name="SAR Duty" />
+      SAR Duty site admins
+    </h2>
+    <h2 class="heading media">
+      <.org_logo id="org-logo-demo-initials" name="Coastal SAR Association" />
+      CSARA's organization admins
+    </h2>
+    <div class="media">
+      <.org_logo id="org-logo-demo-name" name="Coast Range SAR" /> Coast Range SAR
+    </div>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    Beside a team's or organization's name, or a heading about it, so people know whose it is at a glance: each section on Admins, and the organization on General.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    The team at the top of its Dashboard or General, which is 64px in the person head. A member, who gets their photo.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.org_logo id="…" src=&#123;url&#125; name=&#123;team.name&#125; /&gt;</code>
+    shows the logo at <code>src</code>, or the first letters of the first two words of
+    <code>name</code>
+    when <code>src</code>
+    is nil. Put it in a <code>.media</code>
+    row, or a heading with <code>media</code>, so it sits beside the words.
+  </p>
+</.shell>

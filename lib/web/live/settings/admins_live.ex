@@ -1,6 +1,7 @@
 defmodule Web.Settings.AdminsLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.OrgLogo
   import Web.Components.TeamSettingsTabs
 
   import Web.Components.TeamManagers
@@ -42,7 +43,7 @@ defmodule Web.Settings.AdminsLive do
     <.team_settings_tabs team={@current_team} current={:admins} />
     <section id="team-admins" class="measure">
       <h2 class="heading media">
-        <.settings_logo id="team-admins-logo" src={@team_logo} name={@current_team.name} />
+        <.org_logo id="team-admins-logo" src={@team_logo} name={@current_team.name} />
         {@current_team.name}'s team admins
       </h2>
       <p :if={!D4H.records?(@current_team)}>
@@ -65,7 +66,7 @@ defmodule Web.Settings.AdminsLive do
 
     <section :if={@organization} id="organization-admins" class="mt-8 measure">
       <h2 class="heading media">
-        <.settings_logo
+        <.org_logo
           id="organization-admins-logo"
           src={@organization.logo_at && Web.OrganizationController.logo_url(@organization)}
           name={@organization.name}
@@ -86,7 +87,7 @@ defmodule Web.Settings.AdminsLive do
 
     <section id="sar-duty-admins" class="mt-8 measure">
       <h2 class="heading media">
-        <.settings_logo
+        <.org_logo
           id="sar-duty-admins-logo"
           src={~p"/images/sarduty-logo-square.svg"}
           name="SAR Duty"
