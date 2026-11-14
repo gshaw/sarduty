@@ -3,29 +3,24 @@ defmodule Web.Settings.TeamLive do
 
   import Web.Components.OpenInMaps
   import Web.Components.PersonHead
-  import Web.Components.Phone
   import Web.Components.TeamSettingsTabs
 
   alias App.Adapter.D4H
-  alias App.Model.Member
   alias App.Model.Team
   alias App.Repo
 
   # Settings' General tab (#153), an overview of the team like a record page (#1076): the
-  # team on top, its details, organization, and records on the left, and who to reach and
-  # what to do on the right. Change team edits the names and address, which letters and
+  # team on top, its details, organization, and records, and Actions beside them. Change team edits the names and address, which letters and
   # forms print (#995); Change team contacts picks who Get help lists (#780). The key is
   # on Access key (#727). The team comes from the URL, /teams/:subdomain/settings.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
-    now = DateTime.utc_now()
 
     socket =
       socket
       |> assign(page_title: "Team settings")
       |> assign(organization: team |> Repo.preload(:organization) |> Map.get(:organization))
       |> assign(has_logo: Team.logo_file(team.subdomain) != nil)
-      |> assign(contacts: Member.get_team_contacts(team, now))
       |> assign(key_level: if(!D4H.records?(team), do: Team.key_level(team)))
 
     {:ok, socket}
@@ -56,7 +51,7 @@ defmodule Web.Settings.TeamLive do
 
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content team={@current_team} contacts={@contacts} />
+        <.sidebar_content team={@current_team} />
       </aside>
       <main class="content-2/3">
         <.main_content
@@ -135,28 +130,9 @@ defmodule Web.Settings.TeamLive do
   end
 
   attr :team, :map, required: true
-  attr :contacts, :list, required: true
 
-  # Who members reach, then Actions, as on every record's page.
   defp sidebar_content(assigns) do
     ~H"""
-    <dl id="team-contacts-section">
-      <dt>Team contacts</dt>
-      <dd id="team-contacts">
-        <p :if={@contacts == []} class="hint">None yet. Get help lists no one.</p>
-        <ul :if={@contacts != []} class="row-links">
-          <li :for={contact <- @contacts} id={"team-contact-#{contact.id}"} class="py-2">
-            {contact.name}
-            <span class="block">
-              <.email id={"team-contact-#{contact.id}-email"} email={contact.email} />
-            </span>
-            <span class="block">
-              <.phone id={"team-contact-#{contact.id}-phone"} phone={contact.phone} />
-            </span>
-          </li>
-        </ul>
-      </dd>
-    </dl>
     <dl id="team-actions-section">
       <dt>Actions</dt>
       <dd>

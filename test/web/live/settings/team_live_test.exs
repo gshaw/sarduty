@@ -58,17 +58,10 @@ defmodule Web.Settings.TeamLiveTest do
     assert has_element?(lv, "#team-records", "Alex Chen's key, an Owner in D4H.")
   end
 
-  test "team contacts, with Change team contacts", %{conn: conn} do
+  test "Change team contacts is an action", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
-    assert has_element?(lv, "#team-contacts", "None yet. Get help lists no one.")
-
-    sam = member_fixture(team, %{name: "Sam Rivera", email: "sam@example.com"})
-    team |> Ecto.Changeset.change(first_contact_id: sam.id) |> App.Repo.update!()
-
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
-    assert has_element?(lv, "#team-contact-#{sam.id}", "sam@example.com")
 
     assert has_element?(
              lv,
