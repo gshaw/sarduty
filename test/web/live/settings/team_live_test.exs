@@ -28,7 +28,6 @@ defmodule Web.Settings.TeamLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
 
     assert has_element?(lv, "#team-head", team.name)
-    assert has_element?(lv, "#team-head-facts", "Coast Range Search and Rescue Society · COAST")
     assert has_element?(lv, "#team-initials")
     assert has_element?(lv, "#team-mailing-address", "Cedar Creek BC V5K 0A1")
     assert has_element?(lv, "#team-place", "49.20000, -123.10000")
@@ -78,7 +77,7 @@ defmodule Web.Settings.TeamLiveTest do
            )
   end
 
-  test "names the organization, with a link to Admins", %{conn: conn} do
+  test "names the organization", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     organization_fixture([team], %{name: "Coastal SAR Association", logo: nil})
 
@@ -86,11 +85,6 @@ defmodule Web.Settings.TeamLiveTest do
 
     assert has_element?(lv, "#settings-organization", "Coastal SAR Association")
     assert has_element?(lv, "#settings-organization-logo", "CS")
-
-    assert has_element?(
-             lv,
-             ~s(#settings-organization a[href="/teams/#{team.subdomain}/settings/admins"])
-           )
   end
 
   describe "Refresh from D4H" do

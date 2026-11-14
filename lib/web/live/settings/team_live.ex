@@ -40,7 +40,6 @@ defmodule Web.Settings.TeamLive do
       id="team-head"
       class="team-head mb-6"
       name={@current_team.name}
-      facts={[@current_team.legal_name, @current_team.abbreviated_name]}
     >
       <:picture>
         <img
@@ -58,15 +57,18 @@ defmodule Web.Settings.TeamLive do
 
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content team={@current_team} contacts={@contacts} />
+        <.sidebar_content
+          team={@current_team}
+          contacts={@contacts}
+          key_level={@key_level}
+          now={@now}
+        />
       </aside>
       <main class="content-2/3">
         <.main_content
           team={@current_team}
           organization={@organization}
-          key_level={@key_level}
           maps_app={@current_user.maps_app}
-          now={@now}
         />
       </main>
     </div>
@@ -75,9 +77,7 @@ defmodule Web.Settings.TeamLive do
 
   attr :team, :map, required: true
   attr :organization, :map, default: nil
-  attr :key_level, :string, default: nil
   attr :maps_app, :string, required: true
-  attr :now, :any, required: true
 
   defp main_content(assigns) do
     ~H"""
@@ -114,32 +114,18 @@ defmodule Web.Settings.TeamLive do
       <dt>Time zone</dt>
       <dd id="team-timezone">{@team.timezone}</dd>
     </dl>
-    <dl id="team-source">
-      <%!-- A team in an organization (#512) says who its organization admins are. --%>
-      <dt :if={@organization}>Organization</dt>
-      <dd :if={@organization} id="settings-organization">
-        <div class="media items-start">
+    <%!-- A team in an organization (#512). --%>
+    <dl :if={@organization} id="team-organization">
+      <dt>Organization</dt>
+      <dd id="settings-organization">
+        <div class="media mt-2">
           <.settings_logo
             id="settings-organization-logo"
             src={@organization.logo_at && Web.OrganizationController.logo_url(@organization)}
             name={@organization.name}
           />
-          <div>
-            {@organization.name}
-            <span class="hint block">
-              Its organization admins set your hours tags and can turn your ID cards on or
-              off. <.a navigate={~p"/teams/#{@team}/settings/admins"}>See who they are</.a>
-            </span>
-          </div>
+          {@organization.name}
         </div>
-      </dd>
-
-      <dt>Records</dt>
-      <dd id="team-records">
-        {records_text(@team)}
-        <span :if={records_hint(@team, @key_level, @now)} class="hint block">
-          {records_hint(@team, @key_level, @now)}
-        </span>
       </dd>
     </dl>
     """
@@ -147,8 +133,10 @@ defmodule Web.Settings.TeamLive do
 
   attr :team, :map, required: true
   attr :contacts, :list, required: true
+  attr :key_level, :string, default: nil
+  attr :now, :any, required: true
 
-  # Who members reach, then Actions, as on every record's page.
+  # Who members reach, where the records come from, then Actions.
   defp sidebar_content(assigns) do
     ~H"""
     <dl id="team-contacts-section">
@@ -169,6 +157,25 @@ defmodule Web.Settings.TeamLive do
         <p :if={@contacts != []} class="hint">Get help lists them for members.</p>
       </dd>
     </dl>
+    <dl id="team-records-section">
+      <dt>Records</dt>
+      <dd id="team-records">
+        {records_text(@team)}
+        <span :if={records_hint(@team, @key_level, @now)} class="hint block">
+          {records_hint(@team, @key_level, @now)}
+        </span>
+        <ul class="action-list mt-2">
+          <li>
+            <.a
+              id="team-refresh"
+              href="#"
+              phx-click="refresh"
+              phx-disable-with="Refreshing…"
+            >Refresh</.a>
+          </li>
+        </ul>
+      </dd>
+    </dl>
     <dl id="team-actions-section">
       <dt>Actions</dt>
       <dd>
@@ -181,14 +188,6 @@ defmodule Web.Settings.TeamLive do
               id="team-contacts-change"
               navigate={~p"/teams/#{@team}/settings/contacts"}
             >Change team contacts</.a>
-          </li>
-          <li>
-            <.a
-              id="team-refresh"
-              href="#"
-              phx-click="refresh"
-              phx-disable-with="Refreshing…"
-            >Refresh from {D4H.service_name(@team)}</.a>
           </li>
           <li :if={!D4H.records?(@team)}>
             <.a
