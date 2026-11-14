@@ -247,6 +247,7 @@ and must not be used for it.
 | item                                | asset, piece, unit                             | One piece of equipment in D4H. A truck is an item, and so is a drawer in it.                         |
 | in service                          | operational, available (for an item)           | An item D4H marks operational. Its other statuses are Unserviceable, Lost, and Retired.              |
 | template                            | kit, preset, bundle, set                       | SAR Duty's named set of items, tags, and groups whose members it adds, applied to an activity.       |
+| bundle                              | section, group, category, heading              | D4H's named group of one kind's fields, such as KMS Data on incidents. Never a template.             |
 | saved place                         | favourite, location, pin                       | A place a team named, with its address and pin. A D4H team's are its D4H location bookmarks.         |
 | travel                              | mileage report, travel claim, trip log         | How each attended row got to an activity, and the km it counts. The activity's Travel page.          |
 | ID card                             | member card, pass, badge, ID                   | A member's card in Apple Wallet or Google Wallet. Say "Wallet" only when naming where it lives.      |

@@ -1274,6 +1274,109 @@ defmodule App.Adapter.D4H do
   defp whiteboard_time(%DateTime{} = at), do: at |> DateTime.shift_zone!("Etc/UTC") |> iso()
   defp whiteboard_time(at), do: at
 
+  # A team's own custom fields, their choices, and bundles (#1056 step 4). D4H and SAR
+  # Duty Records take the same bodies. Each write answers with what it wrote, so the
+  # caller updates the copy without waiting for the sync.
+
+  @custom_field_keys %{
+    "target" => :targetResourceType,
+    "title" => :title,
+    "field_type" => :type,
+    "options" => :options,
+    "hint" => :hint,
+    "required" => :mandatory,
+    "restricted" => :restricted,
+    "member_privacy" => :memberPrivacy,
+    "value_units" => :valueUnits,
+    "ordering" => :ordering,
+    "d4h_bundle_id" => :resourceBundleId,
+    "archived" => :archived
+  }
+
+  @doc """
+  Adds a custom field. `attrs` has string keys in SAR Duty's words: `target`
+  ("incident", "member", …), `title`, `field_type` ("single_choice", …), `options` (a
+  list of labels, in order), `hint`, `required`, `restricted` (a boolean), and
+  `member_privacy` ("hidden", "viewable", "editable"), with `value_units`, `ordering`,
+  `d4h_bundle_id`, and `archived` when given. `{:ok, %D4H.CustomField{}}`.
+  """
+  def create_custom_field(context, attrs),
+    do:
+      write(context, :post, "/custom-fields", custom_field_json(attrs), &D4H.CustomField.build/1)
+
+  @doc """
+  Changes the keys `attrs` names, as create_custom_field/2 takes them. A field's
+  `target`, `field_type`, and `options` never change: D4H's PATCH takes none of them.
+  """
+  def update_custom_field(context, d4h_custom_field_id, attrs) do
+    json = attrs |> Map.drop(~w(target field_type options)) |> custom_field_json()
+    url = "/custom-fields/#{d4h_custom_field_id}"
+    write(context, :patch, url, json, &D4H.CustomField.build/1)
+  end
+
+  @doc "Deletes a custom field. One already gone counts as deleted."
+  def delete_custom_field(context, d4h_custom_field_id) do
+    request = [method: :delete, url: "/custom-fields/#{d4h_custom_field_id}", retry: false]
+
+    case Req.request(context, request) do
+      {:ok, %{status: status}} when status in 200..299 or status == 404 ->
+        {:ok, d4h_custom_field_id}
+
+      result ->
+        {:error, write_error(result)}
+    end
+  end
+
+  @doc """
+  Adds a choice to a field: `attrs` has `label` and `ordering`. `{:ok, option}` as
+  `D4H.CustomField.option/1` builds it. D4H has no DELETE: a choice is archived.
+  """
+  def create_custom_field_option(context, d4h_custom_field_id, attrs) do
+    json = attrs |> custom_field_option_json() |> Map.put(:customFieldId, d4h_custom_field_id)
+    write(context, :post, "/custom-field-options", json, &D4H.CustomField.option/1)
+  end
+
+  @doc "Changes a choice's `label`, `ordering`, or `archived`, whichever `attrs` names."
+  def update_custom_field_option(context, d4h_option_id, attrs) do
+    url = "/custom-field-options/#{d4h_option_id}"
+    write(context, :patch, url, custom_field_option_json(attrs), &D4H.CustomField.option/1)
+  end
+
+  @doc """
+  Adds a bundle for one kind's custom fields, such as "incident". `{:ok,
+  %D4H.ResourceBundle{}}`. D4H's API cannot rename or delete one.
+  """
+  def create_resource_bundle(context, target, title, ordering) do
+    json = %{
+      title: title,
+      targetResourceType: "CustomField",
+      targetSubResourceType: D4H.CustomField.d4h_target(target),
+      ordering: ordering
+    }
+
+    write(context, :post, "/resource-bundles", json, &D4H.ResourceBundle.build/1)
+  end
+
+  defp custom_field_json(attrs) do
+    for {key, value} <- attrs, d4h_key = @custom_field_keys[key], into: %{} do
+      {d4h_key, custom_field_value(key, value)}
+    end
+  end
+
+  defp custom_field_value("target", target), do: D4H.CustomField.d4h_target(target)
+  defp custom_field_value("field_type", type), do: String.upcase(type)
+  defp custom_field_value("member_privacy", privacy), do: String.upcase(privacy)
+  defp custom_field_value("restricted", true), do: "RESTRICTED"
+  defp custom_field_value("restricted", false), do: "UNRESTRICTED"
+
+  defp custom_field_value("options", labels),
+    do: labels |> Enum.with_index() |> Enum.map(fn {label, i} -> %{label: label, ordering: i} end)
+
+  defp custom_field_value(_key, value), do: value
+
+  defp custom_field_option_json(attrs),
+    do: rename(attrs, %{"label" => :label, "ordering" => :ordering, "archived" => :archived})
+
   @equipment_fields %{
     "title" => "ref",
     # Only Records takes this. D4H's item takes its type from its kind.

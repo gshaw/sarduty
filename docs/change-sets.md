@@ -36,6 +36,16 @@ new kind of write is a new row action there, not a new call from a page or an op
   then runs the sync so the next page shows the change. A group's row skips the sync:
   its caller writes the copy, as group rules do. The row names only the fields
   that changed, with their old values. Edits don't read D4H first.
+- **A team's own fields are an `edit` set** (#1056 step 4), on D4H and Records alike,
+  sent with `ApplyEdit.call_rows/4`: `create_custom_field`, `update_custom_field`
+  (settings, archive and restore, and order), `delete_custom_field`,
+  `create_custom_field_option`, `update_custom_field_option` (a choice is archived,
+  never deleted), and `create_resource_bundle`. A new bundle's row goes first, and the
+  field's row says `created_in_set` and gets the bundle's id as it applies; if the
+  bundle fails, the field is not sent. Change order is one set with a row for each
+  field that moved. Each applied row keeps D4H's answer in `answer`, which is never
+  stored, and the caller writes the copy from it with no sync. See
+  [custom-fields.md](custom-fields.md#adding-and-changing-fields).
 - **A member's own edit is a set of one row** (source `member`, #156): a member
   changing their address or emergency contacts from their page, applied at once. See
   [members.md](members.md).

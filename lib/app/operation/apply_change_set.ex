@@ -43,6 +43,17 @@ defmodule App.Operation.ApplyChangeSet do
     :delete_location_bookmark
   ]
 
+  # A team's own custom fields, their choices, and bundles (#1056), on D4H or Records.
+  # Nothing is read first.
+  @field_writes [
+    :create_custom_field,
+    :update_custom_field,
+    :delete_custom_field,
+    :create_custom_field_option,
+    :update_custom_field_option,
+    :create_resource_bundle
+  ]
+
   # A whiteboard note (#515) is changed as it was on the page; nothing is read first.
   @whiteboard [:create_whiteboard_note, :update_whiteboard_note, :delete_whiteboard_note]
 
@@ -102,11 +113,21 @@ defmodule App.Operation.ApplyChangeSet do
   defp created(%ChangeSetRow{action: :award_qualification, status: :applied} = row, created),
     do: Map.put(created, :award, row.d4h_record_id)
 
+  defp created(%ChangeSetRow{action: :create_resource_bundle, status: :applied} = row, created),
+    do: Map.put(created, :bundle, row.d4h_record_id)
+
   defp created(_row, created), do: created
 
   defp with_created(%ChangeSetRow{action: :attach_award_document} = row, created) do
     if ChangeSetRow.created_in_set?(row) and created[:award],
       do: ChangeSetRow.fill_award!(row, created[:award]),
+      else: row
+  end
+
+  defp with_created(%ChangeSetRow{action: action} = row, created)
+       when action in [:create_custom_field, :update_custom_field] do
+    if ChangeSetRow.created_in_set?(row) and created[:bundle],
+      do: ChangeSetRow.fill_bundle!(row, created[:bundle]),
       else: row
   end
 
@@ -292,6 +313,15 @@ defmodule App.Operation.ApplyChangeSet do
   end
 
   def check(%ChangeSetRow{action: action}, nil) when action in @edits, do: :ok
+
+  # A field goes in the bundle its set adds first, or not at all (#1056).
+  def check(%ChangeSetRow{action: action, new_value: new_value} = row, nil)
+      when action in @field_writes do
+    if ChangeSetRow.created_in_set?(row) and is_nil(new_value["d4h_bundle_id"]),
+      do: {:failed, "The bundle was not added, so the field was not sent."},
+      else: :ok
+  end
+
   def check(%ChangeSetRow{action: action}, nil) when action in @whiteboard, do: :ok
 
   # The same qualification from the same day: D4H can't remove an award, so a second
@@ -535,6 +565,37 @@ defmodule App.Operation.ApplyChangeSet do
   defp write(d4h, %ChangeSetRow{action: :delete_location_bookmark} = row),
     do: d4h |> D4H.delete_location_bookmark(row.d4h_record_id) |> record_result(& &1)
 
+  # A field write keeps D4H's answer on the row, so the caller updates its copy from it.
+  defp write(d4h, %ChangeSetRow{action: :create_custom_field, new_value: new_value}),
+    do: d4h |> D4H.create_custom_field(new_value) |> answer_result(& &1.d4h_custom_field_id)
+
+  defp write(d4h, %ChangeSetRow{action: :update_custom_field} = row) do
+    d4h
+    |> D4H.update_custom_field(row.d4h_record_id, row.new_value)
+    |> answer_result(& &1.d4h_custom_field_id, row)
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :delete_custom_field} = row),
+    do: d4h |> D4H.delete_custom_field(row.d4h_record_id) |> record_result(& &1)
+
+  defp write(d4h, %ChangeSetRow{action: :create_custom_field_option, new_value: new_value}) do
+    d4h
+    |> D4H.create_custom_field_option(new_value["d4h_custom_field_id"], new_value)
+    |> answer_result(& &1["id"])
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :update_custom_field_option} = row) do
+    d4h
+    |> D4H.update_custom_field_option(row.d4h_record_id, row.new_value)
+    |> answer_result(& &1["id"], row)
+  end
+
+  defp write(d4h, %ChangeSetRow{action: :create_resource_bundle, new_value: new_value}) do
+    d4h
+    |> D4H.create_resource_bundle(new_value["target"], new_value["title"], new_value["ordering"])
+    |> answer_result(& &1.d4h_bundle_id)
+  end
+
   defp record_result({:ok, record}, id), do: {:applied, id.(record)}
   defp record_result({:error, error}, _id), do: {:failed, edit_failure_text(error)}
 
@@ -545,6 +606,12 @@ defmodule App.Operation.ApplyChangeSet do
        do: String.replace(message, ~r/ \(\d+\)$/, "")
 
   defp edit_failure_text(error), do: error
+
+  # An answer the adapter can't build is nil: the write went, and the sync copies it.
+  defp answer_result(result, id, row \\ %ChangeSetRow{})
+  defp answer_result({:ok, nil}, _id, row), do: {:applied, row.d4h_record_id, nil}
+  defp answer_result({:ok, record}, id, _row), do: {:applied, id.(record), record}
+  defp answer_result(error, id, _row), do: record_result(error, id)
 
   defp photo_result({:ok, _record}, row), do: {:applied, row.d4h_record_id}
   defp photo_result({:error, error}, _row), do: {:failed, error}

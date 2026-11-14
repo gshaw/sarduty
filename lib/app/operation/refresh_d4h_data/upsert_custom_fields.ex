@@ -2,6 +2,7 @@ defmodule App.Operation.RefreshD4HData.UpsertCustomFields do
   import Ecto.Query
 
   alias App.Adapter.D4H
+  alias App.Model.ChangeSetRow
   alias App.Model.CustomField
   alias App.Model.CustomFieldBundle
   alias App.Operation.RefreshD4HData.StaleRows
@@ -59,6 +60,97 @@ defmodule App.Operation.RefreshD4HData.UpsertCustomFields do
       :d4h_bundle_id,
       bundle_ids |> Map.keys() |> MapSet.new()
     )
+  end
+
+  @doc """
+  Writes the copy from a field set's applied rows, in order (#1056): each bundle, field,
+  and choice as D4H answered with it, and each deleted field. A row whose answer the
+  adapter couldn't read waits for the sync.
+  """
+  def save_answers(team_id, rows, now) do
+    Enum.each(rows, fn
+      %ChangeSetRow{status: :applied, answer: %D4H.ResourceBundle{} = bundle} ->
+        save_bundle(team_id, bundle, now)
+
+      %ChangeSetRow{status: :applied, answer: %D4H.CustomField{} = field} ->
+        save_field(team_id, field, now)
+
+      %ChangeSetRow{status: :applied, answer: %{"id" => _id} = option} = row ->
+        save_option(team_id, row.new_value["d4h_custom_field_id"], option)
+
+      %ChangeSetRow{status: :applied, action: :delete_custom_field} = row ->
+        delete_field(team_id, row.d4h_record_id)
+
+      _row ->
+        :ok
+    end)
+  end
+
+  @doc """
+  Writes one field as D4H answered a write with it (#1056), so the page that follows
+  shows it before the sync. Its bundle must be in the copy already, as save_bundle/3
+  puts a new one. Returns the copy, with its bundle.
+  """
+  def save_field(team_id, %D4H.CustomField{} = field, now) do
+    bundle_id =
+      field.d4h_bundle_id &&
+        CustomFieldBundle
+        |> where([b], b.team_id == ^team_id and b.d4h_bundle_id == ^field.d4h_bundle_id)
+        |> select([b], b.id)
+        |> Repo.one()
+
+    row =
+      field
+      |> Map.from_struct()
+      |> Map.delete(:d4h_bundle_id)
+      |> Map.merge(%{team_id: team_id, bundle_id: bundle_id, inserted_at: now, updated_at: now})
+
+    upsert(CustomField, [row], [:id, :team_id, :d4h_custom_field_id, :inserted_at], [
+      :team_id,
+      :d4h_custom_field_id
+    ])
+
+    CustomField
+    |> preload(:bundle)
+    |> Repo.get_by!(team_id: team_id, d4h_custom_field_id: field.d4h_custom_field_id)
+  end
+
+  @doc "Writes one bundle as D4H answered its create with it (#1056)."
+  def save_bundle(team_id, %D4H.ResourceBundle{} = bundle, now) do
+    save_bundles(team_id, [bundle], now)
+    :ok
+  end
+
+  @doc """
+  Puts one choice, as D4H answered a write with it, on its field's copy (#1056): a
+  changed one in its place, a new one last.
+  """
+  def save_option(team_id, d4h_custom_field_id, %{"id" => id} = option) do
+    case Repo.get_by(CustomField, team_id: team_id, d4h_custom_field_id: d4h_custom_field_id) do
+      nil ->
+        :ok
+
+      field ->
+        others = Enum.reject(field.options, &(&1["id"] == id))
+
+        options =
+          case Enum.find_index(field.options, &(&1["id"] == id)) do
+            nil -> List.insert_at(others, -1, option)
+            index -> List.insert_at(others, index, option)
+          end
+
+        field |> Ecto.Changeset.change(options: options) |> Repo.update!()
+        :ok
+    end
+  end
+
+  @doc "Takes a field D4H deleted out of the copy. The values on records stay."
+  def delete_field(team_id, d4h_custom_field_id) do
+    CustomField
+    |> where([f], f.team_id == ^team_id and f.d4h_custom_field_id == ^d4h_custom_field_id)
+    |> Repo.delete_all()
+
+    :ok
   end
 
   # Returns the local id of each bundle, by its D4H id.

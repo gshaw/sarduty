@@ -448,4 +448,157 @@ defmodule App.Adapter.D4HTest do
       refute_received {"DELETE", "/v3/team/1/documents/12", _query, _body}
     end
   end
+
+  describe "a team's own custom fields (#1056)" do
+    # Answers every write with `reply` and sends the test what came.
+    defp stub_write(status \\ 200, reply) do
+      test = self()
+
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+        send(test, {conn.method, conn.request_path, body != "" && Jason.decode!(body)})
+        conn |> Plug.Conn.put_status(status) |> Req.Test.json(reply)
+      end)
+    end
+
+    defp field_json(attrs) do
+      Map.merge(
+        %{
+          "id" => 93,
+          "targetResourceType" => "Incident",
+          "title" => "Debrief held",
+          "type" => "SINGLE_CHOICE",
+          "restricted" => "UNRESTRICTED",
+          "memberPrivacy" => "HIDDEN",
+          "mandatory" => false,
+          "ordering" => 3,
+          "bundle" => %{"id" => 5},
+          "owner" => %{"resourceType" => "Team", "id" => 1},
+          "options" => [%{"id" => 43, "label" => "Yes", "ordering" => 0, "archivedAt" => nil}]
+        },
+        attrs
+      )
+    end
+
+    test "adds a field in D4H's words, and answers with it" do
+      stub_write(field_json(%{}))
+
+      assert {:ok, %D4H.CustomField{d4h_custom_field_id: 93, d4h_bundle_id: 5, options: [yes]}} =
+               D4H.create_custom_field(context(), %{
+                 "target" => "incident",
+                 "title" => "Debrief held",
+                 "field_type" => "single_choice",
+                 "options" => ["Yes", "No"],
+                 "hint" => "Held within 48 hours",
+                 "required" => true,
+                 "restricted" => false,
+                 "member_privacy" => "hidden",
+                 "value_units" => nil,
+                 "ordering" => 3,
+                 "d4h_bundle_id" => 5,
+                 "archived" => false,
+                 "created_in_set" => true
+               })
+
+      assert yes["label"] == "Yes"
+      assert_received {"POST", "/v3/team/1/custom-fields", body}
+
+      assert body == %{
+               "targetResourceType" => "Incident",
+               "title" => "Debrief held",
+               "type" => "SINGLE_CHOICE",
+               "options" => [
+                 %{"label" => "Yes", "ordering" => 0},
+                 %{"label" => "No", "ordering" => 1}
+               ],
+               "hint" => "Held within 48 hours",
+               "mandatory" => true,
+               "restricted" => "UNRESTRICTED",
+               "memberPrivacy" => "HIDDEN",
+               "valueUnits" => nil,
+               "ordering" => 3,
+               "resourceBundleId" => 5,
+               "archived" => false
+             }
+    end
+
+    test "a change sends only what it names, never the kind, type, or choices" do
+      stub_write(field_json(%{"title" => "Debrief"}))
+
+      assert {:ok, %D4H.CustomField{title: "Debrief"}} =
+               D4H.update_custom_field(context(), 93, %{
+                 "title" => "Debrief",
+                 "restricted" => true,
+                 "member_privacy" => "editable",
+                 "target" => "member",
+                 "field_type" => "text",
+                 "options" => ["A"]
+               })
+
+      assert_received {"PATCH", "/v3/team/1/custom-fields/93", body}
+
+      assert body == %{
+               "title" => "Debrief",
+               "restricted" => "RESTRICTED",
+               "memberPrivacy" => "EDITABLE"
+             }
+    end
+
+    test "deletes a field, and one already gone counts as deleted" do
+      for status <- [204, 404] do
+        Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, status, ""))
+        assert D4H.delete_custom_field(context(), 93) == {:ok, 93}
+      end
+
+      stub_write(409, %{"title" => "Records hold answers to it"})
+      assert {:error, %D4H.Error{status: 409}} = D4H.delete_custom_field(context(), 93)
+    end
+
+    test "adds, renames, and archives a choice" do
+      option = %{"id" => 44, "label" => "No", "ordering" => 1, "archivedAt" => nil}
+      stub_write(option)
+
+      assert {:ok, %{"id" => 44, "label" => "No", "archived" => false}} =
+               D4H.create_custom_field_option(context(), 93, %{
+                 "label" => "No",
+                 "ordering" => 1,
+                 "d4h_custom_field_id" => 93
+               })
+
+      assert_received {"POST", "/v3/team/1/custom-field-options", body}
+      assert body == %{"customFieldId" => 93, "label" => "No", "ordering" => 1}
+
+      stub_write(%{option | "archivedAt" => "2026-11-13T00:00:00Z"})
+
+      assert {:ok, %{"archived" => true}} =
+               D4H.update_custom_field_option(context(), 44, %{
+                 "archived" => true,
+                 "d4h_custom_field_id" => 93
+               })
+
+      assert_received {"PATCH", "/v3/team/1/custom-field-options/44", %{"archived" => true}}
+    end
+
+    test "adds a bundle for one kind's fields" do
+      stub_write(%{
+        "id" => 6,
+        "title" => "Debrief",
+        "ordering" => 1,
+        "target" => %{"resourceType" => "CustomField", "subResourceType" => "Incident"},
+        "owner" => %{"resourceType" => "Team", "id" => 1}
+      })
+
+      assert {:ok, %D4H.ResourceBundle{d4h_bundle_id: 6, target: "incident"}} =
+               D4H.create_resource_bundle(context(), "incident", "Debrief", 1)
+
+      assert_received {"POST", "/v3/team/1/resource-bundles", body}
+
+      assert body == %{
+               "title" => "Debrief",
+               "targetResourceType" => "CustomField",
+               "targetSubResourceType" => "Incident",
+               "ordering" => 1
+             }
+    end
+  end
 end

@@ -36,6 +36,12 @@ defmodule App.Adapter.D4H.CustomField do
   @doc "SAR Duty's name for one of D4H's targets, or nil for one it doesn't copy."
   def target(d4h_target), do: @targets[d4h_target]
 
+  @doc ~s(D4H's name for one of SAR Duty's targets: "incident" is "Incident".)
+  def d4h_target(target) do
+    {d4h_target, ^target} = Enum.find(@targets, &(elem(&1, 1) == target))
+    d4h_target
+  end
+
   def build(record) do
     case @targets[record["targetResourceType"]] do
       nil -> nil
@@ -77,9 +83,11 @@ defmodule App.Adapter.D4H.CustomField do
     }
   end
 
-  # An option's owner is who added it: a team can add choices to its organisation's
-  # field (#872).
-  defp option(record) do
+  @doc """
+  One choice, as `CustomField.options` keeps it. Its owner is who added it: a team can
+  add choices to its organisation's field (#872).
+  """
+  def option(record) do
     owner = owner(record)
 
     %{
