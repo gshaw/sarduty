@@ -6,6 +6,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 - Search finds every Team settings tab, and words like logo, access key, and time zone
   find Team settings. Members find Your membership by card, phone, or address.
+- Your membership's Contact details page is now four short ones: Change mobile number,
+  Change mailing address, Change emergency contacts, and Change fields, each linked
+  from Your membership. Your email shows there too.
 - Team settings' General is now an overview of your team, with Change team, Change
   logo, Change team contacts, and Change access key as actions. Team admins is now
   Admins, and Access key is no longer a tab.
@@ -22,8 +25,7 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 - Put your team's own fields in order with Change order on Team settings → Fields, and
   a field's choices on Change field: drag a row, or move it with the keyboard.
 - Members change their own answers to the member fields your team lets them change, on
-  Your membership's Contact details, and save them with their other details. Fields
-  they may only see stay read only there.
+  Your membership's Change fields. Fields they may only see stay read only there.
 - SAR Duty now keeps every member field, restricted ones too, so team admins see each
   member's answers without picking fields first. The Copy boxes are gone. Team
   settings' Fields tab lists your team's own fields, then your organization's, and each

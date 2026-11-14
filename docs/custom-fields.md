@@ -82,7 +82,7 @@ with the kind.
 - **An equipment item's**, for team admins: its page gets Activities and Fields tabs,
   in the main column under what's inside it.
 - **A member's**, for team admins, before History: every member field, restricted ones
-  too. A member sees their own on Your membership's Contact details, only the ones D4H
+  too. A member sees their own on Your membership's Change fields, only the ones D4H
   lets a member see (`member_privacy` viewable or editable), and changes the editable
   ones there ([below](#a-members-own-answers)). Members never see another member's.
 - **Reports** read the same fields as the Fields tab, by title in backticks:
@@ -192,20 +192,20 @@ values it sent, since the sync after the write may not read them back. History s
 ## A member's own answers
 
 D4H lets a member change their own answer to a member field set to `editable` (#1056
-step 2). On Your membership's Contact details, `/teams/:subdomain/me/details`, a Member
-fields part sits inside the form, after the emergency contacts: each editable field is
-its type's input, the component Change fields uses, and each viewable one is read only
-under them. A hidden one never shows. A key that can't fill in fields
+step 2). On Your membership's Change fields, `/teams/:subdomain/me/fields`
+([MeFieldsLive](../lib/web/live/me_fields_live.ex)), each editable field is its type's
+input, the component a team admin's Change fields uses, and each viewable one is read
+only under them. A hidden one never shows. Your membership links to it only when the
+team has fields a member sees. A key that can't fill in fields
 (`Team.d4h_can?(team, :field_values)` false) shows them all read only.
 
-Save details sends the fields that changed on the same `update_member` row as the
-address and contacts, through [SaveOwnDetails](../lib/app/operation/save_own_details.ex),
-which reads the diff from `SaveCustomFields.changes/3`. The fields it reads are
+Save fields sends the fields that changed on one `update_member` row, through
+[SaveOwnDetails](../lib/app/operation/save_own_details.ex), which reads the diff from `SaveCustomFields.changes/3`. The fields it reads are
 `SaveOwnDetails.fields/1`, looked up through the member's team on every save, so a
 viewable or hidden field's id posted by the client is never sent. The copy takes the
 values sent, as for a team admin's change. History says "Fields changed in SAR Duty",
-never the values. A team admin viewing as the member can't save, as for the rest of the
-form.
+never the values. A team admin viewing as the member can't save, as on the other Change
+pages.
 
 ## Fields on the team itself
 

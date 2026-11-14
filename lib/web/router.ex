@@ -491,7 +491,10 @@ defmodule Web.Router do
       live "/teams/:subdomain/outbox/:id", OutboxLive
       live "/teams/:subdomain/me", MeLive
       live "/teams/:subdomain/me/activities", MeActivitiesLive
-      live "/teams/:subdomain/me/details", MeDetailsLive
+      live "/teams/:subdomain/me/mobile", MeMobileLive
+      live "/teams/:subdomain/me/address", MeAddressLive
+      live "/teams/:subdomain/me/emergency-contacts", MeEmergencyContactsLive
+      live "/teams/:subdomain/me/fields", MeFieldsLive
     end
 
     # A member's own downloads (#156). The member is always the person logged in.

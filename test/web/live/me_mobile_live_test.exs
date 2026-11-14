@@ -1,5 +1,5 @@
-defmodule Web.MeDetailsLivePhoneTest do
-  # The mobile number on the contact details page, in its own file for its texted codes.
+defmodule Web.MeMobileLiveTest do
+  # Change mobile number: a new number is confirmed by a texted code.
   use Web.ConnCase
 
   import App.AccountsFixtures
@@ -57,7 +57,7 @@ defmodule Web.MeDetailsLivePhoneTest do
        %{conn: conn, team: team, member: member, user: user} do
     text_login_fixture()
     stub_d4h(team, member)
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/mobile")
 
     code = send_code(lv, "(604) 555-0199")
     assert has_element?(lv, "#code-sent", "604-555-0199")
@@ -66,7 +66,7 @@ defmodule Web.MeDetailsLivePhoneTest do
 
     lv |> form("#code-form", confirm: %{code: code}) |> render_submit()
 
-    assert_redirect(lv, ~p"/teams/#{team}/me/details")
+    assert_redirect(lv, ~p"/teams/#{team}/me")
     assert_received {:patch, %{"phone" => %{"mobile" => "604-555-0199"}}}
     assert Repo.reload!(member).phone == "604-555-0199"
 
@@ -81,7 +81,7 @@ defmodule Web.MeDetailsLivePhoneTest do
   test "a wrong code changes nothing", %{conn: conn, team: team, member: member} do
     text_login_fixture()
     stub_d4h(team, member)
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/mobile")
     code = send_code(lv, "604-555-0199")
     wrong = if code == "00000000", do: "11111111", else: "00000000"
 
@@ -101,10 +101,10 @@ defmodule Web.MeDetailsLivePhoneTest do
   test "a waiting code shows its form after a reload, and cancel drops it",
        %{conn: conn, team: team} do
     text_login_fixture()
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/mobile")
     send_code(lv, "604-555-0199")
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/mobile")
     assert has_element?(lv, "#code-form")
 
     lv |> element("#cancel-code") |> render_click()
@@ -113,7 +113,7 @@ defmodule Web.MeDetailsLivePhoneTest do
 
   test "the same number is refused", %{conn: conn, team: team} do
     text_login_fixture()
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/mobile")
 
     html = lv |> form("#phone-form", phone: %{phone: "604-555-0100"}) |> render_submit()
 
@@ -122,14 +122,8 @@ defmodule Web.MeDetailsLivePhoneTest do
   end
 
   test "can't be changed while texts are off", %{conn: conn, team: team} do
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/mobile")
     refute has_element?(lv, "#phone-form")
     assert has_element?(lv, "#phone-off")
-  end
-
-  test "the email shows, with no way to change it", %{conn: conn, team: team} do
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/details")
-    assert has_element?(lv, "#email-note", "member@example.com")
-    refute has_element?(lv, "input[type=email]")
   end
 end

@@ -341,14 +341,19 @@ current member of the team can log in with the email or mobile number D4H has fo
 members ([navigation.md](navigation.md)). Their own pages are under
 `/teams/:subdomain/me`:
 
-| Page            | Path                   | What it holds                                                     |
-| --------------- | ---------------------- | ----------------------------------------------------------------- |
-| Your membership | `/me`                  | A year's activities, qualifications, ID card, letter, and more    |
-| The year page   | `/me/activities?year=` | A year's hours, letter, map, and numbers, and every activity      |
-| Contact details | `/me/details`          | Mobile number, mailing address, and emergency contacts, to change |
+| Page                      | Path                     | What it holds                                                  |
+| ------------------------- | ------------------------ | -------------------------------------------------------------- |
+| Your membership           | `/me`                    | A year's activities, qualifications, ID card, letter, and more |
+| The year page             | `/me/activities?year=`   | A year's hours, letter, map, and numbers, and every activity   |
+| Change mobile number      | `/me/mobile`             | A new number, saved once they enter the code texted to it      |
+| Change mailing address    | `/me/address`            | Their mailing address                                          |
+| Change emergency contacts | `/me/emergency-contacts` | Two emergency contacts, the second optional                    |
+| Change fields             | `/me/fields`             | The member fields D4H lets them see, and change where it lets  |
 
-Members don't change their email: teams keep it consistent, and team admins change it in
-D4H. Logins are designed in issue #156; the pages in #389, and one page in #406.
+Each Change page saves one part straight to D4H and goes back to Your membership. The
+`/me/details` page that held them all went with no redirect. Members don't change their
+email: teams keep it consistent, and team admins change it in D4H. Logins are designed in
+issue #156; the pages in #389, and one page in #406.
 
 ### Your membership
 
@@ -375,8 +380,10 @@ Sep 30, 2026". Neither page shows the member ID: teams number members in very di
   the year page so they aren't mistaken for the year's above; then contact details
   and every milestone, newest first. On a phone the ID card and letter come first, then
   the main column, then contact details and milestones.
-- **Contact details** are the mobile number, address, and emergency contact, from the
-  copy, so the page never reads D4H (#423).
+- **Contact details** are the mobile number, email, address, and emergency contacts,
+  from the copy, so the page never reads D4H (#423). Under them, a Change link for each
+  part, and Change fields when the team has member fields a member sees. The email says
+  to ask a team admin to change it.
 - Each part says why it is empty for a new member.
 - **Milestones**: hours (100, 250, 500, 1,000, then every 1,000), years on the team (1, 5,
   10, then every 5), and incidents (the first, 10, 25, 50, 100, then every 100), each

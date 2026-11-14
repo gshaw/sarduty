@@ -7,7 +7,7 @@ defmodule Web.Components.CustomFields do
 
   # A record's D4H custom fields (#681), from App.Model.CustomField.rows/4: a table on the
   # record's Fields tab, or a detail list under a heading on a page with no tabs, such as
-  # Your membership's Contact details. A required field with no value says Missing. Every
+  # Your membership's Change fields. A required field with no value says Missing. Every
   # list groups its fields by D4H's bundles (#872), each bundle's title over its fields,
   # after the fields in none: CustomField.grouped/2. The style guide's Detail list page
   # shows them.

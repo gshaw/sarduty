@@ -11,6 +11,7 @@ defmodule Web.MeLive do
   alias App.Model.Activity
   alias App.Model.Certificate
   alias App.Model.Chore
+  alias App.Model.CustomField
   alias App.Model.EquipmentItem
   alias App.Model.Member
   alias App.Model.MemberCard
@@ -52,12 +53,21 @@ defmodule Web.MeLive do
       |> assign(:chores, chore_stats(member, now))
       |> assign(:qualifications, MemberRecords.qualifications(member, now))
       |> assign(:certificates, sent_certificates(member))
-      |> assign(:card, team.id_cards_enabled && MemberCard.find_current(team, member))
-      |> assign(:letter, member |> TaxCreditLetter.get_all_for_member() |> List.first())
-      |> assign(:milestones, MemberMilestones.for_member(member, now, attended))
       |> assign(:equipment, team |> EquipmentItem.held_by(member) |> EquipmentList.held_rows())
+      |> assign_sidebar(attended)
 
     {:ok, socket}
+  end
+
+  defp assign_sidebar(socket, attended) do
+    %{member: member, team: team, now: now} = socket.assigns
+
+    assign(socket,
+      card: team.id_cards_enabled && MemberCard.find_current(team, member),
+      letter: member |> TaxCreditLetter.get_all_for_member() |> List.first(),
+      fields?: CustomField.member_fields(team.id, :self) != [],
+      milestones: MemberMilestones.for_member(member, now, attended)
+    )
   end
 
   defp organization_name(team), do: Team.organization_name(team) || "Your organization"
@@ -153,6 +163,7 @@ defmodule Web.MeLive do
           <.contact_details
             team={@team}
             member={@member}
+            fields?={@fields?}
           />
           <.milestones milestones={@milestones} today={@today} />
         </div>
@@ -404,7 +415,9 @@ defmodule Web.MeLive do
 
   attr :team, :map, required: true
   attr :member, :map, required: true
+  attr :fields?, :boolean, required: true, doc: "the team has member fields a member sees"
 
+  # Each part has its own Change page; email is the team admins' to change, in D4H.
   defp contact_details(assigns) do
     ~H"""
     <div id="contact-details">
@@ -412,6 +425,11 @@ defmodule Web.MeLive do
       <dl>
         <dt>Mobile</dt>
         <dd id="contact-mobile">{Service.Phone.format(@member.phone) || "None"}</dd>
+        <dt>Email</dt>
+        <dd id="contact-email">
+          {@member.email || "None"}
+          <span class="hint block">Ask a team admin to change it.</span>
+        </dd>
         <dt>Address</dt>
         <dd id="contact-address">{@member.address || "None"}</dd>
         <.emergency_contact
@@ -426,9 +444,23 @@ defmodule Web.MeLive do
           contact={@member.secondary_emergency_contact}
         />
       </dl>
-      <p class="action mb-0">
-        <.a id="change-details" navigate={~p"/teams/#{@team}/me/details"}>Change contact details</.a>
-      </p>
+      <ul id="contact-actions" class="action-list">
+        <li>
+          <.a id="change-mobile" navigate={~p"/teams/#{@team}/me/mobile"}>Change mobile number</.a>
+        </li>
+        <li>
+          <.a id="change-address" navigate={~p"/teams/#{@team}/me/address"}>Change mailing address</.a>
+        </li>
+        <li>
+          <.a
+            id="change-contacts"
+            navigate={~p"/teams/#{@team}/me/emergency-contacts"}
+          >Change emergency contacts</.a>
+        </li>
+        <li :if={@fields?}>
+          <.a id="change-fields" navigate={~p"/teams/#{@team}/me/fields"}>Change fields</.a>
+        </li>
+      </ul>
     </div>
     """
   end
