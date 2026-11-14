@@ -76,7 +76,12 @@ defmodule Web.MeFieldsLive do
     </.breadcrumbs>
     <div class="measure">
       <h1 class="title">Change fields</h1>
-      <p class="lead">Changes go to your team's records, where your team admins see them.</p>
+      <p :if={@editable?} class="lead">
+        Changes go to your team's records, where your team admins see them.
+      </p>
+      <p :if={!@editable?} id="fields-read-only" class="lead">
+        You can see these fields, but not change them. Ask a team admin to change one.
+      </p>
       <.form for={%{}} as={:fields} id="fields-form" phx-change="validate" phx-submit="save">
         <section :if={@own_fields != []} id="team-fields">
           <h2 class="heading media">

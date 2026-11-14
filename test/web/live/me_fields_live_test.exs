@@ -59,6 +59,7 @@ defmodule Web.MeFieldsLiveTest do
   } do
     member_fields(team, member)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/fields")
+    refute has_element?(lv, "#fields-read-only")
 
     assert has_element?(lv, "#fields-form #custom-field-630[value='SF 12']")
     refute has_element?(lv, "#own-fields-630")
@@ -150,6 +151,7 @@ defmodule Web.MeFieldsLiveTest do
     refute has_element?(lv, "#fields-form button", "Save fields")
     assert has_element?(lv, "#own-fields-630", "SF 12")
     assert has_element?(lv, "#own-fields-855", "1988")
+    assert has_element?(lv, "#fields-read-only", "Ask a team admin")
   end
 
   test "Your membership links here only when the team has fields a member sees",
