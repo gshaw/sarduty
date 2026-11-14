@@ -10,7 +10,7 @@ defmodule Web.Settings.TeamLive do
   alias App.Repo
 
   # Settings' General tab (#153), an overview of the team like a record page (#1076): the
-  # team on top, its details, organization, and records, and Actions beside them. Change team edits the names and address, which letters and
+  # team on top, its details and organization, and its records and Actions beside them. Change team edits the names and address, which letters and
   # forms print (#995); Change team contacts picks who Get help lists (#780). The key is
   # on Access key (#727). The team comes from the URL, /teams/:subdomain/settings.
   def mount(_params, _session, socket) do
@@ -51,13 +51,12 @@ defmodule Web.Settings.TeamLive do
 
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content team={@current_team} />
+        <.sidebar_content team={@current_team} key_level={@key_level} />
       </aside>
       <main class="content-2/3">
         <.main_content
           team={@current_team}
           organization={@organization}
-          key_level={@key_level}
           maps_app={@current_user.maps_app}
         />
       </main>
@@ -67,7 +66,6 @@ defmodule Web.Settings.TeamLive do
 
   attr :team, :map, required: true
   attr :organization, :map, default: nil
-  attr :key_level, :string, default: nil
   attr :maps_app, :string, required: true
 
   defp main_content(assigns) do
@@ -117,6 +115,16 @@ defmodule Web.Settings.TeamLive do
         </div>
       </dd>
     </dl>
+    """
+  end
+
+  attr :team, :map, required: true
+  attr :key_level, :string, default: nil
+
+  # Where the records come from and whose key reads them, beside the action that changes
+  # the key, then the rest of Actions.
+  defp sidebar_content(assigns) do
+    ~H"""
     <dl id="team-source">
       <dt>Records</dt>
       <dd id="team-records">
@@ -126,13 +134,6 @@ defmodule Web.Settings.TeamLive do
         </span>
       </dd>
     </dl>
-    """
-  end
-
-  attr :team, :map, required: true
-
-  defp sidebar_content(assigns) do
-    ~H"""
     <dl id="team-actions-section">
       <dt>Actions</dt>
       <dd>
@@ -145,6 +146,12 @@ defmodule Web.Settings.TeamLive do
               id="team-contacts-change"
               navigate={~p"/teams/#{@team}/settings/contacts"}
             >Change team contacts</.a>
+          </li>
+          <li :if={!App.Model.DemoTeam.demo?(@team)}>
+            <.a
+              id="team-key-change"
+              navigate={~p"/teams/#{@team}/settings/access-key"}
+            >Change access key</.a>
           </li>
           <li :if={!D4H.records?(@team)}>
             <.a

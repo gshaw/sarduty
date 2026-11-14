@@ -4,7 +4,6 @@ defmodule Web.Settings.TeamLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
-
   @secret "SECRET-TEAM-PAT-123"
 
   test "shows the team, with no form (#1076)", %{conn: conn} do
@@ -57,7 +56,7 @@ defmodule Web.Settings.TeamLiveTest do
     assert has_element?(lv, "#team-records", "Alex Chen's key, an Owner in D4H.")
   end
 
-  test "Change team contacts is an action", %{conn: conn} do
+  test "Change team contacts and Change access key are actions", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
@@ -65,6 +64,11 @@ defmodule Web.Settings.TeamLiveTest do
     assert has_element?(
              lv,
              ~s(#team-contacts-change[href="/teams/#{team.subdomain}/settings/contacts"])
+           )
+
+    assert has_element?(
+             lv,
+             ~s(#team-key-change[href="/teams/#{team.subdomain}/settings/access-key"])
            )
   end
 
