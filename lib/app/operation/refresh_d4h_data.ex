@@ -61,9 +61,7 @@ defmodule App.Operation.RefreshD4HData do
         team
 
       {:error, reason} ->
-        Logger.warning(
-          "Team #{team.id}'s details weren't refreshed: #{inspect(reason)}"
-        )
+        Logger.warning("Team #{team.id}'s details weren't refreshed: #{inspect(reason)}")
 
         team
     end

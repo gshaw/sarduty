@@ -177,17 +177,17 @@ defmodule Web.Settings.TeamLive do
               navigate={~p"/teams/#{@team}/settings/contacts"}
             >Change team contacts</.a>
           </li>
-          <li :if={@has_fields}>
-            <.a
-              id="team-fields-change"
-              navigate={~p"/teams/#{@team}/settings/fields/edit"}
-            >Change fields</.a>
-          </li>
           <li :if={!App.Model.DemoTeam.demo?(@team)}>
             <.a
               id="team-key-change"
               navigate={~p"/teams/#{@team}/settings/access-key"}
             >Change access key</.a>
+          </li>
+          <li :if={@has_fields}>
+            <.a
+              id="team-fields-change"
+              navigate={~p"/teams/#{@team}/settings/fields/edit"}
+            >Change fields</.a>
           </li>
           <li :if={!D4H.records?(@team)}>
             <.a

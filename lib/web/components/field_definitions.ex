@@ -2,6 +2,7 @@ defmodule Web.Components.FieldDefinitions do
   use Web, :function_component
 
   import Web.Components.HeadingRow
+  import Web.Components.OrgLogo
   import Web.Components.RowLink
 
   alias App.Model.CustomField
@@ -23,7 +24,11 @@ defmodule Web.Components.FieldDefinitions do
     doc: "on a team's page: its own fields come first, under its name, then its organization's"
 
   attr :organization_name, :string, default: nil, doc: "with team_name, the organization's"
-  attr :team_logo, :string, default: nil, doc: "the team's logo URL, beside its heading"
+
+  attr :team_logo, :string,
+    default: nil,
+    doc: "the team's logo URL, beside its heading; none shows its initials"
+
   attr :organization_logo, :string, default: nil, doc: "the organization's logo URL"
 
   slot :team_action,
@@ -36,11 +41,10 @@ defmodule Web.Components.FieldDefinitions do
     <section :for={{key, heading, fields} <- @sections} id={"#{@id}-#{key}"} class="mb-8">
       <.heading_row :if={heading} class="mb-4">
         <h2 class="heading flex items-center gap-3">
-          <img
-            :if={logo(key, @team_logo, @organization_logo)}
+          <.org_logo
+            id={"#{@id}-#{key}-logo"}
             src={logo(key, @team_logo, @organization_logo)}
-            alt=""
-            class="size-8 rounded"
+            name={if key == "team", do: @team_name, else: @organization_name || heading}
           />
           {heading}
         </h2>

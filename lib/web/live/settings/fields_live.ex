@@ -26,9 +26,11 @@ defmodule Web.Settings.FieldsLive do
         service: D4H.service_name(team),
         can_change: Team.d4h_can?(team, :custom_fields),
         organization_name: team.organization && team.organization.short_name,
-        # A logo beside each owner's heading, so its fields are told apart; none, no picture.
-        team_logo: Team.logo_file(team.subdomain) && ~p"/teams/#{team}/logo?shape=square",
-        organization_logo: organization_logo(team.organization)
+        # A logo beside each owner's heading, so its fields are told apart.
+        team_logo: Team.logo_file(team.subdomain) && Web.TeamController.logo_url(team, :square),
+        organization_logo:
+          team.organization && team.organization.logo_at &&
+            Web.OrganizationController.logo_url(team.organization)
       )
       |> assign_fields(team)
 
@@ -38,11 +40,6 @@ defmodule Web.Settings.FieldsLive do
   def handle_params(params, _uri, socket) do
     {:noreply, assign(socket, :kind, kind(params["kind"], socket.assigns.counts))}
   end
-
-  defp organization_logo(%{logo_at: %DateTime{} = logo_at} = organization),
-    do: ~p"/orgs/#{organization}/logo?#{[v: DateTime.to_unix(logo_at)]}"
-
-  defp organization_logo(_none), do: nil
 
   defp assign_fields(socket, team) do
     fields = CustomField.get_all_with_archived(team.id)
