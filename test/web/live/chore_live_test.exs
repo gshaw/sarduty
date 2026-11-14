@@ -212,7 +212,8 @@ defmodule Web.ChoreLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{chore.id}")
     assert has_element?(lv, "#chore-activity a", "Chores: Equipment maintenance, October 2026")
-    assert has_element?(lv, "#chore-change")
+    assert has_element?(lv, "#chore-actions #chore-change")
+    refute has_element?(lv, "#accept-form")
     assert has_element?(lv, "#decline-form")
   end
 
