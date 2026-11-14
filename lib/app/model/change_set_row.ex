@@ -32,6 +32,8 @@ defmodule App.Model.ChangeSetRow do
         :rejoin_member,
         :set_member_photo,
         :remove_member_photo,
+        :set_team_logo,
+        :remove_team_logo,
         :create_activity,
         :update_activity,
         :delete_activity,

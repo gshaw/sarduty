@@ -460,6 +460,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings", Settings.TeamLive
       live "/teams/:subdomain/settings/edit", Settings.TeamFormLive
       live "/teams/:subdomain/settings/contacts", Settings.TeamContactsLive
+      live "/teams/:subdomain/settings/logo", Settings.TeamLogoLive
       live "/teams/:subdomain/settings/admins", Settings.AdminsLive
       live "/teams/:subdomain/settings/access-key", Settings.AccessKeyLive
       live "/teams/:subdomain/settings/members", Settings.MembersLive
@@ -513,6 +514,7 @@ defmodule Web.Router do
       pipe_through :require_authorized_team_subdomain
 
       get "/members/:id/certificates/:award_id", MemberController, :certificate
+      get "/settings/logo/original", TeamController, :original_logo
       get "/tax-credit-letters/:year/members/:id/draft.png", TaxCreditLetterController, :draft
       # An organization's form on an activity (#950): posts its answers, gets the PDF.
       post "/activities/:id/forms/:form_id/pdf", ActivityFormPDFController, :create

@@ -31,8 +31,9 @@ enforces the top-level list and the held URLs.
   (the name search), so Cancel opens the tab as it was (#920).
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
   (`/teams/:subdomain/settings`, `/settings/admins`). General only shows the team, so
-  its form is Change team, `/settings/edit`, and its team contacts' form
-  `/settings/contacts` (#1076). The URL names
+  its form is Change team, `/settings/edit`, its team contacts' form
+  `/settings/contacts`, its logo's `/settings/logo` (#1075), and its key's
+  `/settings/access-key`, the old tab's URL (#1076). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.
 - **One URL per thing, for everyone on the team** (#406). A team admin and a member open
   the same `/teams/:subdomain/…` page; their role decides what it shows.

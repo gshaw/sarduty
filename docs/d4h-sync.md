@@ -125,12 +125,12 @@ door's, leaves it as it was (`Attendance.replied_at/4`).
 ## Which key
 
 Every D4H request uses the team's key (`teams.d4h_access_key`, an `EncryptedString` set
-on team settings' Access key tab). Users have no D4H keys.
+on team settings' Change access key page). Users have no D4H keys.
 
 Each team should create the key from a D4H member named "SAR Duty" rather than a
 person, so D4H history shows SAR Duty for changes made here and the key outlives the
 people on the team. `teams.d4h_access_key_owner` holds the key's D4H member name, from
-`whoami` when the key is saved and at the start of every refresh. Access key and
+`whoami` when the key is saved and at the start of every refresh. Change access key and
 `/admin` flag a key whose owner isn't a SAR Duty account. D4H doesn't say when a token
 expires.
 

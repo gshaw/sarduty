@@ -21,6 +21,8 @@ defmodule App.Operation.ApplyChangeSet do
     :rejoin_member,
     :set_member_photo,
     :remove_member_photo,
+    :set_team_logo,
+    :remove_team_logo,
     :create_activity,
     :update_activity,
     :delete_activity,
@@ -53,7 +55,8 @@ defmodule App.Operation.ApplyChangeSet do
   login.
 
   `photo:` in `opts` is the image a `:set_member_photo` row sends. The row never holds
-  it, so a photo is never kept in SAR Duty. `document:` is the certificate an
+  it, so a photo is never kept in SAR Duty. `logo:` is the PNG a `:set_team_logo` row
+  sends (#1075). `document:` is the certificate an
   `:attach_award_document` row sends, `%{bytes:, filename:, content_type:}` (#493).
   """
   def call(team, change_set, user, now, opts \\ [])
@@ -180,6 +183,14 @@ defmodule App.Operation.ApplyChangeSet do
       # the member's id. A refusal goes to failure_text/3, which names who refused.
       bytes ->
         d4h |> D4H.set_member_photo(row.d4h_record_id, bytes) |> photo_result(row)
+    end
+  end
+
+  # The logo, like a photo, rides in `opts` and is never kept on the row (#1075).
+  defp write(d4h, %ChangeSetRow{action: :set_team_logo} = row, opts) do
+    case opts[:logo] do
+      nil -> {:failed, "Upload the logo again."}
+      bytes -> d4h |> D4H.set_team_logo(bytes) |> photo_result(row)
     end
   end
 
@@ -426,6 +437,9 @@ defmodule App.Operation.ApplyChangeSet do
 
   defp write(d4h, %ChangeSetRow{action: :remove_member_photo} = row),
     do: d4h |> D4H.remove_member_photo(row.d4h_record_id) |> photo_result(row)
+
+  defp write(d4h, %ChangeSetRow{action: :remove_team_logo} = row),
+    do: d4h |> D4H.remove_team_logo() |> photo_result(row)
 
   # An activity's kind is in a create's new_value, and in the old_value of a change.
   defp write(d4h, %ChangeSetRow{action: :create_activity, new_value: new_value}) do

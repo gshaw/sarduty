@@ -91,10 +91,11 @@ is left out, and so is its divider.
   Features; Members (the Retiring group and the attendance check); Tax credit letters
   (address and signer) and Hours tags; Places and Chore categories; then Agents (#761).
   Features comes before the tabs it decides on (2026-10-28). General is the team's
-  overview, like a record page (#1076): its names, address, place, organization, and
-  records, with team contacts and Actions beside them. Change team and Change team
-  contacts are their own pages, with breadcrumbs Team settings › General ›, as a
-  Places or Fields page names its tab. Admins lists the team's, its organization's,
+  overview, like a record page (#1076): its names, address, place, and organization,
+  with its records and Actions beside them. Change team, Change logo (#1075), Change
+  team contacts, and Change access key are its Actions, each its own page with
+  breadcrumbs Team settings › General ›, as a Places or Fields page names its tab.
+  Access key was a tab until then. Admins lists the team's, its organization's,
   and SAR Duty's admins. General held the letters and the attendance check until then, one long form
   with four topics.
 - **Features is where a team turns things on** (2026-10-28): member logins, with chores

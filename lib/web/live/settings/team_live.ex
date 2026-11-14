@@ -10,9 +10,11 @@ defmodule Web.Settings.TeamLive do
   alias App.Repo
 
   # Settings' General tab (#153), an overview of the team like a record page (#1076): the
-  # team on top, its details and organization, and its records and Actions beside them. Change team edits the names and address, which letters and
-  # forms print (#995); Change team contacts picks who Get help lists (#780). The key is
-  # on Access key (#727). The team comes from the URL, /teams/:subdomain/settings.
+  # team on top, its details and organization, and its records and Actions beside them.
+  # Change team edits the names and address, which letters and forms print (#995);
+  # Change logo sets the logo (#1075); Change team contacts picks who Get help lists
+  # (#780); Change access key replaces the key (#727). The team comes from the URL,
+  # /teams/:subdomain/settings.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
 
@@ -140,6 +142,9 @@ defmodule Web.Settings.TeamLive do
         <ul id="team-actions" class="action-list">
           <li>
             <.a id="team-edit" navigate={~p"/teams/#{@team}/settings/edit"}>Change team</.a>
+          </li>
+          <li>
+            <.a id="team-logo-change" navigate={~p"/teams/#{@team}/settings/logo"}>Change logo</.a>
           </li>
           <li>
             <.a

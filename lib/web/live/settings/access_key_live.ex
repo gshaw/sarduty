@@ -2,7 +2,6 @@ defmodule Web.Settings.AccessKeyLive do
   use Web, :live_view_app_layout
 
   import Web.Components.CopyButton, only: [copy_button: 1]
-  import Web.Components.TeamSettingsTabs
 
   alias App.Adapter.D4H
   alias App.Model.D4HAccess
@@ -11,8 +10,9 @@ defmodule Web.Settings.AccessKeyLive do
   alias App.Operation.CheckTeamKey
   alias App.Operation.SaveTeamKey
 
-  # Team settings' Access key tab (#727), last because it's rarely needed: who the key
-  # belongs to, what D4H refuses it, and how to replace it. A D4H key acts as the member
+  # Change access key, from General's Actions (#727, #1076): who the key belongs to, what
+  # D4H refuses it, and how to replace it. A Try a demo team has none: its key is SAR
+  # Duty's, and a real key pasted here would make it a real team (#857). A D4H key acts as the member
   # who made it, so an Editor's key can do less than an Owner's. A Records key can do
   # everything, so a Records team gets no check.
   def mount(_params, _session, socket) do
@@ -20,7 +20,7 @@ defmodule Web.Settings.AccessKeyLive do
 
     socket =
       socket
-      |> assign(page_title: "Team settings · Access key")
+      |> assign(page_title: "Change access key")
       |> assign_team(socket.assigns.current_team)
       |> assign_form(Team.build_key_changeset(socket.assigns.current_team))
 
@@ -29,7 +29,12 @@ defmodule Web.Settings.AccessKeyLive do
 
   def render(assigns) do
     ~H"""
-    <.team_settings_tabs team={@current_team} current={:access_key} />
+    <.breadcrumbs>
+      <:item label="Team settings" path={~p"/teams/#{@current_team}/settings"} />
+      <:item label="General" path={~p"/teams/#{@current_team}/settings"} />
+      <:item label={@page_title} />
+    </.breadcrumbs>
+    <h1 class="title">{@page_title}</h1>
     <div class="measure">
       <p :if={!@records?} class="lead">
         SAR Duty uses this key for everything it reads from D4H and sends to it.
@@ -141,6 +146,7 @@ defmodule Web.Settings.AccessKeyLive do
         </.input>
         <.form_actions>
           <.button variant={:success} phx-disable-with="Saving…">Save key</.button>
+          <.button id="key-cancel" navigate={~p"/teams/#{@current_team}/settings"}>Cancel</.button>
         </.form_actions>
       </.form>
     </div>

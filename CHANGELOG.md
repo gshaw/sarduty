@@ -4,9 +4,11 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
-- Team settings' General is now an overview of your team: its names, address, place,
-  and records, with team contacts and actions beside them. Change team and Change team
-  contacts have their own pages, and Team admins is now Admins.
+- Team settings' General is now an overview of your team, with Change team, Change
+  logo, Change team contacts, and Change access key as actions. Team admins is now
+  Admins, and Access key is no longer a tab.
+- ⭐ Change your team's logo in SAR Duty. It goes to D4H or SAR Duty Records too, and
+  ID cards, letters, and the Dashboard show it at once.
 - A new team logo in D4H shows as soon as the next refresh saves it, Google Wallet
   passes included. Before, browsers kept the old one for up to an hour.
 - Join dates, leave dates, and qualification dates no longer show a day early. A

@@ -1438,23 +1438,62 @@ defmodule App.Adapter.D4H do
         write(context, :put, url, {:body, bytes}, &D4H.Member.build/1)
 
       :d4h ->
-        set_profile_document(context, d4h_member_id, bytes)
+        file = {bytes, filename: "photo.jpg", content_type: "image/jpeg"}
+        set_profile_document(context, {"Member", d4h_member_id}, "Photo", file)
     end
   end
 
-  defp set_profile_document(context, d4h_member_id, bytes) do
+  @doc """
+  Sets the team's logo to `bytes`, a PNG (#1075), the way member photos go: Records
+  takes a PUT on the team's image and answers with the document; D4H takes a document on
+  the team with `profile` set (tried live on DMS Testing, 2026-11-13) and keeps the old
+  one as a plain attachment, so the old profile documents go once the new one is in.
+  """
+  def set_team_logo(context, bytes) when is_binary(bytes) do
+    d4h_team_id = Req.Request.get_private(context, :d4h_team_id)
+
+    case Req.Request.get_private(context, :write_service) do
+      :records ->
+        write(context, :put, "/teams/#{d4h_team_id}/image", {:body, bytes}, &D4H.Document.build/1)
+
+      :d4h ->
+        file = {bytes, filename: "logo.png", content_type: "image/png"}
+        set_profile_document(context, {"Team", d4h_team_id}, "Logo", file)
+    end
+  end
+
+  @doc """
+  Removes the team's logo (#1075). Records takes a DELETE on the image; on D4H, deleting
+  the team's profile documents leaves no logo, not an older one. `{:ok, _}` or
+  `{:error, %D4H.Error{}}`.
+  """
+  def remove_team_logo(context) do
+    d4h_team_id = Req.Request.get_private(context, :d4h_team_id)
+
+    case Req.Request.get_private(context, :write_service) do
+      :records ->
+        write(context, :delete, "/teams/#{d4h_team_id}/image", nil, & &1)
+
+      :d4h ->
+        with {:ok, ids} <- profile_document_ids(context, {"Team", d4h_team_id}),
+             :ok <- delete_documents(context, ids),
+             do: {:ok, d4h_team_id}
+    end
+  end
+
+  defp set_profile_document(context, {type, id} = target, title, file) do
     old_ids =
-      case profile_document_ids(context, d4h_member_id) do
+      case profile_document_ids(context, target) do
         {:ok, ids} -> ids
         {:error, _error} -> []
       end
 
     form = [
-      title: "Photo",
-      targetResourceType: "Member",
-      targetResourceId: to_string(d4h_member_id),
+      title: title,
+      targetResourceType: type,
+      targetResourceId: to_string(id),
       profile: "true",
-      file: {bytes, filename: "photo.jpg", content_type: "image/jpeg"}
+      file: file
     ]
 
     with {:ok, document} <-
@@ -1476,7 +1515,7 @@ defmodule App.Adapter.D4H do
         write(context, :delete, "/members/#{d4h_member_id}/image", nil, &D4H.Member.build/1)
 
       :d4h ->
-        with {:ok, ids} <- profile_document_ids(context, d4h_member_id),
+        with {:ok, ids} <- profile_document_ids(context, {"Member", d4h_member_id}),
              :ok <- delete_documents(context, ids),
              do: {:ok, d4h_member_id}
     end
@@ -1490,8 +1529,8 @@ defmodule App.Adapter.D4H do
          do: delete_documents(context, ids)
   end
 
-  defp profile_document_ids(context, d4h_member_id) do
-    params = [target_resource_type: "Member", target_resource_id: d4h_member_id, profile: true]
+  defp profile_document_ids(context, {type, id}) do
+    params = [target_resource_type: type, target_resource_id: id, profile: true]
 
     case Req.get(context, url: "/documents", params: params, retry: false) do
       {:ok, %{status: 200, body: %{"results" => results}}} ->
