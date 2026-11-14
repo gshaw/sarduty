@@ -78,6 +78,21 @@ defmodule Web.Settings.TeamLogoLiveTest do
       assert Team.logo_file(team.subdomain) == nil
     end
 
+    test "previews the logo on an ID card and a letter, the picked file before it's saved",
+         %{conn: conn, team: team} do
+      put_logo(team, png_fixture(40, 40))
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/logo")
+      saved = Web.TeamController.logo_url(team, :fit)
+      assert has_element?(lv, ~s|#logo-preview-card-logo[src="#{saved}"]|)
+      assert has_element?(lv, ~s|#logo-preview-letter-logo[src="#{saved}"]|)
+      assert has_element?(lv, "#logo-preview-card", team.name)
+
+      upload(lv, "logo.png", png_fixture(40, 30), "image/png")
+      refute has_element?(lv, ~s|#logo-preview-card-logo[src="#{saved}"]|)
+      assert has_element?(lv, "#logo-preview-card-logo[data-phx-entry-ref]")
+      assert has_element?(lv, "#logo-preview-letter-logo[data-phx-entry-ref]")
+    end
+
     test "a file that isn't an image says so, and nothing is sent", %{conn: conn, team: team} do
       RecordsStub.stub(fn _method, _path, _body -> {200, %{}} end)
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/logo")
