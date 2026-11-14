@@ -1,9 +1,10 @@
 defmodule App.ViewData.ActivityForms do
   @moduledoc """
-  An organization's forms on an activity (#950), for its team admins: which forms show on
-  its Forms tab (#1018), and for one form's page what SAR Duty filled in, what's missing, and
-  what each question starts from. Read-only: App.Operation.SaveFormAnswers keeps answers
-  and App.Operation.CreateFormPDF makes the PDF.
+  An organization's forms, and the team's own (#1083), on an activity (#950), for its
+  team admins: which forms show on its Forms tab (#1018), and for one form's page what
+  SAR Duty filled in, what's missing, and what each question starts from. Read-only:
+  App.Operation.SaveFormAnswers keeps answers and App.Operation.CreateFormPDF makes the
+  PDF.
   """
 
   alias App.Document
@@ -23,9 +24,9 @@ defmodule App.ViewData.ActivityForms do
   alias App.Report.Context
 
   @doc """
-  The forms on for the team's organization that show on the activity, by each form's
-  `where`. None on a deleted activity. A form that no longer reads on the team shows, so
-  its page can say why.
+  The forms shown for the team (`Form.shown_for/1`) that show on the activity, by each
+  form's `where`. None on a deleted activity. A form that no longer reads on the team
+  shows, so its page can say why.
   """
   def on(%Team{} = team, %Activity{} = activity, now) do
     forms = if activity.deleted_at, do: [], else: Form.shown_for(team)

@@ -35,7 +35,7 @@ defmodule App.Operation.DeleteTeam do
                   attention_snoozes certificates change_set_rows change_sets chore_categories
                   chore_events chores custom_fields custom_field_bundles d4h_changes demo_teams
                   endorsements equipment_items
-                  equipment_usages events group_membership_changes group_rules groups
+                  equipment_usages events forms group_membership_changes group_rules groups
                   home_coordinates location_bookmarks mcp_calls member_away_periods member_cards
                   member_check_ins member_standing_changes members no_shows outbox_messages qualifications
                   reminders reports route_distances published_pdfs form_answers sign_requests tags team_login_grants templates trips
@@ -50,6 +50,7 @@ defmodule App.Operation.DeleteTeam do
     {"member_qualification_awards", "member_id", "members"},
     {"member_qualification_awards", "qualification_id", "qualifications"},
     {"published_pdf_files", "published_pdf_id", "published_pdfs"},
+    {"form_pages", "form_id", "forms"},
     {"endorsement_includes", "endorsement_id", "endorsements"},
     {"endorsement_includes", "included_endorsement_id", "endorsements"},
     {"endorsement_qualifications", "endorsement_id", "endorsements"},

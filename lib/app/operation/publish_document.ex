@@ -278,14 +278,12 @@ defmodule App.Operation.PublishDocument do
     cond do
       activity.team_id != team.id -> {:error, "This activity is not on your team."}
       activity.deleted_at -> {:error, "This activity is deleted. Nothing can be made from it."}
-      form.organization_id != team.organization_id -> {:error, off()}
+      not Form.shown?(form, team) -> {:error, Form.off_text(form)}
       form.state == :testing -> {:error, "This form is testing. Download a draft PDF instead."}
-      form.state != :on -> {:error, off()}
+      form.state != :on -> {:error, Form.off_text(form)}
       true -> :ok
     end
   end
-
-  defp off, do: "This form is turned off. Ask your organization to turn it on."
 
   @doc "Whether `user` is a team admin of `team`: one who manages it in D4H, or a SAR Duty admin."
   def team_admin?(_team, %User{is_admin: true}, _now), do: true

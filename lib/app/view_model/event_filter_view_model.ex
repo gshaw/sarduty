@@ -65,6 +65,8 @@ defmodule App.ViewModel.EventFilterViewModel do
   def label(:form_turned_on), do: "Form turned on"
   def label(:form_turned_off), do: "Form turned off"
   def label(:form_set_testing), do: "Form set to testing"
+  def label(:team_forms_turned_on), do: "Team forms turned on"
+  def label(:team_forms_turned_off), do: "Team forms turned off"
   def label(:prod_task), do: "Production task"
 
   def validate(params) do

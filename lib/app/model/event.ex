@@ -66,6 +66,8 @@ defmodule App.Model.Event do
     form_turned_on: 730,
     form_turned_off: 730,
     form_set_testing: 730,
+    team_forms_turned_on: 730,
+    team_forms_turned_off: 730,
     prod_task: 730
   }
 

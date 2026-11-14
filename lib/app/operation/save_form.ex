@@ -1,15 +1,16 @@
 defmodule App.Operation.SaveForm do
   @moduledoc """
-  Uploads an organization's form, or replaces one (#950): its text and its page PDF.
-  Only a SAR Duty admin does, since SAR Duty prepares each form's places; there's no
-  editor in the browser.
+  Uploads an organization's or a team's form, or replaces one (#950, #1083): its text and
+  its page PDF. Only a SAR Duty admin does, since SAR Duty prepares each form's places;
+  there's no editor in the browser.
 
-  Saving checks the text against the catalog of each of the organization's teams and of
+  Saving checks an organization's form against the catalog of each of its teams and of
   Coast Range SAR, where its organization admins try it, so it prints on every one of
-  them. No team's RESTRICTED field passes the check, since the form is the
-  organization's (docs/organizations.md). Every `expect` must hold, and every place must
-  be on a page of its page PDF. A form with a layout has no page, and its layout must
-  print.
+  them. No team's RESTRICTED field passes that check, since the form is the
+  organization's (docs/organizations.md). A team's form is checked on that team alone,
+  RESTRICTED fields and all, and can't take the name of one of its organization's forms.
+  Every `expect` must hold, and every place must be on a page of its page PDF. A form
+  with a layout has no page, and its layout must print.
 
   Replacing it raises its version.
   """
@@ -35,20 +36,17 @@ defmodule App.Operation.SaveForm do
   for a new one. `page` is the page PDF's bytes; nil when replacing keeps the form's, if
   the new text says page.
   """
-  def call(
-        %Organization{} = organization,
-        form,
-        text,
-        page,
-        %User{} = user,
-        now \\ DateTime.utc_now()
-      ) do
+  def call(owner, form, text, page, %User{} = user, now \\ DateTime.utc_now()) do
     cond do
       !user.is_admin -> {:error, :forbidden}
-      form && form.organization_id != organization.id -> {:error, :forbidden}
-      true -> save(organization, form, text, page || kept_page(form, text), user, now)
+      form && !owned?(form, owner) -> {:error, :forbidden}
+      true -> save(owner, form, text, page || kept_page(form, text), user, now)
     end
   end
+
+  defp owned?(%Form{organization_id: id}, %Organization{id: id}), do: true
+  defp owned?(%Form{team_id: id}, %Team{id: id}), do: true
+  defp owned?(_form, _owner), do: false
 
   # Replacing keeps the form's page while its text prints on one, and drops it for a
   # layout.
@@ -61,9 +59,10 @@ defmodule App.Operation.SaveForm do
     end
   end
 
-  defp save(organization, form, text, page, user, now) do
-    with {:ok, doc} <- check(text, page, contexts(organization, now)) do
-      result = Repo.transaction(fn -> write!(organization, form, doc, text, page, user) end)
+  defp save(owner, form, text, page, user, now) do
+    with {:ok, doc} <- check(text, page, contexts(owner, now)),
+         :ok <- check_name(owner, doc) do
+      result = Repo.transaction(fn -> write!(owner, form, doc, text, page, user) end)
 
       case result do
         {:ok, saved} -> {:ok, saved}
@@ -72,9 +71,24 @@ defmodule App.Operation.SaveForm do
     end
   end
 
+  # A team's form can't take its organization's form's name: the organization's would
+  # replace it on every activity (App.Model.Form.shown_for/1).
+  defp check_name(%Team{organization_id: id}, doc) when is_integer(id) do
+    taken? =
+      Form |> where([f], f.organization_id == ^id and f.name == ^doc.name) |> Repo.exists?()
+
+    if taken?,
+      do:
+        {:error, :text,
+         "#{Repo.get!(Organization, id).short_name} has a form called #{doc.name}. Give yours another name."},
+      else: :ok
+  end
+
+  defp check_name(_owner, _doc), do: :ok
+
   # The form, its page, and an event, or a rollback with what to fix.
-  defp write!(organization, form, doc, text, page, user) do
-    changeset = changeset(organization, form, doc, text, page, user)
+  defp write!(owner, form, doc, text, page, user) do
+    changeset = changeset(owner, form, doc, text, page, user)
 
     case Repo.insert_or_update(changeset) do
       {:ok, saved} ->
@@ -82,19 +96,32 @@ defmodule App.Operation.SaveForm do
 
         Event.record!(:form_saved,
           user_id: user.id,
-          data: %{organization_id: organization.id, form_id: saved.id, version: saved.version}
+          team_id: saved.team_id,
+          data: Map.merge(owner_data(owner), %{form_id: saved.id, version: saved.version})
         )
 
         saved
 
       {:error, _changeset} ->
         Repo.rollback(
-          "#{organization.short_name} has a form called #{doc.name}. Replace that one instead."
+          "#{owner_name(owner)} has a form called #{doc.name}. Replace that one instead."
         )
     end
   end
 
-  defp changeset(organization, form, doc, text, page, user) do
+  defp owner_data(%Organization{id: id}), do: %{organization_id: id}
+  defp owner_data(%Team{id: id}), do: %{team_id: id}
+
+  defp owner_name(%Organization{short_name: name}), do: name
+  defp owner_name(%Team{name: name}), do: name
+
+  defp new_form(%Organization{id: id}), do: %Form{organization_id: id}
+  defp new_form(%Team{id: id}), do: %Form{team_id: id}
+
+  defp unique_index(%Organization{}), do: :forms_organization_id_name_index
+  defp unique_index(%Team{}), do: :forms_team_id_name_index
+
+  defp changeset(owner, form, doc, text, page, user) do
     changes = %{
       name: doc.name,
       about: doc.about,
@@ -105,13 +132,13 @@ defmodule App.Operation.SaveForm do
 
     {form, changes} =
       case form do
-        nil -> {%Form{organization_id: organization.id}, changes}
+        nil -> {new_form(owner), changes}
         %Form{} -> {form, Map.put(changes, :version, form.version + 1)}
       end
 
     form
     |> Ecto.Changeset.change(changes)
-    |> Ecto.Changeset.unique_constraint(:name, name: :forms_organization_id_name_index)
+    |> Ecto.Changeset.unique_constraint(:name, name: unique_index(owner))
   end
 
   defp put_page!(form, page) do
@@ -153,14 +180,15 @@ defmodule App.Operation.SaveForm do
   # the check passed.
   defp check_contexts(doc, contexts) do
     Enum.reduce_while(contexts, {:ok, doc}, fn {name, context}, _checked ->
-      case Document.check(doc, without_restricted(context)) do
+      case Document.check(doc, context) do
         {:ok, checked} -> {:cont, {:ok, checked}}
         {:error, %Error{} = error} -> {:halt, {:error, :text, "#{name}: #{Error.text(error)}"}}
       end
     end)
   end
 
-  # The catalog without a team's RESTRICTED fields: they're the team's alone.
+  # The catalog without a team's RESTRICTED fields: they're the team's alone, so an
+  # organization's form never reads one.
   defp without_restricted(%Context{custom_fields: custom} = context) do
     custom =
       Map.new(custom, fn
@@ -197,8 +225,9 @@ defmodule App.Operation.SaveForm do
     do: {:error, :page, "Add page to the form's text, or upload no page."}
 
   @doc """
-  The catalogs a form is checked against, `[{name, %Context{}}]`: each of the
-  organization's teams, A to Z, then Coast Range SAR, where it's tried, when seeded.
+  The catalogs a form is checked against, `[{name, %Context{}}]`: for an organization's,
+  each of its teams, A to Z, without their RESTRICTED fields, then Coast Range SAR,
+  where it's tried, when seeded; for a team's, that team.
   """
   def contexts(%Organization{id: id}, now) do
     teams =
@@ -214,6 +243,10 @@ defmodule App.Operation.SaveForm do
         team -> [{team.name, Context.new(team, now, repo: SampleRepo)}]
       end
 
-    Enum.concat(teams, sample)
+    teams
+    |> Enum.concat(sample)
+    |> Enum.map(fn {name, context} -> {name, without_restricted(context)} end)
   end
+
+  def contexts(%Team{} = team, now), do: [{team.name, Context.new(team, now)}]
 end

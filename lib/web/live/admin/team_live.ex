@@ -5,9 +5,11 @@ defmodule Web.Admin.TeamLive do
 
   alias App.Adapter.D4H
   alias App.Model.AgentConnection
+  alias App.Model.Form
   alias App.Model.Team
   alias App.Model.TeamLoginGrant
   alias App.Operation.DeleteTeam
+  alias App.Operation.SetTeamForms
   alias App.Operation.SetTeamIdCards
   alias App.Operation.SetTeamMCP
   alias App.Repo
@@ -15,7 +17,7 @@ defmodule Web.Admin.TeamLive do
   alias App.Worker.RefreshTeamDataWorker
 
   # One team's SAR Duty admin page (#513): its refresh, who reaches it as a team admin,
-  # its ID cards and Agents switches, and Delete team.
+  # its ID cards, Team forms, and Agents switches, and Delete team.
   def mount(%{"id" => id}, _session, socket) do
     team =
       with {id, ""} <- Integer.parse(id), %Team{} = team <- Team.get(id) do
@@ -42,7 +44,8 @@ defmodule Web.Admin.TeamLive do
       now: now,
       team_admins: TeamSummary.team_admin_rows(team, now),
       cards: Map.get(TeamSummary.card_counts(), team.id, 0),
-      agents: Map.get(AgentConnection.count_connected_by_team(), team.id, 0)
+      agents: Map.get(AgentConnection.count_connected_by_team(), team.id, 0),
+      forms: length(Form.get_all(team))
     )
     |> assign_new(:grant_form, fn ->
       grant_form(TeamLoginGrant.build_changeset(%TeamLoginGrant{}))
@@ -269,6 +272,41 @@ defmodule Web.Admin.TeamLive do
           </.button>
         </section>
 
+        <section id="team-forms" class="mb-8 max-w-3xl">
+          <h2 class="heading">Team forms</h2>
+          <p id="team-forms-state">
+            <span :if={@team.forms_enabled} class="text-success-text">On</span>
+            <span :if={!@team.forms_enabled} class="text-text-muted">Off</span>
+            · {Service.Format.count(@forms, one: "%d form", many: "%d forms")}
+          </p>
+          <p>
+            The team keeps its own forms, filled in from its activities. No other team sees
+            them, and they leave its organization's forms alone. Turning it off hides them
+            and keeps every PDF already published.
+          </p>
+          <.button
+            :if={!@team.forms_enabled}
+            id="team-forms-on"
+            type="button"
+            phx-click="team_forms"
+            phx-value-enabled="true"
+          >
+            Turn on team forms
+          </.button>
+          <.button
+            :if={@team.forms_enabled}
+            id="team-forms-off"
+            type="button"
+            variant={:danger}
+            phx-click="team_forms"
+            phx-value-enabled="false"
+            data-confirm={"Turn off team forms for #{@team.name}? Its forms stay, hidden, until they're turned on again."}
+            data-confirm-button="Turn off team forms"
+          >
+            Turn off team forms
+          </.button>
+        </section>
+
         <section id="team-mcp" class="max-w-3xl">
           <h2 class="heading">Agents</h2>
           <p id="team-mcp-state">
@@ -466,6 +504,19 @@ defmodule Web.Admin.TeamLive do
       if team.id_cards_enabled,
         do: "ID cards turned on for #{team.name}.",
         else: "ID cards turned off for #{team.name}. Its cards are cancelled."
+
+    {:noreply,
+     socket |> assign_team(Repo.preload(team, :organization)) |> put_flash(:info, message)}
+  end
+
+  def handle_event("team_forms", %{"enabled" => enabled}, socket) do
+    %{team: team, current_user: user} = socket.assigns
+    {:ok, team} = SetTeamForms.call(team, enabled == "true", user)
+
+    message =
+      if team.forms_enabled,
+        do: "Team forms turned on for #{team.name}.",
+        else: "Team forms turned off for #{team.name}. Its forms are hidden."
 
     {:noreply,
      socket |> assign_team(Repo.preload(team, :organization)) |> put_flash(:info, message)}
