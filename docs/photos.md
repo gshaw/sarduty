@@ -9,6 +9,15 @@ team admin checks it first (#1029). A team admin asks a member for one by email 
 function exists: until then it is off, and a stand-in runs in dev. These are parts 1 to
 4 of the photos stack (#1023).
 
+Part 5 starts [activity photos](#activity-photos) (#1032): members add photos to an
+exercise or an event they attended, and a team admin accepts them. Part 6 makes the
+accepted ones [the team's photos](#the-teams-photos) (#1033): a page for each, stars,
+featured photos on the activity's Overview, and Best of the year on Photos. In part 7 a
+team admin [asks everyone who attended](#asking-everyone-who-attended). In part 8 a
+team admin [edits one](#edit-photo), and in part 9 [exports it for a
+post](#export-for-a-post). They need a file store, which production does not have yet,
+so no team has them today.
+
 ## The switch
 
 `teams.photos_enabled`, off on a new team, set on the Features tab through
@@ -20,9 +29,11 @@ so a Try a demo visitor adds their own photo.
 
 - **Photos**, `/teams/:subdomain/photos`, one page for everyone
   ([navigation.md](navigation.md#where-a-feature-goes)). A team admin sees every
-  counted, current member (`Member.get_all_counted/2`) A to Z, with Members, Waiting,
-  and No photo counts that filter. A member sees only [their own](#a-members-own-photo).
-  It is the last link of the side navigation's first section and never moves.
+  counted, current member (`Member.get_all_counted/2`) A to Z, with Members, No photo,
+  and Waiting counts that filter. A member sees only [their own](#a-members-own-photo).
+  It is the last link of the side navigation's first section and never moves. On a
+  team with activity photos, [the team's photos](#the-teams-photos) lead: four more
+  counts, for everyone.
 - **Add a photo**, `/teams/:subdomain/photos/members/new`, narrow: `?member=<id>` names
   the member, and without it a Member box lists them.
   A member's photo is under `/photos/members`, which leaves `/photos/:id` for an
@@ -211,3 +222,236 @@ Removing a photo works on both: Records takes a `DELETE` on the image, and on D4
 adapter deletes the member's profile documents, which leaves no photo. A refusal
 reaches the team admin as `D4H.error_text/2`, and the photo stays on the page to send
 again.
+
+## Activity photos
+
+Members take photos at every training and event, and they sit on phones. A member adds
+theirs to an activity they attended, with permission to post, and a team admin accepts
+them before the team sees them (#1032). They are SAR Duty's own: nothing goes to the
+team's records.
+
+- **Off without a file store.** The files are in the [file store](files.md), never in
+  SQLite: S3 in Calgary in production, under the `activity-photos` kind. A server with
+  no store has no tab, no pages, and no counts. `AddActivityPhotos.available?/1` is the
+  one test: Photos on, and a store.
+- **Which activities.** Exercises and events only, never an incident, and never an
+  activity with logged time, such as chores: `Activity.takes_photos?/1`. An exercise
+  the team's records turn into an incident stops showing its photos: no tab, no file,
+  and no count.
+- **Who adds.** `AddActivityPhotos.check/3`, pure: once the activity has started, a
+  member who attended (`Attendance.attended/2`), or a team admin. Pages ask
+  `may_add?/4`, and the operation asks again.
+- **Add photos**, `/teams/:subdomain/activities/:id/photos/new`, narrow
+  ([ActivityPhotoFormLive](../lib/web/live/activity_photo_form_live.ex)). The rules show
+  above the files, every time. Take a photo and Select photos open one input, as Add a
+  photo's do, here with the camera on the back of the phone. Up to 20 photos a send, 25
+  MB each. Each uploads when picked and is checked on arrival, so one SAR Duty cannot
+  read is refused by name. One caption and one permission to post for the send; the box
+  starts unchecked, and unchecked is kept as no. No tools, and no video.
+- **On arrival** ([Service.ActivityPhoto](../lib/service/activity_photo.ex)): location
+  and camera data go, HEIC becomes JPEG where the server can read it, and three JPEGs are
+  kept: the original at its full size, a copy up to 2048 px to show, and one up to 600
+  px for tiles. The upload as it came is never kept. Reading 20 photos can pass 30
+  seconds, so Add runs in `start_async` ([jobs.md](jobs.md#job-or-inline)): the member
+  waits for it, and the page says Adding… until it lands on the tab.
+- **The row** is [ActivityPhoto](../lib/app/model/activity_photo.ex): Waiting or
+  Accepted, who added it, the send's caption and `may_post`, and `file_token`, a random
+  name for its files, `teams/12/activity-photos/{token}/…` (`FileStore.key/5`).
+- **The Photos tab**, `/teams/:subdomain/activities/:id/photos`
+  ([ActivityPhotosLive](../lib/web/live/activity_photos_live.ex)), last on an activity
+  that takes photos. Accepted photos, the most stars first (#1033), each with who added
+  it and when. A team admin gets Waiting over them: every waiting photo as a checked
+  tile, then Accept and Delete for the checked ones, and the tab counts them. A team
+  admin's own photos wait too. Delete takes the row and its files for good.
+- **Who sees a waiting photo**: team admins and the member who added it, nobody else, by
+  page and by file. `ActivityPhoto.visible/2` is that rule, for the tab's list and for
+  the file route. A member sees their own on the tab, marked Waiting.
+- **The file route**, `/teams/:subdomain/photos/:id/file`, with `?size=tile`, `show`, or
+  `original`. An accepted photo answers `private, max-age=86400, immutable`, under a
+  path that carries when the photo last changed. A waiting one answers `no-store`.
+- **Waiting, in two more places.** Needs attention's "3 photos waiting" counts both
+  kinds of photo. Photos on Waiting lists the members' photos, then each activity's
+  under its title, which opens its Photos tab.
+- **Deleting a team deletes its files**: everything under its prefix, after its rows
+  (`DeleteTeam`). The copy a delete keeps holds rows only, so a restore leaves the
+  photo rows out.
+
+## The team's photos
+
+An accepted photo is the team's (#1033). Everything here is off without a file store,
+as activity photos are.
+
+- **One photo**, `/teams/:subdomain/photos/:id`
+  ([ActivityPhotoLive](../lib/web/live/activity_photo_live.ex)), for everyone on the
+  team: the photo, who added it and when, its activity, its caption, and Posting,
+  "Coast Range SAR may post it." or "For the team only." A waiting photo has no page:
+  its tile opens its file. `ActivityPhoto.find_accepted!/3` is who opens one, so a
+  photo on an activity that became an incident is not found. A photo has no name, so
+  search leaves it out (`Web.Search.not_searched/0`).
+- **Stars.** Star on the photo's page, for everyone, one each: a row of
+  [ActivityPhotoStar](../lib/app/model/activity_photo_star.ex) for the login, and
+  starring again takes it back
+  ([StarActivityPhoto](../lib/app/operation/star_activity_photo.ex)). The button
+  counts them. A tile shows the count, with the star filled when the person looking gave
+  one (`ActivityPhoto.put_stars/2`). **Who starred is never shown**, to anyone. A team
+  admin viewing as a member sees their own stars, never the member's, and stars nothing.
+- **Featured photos.** A team admin features up to 2 on an activity, from the photo's
+  page or under its tile on the Photos tab: `activity_photos.featured_at`.
+  `FeatureActivityPhoto.check/2`, pure, is the limit, and a third is refused with a
+  toast, "2 photos are featured already. Stop featuring one first." The activity's
+  Overview shows them beside the map, the first featured first, with "All 12 photos"
+  and Add photos for whoever may add. Everyone sees a Featured tag on the tile and the
+  page.
+- **Photos' views**, the counts that filter, in
+  [TeamPhotos](../lib/app/view_data/team_photos.ex). Each tile is the photo, which opens
+  its page, its stars, and its activity's name, which opens the activity's Photos tab.
+  - **Best of 2026**: the 24 accepted photos with the most stars from activities that
+    started that year, in the team's time zone, the most first and the newest photo
+    first among equals (`TeamPhotos.best_of/3`, pure). A photo with no star is not in
+    it. A Year menu, `?year=`, runs from the first activity with an accepted photo to
+    this year.
+  - **Activities**: every accepted photo, newest first.
+  - **Your stars**: the accepted photos you starred.
+  - **Yours**: your [member photo](#a-members-own-photo) and where it stands, then the
+    photos you added, waiting ones included and marked. A team admin with no member row
+    has the photos their login added.
+  - Team admins keep Members, No photo, and Waiting after them.
+  - The lists show 50 a page, `?page=`.
+- **The view it opens on.** `/photos` with no `?view=` opens Best of this year once the
+  team has an accepted photo. Until then it opens as before: Members for a team admin,
+  and Yours for a member. Every count's link names its view, so a link from another
+  page, such as Needs attention's to Waiting, never depends on it.
+- **The buttons.** On the views of members' photos, Ask for photos and Add a photo. On
+  the others, Add photos, for whoever may add to some activity. It opens
+  `/teams/:subdomain/photos/new` ([PhotoAddLive](../lib/web/live/photo_add_live.ex)),
+  narrow, which asks which activity: the ones `AddActivityPhotos.addable/3` lists,
+  newest first. For a member, the exercises and events they attended; for a team admin,
+  every one that has started. Picking one opens its Add photos page.
+- **Team admin actions**, on the photo's page: Edit photo, Feature or Stop featuring,
+  Download original, and Delete photo, behind a confirm.
+- **Take-downs.** Anyone in a photo can ask a team admin to remove it. Delete photo is
+  that ([DeleteActivityPhoto](../lib/app/operation/delete_activity_photo.ex)): the
+  files go first, then the row, and its stars with it, for good. Deleting the photos
+  that wait on a tab goes through the same operation.
+- **Deleting a team** takes the stars with the photos, and a restore leaves both out
+  (`DeleteTeam.file_tables/0`).
+
+## Asking everyone who attended
+
+A team admin asks everyone who attended an activity for their photos (#1032, part 7).
+Each gets an email whose button opens Add photos for that activity, as them, with no
+login. It reuses [Asking for a photo](#asking-for-a-photo)'s page, job, and link.
+Nothing asks by itself: a team admin asks, and asks again later.
+
+- **The button.** Ask for photos, beside Add photos on the activity's Photos tab, for
+  team admins, once the activity has started (`AskForActivityPhotos.askable?/3`).
+  Under the heading, "Asked 10 members on Nov 9, 2026.": how many the last send
+  asked, and when (`ActivityPhotoAsk.last/1`, pure).
+- **The page**, `/teams/:subdomain/activities/:id/photos/ask`
+  ([ActivityPhotoAskLive](../lib/web/live/activity_photo_ask_live.ex)): who gets an
+  email, who attended and gets none and why (Added photos, No email, Turned photo asks
+  off), an optional message of up to 300 characters, and Ask 10 members.
+- **Who is asked** is [AskForActivityPhotos.plan/4](../lib/app/operation/ask_for_activity_photos.ex),
+  pure: the team's current members on the activity who attended
+  (`Attendance.attended/2`), are not retiring, have added no photo to it, waiting ones
+  included, have an email, and take these emails. Asking again later reaches whoever
+  still has added none.
+- **The ask** is an `activity_photo_asks` row,
+  [ActivityPhotoAsk](../lib/app/model/activity_photo_ask.ex): one per member and
+  activity, with who asked, when, and the message. Asking again moves its date. It
+  never closes.
+- **The email** is one `SendPhotoAskWorker` job per ask, as for a member photo, queued in
+  the ask's transaction: "Photos from Swiftwater training?", from SAR Duty, with the team
+  admin who asked as Reply-To under the team's name. The job sends nothing to a member
+  who turned the emails off since, has no email, or may no longer add.
+- **The link** is `/photos/activities/:token` (`Web.PhotoAskLinks.activity_path/1`): Add
+  photos for that activity as the member asked, with no login, on a team with member
+  logins off too. It works for 30 days from its email, as often as the member likes:
+  photos turn up on other phones for days. It stops early when the member may no longer
+  add (`AskForActivityPhotos.may_add?/2`): the team has no activity photos, the activity
+  stopped taking them, or the member left, is retiring, or no longer attended. Photos
+  added through it are the member's and wait for a team admin, with no login on the row.
+- **Photo asks**, a switch in account settings beside Invitation reminders, for each
+  team with activity photos: `members.photo_asks`, the member's own, never from the
+  team's records. Off, they get no ask for activity photos. An ask for their member
+  photo still comes: the team needs that one.
+
+## Edit photo
+
+Most photos never need cropping. They need to be upright and not muddy. A team admin
+fixes an accepted photo on one page (#1032, part 8), and **the original is never
+changed**.
+
+- **The page**, `/teams/:subdomain/photos/:id/edit`
+  ([ActivityPhotoEditLive](../lib/web/live/activity_photo_edit_live.ex)), for team
+  admins, on the certificate review layout a member photo is checked on. A waiting
+  photo opens its activity's Photos tab with "Accept the photo first.".
+- **The tools.** Rotate left and Rotate right, in quarter turns; Straighten, from −10°
+  to 10° in steps of 0.5°; and Clean up, a switch, while
+  [Clean up](#clean-up) is available. No crop, and no sliders for light or colour: the
+  photo keeps its shape until it is exported.
+- **What it shows.** The photo as the team will see it, under a grid to straighten
+  against, and the photo as taken beside it. The browser turns and zooms the original
+  with CSS, so nothing is made until Save. Clean up is the one change it cannot draw:
+  turning the switch on fetches the cleaned-up photo once, in `start_async`
+  (`EditActivityPhoto.preview/1`), and the turns apply to it the same way.
+- **What is saved** is settings on the row: `turns`, `angle`, and `clean_up`, with
+  `edited_by_user` and `edited_at`. Never a new original. One edit, or none: saving
+  replaces the last, and there is no history.
+  [EditActivityPhoto](../lib/app/operation/edit_activity_photo.ex) makes the copies to
+  show and for tiles again from the original.
+- **The plan** is `Service.ActivityPhoto.plan/2`, pure: the quarter turns, then the
+  angle with the cut that leaves no empty corners (`cut_scale/2`, at the photo's own
+  shape), then Clean up. `edit/3` does it at full size, shrinks it to the copy to show,
+  and hands that to Clean up, then makes the tile from the result.
+- **Clean up** uses the same adapter as member photos, with the kind `:activity`. For
+  this kind the function will level the horizon and fix the light and colour. The
+  stand-in stretches the light to its full range and the colour a little, so dev shows
+  a change. When it does not answer, the photo saves without it, `clean_up` false, and
+  the toast says "Clean up did not answer. The photo is saved without it."
+- **The photo's page** gets Edit photo first in Actions, and once edited, "Edited by
+  Alex Chen, Nov 12, 2026" under the photo, with Revert to original for team admins.
+  Revert clears the settings and makes the copies again as they came.
+- **Download original** still gives the original, unedited. A page holds the edited
+  shape: `ActivityPhoto.shown_size/1` turns the original's size.
+- **Files' URLs** carry `updated_at`, and saving always moves it, so no browser keeps the
+  old copies.
+
+## Export for a post
+
+<!-- cspell:ignore Canva -->
+
+Whoever posts for the team takes a copy of a photo in the shape the post needs (#1032,
+part 9). Nothing is saved: not the box, not the export, and **the photo does not
+change**.
+
+- **The page**, `/teams/:subdomain/photos/:id/export`
+  ([ActivityPhotoExportLive](../lib/web/live/activity_photo_export_live.ex)), for team
+  admins, from the photo's Actions, on the certificate review layout. Only for an
+  accepted photo the team may post: on one it may not, the action is greyed with
+  "Cameron did not give permission to post this photo.", and the page opens the photo's
+  page with the same words.
+- **The shapes** are `Service.PhotoExport.shapes/0`: Square 1:1 at 1080 × 1080,
+  Portrait 4:5 at 1080 × 1350, Landscape 16:9 at 1920 × 1080, Story 9:16 at
+  1080 × 1920, and Original, the photo as edited at its own size. Square is picked at
+  the start.
+- **The box** is Add a photo's PhotoPlace hook, with `data-ratio` for the shape: the
+  photo moves under a frame of the post's shape, with lines in thirds. It fills
+  `photo[x]`, `photo[y]`, and `photo[side]`, where `side` is a share of the largest box
+  of that shape the photo holds. A new shape starts a new box.
+- **The crop** is `Service.PhotoExport.crop/3`, pure: the shape, the box, and the
+  photo's size in; the crop and the size it downloads at out. The box keeps the shape
+  and stays inside the photo. It downloads at the shape's size, or smaller at the same
+  shape when the box has fewer pixels: never enlarged.
+- **Download JPEG** is a plain GET of the page's form to `/photos/:id/export/file`
+  (`ActivityPhotoController.export`), so the browser saves the file and the page stays.
+  [ExportActivityPhoto](../lib/app/operation/export_activity_photo.ex) starts from the
+  photo as edited: the original at its full size with the turns and the straightened
+  cut, or, with Clean up on, the cleaned-up copy to show, up to 2048 px, the only copy
+  Clean up made. The JPEG has no location or camera data.
+- **The caption**, with its copy button: "{caption} Photo: {name}", or "Photo: {name}"
+  with no caption, by who added it (`Web.ActivityPhoto.post_caption/3`).
+
+- **Not here**: text on the image, filters, and blurring belong in Canva. A photo that
+  needs a face blurred gets deleted. There is no record of each export, no role for
+  members who post, and no video.

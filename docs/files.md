@@ -40,10 +40,11 @@ Only `FileStore.key/5` makes a key. A string that starts a key anywhere else fai
 
 ## Kinds
 
-| Kind               | Owner  | What                               | Lifecycle                         |
-| ------------------ | ------ | ---------------------------------- | --------------------------------- |
-| `logo`             | `orgs` | An organization's logo, `logo.png` | Kept; replaced by a new upload    |
-| `integration-test` | `site` | Adminland's Files test             | `expires=2d`; the test deletes it |
+| Kind               | Owner   | What                                                  | Lifecycle                         |
+| ------------------ | ------- | ----------------------------------------------------- | --------------------------------- |
+| `logo`             | `orgs`  | An organization's logo, `logo.png`                    | Kept; replaced by a new upload    |
+| `activity-photos`  | `teams` | An activity photo: `original`, `show`, `tile` (#1032) | Kept; deleted with the photo      |
+| `integration-test` | `site`  | Adminland's Files test                                | `expires=2d`; the test deletes it |
 
 Coming, each in its own PR: activity photos and videos, member photos waiting for a
 check (`expires=14d`), certificates, letters, forms, equipment photos, imports and

@@ -68,6 +68,34 @@ defmodule Web.AccountLiveTest do
     assert Repo.reload(member).invitation_reminders
   end
 
+  test "a photo asks switch beside it, on a team with activity photos (#1034)", %{conn: conn} do
+    %{member: member, user: user} = member_with_login_fixture()
+    id = "#photo-asks-#{member.team.subdomain}"
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/account")
+    refute has_element?(lv, id)
+
+    member.team |> Ecto.Changeset.change(photos_enabled: true) |> Repo.update!()
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/account")
+
+    assert has_element?(lv, "label[for=#{String.trim_leading(id, "#")}]", ~r/^\s*Photo asks\s*$/)
+
+    assert has_element?(
+             lv,
+             "#emails",
+             "Emails from a team admin asking for your photos from an activity."
+           )
+
+    assert has_element?(lv, "#{id}[checked]")
+
+    lv |> element(id) |> render_click()
+    refute Repo.reload(member).photo_asks
+    assert Repo.reload(member).invitation_reminders
+    refute has_element?(lv, "#{id}[checked]")
+
+    lv |> element(id) |> render_click()
+    assert Repo.reload(member).photo_asks
+  end
+
   test "names the team when the user logs in to several", %{conn: conn} do
     %{member: member, user: user} = member_with_login_fixture()
     other = member_logins_team_fixture(%{name: "Other SAR"})
