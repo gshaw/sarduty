@@ -21,6 +21,7 @@ defmodule Web.FormCancelTest do
     "lib/web/live/demo_live.ex" => "trying a demo has no page to go back to",
     "lib/web/live/endorsement_collection_live.ex" => "ID card ticks saved on the list",
     "lib/web/live/member_card_live.ex" => "ID card actions on the member's tab",
+    "lib/web/live/member_photo_check_live.ex" => "accept and decline on the photo's check page",
     "lib/web/live/member_qualifications_live.ex" => "awards on the member's tab",
     "lib/web/live/member_standing_live.ex" => "away periods and check-ins on the member's tab",
     "lib/web/live/org/admins_live.ex" => "organization settings tab",

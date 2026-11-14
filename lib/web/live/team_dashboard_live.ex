@@ -15,10 +15,12 @@ defmodule Web.TeamDashboardLive do
   alias App.Model.Chore
   alias App.Model.Member
   alias App.Model.MemberCard
+  alias App.Model.MemberPhoto
   alias App.Model.SignRequest
   alias App.Model.Team
   alias App.Model.Trip
   alias App.Model.WhiteboardNote
+  alias App.Operation.AskForPhoto
   alias App.Operation.AskToSign
   alias App.Operation.SnoozeAttentionItem
   alias App.ViewData.ActivityTravel
@@ -131,26 +133,44 @@ defmodule Web.TeamDashboardLive do
     in_wallet? = card != nil and MemberCard.in_wallet?(card)
     qualifications = MemberRecords.qualifications(member, now)
 
-    chores =
-      if Team.chores?(member.team),
-        do: Chore.get_all_for_member(member, status: :declined),
-        else: []
-
-    certificates =
-      if Team.certificates?(member.team),
-        do: Certificate.get_open_for_member(member),
-        else: []
-
     assign(socket,
       to_do:
         MemberToDo.items(
           card,
           in_wallet?,
           qualifications,
-          [chores: chores, certificates: certificates, sign: sign(member, member.team, now)] ++
-            travel(member, now)
+          [
+            chores: declined_chores(member),
+            certificates: open_certificates(member),
+            sign: sign(member, member.team, now)
+          ] ++ photos(member, now) ++ travel(member, now)
         )
     )
+  end
+
+  defp declined_chores(member) do
+    if Team.chores?(member.team),
+      do: Chore.get_all_for_member(member, status: :declined),
+      else: []
+  end
+
+  defp open_certificates(member) do
+    if Team.certificates?(member.team),
+      do: Certificate.get_open_for_member(member),
+      else: []
+  end
+
+  # A team admin's ask for a photo (#1030), until one is added, and the photo they added
+  # that a team admin declined (#1029), until they add another.
+  defp photos(%{team: team} = member, now) do
+    if Team.photos?(team) do
+      [
+        photo_ask: AskForPhoto.open_for(team, member, now),
+        declined_photo: MemberPhoto.declined_for_member(member)
+      ]
+    else
+      []
+    end
   end
 
   # The forms a team admin asked the member to sign that still ask them (#993).
@@ -614,6 +634,9 @@ defmodule Web.TeamDashboardLive do
 
   defp attention_path(team, %{key: :certificates}), do: ~p"/teams/#{team}/certificates"
 
+  defp attention_path(team, %{key: :photos}),
+    do: Web.PhotoCollectionLive.view_path(team, :waiting)
+
   defp attention_path(team, %{key: key}) when key in [:chores, :chores_to_send],
     do: ~p"/teams/#{team}/chores"
 
@@ -756,6 +779,34 @@ defmodule Web.TeamDashboardLive do
         many: "%d of your certificates were declined"
       )}</.a>
       <span class="hint block">{declined_certificate_hint(@item.certificates)}</span>
+    </li>
+    """
+  end
+
+  defp to_do_item(%{item: %{key: :photo_ask}} = assigns) do
+    ~H"""
+    <li id="to-do-photo-ask" class="py-3">
+      <.a
+        navigate={Web.PhotoCollectionLive.add_path(@team, nil)}
+        class="font-semibold"
+      >Add a photo for your ID card</.a>
+      <span class="hint block">
+        {if @item.ask.message,
+          do: "#{@item.asked_by} asked: “#{@item.ask.message}”",
+          else: "#{@item.asked_by} asked."}
+      </span>
+    </li>
+    """
+  end
+
+  defp to_do_item(%{item: %{key: :declined_photo}} = assigns) do
+    ~H"""
+    <li id="to-do-declined-photo" class="py-3">
+      <.a
+        navigate={Web.PhotoCollectionLive.add_path(@team, nil)}
+        class="font-semibold"
+      >Your photo was declined: {Web.MemberPhoto.reason(@item.photo)}</.a>
+      <span class="hint block">Add another.</span>
     </li>
     """
   end

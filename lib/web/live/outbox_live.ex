@@ -80,7 +80,7 @@ defmodule Web.OutboxLive do
       </p>
       <p class="max-w-3xl mb-6">
         Ask for a reply or send an update from an activity, remove a member, or email a tax credit
-        letter or an ID card, and the message shows up here at once, one for each member.
+        letter or an ID card, or ask for a photo, and the message shows up here at once, one for each member.
         Its links work: open a reminder's reply link to answer as that member.
       </p>
       <.outbox_list

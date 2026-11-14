@@ -55,18 +55,7 @@ defmodule Service.CertificateFile do
 
   @doc "What the file is, from its first bytes: `:pdf`, `:image`, `:heic`, or `:unknown`."
   def type(<<"%PDF-", _rest::binary>>), do: :pdf
-  def type(<<0xFF, 0xD8, 0xFF, _rest::binary>>), do: :image
-  def type(<<0x89, "PNG", _rest::binary>>), do: :image
-  def type(<<"GIF8", _rest::binary>>), do: :image
-  # cspell:ignore webp -- the WebP image type's signature
-  def type(<<"RIFF", _size::binary-size(4), "WEBP", _rest::binary>>), do: :image
-
-  # cspell:ignore ftyp heic heix hevc hevx heim heis -- HEIF file brands
-  def type(<<_size::binary-size(4), "ftyp", brand::binary-size(4), _rest::binary>>)
-      when brand in ["heic", "heix", "hevc", "hevx", "mif1", "msf1", "heim", "heis"],
-      do: :heic
-
-  def type(_bytes), do: :unknown
+  def type(bytes), do: Service.Image.kind(bytes)
 
   defp jpeg_name(file_name) do
     case Path.rootname(file_name || "") do

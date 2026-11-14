@@ -14,6 +14,7 @@ defmodule Web.Components.MemberSidebar do
   alias App.Model.EquipmentItem
   alias App.Model.Member
   alias App.Model.Standing
+  alias App.Model.Team
   alias App.ViewData.MemberMilestones
   alias Service.Format
   alias Web.Components.MilestoneList
@@ -78,9 +79,7 @@ defmodule Web.Components.MemberSidebar do
       id="member-head"
       class="mb-6"
       name={@member.name}
-      photo={
-        ~p"/teams/#{@member.team}/members/#{@member.id}/image?#{[v: Member.photo_version(@member)]}"
-      }
+      photo={Web.MemberPhoto.path(@member.team, @member)}
       standing={@standing}
       facts={facts(@member, @last_attended_at, @member.team.timezone)}
     >
@@ -151,6 +150,14 @@ defmodule Web.Components.MemberSidebar do
             id="member-actions-change-fields"
             navigate={~p"/teams/#{@member.team}/members/#{@member.id}/fields/edit"}
           >Change fields</.a>
+        </li>
+        <%!-- For a new one (#1030). A member with no photo is asked from their ID Card
+          tab. --%>
+        <li :if={Team.photos?(@member.team) and @member.has_photo}>
+          <.a
+            id="member-actions-ask-photo"
+            navigate={Web.PhotoAskLive.path(@member.team, @member)}
+          >Ask for a photo</.a>
         </li>
         <li :if={!D4H.records?(@member.team)}>
           <.a external={true} href={D4H.member_url(@member)}>Open in {D4H.service_name(@member.team)}</.a>

@@ -13,7 +13,6 @@ defmodule Web.MeLive do
   alias App.Model.Chore
   alias App.Model.CustomField
   alias App.Model.EquipmentItem
-  alias App.Model.Member
   alias App.Model.MemberCard
   alias App.Model.Standing
   alias App.Model.TaxCreditLetter
@@ -120,7 +119,7 @@ defmodule Web.MeLive do
     <.person_head
       id="member-head"
       name={@member.name}
-      photo={~p"/teams/#{@team}/members/#{@member}/image?#{[v: Member.photo_version(@member)]}"}
+      photo={Web.MemberPhoto.path(@team, @member)}
       standing={@standing}
       facts={facts(@member, @last_attended_at, @team.timezone)}
     />

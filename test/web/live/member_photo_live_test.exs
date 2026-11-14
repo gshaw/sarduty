@@ -59,7 +59,7 @@ defmodule Web.MemberPhotoLiveTest do
       # version, so the page loads the new photo past the one the browser kept.
       saved = Repo.reload!(admin)
       assert saved.has_photo
-      assert Member.photo_version(saved) > Member.photo_version(admin)
+      assert %DateTime{} = saved.photo_changed_at
     end
 
     test "a team admin removes a photo", %{conn: conn, team: team, admin: admin} do
@@ -117,8 +117,7 @@ defmodule Web.MemberPhotoLiveTest do
       member = member_fixture(team, %{has_photo: false})
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/photo")
 
-      version = Member.photo_version(member)
-      photo = ~p"/teams/#{team}/members/#{member.id}/image?v=#{version}"
+      photo = ~p"/teams/#{team}/members/#{member.id}/image"
       original = ~p"/teams/#{team}/members/#{member.id}/image/original"
       assert has_element?(lv, ~s|#member-photo-image[src="#{photo}"]|)
       assert has_element?(lv, ~s|#download-photo[href="#{original}"]|)

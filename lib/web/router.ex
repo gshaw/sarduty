@@ -231,7 +231,8 @@ defmodule Web.Router do
   end
 
   # A reminder email's links (#444): replying, and turning reminders off. An ID card
-  # email's link (#952): the card's page, and its passes. No login. The token is the
+  # email's link (#952): the card's page, and its passes. An ask for a photo's link
+  # (#1030). No login. The token is the
   # key, so they stay out of search.
   scope "/", Web do
     pipe_through [:browser, :noindex]
@@ -242,6 +243,8 @@ defmodule Web.Router do
       live "/replies/:token", ReplyLinkLive
       live "/reminders/:token", InvitationRemindersLive
       live "/cards/:token", CardLinkLive
+      # An ask for a photo's link (#1030): Add a photo for the member asked.
+      live "/photos/:token", MemberPhotoFormLive
     end
 
     # The card page's badges: each builds its pass on the tap.
@@ -443,6 +446,13 @@ defmodule Web.Router do
       live "/teams/:subdomain/qualifications/:id/edit", TitledRecordFormLive, :edit_qualification
 
       live "/teams/:subdomain/milestones", MilestoneCollectionLive
+      # Photos (#1028). A member's photo is under /photos/members, which leaves
+      # /photos/:id for an activity's. `:id` is a photo a member added, which a team
+      # admin checks (#1029).
+      live "/teams/:subdomain/photos", PhotoCollectionLive
+      live "/teams/:subdomain/photos/members/new", MemberPhotoFormLive
+      live "/teams/:subdomain/photos/members/ask", PhotoAskLive
+      live "/teams/:subdomain/photos/members/:id", MemberPhotoCheckLive
       live "/teams/:subdomain/certificates", CertificateCollectionLive
       live "/teams/:subdomain/certificates/new", CertificateFormLive, :new
       live "/teams/:subdomain/certificates/:id", CertificateLive
@@ -516,6 +526,7 @@ defmodule Web.Router do
       get "/members/:id/image", MemberController, :image
       get "/members/:id/image/original", MemberController, :original_image
       get "/certificates/:id/file", CertificateController, :file
+      get "/photos/members/:id/file", MemberPhotoController, :file
     end
 
     scope "/teams/:subdomain" do

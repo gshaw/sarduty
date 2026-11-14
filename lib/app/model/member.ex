@@ -56,6 +56,9 @@ defmodule App.Model.Member do
     # good; nil while it works. Set and cleared only by App.Mailer, and cleared when the
     # email changes (docs/external-services.md#email-problems).
     field :email_problem, Ecto.Enum, values: Keyword.keys(@email_problems)
+    # When SAR Duty last set or removed their photo (#1028). The photo's URL carries it,
+    # so a browser that cached the old photo loads the new one. Nil until then.
+    field :photo_changed_at, :utc_datetime
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -117,13 +120,6 @@ defmodule App.Model.Member do
     |> select([m], fragment("trim(?)", m.position))
     |> Repo.all()
   end
-
-  @doc """
-  The `v` on the member's photo URL, so a browser that kept the photo for its hour loads
-  a new one at once: SetMemberPhoto moves `updated_at` (#1028).
-  """
-  def photo_version(%{updated_at: %DateTime{} = at}), do: DateTime.to_unix(at, :microsecond)
-  def photo_version(_member), do: 0
 
   @doc "The first word of the member's name, for a line that speaks of them."
   def first_name(%{name: name}), do: name |> String.split(" ", parts: 2) |> hd()
@@ -258,6 +254,19 @@ defmodule App.Model.Member do
   def counted_dynamic,
     do:
       dynamic([m], not m.not_a_person and m.id not in subquery(Standing.all_retiring_ids_query()))
+
+  @doc """
+  The team's current members SAR Duty counts, A to Z by name: who Photos shows and Add a
+  photo lists (#1028).
+  """
+  def get_all_counted(%Team{id: team_id}, now) do
+    Member
+    |> where([m], m.team_id == ^team_id)
+    |> counted_query()
+    |> current_query(now)
+    |> order_by([m], asc: fragment("lower(?)", m.name), asc: m.id)
+    |> Repo.all()
+  end
 
   @doc "Pure. counted_query/1 for one current member, given the team's retiring ids."
   def counted?(%Member{} = member, retiring_ids),

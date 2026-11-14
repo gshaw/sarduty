@@ -61,7 +61,8 @@ team only those fields (`ApplyEdit.d4h_takes?/1`). A D4H team's form has no Team
 box or Mark as retired: D4H sets access and leaving in its web app, and Retiring is its
 own steps ([Retiring](#retiring)). Adding a member is a Records team's only
 ([records.md](records.md#editing-records)). The photo is its own page, Change photo
-([below](#changing-a-members-photo)).
+([below](#changing-a-members-photo)); with Photos on, Add a photo sets one too
+([photos.md](photos.md)).
 
 - **Role** is D4H's free-text `position`, so teams drift: South Fraser had 45 roles
   across 93 members. Role is the combobox with `free_text`: it lists the team's roles,
@@ -462,8 +463,10 @@ The team's Dashboard, `/teams/:subdomain`
 - **For you to do** comes from [MemberToDo](../lib/app/view_data/member_to_do.ex), pure:
   each form a team admin asked you to sign (#993, a team admin without a member login
   gets these too), add your ID card to Wallet (on a team with ID cards on, until
-  `MemberCard.in_wallet?/1`), and each qualification expiring within 60 days (until it's
-  renewed). Each leaves once done. A tax credit letter isn't one: its email carries the
+  `MemberCard.in_wallet?/1`), each qualification expiring within 60 days (until it's
+  renewed), a team admin's ask for a photo (#1030, until one is added:
+  [photos.md](photos.md#asking-for-a-photo)), and a photo of theirs a team admin declined
+  (#1029, until they add another: [photos.md](photos.md#a-members-own-photo)). Each leaves once done. A tax credit letter isn't one: its email carries the
   PDF, and a member with no email shows in Needs attention until one is added. With nothing to do, the card
   says so in one line.
 - `"refresh"` is a team admin's event: the team pages' hook refuses it from a member

@@ -9,20 +9,19 @@ defmodule App.Operation.SetMemberPhoto do
   Duty doesn't. Pages and passes read D4H's smaller PREVIEW size. Then
   `has_photo` is set with no download, the member's card goes to their phones again
   (RefreshMemberCard), and Every member gets a card makes theirs the moment a first photo
-  is saved (#1012). A photo removed leaves a card already out.
+  is saved (#1012). A photo removed leaves a card already out. `photo_changed_at`
+  moves, so pages load the new photo at once (Web.MemberPhoto.path/2).
   """
-
-  import Ecto.Query
 
   alias App.Accounts.User
   alias App.Model.ChangeSetRow
   alias App.Model.Member
+  alias App.Model.PhotoAsk
   alias App.Model.Team
   alias App.Operation.ApplyEdit
   alias App.Operation.CheckMemberPhoto
   alias App.Operation.IssueEveryMemberCard
   alias App.Operation.RefreshMemberCard
-  alias App.Repo
 
   @side 2400
 
@@ -32,8 +31,9 @@ defmodule App.Operation.SetMemberPhoto do
     with {:ok, bytes} <- to_jpeg(bytes),
          {:ok, _d4h_member_id} <-
            ApplyEdit.call(team, user, plan(member, bytes), now, photo: bytes) do
-      member = CheckMemberPhoto.store(member, bytes != nil)
-      touch(member, now)
+      member = CheckMemberPhoto.store(member, bytes != nil, now)
+      # A photo set answers a team admin's ask for one (#1030).
+      if bytes, do: PhotoAsk.close_for_member(member, now)
       RefreshMemberCard.resend(team, member, now)
       IssueEveryMemberCard.call(team, now)
       :ok
@@ -58,14 +58,6 @@ defmodule App.Operation.SetMemberPhoto do
       old_value: %{},
       new_value: %{"size" => byte_size(bytes)}
     }
-  end
-
-  # Pages load the photo with `updated_at` as its version (Member.photo_version/1), and a
-  # browser keeps it an hour, so this makes them load the new one at once.
-  defp touch(%Member{id: id}, now) do
-    Member
-    |> where([m], m.id == ^id)
-    |> Repo.update_all(set: [updated_at: DateTime.truncate(now, :microsecond)])
   end
 
   defp to_jpeg(nil), do: {:ok, nil}
