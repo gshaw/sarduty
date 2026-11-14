@@ -69,7 +69,6 @@ defmodule Web.Settings.TeamLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
     assert has_element?(lv, "#team-contact-#{sam.id}", "sam@example.com")
-    assert has_element?(lv, "#team-contacts", "Get help lists them for members.")
 
     assert has_element?(
              lv,

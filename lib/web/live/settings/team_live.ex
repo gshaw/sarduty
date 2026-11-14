@@ -155,7 +155,6 @@ defmodule Web.Settings.TeamLive do
             </span>
           </li>
         </ul>
-        <p :if={@contacts != []} class="hint">Get help lists them for members.</p>
       </dd>
     </dl>
     <dl id="team-actions-section">
