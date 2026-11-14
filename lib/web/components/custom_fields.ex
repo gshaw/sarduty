@@ -13,7 +13,7 @@ defmodule Web.Components.CustomFields do
   # shows them.
 
   attr :id, :string, required: true
-  attr :title, :string, required: true
+  attr :title, :string, default: nil, doc: "the heading; none when the page gives one"
   attr :rows, :list, required: true
   attr :class, :string, default: "mt-8"
 
@@ -23,7 +23,7 @@ defmodule Web.Components.CustomFields do
 
     ~H"""
     <section :if={@rows != []} id={@id} class={@class}>
-      <h2 class="heading">{@title}</h2>
+      <h2 :if={@title} class="heading">{@title}</h2>
       <div :for={{bundle, rows} <- @groups} id={group_id(@id, bundle)}>
         <h3 :if={bundle} class="subheading mt-6">{bundle.title}</h3>
         <dl class="measure">
@@ -123,6 +123,10 @@ defmodule Web.Components.CustomFields do
     default: false,
     doc: "a draft incident's: a required one left empty is tagged Missing"
 
+  attr :bundle_tag, :string,
+    default: "h2",
+    doc: "each bundle's heading, h4 under a page's own h3 such as Your membership's"
+
   @doc """
   A record's fields as inputs on its Change fields page (#705), each as its type's input,
   named `fields[<D4H field id>]`, each bundle's under its title. On an activity a
@@ -135,13 +139,14 @@ defmodule Web.Components.CustomFields do
 
     ~H"""
     <%= for {{bundle, fields}, index} <- Enum.with_index(@groups) do %>
-      <h2
+      <.dynamic_tag
         :if={bundle}
+        tag_name={@bundle_tag}
         id={"custom-field-bundle-#{bundle.d4h_bundle_id}"}
-        class={["heading", index > 0 && "mt-8"]}
+        class={[if(@bundle_tag == "h2", do: "heading", else: "subheading"), index > 0 && "mt-8"]}
       >
         {bundle.title}
-      </h2>
+      </.dynamic_tag>
       <.custom_input
         :for={field <- fields}
         field={field}

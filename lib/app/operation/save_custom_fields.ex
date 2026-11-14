@@ -104,6 +104,18 @@ defmodule App.Operation.SaveCustomFields do
   `:unchanged`. Only the values that differ go, as `custom_values`, nil to clear one.
   """
   def plan(record, custom_fields, params) do
+    case changes(record, custom_fields, params) do
+      :unchanged -> :unchanged
+      {old, new} -> row(record, %{"custom_values" => old}, %{"custom_values" => new})
+    end
+  end
+
+  @doc """
+  The values of `custom_fields` the form's `params` change on `record`, as `{old, new}`
+  maps by D4H field id, or `:unchanged`. A member's own Save details sends them on its
+  row too (App.Operation.SaveOwnDetails).
+  """
+  def changes(record, custom_fields, params) do
     current = record.custom_values || %{}
 
     changed =
@@ -111,12 +123,9 @@ defmodule App.Operation.SaveCustomFields do
       |> custom_values(params)
       |> Map.reject(fn {id, value} -> current[id] == value end)
 
-    if changed == %{} do
-      :unchanged
-    else
-      old = Map.new(changed, fn {id, _value} -> {id, current[id]} end)
-      row(record, %{"custom_values" => old}, %{"custom_values" => changed})
-    end
+    if changed == %{},
+      do: :unchanged,
+      else: {Map.new(changed, fn {id, _value} -> {id, current[id]} end), changed}
   end
 
   defp row(%Activity{} = activity, old, new) do

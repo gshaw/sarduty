@@ -22,6 +22,10 @@ defmodule Web.MeDetailsLive do
   # shows its form, even after a reload. Members don't change their email here; team
   # admins do, in D4H. A team admin viewing as the member (#425) sees the page with saving
   # turned off. Invitation reminders are in account settings.
+  #
+  # Member fields (#1056) are in the same form: the ones D4H sets to `editable` are
+  # inputs, saved with Save details on the same row; the `viewable` ones are read only
+  # under them. A key that can't fill in fields shows them all read only.
   def mount(_params, session, socket) do
     member = socket.assigns.current_member
     socket = assign(socket, :member, member)
@@ -29,7 +33,7 @@ defmodule Web.MeDetailsLive do
     socket =
       socket
       |> assign(:page_title, "Contact details")
-      |> assign(:field_rows, own_field_rows(member))
+      |> assign_fields(member)
       |> assign(:client_ip, session["client_ip"])
       |> assign(:user_agent, get_connect_info(socket, :user_agent))
       |> assign(:text_login?, Accounts.text_login?())
@@ -56,7 +60,9 @@ defmodule Web.MeDetailsLive do
     assign(socket, form_data: form, form: to_form(changeset, as: "details"))
   end
 
-  def handle_event("validate", %{"details" => params}, socket) do
+  def handle_event("validate", %{"details" => params} = all, socket) do
+    socket = keep_field_values(socket, all)
+
     changeset =
       socket.assigns.form_data
       |> MemberDetailsViewModel.changeset(params)
@@ -65,8 +71,11 @@ defmodule Web.MeDetailsLive do
     {:noreply, assign(socket, form: to_form(changeset, as: "details"))}
   end
 
-  def handle_event("save", %{"details" => params}, socket),
-    do: {:noreply, with_login(socket, &save(socket, &1, params))}
+  def handle_event("save", %{"details" => params} = all, socket) do
+    socket = keep_field_values(socket, all)
+    fields = all["fields"] || %{}
+    {:noreply, with_login(socket, &save(socket, &1, params, fields))}
+  end
 
   def handle_event("send", %{"phone" => %{"phone" => input}}, socket) do
     %{client_ip: ip} = socket.assigns
@@ -136,11 +145,11 @@ defmodule Web.MeDetailsLive do
     end
   end
 
-  defp save(socket, member, params) do
+  defp save(socket, member, params, fields) do
     %{current_user: user, form_data: form} = socket.assigns
 
     with {:ok, values} <- MemberDetailsViewModel.validate(form, params),
-         values = MemberDetailsViewModel.to_values(values),
+         values = values |> MemberDetailsViewModel.to_values() |> Map.put("fields", fields),
          {:ok, _result} <- SaveOwnDetails.call(member, user, values, DateTime.utc_now()) do
       socket
       |> put_flash(:info, "Your contact details are saved.")
@@ -154,14 +163,27 @@ defmodule Web.MeDetailsLive do
     end
   end
 
-  # The member fields D4H lets a member see (#681), read only.
-  defp own_field_rows(member) do
-    team = member.team
+  # The member fields D4H lets a member see (#681): the ones they change as inputs, and
+  # the rest read only.
+  defp assign_fields(socket, member) do
+    editable = SaveOwnDetails.fields(member)
+    ids = MapSet.new(editable, & &1.id)
 
-    team.id
-    |> CustomField.member_fields(:self)
-    |> CustomField.rows(member.custom_values, team.timezone)
+    read_only =
+      member.team_id
+      |> CustomField.member_fields(:self)
+      |> Enum.reject(&MapSet.member?(ids, &1.id))
+
+    assign(socket,
+      editable_fields: editable,
+      field_values: member.custom_values || %{},
+      field_rows: CustomField.rows(read_only, member.custom_values, member.team.timezone)
+    )
   end
+
+  # Keeps what was typed when the page renders again, such as after D4H refuses.
+  defp keep_field_values(socket, params),
+    do: update(socket, :field_values, &Map.merge(&1, params["fields"] || %{}))
 
   def render(assigns) do
     ~H"""
@@ -217,6 +239,16 @@ defmodule Web.MeDetailsLive do
           ]}
         />
 
+        <section
+          :if={@editable_fields != [] or @field_rows != []}
+          id="member-fields"
+          class="mt-6"
+        >
+          <h3 class="subheading">Member fields</h3>
+          <.custom_field_inputs fields={@editable_fields} values={@field_values} bundle_tag="h4" />
+          <.custom_fields id="own-fields" rows={@field_rows} class="mt-6" />
+        </section>
+
         <.form_actions>
           <.button variant={:success} phx-disable-with="Saving…" disabled={@viewing_as != nil}>
             Save details
@@ -227,8 +259,6 @@ defmodule Web.MeDetailsLive do
       <p id="email-note" class="hint mt-8">
         Your email is {@member.email || "not set"}. Ask a team admin to change it.
       </p>
-
-      <.custom_fields id="own-fields" title="Member fields" rows={@field_rows} />
     </div>
     """
   end
