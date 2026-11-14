@@ -146,7 +146,8 @@ defmodule Web.MeFieldsLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/fields")
 
-    refute has_element?(lv, "#fields-form")
+    refute has_element?(lv, "#custom-field-630")
+    refute has_element?(lv, "#fields-form button", "Save fields")
     assert has_element?(lv, "#own-fields-630", "SF 12")
     assert has_element?(lv, "#own-fields-855", "1988")
   end
@@ -159,5 +160,39 @@ defmodule Web.MeFieldsLiveTest do
     member_fields(team, member)
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me")
     assert has_element?(lv, ~s{#change-fields[href="/teams/#{team.subdomain}/me/fields"]})
+  end
+
+  test "the team's fields, then its organization's, each in D4H's order with values in place",
+       %{conn: conn, team: team, member: member} do
+    member_fields(team, member)
+
+    custom_field_fixture(team, %{
+      d4h_custom_field_id: 900,
+      target: "member",
+      title: "Willingness to deploy",
+      owner_type: "Organisation",
+      owner_id: 77,
+      member_privacy: "editable"
+    })
+
+    custom_field_fixture(team, %{
+      d4h_custom_field_id: 631,
+      target: "member",
+      title: "Pager",
+      ordering: -1,
+      member_privacy: "viewable"
+    })
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/fields")
+
+    assert has_element?(lv, "#team-fields h2", team.name)
+    assert has_element?(lv, "#team-fields #team-fields-logo")
+    assert has_element?(lv, "#team-fields #own-fields-631", "None")
+    assert has_element?(lv, "#team-fields #custom-field-630")
+    assert has_element?(lv, "#organization-fields #custom-field-900")
+    refute has_element?(lv, "#team-fields #custom-field-900")
+
+    html = lv |> element("#team-fields") |> render()
+    assert :binary.match(html, "own-fields-631") < :binary.match(html, "custom-field-630")
   end
 end

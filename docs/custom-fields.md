@@ -193,11 +193,13 @@ values it sent, since the sync after the write may not read them back. History s
 
 D4H lets a member change their own answer to a member field set to `editable` (#1056
 step 2). On Your membership's Change fields, `/teams/:subdomain/me/fields`
-([MeFieldsLive](../lib/web/live/me_fields_live.ex)), each editable field is its type's
-input, the component a team admin's Change fields uses, and each viewable one is read
-only under them. A hidden one never shows. Your membership links to it only when the
+([MeFieldsLive](../lib/web/live/me_fields_live.ex)), the team's own fields come first,
+then its organization's, each under its name and logo, as on the Fields tab. Each keeps
+D4H's order: an editable field is its type's input, the component a team admin's Change
+fields uses, and a viewable one shows its value in place, or None. A hidden one never
+shows. Your membership links to it only when the
 team has fields a member sees. A key that can't fill in fields
-(`Team.d4h_can?(team, :field_values)` false) shows them all read only.
+(`Team.d4h_can?(team, :field_values)` false) shows them all as values, with no Save.
 
 Save fields sends the fields that changed on one `update_member` row, through
 [SaveOwnDetails](../lib/app/operation/save_own_details.ex), which reads the diff from `SaveCustomFields.changes/3`. The fields it reads are
