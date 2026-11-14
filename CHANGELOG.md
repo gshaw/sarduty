@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- Search finds every Team settings tab, and words like logo, access key, and time zone
+  find Team settings. Members find Your membership by card, phone, or address.
 - Team settings' General is now an overview of your team, with Change team, Change
   logo, Change team contacts, and Change access key as actions. Team admins is now
   Admins, and Access key is no longer a tab.

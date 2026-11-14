@@ -16,6 +16,7 @@ defmodule Web.Search do
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
   alias App.ViewData.Search
+  alias Web.Components.TeamSettingsTabs
   alias Web.UserAuth
 
   # The page each kind opens. Its `access` decides who finds the kind.
@@ -159,24 +160,49 @@ defmodule Web.Search do
     do: kind |> page_access() |> UserAuth.opens?(team_admin?, member?)
 
   # The side navigation's pages, each with the `words` that find it too, such as Get
-  # help's (#780), then for team admins Admins and Change team contacts (#1076), which
-  # isn't in the navigation.
+  # help's (#780), then for team admins Team settings' tabs, under "Team settings".
+  # General is the side navigation's Team settings, so it lends that link its words.
+  # Pages reached from a page, such as Change logo, are left out: their words find the
+  # page that holds them. Then Account settings, for everyone. See docs/search.md.
   defp pages(team, sections, team_admin?) do
+    tabs = if team_admin?, do: TeamSettingsTabs.list(team), else: []
+    words = Map.new(tabs, &{&1.path, &1.words})
+
     side =
-      for link <- List.flatten(sections),
-          do: %{id: link.key, title: link.label, path: link.path, words: link[:words] || []}
+      for link <- List.flatten(sections) do
+        %{
+          id: link.key,
+          title: link.label,
+          path: link.path,
+          words: (link[:words] || []) ++ Map.get(words, link.path, [])
+        }
+      end
 
-    settings = [
-      %{id: "admins", title: "Admins", path: ~p"/teams/#{team}/settings/admins", words: []},
+    Enum.concat([side, tab_pages(tabs, MapSet.new(side, & &1.path)), [account()]])
+  end
+
+  # Your own login and settings, the same on every team, from the account menu: found by
+  # what it holds, for everyone. Not "reminders", which a team admin means for an
+  # activity's.
+  defp account do
+    %{
+      id: "account",
+      title: "Account settings",
+      path: "/account",
+      words: ~w(account passkey passkeys maps apple google emails)
+    }
+  end
+
+  defp tab_pages(tabs, side_paths) do
+    for tab <- tabs, tab.path not in side_paths do
       %{
-        id: "team-contacts",
-        title: "Change team contacts",
-        path: ~p"/teams/#{team}/settings/contacts",
-        words: []
+        id: "settings-#{tab.key}",
+        title: tab.label,
+        path: tab.path,
+        words: tab.words,
+        line: "Team settings"
       }
-    ]
-
-    side ++ if(team_admin?, do: settings, else: [])
+    end
   end
 
   # A hit with where it opens, and a member's standing as the person searching sees it.

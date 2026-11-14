@@ -339,6 +339,8 @@ defmodule Web.Components.Search do
         end
       ])
 
+  # A Team settings tab says it is one, as "Members" is also the side navigation's.
+  defp line(:page, hit), do: hit[:line] || ""
   defp line(_kind, _hit), do: ""
 
   defp standing(:active), do: nil

@@ -3,6 +3,7 @@ defmodule Web.SearchTest do
 
   import App.DataFixtures
 
+  alias Web.Components.TeamSettingsTabs
   alias Web.Navigation
 
   @now ~U[2026-10-23 19:00:00Z]
@@ -113,22 +114,6 @@ defmodule Web.SearchTest do
       end
     end
 
-    test "contacts finds Change team contacts for team admins (#1076)" do
-      team = team_fixture()
-
-      assert [%{kind: :page, hits: [%{title: "Change team contacts", path: path}]}] =
-               search(team, "contacts", team_admin?: true, member?: false)
-
-      assert path == "/teams/#{team.subdomain}/settings/contacts"
-
-      assert [%{kind: :page, hits: [%{title: "Admins", path: admins}]}] =
-               search(team, "admins", team_admin?: true, member?: false)
-
-      assert admins == "/teams/#{team.subdomain}/settings/admins"
-
-      assert search(team, "contacts", team_admin?: false, member?: true) == []
-    end
-
     test "admin and report don't find it" do
       team = team_fixture()
 
@@ -137,6 +122,110 @@ defmodule Web.SearchTest do
           hit <- group.hits do
         refute hit.title == "Get help"
       end
+    end
+  end
+
+  describe "pages" do
+    @admin [team_admin?: true, member?: false]
+    @member [team_admin?: false, member?: true]
+
+    test "a team admin finds each Team settings tab by its name, under Team settings" do
+      team =
+        team_fixture()
+        |> Ecto.Changeset.change(member_logins: true, chores_enabled: true, mcp_enabled: true)
+        |> Repo.update!()
+
+      for tab <- TeamSettingsTabs.list(team), tab.key != :general do
+        hit = page_hit(team, tab.label, @admin, tab.path)
+        assert hit, "#{tab.label} isn't found"
+        assert hit.line == "Team settings"
+      end
+
+      # The tab and the side navigation's Members page are both found, the page first.
+      pages = team |> search("members", @admin) |> Enum.filter(&(&1.kind == :page))
+      assert [%{hits: [%{title: "Members", path: members}, %{title: "Members"} | _rest]}] = pages
+
+      assert members == "/teams/#{team.subdomain}/members"
+    end
+
+    test "Chore categories and Agents are found only when their tabs show" do
+      team = team_fixture()
+
+      refute page_hit(
+               team,
+               "chore categories",
+               @admin,
+               "/teams/#{team.subdomain}/settings/chore-categories"
+             )
+
+      refute page_hit(team, "agents", @admin, "/teams/#{team.subdomain}/settings/mcp")
+    end
+
+    # A Change page is a step from General, so its words find General (docs/search.md).
+    test "a Change page's words find Team settings, never the Change page" do
+      team = team_fixture()
+      settings = "/teams/#{team.subdomain}/settings"
+
+      for words <- [
+            "logo",
+            "access key",
+            "time zone",
+            "contacts",
+            "team contacts",
+            "address",
+            "legal name",
+            "token"
+          ] do
+        assert page_hit(team, words, @admin, settings), "#{words} doesn't find Team settings"
+      end
+
+      steps = for step <- ~w(edit logo contacts access-key), do: "#{settings}/#{step}"
+
+      for words <- ["change", "change team", "change logo", "logo", "contacts", "access key"],
+          group <- search(team, words, @admin),
+          hit <- group.hits do
+        refute hit.path in steps, "#{words} found #{hit.path}"
+      end
+    end
+
+    test "everyone finds Account settings by what it holds, not by reminders" do
+      team = team_fixture()
+
+      for who <- [@admin, @member],
+          words <- ["account", "account settings", "passkey", "maps", "apple", "emails"] do
+        assert page_hit(team, words, who, "/account"), "#{words} doesn't find Account settings"
+      end
+
+      refute page_hit(team, "reminders", @admin, "/account")
+    end
+
+    test "a member finds no Team settings tab" do
+      team = team_fixture()
+
+      for words <- ["admins", "features", "signer", "places", "logo", "access key", "time zone"],
+          group <- search(team, words, @member),
+          hit <- group.hits do
+        refute String.contains?(hit.path, "/settings"), "#{words} found #{hit.path}"
+      end
+    end
+
+    test "a member finds Your membership by what it shows and Change contact details" do
+      team = team_fixture()
+      me = "/teams/#{team.subdomain}/me"
+
+      for words <- [
+            "card",
+            "id card",
+            "phone",
+            "mobile",
+            "address",
+            "emergency contacts",
+            "contact details"
+          ] do
+        assert page_hit(team, words, @member, me), "#{words} doesn't find Your membership"
+      end
+
+      refute page_hit(team, "card", @admin, me)
     end
   end
 
@@ -205,6 +294,14 @@ defmodule Web.SearchTest do
              "/teams/#{team.subdomain}/members?q=ali+w&standing=all"
 
     assert Web.Search.more_path(:group, team, "x") == nil
+  end
+
+  defp page_hit(team, query, who, path) do
+    team
+    |> search(query, who)
+    |> Enum.find_value(fn group ->
+      group.kind == :page && Enum.find(group.hits, &(&1.path == path))
+    end)
   end
 
   defp recent(team, keys, who) do
