@@ -232,9 +232,9 @@ defmodule Web.FormPagesTest do
       }
     end
 
-    defp team_path(team, rest \\ ""), do: "/teams/#{team.subdomain}/forms#{rest}"
+    defp team_path(team, rest \\ ""), do: "/teams/#{team.subdomain}/settings/forms#{rest}"
 
-    test "lists the team's forms only, after Reports in the side navigation", ctx do
+    test "lists the team's forms only, on Team settings' Forms tab after Fields", ctx do
       %{conn: conn, team: team, own: own, form: form, alex: alex} = ctx
       {:ok, lv, _html} = conn |> log_in_user(alex) |> live(team_path(team))
 
@@ -242,17 +242,21 @@ defmodule Web.FormPagesTest do
       assert has_element?(lv, "#form-#{own.id}-state", "Off")
       refute has_element?(lv, "#form-#{form.id}-name")
       assert has_element?(lv, "th", "On activities")
-      assert has_element?(lv, "#side-nav-forms[href='#{team_path(team)}']")
+      assert has_element?(lv, "nav a[href='#{team_path(team)}'][aria-current]", "Forms")
+      refute has_element?(lv, "#side-nav-forms")
       refute has_element?(lv, "#upload-form")
+
+      tabs = Enum.map(Web.Components.TeamSettingsTabs.list(team), & &1.key)
+      assert Enum.at(tabs, Enum.find_index(tabs, &(&1 == :fields)) + 1) == :forms
     end
 
-    test "are a 404 while team forms are off, and leave the side navigation", ctx do
+    test "are a 404 while team forms are off, with no Forms tab", ctx do
       %{conn: conn, team: team, own: own, alex: alex} = ctx
       team |> Ecto.Changeset.change(forms_enabled: false) |> Repo.update!()
       conn = log_in_user(conn, alex)
 
-      {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/reports")
-      refute has_element?(lv, "#side-nav-forms")
+      {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/settings/fields")
+      refute has_element?(lv, "nav a[href='#{team_path(team)}']")
 
       assert_raise Web.Status.NotFound, fn -> live(conn, team_path(team)) end
       assert_raise Web.Status.NotFound, fn -> live(conn, team_path(team, "/#{own.id}")) end

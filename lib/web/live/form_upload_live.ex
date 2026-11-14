@@ -41,6 +41,11 @@ defmodule Web.FormUploadLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
+      <:item
+        :if={FormOwner.settings_path(@owner)}
+        label="Team settings"
+        path={FormOwner.settings_path(@owner)}
+      />
       <:item label="Forms" path={FormOwner.forms_path(@owner)} />
       <:item :if={@form} label={@form.name} path={FormOwner.form_path(@owner, @form)} />
       <:item label={if @form, do: "Replace", else: "Upload form"} />

@@ -50,6 +50,11 @@ defmodule Web.FormLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
+      <:item
+        :if={FormOwner.settings_path(@owner)}
+        label="Team settings"
+        path={FormOwner.settings_path(@owner)}
+      />
       <:item label="Forms" path={FormOwner.forms_path(@owner)} />
       <:item label={@form.name} />
     </.breadcrumbs>

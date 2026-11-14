@@ -455,11 +455,6 @@ defmodule Web.Router do
       live "/teams/:subdomain/whiteboard/:id/edit", WhiteboardNoteFormLive, :edit
       live "/teams/:subdomain/chores/:id", ChoreLive
       live "/teams/:subdomain/chores/:id/edit", ChoreFormLive, :edit
-      # A team's own forms (#1083), while SAR Duty has team forms on for it.
-      live "/teams/:subdomain/forms", FormCollectionLive
-      live "/teams/:subdomain/forms/new", FormUploadLive, :new
-      live "/teams/:subdomain/forms/:id", FormLive
-      live "/teams/:subdomain/forms/:id/edit", FormUploadLive, :edit
       live "/teams/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive
       # A member's letter for a year, sent or not (#970).
       live "/teams/:subdomain/tax-credit-letters/:year/members/:id", TaxCreditLetterLive
@@ -477,6 +472,11 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings/fields/edit", CustomFieldsFormLive, :team
       live "/teams/:subdomain/settings/fields/:id", Settings.FieldLive
       live "/teams/:subdomain/settings/fields/:id/edit", Settings.FieldFormLive, :edit
+      # A team's own forms (#1083), a Team settings tab while SAR Duty has team forms on.
+      live "/teams/:subdomain/settings/forms", FormCollectionLive
+      live "/teams/:subdomain/settings/forms/new", FormUploadLive, :new
+      live "/teams/:subdomain/settings/forms/:id", FormLive
+      live "/teams/:subdomain/settings/forms/:id/edit", FormUploadLive, :edit
       live "/teams/:subdomain/settings/features", Settings.FeaturesLive
       live "/teams/:subdomain/settings/signer", Settings.SignerLive
       live "/teams/:subdomain/settings/hours-tags", Settings.HoursTagsLive
@@ -533,8 +533,8 @@ defmodule Web.Router do
       # An organization's form on an activity (#950): posts its answers, gets the PDF.
       post "/activities/:id/forms/:form_id/pdf", ActivityFormPDFController, :create
       # A team's own form's page and a try on one of its activities (#1083).
-      get "/forms/:id/page", FormController, :page
-      get "/forms/:id/try", FormController, :try
+      get "/settings/forms/:id/page", FormController, :page
+      get "/settings/forms/:id/try", FormController, :try
       # A published PDF as it was saved, current or not (#970).
       get "/pdfs/:id", PublishedPDFController, :show
       get "/pdfs/:id/preview.png", PublishedPDFController, :preview

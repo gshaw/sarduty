@@ -1,6 +1,8 @@
 defmodule Web.FormCollectionLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.TeamSettingsTabs
+
   alias App.Model.Form
   alias App.Model.Organization
   alias Web.FormOwner
@@ -11,13 +13,17 @@ defmodule Web.FormCollectionLive do
   # for their team.
   def mount(_params, _session, socket) do
     owner = FormOwner.get(socket.assigns)
-    {:ok, assign(socket, page_title: "Forms", owner: owner, forms: Form.get_all(owner))}
+    {:ok, assign(socket, page_title: title(owner), owner: owner, forms: Form.get_all(owner))}
   end
+
+  defp title(%Organization{}), do: "Forms"
+  defp title(_team), do: "Team settings · Forms"
 
   def render(assigns) do
     ~H"""
+    <.team_settings_tabs :if={!match?(%Organization{}, @owner)} team={@owner} current={:forms} />
     <.heading_row>
-      <h1 class="title">Forms</h1>
+      <h1 :if={match?(%Organization{}, @owner)} class="title">Forms</h1>
       <:action :if={@current_user.is_admin}>
         <.button id="upload-form" navigate={FormOwner.new_path(@owner)} variant={:success}>
           Upload form

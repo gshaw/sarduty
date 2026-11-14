@@ -1,7 +1,7 @@
 defmodule Web.FormOwner do
   @moduledoc """
   Who a Forms page is for: an organization, under `/orgs/:slug/forms` (#950), or one
-  team, under `/teams/:subdomain/forms` (#1083). The same pages serve both, so each asks
+  team, a Team settings tab under `/teams/:subdomain/settings/forms` (#1083). The same pages serve both, so each asks
   this for its owner, its paths, and the words that differ. A team's pages are a 404
   until SAR Duty turns team forms on for it.
   """
@@ -27,29 +27,35 @@ defmodule Web.FormOwner do
   def name(%Organization{short_name: name}), do: name
   def name(%Team{name: name}), do: name
 
+  @doc "Team settings, where a team's Forms tab is, for a page's trail; nil for an organization."
+  def settings_path(%Team{} = team), do: ~p"/teams/#{team}/settings"
+  def settings_path(%Organization{}), do: nil
+
   def forms_path(%Organization{} = organization), do: ~p"/orgs/#{organization}/forms"
-  def forms_path(%Team{} = team), do: ~p"/teams/#{team}/forms"
+  def forms_path(%Team{} = team), do: ~p"/teams/#{team}/settings/forms"
 
   def new_path(%Organization{} = organization), do: ~p"/orgs/#{organization}/forms/new"
-  def new_path(%Team{} = team), do: ~p"/teams/#{team}/forms/new"
+  def new_path(%Team{} = team), do: ~p"/teams/#{team}/settings/forms/new"
 
   def form_path(%Organization{} = organization, %Form{} = form),
     do: ~p"/orgs/#{organization}/forms/#{form}"
 
-  def form_path(%Team{} = team, %Form{} = form), do: ~p"/teams/#{team}/forms/#{form}"
+  def form_path(%Team{} = team, %Form{} = form), do: ~p"/teams/#{team}/settings/forms/#{form}"
 
   def edit_path(%Organization{} = organization, %Form{} = form),
     do: ~p"/orgs/#{organization}/forms/#{form}/edit"
 
-  def edit_path(%Team{} = team, %Form{} = form), do: ~p"/teams/#{team}/forms/#{form}/edit"
+  def edit_path(%Team{} = team, %Form{} = form),
+    do: ~p"/teams/#{team}/settings/forms/#{form}/edit"
 
   def page_path(%Organization{} = organization, %Form{} = form),
     do: ~p"/orgs/#{organization}/forms/#{form}/page"
 
-  def page_path(%Team{} = team, %Form{} = form), do: ~p"/teams/#{team}/forms/#{form}/page"
+  def page_path(%Team{} = team, %Form{} = form),
+    do: ~p"/teams/#{team}/settings/forms/#{form}/page"
 
   def try_path(%Organization{} = organization, %Form{} = form),
     do: ~p"/orgs/#{organization}/forms/#{form}/try"
 
-  def try_path(%Team{} = team, %Form{} = form), do: ~p"/teams/#{team}/forms/#{form}/try"
+  def try_path(%Team{} = team, %Form{} = form), do: ~p"/teams/#{team}/settings/forms/#{form}/try"
 end
