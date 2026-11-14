@@ -9,7 +9,6 @@ defmodule Web.Settings.TeamLive do
   alias App.Adapter.D4H
   alias App.Model.Member
   alias App.Model.Team
-  alias App.Operation.RefreshTeamDetails
   alias App.Repo
 
   # Settings' General tab (#153), an overview of the team like a record page (#1076): the
@@ -23,7 +22,7 @@ defmodule Web.Settings.TeamLive do
 
     socket =
       socket
-      |> assign(page_title: "Team settings", now: now)
+      |> assign(page_title: "Team settings")
       |> assign(organization: team |> Repo.preload(:organization) |> Map.get(:organization))
       |> assign(has_logo: Team.logo_file(team.subdomain) != nil)
       |> assign(contacts: Member.get_team_contacts(team, now))
@@ -57,17 +56,13 @@ defmodule Web.Settings.TeamLive do
 
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content
-          team={@current_team}
-          contacts={@contacts}
-          key_level={@key_level}
-          now={@now}
-        />
+        <.sidebar_content team={@current_team} contacts={@contacts} />
       </aside>
       <main class="content-2/3">
         <.main_content
           team={@current_team}
           organization={@organization}
+          key_level={@key_level}
           maps_app={@current_user.maps_app}
         />
       </main>
@@ -77,6 +72,7 @@ defmodule Web.Settings.TeamLive do
 
   attr :team, :map, required: true
   attr :organization, :map, default: nil
+  attr :key_level, :string, default: nil
   attr :maps_app, :string, required: true
 
   defp main_content(assigns) do
@@ -126,15 +122,22 @@ defmodule Web.Settings.TeamLive do
         </div>
       </dd>
     </dl>
+    <dl id="team-source">
+      <dt>Records</dt>
+      <dd id="team-records">
+        {records_text(@team)}
+        <span :if={key_text(@team, @key_level)} class="hint block">
+          {key_text(@team, @key_level)}
+        </span>
+      </dd>
+    </dl>
     """
   end
 
   attr :team, :map, required: true
   attr :contacts, :list, required: true
-  attr :key_level, :string, default: nil
-  attr :now, :any, required: true
 
-  # Who members reach, where the records come from, then Actions.
+  # Who members reach, then Actions, as on every record's page.
   defp sidebar_content(assigns) do
     ~H"""
     <dl id="team-contacts-section">
@@ -153,25 +156,6 @@ defmodule Web.Settings.TeamLive do
           </li>
         </ul>
         <p :if={@contacts != []} class="hint">Get help lists them for members.</p>
-      </dd>
-    </dl>
-    <dl id="team-records-section">
-      <dt>Records</dt>
-      <dd id="team-records">
-        {records_text(@team)}
-        <span :if={records_hint(@team, @key_level, @now)} class="hint block">
-          {records_hint(@team, @key_level, @now)}
-        </span>
-        <ul class="action-list mt-2">
-          <li>
-            <.a
-              id="team-refresh"
-              href="#"
-              phx-click="refresh"
-              phx-disable-with="Refreshing…"
-            >Refresh</.a>
-          </li>
-        </ul>
       </dd>
     </dl>
     <dl id="team-actions-section">
@@ -219,33 +203,10 @@ defmodule Web.Settings.TeamLive do
     end
   end
 
-  # "Alex Chen's key, an Owner in D4H. Last copied 3 min ago."
-  defp records_hint(team, key_level, now) do
-    copied =
-      if ago = Service.Format.time_ago(team.d4h_synced_at, now, team.timezone),
-        do: "Last copied #{String.downcase(ago)}."
-
-    key = if !D4H.records?(team), do: Team.key_text(team, key_level)
-
-    case Enum.reject([key && "#{key}.", copied], &is_nil/1) do
-      [] -> nil
-      parts -> Enum.join(parts, " ")
-    end
-  end
-
-  def handle_event("refresh", _params, socket) do
-    case RefreshTeamDetails.call(socket.assigns.current_team) do
-      {:ok, team} ->
-        {:noreply, socket |> assign(current_team: team) |> put_flash(:info, "Team refreshed.")}
-
-      {:error, text} when is_binary(text) ->
-        {:noreply, put_flash(socket, :error, text)}
-
-      {:error, _changeset} ->
-        service = D4H.service_name(socket.assigns.current_team)
-
-        {:noreply,
-         put_flash(socket, :error, "#{service} sent a place or time zone SAR Duty can't use.")}
+  # "Alex Chen's key, an Owner in D4H." A Records key needs no owner.
+  defp key_text(team, key_level) do
+    if !D4H.records?(team) do
+      if text = Team.key_text(team, key_level), do: "#{text}."
     end
   end
 end

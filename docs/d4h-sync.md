@@ -396,5 +396,5 @@ at midnight starting their leave day. Writes send the day back at 00:00 UTC
   `MemberQualificationAward.good_until/1` is its `ends_at` plus 24 hours.
 - A new D4H field that is a day needs the same: a `Date` from the adapter, and
   `day_start/2` in its upsert.
-- If a team's time zone changes (Refresh in team settings), the next refresh rewrites
+- If a team's time zone changes, the next refresh rewrites
   these dates, with a history row for each.
