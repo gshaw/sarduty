@@ -42,20 +42,20 @@ defmodule Web.Components.MemberSidebar do
   end
 
   @doc """
-  Whether the Fields tab shows: to a team admin when the team copies member fields, so
+  Whether the Fields tab shows: to a team admin when the team has member fields, so
   they can fill one in with Change fields (#705).
   """
   def fields?(_member, false), do: false
 
   def fields?(member, true),
-    do: CustomField.copied_member_fields(member.team_id, :team_admin) != []
+    do: CustomField.member_fields(member.team_id, :team_admin) != []
 
-  @doc "The member fields the Fields tab shows: team admins' alone (#681)."
+  @doc "The member fields the Fields tab shows: team admins' alone, every one (#1056)."
   def field_rows(_member, false), do: []
 
   def field_rows(member, true) do
     member.team_id
-    |> CustomField.copied_member_fields(:team_admin)
+    |> CustomField.member_fields(:team_admin)
     |> CustomField.rows(member.custom_values, member.team.timezone)
   end
 

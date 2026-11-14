@@ -4,7 +4,7 @@ defmodule App.Operation.BuildDemoTeam do
   up: Coast Range SAR, Silver Basin SAR beside it, and WESARA's copy with both in it and
   its made-up Task report on (#963, App.Operation.AddDemoForms). Records makes each team from its cast and picks its ids (App.DemoCast). SAR
   Duty then adds each team, marked as the demo's before anything can send, refreshes it
-  like any team, picks the member fields Coast Range copies, and adds what only SAR Duty
+  like any team, and adds what only SAR Duty
   keeps on Coast Range (endorsements, ID cards, away periods, chores, templates with their
   field values), matched through Records' ids. Records makes WESARA with Coast Range's
   cast, owning the incident fields, and SAR Duty keeps its id (#1003). Silver Basin never
@@ -22,7 +22,6 @@ defmodule App.Operation.BuildDemoTeam do
   alias App.CoastRange
   alias App.DemoCast
   alias App.Model.Activity
-  alias App.Model.CustomField
   alias App.Model.DemoTeam
   alias App.Model.EquipmentItem
   alias App.Model.Group
@@ -38,8 +37,6 @@ defmodule App.Operation.BuildDemoTeam do
   alias App.Operation.AddDemoForms
   alias App.Operation.DeleteTeam
   alias App.Operation.RefreshD4HData
-  alias App.Operation.RefreshD4HData.Progress
-  alias App.Operation.RefreshD4HData.UpsertMembers
   alias App.Repo
   alias App.SilverBasin
 
@@ -161,7 +158,6 @@ defmodule App.Operation.BuildDemoTeam do
     rows = CoastRange.build(now)
     team = insert_team(rows, demo, :team_id, coast, names.coast_range, now)
     team = refresh!(team)
-    copy_member_fields(team, rows, coast.ids)
     add_local_rows(team, coast.ids, visitor, now)
     mark_photos(team, coast.ids)
     team = put_contact(team, coast.ids)
@@ -342,21 +338,6 @@ defmodule App.Operation.BuildDemoTeam do
       end
 
     Repo.update_all(query, set: [has_photo: true])
-  end
-
-  # The member fields Coast Range copies, picked as a team admin picks them: SAR Duty's
-  # own choice, so set after the sync made the fields, then the members read again for
-  # their values (#1003).
-  defp copy_member_fields(team, rows, ids) do
-    picked =
-      for {:custom_field, id, %{copy_values: true}, []} <- rows,
-          do: Map.fetch!(ids, DemoCast.key({:custom_field, id}))
-
-    CustomField
-    |> where([f], f.team_id == ^team.id and f.d4h_custom_field_id in ^picked)
-    |> Repo.update_all(set: [copy_values: true])
-
-    team |> D4H.build_context_from_team() |> UpsertMembers.call(team, Progress.quiet(team.id))
   end
 
   # Get help goes to Alex Chen, as a team that picked its contacts has it (#780).

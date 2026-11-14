@@ -8,7 +8,8 @@
       id="field-definitions-sample"
       fields={custom_field_definitions()}
       path={fn _field -> "#" end}
-      publish?
+      team_name="Coast Range SAR"
+      organization_name="WESARA"
     />
   </div>
 
@@ -19,32 +20,41 @@
       timezone="America/Vancouver"
       team_names={%{11 => "Coast Range SAR"}}
       organization_name="WESARA"
-      restricted_text="Only team admins see its values."
+      team_name="Coast Range SAR"
+      restricted_text="Only team admins see its values. Members and your organization never do."
     />
   </div>
 
   <h2>When to use</h2>
   <p>
-    The Fields pages in settings, for a team or an organization (#872). The list is an index to scan: each field's
-    name, the first line of what it means, and Needed to publish. The fields in no group come first. Then each named
-    group of fields follows under its title, as on a record's Fields tab.
+    The Fields pages in settings, for a team or an organization (#872). The list is an index to scan, one
+    <a href={page_path(:row_link)}>row link</a>
+    per field: its name, its type in grey, at most one tag, and the first line of what it means. On a member field the
+    grey text also says what members do with their own answer. The tag is Needed to publish on an activity's field, or
+    else Restricted on an activity's or an item's. On a team's page its own fields come first, under its name, then its
+    organization's. The fields in no group come first in each, then each named group under its title, as on a record's
+    Fields tab.
   </p>
   <p>
-    The name opens the field's own page: what it means, its type, what it's on, who added it and when, and every
-    choice, one per line. A choice a team added to its organization's field is listed under the team's name.
+    A row opens the field's own page, a detail list in one order that leaves out what a field lacks: what it means, its
+    type, what it's on, who added it, needed to publish, members, restricted, and every choice, one per line. Who added
+    it, needed to publish, members, and restricted each carry a line on what they mean. A choice a team added to its
+    organization's field is listed under the team's name.
   </p>
 
   <h2>When not to use</h2>
   <p>
-    A record's own values. Those are the record's Fields tab, a <a href={page_path(:detail_list)}>detail list</a>.
+    A record's own values. Those are the record's Fields tab, a <a href={page_path(:detail_list)}>detail list</a>. Never a
+    select to show a field's choices: nothing here can be changed.
   </p>
 
   <h2>In the app</h2>
   <p>
     <code>&lt;.field_list&gt;</code>
     takes one kind's fields, with their groups preloaded, and a <code>path</code>
-    function to each field's page. <code>copy?</code>
-    adds who sees a member field and its Copy check box. <code>&lt;.field_details&gt;</code>
+    function to each field's page. <code>team_name</code>
+    and <code>organization_name</code>
+    split it by who owns each field. <code>&lt;.field_details&gt;</code>
     is the field's own page.
   </p>
 </.shell>

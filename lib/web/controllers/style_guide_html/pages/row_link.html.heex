@@ -18,6 +18,13 @@
       </li>
       <li>
         <.row_link navigate="#">
+          <strong class="text-link">Radio call sign</strong>
+          <span class="hint ml-1">Text · Members see their own</span>
+          <span class="hint block">The member's call sign on the team's radio channels.</span>
+        </.row_link>
+      </li>
+      <li>
+        <.row_link navigate="#">
           <strong class="text-link">6 retiring members hold 16 items</strong>
         </.row_link>
         <button type="button" class="row-link-tool" aria-label="Snooze" title="Snooze">
@@ -46,6 +53,12 @@
     <code>&lt;ul class="row-links"&gt;</code>
     with a <code>&lt;.row_link navigate=&#123;…&#125;&gt;</code>
     in each item. Give the row's title <code>text-link</code>. Each row is at least 44px tall, with a chevron at the end.
+  </p>
+  <p>
+    Grey text after the title, in a <code>hint ml-1</code>
+    span, says what kind of thing the row is, such as a field's type on the Fields page. A line of
+    <code>hint block</code>
+    under the title says more.
   </p>
   <p>
     One quiet icon button may sit before the chevron, such as Snooze on Needs attention: a

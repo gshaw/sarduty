@@ -67,8 +67,7 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
   team's names for things: groups, qualifications, tags, hours tags, and custom fields.
   The custom fields are exactly the ones a report reads (`App.Report.CustomFields`,
   #840), each as a query writes it, `` `Task Type` ``, with its subject, type, and a
-  choice's options: every live activity field, the member fields the team copies, and
-  items' fields. Never an answer.
+  choice's options: every live activity field, every member field, and items' fields. Never an answer.
 - `list_reports`: the built-in reports, the team's own, and the lists that run on
   reports, each with its name, description, and query. Never a saved report's values.
 - `check_report`: checks a query against the team's fields with `App.Report.check/4`,

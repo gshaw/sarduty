@@ -113,22 +113,27 @@ defmodule Web.CustomFieldsFormLiveTest do
     refute has_element?(lv, ".field-missing")
   end
 
-  test "a member's copied fields go to D4H, and the copy takes them",
+  test "a member's fields go to D4H, restricted ones too, and the copy takes them",
        %{conn: conn, team: team} do
     stub()
 
     custom_field_fixture(team, %{
       d4h_custom_field_id: 630,
       target: "member",
-      title: "Radio Call Sign",
-      copy_values: true
+      title: "Radio Call Sign"
     })
 
-    custom_field_fixture(team, %{d4h_custom_field_id: 631, target: "member", title: "Not copied"})
-    member = member_fixture(team, %{custom_values: %{"630" => "SF 12"}})
+    custom_field_fixture(team, %{
+      d4h_custom_field_id: 631,
+      target: "member",
+      title: "Year of birth",
+      restricted: true
+    })
+
+    member = member_fixture(team, %{custom_values: %{"630" => "SF 12", "631" => "1988"}})
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/fields/edit")
-    refute has_element?(lv, "#custom-field-631")
+    assert has_element?(lv, "#custom-field-631")
     refute render(lv) =~ "Needed to publish."
 
     lv
@@ -138,7 +143,7 @@ defmodule Web.CustomFieldsFormLiveTest do
     path = "/members/#{member.d4h_member_id}"
     assert [{"PATCH", ^path, body} | _rest] = writes()
     assert body == %{"customFieldValues" => [%{"id" => 630, "value" => "SF 14"}]}
-    assert Repo.reload(member).custom_values == %{"630" => "SF 14"}
+    assert Repo.reload(member).custom_values == %{"630" => "SF 14", "631" => "1988"}
 
     [row] =
       ChangeSet |> Repo.all(team_id: team.id) |> Repo.preload(:rows) |> Enum.flat_map(& &1.rows)

@@ -68,8 +68,7 @@ and a team is a demo when one points at it (`DemoTeam.demo?/1`).
    makes both teams from their casts (`App.DemoCast`, a `POST /v3/sarduty/demo-teams`
    each) and picks their ids. Coast Range's cast makes WESARA in Records too, owning
    the 27 incident fields, and Silver Basin's joins it (#1003). SAR Duty adds each team,
-   marked as the demo's in the same transaction, refreshes it like any team, picks the
-   member fields Coast Range copies, and adds what only it keeps on Coast Range
+   marked as the demo's in the same transaction, refreshes it like any team, and adds what only it keeps on Coast Range
    (endorsements, group rules, ID cards with real codes, away periods, chores,
    templates with their field values, and travel), matched through Records' ids. Alex Chen is the team contact.
    Then WESARA's copy, slug `wesara-<demo id>`, keeping its id in Records

@@ -323,18 +323,25 @@ defmodule Web.MemberLiveTest do
     refute has_element?(lv, "#this-is-you")
   end
 
-  test "a team admin sees the member fields the team copies (#681)", %{conn: conn} do
+  test "a team admin sees every member field, restricted ones too (#1056)", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
     custom_field_fixture(team, %{
       d4h_custom_field_id: 630,
       target: "member",
-      title: "Radio Call Sign",
-      copy_values: true
+      title: "Radio Call Sign"
     })
 
-    custom_field_fixture(team, %{d4h_custom_field_id: 631, target: "member", title: "Not copied"})
-    member = member_fixture(team, %{custom_values: %{"630" => "SF 12"}})
+    custom_field_fixture(team, %{
+      d4h_custom_field_id: 631,
+      target: "member",
+      title: "Year of birth",
+      restricted: true,
+      member_privacy: "hidden"
+    })
+
+    custom_field_fixture(team, %{d4h_custom_field_id: 632, target: "member", title: "Empty"})
+    member = member_fixture(team, %{custom_values: %{"630" => "SF 12", "631" => "1988"}})
 
     conn = log_in_user(conn, user)
 
@@ -347,11 +354,12 @@ defmodule Web.MemberLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/members/#{member.id}/fields")
     assert has_element?(lv, "nav.tabs a[aria-current=page]", "Fields")
     assert has_element?(lv, "#member-fields-630", "SF 12")
-    refute has_element?(lv, "#member-fields-631")
+    assert has_element?(lv, "#member-fields-631", "1988")
+    refute has_element?(lv, "#member-fields-632")
     assert has_element?(lv, "#member-fields-change[href$='/members/#{member.id}/fields/edit']")
   end
 
-  test "a member with no copied field has no Fields tab", %{conn: conn} do
+  test "a member on a team with no member fields has no Fields tab", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)
 

@@ -22,8 +22,9 @@ defmodule App.Model.CustomField do
     # "single_choice", or "multiple_choice".
     field :field_type, :string
     field :required, :boolean, default: false
-    # D4H's RESTRICTED. On a team's own field it keeps the value from its organisation:
-    # team admins see it, never members or anything an organisation sees.
+    # D4H's RESTRICTED. On an activity or equipment field it keeps the value from its
+    # organisation: team admins see it, never members or anything an organisation sees.
+    # On a member field it changes nothing in SAR Duty (#1056).
     field :restricted, :boolean, default: false
     # "hidden", "viewable", or "editable": what a member may do with their own value.
     field :member_privacy, :string
@@ -36,9 +37,6 @@ defmodule App.Model.CustomField do
     field :archived_at, :utc_datetime
     # [%{"id" => d4h_option_id, "label" => …, "ordering" => …, "archived" => bool}]
     field :options, {:array, :map}, default: []
-    # SAR Duty's own, never D4H's: a member field a team admin picked to copy. Never set
-    # on a RESTRICTED one.
-    field :copy_values, :boolean, default: false
     # D4H's resource bundle, a named group of one kind's fields, or nil (#872).
     belongs_to :bundle, CustomFieldBundle
     # When D4H says the field was added.
@@ -205,36 +203,18 @@ defmodule App.Model.CustomField do
   end
 
   @doc """
-  The member fields a team admin may pick to copy: every live one that isn't
-  RESTRICTED. A RESTRICTED member field holds things like ethnicity or date of birth,
-  and is never copied.
+  The member fields `viewer` sees on one member, in order (#1056): every live one for a
+  team admin, and for the member themself the ones D4H lets a member see
+  (`member_privacy` viewable or editable). RESTRICTED changes nothing on a member field.
   """
-  def member_choices(team_id) do
-    team_id |> get_all("member") |> Enum.reject(& &1.restricted)
-  end
-
-  @doc """
-  The member fields the team copies, in order: all of them for a team admin, and for
-  the member themself the ones D4H lets a member see (#681).
-  """
-  def copied_member_fields(team_id, viewer) when viewer in [:team_admin, :self] do
+  def member_fields(team_id, viewer) when viewer in [:team_admin, :self] do
     team_id
     |> get_all("member")
-    |> Enum.filter(
-      &(&1.copy_values and not &1.restricted and
-          (viewer == :team_admin or &1.member_privacy in ~w(viewable editable)))
-    )
+    |> Enum.filter(&(viewer == :team_admin or member_sees?(&1)))
   end
 
-  @doc "The D4H ids, as strings, of the member fields the team copies."
-  def copied_member_ids(team_id) do
-    CustomField
-    |> where([f], f.team_id == ^team_id and f.target == "member")
-    |> where([f], f.copy_values and not f.restricted)
-    |> select([f], f.d4h_custom_field_id)
-    |> Repo.all()
-    |> MapSet.new(&Integer.to_string/1)
-  end
+  @doc "Whether a member sees their own value of a member field: D4H's member privacy."
+  def member_sees?(%CustomField{member_privacy: privacy}), do: privacy in ~w(viewable editable)
 
   def organisation?(%CustomField{owner_type: owner_type}), do: owner_type == "Organisation"
 
@@ -272,8 +252,10 @@ defmodule App.Model.CustomField do
   @doc """
   What a record's page shows, from the target's live `fields` in order and the record's
   `values`: each field with a value, and each required one without, as
-  `%{field:, text:, missing?:}`. RESTRICTED fields are left out unless
-  `restricted: true`, and required ones only marked missing with `missing: true`.
+  `%{field:, text:, missing?:}`. RESTRICTED activity and equipment fields are left out
+  unless `restricted: true`; on a member field it changes nothing, since member_fields/2
+  already picked what the viewer sees. Required ones are only marked missing with
+  `missing: true`.
   """
   def rows(fields, values, timezone, opts \\ []) do
     values = values || %{}
@@ -284,7 +266,7 @@ defmodule App.Model.CustomField do
       value = values[Integer.to_string(field.d4h_custom_field_id)]
 
       cond do
-        field.restricted and not restricted? -> []
+        field.restricted and field.target != "member" and not restricted? -> []
         value != nil -> [%{field: field, text: display(field, value, timezone), missing?: false}]
         missing? and field.required -> [%{field: field, text: nil, missing?: true}]
         true -> []

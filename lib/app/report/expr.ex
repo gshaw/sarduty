@@ -194,19 +194,6 @@ defmodule App.Report.Expr do
   defp known(nil, subject, _via, name, line, _context) when is_map_key(@renamed, name),
     do: fail(line, "#{subject.name} has no field #{name}. Use #{@renamed[name]}.")
 
-  defp known(nil, %{name: "members"} = subject, _via, "`" <> _ = name, line, context) do
-    case CustomFields.uncopied(context, name) do
-      :restricted ->
-        fail(line, "SAR Duty never copies #{name}: it is restricted.")
-
-      :uncopied ->
-        fail(line, "The team does not copy #{name}. Pick it on team settings' Members tab.")
-
-      nil ->
-        fail(line, no_field(subject, name, [], context))
-    end
-  end
-
   defp known(nil, subject, via, name, line, context) do
     others = if via, do: [], else: Map.keys(subject.parents)
     fail(line, no_field(subject, name, others, context))
