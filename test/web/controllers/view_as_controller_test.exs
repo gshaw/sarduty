@@ -128,10 +128,10 @@ defmodule Web.ViewAsControllerTest do
   describe "read-only" do
     test "contact details save nothing", %{conn: conn, team: team, sam: sam} do
       conn = view_as(conn, team, sam)
-      lv = open(conn, ~p"/teams/#{team}/me/details")
-      assert has_element?(lv, "#details-form button[disabled]", "Save details")
+      lv = open(conn, ~p"/teams/#{team}/me/address")
+      assert has_element?(lv, "#address-form button[disabled]", "Save address")
 
-      html = lv |> form("#details-form", details: %{address: "9 Elm St"}) |> render_submit()
+      html = lv |> form("#address-form", details: %{address: "9 Elm St"}) |> render_submit()
       assert html =~ "You&#39;re viewing as Sam Rivera, so nothing is saved."
       refute_received {:d4h, "PATCH", _path}
     end

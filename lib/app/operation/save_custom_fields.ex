@@ -114,7 +114,7 @@ defmodule App.Operation.SaveCustomFields do
 
   @doc """
   The values of `custom_fields` the form's `params` change on `record`, as `{old, new}`
-  maps by D4H field id, or `:unchanged`. A member's own Save details sends them on its
+  maps by D4H field id, or `:unchanged`. A member's own Change fields sends them on its
   row too (App.Operation.SaveOwnDetails).
   """
   def changes(record, custom_fields, params) do

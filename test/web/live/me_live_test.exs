@@ -284,7 +284,16 @@ defmodule Web.MeLiveTest do
       assert has_element?(lv, "#contact-emergency span", "604-555-0101")
       refute has_element?(lv, "#contact-emergency-2")
       refute_received {:d4h_read, _path}
-      assert has_element?(lv, ~s{#change-details[href="/teams/#{team.subdomain}/me/details"]})
+      assert has_element?(lv, "#contact-email", member.email)
+      assert has_element?(lv, ~s{#change-mobile[href="/teams/#{team.subdomain}/me/mobile"]})
+      assert has_element?(lv, ~s{#change-address[href="/teams/#{team.subdomain}/me/address"]})
+
+      assert has_element?(
+               lv,
+               ~s{#change-contacts[href="/teams/#{team.subdomain}/me/emergency-contacts"]}
+             )
+
+      refute has_element?(lv, "#change-fields")
     end
 
     test "both emergency contacts, when the second has something to show",

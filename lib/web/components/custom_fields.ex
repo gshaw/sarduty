@@ -5,44 +5,11 @@ defmodule Web.Components.CustomFields do
 
   alias App.Model.CustomField
 
-  # A record's D4H custom fields (#681), from App.Model.CustomField.rows/4: a table on the
-  # record's Fields tab, or a detail list under a heading on a page with no tabs, such as
-  # Your membership's Contact details. A required field with no value says Missing. Every
-  # list groups its fields by D4H's bundles (#872), each bundle's title over its fields,
-  # after the fields in none: CustomField.grouped/2. The style guide's Detail list page
-  # shows them.
-
-  attr :id, :string, required: true
-  attr :title, :string, default: nil, doc: "the heading; none when the page gives one"
-  attr :rows, :list, required: true
-  attr :class, :string, default: "mt-8"
-
-  @doc "The rows as a detail list under a heading, or nothing when there are none."
-  def custom_fields(assigns) do
-    assigns = assign(assigns, :groups, CustomField.grouped(assigns.rows, & &1.field))
-
-    ~H"""
-    <section :if={@rows != []} id={@id} class={@class}>
-      <h2 :if={@title} class="heading">{@title}</h2>
-      <div :for={{bundle, rows} <- @groups} id={group_id(@id, bundle)}>
-        <h3 :if={bundle} class="subheading mt-6">{bundle.title}</h3>
-        <dl class="measure">
-          <div :for={row <- rows} id={"#{@id}-#{row.field.d4h_custom_field_id}"}>
-            <dt>{row.field.title}</dt>
-            <dd :if={!row.missing?}>{row.text}</dd>
-            <dd :if={row.missing?}>
-              <.badge kind={:warning}>Missing</.badge>
-            </dd>
-          </div>
-        </dl>
-      </div>
-    </section>
-    """
-  end
-
-  # A group's id: the list's, then its bundle's D4H id.
-  defp group_id(id, nil), do: "#{id}-fields"
-  defp group_id(id, bundle), do: "#{id}-bundle-#{bundle.d4h_bundle_id}"
+  # A record's D4H custom fields (#681): a table on the record's Fields tab, from
+  # App.Model.CustomField.rows/4, and the inputs on a Change fields page. A required field
+  # with no value says Missing. Both group their fields by D4H's bundles (#872), each
+  # bundle's title over its fields, after the fields in none: CustomField.grouped/2. The
+  # style guide's Detail list page shows them.
 
   attr :id, :string, required: true
   attr :rows, :list, required: true
@@ -125,7 +92,14 @@ defmodule Web.Components.CustomFields do
 
   attr :bundle_tag, :string,
     default: "h2",
-    doc: "each bundle's heading, h4 under a page's own h3 such as Your membership's"
+    doc:
+      "each bundle's heading, h3 under a section's own h2 such as Change fields' on Your membership"
+
+  attr :read_only, :list,
+    default: [],
+    doc: "local ids of fields shown as their value in place, such as one a member only sees"
+
+  attr :timezone, :string, default: "Etc/UTC", doc: "the team's, for a read-only date"
 
   @doc """
   A record's fields as inputs on its Change fields page (#705), each as its type's input,
@@ -147,13 +121,41 @@ defmodule Web.Components.CustomFields do
       >
         {bundle.title}
       </.dynamic_tag>
-      <.custom_input
-        :for={field <- fields}
-        field={field}
-        value={form_value(@values[Integer.to_string(field.d4h_custom_field_id)])}
-        mark={mark(field, @values, @publish?, @flag_missing?)}
-      />
+      <%= for field <- fields do %>
+        <.read_only_field
+          :if={field.id in @read_only}
+          field={field}
+          value={@values[Integer.to_string(field.d4h_custom_field_id)]}
+          timezone={@timezone}
+        />
+        <.custom_input
+          :if={field.id not in @read_only}
+          field={field}
+          value={form_value(@values[Integer.to_string(field.d4h_custom_field_id)])}
+          mark={mark(field, @values, @publish?, @flag_missing?)}
+        />
+      <% end %>
     <% end %>
+    """
+  end
+
+  attr :field, CustomField, required: true
+  attr :value, :any, required: true
+  attr :timezone, :string, required: true
+
+  # A field among the inputs that can't be changed here: its value, or None.
+  defp read_only_field(assigns) do
+    ~H"""
+    <dl class="mb-6">
+      <div id={"own-fields-#{@field.d4h_custom_field_id}"}>
+        <dt>{@field.title}</dt>
+        <dd>
+          {if @value in [nil, "", []],
+            do: "None",
+            else: CustomField.display(@field, @value, @timezone)}
+        </dd>
+      </div>
+    </dl>
     """
   end
 

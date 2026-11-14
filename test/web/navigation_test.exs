@@ -177,7 +177,7 @@ defmodule Web.NavigationTest do
              ]
 
       assert current(team_sections("/teams/squamish/settings/admins", opts)) == ["settings"]
-      assert current(team_sections("/teams/squamish/me/details", opts)) == ["me"]
+      assert current(team_sections("/teams/squamish/me/address", opts)) == ["me"]
       assert current(team_sections("/teams/squamish/members-x", opts)) == []
     end
 

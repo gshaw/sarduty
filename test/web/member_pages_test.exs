@@ -99,7 +99,10 @@ defmodule Web.MemberPagesTest do
       "/teams/#{s}/me/activities",
       "/teams/#{s}/certificates/new",
       "/teams/#{s}/certificates/#{certificate.id}/edit",
-      "/teams/#{s}/me/details"
+      "/teams/#{s}/me/mobile",
+      "/teams/#{s}/me/address",
+      "/teams/#{s}/me/emergency-contacts",
+      "/teams/#{s}/me/fields"
     ]
 
     %{
