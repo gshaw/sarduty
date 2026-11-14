@@ -58,6 +58,18 @@ defmodule Web.DeleteConfirm do
     end
   end
 
+  @doc """
+  A custom field nobody has answered (#1056). One with answers is archived instead, so
+  this one takes nothing with it but the field, which D4H can't bring back.
+  """
+  def field(team, field) do
+    answers = Web.FieldText.answers(field.target, 0)
+
+    "Delete the #{field.title} field? #{answers}"
+    |> simple("Delete field")
+    |> Map.put("data-confirm-warning", "#{D4H.service_name(team)} can't bring it back.")
+  end
+
   @doc "A template is SAR Duty's own, so deleting it changes nothing in D4H."
   def template(template) do
     simple(

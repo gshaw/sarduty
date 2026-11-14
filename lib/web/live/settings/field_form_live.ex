@@ -2,14 +2,13 @@ defmodule Web.Settings.FieldFormLive do
   use Web, :live_view_app_layout
 
   import Web.Components.DragList
+  import Web.FieldText
 
-  alias App.Adapter.D4H
   alias App.Model.CustomField
   alias App.Model.CustomFieldBundle
   alias App.Model.Team
   alias App.Operation.ChangeCustomField
   alias App.Operation.CreateCustomField
-  alias App.Operation.DeleteCustomField
   alias App.Repo
   alias App.ViewModel.CustomFieldFormViewModel
 
@@ -17,7 +16,8 @@ defmodule Web.Settings.FieldFormLive do
   # /teams/:subdomain/settings/fields/:id/edit (#1056 step 4): one of the team's own
   # fields. The rules are CustomFieldFormViewModel's, and the operations send the change
   # set. Kind and type are set once, so Change field shows them as facts. Choices are
-  # renamed, dragged into order, archived, restored, and added, never deleted.
+  # renamed, dragged into order, archived, restored, and added, never deleted. The form
+  # only saves: deleting, archiving, and restoring the field are on its page.
   def mount(params, _session, socket) do
     team = Repo.preload(socket.assigns.current_team, :organization)
     field = load_field(team, params["id"])
@@ -117,7 +117,7 @@ defmodule Web.Settings.FieldFormLive do
     <p :if={@field} id="field-facts" class="lead">
       {CustomField.type_label(@field.field_type)}, on {String.downcase(
         CustomField.target_title(@field.target)
-      )}. {answers_text(@field.target, @answer_count)}
+      )}. {answers(@field.target, @answer_count)}
     </p>
 
     <.form
@@ -237,39 +237,6 @@ defmodule Web.Settings.FieldFormLive do
         >
           Cancel
         </.button>
-        <:trailing :if={@field}>
-          <.button
-            :if={@field.archived_at}
-            id="field-restore"
-            type="button"
-            phx-click="restore"
-            phx-disable-with="Restoring…"
-          >
-            Restore field
-          </.button>
-          <.button
-            :if={!@field.archived_at and @answer_count > 0}
-            id="field-archive"
-            type="button"
-            phx-click="archive"
-            phx-disable-with="Archiving…"
-          >
-            Archive field
-          </.button>
-          <.button
-            :if={!@field.archived_at and @answer_count == 0}
-            id="field-delete"
-            type="button"
-            variant={:danger}
-            phx-click="delete"
-            data-confirm={"Delete #{@field.title}? #{answers_text(@target, 0)}"}
-            data-confirm-button="Delete field"
-            data-confirm-warning={"#{D4H.service_name(@current_team)} cannot bring it back."}
-            phx-disable-with="Deleting…"
-          >
-            Delete field
-          </.button>
-        </:trailing>
       </.form_actions>
     </.form>
     """
@@ -383,26 +350,6 @@ defmodule Web.Settings.FieldFormLive do
   def type_hint("multiple_choice"), do: "Pick any number from a list."
   def type_hint(_type), do: nil
 
-  # One record of a kind, as a sentence names it.
-  defp noun("incident"), do: "incident"
-  defp noun("exercise"), do: "exercise"
-  defp noun("event"), do: "event"
-  defp noun("member"), do: "member"
-  defp noun("team"), do: "team"
-  defp noun(_equipment), do: "item"
-
-  # The team is one record.
-  defp answers_text("team", 0), do: "The team has no answer."
-  defp answers_text("team", _count), do: "The team has an answer."
-  defp answers_text(target, 0), do: "No #{noun(target)} has an answer."
-
-  defp answers_text(target, count),
-    do:
-      Service.Format.count(count,
-        one: "1 #{noun(target)} has an answer.",
-        many: "%d #{noun(target)}s have an answer."
-      )
-
   defp restricted_who(nil), do: "Members do not."
   defp restricted_who(organization), do: "Members and #{organization} do not."
 
@@ -427,10 +374,6 @@ defmodule Web.Settings.FieldFormLive do
 
   def handle_event("save", %{"field" => params}, socket), do: save_field(socket, params)
 
-  def handle_event("archive", _params, socket), do: set_archived(socket, true)
-  def handle_event("restore", _params, socket), do: set_archived(socket, false)
-  def handle_event("delete", _params, socket), do: delete(socket)
-
   defp save_field(socket, params) do
     %{current_team: team, current_user: user, field: field} = socket.assigns
 
@@ -443,21 +386,6 @@ defmodule Web.Settings.FieldFormLive do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset, form: to_form(changeset, as: "field"))}
-
-      {:error, text} ->
-        {:noreply, put_flash(socket, :error, text)}
-    end
-  end
-
-  defp delete(socket) do
-    %{current_team: team, current_user: user, field: field} = socket.assigns
-
-    case DeleteCustomField.call(team, user, field, DateTime.utc_now()) do
-      :ok ->
-        socket
-        |> put_flash(:info, "Deleted the #{field.title} field.")
-        |> push_navigate(to: ~p"/teams/#{team}/settings/fields?kind=#{field.target}")
-        |> then(&{:noreply, &1})
 
       {:error, text} ->
         {:noreply, put_flash(socket, :error, text)}
@@ -490,24 +418,6 @@ defmodule Web.Settings.FieldFormLive do
   defp change_choices(event, choices, index) do
     archived? = event == "archive-choice"
     List.update_at(choices, String.to_integer(index), &Map.put(&1, "archived", archived?))
-  end
-
-  defp set_archived(socket, archived?) do
-    %{current_team: team, current_user: user, field: field} = socket.assigns
-
-    case ChangeCustomField.set_archived(team, user, field, archived?, DateTime.utc_now()) do
-      :ok ->
-        socket
-        |> put_flash(
-          :info,
-          "#{if archived?, do: "Archived", else: "Restored"} the #{field.title} field."
-        )
-        |> push_navigate(to: ~p"/teams/#{team}/settings/fields/#{field.id}")
-        |> then(&{:noreply, &1})
-
-      {:error, text} ->
-        {:noreply, put_flash(socket, :error, text)}
-    end
   end
 
   defp saved_text(nil, nil, params), do: "Added the #{params["title"]} field."
