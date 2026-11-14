@@ -49,6 +49,30 @@ defmodule App.Operation.RefreshD4HDataTest do
     end
   end
 
+  # Nothing else copies them, so a team that moves or changes its time zone in D4H or
+  # Records sees it the next morning (#1076). The names stay the team's own (#738).
+  test "a full refresh copies the team's place and time zone, not its names" do
+    team = team_fixture(%{d4h_access_key: "key", d4h_team_id: 77})
+    on_exit(fn -> team.subdomain |> Team.logo_path() |> File.rm() end)
+
+    Req.Test.stub(App.Adapter.D4H, fn conn ->
+      if conn.request_path =~ ~r{/teams/77$} do
+        Req.Test.json(conn, %{
+          "id" => 77,
+          "title" => "Renamed SAR",
+          "timezone" => "America/Toronto",
+          "location" => %{"type" => "Point", "coordinates" => [-79.4, 43.7]}
+        })
+      else
+        Req.Test.json(conn, %{"results" => [], "totalSize" => 0, "page" => 0})
+      end
+    end)
+
+    assert {:ok, _team, _missed} = RefreshD4HData.call(team)
+    assert %{timezone: "America/Toronto", lat: 43.7, lng: -79.4} = refreshed = Repo.reload!(team)
+    assert refreshed.name == team.name
+  end
+
   test "a key D4H rejects comes back as an error for a person to fix" do
     team = team_fixture(%{d4h_access_key: "expired-key"})
     Req.Test.stub(App.Adapter.D4H, &Plug.Conn.send_resp(&1, 401, ""))
