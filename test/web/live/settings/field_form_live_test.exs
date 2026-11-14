@@ -281,11 +281,11 @@ defmodule Web.Settings.FieldFormLiveTest do
     {:ok, page, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{field.id}")
     refute has_element?(page, "#field-delete")
 
+    assert has_element?(page, "#field-archive[data-confirm*='Its answers stay']")
     page |> element("#field-archive") |> render_click()
     assert_received {:records, "PATCH", "/custom-fields/93", %{"archived" => true}}
-    assert has_element?(page, "#field-archived")
-    assert has_element?(page, "#field-actions #field-restore")
-    refute has_element?(page, "#field-change")
+    assert has_element?(page, "#field-archived button#field-restore")
+    refute has_element?(page, "#field-actions")
 
     page |> element("#field-restore") |> render_click()
     assert_received {:records, "PATCH", "/custom-fields/93", %{"archived" => false}}

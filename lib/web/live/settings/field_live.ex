@@ -13,7 +13,8 @@ defmodule Web.Settings.FieldLive do
   # it means, its type, who added it and when, and every choice. The Fields tab lists the
   # team's fields and links here. A team's own field, when the key can change fields
   # (#1056 step 4), gets its actions under the title: Change field, then Delete field or
-  # Archive field, or Restore field alone when archived. Change field's form only saves.
+  # Archive field, which asks first. An archived one has a Restore field button under
+  # "This field is archived." instead. Change field's form only saves.
   def mount(%{"id" => id}, _session, socket) do
     team = Repo.preload(socket.assigns.current_team, :organization)
     field = CustomField.get_for_team!(team.id, id)
@@ -40,12 +41,12 @@ defmodule Web.Settings.FieldLive do
       <:item label={@field.title} />
     </.breadcrumbs>
     <h1 class="title">{@field.title}</h1>
-    <p :if={@field.archived_at} id="field-archived" class="lead">This field is archived.</p>
-    <.page_actions :if={@changes and @field.archived_at} id="field-actions">
-      <:action>
-        <.a id="field-restore" href="#" phx-click="restore" phx-disable-with="Restoring…">Restore field</.a>
-      </:action>
-    </.page_actions>
+    <div :if={@field.archived_at} id="field-archived" class="mb-8">
+      <p class="lead">This field is archived.</p>
+      <.button :if={@changes} id="field-restore" phx-click="restore" phx-disable-with="Restoring…">
+        Restore field
+      </.button>
+    </div>
     <.page_actions :if={@changes and !@field.archived_at} id="field-actions">
       <:action>
         <.a
@@ -63,7 +64,14 @@ defmodule Web.Settings.FieldLive do
         >Delete field</.a>
       </:action>
       <:action :if={!@deletable}>
-        <.a id="field-archive" href="#" phx-click="archive" phx-disable-with="Archiving…">Archive field</.a>
+        <.a
+          id="field-archive"
+          href="#"
+          phx-click="archive"
+          phx-disable-with="Archiving…"
+          data-confirm={"Archive the #{@field.title} field? Its answers stay, and you can restore it."}
+          data-confirm-button="Archive field"
+        >Archive field</.a>
       </:action>
     </.page_actions>
     <.field_details

@@ -124,8 +124,9 @@ wasn't enough. Never a select for choices either: nothing on the page can be cha
 With a key that can change fields, the tab says the team adds and changes its own
 fields here, and has **Add field** beside it. A team's own field's page has its actions
 under the title, as arrow links (`/styles/page-actions`): **Change field**, then **Delete
-field** while no record has an answer or **Archive field** once one has, or **Restore
-field** alone when it's archived ([below](#adding-and-changing-fields)).
+field** while no record has an answer or **Archive field** once one has, each asking
+first in the confirm dialog. An archived field has no actions, only a **Restore field**
+button under "This field is archived." ([below](#adding-and-changing-fields)).
 An organization's field, a `frozen` one, and a key that can't get neither. A D4H key
 that can't (an Editor's) keeps the read-only tab, with one paragraph saying to change
 them in D4H or save an Owner's key, linking the Access key tab. D4H's web address for
