@@ -1,24 +1,33 @@
 defmodule Web.Settings.TeamLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.OpenInMaps
+  import Web.Components.PersonHead
+  import Web.Components.Phone
   import Web.Components.TeamSettingsTabs
 
+  alias App.Adapter.D4H
+  alias App.Model.Member
   alias App.Model.Team
   alias App.Operation.RefreshTeamDetails
-  alias App.Operation.UpdateTeamSettings
   alias App.Repo
 
-  # Settings' General tab (#153): the team itself, from D4H, and its address, which
-  # letters and forms print (#995). The key SAR Duty uses is on Access key (#727), and who
-  # signs on Signer. The team comes from the URL, /teams/:subdomain/settings.
+  # Settings' General tab (#153), an overview of the team like a record page (#1076): the
+  # team on top, its details, organization, and records on the left, and who to reach and
+  # what to do on the right. Change team edits the names and address, which letters and
+  # forms print (#995); Change team contacts picks who Get help lists (#780). The key is
+  # on Access key (#727). The team comes from the URL, /teams/:subdomain/settings.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
+    now = DateTime.utc_now()
 
     socket =
       socket
-      |> assign(page_title: "Team settings")
+      |> assign(page_title: "Team settings", now: now)
       |> assign(organization: team |> Repo.preload(:organization) |> Map.get(:organization))
-      |> assign_form(Team.build_settings_changeset(team))
+      |> assign(has_logo: Team.logo_file(team.subdomain) != nil)
+      |> assign(contacts: Member.get_team_contacts(team, now))
+      |> assign(key_level: if(!D4H.records?(team), do: Team.key_level(team)))
 
     {:ok, socket}
   end
@@ -26,134 +35,222 @@ defmodule Web.Settings.TeamLive do
   def render(assigns) do
     ~H"""
     <.team_settings_tabs team={@current_team} current={:general} />
-    <div class="measure">
-      <%!-- ID cards are on Endorsements, so say how to get them while they're off. A team in
-      an organization (#512) says who its organization admins are. --%>
-      <ul
-        :if={@organization != nil or !@current_team.id_cards_enabled}
-        class="row-links mb-4"
-      >
-        <li :if={@organization} id="settings-organization" class="py-2">
-          <div class="media">
-            <img
-              :if={@organization.logo_at}
-              src={Web.OrganizationController.logo_url(@organization)}
-              width="32"
-              height="32"
-              class="size-8 rounded"
-              alt=""
-            />
-            <div>
-              {@organization.name}
-              <span class="hint block">
-                Its organization admins set your hours tags and can turn your ID cards on or
-                off.
-                <.a navigate={~p"/teams/#{@current_team}/settings/team-admins"}>See who they are</.a>
-              </span>
-            </div>
-          </div>
-        </li>
-        <li :if={!@current_team.id_cards_enabled} id="settings-cards-off" class="py-2">
-          ID cards
-          <span :if={!@organization} class="hint block">
-            Members carry them in Apple Wallet or Google Wallet. A SAR Duty site admin turns them
-            on once they have checked your team.
-          </span>
-          <span :if={@organization} class="hint block">
-            Members carry them in Apple Wallet or Google Wallet. {@organization.short_name}'s
-            organization admins or a SAR Duty site admin turn them on.
-          </span>
-        </li>
-      </ul>
 
-      <.form for={@form} id="team_settings_form" phx-submit="save" phx-change="validate">
-        <.error_summary form={@form} />
-        <%!-- Three names for the room each place has (#738). --%>
-        <p id="team-names-lead">
-          Your team has three names, one for each amount of room. Each starts as your team's
-          name.
-        </p>
-        <.input field={@form[:name]} label="Name">
-          Used on most pages, emails, ID cards, and the phone top bar, which may cut off a
-          name over {Service.Format.characters(Team.name_advice(:name))}.
-        </.input>
-        <.input field={@form[:legal_name]} label="Legal name">
-          In full, as registered. Used on tax credit letters, the page that checks them, and
-          the back of ID cards.
-        </.input>
-        <.input field={@form[:abbreviated_name]} label="Abbreviated name">
-          Starts texts to members, where room is tight. {Service.Format.characters(
-            Team.name_advice(:abbreviated_name)
-          )} or fewer.
-        </.input>
-        <.input field={@form[:mailing_address]} label="Mailing address" type="textarea" rows="3">
-          Where the CRA or an agency writes to your team. Tax credit letters and forms print it.
-        </.input>
-        <div class="grid md:grid-cols-2 gap-x-6">
-          <.input field={@form[:city]} label="City (optional)" />
-          <.input field={@form[:postal_code]} label="Postal code (optional)" />
-        </div>
-        <div class="grid grid-cols-2 gap-x-6">
-          <.input field={@form[:lat]} readonly label="Latitude" />
-          <.input field={@form[:lng]} readonly label="Longitude" />
-        </div>
-        <.input field={@form[:timezone]} label="Time zone" readonly>
-          The place and time zone come from {@service}. Refresh copies them again.
-        </.input>
-        <.form_actions>
-          <.button variant={:success} phx-disable-with="Saving…">Save settings</.button>
-          <:trailing>
-            <.button type="button" phx-click="refresh" phx-disable-with="Refreshing…">
-              Refresh
-            </.button>
-          </:trailing>
-        </.form_actions>
-      </.form>
+    <.person_head
+      id="team-head"
+      class="team-head mb-6"
+      name={@current_team.name}
+      facts={[@current_team.legal_name, @current_team.abbreviated_name]}
+    >
+      <:picture>
+        <img
+          :if={@has_logo}
+          id="team-logo"
+          src={Web.TeamController.logo_url(@current_team, :fit)}
+          class="team-head-logo"
+          alt="Team logo"
+        />
+        <span :if={!@has_logo} id="team-initials" class="team-head-logo is-initials">
+          {Web.Navigation.team_initials(@current_team.name)}
+        </span>
+      </:picture>
+    </.person_head>
+
+    <div class="content-wrapper">
+      <aside class="content-1/3">
+        <.sidebar_content team={@current_team} contacts={@contacts} />
+      </aside>
+      <main class="content-2/3">
+        <.main_content
+          team={@current_team}
+          organization={@organization}
+          key_level={@key_level}
+          maps_app={@current_user.maps_app}
+          now={@now}
+        />
+      </main>
     </div>
     """
   end
 
-  defp assign_form(socket, %{} = source) do
-    assign(socket, :form, to_form(source, as: "form"))
+  attr :team, :map, required: true
+  attr :organization, :map, default: nil
+  attr :key_level, :string, default: nil
+  attr :maps_app, :string, required: true
+  attr :now, :any, required: true
+
+  defp main_content(assigns) do
+    ~H"""
+    <dl id="team-details">
+      <dt>Name</dt>
+      <dd id="team-name">{@team.name}</dd>
+      <dt>Legal name</dt>
+      <dd id="team-legal-name">{@team.legal_name}</dd>
+      <dt>Abbreviated name</dt>
+      <dd id="team-abbreviated-name">{@team.abbreviated_name}</dd>
+      <dt>Mailing address</dt>
+      <dd id="team-mailing-address">
+        <%= if present?(@team.mailing_address) do %>
+          <span class="whitespace-pre-line">{@team.mailing_address}</span>
+          <span :if={city_line(@team) != ""} class="block">{city_line(@team)}</span>
+        <% else %>
+          <span class="hint">None yet</span>
+        <% end %>
+      </dd>
+      <dt>Place</dt>
+      <dd id="team-place">
+        <%= if @team.lat && @team.lng do %>
+          {Service.Format.coordinate({@team.lat, @team.lng}, 5)}
+          <.open_in_maps
+            id="team-maps"
+            app={@maps_app}
+            coordinate={"#{@team.lat},#{@team.lng}"}
+            label={@team.name}
+          />
+        <% else %>
+          <span class="hint">Not known yet</span>
+        <% end %>
+      </dd>
+      <dt>Time zone</dt>
+      <dd id="team-timezone">{@team.timezone}</dd>
+    </dl>
+    <dl id="team-source">
+      <%!-- A team in an organization (#512) says who its organization admins are. --%>
+      <dt :if={@organization}>Organization</dt>
+      <dd :if={@organization} id="settings-organization">
+        <div class="media items-start">
+          <.settings_logo
+            id="settings-organization-logo"
+            src={@organization.logo_at && Web.OrganizationController.logo_url(@organization)}
+            name={@organization.name}
+          />
+          <div>
+            {@organization.name}
+            <span class="hint block">
+              Its organization admins set your hours tags and can turn your ID cards on or
+              off. <.a navigate={~p"/teams/#{@team}/settings/admins"}>See who they are</.a>
+            </span>
+          </div>
+        </div>
+      </dd>
+
+      <dt>Records</dt>
+      <dd id="team-records">
+        {records_text(@team)}
+        <span :if={records_hint(@team, @key_level, @now)} class="hint block">
+          {records_hint(@team, @key_level, @now)}
+        </span>
+      </dd>
+    </dl>
+    """
   end
 
-  def handle_event("validate", %{"form" => form_params}, socket) do
-    changeset = Team.build_settings_changeset(socket.assigns.current_team, form_params)
-    {:noreply, assign_form(socket, Map.put(changeset, :action, :validate))}
+  attr :team, :map, required: true
+  attr :contacts, :list, required: true
+
+  # Who members reach, then Actions, as on every record's page.
+  defp sidebar_content(assigns) do
+    ~H"""
+    <dl id="team-contacts-section">
+      <dt>Team contacts</dt>
+      <dd id="team-contacts">
+        <p :if={@contacts == []} class="hint">None yet. Get help lists no one.</p>
+        <ul :if={@contacts != []} class="row-links">
+          <li :for={contact <- @contacts} id={"team-contact-#{contact.id}"} class="py-2">
+            {contact.name}
+            <span class="block">
+              <.email id={"team-contact-#{contact.id}-email"} email={contact.email} />
+            </span>
+            <span class="block">
+              <.phone id={"team-contact-#{contact.id}-phone"} phone={contact.phone} />
+            </span>
+          </li>
+        </ul>
+        <p :if={@contacts != []} class="hint">Get help lists them for members.</p>
+        <ul class="action-list">
+          <li>
+            <.a
+              id="team-contacts-change"
+              navigate={~p"/teams/#{@team}/settings/contacts"}
+            >Change team contacts</.a>
+          </li>
+        </ul>
+      </dd>
+    </dl>
+    <dl id="team-actions-section">
+      <dt>Actions</dt>
+      <dd>
+        <ul id="team-actions" class="action-list">
+          <li>
+            <.a id="team-edit" navigate={~p"/teams/#{@team}/settings/edit"}>Change team</.a>
+          </li>
+          <li>
+            <.a
+              id="team-refresh"
+              href="#"
+              phx-click="refresh"
+              phx-disable-with="Refreshing…"
+            >Refresh from {D4H.service_name(@team)}</.a>
+          </li>
+          <li :if={!D4H.records?(@team)}>
+            <.a
+              id="team-d4h"
+              external={true}
+              href={D4H.build_url(@team, "/dashboard")}
+            >Open in {D4H.service_name(@team)}</.a>
+          </li>
+        </ul>
+      </dd>
+    </dl>
+    """
   end
 
-  def handle_event("save", %{"form" => form_params}, socket) do
-    case UpdateTeamSettings.call(socket.assigns.current_team, form_params) do
-      {:ok, team} ->
-        socket =
-          socket
-          |> assign(current_team: team)
-          |> assign_form(Team.build_settings_changeset(team))
-          |> put_flash(:info, "Team settings saved.")
+  defp present?(text), do: is_binary(text) and String.trim(text) != ""
 
-        {:noreply, socket}
+  # "Cedar Creek BC V5K 0A1", under the address.
+  defp city_line(team),
+    do: [team.city, team.postal_code] |> Enum.filter(&present?/1) |> Enum.join(" ")
 
-      {:error, changeset} ->
-        {:noreply, assign_form(socket, changeset)}
+  # "D4H, team 4210 in Canada", or "SAR Duty Records", which has one team per key.
+  defp records_text(team) do
+    if D4H.records?(team) do
+      D4H.service_name(team)
+    else
+      region =
+        Enum.find_value(D4H.regions(), fn {name, host} -> host == team.d4h_api_host && name end)
+
+      team_text = "team #{team.d4h_team_id}"
+      "#{D4H.service_name(team)}, #{if region, do: "#{team_text} in #{region}", else: team_text}"
+    end
+  end
+
+  # "Alex Chen's key, an Owner in D4H. Last copied 3 min ago."
+  defp records_hint(team, key_level, now) do
+    copied =
+      if ago = Service.Format.time_ago(team.d4h_synced_at, now, team.timezone),
+        do: "Last copied #{String.downcase(ago)}."
+
+    key = if !D4H.records?(team), do: Team.key_text(team, key_level)
+
+    case Enum.reject([key && "#{key}.", copied], &is_nil/1) do
+      [] -> nil
+      parts -> Enum.join(parts, " ")
     end
   end
 
   def handle_event("refresh", _params, socket) do
     case RefreshTeamDetails.call(socket.assigns.current_team) do
       {:ok, team} ->
-        socket =
-          socket
-          |> assign(current_team: team)
-          |> assign_form(Team.build_settings_changeset(team))
-          |> put_flash(:info, "Team refreshed.")
-
-        {:noreply, socket}
+        {:noreply, socket |> assign(current_team: team) |> put_flash(:info, "Team refreshed.")}
 
       {:error, text} when is_binary(text) ->
         {:noreply, put_flash(socket, :error, text)}
 
-      {:error, changeset} ->
-        {:noreply, assign_form(socket, changeset)}
+      {:error, _changeset} ->
+        service = D4H.service_name(socket.assigns.current_team)
+
+        {:noreply,
+         put_flash(socket, :error, "#{service} sent a place or time zone SAR Duty can't use.")}
     end
   end
 end

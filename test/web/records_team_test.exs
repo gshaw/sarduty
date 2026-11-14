@@ -89,7 +89,7 @@ defmodule Web.RecordsTeamTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
 
-    assert lv |> element("button", "Refresh") |> render_click() =~
+    assert lv |> element("#team-refresh") |> render_click() =~
              "Team refreshed."
 
     team = App.Repo.reload!(team)

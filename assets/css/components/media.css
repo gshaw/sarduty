@@ -32,4 +32,7 @@
   /* A picture beside its words: a photo and a name, a logo and a team. */
   .media { display: flex; align-items: center; gap: var(--sp-3); }
   .media > img { flex: none; }
+  /* A team's or organization's letters in a 32px logo's place, as the Dashboard has them
+     at 64px. */
+  .logo-initials { display: inline-grid; place-items: center; flex: none; border-radius: var(--radius); background: var(--shade-1); color: var(--primary); font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 700; }
 }

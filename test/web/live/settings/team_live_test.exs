@@ -8,82 +8,92 @@ defmodule Web.Settings.TeamLiveTest do
 
   @secret "SECRET-TEAM-PAT-123"
 
-  test "renders team settings when team exists", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
+  test "shows the team, with no form (#1076)", %{conn: conn} do
+    %{user: user, team: team} =
+      user_with_team_fixture(%{
+        team: %{
+          legal_name: "Coast Range Search and Rescue Society",
+          abbreviated_name: "COAST",
+          mailing_address: "123 Main St",
+          lat: 49.2,
+          lng: -123.1,
+          timezone: "America/Vancouver"
+        }
+      })
 
-    {:ok, _lv, html} =
-      conn
-      |> log_in_user(user)
-      |> live(~p"/teams/#{team}/settings")
+    team
+    |> Ecto.Changeset.change(city: "Cedar Creek BC", postal_code: "V5K 0A1")
+    |> App.Repo.update!()
 
-    assert html =~ "Team settings"
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
+
+    assert has_element?(lv, "#team-head", team.name)
+    assert has_element?(lv, "#team-head-facts", "Coast Range Search and Rescue Society · COAST")
+    assert has_element?(lv, "#team-initials")
+    assert has_element?(lv, "#team-mailing-address", "Cedar Creek BC V5K 0A1")
+    assert has_element?(lv, "#team-place", "49.20000, -123.10000")
+    assert has_element?(lv, "#team-maps")
+    assert has_element?(lv, "#team-timezone", "America/Vancouver")
+    refute has_element?(lv, "#team_settings_form")
+
+    assert has_element?(lv, ~s(#team-edit[href="/teams/#{team.subdomain}/settings/edit"]))
+    assert has_element?(lv, "#team-d4h", "Open in D4H")
   end
 
-  test "General has no key field; the key is on Access key (#727)", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: @secret}})
+  test "says where the records come from and whose key it is", %{conn: conn} do
+    key = %{
+      d4h_access_key: @secret,
+      d4h_access_key_owner: "Alex Chen",
+      d4h_access_key_member_id: 900,
+      d4h_team_id: 4210,
+      d4h_api_host: "api.ca.d4h.org"
+    }
+
+    %{user: user, team: team} = user_with_team_fixture(%{team: key})
+    manager_fixture(team, %{name: "Alex Chen", d4h_member_id: 900, d4h_permission: 0})
 
     {:ok, lv, html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
 
     refute html =~ @secret
-    refute has_element?(lv, "#form_new_d4h_access_key")
+    assert has_element?(lv, "#team-records", "D4H, team 4210 in Canada")
+    assert has_element?(lv, "#team-records", "Alex Chen's key, an Owner in D4H.")
+  end
+
+  test "team contacts, with Change team contacts", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
+    assert has_element?(lv, "#team-contacts", "None yet. Get help lists no one.")
+
+    sam = member_fixture(team, %{name: "Sam Rivera", email: "sam@example.com"})
+    team |> Ecto.Changeset.change(first_contact_id: sam.id) |> App.Repo.update!()
+
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
+    assert has_element?(lv, "#team-contact-#{sam.id}", "sam@example.com")
+    assert has_element?(lv, "#team-contacts", "Get help lists them for members.")
 
     assert has_element?(
              lv,
-             ~s(a[href="/teams/#{team.subdomain}/settings/access-key"]),
-             "Access key"
+             ~s(#team-contacts-change[href="/teams/#{team.subdomain}/settings/contacts"])
            )
   end
 
-  test "saves the team's three names (#738)", %{conn: conn} do
+  test "names the organization, with a link to Admins", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
+    organization_fixture([team], %{name: "Coastal SAR Association", logo: nil})
 
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
-    assert has_element?(lv, "#team-names-lead")
 
-    names = %{
-      name: "York Sunbury SAR",
-      legal_name: "York Sunbury Search and Rescue Inc.",
-      abbreviated_name: "YSSR"
-    }
+    assert has_element?(lv, "#settings-organization", "Coastal SAR Association")
+    assert has_element?(lv, "#settings-organization-logo", "CS")
 
-    lv |> form("#team_settings_form", form: names) |> render_submit()
-
-    assert %{
-             name: "York Sunbury SAR",
-             legal_name: "York Sunbury Search and Rescue Inc.",
-             abbreviated_name: "YSSR"
-           } = Team.get!(team.id)
+    assert has_element?(
+             lv,
+             ~s(#settings-organization a[href="/teams/#{team.subdomain}/settings/admins"])
+           )
   end
 
-  # Facts about the team, which letters and forms print, beside its legal name (#995).
-  test "saves the team's address, trimmed", %{conn: conn} do
-    %{user: user, team: team} = user_with_team_fixture()
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
-
-    address = %{mailing_address: "PO Box 12", city: " Squamish BC ", postal_code: "V8B 0A1"}
-
-    assert lv |> form("#team_settings_form", form: address) |> render_submit() =~
-             "Team settings saved."
-
-    assert %Team{mailing_address: "PO Box 12", city: "Squamish BC", postal_code: "V8B 0A1"} =
-             Team.get!(team.id)
-  end
-
-  test "changes the team in the URL, not the one last opened", %{conn: conn} do
-    %{user: user, team: first} = user_with_team_fixture()
-    second = team_fixture(%{name: "Second SAR"})
-    manager_fixture(second, %{email: user.email})
-    App.Repo.update_all(App.Accounts.User, set: [last_team_id: first.id])
-
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{second}/settings")
-
-    lv |> form("#team_settings_form", form: %{name: "Renamed Second"}) |> render_submit()
-
-    assert Team.get!(second.id).name == "Renamed Second"
-    assert Team.get!(first.id).name == first.name
-  end
-
-  describe "Refresh" do
+  describe "Refresh from D4H" do
     test "takes the team's time zone from D4H, and leaves its names (#738)", %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture(%{team: %{d4h_access_key: @secret}})
 
@@ -97,7 +107,8 @@ defmodule Web.Settings.TeamLiveTest do
 
       {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
 
-      assert render_click(lv, "refresh", %{}) =~ "Team refreshed."
+      assert lv |> element("#team-refresh") |> render_click() =~ "Team refreshed."
+      assert has_element?(lv, "#team-timezone", "America/Toronto")
       assert %{timezone: "America/Toronto"} = refreshed = Team.get!(team.id)
       assert refreshed.name == team.name
     end
@@ -111,7 +122,7 @@ defmodule Web.Settings.TeamLiveTest do
 
       {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings")
 
-      assert render_click(lv, "refresh", %{}) =~ "D4H refused it"
+      assert lv |> element("#team-refresh") |> render_click() =~ "D4H refused it"
       assert Team.get!(team.id).name == team.name
     end
   end

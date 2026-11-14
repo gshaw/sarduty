@@ -1,6 +1,7 @@
 defmodule App.Model.Team do
   use App, :model
 
+  alias App.Adapter.D4H
   alias App.Field.EncryptedString
   alias App.Field.TrimmedString
   alias App.Model.Activity
@@ -437,6 +438,36 @@ defmodule App.Model.Team do
     do: String.match?(owner, ~r/sar\s*duty/i)
 
   def key_owner_is_sar_duty?(%Team{}), do: false
+
+  @doc """
+  The key member's D4H access level, "Owner" or "Editor", from SAR Duty's copy of
+  members, or nil when it isn't known. Access key and General both say it (#727, #1076).
+  """
+  def key_level(%Team{d4h_access_key_member_id: nil}), do: nil
+
+  def key_level(%Team{} = team) do
+    case Repo.get_by(Member, team_id: team.id, d4h_member_id: team.d4h_access_key_member_id) do
+      %Member{d4h_permission: permission} when permission in [0, 1] ->
+        Member.permission_label(permission)
+
+      _other ->
+        nil
+    end
+  end
+
+  @doc ~s|Who the key belongs to: "Alex Chen, an Owner in D4H", or "Not known yet".|
+  def key_owner_text(%Team{d4h_access_key_owner: nil}, _level), do: "Not known yet"
+  def key_owner_text(%Team{d4h_access_key_owner: owner}, nil), do: owner
+
+  def key_owner_text(%Team{d4h_access_key_owner: owner} = team, level),
+    do: "#{owner}, an #{level} in #{D4H.service_name(team)}"
+
+  @doc ~s|Whose key it is, as General says it: "Alex Chen's key, an Owner in D4H", or nil.|
+  def key_text(%Team{d4h_access_key_owner: nil}, _level), do: nil
+  def key_text(%Team{d4h_access_key_owner: owner}, nil), do: "#{owner}'s key"
+
+  def key_text(%Team{d4h_access_key_owner: owner} = team, level),
+    do: "#{owner}'s key, an #{level} in #{D4H.service_name(team)}"
 
   @doc "Whether D4H lets the team's key do `feature`, from App.Model.D4HAccess.features/0."
   def d4h_can?(%Team{d4h_permissions: permissions}, feature),

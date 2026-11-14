@@ -4,6 +4,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- Team settings' General is now an overview of your team: its names, address, place,
+  and records, with team contacts and actions beside them. Change team and Change team
+  contacts have their own pages, and Team admins is now Admins.
 - A new team logo in D4H shows as soon as the next refresh saves it, Google Wallet
   passes included. Before, browsers kept the old one for up to an hour.
 - Join dates, leave dates, and qualification dates no longer show a day early. A

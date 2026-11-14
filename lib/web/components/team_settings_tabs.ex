@@ -15,7 +15,7 @@ defmodule Web.Components.TeamSettingsTabs do
     required: true,
     values: [
       :general,
-      :team_admins,
+      :admins,
       :members,
       :fields,
       :features,
@@ -34,8 +34,8 @@ defmodule Web.Components.TeamSettingsTabs do
       <:tab navigate={~p"/teams/#{@team}/settings"} current={@current == :general}>
         General
       </:tab>
-      <:tab navigate={~p"/teams/#{@team}/settings/team-admins"} current={@current == :team_admins}>
-        Team admins
+      <:tab navigate={~p"/teams/#{@team}/settings/admins"} current={@current == :admins}>
+        Admins
       </:tab>
       <:tab navigate={~p"/teams/#{@team}/settings/features"} current={@current == :features}>
         Features
@@ -80,6 +80,23 @@ defmodule Web.Components.TeamSettingsTabs do
     """
   end
 
+  attr :id, :string, required: true
+  attr :src, :string, default: nil, doc: "the logo's URL, or nil for the initials"
+  attr :name, :string, required: true, doc: "whose logo, for the initials"
+
+  @doc """
+  A team's or organization's logo at 32px, or its initials when it has none: by the
+  organization on General, and by each heading on Admins (#1076).
+  """
+  def settings_logo(assigns) do
+    ~H"""
+    <img :if={@src} id={@id} src={@src} width="32" height="32" class="size-8 rounded" alt="" />
+    <span :if={!@src} id={@id} class="logo-initials size-8">
+      {Web.Navigation.team_initials(@name)}
+    </span>
+    """
+  end
+
   @general ~w(team.name team.legal_name team.abbreviated_name team.mailing_address team.city
               team.postal_code)
 
@@ -92,7 +109,10 @@ defmodule Web.Components.TeamSettingsTabs do
   def tab_for("team.signer" <> _rest), do: :signer
   def tab_for(_name), do: nil
 
-  @doc "The path of team settings' `tab`, as `tab_for/1` names it."
-  def tab_path(team, :general), do: ~p"/teams/#{team}/settings"
+  @doc """
+  Where to fill team settings' `tab`, as `tab_for/1` names it: Change team for General's
+  names and address (#1076), which General only shows, and the Signer tab.
+  """
+  def tab_path(team, :general), do: ~p"/teams/#{team}/settings/edit"
   def tab_path(team, :signer), do: ~p"/teams/#{team}/settings/signer"
 end

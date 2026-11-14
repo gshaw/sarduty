@@ -458,7 +458,9 @@ defmodule Web.Router do
       # A member's letter for a year, sent or not (#970).
       live "/teams/:subdomain/tax-credit-letters/:year/members/:id", TaxCreditLetterLive
       live "/teams/:subdomain/settings", Settings.TeamLive
-      live "/teams/:subdomain/settings/team-admins", Settings.TeamAdminsLive
+      live "/teams/:subdomain/settings/edit", Settings.TeamFormLive
+      live "/teams/:subdomain/settings/contacts", Settings.TeamContactsLive
+      live "/teams/:subdomain/settings/admins", Settings.AdminsLive
       live "/teams/:subdomain/settings/access-key", Settings.AccessKeyLive
       live "/teams/:subdomain/settings/members", Settings.MembersLive
       live "/teams/:subdomain/settings/fields", Settings.FieldsLive

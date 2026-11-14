@@ -1,0 +1,111 @@
+defmodule Web.Settings.AdminsLive do
+  use Web, :live_view_app_layout
+
+  import Web.Components.TeamSettingsTabs
+
+  import Web.Components.TeamManagers
+
+  alias App.Accounts
+  alias App.Adapter.D4H
+  alias App.Model.Member
+  alias App.Model.OrganizationAdmin
+  alias App.Model.Team
+  alias App.Model.TeamLoginGrant
+  alias App.Repo
+
+  # Team settings' Admins tab (#1076): everyone who can open the team, from closest to
+  # furthest, each with a logo by its heading: the team's admins, its organization's, and
+  # SAR Duty's. Team contacts are on General.
+  def mount(_params, _session, socket) do
+    team = socket.assigns.current_team
+    managers = Member.get_managers(team, DateTime.utc_now())
+    login_emails = managers |> Enum.map(& &1.email) |> Accounts.login_emails()
+    organization = team |> Repo.preload(:organization) |> Map.get(:organization)
+
+    socket =
+      assign(socket,
+        page_title: "Team settings · Admins",
+        team_logo: Team.logo_file(team.subdomain) && Web.TeamController.logo_url(team, :square),
+        managers: managers,
+        grants: TeamLoginGrant.get_for_team(team),
+        login_emails: login_emails,
+        organization: organization,
+        organization_admins: organization_admins(organization),
+        sar_duty_admins: Enum.sort(Accounts.admin_emails())
+      )
+
+    {:ok, socket}
+  end
+
+  def render(assigns) do
+    ~H"""
+    <.team_settings_tabs team={@current_team} current={:admins} />
+    <section id="team-admins" class="measure">
+      <h2 class="heading media">
+        <.settings_logo id="team-admins-logo" src={@team_logo} name={@current_team.name} />
+        {@current_team.name}'s team admins
+      </h2>
+      <p :if={!D4H.records?(@current_team)}>
+        These people can log in to SAR Duty for {@current_team.name}. They are the members with
+        Owner or Editor access in {@service}. Members who are retired or have left cannot log in.
+        To add or remove someone, change their access in {@service}. SAR Duty follows within 10 minutes.
+      </p>
+      <p :if={D4H.records?(@current_team)}>
+        These people can log in to SAR Duty for {@current_team.name}. They are the members who
+        are team admins. Members who are retired or have left cannot log in. To add or remove
+        someone, change Team admin on their Change member page.
+      </p>
+      <.team_managers
+        id="team-managers"
+        managers={@managers}
+        grants={@grants}
+        login_emails={@login_emails}
+      />
+    </section>
+
+    <section :if={@organization} id="organization-admins" class="mt-8 measure">
+      <h2 class="heading media">
+        <.settings_logo
+          id="organization-admins-logo"
+          src={@organization.logo_at && Web.OrganizationController.logo_url(@organization)}
+          name={@organization.name}
+        />
+        {@organization.short_name}'s organization admins
+      </h2>
+      <p>
+        They keep {@organization.name}'s settings and hours tags, and can turn your ID cards on or
+        off. They see your team's totals, never its members.
+      </p>
+      <p :if={@organization_admins == []} class="hint">None yet.</p>
+      <ul :if={@organization_admins != []} id="organization-admin-emails">
+        <li :for={{email, i} <- Enum.with_index(@organization_admins)}>
+          <.email id={"organization-admin-#{i}-email"} email={email} />
+        </li>
+      </ul>
+    </section>
+
+    <section id="sar-duty-admins" class="mt-8 measure">
+      <h2 class="heading media">
+        <.settings_logo
+          id="sar-duty-admins-logo"
+          src={~p"/images/sarduty-logo-square.svg"}
+          name="SAR Duty"
+        /> SAR Duty site admins
+      </h2>
+      <p>
+        They run SAR Duty and can open every team. Reach them at <.a href="mailto:support@sarduty.com">support@sarduty.com</.a>.
+      </p>
+      <ul id="sar-duty-admin-emails">
+        <li :for={{email, i} <- Enum.with_index(@sar_duty_admins)}>
+          <.email id={"sar-duty-admin-#{i}-email"} email={email} />
+        </li>
+      </ul>
+    </section>
+    """
+  end
+
+  defp organization_admins(nil), do: []
+
+  defp organization_admins(organization),
+    do: organization |> OrganizationAdmin.get_for_organization() |> Enum.map(& &1.email)
+end
