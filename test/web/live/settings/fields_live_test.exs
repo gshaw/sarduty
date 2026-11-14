@@ -176,6 +176,31 @@ defmodule Web.Settings.FieldsLiveTest do
     refute render(lv) =~ "never copies"
   end
 
+  test "fields on the team itself are a sixth kind, filled in on General (#1056)",
+       %{conn: conn, team: team} do
+    owner = %{owner_type: "Organisation", owner_id: 9}
+
+    save(team, [], [
+      field(701, "Duty Phone", Map.merge(owner, %{target: "team", hint: "The number to call."})),
+      field(702, "Team Email Contact", Map.merge(owner, %{target: "team", restricted: true})),
+      field(40, "Primary Cause", %{target: "incident"})
+    ])
+
+    [phone, email] =
+      team.id |> CustomField.get_all("team") |> Enum.sort_by(& &1.d4h_custom_field_id)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields?kind=team")
+
+    assert has_element?(lv, "#fields-kind-team", "Team")
+    assert has_element?(lv, "#team-fields-who a[href='/teams/#{team.subdomain}/settings']")
+    assert has_element?(lv, "#fields-team-list-organization #field-#{phone.id}", "Text")
+    assert has_element?(lv, "#field-#{email.id} .badge", "Restricted")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{email.id}")
+    assert has_element?(lv, "#field-on", "Team")
+    assert has_element?(lv, "#field-restricted", "Members and your organization never do.")
+  end
+
   test "says when the team has no fields", %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields")
 

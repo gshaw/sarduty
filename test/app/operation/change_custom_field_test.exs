@@ -86,6 +86,13 @@ defmodule App.Operation.ChangeCustomFieldTest do
     assert plan(item, %{restricted: false}) == []
   end
 
+  test "Restricted changes on a field on the team itself; Needed to publish never (#1056)" do
+    phone = debrief(%{target: "team", field_type: "text", options: [], bundle: nil})
+
+    assert [%{new_value: %{"restricted" => true}}] =
+             plan(phone, %{restricted: true, required: true})
+  end
+
   test "out of a bundle, or into a new one added first" do
     assert [%{new_value: %{"d4h_bundle_id" => nil}}] = plan(debrief(), %{bundle: nil})
 

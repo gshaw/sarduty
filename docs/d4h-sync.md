@@ -235,6 +235,10 @@ Records serves them in D4H's shape (#1003), and bumps a record's `updatedAt` whe
 its values change, which D4H doesn't, so the heads see a value change on Records. See
 [custom-fields.md](custom-fields.md).
 
+The team's own field values (#1056 step 5) are on the team's record, which has no list
+head, so the syncs never read them. The nightly refresh, General's Refresh, and SAR
+Duty's own Change fields keep them; a value changed in D4H waits for one of those.
+
 ## Where the copy drifts
 
 - **Up to 10 minutes behind** for anything D4H marks with a new `updatedAt`, and for
@@ -283,8 +287,10 @@ its values change, which D4H doesn't, so the heads see a value change on Records
   deleted rows, so a row deleted by mistake loses nothing and the next refresh restores it.
   One gap remains: D4H pages by offset, so a row deleted in D4H mid-refresh shifts the
   next one out of view, and that row is gone until the next refresh.
-- The team's place and time zone are copied when the team is created and when an admin
-  clicks refresh in team settings, not on the daily sync. Its three names (#738) come
+- The team's place, time zone, and own field values (#1056) are copied when the team is
+  created and at the start of every full refresh
+  ([RefreshTeamDetails](../lib/app/operation/refresh_team_details.ex), #1076), not by
+  the syncs: D4H moves no list head when they change. Its three names (#738) come
   from D4H's title only at sign-up; after that they are the team's own, and Refresh
   leaves them.
 - Activity tags are stored as titles. Letter hours depend on the exact titles of the

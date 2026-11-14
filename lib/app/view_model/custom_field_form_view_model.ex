@@ -181,8 +181,8 @@ defmodule App.ViewModel.CustomFieldFormViewModel do
   @doc """
   The field's settings as the adapter takes them, without its choices or bundle. Units
   go only on a number, Needed to publish only on an activity's field, and member
-  privacy only on a member's. Restricted is the box on an activity's field, and set for
-  the kind on the others, as D4H's default is RESTRICTED (decided 2026-11-13).
+  privacy only on a member's. Restricted is the box on an activity's or the team's own
+  field (CustomField.restricted_matters?/1), and set for the kind on the others, as D4H's default is RESTRICTED (decided 2026-11-13).
   """
   def value(%__MODULE__{} = form) do
     %{

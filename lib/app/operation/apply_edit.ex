@@ -5,8 +5,9 @@ defmodule App.Operation.ApplyEdit do
   (docs/records.md). A D4H team changes its groups and who is in them (#546), adds and
   changes activities (#585), changes members' details and custom fields (#705), sets and
   removes members' photos (#1028) and the team's logo (#1075), retires and rejoins members
-  (#1053), changes equipment items' status, barcode, and custom fields, and adds and
-  changes its own fields and their bundles (#1056); every other record it changes in D4H.
+  (#1053), changes equipment items' status, barcode, and custom fields, adds and changes
+  its own fields and their bundles, and fills in the team's own field values (#1056);
+  every other record it changes in D4H.
 
   After a group row, a retire, or a rejoin the caller writes the local copy, as group
   rules do, and the next sync confirms it. After any other row the sync copies what
@@ -47,11 +48,18 @@ defmodule App.Operation.ApplyEdit do
   ]
 
   # The caller writes these rows' local copy, and the next sync confirms it: a sync after
-  # a retire took about 10 seconds on South Fraser (#1053).
+  # a retire took about 10 seconds on South Fraser (#1053). The sync never reads the
+  # team's own field values, so one after :update_team would copy nothing (#1056).
   # A team logo's copy is saved by SetTeamLogo, and the sync never reads logos (#1075).
   @local_copy_actions @group_actions ++
                         @field_actions ++
-                        [:retire_member, :rejoin_member, :set_team_logo, :remove_team_logo]
+                        [
+                          :retire_member,
+                          :rejoin_member,
+                          :update_team,
+                          :set_team_logo,
+                          :remove_team_logo
+                        ]
 
   def call(team, user, row, now, opts \\ [])
 
@@ -96,6 +104,10 @@ defmodule App.Operation.ApplyEdit do
   def d4h_takes?(%ChangeSetRow{action: action}) when action in @d4h_actions, do: true
 
   def d4h_takes?(%ChangeSetRow{action: action}) when action in @field_actions, do: true
+
+  # The team's own field values (#1056 step 5), and nothing else about the team.
+  def d4h_takes?(%ChangeSetRow{action: :update_team, new_value: new_value}),
+    do: only?(new_value, ["custom_values"])
 
   def d4h_takes?(%ChangeSetRow{}), do: false
 

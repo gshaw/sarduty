@@ -13,6 +13,9 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
   ID cards, letters, and the Dashboard show it at once.
 - A new team logo in D4H shows as soon as the next refresh saves it, Google Wallet
   passes included. Before, browsers kept the old one for up to an hour.
+- Fill in the fields your organization asks of your team, such as Duty Phone, on Team
+  settings → General with Change fields. Team settings → Fields lists them under Team,
+  and you can add your team's own there too.
 - ⭐ Add your team's own fields in Team settings → Fields, and change, archive, or
   delete them from a field's page, in D4H and in SAR Duty Records. A D4H key that can't
   change fields says so, and how to fix it.

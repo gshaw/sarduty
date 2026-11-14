@@ -3,7 +3,7 @@
 <!-- cspell:ignore BCSARA SFSAR -->
 
 D4H lets a team, or its organization, add its own fields to incidents, exercises,
-events, members, and equipment (#681). BCSARA's 27 incident fields, such as Primary
+events, members, equipment (#681), and the team itself (#1056). BCSARA's 27 incident fields, such as Primary
 Cause, Agency File #, and Task Type, are on every BC team, and 19 of them are required.
 SAR Duty copies the fields and their values so it can show them, flag missing required
 ones, edit them, and fill them from templates (#307).
@@ -13,8 +13,8 @@ ones, edit them, and fill them from templates (#307).
 - **Definitions** are copied to `custom_fields` by
   [UpsertCustomFields](../lib/app/operation/refresh_d4h_data/upsert_custom_fields.ex):
   the team's own fields and its organization's, for events, exercises, incidents,
-  members, and equipment, archived ones too. D4H's other targets (health and safety
-  reports, persons involved, the team itself, incident weather) are left out. Choice
+  members, equipment, and the team itself, archived ones too. D4H's other targets
+  (health and safety reports, persons involved, incident weather) are left out. Choice
   fields keep their options in `options`, each with the team or organization that
   added it: a team can add choices to its organization's field. Each field also keeps
   when it was added (`d4h_created_at`), and D4H's `searchable` and `frozen`, which
@@ -29,7 +29,8 @@ ones, edit them, and fill them from templates (#307).
   delete it. The bundles are read with the fields, so a renamed bundle waits for a field
   change or the nightly refresh.
 - **Values** ride on the records the sync already reads: `activities.custom_values`,
-  `members.custom_values`, and `equipment_items.custom_values`, a map of the D4H field id, as a string, to a string
+  `members.custom_values`, and `equipment_items.custom_values`, and the team's own on
+  `teams.custom_values` ([below](#fields-on-the-team-itself)), a map of the D4H field id, as a string, to a string
   or a list of D4H option ids. They're keyed by D4H ids, not local ones, since the
   values are D4H option ids too and the copy can be rebuilt from D4H at any time. Empty
   values are left out of the map. Nil means not copied yet.
@@ -96,7 +97,7 @@ enter 999" on a number field changes how a report sums it. So team settings has 
 **Fields** tab, `/teams/:subdomain/settings/fields`, after Members (#872).
 
 The tab is an index to scan, one kind at a time: counts for incidents, exercises,
-events, members, and equipment switch between them (`?kind=member`). The team's own
+events, members, equipment, and the team switch between them (`?kind=member`). The team's own
 fields come first, under "Coast Range SAR's fields", then its organization's, under
 "WESARA's fields", so step 4 of #1056 can let a team change its own. Each is a row link,
 by bundle (decided 2026-11-12, #1056): the name, its type in grey, at most one tag, and
@@ -206,6 +207,35 @@ values sent, as for a team admin's change. History says "Fields changed in SAR D
 never the values. A team admin viewing as the member can't save, as for the rest of the
 form.
 
+## Fields on the team itself
+
+D4H's sixth kind is the team (#1056 step 5). BCSARA has five on its teams: Duty Phone,
+Mailing Address, City/Town, Postal Code, and Team Email Contact, and an organization's
+forms need them. The Fields tab has a Team count with the same rows and field pages,
+and Add field's On list has Team.
+
+- **Copied** from `GET /teams/{id}`'s `customFieldValues` into `teams.custom_values`,
+  keyed like a record's, by RefreshTeamDetails at the start of every full refresh. The
+  team's record has no list head, so the syncs never read them, and a value changed in
+  D4H waits for the next full refresh ([d4h-sync.md](d4h-sync.md#custom-fields)).
+- **Shown** on General, `/teams/:subdomain/settings`, under the team's details: the
+  team's own fields under its name, then its organization's, each a Fields table as a
+  record's Fields tab draws it. **Change fields** in General's Actions opens
+  `/teams/:subdomain/settings/fields/edit`. That is
+  [CustomFieldsFormLive](../lib/web/live/custom_fields_form_live.ex) for the team, and
+  goes back to General.
+- **Saved** by [SaveCustomFields](../lib/app/operation/save_custom_fields.ex) as one
+  change set row, `update_team` with only `custom_values`, sent as `PATCH /teams/{id}`
+  (`D4H.update_team/2`). Records takes it. On D4H it is untried until Gerry's live
+  check on South Fraser. The copy takes what was sent; no sync follows.
+- **Who sees.** Team admins: General is theirs. Restricted works as on an activity's
+  field: the box is on Add field and Change field for the team, and nothing an
+  organization sees reads a restricted one. Members never see the team's values.
+  Reports and agents don't read them yet.
+
+City and Postal code stay on General's form until the organization's forms read its own
+fields, with the forms work.
+
 ## Adding and changing fields
 
 A team admin adds, changes, archives, restores, deletes, and reorders the team's own
@@ -250,7 +280,8 @@ These are the operations they call.
   live choice on a choice field, each named once; units of up to 10 characters, sent on
   a number only. A new field goes after the team's others of its kind.
 - **Settings by kind.** Needed to publish goes on incidents, exercises, and events only.
-  Restricted is the team admin's choice on an activity field, and always sent, since
+  Restricted is the team admin's choice on an activity field or one on the team itself
+  (`CustomField.restricted_matters?/1`), and always sent, since
   D4H's default is RESTRICTED: RESTRICTED on a member field, the safer choice inside
   D4H, and UNRESTRICTED on equipment (decided 2026-11-13). Neither changes anything in
   SAR Duty, and changing a member or equipment field never changes it. A new member
@@ -309,6 +340,8 @@ Fraser's one is "SFSAR Custom PRIVATE", working notes on a task report. So:
 - Member fields are different: RESTRICTED changes nothing on one in SAR Duty. Team
   admins see every member's values, members their own as member privacy allows, and an
   organization never a person's (#1056).
+- A field on the team itself is like an activity's: an organization reads only the
+  unrestricted ones ([above](#fields-on-the-team-itself)).
 
 ## D4H's API
 
@@ -322,6 +355,8 @@ Fraser's one is "SFSAR Custom PRIVATE", working notes on a task report. So:
   exercises, and incidents, and on PATCH of members and equipment. A PATCH that sends
   one field keeps the others. `value: null` clears a text or choice field; `[]` gets a
   400 (tested on a member, 2026-10-28).
+- `GET /teams/{id}` has the team's own values as `customFieldValues`. `PATCH
+/teams/{id}` with only `customFieldValues` is untried on D4H (#1056 step 5).
 - D4H checks required fields when an incident is published or approved, not when it is
   saved: a new incident with them blank saves in D4H.
 
@@ -339,4 +374,7 @@ Records takes the same field, choice, and bundle writes as D4H
 (gshaw/sarduty-records#36 and #37), so a Records team adds and changes its own fields
 as a D4H team does ([above](#adding-and-changing-fields)). Its own store also makes
 fields for Try a demo's cast ([demo.md](demo.md#the-cast)), the dev teams, and its own
-sample.
+sample. Coast Range SAR's cast has WESARA's 5 team fields, with no values. Records
+serves the team's own values on `GET /teams/{id}` and takes `PATCH /teams/{id}` with
+only `customFieldValues`; its `bin/check-sarduty` checks `update_team/2` and
+`fetch_team/1`.

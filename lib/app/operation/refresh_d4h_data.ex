@@ -52,17 +52,16 @@ defmodule App.Operation.RefreshD4HData do
     end
   end
 
-  # The team's place and time zone (#1076), first, so the stages after read days in the
-  # new zone. A refusal or a value SAR Duty can't use keeps the ones it has.
+  # The team's place, time zone (#1076), and own field values (#1056), first, so the
+  # stages after read days in the new zone. D4H moves no list head when the values
+  # change, so the syncs never read them. A refusal keeps the ones it has.
   defp refresh_details(team) do
     case RefreshTeamDetails.call(team) do
       {:ok, team} ->
         team
 
       {:error, reason} ->
-        Logger.warning(
-          "Team #{team.id}'s place and time zone weren't refreshed: #{inspect(reason)}"
-        )
+        Logger.warning("Team #{team.id}'s details weren't refreshed: #{inspect(reason)}")
 
         team
     end

@@ -1,6 +1,8 @@
 defmodule Web.Components.FieldDefinitions do
   use Web, :function_component
 
+  import Web.Components.HeadingRow
+  import Web.Components.OrgLogo
   import Web.Components.RowLink
 
   alias App.Model.CustomField
@@ -23,12 +25,34 @@ defmodule Web.Components.FieldDefinitions do
 
   attr :organization_name, :string, default: nil, doc: "with team_name, the organization's"
 
+  attr :team_logo, :string,
+    default: nil,
+    doc: "the team's logo URL, beside its heading; none shows its initials"
+
+  attr :organization_logo, :string, default: nil, doc: "the organization's logo URL"
+
+  slot :team_action,
+    doc: "buttons on the team's heading, which shows even with no fields of its own"
+
   def field_list(assigns) do
     assigns = assign(assigns, :sections, sections(assigns))
 
     ~H"""
     <section :for={{key, heading, fields} <- @sections} id={"#{@id}-#{key}"} class="mb-8">
-      <h2 :if={heading} class="heading mb-4">{heading}</h2>
+      <.heading_row :if={heading} class="mb-4">
+        <h2 class="heading flex items-center gap-3">
+          <.org_logo
+            id={"#{@id}-#{key}-logo"}
+            src={logo(key, @team_logo, @organization_logo)}
+            name={if key == "team", do: @team_name, else: @organization_name || heading}
+          />
+          {heading}
+        </h2>
+        <:action :if={key == "team" and @team_action != []}>
+          {render_slot(@team_action)}
+        </:action>
+      </.heading_row>
+      <p :if={fields == []} class="hint">None yet.</p>
       <div
         :for={{bundle, fields} <- CustomField.grouped(fields)}
         id={group_id(@id, key, bundle)}
@@ -41,7 +65,8 @@ defmodule Web.Components.FieldDefinitions do
               <strong class="text-link">{field.title}</strong>
               <span class="hint ml-1">{about(field)}</span>
               <.field_tag field={field} />
-              <span :if={first_line(field.hint)} class="hint block line-clamp-1">
+              <%!-- line-clamp sets its own display: a `block` beside it undoes the clamp. --%>
+              <span :if={first_line(field.hint)} class="hint line-clamp-2">
                 {first_line(field.hint)}
               </span>
             </.row_link>
@@ -56,15 +81,24 @@ defmodule Web.Components.FieldDefinitions do
   # one section with no heading: an organization's page lists only its own.
   defp sections(%{team_name: nil, fields: fields}), do: [{"all", nil, fields}]
 
-  defp sections(%{team_name: team_name, organization_name: organization_name, fields: fields}) do
+  # The team's heading stays when it has actions, so Add field has a home.
+  defp sections(
+         %{team_name: team_name, organization_name: organization_name, fields: fields} = assigns
+       ) do
     {organization, own} = Enum.split_with(fields, &CustomField.organisation?/1)
 
     [
       {"team", "#{team_name}'s fields", own},
       {"organization", "#{organization_name || "Your organization"}'s fields", organization}
     ]
-    |> Enum.reject(&(elem(&1, 2) == []))
+    |> Enum.reject(fn {key, _heading, fields} ->
+      fields == [] and not (key == "team" and assigns.team_action != [])
+    end)
   end
+
+  defp logo("team", team_logo, _organization_logo), do: team_logo
+  defp logo("organization", _team_logo, organization_logo), do: organization_logo
+  defp logo(_all, _team_logo, _organization_logo), do: nil
 
   defp group_id(id, key, nil), do: "#{id}-#{key}-fields"
   defp group_id(id, key, bundle), do: "#{id}-#{key}-bundle-#{bundle.d4h_bundle_id}"

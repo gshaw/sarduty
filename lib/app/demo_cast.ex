@@ -65,7 +65,8 @@ defmodule App.DemoCast do
     "exercise" => "Exercise",
     "incident" => "Incident",
     "member" => "Member",
-    "equipment" => "Equipment"
+    "equipment" => "Equipment",
+    "team" => "Team"
   }
 
   # Every Records team has these (Records' create_team), under these keys.

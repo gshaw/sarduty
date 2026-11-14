@@ -1,12 +1,14 @@
 defmodule Web.Settings.TeamLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.CustomFields
   import Web.Components.OpenInMaps
   import Web.Components.PersonHead
   import Web.Components.OrgLogo
   import Web.Components.TeamSettingsTabs
 
   alias App.Adapter.D4H
+  alias App.Model.CustomField
   alias App.Model.Team
   alias App.Repo
 
@@ -14,8 +16,9 @@ defmodule Web.Settings.TeamLive do
   # team on top, its details and organization, and its records and Actions beside them.
   # Change team edits the names and address, which letters and forms print (#995);
   # Change logo sets the logo (#1075); Change team contacts picks who Get help lists
-  # (#780); Change access key replaces the key (#727). The team comes from the URL,
-  # /teams/:subdomain/settings.
+  # (#780); Change access key replaces the key (#727). Under the details, the values of
+  # the fields on the team itself (#1056 step 5), the team's own and its organization's,
+  # changed on Change fields. The team comes from the URL, /teams/:subdomain/settings.
   def mount(_params, _session, socket) do
     team = socket.assigns.current_team
 
@@ -25,6 +28,7 @@ defmodule Web.Settings.TeamLive do
       |> assign(organization: team |> Repo.preload(:organization) |> Map.get(:organization))
       |> assign(has_logo: Team.logo_file(team.subdomain) != nil)
       |> assign(key_level: if(!D4H.records?(team), do: Team.key_level(team)))
+      |> assign(team_fields: CustomField.get_all(team.id, "team"))
 
     {:ok, socket}
   end
@@ -54,7 +58,11 @@ defmodule Web.Settings.TeamLive do
 
     <div class="content-wrapper">
       <aside class="content-1/3">
-        <.sidebar_content team={@current_team} key_level={@key_level} />
+        <.sidebar_content
+          team={@current_team}
+          key_level={@key_level}
+          has_fields={@team_fields != []}
+        />
       </aside>
       <main class="content-2/3">
         <.main_content
@@ -62,6 +70,21 @@ defmodule Web.Settings.TeamLive do
           organization={@organization}
           maps_app={@current_user.maps_app}
         />
+        <section :if={@team_fields != []} id="team-fields" class="mt-12">
+          <div :for={{key, heading, lead, fields} <- field_sections(assigns)} class="mb-8">
+            <h2 class="heading">{heading}</h2>
+            <p :if={lead} class="hint mb-4">{lead}</p>
+            <.custom_fields_table
+              id={"team-fields-#{key}"}
+              rows={
+                CustomField.rows(fields, @current_team.custom_values, @current_team.timezone,
+                  restricted: true
+                )
+              }
+              fields_path={~p"/teams/#{@current_team}/settings/fields?kind=team"}
+            />
+          </div>
+        </section>
       </main>
     </div>
     """
@@ -123,6 +146,7 @@ defmodule Web.Settings.TeamLive do
 
   attr :team, :map, required: true
   attr :key_level, :string, default: nil
+  attr :has_fields, :boolean, default: false
 
   # Where the records come from and whose key reads them, beside the action that changes
   # the key, then the rest of Actions.
@@ -159,6 +183,12 @@ defmodule Web.Settings.TeamLive do
               navigate={~p"/teams/#{@team}/settings/access-key"}
             >Change access key</.a>
           </li>
+          <li :if={@has_fields}>
+            <.a
+              id="team-fields-change"
+              navigate={~p"/teams/#{@team}/settings/fields/edit"}
+            >Change fields</.a>
+          </li>
           <li :if={!D4H.records?(@team)}>
             <.a
               id="team-d4h"
@@ -170,6 +200,19 @@ defmodule Web.Settings.TeamLive do
       </dd>
     </dl>
     """
+  end
+
+  # The team's own fields under its name, then its organization's, as on the Fields tab.
+  defp field_sections(assigns) do
+    {organization, own} = Enum.split_with(assigns.team_fields, &CustomField.organisation?/1)
+    org = assigns.organization && assigns.organization.short_name
+
+    [
+      {"team", "#{assigns.current_team.name}'s fields", nil, own},
+      {"organization", "#{org || "Your organization"}'s fields",
+       "#{org || "Your organization"} asks each of its teams for these.", organization}
+    ]
+    |> Enum.reject(&(elem(&1, 3) == []))
   end
 
   defp present?(text), do: is_binary(text) and String.trim(text) != ""

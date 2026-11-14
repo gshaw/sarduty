@@ -46,6 +46,11 @@ new kind of write is a new row action there, not a new call from a page or an op
   field that moved. Each applied row keeps D4H's answer in `answer`, which is never
   stored, and the caller writes the copy from it with no sync. See
   [custom-fields.md](custom-fields.md#adding-and-changing-fields).
+- **The team's own field values are an `edit` set of one row** (#1056 step 5),
+  `update_team` with only `custom_values`, sent as `PATCH /teams/{id}` from Change
+  fields on General. D4H's PATCH takes nothing else about the team here. The caller
+  writes the copy with what it sent, with no sync, since the sync never reads them. See
+  [custom-fields.md](custom-fields.md#fields-on-the-team-itself).
 - **A member's own edit is a set of one row** (source `member`, #156): a member
   changing their address or emergency contacts from their page, applied at once. See
   [members.md](members.md).

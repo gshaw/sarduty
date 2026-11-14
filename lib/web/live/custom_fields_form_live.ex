@@ -1,8 +1,8 @@
 defmodule Web.CustomFieldsFormLive do
   @moduledoc """
   A record's Change fields page (#705): an activity's, a member's, or an equipment item's
-  D4H custom fields, reached from Change fields on its Fields tab. The live action names
-  the kind. Saving sends the changed ones to D4H (App.Operation.SaveCustomFields) and goes
+  D4H custom fields, reached from Change fields on its Fields tab, or the team's own
+  (#1056 step 5), from General. The live action names the kind. Saving sends the changed ones to D4H (App.Operation.SaveCustomFields) and goes
   back to the Fields tab. A published activity is locked, as on Change activity.
   """
   use Web, :live_view_app_layout
@@ -13,11 +13,12 @@ defmodule Web.CustomFieldsFormLive do
   alias App.Model.Activity
   alias App.Model.EquipmentItem
   alias App.Model.Member
+  alias App.Model.Team
   alias App.Operation.SaveCustomFields
 
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(params, _session, socket) do
     team = socket.assigns.current_team
-    record = find!(team, socket.assigns.live_action, id)
+    record = find!(team, socket.assigns.live_action, params["id"])
     fields = SaveCustomFields.fields(team, record)
 
     socket =
@@ -41,16 +42,17 @@ defmodule Web.CustomFieldsFormLive do
 
   defp find!(team, :member, id), do: Member.find!(team, id)
   defp find!(team, :equipment, id), do: EquipmentItem.find!(team, id)
+  defp find!(team, :team, nil), do: team
 
   defp title(%Activity{title: title}), do: title
   defp title(%Member{name: name}), do: name
   defp title(%EquipmentItem{title: title}), do: title
+  defp title(%Team{name: name}), do: name
 
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
-      <:item label={section(@record)} path={section_path(@current_team, @record)} />
-      <:item label={crumb(@record)} path={fields_path(@current_team, @record)} />
+      <:item :for={{label, path} <- crumbs(@current_team, @record)} label={label} path={path} />
       <:item label="Change fields" />
     </.breadcrumbs>
     <h1 class="title">{@page_title}</h1>
@@ -106,6 +108,15 @@ defmodule Web.CustomFieldsFormLive do
     """
   end
 
+  # The team's own are on General, so its crumb is Team settings alone.
+  defp crumbs(team, %Team{}), do: [{"Team settings", ~p"/teams/#{team}/settings"}]
+
+  defp crumbs(team, record),
+    do: [
+      {section(record), section_path(team, record)},
+      {crumb(record), fields_path(team, record)}
+    ]
+
   defp section(%Activity{}), do: "Activities"
   defp section(%Member{}), do: "Members"
   defp section(%EquipmentItem{}), do: "Equipment"
@@ -116,6 +127,7 @@ defmodule Web.CustomFieldsFormLive do
   defp kind_word(%Activity{activity_kind: kind}), do: kind
   defp kind_word(%Member{}), do: "member"
   defp kind_word(%EquipmentItem{}), do: "item"
+  defp kind_word(%Team{}), do: "team"
 
   defp section_path(team, %Activity{}), do: ~p"/teams/#{team}/activities"
   defp section_path(team, %Member{}), do: ~p"/teams/#{team}/members"
@@ -124,6 +136,7 @@ defmodule Web.CustomFieldsFormLive do
   defp fields_path(team, %Activity{id: id}), do: ~p"/teams/#{team}/activities/#{id}/fields"
   defp fields_path(team, %Member{id: id}), do: ~p"/teams/#{team}/members/#{id}/fields"
   defp fields_path(team, %EquipmentItem{id: id}), do: ~p"/teams/#{team}/equipment/#{id}/fields"
+  defp fields_path(team, %Team{}), do: ~p"/teams/#{team}/settings"
 
   # Keeps what was typed when the page renders again, such as after D4H refuses.
   def handle_event("validate", params, socket) do
