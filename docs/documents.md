@@ -613,6 +613,10 @@ organization.
   organization's form saved later with its name replaces it on the team's activities.
 - **The team's admins set it Off, Testing, or On** (App.Operation.SetFormState); its
   organization's admins can't.
+- **Its pages are the organization's pages**, under `/teams/:subdomain/forms`, after
+  Reports in the side navigation, and a 404 while team forms are off. Web.FormOwner
+  gives each page its owner, paths, and the words that differ. SAR Duty admins upload
+  and replace; the team's admins try it on the team's own activities, marked SAMPLE.
 
 ### On an activity
 

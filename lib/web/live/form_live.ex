@@ -1,22 +1,27 @@
-defmodule Web.Org.FormLive do
+defmodule Web.FormLive do
   use Web, :live_view_app_layout
 
   alias App.Document
   alias App.Model.Form
+  alias App.Model.Organization
   alias App.Operation.SetFormState
   alias App.Operation.TryForm
   alias App.Report.Query
+  alias Web.FormCollectionLive
+  alias Web.FormOwner
 
-  # One of an organization's forms (#950): what it reads and asks, whether it's off,
-  # testing, or on for its teams (#970), and a try on Coast Range SAR, a made-up team. Found through the
-  # organization, so another's is a 404. SAR Duty admins also replace it.
+  # One form (#950), an organization's or a team's own (#1083): what it reads and asks,
+  # whether it's off, testing, or on (#970), and a try: on Coast Range SAR, a made-up
+  # team, for an organization's, and on the team's own activities for a team's. Found
+  # through its owner, so another's is a 404. SAR Duty admins also replace it.
   def mount(%{"id" => id}, _session, socket) do
-    form = Form.get(socket.assigns.current_organization, id) || raise(Web.Status.NotFound)
-    activities = TryForm.activities(form)
+    owner = FormOwner.get(socket.assigns)
+    form = Form.get(owner, id) || raise(Web.Status.NotFound)
+    activities = TryForm.activities(form, owner)
 
     socket =
       socket
-      |> assign(page_title: form.name, activities: activities)
+      |> assign(page_title: form.name, owner: owner, activities: activities)
       |> assign(activity: TryForm.first(activities))
       |> assign_form(form)
 
@@ -45,7 +50,7 @@ defmodule Web.Org.FormLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
-      <:item label="Forms" path={~p"/orgs/#{@current_organization}/forms"} />
+      <:item label="Forms" path={FormOwner.forms_path(@owner)} />
       <:item label={@form.name} />
     </.breadcrumbs>
     <h1 class="title">{@form.name}</h1>
@@ -54,7 +59,7 @@ defmodule Web.Org.FormLive do
     <div class="content-wrapper">
       <aside class="content-1/3">
         <dl id="form-facts">
-          <dt>For teams</dt>
+          <dt>{FormCollectionLive.state_label(@owner)}</dt>
           <dd id="form-state">
             {Form.state_label(@form.state)}
           </dd>
@@ -71,7 +76,7 @@ defmodule Web.Org.FormLive do
             <div :if={is_nil(@pages) and not layout?(@doc)}>None</div>
             <div :if={@pages}>
               <.a
-                href={~p"/orgs/#{@current_organization}/forms/#{@form}/page"}
+                href={FormOwner.page_path(@owner, @form)}
                 target="_blank"
               >{Service.Format.count(@pages, one: "%d page", many: "%d pages")}</.a>
             </div>
@@ -80,7 +85,7 @@ defmodule Web.Org.FormLive do
           <dd id="form-version">
             {@form.version}
             <span class="hint">
-              {Service.Format.date_long(@form.updated_at, @current_organization.timezone)}
+              {Service.Format.date_long(@form.updated_at, @owner.timezone)}
             </span>
           </dd>
         </dl>
@@ -89,7 +94,7 @@ defmodule Web.Org.FormLive do
         <%!-- Two switches for three states, as Features nests one under another: on shows
         it to teams, and testing under it keeps it to drafts. Turning it on starts testing. --%>
         <section id="form-on-off" class="mb-8 measure flex flex-col gap-6">
-          <h2 class="heading mb-0">For teams</h2>
+          <h2 class="heading mb-0">{FormCollectionLive.state_label(@owner)}</h2>
           <.switch
             id="form-on"
             label="Turned on"
@@ -98,9 +103,7 @@ defmodule Web.Org.FormLive do
             phx-value-state={if @form.state == :off, do: "testing", else: "off"}
             {off_confirm(@form)}
           >
-            Team admins of every team in {@current_organization.short_name} fill it in from an
-            activity it shows on. Members never see it. Turning it off keeps every PDF already
-            published.
+            {on_hint(@owner)}
           </.switch>
           <div class="pl-8">
             <.switch
@@ -110,27 +113,22 @@ defmodule Web.Org.FormLive do
               disabled={@form.state == :off}
               phx-click="state"
               phx-value-state={if @form.state == :testing, do: "on", else: "testing"}
-              {publish_confirm(@form)}
+              {publish_confirm(@owner, @form)}
             >
-              Draft PDFs only, marked DRAFT. Turn testing off and they publish it, with an ID
-              and a verify code.
+              Draft PDFs only, marked DRAFT. Turn testing off and team admins publish it, with an
+              ID and a verify code.
             </.switch>
           </div>
         </section>
 
         <section id="form-try" class="mb-8 measure">
           <h2 class="heading">Try it</h2>
-          <p>
-            Prints it from Coast Range SAR, a made-up team, with each question's default answer.
-            The PDF says SAMPLE across it.
-          </p>
-          <p :if={@activities == []} id="form-try-none">
-            Coast Range SAR has no activity this form shows on.
-          </p>
+          <p>{try_text(@owner)} The PDF says SAMPLE across it.</p>
+          <p :if={@activities == []} id="form-try-none">{try_none(@owner)}</p>
           <form
             :if={@activities != []}
             id="form-try-form"
-            action={~p"/orgs/#{@current_organization}/forms/#{@form}/try"}
+            action={FormOwner.try_path(@owner, @form)}
             method="get"
             target="_blank"
           >
@@ -140,7 +138,7 @@ defmodule Web.Org.FormLive do
               type="select"
               label="Activity"
               value={@activity && @activity.id}
-              options={Enum.map(@activities, &{activity_label(&1), &1.id})}
+              options={Enum.map(@activities, &{activity_label(&1, @owner), &1.id})}
             />
             <.button id="form-try-button">Try form</.button>
           </form>
@@ -151,10 +149,7 @@ defmodule Web.Org.FormLive do
           <p>
             Upload a new text or page.
           </p>
-          <.button
-            id="form-replace-button"
-            navigate={~p"/orgs/#{@current_organization}/forms/#{@form}/edit"}
-          >
+          <.button id="form-replace-button" navigate={FormOwner.edit_path(@owner, @form)}>
             Replace form
           </.button>
         </section>
@@ -171,6 +166,25 @@ defmodule Web.Org.FormLive do
     """
   end
 
+  defp on_hint(%Organization{short_name: name}),
+    do:
+      "Team admins of every team in #{name} fill it in from an activity it shows on. " <>
+        "Members never see it. Turning it off keeps every PDF already published."
+
+  defp on_hint(team),
+    do:
+      "Team admins fill it in from an activity it shows on. Only #{team.name} sees it, " <>
+        "and members never do. Turning it off keeps every PDF already published."
+
+  defp try_text(%Organization{}),
+    do: "Prints it from Coast Range SAR, a made-up team, with each question's default answer."
+
+  defp try_text(_team),
+    do: "Prints it from one of your activities, with each question's default answer."
+
+  defp try_none(%Organization{}), do: "Coast Range SAR has no activity this form shows on."
+  defp try_none(_team), do: "Your team has no activity this form shows on."
+
   defp off_confirm(%Form{state: :off}), do: %{}
 
   defp off_confirm(form),
@@ -179,14 +193,16 @@ defmodule Web.Org.FormLive do
       "data-confirm-button" => "Turn off"
     }
 
-  defp publish_confirm(%Form{state: :testing} = form),
+  defp publish_confirm(owner, %Form{state: :testing} = form),
     do: %{
-      "data-confirm" =>
-        "Turn off testing for #{form.name}? Team admins of every team can then publish it.",
+      "data-confirm" => "Turn off testing for #{form.name}? #{who_publishes(owner)}",
       "data-confirm-button" => "Turn off testing"
     }
 
-  defp publish_confirm(_form), do: %{}
+  defp publish_confirm(_owner, _form), do: %{}
+
+  defp who_publishes(%Organization{}), do: "Team admins of every team can then publish it."
+  defp who_publishes(_team), do: "Team admins can then publish it."
 
   defp shows_on(nil), do: "Activities"
   defp shows_on(%Document{where: nil}), do: "Every activity"
@@ -199,23 +215,29 @@ defmodule Web.Org.FormLive do
   defp asks(nil), do: []
   defp asks(%Document{asks: asks}), do: asks
 
-  defp activity_label(activity),
-    do:
-      "#{activity.title}, #{Service.Format.date_short(activity.started_at, App.CoastRange.timezone())}"
+  # Coast Range SAR's activities in its own zone, a team's in the team's.
+  defp activity_label(activity, owner),
+    do: "#{activity.title}, #{Service.Format.date_short(activity.started_at, try_zone(owner))}"
+
+  defp try_zone(%Organization{}), do: App.CoastRange.timezone()
+  defp try_zone(team), do: team.timezone
 
   def handle_event("state", %{"state" => state}, socket) when state in ~w(off testing on) do
-    %{form: form, current_user: user} = socket.assigns
+    %{form: form, owner: owner, current_user: user} = socket.assigns
 
     case SetFormState.call(form, String.to_existing_atom(state), user) do
       {:ok, form} ->
-        {:noreply, socket |> assign_form(form) |> put_flash(:info, state_message(form))}
+        {:noreply, socket |> assign_form(form) |> put_flash(:info, state_message(owner, form))}
 
       {:error, :forbidden} ->
         {:noreply, put_flash(socket, :error, "You can no longer turn this form on or off.")}
     end
   end
 
-  defp state_message(%Form{state: :on, name: name}), do: "#{name} turned on for every team."
-  defp state_message(%Form{state: :testing, name: name}), do: "#{name} set to testing."
-  defp state_message(%Form{state: :off, name: name}), do: "#{name} turned off."
+  defp state_message(%Organization{}, %Form{state: :on, name: name}),
+    do: "#{name} turned on for every team."
+
+  defp state_message(_team, %Form{state: :on, name: name}), do: "#{name} turned on."
+  defp state_message(_owner, %Form{state: :testing, name: name}), do: "#{name} set to testing."
+  defp state_message(_owner, %Form{state: :off, name: name}), do: "#{name} turned off."
 end

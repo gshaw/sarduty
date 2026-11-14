@@ -35,11 +35,15 @@ defmodule App.FormsTest do
       # A form with a layout has no page.
       page = if File.exists?(path <> ".pdf"), do: File.read!(path <> ".pdf")
 
-      assert {:ok, form} = SaveForm.call(organization_fixture(), nil, text, page, admin),
+      organization = organization_fixture()
+
+      assert {:ok, form} = SaveForm.call(organization, nil, text, page, admin),
              "#{path}: #{inspect(SaveForm.call(organization_fixture(), nil, text, page, admin))}"
 
-      activity = form |> TryForm.activities() |> TryForm.first()
-      assert {:ok, %{content: "%PDF" <> _rest}} = TryForm.call(form, activity.id), path
+      activity = form |> TryForm.activities(organization) |> TryForm.first()
+
+      assert {:ok, %{content: "%PDF" <> _rest}} = TryForm.call(form, organization, activity.id),
+             path
     end
   end
 

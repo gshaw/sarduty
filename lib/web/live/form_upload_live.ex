@@ -1,28 +1,32 @@
-defmodule Web.Org.FormUploadLive do
+defmodule Web.FormUploadLive do
   use Web, :live_view_app_layout
 
   import Web.Components.FileDrop
 
   alias App.Model.Form
+  alias App.Model.Organization
   alias App.Operation.SaveForm
+  alias Web.FormOwner
 
   # Upload form and Replace form (#950), for SAR Duty admins: the form's text and its page
   # PDF, prepared on a Mac. There's no editor here. Saving checks the text on every team
-  # in the organization and on Coast Range SAR (App.Operation.SaveForm).
+  # in the organization and on Coast Range SAR, or on the team alone for a team's own
+  # form (#1083, App.Operation.SaveForm).
   def mount(params, _session, socket) do
     unless socket.assigns.current_user.is_admin, do: raise(Web.Status.NotFound)
-    organization = socket.assigns.current_organization
+    owner = FormOwner.get(socket.assigns)
 
     form =
       case socket.assigns.live_action do
         :new -> nil
-        :edit -> Form.get(organization, params["id"]) || raise(Web.Status.NotFound)
+        :edit -> Form.get(owner, params["id"]) || raise(Web.Status.NotFound)
       end
 
     socket =
       socket
       |> assign(
         page_title: if(form, do: "#{form.name} · Replace", else: "Upload form"),
+        owner: owner,
         form: form,
         errors: %{},
         # Files from a save that failed, so fixing one doesn't mean choosing both again.
@@ -37,15 +41,12 @@ defmodule Web.Org.FormUploadLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
-      <:item label="Forms" path={~p"/orgs/#{@current_organization}/forms"} />
-      <:item :if={@form} label={@form.name} path={~p"/orgs/#{@current_organization}/forms/#{@form}"} />
+      <:item label="Forms" path={FormOwner.forms_path(@owner)} />
+      <:item :if={@form} label={@form.name} path={FormOwner.form_path(@owner, @form)} />
       <:item label={if @form, do: "Replace", else: "Upload form"} />
     </.breadcrumbs>
     <h1 class="title">{if @form, do: "Replace #{@form.name}", else: "Upload form"}</h1>
-    <p class="lead measure">
-      Saving checks the text on every team in {@current_organization.short_name} and on Coast
-      Range SAR. Every expect must hold.
-    </p>
+    <p class="lead measure">{checks_text(@owner)} Every expect must hold.</p>
 
     <.form
       for={%{}}
@@ -87,7 +88,7 @@ defmodule Web.Org.FormUploadLive do
         <.button variant={:success} phx-disable-with="Checking…">
           {if @form, do: "Replace form", else: "Upload form"}
         </.button>
-        <.button navigate={cancel_path(@current_organization, @form)}>Cancel</.button>
+        <.button navigate={cancel_path(@owner, @form)}>Cancel</.button>
       </.form_actions>
     </.form>
     """
@@ -112,14 +113,14 @@ defmodule Web.Org.FormUploadLive do
   end
 
   defp save(socket, text, page) do
-    %{current_organization: organization, current_user: user, form: form} = socket.assigns
+    %{owner: owner, current_user: user, form: form} = socket.assigns
 
-    case SaveForm.call(organization, form, text, page, user) do
+    case SaveForm.call(owner, form, text, page, user) do
       {:ok, saved} ->
         socket =
           socket
           |> put_flash(:info, saved_message(form, saved))
-          |> push_navigate(to: ~p"/orgs/#{organization}/forms/#{saved}")
+          |> push_navigate(to: FormOwner.form_path(owner, saved))
 
         {:noreply, socket}
 
@@ -131,8 +132,13 @@ defmodule Web.Org.FormUploadLive do
     end
   end
 
-  defp cancel_path(organization, nil), do: ~p"/orgs/#{organization}/forms"
-  defp cancel_path(organization, form), do: ~p"/orgs/#{organization}/forms/#{form}"
+  defp cancel_path(owner, nil), do: FormOwner.forms_path(owner)
+  defp cancel_path(owner, form), do: FormOwner.form_path(owner, form)
+
+  defp checks_text(%Organization{short_name: name}),
+    do: "Saving checks the text on every team in #{name} and on Coast Range SAR."
+
+  defp checks_text(team), do: "Saving checks the text on #{team.name}."
 
   defp saved_message(nil, saved), do: "#{saved.name} uploaded."
   defp saved_message(_form, saved), do: "#{saved.name} replaced. It's version #{saved.version}."

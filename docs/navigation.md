@@ -57,7 +57,7 @@ is left out, and so is its divider.
 | 3       | Groups, Qualifications, Endorsements, Tax credit letters | team admins |
 | 4       | Equipment                                                | team admins |
 | 4       | Chores                                                   | everyone    |
-| 5       | Reports                                                  | team admins |
+| 5       | Reports, Forms                                           | team admins |
 | 6       | Team settings                                            | team admins |
 | 7       | Your membership                                          | members     |
 | 7       | Get help                                                 | everyone    |
@@ -66,6 +66,7 @@ is left out, and so is its divider.
   from Adminland and is not a member there sees 1 to 6, then Get help. A member sees
   Dashboard and Whiteboard, Activities and Take attendance, Members and Milestones,
   Chores, and Your membership and Get help, each in its own section (#440, #645).
+- Forms (#1083) shows only on a team SAR Duty turned team forms on for.
 - Get help (#780) is in the side navigation, not the team picker: on two teams, a row
   in the picker couldn't say which team it asks. Its link carries the page it was
   opened on, `?from=`, for its email.

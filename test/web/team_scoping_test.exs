@@ -33,6 +33,11 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/activities/:id/forms/:form_id/pdf",
     "/teams/:subdomain/activities/:id/forms/:form_id/publish",
     "/teams/:subdomain/activities/:id/forms/:form_id/sign",
+    # A team's own form (#1083), with team forms on here, so the 404 is the scoping's.
+    "/teams/:subdomain/forms/:id",
+    "/teams/:subdomain/forms/:id/edit",
+    "/teams/:subdomain/forms/:id/page",
+    "/teams/:subdomain/forms/:id/try",
     "/teams/:subdomain/equipment/:id",
     "/teams/:subdomain/equipment/:id/fields",
     "/teams/:subdomain/equipment/:id/fields/edit",
@@ -112,7 +117,11 @@ defmodule Web.TeamScopingTest do
 
     team =
       team
-      |> Ecto.Changeset.change(member_logins: true, certificates_enabled: true)
+      |> Ecto.Changeset.change(
+        member_logins: true,
+        certificates_enabled: true,
+        forms_enabled: true
+      )
       |> Repo.update!()
 
     other_team = team_fixture()
@@ -125,6 +134,7 @@ defmodule Web.TeamScopingTest do
     other = %{
       activity: activity_fixture(other_team, %{activity_kind: "incident"}),
       form: form_fixture(organization, %{state: :on}),
+      team_form: form_fixture(other_team, %{name: "Debrief", state: :on}),
       member: member,
       group: group,
       rule: group_rule_fixture(group, endorsement),
@@ -435,6 +445,9 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/outbox/:id" <> rest, s, o),
     do: "/teams/#{s}/outbox/#{o.outbox.id}#{rest}"
+
+  defp path_for("/teams/:subdomain/forms/:id" <> rest, s, o),
+    do: "/teams/#{s}/forms/#{o.team_form.id}#{rest}"
 
   defp path_for("/teams/:subdomain/reports/:id" <> rest, s, o),
     do: "/teams/#{s}/reports/#{o.report.id}#{rest}"
