@@ -100,7 +100,7 @@ defmodule Web.MeFieldsLive do
             <.org_logo
               id="organization-fields-logo"
               src={organization_logo(@team.organization)}
-              name={organization_name(@team)}
+              name={organization_full_name(@team)}
             />
             {organization_name(@team)}
           </h2>
@@ -132,4 +132,8 @@ defmodule Web.MeFieldsLive do
   defp organization_logo(_organization), do: nil
 
   defp organization_name(team), do: Team.organization_name(team) || "Your organization"
+
+  # Initials come from the full name, as on Admins.
+  defp organization_full_name(%{organization: %{name: name}}), do: name
+  defp organization_full_name(team), do: organization_name(team)
 end
