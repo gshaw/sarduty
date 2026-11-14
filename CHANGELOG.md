@@ -16,6 +16,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 - ⭐ Add your team's own fields in Team settings → Fields, and change, archive, or
   delete them from a field's page, in D4H and in SAR Duty Records. A D4H key that can't
   change fields says so, and how to fix it.
+- Put your team's own fields in order with Change order on Team settings → Fields, and
+  a field's choices on Change field: drag a row, or move it with the keyboard.
 - Members change their own answers to the member fields your team lets them change, on
   Your membership's Contact details, and save them with their other details. Fields
   they may only see stay read only there.

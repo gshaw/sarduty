@@ -1,6 +1,8 @@
 defmodule Web.Settings.FieldFormLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.DragList
+
   alias App.Adapter.D4H
   alias App.Model.CustomField
   alias App.Model.CustomFieldBundle
@@ -15,8 +17,7 @@ defmodule Web.Settings.FieldFormLive do
   # /teams/:subdomain/settings/fields/:id/edit (#1056 step 4): one of the team's own
   # fields. The rules are CustomFieldFormViewModel's, and the operations send the change
   # set. Kind and type are set once, so Change field shows them as facts. Choices are
-  # renamed, archived, restored, and added, never deleted; Change order (#1056) adds
-  # dragging them.
+  # renamed, dragged into order, archived, restored, and added, never deleted.
   def mount(params, _session, socket) do
     team = Repo.preload(socket.assigns.current_team, :organization)
     field = load_field(team, params["id"])
@@ -299,10 +300,14 @@ defmodule Web.Settings.FieldFormLive do
             "A renamed choice changes on every #{@noun} that has it. An archived choice is no longer offered, and #{@noun}s that have it keep it.",
           else: "In the order people see them."}
       </p>
-      <div
-        :for={{choice, index} <- Enum.with_index(@choices)}
-        id={"field-choice-#{index}"}
-        class="flex gap-2 items-center mb-2"
+      <.drag_list
+        :let={{choice, index}}
+        id="field-choice-list"
+        class="mb-2"
+        rows={Enum.with_index(@choices)}
+        key={&choice_key/1}
+        label={&choice_label/1}
+        event="reorder-choices"
       >
         <input type="hidden" name={"field[choices][#{index}][id]"} value={choice["id"]} />
         <input
@@ -351,7 +356,7 @@ defmodule Web.Settings.FieldFormLive do
         >
           Restore
         </.button>
-      </div>
+      </.drag_list>
       <.error :for={message <- @errors}>{message}</.error>
       <.button id="field-add-choice" type="button" size={:sm} phx-click="add-choice">
         Add choice
@@ -359,6 +364,13 @@ defmodule Web.Settings.FieldFormLive do
     </fieldset>
     """
   end
+
+  # A choice the field has keeps its key as it moves; a new one goes by its place.
+  defp choice_key({%{"id" => nil}, index}), do: "new-#{index}"
+  defp choice_key({%{"id" => id}, _index}), do: "option-#{id}"
+
+  defp choice_label({%{"label" => label}, _index}) when label not in [nil, ""], do: label
+  defp choice_label({_choice, index}), do: "choice #{index + 1}"
 
   @doc "A line under each type in the picker, on what it holds."
   def type_hint("text"), do: "A line of text."
@@ -396,6 +408,18 @@ defmodule Web.Settings.FieldFormLive do
   def handle_event(event, params, socket)
       when event in ~w(add-choice remove-choice archive-choice restore-choice),
       do: {:noreply, update_choices(socket, &change_choices(event, &1, params["index"]))}
+
+  def handle_event("reorder-choices", %{"keys" => keys}, socket) do
+    choices = Enum.with_index(socket.assigns.params["choices"])
+
+    case reorder(choices, keys, &choice_key/1) do
+      {:ok, moved} ->
+        {:noreply, update_choices(socket, fn _ -> Enum.map(moved, &elem(&1, 0)) end)}
+
+      :error ->
+        {:noreply, socket}
+    end
+  end
 
   def handle_event("save", %{"field" => params}, socket), do: save_field(socket, params)
 

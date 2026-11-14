@@ -10,6 +10,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.CopyButton
   import Web.Components.CustomFields
   import Web.Components.D4H
+  import Web.Components.DragList
   import Web.Components.FieldDefinitions
   import Web.Components.EmailPreview
   import Web.Components.FileDrop
@@ -90,6 +91,7 @@ defmodule Web.StyleGuideHTML do
          {:confirm_dialog, "Confirm dialog", "A question before a change that can't be undone."},
          {:copy_button, "Copy button", "Copies the value before it."},
          {:detail_list, "Detail list", "Key facts about one record."},
+         {:drag_list, "Drag list", "Rows people put in order, by dragging or the keyboard."},
          {:duration_input, "Duration input", "How long something takes, typed as people say it."},
          {:email, "Email", "An email address to reach someone by, with a copy button."},
          {:email_preview, "Email preview", "An email or text as members get it."},
@@ -286,7 +288,8 @@ defmodule Web.StyleGuideHTML do
       {"italic", "Italic, in rich text"},
       {"link", "Link, in rich text"},
       {"list", "Bulleted list, in rich text"},
-      {"list-ordered", "Numbered list, in rich text"}
+      {"list-ordered", "Numbered list, in rich text"},
+      {"grip-vertical", "The handle that drags a row, in a drag list"}
     ]
   end
 

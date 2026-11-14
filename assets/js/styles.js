@@ -2,6 +2,7 @@
 // need are mounted here by hand.
 import {listenForBarMenuKeys} from "./bar_menu_keys"
 import {Combobox} from "./combobox"
+import {DragList} from "./drag_list"
 import {listenForConfirms} from "./confirm_dialog"
 import {RichText} from "./rich_text"
 import {Search} from "./search"
@@ -26,10 +27,12 @@ listenForConfirms()
 // The bar's ` key and arrow keys, as in the app.
 listenForBarMenuKeys()
 
-for (const [name, Hook] of Object.entries({Combobox, RichText})) {
+// A drag list here has no LiveView to tell, so its rows only move on the page.
+for (const [name, Hook] of Object.entries({Combobox, DragList, RichText})) {
   document.querySelectorAll(`[phx-hook=${name}]`).forEach(el => {
     const hook = Object.create(Hook)
     hook.el = el
+    hook.pushEvent = () => {}
     hook.mounted()
   })
 }
