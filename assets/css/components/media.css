@@ -46,5 +46,7 @@
   .logo-swatch img { max-width: 100%; max-height: 100%; object-fit: contain; }
   .logo-swatch.is-blue { background: #13243a; }
   .logo-swatch.is-white { background: #ffffff; }
-  .logo-swatch.is-checks { background: repeating-conic-gradient(#d4d4d4 0% 25%, #ffffff 0% 50%) 0 0 / 16px 16px; }
+  /* A checkerboard behind a picture, so what's clear in it shows: here, and behind a file
+     picked in a file drop (#1075). */
+  :is(.logo-swatch.is-checks, .file-drop-thumb) { background: repeating-conic-gradient(#d4d4d4 0% 25%, #ffffff 0% 50%) 0 0 / 16px 16px; }
 }

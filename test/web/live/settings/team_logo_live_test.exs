@@ -78,7 +78,7 @@ defmodule Web.Settings.TeamLogoLiveTest do
       assert Team.logo_file(team.subdomain) == nil
     end
 
-    test "shows the logo on blue, a checkerboard, and white, the picked file before it's saved",
+    test "shows the saved logo on blue, a checkerboard, and white, not a picked file",
          %{conn: conn, team: team} do
       put_logo(team, png_fixture(40, 40))
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/logo")
@@ -91,7 +91,7 @@ defmodule Web.Settings.TeamLogoLiveTest do
       upload(lv, "logo.png", png_fixture(40, 30), "image/png")
 
       for kind <- ~w(blue checks white) do
-        assert has_element?(lv, "#logo-#{kind}[data-phx-entry-ref]")
+        assert has_element?(lv, ~s|#logo-#{kind}[src="#{saved}"]|)
       end
     end
 

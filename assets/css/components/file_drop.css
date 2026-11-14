@@ -19,7 +19,7 @@
   /* A file chosen: it shows instead of the icon and the words. */
   .file-drop:has(.file-drop-file) { justify-items: start; text-align: left; border-style: solid; border-color: var(--border-subtle); }
   .file-drop:has(.file-drop-file) :is(.file-drop-icon, .file-drop-text) { display: none; }
-  .file-drop-thumb { width: 96px; max-height: 96px; object-fit: contain; background: var(--surface-alt); border: 1px solid var(--border-subtle); }
+  .file-drop-thumb { width: 96px; max-height: 96px; object-fit: contain; border: 1px solid var(--border-subtle); }
   .file-drop-doc { line-height: 0; color: var(--text-muted); }
 
   @media (pointer: coarse) {

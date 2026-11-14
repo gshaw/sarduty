@@ -35,13 +35,9 @@ defmodule Web.Settings.TeamLogoLive do
     <h1 class="title">{@page_title}</h1>
 
     <section id="team-logo" class="measure">
-      <%= if @has_logo or @uploads.logo.entries != [] do %>
-        <.logo_swatches
-          team={@current_team}
-          has_logo={@has_logo}
-          entry={List.first(@uploads.logo.entries)}
-        />
-        <p :if={@has_logo}>
+      <%= if @has_logo do %>
+        <.logo_swatches team={@current_team} />
+        <p>
           <.button id="download-logo" href={~p"/teams/#{@current_team}/settings/logo/original"}>
             Download original logo
           </.button>
@@ -84,10 +80,9 @@ defmodule Web.Settings.TeamLogoLive do
   end
 
   attr :team, :map, required: true
-  attr :has_logo, :boolean, required: true
-  attr :entry, :any, default: nil, doc: "the file picked, shown before it's saved"
 
-  # The logo on blue, clear, and white: the file picked, or else the one saved.
+  # The saved logo on blue, clear, and white. A file picked shows in the file drop until
+  # it's saved, so this never looks changed before Save.
   defp logo_swatches(assigns) do
     ~H"""
     <div id="logo-swatches" class="logo-swatches">
@@ -96,28 +91,9 @@ defmodule Web.Settings.TeamLogoLive do
         id={"logo-swatch-#{kind}"}
         class={["logo-swatch", "is-#{kind}"]}
       >
-        <.preview_logo id={"logo-#{kind}"} team={@team} has_logo={@has_logo} entry={@entry} />
+        <img id={"logo-#{kind}"} src={Web.TeamController.logo_url(@team, :fit)} alt="Team logo" />
       </div>
     </div>
-    """
-  end
-
-  attr :id, :string, required: true
-  attr :team, :map, required: true
-  attr :has_logo, :boolean, required: true
-  attr :entry, :any, default: nil
-
-  defp preview_logo(%{entry: nil, has_logo: false} = assigns), do: ~H""
-
-  defp preview_logo(%{entry: nil} = assigns) do
-    ~H"""
-    <img id={@id} src={Web.TeamController.logo_url(@team, :fit)} alt="Team logo" />
-    """
-  end
-
-  defp preview_logo(assigns) do
-    ~H"""
-    <.live_img_preview id={@id} entry={@entry} alt="" />
     """
   end
 
