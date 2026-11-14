@@ -167,14 +167,6 @@ defmodule Web.Settings.TeamLive do
           </li>
         </ul>
         <p :if={@contacts != []} class="hint">Get help lists them for members.</p>
-        <ul class="action-list">
-          <li>
-            <.a
-              id="team-contacts-change"
-              navigate={~p"/teams/#{@team}/settings/contacts"}
-            >Change team contacts</.a>
-          </li>
-        </ul>
       </dd>
     </dl>
     <dl id="team-actions-section">
@@ -183,6 +175,12 @@ defmodule Web.Settings.TeamLive do
         <ul id="team-actions" class="action-list">
           <li>
             <.a id="team-edit" navigate={~p"/teams/#{@team}/settings/edit"}>Change team</.a>
+          </li>
+          <li>
+            <.a
+              id="team-contacts-change"
+              navigate={~p"/teams/#{@team}/settings/contacts"}
+            >Change team contacts</.a>
           </li>
           <li>
             <.a
