@@ -4,7 +4,6 @@ defmodule Web.Settings.TeamLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
-  alias App.Model.Team
 
   @secret "SECRET-TEAM-PAT-123"
 
