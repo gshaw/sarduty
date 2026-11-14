@@ -125,12 +125,12 @@ door's, leaves it as it was (`Attendance.replied_at/4`).
 ## Which key
 
 Every D4H request uses the team's key (`teams.d4h_access_key`, an `EncryptedString` set
-on team settings' Access key tab). Users have no D4H keys.
+on team settings' Change access key page). Users have no D4H keys.
 
 Each team should create the key from a D4H member named "SAR Duty" rather than a
 person, so D4H history shows SAR Duty for changes made here and the key outlives the
 people on the team. `teams.d4h_access_key_owner` holds the key's D4H member name, from
-`whoami` when the key is saved and at the start of every refresh. Access key and
+`whoami` when the key is saved and at the start of every refresh. Change access key and
 `/admin` flag a key whose owner isn't a SAR Duty account. D4H doesn't say when a token
 expires.
 
@@ -360,7 +360,7 @@ back in is `bin/prod console` ([production.md](production.md)).
   `TeamLoginGrant.grant!(team, email, reason)` and `revoke!(team, email)`.
 - **Landing**: the page that asked for a login, else the team the user last opened
   (`users.last_team_id`), else their first. An admin with no team lands on `/admin`.
-- `/teams/:subdomain/settings/team-admins` shows the team who can log in, with the same list on `/admin`.
+- `/teams/:subdomain/settings/admins` shows the team who can log in, with the same list on `/admin`.
 - **New teams sign themselves up** at `/signup` (`App.Operation.SignUpTeam`): a D4H
   personal access token, or a Records access key ([records.md](records.md)), becomes the
   team key, and the person signing up must be a current Owner or Editor on that team
@@ -396,5 +396,5 @@ at midnight starting their leave day. Writes send the day back at 00:00 UTC
   `MemberQualificationAward.good_until/1` is its `ends_at` plus 24 hours.
 - A new D4H field that is a day needs the same: a `Date` from the adapter, and
   `day_start/2` in its upsert.
-- If a team's time zone changes (Refresh in team settings), the next refresh rewrites
-  these dates, with a history row for each.
+- If a team's time zone changes (the nightly refresh copies it, #1076), the next
+  refresh rewrites these dates, with a history row for each.

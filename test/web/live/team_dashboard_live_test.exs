@@ -106,7 +106,7 @@ defmodule Web.TeamDashboardLiveTest do
 
     assert has_element?(
              lv,
-             ~s{#attention-team_contacts a[href="/teams/#{team.subdomain}/settings/team-admins#team-contacts"]},
+             ~s{#attention-team_contacts a[href="/teams/#{team.subdomain}/settings/contacts"]},
              "Pick team contacts"
            )
 

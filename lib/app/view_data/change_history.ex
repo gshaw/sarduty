@@ -722,6 +722,12 @@ defmodule App.ViewData.ChangeHistory do
   def describe_row(%ChangeSetRow{action: :remove_member_photo}, _page),
     do: "Photo removed in SAR Duty"
 
+  def describe_row(%ChangeSetRow{action: :set_team_logo}, _page),
+    do: "Logo changed in SAR Duty"
+
+  def describe_row(%ChangeSetRow{action: :remove_team_logo}, _page),
+    do: "Logo removed in SAR Duty"
+
   def describe_row(%ChangeSetRow{action: :rejoin_member}, _page),
     do: "Marked as rejoined in SAR Duty"
 

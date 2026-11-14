@@ -205,7 +205,7 @@ defmodule Web.TeamDashboardLive do
           alt="Team logo"
         />
         <span :if={!@has_logo} id="team-initials" class="team-head-logo is-initials">
-          {team_initials(@current_team.name)}
+          {Web.Navigation.team_initials(@current_team.name)}
         </span>
       </:picture>
       <:line>
@@ -301,15 +301,6 @@ defmodule Web.TeamDashboardLive do
       )}</.a>
     </span>
     """
-  end
-
-  # "SF" for South Fraser SAR, in the logo's place until the team saves one.
-  defp team_initials(name) do
-    name
-    |> String.split(~r/\s+/, trim: true)
-    |> Enum.take(2)
-    |> Enum.map_join(&String.first/1)
-    |> String.upcase()
   end
 
   # The reply control's assigns for an activity, or nil when the replier can't reply to
@@ -569,10 +560,12 @@ defmodule Web.TeamDashboardLive do
     if by, do: "Snoozed by #{by} until #{until}", else: "Snoozed until #{until}"
   end
 
-  defp attention_path(team, %{key: key}) when key in [:refresh, :long_abbreviated_name],
-    do: ~p"/teams/#{team}/settings"
+  defp attention_path(team, %{key: :refresh}), do: ~p"/teams/#{team}/settings"
 
-  # The tab that fills the first one missing: General for the address, Signer for the rest.
+  defp attention_path(team, %{key: :long_abbreviated_name}),
+    do: ~p"/teams/#{team}/settings/edit"
+
+  # Where the first one missing is filled: Change team for the address, Signer for the rest.
   defp attention_path(team, %{key: :letter_settings, names: [name | _rest]}),
     do: TeamSettingsTabs.tab_path(team, TeamSettingsTabs.tab_for(name) || :general)
 
@@ -586,7 +579,7 @@ defmodule Web.TeamDashboardLive do
        do: ~p"/teams/#{team}/reports/activities-with-two-hours-tags?#{[year: year]}"
 
   defp attention_path(team, %{key: :team_contacts}),
-    do: ~p"/teams/#{team}/settings/team-admins#team-contacts"
+    do: ~p"/teams/#{team}/settings/contacts"
 
   defp attention_path(team, %{key: :drafts}),
     do: ~p"/teams/#{team}/activities?status=draft&when=recent&sort=date-"

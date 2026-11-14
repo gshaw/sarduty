@@ -436,7 +436,7 @@ defmodule Web.Org.OrgPagesTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{coast}/settings")
       assert has_element?(lv, "#settings-organization", "Western SAR Association")
 
-      {:ok, lv, _html} = live(conn, ~p"/teams/#{coast}/settings/team-admins")
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{coast}/settings/admins")
       assert has_element?(lv, "#organization-admin-emails", dana.email)
       assert has_element?(lv, "#sar-duty-admin-emails", sar_duty_admin.email)
     end

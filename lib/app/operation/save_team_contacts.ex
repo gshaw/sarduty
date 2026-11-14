@@ -1,6 +1,6 @@
 defmodule App.Operation.SaveTeamContacts do
   @moduledoc """
-  Saves the team's contacts (#780) from Team settings › Team admins: one or two of its
+  Saves the team's contacts (#780) from Change team contacts (#1076): one or two of its
   members, who need not be team admins. Get help sends the team's messages to them.
   """
 

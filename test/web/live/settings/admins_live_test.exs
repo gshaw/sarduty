@@ -1,4 +1,4 @@
-defmodule Web.Settings.TeamAdminsLiveTest do
+defmodule Web.Settings.AdminsLiveTest do
   use Web.ConnCase
 
   import App.DataFixtures
@@ -12,7 +12,7 @@ defmodule Web.Settings.TeamAdminsLiveTest do
     _member = manager_fixture(team, %{name: "Mo Member", d4h_permission: 2})
     grant = TeamLoginGrant.grant!(team, "office@example.com", "role address")
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/team-admins")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/admins")
 
     assert has_element?(lv, "#manager-#{editor.id}", "Editor")
     refute has_element?(lv, "#team-managers", "Mo Member")
@@ -25,36 +25,22 @@ defmodule Web.Settings.TeamAdminsLiveTest do
     sar_duty = manager_fixture(team, %{name: "SAR Duty", d4h_member_id: 900, not_a_person: true})
     person = manager_fixture(team, %{name: "Kim Lee"})
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/team-admins")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/admins")
 
     assert has_element?(lv, "#manager-#{sar_duty.id}", "Not a person")
     assert has_element?(lv, "#manager-#{person.id}", "Kim Lee")
     refute has_element?(lv, "#manager-#{person.id}", "Not a person")
   end
 
-  test "team contacts: a team admin picks one or two members (#780)", %{conn: conn} do
+  test "three sections, each with a logo or initials by its heading (#1076)", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
-    sam = member_fixture(team, %{name: "Sam Rivera"})
-    alex = member_fixture(team, %{name: "Alex Chen"})
 
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/team-admins")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/settings/admins")
 
-    lv
-    |> form("#team-contacts-form",
-      contacts: %{first_contact_id: sam.id, second_contact_id: alex.id}
-    )
-    |> render_submit()
-
-    assert render(lv) =~ "Saved team contacts."
-    team = App.Repo.reload!(team)
-    assert {team.first_contact_id, team.second_contact_id} == {sam.id, alex.id}
-
-    lv
-    |> form("#team-contacts-form",
-      contacts: %{first_contact_id: sam.id, second_contact_id: sam.id}
-    )
-    |> render_submit()
-
-    assert has_element?(lv, "#team-contacts-form", "Select someone else, or None.")
+    assert has_element?(lv, "#team-admins h2", "#{team.name}'s team admins")
+    assert has_element?(lv, "span#team-admins-logo")
+    assert has_element?(lv, "img#sar-duty-admins-logo")
+    refute has_element?(lv, "#organization-admins")
+    refute has_element?(lv, "#team-contacts-form")
   end
 end

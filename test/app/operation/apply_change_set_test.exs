@@ -101,7 +101,7 @@ defmodule App.Operation.ApplyChangeSetTest do
 
   @writes ~w(add_group_member remove_group_membership set_attendance create_attendance
              create_member update_member retire_member rejoin_member set_member_photo
-             remove_member_photo create_activity
+             remove_member_photo set_team_logo remove_team_logo create_activity
              update_activity delete_activity create_qualification update_qualification
              delete_qualification award_qualification remove_award create_group update_group
              delete_group create_equipment_usage update_equipment_usage delete_equipment_usage

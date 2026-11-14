@@ -4,10 +4,8 @@ defmodule Web.Components.TeamSettingsTabs do
   # Team settings is one link in the side navigation (#406); its pages are tabs under one
   # title, a topic each: the team and what it has turned on, then its members, who signs
   # its letters and forms, and its activities. Fields, after Members, is what each custom
-  # field on its records means (#872). Access key is last: it's rarely needed (#727).
-  # Chore categories shows with chores on, and Agents with Agents on. A Try a demo team
-  # has no Access key tab: its key is SAR Duty's, and a real key pasted there would make
-  # it a real team (#857).
+  # field on its records means (#872). Chore categories shows with chores on, and Agents
+  # with Agents on. The key, rarely needed, is Change access key from General (#727).
 
   attr :team, :map, required: true
 
@@ -15,7 +13,7 @@ defmodule Web.Components.TeamSettingsTabs do
     required: true,
     values: [
       :general,
-      :team_admins,
+      :admins,
       :members,
       :fields,
       :features,
@@ -23,8 +21,7 @@ defmodule Web.Components.TeamSettingsTabs do
       :hours_tags,
       :places,
       :chore_categories,
-      :mcp,
-      :access_key
+      :mcp
     ]
 
   def team_settings_tabs(assigns) do
@@ -34,8 +31,8 @@ defmodule Web.Components.TeamSettingsTabs do
       <:tab navigate={~p"/teams/#{@team}/settings"} current={@current == :general}>
         General
       </:tab>
-      <:tab navigate={~p"/teams/#{@team}/settings/team-admins"} current={@current == :team_admins}>
-        Team admins
+      <:tab navigate={~p"/teams/#{@team}/settings/admins"} current={@current == :admins}>
+        Admins
       </:tab>
       <:tab navigate={~p"/teams/#{@team}/settings/features"} current={@current == :features}>
         Features
@@ -69,13 +66,6 @@ defmodule Web.Components.TeamSettingsTabs do
       >
         Agents
       </:tab>
-      <:tab
-        :if={!App.Model.DemoTeam.demo?(@team)}
-        navigate={~p"/teams/#{@team}/settings/access-key"}
-        current={@current == :access_key}
-      >
-        Access key
-      </:tab>
     </.tabs>
     """
   end
@@ -92,7 +82,10 @@ defmodule Web.Components.TeamSettingsTabs do
   def tab_for("team.signer" <> _rest), do: :signer
   def tab_for(_name), do: nil
 
-  @doc "The path of team settings' `tab`, as `tab_for/1` names it."
-  def tab_path(team, :general), do: ~p"/teams/#{team}/settings"
+  @doc """
+  Where to fill team settings' `tab`, as `tab_for/1` names it: Change team for General's
+  names and address (#1076), which General only shows, and the Signer tab.
+  """
+  def tab_path(team, :general), do: ~p"/teams/#{team}/settings/edit"
   def tab_path(team, :signer), do: ~p"/teams/#{team}/settings/signer"
 end

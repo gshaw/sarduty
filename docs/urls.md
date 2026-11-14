@@ -8,8 +8,10 @@ enforces the top-level list and the held URLs.
 
 - **Plural kebab-case nouns**: `/members`, `/tax-credit-letters`.
 - **A URL says what its page says**, in the glossary's words ([writing.md](writing.md)):
-  `/settings/team-admins` for the Team admins tab, not `managers`. It moved on
-  2026-10-28 with no redirect. The Tax credit letters tab became Signer,
+  `/settings/admins` for the Admins tab, not `managers`. It moved from `managers` to
+  `/settings/team-admins` on 2026-10-28, and to `/settings/admins` on 2026-11-13
+  (#1076), when it began to list the organization's and SAR Duty's admins too, both
+  with no redirect. The Tax credit letters tab became Signer,
   `/settings/signer`, on 2026-11-10, when the team's address moved to General (#995);
   `/settings/tax-credit-letters` went with no redirect.
 - **Local ids, never D4H ids**: `/members/42`. D4H ids stay in `d4h_*_id` columns.
@@ -28,7 +30,10 @@ enforces the top-level list and the held URLs.
   in the query, `?group=`, `?status=` (the reply tile, such as `no-reply`), and `?q=`
   (the name search), so Cancel opens the tab as it was (#920).
 - **Team pages live under `/teams/:subdomain`**, including the team's settings
-  (`/teams/:subdomain/settings`, `/settings/team-admins`). The URL names
+  (`/teams/:subdomain/settings`, `/settings/admins`). General only shows the team, so
+  its form is Change team, `/settings/edit`, its team contacts' form
+  `/settings/contacts`, its logo's `/settings/logo` (#1075), and its key's
+  `/settings/access-key`, the old tab's URL (#1076). The URL names
   the team a page acts on; there is no hidden "current team" for a page to change.
 - **One URL per thing, for everyone on the team** (#406). A team admin and a member open
   the same `/teams/:subdomain/…` page; their role decides what it shows.

@@ -392,6 +392,15 @@ defmodule Web.Navigation do
 
   defp email_name(email), do: email |> String.split("@") |> List.first("")
 
+  @doc ~s(A team's or organization's letters in its logo's place: "SF" for South Fraser SAR.)
+  def team_initials(name) do
+    name
+    |> String.split(~r/\s+/, trim: true)
+    |> Enum.take(2)
+    |> Enum.map_join(&String.first/1)
+    |> String.upcase()
+  end
+
   @doc ~s(An avatar's letters: "Sam Rivera Jones" is "SJ", "gerry_shaw" is "GS".)
   def initials(text) do
     words = String.split(text || "", ~r/[\s._+-]+/, trim: true)

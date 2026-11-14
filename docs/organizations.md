@@ -39,7 +39,7 @@ types in its **organization admins'** emails on its Organization admins tab.
   then adding it to the other. `SetTeamOrganization` does both: it refuses a team whose
   own hours tags would repeat the organization's, queues its pass updates, records an
   event, and emails its team admins (`TeamAdminMailer`, Reply-To `support@sarduty.com`).
-  Its ID cards stay on or off. Team settings › Team admins lists the team's organization
+  Its ID cards stay on or off. Team settings › Admins lists the team's organization
   admins and the SAR Duty admins, so its team admins know who to reach.
 - The `/orgs/:slug` pages share one `live_session` and an `:ensure_org_access` hook that
   404s anyone who is neither its organization admin nor a SAR Duty admin.

@@ -13,6 +13,7 @@ defmodule App.Operation.RefreshD4HData do
   alias App.Operation.CheckTeamKey
   alias App.Operation.RecordD4HChanges
   alias App.Operation.RefreshD4HData
+  alias App.Operation.RefreshTeamDetails
   alias App.Operation.SyncD4HChanges
   alias App.Repo
 
@@ -23,7 +24,7 @@ defmodule App.Operation.RefreshD4HData do
   def call(%Team{d4h_access_key: key}) when key in [nil, ""], do: {:error, :no_key}
 
   def call(%Team{} = team) do
-    team = check_key(team)
+    team = team |> check_key() |> refresh_details()
     d4h = D4H.build_context_from_team(team)
     progress = RefreshD4HData.Progress.new(team.id)
     refresh(d4h, team, progress)
@@ -48,6 +49,22 @@ defmodule App.Operation.RefreshD4HData do
     case CheckTeamKey.call(team) do
       {:ok, team} -> team
       {:error, _reason} -> team
+    end
+  end
+
+  # The team's place and time zone (#1076), first, so the stages after read days in the
+  # new zone. A refusal or a value SAR Duty can't use keeps the ones it has.
+  defp refresh_details(team) do
+    case RefreshTeamDetails.call(team) do
+      {:ok, team} ->
+        team
+
+      {:error, reason} ->
+        Logger.warning(
+          "Team #{team.id}'s place and time zone weren't refreshed: #{inspect(reason)}"
+        )
+
+        team
     end
   end
 

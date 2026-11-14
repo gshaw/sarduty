@@ -20,7 +20,7 @@ defmodule App.Mailer.TeamAdminMailer do
       [
         "The back of your team's ID cards names #{organization.name}.",
         joined_hours_line(organization),
-        "#{organization.short_name}'s organization admins can turn your ID cards on or off. Team admins in team settings lists them."
+        "#{organization.short_name}'s organization admins can turn your ID cards on or off. Admins in team settings lists them."
       ]
     ])
   end

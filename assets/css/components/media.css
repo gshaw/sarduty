@@ -32,4 +32,21 @@
   /* A picture beside its words: a photo and a name, a logo and a team. */
   .media { display: flex; align-items: center; gap: var(--sp-3); }
   .media > img { flex: none; }
+  /* A team's or organization's letters in a 32px logo's place (<.org_logo>), as the
+     Dashboard has them at 64px. */
+  .logo-initials { display: inline-grid; place-items: center; flex: none; border-radius: var(--radius); background: var(--shade-1); color: var(--primary); font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 700; }
+}
+
+/* Change logo's swatches (#1075): the logo on SAR Duty's blue, a checkerboard that shows
+   what's clear, and white, each the same in dark mode. A logo with a white box behind
+   it shows the box on the blue, which is how it looks on an ID card. */
+@layer components {
+  .logo-swatches { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+  .logo-swatch { display: grid; place-items: center; width: 112px; height: 112px; padding: var(--sp-3); border: 1px solid var(--border-subtle); border-radius: var(--radius); }
+  .logo-swatch img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .logo-swatch.is-blue { background: #13243a; }
+  .logo-swatch.is-white { background: #ffffff; }
+  /* A checkerboard behind a picture, so what's clear in it shows: here, and behind a file
+     picked in a file drop (#1075). */
+  :is(.logo-swatch.is-checks, .file-drop-thumb) { background: repeating-conic-gradient(#d4d4d4 0% 25%, #ffffff 0% 50%) 0 0 / 16px 16px; }
 }

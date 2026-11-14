@@ -159,20 +159,24 @@ defmodule Web.Search do
     do: kind |> page_access() |> UserAuth.opens?(team_admin?, member?)
 
   # The side navigation's pages, each with the `words` that find it too, such as Get
-  # help's (#780), then Team admins for team admins, where they pick the team contacts.
+  # help's (#780), then for team admins Admins and Change team contacts (#1076), which
+  # isn't in the navigation.
   defp pages(team, sections, team_admin?) do
     side =
       for link <- List.flatten(sections),
           do: %{id: link.key, title: link.label, path: link.path, words: link[:words] || []}
 
-    team_admins = %{
-      id: "team-admins",
-      title: "Team admins",
-      path: ~p"/teams/#{team}/settings/team-admins",
-      words: ~w(contacts)
-    }
+    settings = [
+      %{id: "admins", title: "Admins", path: ~p"/teams/#{team}/settings/admins", words: []},
+      %{
+        id: "team-contacts",
+        title: "Change team contacts",
+        path: ~p"/teams/#{team}/settings/contacts",
+        words: []
+      }
+    ]
 
-    side ++ if(team_admin?, do: [team_admins], else: [])
+    side ++ if(team_admin?, do: settings, else: [])
   end
 
   # A hit with where it opens, and a member's standing as the person searching sees it.

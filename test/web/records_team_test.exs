@@ -76,26 +76,6 @@ defmodule Web.RecordsTeamTest do
     refute has_element?(lv, "#key-rights")
   end
 
-  # Records may have no place for a team, so the refresh keeps the one SAR Duty has.
-  test "refreshing a team with no place keeps its place", %{conn: conn, team: team} do
-    Req.Test.stub(App.Adapter.D4H, fn conn ->
-      Req.Test.json(conn, %{
-        "id" => team.d4h_team_id,
-        "title" => "Demo SAR",
-        "subdomain" => team.subdomain,
-        "timezone" => "America/Halifax"
-      })
-    end)
-
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings")
-
-    assert lv |> element("button", "Refresh") |> render_click() =~
-             "Team refreshed."
-
-    team = App.Repo.reload!(team)
-    assert team.lat == 49.2
-  end
-
   test "a D4H team still links to D4H", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     member = member_fixture(team)

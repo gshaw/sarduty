@@ -53,4 +53,38 @@ defmodule Web.TeamController do
         send_resp(conn, :not_found, "")
     end
   end
+
+  @doc """
+  The logo as SAR Duty saved it, to download from Change logo (#1075): the file the
+  team's records gave, or the one saved from Change logo.
+  """
+  def original_logo(conn, _params) do
+    team = conn.assigns.current_team
+
+    case team.subdomain |> Team.logo_file() |> then(&(&1 && File.read(&1))) do
+      {:ok, bytes} ->
+        {type, extension} = image_type(bytes)
+        filename = String.replace("#{team.name} logo.#{extension}", ~r/["\\\r\n]/, "")
+
+        conn
+        |> put_resp_content_type(type, nil)
+        |> put_resp_header("content-disposition", ~s(attachment; filename="#{filename}"))
+        |> put_resp_header("cache-control", "private, no-store")
+        |> put_resp_header("x-content-type-options", "nosniff")
+        |> send_resp(200, bytes)
+
+      _none ->
+        send_resp(conn, :not_found, "")
+    end
+  end
+
+  # cspell:ignore webp -- the WebP image format, by its file signature
+  # D4H keeps the file as it was sent, so a logo saved in D4H's web app may be a JPEG.
+  defp image_type(<<0x89, "PNG", _rest::binary>>), do: {"image/png", "png"}
+  defp image_type(<<0xFF, 0xD8, _rest::binary>>), do: {"image/jpeg", "jpg"}
+
+  defp image_type(<<"RIFF", _size::binary-size(4), "WEBP", _rest::binary>>),
+    do: {"image/webp", "webp"}
+
+  defp image_type(_bytes), do: {"application/octet-stream", "bin"}
 end

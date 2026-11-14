@@ -1,7 +1,8 @@
 defmodule App.Operation.RefreshTeamDetails do
   @moduledoc """
-  Team settings' Refresh: the team's place and time zone again from D4H. The names
-  are the team's own, so Refresh leaves them (#738).
+  The team's place and time zone again from D4H or Records, on every full refresh
+  (App.Operation.RefreshD4HData, #1076). The names are the team's own, so it leaves
+  them (#738).
   `{:ok, team}`, `{:error, text}` when D4H refuses or doesn't answer, or
   `{:error, changeset}`.
   """

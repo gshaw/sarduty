@@ -113,13 +113,18 @@ defmodule Web.SearchTest do
       end
     end
 
-    test "contacts finds Team admins for team admins, where the team contacts are picked" do
+    test "contacts finds Change team contacts for team admins (#1076)" do
       team = team_fixture()
 
-      assert [%{kind: :page, hits: [%{title: "Team admins", path: path}]}] =
+      assert [%{kind: :page, hits: [%{title: "Change team contacts", path: path}]}] =
                search(team, "contacts", team_admin?: true, member?: false)
 
-      assert path == "/teams/#{team.subdomain}/settings/team-admins"
+      assert path == "/teams/#{team.subdomain}/settings/contacts"
+
+      assert [%{kind: :page, hits: [%{title: "Admins", path: admins}]}] =
+               search(team, "admins", team_admin?: true, member?: false)
+
+      assert admins == "/teams/#{team.subdomain}/settings/admins"
 
       assert search(team, "contacts", team_admin?: false, member?: true) == []
     end
