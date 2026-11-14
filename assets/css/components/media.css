@@ -37,19 +37,14 @@
   .logo-initials { display: inline-grid; place-items: center; flex: none; border-radius: var(--radius); background: var(--shade-1); color: var(--primary); font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: 700; }
 }
 
-/* Change logo's previews (#1075): the logo where it prints, before it's saved. The card is
-   the top of an ID card as the Wallet passes and the card page draw it, in their navy
-   with the team's name in yellow, so a logo with a white box around it shows one. The
-   letter is the top of a tax credit letter: the address on the left, the logos on the
-   right. Both are cut off at the bottom, and keep their own colours in dark mode. */
+/* Change logo's swatches (#1075): the logo on SAR Duty's blue, a checkerboard that shows
+   what's clear, and white, each the same in dark mode. A logo with a white box behind
+   it shows the box on the blue, which is how it looks on an ID card. */
 @layer components {
-  .logo-previews { display: grid; gap: var(--sp-6); margin-block: var(--sp-6); }
-  @media (min-width: 48rem) { .logo-previews { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .logo-preview { margin: 0; }
-  .logo-preview figcaption { margin-top: var(--sp-2); }
-  .logo-preview-card { display: flex; align-items: center; gap: var(--sp-3); height: 88px; padding: var(--sp-4); border-radius: 12px 12px 0 0; background: rgb(28 45 66); color: rgb(255 196 0); font-weight: 700; font-family: Arimo, Arial, sans-serif; line-height: 1.2; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent); mask-image: linear-gradient(to bottom, black 70%, transparent); }
-  .logo-preview-card img { height: 44px; width: auto; max-width: 120px; object-fit: contain; flex: none; }
-  .logo-preview-letter { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-4); height: 120px; padding: var(--sp-6) var(--sp-6) 0; background: var(--paper); color: rgb(17 24 39); border: 1px solid var(--border-subtle); border-bottom: 0; font-size: 11px; line-height: 1.3; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, black 65%, transparent); mask-image: linear-gradient(to bottom, black 65%, transparent); }
-  .logo-preview-letter .logo-preview-logos { display: flex; gap: var(--sp-3); flex: none; }
-  .logo-preview-letter img { height: 56px; width: auto; max-width: 140px; object-fit: contain; }
+  .logo-swatches { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+  .logo-swatch { display: grid; place-items: center; width: 112px; height: 112px; padding: var(--sp-3); border: 1px solid var(--border-subtle); border-radius: var(--radius); }
+  .logo-swatch img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .logo-swatch.is-blue { background: #13243a; }
+  .logo-swatch.is-white { background: #ffffff; }
+  .logo-swatch.is-checks { background: repeating-conic-gradient(#d4d4d4 0% 25%, #ffffff 0% 50%) 0 0 / 16px 16px; }
 }
