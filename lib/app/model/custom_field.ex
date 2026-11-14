@@ -186,7 +186,7 @@ defmodule App.Model.CustomField do
   def type_label("datetime"), do: "Date and time"
   def type_label("time"), do: "Time"
   def type_label("single_choice"), do: "One choice"
-  def type_label("multiple_choice"), do: "Choices"
+  def type_label("multiple_choice"), do: "Several choices"
   def type_label(type), do: type |> String.replace("_", " ") |> String.capitalize()
 
   @doc ~s(What a member may do with their own value of a member field, in words.)
