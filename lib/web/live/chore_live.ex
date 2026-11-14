@@ -40,6 +40,11 @@ defmodule Web.ChoreLive do
       <:item label={@chore.description} />
     </.breadcrumbs>
     <h1 class="title">{@chore.description}</h1>
+    <.page_actions id="chore-actions">
+      <:action>
+        <.a id="chore-change" navigate={~p"/teams/#{@current_team}/chores/#{@chore.id}/edit"}>Change chore</.a>
+      </:action>
+    </.page_actions>
 
     <dl id="chore-details" class="mb-4">
       <dt>Member</dt>
@@ -86,20 +91,22 @@ defmodule Web.ChoreLive do
       </div>
     </dl>
 
-    <.form for={%{}} id="accept-form" phx-change="own" phx-submit="accept">
-      <.own_box :if={@own_chore? and @chore.status != :accepted} checked={@own} />
+    <.form
+      :if={@chore.status != :accepted}
+      for={%{}}
+      id="accept-form"
+      phx-change="own"
+      phx-submit="accept"
+    >
+      <.own_box :if={@own_chore?} checked={@own} />
       <.form_actions>
         <.button
-          :if={@chore.status != :accepted}
           id="chore-accept"
           variant={:success}
           disabled={@own_chore? and !@own}
           phx-disable-with="Sending…"
         >
           Accept chore
-        </.button>
-        <.button id="chore-change" navigate={~p"/teams/#{@current_team}/chores/#{@chore.id}/edit"}>
-          Change chore
         </.button>
       </.form_actions>
     </.form>

@@ -32,7 +32,10 @@
   <h2>When not to use</h2>
   <ul>
     <li>
-      Actions about one record. They go in an action list in its <a href={page_path(:detail_list)}>details</a>.
+      Actions about one record, such as Change field or Delete field. They go in an action list in its
+      <a href={page_path(:detail_list)}>details</a>
+      or, on a page with no sidebar, in its <a href={page_path(:page_actions)}>page actions</a>
+      under the title. A test fails on a heading row with a Change, Rename, Restore, Archive, or Delete action.
     </li>
     <li>A heading with nothing beside it. Use the heading alone.</li>
   </ul>

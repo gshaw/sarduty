@@ -192,7 +192,8 @@ defmodule Web.Settings.FieldFormLiveTest do
     assert has_element?(lv, "#field-choice-0-archive")
     assert has_element?(lv, "#field-choice-2-restore")
     assert has_element?(lv, "#field-choice-2-label[readonly]")
-    assert has_element?(lv, "#field-archive")
+    # The form only saves: archiving and deleting the field are on its page.
+    refute has_element?(lv, "#field-archive")
     refute has_element?(lv, "#field-delete")
 
     lv |> element("#field-choice-1-archive") |> render_click()
@@ -241,15 +242,19 @@ defmodule Web.Settings.FieldFormLiveTest do
     refute_received {:records, "PATCH", "/custom-field-options/45", _}
   end
 
-  test "a field no record has answered offers Delete in place of Archive",
+  test "the page of a field no record has answered offers Delete in place of Archive",
        %{conn: conn, team: team} do
     field = own_field(team)
     RecordsStub.stub(fn "DELETE", "/custom-fields/93", _ -> {204, %{}} end)
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{field.id}/edit")
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{field.id}")
 
-    assert has_element?(lv, "#field-facts", "No incident has an answer.")
+    assert has_element?(lv, "#field-actions #field-change")
     refute has_element?(lv, "#field-archive")
-    assert has_element?(lv, "#field-delete[data-confirm]")
+
+    assert has_element?(
+             lv,
+             "#field-delete[data-confirm='Delete the Debrief held field? No incident has an answer.']"
+           )
 
     {:ok, page, _html} =
       lv |> element("#field-delete") |> render_click() |> follow_redirect(conn)
@@ -259,7 +264,8 @@ defmodule Web.Settings.FieldFormLiveTest do
     assert render(page) =~ "Deleted the Debrief held field."
   end
 
-  test "archives a field with answers, and its page restores it", %{conn: conn, team: team} do
+  test "a field's page archives it once a record has an answer, and restores it",
+       %{conn: conn, team: team} do
     field = own_field(team)
     activity_fixture(team, %{activity_kind: "incident", custom_values: nil})
     archived = field_json(%{"archivedAt" => "2026-11-13T18:00:00Z"})
@@ -272,19 +278,20 @@ defmodule Web.Settings.FieldFormLiveTest do
 
     RecordsStub.stub(reply)
 
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{field.id}/edit")
+    {:ok, page, _html} = live(conn, ~p"/teams/#{team}/settings/fields/#{field.id}")
+    refute has_element?(page, "#field-delete")
 
-    {:ok, page, _html} =
-      lv |> element("#field-archive") |> render_click() |> follow_redirect(conn)
-
-    assert has_element?(page, "#field-archived")
-    assert has_element?(page, "#field-restore")
-    refute has_element?(page, "#field-change")
+    assert has_element?(page, "#field-archive[data-confirm*='Its answers stay']")
+    page |> element("#field-archive") |> render_click()
+    assert_received {:records, "PATCH", "/custom-fields/93", %{"archived" => true}}
+    assert has_element?(page, "#field-archived button#field-restore")
+    refute has_element?(page, "#field-actions")
 
     page |> element("#field-restore") |> render_click()
     assert_received {:records, "PATCH", "/custom-fields/93", %{"archived" => false}}
     refute has_element?(page, "#field-archived")
     assert has_element?(page, "#field-change")
+    refute has_element?(page, "#field-delete")
   end
 
   test "an organization's field has no Change field, and its form is not found",

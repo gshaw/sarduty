@@ -122,8 +122,11 @@ and with BCSARA's 40-odd Activity choices it read as a wall of text. Folding lon
 wasn't enough. Never a select for choices either: nothing on the page can be changed.
 
 With a key that can change fields, the tab says the team adds and changes its own
-fields here, and has **Add field** beside it; a team's own field's page has **Change
-field**, or **Restore field** when it's archived ([below](#adding-and-changing-fields)).
+fields here, and has **Add field** beside it. A team's own field's page has its actions
+under the title, as arrow links (`/styles/page-actions`): **Change field**, then **Delete
+field** while no record has an answer or **Archive field** once one has, each asking
+first in the confirm dialog. An archived field has no actions, only a **Restore field**
+button under "This field is archived." ([below](#adding-and-changing-fields)).
 An organization's field, a `frozen` one, and a key that can't get neither. A D4H key
 that can't (an Editor's) keeps the read-only tab, with one paragraph saying to change
 them in D4H or save an Owner's key, linking the Access key tab. D4H's web address for
@@ -263,10 +266,15 @@ sync.
   without On and Type, which are facts in the lead with how many records have an answer:
   "One choice, on incidents. 38 incidents have an answer." A choice the field has is
   dragged into a new order, and archived or restored, shown greyed while archived; a new
-  one is removed. Archive field keeps every answer; a field no record has answered
-  offers Delete field in its place, red with a confirm. Both pages are
+  one is removed. The form only saves. Both pages are
   [FieldFormLive](../lib/web/live/settings/field_form_live.ex), and refuse a field the
   team can't change.
+- **Delete, Archive, and Restore** are on the field's page
+  ([FieldLive](../lib/web/live/settings/field_live.ex)), never its form (decided
+  2026-11-13): a record's actions are on its page, and Delete is never behind Change.
+  Archive field keeps every answer; a field no record has answered offers Delete field in
+  its place, with the confirm dialog (`Web.DeleteConfirm.field/2`), as
+  `DeleteCustomField.check_answers/1` decides.
 
 These are the operations they call.
 

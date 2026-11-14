@@ -6,26 +6,28 @@ defmodule Web.Settings.FieldLive do
   alias App.Adapter.D4H
   alias App.Model.CustomField
   alias App.Operation.ChangeCustomField
+  alias App.Operation.DeleteCustomField
   alias App.Repo
 
   # One custom field on its own page, /teams/:subdomain/settings/fields/:id (#872): what
   # it means, its type, who added it and when, and every choice. The Fields tab lists the
-  # team's fields and links here. A team's own field gets Change field, or Restore field
-  # when archived, when the key can change fields (#1056 step 4).
+  # team's fields and links here. A team's own field, when the key can change fields
+  # (#1056 step 4), gets its actions under the title: Change field, then Delete field or
+  # Archive field, which asks first. An archived one has a Restore field button under
+  # "This field is archived." instead. Change field's form only saves.
   def mount(%{"id" => id}, _session, socket) do
     team = Repo.preload(socket.assigns.current_team, :organization)
     field = CustomField.get_for_team!(team.id, id)
 
-    socket =
-      assign(socket,
-        page_title: field.title,
-        field: field,
-        changes: CustomField.team_changes?(team, field),
-        team_names: %{team.d4h_team_id => team.name},
-        organization_name: team.organization && team.organization.short_name
-      )
-
-    {:ok, socket}
+    socket
+    |> assign(
+      page_title: field.title,
+      changes: CustomField.team_changes?(team, field),
+      team_names: %{team.d4h_team_id => team.name},
+      organization_name: team.organization && team.organization.short_name
+    )
+    |> assign_field(field)
+    |> then(&{:ok, &1})
   end
 
   def render(assigns) do
@@ -38,27 +40,40 @@ defmodule Web.Settings.FieldLive do
       />
       <:item label={@field.title} />
     </.breadcrumbs>
-    <.heading_row>
-      <h1 class="title">{@field.title}</h1>
-      <:action :if={@changes}>
-        <.button
-          :if={!@field.archived_at}
+    <h1 class="title">{@field.title}</h1>
+    <div :if={@field.archived_at} id="field-archived" class="mb-8">
+      <p class="lead">This field is archived.</p>
+      <.button :if={@changes} id="field-restore" phx-click="restore" phx-disable-with="Restoring…">
+        Restore field
+      </.button>
+    </div>
+    <.page_actions :if={@changes and !@field.archived_at} id="field-actions">
+      <:action>
+        <.a
           id="field-change"
           navigate={~p"/teams/#{@current_team}/settings/fields/#{@field.id}/edit"}
-        >
-          Change field
-        </.button>
-        <.button
-          :if={@field.archived_at}
-          id="field-restore"
-          phx-click="restore"
-          phx-disable-with="Restoring…"
-        >
-          Restore field
-        </.button>
+        >Change field</.a>
       </:action>
-    </.heading_row>
-    <p :if={@field.archived_at} id="field-archived" class="lead">This field is archived.</p>
+      <:action :if={@deletable}>
+        <.a
+          id="field-delete"
+          href="#"
+          phx-click="delete"
+          phx-disable-with="Deleting…"
+          {Web.DeleteConfirm.field(@current_team, @field)}
+        >Delete field</.a>
+      </:action>
+      <:action :if={!@deletable}>
+        <.a
+          id="field-archive"
+          href="#"
+          phx-click="archive"
+          phx-disable-with="Archiving…"
+          data-confirm={"Archive the #{@field.title} field? Its answers stay, and you can restore it."}
+          data-confirm-button="Archive field"
+        >Archive field</.a>
+      </:action>
+    </.page_actions>
     <.field_details
       field={@field}
       timezone={@current_team.timezone}
@@ -72,19 +87,50 @@ defmodule Web.Settings.FieldLive do
     """
   end
 
-  def handle_event("restore", _params, socket) do
+  def handle_event("archive", _params, socket), do: set_archived(socket, true)
+  def handle_event("restore", _params, socket), do: set_archived(socket, false)
+
+  def handle_event("delete", _params, socket) do
     %{current_team: team, current_user: user, field: field} = socket.assigns
 
-    case ChangeCustomField.set_archived(team, user, field, false, DateTime.utc_now()) do
+    case DeleteCustomField.call(team, user, field, DateTime.utc_now()) do
       :ok ->
         socket
-        |> put_flash(:info, "Restored the #{field.title} field.")
-        |> assign(field: CustomField.get_for_team!(team.id, field.id))
+        |> put_flash(:info, "Deleted the #{field.title} field.")
+        |> push_navigate(to: ~p"/teams/#{team}/settings/fields?kind=#{field.target}")
         |> then(&{:noreply, &1})
 
       {:error, text} ->
         {:noreply, put_flash(socket, :error, text)}
     end
+  end
+
+  defp set_archived(socket, archived?) do
+    %{current_team: team, current_user: user, field: field} = socket.assigns
+
+    case ChangeCustomField.set_archived(team, user, field, archived?, DateTime.utc_now()) do
+      :ok ->
+        socket
+        |> put_flash(
+          :info,
+          "#{if archived?, do: "Archived", else: "Restored"} the #{field.title} field."
+        )
+        |> assign_field(CustomField.get_for_team!(team.id, field.id))
+        |> then(&{:noreply, &1})
+
+      {:error, text} ->
+        {:noreply, put_flash(socket, :error, text)}
+    end
+  end
+
+  # Delete field only while nobody has answered it; Archive field once someone has, as
+  # DeleteCustomField allows. Counted only for a field the team changes.
+  defp assign_field(socket, field) do
+    deletable =
+      socket.assigns.changes and is_nil(field.archived_at) and
+        field |> CustomField.answer_count() |> DeleteCustomField.check_answers() == :ok
+
+    assign(socket, field: field, deletable: deletable)
   end
 
   defp restricted_text(%{target: "member"}),

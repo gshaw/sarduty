@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- A field's page and a chore's keep their actions under the title, like a report's:
+  Change field, Delete or Archive field, and Change chore.
 - Search finds every Team settings tab, and words like logo, access key, and time zone
   find Team settings. Members find Your membership by card, phone, or address.
 - Your membership's Contact details page is now four short ones: Change mobile number,

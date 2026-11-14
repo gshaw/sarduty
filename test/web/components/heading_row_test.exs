@@ -36,4 +36,22 @@ defmodule Web.Components.HeadingRowTest do
 
     assert by_hand == [], "Use <.heading_row> in: #{inspect(by_hand)}"
   end
+
+  # A heading row's action is for its list, such as Add item. One record's actions go in
+  # its sidebar's Actions or, with no sidebar, <.page_actions> under its title.
+  test "no heading row holds an action about one record" do
+    verbs = ~w(Change Rename Restore Archive Delete)
+
+    found =
+      for path <- Path.wildcard("lib/**/*.{ex,heex}"),
+          [row] <- Regex.scan(~r/<\.heading_row.*?<\/\.heading_row>/s, File.read!(path)),
+          [action] <- Regex.scan(~r/<:action.*?<\/:action>/s, row),
+          [verb] <- Regex.scan(~r/>\s*(\w+) \w+\s*</, action, capture: :all_but_first),
+          verb in verbs,
+          do: path
+
+    assert found == [],
+           "Put one record's actions under its title with <.page_actions>, or in its " <>
+             "sidebar's Actions (/styles/heading-row): #{inspect(Enum.uniq(found))}"
+  end
 end
