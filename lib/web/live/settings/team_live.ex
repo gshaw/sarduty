@@ -82,8 +82,6 @@ defmodule Web.Settings.TeamLive do
   defp main_content(assigns) do
     ~H"""
     <dl id="team-details">
-      <dt>Name</dt>
-      <dd id="team-name">{@team.name}</dd>
       <dt>Legal name</dt>
       <dd id="team-legal-name">{@team.legal_name}</dd>
       <dt>Abbreviated name</dt>
