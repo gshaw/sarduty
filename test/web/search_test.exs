@@ -188,6 +188,17 @@ defmodule Web.SearchTest do
       end
     end
 
+    test "everyone finds Account settings by what it holds, not by reminders" do
+      team = team_fixture()
+
+      for who <- [@admin, @member],
+          words <- ["account", "account settings", "passkey", "maps", "apple", "emails"] do
+        assert page_hit(team, words, who, "/account"), "#{words} doesn't find Account settings"
+      end
+
+      refute page_hit(team, "reminders", @admin, "/account")
+    end
+
     test "a member finds no Team settings tab" do
       team = team_fixture()
 

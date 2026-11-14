@@ -56,8 +56,11 @@ Search finds the pages people go to by name, and never the steps reached from on
   Change logo in its Actions. The page shows the value first, which is what most
   searches want, and some values, like the time zone, have no Change page at all. It is
   the record rule too: search finds a member, not Change member.
+- **Account settings**, for everyone: your own page from the account menu, the same on
+  every team. "account", "passkey", "maps", and "emails" find it. Not "reminders", which a
+  team admin means for an activity's.
 - **Not another area's pages.** Search is on a team's pages only, so the organization's
-  space, Adminland, and Account settings have none.
+  space and Adminland have none.
 
 A page matches only where a word of its name starts, so "ali" finds Alice but not
 Qualifications, or where one of its `words` starts. The words are the ones people search
