@@ -11,7 +11,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-main=$(git worktree list --porcelain | awk '/^worktree /{print $2; exit}')
+# awk reads every line: exiting early closes the pipe, and git's SIGPIPE fails the script.
+main=$(git worktree list --porcelain | awk '/^worktree / && !found {print $2; found = 1}')
 export DEV_DB="$main/db/sarduty_dev.db"
 [ -e .mise.local.toml ] || cp "$main/.mise.local.toml" .
 [ -d priv/static/assets ] || mise exec -- mix assets.setup
