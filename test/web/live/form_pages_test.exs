@@ -6,9 +6,11 @@ defmodule Web.FormPagesTest do
   import Ecto.Query
   import Phoenix.LiveViewTest
 
+  alias App.Document.Draft
   alias App.Model.Event
   alias App.Model.Form
   alias App.Repo
+  alias Web.Components.TeamSettingsTabs
 
   @text File.read!("test/support/fixtures/forms/task_report.txt")
   @page_source File.read!("test/support/fixtures/forms/task_report_page.typ")
@@ -245,8 +247,9 @@ defmodule Web.FormPagesTest do
       assert has_element?(lv, "nav a[href='#{team_path(team)}'][aria-current]", "Forms")
       refute has_element?(lv, "#side-nav-forms")
       refute has_element?(lv, "#upload-form")
+      assert has_element?(lv, "#new-form")
 
-      tabs = Enum.map(Web.Components.TeamSettingsTabs.list(team), & &1.key)
+      tabs = team |> TeamSettingsTabs.list() |> Enum.map(& &1.key)
       assert Enum.at(tabs, Enum.find_index(tabs, &(&1 == :fields)) + 1) == :forms
     end
 
@@ -275,6 +278,7 @@ defmodule Web.FormPagesTest do
 
       assert has_element?(lv, "#form-try-none", "Your team has no activity this form shows on.")
       refute has_element?(lv, "#form-replace")
+      assert has_element?(lv, "#form-ask", "Change SAR Duty form #{own.id}, Debrief:")
     end
 
     test "opens its blank page", %{conn: conn, team: team, own: own, alex: alex, page: page} do
@@ -293,14 +297,14 @@ defmodule Web.FormPagesTest do
       end
     end
 
-    test "a SAR Duty admin uploads one, named apart from its organization's", ctx do
-      %{conn: conn, team: team, page: page} = ctx
+    test "a SAR Duty admin uploads a text, named apart from its organization's", ctx do
+      %{conn: conn, team: team, own: own} = ctx
       conn = log_in_user(conn, sar_duty_admin())
-      {:ok, lv, _html} = live(conn, team_path(team, "/new"))
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}/edit"))
+      assert has_element?(lv, "h1", "Change Debrief")
       assert has_element?(lv, "p", "Saving checks the text on Valley SAR.")
 
       upload(lv, :text, "task_report.txt", @text, "text/plain")
-      upload(lv, :page, "task_report.pdf", page, "application/pdf")
       lv |> form("#form-upload") |> render_submit()
 
       assert has_element?(
@@ -313,15 +317,116 @@ defmodule Web.FormPagesTest do
       upload(lv, :text, "task_report.txt", text, "text/plain")
       {:ok, lv, _html} = lv |> form("#form-upload") |> render_submit() |> follow_redirect(conn)
 
-      assert [_debrief, %Form{name: "Task report v2"} = saved] = Form.get_all(team)
+      assert [%Form{name: "Task report v2", version: 2}] = Form.get_all(team)
       assert has_element?(lv, "h1", "Task report v2")
 
       assert has_element?(
                lv,
-               "#form-replace-button[href='#{team_path(team, "/#{saved.id}/edit")}']"
+               "#form-change-button[href='#{team_path(team, "/#{own.id}/edit")}']"
              )
     end
+
+    test "its team admin starts one from the agency's PDF, to ask their agent to write", ctx do
+      %{conn: conn, team: team, alex: alex, page: page} = ctx
+      conn = log_in_user(conn, alex)
+      {:ok, lv, _html} = live(conn, team_path(team))
+      assert has_element?(lv, "#new-form[href='#{team_path(team, "/new")}']")
+
+      {:ok, lv, _html} = live(conn, team_path(team, "/new"))
+      lv |> form("#form-start", %{"name" => "Task report"}) |> render_change()
+      start(lv, "task_report.pdf", page)
+      lv |> form("#form-start", %{"name" => "Task report"}) |> render_submit()
+      assert has_element?(lv, "#form-start", "WSARA has a form called Task report.")
+
+      start(lv, "task_report.pdf", page)
+
+      {:ok, lv, _html} =
+        lv
+        |> form("#form-start", %{"name" => "Incident debrief"})
+        |> render_submit()
+        |> follow_redirect(conn)
+
+      started = Repo.get_by!(Form, team_id: team.id, name: "Incident debrief")
+      refute Form.written?(started)
+      assert started.state == :off
+      assert Form.page_bytes(started) == page
+
+      assert has_element?(lv, "#form-state", "Not written yet")
+      assert has_element?(lv, "#form-ask", "Write SAR Duty form #{started.id}, Incident debrief")
+      assert has_element?(lv, "#form-agents", "Agents are off for Valley SAR")
+      refute has_element?(lv, "#form-on")
+      refute has_element?(lv, "#form-try")
+    end
+
+    test "a scan has no text to read, so it can't start a form", ctx do
+      %{conn: conn, team: team, alex: alex} = ctx
+      {:ok, scan} = Service.Typst.compile("#rect(width: 2in, height: 1in, fill: gray)")
+      {:ok, lv, _html} = conn |> log_in_user(alex) |> live(team_path(team, "/new"))
+
+      start(lv, "scan.pdf", scan)
+      lv |> form("#form-start", %{"name" => "Incident debrief"}) |> render_submit()
+
+      assert has_element?(lv, "#form-start", "This PDF is a scan")
+      refute Repo.get_by(Form, team_id: team.id, name: "Incident debrief")
+    end
+
+    test "its team admin follows their agent's draft on Change form, tries it, and saves it",
+         ctx do
+      %{conn: conn, team: team, own: own, alex: alex} = ctx
+      conn = log_in_user(conn, alex)
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}/edit"))
+
+      assert has_element?(lv, "#form-draft-none")
+      assert has_element?(lv, "#form-ask", "Change SAR Duty form #{own.id}, Debrief:")
+      refute has_element?(lv, "#form-upload")
+
+      text = String.replace(@text, "form 'Task report'", "form 'Debrief'")
+      draft = %Draft{text: text, change: "Asks for people helped", agent: "Claude", at: now()}
+      Draft.put(team, alex.id, own, draft)
+
+      assert has_element?(lv, "#form-draft-from", "From Claude, just now. Asks for people helped")
+      assert has_element?(lv, "#form-draft-text", "form 'Debrief'")
+      assert has_element?(lv, "#form-draft-try-none")
+
+      {:ok, lv, _html} =
+        lv |> element("#form-draft-save") |> render_click() |> follow_redirect(conn)
+
+      assert has_element?(lv, "h1", "Debrief")
+      assert Repo.reload!(own).version == 2
+      assert Repo.reload!(own).text == text
+      refute Draft.get(team, alex.id, own)
+    end
+
+    test "another team admin never sees someone else's draft", ctx do
+      %{conn: conn, team: team, own: own, alex: alex} = ctx
+      sam = user_fixture(%{email: manager_fixture(team).email})
+      Draft.put(team, sam.id, own, %Draft{text: @text, agent: "Claude", at: now()})
+
+      {:ok, lv, _html} = conn |> log_in_user(alex) |> live(team_path(team, "/#{own.id}/edit"))
+      assert has_element?(lv, "#form-draft-none")
+    end
+
+    test "Try draft prints the draft, and says when it's gone", ctx do
+      %{conn: conn, team: team, own: own, alex: alex} = ctx
+      conn = log_in_user(conn, alex)
+
+      conn = get(conn, team_path(team, "/#{own.id}/try?draft=1"))
+      assert redirected_to(conn) == team_path(team, "/#{own.id}/edit")
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "The draft is gone. Ask your agent to check it again."
+    end
   end
+
+  defp start(lv, filename, content) do
+    lv
+    |> file_input("#form-start", :page, [
+      %{name: filename, content: content, type: "application/pdf"}
+    ])
+    |> render_upload(filename)
+  end
+
+  defp now, do: DateTime.utc_now()
 
   defp upload(lv, name, filename, content, type) do
     lv

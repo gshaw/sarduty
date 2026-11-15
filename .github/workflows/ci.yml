@@ -54,12 +54,13 @@ jobs:
 
       # A cold install from a slow mirror took 9 minutes on 2026-11-18. 15 lets it
       # finish and save the cache; a real hang still stops long before 6 hours.
-      - name: Install libvips
+      # mupdf-tools: mutool reads a form's page, as in the Dockerfile (#1083).
+      - name: Install libvips and mutool
         if: steps.same_tree.outputs.skip != 'true'
         timeout-minutes: 15
         uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
         with:
-          packages: libvips-dev
+          packages: libvips-dev mupdf-tools
           version: "1"
           execute_install_scripts: true
 

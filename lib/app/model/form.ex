@@ -12,8 +12,9 @@ defmodule App.Model.Form do
   # it prints on. It belongs to an organization or to one team (#1083), never both: an
   # organization's shows for every team in it, and a team's only for that team, while
   # SAR Duty has team forms on for it. Testing prints draft PDFs only, and on publishes
-  # them (#970). SAR Duty admins upload and replace it (App.Operation.SaveForm); its
-  # organization admins, or the team's admins, set it off, testing, or on
+  # them (#970). SAR Duty admins upload and replace an organization's; a team's admins
+  # start their own from its page, and their AI agent writes it (App.Operation.SaveForm).
+  # Its organization admins, or the team's admins, set it off, testing, or on
   # (App.Operation.SetFormState). docs/documents.md.
   schema "forms" do
     belongs_to :organization, Organization
@@ -21,12 +22,14 @@ defmodule App.Model.Form do
     # From the text's `form '…'` and `about '…'`, so a list needn't parse it.
     field :name, :string
     field :about, :string
+    # "" until a team's new form is written (written?/1).
     field :text, :string
     # The page PDF's SHA-256, in hex, so a person can tell which page a form prints on.
     # Nil when the form has no page.
     field :page_sha256, :string
     field :state, Ecto.Enum, values: [:off, :testing, :on], default: :off
-    # Starts at 1, and goes up each time a SAR Duty admin replaces it.
+    # Starts at 1, and goes up each time it's replaced. Writing a team's new form keeps
+    # it 1.
     field :version, :integer, default: 1
     # Who last changed it, uploading it or turning it on or off, and when: updated_at.
     belongs_to :user, User
@@ -75,6 +78,12 @@ defmodule App.Model.Form do
 
   @doc "Whether `form` is testing or on for `team`: one `shown_for/1` lists."
   def shown?(%Form{id: id}, %Team{} = team), do: team |> shown_for() |> Enum.any?(&(&1.id == id))
+
+  @doc """
+  Whether the form has its text. A team's new form starts as its page alone, off, until
+  the team's AI agent writes it and a team admin saves it (#1083).
+  """
+  def written?(%Form{text: text}), do: text not in [nil, ""]
 
   @doc "How the state reads: Off, Testing, or On."
   def state_label(:off), do: "Off"

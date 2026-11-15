@@ -15,6 +15,9 @@ defmodule Web.MCPControllerTest do
   alias App.Repo
   alias App.Report.Draft
 
+  @form_text File.read!("test/support/fixtures/forms/task_report.txt")
+  @page_source File.read!("test/support/fixtures/forms/task_report_page.typ")
+
   setup do
     admin = make_admin(AccountsFixtures.user_fixture())
     %{user: user, team: team} = user_with_team_fixture()
@@ -69,11 +72,19 @@ defmodule Web.MCPControllerTest do
       qualification_fixture(other, %{title: "Their Qualification"})
       tag_fixture(other, "Their Tag")
       saved_report_fixture(other, "Their Report")
+      other |> Ecto.Changeset.change(forms_enabled: true) |> Repo.update!()
+      form_fixture(other, %{name: "Their Form"})
 
-      for {name, args} <- tool_calls() do
+      for {name, args} <- tool_calls(team_form(team)) do
         {_result, text} = call_tool(conn, token, team, name, args)
 
-        for theirs <- ["Their Group", "Their Qualification", "Their Tag", "Their Report"],
+        for theirs <- [
+              "Their Group",
+              "Their Qualification",
+              "Their Tag",
+              "Their Report",
+              "Their Form"
+            ],
             do: refute(text =~ theirs, "#{name} returned #{theirs}")
       end
     end
@@ -219,7 +230,9 @@ defmodule Web.MCPControllerTest do
         team.mailing_address
       ]
 
-      for {name, args} <- tool_calls() do
+      form = team_form(team)
+
+      for {name, args} <- tool_calls(form) do
         {result, text} = call_tool(conn, token, team, name, args)
         refute result["isError"], name
         output = Jason.decode!(text)
@@ -411,6 +424,73 @@ defmodule Web.MCPControllerTest do
       end
     end
 
+    test "the form tools say team forms are off, and never reach another team's form", ctx do
+      %{conn: conn, team: team, token: token} = ctx
+      form = form_fixture(team)
+
+      {result, text} = call_tool(conn, token, team, "list_forms")
+      assert result["isError"]
+      assert text =~ "has no team forms"
+
+      team |> Ecto.Changeset.change(forms_enabled: true) |> Repo.update!()
+      other = form_fixture(team_fixture())
+
+      {result, text} = call_tool(conn, token, team, "read_form", %{"form_id" => other.id})
+      assert result["isError"]
+      assert text == "The team has no form #{other.id}. Use an id from list_forms."
+
+      {_result, text} = call_tool(conn, token, team, "list_forms")
+      assert [%{"id" => id, "written" => true}] = Jason.decode!(text)["forms"]
+      assert id == form.id
+    end
+
+    test "read_form measures the form's page in points", ctx do
+      %{conn: conn, team: team, token: token} = ctx
+      form = team_form(team)
+
+      {_result, text} = call_tool(conn, token, team, "read_form", %{"form_id" => form.id})
+      output = Jason.decode!(text)
+
+      assert output["text"] == form.text
+      assert output["language"] =~ "### Writing a form with an AI agent"
+      assert [%{"page" => 1, "width" => 612.0, "lines" => [_ | _]} = page | _] = output["pages"]
+      assert Enum.all?(page["lines"], &(is_binary(&1["text"]) and is_float(&1["baseline"])))
+    end
+
+    test "check_form sends a text that passes to its user's Change page, and saves nothing",
+         ctx do
+      %{conn: conn, team: team, token: token, user: user} = ctx
+      form = team_form(team)
+      App.Document.Draft.subscribe(team, user.id, form)
+      text = String.replace(@form_text, "for tests.", "for tests, by an agent.")
+
+      {_result, reply} =
+        call_tool(conn, token, team, "check_form", %{
+          "form_id" => form.id,
+          "text" => text,
+          "change" => "A new description"
+        })
+
+      assert Jason.decode!(reply) == %{
+               "ok" => true,
+               "name" => "Task report",
+               "version" => 2,
+               "link" =>
+                 "http://localhost:4002/teams/#{team.subdomain}/settings/forms/#{form.id}/edit"
+             }
+
+      assert_received {:form_draft, %{text: ^text, change: "A new description"}}
+      assert App.Document.Draft.get(team, user.id, form).agent == "Laptop agent"
+      assert Repo.reload!(form).text == form.text
+
+      {result, reply} =
+        call_tool(conn, token, team, "check_form", %{"form_id" => form.id, "text" => "form"})
+
+      assert result["isError"]
+      assert reply =~ "Line 1:"
+      refute_received {:form_draft, _draft}
+    end
+
     test "check_report links a saved report to Change report", ctx do
       %{conn: conn, team: team, token: token} = ctx
       saved = saved_report_fixture(team, "Callout list")
@@ -476,7 +556,8 @@ defmodule Web.MCPControllerTest do
       tools = json_response(conn, 200)["result"]["tools"]
 
       assert Enum.map(tools, & &1["name"]) ==
-               ~w(report_fields list_reports try_report check_report)
+               ~w(report_fields list_reports try_report check_report list_forms read_form
+                  check_form)
 
       assert Enum.all?(tools, & &1["annotations"]["readOnlyHint"])
     end
@@ -537,8 +618,8 @@ defmodule Web.MCPControllerTest do
   end
 
   # A query that reads members' names, activities' titles, and contact-free fields:
-  # checking it must give back none of them.
-  defp tool_calls do
+  # checking it must give back none of them. The form reads an activity's title too.
+  defp tool_calls(form) do
     query = """
     select member, activity, activity.tracking_number, hours
     from attendance
@@ -549,8 +630,26 @@ defmodule Web.MCPControllerTest do
       {"report_fields", %{}},
       {"list_reports", %{}},
       {"try_report", %{"query" => query}},
-      {"check_report", %{"query" => query, "name" => "Who went"}}
+      {"check_report", %{"query" => query, "name" => "Who went"}},
+      {"list_forms", %{}},
+      {"read_form", %{"form_id" => form.id}},
+      {"check_form", %{"form_id" => form.id, "text" => @form_text}}
     ]
+  end
+
+  # The team with team forms on, the fields the test form reads, and the form on its page.
+  defp team_form(team) do
+    team |> Ecto.Changeset.change(forms_enabled: true) |> Repo.update!()
+
+    custom_field_fixture(team, %{
+      title: "What was SAR tasked to do?",
+      field_type: "single_choice",
+      options: [%{"id" => 1, "label" => "Search - lost subject(s)"}]
+    })
+
+    custom_field_fixture(team, %{title: "People helped", field_type: "number"})
+    {:ok, page} = Service.Typst.compile(@page_source)
+    form_fixture(team, %{name: "Task report", page: page})
   end
 
   defp saved_report_fixture(team, name, values \\ %{}) do

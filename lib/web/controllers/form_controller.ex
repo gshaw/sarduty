@@ -1,7 +1,9 @@
 defmodule Web.FormController do
   use Web, :controller
 
+  alias App.Document.Draft
   alias App.Model.Form
+  alias App.Model.Team
   alias App.Operation.TryForm
   alias Web.FormOwner
 
@@ -18,19 +20,36 @@ defmodule Web.FormController do
     end
   end
 
+  # With `draft`, a team's form tries the team admin's draft from their AI agent (#1083),
+  # unsaved, as its Change page shows it.
   def try(conn, %{"id" => id} = params) do
     {owner, form} = form!(conn, id)
 
-    case TryForm.call(form, owner, params["activity"]) do
-      {:ok, attachment} ->
-        send_pdf(conn, attachment.content, "Sample #{attachment.filename}")
-
+    with {:ok, tried} <- tried(conn, owner, form, params["draft"]),
+         {:ok, attachment} <- TryForm.call(tried, owner, params["activity"]) do
+      send_pdf(conn, attachment.content, "Sample #{attachment.filename}")
+    else
       {:error, message} ->
         conn
         |> put_flash(:error, message)
-        |> redirect(to: FormOwner.form_path(owner, form))
+        |> redirect(to: back_path(owner, form, params["draft"]))
     end
   end
+
+  # Back to where the try was asked for: the Change page for a draft.
+  defp back_path(owner, form, nil), do: FormOwner.form_path(owner, form)
+  defp back_path(owner, form, _draft), do: FormOwner.edit_path(owner, form)
+
+  defp tried(_conn, _owner, form, nil), do: {:ok, form}
+
+  defp tried(conn, %Team{} = team, form, _draft) do
+    case Draft.get(team, conn.assigns.current_user.id, form) do
+      nil -> {:error, "The draft is gone. Ask your agent to check it again."}
+      draft -> {:ok, %{form | text: draft.text}}
+    end
+  end
+
+  defp tried(_conn, _owner, _form, _draft), do: raise(Web.Status.NotFound)
 
   defp form!(conn, id) do
     owner = FormOwner.get(conn.assigns)

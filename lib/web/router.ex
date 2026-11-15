@@ -474,7 +474,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings/fields/:id/edit", Settings.FieldFormLive, :edit
       # A team's own forms (#1083), a Team settings tab while SAR Duty has team forms on.
       live "/teams/:subdomain/settings/forms", FormCollectionLive
-      live "/teams/:subdomain/settings/forms/new", FormUploadLive, :new
+      live "/teams/:subdomain/settings/forms/new", FormStartLive
       live "/teams/:subdomain/settings/forms/:id", FormLive
       live "/teams/:subdomain/settings/forms/:id/edit", FormUploadLive, :edit
       live "/teams/:subdomain/settings/features", Settings.FeaturesLive

@@ -17,6 +17,7 @@
 !rel
 !litestream.yml
 !docs/writing.md
+!docs/documents.md
 !CHANGELOG.md
 
 # Built inside the image, so skip local copies

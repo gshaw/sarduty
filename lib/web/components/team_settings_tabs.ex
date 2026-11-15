@@ -6,8 +6,9 @@ defmodule Web.Components.TeamSettingsTabs do
   # Team settings is one link in the side navigation (#406); its pages are tabs under one
   # title, a topic each: the team and what it has turned on, then its members, who signs
   # its letters and forms, and its activities. Fields, after Members, is what each custom
-  # field on its records means (#872), then Forms with team forms on (#1083). Chore categories shows with chores on, and Agents
-  # with Agents on. The key, rarely needed, is Change access key from General (#727).
+  # field on its records means (#872), then Forms with team forms on (#1083). Chore
+  # categories shows with chores on, and Agents with Agents on. The key, rarely needed,
+  # is Change access key from General (#727).
 
   attr :team, :map, required: true
 

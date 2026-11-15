@@ -173,7 +173,50 @@ defmodule App.Operation.SaveFormTest do
 
       assert SaveForm.call(team, nil, @text, page, admin) ==
                {:error, :text,
-                "Valley SAR has a form called Task report. Replace that one instead."}
+                "Your team has a form called Task report. Give this one another name."}
+    end
+
+    test "its team admins save it, and nobody else", %{team: team, page: page} do
+      manager = user_fixture(%{email: manager_fixture(team).email})
+      assert {:ok, %Form{}} = SaveForm.call(team, nil, @text, page, manager)
+
+      member = user_fixture(%{email: member_fixture(team).email})
+      text = String.replace(@text, "form 'Task report'", "form 'Debrief'")
+      assert SaveForm.call(team, nil, text, page, member) == {:error, :forbidden}
+    end
+
+    test "starts from the agency's PDF alone, off and not written, until its first text",
+         %{team: team, page: page} do
+      manager = user_fixture(%{email: manager_fixture(team).email})
+
+      assert {:ok, %Form{text: "", state: :off, version: 1} = started} =
+               SaveForm.start(team, " Debrief ", page, manager)
+
+      assert started.name == "Debrief"
+      refute Form.written?(started)
+      assert Form.page_bytes(started) == page
+
+      assert SaveForm.start(team, "Debrief", page, manager) ==
+               {:error, :name, "Your team has a form called Debrief. Give this one another name."}
+
+      assert SaveForm.start(team, "", page, manager) == {:error, :name, "Give the form a name."}
+
+      assert SaveForm.start(team, "Other", nil, manager) ==
+               {:error, :page, "Choose the agency's PDF."}
+
+      text = String.replace(@text, "form 'Task report'", "form 'Debrief'")
+      assert {:ok, written} = SaveForm.call(team, started, text, nil, manager)
+      assert written.version == 1
+      assert Form.page_bytes(written) == page
+      assert {:ok, %Form{version: 2}} = SaveForm.call(team, written, text, nil, manager)
+    end
+
+    test "a scan can't start one", %{team: team, admin: admin} do
+      {:ok, scan} = Service.Typst.compile("#rect(width: 2in, height: 1in, fill: gray)")
+
+      assert SaveForm.start(team, "Debrief", scan, admin) ==
+               {:error, :page,
+                "This PDF is a scan, with no text to read. Ask the agency for its PDF."}
     end
 
     test "another team's form, or the organization's, isn't replaced here",

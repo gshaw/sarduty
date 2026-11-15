@@ -58,4 +58,20 @@ defmodule Web.FormOwner do
     do: ~p"/orgs/#{organization}/forms/#{form}/try"
 
   def try_path(%Team{} = team, %Form{} = form), do: ~p"/teams/#{team}/settings/forms/#{form}/try"
+
+  @doc "The team's Agents tab, where a team admin connects an AI agent."
+  def agents_path(%Team{} = team), do: ~p"/teams/#{team}/settings/mcp"
+
+  @doc "Whether the team admin can connect an agent yet: SAR Duty turns Agents on."
+  def agents_on?(%Team{mcp_enabled: on}), do: on
+
+  @doc """
+  What a team admin asks their AI agent, to write a team's form or change it (#1083): the
+  form's id and name, so the agent finds it with list_forms.
+  """
+  def agent_ask(%Form{} = form) do
+    if Form.written?(form),
+      do: "Change SAR Duty form #{form.id}, #{form.name}: ",
+      else: "Write SAR Duty form #{form.id}, #{form.name}, from its PDF."
+  end
 end

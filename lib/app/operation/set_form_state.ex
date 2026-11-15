@@ -4,7 +4,8 @@ defmodule App.Operation.SetFormState do
   a team's for that team (#1083). Testing prints draft PDFs only; on publishes them. One
   of its organization admins does, or the team's admins for a team's form, or a SAR Duty
   admin; anyone else is refused, which also stops someone removed while the page is
-  open. Turning a form off keeps every PDF published from it.
+  open. Turning a form off keeps every PDF published from it. A team's form with no
+  text yet stays off (#1083).
   """
 
   alias App.Accounts.User
@@ -18,7 +19,11 @@ defmodule App.Operation.SetFormState do
 
   def call(%Form{} = form, state, %User{} = user, now \\ DateTime.utc_now())
       when is_map_key(@events, state) do
-    if allowed?(form, user, now), do: set(form, state, user), else: {:error, :forbidden}
+    cond do
+      !allowed?(form, user, now) -> {:error, :forbidden}
+      state != :off and !Form.written?(form) -> {:error, :not_written}
+      true -> set(form, state, user)
+    end
   end
 
   @doc "Whether the user may set the form's state."
