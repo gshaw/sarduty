@@ -1,5 +1,5 @@
 defmodule Service.PDFGeometryTest do
-  # What an agent writes a form's places from (#1083), checked against BCSARA's Task
+  # What a model writes a form's places from (#1083), checked against BCSARA's Task
   # report, whose places were measured by hand with pdfplumber.
   use ExUnit.Case, async: true
 
@@ -50,6 +50,53 @@ defmodule Service.PDFGeometryTest do
     assert [%{x0: x0, x1: x1}] = page.blanks
     assert x1 - x0 > 30
     assert page.boxes == [%{x0: 20.0, x1: 29.0, top: 60.0, bottom: 69.0}]
+  end
+
+  test "writes the pages out for a model, one line each, in points (#1088)" do
+    page = %{
+      number: 1,
+      width: 612.0,
+      height: 792.0,
+      lines: [%{text: "Task: \"A\"", x0: 64.9, x1: 84.4, top: 103.2, baseline: 111.0, size: 7.8}],
+      blanks: [],
+      rules: [%{x0: 86.8, x1: 200.8, y: 114.6}],
+      boxes: [%{x0: 117.1, x1: 595.3, top: 252.9, bottom: 384.3}]
+    }
+
+    assert PDFGeometry.describe([page, %{page | number: 2}]) == """
+           Page 1: 612.0 wide and 792.0 high.
+
+           Lines of text (x0 x1 top baseline size text):
+           64.9 84.4 103.2 111.0 7.8 "Task: \\"A\\""
+
+           Blanks, runs of underscores: none.
+
+           Rules, drawn lines (x0 x1 y):
+           86.8 200.8 114.6
+
+           Boxes (x0 x1 top bottom):
+           117.1 595.3 252.9 384.3
+
+           Page 2: 612.0 wide and 792.0 high.
+
+           Lines of text (x0 x1 top baseline size text):
+           64.9 84.4 103.2 111.0 7.8 "Task: \\"A\\""
+
+           Blanks, runs of underscores: none.
+
+           Rules, drawn lines (x0 x1 y):
+           86.8 200.8 114.6
+
+           Boxes (x0 x1 top bottom):
+           117.1 595.3 252.9 384.3
+           """
+  end
+
+  test "writes out every line BCSARA's Task report prints", %{pages: pages} do
+    text = PDFGeometry.describe(pages)
+    assert text =~ ~s(64.9 84.4)
+    assert text =~ ~s("Task:")
+    assert text =~ "86.8 200.8 114.6"
   end
 
   test "a page that isn't a PDF is refused" do

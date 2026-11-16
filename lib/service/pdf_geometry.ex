@@ -1,9 +1,9 @@
 defmodule Service.PDFGeometry do
   @moduledoc """
-  What's printed where on a form's page (#1083), so an agent writes each place from
-  measured points instead of guessing them from a picture. MuPDF's `mutool` reads the
-  PDF, through Service.Program, and every length is in points from the page's top left,
-  as a form's places are:
+  What's printed where on a form's page (#1083), so a model writing a team's form
+  writes each place from measured points instead of guessing them from a picture.
+  MuPDF's `mutool` reads the PDF, through Service.Program, and every length is in points
+  from the page's top left, as a form's places are:
 
   - `lines`: each line of text, with its left and right ends, its top, its baseline, and
     its font size.
@@ -60,6 +60,42 @@ defmodule Service.PDFGeometry do
       File.rm_rf(dir)
     end
   end
+
+  @doc """
+  `pages` from `read/1` written out for a model writing a form's places (#1088): each
+  page's size, then its lines of text, blanks, rules, and boxes, one a line, in points
+  from the page's top left.
+  """
+  def describe(pages) when is_list(pages), do: Enum.map_join(pages, "\n", &describe_page/1)
+
+  defp describe_page(page) do
+    [
+      "Page #{page.number}: #{pt(page.width)} wide and #{pt(page.height)} high.",
+      list("Lines of text", page.lines, [:x0, :x1, :top, :baseline, :size, :text]),
+      list("Blanks, runs of underscores", page.blanks, [:x0, :x1, :baseline]),
+      list("Rules, drawn lines", page.rules, [:x0, :x1, :y]),
+      list("Boxes", page.boxes, [:x0, :x1, :top, :bottom])
+    ]
+    |> Enum.join("\n\n")
+    |> Kernel.<>("\n")
+  end
+
+  defp list(title, [], _keys), do: "#{title}: none."
+
+  defp list(title, items, keys) do
+    rows =
+      Enum.map_join(items, "\n", fn item ->
+        Enum.map_join(keys, " ", fn
+          :text -> inspect(item.text)
+          key -> pt(Map.fetch!(item, key))
+        end)
+      end)
+
+    "#{title} (#{Enum.join(keys, " ")}):\n#{rows}"
+  end
+
+  defp pt(value) when is_float(value), do: :erlang.float_to_binary(value, decimals: 1)
+  defp pt(value), do: to_string(value)
 
   defp mutool(args, dir) do
     case Service.Program.run(executable(), args, dir, "mutool", @timeout_ms) do

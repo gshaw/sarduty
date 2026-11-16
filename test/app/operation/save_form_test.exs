@@ -211,6 +211,25 @@ defmodule App.Operation.SaveFormTest do
       assert {:ok, %Form{version: 2}} = SaveForm.call(team, written, text, nil, manager)
     end
 
+    test "check_for runs every check saving runs, and saves nothing",
+         %{team: team, admin: admin, page: page} do
+      {:ok, started} = SaveForm.start(team, "Debrief", page, admin)
+      text = String.replace(@text, "form 'Task report'", "form 'Debrief'")
+
+      assert {:ok, %App.Document{name: "Debrief"}} =
+               SaveForm.check_for(team, started, text, page)
+
+      refute team |> Form.get(started.id) |> Form.written?()
+
+      assert {:error, :text, "Line 1:" <> _rest} = SaveForm.check_for(team, started, "form", page)
+
+      {:ok, _form} = SaveForm.call(team, nil, @text, page, admin)
+
+      assert SaveForm.check_for(team, started, @text, page) ==
+               {:error, :text,
+                "Your team has a form called Task report. Give this one another name."}
+    end
+
     test "a scan can't start one", %{team: team, admin: admin} do
       {:ok, scan} = Service.Typst.compile("#rect(width: 2in, height: 1in, fill: gray)")
 

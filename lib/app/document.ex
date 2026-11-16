@@ -95,6 +95,17 @@ defmodule App.Document do
 
   @dir "documents"
 
+  # The language's docs, built in so a model's prompt can't drift from them (#1088).
+  @language_path Path.expand("../../docs/documents.md", __DIR__)
+  @external_resource @language_path
+  @language File.read!(@language_path)
+
+  @doc """
+  The language, docs/documents.md, built in at compile time: the prompt for a model
+  writing a team's form (#1088).
+  """
+  def language, do: @language
+
   @doc "The text of the document `name` in priv/documents."
   def read(name) when is_binary(name),
     do:
