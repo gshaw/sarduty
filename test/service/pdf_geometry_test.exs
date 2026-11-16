@@ -52,6 +52,31 @@ defmodule Service.PDFGeometryTest do
     assert page.boxes == [%{x0: 20.0, x1: 29.0, top: 60.0, bottom: 69.0}]
   end
 
+  test "counts pages in order, since older MuPDF writes no page number (#1088)" do
+    # Ubuntu 24.04's mupdf-tools 1.23 and Debian trixie's 1.25, as in CI and production.
+    trace = """
+    <page mediabox="0 0 300 200">
+    <stroke_path linewidth="1" miterlimit="10" linejoin="0" linecap="0" colorspace="DeviceGray" color="0" transform="1 0 0 1 0 0">
+    <moveto x="10" y="50"/>
+    <lineto x="110" y="50"/>
+    </stroke_path>
+    </page>
+    <page mediabox="0 0 300 200">
+    <fill_path winding="nonzero" colorspace="DeviceGray" color="0" transform="1 0 0 1 0 0">
+    <moveto x="20" y="60"/>
+    <lineto x="80" y="60"/>
+    <lineto x="80" y="90"/>
+    <lineto x="20" y="90"/>
+    </fill_path>
+    </page>
+    """
+
+    assert PDFGeometry.read_paths(trace) == %{
+             1 => %{rules: [%{x0: 10.0, x1: 110.0, y: 49.5}], boxes: []},
+             2 => %{rules: [], boxes: [%{x0: 20.0, x1: 80.0, top: 60.0, bottom: 90.0}]}
+           }
+  end
+
   test "writes the pages out for a model, one line each, in points (#1088)" do
     page = %{
       number: 1,

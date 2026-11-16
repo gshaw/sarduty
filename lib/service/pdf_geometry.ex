@@ -17,7 +17,7 @@ defmodule Service.PDFGeometry do
   general PDF reader.
   """
 
-  # cspell:ignore stext moveto lineto apos trunc -- MuPDF's output and XML names; Kernel.trunc
+  # cspell:ignore stext apos -- MuPDF's output and XML names
 
   @timeout_ms 20_000
   @max_pages 20
@@ -204,8 +204,10 @@ defmodule Service.PDFGeometry do
     end)
   end
 
-  # Paths: `<page number>`, then `<fill_path>` and `<stroke_path>` of `<moveto>` and
-  # `<lineto>` points in the path's own space, with its `transform` to the page's.
+  # Paths: `<page>`, then `<fill_path>` and `<stroke_path>` of `<moveto>` and `<lineto>`
+  # points in the path's own space, with its `transform` to the page's. Pages count in
+  # order, as text's do: older MuPDF, such as Debian trixie's 1.25 in production and
+  # Ubuntu 24.04's 1.23 in CI, writes no `number` on `<page>`.
 
   @doc false
   def read_paths(xml) do
@@ -213,8 +215,8 @@ defmodule Service.PDFGeometry do
     pages
   end
 
-  defp path_tag({"page", line}, {pages, state}) do
-    number = attrs(line)["number"] |> number() |> trunc()
+  defp path_tag({"page", _line}, {pages, state}) do
+    number = state.page + 1
     {Map.put(pages, number, %{rules: [], boxes: []}), %{state | page: number}}
   end
 
