@@ -13,7 +13,7 @@ defmodule App.Operation.AskAI do
   most 6 requests per ask. A mistake in the answer goes back once, unseen; a second keeps
   the text as it was.
 
-  `request/3`, `next_step/1`, and `usage/1` are pure, for tests. `call/5` runs the loop.
+  `request/3`, `next_step/1`, and `usage/1` are pure, for tests. `call/4` runs the loop.
   """
 
   alias App.Accounts.User
@@ -60,14 +60,12 @@ defmodule App.Operation.AskAI do
   @doc """
   Runs the ask. `{:ok, result}` from the job's `finish`, `{:unchanged, note}`, or
   `{:error, reason}`: those of `check/4`, `:no_credit`, `:busy`, `:unreachable`,
-  `:refused`, `:failed`, or `{:checks, mistake}`. `opts[:on_step]` is called with
-  `:writing`, `:checking`, or `:trying` as the ask goes.
+  `:refused`, `:failed`, or `{:checks, mistake}`.
   """
-  def call(%Team{} = team, %User{} = user, %Job{} = job, now, opts \\ []) do
+  def call(%Team{} = team, %User{} = user, %Job{} = job, now) do
     settings = AISettings.get()
 
     with :ok <- check(team, user, now, job.kind, settings) do
-      on_step = Keyword.get(opts, :on_step, fn _step -> :ok end)
       history = [%{"role" => "user", "content" => job.prompt}]
 
       row =
@@ -89,7 +87,7 @@ defmodule App.Operation.AskAI do
         started: System.monotonic_time(:millisecond)
       }
 
-      {result, acc} = loop(settings, job, history, acc, false, on_step)
+      {result, acc} = loop(settings, job, history, acc, false)
       AIAsk.update!(acc.row, outcome: outcome(result), duration_ms: took(acc))
       result
     end
@@ -117,43 +115,32 @@ defmodule App.Operation.AskAI do
   end
 
   # `history` is the conversation so far, newest first.
-  defp loop(_settings, _job, _history, %{requests: n} = acc, _retried, _on_step)
+  defp loop(_settings, _job, _history, %{requests: n} = acc, _retried)
        when n >= @max_requests,
        do: {{:error, :failed}, acc}
 
-  defp loop(settings, job, history, acc, retried, on_step) do
-    on_step.(:writing)
-
+  defp loop(settings, job, history, acc, retried) do
     case settings
          |> request(job, Enum.reverse(history))
          |> Claude.create_message(stream: job.stream) do
       {:ok, response} ->
         acc = count(acc, response, settings)
         history = [%{"role" => "assistant", "content" => response["content"]} | history]
-        answer(next_step(response), settings, job, history, acc, retried, on_step)
+        answer(next_step(response), settings, job, history, acc, retried)
 
       {:error, reason} ->
         {{:error, reason}, acc}
     end
   end
 
-  defp answer({:tools, uses}, settings, job, history, acc, retried, on_step) do
-    results = Enum.map(uses, &run_tool(&1, job, on_step))
-
-    loop(
-      settings,
-      job,
-      [%{"role" => "user", "content" => results} | history],
-      acc,
-      retried,
-      on_step
-    )
+  defp answer({:tools, uses}, settings, job, history, acc, retried) do
+    results = Enum.map(uses, &run_tool(&1, job))
+    loop(settings, job, [%{"role" => "user", "content" => results} | history], acc, retried)
   end
 
-  defp answer({:answer, output}, settings, job, history, acc, retried, on_step) do
+  defp answer({:answer, output}, settings, job, history, acc, retried) do
     case job.finish.(output) do
       {:retry, mistake} when not retried ->
-        on_step.(:checking)
         again = "SAR Duty's check found a mistake: #{mistake} Fix it and answer again."
 
         loop(
@@ -161,8 +148,7 @@ defmodule App.Operation.AskAI do
           job,
           [%{"role" => "user", "content" => again} | history],
           acc,
-          true,
-          on_step
+          true
         )
 
       {:retry, mistake} ->
@@ -173,17 +159,15 @@ defmodule App.Operation.AskAI do
     end
   end
 
-  defp answer(error, _settings, _job, _history, acc, _retried, _on_step), do: {error, acc}
+  defp answer(error, _settings, _job, _history, acc, _retried), do: {error, acc}
 
-  defp run_tool(%{"id" => id, "name" => name, "input" => input}, job, on_step) do
+  defp run_tool(%{"id" => id, "name" => name, "input" => input}, job) do
     result =
       case Enum.find(job.tools, &(&1.name() == name)) do
         nil ->
           {:error, "There is no tool #{name}."}
 
         tool ->
-          step = if name == "try_report", do: :trying, else: :checking
-          on_step.(step)
           args = if is_map(input), do: input, else: %{}
           call_tool(tool, job.context, args)
       end

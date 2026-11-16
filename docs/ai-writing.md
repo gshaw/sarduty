@@ -23,8 +23,9 @@ On New report and Change report, for a user AI writing is open to
   mistake in it opens it. With the query, the fields are buttons under it, with How to
   write a report, What each chart takes, and What each field means. The preview's count
   drops "runs as you type" while the query is hidden.
-- The ask shows at once, with the step under it (Writing…, Checking it…, Trying it on
-  made-up data…) and Stop. The box clears and Ask waits until AI answers.
+- The ask shows at once, with Thinking… and the seconds it has taken under it, and
+  Stop. One steady line: an ask's own steps (writing, checking, trying) change too fast
+  to read. The box clears and Ask waits until AI answers.
 - The answer fills the query, and a new report's name and description, as typing
   would, so the preview reruns. AI's one-line note is its reply under the ask, with
   Undo when it changed the report.
@@ -70,8 +71,7 @@ to them. Organization forms are SAR Duty's to write.
   another. Before there's a text, it's the agency's blank form. AI writing is the column
   beside it, as on Change report: the conversation, the box, and the hint, "AI works only
   with the agency's blank form, the form language, and your team's field names."
-- The steps are Reading the page…, Writing…, and Checking it…. Stop and a failed ask
-  are a toast, and the ask's words go back in the box, as for reports.
+- The running ask is Thinking…, as for reports. Stop and a failed ask are a toast, and the ask's words go back in the box, as for reports.
 - **AI's reply** is its note, then **Left blank**: each label on the page it didn't
   fill, and why. Ask for one in the box, or leave it. Undo puts back the text from
   before an ask.

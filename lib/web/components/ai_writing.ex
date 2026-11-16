@@ -38,14 +38,14 @@ defmodule Web.Components.AIWriting do
   The conversation, the box, and what AI sees. `id` starts each element's id, such as
   `report-ai`. `asks` is the conversation, newest first: each `%{id, ask, note, undo?}`
   and, for a form, `blank`, the labels AI left blank, `[%{label, why}]`. `pending` is
-  the running ask, `%{ask}`, with `step` (`:reading`, `:writing`, `:checking`, or
-  `:trying`). `ai` is `:ok`, or why the box is closed, said by `closed`. Undo sends
+  the running ask, `%{ask}`, shown as Thinking… with the seconds it has taken: one steady
+  line, since an ask's own steps change too fast to read. `ai` is `:ok`, or why the box
+  is closed, said by `closed`. Undo sends
   `undo_ask` with the ask's id, Stop `cancel_ask`, and the box `ask`.
   """
   attr :id, :string, required: true
   attr :ai, :any, required: true
   attr :form, :map, required: true
-  attr :step, :atom, default: nil
   attr :pending, :map, default: nil
   attr :asks, :list, required: true
   attr :label, :string, required: true
@@ -87,7 +87,9 @@ defmodule Web.Components.AIWriting do
       <% end %>
       <li :if={@pending} id={"#{@id}-ask-running"} class="ai-you">{@pending.ask}</li>
       <li :if={@pending} id={"#{@id}-step"} class="ai-step">
-        <.spinner>{step_text(@step)}</.spinner>
+        <.spinner>
+          Thinking… <span id={"#{@id}-seconds"} phx-hook=".Seconds" phx-update="ignore"></span>
+        </.spinner>
         <.button id={"#{@id}-stop"} type="button" size={:sm} phx-click="cancel_ask">
           Stop
         </.button>
@@ -97,13 +99,24 @@ defmodule Web.Components.AIWriting do
       <.input field={@form[:ask]} type="textarea" rows="3" label={@label}>
         {render_slot(@inner_block)}
       </.input>
-      <.button id={"#{@id}-ask"} variant={:success} disabled={@step != nil}>{@button}</.button>
+      <.button id={"#{@id}-ask"} variant={:success} disabled={@pending != nil}>{@button}</.button>
     </.form>
     <p :if={@ai != :ok} id={"#{@id}-closed"} class="hint">{@closed}</p>
     <p class="hint mt-4">
       {@sees}
       <.a id={"#{@id}-agents-link"} href={~p"/agents"} external={true}>How agents work with SAR Duty</.a>
     </p>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".Seconds">
+      export default {
+        mounted() {
+          this.start = Date.now()
+          this.timer = setInterval(() => {
+            this.el.textContent = `${Math.floor((Date.now() - this.start) / 1000)}s`
+          }, 1000)
+        },
+        destroyed() { clearInterval(this.timer) }
+      }
+    </script>
     """
   end
 
@@ -115,11 +128,4 @@ defmodule Web.Components.AIWriting do
     do: to_form(%{"ask" => ask}, as: "ai", id: "ai-#{System.unique_integer([:positive])}")
 
   defp blank(ask), do: Map.get(ask, :blank) || []
-
-  @doc "What the running ask is doing."
-  def step_text(:reading), do: "Reading the page…"
-  def step_text(:writing), do: "Writing…"
-  def step_text(:checking), do: "Checking it…"
-  def step_text(:trying), do: "Trying it on made-up data…"
-  def step_text(_step), do: "Writing…"
 end

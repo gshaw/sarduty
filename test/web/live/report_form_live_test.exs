@@ -692,6 +692,7 @@ defmodule Web.ReportFormLiveTest do
 
       # The ask shows at once, with its step and Stop, and the box waits.
       assert has_element?(lv, "#report-ai-ask-running", "add a menu for the period")
+      assert has_element?(lv, "#report-ai-step", "Thinking…")
       assert has_element?(lv, "#report-ai-step #report-ai-stop")
       assert has_element?(lv, "#report-ai-ask[disabled]")
       refute has_element?(lv, "textarea[name='ai[ask]']", "add a menu for the period")

@@ -15,7 +15,7 @@ defmodule Web.ReportFormLive do
   The query is hidden, since AI writes it; Show query opens it. Each ask runs in
   `start_async` (App.Operation.AskAI) with the visit's earlier asks and notes, and fills
   the form as typing would, so the rows rerun here, on the team's records, after Claude
-  is done. The running ask shows at once, with its step and Stop under it. Undo puts back
+  is done. The running ask shows at once, with Thinking… and Stop under it. Undo puts back
   the query, name, and description from before an ask and drops the asks after it. A
   failed or stopped ask is a toast, and its words go back in the box. Nothing is saved
   until Save, which notes the version came from AI. With AI writing open, What changed
@@ -102,7 +102,6 @@ defmodule Web.ReportFormLive do
       ai: ai,
       ai_line: WriteHistoryLine.writes?(team, user, saved, nil, now),
       ai_form: ask_form(""),
-      ai_step: nil,
       ai_pending: nil,
       ai_asks: [],
       starting: blank_new? and ai == :ok,
@@ -279,7 +278,7 @@ defmodule Web.ReportFormLive do
   def handle_event("ask", %{"ai" => %{"ask" => ask}}, socket) do
     case String.trim(ask) do
       "" -> {:noreply, socket}
-      _ask when socket.assigns.ai_step != nil -> {:noreply, socket}
+      _ask when socket.assigns.ai_pending != nil -> {:noreply, socket}
       ask -> {:noreply, start_ask(socket, ask)}
     end
   end
@@ -290,7 +289,7 @@ defmodule Web.ReportFormLive do
     {:noreply,
      socket
      |> cancel_async(:ai_ask)
-     |> assign(ai_step: nil, ai_pending: nil, ai_form: ask_form((pending && pending.ask) || ""))
+     |> assign(ai_pending: nil, ai_form: ask_form((pending && pending.ask) || ""))
      |> put_flash(:info, "Stopped. Nothing changed.")}
   end
 
@@ -339,7 +338,6 @@ defmodule Web.ReportFormLive do
   defp ai_agent(asks), do: if(Enum.any?(asks, & &1.undo?), do: Reports.ai_agent())
 
   def handle_async(:ai_ask, {:ok, result}, socket) do
-    socket = assign(socket, ai_step: nil)
     {:noreply, socket |> ask_done(result) |> assign(ai_pending: nil) |> refresh_ai()}
   end
 
@@ -347,25 +345,22 @@ defmodule Web.ReportFormLive do
   def handle_async(:ai_ask, {:exit, {:shutdown, :cancel}}, socket), do: {:noreply, socket}
 
   def handle_async(:ai_ask, {:exit, _reason}, socket) do
-    {:noreply,
-     socket |> ask_done({:error, :unreachable}) |> assign(ai_step: nil, ai_pending: nil)}
+    {:noreply, socket |> ask_done({:error, :unreachable}) |> assign(ai_pending: nil)}
   end
 
-  # The ask runs beside the page, with the visit's earlier asks; its steps arrive as
-  # messages while it does.
+  # The ask runs beside the page, with the visit's earlier asks.
   defp start_ask(socket, ask) do
     %{current_team: team, current_user: user, form: form, ai_asks: asks} = socket.assigns
     report = report_fields(form)
     earlier = asks |> Enum.reverse() |> Enum.map(&Map.take(&1, [:ask, :note]))
     now = DateTime.utc_now()
-    pid = self()
     pending = %{ask: ask, before: fields_params(form)}
 
     socket
-    |> assign(ai_step: :writing, ai_pending: pending, ai_form: ask_form(""))
+    |> assign(ai_pending: pending, ai_form: ask_form(""))
     |> start_async(:ai_ask, fn ->
       job = ReportJob.build(team, report, ask, now, earlier)
-      AskAI.call(team, user, job, now, on_step: &send(pid, {:ai_step, &1}))
+      AskAI.call(team, user, job, now)
     end)
   end
 
@@ -429,13 +424,6 @@ defmodule Web.ReportFormLive do
   defp ai_error_text(:off), do: "AI writing is off."
   defp ai_error_text(_reason), do: "AI writing did not answer. Try again."
 
-  # A step of the running ask: Writing, Checking it, Trying it.
-  def handle_info({:ai_step, step}, socket) do
-    if socket.assigns.ai_step,
-      do: {:noreply, assign(socket, ai_step: step)},
-      else: {:noreply, socket}
-  end
-
   # The name, description, and query, as the form holds them.
   defp report_fields(form), do: Map.new(~w(name about query)a, &{&1, form[&1].value || ""})
 
@@ -473,7 +461,6 @@ defmodule Web.ReportFormLive do
           id="report-ai"
           ai={@ai}
           form={@ai_form}
-          step={@ai_step}
           pending={@ai_pending}
           asks={@ai_asks}
           label="Ask AI"
@@ -490,7 +477,6 @@ defmodule Web.ReportFormLive do
           id="report-ai"
           ai={@ai}
           form={@ai_form}
-          step={@ai_step}
           pending={@ai_pending}
           asks={@ai_asks}
           label="Describe the report you want"

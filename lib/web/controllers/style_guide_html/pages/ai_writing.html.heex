@@ -28,7 +28,6 @@
         form={ask_form("")}
         asks={[]}
         pending={%{ask: "Write this form."}}
-        step={:reading}
         label="Ask AI"
         button="Ask"
         sees="AI works only with the report language and your team's field names. Agents never see your team's members or records."
@@ -66,7 +65,8 @@
     <li>A reply that changed the page has Undo, which puts it back to before that ask.</li>
     <li>A form's reply ends with Left blank: each label AI didn't fill, and why.</li>
     <li>
-      A running ask shows at once, with its step and Stop. The box clears and its button waits.
+      A running ask shows at once, with Thinking…, the seconds it has taken, and Stop. The box
+      clears and its button waits. No steps: they change too fast to read.
     </li>
     <li>AI suggests no next asks. Every ask is one someone typed.</li>
     <li>The hint under the box says what AI sees, and links to How agents work with SAR Duty.</li>

@@ -68,7 +68,6 @@ defmodule Web.FormChangeLive do
     assign(socket,
       ai: AskAI.check(team, user, DateTime.utc_now(), :form),
       ai_form: ask_form(""),
-      ai_step: nil,
       ai_pending: nil,
       ai_asks: []
     )
@@ -136,7 +135,7 @@ defmodule Web.FormChangeLive do
   def handle_event("ask", %{"ai" => %{"ask" => ask}}, socket) do
     case String.trim(ask) do
       "" -> {:noreply, socket}
-      _ask when socket.assigns.ai_step != nil -> {:noreply, socket}
+      _ask when socket.assigns.ai_pending != nil -> {:noreply, socket}
       ask -> {:noreply, start_ask(socket, ask)}
     end
   end
@@ -147,7 +146,7 @@ defmodule Web.FormChangeLive do
     {:noreply,
      socket
      |> cancel_async(:ai_ask)
-     |> assign(ai_step: nil, ai_pending: nil, ai_form: ask_form((pending && pending.ask) || ""))
+     |> assign(ai_pending: nil, ai_form: ask_form((pending && pending.ask) || ""))
      |> put_flash(:info, "Stopped. Nothing changed.")}
   end
 
@@ -200,7 +199,6 @@ defmodule Web.FormChangeLive do
   def handle_async(:preview, {:exit, _reason}, socket), do: {:noreply, socket}
 
   def handle_async(:ai_ask, {:ok, result}, socket) do
-    socket = assign(socket, ai_step: nil)
     {:noreply, socket |> ask_done(result) |> assign(ai_pending: nil) |> refresh_ai()}
   end
 
@@ -208,25 +206,22 @@ defmodule Web.FormChangeLive do
   def handle_async(:ai_ask, {:exit, {:shutdown, :cancel}}, socket), do: {:noreply, socket}
 
   def handle_async(:ai_ask, {:exit, _reason}, socket) do
-    {:noreply,
-     socket |> ask_done({:error, :unreachable}) |> assign(ai_step: nil, ai_pending: nil)}
+    {:noreply, socket |> ask_done({:error, :unreachable}) |> assign(ai_pending: nil)}
   end
 
-  # The ask runs beside the page, with the visit's earlier asks; reading the page is its
-  # first step, then its steps arrive as messages.
+  # The ask runs beside the page, with the visit's earlier asks.
   defp start_ask(socket, ask) do
     %{team: team, form: form, page: page, text: text, ai_asks: asks, current_user: user} =
       socket.assigns
 
     earlier = asks |> Enum.reverse() |> Enum.map(&Map.take(&1, [:ask, :note, :blank]))
     now = DateTime.utc_now()
-    pid = self()
 
     socket
-    |> assign(ai_step: :reading, ai_pending: %{ask: ask, before: text}, ai_form: ask_form(""))
+    |> assign(ai_pending: %{ask: ask, before: text}, ai_form: ask_form(""))
     |> start_async(:ai_ask, fn ->
       job = FormJob.build(team, form, page, text, ask, now, earlier)
-      AskAI.call(team, user, job, now, on_step: &send(pid, {:ai_step, &1}))
+      AskAI.call(team, user, job, now)
     end)
   end
 
@@ -266,12 +261,6 @@ defmodule Web.FormChangeLive do
   defp refresh_ai(socket) do
     %{team: team, current_user: user} = socket.assigns
     assign(socket, ai: AskAI.check(team, user, DateTime.utc_now(), :form))
-  end
-
-  def handle_info({:ai_step, step}, socket) do
-    if socket.assigns.ai_step,
-      do: {:noreply, assign(socket, ai_step: step)},
-      else: {:noreply, socket}
   end
 
   defp ai_error_text(:daily_limit),
@@ -331,7 +320,6 @@ defmodule Web.FormChangeLive do
           id="form-ai"
           ai={@ai}
           form={@ai_form}
-          step={@ai_step}
           pending={@ai_pending}
           asks={@ai_asks}
           label="Ask AI"
