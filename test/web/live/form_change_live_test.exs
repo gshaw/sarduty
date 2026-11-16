@@ -180,11 +180,10 @@ defmodule Web.FormChangeLiveTest do
 
     assert has_element?(lv, "#form-page-1[alt='Page 1 of 2, marked SAMPLE']")
 
-    # The text is folded, and read only.
-    refute has_element?(lv, "#form-text-code")
-    lv |> element("#form-show-text") |> render_click()
-    assert has_element?(lv, "#form-text-code", "form 'Debrief'")
-    refute has_element?(lv, "#form-text textarea")
+    # How it fills in is folded until it's shown.
+    refute has_element?(lv, "#form-text-input")
+    lv |> element("#form-show-text", "Show how it fills in") |> render_click()
+    assert has_element?(lv, "#form-text-input", "form 'Debrief'")
 
     # Nothing is saved until Save form, a reload asks nothing, and the conversation goes.
     refute form |> Repo.reload!() |> Form.written?()
@@ -221,12 +220,11 @@ defmodule Web.FormChangeLiveTest do
     assert now["text"] =~ "- The admin asked: Write this form.\n  You noted: Wrote it."
 
     lv |> element("#form-show-text") |> render_click()
-    assert has_element?(lv, "#form-text-code", "Anything else")
+    assert has_element?(lv, "#form-text-input", "Anything else")
 
     [_, id] = Regex.run(~r/id="form-ai-undo-(\d+)"/, render(lv))
     lv |> element("#form-ai-undo-#{id}") |> render_click()
     refute has_element?(lv, "#form-ai-asks")
-    refute has_element?(lv, "#form-text")
     assert has_element?(lv, "#form-blank-page")
   end
 
@@ -264,12 +262,17 @@ defmodule Web.FormChangeLiveTest do
       lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
       render_async(lv, @wait)
 
+      lv |> element("#form-replace-pdf", "Replace PDF") |> render_click()
+      assert has_element?(lv, "#form-replace-dialog", "Replace the agency's PDF?")
+
       lv
-      |> file_input("#form-new-page", :page, [
+      |> file_input("#form-replace-form", :page, [
         %{name: "task_report_v2.pdf", content: new_page, type: "application/pdf"}
       ])
       |> render_upload("task_report_v2.pdf")
 
+      lv |> form("#form-replace-form") |> render_submit()
+      refute has_element?(lv, "#form-replace-dialog")
       render_async(lv, @wait)
       %{conn: conn, lv: lv, new_page: new_page}
     end
@@ -293,6 +296,49 @@ defmodule Web.FormChangeLiveTest do
       {:ok, _lv, _html} = lv |> element("#form-save") |> render_click() |> follow_redirect(conn)
       assert Repo.reload!(started).page_sha256 == Form.sha256(page)
     end
+  end
+
+  test "a fix by hand is checked as it's typed, and Save form saves it", ctx do
+    %{conn: conn, team: team, alex: alex, started: started} = ctx
+    stub_claude([%{"text" => written(), "note" => "Wrote it.", "blank" => []}])
+    conn = log_in_user(conn, alex)
+    {:ok, lv, _html} = live(conn, forms_path(team, "/#{started.id}/edit"))
+    lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
+    render_async(lv, @wait)
+    lv |> element("#form-show-text") |> render_click()
+
+    broken = written(&String.replace(&1, "`People helped`", "`People halped`"))
+    lv |> form("#form-text-form", text: broken) |> render_change()
+    assert has_element?(lv, "#form-text-form .field-error")
+    assert has_element?(lv, "#form-hide-text")
+
+    fixed = written(&String.replace(&1, "ask notes 'Notes'", "ask notes 'Anything else'"))
+    lv |> form("#form-text-form", text: fixed) |> render_change()
+    refute has_element?(lv, "#form-text-form .field-error")
+    render_async(lv, @wait)
+
+    {:ok, _lv, _html} = lv |> element("#form-save") |> render_click() |> follow_redirect(conn)
+    assert Repo.reload!(started).text =~ "Anything else"
+  end
+
+  test "a scan is refused in Replace PDF, and the dialog stays open", ctx do
+    %{conn: conn, team: team, alex: alex, started: started} = ctx
+    {:ok, scan} = Service.Typst.compile("#rect(width: 2in, height: 1in, fill: gray)")
+    {:ok, lv, _html} = conn |> log_in_user(alex) |> live(forms_path(team, "/#{started.id}/edit"))
+
+    lv |> element("#form-replace-pdf") |> render_click()
+
+    lv
+    |> file_input("#form-replace-form", :page, [
+      %{name: "scan.pdf", content: scan, type: "application/pdf"}
+    ])
+    |> render_upload("scan.pdf")
+
+    lv |> form("#form-replace-form") |> render_submit()
+    assert has_element?(lv, "#form-replace-dialog", "This PDF is a scan")
+
+    lv |> element("#form-replace-cancel") |> render_click()
+    refute has_element?(lv, "#form-replace-dialog")
   end
 
   test "Stop puts the words back, and the ask counts with what it spent", ctx do
@@ -333,7 +379,7 @@ defmodule Web.FormChangeLiveTest do
 
     assert render(lv) =~ "Its text still had a mistake:"
     assert has_element?(lv, "textarea[name='ai[ask]']", "Write this form.")
-    refute has_element?(lv, "#form-text")
+    assert has_element?(lv, "#form-blank-page")
     assert Repo.get_by!(AIAsk, team_id: team.id).outcome == :refused_by_checks
   end
 

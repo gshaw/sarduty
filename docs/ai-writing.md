@@ -76,12 +76,15 @@ to them. Organization forms are SAR Duty's to write.
 - **AI's reply** is its note, then **Left blank**: each label on the page it didn't
   fill, and why. Ask for one in the box, or leave it. Undo puts back the text from
   before an ask.
-- **The text** is folded and read only: Show text and Hide text. The box is the one way
-  to change it here, and nobody uploads a team form's text: Replace form is for an
-  organization's forms only.
-- **A new PDF from the agency**, under the try, takes the page's place and asks AI to
-  "Fit the form to the agency's new PDF." The try prints on it at once. Undo, Stop, or a
-  failed ask puts the old page back, and Save form saves the page with the text.
+- **Two ways past AI writing**, under the try, as links:
+  - **Show how it fills in** opens the text, "How it fills in", for a small fix by
+    hand, as Show query does on a report. Each change runs the checks saving runs
+    (`SaveForm.check_for/5`); a mistake shows under it and keeps it open, and once it
+    passes the try reprints. Nobody writes a form by hand from nothing.
+  - **Replace PDF** opens a dialog for the agency's new PDF. It takes the page's place
+    and asks AI to "Fit the form to the agency's new PDF." The try prints on it at once.
+    Undo, Stop, or a failed ask puts the old PDF back, and Save form saves the PDF with
+    the text. A scan is refused in the dialog.
 - **Save form** saves the text (App.Operation.SaveForm) and keeps the form's state, so a
   new form stays off until a team admin turns on testing. Nothing is saved until then,
   a reload loses the conversation, and forms have no History line.

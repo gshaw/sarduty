@@ -3,6 +3,7 @@ defmodule Web.FormChangeLive do
 
   import Web.Components.AIWriting
   import Web.Components.FileDrop
+  import Web.Components.PageActions
 
   alias App.AI.FormJob
   alias App.Model.Form
@@ -18,10 +19,11 @@ defmodule Web.FormChangeLive do
   # is the column beside it. Each ask runs in `start_async` (App.Operation.AskAI, with
   # App.AI.FormJob) with the visit's earlier asks and replies, and its text replaces the
   # draft, so the try reprints here, in SAR Duty, after Claude is done. Undo puts back
-  # the text from before an ask and drops the asks after it. The text is folded and read
-  # only: the box is the one way to change it here. A new PDF from the agency takes the
-  # page's place and asks AI to fit the form to it; Undo, Stop, or a failed ask puts the
-  # old page back, and Save form saves both.
+  # the text from before an ask and drops the asks after it. Two ways past AI writing sit
+  # under the try: Show how it fills in opens the text for a small fix by hand, as Show
+  # query does on a report, checked and tried as it's typed; Replace PDF, a dialog, takes
+  # the agency's new PDF and asks AI to fit the form to it. Undo, Stop, or a failed ask
+  # puts the old PDF back, and Save form saves both.
   #
   # New form's Write form opens it with its first ask, What it's for, in the flash, so a
   # reload never asks again. Nothing is saved until Save form, which keeps the form's
@@ -41,18 +43,15 @@ defmodule Web.FormChangeLive do
       page: Form.page_bytes(form),
       text: form.text,
       text_open: false,
+      text_error: nil,
+      replacing: false,
+      page_error: nil,
       activity: nil,
       activities: [],
       pages: [],
       preview_error: nil
     )
-    |> allow_upload(:page,
-      accept: ~w(.pdf),
-      max_entries: 1,
-      max_file_size: 10_000_000,
-      auto_upload: true,
-      progress: &page_progress/3
-    )
+    |> allow_upload(:page, accept: ~w(.pdf), max_entries: 1, max_file_size: 10_000_000)
     |> assign_ai(team, user)
     |> preview()
     |> first_ask(first)
@@ -134,6 +133,8 @@ defmodule Web.FormChangeLive do
     end
   end
 
+  @new_page_ask "Fit the form to the agency's new PDF."
+
   def handle_event("try_on", %{"activity" => id}, socket) do
     activity = Enum.find(socket.assigns.activities, &(to_string(&1.id) == id))
     {:noreply, socket |> assign(activity: activity) |> preview()}
@@ -146,6 +147,51 @@ defmodule Web.FormChangeLive do
 
   def handle_event("show_text", _params, socket), do: {:noreply, assign(socket, text_open: true)}
   def handle_event("hide_text", _params, socket), do: {:noreply, assign(socket, text_open: false)}
+
+  # A fix by hand: checked as saving checks it, and tried again once it passes.
+  def handle_event("edit_text", %{"text" => text}, socket) do
+    %{team: team, form: form, page: page} = socket.assigns
+
+    case SaveForm.check_for(team, form, text, page) do
+      {:ok, _doc} -> {:noreply, socket |> assign(text: text, text_error: nil) |> preview()}
+      {:error, _field, message} -> {:noreply, assign(socket, text: text, text_error: message)}
+    end
+  end
+
+  def handle_event("open_replace", _params, socket),
+    do: {:noreply, assign(socket, replacing: true, page_error: nil)}
+
+  def handle_event("close_replace", _params, socket) do
+    socket =
+      Enum.reduce(socket.assigns.uploads.page.entries, socket, &cancel_upload(&2, :page, &1.ref))
+
+    {:noreply, assign(socket, replacing: false, page_error: nil)}
+  end
+
+  # The agency's new PDF takes the old one's place, and AI fits the form to it.
+  def handle_event("replace_pdf", _params, socket) do
+    bytes =
+      consume_uploaded_entries(socket, :page, fn %{path: path}, _entry ->
+        {:ok, File.read!(path)}
+      end)
+
+    case SaveForm.check_page(List.first(bytes)) do
+      :ok when socket.assigns.ai_pending == nil ->
+        old = socket.assigns.page
+
+        {:noreply,
+         socket
+         |> assign(page: hd(bytes), replacing: false, page_error: nil)
+         |> preview()
+         |> start_ask(@new_page_ask, old)}
+
+      :ok ->
+        {:noreply, assign(socket, page_error: "Wait for AI to answer, then replace the PDF.")}
+
+      {:error, :page, message} ->
+        {:noreply, assign(socket, page_error: message)}
+    end
+  end
 
   def handle_event("ask", %{"ai" => %{"ask" => ask}}, socket) do
     case String.trim(ask) do
@@ -251,7 +297,7 @@ defmodule Web.FormChangeLive do
 
   defp ask_done(socket, {:ok, %{text: text, note: note, blank: blank}}) do
     socket
-    |> assign(text: text)
+    |> assign(text: text, text_error: nil)
     |> preview()
     |> add_ask(blank_or(note, nil), true, blank)
   end
@@ -283,31 +329,6 @@ defmodule Web.FormChangeLive do
 
     assign(socket, ai_asks: [entry | socket.assigns.ai_asks])
   end
-
-  @new_page_ask "Fit the form to the agency's new PDF."
-
-  # The agency's new PDF, once it's up: it takes the page's place, and AI fits the form
-  # to it, unless it's a scan or an ask is running.
-  defp page_progress(:page, %{done?: true}, socket) do
-    [bytes] =
-      consume_uploaded_entries(socket, :page, fn %{path: path}, _entry ->
-        {:ok, File.read!(path)}
-      end)
-
-    case SaveForm.check_page(bytes) do
-      :ok when socket.assigns.ai_pending == nil ->
-        old = socket.assigns.page
-        {:noreply, socket |> assign(page: bytes) |> preview() |> start_ask(@new_page_ask, old)}
-
-      :ok ->
-        {:noreply, put_flash(socket, :error, "Wait for AI to answer, then use the new PDF.")}
-
-      {:error, :page, message} ->
-        {:noreply, put_flash(socket, :error, message)}
-    end
-  end
-
-  defp page_progress(:page, _entry, socket), do: {:noreply, socket}
 
   # Stop or a failed ask puts back the page from before it.
   defp put_back_page(socket, %{before_page: page}) when page != socket.assigns.page,
@@ -442,36 +463,96 @@ defmodule Web.FormChangeLive do
         </div>
       </section>
 
-      <.form
-        :if={@ai == :ok and is_nil(@ai_pending)}
-        for={%{}}
-        id="form-new-page"
-        phx-change="validate_page"
-        class="measure mb-8"
-      >
-        <.file_drop
-          id="form-new-page-file"
-          upload={@uploads.page}
-          label="A new PDF from the agency"
-          kinds="a PDF"
-        >
-          AI fits the form to it. Nothing is saved until Save form.
-        </.file_drop>
-      </.form>
-
-      <section :if={written?(@text)} id="form-text">
-        <p class="action mb-3">
-          <.a :if={!@text_open} id="form-show-text" href="#" phx-click="show_text">Show text</.a>
-          <.a :if={@text_open} id="form-hide-text" href="#" phx-click="hide_text">Hide text</.a>
-        </p>
+      <section id="form-text">
+        <.page_actions id="form-text-actions">
+          <:action :if={!text_shown?(assigns)}>
+            <.a id="form-show-text" href="#" phx-click="show_text">Show how it fills in</.a>
+          </:action>
+          <:action :if={text_shown?(assigns)}>
+            <.a id="form-hide-text" href="#" phx-click="hide_text">Hide how it fills in</.a>
+          </:action>
+          <:action :if={@ai == :ok and is_nil(@ai_pending)}>
+            <.a id="form-replace-pdf" href="#" phx-click="open_replace">Replace PDF</.a>
+          </:action>
+        </.page_actions>
         <p class="hint measure">
-          The form in SAR Duty's form language, read only. Ask AI to change it.
+          AI writes the form. Show how it fills in for a small fix by hand, and Replace PDF
+          when the agency puts out a new one.
         </p>
-        <pre :if={@text_open} id="form-text-code" class="code-block mt-3"><code>{@text}</code></pre>
+        <.form
+          :if={text_shown?(assigns)}
+          for={%{}}
+          id="form-text-form"
+          phx-change="edit_text"
+          class="mt-6"
+        >
+          <.input
+            id="form-text-input"
+            name="text"
+            type="textarea"
+            label="How it fills in"
+            value={@text}
+            rows="16"
+            class="font-mono"
+            phx-debounce="500"
+            spellcheck="false"
+            errors={List.wrap(@text_error)}
+          >
+            What each value is, and where it goes on the page. For a small fix by hand.
+          </.input>
+        </.form>
       </section>
     </.ai_editor>
+
+    <%!-- Replace PDF: the upload in a dialog over the page. Cancel or Escape closes it. --%>
+    <dialog
+      :if={@replacing}
+      id="form-replace-dialog"
+      class="confirm-dialog"
+      phx-hook="AskDialog"
+      phx-mounted={JS.ignore_attributes(["open"])}
+      data-cancel-event="close_replace"
+      aria-labelledby="form-replace-question"
+    >
+      <.form
+        for={%{}}
+        id="form-replace-form"
+        phx-change="validate_page"
+        phx-submit="replace_pdf"
+      >
+        <h2 id="form-replace-question" class="confirm-dialog-question">
+          Replace the agency's PDF?
+        </h2>
+        <p>
+          The agency's new PDF takes the old one's place, and AI fits the form to it. Nothing
+          is saved until Save form, and Undo puts the old PDF back.
+        </p>
+        <div class="confirm-dialog-fields">
+          <.file_drop
+            id="form-replace-file"
+            upload={@uploads.page}
+            label="The agency's new PDF"
+            kinds="a PDF"
+            errors={List.wrap(@page_error)}
+          >
+            The blank form, as the agency gives it. A scan has no text to read.
+          </.file_drop>
+        </div>
+        <div class="confirm-dialog-actions">
+          <.button id="form-replace-save" variant={:success} phx-disable-with="Reading the PDF…">
+            Replace PDF
+          </.button>
+          <.button id="form-replace-cancel" type="button" value="cancel" phx-click="close_replace">
+            Cancel
+          </.button>
+        </div>
+      </.form>
+    </dialog>
     """
   end
+
+  # The text shows while it's open, and while a fix by hand has a mistake.
+  defp text_shown?(assigns), do: assigns.text_open or assigns.text_error != nil
 
   defp written?(text), do: String.trim(text || "") != ""
 
