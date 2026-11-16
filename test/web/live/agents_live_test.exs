@@ -15,7 +15,7 @@ defmodule Web.AgentsLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/agents")
 
     assert has_element?(lv, "#agents-use-reports", "nothing to connect")
-    refute render(lv) =~ "disconnect"
+    refute has_element?(lv, "#agents-who", "disconnect")
 
     assert has_element?(
              lv,

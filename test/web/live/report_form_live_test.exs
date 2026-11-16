@@ -150,8 +150,12 @@ defmodule Web.ReportFormLiveTest do
 
   test "the name is the title, and Rename shows its fields", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
-    params = %{query: "select name from members", name: "Everyone", about: "All of us"}
-    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new?#{params}")
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+    assert has_element?(lv, "h1#report-title", "New report")
+
+    lv
+    |> form("#report-form", report: %{name: "Everyone", about: "All of us"})
+    |> render_change()
 
     assert has_element?(lv, "h1#report-title", "Everyone")
     assert has_element?(lv, "#report-about.lead", "All of us")

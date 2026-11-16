@@ -64,9 +64,9 @@ defmodule App.AI.ToolTest do
     ]
 
     calls = [
-      {CheckReport, %{"query" => "select name, ref_id, email, phone, address from members"}},
+      {CheckReport, %{"query" => "select name, ref_id, email, mobile, address from members"}},
       {CheckReport, %{"query" => "select title, address, tracking_number from activities"}},
-      {TryReport, %{"query" => "select name, ref_id, email, phone, address from members"}},
+      {TryReport, %{"query" => "select name, ref_id, email, mobile, address from members"}},
       {TryReport, %{"query" => "select title, address, tracking_number from activities"}}
     ]
 
