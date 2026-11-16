@@ -34,7 +34,9 @@ defmodule Web.Admin.AILive do
     do: %{
       "access" => settings.access,
       "model" => settings.model,
-      "monthly_budget" => div(settings.monthly_budget_cents, 100)
+      "monthly_budget" => div(settings.monthly_budget_cents, 100),
+      "suggest_reports" => settings.suggest_reports,
+      "suggest_forms" => settings.suggest_forms
     }
 
   defp assign_usage(socket) do
@@ -108,6 +110,10 @@ defmodule Web.Admin.AILive do
           >
             Asks stop for every team once this month's cost reaches it.
           </.input>
+          <.input field={@form[:suggest_reports]} type="checkbox" label="Suggest next asks on reports">
+            Two or three asks under AI's reply, to show what it can do.
+          </.input>
+          <.input field={@form[:suggest_forms]} type="checkbox" label="Suggest next asks on forms" />
           <.button id="ai-settings-save" variant={:success} phx-disable-with="Saving…">
             Save
           </.button>

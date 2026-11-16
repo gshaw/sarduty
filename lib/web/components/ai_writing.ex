@@ -37,7 +37,9 @@ defmodule Web.Components.AIWriting do
   @doc """
   The conversation, the box, and what AI sees. `id` starts each element's id, such as
   `report-ai`. `asks` is the conversation, newest first: each `%{id, ask, note, undo?}`
-  and, for a form, `blank`, the labels AI left blank, `[%{label, why}]`. `pending` is
+  and, for a form, `blank`, the labels AI left blank, `[%{label, why}]`, and `next`, the
+  asks AI suggests after it: Try next shows the newest's, and a tap sends `suggest`
+  with the ask, which the page puts in the box. `pending` is
   the running ask, `%{ask}`, shown as Thinking… with the seconds it has taken: one steady
   line, since an ask's own steps change too fast to read. `ai` is `:ok`, or why the box
   is closed, said by `closed`. Undo sends
@@ -95,6 +97,19 @@ defmodule Web.Components.AIWriting do
         </.button>
       </li>
     </ol>
+    <div :if={@ai == :ok and !@pending and next(@asks) != []} id={"#{@id}-next"} class="mb-4">
+      <p class="hint mb-2">Try next</p>
+      <div class="flex flex-wrap gap-2">
+        <.button
+          :for={{ask, n} <- Enum.with_index(next(@asks))}
+          id={"#{@id}-next-#{n}"}
+          type="button"
+          size={:sm}
+          phx-click="suggest"
+          phx-value-ask={ask}
+        >{ask}</.button>
+      </div>
+    </div>
     <.form :if={@ai == :ok} for={@form} id={"#{@id}-form"} class="ai-writing-form" phx-submit="ask">
       <.input
         field={@form[:ask]}
@@ -125,4 +140,8 @@ defmodule Web.Components.AIWriting do
     do: to_form(%{"ask" => ask}, as: "ai", id: "ai-#{System.unique_integer([:positive])}")
 
   defp blank(ask), do: Map.get(ask, :blank) || []
+
+  # What AI suggests asking after the newest reply.
+  defp next([newest | _older]), do: Map.get(newest, :next) || []
+  defp next([]), do: []
 end

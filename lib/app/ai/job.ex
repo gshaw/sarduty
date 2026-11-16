@@ -17,6 +17,8 @@ defmodule App.AI.Job do
   - `effort`: how hard the model thinks, `"medium"` unless the job is small.
   - `stream`: true streams each request under the hood, for a job whose answer may take
     near the adapter's timeout, such as a form's first draft (App.Adapter.Claude).
+  - `suggest`: true asks for two or three next asks with the answer, given back as
+    `next` (App.Operation.AskAI sets it from the settings).
   """
 
   @enforce_keys [:kind, :system, :tools, :prompt, :schema, :finish, :context, :ask]
@@ -30,6 +32,7 @@ defmodule App.AI.Job do
     :context,
     :ask,
     effort: "medium",
-    stream: false
+    stream: false,
+    suggest: false
   ]
 end

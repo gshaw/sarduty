@@ -18,7 +18,9 @@ On New report and Change report, for a user AI writing is open to
 - **AI writing** is a column beside the report, where the help column was; under
   1024px it sits above the report. In it, the asks as a conversation, oldest first, then
   "Ask AI" with its hint, "A change, or a question about the report.", and Ask, then what AI sees and How agents work with SAR Duty.
-  AI suggests no next asks: every ask is one someone typed.
+  Under the newest reply, **Try next**: two or three asks AI suggests, to show what it
+  can do. A tap puts one in the box; it never sends on its own. Every ask is still one
+  someone sent.
 - The query is hidden, since AI writes it: Show query and Hide query toggle it, and a
   mistake in it opens it. With the query, the fields are buttons under it, with How to
   write a report, What each chart takes, and What each field means. The preview's count
@@ -184,6 +186,9 @@ Adminland › AI writing, `/admin/ai` ([Web.Admin.AILive](../lib/web/live/admin/
 one `ai_settings` row ([App.Model.AISettings](../lib/app/model/ai_settings.ex)). Each save
 is an `ai_settings_changed` event.
 
+- **Suggest next asks on reports** and **on forms**: whether AI gives Try next after
+  each reply (`AISettings.suggest?/2`). Both start on. Off, `AskAI` doesn't ask for
+  them, so the answer is a little shorter.
 - **Who gets it**: Nobody, SAR Duty admins only (to try it on a team first), or Every
   team and organization admin. Off with no row.
 - **Model**: Claude Sonnet 5.5 by default, or Opus 5.5 or Haiku 5.5. Prices are in

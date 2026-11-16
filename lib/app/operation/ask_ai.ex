@@ -70,6 +70,8 @@ defmodule App.Operation.AskAI do
       when is_struct(owner, Team) or is_struct(owner, Organization) do
     settings = AISettings.get()
 
+    job = %{job | suggest: AISettings.suggest?(settings, job.kind)}
+
     with :ok <- check(owner, user, now, job.kind, settings) do
       history = [%{"role" => "user", "content" => job.prompt}]
 
@@ -162,11 +164,39 @@ defmodule App.Operation.AskAI do
         {{:error, {:checks, mistake}}, acc}
 
       result ->
-        {result, acc}
+        {with_next(result, job, output), acc}
     end
   end
 
   defp answer(error, _settings, _job, _history, acc, _retried), do: {error, acc}
+
+  # With suggestions on, the next asks AI gave: `result.next`, or a third element after
+  # an unchanged ask's note.
+  defp with_next(result, %Job{suggest: false}, _output), do: result
+  defp with_next({:ok, result}, _job, output), do: {:ok, Map.put(result, :next, next(output))}
+  defp with_next({:unchanged, note}, _job, output), do: {:unchanged, note, next(output)}
+  defp with_next(result, _job, _output), do: result
+
+  @doc "Up to three short next asks from an answer's `next`, each trimmed."
+  def next(%{"next" => list}) when is_list(list) do
+    list
+    |> Enum.filter(&is_binary/1)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == "" or String.length(&1) > 80))
+    |> Enum.uniq()
+    |> Enum.take(3)
+  end
+
+  def next(_output), do: []
+
+  @next %{
+    "type" => "array",
+    "items" => %{"type" => "string"},
+    "description" =>
+      "Two or three short asks the admin might try next, a few words each in their own " <>
+        "voice, such as \"Group by quarter\". Only what SAR Duty can do. None when " <>
+        "nothing more would help."
+  }
 
   defp run_tool(%{"id" => id, "name" => name, "input" => input}, job) do
     result =
@@ -210,7 +240,7 @@ defmodule App.Operation.AskAI do
       "inference_geo" => "us",
       "output_config" => %{
         "effort" => job.effort,
-        "format" => %{"type" => "json_schema", "schema" => job.schema}
+        "format" => %{"type" => "json_schema", "schema" => schema(job)}
       },
       "system" =>
         Enum.map(
@@ -220,6 +250,14 @@ defmodule App.Operation.AskAI do
       "messages" => messages
     }
     |> put_tools(job.tools)
+  end
+
+  defp schema(%Job{suggest: false, schema: schema}), do: schema
+
+  defp schema(%Job{schema: schema}) do
+    schema
+    |> Map.update("properties", %{"next" => @next}, &Map.put(&1, "next", @next))
+    |> Map.update("required", ["next"], &["next" | &1])
   end
 
   defp put_tools(request, []), do: request
@@ -266,6 +304,7 @@ defmodule App.Operation.AskAI do
 
   defp outcome({:ok, _result}), do: :used
   defp outcome({:unchanged, _note}), do: :unchanged
+  defp outcome({:unchanged, _note, _next}), do: :unchanged
   defp outcome({:error, {:checks, _mistake}}), do: :refused_by_checks
   defp outcome({:error, :refused}), do: :refused
   defp outcome({:error, _reason}), do: :failed

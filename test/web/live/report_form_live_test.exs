@@ -617,6 +617,52 @@ defmodule Web.ReportFormLiveTest do
       assert has_element?(lv, "#report-ai-form .ai-enter-hint", "Enter sends it.")
     end
 
+    # Try next (#1089): the asks AI suggests after its reply. A tap puts one in the box;
+    # nothing is sent. Adminland can turn them off for reports.
+    test "Try next shows AI's suggested asks, and a tap puts one in the box", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+
+      stub_claude("select name from members order by name", "Lists every member.", %{
+        "next" => ["Add each member's standing", "  ", "Only counted members"]
+      })
+
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+      lv |> form("#report-ai-form", ai: %{ask: "every member"}) |> render_submit()
+      render_async(lv)
+
+      assert_received {:claude, request}
+      assert "next" in request["output_config"]["format"]["schema"]["required"]
+      assert has_element?(lv, "#report-ai-next", "Try next")
+      assert has_element?(lv, "#report-ai-next-1", "Only counted members")
+      refute has_element?(lv, "#report-ai-next-2")
+
+      lv |> element("#report-ai-next-0") |> render_click()
+      assert has_element?(lv, "textarea[name='ai[ask]']", "Add each member's standing")
+    end
+
+    test "with suggestions off for reports, AI is never asked for them", %{conn: conn} do
+      {:ok, _settings} =
+        SetAISettings.call(
+          %{
+            access: "everyone",
+            model: "claude-sonnet-5-5",
+            monthly_budget: "50",
+            suggest_reports: "false"
+          },
+          make_admin(AccountsFixtures.user_fixture())
+        )
+
+      %{user: user, team: team} = user_with_team_fixture()
+      stub_claude("select name from members", "Lists every member.", %{})
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+      lv |> form("#report-ai-form", ai: %{ask: "every member"}) |> render_submit()
+      render_async(lv)
+
+      assert_received {:claude, request}
+      refute Map.has_key?(request["output_config"]["format"]["schema"]["properties"], "next")
+      refute has_element?(lv, "#report-ai-next")
+    end
+
     test "an ask writes the query, name, and description, the next carries it, and Undo puts it back",
          %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()

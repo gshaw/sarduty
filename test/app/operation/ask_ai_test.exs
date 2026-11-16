@@ -41,6 +41,25 @@ defmodule App.Operation.AskAITest do
     refute Map.has_key?(request, "temperature")
   end
 
+  test "with suggestions on, the answer's schema asks for next asks too" do
+    settings = %AISettings{model: "claude-sonnet-5-5"}
+    schema = fn job -> AskAI.request(settings, job, [])["output_config"]["format"]["schema"] end
+
+    refute Map.has_key?(schema.(job())["properties"] || %{}, "next")
+
+    assert %{"properties" => %{"next" => %{"type" => "array"}}, "required" => ["next"]} =
+             schema.(%{job() | suggest: true})
+  end
+
+  test "next asks are trimmed, blanks and long ones dropped, three at most" do
+    long = String.duplicate("a", 81)
+
+    assert AskAI.next(%{"next" => [" Group by quarter ", "", long, "A", "B", "C"]}) ==
+             ["Group by quarter", "A", "B"]
+
+    assert AskAI.next(%{"note" => "no next"}) == []
+  end
+
   test "a response asks for tools, gives an answer, or ends the ask" do
     use = %{"type" => "tool_use", "id" => "t1", "name" => "check_report", "input" => %{}}
 

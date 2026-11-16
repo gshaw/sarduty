@@ -117,7 +117,8 @@ defmodule Web.StyleGuideHTML.SampleData do
         ask: "Tick Search when the task type says search",
         note: "Search is ticked when Task type starts with Search.",
         undo?: true,
-        blank: []
+        blank: [],
+        next: ["Fill EPC Name from a question", "Leave Section B blank"]
       },
       %{
         id: 1,

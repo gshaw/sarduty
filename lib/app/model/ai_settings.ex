@@ -4,7 +4,9 @@ defmodule App.Model.AISettings do
   (App.Operation.SetAISettings). `access` says who gets AI writing: nobody, SAR Duty
   admins only while it's tried, or every team admin. `model` is the Claude model asks
   use. `monthly_budget_cents` stops asks once this month's asks cost that much
-  (App.Model.AIAsk.month_cost_microdollars/1). With no row yet, AI writing is off.
+  (App.Model.AIAsk.month_cost_microdollars/1). `suggest_reports` and `suggest_forms` say
+  whether AI suggests next asks after each reply on each. With no row yet, AI writing
+  is off.
   """
   use App, :model
 
@@ -20,6 +22,8 @@ defmodule App.Model.AISettings do
     field :access, :string, default: "off"
     field :model, :string
     field :monthly_budget_cents, :integer
+    field :suggest_reports, :boolean, default: true
+    field :suggest_forms, :boolean, default: true
     belongs_to :updated_by, User
     timestamps(type: :utc_datetime_usec)
   end
@@ -44,12 +48,17 @@ defmodule App.Model.AISettings do
   @doc "For Adminland's form. The budget is in whole dollars there."
   def changeset(%AISettings{} = settings, attrs) do
     settings
-    |> cast(attrs, [:access, :model, :monthly_budget_cents])
+    |> cast(attrs, [:access, :model, :monthly_budget_cents, :suggest_reports, :suggest_forms])
     |> validate_required([:access, :model, :monthly_budget_cents])
     |> validate_inclusion(:access, @accesses)
     |> validate_inclusion(:model, Models.ids())
     |> validate_number(:monthly_budget_cents, greater_than_or_equal_to: 0)
   end
+
+  @doc "Whether AI suggests next asks after a reply to a job of `kind`."
+  def suggest?(%AISettings{suggest_reports: on}, :report), do: on
+  def suggest?(%AISettings{suggest_forms: on}, :form), do: on
+  def suggest?(%AISettings{}, _kind), do: false
 
   @doc "Whether `user` gets AI writing under these settings, before the key and the budget."
   def open_to?(%AISettings{access: "everyone"}, %User{}), do: true

@@ -212,6 +212,10 @@ defmodule Web.FormChangeLive do
      |> put_flash(:info, "Stopped. Nothing changed.")}
   end
 
+  # A suggested next ask goes in the box, to change or send.
+  def handle_event("suggest", %{"ask" => ask}, socket),
+    do: {:noreply, assign(socket, ai_form: ask_form(ask))}
+
   def handle_event("undo_ask", %{"id" => id}, socket) do
     case Enum.split_while(socket.assigns.ai_asks, &(to_string(&1.id) != id)) do
       {_newer, [ask | older]} ->
@@ -304,15 +308,17 @@ defmodule Web.FormChangeLive do
     end)
   end
 
-  defp ask_done(socket, {:ok, %{text: text, note: note, blank: blank}}) do
+  defp ask_done(socket, {:ok, %{text: text, note: note, blank: blank} = result}) do
     socket
     |> assign(text: text, text_error: nil)
     |> preview()
-    |> add_ask(blank_or(note, nil), true, blank)
+    |> add_ask(blank_or(note, nil), true, blank, Map.get(result, :next, []))
   end
 
-  defp ask_done(socket, {:unchanged, note}),
-    do: add_ask(socket, blank_or(note, "Nothing changed."), false, [])
+  defp ask_done(socket, {:unchanged, note}), do: ask_done(socket, {:unchanged, note, []})
+
+  defp ask_done(socket, {:unchanged, note, next}),
+    do: add_ask(socket, blank_or(note, "Nothing changed."), false, [], next)
 
   # A failed ask leaves no reply: a toast says why, and its words go back in the box.
   defp ask_done(socket, {:error, reason}) do
@@ -323,7 +329,7 @@ defmodule Web.FormChangeLive do
   end
 
   # The conversation, newest first. `undo?` is false for an ask that changed nothing.
-  defp add_ask(socket, note, undo?, blank) do
+  defp add_ask(socket, note, undo?, blank, next) do
     pending = socket.assigns.ai_pending
 
     entry = %{
@@ -333,7 +339,8 @@ defmodule Web.FormChangeLive do
       before_page: pending.before_page,
       note: note,
       undo?: undo? or pending.before_page != socket.assigns.page,
-      blank: blank
+      blank: blank,
+      next: next
     }
 
     assign(socket, ai_asks: [entry | socket.assigns.ai_asks])

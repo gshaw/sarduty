@@ -82,7 +82,12 @@ defmodule Web.Admin.AILiveTest do
 
     lv
     |> form("#ai-settings",
-      settings: %{access: "everyone", model: "claude-opus-5-5", monthly_budget: "75"}
+      settings: %{
+        access: "everyone",
+        model: "claude-opus-5-5",
+        monthly_budget: "75",
+        suggest_forms: "false"
+      }
     )
     |> render_submit()
 
@@ -90,6 +95,8 @@ defmodule Web.Admin.AILiveTest do
     assert settings.access == "everyone"
     assert settings.model == "claude-opus-5-5"
     assert settings.monthly_budget_cents == 7_500
+    assert settings.suggest_reports
+    refute settings.suggest_forms
     assert Event.get_last(:ai_settings_changed).user_id == admin.id
   end
 
