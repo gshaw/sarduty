@@ -2,7 +2,9 @@ defmodule App.Operation.SaveReport do
   @moduledoc """
   Saves a team admin's report (#768), new or changed. Its query must run on the team's
   fields: a mistake goes on the Query field with its line, as the editor shows it. Every
-  save appends a version (#834), with What changed when changing a saved report. Delete
+  save appends a version (#834), with What changed when changing a saved report. Left
+  blank while AI writing is open to the team admin, AI writes it a few seconds later
+  (App.Operation.WriteHistoryLine). Delete
   moves a report to Recently deleted for 30 days, and Restore brings it back.
   """
 
@@ -10,9 +12,11 @@ defmodule App.Operation.SaveReport do
   alias App.Model.ReportVersion
   alias App.Model.SavedReport
   alias App.Model.Team
+  alias App.Operation.WriteHistoryLine
   alias App.Repo
   alias App.Report
   alias App.Report.Error
+  alias App.Worker.WriteHistoryLineWorker
   alias Ecto.Changeset
 
   @doc """
@@ -37,10 +41,12 @@ defmodule App.Operation.SaveReport do
 
     # A new report's description already says what it is.
     change = if report.id, do: Changeset.get_change(changeset, :change)
+    ai_line? = WriteHistoryLine.writes?(team, user, report, change, now)
 
     Repo.transact(fn ->
       with {:ok, saved} <- Repo.insert_or_update(changeset) do
-        saved |> ReportVersion.build(user.id, change, agent) |> Repo.insert!()
+        version = saved |> ReportVersion.build(user.id, change, agent) |> Repo.insert!()
+        if ai_line?, do: WriteHistoryLineWorker.enqueue(version)
         {:ok, saved}
       end
     end)
