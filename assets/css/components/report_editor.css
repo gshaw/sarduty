@@ -1,5 +1,26 @@
 @layer components {
-  /* The report editor (#784): its help column shows only with the query. Without it,
-     the form takes the full width. */
-  .report-editor.is-help-hidden > .report-main { width: 100%; }
+  /* The report editor (#784). With AI writing, its column sits beside the report from
+     1024px, where the help column was, and above it under that. */
+  .report-editor { display: flex; flex-direction: column; gap: var(--sp-8); }
+  .report-editor > .report-main { min-width: 0; }
+  @media (min-width: 1024px) {
+    .report-editor.has-ai { flex-direction: row-reverse; gap: var(--sp-6); }
+    .report-editor.has-ai > .report-main { flex: 1; }
+    .report-editor.has-ai > .report-ai {
+      width: 33%; max-width: var(--sidebar-max); flex-shrink: 0; align-self: flex-start;
+      border-left: 1px solid var(--border-subtle); padding-left: var(--sp-4);
+    }
+  }
+
+  /* AI writing's conversation: each ask on the right, AI's reply under it. */
+  .ai-thread { list-style: none; margin: 0 0 var(--sp-6); padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+  .ai-thread p { margin: 0; }
+  .ai-you { align-self: flex-end; max-width: 90%; padding: var(--sp-2) var(--sp-3); background: var(--surface-alt); border-radius: var(--radius); overflow-wrap: anywhere; }
+  .ai-reply .btn { margin-top: var(--sp-2); }
+  .ai-step { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); color: var(--text-muted); }
+  .report-ai #report-ai-form textarea { width: 100%; }
+
+  /* New report's built-in reports to start from, a chart's marked with its icon. */
+  .report-start-list li { display: flex; align-items: center; gap: var(--sp-3); }
+  .report-start-chart { display: inline-flex; align-items: center; gap: var(--sp-1); color: var(--text-muted); font-size: var(--fs-sm); }
 }

@@ -289,7 +289,9 @@ defmodule Web.StyleGuideHTML do
       {"link", "Link, in rich text"},
       {"list", "Bulleted list, in rich text"},
       {"list-ordered", "Numbered list, in rich text"},
-      {"grip-vertical", "The handle that drags a row, in a drag list"}
+      {"grip-vertical", "The handle that drags a row, in a drag list"},
+      {"chart-column", "A built-in report that draws columns, on New report"},
+      {"chart-bar", "A built-in report that draws bars, on New report"}
     ]
   end
 

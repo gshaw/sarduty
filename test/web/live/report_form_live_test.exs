@@ -65,18 +65,14 @@ defmodule Web.ReportFormLiveTest do
 
     assert has_element?(
              lv,
-             "#report-custom-fields button[data-field='`Task type`']",
+             "#report-fields button[data-field='`Task type`'][title*=\"One of 'Search' or 'Rescue'.\"]",
              "`Task type`"
            )
-
-    assert has_element?(lv, "#report-custom-fields", "One of 'Search' or 'Rescue'.")
 
     assert has_element?(
              lv,
              "#report-field-meanings[href='/teams/#{team.subdomain}/settings/fields']"
            )
-
-    refute has_element?(lv, "#report-field-table", "Task type")
 
     lv
     |> form("#report-form",
@@ -224,9 +220,8 @@ defmodule Web.ReportFormLiveTest do
     {query, _} = :binary.match(html, ~s(id="report_query"))
     assert name < query
 
-    # The help column shows with the query.
+    # The fields show under the query.
     assert has_element?(lv, "#report-fields")
-    refute has_element?(lv, "#report-editor.is-help-hidden")
     refute has_element?(lv, "#report-delete-button")
   end
 
@@ -522,7 +517,7 @@ defmodule Web.ReportFormLiveTest do
     assert has_element?(lv, "#report-chart-map circle.is-recent")
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/new")
-    assert has_element?(lv, "#chart-calendar")
+    assert has_element?(lv, "#report-charts-link[href='/agents/reports#charts']")
 
     lv
     |> form("#report-form",
@@ -642,8 +637,6 @@ defmodule Web.ReportFormLiveTest do
       activity_fixture(team, %{title: "Rope rescue", activity_kind: "exercise"})
       {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
 
-      assert has_element?(lv, "#clause-switch", "The tiles")
-
       query = """
       select title from activities
       order by title
@@ -711,68 +704,111 @@ defmodule Web.ReportFormLiveTest do
       :ok
     end
 
-    # Claude checks the query once, then answers with it.
-    defp stub_claude(query, note) do
+    # Claude checks the query once, then answers with it. Each request goes to the test
+    # as {:claude, request}. A History line's request, with no tools, gets `line`.
+    defp stub_claude(query, note, more) do
+      test = self()
+
       Req.Test.stub(App.Adapter.Claude, fn conn ->
         {:ok, body, conn} = Plug.Conn.read_body(conn)
         request = Jason.decode!(body)
-
-        response =
-          case List.last(request["messages"]) do
-            %{"content" => [%{"type" => "tool_result"} | _]} ->
-              %{
-                "stop_reason" => "end_turn",
-                "content" => [
-                  %{
-                    "type" => "text",
-                    "text" => Jason.encode!(%{"query" => query, "name" => "", "note" => note})
-                  }
-                ],
-                "usage" => %{"input_tokens" => 900, "output_tokens" => 300}
-              }
-
-            _first ->
-              %{
-                "stop_reason" => "tool_use",
-                "content" => [
-                  %{
-                    "type" => "tool_use",
-                    "id" => "call_1",
-                    "name" => "check_report",
-                    "input" => %{"query" => query}
-                  }
-                ],
-                "usage" => %{"input_tokens" => 9_000, "output_tokens" => 200}
-              }
-          end
-
-        Req.Test.json(conn, response)
+        send(test, {:claude, request})
+        Req.Test.json(conn, response(request, query, note, more))
       end)
     end
 
-    test "an ask writes the query, This visit lists it, and Undo puts it back", %{conn: conn} do
+    defp response(%{"tools" => nil}, _query, _note, more),
+      do: answer(%{"line" => more[:line] || "Added standing."})
+
+    defp response(request, query, note, more) do
+      case List.last(request["messages"]) do
+        %{"content" => [%{"type" => "tool_result"} | _]} ->
+          answer(
+            Map.merge(%{"query" => query, "name" => "", "about" => "", "note" => note}, more)
+          )
+
+        _first ->
+          %{
+            "stop_reason" => "tool_use",
+            "content" => [
+              %{
+                "type" => "tool_use",
+                "id" => "call_1",
+                "name" => "check_report",
+                "input" => %{"query" => query}
+              }
+            ],
+            "usage" => %{"input_tokens" => 9_000, "output_tokens" => 200}
+          }
+      end
+    end
+
+    defp answer(output) do
+      %{
+        "stop_reason" => "end_turn",
+        "content" => [%{"type" => "text", "text" => Jason.encode!(output)}],
+        "usage" => %{"input_tokens" => 900, "output_tokens" => 300}
+      }
+    end
+
+    test "a blank New report starts from the box and the built-in reports", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+
+      assert has_element?(lv, "#report-start #report-ai-form", "Describe the report you want")
+      assert has_element?(lv, "#report-start #report-ai-form", "a chart of incidents by month")
+      assert has_element?(lv, "#report-ai-ask", "Write it")
+      assert has_element?(lv, "#report-body.hidden")
+      refute has_element?(lv, "#report-ai")
+      refute has_element?(lv, "#report-about")
+
+      assert has_element?(
+               lv,
+               "#report-start-activities-by-month a[href='/teams/#{team.subdomain}/reports/new?from=activities-by-month']"
+             )
+
+      assert has_element?(lv, "#report-start-activities-by-month .icon-chart-column")
+      assert has_element?(lv, "#report-start-qualification-coverage .icon-chart-bar")
+      refute has_element?(lv, "#report-start-hours-by-member .report-start-chart")
+      count = length(App.Report.BuiltIn.for_team(team))
+      assert has_element?(lv, "#report-start-all", "All #{count} built-in reports")
+
+      lv |> element("#report-write-own") |> render_click()
+      refute has_element?(lv, "#report-start")
+      refute has_element?(lv, "#report-body.hidden")
+      refute has_element?(lv, ".hidden #report_query")
+      assert has_element?(lv, "#report-ai #report-ai-form", "Describe a change")
+    end
+
+    test "an ask writes the query, name, and description, the next carries it, and Undo puts it back",
+         %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
 
       stub_claude(
         "select name, last_attended from members order by name",
-        "Shows when each member last came."
+        "Shows when each member last came.",
+        %{"name" => "Last came", "about" => "When each member last came."}
       )
 
       {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
-
-      assert has_element?(lv, "#report-ai-form", "Describe it")
-      assert has_element?(lv, "#report-show-query")
 
       lv
       |> form("#report-ai-form", ai: %{ask: "when did each member last come"})
       |> render_submit()
 
+      assert has_element?(lv, "#report-ai-ask-running", "when did each member last come")
+      assert has_element?(lv, "#report-ai-step #report-ai-stop")
+      assert has_element?(lv, "#report-ai-ask[disabled]")
+
       render_async(lv)
 
       assert has_element?(lv, "#report_query", "select name, last_attended from members")
-      assert has_element?(lv, "#report-ai-asks", "Shows when each member last came.")
-      assert has_element?(lv, "#report-ai-asks", "when did each member last come")
-      assert has_element?(lv, "#report-ai-form", "Describe a change")
+      assert has_element?(lv, "h1#report-title", "Last came")
+      assert has_element?(lv, "#report-about", "When each member last came.")
+      assert has_element?(lv, "#report-ai .ai-you", "when did each member last come")
+      assert has_element?(lv, "#report-ai .ai-reply", "Shows when each member last came.")
+      assert has_element?(lv, "#report-ai #report-ai-form", "Describe a change")
+      refute has_element?(lv, "#report-start")
 
       ask = App.Repo.get_by!(AIAsk, team_id: team.id)
       assert ask.outcome == :used
@@ -780,9 +816,89 @@ defmodule Web.ReportFormLiveTest do
       assert ask.input_tokens == 9_900
       assert ask.cost_microdollars > 0
 
-      lv |> element("#report-ai-asks button", "Undo") |> render_click()
+      lv |> form("#report-ai-form", ai: %{ask: "and their standing"}) |> render_submit()
+      render_async(lv)
+      assert_received {:claude, %{"messages" => [%{"content" => "Earlier asks" <> prompt} | _]}}
+      assert prompt =~ "when did each member last come"
+      assert prompt =~ "Shows when each member last came."
+
+      # The second ask changed nothing, so the first has the only Undo.
+      [_, id] = Regex.run(~r/id="report-ai-undo-(\d+)"/, render(lv))
+      lv |> element("#report-ai-undo-#{id}") |> render_click()
       assert has_element?(lv, "#report_query", "where counted = true")
+      assert has_element?(lv, "h1#report-title", "New report")
       refute has_element?(lv, "#report-ai-asks")
+    end
+
+    test "Stop puts the words back, and the ask counts with what it spent", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      test = self()
+
+      # The first request answers; the second waits until the ask is stopped.
+      Req.Test.stub(App.Adapter.Claude, fn conn ->
+        if Process.get(:asked) do
+          send(test, :waiting)
+          Process.sleep(:infinity)
+        end
+
+        Process.put(:asked, true)
+
+        Req.Test.json(conn, %{
+          "stop_reason" => "tool_use",
+          "content" => [
+            %{"type" => "tool_use", "id" => "c1", "name" => "check_report", "input" => %{}}
+          ],
+          "usage" => %{"input_tokens" => 9_000, "output_tokens" => 200}
+        })
+      end)
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new?from=hours-by-member")
+
+      lv |> form("#report-ai-form", ai: %{ask: "add a menu for the period"}) |> render_submit()
+      assert_receive :waiting
+      lv |> element("#report-ai-stop") |> render_click()
+
+      assert has_element?(lv, "#ai_ask", "add a menu for the period")
+      refute has_element?(lv, "#report-ai-asks")
+
+      ask = App.Repo.get_by!(AIAsk, team_id: team.id)
+      assert ask.outcome == :stopped
+      assert ask.input_tokens == 9_000
+      assert ask.cost_microdollars > 0
+      assert AIAsk.count_today(team, DateTime.utc_now()) == 1
+    end
+
+    test "with AI writing on, What changed goes and AI writes the History line after the save",
+         %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+
+      {:ok, report} =
+        SaveReport.call(team, user, nil, %{
+          "name" => "Members",
+          "query" => "select name from members"
+        })
+
+      stub_claude("", "", %{line: "Added each member's standing."})
+      conn = log_in_user(conn, user)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
+      refute has_element?(lv, "#report_change")
+
+      lv
+      |> form("#report-form", report: %{query: "select name, standing from members"})
+      |> render_submit()
+
+      assert_received {:claude, request}
+      assert request["output_config"]["effort"] == "low"
+      assert hd(request["messages"])["content"] =~ "select name, standing from members"
+
+      assert [%{change: "Added each member's standing."}, %{change: nil}] =
+               ReportVersion.get_all(report)
+
+      line = App.Repo.get_by!(AIAsk, team_id: team.id)
+      assert line.kind == :history_line
+      assert line.ask == "Members"
+      assert AIAsk.count_today(team, DateTime.utc_now()) == 0
     end
 
     test "a team that used today's asks is told so", %{conn: conn} do
@@ -803,13 +919,25 @@ defmodule Web.ReportFormLiveTest do
       assert has_element?(lv, "#report-ai-closed", "used today's 100 asks")
     end
 
-    test "with AI writing off there is no box", %{conn: conn} do
+    test "with AI writing off there is no column, and What changed stays", %{conn: conn} do
       admin = make_admin(AccountsFixtures.user_fixture())
       params = %{access: "off", model: "claude-sonnet-5-5", monthly_budget: "50"}
       {:ok, _settings} = SetAISettings.call(params, admin)
       %{user: user, team: team} = user_with_team_fixture()
-      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+      conn = log_in_user(conn, user)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/new")
       refute has_element?(lv, "#report-ai")
+      refute has_element?(lv, "#report-start")
+      assert has_element?(lv, "#report-fields")
+
+      {:ok, report} =
+        SaveReport.call(team, user, nil, %{
+          "name" => "Members",
+          "query" => "select name from members"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
+      assert has_element?(lv, "#report_change")
     end
   end
 end
