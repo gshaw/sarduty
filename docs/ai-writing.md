@@ -23,6 +23,10 @@ On New report and Change report, for a user AI writing is open to
   mistake in it opens it. With the query, the fields are buttons under it, with How to
   write a report, What each chart takes, and What each field means. The preview's count
   drops "runs as you type" while the query is hidden.
+- **Not saved yet** shows beside Save report or Save form once the page differs from
+  what's saved (Web.Components.Unsaved). Leaving then asks first: a reload or closing
+  the tab through the browser's own question, a link through a confirm. Save and Cancel
+  never ask.
 - **Enter sends** the ask, and Shift+Enter starts a new line (assets/js/ask_enter.js).
   On a touch screen, return starts a new line and Ask sends, and the hint saying so
   hides.

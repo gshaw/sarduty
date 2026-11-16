@@ -37,6 +37,7 @@ defmodule Web.ReportFormLive do
   use Web, :live_view_app_layout
 
   import Web.Components.AIWriting
+  import Web.Components.Unsaved
   import Web.Components.ReportPage
   import Web.Components.ReportTable
 
@@ -425,6 +426,13 @@ defmodule Web.ReportFormLive do
   defp ai_error_text(_reason), do: "AI writing did not answer. Try again."
 
   # The name, description, and query, as the form holds them.
+  # Not saved yet: a new report once it has anything in it, or a saved one that differs.
+  defp unsaved?(%{saved: nil, form: form}),
+    do: form |> report_fields() |> Map.values() |> Enum.any?(&(String.trim(&1) != ""))
+
+  defp unsaved?(%{saved: saved, form: form}),
+    do: report_fields(form) != Map.new(~w(name about query)a, &{&1, Map.get(saved, &1) || ""})
+
   defp report_fields(form), do: Map.new(~w(name about query)a, &{&1, form[&1].value || ""})
 
   defp fields_params(form),
@@ -444,10 +452,13 @@ defmodule Web.ReportFormLive do
     <.heading_row>
       <h1 id="report-title" class="title">{title(@form, @page_title)}</h1>
       <:action>
+        <.unsaved id="report-unsaved" unsaved={unsaved?(assigns)} />
         <.button id="report-save" form="report-form" variant={:success} phx-disable-with="Saving…">
           Save report
         </.button>
-        <.button id="report-cancel" navigate={cancel_path(@current_team, @saved)}>Cancel</.button>
+        <.button id="report-cancel" navigate={cancel_path(@current_team, @saved)} data-leave-ok>
+          Cancel
+        </.button>
       </:action>
     </.heading_row>
     <p :if={!@starting and (about(@form) || !@renaming)} id="report-about" class="lead">

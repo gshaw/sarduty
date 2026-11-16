@@ -790,4 +790,27 @@ defmodule Web.ReportFormLiveTest do
     [id] = Regex.run(~r/ id="([^"]+)"/, html, capture: :all_but_first)
     id
   end
+
+  # Not saved yet shows beside Save once the page differs from what's saved, and leaving
+  # then asks first (assets/js/unsaved.js); Cancel never asks.
+  test "Not saved yet shows once the report differs from what's saved", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    conn = log_in_user(conn, user)
+
+    {:ok, report} =
+      SaveReport.call(team, user, nil, %{
+        "name" => "Members",
+        "query" => "select name from members"
+      })
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
+    assert has_element?(lv, "#report-unsaved[hidden][phx-hook=Unsaved]")
+    assert has_element?(lv, "#report-cancel[data-leave-ok]")
+
+    lv |> form("#report-form", report: %{name: "Members by name"}) |> render_change()
+    assert has_element?(lv, "#report-unsaved[data-unsaved=true]:not([hidden])", "Not saved yet")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/new?from=hours-by-member")
+    assert has_element?(lv, "#report-unsaved:not([hidden])")
+  end
 end

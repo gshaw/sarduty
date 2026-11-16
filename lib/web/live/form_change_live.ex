@@ -4,6 +4,7 @@ defmodule Web.FormChangeLive do
   import Web.Components.AIWriting
   import Web.Components.FileDrop
   import Web.Components.PageActions
+  import Web.Components.Unsaved
 
   alias App.AI.FormJob
   alias App.Model.Form
@@ -397,10 +398,13 @@ defmodule Web.FormChangeLive do
     <.heading_row>
       <h1 id="form-title" class="title">{title(@form, @text)}</h1>
       <:action>
+        <.unsaved id="form-unsaved" unsaved={@text != @form.text or page_changed?(assigns)} />
         <.button id="form-save" variant={:success} phx-click="save" phx-disable-with="Saving…">
           Save form
         </.button>
-        <.button id="form-cancel" navigate={FormOwner.form_path(@owner, @form)}>Cancel</.button>
+        <.button id="form-cancel" navigate={FormOwner.form_path(@owner, @form)} data-leave-ok>
+          Cancel
+        </.button>
       </:action>
     </.heading_row>
 

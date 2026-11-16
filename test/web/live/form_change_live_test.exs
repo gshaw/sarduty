@@ -233,9 +233,11 @@ defmodule Web.FormChangeLiveTest do
     stub_claude([%{"text" => written(), "note" => "Wrote it.", "blank" => []}])
     conn = log_in_user(conn, alex)
     {:ok, lv, _html} = live(conn, forms_path(team, "/#{started.id}/edit"))
+    assert has_element?(lv, "#form-unsaved[hidden]")
 
     lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
     render_async(lv, @wait)
+    assert has_element?(lv, "#form-unsaved:not([hidden])", "Not saved yet")
 
     {:ok, lv, _html} = lv |> element("#form-save") |> render_click() |> follow_redirect(conn)
     assert render(lv) =~ "Incident debrief saved."
