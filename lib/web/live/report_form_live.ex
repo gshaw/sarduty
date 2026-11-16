@@ -783,7 +783,7 @@ defmodule Web.ReportFormLive do
           rows="2"
           label={if @asks == [] and !@pending, do: "Describe it", else: "Describe a change"}
         >
-          AI works only with the report language and your team's field names. It never sees your team's members or records.
+          AI works only with the report language and your team's field names. Agents never see your team's members or records.
           <.a id="report-ai-agents-link" href={~p"/agents"} external={true}>
             How agents work with SAR Duty
           </.a>
