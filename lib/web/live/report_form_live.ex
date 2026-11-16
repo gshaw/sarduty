@@ -668,24 +668,16 @@ defmodule Web.ReportFormLive do
           <p class="hint mb-3">A click opens a copy to change. No ask is spent.</p>
           <ul id="report-start-list" class="action-list report-start-list">
             <li :for={report <- BuiltIn.starters(@current_team)} id={"report-start-#{report.slug}"}>
-              <.link navigate={~p"/teams/#{@current_team}/reports/new?from=#{report.slug}"}>
-                {report.name}
-              </.link>
+              <.a navigate={~p"/teams/#{@current_team}/reports/new?from=#{report.slug}"}>{report.name}</.a>
               <span :if={chart_icon(report)} class="report-start-chart">
                 <.icon name={chart_icon(report)} size={:sm} />Chart
               </span>
             </li>
           </ul>
           <p class="mt-3">
-            <.link
-              id="report-start-all"
-              navigate={~p"/teams/#{@current_team}/reports?show=built-in"}
-            >
-              {Format.count(length(BuiltIn.for_team(@current_team)),
-                one: "The %d built-in report",
-                many: "All %d built-in reports"
-              )}
-            </.link>
+            <.a id="report-start-all" navigate={~p"/teams/#{@current_team}/reports?show=built-in"}>{all_built_in(
+              @current_team
+            )}</.a>
           </p>
           <p class="action mt-8">
             <.a id="report-write-own" href="#" phx-click="write_own">Write the query yourself</.a>
@@ -820,7 +812,7 @@ defmodule Web.ReportFormLive do
         ·
         <.a id="report-charts-link" href={~p"/agents/reports" <> "#charts"} external={true}>What each chart takes</.a>
         ·
-        <.link id="report-field-meanings" navigate={~p"/teams/#{@team}/settings/fields"}>What each field means</.link>
+        <.a id="report-field-meanings" navigate={~p"/teams/#{@team}/settings/fields"}>What each field means</.a>
       </p>
     </div>
     """
@@ -893,6 +885,13 @@ defmodule Web.ReportFormLive do
 
   defp ai_closed_text({:error, :daily_limit}), do: ai_error_text(:daily_limit)
   defp ai_closed_text({:error, reason}), do: ai_error_text(reason)
+
+  defp all_built_in(team) do
+    team
+    |> BuiltIn.for_team()
+    |> length()
+    |> Format.count(one: "The %d built-in report", many: "All %d built-in reports")
+  end
 
   # The chart a built-in report ends with, as its icon, or nil.
   defp chart_icon(report) do
