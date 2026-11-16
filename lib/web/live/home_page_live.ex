@@ -155,7 +155,7 @@ defmodule Web.HomePageLive do
       {"Your membership",
        "Each member sees their year: their hours, their qualifications, their ID card, and what they signed up for."},
       {"Reports",
-       "Answer what the lists can't, such as who gave the most rope hours. An AI agent can help write one."}
+       "Answer what the lists can't, such as who gave the most rope hours. Describe one, and AI writing writes it."}
     ]
   end
 

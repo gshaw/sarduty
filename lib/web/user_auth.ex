@@ -642,7 +642,7 @@ defmodule Web.UserAuth do
   # On the way to Take attendance (#475) the login page says what logging in is for, so a
   # toast there would only cover it.
   defp put_login_flash(conn) do
-    if conn.method == "GET" and Web.TakeAttendanceLive.path?(current_path(conn)),
+    if conn.method == "GET" and conn |> current_path() |> Web.TakeAttendanceLive.path?(),
       do: conn,
       else: put_flash(conn, :error, "Log in to see this page.")
   end
