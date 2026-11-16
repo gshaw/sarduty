@@ -634,9 +634,11 @@ A team admin starts their team's form without a Mac (#1083, #1088):
    points from the page's top left, read by MuPDF's `mutool`. The labels say what each
    place is, and the numbers say where.
 3. **`SaveForm.check_for/5`** runs every check saving runs, and saves nothing.
-4. **Saving its first text** keeps it version 1; each later save adds one. Until a
-   model writes it in SAR Duty, a SAR Duty admin writes it and uploads the text on
-   Replace. The form's page says it's not written yet, and nothing more.
+4. **Saving its first text** keeps it version 1; each later save adds one. With AI
+   writing open, the team's admins write it on Change form, and New form's Write form
+   opens it with the first ask running ([ai-writing.md](ai-writing.md#forms), #1089).
+   Without it, a SAR Duty admin writes it and uploads the text on Replace. The form's
+   page says it's not written yet, and nothing more.
 
 A model writing a team's form gets this page, built in (`App.Document.language/0`), and
 the page's measures. It writes each place from the measures, as find_places.py does:

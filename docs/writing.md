@@ -256,7 +256,7 @@ and must not be used for it.
 | access key                          | token, API key                                 | The D4H access key or Records access key. Alone when the page does not need to say which.            |
 | D4H access key                      | token, API key, personal access token, PAT     | The key that lets SAR Duty read and change the team's D4H data.                                      |
 | Records access key                  | token, API key                                 | The same for a team on SAR Duty Records. Records' own page for them is "API keys".                   |
-| AI writing                          | AI assistant, copilot, generate, chat          | SAR Duty writing a report's query when a team admin describes it. "AI" on its own in the box.        |
+| AI writing                          | AI assistant, copilot, generate, chat          | SAR Duty writing a report's query or a team's form when a team admin describes it. "AI" in the box.  |
 | refresh                             | sync, update, import, pull, fetch              | Copying the team's data from D4H or SAR Duty Records into SAR Duty.                                  |
 | send                                | apply, push, perform, make                     | Making changes in D4H or SAR Duty Records: "Send 3 changes". "Apply" is only for templates.          |
 | whiteboard                          | notice board, bulletin board, announcements    | D4H's board of short notes for everyone on the team.                                                 |

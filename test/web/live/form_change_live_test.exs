@@ -77,31 +77,34 @@ defmodule Web.FormChangeLiveTest do
     end)
   end
 
-  defp claude_response(request, agent) do
-    case List.last(request["messages"]) do
-      %{"content" => [%{"type" => "tool_result"} | _]} ->
-        Agent.get_and_update(agent, fn [answer | rest] -> {answer(answer), rest ++ [answer]} end)
+  defp claude_response(request, agent), do: request["messages"] |> List.last() |> reply(agent)
 
-      %{"content" => content} when is_binary(content) ->
-        # SAR Duty's check sent it back: answer again with the same.
-        Agent.get(agent, fn [answer | _] -> answer(answer) end)
+  # After check_form, the next answer; the last one stays for any ask after it.
+  defp reply(%{"content" => [%{"type" => "tool_result"} | _]}, agent),
+    do: Agent.get_and_update(agent, &next/1)
 
-      _first ->
-        text = Agent.get(agent, fn [answer | _] -> answer["text"] end)
+  # SAR Duty's check sent it back: answer again with the same.
+  defp reply(%{"content" => content}, agent) when is_binary(content),
+    do: Agent.get(agent, &answer(hd(&1)))
 
+  defp reply(_first, agent), do: agent |> Agent.get(&hd(&1)["text"]) |> check_call()
+
+  defp next([output]), do: {answer(output), [output]}
+  defp next([output | rest]), do: {answer(output), rest}
+
+  defp check_call(text) do
+    %{
+      "stop_reason" => "tool_use",
+      "content" => [
         %{
-          "stop_reason" => "tool_use",
-          "content" => [
-            %{
-              "type" => "tool_use",
-              "id" => "call_1",
-              "name" => "check_form",
-              "input" => %{"text" => text}
-            }
-          ],
-          "usage" => %{"input_tokens" => 30_000, "output_tokens" => 2_000}
+          "type" => "tool_use",
+          "id" => "call_1",
+          "name" => "check_form",
+          "input" => %{"text" => text}
         }
-    end
+      ],
+      "usage" => %{"input_tokens" => 30_000, "output_tokens" => 2_000}
+    }
   end
 
   defp answer(output) do
@@ -172,7 +175,7 @@ defmodule Web.FormChangeLiveTest do
     refute has_element?(lv, "#form-text textarea")
 
     # Nothing is saved until Save form, a reload asks nothing, and the conversation goes.
-    refute Form.written?(Repo.reload!(form))
+    refute form |> Repo.reload!() |> Form.written?()
     {:ok, lv, _html} = live(conn, forms_path(team, "/#{form.id}/edit"))
     refute has_element?(lv, "#form-ai-asks")
     assert Repo.aggregate(AIAsk, :count) == 1
@@ -201,7 +204,7 @@ defmodule Web.FormChangeLiveTest do
 
     requests = for {:claude, request} <- messages(), do: request
     last = List.last(requests)
-    [_document, _measures, now] = hd(last["messages"])["content"]
+    %{"messages" => [%{"content" => [_document, _measures, now]} | _]} = last
     assert now["text"] =~ "Earlier asks in this visit"
     assert now["text"] =~ "- The admin asked: Write this form.\n  You noted: Wrote it."
 

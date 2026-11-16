@@ -5,6 +5,7 @@ defmodule Web.FormChangeLive do
 
   alias App.AI.FormJob
   alias App.Model.Form
+  alias App.Model.Team
   alias App.Operation.AskAI
   alias App.Operation.SaveForm
   alias App.Operation.TryForm
@@ -24,14 +25,12 @@ defmodule Web.FormChangeLive do
   # state; a reload loses the conversation.
   def mount(%{"id" => id}, _session, socket) do
     %{current_user: user} = socket.assigns
-    team = FormOwner.get(socket.assigns)
-    unless match?(%App.Model.Team{}, team), do: raise(Web.Status.NotFound)
-    unless SaveForm.allowed?(team, user), do: raise(Web.Status.NotFound)
+    team = team!(socket.assigns)
     form = Form.get(team, id) || raise(Web.Status.NotFound)
     first = Phoenix.Flash.get(socket.assigns.flash, :ai_ask)
 
     socket
-    |> then(&if(connected?(&1), do: clear_flash(&1, :ai_ask), else: &1))
+    |> clear_first_ask()
     |> assign(
       page_title: "Change form",
       team: team,
@@ -39,16 +38,37 @@ defmodule Web.FormChangeLive do
       page: Form.page_bytes(form),
       text: form.text,
       text_open: false,
-      activity: nil,
+      activity: nil
+    )
+    |> assign_ai(team, user)
+    |> preview()
+    |> first_ask(first)
+    |> then(&{:ok, &1})
+  end
+
+  # A team's form, for its team admins and SAR Duty admins.
+  defp team!(%{current_user: user} = assigns) do
+    case FormOwner.get(assigns) do
+      %Team{} = team ->
+        if SaveForm.allowed?(team, user), do: team, else: raise(Web.Status.NotFound)
+
+      _organization ->
+        raise(Web.Status.NotFound)
+    end
+  end
+
+  # The first ask stays in the flash until the page is live, which starts it.
+  defp clear_first_ask(socket),
+    do: if(connected?(socket), do: clear_flash(socket, :ai_ask), else: socket)
+
+  defp assign_ai(socket, team, user) do
+    assign(socket,
       ai: AskAI.check(team, user, DateTime.utc_now(), :form),
       ai_form: ask_form(""),
       ai_step: nil,
       ai_pending: nil,
       ai_asks: []
     )
-    |> preview()
-    |> first_ask(first)
-    |> then(&{:ok, &1})
   end
 
   defp ask_form(ask), do: to_form(%{"ask" => ask}, as: "ai")
@@ -68,19 +88,22 @@ defmodule Web.FormChangeLive do
     %{form: form, text: text, team: team, page: page} = socket.assigns
     draft = %{form | text: text}
 
-    if Form.written?(draft) do
-      activities = TryForm.activities(draft, team)
-      activity = keep(activities, socket.assigns.activity) || TryForm.first(activities)
-      socket = assign(socket, activities: activities, activity: activity)
+    cond do
+      Form.written?(draft) -> try_draft(socket, draft, team)
+      page -> socket |> assign(activities: [], activity: nil) |> assign_pages(page)
+      true -> assign(socket, activities: [], activity: nil, pages: [], preview_error: nil)
+    end
+  end
 
-      case activity && TryForm.call(draft, team, activity.id) do
-        nil -> assign(socket, pages: [], preview_error: nil)
-        {:ok, attachment} -> assign_pages(socket, attachment.content)
-        {:error, reason} -> assign(socket, pages: [], preview_error: reason)
-      end
-    else
-      socket = assign(socket, activities: [], activity: nil)
-      if page, do: assign_pages(socket, page), else: assign(socket, pages: [], preview_error: nil)
+  defp try_draft(socket, draft, team) do
+    activities = TryForm.activities(draft, team)
+    activity = keep(activities, socket.assigns.activity) || TryForm.first(activities)
+    socket = assign(socket, activities: activities, activity: activity)
+
+    case activity && TryForm.call(draft, team, activity.id) do
+      nil -> assign(socket, pages: [], preview_error: nil)
+      {:ok, attachment} -> assign_pages(socket, attachment.content)
+      {:error, reason} -> assign(socket, pages: [], preview_error: reason)
     end
   end
 
@@ -156,7 +179,7 @@ defmodule Web.FormChangeLive do
          |> push_navigate(to: FormOwner.form_path(team, saved))}
 
       {:error, _field, message} ->
-        {:noreply, put_flash(socket, :error, "It didn't save: #{message}")}
+        {:noreply, put_flash(socket, :error, "The form did not save. #{message}")}
 
       {:error, :forbidden} ->
         {:noreply, put_flash(socket, :error, "You can no longer change this team's forms.")}

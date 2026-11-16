@@ -109,22 +109,8 @@ defmodule Web.FormStartLive do
     socket = assign(socket, name: name, for: params["for"] || "")
 
     case SaveForm.start(team, name, page(socket), user) do
-      {:ok, form} when socket.assigns.ai? ->
-        socket =
-          socket
-          |> put_flash(:info, "#{form.name} added. AI is writing it.")
-          |> put_flash(:ai_ask, first_ask(params["for"]))
-          |> push_navigate(to: FormOwner.change_path(team, form))
-
-        {:noreply, socket}
-
       {:ok, form} ->
-        socket =
-          socket
-          |> put_flash(:info, "#{form.name} added.")
-          |> push_navigate(to: FormOwner.form_path(team, form))
-
-        {:noreply, socket}
+        {:noreply, started(socket, team, form, params["for"])}
 
       {:error, field, message} ->
         {:noreply, assign(socket, errors: %{field => message})}
@@ -132,6 +118,20 @@ defmodule Web.FormStartLive do
       {:error, :forbidden} ->
         {:noreply, put_flash(socket, :error, "You can no longer add this team's forms.")}
     end
+  end
+
+  # With AI writing open, Change form with the first ask; else the form's page.
+  defp started(%{assigns: %{ai?: true}} = socket, team, form, for_text) do
+    socket
+    |> put_flash(:info, "#{form.name} added. AI is writing it.")
+    |> put_flash(:ai_ask, first_ask(for_text))
+    |> push_navigate(to: FormOwner.change_path(team, form))
+  end
+
+  defp started(socket, team, form, _for_text) do
+    socket
+    |> put_flash(:info, "#{form.name} added.")
+    |> push_navigate(to: FormOwner.form_path(team, form))
   end
 
   # What it's for, or "Write this form." without it.

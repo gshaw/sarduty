@@ -89,11 +89,13 @@ defmodule App.Adapter.Claude do
   one. Text, thinking and its signature, and a tool call's input come in pieces.
   """
   def assemble(events) when is_binary(events) do
-    events
-    |> String.split(~r/\r?\n\r?\n/)
-    |> Enum.flat_map(&event_data/1)
-    |> Enum.reduce_while({%{"content" => []}, %{}}, &apply_event/2)
-    |> case do
+    streamed =
+      events
+      |> String.split(~r/\r?\n\r?\n/)
+      |> Enum.flat_map(&event_data/1)
+      |> Enum.reduce_while({%{"content" => []}, %{}}, &apply_event/2)
+
+    case streamed do
       {:error, error} -> {:error, error}
       {message, _partial} -> {:ok, Map.update!(message, "content", &Enum.reverse/1)}
     end
@@ -103,7 +105,7 @@ defmodule App.Adapter.Claude do
     data =
       for "data:" <> rest <- String.split(event, ~r/\r?\n/), do: String.trim_leading(rest)
 
-    case Jason.decode(Enum.join(data, "\n")) do
+    case data |> Enum.join("\n") |> Jason.decode() do
       {:ok, %{"type" => _type} = decoded} -> [decoded]
       _not_data -> []
     end
