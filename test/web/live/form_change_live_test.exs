@@ -14,6 +14,10 @@ defmodule Web.FormChangeLiveTest do
   alias App.Repo
 
   @text File.read!("test/support/fixtures/forms/task_report.txt")
+
+  # An ask reads the page with mutool and prints the try with Typst, slower on CI than
+  # render_async's 100ms.
+  @wait 5_000
   @page_source File.read!("test/support/fixtures/forms/task_report_page.typ")
 
   setup_all do
@@ -153,9 +157,9 @@ defmodule Web.FormChangeLiveTest do
     assert has_element?(lv, "#form-ai-step #form-ai-stop")
     assert has_element?(lv, "#form-blank-page")
 
-    render_async(lv)
+    render_async(lv, @wait)
     # Then the try prints, beside the page.
-    render_async(lv)
+    render_async(lv, @wait)
 
     assert_received {:claude, request}
     sent = Jason.encode!(request)
@@ -200,9 +204,9 @@ defmodule Web.FormChangeLiveTest do
     assert has_element?(lv, "#form-ai-agents-link[href='/agents']")
 
     lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
-    render_async(lv)
+    render_async(lv, @wait)
     lv |> form("#form-ai-form", ai: %{ask: "Call Notes Anything else"}) |> render_submit()
-    render_async(lv)
+    render_async(lv, @wait)
 
     requests = for {:claude, request} <- messages(), do: request
     last = List.last(requests)
@@ -227,7 +231,7 @@ defmodule Web.FormChangeLiveTest do
     {:ok, lv, _html} = live(conn, forms_path(team, "/#{started.id}/edit"))
 
     lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
-    render_async(lv)
+    render_async(lv, @wait)
 
     {:ok, lv, _html} = lv |> element("#form-save") |> render_click() |> follow_redirect(conn)
     assert render(lv) =~ "Incident debrief saved."
@@ -271,7 +275,7 @@ defmodule Web.FormChangeLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(alex) |> live(forms_path(team, "/#{started.id}/edit"))
     lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
-    render_async(lv)
+    render_async(lv, @wait)
 
     assert render(lv) =~ "Its text still had a mistake:"
     assert has_element?(lv, "#ai_ask", "Write this form.")
