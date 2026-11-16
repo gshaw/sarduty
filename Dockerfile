@@ -73,8 +73,7 @@ COPY priv priv
 COPY lib lib
 
 # Web.StyleGuideHTML embeds assets/css/tokens.css and docs/writing.md at compile time,
-# App.MCP.Tool.ReadForm embeds docs/documents.md, and Web.ChangelogLive embeds
-# CHANGELOG.md
+# App.Document embeds docs/documents.md, and Web.ChangelogLive embeds CHANGELOG.md
 COPY assets assets
 COPY docs/writing.md docs/documents.md docs/
 COPY CHANGELOG.md ./
@@ -95,7 +94,7 @@ RUN mix release
 # the compiled release and other runtime necessities
 FROM ${RUNNER_IMAGE} AS final
 
-# mupdf-tools: mutool reads a team form's page for its AI agent (Service.PDFGeometry).
+# mupdf-tools: mutool reads a team form's page (Service.PDFGeometry).
 RUN apt-get update \
   && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 ca-certificates libvips42t64 mupdf-tools \
   && rm -rf /var/lib/apt/lists/*

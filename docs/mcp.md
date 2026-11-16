@@ -93,20 +93,6 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
   of every type (Task Type, People helped, Event leader on two kinds): a query that names
   the team's own, such as Wilderness First Aid for First aid, finds nothing there, so
   the agent tries with Coast Range's names and gives check_report the team's.
-- **A team's own forms** (#1083), while SAR Duty has team forms on for it; otherwise
-  each form tool says they're off. A team admin starts a form from the agency's PDF,
-  and the agent writes it ([Writing a form with an AI agent](documents.md#writing-a-form-with-an-ai-agent)).
-  Never an organization's form: SAR Duty uploads those.
-  - `list_forms`: the team's own forms, each with its id, name, description, state,
-    version, whether it's written yet, and its PDF's page count.
-  - `read_form`: [documents.md](documents.md), built in at compile time, the form's
-    text, and its PDF's pages from `Service.PDFGeometry`: lines of text, blanks, rules,
-    and boxes, in points. The agency's blank form, never a filled-in copy.
-  - `check_form`: every check `SaveForm` runs (`check_for/5`), saving nothing. A text
-    that passes is the connection user's draft (`App.Document.Draft`), kept in memory
-    for a day and shown on their Change form page as it arrives, where they try it and
-    save it. The reply is the form's name, the version it saves as, and that page's
-    link.
 
 - **No records** (#816). No tool returns a member, an activity's title, a row, or a
   count from the team's records. `Web.MCPControllerTest` seeds them, with contact
@@ -115,8 +101,7 @@ One module per tool in [lib/app/mcp/tool/](../lib/app/mcp/tool), listed in
   list_reports leaves them out (#816 replaces #768's choice to show them).
 - **Read-only** (#627). Every tool's `readOnlyHint` is true, and a test fails if anything
   in `lib/app/mcp/` mentions `ChangeSet`, a `Repo` write, the D4H adapter, `SendChores`,
-  or `SaveChore`. The agent never saves a report or a form: the team admin does, from
-  its link. A form's draft waits in memory, not the database.
+  or `SaveChore`. The agent never saves a report: the team admin does, from its link.
 - **Allowlisted keys.** Each tool builds explicit maps and lists every key it may
   return in `fields/0`; a test fails on any other key.
 - **Scoped.** Every query filters by the connection's team.

@@ -1,19 +1,15 @@
 defmodule App.MCP.Tools do
   @moduledoc """
-  The MCP tools the endpoint offers (#28). Agents write reports (#816) and a team's own
-  forms (#1083), and nothing else: every tool works from how the team is organized,
-  never from who is in it or what they did. Adding a tool is a module with the
-  App.MCP.Tool behaviour and a line here.
+  The MCP tools the endpoint offers (#28). Agents write reports and nothing else (#816):
+  every tool works from how the team is organized, never from who is in it or what they
+  did. Adding a tool is a module with the App.MCP.Tool behaviour and a line here.
   """
 
   @tools [
     App.MCP.Tool.ReportFields,
     App.MCP.Tool.ListReports,
     App.MCP.Tool.TryReport,
-    App.MCP.Tool.CheckReport,
-    App.MCP.Tool.ListForms,
-    App.MCP.Tool.ReadForm,
-    App.MCP.Tool.CheckForm
+    App.MCP.Tool.CheckReport
   ]
 
   def all, do: @tools

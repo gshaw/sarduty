@@ -139,7 +139,11 @@ defmodule Web.MCPController do
        "protocolVersion" => version,
        "capabilities" => %{"tools" => %{"listChanged" => false}},
        "serverInfo" => %{"name" => "sarduty", "title" => "SAR Duty", "version" => "1.0.0"},
-       "instructions" => instructions(team, service)
+       "instructions" =>
+         "Help a team admin of #{team.name} write SAR Duty reports. Start with " <>
+           "report_fields. You work from how the team is organized, never its members or " <>
+           "records: the team admin runs the report in SAR Duty. Tools only read: nothing " <>
+           "here changes SAR Duty or #{service}."
      }}
   end
 
@@ -162,22 +166,6 @@ defmodule Web.MCPController do
 
   defp dispatch(_connection, method, _params),
     do: {:error, -32_601, "Method not found: #{method}"}
-
-  # Forms only while SAR Duty has team forms on for the team (#1083), so no other team
-  # hears of them.
-  defp instructions(%{forms_enabled: true} = team, service) do
-    "Help a team admin of #{team.name} write SAR Duty reports and the team's own forms. " <>
-      "Start with report_fields, or list_forms for a form. You work from how the team is " <>
-      "organized, never its members or records: the team admin runs the report and saves " <>
-      "the form in SAR Duty. Tools only read: nothing here changes SAR Duty or #{service}."
-  end
-
-  defp instructions(team, service) do
-    "Help a team admin of #{team.name} write SAR Duty reports. Start with " <>
-      "report_fields. You work from how the team is organized, never its members or " <>
-      "records: the team admin runs the report in SAR Duty. Tools only read: nothing " <>
-      "here changes SAR Duty or #{service}."
-  end
 
   defp text(text), do: %{"type" => "text", "text" => text}
 
