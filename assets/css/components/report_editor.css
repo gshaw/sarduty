@@ -1,10 +1,5 @@
 @layer components {
-  /* The report editor (#784): its help column hides and shows (help_toggle.js). Hidden,
-     the form takes the full width. Hide help and Show help both sit at the right end of
-     the Query label's line, so the link only slides sideways. */
-  .report-editor.is-help-hidden > .report-help { display: none; }
+  /* The report editor (#784): its help column shows only with the query. Without it,
+     the form takes the full width. */
   .report-editor.is-help-hidden > .report-main { width: 100%; }
-  .report-help-toggle { float: right; margin: 0; }
-  .report-editor.is-help-hidden #report-hide-help,
-  .report-editor:not(.is-help-hidden) #report-show-help { display: none; }
 }

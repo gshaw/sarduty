@@ -15,9 +15,9 @@ On New report and Change report, above the form, for a user AI writing is open t
 ([Web.ReportFormLive](../lib/web/live/report_form_live.ex)).
 
 - "Describe it" and Write it; after the first ask, "Describe a change" and Change it.
-- The query folds to one line, since AI writes it: Show query opens it, Hide query folds
-  it again, and a mistake in it opens it. The preview's count drops "runs as you type"
-  while it's folded.
+- The query is hidden, since AI writes it: Show query and Hide query toggle it, and a
+  mistake in it opens it. The help column shows only with the query. The preview's
+  count drops "runs as you type" while the query is hidden.
 - The ask runs in `start_async` and goes to the top of **This visit** at once, with a
   spinner naming its step (Writing…, Checking it…, Trying it on made-up data…) and Stop.
 - The answer fills the query, and a new report's name, as typing would, so the preview

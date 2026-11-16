@@ -181,9 +181,24 @@ defmodule Web.ReportFormLiveTest do
     lv |> form("#report-form", report: %{name: "Members"}) |> render_change()
     assert has_element?(lv, "h1#report-title", "Members")
 
+    # Rename is a step: the fields, with the rest hidden until Rename or Cancel.
     lv |> element("#report-rename") |> render_click()
     assert has_element?(lv, "#report-names:not([hidden]) #report_name")
     refute has_element?(lv, "#report-rename")
+    assert has_element?(lv, "#report-body.hidden")
+    refute has_element?(lv, "#report-fields")
+
+    lv |> form("#report-form", report: %{name: "Crew"}) |> render_change()
+    lv |> element("#report-rename-cancel") |> render_click()
+    assert has_element?(lv, "h1#report-title", "Members")
+    refute has_element?(lv, "#report-body.hidden")
+    assert has_element?(lv, "#report-fields")
+
+    lv |> element("#report-rename") |> render_click()
+    lv |> form("#report-form", report: %{name: "Crew"}) |> render_change()
+    lv |> element("#report-rename-keep") |> render_click()
+    assert has_element?(lv, "h1#report-title", "Crew")
+    assert has_element?(lv, "#report-names-hidden[hidden] #report_name")
   end
 
   test "a new report is New report until named, and Save asks for a name", %{conn: conn} do
@@ -191,7 +206,7 @@ defmodule Web.ReportFormLiveTest do
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
 
     assert has_element?(lv, "h1#report-title", "New report")
-    refute has_element?(lv, "#report-query-folded")
+    refute has_element?(lv, "#report-query-toggle")
 
     lv |> form("#report-form") |> render_submit()
     assert has_element?(lv, "#report-names #report_name")
@@ -209,12 +224,9 @@ defmodule Web.ReportFormLiveTest do
     {query, _} = :binary.match(html, ~s(id="report_query"))
     assert name < query
 
-    # The toggle is the browser's (help_toggle.js): both links sit on the Query line, and
-    # CSS shows one.
-    assert has_element?(lv, "#report-editor[phx-hook=HelpToggle]")
-    assert has_element?(lv, "#report-form .report-help-toggle #report-hide-help[data-help=hide]")
-    assert has_element?(lv, "#report-form .report-help-toggle #report-show-help[data-help=show]")
-    refute has_element?(lv, "#report-fields #report-hide-help")
+    # The help column shows with the query.
+    assert has_element?(lv, "#report-fields")
+    refute has_element?(lv, "#report-editor.is-help-hidden")
     refute has_element?(lv, "#report-delete-button")
   end
 
@@ -313,22 +325,27 @@ defmodule Web.ReportFormLiveTest do
       params = %{query: "select title\nfrom groups", agent: "Claude", draft: "draft-one-id"}
       {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
 
-      assert has_element?(lv, "#report-query-folded", "2 lines, from groups")
+      assert has_element?(lv, "#report-show-query")
       assert has_element?(lv, ".hidden #report_query")
+      refute has_element?(lv, "#report-fields")
 
       lv |> element("#report-show-query") |> render_click()
-      refute has_element?(lv, "#report-query-folded")
+      assert has_element?(lv, "#report-hide-query")
       refute has_element?(lv, ".hidden #report_query")
+      assert has_element?(lv, "#report-fields")
+
+      lv |> element("#report-hide-query") |> render_click()
+      assert has_element?(lv, ".hidden #report_query")
 
       {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
       lv |> element("#report-draft-stop") |> render_click()
-      refute has_element?(lv, "#report-query-folded")
+      refute has_element?(lv, "#report-show-query")
 
       # A mistake in the agent's query shows the query, with the mistake on it.
       {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
       Draft.broadcast(team, user.id, "draft-one-id", draft("select nme from members"))
       assert has_element?(lv, "#report-form", "members has no field nme")
-      refute has_element?(lv, "#report-query-folded")
+      refute has_element?(lv, "#report-show-query")
     end
 
     test "names an agent that gave no name as an AI agent", %{conn: conn} do
@@ -744,7 +761,7 @@ defmodule Web.ReportFormLiveTest do
       {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
 
       assert has_element?(lv, "#report-ai-form", "Describe it")
-      assert has_element?(lv, "#report-query-folded")
+      assert has_element?(lv, "#report-show-query")
 
       lv
       |> form("#report-ai-form", ai: %{ask: "when did each member last come"})

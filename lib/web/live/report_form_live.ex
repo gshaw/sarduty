@@ -12,7 +12,7 @@ defmodule Web.ReportFormLive do
   and `agent` names who wrote it, saved with the report.
 
   AI writing (docs/ai-writing.md): when it's open to the admin, a describe box above the
-  form, and the query folds to one line, since AI writes it; Show query opens it. Each
+  form, and the query is hidden, since AI writes it; Show query opens it. Each
   ask runs in `start_async` (App.Operation.AskAI) and fills the form as typing would, so
   the rows rerun here, on the team's records, after Claude is done. This visit lists the
   asks, newest first, each with AI's note, in the page only: the one running shows its
@@ -25,9 +25,12 @@ defmodule Web.ReportFormLive do
   admin has typed since the agent's last query, a new one waits in a toast instead of
   overwriting their typing. Nothing is saved until they save.
 
-  The name is the page's title and the description the line under it (#834); Rename shows
-  their fields, as does a save they stop. While following a draft the query folds to one
-  line, since the agent writes it; Show query opens it, as does stopping or a mistake in it.
+  The name is the page's title and the description the line under it (#834). Rename is a
+  step of its own: their fields with Rename and Cancel, and the rest of the page hidden
+  until one is chosen. A save they stop shows their fields too, with the rest. The help
+  column (clauses, charts, and fields) shows whenever the query does. While following a
+  draft the query is hidden, since the agent writes it; Show query and Hide query toggle
+  it, and stopping or a mistake in it opens it.
 
   Changing a saved report asks What changed, kept in its History (#834); an agent's draft
   can fill it. `?version=<id>` is Restore from History: that version's name,
@@ -82,6 +85,7 @@ defmodule Web.ReportFormLive do
       params: start,
       agent: agent(params),
       renaming: false,
+      rename_from: nil,
       query_open: draft(params) == nil
     )
     |> assign_form(SavedReport.changeset(saved || %SavedReport{}, start))
@@ -277,7 +281,25 @@ defmodule Web.ReportFormLive do
     {:noreply, assign_form(socket, changeset)}
   end
 
-  def handle_event("rename", _params, socket), do: {:noreply, assign(socket, renaming: true)}
+  # Rename keeps the name and description as they were, for Cancel.
+  def handle_event("rename", _params, socket) do
+    form = socket.assigns.form
+    from = %{"name" => form[:name].value || "", "about" => form[:about].value || ""}
+    {:noreply, assign(socket, renaming: true, rename_from: from)}
+  end
+
+  def handle_event("rename_keep", _params, socket),
+    do: {:noreply, assign(socket, renaming: false, rename_from: nil)}
+
+  def handle_event("rename_cancel", _params, socket) do
+    params =
+      socket.assigns.params
+      |> Map.merge(fields_params(socket.assigns.form))
+      |> Map.merge(socket.assigns.rename_from || %{})
+
+    {:noreply, socket} = handle_event("change", %{"report" => params}, socket)
+    {:noreply, assign(socket, renaming: false, rename_from: nil)}
+  end
 
   def handle_event("show_query", _params, socket),
     do: {:noreply, assign(socket, query_open: true)}
@@ -365,7 +387,7 @@ defmodule Web.ReportFormLive do
 
         {:noreply,
          socket
-         |> assign(renaming: socket.assigns.renaming or renaming)
+         |> assign(renaming: socket.assigns.renaming or renaming, rename_from: nil)
          |> assign_form(changeset)
          |> preview(params)}
     end
@@ -575,8 +597,11 @@ defmodule Web.ReportFormLive do
       <.a :if={!@renaming} id="report-rename" href="#" phx-click="rename">Rename</.a>
     </p>
 
-    <div id="report-editor" class="content-wrapper report-editor" phx-hook="HelpToggle">
-      <aside id="report-fields" class="content-1/3 report-help">
+    <div
+      id="report-editor"
+      class={["content-wrapper report-editor", !help?(assigns) && "is-help-hidden"]}
+    >
+      <aside :if={help?(assigns)} id="report-fields" class="content-1/3 report-help">
         <p class="action mb-4">
           <.a id="report-language-link" href={~p"/agents/reports"} external={true}>How to write a report</.a>
         </p>
@@ -638,7 +663,7 @@ defmodule Web.ReportFormLive do
 
       <div class="content-2/3 report-main">
         <.banner
-          :if={@draft}
+          :if={@draft && !@rename_from}
           id="report-draft-following"
           title={"Following #{Reports.possessive(@agent)} draft"}
           class="mb-6"
@@ -649,7 +674,7 @@ defmodule Web.ReportFormLive do
           </p>
         </.banner>
         <.ai_box
-          :if={@ai != {:error, :off}}
+          :if={@ai != {:error, :off} and !@rename_from}
           ai={@ai}
           form={@ai_form}
           step={@ai_step}
@@ -660,68 +685,79 @@ defmodule Web.ReportFormLive do
           <.error_summary form={@form} />
           <div :if={@renaming} id="report-names" phx-mounted={JS.focus(to: "#report_name")}>
             <.name_fields form={@form} />
+            <div :if={@rename_from} id="report-rename-actions" class="flex gap-3">
+              <.button
+                id="report-rename-keep"
+                type="button"
+                variant={:success}
+                phx-click="rename_keep"
+              >
+                Rename
+              </.button>
+              <.button id="report-rename-cancel" type="button" phx-click="rename_cancel">
+                Cancel
+              </.button>
+            </div>
           </div>
           <div :if={!@renaming} id="report-names-hidden" hidden>
             <.name_fields form={@form} />
           </div>
-          <.input
-            :if={@saved}
-            field={@form[:change]}
-            type="text"
-            label="What changed (optional)"
-            maxlength={SavedReport.max_change()}
-          >
-            One line in the report's History.
-          </.input>
+          <div id="report-body" class={@rename_from && "hidden"}>
+            <.input
+              :if={@saved}
+              field={@form[:change]}
+              type="text"
+              label="What changed (optional)"
+              maxlength={SavedReport.max_change()}
+            >
+              One line in the report's History.
+            </.input>
 
-          <p class="action report-help-toggle">
-            <.a id="report-hide-help" href="#" data-help="hide">Hide help</.a>
-            <.a id="report-show-help" href="#" data-help="show">Show help</.a>
-          </p>
-          <p :if={!query_shown?(assigns)} id="report-query-folded" class="mb-6">
-            <strong>Query</strong>
-            <span class="hint">{query_summary(@form, @subject)}</span>
-            <.a id="report-show-query" href="#" phx-click="show_query">Show query</.a>
-          </p>
-          <.input
-            field={@form[:query]}
-            field_class={!query_shown?(assigns) && "hidden"}
-            type="textarea"
-            label="Query"
-            rows="9"
-            class="font-mono"
-            phx-debounce="300"
-            spellcheck="false"
-          >
-            Write :year for a value you pick each time it runs. For one member, use their ID: member.ref_id = '112'.
-          </.input>
-          <p :if={@ai == :ok and query_shown?(assigns)} class="action mb-6">
-            <.a id="report-hide-query" href="#" phx-click="hide_query">Hide query</.a>
-          </p>
+            <p :if={query_toggle?(assigns)} id="report-query-toggle" class="action mb-6">
+              <.a :if={!query_shown?(assigns)} id="report-show-query" href="#" phx-click="show_query">
+                Show query
+              </.a>
+              <.a :if={query_shown?(assigns)} id="report-hide-query" href="#" phx-click="hide_query">
+                Hide query
+              </.a>
+            </p>
+            <.input
+              field={@form[:query]}
+              field_class={!query_shown?(assigns) && "hidden"}
+              type="textarea"
+              label="Query"
+              rows="9"
+              class="font-mono"
+              phx-debounce="300"
+              spellcheck="false"
+            >
+              Write :year for a value you pick each time it runs. For one member, use their ID: member.ref_id = '112'.
+            </.input>
 
-          <.report_value
-            :for={value <- (@view && @view.values) || []}
-            value={value}
-            id={"report-form-value-#{value.name}"}
-            name={"report[values][#{value.name}]"}
-          />
-          <input
-            :for={{name, value} <- picks(@view)}
-            type="hidden"
-            name={"report[values][#{name}]"}
-            value={value}
-          />
-
-          <div :if={@view} id="report-preview">
-            <.report_page
-              id="report-preview"
-              view={@view}
-              records={@records}
-              team={@current_team}
-              now={@now}
-              maps_app={@current_user.maps_app}
-              count={preview_count(@view, draft_line(assigns))}
+            <.report_value
+              :for={value <- (@view && @view.values) || []}
+              value={value}
+              id={"report-form-value-#{value.name}"}
+              name={"report[values][#{value.name}]"}
             />
+            <input
+              :for={{name, value} <- picks(@view)}
+              type="hidden"
+              name={"report[values][#{name}]"}
+              value={value}
+            />
+
+            <div :if={@view} id="report-preview">
+              <.report_page
+                id="report-preview"
+                view={@view}
+                records={@records}
+                team={@current_team}
+                now={@now}
+                maps_app={@current_user.maps_app}
+                count={preview_count(@view, draft_line(assigns))}
+              />
+            </div>
           </div>
         </.form>
       </div>
@@ -836,10 +872,13 @@ defmodule Web.ReportFormLive do
   # The agent writes the query while the page follows its draft; a mistake shows it.
   defp query_shown?(assigns), do: assigns.query_open or assigns.query_error != nil
 
-  defp query_summary(form, subject) do
-    lines = (form[:query].value || "") |> String.trim() |> String.split("\n") |> length()
-    Format.count(lines, one: "%d line", many: "%d lines") <> ", from " <> subject.name
-  end
+  # Show query and Hide query, while AI writing or an agent writes it. A mistake keeps
+  # the query open, so there is nothing to toggle then.
+  defp query_toggle?(assigns),
+    do: (assigns.ai == :ok or assigns.draft != nil) and assigns.query_error == nil
+
+  # The help column shows with the query, and never during Rename.
+  defp help?(assigns), do: query_shown?(assigns) and assigns.rename_from == nil
 
   defp field_text(field), do: Expr.example(field)
 
