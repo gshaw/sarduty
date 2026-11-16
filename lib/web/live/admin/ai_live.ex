@@ -71,8 +71,9 @@ defmodule Web.Admin.AILive do
     ~H"""
     <h1 class="title">AI writing</h1>
     <p class="lead max-w-3xl">
-      Team admins describe a report and AI writes its query. Requests go to Anthropic's
-      Claude API in the US, with the team's field names and never its records.
+      Team admins describe a report or a form, and organization admins a form, and AI
+      writes it. Requests go to Anthropic's Claude API in the US, with field names and never
+      a team's records.
     </p>
     <.banner :if={!@configured} id="ai-not-set-up" title="Not set up here" class="mb-6">
       <p>Set ANTHROPIC_API_KEY to turn on AI writing on this server.</p>
@@ -89,7 +90,7 @@ defmodule Web.Admin.AILive do
             options={[
               {"Nobody", "off"},
               {"SAR Duty admins only", "admins"},
-              {"Every team admin", "everyone"}
+              {"Every team and organization admin", "everyone"}
             ]}
           />
           <.input
@@ -124,12 +125,13 @@ defmodule Web.Admin.AILive do
           Paused: this month's asks reached the budget.
         </p>
         <p class="hint mb-6">
-          {AskAI.asks_per_day()} asks a team a day at most. Months and days are BC time.
+          {AskAI.asks_per_day()} asks a team or an organization a day at most. Months and days
+          are BC time.
         </p>
 
-        <h3 class="heading">By team</h3>
-        <.table id="ai-teams" rows={@teams} row_id={&"ai-team-#{&1.id}"}>
-          <:col :let={row} label="Team">{row.name}</:col>
+        <h3 class="heading">By team or organization</h3>
+        <.table id="ai-teams" rows={@teams} row_id={&"ai-#{&1.id}"}>
+          <:col :let={row} label="For">{row.name}</:col>
           <:col :let={row} label="Asks" class="text-right">{Format.number(row.asks)}</:col>
           <:col :let={row} label="Tokens in" class="text-right">{Format.number(row.input)}</:col>
           <:col :let={row} label="From cache" class="text-right">
@@ -143,7 +145,7 @@ defmodule Web.Admin.AILive do
         <h3 class="heading mt-8">By person</h3>
         <.table id="ai-people" rows={@people} row_id={&"ai-person-#{&1.id}-#{&1.team}"}>
           <:col :let={row} label="Account">{row.email || "Deleted account"}</:col>
-          <:col :let={row} label="Team">{row.team}</:col>
+          <:col :let={row} label="For">{row.team}</:col>
           <:col :let={row} label="Asks" class="text-right">{Format.number(row.asks)}</:col>
           <:col :let={row} label="Cost" class="text-right">{Format.money(dollars(row.cost))}</:col>
         </.table>
@@ -156,7 +158,7 @@ defmodule Web.Admin.AILive do
       <:col :let={ask} label="When" class="whitespace-nowrap">
         {Format.month_day_time(ask.asked_at, AIAsk.timezone())}
       </:col>
-      <:col :let={ask} label="Team">{ask.team.name}</:col>
+      <:col :let={ask} label="For">{AIAsk.owner_name(ask)}</:col>
       <:col :let={ask} label="Account">{ask.user && ask.user.email}</:col>
       <:col :let={ask} label="Ask">
         {ask_text(ask)}

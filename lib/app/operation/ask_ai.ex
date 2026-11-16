@@ -1,12 +1,13 @@
 defmodule App.Operation.AskAI do
   @moduledoc """
-  One AI writing ask (docs/ai-writing.md). A team admin describes a change; Claude
+  One AI writing ask (docs/ai-writing.md). An admin describes a change; Claude
   rewrites the text, calling SAR Duty's tools to check it; SAR Duty checks the answer once
   more and gives it to the page, which fills the editor. Nothing is saved but the ask's
   row in `ai_asks`: the admin saves the report.
 
   Before Claude is called: AI writing is open to the user (App.Model.AISettings), the
-  key is set, the team has asks left today (not for a History line), and this month's
+  key is set, the team or organization has asks left today (not for a History line),
+  and this month's
   asks cost less than the budget. The ask's row is written as it starts and its usage as
   each request returns, so Stop, which kills the ask's task, still counts what it spent.
   Each ask sends the text as it stands, with the job's earlier asks in its prompt. At
@@ -23,6 +24,7 @@ defmodule App.Operation.AskAI do
   alias App.AI.Tool
   alias App.Model.AIAsk
   alias App.Model.AISettings
+  alias App.Model.Organization
   alias App.Model.Team
 
   require Logger
@@ -34,19 +36,21 @@ defmodule App.Operation.AskAI do
   def asks_per_day, do: @asks_per_day
 
   @doc """
-  Whether `user` can ask on `team` now: `:ok`, or `{:error, reason}` with reason `:off`
-  (not open to them, or no key here), `:daily_limit`, or `:paused` (the budget is spent).
-  `kind` is the job's: a `:history_line` skips the daily limit.
+  Whether `user` can ask for `owner`, a team or an organization (an organization's
+  form, #1089), now: `:ok`, or `{:error, reason}` with reason `:off` (not open to them,
+  or no key here), `:daily_limit`, or `:paused` (the budget is spent). Each owner has
+  its own daily limit. `kind` is the job's: a `:history_line` skips the daily limit.
   """
-  def check(%Team{} = team, %User{} = user, now, kind \\ :report),
-    do: check(team, user, now, kind, AISettings.get())
+  def check(owner, %User{} = user, now, kind \\ :report)
+      when is_struct(owner, Team) or is_struct(owner, Organization),
+      do: check(owner, user, now, kind, AISettings.get())
 
-  defp check(team, user, now, kind, settings) do
+  defp check(owner, user, now, kind, settings) do
     cond do
       not (Claude.configured?() and AISettings.open_to?(settings, user)) ->
         {:error, :off}
 
-      kind != :history_line and AIAsk.count_today(team, now) >= @asks_per_day ->
+      kind != :history_line and AIAsk.count_today(owner, now) >= @asks_per_day ->
         {:error, :daily_limit}
 
       AIAsk.month_cost_microdollars(now) >= settings.monthly_budget_cents * 10_000 ->
@@ -62,22 +66,25 @@ defmodule App.Operation.AskAI do
   `{:error, reason}`: those of `check/4`, `:no_credit`, `:busy`, `:unreachable`,
   `:refused`, `:failed`, or `{:checks, mistake}`.
   """
-  def call(%Team{} = team, %User{} = user, %Job{} = job, now) do
+  def call(owner, %User{} = user, %Job{} = job, now)
+      when is_struct(owner, Team) or is_struct(owner, Organization) do
     settings = AISettings.get()
 
-    with :ok <- check(team, user, now, job.kind, settings) do
+    with :ok <- check(owner, user, now, job.kind, settings) do
       history = [%{"role" => "user", "content" => job.prompt}]
 
       row =
         AIAsk.record!(
-          team_id: team.id,
-          user_id: user.id,
-          kind: job.kind,
-          ask: job.ask,
-          model: settings.model,
-          outcome: :stopped,
-          duration_ms: 0,
-          asked_at: now
+          AIAsk.owner(owner) ++
+            [
+              user_id: user.id,
+              kind: job.kind,
+              ask: job.ask,
+              model: settings.model,
+              outcome: :stopped,
+              duration_ms: 0,
+              asked_at: now
+            ]
         )
 
       acc = %{

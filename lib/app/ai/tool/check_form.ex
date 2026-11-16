@@ -1,8 +1,8 @@
 defmodule App.AI.Tool.CheckForm do
   @moduledoc """
-  Checks a team's form's text as saving would (#1089), and saves nothing: every check
-  App.Operation.SaveForm runs, through `SaveForm.check_for/5`, on the asker's team and
-  the form's page. It reads no records. Its answer is the questions and places the text
+  Checks a form's text as saving would (#1089), and saves nothing: every check
+  App.Operation.SaveForm runs, through `SaveForm.check_for/5`, on the form's team, or on
+  every team in its organization, and the form's page. It reads no records. Its answer is the questions and places the text
   has, or the mistake.
   """
   @behaviour App.AI.Tool
@@ -14,7 +14,7 @@ defmodule App.AI.Tool.CheckForm do
 
   @impl App.AI.Tool
   def description do
-    "Check a form's whole text as saving would, against this team's fields and the " <>
+    "Check a form's whole text as saving would, against the fields it may read and the " <>
       "form's page, without saving it. Returns its questions and places, or the mistake. " <>
       "Check every text before you give it as your answer."
   end
@@ -29,9 +29,9 @@ defmodule App.AI.Tool.CheckForm do
   end
 
   @impl App.AI.Tool
-  def call(%{team: team, now: now, form: form, page: page}, %{"text" => text})
+  def call(%{owner: owner, now: now, form: form, page: page}, %{"text" => text})
       when is_binary(text) and text != "" do
-    case SaveForm.check_for(team, form, text, page, now) do
+    case SaveForm.check_for(owner, form, text, page, now) do
       {:ok, doc} ->
         {:ok,
          %{

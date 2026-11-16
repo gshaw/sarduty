@@ -183,8 +183,14 @@ defmodule App.AI.ReportJob do
   Exactly the fields a report can read (App.Report.CustomFields), as a query writes them:
   an activity's for every kind, and a member's only when the team copies it.
   """
-  def custom_fields(team) do
-    for {on, defs} when is_binary(on) <- CustomFields.read(team, App.Repo), d <- defs do
+  def custom_fields(team), do: team |> CustomFields.read(App.Repo) |> field_list()
+
+  @doc """
+  Custom fields as `custom_fields/1` lists them, from a team's fields by subject, as
+  App.Report.Context holds them.
+  """
+  def field_list(by_subject) do
+    for {on, defs} when is_binary(on) <- by_subject, d <- defs do
       %{
         "title" => d.title,
         "write" => "`#{d.title}`",

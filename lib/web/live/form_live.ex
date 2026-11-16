@@ -6,7 +6,6 @@ defmodule Web.FormLive do
   alias App.Document
   alias App.Model.Form
   alias App.Model.Organization
-  alias App.Model.Team
   alias App.Operation.AskAI
   alias App.Operation.DeleteForm
   alias App.Operation.SaveForm
@@ -19,10 +18,10 @@ defmodule Web.FormLive do
   # One form (#950), an organization's or a team's own (#1083): what it reads and asks,
   # whether it's off, testing, or on (#970), and a try: on Coast Range SAR, a made-up
   # team, for an organization's, and on the team's own activities for a team's. Found
-  # through its owner, so another's is a 404. SAR Duty admins replace an organization's. A
-  # team's new form says it's not written yet, and nothing more, until it has its text
-  # (#1088). With AI writing open, a team's admins write it on Change form (#1089), and
-  # give it the agency's new PDF there; nobody uploads a team's text. Delete form shows
+  # through its owner, so another's is a 404. A new form says it's not written yet, and
+  # nothing more, until it has its text (#1088). With AI writing open, its admins write it
+  # on Change form (#1089), the organization's or the team's, and give it the agency's
+  # new PDF there; nobody uploads a form's text. Delete form shows
   # while no PDF was published from it; after, turning it off is the way.
   def mount(%{"id" => id}, _session, socket) do
     owner = FormOwner.get(socket.assigns)
@@ -40,14 +39,12 @@ defmodule Web.FormLive do
     {:ok, socket}
   end
 
-  # Change form writes a team's form with AI writing (#1089), for its team admins while
-  # AI writing is open to them.
-  defp change?(%Team{} = team, user),
+  # Change form writes the form with AI writing (#1089), for whoever saves the owner's
+  # forms while AI writing is open to them.
+  defp change?(owner, user),
     do:
-      SaveForm.allowed?(team, user) and
-        AskAI.check(team, user, DateTime.utc_now(), :form) != {:error, :off}
-
-  defp change?(_organization, _user), do: false
+      SaveForm.allowed?(owner, user) and
+        AskAI.check(owner, user, DateTime.utc_now(), :form) != {:error, :off}
 
   defp assign_form(socket, form) do
     page = Form.page_bytes(form)
@@ -190,18 +187,6 @@ defmodule Web.FormLive do
             />
             <.button id="form-try-button">Try form</.button>
           </form>
-        </section>
-
-        <section
-          :if={@current_user.is_admin and match?(%Organization{}, @owner)}
-          id="form-replace"
-          class="mb-8 measure"
-        >
-          <h2 class="heading">Replace</h2>
-          <p>Upload a new text or page.</p>
-          <.button id="form-replace-button" navigate={FormOwner.replace_path(@owner, @form)}>
-            Replace form
-          </.button>
         </section>
 
         <section :if={Form.written?(@form)} id="form-text">

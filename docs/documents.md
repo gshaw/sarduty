@@ -377,8 +377,10 @@ uv run --with pdfplumber python -I tools/forms/find_places.py \
 ```
 
 A form can have no page at all: its own [layout](#layout) draws it each time it prints,
-and it's only the text to upload. Change the layout and upload it again: saving prints
-it once, and FormsTest prints it on Coast Range SAR.
+and it's only its text. BCSARA's Expense request is the one. No new form starts this
+way: New form takes the agency's PDF, and someone with no PDF asks for a blank one
+outside SAR Duty and starts from that. Change a layout with Show how it fills in on
+Change form: saving prints it once, and FormsTest prints it on Coast Range SAR.
 
 A form whose agency takes a page drawn in another's layout, such as D4H's, gets a blank
 page SAR Duty draws once: a Typst program beside it, such as
@@ -390,14 +392,13 @@ after changing the program; `App.FormsTest` checks the PDF is the one it draws:
 mise exec -- mix run --no-start tools/forms/draw_page.exs priv/forms/bcsara/supplement.typ
 ```
 
-Each form's text and page are in `priv/forms/<organization>/`, as uploaded.
-`App.FormsTest` saves each one as an upload does, checking it on Coast Range SAR and
+Each form's text and page are in `priv/forms/<organization>/`, as saved.
+`App.FormsTest` saves each one as Save form does, checking it on Coast Range SAR and
 running its expects, then prints it there.
 
 - **BCSARA's Task report** ([task_report.txt](../priv/forms/bcsara/task_report.txt)) is
   EMBC's Task Report Form (#993), the page D4H draws and EMCR takes today, as Andrew's
-  version 4 on production: `form 'EMBC Task Report Form'`, so an upload replaces
-  production's form. It reads the incident and BCSARA's fields (Agency, Agency File #,
+  version 4 on production: `form 'EMBC Task Report Form'`. It reads the incident and BCSARA's fields (Agency, Agency File #,
   ASE#, Region, Task Type, Equipment Used/Lost, Task Leader's Name) and asks nothing.
   Details of Task has 10 lines and Equipment Used/Lost 4, at 9pt, and each goes on an
   attached page when it's too long for them at 8pt
@@ -576,15 +577,16 @@ with its page PDF's bytes in `form_pages` and its SHA-256 on the form, so a list
 loads the page. Its name and about come from its text. Its pages are under the
 organization's space, `/orgs/:slug/forms` ([organizations.md](organizations.md#its-forms)).
 
-- **A SAR Duty admin uploads it**, the text and the page, and replaces it
-  (App.Operation.SaveForm). A form with a layout is its text alone. SAR Duty prepares
-  each form's places on a Mac: there's no editor in the browser. Replacing raises its
-  `version`, and keeps the page while the new text says `page`.
+- **Its organization admins or a SAR Duty admin write it**, as a team's admins write
+  theirs: New form from the agency's PDF, then Change form with AI writing, Show how it
+  fills in, and Replace PDF (App.Operation.SaveForm, #1089,
+  [ai-writing.md](ai-writing.md#forms)). A form with a layout is its text alone. Saving
+  again raises its `version`, and keeps the page while the new text says `page`.
 - **Saving checks it everywhere it will print**: against the catalog of each of the
   organization's teams and of Coast Range SAR, then every `expect`, then that each place
   is on a page of the page PDF (`PrintDocument.check_page/2`), or that its layout prints
-  (`PrintDocument.check_layout/1`). An error names the team,
-  and the upload page shows it under the file to fix. A team's RESTRICTED fields are left
+  (`PrintDocument.check_layout/1`). An error names the team, under How it fills in or in
+  the toast Save form shows. A team's RESTRICTED fields are left
   out of the check, so a form never reads one ([organizations.md](organizations.md#what-an-organization-never-sees)).
   A team without a field a form reads, such as a Records team outside BCSARA, fails the
   check, so the form can't be saved for its organization.
@@ -620,9 +622,8 @@ organization.
   organization's admins can't.
 - **Its pages are the organization's pages**, as Team settings' Forms tab, after Fields,
   under `/teams/:subdomain/settings/forms`, and a 404 while team forms are off. Web.FormOwner
-  gives each page its owner, paths, and the words that differ, except Replace form: a
-  team's form is written with AI writing, never uploaded (#1089). The team's admins try
-  it on the team's own activities, marked SAMPLE.
+  gives each page its owner, paths, and the words that differ. The team's admins try it
+  on the team's own activities, marked SAMPLE.
 - **The team's admins start it from the agency's PDF**, and save its text; see
   [Writing a team's form](#writing-a-teams-form).
 

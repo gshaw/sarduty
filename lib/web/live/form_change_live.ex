@@ -7,15 +7,18 @@ defmodule Web.FormChangeLive do
 
   alias App.AI.FormJob
   alias App.Model.Form
+  alias App.Model.Organization
   alias App.Model.Team
   alias App.Operation.AskAI
   alias App.Operation.SaveForm
   alias App.Operation.TryForm
   alias Web.FormOwner
 
-  # Change form (#1089): a team admin writes the team's form with AI writing
-  # (docs/ai-writing.md#forms), as the report editor does. The form tried on one of the
-  # team's activities, marked SAMPLE, as Try it prints it, is the main column; AI writing
+  # Change form (#1089): an admin writes the form with AI writing
+  # (docs/ai-writing.md#forms), as the report editor does, a team's form or an
+  # organization's, one page for both (Web.FormOwner). The form tried on an activity, the
+  # team's own or Coast Range SAR's for an organization, marked SAMPLE, as Try it prints
+  # it, is the main column; AI writing
   # is the column beside it. Each ask runs in `start_async` (App.Operation.AskAI, with
   # App.AI.FormJob) with the visit's earlier asks and replies, and its text replaces the
   # draft, so the try reprints here, in SAR Duty, after Claude is done. Undo puts back
@@ -30,15 +33,15 @@ defmodule Web.FormChangeLive do
   # state; a reload loses the conversation.
   def mount(%{"id" => id}, _session, socket) do
     %{current_user: user} = socket.assigns
-    team = team!(socket.assigns)
-    form = Form.get(team, id) || raise(Web.Status.NotFound)
+    owner = owner!(socket.assigns)
+    form = Form.get(owner, id) || raise(Web.Status.NotFound)
     first = Phoenix.Flash.get(socket.assigns.flash, :ai_ask)
 
     socket
     |> clear_first_ask()
     |> assign(
       page_title: "Change form",
-      team: team,
+      owner: owner,
       form: form,
       page: Form.page_bytes(form),
       text: form.text,
@@ -52,30 +55,25 @@ defmodule Web.FormChangeLive do
       preview_error: nil
     )
     |> allow_upload(:page, accept: ~w(.pdf), max_entries: 1, max_file_size: 10_000_000)
-    |> assign_ai(team, user)
+    |> assign_ai(owner, user)
     |> preview()
     |> first_ask(first)
     |> then(&{:ok, &1})
   end
 
-  # A team's form, for its team admins and SAR Duty admins.
-  defp team!(%{current_user: user} = assigns) do
-    case FormOwner.get(assigns) do
-      %Team{} = team ->
-        if SaveForm.allowed?(team, user), do: team, else: raise(Web.Status.NotFound)
-
-      _organization ->
-        raise(Web.Status.NotFound)
-    end
+  # For whoever saves the owner's forms (SaveForm.allowed?/3).
+  defp owner!(%{current_user: user} = assigns) do
+    owner = FormOwner.get(assigns)
+    if SaveForm.allowed?(owner, user), do: owner, else: raise(Web.Status.NotFound)
   end
 
   # The first ask stays in the flash until the page is live, which starts it.
   defp clear_first_ask(socket),
     do: if(connected?(socket), do: clear_flash(socket, :ai_ask), else: socket)
 
-  defp assign_ai(socket, team, user) do
+  defp assign_ai(socket, owner, user) do
     assign(socket,
-      ai: AskAI.check(team, user, DateTime.utc_now(), :form),
+      ai: AskAI.check(owner, user, DateTime.utc_now(), :form),
       ai_form: ask_form(""),
       ai_pending: nil,
       ai_asks: []
@@ -95,29 +93,29 @@ defmodule Web.FormChangeLive do
   # written, the agency's blank page. It prints beside the page, so a pick or an Undo
   # answers at once; a newer print replaces one still running.
   defp preview(socket) do
-    %{form: form, text: text, team: team, page: page, activity: activity} = socket.assigns
+    %{form: form, text: text, owner: owner, page: page, activity: activity} = socket.assigns
     draft = %{form | text: text}
     activity_id = activity && activity.id
 
     socket
     |> assign(previewing: true)
-    |> start_async(:preview, fn -> print(draft, team, page, activity_id) end)
+    |> start_async(:preview, fn -> print(draft, owner, page, activity_id) end)
   end
 
-  defp print(draft, team, page, activity_id) do
+  defp print(draft, owner, page, activity_id) do
     cond do
-      Form.written?(draft) -> try_draft(draft, team, page, activity_id)
+      Form.written?(draft) -> try_draft(draft, owner, page, activity_id)
       page -> Map.merge(%{activities: [], activity: nil}, pages(page))
       true -> %{activities: [], activity: nil, pages: [], preview_error: nil}
     end
   end
 
-  defp try_draft(draft, team, page, activity_id) do
-    activities = TryForm.activities(draft, team)
+  defp try_draft(draft, owner, page, activity_id) do
+    activities = TryForm.activities(draft, owner)
     activity = Enum.find(activities, &(&1.id == activity_id)) || TryForm.first(activities)
 
     printed =
-      case activity && TryForm.call(draft, team, activity.id, page: page) do
+      case activity && TryForm.call(draft, owner, activity.id, page: page) do
         nil -> %{pages: [], preview_error: nil}
         {:ok, attachment} -> pages(attachment.content)
         {:error, reason} -> %{pages: [], preview_error: reason}
@@ -148,14 +146,15 @@ defmodule Web.FormChangeLive do
   def handle_event("show_text", _params, socket), do: {:noreply, assign(socket, text_open: true)}
   def handle_event("hide_text", _params, socket), do: {:noreply, assign(socket, text_open: false)}
 
-  # A fix by hand: checked as saving checks it, and tried again once it passes.
+  # A fix by hand: checked as saving checks it, beside the page, and tried again once it
+  # passes. A newer check replaces one still running.
   def handle_event("edit_text", %{"text" => text}, socket) do
-    %{team: team, form: form, page: page} = socket.assigns
+    %{owner: owner, form: form, page: page} = socket.assigns
 
-    case SaveForm.check_for(team, form, text, page) do
-      {:ok, _doc} -> {:noreply, socket |> assign(text: text, text_error: nil) |> preview()}
-      {:error, _field, message} -> {:noreply, assign(socket, text: text, text_error: message)}
-    end
+    {:noreply,
+     socket
+     |> assign(text: text)
+     |> start_async(:check_text, fn -> SaveForm.check_for(owner, form, text, page) end)}
   end
 
   def handle_event("open_replace", _params, socket),
@@ -170,18 +169,18 @@ defmodule Web.FormChangeLive do
 
   # The agency's new PDF takes the old one's place, and AI fits the form to it.
   def handle_event("replace_pdf", _params, socket) do
-    bytes =
-      consume_uploaded_entries(socket, :page, fn %{path: path}, _entry ->
-        {:ok, File.read!(path)}
-      end)
+    page =
+      socket
+      |> consume_uploaded_entries(:page, fn %{path: path}, _entry -> {:ok, File.read!(path)} end)
+      |> List.first()
 
-    case SaveForm.check_page(List.first(bytes)) do
+    case SaveForm.check_page(page) do
       :ok when socket.assigns.ai_pending == nil ->
         old = socket.assigns.page
 
         {:noreply,
          socket
-         |> assign(page: hd(bytes), replacing: false, page_error: nil)
+         |> assign(page: page, replacing: false, page_error: nil)
          |> preview()
          |> start_ask(@new_page_ask, old)}
 
@@ -227,7 +226,7 @@ defmodule Web.FormChangeLive do
   end
 
   def handle_event("save", _params, socket) do
-    %{team: team, form: form, text: text, current_user: user} = socket.assigns
+    %{owner: owner, form: form, text: text, current_user: user} = socket.assigns
 
     page = if page_changed?(socket.assigns), do: socket.assigns.page
 
@@ -235,27 +234,28 @@ defmodule Web.FormChangeLive do
       {:noreply,
        socket
        |> put_flash(:info, "Nothing to save. #{form.name} is as it was.")
-       |> push_navigate(to: FormOwner.form_path(team, form))}
+       |> push_navigate(to: FormOwner.form_path(owner, form))}
     else
-      save(socket, team, form, text, page, user)
+      save(socket, owner, form, text, page, user)
     end
   end
 
   defp page_changed?(%{form: form, page: page}), do: Form.sha256(page) != form.page_sha256
 
-  defp save(socket, team, form, text, page, user) do
-    case SaveForm.call(team, form, text, page, user) do
+  defp save(socket, owner, form, text, page, user) do
+    case SaveForm.call(owner, form, text, page, user) do
       {:ok, saved} ->
         {:noreply,
          socket
          |> put_flash(:info, "#{saved.name} saved. It's version #{saved.version}.")
-         |> push_navigate(to: FormOwner.form_path(team, saved))}
+         |> push_navigate(to: FormOwner.form_path(owner, saved))}
 
       {:error, _field, message} ->
         {:noreply, put_flash(socket, :error, "The form did not save. #{message}")}
 
       {:error, :forbidden} ->
-        {:noreply, put_flash(socket, :error, "You can no longer change this team's forms.")}
+        {:noreply,
+         put_flash(socket, :error, "You can no longer change #{FormOwner.name(owner)}'s forms.")}
     end
   end
 
@@ -263,6 +263,14 @@ defmodule Web.FormChangeLive do
     do: {:noreply, socket |> assign(printed) |> assign(previewing: false)}
 
   def handle_async(:preview, {:exit, _reason}, socket), do: {:noreply, socket}
+
+  def handle_async(:check_text, {:ok, {:ok, _doc}}, socket),
+    do: {:noreply, socket |> assign(text_error: nil) |> preview()}
+
+  def handle_async(:check_text, {:ok, {:error, _field, message}}, socket),
+    do: {:noreply, assign(socket, text_error: message)}
+
+  def handle_async(:check_text, {:exit, _reason}, socket), do: {:noreply, socket}
 
   def handle_async(:ai_ask, {:ok, result}, socket) do
     {:noreply, socket |> ask_done(result) |> assign(ai_pending: nil) |> refresh_ai()}
@@ -278,7 +286,7 @@ defmodule Web.FormChangeLive do
   # The ask runs beside the page, with the visit's earlier asks. `before_page` is the page
   # Undo puts back: the old one when the ask is for a new one.
   defp start_ask(socket, ask, before_page \\ nil) do
-    %{team: team, form: form, page: page, text: text, ai_asks: asks, current_user: user} =
+    %{owner: owner, form: form, page: page, text: text, ai_asks: asks, current_user: user} =
       socket.assigns
 
     earlier = asks |> Enum.reverse() |> Enum.map(&Map.take(&1, [:ask, :note, :blank]))
@@ -290,8 +298,8 @@ defmodule Web.FormChangeLive do
       ai_form: ask_form("")
     )
     |> start_async(:ai_ask, fn ->
-      job = FormJob.build(team, form, page, text, ask, now, earlier)
-      AskAI.call(team, user, job, now)
+      job = FormJob.build(owner, form, page, text, ask, now, earlier)
+      AskAI.call(owner, user, job, now)
     end)
   end
 
@@ -337,12 +345,12 @@ defmodule Web.FormChangeLive do
   defp put_back_page(socket, _pending), do: socket
 
   defp refresh_ai(socket) do
-    %{team: team, current_user: user} = socket.assigns
-    assign(socket, ai: AskAI.check(team, user, DateTime.utc_now(), :form))
+    %{owner: owner, current_user: user} = socket.assigns
+    assign(socket, ai: AskAI.check(owner, user, DateTime.utc_now(), :form))
   end
 
   defp ai_error_text(:daily_limit),
-    do: "Your team has used today's #{AskAI.asks_per_day()} asks. Ask again tomorrow."
+    do: "Today's #{AskAI.asks_per_day()} asks are used. Ask again tomorrow."
 
   defp ai_error_text(reason) when reason in [:paused, :no_credit],
     do: "AI writing is paused until next month."
@@ -377,9 +385,13 @@ defmodule Web.FormChangeLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
-      <:item label="Team settings" path={FormOwner.settings_path(@team)} />
-      <:item label="Forms" path={FormOwner.forms_path(@team)} />
-      <:item label={@form.name} path={FormOwner.form_path(@team, @form)} />
+      <:item
+        :if={FormOwner.settings_path(@owner)}
+        label="Team settings"
+        path={FormOwner.settings_path(@owner)}
+      />
+      <:item label="Forms" path={FormOwner.forms_path(@owner)} />
+      <:item label={@form.name} path={FormOwner.form_path(@owner, @form)} />
       <:item label="Change form" />
     </.breadcrumbs>
     <.heading_row>
@@ -388,7 +400,7 @@ defmodule Web.FormChangeLive do
         <.button id="form-save" variant={:success} phx-click="save" phx-disable-with="Saving…">
           Save form
         </.button>
-        <.button id="form-cancel" navigate={FormOwner.form_path(@team, @form)}>Cancel</.button>
+        <.button id="form-cancel" navigate={FormOwner.form_path(@owner, @form)}>Cancel</.button>
       </:action>
     </.heading_row>
 
@@ -403,15 +415,16 @@ defmodule Web.FormChangeLive do
           label="Ask AI"
           button="Ask"
           closed={ai_closed_text(@ai)}
-          sees="AI works only with the agency's blank form, the form language, and your team's field names. Agents never see your team's members or records."
+          sees={sees(@owner)}
         >
           A change, or a question about the form.
         </.ai_writing>
       </:column>
 
       <section id="form-try" class="mb-8">
-        <%!-- The team's own activities; Open activity, at the label's end, checks the try
-        against one in a new window. --%>
+        <%!-- The team's own activities, or Coast Range SAR's for an organization. On a team's
+        form, Open activity, at the label's end, checks the try against one in a new
+        window. --%>
         <form
           :if={@activities != []}
           id="form-try-form"
@@ -420,11 +433,11 @@ defmodule Web.FormChangeLive do
           class="measure"
         >
           <div class="flex items-baseline justify-between gap-4">
-            <.label for="form-try-activity">Tried on</.label>
+            <.label for="form-try-activity">{tried_on(@owner)}</.label>
             <.a
-              :if={@activity}
+              :if={@activity && match?(%Team{}, @owner)}
               id="form-try-open"
-              href={~p"/teams/#{@team}/activities/#{@activity.id}"}
+              href={~p"/teams/#{@owner}/activities/#{@activity.id}"}
               external={true}
             >
               Open activity
@@ -435,7 +448,7 @@ defmodule Web.FormChangeLive do
             name="activity"
             type="select"
             value={@activity && @activity.id}
-            options={Enum.map(@activities, &{activity_label(&1, @team), &1.id})}
+            options={Enum.map(@activities, &{activity_label(&1, @owner), &1.id})}
           />
         </form>
         <p
@@ -443,7 +456,7 @@ defmodule Web.FormChangeLive do
           id="form-try-none"
           class="measure"
         >
-          Your team has no activity this form shows on.
+          {no_activity(@owner)}
         </p>
         <p :if={!written?(@text)} id="form-blank-page" class="measure">
           The agency's blank form. AI writes the form from it.
@@ -484,6 +497,7 @@ defmodule Web.FormChangeLive do
           for={%{}}
           id="form-text-form"
           phx-change="edit_text"
+          phx-submit="edit_text"
           class="mt-6"
         >
           <.input
@@ -562,6 +576,26 @@ defmodule Web.FormChangeLive do
       else: "Page #{n} of #{count} of the agency's blank form"
   end
 
-  defp activity_label(activity, team),
-    do: "#{activity.title}, #{Service.Format.date_short(activity.started_at, team.timezone)}"
+  # Coast Range SAR's activities in its own zone, a team's in the team's.
+  defp activity_label(activity, owner),
+    do: "#{activity.title}, #{Service.Format.date_short(activity.started_at, zone(owner))}"
+
+  defp zone(%Organization{}), do: App.CoastRange.timezone()
+  defp zone(team), do: team.timezone
+
+  defp tried_on(%Organization{}), do: "Tried on Coast Range SAR"
+  defp tried_on(_team), do: "Tried on"
+
+  defp no_activity(%Organization{}), do: "Coast Range SAR has no activity this form shows on."
+  defp no_activity(_team), do: "Your team has no activity this form shows on."
+
+  defp sees(%Organization{short_name: name}),
+    do:
+      "AI works only with the agency's blank form, the form language, and the field names " <>
+        "every team in #{name} has. Agents never see any team's members or records."
+
+  defp sees(_team),
+    do:
+      "AI works only with the agency's blank form, the form language, and your team's " <>
+        "field names. Agents never see your team's members or records."
 end

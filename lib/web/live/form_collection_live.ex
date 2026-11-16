@@ -5,12 +5,13 @@ defmodule Web.FormCollectionLive do
 
   alias App.Model.Form
   alias App.Model.Organization
+  alias App.Operation.SaveForm
   alias Web.FormOwner
 
   # An organization's forms (#950), such as EMCR's Task report, or a team's own (#1083),
-  # one page for both (Web.FormOwner). SAR Duty admins upload an organization's, and its
-  # admins try each and turn it on for every team. A team's admins start their own from
-  # the agency's PDF, and turn it on for their team once it's written.
+  # one page for both (Web.FormOwner). Its admins start one from the agency's PDF with
+  # New form, AI writes it (#1089), and they turn it on once it's written: for every team
+  # in the organization, or for their own team.
   def mount(_params, _session, socket) do
     owner = FormOwner.get(socket.assigns)
     {:ok, assign(socket, page_title: title(owner), owner: owner, forms: Form.get_all(owner))}
@@ -24,12 +25,7 @@ defmodule Web.FormCollectionLive do
     <.team_settings_tabs :if={!match?(%Organization{}, @owner)} team={@owner} current={:forms} />
     <.heading_row>
       <h1 :if={match?(%Organization{}, @owner)} class="title">Forms</h1>
-      <:action :if={match?(%Organization{}, @owner) and @current_user.is_admin}>
-        <.button id="upload-form" navigate={FormOwner.new_path(@owner)} variant={:success}>
-          Upload form
-        </.button>
-      </:action>
-      <:action :if={!match?(%Organization{}, @owner)}>
+      <:action :if={SaveForm.allowed?(@owner, @current_user)}>
         <.button id="new-form" navigate={FormOwner.new_path(@owner)} variant={:success}>
           New form
         </.button>
@@ -47,18 +43,7 @@ defmodule Web.FormCollectionLive do
       on, you publish it.
     </p>
 
-    <.empty_state
-      :if={@forms == [] and match?(%Organization{}, @owner)}
-      id="no-forms"
-      title="No forms yet"
-    >
-      A SAR Duty site admin uploads {FormOwner.name(@owner)}'s forms. Reach them at <.a href="mailto:support@sarduty.com">support@sarduty.com</.a>.
-    </.empty_state>
-    <.empty_state
-      :if={@forms == [] and !match?(%Organization{}, @owner)}
-      id="no-forms"
-      title="No forms yet"
-    >
+    <.empty_state :if={@forms == []} id="no-forms" title="No forms yet">
       Choose New form and give SAR Duty the agency's PDF.
     </.empty_state>
 

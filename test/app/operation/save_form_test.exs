@@ -66,12 +66,33 @@ defmodule App.Operation.SaveFormTest do
     assert Form.page_bytes(replaced) == page
   end
 
-  test "only a SAR Duty admin saves one", %{organization: organization, page: page} do
-    user = user_fixture()
-    organization_admin_fixture(organization, user.email)
+  test "its organization admins and SAR Duty admins save one, and nobody else (#1089)",
+       %{organization: organization, page: page} do
+    org_admin = user_fixture()
+    organization_admin_fixture(organization, org_admin.email)
+    other = user_fixture()
+    organization_admin_fixture(organization_fixture(), other.email)
 
-    assert SaveForm.call(organization, nil, @text, page, user) == {:error, :forbidden}
+    for user <- [user_fixture(), other] do
+      assert SaveForm.call(organization, nil, @text, page, user) == {:error, :forbidden}
+    end
+
     assert Form.get_all(organization) == []
+    assert {:ok, %Form{}} = SaveForm.call(organization, nil, @text, page, org_admin)
+  end
+
+  test "its organization admins start one from the agency's PDF (#1089)",
+       %{organization: organization, page: page} do
+    org_admin = user_fixture()
+    organization_admin_fixture(organization, org_admin.email)
+
+    assert {:ok, %Form{text: "", organization_id: id, name: "Debrief"}} =
+             SaveForm.start(organization, "Debrief", page, org_admin)
+
+    assert id == organization.id
+
+    assert {:error, :name, "WSARA has a form called Debrief. Give this one another name."} =
+             SaveForm.start(organization, "Debrief", page, org_admin)
   end
 
   test "a form from another organization isn't replaced here",

@@ -107,7 +107,7 @@ defmodule App.AI.FormJobTest do
     job = FormJob.build(team, form, page, "", "Write this form.", @now)
     [shared, own] = job.system
 
-    assert shared =~ "You write a team's form in SAR Duty"
+    assert shared =~ "You write a form in SAR Duty"
     assert shared =~ "### Writing a team's form"
     assert shared =~ "## Subjects"
     refute shared =~ team.name
@@ -149,7 +149,7 @@ defmodule App.AI.FormJobTest do
 
   test "check_form checks a text as saving would, and saves nothing",
        %{team: team, form: form, page: page} do
-    context = %{team: team, now: @now, form: form, page: page}
+    context = %{owner: team, now: @now, form: form, page: page}
     text = String.replace(@text, "form 'Task report'", "form 'Debrief'")
 
     assert {:ok, %{"ok" => true, "asks" => asks, "places" => places}} =
@@ -167,6 +167,24 @@ defmodule App.AI.FormJobTest do
     assert message =~ "Nobody"
     assert CheckForm.call(context, %{}) == {:error, "Give text as the form's whole text."}
     assert %Form{} = form
+  end
+
+  # An organization's form must hold on every team in it, so AI gets only the custom
+  # fields they all have, and no team's own.
+  test "an organization's form names its teams, and only the fields they all have",
+       %{team: team, page: page} do
+    other = team_fixture(%{name: "Harrison SAR"})
+    custom_field_fixture(other, %{title: "People helped", field_type: "number"})
+    custom_field_fixture(other, %{title: "Harrison only", field_type: "text"})
+    organization = organization_fixture([team, other], %{name: "Valley SAR Association"})
+    form = form_fixture(organization, %{name: "Debrief", text: "", page: page})
+
+    [_shared, own] = FormJob.build(organization, form, page, "", "Write this form.", @now).system
+
+    assert own =~ "Valley SAR Association's, for every team in it"
+    assert own =~ "Fraser Valley SAR, Harrison SAR"
+    refute own =~ "Harrison only"
+    refute own =~ "What was SAR tasked to do?"
   end
 
   defp prompt(job), do: %{"role" => "user", "content" => job.prompt}

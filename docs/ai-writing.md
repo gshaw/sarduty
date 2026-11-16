@@ -54,11 +54,15 @@ an empty one stays empty.
 
 ## Forms
 
-A team admin writes a team's own form from the agency's PDF (#1089), on a team with
-team forms on ([documents.md](documents.md#a-teams-own-forms)), when AI writing is open
-to them. Organization forms are SAR Duty's to write.
+An admin writes a form from the agency's PDF (#1089) when AI writing is open to them:
+a team's admins their team's own, on a team with team forms on
+([documents.md](documents.md#a-teams-own-forms)), and an organization's admins its
+forms for every team in it. The pages are one set for both (Web.FormOwner). An
+organization's form is tried on Coast Range SAR, and AI gets the custom fields every
+team in the organization has, never a team's own groups or tags.
 
-- **New form** (Team settings › Forms, [Web.FormStartLive](../lib/web/live/form_start_live.ex))
+- **New form** (Team settings › Forms, or an organization's Forms,
+  [Web.FormStartLive](../lib/web/live/form_start_live.ex))
   takes the name, the agency's PDF, and What it's for (optional), "When it's filled in
   and who signs it." With AI writing open, its button is Write form. It saves the form
   off with no text, as before, and opens Change form with What it's for as the first
@@ -110,8 +114,8 @@ kind `form`:
 - **It streams under the hood**: a first draft with the PDF can take a minute or more,
   near the adapter's 120-second timeout, so the request streams and the timeout is
   between pieces (`App.Adapter.Claude.assemble/1`). Nothing streams to the page.
-- The limits are a report's: the 100 asks a team a day, reports and forms together, and
-  the monthly budget.
+- The limits are a report's: 100 asks a day, reports and forms together, for each team
+  and each organization apart, and the monthly budget.
 
 ## One ask
 
@@ -174,14 +178,15 @@ one `ai_settings` row ([App.Model.AISettings](../lib/app/model/ai_settings.ex)).
 is an `ai_settings_changed` event.
 
 - **Who gets it**: Nobody, SAR Duty admins only (to try it on a team first), or Every
-  team admin. Off with no row.
+  team and organization admin. Off with no row.
 - **Model**: Claude Sonnet 5.5 by default, or Opus 5.5 or Haiku 5.5. Prices are in
   [App.AI.Models](../lib/app/ai/models.ex), Anthropic's list prices on 2026-11-15.
 - **Monthly budget**: $50 by default. Once this month's asks cost that much, asks stop
   for every team and the box says AI writing is paused until next month. The Claude API
   stops too when the plan's credit is spent.
-- **100 asks a team a day**, reports and forms together, in `AskAI`. History lines
-  don't count.
+- **100 asks a day**, reports and forms together, for each team and each organization,
+  in `AskAI`. History lines don't count. An organization's asks are its own rows
+  (`ai_asks.organization_id`), apart from its teams'.
 
 Months and days are BC time.
 
@@ -196,7 +201,8 @@ changed, failed SAR Duty's checks, declined, failed, stopped). The words are
 Delete team deletes a team's rows.
 
 Adminland › AI writing shows this month's cost against the budget, with asks and History
-lines counted apart ("3 asks, 1 History line"), the cost by team and by person, whose
+lines counted apart ("3 asks, 1 History line"), the cost by team or organization and
+by person, whose
 Asks columns leave History lines out, and the newest 50 rows, each naming its kind,
 report or form. Teams never see dollars. Adminland › Integrations
 tests the key with a few tokens.

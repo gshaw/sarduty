@@ -283,7 +283,7 @@ defmodule Web.FormChangeLiveTest do
       assert has_element?(lv, ".ai-you", "Fit the form to the agency's new PDF.")
       assert has_element?(lv, ".ai-reply", "It fits the new page as it was.")
       requests = for {:claude, request} <- messages(), do: request
-      assert Jason.encode!(List.last(requests)) =~ Base.encode64(new_page)
+      assert requests |> List.last() |> Jason.encode!() =~ Base.encode64(new_page)
 
       {:ok, _lv, _html} = lv |> element("#form-save") |> render_click() |> follow_redirect(conn)
       assert Repo.reload!(started).page_sha256 == Form.sha256(new_page)
@@ -309,11 +309,13 @@ defmodule Web.FormChangeLiveTest do
 
     broken = written(&String.replace(&1, "`People helped`", "`People halped`"))
     lv |> form("#form-text-form", text: broken) |> render_change()
+    render_async(lv, @wait)
     assert has_element?(lv, "#form-text-form .field-error")
     assert has_element?(lv, "#form-hide-text")
 
     fixed = written(&String.replace(&1, "ask notes 'Notes'", "ask notes 'Anything else'"))
     lv |> form("#form-text-form", text: fixed) |> render_change()
+    render_async(lv, @wait)
     refute has_element?(lv, "#form-text-form .field-error")
     render_async(lv, @wait)
 

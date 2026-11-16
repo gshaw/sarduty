@@ -1,9 +1,9 @@
 defmodule App.Operation.SaveForm do
   @moduledoc """
-  Uploads an organization's or a team's form, or replaces one (#950, #1083): its text and
-  its page PDF. A SAR Duty admin uploads an organization's, prepared on a Mac. A team's
-  admins start their own from its page alone (`start/5`), and save its text.
-  `check_for/5` runs every check saving runs, and saves nothing (#1088).
+  Saves an organization's or a team's form (#950, #1083): its text and its page PDF.
+  Its admins, the organization's or the team's, or a SAR Duty admin, start one from the
+  agency's PDF alone (`start/5`), and save its text from Change form, written with AI
+  writing (#1089). `check_for/5` runs every check saving runs, and saves nothing (#1088).
 
   Saving checks an organization's form against the catalog of each of its teams and of
   Coast Range SAR, where its organization admins try it, so it prints on every one of
@@ -13,7 +13,7 @@ defmodule App.Operation.SaveForm do
   Every `expect` must hold, and every place must be on a page of its page PDF. A form
   with a layout has no page, and its layout must print.
 
-  Replacing it raises its version, except writing a new team form's first text.
+  Saving it again raises its version, except writing a new form's first text.
   """
 
   import Ecto.Query
@@ -24,6 +24,7 @@ defmodule App.Operation.SaveForm do
   alias App.Model.Form
   alias App.Model.FormPage
   alias App.Model.Organization
+  alias App.Model.OrganizationAdmin
   alias App.Model.Team
   alias App.Operation.PrintDocument
   alias App.Repo
@@ -33,8 +34,7 @@ defmodule App.Operation.SaveForm do
 
   @doc """
   `{:ok, form}`; `{:error, field, message}`, where `field` is `:text` or `:page`, the
-  file to fix; or `{:error, :forbidden}` for anyone but a SAR Duty admin, or a team
-  admin saving their own team's form. `form` is nil for a new one. `page` is the page
+  file to fix; or `{:error, :forbidden}` for anyone `allowed?/3` refuses. `form` is nil for a new one. `page` is the page
   PDF's bytes; nil when replacing keeps the form's, if the new text says page.
   """
   def call(owner, form, text, page, %User{} = user, now \\ DateTime.utc_now()) do
@@ -46,18 +46,18 @@ defmodule App.Operation.SaveForm do
   end
 
   @doc """
-  Starts a team's form from its page alone (#1083): named, off, and with no text until
-  it's written. `{:ok, form}`, `{:error, field, message}` where `field`
-  is `:name` or `:page`, or `{:error, :forbidden}`.
+  Starts an organization's or a team's form from its page alone (#1083, #1089): named,
+  off, and with no text until it's written. `{:ok, form}`, `{:error, field, message}`
+  where `field` is `:name` or `:page`, or `{:error, :forbidden}`.
   """
-  def start(%Team{} = team, name, page, %User{} = user, now \\ DateTime.utc_now()) do
+  def start(owner, name, page, %User{} = user, now \\ DateTime.utc_now()) do
     name = String.trim(name || "")
 
-    with true <- allowed?(team, user, now) || {:error, :forbidden},
-         :ok <- check_start_name(team, name),
+    with true <- allowed?(owner, user, now) || {:error, :forbidden},
+         :ok <- check_start_name(owner, name),
          :ok <- check_page(page) do
-      form = %Form{team_id: team.id, name: name, text: ""}
-      result = Repo.transaction(fn -> write_start!(form, page, user) end)
+      form = %{new_form(owner) | name: name, text: ""}
+      result = Repo.transaction(fn -> write_start!(owner, form, page, user) end)
 
       case result do
         {:ok, saved} -> {:ok, saved}
@@ -66,10 +66,10 @@ defmodule App.Operation.SaveForm do
     end
   end
 
-  defp check_start_name(_team, ""), do: {:error, :name, "Give the form a name."}
+  defp check_start_name(_owner, ""), do: {:error, :name, "Give the form a name."}
 
-  defp check_start_name(team, name) do
-    case check_name(team, nil, %{name: name}) do
+  defp check_start_name(owner, name) do
+    case check_name(owner, nil, %{name: name}) do
       :ok -> :ok
       {:error, :text, message} -> {:error, :name, message}
     end
@@ -96,11 +96,11 @@ defmodule App.Operation.SaveForm do
     end
   end
 
-  defp write_start!(form, page, user) do
+  defp write_start!(owner, form, page, user) do
     changeset =
       form
       |> Ecto.Changeset.change(page_sha256: Form.sha256(page), user_id: user.id)
-      |> Ecto.Changeset.unique_constraint(:name, name: :forms_team_id_name_index)
+      |> Ecto.Changeset.unique_constraint(:name, name: unique_index(owner))
 
     case Repo.insert(changeset) do
       {:ok, saved} ->
@@ -109,23 +109,33 @@ defmodule App.Operation.SaveForm do
         Event.record!(:form_saved,
           user_id: user.id,
           team_id: saved.team_id,
-          data: %{team_id: saved.team_id, form_id: saved.id, version: saved.version}
+          data: Map.merge(owner_data(owner), %{form_id: saved.id, version: saved.version})
         )
 
         saved
 
       {:error, _changeset} ->
-        Repo.rollback("Your team has a form called #{form.name}. Give this one another name.")
+        owner |> taken(form.name) |> Repo.rollback()
     end
   end
 
+  defp taken(%Team{}, name),
+    do: "Your team has a form called #{name}. Give this one another name."
+
+  defp taken(%Organization{short_name: short}, name),
+    do: "#{short} has a form called #{name}. Give this one another name."
+
   @doc """
-  Whether a SAR Duty admin, or for a team's form one of the team's admins, may save the
-  owner's forms.
+  Whether the user may start and save the owner's forms: a SAR Duty admin, an
+  organization's admins for its forms, or a team's admins for the team's own.
   """
   def allowed?(owner, user, now \\ DateTime.utc_now())
   def allowed?(_owner, %User{is_admin: true}, _now), do: true
   def allowed?(%Team{} = team, %User{email: email}, now), do: Team.managed_by?(team, email, now)
+
+  def allowed?(%Organization{id: id}, %User{} = user, _now),
+    do: OrganizationAdmin.admin_of?(id, user)
+
   def allowed?(_owner, _user, _now), do: false
 
   @doc """
