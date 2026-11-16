@@ -253,6 +253,34 @@ defmodule Web.FormPagesTest do
       assert Enum.at(tabs, Enum.find_index(tabs, &(&1 == :fields)) + 1) == :forms
     end
 
+    test "Delete form deletes a form no PDF was published from, and goes back to Forms",
+         ctx do
+      %{conn: conn, team: team, own: own, alex: alex} = ctx
+      conn = log_in_user(conn, alex)
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}"))
+
+      assert has_element?(lv, "#form-actions #form-delete[data-confirm-button='Delete form']")
+
+      {:ok, lv, html} = lv |> element("#form-delete") |> render_click() |> follow_redirect(conn)
+
+      assert html =~ "Deleted Debrief."
+      refute has_element?(lv, "#form-#{own.id}-name")
+      refute Repo.get(Form, own.id)
+    end
+
+    test "no Delete form once a PDF was published from it", ctx do
+      %{conn: conn, team: team, own: own, alex: alex} = ctx
+
+      team
+      |> member_fixture()
+      |> tax_credit_letter_fixture()
+      |> Ecto.Changeset.change(form_id: own.id)
+      |> Repo.update!()
+
+      {:ok, lv, _html} = conn |> log_in_user(alex) |> live(team_path(team, "/#{own.id}"))
+      refute has_element?(lv, "#form-delete")
+    end
+
     test "are a 404 while team forms are off, with no Forms tab", ctx do
       %{conn: conn, team: team, own: own, alex: alex} = ctx
       team |> Ecto.Changeset.change(forms_enabled: false) |> Repo.update!()

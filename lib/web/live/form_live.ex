@@ -8,6 +8,7 @@ defmodule Web.FormLive do
   alias App.Model.Organization
   alias App.Model.Team
   alias App.Operation.AskAI
+  alias App.Operation.DeleteForm
   alias App.Operation.SaveForm
   alias App.Operation.SetFormState
   alias App.Operation.TryForm
@@ -20,7 +21,8 @@ defmodule Web.FormLive do
   # team, for an organization's, and on the team's own activities for a team's. Found
   # through its owner, so another's is a 404. SAR Duty admins replace it. A team's new
   # form says it's not written yet, and nothing more, until it has its text (#1088). With
-  # AI writing open, a team's admins write it on Change form (#1089).
+  # AI writing open, a team's admins write it on Change form (#1089). Delete form shows
+  # while no PDF was published from it; after, turning it off is the way.
   def mount(%{"id" => id}, _session, socket) do
     owner = FormOwner.get(socket.assigns)
     form = Form.get(owner, id) || raise(Web.Status.NotFound)
@@ -30,6 +32,7 @@ defmodule Web.FormLive do
       socket
       |> assign(page_title: form.name, owner: owner, activities: activities)
       |> assign(change?: change?(owner, socket.assigns.current_user))
+      |> assign(delete?: DeleteForm.allowed?(form, socket.assigns.current_user))
       |> assign(activity: TryForm.first(activities))
       |> assign_form(form)
 
@@ -76,9 +79,18 @@ defmodule Web.FormLive do
       <:item label={@form.name} />
     </.breadcrumbs>
     <h1 class="title">{@form.name}</h1>
-    <.page_actions :if={@change?} id="form-actions">
-      <:action>
+    <.page_actions :if={@change? or @delete?} id="form-actions">
+      <:action :if={@change?}>
         <.a id="form-change" navigate={FormOwner.change_path(@owner, @form)}>Change form</.a>
+      </:action>
+      <:action :if={@delete?}>
+        <.a
+          id="form-delete"
+          href="#"
+          phx-click="delete"
+          phx-disable-with="Deleting…"
+          {Web.DeleteConfirm.form(@form)}
+        >Delete form</.a>
       </:action>
     </.page_actions>
     <p :if={@form.about} class="lead measure">{@form.about}</p>
@@ -269,6 +281,25 @@ defmodule Web.FormLive do
 
       {:error, :not_written} ->
         {:noreply, put_flash(socket, :error, "Save the form's text before you turn it on.")}
+    end
+  end
+
+  def handle_event("delete", _params, socket) do
+    %{form: form, owner: owner, current_user: user} = socket.assigns
+
+    case DeleteForm.call(form, user) do
+      :ok ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Deleted #{form.name}.")
+         |> push_navigate(to: FormOwner.forms_path(owner))}
+
+      {:error, :forbidden} ->
+        {:noreply, put_flash(socket, :error, "You can no longer delete this form.")}
+
+      {:error, :published} ->
+        {:noreply,
+         put_flash(socket, :error, "Turn #{form.name} off instead. PDFs were published from it.")}
     end
   end
 

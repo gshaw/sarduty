@@ -592,6 +592,10 @@ organization's space, `/orgs/:slug/forms` ([organizations.md](organizations.md#i
   (App.Operation.SetFormState, #970). Testing, team admins download draft PDFs only,
   under a Testing only banner; on, they publish. Its admins **try it** on Coast Range SAR (App.Operation.TryForm): one of its activities the
   form shows on, every answer its default, marked SAMPLE, and nothing saved.
+- **Delete form** (App.Operation.DeleteForm), under the form's title, for whoever sets
+  it Off, Testing, or On, while no PDF was published from it: a form tried and never
+  used. Its page and sign requests go with it; answers stay, as they're the activity's.
+  Once a PDF was published, turning it off is the way, so every PDF keeps its form.
 - **Coast Range SAR has BCSARA's 27 incident fields**, with made-up values, so a BC form
   tried there fills every line. Its draft Missing hiker has no Agency File #.
 
