@@ -68,7 +68,8 @@ to them. Organization forms are SAR Duty's to write.
   ([Web.FormChangeLive](../lib/web/live/form_change_live.ex)), linked from the form's
   page: the draft tried on one of the team's activities it shows on, marked SAMPLE, as
   Try it prints it, every page a picture, is the main column, with Tried on to pick
-  another and Open the activity, in a new window, to check the form against it. Before there's a text, it's the agency's blank form. AI writing is the column
+  another and Open activity at the label's end, in a new window, to check the form
+  against it. Before there's a text, it's the agency's blank form. AI writing is the column
   beside it, as on Change report: the conversation, the box, and the hint, "AI works only
   with the agency's blank form, the form language, and your team's field names."
 - The running ask is Thinking…, as for reports. Stop and a failed ask are a toast, and the ask's words go back in the box, as for reports.

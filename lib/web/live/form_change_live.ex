@@ -332,6 +332,8 @@ defmodule Web.FormChangeLive do
       </:column>
 
       <section id="form-try" class="mb-8">
+        <%!-- The team's own activities; Open activity, at the label's end, checks the try
+        against one in a new window. --%>
         <form
           :if={@activities != []}
           id="form-try-form"
@@ -339,26 +341,25 @@ defmodule Web.FormChangeLive do
           phx-submit="try_on"
           class="measure"
         >
+          <div class="flex items-baseline justify-between gap-4">
+            <.label for="form-try-activity">Tried on</.label>
+            <.a
+              :if={@activity}
+              id="form-try-open"
+              href={~p"/teams/#{@team}/activities/#{@activity.id}"}
+              external={true}
+            >
+              Open activity
+            </.a>
+          </div>
           <.input
             id="form-try-activity"
             name="activity"
             type="select"
-            label="Tried on"
             value={@activity && @activity.id}
             options={Enum.map(@activities, &{activity_label(&1, @team), &1.id})}
-          >
-            Marked SAMPLE, with each question's default answer.
-          </.input>
+          />
         </form>
-        <p :if={@activity} class="action mt-2 mb-4">
-          <.a
-            id="form-try-open"
-            href={~p"/teams/#{@team}/activities/#{@activity.id}"}
-            external={true}
-          >
-            Open the activity
-          </.a>
-        </p>
         <p
           :if={written?(@text) and @activities == [] and !@previewing}
           id="form-try-none"
