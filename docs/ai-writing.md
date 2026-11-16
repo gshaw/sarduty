@@ -15,9 +15,20 @@ most team admins. See [Before AI writing](#before-ai-writing-mcp).
 On New report and Change report, for a user AI writing is open to
 ([Web.ReportFormLive](../lib/web/live/report_form_live.ex)).
 
-- **AI writing** is a column beside the report, where the help column was; under
-  1024px it sits above the report. In it, the asks as a conversation, oldest first, then
-  "Ask AI" with its hint, "A change, or a question about the report.", and Ask, then what AI sees and How agents work with SAR Duty.
+- **The page** (`ai_editor` in Web.Components.AIWriting, the same on Change form): the
+  title, the description, and the page's links, Rename and Show query; AI writing beside
+  them; the report under them; and a bar stuck to the window's foot with Not saved yet,
+  Save report, and Cancel.
+- **AI writing** starts beside the title. From 1024px it stays in view as the page
+  scrolls, filling the window down to the bar (assets/js/ai_panel.js), and its
+  conversation scrolls on its own, to the newest reply after each ask. Under 1024px
+  it's one column, title first, and the conversation shows its last two asks with Show
+  earlier asks. In it: what AI sees, one line with How it works; the asks as a
+  conversation, oldest first; then "Ask AI" with its hint, "A change, or a question
+  about the report.", and Ask.
+- **Rename** opens a dialog with the name and description, inside the form: Rename
+  keeps them, to save with Save report, and Cancel or Escape puts them back. With AI
+  writing off or the query written by hand, the fields show on the page as before.
   Under the newest reply, **Try next**: two or three asks AI suggests, to show what it
   can do. A tap puts one in the box; it never sends on its own. Every ask is still one
   someone sent.
@@ -89,7 +100,7 @@ team in the organization has, never a team's own groups or tags.
 - **AI's reply** is its note, then **Left blank**: each label on the page it didn't
   fill, and why. Ask for one in the box, or leave it. Undo puts back the text from
   before an ask.
-- **Two ways past AI writing**, under the try, as links:
+- **Two ways past AI writing**, the page's links under the title:
   - **Show how it fills in** opens the text, "How it fills in", for a small fix by
     hand, as Show query does on a report. Each change runs the checks saving runs
     (`SaveForm.check_for/5`); a mistake shows under it and keeps it open, and once it

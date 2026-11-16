@@ -1,36 +1,58 @@
 defmodule Web.Components.AIWriting do
   @moduledoc """
   AI writing's column (docs/ai-writing.md), on Change report and Change form (#1089):
-  the asks as a conversation, oldest first, each with AI's reply and Undo when it
-  changed the page; the running ask with its step and Stop; then the describe box and
-  what AI sees. Each page runs the asks (App.Operation.AskAI) and keeps the
-  conversation; this draws it. `ai_editor` lays the column beside the page's main part
-  from 1024px, and above it under that. Its CSS is
-  assets/css/components/ai_writing.css, and /styles/ai-writing shows it.
+  what AI sees, then the asks as a conversation, oldest first, each with AI's reply and
+  Undo when it changed the page; the running ask with Stop; Try next; and the box. Each
+  page runs the asks (App.Operation.AskAI) and keeps the conversation; this draws it.
+
+  `ai_editor` lays out the page: its head (the title, description, and links), the
+  column, and its main part. From 1024px the column starts beside the title and stays in
+  view as the page scrolls, filling the window down to the Save bar, and its
+  conversation scrolls on its own (assets/js/ai_panel.js). Under that it's one column:
+  the head, AI writing, then the main part, and the conversation shows its last two asks
+  with Show earlier asks. Its CSS is assets/css/components/ai_writing.css, and
+  /styles/ai-writing shows it.
   """
   use Web, :function_component
 
   import Web.Components.A
 
+  alias Phoenix.LiveView.JS
+
   @doc """
-  The page's main part, with the AI writing column beside it when `ai?`.
+  The page: its `head`, the AI writing column beside it when `ai?`, and its main part.
   """
   attr :id, :string, required: true
   attr :ai?, :boolean, required: true
   attr :label, :string, default: "AI writing"
   attr :column_id, :string, required: true
+  slot :head, required: true
   slot :column, required: true
   slot :inner_block, required: true
 
   def ai_editor(assigns) do
     ~H"""
     <div id={@id} class={["ai-editor", @ai? && "has-ai"]}>
-      <aside :if={@ai?} id={@column_id} class="ai-column" aria-label={@label}>
-        <h2 class="subheading mb-4">{@label}</h2>
+      <div class="ai-head">{render_slot(@head)}</div>
+      <aside :if={@ai?} id={@column_id} class="ai-column" aria-label={@label} phx-hook="AIPanel">
+        <h2 class="subheading mb-2">{@label}</h2>
         {render_slot(@column)}
       </aside>
       <div class="ai-main">{render_slot(@inner_block)}</div>
     </div>
+    """
+  end
+
+  @doc """
+  The bar stuck to the window's foot with Not saved yet and the page's Save and Cancel,
+  its inner block. The AI writing column stops above it.
+  """
+  attr :id, :string, required: true
+  slot :inner_block, required: true
+
+  def save_bar(assigns) do
+    ~H"""
+    <div id={@id} class="action-bar ai-bar">{render_slot(@inner_block)}</div>
     """
   end
 
@@ -57,46 +79,61 @@ defmodule Web.Components.AIWriting do
   slot :inner_block
 
   def ai_writing(assigns) do
+    assigns = assign(assigns, :older, max(length(assigns.asks) - 2, 0))
+
     ~H"""
-    <ol :if={@pending || @asks != []} id={"#{@id}-asks"} class="ai-thread">
-      <%= for ask <- Enum.reverse(@asks) do %>
-        <li id={"#{@id}-ask-#{ask.id}"} class="ai-you">{ask.ask}</li>
-        <li
-          :if={ask.note || ask.undo? || blank(ask) != []}
-          id={"#{@id}-reply-#{ask.id}"}
-          class="ai-reply"
-        >
-          <p :if={ask.note}>{ask.note}</p>
-          <div :if={blank(ask) != []} id={"#{@id}-blank-#{ask.id}"} class="ai-blank">
-            <p class="font-semibold">Left blank</p>
-            <ul>
-              <li :for={item <- blank(ask)}>
-                <span class="font-semibold">{item.label}</span><span :if={item.why != ""}>: {item.why}</span>
-              </li>
-            </ul>
-          </div>
-          <.button
-            :if={ask.undo?}
-            id={"#{@id}-undo-#{ask.id}"}
-            type="button"
-            size={:sm}
-            phx-click="undo_ask"
-            phx-value-id={ask.id}
+    <p class="hint mb-4">
+      {@sees}
+      <.a id={"#{@id}-agents-link"} href={~p"/agents"} external={true}>How it works</.a>
+    </p>
+    <div class="ai-scroll">
+      <p :if={@older > 0} class="action ai-earlier mb-3">
+        <.a
+          id={"#{@id}-earlier"}
+          href="#"
+          phx-click={JS.add_class("ai-thread-all", to: "##{@id}-asks") |> JS.hide()}
+        >{Service.Format.count(@older, one: "Show %d earlier ask", many: "Show %d earlier asks")}</.a>
+      </p>
+      <ol :if={@pending || @asks != []} id={"#{@id}-asks"} class="ai-thread">
+        <%= for {ask, n} <- @asks |> Enum.reverse() |> Enum.with_index() do %>
+          <li id={"#{@id}-ask-#{ask.id}"} class={["ai-you", n < @older && "ai-older"]}>{ask.ask}</li>
+          <li
+            :if={ask.note || ask.undo? || blank(ask) != []}
+            id={"#{@id}-reply-#{ask.id}"}
+            class={["ai-reply", n < @older && "ai-older"]}
           >
-            Undo
+            <p :if={ask.note}>{ask.note}</p>
+            <div :if={blank(ask) != []} id={"#{@id}-blank-#{ask.id}"} class="ai-blank">
+              <p class="font-semibold">Left blank</p>
+              <ul>
+                <li :for={item <- blank(ask)}>
+                  <span class="font-semibold">{item.label}</span><span :if={item.why != ""}>: {item.why}</span>
+                </li>
+              </ul>
+            </div>
+            <.button
+              :if={ask.undo?}
+              id={"#{@id}-undo-#{ask.id}"}
+              type="button"
+              size={:sm}
+              phx-click="undo_ask"
+              phx-value-id={ask.id}
+            >
+              Undo
+            </.button>
+          </li>
+        <% end %>
+        <li :if={@pending} id={"#{@id}-ask-running"} class="ai-you">{@pending.ask}</li>
+        <li :if={@pending} id={"#{@id}-step"} class="ai-step">
+          <.spinner>
+            Thinking… <span id={"#{@id}-seconds"} phx-hook="Seconds" phx-update="ignore"></span>
+          </.spinner>
+          <.button id={"#{@id}-stop"} type="button" size={:sm} phx-click="cancel_ask">
+            Stop
           </.button>
         </li>
-      <% end %>
-      <li :if={@pending} id={"#{@id}-ask-running"} class="ai-you">{@pending.ask}</li>
-      <li :if={@pending} id={"#{@id}-step"} class="ai-step">
-        <.spinner>
-          Thinking… <span id={"#{@id}-seconds"} phx-hook="Seconds" phx-update="ignore"></span>
-        </.spinner>
-        <.button id={"#{@id}-stop"} type="button" size={:sm} phx-click="cancel_ask">
-          Stop
-        </.button>
-      </li>
-    </ol>
+      </ol>
+    </div>
     <div :if={@ai == :ok and !@pending and next(@asks) != []} id={"#{@id}-next"} class="mb-4">
       <p class="hint mb-2">Try next</p>
       <div class="flex flex-wrap gap-2">
@@ -125,10 +162,6 @@ defmodule Web.Components.AIWriting do
       <.button id={"#{@id}-ask"} variant={:success} disabled={@pending != nil}>{@button}</.button>
     </.form>
     <p :if={@ai != :ok} id={"#{@id}-closed"} class="hint">{@closed}</p>
-    <p class="hint mt-4">
-      {@sees}
-      <.a id={"#{@id}-agents-link"} href={~p"/agents"} external={true}>How agents work with SAR Duty</.a>
-    </p>
     """
   end
 

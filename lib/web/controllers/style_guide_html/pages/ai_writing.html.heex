@@ -4,6 +4,10 @@
 
   <div class="demo">
     <.ai_editor id="ai-writing-demo" ai?={true} column_id="ai-writing-demo-column">
+      <:head>
+        <p class="title mb-2">Task report</p>
+        <p class="hint">The head: the title, the description, and the page's links.</p>
+      </:head>
       <:column>
         <.ai_writing
           id="ai-writing-demo-ai"
@@ -12,7 +16,7 @@
           asks={SampleData.ai_asks()}
           label="Ask AI"
           button="Ask"
-          sees="AI works only with the agency's blank form, the form language, and your team's field names. Agents never see your team's members or records."
+          sees="AI sees the agency's form and your team's field names, never its members or records."
         />
       </:column>
       <p class="hint">The page's main part: the report, or the form tried on an activity.</p>
@@ -30,7 +34,7 @@
         pending={%{ask: "Write this form."}}
         label="Ask AI"
         button="Ask"
-        sees="AI works only with the report language and your team's field names. Agents never see your team's members or records."
+        sees="AI sees your team's field names, never its members or records."
       />
     </div>
   </div>
@@ -46,15 +50,17 @@
         label="Ask AI"
         button="Ask"
         closed="AI writing is paused until next month. You can still change the query yourself."
-        sees="AI works only with the report language and your team's field names. Agents never see your team's members or records."
+        sees="AI sees your team's field names, never its members or records."
       />
     </div>
   </div>
 
   <h2>When to use</h2>
   <p>
-    A page AI writes for a team admin: Change report and Change form. One column, beside
-    the page's main part from 1024px and above it under that.
+    A page AI writes for an admin: Change report and Change form. From 1024px the column
+    starts beside the title and stays in view as the page scrolls, down to the Save bar at
+    the window's foot, and its conversation scrolls on its own. Under that it's one column:
+    the head, AI writing, then the page, with the last two asks and Show earlier asks.
   </p>
 
   <h2>How it works</h2>
@@ -72,7 +78,8 @@
       Try next, under the newest reply: two or three asks AI suggests. A tap puts one in the
       box, to change or send; it never sends on its own.
     </li>
-    <li>The hint under the box says what AI sees, and links to How agents work with SAR Duty.</li>
+    <li>The line under the heading says what AI sees, and links to How it works.</li>
+    <li>Enter sends; Shift+Enter starts a new line.</li>
   </ul>
 
   <h2>In the app</h2>

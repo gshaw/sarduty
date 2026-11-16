@@ -1,6 +1,6 @@
 defmodule Web.ReportFormLive do
   @moduledoc """
-  New report and Change report (#768). Save report at the top; the name and description
+  New report and Change report (#768). Save report in the bar at the window's foot; the name and description
   first, then the query and its rows as you type (#784). The preview draws the page's clauses too
   (#784): its tiles, filters, and headers pick as they will on the report's page. Save
   keeps the query and the picked values, never the rows. Under the query, the fields of
@@ -37,6 +37,7 @@ defmodule Web.ReportFormLive do
   use Web, :live_view_app_layout
 
   import Web.Components.AIWriting
+  import Web.Components.PageActions
   import Web.Components.Unsaved
   import Web.Components.ReportPage
   import Web.Components.ReportTable
@@ -460,24 +461,22 @@ defmodule Web.ReportFormLive do
       />
       <:item label={@page_title} />
     </.breadcrumbs>
-    <.heading_row>
-      <h1 id="report-title" class="title">{title(@form, @page_title)}</h1>
-      <:action>
-        <.unsaved id="report-unsaved" unsaved={unsaved?(assigns)} />
-        <.button id="report-save" form="report-form" variant={:success} phx-disable-with="Saving…">
-          Save report
-        </.button>
-        <.button id="report-cancel" navigate={cancel_path(@current_team, @saved)} data-leave-ok>
-          Cancel
-        </.button>
-      </:action>
-    </.heading_row>
-    <p :if={!@starting and (about(@form) || !@renaming)} id="report-about" class="lead">
-      {about(@form)}
-      <.a :if={!@renaming} id="report-rename" href="#" phx-click="rename">Rename</.a>
-    </p>
-
     <.ai_editor id="report-editor" ai?={ai_column?(assigns)} column_id="report-ai">
+      <:head>
+        <h1 id="report-title" class="title mb-2">{title(@form, @page_title)}</h1>
+        <p :if={!@starting and about(@form)} id="report-about" class="lead">{about(@form)}</p>
+        <.page_actions :if={!@starting and !@renaming} id="report-actions">
+          <:action>
+            <.a id="report-rename" href="#" phx-click="rename">Rename</.a>
+          </:action>
+          <:action :if={query_toggle?(assigns) and !query_shown?(assigns)}>
+            <.a id="report-show-query" href="#" phx-click="show_query">Show query</.a>
+          </:action>
+          <:action :if={query_toggle?(assigns) and query_shown?(assigns)}>
+            <.a id="report-hide-query" href="#" phx-click="hide_query">Hide query</.a>
+          </:action>
+        </.page_actions>
+      </:head>
       <:column>
         <.ai_writing
           id="report-ai"
@@ -529,26 +528,47 @@ defmodule Web.ReportFormLive do
       </section>
       <.form for={@form} id="report-form" phx-change="change" phx-submit="save">
         <.error_summary form={@form} />
-        <div :if={@renaming} id="report-names" phx-mounted={JS.focus(to: "#report_name")}>
+        <div
+          :if={@renaming and !@rename_from}
+          id="report-names"
+          phx-mounted={JS.focus(to: "#report_name")}
+        >
           <.name_fields form={@form} />
-          <div :if={@rename_from} id="report-rename-actions" class="flex gap-3">
-            <.button
-              id="report-rename-keep"
-              type="button"
-              variant={:success}
-              phx-click="rename_keep"
-            >
+        </div>
+        <%!-- Rename: the name and description in a dialog over the page, inside the form
+        so they save with it. Escape or Cancel puts them back. --%>
+        <dialog
+          :if={@rename_from}
+          id="report-rename-dialog"
+          class="confirm-dialog"
+          phx-hook="AskDialog"
+          phx-mounted={JS.ignore_attributes(["open"])}
+          data-cancel-event="rename_cancel"
+          aria-labelledby="report-rename-question"
+        >
+          <h2 id="report-rename-question" class="confirm-dialog-question">Rename the report</h2>
+          <p>The new name shows once you save the report.</p>
+          <div data-part="fields" class="confirm-dialog-fields">
+            <.name_fields form={@form} />
+          </div>
+          <div class="confirm-dialog-actions">
+            <.button id="report-rename-keep" type="button" variant={:primary} phx-click="rename_keep">
               Rename
             </.button>
-            <.button id="report-rename-cancel" type="button" phx-click="rename_cancel">
+            <.button
+              id="report-rename-cancel"
+              type="button"
+              value="cancel"
+              phx-click="rename_cancel"
+            >
               Cancel
             </.button>
           </div>
-        </div>
+        </dialog>
         <div :if={!@renaming} id="report-names-hidden" hidden>
           <.name_fields form={@form} />
         </div>
-        <div id="report-body" class={(@rename_from || @starting) && "hidden"}>
+        <div id="report-body" class={@starting && "hidden"}>
           <.input
             :if={change_field?(assigns)}
             field={@form[:change]}
@@ -559,20 +579,6 @@ defmodule Web.ReportFormLive do
             One line in the report's History.
           </.input>
 
-          <p :if={query_toggle?(assigns)} id="report-query-toggle" class="action mb-6">
-            <.a
-              :if={!query_shown?(assigns)}
-              id="report-show-query"
-              href="#"
-              phx-click="show_query"
-            >Show query</.a>
-            <.a
-              :if={query_shown?(assigns)}
-              id="report-hide-query"
-              href="#"
-              phx-click="hide_query"
-            >Hide query</.a>
-          </p>
           <.input
             field={@form[:query]}
             field_class={!query_shown?(assigns) && "hidden"}
@@ -619,6 +625,16 @@ defmodule Web.ReportFormLive do
         </div>
       </.form>
     </.ai_editor>
+
+    <.save_bar id="report-bar">
+      <.unsaved id="report-unsaved" unsaved={unsaved?(assigns)} />
+      <.button id="report-save" form="report-form" variant={:success} phx-disable-with="Saving…">
+        Save report
+      </.button>
+      <.button id="report-cancel" navigate={cancel_path(@current_team, @saved)} data-leave-ok>
+        Cancel
+      </.button>
+    </.save_bar>
     """
   end
 
@@ -670,8 +686,7 @@ defmodule Web.ReportFormLive do
   defp field_id(field), do: "field-#{field.name}"
 
   defp ai_sees,
-    do:
-      "AI works only with the report language and your team's field names. Agents never see your team's members or records."
+    do: "AI sees your team's field names, never its members or records."
 
   defp ai_closed_text(:ok), do: nil
   defp ai_closed_text({:error, :daily_limit}), do: ai_error_text(:daily_limit)
@@ -721,9 +736,8 @@ defmodule Web.ReportFormLive do
   # so there is nothing to toggle then.
   defp query_toggle?(assigns), do: assigns.ai == :ok and assigns.query_error == nil
 
-  # AI writing beside the report: open to the admin, past the blank start, not renaming.
-  defp ai_column?(assigns),
-    do: assigns.ai != {:error, :off} and !assigns.starting and assigns.rename_from == nil
+  # AI writing beside the report: open to the admin, past the blank start.
+  defp ai_column?(assigns), do: assigns.ai != {:error, :off} and !assigns.starting
 
   # What changed, unless AI writes the History line.
   defp change_field?(assigns), do: assigns.saved != nil and !assigns.ai_line

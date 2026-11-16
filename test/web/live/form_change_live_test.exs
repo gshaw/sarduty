@@ -205,7 +205,7 @@ defmodule Web.FormChangeLiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(alex) |> live(forms_path(team, "/#{started.id}/edit"))
     assert has_element?(lv, "#form-ai #form-ai-form", "Ask AI")
-    assert has_element?(lv, "#form-ai", "AI works only with the agency's blank form")
+    assert has_element?(lv, "#form-ai", "AI sees the agency's form and your team's field names")
     assert has_element?(lv, "#form-ai-agents-link[href='/agents']")
 
     lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()

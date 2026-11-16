@@ -148,7 +148,7 @@ defmodule Web.ReportFormLiveTest do
     assert has_element?(lv, "#report-errors", "activities has no field hour_tags")
   end
 
-  test "the name is the title, and Rename shows its fields", %{conn: conn} do
+  test "the name is the title, and Rename opens its fields in a dialog", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
     assert has_element?(lv, "h1#report-title", "New report")
@@ -164,17 +164,18 @@ defmodule Web.ReportFormLiveTest do
     lv |> form("#report-form", report: %{name: "Members"}) |> render_change()
     assert has_element?(lv, "h1#report-title", "Members")
 
-    # Rename is a step: the fields, with the rest hidden until Rename or Cancel.
+    # Rename opens a dialog with the fields, inside the form, over the page. Escape or
+    # Cancel puts them back; Rename keeps them, to save with the report.
     lv |> element("#report-rename") |> render_click()
-    assert has_element?(lv, "#report-names:not([hidden]) #report_name")
+    assert has_element?(lv, "#report-form #report-rename-dialog[phx-hook=AskDialog] #report_name")
+    assert has_element?(lv, "#report-rename-dialog[data-cancel-event=rename_cancel]")
     refute has_element?(lv, "#report-rename")
-    assert has_element?(lv, "#report-body.hidden")
-    refute has_element?(lv, "#report-fields")
+    refute has_element?(lv, "#report-body.hidden")
 
     lv |> form("#report-form", report: %{name: "Crew"}) |> render_change()
     lv |> element("#report-rename-cancel") |> render_click()
     assert has_element?(lv, "h1#report-title", "Members")
-    refute has_element?(lv, "#report-body.hidden")
+    refute has_element?(lv, "#report-rename-dialog")
     assert has_element?(lv, "#report-fields")
 
     lv |> element("#report-rename") |> render_click()
@@ -196,12 +197,13 @@ defmodule Web.ReportFormLiveTest do
     assert has_element?(lv, "#report-form", "Enter a name for the report")
   end
 
-  test "the name and description come first, Save is at the top, and help can hide",
+  test "the name and description come first, Save is in the bar at the foot",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     {:ok, lv, html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
 
-    assert has_element?(lv, ".heading-row #report-save[form=report-form]")
+    assert has_element?(lv, "#report-bar.action-bar #report-save[form=report-form]")
+    assert has_element?(lv, "#report-bar #report-cancel[data-leave-ok]")
     assert has_element?(lv, "label[for=report_about]", "Description")
     {name, _} = :binary.match(html, ~s(id="report_name"))
     {query, _} = :binary.match(html, ~s(id="report_query"))
@@ -638,6 +640,24 @@ defmodule Web.ReportFormLiveTest do
 
       lv |> element("#report-ai-next-0") |> render_click()
       assert has_element?(lv, "textarea[name='ai[ask]']", "Add each member's standing")
+    end
+
+    # The column stays in view and scrolls on its own from 1024px (assets/js/ai_panel.js);
+    # under that, the conversation shows its last two asks with Show earlier asks.
+    test "past two asks, the older ones fold under Show earlier asks", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      stub_claude("select name from members", "Lists every member.", %{})
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+
+      for ask <- ["every member", "by name", "with standing"] do
+        lv |> form("#report-ai-form", ai: %{ask: ask}) |> render_submit()
+        render_async(lv)
+      end
+
+      assert has_element?(lv, "aside#report-ai[phx-hook=AIPanel] .ai-scroll #report-ai-asks")
+      assert has_element?(lv, "#report-ai-earlier", "Show 1 earlier ask")
+      assert has_element?(lv, "#report-ai-asks .ai-you.ai-older", "every member")
+      refute has_element?(lv, "#report-ai-asks .ai-you.ai-older", "by name")
     end
 
     test "with suggestions off for reports, AI is never asked for them", %{conn: conn} do

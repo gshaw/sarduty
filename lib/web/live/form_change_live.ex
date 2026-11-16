@@ -402,20 +402,21 @@ defmodule Web.FormChangeLive do
       <:item label={@form.name} path={FormOwner.form_path(@owner, @form)} />
       <:item label="Change form" />
     </.breadcrumbs>
-    <.heading_row>
-      <h1 id="form-title" class="title">{title(@form, @text)}</h1>
-      <:action>
-        <.unsaved id="form-unsaved" unsaved={@text != @form.text or page_changed?(assigns)} />
-        <.button id="form-save" variant={:success} phx-click="save" phx-disable-with="Saving…">
-          Save form
-        </.button>
-        <.button id="form-cancel" navigate={FormOwner.form_path(@owner, @form)} data-leave-ok>
-          Cancel
-        </.button>
-      </:action>
-    </.heading_row>
-
     <.ai_editor id="form-editor" ai?={true} column_id="form-ai">
+      <:head>
+        <h1 id="form-title" class="title mb-2">{title(@form, @text)}</h1>
+        <.page_actions id="form-text-actions">
+          <:action :if={!text_shown?(assigns)}>
+            <.a id="form-show-text" href="#" phx-click="show_text">Show how it fills in</.a>
+          </:action>
+          <:action :if={text_shown?(assigns)}>
+            <.a id="form-hide-text" href="#" phx-click="hide_text">Hide how it fills in</.a>
+          </:action>
+          <:action :if={@ai == :ok and is_nil(@ai_pending)}>
+            <.a id="form-replace-pdf" href="#" phx-click="open_replace">Replace PDF</.a>
+          </:action>
+        </.page_actions>
+      </:head>
       <:column>
         <.ai_writing
           id="form-ai"
@@ -431,6 +432,30 @@ defmodule Web.FormChangeLive do
           A change, or a question about the form.
         </.ai_writing>
       </:column>
+
+      <section :if={text_shown?(assigns)} id="form-text" class="mb-8">
+        <.form
+          for={%{}}
+          id="form-text-form"
+          phx-change="edit_text"
+          phx-submit="edit_text"
+        >
+          <.input
+            id="form-text-input"
+            name="text"
+            type="textarea"
+            label="How it fills in"
+            value={@text}
+            rows="16"
+            class="font-mono"
+            phx-debounce="500"
+            spellcheck="false"
+            errors={List.wrap(@text_error)}
+          >
+            What each value is, and where it goes on the page. For a small fix by hand.
+          </.input>
+        </.form>
+      </section>
 
       <section id="form-try" class="mb-8">
         <%!-- The team's own activities, or Coast Range SAR's for an organization. On a team's
@@ -484,48 +509,17 @@ defmodule Web.FormChangeLive do
           />
         </div>
       </section>
-
-      <section id="form-text">
-        <.page_actions id="form-text-actions">
-          <:action :if={!text_shown?(assigns)}>
-            <.a id="form-show-text" href="#" phx-click="show_text">Show how it fills in</.a>
-          </:action>
-          <:action :if={text_shown?(assigns)}>
-            <.a id="form-hide-text" href="#" phx-click="hide_text">Hide how it fills in</.a>
-          </:action>
-          <:action :if={@ai == :ok and is_nil(@ai_pending)}>
-            <.a id="form-replace-pdf" href="#" phx-click="open_replace">Replace PDF</.a>
-          </:action>
-        </.page_actions>
-        <p class="hint measure">
-          AI writes the form. Show how it fills in for a small fix by hand, and Replace PDF
-          when the agency puts out a new one.
-        </p>
-        <.form
-          :if={text_shown?(assigns)}
-          for={%{}}
-          id="form-text-form"
-          phx-change="edit_text"
-          phx-submit="edit_text"
-          class="mt-6"
-        >
-          <.input
-            id="form-text-input"
-            name="text"
-            type="textarea"
-            label="How it fills in"
-            value={@text}
-            rows="16"
-            class="font-mono"
-            phx-debounce="500"
-            spellcheck="false"
-            errors={List.wrap(@text_error)}
-          >
-            What each value is, and where it goes on the page. For a small fix by hand.
-          </.input>
-        </.form>
-      </section>
     </.ai_editor>
+
+    <.save_bar id="form-bar">
+      <.unsaved id="form-unsaved" unsaved={@text != @form.text or page_changed?(assigns)} />
+      <.button id="form-save" variant={:success} phx-click="save" phx-disable-with="Saving…">
+        Save form
+      </.button>
+      <.button id="form-cancel" navigate={FormOwner.form_path(@owner, @form)} data-leave-ok>
+        Cancel
+      </.button>
+    </.save_bar>
 
     <%!-- Replace PDF: the upload in a dialog over the page. Cancel or Escape closes it. --%>
     <dialog
@@ -600,11 +594,9 @@ defmodule Web.FormChangeLive do
 
   defp sees(%Organization{short_name: name}),
     do:
-      "AI works only with the agency's blank form, the form language, and the field names " <>
-        "every team in #{name} has. Agents never see any team's members or records."
+      "AI sees the agency's form and the field names every team in #{name} has, never a " <>
+        "team's members or records."
 
   defp sees(_team),
-    do:
-      "AI works only with the agency's blank form, the form language, and your team's " <>
-        "field names. Agents never see your team's members or records."
+    do: "AI sees the agency's form and your team's field names, never its members or records."
 end

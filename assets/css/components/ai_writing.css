@@ -1,17 +1,36 @@
 @layer components {
-  /* AI writing (docs/ai-writing.md): its column sits beside the page's main part from
-     1024px, where the report editor's help column was, and above it under that. Change
-     report and Change form share it (#1089). */
-  .ai-editor { display: flex; flex-direction: column; gap: var(--sp-8); }
-  .ai-editor > .ai-main { min-width: 0; }
+  /* AI writing (docs/ai-writing.md), on Change report and Change form (#1089). Under
+     1024px one column: the head (title, description, links), AI writing, then the main
+     part. From 1024px the column starts beside the title and sticks under the site bar,
+     filling the window down to the Save bar (assets/js/ai_panel.js sizes it), and its
+     conversation scrolls on its own. */
+  .ai-editor {
+    display: grid; grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "head" "ai" "main"; row-gap: var(--sp-6);
+  }
+  .ai-editor > .ai-head { grid-area: head; }
+  .ai-editor > .ai-column { grid-area: ai; }
+  .ai-editor > .ai-main { grid-area: main; min-width: 0; }
   @media (min-width: 1024px) {
-    .ai-editor.has-ai { flex-direction: row-reverse; gap: var(--sp-6); }
-    .ai-editor.has-ai > .ai-main { flex: 1; }
+    .ai-editor.has-ai {
+      grid-template-columns: minmax(0, 1fr) min(33%, var(--sidebar-max));
+      grid-template-rows: auto 1fr; grid-template-areas: "head ai" "main ai";
+      column-gap: var(--sp-6); row-gap: var(--sp-4);
+    }
     .ai-editor.has-ai > .ai-column {
-      width: 33%; max-width: var(--sidebar-max); flex-shrink: 0; align-self: flex-start;
+      position: sticky; top: calc(56px + var(--sp-4)); align-self: start;
+      display: flex; flex-direction: column;
       border-left: 1px solid var(--border-subtle); padding-left: var(--sp-4);
     }
+    .ai-column .ai-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+    .ai-column .ai-earlier { display: none; }
   }
+  /* Under 1024px the conversation shows its last two asks until Show earlier asks. */
+  @media (max-width: 1023px) {
+    .ai-thread:not(.ai-thread-all) > .ai-older { display: none; }
+  }
+  /* The Save bar under the page (.action-bar), its buttons at the end. */
+  .ai-bar { justify-content: flex-end; }
 
   /* The conversation: each ask on the right, AI's reply under it. */
   .ai-thread { list-style: none; margin: 0 0 var(--sp-6); padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
