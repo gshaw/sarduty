@@ -58,7 +58,6 @@ words:
   - SAMPXRTRDX
   - SAMPXCNCDX
   - SAMPXNCRDX
-  - PKCE # OAuth's proof key for code exchange (RFC 7636), in agent connections (#761)
   - oxipng # the lossless PNG optimizer the mockup kit runs, pinned in .mise.toml
   - noindex # X-Robots-Tag's value, and the router pipeline that sends it (#824)
   - llms # /llms.txt, the file agents look for (#824)

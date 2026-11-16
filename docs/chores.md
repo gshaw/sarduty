@@ -61,7 +61,8 @@ did, a date, and a time ([Chore](../lib/app/model/chore.ex),
   cleared, and select all passes over them. Accepting one, on Chores or its page, takes
   a box, Accept my own chores, and SaveChore refuses it without one. Declining needs none.
 - **AI agents proposed chores** through the MCP from #595 until it became read-only
-  (#627, 2026-10-26). The chores stay; their proposals were deleted (2026-10-28).
+  (#627, 2026-10-26). The chores stay; their proposals were deleted (2026-10-28). MCP
+  went in #1087.
 - **Chores is one page for everyone** (#645), as [Where a feature goes](navigation.md#where-a-feature-goes)
   says. Anyone who is a member gets Log a chore and Yours, their own chores by month with
   what a team admin decided. A member opens on Yours and gets nothing else. Before this,

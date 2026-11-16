@@ -9,8 +9,9 @@ design: the feature's issue, then the component's page in `/styles`. If a line h
 change when the layout changes, it does not belong here.
 
 Adminland's pages follow these rules too, but they are for the people who run SAR Duty
-and can use the docs' words for its internals, such as the 10-minute sync. MCP tool text is
-for AI agents: it uses the glossary, and names fields and formats where an agent needs them.
+and can use the docs' words for its internals, such as the 10-minute sync. Text for AI,
+such as the `/agents` pages and AI writing's prompt, uses the glossary and names fields
+and formats where a model needs them.
 
 Check new or changed text against [the checklist](#checklist) before you commit.
 
@@ -256,8 +257,6 @@ and must not be used for it.
 | D4H access key                      | token, API key, personal access token, PAT     | The key that lets SAR Duty read and change the team's D4H data.                                      |
 | Records access key                  | token, API key                                 | The same for a team on SAR Duty Records. Records' own page for them is "API keys".                   |
 | AI writing                          | AI assistant, copilot, generate, chat          | SAR Duty writing a report's query when a team admin describes it. "AI" on its own in the box.        |
-| AI agent, agent                     | AI app, assistant, bot, MCP client, connector  | An AI service a team admin connects to help write reports. "AI agent" in full the first time.        |
-| connect, disconnect                 | authorize, link, revoke, token                 | Letting an agent help with the team's reports, and ending that. A connected agent is a connection.   |
 | refresh                             | sync, update, import, pull, fetch              | Copying the team's data from D4H or SAR Duty Records into SAR Duty.                                  |
 | send                                | apply, push, perform, make                     | Making changes in D4H or SAR Duty Records: "Send 3 changes". "Apply" is only for templates.          |
 | whiteboard                          | notice board, bulletin board, announcements    | D4H's board of short notes for everyone on the team.                                                 |

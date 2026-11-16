@@ -4,6 +4,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- AI agents connected to SAR Duty stop working. AI writing in the report editor does
+  what they did: describe the report you want, and it writes it.
 - ⭐ Change your team's logo in SAR Duty. It goes to D4H or SAR Duty Records too, and ID
   cards, letters, and the Dashboard show it at once.
 - ⭐ Custom fields in SAR Duty: add your team's own, put them in order, change, archive,

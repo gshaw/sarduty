@@ -100,7 +100,7 @@ only when the organization has its own host.
 
 A team's D4H field marked RESTRICTED is the team's alone: D4H keeps it from rolling up
 to the organization (#681). Nothing an organization sees in SAR Duty may read one: its
-space, its reports, or an organization's MCP when there is one. A report across an
+space, its reports, or AI writing for an organization when there is one. A report across an
 organization's teams uses the organization's own fields, such as BCSARA's Agency File #,
 which mean the same thing on every team. As organization features grow, check each new
 one against this. See [custom-fields.md](custom-fields.md#restricted-fields-and-organizations).

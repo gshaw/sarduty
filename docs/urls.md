@@ -71,8 +71,7 @@ enforces the top-level list and the held URLs.
   the app in production only (`Web.FlyHostRedirect`, exact hosts).
 - **Search vs agents** (#824): nothing is blocked. Routes kept out of search pipe
   through `:noindex`, which sends `X-Robots-Tag: noindex`: the whole verify host,
-  `/replies/:token`, `/reminders/:token`, `/cards/:token`, MCP, OAuth, wallet, and
-  `/maps`. Public pages, `/agents` and `/styles` included, stay indexable. The router
+  `/replies/:token`, `/reminders/:token`, `/cards/:token`, wallet, and `/maps`. Public pages, `/agents` and `/styles` included, stay indexable. The router
   test puts every route in one group, hidden, logged in, or public, and fails on a new
   one until it's classified.
 - **Anything printed on a card goes through the verify site**, so it stays short and never
@@ -98,10 +97,6 @@ Devices, Google, Apple, and shared links hold these. They don't move.
   `/cards/:token/image` and `/pdf`, the card it draws (#973).
 - `/teams/:subdomain/logo`: Google Wallet objects fetch it.
 - `/teams/:subdomain/take-attendance`: teams print a QR code of it for the hall (#475).
-- `/teams/:subdomain/mcp`: agents' MCP configs hold it ([mcp.md](mcp.md)).
-- `/teams/:subdomain/oauth/register`, `/oauth/token`, `/oauth/authorize`, and the two
-  `/.well-known/oauth-…/teams/:subdomain…` metadata addresses: agents keep them from
-  their first connection (#761).
 - On the verify site: `/:code` (the QR code), `/:code/photo`, `/:code/banner` (the Google
   Wallet banner), `/orgs/:slug`, `/samples`, the sample ID cards (#854), and `/api/v1/cards/:code`,
   the card check as JSON that apps scanning cards call (#299). A change that breaks those
