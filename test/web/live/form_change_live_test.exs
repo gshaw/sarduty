@@ -154,6 +154,8 @@ defmodule Web.FormChangeLiveTest do
     assert has_element?(lv, "#form-blank-page")
 
     render_async(lv)
+    # Then the try prints, beside the page.
+    render_async(lv)
 
     assert_received {:claude, request}
     sent = Jason.encode!(request)

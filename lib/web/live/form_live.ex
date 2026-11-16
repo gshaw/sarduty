@@ -1,6 +1,8 @@
 defmodule Web.FormLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.PageActions
+
   alias App.Document
   alias App.Model.Form
   alias App.Model.Organization
@@ -73,14 +75,12 @@ defmodule Web.FormLive do
       <:item label="Forms" path={FormOwner.forms_path(@owner)} />
       <:item label={@form.name} />
     </.breadcrumbs>
-    <.heading_row>
-      <h1 class="title">{@form.name}</h1>
-      <:action :if={@change?}>
-        <.button id="form-change" navigate={FormOwner.change_path(@owner, @form)}>
-          Change form
-        </.button>
+    <h1 class="title">{@form.name}</h1>
+    <.page_actions :if={@change?} id="form-actions">
+      <:action>
+        <.a id="form-change" navigate={FormOwner.change_path(@owner, @form)}>Change form</.a>
       </:action>
-    </.heading_row>
+    </.page_actions>
     <p :if={@form.about} class="lead measure">{@form.about}</p>
 
     <div class="content-wrapper">

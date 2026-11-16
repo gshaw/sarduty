@@ -38,7 +38,10 @@ defmodule Web.FormChangeLive do
       page: Form.page_bytes(form),
       text: form.text,
       text_open: false,
-      activity: nil
+      activity: nil,
+      activities: [],
+      pages: [],
+      preview_error: nil
     )
     |> assign_ai(team, user)
     |> preview()
@@ -83,37 +86,44 @@ defmodule Web.FormChangeLive do
   defp first_ask(socket, _none), do: socket
 
   # The draft tried on an activity it shows on, every page a picture; before it's
-  # written, the agency's blank page.
+  # written, the agency's blank page. It prints beside the page, so a pick or an Undo
+  # answers at once; a newer print replaces one still running.
   defp preview(socket) do
-    %{form: form, text: text, team: team, page: page} = socket.assigns
+    %{form: form, text: text, team: team, page: page, activity: activity} = socket.assigns
     draft = %{form | text: text}
+    activity_id = activity && activity.id
 
+    socket
+    |> assign(previewing: true)
+    |> start_async(:preview, fn -> print(draft, team, page, activity_id) end)
+  end
+
+  defp print(draft, team, page, activity_id) do
     cond do
-      Form.written?(draft) -> try_draft(socket, draft, team)
-      page -> socket |> assign(activities: [], activity: nil) |> assign_pages(page)
-      true -> assign(socket, activities: [], activity: nil, pages: [], preview_error: nil)
+      Form.written?(draft) -> try_draft(draft, team, activity_id)
+      page -> Map.merge(%{activities: [], activity: nil}, pages(page))
+      true -> %{activities: [], activity: nil, pages: [], preview_error: nil}
     end
   end
 
-  defp try_draft(socket, draft, team) do
+  defp try_draft(draft, team, activity_id) do
     activities = TryForm.activities(draft, team)
-    activity = keep(activities, socket.assigns.activity) || TryForm.first(activities)
-    socket = assign(socket, activities: activities, activity: activity)
+    activity = Enum.find(activities, &(&1.id == activity_id)) || TryForm.first(activities)
 
-    case activity && TryForm.call(draft, team, activity.id) do
-      nil -> assign(socket, pages: [], preview_error: nil)
-      {:ok, attachment} -> assign_pages(socket, attachment.content)
-      {:error, reason} -> assign(socket, pages: [], preview_error: reason)
-    end
+    printed =
+      case activity && TryForm.call(draft, team, activity.id) do
+        nil -> %{pages: [], preview_error: nil}
+        {:ok, attachment} -> pages(attachment.content)
+        {:error, reason} -> %{pages: [], preview_error: reason}
+      end
+
+    Map.merge(%{activities: activities, activity: activity}, printed)
   end
 
-  defp keep(_activities, nil), do: nil
-  defp keep(activities, activity), do: Enum.find(activities, &(&1.id == activity.id))
-
-  defp assign_pages(socket, pdf) do
+  defp pages(pdf) do
     case Service.PDFImages.pages(pdf) do
-      {:ok, pages} -> assign(socket, pages: pages, preview_error: nil)
-      {:error, reason} -> assign(socket, pages: [], preview_error: reason)
+      {:ok, pages} -> %{pages: pages, preview_error: nil}
+      {:error, reason} -> %{pages: [], preview_error: reason}
     end
   end
 
@@ -185,6 +195,11 @@ defmodule Web.FormChangeLive do
         {:noreply, put_flash(socket, :error, "You can no longer change this team's forms.")}
     end
   end
+
+  def handle_async(:preview, {:ok, printed}, socket),
+    do: {:noreply, socket |> assign(printed) |> assign(previewing: false)}
+
+  def handle_async(:preview, {:exit, _reason}, socket), do: {:noreply, socket}
 
   def handle_async(:ai_ask, {:ok, result}, socket) do
     socket = assign(socket, ai_step: nil)
@@ -329,7 +344,13 @@ defmodule Web.FormChangeLive do
       </:column>
 
       <section id="form-try" class="mb-8">
-        <form :if={@activities != []} id="form-try-form" phx-change="try_on" class="measure">
+        <form
+          :if={@activities != []}
+          id="form-try-form"
+          phx-change="try_on"
+          phx-submit="try_on"
+          class="measure"
+        >
           <.input
             id="form-try-activity"
             name="activity"
@@ -341,11 +362,18 @@ defmodule Web.FormChangeLive do
             Marked SAMPLE, with each question's default answer.
           </.input>
         </form>
-        <p :if={written?(@text) and @activities == []} id="form-try-none" class="measure">
+        <p
+          :if={written?(@text) and @activities == [] and !@previewing}
+          id="form-try-none"
+          class="measure"
+        >
           Your team has no activity this form shows on.
         </p>
         <p :if={!written?(@text)} id="form-blank-page" class="measure">
           The agency's blank form. AI writes the form from it.
+        </p>
+        <p :if={@previewing} id="form-try-printing" class="hint mb-3">
+          <.spinner>Printing it…</.spinner>
         </p>
         <p :if={@preview_error} id="form-try-error" class="measure">{@preview_error}</p>
         <div :if={@pages != []} id="form-pages" class="flex flex-col gap-4">
