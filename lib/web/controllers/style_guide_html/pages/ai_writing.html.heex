@@ -8,7 +8,7 @@
         <.ai_writing
           id="ai-writing-demo-ai"
           ai={:ok}
-          form={Phoenix.Component.to_form(%{"ask" => ""}, as: "ai")}
+          form={ask_form("")}
           asks={SampleData.ai_asks()}
           label="Describe a change"
           button="Change it"
@@ -25,7 +25,7 @@
       <.ai_writing
         id="ai-writing-demo-running"
         ai={:ok}
-        form={Phoenix.Component.to_form(%{"ask" => ""}, as: "ai")}
+        form={ask_form("")}
         asks={[]}
         pending={%{ask: "Write this form."}}
         step={:reading}
@@ -42,7 +42,7 @@
       <.ai_writing
         id="ai-writing-demo-closed"
         ai={{:error, :paused}}
-        form={Phoenix.Component.to_form(%{"ask" => ""}, as: "ai")}
+        form={ask_form("")}
         asks={[]}
         label="Describe a change"
         button="Change it"

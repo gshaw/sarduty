@@ -686,6 +686,7 @@ defmodule Web.ReportFormLiveTest do
       {:ok, lv, _html} =
         conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new?from=hours-by-member")
 
+      box = box_id(lv)
       lv |> form("#report-ai-form", ai: %{ask: "add a menu for the period"}) |> render_submit()
       assert_receive :waiting
 
@@ -693,11 +694,13 @@ defmodule Web.ReportFormLiveTest do
       assert has_element?(lv, "#report-ai-ask-running", "add a menu for the period")
       assert has_element?(lv, "#report-ai-step #report-ai-stop")
       assert has_element?(lv, "#report-ai-ask[disabled]")
-      refute has_element?(lv, "#ai_ask", "add a menu for the period")
+      refute has_element?(lv, "textarea[name='ai[ask]']", "add a menu for the period")
+      # A new box, so one Safari leaves focused still clears.
+      refute box_id(lv) == box
 
       lv |> element("#report-ai-stop") |> render_click()
 
-      assert has_element?(lv, "#ai_ask", "add a menu for the period")
+      assert has_element?(lv, "textarea[name='ai[ask]']", "add a menu for the period")
       refute has_element?(lv, "#report-ai-asks")
 
       ask = App.Repo.get_by!(AIAsk, team_id: team.id)
@@ -777,5 +780,11 @@ defmodule Web.ReportFormLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
       assert has_element?(lv, "#report_change")
     end
+  end
+
+  defp box_id(lv) do
+    html = lv |> element("textarea[name='ai[ask]']") |> render()
+    [id] = Regex.run(~r/ id="([^"]+)"/, html, capture: :all_but_first)
+    id
   end
 end

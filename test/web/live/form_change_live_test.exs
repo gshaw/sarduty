@@ -259,7 +259,7 @@ defmodule Web.FormChangeLiveTest do
     assert has_element?(lv, "#form-ai-ask[disabled]")
 
     lv |> element("#form-ai-stop") |> render_click()
-    assert has_element?(lv, "#ai_ask", "Write this form.")
+    assert has_element?(lv, "textarea[name='ai[ask]']", "Write this form.")
     refute has_element?(lv, "#form-ai-asks")
 
     ask = Repo.get_by!(AIAsk, team_id: team.id)
@@ -278,7 +278,7 @@ defmodule Web.FormChangeLiveTest do
     render_async(lv, @wait)
 
     assert render(lv) =~ "Its text still had a mistake:"
-    assert has_element?(lv, "#ai_ask", "Write this form.")
+    assert has_element?(lv, "textarea[name='ai[ask]']", "Write this form.")
     refute has_element?(lv, "#form-text")
     assert Repo.get_by!(AIAsk, team_id: team.id).outcome == :refused_by_checks
   end

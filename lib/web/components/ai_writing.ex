@@ -107,6 +107,13 @@ defmodule Web.Components.AIWriting do
     """
   end
 
+  @doc """
+  The box's form, holding `ask`. Each has its own id, so the box is a new element: a
+  box still focused after its ask, as Safari leaves it, would otherwise keep its words.
+  """
+  def ask_form(ask),
+    do: to_form(%{"ask" => ask}, as: "ai", id: "ai-#{System.unique_integer([:positive])}")
+
   defp blank(ask), do: Map.get(ask, :blank) || []
 
   @doc "What the running ask is doing."

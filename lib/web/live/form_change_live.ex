@@ -74,8 +74,6 @@ defmodule Web.FormChangeLive do
     )
   end
 
-  defp ask_form(ask), do: to_form(%{"ask" => ask}, as: "ai")
-
   # Write form's first ask, once the page is live.
   defp first_ask(socket, ask) when is_binary(ask) do
     if connected?(socket) and socket.assigns.ai == :ok,

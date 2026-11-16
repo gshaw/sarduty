@@ -113,8 +113,6 @@ defmodule Web.ReportFormLive do
   defp blank_new?(:new, params), do: not Enum.any?(~w(from list), &Map.has_key?(params, &1))
   defp blank_new?(_action, _params), do: false
 
-  defp ask_form(ask), do: to_form(%{"ask" => ask}, as: "ai")
-
   defp start(:edit, %{"id" => id} = params, team, now) do
     case Reports.find(team, id, now) do
       %{saved: %SavedReport{} = saved} -> {saved, edit_start(saved, params)}
