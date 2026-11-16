@@ -204,18 +204,6 @@ defmodule App.ViewData.ChangeHistoryTest do
            ) == "Area cleared. Primary Cause changed to Dementia"
   end
 
-  test "custom fields by title alone, for the MCP (#681)" do
-    assert describe_change(
-             %{
-               record_kind: :activity,
-               action: :changed,
-               fields: ["custom_values"],
-               new_value: %{"custom_values" => ["Primary Cause", "Area"]}
-             },
-             :activity
-           ) == "Area and Primary Cause changed"
-  end
-
   describe "an activity's own saves (#447)" do
     defp activity_row(action, old_value, new_value) do
       ChangeHistory.describe_row(

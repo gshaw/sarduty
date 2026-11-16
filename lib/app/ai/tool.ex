@@ -3,7 +3,7 @@ defmodule App.AI.Tool do
   A tool Claude may call during an AI writing ask (App.Operation.AskAI). It runs in SAR
   Duty, on the asker's team, and its answer goes back to Claude.
 
-  The rules from MCP (#627, #816) hold, now that SAR Duty is the one sending: a tool only
+  The rules from MCP (#627, #816), which AI writing replaced (#1087), hold: a tool only
   reads, and never answers with a member, an activity, a row, or a count from the team's
   records. A tool that runs a query runs it on Coast Range SAR, the made-up team. Each
   builds its answer from explicit maps; App.AI.ToolsTest checks the source.

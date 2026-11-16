@@ -3,7 +3,7 @@ defmodule Web.AgentsLive do
 
   # The lander for agents (#816): public, beside Privacy and Terms, for teams and
   # organizations deciding about agents, and for agents and the people building with
-  # them. Each team's Agents tab and the page that lets an agent in link here. Each thing
+  # them. AI writing in the report editor links here. Each thing
   # agents can do is one entry in uses/0, with its own page under /agents; a new one is an
   # entry there, and shows here and in /agents.md (Web.MarkdownController).
   def mount(_params, _session, socket) do
@@ -91,7 +91,7 @@ defmodule Web.AgentsLive do
   end
 
   defp who do
-    "A team admin connects an agent to their team, and any team admin can disconnect it. A public check, such as an ID card's, needs no connection: it shows only what anyone can see. Agents never change anything."
+    "SAR Duty decides which team admins get AI writing, and it runs in SAR Duty: no agent connects to a team. A public check, such as an ID card's, shows only what anyone can see. Agents never change anything."
   end
 
   # What agents can do, each with its page under /agents. `access` says who decides.
@@ -110,8 +110,8 @@ defmodule Web.AgentsLive do
         id: "agents-use-reports",
         title: "Write reports",
         text:
-          "An agent helps a team admin write a report, such as members on Callout without First Aid. It tries the report on Coast Range SAR, a made-up team, and the team admin runs it on the team's records.",
-        access: "A team admin connects the agent to their team.",
+          "A team admin describes a report in the report editor, such as members on Callout without First Aid, and AI writing writes its query. It tries the report on Coast Range SAR, a made-up team, and the team admin runs it on the team's records. Scripts and other agents can read the same report language.",
+        access: "A team admin asks in SAR Duty. There is nothing to connect.",
         link: "How to write a report",
         path: ~p"/agents/reports"
       },

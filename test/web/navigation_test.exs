@@ -187,7 +187,6 @@ defmodule Web.NavigationTest do
       assert sections |> keys() |> List.last() == [
                "admin-admins",
                "admin-events",
-               "admin-mcp",
                "admin-ai",
                "admin-integrations"
              ]

@@ -132,7 +132,7 @@ defmodule Web.SearchTest do
     test "a team admin finds each Team settings tab by its name, under Team settings" do
       team =
         team_fixture()
-        |> Ecto.Changeset.change(member_logins: true, chores_enabled: true, mcp_enabled: true)
+        |> Ecto.Changeset.change(member_logins: true, chores_enabled: true)
         |> Repo.update!()
 
       for tab <- TeamSettingsTabs.list(team), tab.key != :general do
@@ -148,7 +148,7 @@ defmodule Web.SearchTest do
       assert members == "/teams/#{team.subdomain}/members"
     end
 
-    test "Chore categories and Agents are found only when their tabs show" do
+    test "Chore categories is found only when its tab shows" do
       team = team_fixture()
 
       refute page_hit(
@@ -157,8 +157,6 @@ defmodule Web.SearchTest do
                @admin,
                "/teams/#{team.subdomain}/settings/chore-categories"
              )
-
-      refute page_hit(team, "agents", @admin, "/teams/#{team.subdomain}/settings/mcp")
     end
 
     # A Change page is a step from General, so its words find General (docs/search.md).

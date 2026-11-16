@@ -7,7 +7,6 @@ defmodule Web.ReportFormLiveTest do
   alias App.Model.ReportVersion
   alias App.Model.SavedReport
   alias App.Operation.SaveReport
-  alias App.Report.Draft
 
   test "a report runs as you type, and saves once it has a name", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
@@ -83,34 +82,18 @@ defmodule Web.ReportFormLiveTest do
     assert has_element?(lv, "#report-preview", "Rescue")
   end
 
-  test "an agent's link fills the form, and saving names the agent (#816)", %{conn: conn} do
+  # Agents connected through MCP linked here with their query (#816) until #1087.
+  test "an old agent link's query and agent are ignored", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
-    member_fixture(team, %{name: "Avery Chen"})
-    params = %{query: "select name from members", name: "Everyone", agent: "Claude"}
-    conn = log_in_user(conn, user)
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/new?#{params}")
+    params = %{query: "select title from groups", name: "Everyone", agent: "Claude"}
+    {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new?#{params}")
 
-    assert has_element?(lv, "#report-preview td", "Avery Chen")
-    lv |> form("#report-form") |> render_submit()
+    refute has_element?(lv, "#report_query", "select title from groups")
+    lv |> form("#report-form", report: %{name: "Everyone"}) |> render_submit()
 
     report = App.Repo.get_by!(SavedReport, team_id: team.id, name: "Everyone")
-    assert report.query == "select name from members"
-    assert report.agent == "Claude"
-
-    {:ok, lv, _html} =
-      live(
-        conn,
-        ~p"/teams/#{team}/reports/#{report.id}/edit?#{%{query: "select name, position from members", agent: "Codex"}}"
-      )
-
-    lv |> form("#report-form") |> render_submit()
-    report = App.Repo.reload!(report)
-    assert report.query == "select name, position from members"
-    assert report.agent == "Codex"
-
-    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
-    lv |> form("#report-form", report: %{name: "All of us"}) |> render_submit()
-    assert App.Repo.reload!(report).agent == "Codex"
+    refute report.query =~ "groups"
+    assert report.agent == nil
   end
 
   test "format draws a column another way (#804)", %{conn: conn} do
@@ -223,159 +206,6 @@ defmodule Web.ReportFormLiveTest do
     # The fields show under the query.
     assert has_element?(lv, "#report-fields")
     refute has_element?(lv, "#report-delete-button")
-  end
-
-  describe "an agent's live draft (#834)" do
-    defp draft(query, attrs \\ %{}) do
-      struct!(
-        %Draft{query: query, agent: "Claude", at: ~U[2026-11-02 21:10:00Z]},
-        attrs
-      )
-    end
-
-    defp open_draft(conn, user, path, params) do
-      conn |> log_in_user(user) |> live("#{path}?#{URI.encode_query(params)}")
-    end
-
-    test "the editor follows each query the agent checks", %{conn: conn} do
-      %{user: user, team: team} = user_with_team_fixture()
-      member_fixture(team, %{name: "Avery Chen"})
-
-      params = %{query: "select title from groups", agent: "Claude", draft: "draft-one-id"}
-      {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
-
-      assert has_element?(lv, "#report-draft-following", "Following Claude's draft")
-      assert has_element?(lv, "#report-preview-count", "the agent's query from")
-
-      Draft.broadcast(
-        team,
-        user.id,
-        "draft-one-id",
-        draft("select name from members", %{name: "Everyone"})
-      )
-
-      assert has_element?(lv, "#report_name[value='Everyone']")
-      assert has_element?(lv, "#report-preview", "Avery Chen")
-      assert has_element?(lv, "#report-preview-count", "the agent's query from 14:10")
-
-      lv |> form("#report-form") |> render_submit()
-      report = App.Repo.get_by!(SavedReport, team_id: team.id, name: "Everyone")
-      assert report.query == "select name from members"
-      assert report.agent == "Claude"
-    end
-
-    test "another admin's, another draft's, and another report's updates don't reach it",
-         %{conn: conn} do
-      %{user: user, team: team} = user_with_team_fixture()
-      params = %{query: "select title from groups", agent: "Claude", draft: "draft-one-id"}
-      {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
-
-      Draft.broadcast(team, user.id + 1, "draft-one-id", draft("select name from members"))
-      Draft.broadcast(team, user.id, "draft-two-id", draft("select name from members"))
-
-      Draft.broadcast(
-        team,
-        user.id,
-        "draft-one-id",
-        draft("select name from members", %{report_id: 1})
-      )
-
-      assert has_element?(lv, "#report_query", "select title from groups")
-    end
-
-    test "after the admin types, a new query waits in a toast", %{conn: conn} do
-      %{user: user, team: team} = user_with_team_fixture()
-      params = %{query: "select title from groups", agent: "Claude", draft: "draft-one-id"}
-      {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
-
-      lv |> form("#report-form", report: %{query: "select name from members"}) |> render_change()
-      assert has_element?(lv, "#report-preview-count", "runs as you type")
-
-      Draft.broadcast(team, user.id, "draft-one-id", draft("select ref_id from members"))
-
-      assert has_element?(lv, "#report_query", "select name from members")
-      assert has_element?(lv, "#report-draft-toasts", "New query from Claude")
-
-      lv |> element("#report-draft-load") |> render_click()
-      assert has_element?(lv, "#report_query", "select ref_id from members")
-      refute has_element?(lv, "#report-draft-toasts")
-    end
-
-    test "Stop following keeps the form as it is", %{conn: conn} do
-      %{user: user, team: team} = user_with_team_fixture()
-      params = %{query: "select title from groups", agent: "Claude", draft: "draft-one-id"}
-      {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
-
-      lv |> element("#report-draft-stop") |> render_click()
-      refute has_element?(lv, "#report-draft-following")
-      assert render(lv) =~ "Stopped following Claude&#39;s draft."
-
-      Draft.broadcast(team, user.id, "draft-one-id", draft("select name from members"))
-      assert has_element?(lv, "#report_query", "select title from groups")
-    end
-
-    test "the query folds to a line while following, and opens on Show query or Stop",
-         %{conn: conn} do
-      %{user: user, team: team} = user_with_team_fixture()
-      params = %{query: "select title\nfrom groups", agent: "Claude", draft: "draft-one-id"}
-      {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
-
-      assert has_element?(lv, "#report-show-query")
-      assert has_element?(lv, ".hidden #report_query")
-      refute has_element?(lv, "#report-fields")
-
-      lv |> element("#report-show-query") |> render_click()
-      assert has_element?(lv, "#report-hide-query")
-      refute has_element?(lv, ".hidden #report_query")
-      assert has_element?(lv, "#report-fields")
-
-      lv |> element("#report-hide-query") |> render_click()
-      assert has_element?(lv, ".hidden #report_query")
-
-      {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
-      lv |> element("#report-draft-stop") |> render_click()
-      refute has_element?(lv, "#report-show-query")
-
-      # A mistake in the agent's query shows the query, with the mistake on it.
-      {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
-      Draft.broadcast(team, user.id, "draft-one-id", draft("select nme from members"))
-      assert has_element?(lv, "#report-form", "members has no field nme")
-      refute has_element?(lv, "#report-show-query")
-    end
-
-    test "names an agent that gave no name as an AI agent", %{conn: conn} do
-      %{user: user, team: team} = user_with_team_fixture()
-      params = %{query: "select title from groups", agent: "An AI agent", draft: "draft-one-id"}
-      {:ok, lv, _html} = open_draft(conn, user, ~p"/teams/#{team}/reports/new", params)
-
-      assert has_element?(lv, "#report-draft-following", "Following an AI agent's draft")
-    end
-
-    test "a saved report's draft lands on its edit page", %{conn: conn} do
-      %{user: user, team: team} = user_with_team_fixture()
-
-      {:ok, report} =
-        SaveReport.call(team, user, nil, %{
-          "name" => "Groups",
-          "query" => "select title from groups"
-        })
-
-      params = %{query: "select title from groups", agent: "Claude", draft: "draft-one-id"}
-
-      {:ok, lv, _html} =
-        open_draft(conn, user, ~p"/teams/#{team}/reports/#{report.id}/edit", params)
-
-      Draft.broadcast(
-        team,
-        user.id,
-        "draft-one-id",
-        draft("select name from members", %{report_id: report.id, change: "Members, not groups"})
-      )
-
-      assert has_element?(lv, "#report_query", "select name from members")
-      assert has_element?(lv, "#report_name[value='Groups']")
-      assert has_element?(lv, "#report_change[value='Members, not groups']")
-    end
   end
 
   describe "History and Recently deleted (#834)" do

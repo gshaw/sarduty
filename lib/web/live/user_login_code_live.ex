@@ -8,13 +8,8 @@ defmodule Web.UserLoginCodeLive do
   # the login form, the submit goes through LiveView, then posts to the controller, which
   # logs in. The button stays busy until that POST leaves the page.
   def mount(params, session, socket) do
-    return_to = session["user_return_to"]
-
     socket =
-      assign(socket,
-        take_attendance?: Web.TakeAttendanceLive.path?(return_to),
-        agent_team: Web.AgentAuthorizeLive.login_team_name(return_to)
-      )
+      assign(socket, take_attendance?: Web.TakeAttendanceLive.path?(session["user_return_to"]))
 
     case {session["login_phone"], session["login_email"] || params["email"]} do
       {nil, nil} ->
@@ -46,9 +41,6 @@ defmodule Web.UserLoginCodeLive do
       <h1 class="heading">Enter your code</h1>
       <p :if={@take_attendance?} id="login-take-attendance" class="lead">
         Log in to take attendance.
-      </p>
-      <p :if={@agent_team} id="login-agent" class="lead">
-        Log in to connect an AI agent to {@agent_team}.
       </p>
       <p :if={@field == "email"}>
         If <strong>{@value}</strong> can use SAR Duty, we've emailed it an 8-digit code. It

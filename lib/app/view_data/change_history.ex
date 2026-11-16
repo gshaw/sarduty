@@ -20,9 +20,6 @@ defmodule App.ViewData.ChangeHistory do
   # activity's forms (#970). Each entry is a map: `at`, `by`
   # (`:sar_duty` or `:d4h`), `seen_after` for a D4H change (the last refresh before it),
   # `text`, and for SAR Duty's changes `source`, `applied_by`, and `reason`. Newest first.
-  #
-  # `field_values: false` names an activity's changed custom fields without their values,
-  # for the MCP (#681), which never gets a custom field value.
 
   @limit 200
 
@@ -53,14 +50,9 @@ defmodule App.ViewData.ChangeHistory do
     |> Enum.take(@limit)
   end
 
-  def for_activity(%Team{} = team, %{team_id: team_id} = activity, opts \\ [])
+  def for_activity(%Team{} = team, %{team_id: team_id} = activity)
       when team_id == team.id do
     changes = D4HChange.for_activity(team.id, activity.id, @limit)
-
-    changes =
-      if Keyword.get(opts, :field_values, true),
-        do: changes,
-        else: Enum.map(changes, &field_titles/1)
 
     rows =
       ChangeSetRow
@@ -188,11 +180,6 @@ defmodule App.ViewData.ChangeHistory do
 
     [published | withdrawn]
   end
-
-  defp field_titles(%D4HChange{new_value: %{"custom_values" => %{} = values}} = change),
-    do: %{change | new_value: %{change.new_value | "custom_values" => Map.keys(values)}}
-
-  defp field_titles(change), do: change
 
   defp applied_rows(query) do
     query
@@ -443,10 +430,7 @@ defmodule App.ViewData.ChangeHistory do
     end
   end
 
-  # Kept as text by field title (#681): see RecordD4HChanges. Titles alone for the MCP.
-  defp activity_field("custom_values", %{new_value: %{"custom_values" => [_ | _] = titles}}, _tz),
-    do: "#{titles |> Enum.sort() |> Service.Format.and_list()} changed"
-
+  # Kept as text by field title (#681): see RecordD4HChanges.
   defp activity_field("custom_values", c, _tz) do
     (c.new_value["custom_values"] || %{})
     |> Enum.sort()

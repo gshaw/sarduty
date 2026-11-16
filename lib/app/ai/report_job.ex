@@ -160,7 +160,7 @@ defmodule App.AI.ReportJob do
     """
   end
 
-  @doc "The team's names for things, as maps. MCP's report_fields gives the same."
+  @doc "The team's names for things, as maps."
   def names(%Team{} = team) do
     hours_tags = Activity.hours_tags(team)
 
@@ -181,8 +181,7 @@ defmodule App.AI.ReportJob do
 
   @doc """
   Exactly the fields a report can read (App.Report.CustomFields), as a query writes them:
-  an activity's for every kind, and a member's only when the team copies it. MCP's
-  report_fields gives the same.
+  an activity's for every kind, and a member's only when the team copies it.
   """
   def custom_fields(team) do
     for {on, defs} when is_binary(on) <- CustomFields.read(team, App.Repo), d <- defs do

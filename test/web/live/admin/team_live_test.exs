@@ -48,16 +48,12 @@ defmodule Web.Admin.TeamLiveTest do
     assert Repo.reload!(team).d4h_refresh_result =~ "Error"
   end
 
-  test "turns ID cards and MCP on and off", %{conn: conn, team: team} do
+  test "turns ID cards off", %{conn: conn, team: team} do
     {:ok, lv, _html} = live(conn, ~p"/admin/teams/#{team.id}")
 
     lv |> element("#id-cards-off") |> render_click()
     refute Repo.reload!(team).id_cards_enabled
     assert has_element?(lv, "#team-id-cards-state", "Off")
-
-    lv |> element("#mcp-on") |> render_click()
-    assert Repo.reload!(team).mcp_enabled
-    assert has_element?(lv, "#team-mcp-state", "On")
   end
 
   test "a SAR Duty admin turns team forms on and off, and sees how many the team has (#1083)",
