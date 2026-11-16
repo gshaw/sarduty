@@ -41,6 +41,19 @@ defmodule Web.Admin.AILiveTest do
       asked_at: DateTime.utc_now()
     )
 
+    form =
+      AIAsk.record!(
+        team_id: team.id,
+        user_id: admin.id,
+        kind: :form,
+        ask: "Write this form.",
+        model: "claude-sonnet-5-5",
+        input_tokens: 30_000,
+        cost_microdollars: 20_000,
+        outcome: :used,
+        asked_at: DateTime.utc_now()
+      )
+
     line =
       AIAsk.record!(
         team_id: team.id,
@@ -56,12 +69,13 @@ defmodule Web.Admin.AILiveTest do
 
     {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin/ai")
 
-    assert has_element?(lv, "#ai-month-spent", "$0.06 of $50.00 · 2 asks, 1 History line")
-    assert has_element?(lv, "#ai-team-#{team.id}", "$0.06")
-    assert has_element?(lv, "#ai-team-#{team.id} td[data-label=Asks]", "2")
+    assert has_element?(lv, "#ai-month-spent", "$0.08 of $50.00 · 3 asks, 1 History line")
+    assert has_element?(lv, "#ai-team-#{team.id}", "$0.08")
+    assert has_element?(lv, "#ai-team-#{team.id} td[data-label=Asks]", "3")
+    assert has_element?(lv, "#ai-ask-#{form.id}", "Claude Sonnet 5.5 · form · used")
     assert has_element?(lv, "#ai-asks", "hours per member this year")
     assert has_element?(lv, "#ai-asks", "add a menu for the period")
-    assert has_element?(lv, "#ai-asks", "Claude Sonnet 5.5 · stopped")
+    assert has_element?(lv, "#ai-asks", "Claude Sonnet 5.5 · report · stopped")
     assert has_element?(lv, "#ai-ask-#{line.id}", "History line: Members")
     assert has_element?(lv, "#ai-ask-#{line.id}", "History line at save")
     refute has_element?(lv, "#ai-not-set-up")

@@ -160,7 +160,11 @@ defmodule Web.Admin.AILive do
       <:col :let={ask} label="Account">{ask.user && ask.user.email}</:col>
       <:col :let={ask} label="Ask">
         {ask_text(ask)}
-        <.hint>{Models.name(ask.model)} · {outcome(ask)}</.hint>
+        <.hint>
+          {[Models.name(ask.model), kind(ask), outcome(ask)]
+          |> Enum.reject(&is_nil/1)
+          |> Enum.join(" · ")}
+        </.hint>
       </:col>
       <:col :let={ask} label="Tokens" class="whitespace-nowrap">
         {Format.number(ask.input_tokens + ask.cache_write_tokens + ask.cache_read_tokens)} in
@@ -203,6 +207,10 @@ defmodule Web.Admin.AILive do
   defp ask_text(%{kind: :history_line, ask: nil}), do: "History line"
   defp ask_text(%{kind: :history_line, ask: name}), do: "History line: #{name}"
   defp ask_text(ask), do: ask.ask
+
+  # The kind an ask is, for its row: a History line's outcome already says it is one.
+  defp kind(%{kind: :history_line}), do: nil
+  defp kind(%{kind: kind}), do: Atom.to_string(kind)
 
   defp outcome(%{kind: :history_line, outcome: :used}), do: "History line at save"
   defp outcome(%{kind: :history_line} = ask), do: "History line at save, #{outcome(ask.outcome)}"
