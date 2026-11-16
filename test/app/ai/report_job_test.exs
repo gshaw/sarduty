@@ -52,16 +52,22 @@ defmodule App.AI.ReportJobTest do
     assert own =~ team.name
   end
 
-  test "an answer is checked against the team's fields, and a new report gets a name" do
+  test "an answer is checked against the team's fields, and a new report gets a name and description" do
     team = team_fixture()
     report = %{query: "select name from members", name: "", about: ""}
     finish = ReportJob.build(team, report, "add standing", @now).finish
 
     assert {:ok,
-            %{query: "select name, standing from members", name: "Standing", note: "Added it."}} =
+            %{
+              query: "select name, standing from members",
+              name: "Standing",
+              about: "Each member and their standing.",
+              note: "Added it."
+            }} =
              finish.(%{
                "query" => "select name, standing from members",
                "name" => "Standing",
+               "about" => "Each member and their standing.",
                "note" => "Added it."
              })
 
@@ -74,17 +80,36 @@ defmodule App.AI.ReportJobTest do
              finish.(%{"query" => "", "name" => "", "note" => "No field has shoe sizes."})
   end
 
-  test "a report that has a name keeps it" do
+  test "a report that has a name and description keeps them" do
     team = team_fixture()
-    report = %{query: "select name from members", name: "Everyone", about: ""}
+    report = %{query: "select name from members", name: "Everyone", about: "All of us."}
     finish = ReportJob.build(team, report, "add standing", @now).finish
 
-    assert {:ok, %{name: nil}} =
+    assert {:ok, %{name: nil, about: nil}} =
              finish.(%{
                "query" => "select name, standing from members",
                "name" => "New",
+               "about" => "New description.",
                "note" => ""
              })
+  end
+
+  test "each ask carries the visit's earlier asks and notes, oldest first" do
+    team = team_fixture()
+    report = %{query: "select name from members", name: "Everyone", about: ""}
+
+    earlier = [
+      %{ask: "add standing", note: "Added standing."},
+      %{ask: "chart it", note: "Added a bar chart."}
+    ]
+
+    job = ReportJob.build(team, report, "add a menu", @now, earlier)
+
+    assert job.prompt =~
+             "- The admin asked: add standing\n  You noted: Added standing.\n- The admin asked: chart it"
+
+    assert job.prompt =~ "The admin asks: add a menu"
+    refute ReportJob.build(team, report, "add a menu", @now).prompt =~ "Earlier asks"
   end
 
   defp prompt(job), do: %{"role" => "user", "content" => job.prompt}

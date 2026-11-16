@@ -2,8 +2,8 @@ defmodule App.AI.ReportJob do
   @moduledoc """
   An AI writing ask on the report editor: the system prompt, the tools, and the check of
   Claude's answer (App.AI.Job). Claude gets the rules, the report language
-  (App.Report.Language), the team's names for things (`names/1`), the report as it
-  stands, and the ask. Never a member, a row, or a count: rows come from the editor's
+  (App.Report.Language), the team's names for things (`names/1`), the visit's earlier
+  asks with its notes, the report as it stands, and the ask. Never a member, a row, or a count: rows come from the editor's
   preview, in SAR Duty, after Claude is done. App.AI.ReportJobTest seeds them and checks
   the request.
   """
@@ -14,6 +14,7 @@ defmodule App.AI.ReportJob do
   alias App.Model.Activity
   alias App.Model.Group
   alias App.Model.Qualification
+  alias App.Model.SavedReport
   alias App.Model.Team
   alias App.Report
   alias App.Report.Catalog
@@ -26,7 +27,8 @@ defmodule App.AI.ReportJob do
   query in SAR Duty's report language, below. A team admin describes what they want, and
   you rewrite the report's query to do it.
 
-  - Start from the query as it stands and change only what the ask needs.
+  - Start from the query as it stands and change only what the ask needs. Earlier asks
+    in this visit come first, with your notes: the query already has their changes.
   - Use only the subjects and fields in the language, and the team's names for groups,
     qualifications, tags, hours tags, and custom fields given after it. Write a custom
     field by its title in backticks.
@@ -34,10 +36,13 @@ defmodule App.AI.ReportJob do
     it gives sensible rows on Coast Range SAR, a made-up team. Its names for things
     differ from this team's: answer with this team's.
   - You never see the team's members or records. The admin runs the report in SAR Duty.
-  - Answer with the whole query, a name, and a note. The name is for a report that has
-    none yet, at most 80 characters; give "" when it has one. The note is one short
-    sentence for the admin in plain words: what you changed, or why you could not. No
-    tool names, no field names in backticks.
+  - Answer with the whole query, a name, a description, and a note. The name and
+    description are for a report that has none yet: the name at most 80 characters, and
+    the description one sentence of at most 200 characters saying what the report shows,
+    such as "Counted members who attended in the last 90 days, with their hours." Give ""
+    for each it already has. The note is one short sentence for the admin in plain
+    words: what you changed, or why you could not. No tool names, no field names in
+    backticks.
   - When nothing in the language or the team's fields answers the ask, give "" as the
     query and say in the note what would work instead.
   """
@@ -47,22 +52,25 @@ defmodule App.AI.ReportJob do
     "properties" => %{
       "query" => %{"type" => "string"},
       "name" => %{"type" => "string"},
+      "about" => %{"type" => "string"},
       "note" => %{"type" => "string"}
     },
-    "required" => ["query", "name", "note"],
+    "required" => ["query", "name", "about", "note"],
     "additionalProperties" => false
   }
 
   @doc """
   The job for `report`, a map of the editor's `query`, `name`, and `about`, and `ask`.
-  Its result is `%{query:, name:, note:}`, with `name` nil unless the report had none.
+  `earlier` is the visit's asks before it, oldest first, each `%{ask:, note:}`. Its
+  result is `%{query:, name:, about:, note:}`, with `name` and `about` nil unless the
+  report had none.
   """
-  def build(%Team{} = team, report, ask, now) do
+  def build(%Team{} = team, report, ask, now, earlier \\ []) do
     %Job{
       kind: :report,
       system: [@rules <> "\n" <> Language.markdown(), catalog(team)],
       tools: [CheckReport, TryReport],
-      prompt: prompt(report, ask),
+      prompt: prompt(report, ask, earlier),
       schema: @schema,
       finish: &finish(&1, team, report, now),
       context: %{team: team, now: now},
@@ -70,9 +78,9 @@ defmodule App.AI.ReportJob do
     }
   end
 
-  defp prompt(report, ask) do
+  defp prompt(report, ask, earlier) do
     """
-    The report as it stands:
+    #{earlier(earlier)}The report as it stands:
     Name: #{blank_or(report[:name], "(none yet)")}
     Description: #{blank_or(report[:about], "(none)")}
     Query:
@@ -82,6 +90,19 @@ defmodule App.AI.ReportJob do
 
     The admin asks: #{ask}
     """
+  end
+
+  defp earlier([]), do: ""
+
+  defp earlier(asks) do
+    lines =
+      Enum.map_join(
+        asks,
+        "\n",
+        &"- The admin asked: #{&1.ask}\n  You noted: #{&1.note || "(none)"}"
+      )
+
+    "Earlier asks in this visit, oldest first:\n#{lines}\n\n"
   end
 
   defp blank_or(value, default) do
@@ -100,16 +121,26 @@ defmodule App.AI.ReportJob do
       {:unchanged, note}
     else
       case Report.check(query, team, %{}, now) do
-        {:ok, _plan} -> {:ok, %{query: query, name: name(output, report), note: note}}
-        {:error, error} -> {:retry, Error.text(error)}
+        {:ok, _plan} ->
+          {:ok,
+           %{
+             query: query,
+             name: new(output, report, :name, SavedReport.max_name()),
+             about: new(output, report, :about, SavedReport.max_about()),
+             note: note
+           }}
+
+        {:error, error} ->
+          {:retry, Error.text(error)}
       end
     end
   end
 
-  defp name(output, report) do
-    with "" <- String.trim(report[:name] || ""),
-         name when name != "" <- String.trim(output["name"] || "") do
-      String.slice(name, 0, 80)
+  # A name or description for a report that has none yet.
+  defp new(output, report, key, max) do
+    with "" <- String.trim(report[key] || ""),
+         text when text != "" <- String.trim(output[Atom.to_string(key)] || "") do
+      String.slice(text, 0, max)
     else
       _has_one -> nil
     end

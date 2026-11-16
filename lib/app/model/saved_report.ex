@@ -34,6 +34,9 @@ defmodule App.Model.SavedReport do
   @doc "The longest a name may be."
   def max_name, do: @max_name
 
+  @doc "The longest a description may be."
+  def max_about, do: @max_about
+
   @doc "The longest What changed may be."
   def max_change, do: @max_change
 
