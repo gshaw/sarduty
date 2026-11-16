@@ -696,6 +696,7 @@ defmodule Web.ReportFormLiveTest do
     alias App.Model.AIAsk
     alias App.Operation.AskAI
     alias App.Operation.SetAISettings
+    alias App.Report.BuiltIn
 
     setup do
       admin = make_admin(AccountsFixtures.user_fixture())
@@ -770,7 +771,7 @@ defmodule Web.ReportFormLiveTest do
       assert has_element?(lv, "#report-start-activities-by-month .icon-chart-column")
       assert has_element?(lv, "#report-start-qualification-coverage .icon-chart-bar")
       refute has_element?(lv, "#report-start-hours-by-member .report-start-chart")
-      count = length(App.Report.BuiltIn.for_team(team))
+      count = length(BuiltIn.for_team(team))
       assert has_element?(lv, "#report-start-all", "All #{count} built-in reports")
 
       lv |> element("#report-write-own") |> render_click()

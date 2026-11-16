@@ -372,7 +372,7 @@ defmodule Web.ReportFormLive do
 
   def handle_event("undo_ask", %{"id" => id}, socket) do
     case Enum.split_while(socket.assigns.ai_asks, &(to_string(&1.id) != id)) do
-      {older, [ask | _newer]} ->
+      {_newer, [ask | older]} ->
         params =
           socket.assigns.params
           |> Map.merge(fields_params(socket.assigns.form))
@@ -393,9 +393,7 @@ defmodule Web.ReportFormLive do
   def handle_event("save", %{"report" => params}, socket) do
     %{current_team: team, current_user: user, saved: saved} = socket.assigns
 
-    agent =
-      socket.assigns.agent ||
-        if(Enum.any?(socket.assigns.ai_asks, & &1.undo?), do: Reports.ai_agent())
+    agent = socket.assigns.agent || ai_agent(socket.assigns.ai_asks)
 
     case SaveReport.call(team, user, saved, params, socket.assigns.now, agent) do
       {:ok, report} ->
@@ -412,6 +410,9 @@ defmodule Web.ReportFormLive do
          |> preview(params)}
     end
   end
+
+  # A save after an ask that changed the report is from AI's draft.
+  defp ai_agent(asks), do: if(Enum.any?(asks, & &1.undo?), do: Reports.ai_agent())
 
   def handle_async(:ai_ask, {:ok, result}, socket) do
     socket = assign(socket, ai_step: nil)
@@ -430,14 +431,14 @@ defmodule Web.ReportFormLive do
   # messages while it does.
   defp start_ask(socket, ask) do
     %{current_team: team, current_user: user, form: form, ai_asks: asks} = socket.assigns
-    report = %{query: form[:query].value, name: form[:name].value, about: form[:about].value}
-    before = fields_params(form)
-    earlier = Enum.map(asks, &Map.take(&1, [:ask, :note]))
+    report = draft_fields(form)
+    earlier = asks |> Enum.reverse() |> Enum.map(&Map.take(&1, [:ask, :note]))
     now = DateTime.utc_now()
     pid = self()
+    pending = %{ask: ask, before: fields_params(form)}
 
     socket
-    |> assign(ai_step: :writing, ai_pending: %{ask: ask, before: before}, ai_form: ask_form(""))
+    |> assign(ai_step: :writing, ai_pending: pending, ai_form: ask_form(""))
     |> start_async(:ai_ask, fn ->
       job = ReportJob.build(team, report, ask, now, earlier)
       AskAI.call(team, user, job, now, on_step: &send(pid, {:ai_step, &1}))
@@ -467,7 +468,7 @@ defmodule Web.ReportFormLive do
     |> put_flash(:error, ai_error_text(reason))
   end
 
-  # The conversation, oldest first. `undo?` is false for an ask that changed nothing.
+  # The conversation, newest first. `undo?` is false for an ask that changed nothing.
   defp add_ask(socket, note, undo?) do
     pending = socket.assigns.ai_pending
 
@@ -479,7 +480,7 @@ defmodule Web.ReportFormLive do
       undo?: undo?
     }
 
-    assign(socket, ai_asks: socket.assigns.ai_asks ++ [entry])
+    assign(socket, ai_asks: [entry | socket.assigns.ai_asks])
   end
 
   # Whether asks are left, now that this one counted.
@@ -848,7 +849,7 @@ defmodule Web.ReportFormLive do
   defp ai_writing(assigns) do
     ~H"""
     <ol :if={@pending || @asks != []} id="report-ai-asks" class="ai-thread">
-      <%= for ask <- @asks do %>
+      <%= for ask <- Enum.reverse(@asks) do %>
         <li id={"report-ai-ask-#{ask.id}"} class="ai-you">{ask.ask}</li>
         <li :if={ask.note || ask.undo?} id={"report-ai-reply-#{ask.id}"} class="ai-reply">
           <p :if={ask.note}>{ask.note}</p>

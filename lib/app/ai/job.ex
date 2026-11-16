@@ -17,5 +17,5 @@ defmodule App.AI.Job do
   """
 
   @enforce_keys [:kind, :system, :tools, :prompt, :schema, :finish, :context, :ask]
-  defstruct @enforce_keys ++ [effort: "medium"]
+  defstruct [:kind, :system, :tools, :prompt, :schema, :finish, :context, :ask, effort: "medium"]
 end

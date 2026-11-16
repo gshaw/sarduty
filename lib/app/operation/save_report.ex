@@ -45,8 +45,7 @@ defmodule App.Operation.SaveReport do
 
     Repo.transact(fn ->
       with {:ok, saved} <- Repo.insert_or_update(changeset) do
-        version = saved |> ReportVersion.build(user.id, change, agent) |> Repo.insert!()
-        if ai_line?, do: WriteHistoryLineWorker.enqueue(version)
+        saved |> ReportVersion.build(user.id, change, agent) |> Repo.insert!() |> line(ai_line?)
         {:ok, saved}
       end
     end)
@@ -63,6 +62,10 @@ defmodule App.Operation.SaveReport do
       report -> {:ok, report |> Changeset.change(deleted_at: nil) |> Repo.update!()}
     end
   end
+
+  # AI writes What changed after the save.
+  defp line(version, true), do: WriteHistoryLineWorker.enqueue(version)
+  defp line(_version, false), do: :ok
 
   defp agent(changeset, nil), do: changeset
   defp agent(changeset, agent), do: Changeset.force_change(changeset, :agent, agent)
