@@ -1,0 +1,83 @@
+<.shell current={:ai_writing}>
+  <h1>AI writing</h1>
+  <p class="lead">Asks in plain words, and AI's replies, beside what it changes.</p>
+
+  <div class="demo">
+    <.ai_editor id="ai-writing-demo" ai?={true} column_id="ai-writing-demo-column">
+      <:column>
+        <.ai_writing
+          id="ai-writing-demo-ai"
+          ai={:ok}
+          form={Phoenix.Component.to_form(%{"ask" => ""}, as: "ai")}
+          asks={SampleData.ai_asks()}
+          label="Describe a change"
+          button="Change it"
+          sees="AI works only with the agency's blank form, the form language, and your team's field names. Agents never see your team's members or records."
+        />
+      </:column>
+      <p class="hint">The page's main part: the report, or the form tried on an activity.</p>
+    </.ai_editor>
+  </div>
+
+  <h3>An ask running</h3>
+  <div class="demo">
+    <div class="measure">
+      <.ai_writing
+        id="ai-writing-demo-running"
+        ai={:ok}
+        form={Phoenix.Component.to_form(%{"ask" => ""}, as: "ai")}
+        asks={[]}
+        pending={%{ask: "Write this form."}}
+        step={:reading}
+        label="Describe a change"
+        button="Change it"
+        sees="AI works only with the report language and your team's field names. Agents never see your team's members or records."
+      />
+    </div>
+  </div>
+
+  <h3>Closed</h3>
+  <div class="demo">
+    <div class="measure">
+      <.ai_writing
+        id="ai-writing-demo-closed"
+        ai={{:error, :paused}}
+        form={Phoenix.Component.to_form(%{"ask" => ""}, as: "ai")}
+        asks={[]}
+        label="Describe a change"
+        button="Change it"
+        closed="AI writing is paused until next month. You can still change the query yourself."
+        sees="AI works only with the report language and your team's field names. Agents never see your team's members or records."
+      />
+    </div>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    A page AI writes for a team admin: Change report and Change form. One column, beside
+    the page's main part from 1024px and above it under that.
+  </p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>
+      The asks show as a conversation, oldest first: each ask on the right, AI's reply under it.
+    </li>
+    <li>A reply that changed the page has Undo, which puts it back to before that ask.</li>
+    <li>A form's reply ends with Left blank: each label AI didn't fill, and why.</li>
+    <li>
+      A running ask shows at once, with its step and Stop. The box clears and its button waits.
+    </li>
+    <li>AI suggests no next asks. Every ask is one someone typed.</li>
+    <li>The hint under the box says what AI sees, and links to How agents work with SAR Duty.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.ai_editor&gt;</code>
+    and <code>&lt;.ai_writing&gt;</code>
+    in <code>Web.Components.AIWriting</code>. The page runs each ask with
+    <code>App.Operation.AskAI</code>
+    and keeps the conversation.
+  </p>
+</.shell>

@@ -36,6 +36,7 @@ defmodule Web.ReportFormLive do
   """
   use Web, :live_view_app_layout
 
+  import Web.Components.AIWriting
   import Web.Components.ReportPage
   import Web.Components.ReportTable
 
@@ -468,10 +469,10 @@ defmodule Web.ReportFormLive do
       <.a :if={!@renaming} id="report-rename" href="#" phx-click="rename">Rename</.a>
     </p>
 
-    <div id="report-editor" class={["report-editor", ai_column?(assigns) && "has-ai"]}>
-      <aside :if={ai_column?(assigns)} id="report-ai" class="report-ai" aria-label="AI writing">
-        <h2 class="subheading mb-4">AI writing</h2>
+    <.ai_editor id="report-editor" ai?={ai_column?(assigns)} column_id="report-ai">
+      <:column>
         <.ai_writing
+          id="report-ai"
           ai={@ai}
           form={@ai_form}
           step={@ai_step}
@@ -479,134 +480,137 @@ defmodule Web.ReportFormLive do
           asks={@ai_asks}
           label="Describe a change"
           button="Change it"
+          closed={ai_closed_text(@ai)}
+          sees={ai_sees()}
         />
-      </aside>
+      </:column>
 
-      <div class="report-main">
-        <section :if={@starting} id="report-start" class="measure mb-8">
-          <.ai_writing
-            ai={@ai}
-            form={@ai_form}
-            step={@ai_step}
-            pending={@ai_pending}
-            asks={@ai_asks}
-            label="Describe the report you want"
-            button="Write it"
+      <section :if={@starting} id="report-start" class="measure mb-8">
+        <.ai_writing
+          id="report-ai"
+          ai={@ai}
+          form={@ai_form}
+          step={@ai_step}
+          pending={@ai_pending}
+          asks={@ai_asks}
+          label="Describe the report you want"
+          button="Write it"
+          closed={ai_closed_text(@ai)}
+          sees={ai_sees()}
+        >
+          For example: members who haven't attended in a year, or a chart of incidents by month.
+        </.ai_writing>
+        <h2 class="subheading mt-8">Or start from a built-in report</h2>
+        <p class="hint mb-3">A click opens a copy to change. No ask is spent.</p>
+        <ul id="report-start-list" class="action-list report-start-list">
+          <li :for={report <- BuiltIn.starters(@current_team)} id={"report-start-#{report.slug}"}>
+            <.a navigate={~p"/teams/#{@current_team}/reports/new?from=#{report.slug}"}>{report.name}</.a>
+            <span :if={chart_icon(report)} class="report-start-chart">
+              <.icon name={chart_icon(report)} size={:sm} />Chart
+            </span>
+          </li>
+        </ul>
+        <p class="mt-3">
+          <.a id="report-start-all" navigate={~p"/teams/#{@current_team}/reports?show=built-in"}>{all_built_in(
+            @current_team
+          )}</.a>
+        </p>
+        <p class="action mt-8">
+          <.a id="report-write-own" href="#" phx-click="write_own">Write the query yourself</.a>
+        </p>
+      </section>
+      <.form for={@form} id="report-form" phx-change="change" phx-submit="save">
+        <.error_summary form={@form} />
+        <div :if={@renaming} id="report-names" phx-mounted={JS.focus(to: "#report_name")}>
+          <.name_fields form={@form} />
+          <div :if={@rename_from} id="report-rename-actions" class="flex gap-3">
+            <.button
+              id="report-rename-keep"
+              type="button"
+              variant={:success}
+              phx-click="rename_keep"
+            >
+              Rename
+            </.button>
+            <.button id="report-rename-cancel" type="button" phx-click="rename_cancel">
+              Cancel
+            </.button>
+          </div>
+        </div>
+        <div :if={!@renaming} id="report-names-hidden" hidden>
+          <.name_fields form={@form} />
+        </div>
+        <div id="report-body" class={(@rename_from || @starting) && "hidden"}>
+          <.input
+            :if={change_field?(assigns)}
+            field={@form[:change]}
+            type="text"
+            label="What changed (optional)"
+            maxlength={SavedReport.max_change()}
           >
-            For example: members who haven't attended in a year, or a chart of incidents by month.
-          </.ai_writing>
-          <h2 class="subheading mt-8">Or start from a built-in report</h2>
-          <p class="hint mb-3">A click opens a copy to change. No ask is spent.</p>
-          <ul id="report-start-list" class="action-list report-start-list">
-            <li :for={report <- BuiltIn.starters(@current_team)} id={"report-start-#{report.slug}"}>
-              <.a navigate={~p"/teams/#{@current_team}/reports/new?from=#{report.slug}"}>{report.name}</.a>
-              <span :if={chart_icon(report)} class="report-start-chart">
-                <.icon name={chart_icon(report)} size={:sm} />Chart
-              </span>
-            </li>
-          </ul>
-          <p class="mt-3">
-            <.a id="report-start-all" navigate={~p"/teams/#{@current_team}/reports?show=built-in"}>{all_built_in(
-              @current_team
-            )}</.a>
-          </p>
-          <p class="action mt-8">
-            <.a id="report-write-own" href="#" phx-click="write_own">Write the query yourself</.a>
-          </p>
-        </section>
-        <.form for={@form} id="report-form" phx-change="change" phx-submit="save">
-          <.error_summary form={@form} />
-          <div :if={@renaming} id="report-names" phx-mounted={JS.focus(to: "#report_name")}>
-            <.name_fields form={@form} />
-            <div :if={@rename_from} id="report-rename-actions" class="flex gap-3">
-              <.button
-                id="report-rename-keep"
-                type="button"
-                variant={:success}
-                phx-click="rename_keep"
-              >
-                Rename
-              </.button>
-              <.button id="report-rename-cancel" type="button" phx-click="rename_cancel">
-                Cancel
-              </.button>
-            </div>
-          </div>
-          <div :if={!@renaming} id="report-names-hidden" hidden>
-            <.name_fields form={@form} />
-          </div>
-          <div id="report-body" class={(@rename_from || @starting) && "hidden"}>
-            <.input
-              :if={change_field?(assigns)}
-              field={@form[:change]}
-              type="text"
-              label="What changed (optional)"
-              maxlength={SavedReport.max_change()}
-            >
-              One line in the report's History.
-            </.input>
+            One line in the report's History.
+          </.input>
 
-            <p :if={query_toggle?(assigns)} id="report-query-toggle" class="action mb-6">
-              <.a
-                :if={!query_shown?(assigns)}
-                id="report-show-query"
-                href="#"
-                phx-click="show_query"
-              >Show query</.a>
-              <.a
-                :if={query_shown?(assigns)}
-                id="report-hide-query"
-                href="#"
-                phx-click="hide_query"
-              >Hide query</.a>
-            </p>
-            <.input
-              field={@form[:query]}
-              field_class={!query_shown?(assigns) && "hidden"}
-              type="textarea"
-              label="Query"
-              rows="9"
-              class="font-mono"
-              phx-debounce="300"
-              spellcheck="false"
-            >
-              Write :year for a value you pick each time it runs. For one member, use their ID: member.ref_id = '112'.
-            </.input>
-            <.field_buttons
-              :if={query_shown?(assigns) and !@rename_from}
-              subject={@subject}
-              context={@context}
+          <p :if={query_toggle?(assigns)} id="report-query-toggle" class="action mb-6">
+            <.a
+              :if={!query_shown?(assigns)}
+              id="report-show-query"
+              href="#"
+              phx-click="show_query"
+            >Show query</.a>
+            <.a
+              :if={query_shown?(assigns)}
+              id="report-hide-query"
+              href="#"
+              phx-click="hide_query"
+            >Hide query</.a>
+          </p>
+          <.input
+            field={@form[:query]}
+            field_class={!query_shown?(assigns) && "hidden"}
+            type="textarea"
+            label="Query"
+            rows="9"
+            class="font-mono"
+            phx-debounce="300"
+            spellcheck="false"
+          >
+            Write :year for a value you pick each time it runs. For one member, use their ID: member.ref_id = '112'.
+          </.input>
+          <.field_buttons
+            :if={query_shown?(assigns) and !@rename_from}
+            subject={@subject}
+            context={@context}
+            team={@current_team}
+          />
+
+          <.report_value
+            :for={value <- (@view && @view.values) || []}
+            value={value}
+            id={"report-form-value-#{value.name}"}
+            name={"report[values][#{value.name}]"}
+          />
+          <input
+            :for={{name, value} <- picks(@view)}
+            type="hidden"
+            name={"report[values][#{name}]"}
+            value={value}
+          />
+
+          <div :if={@view} id="report-preview">
+            <.report_page
+              id="report-preview"
+              view={@view}
+              records={@records}
               team={@current_team}
+              now={@now}
+              maps_app={@current_user.maps_app}
+              count={preview_count(@view, query_shown?(assigns))}
             />
-
-            <.report_value
-              :for={value <- (@view && @view.values) || []}
-              value={value}
-              id={"report-form-value-#{value.name}"}
-              name={"report[values][#{value.name}]"}
-            />
-            <input
-              :for={{name, value} <- picks(@view)}
-              type="hidden"
-              name={"report[values][#{name}]"}
-              value={value}
-            />
-
-            <div :if={@view} id="report-preview">
-              <.report_page
-                id="report-preview"
-                view={@view}
-                records={@records}
-                team={@current_team}
-                now={@now}
-                maps_app={@current_user.maps_app}
-                count={preview_count(@view, query_shown?(assigns))}
-              />
-            </div>
           </div>
-        </.form>
-      </div>
-    </div>
+        </div>
+      </.form>
+    </.ai_editor>
     """
   end
 
@@ -657,63 +661,11 @@ defmodule Web.ReportFormLive do
   defp field_id(%{custom: %{ids: ids}}), do: "custom-field-#{Enum.join(ids, "-")}"
   defp field_id(field), do: "field-#{field.name}"
 
-  attr :ai, :any, required: true
-  attr :form, :map, required: true
-  attr :step, :atom, default: nil
-  attr :pending, :map, default: nil
-  attr :asks, :list, required: true
-  attr :label, :string, required: true
-  attr :button, :string, required: true
-  slot :inner_block
+  defp ai_sees,
+    do:
+      "AI works only with the report language and your team's field names. Agents never see your team's members or records."
 
-  # The conversation, oldest first: each ask, then AI's note with Undo when it changed
-  # the report, and the running ask with its step and Stop. Then the describe box and
-  # what AI sees.
-  defp ai_writing(assigns) do
-    ~H"""
-    <ol :if={@pending || @asks != []} id="report-ai-asks" class="ai-thread">
-      <%= for ask <- Enum.reverse(@asks) do %>
-        <li id={"report-ai-ask-#{ask.id}"} class="ai-you">{ask.ask}</li>
-        <li :if={ask.note || ask.undo?} id={"report-ai-reply-#{ask.id}"} class="ai-reply">
-          <p :if={ask.note}>{ask.note}</p>
-          <.button
-            :if={ask.undo?}
-            id={"report-ai-undo-#{ask.id}"}
-            type="button"
-            size={:sm}
-            phx-click="undo_ask"
-            phx-value-id={ask.id}
-          >
-            Undo
-          </.button>
-        </li>
-      <% end %>
-      <li :if={@pending} id="report-ai-ask-running" class="ai-you">{@pending.ask}</li>
-      <li :if={@pending} id="report-ai-step" class="ai-step">
-        <.spinner>{step_text(@step)}</.spinner>
-        <.button id="report-ai-stop" type="button" size={:sm} phx-click="cancel_ask">
-          Stop
-        </.button>
-      </li>
-    </ol>
-    <.form :if={@ai == :ok} for={@form} id="report-ai-form" phx-submit="ask">
-      <.input field={@form[:ask]} type="textarea" rows="3" label={@label}>
-        {render_slot(@inner_block)}
-      </.input>
-      <.button id="report-ai-ask" variant={:success} disabled={@step != nil}>{@button}</.button>
-    </.form>
-    <p :if={@ai != :ok} id="report-ai-closed" class="hint">{ai_closed_text(@ai)}</p>
-    <p class="hint mt-4">
-      AI works only with the report language and your team's field names. Agents never see your team's members or records.
-      <.a id="report-ai-agents-link" href={~p"/agents"} external={true}>How agents work with SAR Duty</.a>
-    </p>
-    """
-  end
-
-  defp step_text(:writing), do: "Writing…"
-  defp step_text(:checking), do: "Checking it…"
-  defp step_text(:trying), do: "Trying it on made-up data…"
-
+  defp ai_closed_text(:ok), do: nil
   defp ai_closed_text({:error, :daily_limit}), do: ai_error_text(:daily_limit)
   defp ai_closed_text({:error, reason}), do: ai_error_text(reason)
 

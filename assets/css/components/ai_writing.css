@@ -1,0 +1,25 @@
+@layer components {
+  /* AI writing (docs/ai-writing.md): its column sits beside the page's main part from
+     1024px, where the report editor's help column was, and above it under that. Change
+     report and Change form share it (#1089). */
+  .ai-editor { display: flex; flex-direction: column; gap: var(--sp-8); }
+  .ai-editor > .ai-main { min-width: 0; }
+  @media (min-width: 1024px) {
+    .ai-editor.has-ai { flex-direction: row-reverse; gap: var(--sp-6); }
+    .ai-editor.has-ai > .ai-main { flex: 1; }
+    .ai-editor.has-ai > .ai-column {
+      width: 33%; max-width: var(--sidebar-max); flex-shrink: 0; align-self: flex-start;
+      border-left: 1px solid var(--border-subtle); padding-left: var(--sp-4);
+    }
+  }
+
+  /* The conversation: each ask on the right, AI's reply under it. */
+  .ai-thread { list-style: none; margin: 0 0 var(--sp-6); padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+  .ai-thread p { margin: 0; }
+  .ai-you { align-self: flex-end; max-width: 90%; padding: var(--sp-2) var(--sp-3); background: var(--surface-alt); border-radius: var(--radius); overflow-wrap: anywhere; }
+  .ai-reply .btn { margin-top: var(--sp-2); }
+  .ai-blank { margin-top: var(--sp-2); }
+  .ai-blank ul { margin: var(--sp-1) 0 0; padding-left: var(--sp-4); list-style: disc; }
+  .ai-step { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); color: var(--text-muted); }
+  .ai-writing-form textarea { width: 100%; }
+}

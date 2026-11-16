@@ -2,6 +2,7 @@ defmodule Web.StyleGuideHTML do
   use Web, :html
 
   import Web.Components.ActionBar
+  import Web.Components.AIWriting
   import Web.Components.ActivityMap, only: [activity_map: 1]
   import Web.Components.ActivityPanel
   import Web.Components.ActivityTable
@@ -80,6 +81,8 @@ defmodule Web.StyleGuideHTML do
        [
          {:action_bar, "Action bar", "The one button for a long list of checked rows."},
          {:activity_panel, "Activity panel", "An activity's day and time, counts, and reply."},
+         {:ai_writing, "AI writing",
+          "Asks in plain words, and AI's replies, beside what it changes."},
          {:band, "Band", "The result of a check, big and in colour."},
          {:banner, "Banner", "Something true about the page until it changes."},
          {:breadcrumbs, "Breadcrumbs", "Where a page sits under its section."},
