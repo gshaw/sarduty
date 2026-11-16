@@ -29,11 +29,41 @@ defmodule Web.Admin.AILiveTest do
       asked_at: DateTime.utc_now()
     )
 
+    AIAsk.record!(
+      team_id: team.id,
+      user_id: admin.id,
+      kind: :report,
+      ask: "add a menu for the period",
+      model: "claude-sonnet-5-5",
+      input_tokens: 9_000,
+      cost_microdollars: 18_000,
+      outcome: :stopped,
+      asked_at: DateTime.utc_now()
+    )
+
+    line =
+      AIAsk.record!(
+        team_id: team.id,
+        user_id: admin.id,
+        kind: :history_line,
+        ask: "Members",
+        model: "claude-sonnet-5-5",
+        input_tokens: 900,
+        cost_microdollars: 2_000,
+        outcome: :used,
+        asked_at: DateTime.utc_now()
+      )
+
     {:ok, lv, _html} = conn |> log_in_user(admin) |> live(~p"/admin/ai")
 
-    assert has_element?(lv, "#ai-month-spent", "$0.04 of $50.00")
-    assert has_element?(lv, "#ai-team-#{team.id}", "$0.04")
+    assert has_element?(lv, "#ai-month-spent", "$0.06 of $50.00 · 2 asks, 1 History line")
+    assert has_element?(lv, "#ai-team-#{team.id}", "$0.06")
+    assert has_element?(lv, "#ai-team-#{team.id} td[data-label=Asks]", "2")
     assert has_element?(lv, "#ai-asks", "hours per member this year")
+    assert has_element?(lv, "#ai-asks", "add a menu for the period")
+    assert has_element?(lv, "#ai-asks", "Claude Sonnet 5.5 · stopped")
+    assert has_element?(lv, "#ai-ask-#{line.id}", "History line: Members")
+    assert has_element?(lv, "#ai-ask-#{line.id}", "History line at save")
     refute has_element?(lv, "#ai-not-set-up")
 
     lv

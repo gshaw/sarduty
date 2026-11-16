@@ -12,8 +12,10 @@ defmodule App.AI.Job do
   - `finish`: takes the answer as a map and gives `{:ok, result}`, `{:unchanged, note}`,
     or `{:retry, mistake}`, which goes back to Claude once.
   - `context`: what tools get, `%{team:, now:}`.
+  - `ask`: the words kept on the `ai_asks` row.
+  - `effort`: how hard the model thinks, `"medium"` unless the job is small.
   """
 
   @enforce_keys [:kind, :system, :tools, :prompt, :schema, :finish, :context, :ask]
-  defstruct @enforce_keys
+  defstruct @enforce_keys ++ [effort: "medium"]
 end

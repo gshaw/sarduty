@@ -2,10 +2,17 @@ defmodule App.Model.AIAsk do
   @moduledoc """
   One AI writing ask (App.Operation.AskAI): who asked, on which team, for what, and what
   it cost. Adminland › AI writing sums these for this month's spend against the budget,
-  and a team's asks today against the daily limit. An ask that never reached Claude, a
-  limit or the budget, has no row. The ask's words can hold whatever a team admin typed,
-  so they are redacted from error reports and cleared after 90 days; the numbers stay.
-  Delete team deletes a team's asks.
+  and a team's asks today against the daily limit. A row is written as the ask starts,
+  as stopped, and its tokens and cost as each request returns, so an ask stopped or cut
+  off keeps what it spent; the end sets how it ended. An ask that never reached Claude, a
+  limit or the budget, has no row.
+
+  Kind `report` is an ask on the report editor. Kind `history_line` is the line AI writes
+  in a report's History after a save (App.Worker.WriteHistoryLineWorker): it counts
+  toward the budget, never the daily limit, and Adminland counts it apart from asks.
+
+  The ask's words can hold whatever a team admin typed, so they are redacted from error
+  reports and cleared after 90 days; the numbers stay. Delete team deletes a team's asks.
   """
   use App, :model
 
@@ -14,8 +21,8 @@ defmodule App.Model.AIAsk do
   alias App.Model.Team
   alias App.Repo
 
-  @outcomes [:used, :unchanged, :refused_by_checks, :refused, :failed]
-  @kinds [:report]
+  @outcomes [:used, :unchanged, :refused_by_checks, :refused, :failed, :stopped]
+  @kinds [:report, :history_line]
   @words_days 90
 
   # SAR Duty's own month and day, in BC, as Adminland's other times are.
@@ -44,6 +51,9 @@ defmodule App.Model.AIAsk do
   @doc "Records an ask. `attrs` takes every field but the id."
   def record!(attrs), do: AIAsk |> struct!(Map.new(attrs)) |> Repo.insert!()
 
+  @doc "Sets `attrs` on a recorded ask: its tokens and cost so far, or how it ended."
+  def update!(%AIAsk{} = ask, attrs), do: ask |> change(attrs) |> Repo.update!()
+
   @doc "The start of `now`'s month in BC, in UTC."
   def month_start(now) do
     local = DateTime.shift_zone!(now, @timezone)
@@ -69,18 +79,19 @@ defmodule App.Model.AIAsk do
     AIAsk |> where([a], a.asked_at >= ^since) |> Repo.aggregate(:sum, :cost_microdollars) || 0
   end
 
-  @doc "How many asks `team` made today, BC time."
+  @doc "How many asks `team` made today, BC time. History lines don't count."
   def count_today(%Team{id: team_id}, now) do
     since = day_start(now)
 
     AIAsk
-    |> where([a], a.team_id == ^team_id and a.asked_at >= ^since)
+    |> where([a], a.team_id == ^team_id and a.asked_at >= ^since and a.kind != ^:history_line)
     |> Repo.aggregate(:count)
   end
 
   @doc """
   This month's asks summed by team, then by person: `%{teams: rows, people: rows}`,
-  each row with its asks, tokens, and cost, costliest first.
+  each row with its asks, its History lines, tokens, and cost, costliest first. Tokens
+  and cost cover both.
   """
   def month_summary(now) do
     since = month_start(now)
@@ -109,7 +120,8 @@ defmodule App.Model.AIAsk do
 
   defp sums(query) do
     select_merge(query, [a], %{
-      asks: count(a.id),
+      asks: sum(fragment("CASE WHEN ? = 'history_line' THEN 0 ELSE 1 END", a.kind)),
+      history_lines: sum(fragment("CASE WHEN ? = 'history_line' THEN 1 ELSE 0 END", a.kind)),
       input: sum(a.input_tokens),
       cache_write: sum(a.cache_write_tokens),
       cache_read: sum(a.cache_read_tokens),

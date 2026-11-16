@@ -6,10 +6,12 @@ defmodule App.Operation.AskAI do
   row in `ai_asks`: the admin saves the report.
 
   Before Claude is called: AI writing is open to the user (App.Model.AISettings), the
-  key is set, the team has asks left today, and this month's asks cost less than the
-  budget. Each ask starts fresh, with the text as it stands: no conversation is kept.
-  At most 6 requests per ask. A mistake in the answer goes back once, unseen; a second
-  keeps the text as it was.
+  key is set, the team has asks left today (not for a History line), and this month's
+  asks cost less than the budget. The ask's row is written as it starts and its usage as
+  each request returns, so Stop, which kills the ask's task, still counts what it spent.
+  Each ask sends the text as it stands, with the job's earlier asks in its prompt. At
+  most 6 requests per ask. A mistake in the answer goes back once, unseen; a second keeps
+  the text as it was.
 
   `request/3`, `next_step/1`, and `usage/1` are pure, for tests. `call/5` runs the loop.
   """
@@ -34,13 +36,17 @@ defmodule App.Operation.AskAI do
   @doc """
   Whether `user` can ask on `team` now: `:ok`, or `{:error, reason}` with reason `:off`
   (not open to them, or no key here), `:daily_limit`, or `:paused` (the budget is spent).
+  `kind` is the job's: a `:history_line` skips the daily limit.
   """
-  def check(%Team{} = team, %User{} = user, now, settings \\ AISettings.get()) do
+  def check(%Team{} = team, %User{} = user, now, kind \\ :report),
+    do: check(team, user, now, kind, AISettings.get())
+
+  defp check(team, user, now, kind, settings) do
     cond do
       not (Claude.configured?() and AISettings.open_to?(settings, user)) ->
         {:error, :off}
 
-      AIAsk.count_today(team, now) >= @asks_per_day ->
+      kind != :history_line and AIAsk.count_today(team, now) >= @asks_per_day ->
         {:error, :daily_limit}
 
       AIAsk.month_cost_microdollars(now) >= settings.monthly_budget_cents * 10_000 ->
@@ -60,33 +66,54 @@ defmodule App.Operation.AskAI do
   def call(%Team{} = team, %User{} = user, %Job{} = job, now, opts \\ []) do
     settings = AISettings.get()
 
-    with :ok <- check(team, user, now, settings) do
-      started = System.monotonic_time(:millisecond)
+    with :ok <- check(team, user, now, job.kind, settings) do
       on_step = Keyword.get(opts, :on_step, fn _step -> :ok end)
       history = [%{"role" => "user", "content" => job.prompt}]
-      acc = %{usage: %{input: 0, cache_write: 0, cache_read: 0, output: 0}, requests: 0}
+
+      row =
+        AIAsk.record!(
+          team_id: team.id,
+          user_id: user.id,
+          kind: job.kind,
+          ask: job.ask,
+          model: settings.model,
+          outcome: :stopped,
+          duration_ms: 0,
+          asked_at: now
+        )
+
+      acc = %{
+        usage: %{input: 0, cache_write: 0, cache_read: 0, output: 0},
+        requests: 0,
+        row: row,
+        started: System.monotonic_time(:millisecond)
+      }
 
       {result, acc} = loop(settings, job, history, acc, false, on_step)
-
-      AIAsk.record!(
-        team_id: team.id,
-        user_id: user.id,
-        kind: job.kind,
-        ask: job.ask,
-        model: settings.model,
-        input_tokens: acc.usage.input,
-        cache_write_tokens: acc.usage.cache_write,
-        cache_read_tokens: acc.usage.cache_read,
-        output_tokens: acc.usage.output,
-        cost_microdollars: Models.cost_microdollars(settings.model, acc.usage),
-        turns: acc.requests,
-        duration_ms: System.monotonic_time(:millisecond) - started,
-        outcome: outcome(result),
-        asked_at: now
-      )
-
+      AIAsk.update!(acc.row, outcome: outcome(result), duration_ms: took(acc))
       result
     end
+  end
+
+  defp took(acc), do: System.monotonic_time(:millisecond) - acc.started
+
+  # Each response's usage goes on the row as it returns.
+  defp count(acc, response, settings) do
+    usage = add(acc.usage, usage(response))
+    requests = acc.requests + 1
+
+    row =
+      AIAsk.update!(acc.row,
+        input_tokens: usage.input,
+        cache_write_tokens: usage.cache_write,
+        cache_read_tokens: usage.cache_read,
+        output_tokens: usage.output,
+        cost_microdollars: Models.cost_microdollars(settings.model, usage),
+        turns: requests,
+        duration_ms: took(acc)
+      )
+
+    %{acc | usage: usage, requests: requests, row: row}
   end
 
   # `history` is the conversation so far, newest first.
@@ -99,7 +126,7 @@ defmodule App.Operation.AskAI do
 
     case settings |> request(job, Enum.reverse(history)) |> Claude.create_message() do
       {:ok, response} ->
-        acc = %{acc | usage: add(acc.usage, usage(response)), requests: acc.requests + 1}
+        acc = count(acc, response, settings)
         history = [%{"role" => "assistant", "content" => response["content"]} | history]
         answer(next_step(response), settings, job, history, acc, retried, on_step)
 
@@ -181,7 +208,7 @@ defmodule App.Operation.AskAI do
   @doc """
   The Messages API request for `job` on `settings`' model, with `messages` so far. Runs
   in the US. Every system part is a cache breakpoint. Thinking is left to the model
-  (adaptive on every model listed) at effort medium.
+  (adaptive on every model listed) at the job's effort. A job with no tools sends none.
   """
   def request(%AISettings{} = settings, %Job{} = job, messages) do
     %{
@@ -189,7 +216,7 @@ defmodule App.Operation.AskAI do
       "max_tokens" => @max_tokens,
       "inference_geo" => "us",
       "output_config" => %{
-        "effort" => "medium",
+        "effort" => job.effort,
         "format" => %{"type" => "json_schema", "schema" => job.schema}
       },
       "system" =>
@@ -197,10 +224,15 @@ defmodule App.Operation.AskAI do
           job.system,
           &%{"type" => "text", "text" => &1, "cache_control" => %{"type" => "ephemeral"}}
         ),
-      "tools" => Enum.map(job.tools, &Tool.definition/1),
       "messages" => messages
     }
+    |> put_tools(job.tools)
   end
+
+  defp put_tools(request, []), do: request
+
+  defp put_tools(request, tools),
+    do: Map.put(request, "tools", Enum.map(tools, &Tool.definition/1))
 
   @doc """
   What a response asks for next: `{:tools, uses}`, `{:answer, map}`, or

@@ -13,7 +13,8 @@ defmodule Web.Admin.AILive do
 
   # Adminland › AI writing (docs/ai-writing.md): who gets it, which Claude model, and the
   # monthly budget, then this month's spend by team and by person, and the newest asks.
-  # Everything is summed from ai_asks. Dollars show here only, never to a team.
+  # Everything is summed from ai_asks. A History line AI wrote at a save has a row too:
+  # it counts in the cost, apart from the asks. Dollars show here only, never to a team.
   def mount(_params, _session, socket) do
     {:ok,
      socket
@@ -115,10 +116,8 @@ defmodule Web.Admin.AILive do
       <section class="content-2/3" aria-labelledby="ai-month-title">
         <h2 id="ai-month-title" class="heading">This month</h2>
         <p id="ai-month-spent" class="mb-2">
-          {Format.money(dollars(@spent))} of {Format.money(div(@settings.monthly_budget_cents, 100))} · {Format.count(
-            Enum.sum(Enum.map(@teams, & &1.asks)),
-            one: "%d ask",
-            many: "%d asks"
+          {Format.money(dollars(@spent))} of {Format.money(div(@settings.monthly_budget_cents, 100))} · {month_count(
+            @teams
           )}
         </p>
         <p :if={paused?(@spent, @settings)} id="ai-paused" class="warning-text mb-2">
@@ -160,8 +159,8 @@ defmodule Web.Admin.AILive do
       <:col :let={ask} label="Team">{ask.team.name}</:col>
       <:col :let={ask} label="Account">{ask.user && ask.user.email}</:col>
       <:col :let={ask} label="Ask">
-        {ask.ask}
-        <.hint>{Models.name(ask.model)} · {outcome(ask.outcome)}</.hint>
+        {ask_text(ask)}
+        <.hint>{Models.name(ask.model)} · {outcome(ask)}</.hint>
       </:col>
       <:col :let={ask} label="Tokens" class="whitespace-nowrap">
         {Format.number(ask.input_tokens + ask.cache_write_tokens + ask.cache_read_tokens)} in
@@ -189,9 +188,29 @@ defmodule Web.Admin.AILive do
 
   defp paused?(spent, settings), do: spent >= settings.monthly_budget_cents * 10_000
 
+  # "3 asks, 1 History line": History lines apart from asks.
+  defp month_count(teams) do
+    asks = teams |> Enum.map(& &1.asks) |> Enum.sum()
+    lines = teams |> Enum.map(& &1.history_lines) |> Enum.sum()
+    asks_text = Format.count(asks, one: "%d ask", many: "%d asks")
+
+    if lines == 0,
+      do: asks_text,
+      else:
+        "#{asks_text}, #{Format.count(lines, one: "%d History line", many: "%d History lines")}"
+  end
+
+  defp ask_text(%{kind: :history_line, ask: nil}), do: "History line"
+  defp ask_text(%{kind: :history_line, ask: name}), do: "History line: #{name}"
+  defp ask_text(ask), do: ask.ask
+
+  defp outcome(%{kind: :history_line, outcome: :used}), do: "History line at save"
+  defp outcome(%{kind: :history_line} = ask), do: "History line at save, #{outcome(ask.outcome)}"
+  defp outcome(%{outcome: outcome}), do: outcome(outcome)
   defp outcome(:used), do: "used"
   defp outcome(:unchanged), do: "nothing changed"
   defp outcome(:refused_by_checks), do: "failed SAR Duty's checks"
   defp outcome(:refused), do: "declined"
   defp outcome(:failed), do: "failed"
+  defp outcome(:stopped), do: "stopped"
 end
