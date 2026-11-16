@@ -797,10 +797,6 @@ defmodule Web.ReportFormLiveTest do
       |> form("#report-ai-form", ai: %{ask: "when did each member last come"})
       |> render_submit()
 
-      assert has_element?(lv, "#report-ai-ask-running", "when did each member last come")
-      assert has_element?(lv, "#report-ai-step #report-ai-stop")
-      assert has_element?(lv, "#report-ai-ask[disabled]")
-
       render_async(lv)
 
       assert has_element?(lv, "#report_query", "select name, last_attended from members")
@@ -858,6 +854,13 @@ defmodule Web.ReportFormLiveTest do
 
       lv |> form("#report-ai-form", ai: %{ask: "add a menu for the period"}) |> render_submit()
       assert_receive :waiting
+
+      # The ask shows at once, with its step and Stop, and the box waits.
+      assert has_element?(lv, "#report-ai-ask-running", "add a menu for the period")
+      assert has_element?(lv, "#report-ai-step #report-ai-stop")
+      assert has_element?(lv, "#report-ai-ask[disabled]")
+      refute has_element?(lv, "#ai_ask", "add a menu for the period")
+
       lv |> element("#report-ai-stop") |> render_click()
 
       assert has_element?(lv, "#ai_ask", "add a menu for the period")
