@@ -22,4 +22,6 @@
   .ai-blank ul { margin: var(--sp-1) 0 0; padding-left: var(--sp-4); list-style: disc; }
   .ai-step { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); color: var(--text-muted); }
   .ai-writing-form textarea { width: 100%; }
+  /* Enter sends only where there's a keyboard with Shift (assets/js/ask_enter.js). */
+  @media (pointer: coarse) { .ai-enter-hint { display: none; } }
 }

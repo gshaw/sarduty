@@ -96,9 +96,17 @@ defmodule Web.Components.AIWriting do
       </li>
     </ol>
     <.form :if={@ai == :ok} for={@form} id={"#{@id}-form"} class="ai-writing-form" phx-submit="ask">
-      <.input field={@form[:ask]} type="textarea" rows="3" label={@label}>
+      <.input
+        field={@form[:ask]}
+        type="textarea"
+        rows="3"
+        label={@label}
+        field_class="mb-1"
+        phx-hook="AskEnter"
+      >
         {render_slot(@inner_block)}
       </.input>
+      <p class="hint ai-enter-hint mb-4">Enter sends it. Shift+Enter starts a new line.</p>
       <.button id={"#{@id}-ask"} variant={:success} disabled={@pending != nil}>{@button}</.button>
     </.form>
     <p :if={@ai != :ok} id={"#{@id}-closed"} class="hint">{@closed}</p>

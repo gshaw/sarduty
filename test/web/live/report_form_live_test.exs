@@ -613,6 +613,8 @@ defmodule Web.ReportFormLiveTest do
       refute has_element?(lv, "#report-body.hidden")
       refute has_element?(lv, ".hidden #report_query")
       assert has_element?(lv, "#report-ai #report-ai-form", "Ask AI")
+      assert has_element?(lv, "textarea[name='ai[ask]'][phx-hook=AskEnter]")
+      assert has_element?(lv, "#report-ai-form .ai-enter-hint", "Enter sends it.")
     end
 
     test "an ask writes the query, name, and description, the next carries it, and Undo puts it back",

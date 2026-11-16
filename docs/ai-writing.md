@@ -23,6 +23,9 @@ On New report and Change report, for a user AI writing is open to
   mistake in it opens it. With the query, the fields are buttons under it, with How to
   write a report, What each chart takes, and What each field means. The preview's count
   drops "runs as you type" while the query is hidden.
+- **Enter sends** the ask, and Shift+Enter starts a new line (assets/js/ask_enter.js).
+  On a touch screen, return starts a new line and Ask sends, and the hint saying so
+  hides.
 - The ask shows at once, with Thinking… and the seconds it has taken under it, and
   Stop. One steady line: an ask's own steps (writing, checking, trying) change too fast
   to read. The box clears and Ask waits until AI answers.
