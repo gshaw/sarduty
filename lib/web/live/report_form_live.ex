@@ -747,7 +747,10 @@ defmodule Web.ReportFormLive do
           rows="2"
           label={if @asks == [] and !@pending, do: "Describe it", else: "Describe a change"}
         >
-          AI writes the query from your team's field names. It never sees your members or records.
+          AI works only with the report language and your team's field names. It never sees your team's members or records.
+          <.a id="report-ai-agents-link" href={~p"/agents"} external={true}>
+            How agents work with SAR Duty
+          </.a>
         </.input>
         <.button id="report-ai-ask" variant={:success} disabled={@step != nil}>
           {if @asks == [] and !@pending, do: "Write it", else: "Change it"}
