@@ -680,4 +680,118 @@ defmodule Web.ReportFormLiveTest do
              )
     end
   end
+
+  describe "AI writing" do
+    alias App.AccountsFixtures
+    alias App.Model.AIAsk
+    alias App.Operation.AskAI
+    alias App.Operation.SetAISettings
+
+    setup do
+      admin = make_admin(AccountsFixtures.user_fixture())
+      params = %{access: "everyone", model: "claude-sonnet-5-5", monthly_budget: "50"}
+      {:ok, _settings} = SetAISettings.call(params, admin)
+      :ok
+    end
+
+    # Claude checks the query once, then answers with it.
+    defp stub_claude(query, note) do
+      Req.Test.stub(App.Adapter.Claude, fn conn ->
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+        request = Jason.decode!(body)
+
+        response =
+          case List.last(request["messages"]) do
+            %{"content" => [%{"type" => "tool_result"} | _]} ->
+              %{
+                "stop_reason" => "end_turn",
+                "content" => [
+                  %{
+                    "type" => "text",
+                    "text" => Jason.encode!(%{"query" => query, "name" => "", "note" => note})
+                  }
+                ],
+                "usage" => %{"input_tokens" => 900, "output_tokens" => 300}
+              }
+
+            _first ->
+              %{
+                "stop_reason" => "tool_use",
+                "content" => [
+                  %{
+                    "type" => "tool_use",
+                    "id" => "call_1",
+                    "name" => "check_report",
+                    "input" => %{"query" => query}
+                  }
+                ],
+                "usage" => %{"input_tokens" => 9_000, "output_tokens" => 200}
+              }
+          end
+
+        Req.Test.json(conn, response)
+      end)
+    end
+
+    test "an ask writes the query, This visit lists it, and Undo puts it back", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+
+      stub_claude(
+        "select name, last_attended from members order by name",
+        "Shows when each member last came."
+      )
+
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+
+      assert has_element?(lv, "#report-ai-form", "Describe it")
+
+      lv
+      |> form("#report-ai-form", ai: %{ask: "when did each member last come"})
+      |> render_submit()
+
+      render_async(lv)
+
+      assert has_element?(lv, "#report_query", "select name, last_attended from members")
+      assert has_element?(lv, "#report-ai-note", "Shows when each member last came.")
+      assert has_element?(lv, "#report-ai-asks", "when did each member last come")
+      assert has_element?(lv, "#report-ai-form", "Describe a change")
+
+      ask = App.Repo.get_by!(AIAsk, team_id: team.id)
+      assert ask.outcome == :used
+      assert ask.turns == 2
+      assert ask.input_tokens == 9_900
+      assert ask.cost_microdollars > 0
+
+      lv |> element("#report-ai-asks a", "Undo") |> render_click()
+      assert has_element?(lv, "#report_query", "where counted = true")
+      refute has_element?(lv, "#report-ai-asks")
+    end
+
+    test "a team that used today's asks is told so", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+
+      for _n <- 1..AskAI.asks_per_day() do
+        AIAsk.record!(
+          team_id: team.id,
+          kind: :report,
+          model: "claude-sonnet-5-5",
+          outcome: :used,
+          asked_at: DateTime.utc_now()
+        )
+      end
+
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+      refute has_element?(lv, "#report-ai-form")
+      assert has_element?(lv, "#report-ai-closed", "used today's 30 asks")
+    end
+
+    test "with AI writing off there is no box", %{conn: conn} do
+      admin = make_admin(AccountsFixtures.user_fixture())
+      params = %{access: "off", model: "claude-sonnet-5-5", monthly_budget: "50"}
+      {:ok, _settings} = SetAISettings.call(params, admin)
+      %{user: user, team: team} = user_with_team_fixture()
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+      refute has_element?(lv, "#report-ai")
+    end
+  end
 end

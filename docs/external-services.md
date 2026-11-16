@@ -256,6 +256,20 @@ keeps only its errors. Attendance tokens, short
 link codes and card codes are cut from paths, URLs and the referrer, the same way
 [Web.RequestLog](../lib/web/request_log.ex) cuts them from Fly's request logs (#176).
 
+## Claude API
+
+[lib/app/adapter/claude.ex](../lib/app/adapter/claude.ex). AI writing: a team admin
+describes a report and Claude writes its query (see [ai-writing.md](ai-writing.md)).
+Requests run in the US (`inference_geo: "us"`). They carry the report language, the
+team's names for things, the query, and the ask, never members or records. Adminland ›
+AI writing picks the model and the monthly budget.
+
+- `ANTHROPIC_API_KEY` — optional. A key from SAR Duty's own workspace in the Console org
+  linked to Gerry's Max plan, so asks spend the plan's monthly API credit. In fnox as
+  `SARDUTY_ANTHROPIC_API_KEY` and in Fly secrets. Without it, AI writing is off and the
+  box never shows. With no bought credit and no auto-reload, asks stop when the credit
+  is spent, and the box says AI writing is paused.
+
 ## MCP endpoint
 
 Agents call in rather than SAR Duty calling out: `POST /teams/:subdomain/mcp`,

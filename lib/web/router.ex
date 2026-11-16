@@ -302,6 +302,7 @@ defmodule Web.Router do
       live "/admin/admins", Admin.AdminCollectionLive
       live "/admin/events", Admin.EventCollectionLive
       live "/admin/mcp", Admin.MCPLive
+      live "/admin/ai", Admin.AILive
       live "/admin/orgs", Admin.OrganizationCollectionLive
       live "/admin/orgs/new", Admin.OrganizationNewLive
       live "/admin/integrations", Admin.IntegrationsLive

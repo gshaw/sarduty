@@ -89,6 +89,12 @@ if config_env() != :test do
     deliver: config_env() == :prod or System.get_env("DEV_SEND_SMS") == "true"
 end
 
+# The Claude API, for AI writing (docs/ai-writing.md). Optional: without the key, AI
+# writing is off. Tests ignore it and stub the API.
+if config_env() != :test do
+  config :sarduty, App.Adapter.Claude, api_key: System.get_env("ANTHROPIC_API_KEY")
+end
+
 if config_env() == :prod do
   config :sarduty, Web.Endpoint,
     secret_key_base: System.fetch_env!("SECRET_KEY_BASE"),

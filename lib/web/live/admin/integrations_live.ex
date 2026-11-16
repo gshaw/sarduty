@@ -25,6 +25,7 @@ defmodule Web.Admin.IntegrationsLive do
     "errors",
     "d4h",
     "maps",
+    "ai",
     "health",
     "files"
   ]
@@ -80,6 +81,7 @@ defmodule Web.Admin.IntegrationsLive do
          {"errors", "Errors", "Honeybadger", "Errors on pages and in jobs"},
          {"d4h", "D4H", "Each team's key", "Everything a team reads and sends, Records too"},
          {"maps", "Maps", "Mapbox", "Maps on activities and places, and place search"},
+         {"ai", "AI writing", "Claude API", "Report queries a team admin asks AI to write"},
          {"health", "Health checks", "Healthchecks.io",
           "Alerts when the nightly refresh or the D4H sync is late"},
          {"files", "Files", files_detail(), "Organization logos, and photos next"},
@@ -262,6 +264,7 @@ defmodule Web.Admin.IntegrationsLive do
   defp button_label("errors"), do: "Send test error"
   defp button_label("d4h"), do: "Check key…"
   defp button_label("maps"), do: "Check token"
+  defp button_label("ai"), do: "Check key"
   defp button_label("health"), do: "Send test ping"
   defp button_label("files"), do: "Check files"
 

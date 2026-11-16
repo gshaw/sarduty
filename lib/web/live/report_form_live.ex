@@ -11,6 +11,13 @@ defmodule Web.ReportFormLive do
   agent's link from check_report (#816): its query, name, and description fill the form,
   and `agent` names who wrote it, saved with the report.
 
+  AI writing (docs/ai-writing.md): when it's open to the admin, a describe box above the
+  form. Each ask runs in `start_async` (App.Operation.AskAI) and fills the form as typing
+  would, so the rows rerun here, on the team's records, after Claude is done. This visit
+  lists the asks, newest first, in the page only; Undo puts back the query and name from
+  before an ask and drops the asks after it. Nothing is saved until Save, which notes the
+  version came from AI.
+
   With `draft`, the page follows the agent's live draft (#834): each query the agent
   checks fills the form and reruns the rows, at most one run a second. Once the team
   admin has typed since the agent's last query, a new one waits in a toast instead of
@@ -29,8 +36,10 @@ defmodule Web.ReportFormLive do
   import Web.Components.ReportPage
   import Web.Components.ReportTable
 
+  alias App.AI.ReportJob
   alias App.Model.ReportVersion
   alias App.Model.SavedReport
+  alias App.Operation.AskAI
   alias App.Operation.SaveReport
   alias App.Report
   alias App.Report.Catalog
@@ -76,7 +85,22 @@ defmodule Web.ReportFormLive do
     |> assign_form(SavedReport.changeset(saved || %SavedReport{}, start))
     |> preview(start)
     |> follow(draft(params))
+    |> assign_ai()
     |> then(&{:ok, &1})
+  end
+
+  defp assign_ai(socket) do
+    %{current_team: team, current_user: user} = socket.assigns
+
+    assign(socket,
+      ai: AskAI.check(team, user, DateTime.utc_now()),
+      ai_form: to_form(%{"ask" => ""}, as: "ai"),
+      ai_step: nil,
+      ai_pending: nil,
+      ai_note: nil,
+      ai_error: nil,
+      ai_asks: []
+    )
   end
 
   # The agent's draft to follow, from its link: an id check_report made.
@@ -280,10 +304,43 @@ defmodule Web.ReportFormLive do
      )}
   end
 
+  def handle_event("ask", %{"ai" => %{"ask" => ask}}, socket) do
+    case String.trim(ask) do
+      "" -> {:noreply, socket}
+      _ask when socket.assigns.ai_step != nil -> {:noreply, socket}
+      ask -> {:noreply, start_ask(socket, ask)}
+    end
+  end
+
+  def handle_event("cancel_ask", _params, socket) do
+    {:noreply,
+     socket
+     |> cancel_async(:ai_ask)
+     |> assign(ai_step: nil, ai_pending: nil, ai_note: "Stopped. Nothing changed.")}
+  end
+
+  def handle_event("undo_ask", %{"id" => id}, socket) do
+    case Enum.split_while(socket.assigns.ai_asks, &(to_string(&1.id) != id)) do
+      {_newer, [ask | older]} ->
+        params =
+          socket.assigns.params
+          |> Map.merge(fields_params(socket.assigns.form))
+          |> Map.merge(ask.before)
+
+        {:noreply, socket} = handle_event("change", %{"report" => params}, socket)
+        {:noreply, assign(socket, ai_asks: older, ai_note: nil, ai_error: nil)}
+
+      {_all, []} ->
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("save", %{"report" => params}, socket) do
     %{current_team: team, current_user: user, saved: saved} = socket.assigns
 
-    case SaveReport.call(team, user, saved, params, socket.assigns.now, socket.assigns.agent) do
+    agent = socket.assigns.agent || if(socket.assigns.ai_asks != [], do: Reports.ai_agent())
+
+    case SaveReport.call(team, user, saved, params, socket.assigns.now, agent) do
       {:ok, report} ->
         {:noreply, push_navigate(socket, to: ~p"/teams/#{team}/reports/#{report.id}")}
 
@@ -297,6 +354,88 @@ defmodule Web.ReportFormLive do
          |> assign_form(changeset)
          |> preview(params)}
     end
+  end
+
+  def handle_async(:ai_ask, {:ok, result}, socket) do
+    socket = assign(socket, ai_step: nil)
+    {:noreply, socket |> ask_done(result) |> assign(ai_pending: nil) |> refresh_ai()}
+  end
+
+  def handle_async(:ai_ask, {:exit, _reason}, socket) do
+    {:noreply,
+     assign(socket, ai_step: nil, ai_pending: nil, ai_error: ai_error_text(:unreachable))}
+  end
+
+  # The ask runs beside the page; its steps arrive as messages while it does.
+  defp start_ask(socket, ask) do
+    %{current_team: team, current_user: user, form: form} = socket.assigns
+    report = %{query: form[:query].value, name: form[:name].value, about: form[:about].value}
+    before = %{"query" => report.query || "", "name" => report.name || ""}
+    now = DateTime.utc_now()
+    pid = self()
+
+    socket
+    |> assign(
+      ai_step: :writing,
+      ai_pending: %{ask: ask, before: before},
+      ai_note: nil,
+      ai_error: nil
+    )
+    |> start_async(:ai_ask, fn ->
+      job = ReportJob.build(team, report, ask, now)
+      AskAI.call(team, user, job, now, on_step: &send(pid, {:ai_step, &1}))
+    end)
+  end
+
+  defp ask_done(socket, {:ok, %{query: query, name: name, note: note}}) do
+    sent = if name, do: %{"query" => query, "name" => name}, else: %{"query" => query}
+
+    params =
+      socket.assigns.params |> Map.merge(fields_params(socket.assigns.form)) |> Map.merge(sent)
+
+    {:noreply, socket} = handle_event("change", %{"report" => params}, socket)
+    pending = socket.assigns.ai_pending
+    entry = %{id: System.unique_integer([:positive]), ask: pending.ask, before: pending.before}
+
+    assign(socket,
+      ai_asks: [entry | socket.assigns.ai_asks],
+      ai_note: blank_or(note, nil),
+      ai_form: to_form(%{"ask" => ""}, as: "ai")
+    )
+  end
+
+  defp ask_done(socket, {:unchanged, note}),
+    do: assign(socket, ai_note: blank_or(note, "Nothing changed."))
+
+  defp ask_done(socket, {:error, reason}), do: assign(socket, ai_error: ai_error_text(reason))
+
+  # Whether asks are left, now that this one counted.
+  defp refresh_ai(socket) do
+    %{current_team: team, current_user: user} = socket.assigns
+    assign(socket, ai: AskAI.check(team, user, DateTime.utc_now()))
+  end
+
+  defp ai_error_text(:daily_limit),
+    do:
+      "Your team has used today's #{AskAI.asks_per_day()} asks. Ask again tomorrow, or change the query yourself."
+
+  defp ai_error_text(reason) when reason in [:paused, :no_credit],
+    do: "AI writing is paused until next month. You can still change the query yourself."
+
+  defp ai_error_text(:busy), do: "AI writing is busy. Try again in a minute."
+  defp ai_error_text(:refused), do: "AI writing cannot help with that. Try other words."
+
+  defp ai_error_text({:checks, mistake}),
+    do: "Its query still had a mistake: #{mistake} Ask again in other words, or fix it yourself."
+
+  defp ai_error_text(:off), do: "AI writing is off."
+  defp ai_error_text(_reason), do: "AI writing did not answer. Try again."
+
+  # A step of the running ask: Writing, Checking it, Trying it.
+  def handle_info({:ai_step, step}, socket) do
+    if socket.assigns.ai_step,
+      do: {:noreply, assign(socket, ai_step: step)},
+      else: {:noreply, socket}
   end
 
   # A query the agent checked. It waits in a toast when the admin has typed since the
@@ -486,6 +625,15 @@ defmodule Web.ReportFormLive do
             <.a id="report-draft-stop" href="#" phx-click="stop_following">Stop following</.a>
           </p>
         </.banner>
+        <.ai_box
+          :if={@ai != {:error, :off}}
+          ai={@ai}
+          form={@ai_form}
+          step={@ai_step}
+          note={@ai_note}
+          error={@ai_error}
+          asks={@ai_asks}
+        />
         <.form for={@form} id="report-form" phx-change="change" phx-submit="save">
           <.error_summary form={@form} />
           <div :if={@renaming} id="report-names" phx-mounted={JS.focus(to: "#report_name")}>
@@ -555,6 +703,60 @@ defmodule Web.ReportFormLive do
     </div>
     """
   end
+
+  attr :ai, :any, required: true
+  attr :form, :map, required: true
+  attr :step, :atom, default: nil
+  attr :note, :string, default: nil
+  attr :error, :string, default: nil
+  attr :asks, :list, required: true
+
+  # The describe box: the ask, its steps while it runs, what came of it, and This visit.
+  defp ai_box(assigns) do
+    ~H"""
+    <section id="report-ai" class="mb-8" aria-label="AI writing">
+      <.form :if={@ai == :ok} for={@form} id="report-ai-form" phx-submit="ask">
+        <.input
+          field={@form[:ask]}
+          type="textarea"
+          rows="2"
+          label={if @asks == [], do: "Describe it", else: "Describe a change"}
+          disabled={@step != nil}
+        >
+          AI writes the query from your team's field names. It never sees your members or records.
+        </.input>
+        <div class="flex items-center gap-3">
+          <.button :if={!@step} id="report-ai-ask" variant={:success}>
+            {if @asks == [], do: "Write it", else: "Change it"}
+          </.button>
+          <span :if={@step} id="report-ai-step" class="hint">{step_text(@step)}</span>
+          <.a :if={@step} id="report-ai-cancel" href="#" phx-click="cancel_ask">Stop</.a>
+        </div>
+      </.form>
+      <p :if={@ai != :ok and !@error} id="report-ai-closed" class="hint">
+        {ai_closed_text(@ai)}
+      </p>
+      <p :if={@note} id="report-ai-note" class="mt-2">{@note}</p>
+      <p :if={@error} id="report-ai-error" class="warning-text mt-2">{@error}</p>
+      <div :if={@asks != []} id="report-ai-asks" class="mt-4">
+        <h2 class="heading">This visit</h2>
+        <ol>
+          <li :for={ask <- @asks} id={"report-ai-ask-#{ask.id}"}>
+            {ask.ask}
+            <.a href="#" phx-click="undo_ask" phx-value-id={ask.id}>Undo</.a>
+          </li>
+        </ol>
+      </div>
+    </section>
+    """
+  end
+
+  defp step_text(:writing), do: "Writing…"
+  defp step_text(:checking), do: "Checking it…"
+  defp step_text(:trying), do: "Trying it on made-up data…"
+
+  defp ai_closed_text({:error, :daily_limit}), do: ai_error_text(:daily_limit)
+  defp ai_closed_text({:error, reason}), do: ai_error_text(reason)
 
   attr :form, :map, required: true
 

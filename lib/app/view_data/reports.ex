@@ -51,7 +51,11 @@ defmodule App.ViewData.Reports do
   name, as AgentClient.display_name/2 calls it.
   """
   def possessive("An AI agent"), do: "an AI agent's"
+  def possessive("AI"), do: "the AI's"
   def possessive(name), do: "#{name}'s"
+
+  @doc "Who a version written with AI writing came from, as `agent` keeps it: \"from the AI's draft\"."
+  def ai_agent, do: "AI"
 
   defp built_in_for(nil, _team), do: nil
 

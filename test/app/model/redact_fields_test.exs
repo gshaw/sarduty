@@ -14,6 +14,10 @@ defmodule App.Model.RedactFieldsTest do
   @not_personal %{
     {App.Accounts.UserPasskey, :public_key} => "a passkey's public key, public by design",
     {App.Model.AttentionSnooze, :key} => "which Needs attention item, like retiring",
+    {App.Model.AIAsk, :input_tokens} => "how many tokens an AI ask sent, a count",
+    {App.Model.AIAsk, :cache_write_tokens} => "how many tokens an AI ask cached, a count",
+    {App.Model.AIAsk, :cache_read_tokens} => "how many tokens an AI ask read from cache",
+    {App.Model.AIAsk, :output_tokens} => "how many tokens an AI ask got back, a count",
     {App.Model.Certificate, :content_type} => "a file's MIME type",
     {App.Model.OutboxAttachment, :content_type} => "a file's MIME type",
     {App.Model.ChoreCategory, :description} => "what a team's chore category is for",

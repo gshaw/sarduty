@@ -8,12 +8,12 @@ defmodule App.MCP.Tool.ReportFields do
 
   use Web, :verified_routes
 
+  alias App.AI.ReportJob
   alias App.Model.Activity
   alias App.Model.Group
   alias App.Model.Qualification
   alias App.Model.Team
   alias App.Report.Catalog
-  alias App.Report.CustomFields
   alias App.Report.Language
 
   @impl App.MCP.Tool
@@ -43,29 +43,13 @@ defmodule App.MCP.Tool.ReportFields do
       qualifications: titles(Qualification.get_all(team.id)),
       tags: team |> Catalog.read_tag_titles(App.Repo) |> Enum.map(&elem(&1, 0)),
       hours_tags: Activity.hours_tags(team),
-      custom_fields: custom_fields(team)
+      custom_fields: ReportJob.custom_fields(team)
     }
 
     {:ok, build(team, names), 1}
   end
 
   defp titles(records), do: Enum.map(records, & &1.title)
-
-  # Exactly the fields a report can read (App.Report.CustomFields), as a query writes them:
-  # an activity's for every kind, and a member's only when the team copies it.
-  defp custom_fields(team) do
-    for {on, defs} when is_binary(on) <- CustomFields.read(team, App.Repo), d <- defs do
-      %{
-        "title" => d.title,
-        "write" => "`#{d.title}`",
-        "on" => on,
-        "type" => Atom.to_string(d.type),
-        "choices" =>
-          if(d.type in [:choice, :list], do: d.options |> Enum.map(&elem(&1, 1)) |> Enum.uniq())
-      }
-      |> Map.reject(fn {_key, value} -> is_nil(value) end)
-    end
-  end
 
   @doc "The output, from the team's names for things."
   def build(%Team{} = team, names) do

@@ -94,3 +94,9 @@ config :sarduty, App.Adapter.GoogleWallet, plug: {Req.Test, App.Adapter.GoogleWa
 # And Twilio's, so no test sends a text. Text login stays off until a test turns it on
 # with App.AccountsFixtures.text_login_fixture/0.
 config :sarduty, App.Adapter.Twilio, plug: {Req.Test, App.Adapter.Twilio}, deliver: true
+
+# And the Claude API's, so no test spends credit. A key is set so AI writing can be on.
+config :sarduty, App.Adapter.Claude,
+  plug: {Req.Test, App.Adapter.Claude},
+  api_key: "test-key",
+  retry: false
