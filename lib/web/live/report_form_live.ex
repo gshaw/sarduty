@@ -476,11 +476,13 @@ defmodule Web.ReportFormLive do
           step={@ai_step}
           pending={@ai_pending}
           asks={@ai_asks}
-          label="Describe a change"
-          button="Change it"
+          label="Ask AI"
+          button="Ask"
           closed={ai_closed_text(@ai)}
           sees={ai_sees()}
-        />
+        >
+          A change, or a question about the report.
+        </.ai_writing>
       </:column>
 
       <section :if={@starting} id="report-start" class="measure mb-8">

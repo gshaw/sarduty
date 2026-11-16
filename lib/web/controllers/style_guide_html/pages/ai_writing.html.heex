@@ -10,8 +10,8 @@
           ai={:ok}
           form={ask_form("")}
           asks={SampleData.ai_asks()}
-          label="Describe a change"
-          button="Change it"
+          label="Ask AI"
+          button="Ask"
           sees="AI works only with the agency's blank form, the form language, and your team's field names. Agents never see your team's members or records."
         />
       </:column>
@@ -29,8 +29,8 @@
         asks={[]}
         pending={%{ask: "Write this form."}}
         step={:reading}
-        label="Describe a change"
-        button="Change it"
+        label="Ask AI"
+        button="Ask"
         sees="AI works only with the report language and your team's field names. Agents never see your team's members or records."
       />
     </div>
@@ -44,8 +44,8 @@
         ai={{:error, :paused}}
         form={ask_form("")}
         asks={[]}
-        label="Describe a change"
-        button="Change it"
+        label="Ask AI"
+        button="Ask"
         closed="AI writing is paused until next month. You can still change the query yourself."
         sees="AI works only with the report language and your team's field names. Agents never see your team's members or records."
       />

@@ -17,14 +17,14 @@ On New report and Change report, for a user AI writing is open to
 
 - **AI writing** is a column beside the report, where the help column was; under
   1024px it sits above the report. In it, the asks as a conversation, oldest first, then
-  "Describe a change" and Change it, then what AI sees and How agents work with SAR Duty.
+  "Ask AI" with its hint, "A change, or a question about the report.", and Ask, then what AI sees and How agents work with SAR Duty.
   AI suggests no next asks: every ask is one someone typed.
 - The query is hidden, since AI writes it: Show query and Hide query toggle it, and a
   mistake in it opens it. With the query, the fields are buttons under it, with How to
   write a report, What each chart takes, and What each field means. The preview's count
   drops "runs as you type" while the query is hidden.
 - The ask shows at once, with the step under it (Writing…, Checking it…, Trying it on
-  made-up data…) and Stop. The box clears and Change it waits until AI answers.
+  made-up data…) and Stop. The box clears and Ask waits until AI answers.
 - The answer fills the query, and a new report's name and description, as typing
   would, so the preview reruns. AI's one-line note is its reply under the ask, with
   Undo when it changed the report.

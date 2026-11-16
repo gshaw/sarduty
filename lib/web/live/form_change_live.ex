@@ -334,11 +334,13 @@ defmodule Web.FormChangeLive do
           step={@ai_step}
           pending={@ai_pending}
           asks={@ai_asks}
-          label="Describe a change"
-          button="Change it"
+          label="Ask AI"
+          button="Ask"
           closed={ai_closed_text(@ai)}
           sees="AI works only with the agency's blank form, the form language, and your team's field names. Agents never see your team's members or records."
-        />
+        >
+          A change, or a question about the form.
+        </.ai_writing>
       </:column>
 
       <section id="form-try" class="mb-8">
@@ -391,7 +393,7 @@ defmodule Web.FormChangeLive do
           <.a :if={@text_open} id="form-hide-text" href="#" phx-click="hide_text">Hide text</.a>
         </p>
         <p class="hint measure">
-          The form in SAR Duty's form language, read only. Describe a change to change it.
+          The form in SAR Duty's form language, read only. Ask AI to change it.
         </p>
         <pre :if={@text_open} id="form-text-code" class="code-block mt-3"><code>{@text}</code></pre>
       </section>

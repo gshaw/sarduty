@@ -612,7 +612,7 @@ defmodule Web.ReportFormLiveTest do
       refute has_element?(lv, "#report-start")
       refute has_element?(lv, "#report-body.hidden")
       refute has_element?(lv, ".hidden #report_query")
-      assert has_element?(lv, "#report-ai #report-ai-form", "Describe a change")
+      assert has_element?(lv, "#report-ai #report-ai-form", "Ask AI")
     end
 
     test "an ask writes the query, name, and description, the next carries it, and Undo puts it back",
@@ -638,7 +638,7 @@ defmodule Web.ReportFormLiveTest do
       assert has_element?(lv, "#report-about", "When each member last came.")
       assert has_element?(lv, "#report-ai .ai-you", "when did each member last come")
       assert has_element?(lv, "#report-ai .ai-reply", "Shows when each member last came.")
-      assert has_element?(lv, "#report-ai #report-ai-form", "Describe a change")
+      assert has_element?(lv, "#report-ai #report-ai-form", "Ask AI")
       refute has_element?(lv, "#report-start")
 
       ask = App.Repo.get_by!(AIAsk, team_id: team.id)
