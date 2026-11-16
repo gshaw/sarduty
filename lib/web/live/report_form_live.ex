@@ -714,12 +714,18 @@ defmodule Web.ReportFormLive do
             </.input>
 
             <p :if={query_toggle?(assigns)} id="report-query-toggle" class="action mb-6">
-              <.a :if={!query_shown?(assigns)} id="report-show-query" href="#" phx-click="show_query">
-                Show query
-              </.a>
-              <.a :if={query_shown?(assigns)} id="report-hide-query" href="#" phx-click="hide_query">
-                Hide query
-              </.a>
+              <.a
+                :if={!query_shown?(assigns)}
+                id="report-show-query"
+                href="#"
+                phx-click="show_query"
+              >Show query</.a>
+              <.a
+                :if={query_shown?(assigns)}
+                id="report-hide-query"
+                href="#"
+                phx-click="hide_query"
+              >Hide query</.a>
             </p>
             <.input
               field={@form[:query]}
@@ -784,9 +790,11 @@ defmodule Web.ReportFormLive do
           label={if @asks == [] and !@pending, do: "Describe it", else: "Describe a change"}
         >
           AI works only with the report language and your team's field names. Agents never see your team's members or records.
-          <.a id="report-ai-agents-link" href={~p"/agents"} external={true}>
-            How agents work with SAR Duty
-          </.a>
+          <.a
+            id="report-ai-agents-link"
+            href={~p"/agents"}
+            external={true}
+          >How agents work with SAR Duty</.a>
         </.input>
         <.button id="report-ai-ask" variant={:success} disabled={@step != nil}>
           {if @asks == [] and !@pending, do: "Write it", else: "Change it"}
