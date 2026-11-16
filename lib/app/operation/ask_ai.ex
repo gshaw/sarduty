@@ -124,7 +124,9 @@ defmodule App.Operation.AskAI do
   defp loop(settings, job, history, acc, retried, on_step) do
     on_step.(:writing)
 
-    case settings |> request(job, Enum.reverse(history)) |> Claude.create_message() do
+    case settings
+         |> request(job, Enum.reverse(history))
+         |> Claude.create_message(stream: job.stream) do
       {:ok, response} ->
         acc = count(acc, response, settings)
         history = [%{"role" => "assistant", "content" => response["content"]} | history]

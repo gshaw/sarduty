@@ -7,7 +7,8 @@ defmodule App.Model.AIAsk do
   off keeps what it spent; the end sets how it ended. An ask that never reached Claude, a
   limit or the budget, has no row.
 
-  Kind `report` is an ask on the report editor. Kind `history_line` is the line AI writes
+  Kind `report` is an ask on the report editor, and `form` one on a team's Change form
+  (#1089); both count toward the daily limit. Kind `history_line` is the line AI writes
   in a report's History after a save (App.Worker.WriteHistoryLineWorker): it counts
   toward the budget, never the daily limit, and Adminland counts it apart from asks.
 
@@ -22,7 +23,7 @@ defmodule App.Model.AIAsk do
   alias App.Repo
 
   @outcomes [:used, :unchanged, :refused_by_checks, :refused, :failed, :stopped]
-  @kinds [:report, :history_line]
+  @kinds [:report, :form, :history_line]
   @words_days 90
 
   # SAR Duty's own month and day, in BC, as Adminland's other times are.
