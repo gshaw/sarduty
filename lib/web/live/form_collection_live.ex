@@ -10,7 +10,7 @@ defmodule Web.FormCollectionLive do
   # An organization's forms (#950), such as EMCR's Task report, or a team's own (#1083),
   # one page for both (Web.FormOwner). SAR Duty admins upload an organization's, and its
   # admins try each and turn it on for every team. A team's admins start their own from
-  # the agency's PDF, their AI agent writes it, and they turn it on for their team.
+  # the agency's PDF, and turn it on for their team once it's written.
   def mount(_params, _session, socket) do
     owner = FormOwner.get(socket.assigns)
     {:ok, assign(socket, page_title: title(owner), owner: owner, forms: Form.get_all(owner))}
@@ -43,8 +43,8 @@ defmodule Web.FormCollectionLive do
     </p>
     <p :if={!match?(%Organization{}, @owner)} class="lead measure">
       {@owner.name}'s own forms, filled in from an activity. Only your team sees them. Start
-      one from the agency's PDF, and your AI agent writes it. While a form is testing, you
-      download draft PDFs. Once it's on, you publish it.
+      one from the agency's PDF. While a form is testing, you download draft PDFs. Once it's
+      on, you publish it.
     </p>
 
     <.empty_state

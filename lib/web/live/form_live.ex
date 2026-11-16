@@ -1,12 +1,9 @@
 defmodule Web.FormLive do
   use Web, :live_view_app_layout
 
-  import Web.Components.CopyButton, only: [copy_code_block: 1]
-
   alias App.Document
   alias App.Model.Form
   alias App.Model.Organization
-  alias App.Model.Team
   alias App.Operation.SetFormState
   alias App.Operation.TryForm
   alias App.Report.Query
@@ -16,9 +13,8 @@ defmodule Web.FormLive do
   # One form (#950), an organization's or a team's own (#1083): what it reads and asks,
   # whether it's off, testing, or on (#970), and a try: on Coast Range SAR, a made-up
   # team, for an organization's, and on the team's own activities for a team's. Found
-  # through its owner, so another's is a 404. SAR Duty admins replace an organization's.
-  # A team's is written and changed by the team's AI agent: the page gives the team
-  # admin what to ask it, and Change form shows each text it checks.
+  # through its owner, so another's is a 404. SAR Duty admins replace it. A team's new
+  # form says it's not written yet, and nothing more, until it has its text (#1088).
   def mount(%{"id" => id}, _session, socket) do
     owner = FormOwner.get(socket.assigns)
     form = Form.get(owner, id) || raise(Web.Status.NotFound)
@@ -101,15 +97,9 @@ defmodule Web.FormLive do
         </dl>
       </aside>
       <main class="content-2/3">
-        <section :if={!Form.written?(@form)} id="form-write" class="mb-8 measure">
-          <h2 class="heading">Write it</h2>
-          <p>
-            Ask your AI agent to write this form from its PDF. It checks each try here, and
-            then you try the form and save it.
-          </p>
-          <.copy_code_block id="form-ask" value={FormOwner.agent_ask(@form)} label="Copy what to ask" />
-          <.agents_hint team={@owner} />
-        </section>
+        <p :if={!Form.written?(@form)} id="form-not-written" class="mb-8 measure">
+          {@form.name} isn't written yet. It stays off until it is.
+        </p>
 
         <%!-- Two switches for three states, as Features nests one under another: on shows
         it to teams, and testing under it keeps it to drafts. Turning it on starts testing. --%>
@@ -168,34 +158,13 @@ defmodule Web.FormLive do
           </form>
         </section>
 
-        <section
-          :if={@current_user.is_admin and match?(%Organization{}, @owner)}
-          id="form-replace"
-          class="mb-8 measure"
-        >
+        <section :if={@current_user.is_admin} id="form-replace" class="mb-8 measure">
           <h2 class="heading">Replace</h2>
           <p>
-            Upload a new text or page.
+            {if Form.written?(@form), do: "Upload a new text or page.", else: "Upload its text."}
           </p>
           <.button id="form-replace-button" navigate={FormOwner.edit_path(@owner, @form)}>
             Replace form
-          </.button>
-        </section>
-
-        <section
-          :if={Form.written?(@form) and match?(%Team{}, @owner)}
-          id="form-change"
-          class="mb-8 measure"
-        >
-          <h2 class="heading">Change it</h2>
-          <p>
-            Ask your AI agent for a change. Each text it checks shows on Change form, where you
-            try it and save it.
-          </p>
-          <.copy_code_block id="form-ask" value={FormOwner.agent_ask(@form)} label="Copy what to ask" />
-          <.agents_hint team={@owner} />
-          <.button id="form-change-button" navigate={FormOwner.edit_path(@owner, @form)}>
-            Change form
           </.button>
         </section>
 
@@ -208,21 +177,6 @@ defmodule Web.FormLive do
         </section>
       </main>
     </div>
-    """
-  end
-
-  attr :team, Team, required: true
-
-  @doc "Under what to ask an agent: where to connect one, or that Agents are off."
-  def agents_hint(assigns) do
-    ~H"""
-    <p id="form-agents" class="hint">
-      <%= if FormOwner.agents_on?(@team) do %>
-        No agent yet? <.a navigate={FormOwner.agents_path(@team)}>Connect an AI agent</.a>
-      <% else %>
-        Agents are off for {@team.name}. Ask SAR Duty to turn them on, then connect one.
-      <% end %>
-    </p>
     """
   end
 

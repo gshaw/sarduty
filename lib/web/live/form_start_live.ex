@@ -7,8 +7,8 @@ defmodule Web.FormStartLive do
   alias Web.FormOwner
 
   # New form on a team's Forms tab (#1083): its name and the agency's PDF. It saves off,
-  # with no text, and the form's page asks the team's AI agent to write it. An
-  # organization's forms are uploaded instead (Web.FormUploadLive).
+  # with no text, and stays off until it's written. An organization's forms are uploaded
+  # instead (Web.FormUploadLive).
   def mount(_params, _session, socket) do
     team = FormOwner.get(socket.assigns)
     unless SaveForm.allowed?(team, socket.assigns.current_user), do: raise(Web.Status.NotFound)
@@ -30,8 +30,7 @@ defmodule Web.FormStartLive do
     </.breadcrumbs>
     <h1 class="title">New form</h1>
     <p class="lead measure">
-      Give SAR Duty the agency's PDF. Your AI agent then writes the form from it, and you
-      try it before you save it. It starts off.
+      Give SAR Duty the agency's PDF. The form starts off, and stays off until it's written.
     </p>
 
     <.form for={%{}} id="form-start" phx-change="validate" phx-submit="save" class="measure">
@@ -78,7 +77,7 @@ defmodule Web.FormStartLive do
       {:ok, form} ->
         socket =
           socket
-          |> put_flash(:info, "#{form.name} added. Ask your agent to write it.")
+          |> put_flash(:info, "#{form.name} added.")
           |> push_navigate(to: FormOwner.form_path(team, form))
 
         {:noreply, socket}

@@ -2,8 +2,8 @@ defmodule App.Operation.SaveForm do
   @moduledoc """
   Uploads an organization's or a team's form, or replaces one (#950, #1083): its text and
   its page PDF. A SAR Duty admin uploads an organization's, prepared on a Mac. A team's
-  admins start their own from its page alone (`start/5`), and save the text their AI
-  agent writes from it, which `check_form` checked first (`check_for/5`).
+  admins start their own from its page alone (`start/5`), and save its text.
+  `check_for/5` runs every check saving runs, and saves nothing (#1088).
 
   Saving checks an organization's form against the catalog of each of its teams and of
   Coast Range SAR, where its organization admins try it, so it prints on every one of
@@ -47,7 +47,7 @@ defmodule App.Operation.SaveForm do
 
   @doc """
   Starts a team's form from its page alone (#1083): named, off, and with no text until
-  the team's AI agent writes it. `{:ok, form}`, `{:error, field, message}` where `field`
+  it's written. `{:ok, form}`, `{:error, field, message}` where `field`
   is `:name` or `:page`, or `{:error, :forbidden}`.
   """
   def start(%Team{} = team, name, page, %User{} = user, now \\ DateTime.utc_now()) do
@@ -125,8 +125,8 @@ defmodule App.Operation.SaveForm do
 
   @doc """
   `{:ok, doc}` when `text` would save as `form`, the owner's form or nil for a new one,
-  on `page`, or `{:error, field, message}`: every check saving runs, without saving. An
-  agent's draft is checked this way before a team admin sees it (#1083).
+  on `page`, or `{:error, field, message}`: every check saving runs, without saving. A
+  model writing a team's form checks its text with it (#1088).
   """
   def check_for(owner, form, text, page, now \\ DateTime.utc_now()) do
     with {:ok, doc} <- check(text, page, contexts(owner, now)),

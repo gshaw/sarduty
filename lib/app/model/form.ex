@@ -13,7 +13,7 @@ defmodule App.Model.Form do
   # organization's shows for every team in it, and a team's only for that team, while
   # SAR Duty has team forms on for it. Testing prints draft PDFs only, and on publishes
   # them (#970). SAR Duty admins upload and replace an organization's; a team's admins
-  # start their own from its page, and their AI agent writes it (App.Operation.SaveForm).
+  # start their own from its page, and save its text (App.Operation.SaveForm).
   # Its organization admins, or the team's admins, set it off, testing, or on
   # (App.Operation.SetFormState). docs/documents.md.
   schema "forms" do
@@ -81,7 +81,7 @@ defmodule App.Model.Form do
 
   @doc """
   Whether the form has its text. A team's new form starts as its page alone, off, until
-  the team's AI agent writes it and a team admin saves it (#1083).
+  its text is saved (#1083).
   """
   def written?(%Form{text: text}), do: text not in [nil, ""]
 

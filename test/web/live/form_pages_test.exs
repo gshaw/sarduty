@@ -6,7 +6,6 @@ defmodule Web.FormPagesTest do
   import Ecto.Query
   import Phoenix.LiveViewTest
 
-  alias App.Document.Draft
   alias App.Model.Event
   alias App.Model.Form
   alias App.Repo
@@ -278,7 +277,6 @@ defmodule Web.FormPagesTest do
 
       assert has_element?(lv, "#form-try-none", "Your team has no activity this form shows on.")
       refute has_element?(lv, "#form-replace")
-      assert has_element?(lv, "#form-ask", "Change SAR Duty form #{own.id}, Debrief:")
     end
 
     test "opens its blank page", %{conn: conn, team: team, own: own, alex: alex, page: page} do
@@ -301,7 +299,7 @@ defmodule Web.FormPagesTest do
       %{conn: conn, team: team, own: own} = ctx
       conn = log_in_user(conn, sar_duty_admin())
       {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}/edit"))
-      assert has_element?(lv, "h1", "Change Debrief")
+      assert has_element?(lv, "h1", "Replace Debrief")
       assert has_element?(lv, "p", "Saving checks the text on Valley SAR.")
 
       upload(lv, :text, "task_report.txt", @text, "text/plain")
@@ -322,11 +320,11 @@ defmodule Web.FormPagesTest do
 
       assert has_element?(
                lv,
-               "#form-change-button[href='#{team_path(team, "/#{own.id}/edit")}']"
+               "#form-replace-button[href='#{team_path(team, "/#{own.id}/edit")}']"
              )
     end
 
-    test "its team admin starts one from the agency's PDF, to ask their agent to write", ctx do
+    test "its team admin starts one from the agency's PDF, not written yet", ctx do
       %{conn: conn, team: team, alex: alex, page: page} = ctx
       conn = log_in_user(conn, alex)
       {:ok, lv, _html} = live(conn, team_path(team))
@@ -352,10 +350,39 @@ defmodule Web.FormPagesTest do
       assert Form.page_bytes(started) == page
 
       assert has_element?(lv, "#form-state", "Not written yet")
-      assert has_element?(lv, "#form-ask", "Write SAR Duty form #{started.id}, Incident debrief")
-      assert has_element?(lv, "#form-agents", "Agents are off for Valley SAR")
+      assert has_element?(lv, "#form-not-written", "Incident debrief isn't written yet.")
       refute has_element?(lv, "#form-on")
       refute has_element?(lv, "#form-try")
+      refute has_element?(lv, "#form-text")
+      refute has_element?(lv, "#form-replace")
+    end
+
+    test "a SAR Duty admin writes a started form with a text file, and it stays version 1",
+         ctx do
+      %{conn: conn, team: team, alex: alex, page: page} = ctx
+      {:ok, started} = App.Operation.SaveForm.start(team, "Incident debrief", page, alex)
+
+      assert_raise Web.Status.NotFound, fn ->
+        conn |> log_in_user(alex) |> live(team_path(team, "/#{started.id}/edit"))
+      end
+
+      conn = log_in_user(conn, sar_duty_admin())
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{started.id}"))
+      assert has_element?(lv, "#form-replace", "Upload its text.")
+
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{started.id}/edit"))
+      assert has_element?(lv, "#form-text-file", "Text")
+      refute has_element?(lv, "#form-text-file", "Leave it empty to keep its text.")
+      lv |> form("#form-upload") |> render_submit()
+      assert has_element?(lv, "#form-text-file", "Upload the form's text, a .txt file.")
+
+      text = String.replace(@text, "form 'Task report'", "form 'Incident debrief'")
+      upload(lv, :text, "debrief.txt", text, "text/plain")
+      {:ok, lv, html} = lv |> form("#form-upload") |> render_submit() |> follow_redirect(conn)
+
+      assert html =~ "Incident debrief saved."
+      assert %Form{version: 1, text: ^text} = Repo.reload!(started)
+      assert has_element?(lv, "#form-on")
     end
 
     test "a scan has no text to read, so it can't start a form", ctx do
@@ -369,53 +396,6 @@ defmodule Web.FormPagesTest do
       assert has_element?(lv, "#form-start", "This PDF is a scan")
       refute Repo.get_by(Form, team_id: team.id, name: "Incident debrief")
     end
-
-    test "its team admin follows their agent's draft on Change form, tries it, and saves it",
-         ctx do
-      %{conn: conn, team: team, own: own, alex: alex} = ctx
-      conn = log_in_user(conn, alex)
-      {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}/edit"))
-
-      assert has_element?(lv, "#form-draft-none")
-      assert has_element?(lv, "#form-ask", "Change SAR Duty form #{own.id}, Debrief:")
-      refute has_element?(lv, "#form-upload")
-
-      text = String.replace(@text, "form 'Task report'", "form 'Debrief'")
-      draft = %Draft{text: text, change: "Asks for people helped", agent: "Claude", at: now()}
-      Draft.put(team, alex.id, own, draft)
-
-      assert has_element?(lv, "#form-draft-from", "From Claude, just now. Asks for people helped")
-      assert has_element?(lv, "#form-draft-text", "form 'Debrief'")
-      assert has_element?(lv, "#form-draft-try-none")
-
-      {:ok, lv, _html} =
-        lv |> element("#form-draft-save") |> render_click() |> follow_redirect(conn)
-
-      assert has_element?(lv, "h1", "Debrief")
-      assert Repo.reload!(own).version == 2
-      assert Repo.reload!(own).text == text
-      refute Draft.get(team, alex.id, own)
-    end
-
-    test "another team admin never sees someone else's draft", ctx do
-      %{conn: conn, team: team, own: own, alex: alex} = ctx
-      sam = user_fixture(%{email: manager_fixture(team).email})
-      Draft.put(team, sam.id, own, %Draft{text: @text, agent: "Claude", at: now()})
-
-      {:ok, lv, _html} = conn |> log_in_user(alex) |> live(team_path(team, "/#{own.id}/edit"))
-      assert has_element?(lv, "#form-draft-none")
-    end
-
-    test "Try draft prints the draft, and says when it's gone", ctx do
-      %{conn: conn, team: team, own: own, alex: alex} = ctx
-      conn = log_in_user(conn, alex)
-
-      conn = get(conn, team_path(team, "/#{own.id}/try?draft=1"))
-      assert redirected_to(conn) == team_path(team, "/#{own.id}/edit")
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "The draft is gone. Ask your agent to check it again."
-    end
   end
 
   defp start(lv, filename, content) do
@@ -425,8 +405,6 @@ defmodule Web.FormPagesTest do
     ])
     |> render_upload(filename)
   end
-
-  defp now, do: DateTime.utc_now()
 
   defp upload(lv, name, filename, content, type) do
     lv

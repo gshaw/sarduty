@@ -29,7 +29,6 @@ defmodule App.Application do
       # Before Oban: jobs broadcast refresh progress, and children stop in reverse
       # order, so a job still draining at shutdown needs PubSub running.
       {Phoenix.PubSub, name: App.PubSub},
-      App.Document.Draft,
       App.Vault,
       {App.RateLimit, clean_period: :timer.minutes(1)},
       {Oban, Application.fetch_env!(:sarduty, Oban)},
