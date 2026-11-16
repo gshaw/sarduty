@@ -4,6 +4,9 @@ defmodule Web.FormLive do
   alias App.Document
   alias App.Model.Form
   alias App.Model.Organization
+  alias App.Model.Team
+  alias App.Operation.AskAI
+  alias App.Operation.SaveForm
   alias App.Operation.SetFormState
   alias App.Operation.TryForm
   alias App.Report.Query
@@ -14,7 +17,8 @@ defmodule Web.FormLive do
   # whether it's off, testing, or on (#970), and a try: on Coast Range SAR, a made-up
   # team, for an organization's, and on the team's own activities for a team's. Found
   # through its owner, so another's is a 404. SAR Duty admins replace it. A team's new
-  # form says it's not written yet, and nothing more, until it has its text (#1088).
+  # form says it's not written yet, and nothing more, until it has its text (#1088). With
+  # AI writing open, a team's admins write it on Change form (#1089).
   def mount(%{"id" => id}, _session, socket) do
     owner = FormOwner.get(socket.assigns)
     form = Form.get(owner, id) || raise(Web.Status.NotFound)
@@ -23,11 +27,21 @@ defmodule Web.FormLive do
     socket =
       socket
       |> assign(page_title: form.name, owner: owner, activities: activities)
+      |> assign(change?: change?(owner, socket.assigns.current_user))
       |> assign(activity: TryForm.first(activities))
       |> assign_form(form)
 
     {:ok, socket}
   end
+
+  # Change form writes a team's form with AI writing (#1089), for its team admins while
+  # AI writing is open to them.
+  defp change?(%Team{} = team, user),
+    do:
+      SaveForm.allowed?(team, user) and
+        AskAI.check(team, user, DateTime.utc_now(), :form) != {:error, :off}
+
+  defp change?(_organization, _user), do: false
 
   defp assign_form(socket, form) do
     page = Form.page_bytes(form)
@@ -59,7 +73,14 @@ defmodule Web.FormLive do
       <:item label="Forms" path={FormOwner.forms_path(@owner)} />
       <:item label={@form.name} />
     </.breadcrumbs>
-    <h1 class="title">{@form.name}</h1>
+    <.heading_row>
+      <h1 class="title">{@form.name}</h1>
+      <:action :if={@change?}>
+        <.button id="form-change" navigate={FormOwner.change_path(@owner, @form)}>
+          Change form
+        </.button>
+      </:action>
+    </.heading_row>
     <p :if={@form.about} class="lead measure">{@form.about}</p>
 
     <div class="content-wrapper">
@@ -163,7 +184,7 @@ defmodule Web.FormLive do
           <p>
             {if Form.written?(@form), do: "Upload a new text or page.", else: "Upload its text."}
           </p>
-          <.button id="form-replace-button" navigate={FormOwner.edit_path(@owner, @form)}>
+          <.button id="form-replace-button" navigate={FormOwner.replace_path(@owner, @form)}>
             Replace form
           </.button>
         </section>

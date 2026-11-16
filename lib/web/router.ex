@@ -445,7 +445,9 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings/forms", FormCollectionLive
       live "/teams/:subdomain/settings/forms/new", FormStartLive
       live "/teams/:subdomain/settings/forms/:id", FormLive
-      live "/teams/:subdomain/settings/forms/:id/edit", FormUploadLive, :edit
+      # Change form writes it with AI writing (#1089); a SAR Duty admin replaces its text.
+      live "/teams/:subdomain/settings/forms/:id/edit", FormChangeLive
+      live "/teams/:subdomain/settings/forms/:id/replace", FormUploadLive, :edit
       live "/teams/:subdomain/settings/features", Settings.FeaturesLive
       live "/teams/:subdomain/settings/signer", Settings.SignerLive
       live "/teams/:subdomain/settings/hours-tags", Settings.HoursTagsLive

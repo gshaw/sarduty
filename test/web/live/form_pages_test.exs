@@ -299,7 +299,7 @@ defmodule Web.FormPagesTest do
     test "a SAR Duty admin uploads a text, named apart from its organization's", ctx do
       %{conn: conn, team: team, own: own} = ctx
       conn = log_in_user(conn, sar_duty_admin())
-      {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}/edit"))
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}/replace"))
       assert has_element?(lv, "h1", "Replace Debrief")
       assert has_element?(lv, "p", "Saving checks the text on Valley SAR.")
 
@@ -321,7 +321,7 @@ defmodule Web.FormPagesTest do
 
       assert has_element?(
                lv,
-               "#form-replace-button[href='#{team_path(team, "/#{own.id}/edit")}']"
+               "#form-replace-button[href='#{team_path(team, "/#{own.id}/replace")}']"
              )
     end
 
@@ -364,14 +364,14 @@ defmodule Web.FormPagesTest do
       {:ok, started} = SaveForm.start(team, "Incident debrief", page, alex)
 
       assert_raise Web.Status.NotFound, fn ->
-        conn |> log_in_user(alex) |> live(team_path(team, "/#{started.id}/edit"))
+        conn |> log_in_user(alex) |> live(team_path(team, "/#{started.id}/replace"))
       end
 
       conn = log_in_user(conn, sar_duty_admin())
       {:ok, lv, _html} = live(conn, team_path(team, "/#{started.id}"))
       assert has_element?(lv, "#form-replace", "Upload its text.")
 
-      {:ok, lv, _html} = live(conn, team_path(team, "/#{started.id}/edit"))
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{started.id}/replace"))
       assert has_element?(lv, "#form-text-file", "Text")
       refute has_element?(lv, "#form-text-file", "Leave it empty to keep its text.")
       lv |> form("#form-upload") |> render_submit()
