@@ -2,6 +2,7 @@ defmodule Web.FormChangeLive do
   use Web, :live_view_app_layout
 
   import Web.Components.AIWriting
+  import Web.Components.FileDrop
 
   alias App.AI.FormJob
   alias App.Model.Form
@@ -18,7 +19,9 @@ defmodule Web.FormChangeLive do
   # App.AI.FormJob) with the visit's earlier asks and replies, and its text replaces the
   # draft, so the try reprints here, in SAR Duty, after Claude is done. Undo puts back
   # the text from before an ask and drops the asks after it. The text is folded and read
-  # only: the box is the one way to change it here.
+  # only: the box is the one way to change it here. A new PDF from the agency takes the
+  # page's place and asks AI to fit the form to it; Undo, Stop, or a failed ask puts the
+  # old page back, and Save form saves both.
   #
   # New form's Write form opens it with its first ask, What it's for, in the flash, so a
   # reload never asks again. Nothing is saved until Save form, which keeps the form's
@@ -42,6 +45,13 @@ defmodule Web.FormChangeLive do
       activities: [],
       pages: [],
       preview_error: nil
+    )
+    |> allow_upload(:page,
+      accept: ~w(.pdf),
+      max_entries: 1,
+      max_file_size: 10_000_000,
+      auto_upload: true,
+      progress: &page_progress/3
     )
     |> assign_ai(team, user)
     |> preview()
@@ -97,18 +107,18 @@ defmodule Web.FormChangeLive do
 
   defp print(draft, team, page, activity_id) do
     cond do
-      Form.written?(draft) -> try_draft(draft, team, activity_id)
+      Form.written?(draft) -> try_draft(draft, team, page, activity_id)
       page -> Map.merge(%{activities: [], activity: nil}, pages(page))
       true -> %{activities: [], activity: nil, pages: [], preview_error: nil}
     end
   end
 
-  defp try_draft(draft, team, activity_id) do
+  defp try_draft(draft, team, page, activity_id) do
     activities = TryForm.activities(draft, team)
     activity = Enum.find(activities, &(&1.id == activity_id)) || TryForm.first(activities)
 
     printed =
-      case activity && TryForm.call(draft, team, activity.id) do
+      case activity && TryForm.call(draft, team, activity.id, page: page) do
         nil -> %{pages: [], preview_error: nil}
         {:ok, attachment} -> pages(attachment.content)
         {:error, reason} -> %{pages: [], preview_error: reason}
@@ -129,6 +139,11 @@ defmodule Web.FormChangeLive do
     {:noreply, socket |> assign(activity: activity) |> preview()}
   end
 
+  def handle_event("validate_page", _params, socket), do: {:noreply, socket}
+
+  def handle_event("cancel-upload", %{"ref" => ref}, socket),
+    do: {:noreply, cancel_upload(socket, :page, ref)}
+
   def handle_event("show_text", _params, socket), do: {:noreply, assign(socket, text_open: true)}
   def handle_event("hide_text", _params, socket), do: {:noreply, assign(socket, text_open: false)}
 
@@ -146,6 +161,7 @@ defmodule Web.FormChangeLive do
     {:noreply,
      socket
      |> cancel_async(:ai_ask)
+     |> put_back_page(pending)
      |> assign(ai_pending: nil, ai_form: ask_form((pending && pending.ask) || ""))
      |> put_flash(:info, "Stopped. Nothing changed.")}
   end
@@ -155,7 +171,7 @@ defmodule Web.FormChangeLive do
       {_newer, [ask | older]} ->
         {:noreply,
          socket
-         |> assign(text: ask.before, ai_asks: older)
+         |> assign(text: ask.before, page: ask.before_page, ai_asks: older)
          |> preview()
          |> put_flash(:info, "Undone. The form is back to before that ask.")}
 
@@ -167,18 +183,22 @@ defmodule Web.FormChangeLive do
   def handle_event("save", _params, socket) do
     %{team: team, form: form, text: text, current_user: user} = socket.assigns
 
-    if text == form.text do
+    page = if page_changed?(socket.assigns), do: socket.assigns.page
+
+    if text == form.text and is_nil(page) do
       {:noreply,
        socket
        |> put_flash(:info, "Nothing to save. #{form.name} is as it was.")
        |> push_navigate(to: FormOwner.form_path(team, form))}
     else
-      save(socket, team, form, text, user)
+      save(socket, team, form, text, page, user)
     end
   end
 
-  defp save(socket, team, form, text, user) do
-    case SaveForm.call(team, form, text, nil, user) do
+  defp page_changed?(%{form: form, page: page}), do: Form.sha256(page) != form.page_sha256
+
+  defp save(socket, team, form, text, page, user) do
+    case SaveForm.call(team, form, text, page, user) do
       {:ok, saved} ->
         {:noreply,
          socket
@@ -209,8 +229,9 @@ defmodule Web.FormChangeLive do
     {:noreply, socket |> ask_done({:error, :unreachable}) |> assign(ai_pending: nil)}
   end
 
-  # The ask runs beside the page, with the visit's earlier asks.
-  defp start_ask(socket, ask) do
+  # The ask runs beside the page, with the visit's earlier asks. `before_page` is the page
+  # Undo puts back: the old one when the ask is for a new one.
+  defp start_ask(socket, ask, before_page \\ nil) do
     %{team: team, form: form, page: page, text: text, ai_asks: asks, current_user: user} =
       socket.assigns
 
@@ -218,7 +239,10 @@ defmodule Web.FormChangeLive do
     now = DateTime.utc_now()
 
     socket
-    |> assign(ai_pending: %{ask: ask, before: text}, ai_form: ask_form(""))
+    |> assign(
+      ai_pending: %{ask: ask, before: text, before_page: before_page || page},
+      ai_form: ask_form("")
+    )
     |> start_async(:ai_ask, fn ->
       job = FormJob.build(team, form, page, text, ask, now, earlier)
       AskAI.call(team, user, job, now)
@@ -238,6 +262,7 @@ defmodule Web.FormChangeLive do
   # A failed ask leaves no reply: a toast says why, and its words go back in the box.
   defp ask_done(socket, {:error, reason}) do
     socket
+    |> put_back_page(socket.assigns.ai_pending)
     |> assign(ai_form: ask_form(socket.assigns.ai_pending.ask))
     |> put_flash(:error, ai_error_text(reason))
   end
@@ -250,13 +275,45 @@ defmodule Web.FormChangeLive do
       id: System.unique_integer([:positive]),
       ask: pending.ask,
       before: pending.before,
+      before_page: pending.before_page,
       note: note,
-      undo?: undo?,
+      undo?: undo? or pending.before_page != socket.assigns.page,
       blank: blank
     }
 
     assign(socket, ai_asks: [entry | socket.assigns.ai_asks])
   end
+
+  @new_page_ask "Fit the form to the agency's new PDF."
+
+  # The agency's new PDF, once it's up: it takes the page's place, and AI fits the form
+  # to it, unless it's a scan or an ask is running.
+  defp page_progress(:page, %{done?: true}, socket) do
+    [bytes] =
+      consume_uploaded_entries(socket, :page, fn %{path: path}, _entry ->
+        {:ok, File.read!(path)}
+      end)
+
+    case SaveForm.check_page(bytes) do
+      :ok when socket.assigns.ai_pending == nil ->
+        old = socket.assigns.page
+        {:noreply, socket |> assign(page: bytes) |> preview() |> start_ask(@new_page_ask, old)}
+
+      :ok ->
+        {:noreply, put_flash(socket, :error, "Wait for AI to answer, then use the new PDF.")}
+
+      {:error, :page, message} ->
+        {:noreply, put_flash(socket, :error, message)}
+    end
+  end
+
+  defp page_progress(:page, _entry, socket), do: {:noreply, socket}
+
+  # Stop or a failed ask puts back the page from before it.
+  defp put_back_page(socket, %{before_page: page}) when page != socket.assigns.page,
+    do: socket |> assign(page: page) |> preview()
+
+  defp put_back_page(socket, _pending), do: socket
 
   defp refresh_ai(socket) do
     %{team: team, current_user: user} = socket.assigns
@@ -384,6 +441,23 @@ defmodule Web.FormChangeLive do
           />
         </div>
       </section>
+
+      <.form
+        :if={@ai == :ok and is_nil(@ai_pending)}
+        for={%{}}
+        id="form-new-page"
+        phx-change="validate_page"
+        class="measure mb-8"
+      >
+        <.file_drop
+          id="form-new-page-file"
+          upload={@uploads.page}
+          label="A new PDF from the agency"
+          kinds="a PDF"
+        >
+          AI fits the form to it. Nothing is saved until Save form.
+        </.file_drop>
+      </.form>
 
       <section :if={written?(@text)} id="form-text">
         <p class="action mb-3">

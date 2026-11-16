@@ -77,8 +77,11 @@ to them. Organization forms are SAR Duty's to write.
   fill, and why. Ask for one in the box, or leave it. Undo puts back the text from
   before an ask.
 - **The text** is folded and read only: Show text and Hide text. The box is the one way
-  to change it here. A SAR Duty admin still uploads a text file on Replace form,
-  `/settings/forms/:id/replace`.
+  to change it here, and nobody uploads a team form's text: Replace form is for an
+  organization's forms only.
+- **A new PDF from the agency**, under the try, takes the page's place and asks AI to
+  "Fit the form to the agency's new PDF." The try prints on it at once. Undo, Stop, or a
+  failed ask puts the old page back, and Save form saves the page with the text.
 - **Save form** saves the text (App.Operation.SaveForm) and keeps the form's state, so a
   new form stays off until a team admin turns on testing. Nothing is saved until then,
   a reload loses the conversation, and forms have no History line.

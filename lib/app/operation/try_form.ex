@@ -58,18 +58,20 @@ defmodule App.Operation.TryForm do
 
   @doc """
   `{:ok, attachment}`, the form printed on the activity `activity_id` it's tried on, or
-  `{:error, reason}`.
+  `{:error, reason}`. `opts[:page]` prints it on that page PDF instead of the form's
+  own, as Change form does with the agency's new PDF before it's saved (#1089).
   """
-  def call(%Form{} = form, owner, activity_id, now \\ DateTime.utc_now()) do
+  def call(%Form{} = form, owner, activity_id, opts \\ []) do
+    now = Keyword.get_lazy(opts, :now, &DateTime.utc_now/0)
+    page = Keyword.get_lazy(opts, :page, fn -> Form.page_bytes(form) end)
+
     case context(owner, now) do
       {nil, _repo} ->
         {:error, "Coast Range SAR is not ready. Try again in a minute."}
 
       {context, _repo} ->
         with {:ok, %{attachment: attachment}} <-
-               PrintForm.call(form.text, Form.page_bytes(form), context, activity_id, %{},
-                 mark: :sample
-               ),
+               PrintForm.call(form.text, page, context, activity_id, %{}, mark: :sample),
              do: {:ok, attachment}
     end
   end

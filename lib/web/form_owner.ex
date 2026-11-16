@@ -42,12 +42,12 @@ defmodule Web.FormOwner do
 
   def form_path(%Team{} = team, %Form{} = form), do: ~p"/teams/#{team}/settings/forms/#{form}"
 
-  @doc "Replace form, where a SAR Duty admin uploads its text and page."
+  @doc """
+  Replace form, where a SAR Duty admin uploads an organization's form's text and page. A
+  team's own form has none: AI writing writes it on Change form (#1089).
+  """
   def replace_path(%Organization{} = organization, %Form{} = form),
     do: ~p"/orgs/#{organization}/forms/#{form}/edit"
-
-  def replace_path(%Team{} = team, %Form{} = form),
-    do: ~p"/teams/#{team}/settings/forms/#{form}/replace"
 
   @doc "Change form, where a team's admin writes its form with AI writing (#1089)."
   def change_path(%Team{} = team, %Form{} = form),

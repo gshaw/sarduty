@@ -620,8 +620,9 @@ organization.
   organization's admins can't.
 - **Its pages are the organization's pages**, as Team settings' Forms tab, after Fields,
   under `/teams/:subdomain/settings/forms`, and a 404 while team forms are off. Web.FormOwner
-  gives each page its owner, paths, and the words that differ. SAR Duty admins replace
-  it; the team's admins try it on the team's own activities, marked SAMPLE.
+  gives each page its owner, paths, and the words that differ, except Replace form: a
+  team's form is written with AI writing, never uploaded (#1089). The team's admins try
+  it on the team's own activities, marked SAMPLE.
 - **The team's admins start it from the agency's PDF**, and save its text; see
   [Writing a team's form](#writing-a-teams-form).
 
@@ -641,8 +642,8 @@ A team admin starts their team's form without a Mac (#1083, #1088):
 4. **Saving its first text** keeps it version 1; each later save adds one. With AI
    writing open, the team's admins write it on Change form, and New form's Write form
    opens it with the first ask running ([ai-writing.md](ai-writing.md#forms), #1089).
-   Without it, a SAR Duty admin writes it and uploads the text on Replace. The form's
-   page says it's not written yet, and nothing more.
+   Without it, the form's page says it's not written yet, and nothing more, until AI
+   writing opens to them. The agency's new PDF goes in on Change form too.
 
 A model writing a team's form gets this page, built in (`App.Document.language/0`), and
 the page's measures. It writes each place from the measures, as find_places.py does:

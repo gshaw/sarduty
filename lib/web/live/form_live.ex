@@ -19,9 +19,10 @@ defmodule Web.FormLive do
   # One form (#950), an organization's or a team's own (#1083): what it reads and asks,
   # whether it's off, testing, or on (#970), and a try: on Coast Range SAR, a made-up
   # team, for an organization's, and on the team's own activities for a team's. Found
-  # through its owner, so another's is a 404. SAR Duty admins replace it. A team's new
-  # form says it's not written yet, and nothing more, until it has its text (#1088). With
-  # AI writing open, a team's admins write it on Change form (#1089). Delete form shows
+  # through its owner, so another's is a 404. SAR Duty admins replace an organization's. A
+  # team's new form says it's not written yet, and nothing more, until it has its text
+  # (#1088). With AI writing open, a team's admins write it on Change form (#1089), and
+  # give it the agency's new PDF there; nobody uploads a team's text. Delete form shows
   # while no PDF was published from it; after, turning it off is the way.
   def mount(%{"id" => id}, _session, socket) do
     owner = FormOwner.get(socket.assigns)
@@ -191,11 +192,13 @@ defmodule Web.FormLive do
           </form>
         </section>
 
-        <section :if={@current_user.is_admin} id="form-replace" class="mb-8 measure">
+        <section
+          :if={@current_user.is_admin and match?(%Organization{}, @owner)}
+          id="form-replace"
+          class="mb-8 measure"
+        >
           <h2 class="heading">Replace</h2>
-          <p>
-            {if Form.written?(@form), do: "Upload a new text or page.", else: "Upload its text."}
-          </p>
+          <p>Upload a new text or page.</p>
           <.button id="form-replace-button" navigate={FormOwner.replace_path(@owner, @form)}>
             Replace form
           </.button>

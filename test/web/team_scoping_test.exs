@@ -36,7 +36,6 @@ defmodule Web.TeamScopingTest do
     # A team's own form (#1083), with team forms on here, so the 404 is the scoping's.
     "/teams/:subdomain/settings/forms/:id",
     "/teams/:subdomain/settings/forms/:id/edit",
-    "/teams/:subdomain/settings/forms/:id/replace",
     "/teams/:subdomain/settings/forms/:id/page",
     "/teams/:subdomain/settings/forms/:id/try",
     "/teams/:subdomain/equipment/:id",

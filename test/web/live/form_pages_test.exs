@@ -324,33 +324,14 @@ defmodule Web.FormPagesTest do
       end
     end
 
-    test "a SAR Duty admin uploads a text, named apart from its organization's", ctx do
+    test "has no Replace, even for a SAR Duty admin: AI writing writes it (#1089)", ctx do
       %{conn: conn, team: team, own: own} = ctx
       conn = log_in_user(conn, sar_duty_admin())
-      {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}/replace"))
-      assert has_element?(lv, "h1", "Replace Debrief")
-      assert has_element?(lv, "p", "Saving checks the text on Valley SAR.")
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}"))
 
-      upload(lv, :text, "task_report.txt", @text, "text/plain")
-      lv |> form("#form-upload") |> render_submit()
+      refute has_element?(lv, "#form-replace")
 
-      assert has_element?(
-               lv,
-               "#form-text-file",
-               "WSARA has a form called Task report. Give yours another name."
-             )
-
-      text = String.replace(@text, "form 'Task report'", "form 'Task report v2'")
-      upload(lv, :text, "task_report.txt", text, "text/plain")
-      {:ok, lv, _html} = lv |> form("#form-upload") |> render_submit() |> follow_redirect(conn)
-
-      assert [%Form{name: "Task report v2", version: 2}] = Form.get_all(team)
-      assert has_element?(lv, "h1", "Task report v2")
-
-      assert has_element?(
-               lv,
-               "#form-replace-button[href='#{team_path(team, "/#{own.id}/replace")}']"
-             )
+      assert conn |> get(team_path(team, "/#{own.id}/replace")) |> html_response(404)
     end
 
     test "its team admin starts one from the agency's PDF, not written yet", ctx do
@@ -384,34 +365,6 @@ defmodule Web.FormPagesTest do
       refute has_element?(lv, "#form-try")
       refute has_element?(lv, "#form-text")
       refute has_element?(lv, "#form-replace")
-    end
-
-    test "a SAR Duty admin writes a started form with a text file, and it stays version 1",
-         ctx do
-      %{conn: conn, team: team, alex: alex, page: page} = ctx
-      {:ok, started} = SaveForm.start(team, "Incident debrief", page, alex)
-
-      assert_raise Web.Status.NotFound, fn ->
-        conn |> log_in_user(alex) |> live(team_path(team, "/#{started.id}/replace"))
-      end
-
-      conn = log_in_user(conn, sar_duty_admin())
-      {:ok, lv, _html} = live(conn, team_path(team, "/#{started.id}"))
-      assert has_element?(lv, "#form-replace", "Upload its text.")
-
-      {:ok, lv, _html} = live(conn, team_path(team, "/#{started.id}/replace"))
-      assert has_element?(lv, "#form-text-file", "Text")
-      refute has_element?(lv, "#form-text-file", "Leave it empty to keep its text.")
-      lv |> form("#form-upload") |> render_submit()
-      assert has_element?(lv, "#form-text-file", "Upload the form's text, a .txt file.")
-
-      text = String.replace(@text, "form 'Task report'", "form 'Incident debrief'")
-      upload(lv, :text, "debrief.txt", text, "text/plain")
-      {:ok, lv, html} = lv |> form("#form-upload") |> render_submit() |> follow_redirect(conn)
-
-      assert html =~ "Incident debrief saved."
-      assert %Form{version: 1, text: ^text} = Repo.reload!(started)
-      assert has_element?(lv, "#form-on")
     end
 
     test "a scan has no text to read, so it can't start a form", ctx do

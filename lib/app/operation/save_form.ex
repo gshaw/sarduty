@@ -55,7 +55,7 @@ defmodule App.Operation.SaveForm do
 
     with true <- allowed?(team, user, now) || {:error, :forbidden},
          :ok <- check_start_name(team, name),
-         :ok <- check_start_page(page) do
+         :ok <- check_page(page) do
       form = %Form{team_id: team.id, name: name, text: ""}
       result = Repo.transaction(fn -> write_start!(form, page, user) end)
 
@@ -75,9 +75,14 @@ defmodule App.Operation.SaveForm do
     end
   end
 
-  defp check_start_page(nil), do: {:error, :page, "Choose the agency's PDF."}
+  @doc """
+  `:ok` when `page`, the agency's PDF, has text to read, as AI writing needs, or
+  `{:error, :page, message}`. Starting a form checks it, and so does a new PDF on Change
+  form (#1089).
+  """
+  def check_page(nil), do: {:error, :page, "Choose the agency's PDF."}
 
-  defp check_start_page(page) do
+  def check_page(page) do
     case Service.PDFGeometry.read(page) do
       {:ok, pages} ->
         if Enum.any?(pages, &(&1.lines != [])),

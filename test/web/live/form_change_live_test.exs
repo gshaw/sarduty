@@ -247,6 +247,54 @@ defmodule Web.FormChangeLiveTest do
     assert form.state == :off
   end
 
+  describe "a new PDF from the agency" do
+    # The form written, then the agency's new page: AI fits the form to it and changes
+    # nothing, as the made-up page only adds a word.
+    setup %{conn: conn, team: team, alex: alex, started: started} do
+      revised = String.replace(@page_source, "Page 1 of 2.", "Page 1 of 2. Revised.")
+      {:ok, new_page} = Service.Typst.compile(revised)
+
+      stub_claude([
+        %{"text" => written(), "note" => "Wrote it.", "blank" => []},
+        %{"text" => written(), "note" => "It fits the new page as it was.", "blank" => []}
+      ])
+
+      conn = log_in_user(conn, alex)
+      {:ok, lv, _html} = live(conn, forms_path(team, "/#{started.id}/edit"))
+      lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
+      render_async(lv, @wait)
+
+      lv
+      |> file_input("#form-new-page", :page, [
+        %{name: "task_report_v2.pdf", content: new_page, type: "application/pdf"}
+      ])
+      |> render_upload("task_report_v2.pdf")
+
+      render_async(lv, @wait)
+      %{conn: conn, lv: lv, new_page: new_page}
+    end
+
+    test "AI fits the form to it, and Save form saves the new page", ctx do
+      %{conn: conn, lv: lv, new_page: new_page, started: started} = ctx
+
+      assert has_element?(lv, ".ai-you", "Fit the form to the agency's new PDF.")
+      assert has_element?(lv, ".ai-reply", "It fits the new page as it was.")
+      requests = for {:claude, request} <- messages(), do: request
+      assert Jason.encode!(List.last(requests)) =~ Base.encode64(new_page)
+
+      {:ok, _lv, _html} = lv |> element("#form-save") |> render_click() |> follow_redirect(conn)
+      assert Repo.reload!(started).page_sha256 == Form.sha256(new_page)
+    end
+
+    test "Undo puts the old page back", %{conn: conn, lv: lv, page: page, started: started} do
+      [_, id] = ~r/id="form-ai-undo-(\d+)"/ |> Regex.scan(render(lv)) |> List.last()
+      lv |> element("#form-ai-undo-#{id}") |> render_click()
+
+      {:ok, _lv, _html} = lv |> element("#form-save") |> render_click() |> follow_redirect(conn)
+      assert Repo.reload!(started).page_sha256 == Form.sha256(page)
+    end
+  end
+
   test "Stop puts the words back, and the ask counts with what it spent", ctx do
     %{conn: conn, team: team, alex: alex, started: started} = ctx
     test = self()
