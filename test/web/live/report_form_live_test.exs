@@ -744,6 +744,7 @@ defmodule Web.ReportFormLiveTest do
       {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
 
       assert has_element?(lv, "#report-ai-form", "Describe it")
+      assert has_element?(lv, "#report-query-folded")
 
       lv
       |> form("#report-ai-form", ai: %{ask: "when did each member last come"})
@@ -752,7 +753,7 @@ defmodule Web.ReportFormLiveTest do
       render_async(lv)
 
       assert has_element?(lv, "#report_query", "select name, last_attended from members")
-      assert has_element?(lv, "#report-ai-note", "Shows when each member last came.")
+      assert has_element?(lv, "#report-ai-asks", "Shows when each member last came.")
       assert has_element?(lv, "#report-ai-asks", "when did each member last come")
       assert has_element?(lv, "#report-ai-form", "Describe a change")
 
@@ -762,7 +763,7 @@ defmodule Web.ReportFormLiveTest do
       assert ask.input_tokens == 9_900
       assert ask.cost_microdollars > 0
 
-      lv |> element("#report-ai-asks a", "Undo") |> render_click()
+      lv |> element("#report-ai-asks button", "Undo") |> render_click()
       assert has_element?(lv, "#report_query", "where counted = true")
       refute has_element?(lv, "#report-ai-asks")
     end
@@ -782,7 +783,7 @@ defmodule Web.ReportFormLiveTest do
 
       {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
       refute has_element?(lv, "#report-ai-form")
-      assert has_element?(lv, "#report-ai-closed", "used today's 30 asks")
+      assert has_element?(lv, "#report-ai-closed", "used today's 100 asks")
     end
 
     test "with AI writing off there is no box", %{conn: conn} do

@@ -12,11 +12,13 @@ defmodule Web.ReportFormLive do
   and `agent` names who wrote it, saved with the report.
 
   AI writing (docs/ai-writing.md): when it's open to the admin, a describe box above the
-  form. Each ask runs in `start_async` (App.Operation.AskAI) and fills the form as typing
-  would, so the rows rerun here, on the team's records, after Claude is done. This visit
-  lists the asks, newest first, in the page only; Undo puts back the query and name from
-  before an ask and drops the asks after it. Nothing is saved until Save, which notes the
-  version came from AI.
+  form, and the query folds to one line, since AI writes it; Show query opens it. Each
+  ask runs in `start_async` (App.Operation.AskAI) and fills the form as typing would, so
+  the rows rerun here, on the team's records, after Claude is done. This visit lists the
+  asks, newest first, each with AI's note, in the page only: the one running shows its
+  step with a spinner and Stop, and Undo puts back the query and name from before an ask
+  and drops the asks after it. A failed ask is a toast, and its words go back in the box.
+  Nothing is saved until Save, which notes the version came from AI.
 
   With `draft`, the page follows the agent's live draft (#834): each query the agent
   checks fills the form and reruns the rows, at most one run a second. Once the team
@@ -89,19 +91,22 @@ defmodule Web.ReportFormLive do
     |> then(&{:ok, &1})
   end
 
+  # With AI writing open, the query starts folded: AI writes it.
   defp assign_ai(socket) do
     %{current_team: team, current_user: user} = socket.assigns
+    ai = AskAI.check(team, user, DateTime.utc_now())
 
     assign(socket,
-      ai: AskAI.check(team, user, DateTime.utc_now()),
-      ai_form: to_form(%{"ask" => ""}, as: "ai"),
+      ai: ai,
+      ai_form: ask_form(""),
       ai_step: nil,
       ai_pending: nil,
-      ai_note: nil,
-      ai_error: nil,
-      ai_asks: []
+      ai_asks: [],
+      query_open: socket.assigns.query_open and ai != :ok
     )
   end
+
+  defp ask_form(ask), do: to_form(%{"ask" => ask}, as: "ai")
 
   # The agent's draft to follow, from its link: an id check_report made.
   defp draft(%{"draft" => id, "query" => _query}), do: if(Draft.id?(id), do: id)
@@ -277,6 +282,9 @@ defmodule Web.ReportFormLive do
   def handle_event("show_query", _params, socket),
     do: {:noreply, assign(socket, query_open: true)}
 
+  def handle_event("hide_query", _params, socket),
+    do: {:noreply, assign(socket, query_open: false)}
+
   def handle_event("load_draft", _params, socket) do
     case socket.assigns.draft_waiting do
       nil -> {:noreply, socket}
@@ -313,10 +321,13 @@ defmodule Web.ReportFormLive do
   end
 
   def handle_event("cancel_ask", _params, socket) do
+    pending = socket.assigns.ai_pending
+
     {:noreply,
      socket
      |> cancel_async(:ai_ask)
-     |> assign(ai_step: nil, ai_pending: nil, ai_note: "Stopped. Nothing changed.")}
+     |> assign(ai_step: nil, ai_pending: nil, ai_form: ask_form((pending && pending.ask) || ""))
+     |> put_flash(:info, "Stopped. Nothing changed.")}
   end
 
   def handle_event("undo_ask", %{"id" => id}, socket) do
@@ -328,7 +339,11 @@ defmodule Web.ReportFormLive do
           |> Map.merge(ask.before)
 
         {:noreply, socket} = handle_event("change", %{"report" => params}, socket)
-        {:noreply, assign(socket, ai_asks: older, ai_note: nil, ai_error: nil)}
+
+        {:noreply,
+         socket
+         |> assign(ai_asks: older)
+         |> put_flash(:info, "Undone. The query is back to before that ask.")}
 
       {_all, []} ->
         {:noreply, socket}
@@ -363,7 +378,7 @@ defmodule Web.ReportFormLive do
 
   def handle_async(:ai_ask, {:exit, _reason}, socket) do
     {:noreply,
-     assign(socket, ai_step: nil, ai_pending: nil, ai_error: ai_error_text(:unreachable))}
+     socket |> ask_done({:error, :unreachable}) |> assign(ai_step: nil, ai_pending: nil)}
   end
 
   # The ask runs beside the page; its steps arrive as messages while it does.
@@ -375,12 +390,7 @@ defmodule Web.ReportFormLive do
     pid = self()
 
     socket
-    |> assign(
-      ai_step: :writing,
-      ai_pending: %{ask: ask, before: before},
-      ai_note: nil,
-      ai_error: nil
-    )
+    |> assign(ai_step: :writing, ai_pending: %{ask: ask, before: before}, ai_form: ask_form(""))
     |> start_async(:ai_ask, fn ->
       job = ReportJob.build(team, report, ask, now)
       AskAI.call(team, user, job, now, on_step: &send(pid, {:ai_step, &1}))
@@ -394,20 +404,33 @@ defmodule Web.ReportFormLive do
       socket.assigns.params |> Map.merge(fields_params(socket.assigns.form)) |> Map.merge(sent)
 
     {:noreply, socket} = handle_event("change", %{"report" => params}, socket)
-    pending = socket.assigns.ai_pending
-    entry = %{id: System.unique_integer([:positive]), ask: pending.ask, before: pending.before}
-
-    assign(socket,
-      ai_asks: [entry | socket.assigns.ai_asks],
-      ai_note: blank_or(note, nil),
-      ai_form: to_form(%{"ask" => ""}, as: "ai")
-    )
+    add_ask(socket, blank_or(note, nil), true)
   end
 
   defp ask_done(socket, {:unchanged, note}),
-    do: assign(socket, ai_note: blank_or(note, "Nothing changed."))
+    do: add_ask(socket, blank_or(note, "Nothing changed."), false)
 
-  defp ask_done(socket, {:error, reason}), do: assign(socket, ai_error: ai_error_text(reason))
+  # A failed ask leaves no row: a toast says why, and its words go back in the box.
+  defp ask_done(socket, {:error, reason}) do
+    socket
+    |> assign(ai_form: ask_form(socket.assigns.ai_pending.ask))
+    |> put_flash(:error, ai_error_text(reason))
+  end
+
+  # This visit, newest first. `undo?` is false for an ask that changed nothing.
+  defp add_ask(socket, note, undo?) do
+    pending = socket.assigns.ai_pending
+
+    entry = %{
+      id: System.unique_integer([:positive]),
+      ask: pending.ask,
+      before: pending.before,
+      note: note,
+      undo?: undo?
+    }
+
+    assign(socket, ai_asks: [entry | socket.assigns.ai_asks])
+  end
 
   # Whether asks are left, now that this one counted.
   defp refresh_ai(socket) do
@@ -630,8 +653,7 @@ defmodule Web.ReportFormLive do
           ai={@ai}
           form={@ai_form}
           step={@ai_step}
-          note={@ai_note}
-          error={@ai_error}
+          pending={@ai_pending}
           asks={@ai_asks}
         />
         <.form for={@form} id="report-form" phx-change="change" phx-submit="save">
@@ -673,6 +695,9 @@ defmodule Web.ReportFormLive do
           >
             Write :year for a value you pick each time it runs. For one member, use their ID: member.ref_id = '112'.
           </.input>
+          <p :if={@ai == :ok and query_shown?(assigns)} class="action mb-6">
+            <.a id="report-hide-query" href="#" phx-click="hide_query">Hide query</.a>
+          </p>
 
           <.report_value
             :for={value <- (@view && @view.values) || []}
@@ -707,11 +732,11 @@ defmodule Web.ReportFormLive do
   attr :ai, :any, required: true
   attr :form, :map, required: true
   attr :step, :atom, default: nil
-  attr :note, :string, default: nil
-  attr :error, :string, default: nil
+  attr :pending, :map, default: nil
   attr :asks, :list, required: true
 
-  # The describe box: the ask, its steps while it runs, what came of it, and This visit.
+  # The describe box, then This visit: the running ask with its step, and each ask with
+  # AI's note.
   defp ai_box(assigns) do
     ~H"""
     <section id="report-ai" class="mb-8" aria-label="AI writing">
@@ -720,36 +745,61 @@ defmodule Web.ReportFormLive do
           field={@form[:ask]}
           type="textarea"
           rows="2"
-          label={if @asks == [], do: "Describe it", else: "Describe a change"}
-          disabled={@step != nil}
+          label={if @asks == [] and !@pending, do: "Describe it", else: "Describe a change"}
         >
           AI writes the query from your team's field names. It never sees your members or records.
         </.input>
-        <div class="flex items-center gap-3">
-          <.button :if={!@step} id="report-ai-ask" variant={:success}>
-            {if @asks == [], do: "Write it", else: "Change it"}
-          </.button>
-          <span :if={@step} id="report-ai-step" class="hint">{step_text(@step)}</span>
-          <.a :if={@step} id="report-ai-cancel" href="#" phx-click="cancel_ask">Stop</.a>
-        </div>
+        <.button id="report-ai-ask" variant={:success} disabled={@step != nil}>
+          {if @asks == [] and !@pending, do: "Write it", else: "Change it"}
+        </.button>
       </.form>
-      <p :if={@ai != :ok and !@error} id="report-ai-closed" class="hint">
-        {ai_closed_text(@ai)}
-      </p>
-      <p :if={@note} id="report-ai-note" class="mt-2">{@note}</p>
-      <p :if={@error} id="report-ai-error" class="warning-text mt-2">{@error}</p>
-      <div :if={@asks != []} id="report-ai-asks" class="mt-4">
+      <p :if={@ai != :ok} id="report-ai-closed" class="hint">{ai_closed_text(@ai)}</p>
+
+      <div :if={@pending || @asks != []} id="report-ai-asks" class="mt-6">
         <h2 class="heading">This visit</h2>
-        <ol>
-          <li :for={ask <- @asks} id={"report-ai-ask-#{ask.id}"}>
-            {ask.ask}
-            <.a href="#" phx-click="undo_ask" phx-value-id={ask.id}>Undo</.a>
-          </li>
-        </ol>
+        <.table
+          id="report-ai-ask-table"
+          rows={ask_rows(@pending, @asks)}
+          row_id={&"report-ai-ask-#{&1.id}"}
+        >
+          <:col :let={row} label="Ask">
+            {row.ask}
+            <.hint :if={row.note}>{row.note}</.hint>
+            <span :if={row.id == "running"} id="report-ai-step" class="hint block">
+              <.spinner>{step_text(@step)}</.spinner>
+            </span>
+          </:col>
+          <:col :let={row} label="" align="right">
+            <.button
+              :if={row.id == "running"}
+              id="report-ai-stop"
+              type="button"
+              size={:sm}
+              phx-click="cancel_ask"
+            >
+              Stop
+            </.button>
+            <.button
+              :if={row.undo?}
+              id={"report-ai-undo-#{row.id}"}
+              type="button"
+              size={:sm}
+              phx-click="undo_ask"
+              phx-value-id={row.id}
+            >
+              Undo
+            </.button>
+          </:col>
+        </.table>
       </div>
     </section>
     """
   end
+
+  defp ask_rows(nil, asks), do: asks
+
+  defp ask_rows(pending, asks),
+    do: [%{id: "running", ask: pending.ask, note: nil, undo?: false} | asks]
 
   defp step_text(:writing), do: "Writing…"
   defp step_text(:checking), do: "Checking it…"
@@ -833,12 +883,15 @@ defmodule Web.ReportFormLive do
     switch ++ sort
   end
 
+  # The count, how many show, and where the rows come from: nothing to say about typing
+  # while the query is folded.
   defp preview_count(view, source) do
-    count = ReportPage.count(view)
+    shown = length(view.result.rows)
+    first = if view.total > shown, do: "shows the first #{Format.number(shown)}"
 
-    if view.total > length(view.result.rows),
-      do: "#{count} · shows the first #{Format.number(length(view.result.rows))} · #{source}",
-      else: "#{count} · #{source}"
+    [ReportPage.count(view), first, source]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" · ")
   end
 
   # Whose query the rows are from: the agent's while the page follows it and the query
@@ -850,5 +903,5 @@ defmodule Web.ReportFormLive do
       else: "runs as you type"
   end
 
-  defp draft_line(_assigns), do: "runs as you type"
+  defp draft_line(assigns), do: if(query_shown?(assigns), do: "runs as you type")
 end

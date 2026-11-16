@@ -26,7 +26,7 @@ defmodule App.Operation.AskAI do
   require Logger
 
   @max_requests 6
-  @asks_per_day 30
+  @asks_per_day 100
   @max_tokens 16_000
 
   def asks_per_day, do: @asks_per_day

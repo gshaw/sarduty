@@ -15,12 +15,17 @@ On New report and Change report, above the form, for a user AI writing is open t
 ([Web.ReportFormLive](../lib/web/live/report_form_live.ex)).
 
 - "Describe it" and Write it; after the first ask, "Describe a change" and Change it.
-- The ask runs in `start_async`. The page shows its steps: Writing…, Checking it…,
-  Trying it on made-up data…, with Stop.
+- The query folds to one line, since AI writes it: Show query opens it, Hide query folds
+  it again, and a mistake in it opens it. The preview's count drops "runs as you type"
+  while it's folded.
+- The ask runs in `start_async` and goes to the top of **This visit** at once, with a
+  spinner naming its step (Writing…, Checking it…, Trying it on made-up data…) and Stop.
 - The answer fills the query, and a new report's name, as typing would, so the preview
-  reruns. Claude's one-line note shows under the box.
-- **This visit** lists the asks, newest first, in the page only. Undo puts back the query
-  and name from before an ask and drops the asks after it. A reload loses the list.
+  reruns. AI's one-line note shows under the ask in This visit.
+- This visit lists the asks, newest first, in the page only. Undo puts back the query
+  and name from before an ask and drops the asks after it. An ask that changed nothing
+  has no Undo. A reload loses the list.
+- A failed ask is a toast, and its words go back in the box to try again.
 - Save notes the version came "from the AI's draft" (`reports.agent` is `AI`).
 - When nothing answers the ask, the query stays and the note says what would work.
 
@@ -77,7 +82,7 @@ is an `ai_settings_changed` event.
 - **Monthly budget**: $50 by default. Once this month's asks cost that much, asks stop
   for every team and the box says AI writing is paused until next month. The Claude API
   stops too when the plan's credit is spent.
-- **30 asks a team a day**, reports and forms together, in `AskAI`.
+- **100 asks a team a day**, reports and forms together, in `AskAI`.
 
 Months and days are BC time.
 
