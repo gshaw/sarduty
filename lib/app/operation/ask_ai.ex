@@ -23,6 +23,8 @@ defmodule App.Operation.AskAI do
   alias App.Model.AISettings
   alias App.Model.Team
 
+  require Logger
+
   @max_requests 6
   @asks_per_day 30
   @max_tokens 16_000
@@ -154,7 +156,7 @@ defmodule App.Operation.AskAI do
           step = if name == "try_report", do: :trying, else: :checking
           on_step.(step)
           args = if is_map(input), do: input, else: %{}
-          tool.call(job.context, args)
+          call_tool(tool, job.context, args)
       end
 
     case result do
@@ -164,6 +166,16 @@ defmodule App.Operation.AskAI do
       {:error, message} ->
         %{"type" => "tool_result", "tool_use_id" => id, "content" => message, "is_error" => true}
     end
+  end
+
+  # A tool that raises fails its call, not the ask: Claude hears it failed and goes on
+  # without it, and the error still reaches Honeybadger through the log.
+  defp call_tool(tool, context, args) do
+    tool.call(context, args)
+  rescue
+    exception ->
+      :error |> Exception.format(exception, __STACKTRACE__) |> Logger.error()
+      {:error, "#{tool.name()} failed in SAR Duty. Go on without it."}
   end
 
   @doc """
