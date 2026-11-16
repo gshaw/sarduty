@@ -8,6 +8,7 @@ defmodule Web.FormPagesTest do
 
   alias App.Model.Event
   alias App.Model.Form
+  alias App.Operation.SaveForm
   alias App.Repo
   alias Web.Components.TeamSettingsTabs
 
@@ -360,7 +361,7 @@ defmodule Web.FormPagesTest do
     test "a SAR Duty admin writes a started form with a text file, and it stays version 1",
          ctx do
       %{conn: conn, team: team, alex: alex, page: page} = ctx
-      {:ok, started} = App.Operation.SaveForm.start(team, "Incident debrief", page, alex)
+      {:ok, started} = SaveForm.start(team, "Incident debrief", page, alex)
 
       assert_raise Web.Status.NotFound, fn ->
         conn |> log_in_user(alex) |> live(team_path(team, "/#{started.id}/edit"))
