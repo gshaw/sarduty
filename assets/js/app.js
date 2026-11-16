@@ -40,6 +40,7 @@ import {ScannerInput} from "./scanner_input"
 import {RichText} from "./rich_text"
 import {SaveImage} from "./save_image"
 import {Search} from "./search"
+import {Seconds} from "./seconds"
 import {Toast} from "./toast"
 import {listenForBarMenuKeys} from "./bar_menu_keys"
 import {hideImagesOnError} from "./hide_on_error"
@@ -48,7 +49,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, AskDialog, Combobox, DemoBanner, DragList, FileDrop, InsertField, PasskeyAdd, PasskeyLogin, QRScanner, RichText, SaveImage, ScannerInput, Search, SelectAll, SoundSwitch, Toast, WebOTP},
+  hooks: {...colocatedHooks, AskDialog, Combobox, DemoBanner, DragList, FileDrop, InsertField, PasskeyAdd, PasskeyLogin, QRScanner, RichText, SaveImage, ScannerInput, Search, Seconds, SelectAll, SoundSwitch, Toast, WebOTP},
 })
 
 trackPointer()

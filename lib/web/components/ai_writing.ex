@@ -88,7 +88,7 @@ defmodule Web.Components.AIWriting do
       <li :if={@pending} id={"#{@id}-ask-running"} class="ai-you">{@pending.ask}</li>
       <li :if={@pending} id={"#{@id}-step"} class="ai-step">
         <.spinner>
-          Thinking… <span id={"#{@id}-seconds"} phx-hook=".Seconds" phx-update="ignore"></span>
+          Thinking… <span id={"#{@id}-seconds"} phx-hook="Seconds" phx-update="ignore"></span>
         </.spinner>
         <.button id={"#{@id}-stop"} type="button" size={:sm} phx-click="cancel_ask">
           Stop
@@ -106,17 +106,6 @@ defmodule Web.Components.AIWriting do
       {@sees}
       <.a id={"#{@id}-agents-link"} href={~p"/agents"} external={true}>How agents work with SAR Duty</.a>
     </p>
-    <script :type={Phoenix.LiveView.ColocatedHook} name=".Seconds">
-      export default {
-        mounted() {
-          this.start = Date.now()
-          this.timer = setInterval(() => {
-            this.el.textContent = `${Math.floor((Date.now() - this.start) / 1000)}s`
-          }, 1000)
-        },
-        destroyed() { clearInterval(this.timer) }
-      }
-    </script>
     """
   end
 

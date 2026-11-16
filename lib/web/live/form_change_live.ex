@@ -439,9 +439,7 @@ defmodule Web.FormChangeLive do
               id="form-try-open"
               href={~p"/teams/#{@owner}/activities/#{@activity.id}"}
               external={true}
-            >
-              Open activity
-            </.a>
+            >Open activity</.a>
           </div>
           <.input
             id="form-try-activity"
