@@ -172,6 +172,12 @@ defmodule Web.FormChangeLiveTest do
     assert has_element?(lv, ".ai-blank", "Left blank")
     assert has_element?(lv, ".ai-blank", "The task leader signs it by hand.")
     assert has_element?(lv, "#form-try-activity option", incident.title)
+    # The activity it's tried on opens in a new window, to check the form against.
+    assert has_element?(
+             lv,
+             "#form-try-open[target=_blank][href='/teams/#{team.subdomain}/activities/#{incident.id}']"
+           )
+
     assert has_element?(lv, "#form-page-1[alt='Page 1 of 2, marked SAMPLE']")
 
     # The text is folded, and read only.

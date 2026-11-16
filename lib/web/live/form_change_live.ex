@@ -350,6 +350,15 @@ defmodule Web.FormChangeLive do
             Marked SAMPLE, with each question's default answer.
           </.input>
         </form>
+        <p :if={@activity} class="action mt-2 mb-4">
+          <.a
+            id="form-try-open"
+            href={~p"/teams/#{@team}/activities/#{@activity.id}"}
+            external={true}
+          >
+            Open the activity
+          </.a>
+        </p>
         <p
           :if={written?(@text) and @activities == [] and !@previewing}
           id="form-try-none"
