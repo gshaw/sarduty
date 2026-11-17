@@ -7,10 +7,12 @@ defmodule Web.FormLive do
   alias App.Model.Form
   alias App.Model.Organization
   alias App.Operation.AskAI
+  alias App.Operation.CopyForm
   alias App.Operation.DeleteForm
   alias App.Operation.SaveForm
   alias App.Operation.SetFormState
   alias App.Operation.TryForm
+  alias App.Repo
   alias App.Report.Query
   alias Web.FormCollectionLive
   alias Web.FormOwner
@@ -23,21 +25,47 @@ defmodule Web.FormLive do
   # on Change form (#1089), the organization's or the team's, and give it the agency's
   # new PDF there; nobody uploads a form's text. Delete form shows
   # while no PDF was published from it; after, turning it off is the way.
+  #
+  # On a team's page, its organization's form is read-only: its facts, a try on the
+  # team's own activities, and its text. With team forms on, its team admins copy it as
+  # their own to change (App.Operation.CopyForm).
   def mount(%{"id" => id}, _session, socket) do
-    owner = FormOwner.get(socket.assigns)
-    form = Form.get(owner, id) || raise(Web.Status.NotFound)
+    owner = FormOwner.viewer(socket.assigns)
+    {form, own?} = FormOwner.form!(owner, id)
+    user = socket.assigns.current_user
     activities = TryForm.activities(form, owner)
 
     socket =
       socket
-      |> assign(page_title: form.name, owner: owner, activities: activities)
-      |> assign(change?: change?(owner, socket.assigns.current_user))
-      |> assign(delete?: DeleteForm.allowed?(form, socket.assigns.current_user))
+      |> assign(page_title: form.name, owner: owner, activities: activities, own?: own?)
+      |> assign_actions(form, owner, own?, user)
       |> assign(activity: TryForm.first(activities))
       |> assign_form(form)
 
     {:ok, socket}
   end
+
+  # What the user may do with it: the owner's own form, or on a team's page, its
+  # organization's, read-only, which they may copy.
+  defp assign_actions(socket, form, owner, true = _own?, user),
+    do:
+      assign(socket,
+        change?: change?(owner, user),
+        delete?: DeleteForm.allowed?(form, user),
+        copy?: false,
+        from: nil,
+        replaced?: Form.replaced?(form, owner)
+      )
+
+  defp assign_actions(socket, _form, team, false = _own?, user),
+    do:
+      assign(socket,
+        change?: false,
+        delete?: false,
+        copy?: CopyForm.allowed?(team, user),
+        from: Repo.preload(team, :organization).organization,
+        replaced?: false
+      )
 
   # Change form writes the form with AI writing (#1089), for whoever saves the owner's
   # forms while AI writing is open to them.
@@ -77,7 +105,7 @@ defmodule Web.FormLive do
       <:item label={@form.name} />
     </.breadcrumbs>
     <h1 class="title">{@form.name}</h1>
-    <.page_actions :if={@change? or @delete?} id="form-actions">
+    <.page_actions :if={@change? or @delete? or @copy?} id="form-actions">
       <:action :if={@change?}>
         <.a id="form-change" navigate={FormOwner.change_path(@owner, @form)}>Change form</.a>
       </:action>
@@ -90,8 +118,19 @@ defmodule Web.FormLive do
           {Web.DeleteConfirm.form(@form)}
         >Delete form</.a>
       </:action>
+      <:action :if={@copy?}>
+        <.a
+          id="form-copy"
+          href="#"
+          phx-click="copy"
+          phx-disable-with="Copying…"
+        >Copy as your team's form</.a>
+      </:action>
     </.page_actions>
     <p :if={@form.about} class="lead measure">{@form.about}</p>
+    <p :if={@from} id="form-from" class="measure">
+      {@from.short_name}'s form. Only {@from.short_name} can change it.
+    </p>
 
     <div class="content-wrapper">
       <aside class="content-1/3">
@@ -99,6 +138,9 @@ defmodule Web.FormLive do
           <dt>{FormCollectionLive.state_label(@owner)}</dt>
           <dd id="form-state">
             {if Form.written?(@form), do: Form.state_label(@form.state), else: "Not written yet"}
+            <div :if={@replaced?} id="form-replaced" class="hint">
+              Replaced by your organization's {@form.name}
+            </div>
           </dd>
           <dt>Shows on</dt>
           <dd id="form-shows-on">{shows_on(@doc)}</dd>
@@ -135,7 +177,7 @@ defmodule Web.FormLive do
         <%!-- Two switches for three states, as Features nests one under another: on shows
         it to teams, and testing under it keeps it to drafts. Turning it on starts testing. --%>
         <section
-          :if={Form.written?(@form)}
+          :if={@own? and Form.written?(@form)}
           id="form-on-off"
           class="mb-8 measure flex flex-col gap-6"
         >
@@ -269,6 +311,24 @@ defmodule Web.FormLive do
 
       {:error, :not_written} ->
         {:noreply, put_flash(socket, :error, "Save the form's text before you turn it on.")}
+    end
+  end
+
+  def handle_event("copy", _params, socket) do
+    %{form: form, owner: owner, current_user: user} = socket.assigns
+
+    case CopyForm.call(form, owner, user) do
+      {:ok, copy} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Copied as #{copy.name}. It's off until you turn it on.")
+         |> push_navigate(to: FormOwner.form_path(owner, copy))}
+
+      {:error, :forbidden} ->
+        {:noreply, put_flash(socket, :error, "You can no longer copy this form.")}
+
+      {:error, message} ->
+        {:noreply, put_flash(socket, :error, message)}
     end
   end
 

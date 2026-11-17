@@ -624,6 +624,15 @@ organization.
   under `/teams/:subdomain/settings/forms`, and a 404 while team forms are off. Web.FormOwner
   gives each page its owner, paths, and the words that differ. The team's admins try it
   on the team's own activities, marked SAMPLE.
+- **The Forms tab shows on every team**, as Fields does: the team's own forms under its
+  logo, with New form, while team forms are on, then its organization's testing or on,
+  read-only, under the organization's. A team form its organization's replaced says so.
+  An organization's form's page there has its facts, a try on the team's activities, and
+  its text, with no switches.
+- **Copy as your team's form** (App.Operation.CopyForm), with team forms on, makes an
+  organization's form the team's own, named "Task report (copy)" for a Task report, off, with its text and page. It
+  shows beside the organization's on activities, never instead: the organization's stays
+  the one its teams file.
 - **The team's admins start it from the agency's PDF**, and save its text; see
   [Writing a team's form](#writing-a-teams-form).
 

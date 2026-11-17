@@ -238,14 +238,15 @@ defmodule Web.FormPagesTest do
 
     defp team_path(team, rest \\ ""), do: "/teams/#{team.subdomain}/settings/forms#{rest}"
 
-    test "lists the team's forms only, on Team settings' Forms tab after Fields", ctx do
+    test "lists the team's forms, on Team settings' Forms tab after Fields", ctx do
       %{conn: conn, team: team, own: own, form: form, alex: alex} = ctx
       {:ok, lv, _html} = conn |> log_in_user(alex) |> live(team_path(team))
 
-      assert has_element?(lv, "#form-#{own.id}-name[href='#{team_path(team, "/#{own.id}")}']")
+      assert has_element?(lv, "#forms-team a[href='#{team_path(team, "/#{own.id}")}']", "Debrief")
       assert has_element?(lv, "#form-#{own.id}-state", "Off")
+      # The organization's form is off, so its teams don't see it.
       refute has_element?(lv, "#form-#{form.id}-name")
-      assert has_element?(lv, "th", "On activities")
+      refute has_element?(lv, "#forms-organization")
       assert has_element?(lv, "nav a[href='#{team_path(team)}'][aria-current]", "Forms")
       refute has_element?(lv, "#side-nav-forms")
       refute has_element?(lv, "#upload-form")
@@ -283,17 +284,72 @@ defmodule Web.FormPagesTest do
       refute has_element?(lv, "#form-delete")
     end
 
-    test "are a 404 while team forms are off, with no Forms tab", ctx do
-      %{conn: conn, team: team, own: own, alex: alex} = ctx
+    test "are a 404 while team forms are off; the Forms tab shows the organization's", ctx do
+      %{conn: conn, team: team, own: own, form: form, alex: alex} = ctx
       team |> Ecto.Changeset.change(forms_enabled: false) |> Repo.update!()
+      form |> Ecto.Changeset.change(state: :on) |> Repo.update!()
       conn = log_in_user(conn, alex)
 
-      {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/settings/fields")
-      refute has_element?(lv, "nav a[href='#{team_path(team)}']")
+      {:ok, lv, _html} = live(conn, team_path(team))
+      assert has_element?(lv, "nav a[href='#{team_path(team)}'][aria-current]", "Forms")
+      refute has_element?(lv, "#forms-team")
+      refute has_element?(lv, "#new-form")
+      refute has_element?(lv, "#form-#{own.id}")
+      assert has_element?(lv, "#forms-organization h2", "WSARA's forms")
+      assert has_element?(lv, "#forms-who-changes", "Only WSARA can change its forms.")
 
-      assert_raise Web.Status.NotFound, fn -> live(conn, team_path(team)) end
       assert_raise Web.Status.NotFound, fn -> live(conn, team_path(team, "/#{own.id}")) end
       assert_error_sent 404, fn -> get(conn, team_path(team, "/#{own.id}/page")) end
+
+      # Its organization's form is read-only, with no Copy while team forms are off.
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{form.id}"))
+      assert has_element?(lv, "#form-from", "WSARA's form. Only WSARA can change it.")
+      refute has_element?(lv, "#form-on-off")
+      refute has_element?(lv, "#form-actions")
+      assert has_element?(lv, "#form-try")
+    end
+
+    test "with no organization forms and team forms off, the tab says where forms come from",
+         ctx do
+      %{conn: conn, team: team, alex: alex} = ctx
+      team |> Ecto.Changeset.change(forms_enabled: false) |> Repo.update!()
+      {:ok, lv, _html} = conn |> log_in_user(alex) |> live(team_path(team))
+
+      assert has_element?(lv, "#no-forms", "When WSARA adds a form")
+    end
+
+    test "its team admin copies an organization's form as the team's own, off", ctx do
+      %{conn: conn, team: team, form: form, alex: alex} = ctx
+      form = form |> Ecto.Changeset.change(state: :on) |> Repo.update!()
+      conn = log_in_user(conn, alex)
+
+      {:ok, lv, _html} = live(conn, team_path(team))
+      assert has_element?(lv, "#organization-forms a[href='#{team_path(team, "/#{form.id}")}']")
+
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{form.id}"))
+      refute has_element?(lv, "#form-change")
+      refute has_element?(lv, "#form-delete")
+
+      {:ok, lv, html} = lv |> element("#form-copy") |> render_click() |> follow_redirect(conn)
+
+      copy = Repo.get_by!(Form, team_id: team.id, name: "#{form.name} (copy)")
+      assert html =~ "Copied as #{copy.name}."
+      assert copy.state == :off
+      assert copy.text =~ "form '#{form.name} (copy)'"
+      assert Form.page_bytes(copy) == Form.page_bytes(form)
+      assert has_element?(lv, "#form-on-off")
+    end
+
+    test "a team's form its organization's replaced says so", ctx do
+      %{conn: conn, team: team, own: own, form: form, alex: alex} = ctx
+      form |> Ecto.Changeset.change(state: :on, name: own.name) |> Repo.update!()
+      conn = log_in_user(conn, alex)
+
+      {:ok, lv, _html} = live(conn, team_path(team))
+      assert has_element?(lv, "#form-#{own.id}-replaced", "Replaced by WSARA's")
+
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}"))
+      assert has_element?(lv, "#form-replaced")
     end
 
     test "its team admin sets it testing, and sees there's no activity to try it on", ctx do
