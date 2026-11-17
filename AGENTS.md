@@ -136,19 +136,22 @@ fi
 
 ## Developer workflow (repo-specific)
 
-- Tooling is managed by `mise` (see `.mise.toml`). `mise run check` formats, compiles
-  with warnings as errors, lints with Credo, and spell-checks and lints the Markdown.
-  `mise run test` runs the suite; `mise run ci` runs both. `mix precommit` is an alias for
-  `mise run ci`.
-- **Read the counts, not just the exit code.** Credo prints `N source files`,
-  markdownlint prints `Linting: N files`, and ExUnit prints `Result: N passed`. A green
-  run over a handful of files checked nothing; if a count looks small, the checker is
-  misconfigured rather than satisfied.
+- Tooling is managed by `mise` (see `.mise.toml`). `mise run check` runs `hk fix --all`
+  (formats and lints the Elixir, and spell-checks and lints the Markdown through stet),
+  then compiles with warnings as errors. `mise run lint` checks the same without changing
+  files. `mise run test` runs the suite; `mise run ci` runs both. `mix precommit` is an
+  alias for `mise run ci`.
+- **Read the counts, not just the exit code.** Credo prints `N source files`, stet
+  prints `files read: cspell N, markdownlint N`, and ExUnit prints `Result: N passed`. A
+  green run over a handful of files checked nothing; if a count looks small, the checker
+  is misconfigured rather than satisfied.
 - CI runs `mise run -c ci-static-analysis` and `mise run test` on every PR
   ([.github/workflows/ci.yml](.github/workflows/ci.yml)). Don't merge on red.
-- **`git push` runs the static checks first**, all but the compile
-  (`bin/git-hooks/pre-push`). When it fails, run `mise run check`, commit the fix, and
-  push again. Never `--no-verify` to get past a failure.
+- **Every commit runs the pre-commit hook** in [hk.pkl](hk.pkl): stet on the staged files
+  (Markdown, spelling), then `mix format --check-formatted` and `mix credo --strict`. It
+  only checks. When it fails, run `mise run check`, stage the fix, and commit again.
+  Never `--no-verify`. stet writes the top of `hk.pkl` from `.stet.toml`; the repo's own
+  steps go below its marker line. Markdown ignores go in `.stet.toml`, then `stet sync`.
 - **Deploys are manual**: `mise run deploy`, only when asked. The how is in
   [docs/deployment.md](docs/deployment.md).
 - **Production data only through `bin/prod`** ([docs/production.md](docs/production.md)).
