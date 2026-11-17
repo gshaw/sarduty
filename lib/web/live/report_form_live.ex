@@ -378,24 +378,22 @@ defmodule Web.ReportFormLive do
     %{current_team: team, current_user: user, form: form, ai_asks: asks} = socket.assigns
     report = report_fields(form)
 
-    earlier =
-      asks
-      |> Enum.reverse()
-      |> Enum.reject(& &1[:failed])
-      |> Enum.map(&Map.take(&1, [:ask, :note]))
+    earlier = earlier(asks, [:ask, :note])
 
     now = DateTime.utc_now()
     pending = %{ask: ask, before: fields_params(form), test?: test?}
 
-    {socket, run} =
-      ask_task(socket, test?, ask, fn ->
-        job = ReportJob.build(team, report, ask, now, earlier)
-        AskAI.call(team, user, job, now)
-      end)
+    {socket, test} = count_test(socket, test?)
 
     socket
     |> assign(ai_pending: pending, ai_form: ask_form(""))
-    |> start_async(:ai_ask, run)
+    |> start_async(:ai_ask, fn ->
+      if test do
+        test_ask(ask, test)
+      else
+        AskAI.call(team, user, ReportJob.build(team, report, ask, now, earlier), now)
+      end
+    end)
   end
 
   # The query, and a new report's name and description.

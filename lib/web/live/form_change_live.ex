@@ -319,26 +319,23 @@ defmodule Web.FormChangeLive do
     %{owner: owner, form: form, page: page, text: text, ai_asks: asks, current_user: user} =
       socket.assigns
 
-    earlier =
-      asks
-      |> Enum.reverse()
-      |> Enum.reject(& &1[:failed])
-      |> Enum.map(&Map.take(&1, [:ask, :note, :blank]))
-
+    earlier = earlier(asks, [:ask, :note, :blank])
     now = DateTime.utc_now()
 
-    {socket, run} =
-      ask_task(socket, test?, ask, fn ->
-        job = FormJob.build(owner, form, page, text, ask, now, earlier)
-        AskAI.call(owner, user, job, now)
-      end)
+    {socket, test} = count_test(socket, test?)
 
     socket
     |> assign(
       ai_pending: %{ask: ask, before: text, before_page: before_page || page, test?: test?},
       ai_form: ask_form("")
     )
-    |> start_async(:ai_ask, run)
+    |> start_async(:ai_ask, fn ->
+      if test do
+        test_ask(ask, test)
+      else
+        AskAI.call(owner, user, FormJob.build(owner, form, page, text, ask, now, earlier), now)
+      end
+    end)
   end
 
   defp ask_done(socket, {:ok, %{text: text, note: note, blank: blank} = result}) do

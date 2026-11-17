@@ -217,15 +217,22 @@ defmodule Web.Components.AIWriting do
   defp blank_or(ask, _default), do: ask
 
   @doc """
-  What an ask runs: `real`, or for Test (`test?`) a made-up answer, counting the visit's
-  Test presses in the socket's `ai_tests`. Returns the socket and the function.
+  The visit's earlier asks to send with the next, oldest first, each with `keys`. A
+  failed ask isn't sent.
   """
-  def ask_task(socket, test?, ask, real)
-  def ask_task(socket, false, _ask, real), do: {socket, real}
+  def earlier(asks, keys),
+    do: asks |> Enum.reverse() |> Enum.reject(& &1[:failed]) |> Enum.map(&Map.take(&1, keys))
 
-  def ask_task(socket, true, ask, _real) do
+  @doc """
+  For a Test ask (`test?`), the socket with one more Test press in `ai_tests` and this
+  press's number from 0, for `test_ask/2`; for a real ask, the socket and nil. The ask
+  must start in `start_async` itself, which Web.SlowButtonTest counts as off the button.
+  """
+  def count_test(socket, false), do: {socket, nil}
+
+  def count_test(socket, true) do
     n = Map.get(socket.assigns, :ai_tests, 0)
-    {assign(socket, ai_tests: n + 1), fn -> test_ask(ask, n) end}
+    {assign(socket, ai_tests: n + 1), n}
   end
 
   @doc """
