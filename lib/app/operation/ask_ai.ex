@@ -64,7 +64,8 @@ defmodule App.Operation.AskAI do
   @doc """
   Runs the ask. `{:ok, result}` from the job's `finish`, `{:unchanged, note}`, or
   `{:error, reason}`: those of `check/4`, `:no_credit`, `:busy`, `:unreachable`,
-  `:refused`, `:failed`, or `{:checks, mistake}`.
+  `:refused`, `:too_many_steps` (#{@max_requests} requests without an answer), `:too_long`
+  (cut off at max tokens), `:failed`, or `{:checks, mistake}`.
   """
   def call(owner, %User{} = user, %Job{} = job, now)
       when is_struct(owner, Team) or is_struct(owner, Organization) do
@@ -126,7 +127,7 @@ defmodule App.Operation.AskAI do
   # `history` is the conversation so far, newest first.
   defp loop(_settings, _job, _history, %{requests: n} = acc, _retried)
        when n >= @max_requests,
-       do: {{:error, :failed}, acc}
+       do: {{:error, :too_many_steps}, acc}
 
   defp loop(settings, job, history, acc, retried) do
     case settings
@@ -267,7 +268,7 @@ defmodule App.Operation.AskAI do
 
   @doc """
   What a response asks for next: `{:tools, uses}`, `{:answer, map}`, or
-  `{:error, :refused | :failed}`.
+  `{:error, :refused | :too_long | :failed}`.
   """
   def next_step(%{"stop_reason" => "tool_use", "content" => content}) do
     case Enum.filter(content, &(&1["type"] == "tool_use")) do
@@ -286,6 +287,7 @@ defmodule App.Operation.AskAI do
   end
 
   def next_step(%{"stop_reason" => "refusal"}), do: {:error, :refused}
+  def next_step(%{"stop_reason" => "max_tokens"}), do: {:error, :too_long}
   def next_step(_response), do: {:error, :failed}
 
   @doc "A response's token counts."

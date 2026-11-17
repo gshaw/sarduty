@@ -216,6 +216,22 @@ defmodule Web.FormChangeLive do
   def handle_event("suggest", %{"ask" => ask}, socket),
     do: {:noreply, assign(socket, ai_form: ask_form(ask))}
 
+  # A failed ask runs again in its place, on the PDF it ran on: a new PDF that failed to
+  # fit goes back in, with the PDF before it for Undo.
+  def handle_event("ask_again", %{"id" => id}, socket) do
+    case Enum.split_with(socket.assigns.ai_asks, &(to_string(&1.id) == id and &1[:failed])) do
+      {[failed], rest} when socket.assigns.ai_pending == nil ->
+        {:noreply,
+         socket
+         |> assign(ai_asks: rest, page: failed.page)
+         |> preview()
+         |> start_ask(failed.ask, failed.before_page)}
+
+      _other ->
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("undo_ask", %{"id" => id}, socket) do
     case Enum.split_while(socket.assigns.ai_asks, &(to_string(&1.id) != id)) do
       {_newer, [ask | older]} ->
@@ -294,7 +310,12 @@ defmodule Web.FormChangeLive do
     %{owner: owner, form: form, page: page, text: text, ai_asks: asks, current_user: user} =
       socket.assigns
 
-    earlier = asks |> Enum.reverse() |> Enum.map(&Map.take(&1, [:ask, :note, :blank]))
+    earlier =
+      asks
+      |> Enum.reverse()
+      |> Enum.reject(& &1[:failed])
+      |> Enum.map(&Map.take(&1, [:ask, :note, :blank]))
+
     now = DateTime.utc_now()
 
     socket
@@ -320,12 +341,27 @@ defmodule Web.FormChangeLive do
   defp ask_done(socket, {:unchanged, note, next}),
     do: add_ask(socket, blank_or(note, "Nothing changed."), false, [], next)
 
-  # A failed ask leaves no reply: a toast says why, and its words go back in the box.
+  # A failed ask puts back the page from before it and stays in the conversation, saying
+  # what went wrong, with Ask again. `page` is the PDF it ran on, for Ask again.
   defp ask_done(socket, {:error, reason}) do
+    pending = socket.assigns.ai_pending
+
+    entry = %{
+      id: System.unique_integer([:positive]),
+      ask: pending.ask,
+      before: pending.before,
+      before_page: pending.before_page,
+      page: socket.assigns.page,
+      note: nil,
+      undo?: false,
+      blank: [],
+      next: [],
+      failed: failed(reason, "text")
+    }
+
     socket
-    |> put_back_page(socket.assigns.ai_pending)
-    |> assign(ai_form: ask_form(socket.assigns.ai_pending.ask))
-    |> put_flash(:error, ai_error_text(reason))
+    |> put_back_page(pending)
+    |> assign(ai_asks: [entry | socket.assigns.ai_asks])
   end
 
   # The conversation, newest first. `undo?` is false for an ask that changed nothing.
@@ -357,23 +393,12 @@ defmodule Web.FormChangeLive do
     assign(socket, ai: AskAI.check(owner, user, DateTime.utc_now(), :form))
   end
 
-  defp ai_error_text(:daily_limit),
-    do: "Today's #{AskAI.asks_per_day()} asks are used. Ask again tomorrow."
-
-  defp ai_error_text(reason) when reason in [:paused, :no_credit],
-    do: "AI writing is paused until next month."
-
-  defp ai_error_text(:busy), do: "AI writing is busy. Try again in a minute."
-  defp ai_error_text(:refused), do: "AI writing cannot help with that. Try other words."
-
-  defp ai_error_text({:checks, mistake}),
-    do: "Its text still had a mistake: #{mistake} Ask again in other words."
-
-  defp ai_error_text(:off), do: "AI writing is off."
-  defp ai_error_text(_reason), do: "AI writing did not answer. Try again."
-
   defp ai_closed_text(:ok), do: nil
-  defp ai_closed_text({:error, reason}), do: ai_error_text(reason)
+
+  defp ai_closed_text({:error, reason}) do
+    %{title: title, detail: detail} = failed(reason, "text")
+    "#{title} #{detail}"
+  end
 
   defp blank_or(value, default) do
     case String.trim(value || "") do

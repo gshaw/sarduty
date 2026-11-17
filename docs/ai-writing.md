@@ -51,8 +51,12 @@ On New report and Change report, for a user AI writing is open to
   Undo when it changed the report.
 - Undo puts back the query, name, and description from before an ask and drops the
   asks after it. The conversation is in the page only: a reload loses it.
-- Stop and a failed ask are a toast, and the ask's words go back in the box to change
-  and send again. A stopped ask still counts (below).
+- Stop is a toast, and the ask's words go back in the box to change and send again. A
+  stopped ask still counts (below).
+- A failed ask stays in the conversation: what went wrong (too many steps, an answer cut
+  off, busy, unreachable, declined, a mistake left after one fix) and what to try, with
+  Ask again when the same words could work. Ask again runs it in the failed row's place.
+  A failed ask isn't sent with later asks. The words are `AIWriting.failed/2`.
 - Save notes the version came "from the AI's draft" (`reports.agent` is `AI`).
 - When nothing answers the ask, the query stays and the note says what would work.
 
@@ -96,7 +100,7 @@ team in the organization has, never a team's own groups or tags.
   against it. Before there's a text, it's the agency's blank form. AI writing is the column
   beside it, as on Change report: the conversation, the box, and the hint, "AI works only
   with the agency's blank form, the form language, and your team's field names."
-- The running ask is Thinking…, as for reports. Stop and a failed ask are a toast, and the ask's words go back in the box, as for reports.
+- The running ask is Thinking…, as for reports. Stop and a failed ask work as for reports. Ask again on a new PDF that failed to fit puts that PDF back first.
 - **AI's reply** is its note, then **Left blank**: each label on the page it didn't
   fill, and why. Ask for one in the box, or leave it. Undo puts back the text from
   before an ask.

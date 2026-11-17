@@ -2,7 +2,7 @@ defmodule Web.Components.AIWriting do
   @moduledoc """
   AI writing's column (docs/ai-writing.md), on Change report and Change form (#1089):
   what AI sees, then the asks as a conversation, oldest first, each with AI's reply and
-  Undo when it changed the page; the running ask with Stop; Try next; and the box. Each
+  Undo when it changed the page, or what went wrong and Ask again when it failed; the running ask with Stop; Try next; and the box. Each
   page runs the asks (App.Operation.AskAI) and keeps the conversation; this draws it.
 
   `ai_editor` lays out the page: its head (the title, description, and links), the
@@ -17,6 +17,7 @@ defmodule Web.Components.AIWriting do
 
   import Web.Components.A
 
+  alias App.Operation.AskAI
   alias Phoenix.LiveView.JS
 
   @doc """
@@ -98,7 +99,25 @@ defmodule Web.Components.AIWriting do
         <%= for {ask, n} <- @asks |> Enum.reverse() |> Enum.with_index() do %>
           <li id={"#{@id}-ask-#{ask.id}"} class={["ai-you", n < @older && "ai-older"]}>{ask.ask}</li>
           <li
-            :if={ask.note || ask.undo? || blank(ask) != []}
+            :if={ask[:failed]}
+            id={"#{@id}-reply-#{ask.id}"}
+            class={["ai-reply ai-failed", n < @older && "ai-older"]}
+          >
+            <p class="font-semibold">{ask.failed.title}</p>
+            <p>{ask.failed.detail}</p>
+            <.button
+              :if={ask.failed.again? and @ai == :ok and !@pending}
+              id={"#{@id}-again-#{ask.id}"}
+              type="button"
+              size={:sm}
+              phx-click="ask_again"
+              phx-value-id={ask.id}
+            >
+              Ask again
+            </.button>
+          </li>
+          <li
+            :if={!ask[:failed] and (ask.note || ask.undo? || blank(ask) != [])}
             id={"#{@id}-reply-#{ask.id}"}
             class={["ai-reply", n < @older && "ai-older"]}
           >
@@ -171,6 +190,60 @@ defmodule Web.Components.AIWriting do
   """
   def ask_form(ask),
     do: to_form(%{"ask" => ask}, as: "ai", id: "ai-#{System.unique_integer([:positive])}")
+
+  @doc """
+  What a failed ask's reply says, for `reason` from App.Operation.AskAI: a `title`
+  (what went wrong), a `detail` (what to try), and `again?`, whether Ask again could
+  work. `thing` is what the admin can change by hand instead: "query" or "text".
+  """
+  def failed(reason, thing) do
+    {title, detail, again?} = failed_words(reason, thing)
+    %{title: title, detail: detail, again?: again?}
+  end
+
+  defp failed_words(:too_many_steps, _thing),
+    do:
+      {"AI took too many steps and stopped before it finished.",
+       "Nothing changed. Ask for one change at a time.", true}
+
+  defp failed_words(:too_long, _thing),
+    do:
+      {"AI's answer ran too long and was cut off.", "Nothing changed. Ask for a smaller change.",
+       true}
+
+  defp failed_words(:busy, _thing),
+    do: {"AI is busy right now.", "Nothing changed. Ask again in a minute.", true}
+
+  defp failed_words(:unreachable, _thing),
+    do: {"SAR Duty could not reach AI.", "Nothing changed. Ask again in a minute.", true}
+
+  defp failed_words(:refused, thing),
+    do:
+      {"AI won't help with that.",
+       "Nothing changed. Try other words, or change the #{thing} yourself.", false}
+
+  defp failed_words({:checks, mistake}, thing),
+    do:
+      {"AI's #{thing} still had a mistake after one fix.",
+       "#{mistake} Nothing changed. Ask in other words, or fix the #{thing} yourself.", true}
+
+  defp failed_words(:daily_limit, thing),
+    do:
+      {"Your team has used today's #{AskAI.asks_per_day()} asks.",
+       "Ask again tomorrow, or change the #{thing} yourself.", false}
+
+  defp failed_words(reason, thing) when reason in [:paused, :no_credit],
+    do:
+      {"AI writing is paused until next month.", "You can still change the #{thing} yourself.",
+       false}
+
+  defp failed_words(:off, thing),
+    do: {"AI writing is off.", "You can still change the #{thing} yourself.", false}
+
+  defp failed_words(_reason, _thing),
+    do:
+      {"AI's answer did not make sense to SAR Duty.",
+       "Nothing changed. Ask again: the same words often work the second time.", true}
 
   defp blank(ask), do: Map.get(ask, :blank) || []
 

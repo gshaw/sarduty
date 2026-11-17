@@ -84,7 +84,9 @@ defmodule App.Operation.AskAITest do
              })
 
     assert {:error, :refused} = AskAI.next_step(%{"stop_reason" => "refusal", "content" => []})
-    assert {:error, :failed} = AskAI.next_step(%{"stop_reason" => "max_tokens", "content" => []})
+
+    assert {:error, :too_long} =
+             AskAI.next_step(%{"stop_reason" => "max_tokens", "content" => []})
   end
 
   test "usage reads every token count, and the cost comes from the model's price" do

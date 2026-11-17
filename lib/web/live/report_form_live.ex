@@ -299,6 +299,17 @@ defmodule Web.ReportFormLive do
   def handle_event("suggest", %{"ask" => ask}, socket),
     do: {:noreply, assign(socket, ai_form: ask_form(ask))}
 
+  # A failed ask runs again in its place.
+  def handle_event("ask_again", %{"id" => id}, socket) do
+    case Enum.split_with(socket.assigns.ai_asks, &(to_string(&1.id) == id and &1[:failed])) do
+      {[failed], rest} when socket.assigns.ai_pending == nil ->
+        {:noreply, socket |> assign(ai_asks: rest) |> start_ask(failed.ask)}
+
+      _other ->
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("undo_ask", %{"id" => id}, socket) do
     case Enum.split_while(socket.assigns.ai_asks, &(to_string(&1.id) != id)) do
       {_newer, [ask | older]} ->
@@ -358,7 +369,13 @@ defmodule Web.ReportFormLive do
   defp start_ask(socket, ask) do
     %{current_team: team, current_user: user, form: form, ai_asks: asks} = socket.assigns
     report = report_fields(form)
-    earlier = asks |> Enum.reverse() |> Enum.map(&Map.take(&1, [:ask, :note]))
+
+    earlier =
+      asks
+      |> Enum.reverse()
+      |> Enum.reject(& &1[:failed])
+      |> Enum.map(&Map.take(&1, [:ask, :note]))
+
     now = DateTime.utc_now()
     pending = %{ask: ask, before: fields_params(form)}
 
@@ -391,11 +408,21 @@ defmodule Web.ReportFormLive do
   defp ask_done(socket, {:unchanged, note, next}),
     do: add_ask(socket, blank_or(note, "Nothing changed."), false, next)
 
-  # A failed ask leaves no row: a toast says why, and its words go back in the box.
+  # A failed ask stays in the conversation, saying what went wrong, with Ask again.
   defp ask_done(socket, {:error, reason}) do
-    socket
-    |> assign(ai_form: ask_form(socket.assigns.ai_pending.ask))
-    |> put_flash(:error, ai_error_text(reason))
+    pending = socket.assigns.ai_pending
+
+    entry = %{
+      id: System.unique_integer([:positive]),
+      ask: pending.ask,
+      before: pending.before,
+      note: nil,
+      undo?: false,
+      next: [],
+      failed: failed(reason, "query")
+    }
+
+    assign(socket, ai_asks: [entry | socket.assigns.ai_asks])
   end
 
   # The conversation, newest first. `undo?` is false for an ask that changed nothing.
@@ -420,22 +447,6 @@ defmodule Web.ReportFormLive do
     %{current_team: team, current_user: user} = socket.assigns
     assign(socket, ai: AskAI.check(team, user, DateTime.utc_now()))
   end
-
-  defp ai_error_text(:daily_limit),
-    do:
-      "Your team has used today's #{AskAI.asks_per_day()} asks. Ask again tomorrow, or change the query yourself."
-
-  defp ai_error_text(reason) when reason in [:paused, :no_credit],
-    do: "AI writing is paused until next month. You can still change the query yourself."
-
-  defp ai_error_text(:busy), do: "AI writing is busy. Try again in a minute."
-  defp ai_error_text(:refused), do: "AI writing cannot help with that. Try other words."
-
-  defp ai_error_text({:checks, mistake}),
-    do: "Its query still had a mistake: #{mistake} Ask again in other words, or fix it yourself."
-
-  defp ai_error_text(:off), do: "AI writing is off."
-  defp ai_error_text(_reason), do: "AI writing did not answer. Try again."
 
   # The name, description, and query, as the form holds them.
   # Not saved yet: a new report once it has anything in it, or a saved one that differs.
@@ -689,8 +700,11 @@ defmodule Web.ReportFormLive do
     do: "AI sees your team's field names, never its members or records."
 
   defp ai_closed_text(:ok), do: nil
-  defp ai_closed_text({:error, :daily_limit}), do: ai_error_text(:daily_limit)
-  defp ai_closed_text({:error, reason}), do: ai_error_text(reason)
+
+  defp ai_closed_text({:error, reason}) do
+    %{title: title, detail: detail} = failed(reason, "query")
+    "#{title} #{detail}"
+  end
 
   defp all_built_in(team) do
     team

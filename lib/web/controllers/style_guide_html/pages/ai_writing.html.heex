@@ -39,6 +39,34 @@
     </div>
   </div>
 
+  <h3>An ask that failed</h3>
+  <p>
+    It stays in the conversation with what went wrong and what to try, never a toast.
+    Ask again runs it in its place when that could work.
+  </p>
+  <div class="demo">
+    <div class="measure">
+      <.ai_writing
+        id="ai-writing-demo-failed"
+        ai={:ok}
+        form={ask_form("")}
+        asks={[
+          %{
+            id: 1,
+            ask: "Group by quarter",
+            note: nil,
+            undo?: false,
+            next: [],
+            failed: failed(:too_many_steps, "query")
+          }
+        ]}
+        label="Ask AI"
+        button="Ask"
+        sees="AI sees your team's field names, never its members or records."
+      />
+    </div>
+  </div>
+
   <h3>Closed</h3>
   <div class="demo">
     <div class="measure">

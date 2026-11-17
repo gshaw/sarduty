@@ -381,10 +381,21 @@ defmodule Web.FormChangeLiveTest do
     lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
     render_async(lv, @wait)
 
-    assert render(lv) =~ "Its text still had a mistake:"
-    assert has_element?(lv, "textarea[name='ai[ask]']", "Write this form.")
+    assert has_element?(lv, ".ai-failed", "AI's text still had a mistake after one fix.")
+    assert has_element?(lv, ".ai-failed", "People halped")
+    refute has_element?(lv, "#flash-error")
+    refute has_element?(lv, "textarea[name='ai[ask]']", "Write this form.")
     assert has_element?(lv, "#form-blank-page")
     assert Repo.get_by!(AIAsk, team_id: team.id).outcome == :refused_by_checks
+
+    # Ask again runs the same ask in its place.
+    stub_claude([%{"text" => written(), "note" => "Wrote it.", "blank" => []}])
+    lv |> element("[id^='form-ai-again-']", "Ask again") |> render_click()
+    render_async(lv, @wait)
+
+    refute has_element?(lv, ".ai-failed")
+    assert has_element?(lv, ".ai-reply", "Wrote it.")
+    assert has_element?(lv, ".ai-you", "Write this form.")
   end
 
   test "without AI writing, New form adds the form and there's no Change form", ctx do
