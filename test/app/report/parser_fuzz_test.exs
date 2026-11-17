@@ -1,5 +1,5 @@
 defmodule App.Report.ParserFuzzTest do
-  # `mix test` replays the seeds and saved failures. To fuzz: mix fuzz test/app/report/parser_fuzz_test.exs:12
+  # `mix test` replays the seeds and saved failures. To fuzz: mise run fuzz
   use ExUnit.Case, async: true
   use ExFuzz
 

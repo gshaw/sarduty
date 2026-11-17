@@ -1,7 +1,6 @@
 defmodule App.Report.ReportFuzzTest do
   # Runs each input as a report, and as its page, on Coast Range SAR (App.SampleRepo).
-  # `mix test` replays the seeds and saved failures. To fuzz:
-  #   MIX_ENV=test mix fuzz test/app/report/report_fuzz_test.exs:"fuzz any text runs or gives a report error"
+  # `mix test` replays the seeds and saved failures. To fuzz: mise run fuzz
   use ExUnit.Case, async: true
   use ExFuzz
 

@@ -96,6 +96,27 @@ data?
   [urls.md](urls.md), and that the URLs devices and shared links hold still route.
 - Most LiveViews have one smoke test that the page renders or redirects.
 
+## Fuzz tests
+
+The report language is the one place where typed text, from a team admin or an agent,
+becomes SQL, so it is fuzzed with [ex_fuzz](https://hex.pm/packages/ex_fuzz). A fuzzer
+runs a test on generated inputs and keeps each input that reaches new code, so it finds
+the cases nobody thought to write. Each test's rule: any text runs, or gives a report
+error. A crash, or SQL that SQLite refuses, fails it.
+
+- `parser_fuzz_test.exs`: any bytes through `App.Report.Parser`. Its first run found
+  two crashes: text that isn't UTF-8, and a number of 35 digits (Decimal's cap is 34).
+- `report_words_fuzz_test.exs`: the built-in reports with whole words, values, and lines
+  swapped from Coast Range SAR's catalog, so most inputs reach the compiler and the SQL.
+- `report_fuzz_test.exs`: any bytes, run as a report and its page. Weaker: most inputs
+  never parse.
+
+`mix test` only replays each test's seeds and the failing inputs saved in
+`test/fixtures/fuzz/`, in milliseconds. Fuzzing is by hand, never in CI: run
+`mise run fuzz` (5 minutes a test; `MINUTES=10 mise run fuzz` for longer) after changing
+the lexer, parser, compiler, or catalog. A failure saves its input to
+`test/fixtures/fuzz/`; commit it with the fix, and it replays from then on.
+
 ## High-value targets
 
 | Target                                           | Why                                           | Shape                           |

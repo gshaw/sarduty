@@ -1,8 +1,8 @@
 defmodule App.Report.ReportWordsFuzzTest do
   # The built-in reports with whole words, values, and lines swapped, so nearly every input
   # parses and the fuzzer's coverage lands on the compiler and the SQL. Each runs as a
-  # report and as its page on Coast Range SAR (App.SampleRepo). To fuzz:
-  #   MIX_ENV=test mix fuzz test/app/report/report_words_fuzz_test.exs:24
+  # report and as its page on Coast Range SAR (App.SampleRepo).
+  # `mix test` replays the seeds and saved failures. To fuzz: mise run fuzz
   use ExUnit.Case, async: true
   use ExFuzz
 
