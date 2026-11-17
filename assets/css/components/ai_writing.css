@@ -2,8 +2,8 @@
   /* AI writing (docs/ai-writing.md), on Change report and Change form (#1089). Under
      1024px one column: the head (title, description, links), AI writing, then the main
      part, with the Save bar at its foot. From 1024px the column starts beside the title
-     and sticks under the site bar, no taller than the window: the box at its top, and
-     under it the conversation scrolls on its own. */
+     and sticks under the site bar. It grows with the conversation, the box under it,
+     until it's as tall as the window; then the conversation scrolls on its own. */
   .ai-editor {
     display: grid; grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "head" "ai" "main"; row-gap: var(--sp-6);
@@ -25,7 +25,7 @@
     }
     /* Its own height, not stretched to the column's, so the Save bar sits under it. */
     .ai-editor.has-ai > .ai-main { align-self: start; }
-    .ai-column .ai-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+    .ai-column .ai-scroll { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
     .ai-column .ai-earlier { display: none; }
   }
   /* Under 1024px the conversation shows its last two asks until Show earlier asks. */
@@ -33,9 +33,9 @@
     .ai-thread:not(.ai-thread-all) > .ai-older { display: none; }
   }
 
-  /* The conversation, newest first: each ask on the right, AI's reply under it. */
-  .ai-next { margin-top: var(--sp-4); }
-  .ai-scroll { margin-top: var(--sp-6); }
+  /* The conversation, oldest first: each ask on the right, AI's reply under it. */
+  .ai-scroll { margin-bottom: var(--sp-6); }
+  .ai-next { margin-bottom: var(--sp-4); }
   .ai-thread { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
   .ai-thread p { margin: 0; }
   .ai-you { align-self: flex-end; max-width: 90%; padding: var(--sp-2) var(--sp-3); background: var(--surface-alt); border-radius: var(--radius); overflow-wrap: anywhere; }

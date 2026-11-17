@@ -222,8 +222,7 @@ defmodule Web.FormChangeLiveTest do
     lv |> element("#form-show-text") |> render_click()
     assert has_element?(lv, "#form-text-input", "Anything else")
 
-    # The first ask's Undo: the conversation is newest first.
-    [_, id] = ~r/id="form-ai-undo-(\d+)"/ |> Regex.scan(render(lv)) |> List.last()
+    [_, id] = Regex.run(~r/id="form-ai-undo-(\d+)"/, render(lv))
     lv |> element("#form-ai-undo-#{id}") |> render_click()
     refute has_element?(lv, "#form-ai-asks")
     assert has_element?(lv, "#form-blank-page")

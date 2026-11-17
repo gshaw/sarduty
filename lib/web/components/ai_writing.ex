@@ -1,15 +1,16 @@
 defmodule Web.Components.AIWriting do
   @moduledoc """
   AI writing's column (docs/ai-writing.md), on Change report and Change form (#1089):
-  what AI sees, the box, Try next, then the asks as a conversation, newest first, each
-  with AI's reply and Undo when it changed the page, or what went wrong and Ask again
-  when it failed, and the running ask with Stop on top. Each page runs the asks
+  what AI sees, the asks as a conversation, oldest first, each with AI's reply and Undo
+  when it changed the page, or what went wrong and Ask again when it failed, and the
+  running ask with Stop last; then Try next and the box, as in a chat. Each page runs the asks
   (App.Operation.AskAI) and keeps the conversation; this draws it.
 
   `ai_editor` lays out the page: its head (the title, description, and links), the
   column, and its main part with the Save bar at its foot. From 1024px the column starts
-  beside the title and sticks under the site bar, no taller than the window, and its
-  conversation scrolls on its own. Under that it's one column: the head, AI writing,
+  beside the title and sticks under the site bar. It grows as the conversation does, the
+  box pushed down, until it's as tall as the window; then the conversation scrolls on
+  its own, older asks off the top. Under that it's one column: the head, AI writing,
   then the main part, and the conversation shows its last two asks with Show earlier
   asks. Its CSS is assets/css/components/ai_writing.css, and /styles/ai-writing shows
   it.
@@ -94,50 +95,21 @@ defmodule Web.Components.AIWriting do
       {@sees}
       <.a id={"#{@id}-agents-link"} href={~p"/agents"} external={true}>How it works</.a>
     </p>
-    <.form :if={@ai == :ok} for={@form} id={"#{@id}-form"} class="ai-writing-form" phx-submit="ask">
-      <.input
-        field={@form[:ask]}
-        type="textarea"
-        rows="3"
-        label={@label}
-        field_class="mb-2"
-        phx-hook="AskEnter"
-      >
-        {render_slot(@inner_block)}
-      </.input>
-      <.button id={"#{@id}-ask"} variant={:success} disabled={@pending != nil}>{@button}</.button>
-    </.form>
-    <p :if={@ai != :ok} id={"#{@id}-closed"} class="hint mb-4">{@closed}</p>
-    <div :if={@ai == :ok and !@pending and next(@asks) != []} id={"#{@id}-next"} class="ai-next">
-      <p class="hint mb-2">Try next</p>
-      <div class="flex flex-wrap gap-2">
-        <.button
-          :for={{ask, n} <- Enum.with_index(next(@asks))}
-          id={"#{@id}-next-#{n}"}
-          type="button"
-          size={:sm}
-          phx-click="suggest"
-          phx-value-ask={ask}
-        >{ask}</.button>
-      </div>
-    </div>
     <div :if={@pending || @asks != []} class="ai-scroll">
+      <p :if={@older > 0} class="action ai-earlier mb-3">
+        <.a
+          id={"#{@id}-earlier"}
+          href="#"
+          phx-click={JS.add_class("ai-thread-all", to: "##{@id}-asks") |> JS.hide()}
+        >{Service.Format.count(@older, one: "Show %d earlier ask", many: "Show %d earlier asks")}</.a>
+      </p>
       <ol id={"#{@id}-asks"} class="ai-thread">
-        <li :if={@pending} id={"#{@id}-ask-running"} class="ai-you">{@pending.ask}</li>
-        <li :if={@pending} id={"#{@id}-step"} class="ai-step">
-          <.spinner>
-            Thinking… <span id={"#{@id}-seconds"} phx-hook="Seconds" phx-update="ignore"></span>
-          </.spinner>
-          <.button id={"#{@id}-stop"} type="button" size={:sm} phx-click="cancel_ask">
-            Stop
-          </.button>
-        </li>
-        <%= for {ask, n} <- Enum.with_index(@asks) do %>
-          <li id={"#{@id}-ask-#{ask.id}"} class={["ai-you", n >= 2 && "ai-older"]}>{ask.ask}</li>
+        <%= for {ask, n} <- @asks |> Enum.reverse() |> Enum.with_index() do %>
+          <li id={"#{@id}-ask-#{ask.id}"} class={["ai-you", n < @older && "ai-older"]}>{ask.ask}</li>
           <li
             :if={ask[:failed]}
             id={"#{@id}-reply-#{ask.id}"}
-            class={["ai-reply ai-failed", n >= 2 && "ai-older"]}
+            class={["ai-reply ai-failed", n < @older && "ai-older"]}
           >
             <p class="font-semibold">{ask.failed.title}</p>
             <p>{ask.failed.detail}</p>
@@ -155,7 +127,7 @@ defmodule Web.Components.AIWriting do
           <li
             :if={!ask[:failed] and (ask.note || ask.undo? || blank(ask) != [])}
             id={"#{@id}-reply-#{ask.id}"}
-            class={["ai-reply", n >= 2 && "ai-older"]}
+            class={["ai-reply", n < @older && "ai-older"]}
           >
             <p :if={ask.note}>{ask.note}</p>
             <div :if={blank(ask) != []} id={"#{@id}-blank-#{ask.id}"} class="ai-blank">
@@ -178,15 +150,44 @@ defmodule Web.Components.AIWriting do
             </.button>
           </li>
         <% end %>
+        <li :if={@pending} id={"#{@id}-ask-running"} class="ai-you">{@pending.ask}</li>
+        <li :if={@pending} id={"#{@id}-step"} class="ai-step">
+          <.spinner>
+            Thinking… <span id={"#{@id}-seconds"} phx-hook="Seconds" phx-update="ignore"></span>
+          </.spinner>
+          <.button id={"#{@id}-stop"} type="button" size={:sm} phx-click="cancel_ask">
+            Stop
+          </.button>
+        </li>
       </ol>
-      <p :if={@older > 0} class="action ai-earlier mt-3">
-        <.a
-          id={"#{@id}-earlier"}
-          href="#"
-          phx-click={JS.add_class("ai-thread-all", to: "##{@id}-asks") |> JS.hide()}
-        >{Service.Format.count(@older, one: "Show %d earlier ask", many: "Show %d earlier asks")}</.a>
-      </p>
     </div>
+    <div :if={@ai == :ok and !@pending and next(@asks) != []} id={"#{@id}-next"} class="ai-next">
+      <p class="hint mb-2">Try next</p>
+      <div class="flex flex-wrap gap-2">
+        <.button
+          :for={{ask, n} <- Enum.with_index(next(@asks))}
+          id={"#{@id}-next-#{n}"}
+          type="button"
+          size={:sm}
+          phx-click="suggest"
+          phx-value-ask={ask}
+        >{ask}</.button>
+      </div>
+    </div>
+    <.form :if={@ai == :ok} for={@form} id={"#{@id}-form"} class="ai-writing-form" phx-submit="ask">
+      <.input
+        field={@form[:ask]}
+        type="textarea"
+        rows="3"
+        label={@label}
+        field_class="mb-2"
+        phx-hook="AskEnter"
+      >
+        {render_slot(@inner_block)}
+      </.input>
+      <.button id={"#{@id}-ask"} variant={:success} disabled={@pending != nil}>{@button}</.button>
+    </.form>
+    <p :if={@ai != :ok} id={"#{@id}-closed"} class="hint">{@closed}</p>
     """
   end
 

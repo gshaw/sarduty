@@ -20,17 +20,18 @@ On New report and Change report, for a user AI writing is open to
   them; the report under them; and under the report a bar with Not saved yet, Save
   report, and Cancel, stuck to the window's foot while the report runs past it, like the
   bar for checked rows.
-- **AI writing** starts beside the title. From 1024px it sticks under the site bar,
-  no taller than the window, and its conversation scrolls on its own, back to the top
-  when an ask starts or ends (assets/js/ai_panel.js). Under 1024px it's one column,
-  title first, and the conversation shows its last two asks with Show earlier asks
-  under them. In it: what AI sees, one line with How it works; "Ask AI" with its hint,
-  "A change, or a question about the report.", and Ask; Try next; then the asks as a
-  conversation, newest first, each ask above its reply.
+- **AI writing** starts beside the title, as a chat. From 1024px it sticks under the
+  site bar and grows with the conversation, the box pushed down, until it's as tall as
+  the window; then the conversation scrolls on its own, older asks off the top, and
+  goes to the newest when an ask starts or ends (assets/js/ai_panel.js). Under 1024px
+  it's one column, title first, and the conversation shows its last two asks with Show
+  earlier asks. In it: what AI sees, one line with How it works; the asks as a
+  conversation, oldest first; Try next; then "Ask AI" with its hint, "A change, or a
+  question about the report.", and Ask.
 - **Rename** opens a dialog with the name and description, inside the form: Rename
   keeps them, to save with Save report, and Cancel or Escape puts them back. With AI
   writing off or the query written by hand, the fields show on the page as before.
-  Under the box, **Try next**: two or three asks AI suggests after the newest reply, to show what it
+  Above the box, **Try next**: two or three asks AI suggests after the newest reply, to show what it
   can do. A tap puts one in the box; it never sends on its own. Every ask is still one
   someone sent.
 - The query is hidden, since AI writes it: Show query and Hide query toggle it, and a
