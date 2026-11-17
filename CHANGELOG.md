@@ -4,6 +4,15 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
+- ⭐ Photos: turn it on under Features, and a team admin adds or changes any member's
+  photo in SAR Duty. Take one with a phone or select one, place the face in the oval,
+  and save. A Photos page shows every current member's photo and who has none. On a D4H
+  team the photo becomes the member's D4H profile photo.
+- Members add their own photo from Photos, on a team with member logins. A team admin
+  checks it first: fix the framing, then accept or decline it with a reason. Needs
+  attention counts the photos waiting.
+- Ask a member for a photo, or everyone with no photo at once, from Photos or their ID
+  Card tab. Each gets an email with a link to add one, no login needed.
 - A field's page and a chore's keep their actions under the title, like a report's:
   Change field, Delete or Archive field, and Change chore.
 - Search finds every Team settings tab, and words like logo, access key, and time zone

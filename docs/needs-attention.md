@@ -40,7 +40,7 @@ other kind of item stays on the list until it's done:
 | Activities with two hours tags, this year                  | Yes    | Tidied at year end                 |
 | Can't refresh, key rejected, a group deleted               | No     | Something is broken                |
 | Retiring members can still log in to D4H                   | No     | A risk while it lasts              |
-| Certificates, chores to accept                             | No     | A member waits on the team admin   |
+| Certificates, chores to accept, photos waiting             | No     | A member waits on the team admin   |
 | Attendance to send, group rule changes, chores out of date | No     | One step in SAR Duty               |
 | No-shows to follow up                                      | No     | Leaves on its own after a week     |
 | Tax credit letters, last year's hours tags                 | No     | Has a deadline                     |

@@ -10,6 +10,8 @@ defmodule App.Operation.SetTeamFeature do
   - `:travel` (#230), on incidents only (App.Model.Activity.travel?/2).
   - `:whiteboard` (#515). Once it's on, the page calls read_whiteboard/1, so its notes
     show at once and the page can say when D4H has the module off.
+  - `:photos` (#1028), which needs no member logins. Once it's on, the page calls
+    check_photos/2, so Photos knows who has one without waiting for the night's check.
 
   MCP has its own, App.Operation.SetTeamMCP: turning it off revokes every token.
   """
@@ -18,6 +20,7 @@ defmodule App.Operation.SetTeamFeature do
   alias App.Adapter.D4H
   alias App.Model.Event
   alias App.Model.Team
+  alias App.Operation.CheckMemberPhoto
   alias App.Operation.RefreshD4HData.UpsertWhiteboardNotes
   alias App.Repo
 
@@ -28,7 +31,8 @@ defmodule App.Operation.SetTeamFeature do
     chores: :chores_enabled,
     certificates: :certificates_enabled,
     whiteboard: :whiteboard_enabled,
-    travel: :travel_enabled
+    travel: :travel_enabled,
+    photos: :photos_enabled
   }
 
   def features, do: Map.keys(@fields)
@@ -66,4 +70,13 @@ defmodule App.Operation.SetTeamFeature do
   end
 
   def read_whiteboard(team), do: team
+
+  @doc """
+  Checks who has a photo, for a team that just turned Photos on (#1028). A team with ID
+  cards has it from the night's check; any other team has never been asked. `:ok`.
+  """
+  def check_photos(%Team{d4h_access_key: key} = team, now) when key not in [nil, ""],
+    do: CheckMemberPhoto.check_team(team, now)
+
+  def check_photos(_team, _now), do: :ok
 end

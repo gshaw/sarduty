@@ -47,9 +47,7 @@ defmodule Web.MemberPhotoLive do
           <img
             id="member-photo-image"
             class="photo"
-            src={
-              ~p"/teams/#{@current_team}/members/#{@member.id}/image?#{[v: Member.photo_version(@member)]}"
-            }
+            src={Web.MemberPhoto.path(@current_team, @member)}
             alt={"#{@member.name}'s photo"}
             data-hide-on-error
           />

@@ -17,6 +17,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Group
   alias App.Model.GroupRule
   alias App.Model.Member
+  alias App.Model.MemberPhoto
   alias App.Model.MemberQualificationAward
   alias App.Model.NoShow
   alias App.Model.Standing
@@ -120,6 +121,7 @@ defmodule App.ViewData.TeamDashboardViewData do
           do: Certificate.count_to_accept(team, member, now),
           else: 0
         ),
+      photo_count: if(Team.photos?(team), do: MemberPhoto.count_waiting(team, now), else: 0),
       chores_to_send: chores_to_send(team),
       attendance_to_send: attendance_to_send(team, now),
       no_shows: no_shows(team, now),

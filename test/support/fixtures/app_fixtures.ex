@@ -22,6 +22,8 @@ defmodule App.DataFixtures do
   alias App.Model.Member
   alias App.Model.MemberAwayPeriod
   alias App.Model.MemberCard
+  alias App.Model.MemberPhoto
+  alias App.Model.MemberPhotoFile
   alias App.Model.MemberQualificationAward
   alias App.Model.Organization
   alias App.Model.PublishedPDF
@@ -49,6 +51,8 @@ defmodule App.DataFixtures do
     {whiteboard_enabled, attrs} = Map.pop(attrs, :whiteboard_enabled, true)
     {travel_enabled, attrs} = Map.pop(attrs, :travel_enabled, true)
     {every_member_card, attrs} = Map.pop(attrs, :every_member_card, false)
+    # Off, as on a new team: the Photos tests turn it on (#1028).
+    {photos_enabled, attrs} = Map.pop(attrs, :photos_enabled, false)
 
     name = Map.get(attrs, :name, "Team #{unique}")
 
@@ -75,7 +79,8 @@ defmodule App.DataFixtures do
       id_cards_enabled: id_cards_enabled,
       whiteboard_enabled: whiteboard_enabled,
       travel_enabled: travel_enabled,
-      every_member_card: every_member_card
+      every_member_card: every_member_card,
+      photos_enabled: photos_enabled
     )
     |> Repo.update!()
   end
@@ -816,5 +821,40 @@ defmodule App.DataFixtures do
 
     if certificate.status == :waiting, do: CertificateFile.put!(certificate, "%PDF-1.7\n")
     certificate
+  end
+
+  @doc """
+  A photo `member` added of themselves (#1029): 800 × 600, placed on the middle square,
+  waiting with its file unless `attrs` say it was decided. With a `cleaned_width` and
+  `cleaned_height` it keeps a cleaned-up photo that size too (#1031).
+  """
+  def member_photo_fixture(%Member{} = member, attrs \\ %{}) do
+    photo =
+      %MemberPhoto{
+        team_id: member.team_id,
+        member_id: member.id,
+        width: 800,
+        height: 600
+      }
+      |> Map.merge(attrs)
+      |> Repo.insert!()
+
+    if photo.status == :waiting do
+      {:ok, taken} = 800 |> png_fixture(600) |> Service.MemberPhoto.prepare()
+
+      cleaned =
+        if photo.cleaned_width do
+          {:ok, cleaned} =
+            photo.cleaned_width
+            |> png_fixture(photo.cleaned_height)
+            |> Service.MemberPhoto.prepare()
+
+          cleaned.bytes
+        end
+
+      MemberPhotoFile.put!(photo, taken.bytes, cleaned)
+    end
+
+    photo
   end
 end

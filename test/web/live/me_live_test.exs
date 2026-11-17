@@ -71,7 +71,7 @@ defmodule Web.MeLiveTest do
 
       assert has_element?(
                lv,
-               ~s{#member-head-photo[src^="/teams/#{team.subdomain}/members/#{member.id}/image?v="]}
+               ~s{#member-head-photo[src^="/teams/#{team.subdomain}/members/#{member.id}/image"]}
              )
     end
 

@@ -27,6 +27,23 @@ defmodule App.ViewData.MemberToDoTest do
     assert [%{days: 41}, %{days: 1}] = MemberToDo.items(nil, false, rows)
   end
 
+  test "a declined photo is one item, and none without one (#1029)" do
+    photo = %{id: 3, decline_reason: :dark}
+
+    assert [%{key: :declined_photo, photo: ^photo}] =
+             MemberToDo.items(nil, false, [], declined_photo: photo)
+
+    assert MemberToDo.items(nil, false, [], declined_photo: nil) == []
+
+    # An ask for a photo (#1030) comes first of the two.
+    asked = %{ask: %App.Model.PhotoAsk{id: 1}, asked_by: "Alex Chen"}
+
+    assert [%{key: :photo_ask, asked_by: "Alex Chen"}, %{key: :declined_photo}] =
+             MemberToDo.items(nil, false, [], declined_photo: photo, photo_ask: asked)
+
+    assert MemberToDo.items(nil, false, [], photo_ask: nil) == []
+  end
+
   test "items come card, then qualifications" do
     rows = [row(:expiring, "First Aid", 41)]
     items = MemberToDo.items(@card, false, rows)

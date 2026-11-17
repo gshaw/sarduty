@@ -1,0 +1,64 @@
+/* Photos (#1028): the grid of members' photos, Add a photo's guide, and the square a
+   photo is placed in. A member's own photo and a team admin's check of it (#1029). */
+@layer components {
+  /* Every current member's photo, as their ID card shows it: square tiles that fill the
+     row, 2 across on a phone. */
+  .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: var(--sp-6) var(--sp-4); max-width: 60rem; margin: 0; padding: 0; list-style: none; }
+  .photo-grid > li { min-width: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+
+  /* A tile holds the member's initials with the photo over them, so a photo that fails
+     to load leaves the initials. */
+  .photo-tile { position: relative; display: grid; place-items: center; aspect-ratio: 1; margin-bottom: var(--sp-2); overflow: hidden; background: var(--surface-alt); border-radius: var(--radius); color: var(--text-muted); font-size: var(--fs-xl); line-height: var(--lh-xl); font-weight: 600; }
+  .photo-tile > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: var(--surface-alt); }
+  /* No photo: a dashed edge says something is missing. */
+  .photo-tile-none { border: 1px dashed var(--border); }
+  .photo-tile-name { display: block; font-weight: 600; overflow-wrap: anywhere; }
+  /* The photo on a member's ID card now, small under the one that waits (#1029). */
+  .photo-tile-small { width: 6rem; }
+
+  /* A member's own photo beside where it stands (#1029): under it on a narrow phone. */
+  .photo-yours { display: flex; flex-wrap: wrap; gap: var(--sp-4) var(--sp-6); align-items: flex-start; }
+  .photo-yours > .photo-tile { flex: none; width: 12rem; margin-bottom: 0; }
+  .photo-yours > div { flex: 1; min-width: 14rem; }
+
+  /* A photo a team admin checks (#1029): the square at the certificate's width, and
+     Compare's two small photos side by side, each over its caption. */
+  .photo-check .photo-place { max-width: 26rem; }
+  /* The Clean up switch (#1031) ends where the square does. */
+  .photo-check .switch-row { max-width: 26rem; }
+  .photo-compare { display: flex; gap: var(--sp-4); margin: var(--sp-2) 0 0; }
+  .photo-compare > figure { width: 7rem; margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+  /* All of the photo as taken, tall or wide, on a mat the size of the card's square. */
+  .photo-compare img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; margin-bottom: var(--sp-1); background: var(--surface-alt); border-radius: var(--radius); }
+
+  /* The guide: one good example beside its rules, then what does not work, 3 across on
+     a phone. The examples are drawn. */
+  .photo-guide { display: flex; gap: var(--sp-4); align-items: flex-start; margin-bottom: var(--sp-6); }
+  .photo-guide > ul { margin: 0; padding-left: var(--sp-4); list-style: disc; }
+  .photo-guide li + li { margin-top: var(--sp-1); }
+  .photo-guide-example { position: relative; flex: none; width: 112px; }
+  .photo-guide-example > img { display: block; width: 100%; height: auto; border-radius: var(--radius); }
+  .photo-guide-bad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4) var(--sp-3); margin: 0 0 var(--sp-6); padding: 0; list-style: none; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  .photo-guide-bad > li { min-width: 0; }
+  .photo-guide-bad .photo-guide-example { width: auto; margin-bottom: var(--sp-1); }
+  @media (min-width: 30rem) {
+    .photo-guide-bad { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  }
+  /* Works, or does not: a mark on the example's corner. */
+  .photo-guide-mark { position: absolute; top: calc(-1 * var(--sp-1)); right: calc(-1 * var(--sp-1)); display: grid; place-items: center; width: 24px; height: 24px; border: 2px solid var(--bg); border-radius: 50%; color: var(--on-fill); }
+  .photo-guide-mark.is-good { background: var(--success); }
+  .photo-guide-mark.is-bad { background: var(--danger); }
+
+  /* The square the ID card shows, with the photo under an oval for the face. The
+     PhotoPlace hook moves the photo; the page never scrolls or zooms under a finger. */
+  .photo-place { position: relative; width: 100%; max-width: 20rem; aspect-ratio: 1; overflow: hidden; background: var(--surface-alt); border-radius: var(--radius); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .photo-place:active { cursor: grabbing; }
+  .photo-place:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .photo-place > img { position: absolute; top: 0; left: 0; max-width: none; transform-origin: 0 0; pointer-events: none; -webkit-user-drag: none; }
+  .photo-place-oval { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  /* A white dashed line over a dark edge, so the oval shows on a light wall and a dark one. */
+  .photo-place-oval ellipse { fill: none; vector-effect: non-scaling-stroke; }
+  .photo-place-oval-edge { stroke: var(--nav); stroke-width: 4.5; opacity: 0.45; }
+  .photo-place-oval-line { stroke: var(--paper); stroke-width: 2.5; stroke-dasharray: 7 5; }
+  .photo-place-tools { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+}
