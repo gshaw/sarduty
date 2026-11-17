@@ -594,6 +594,10 @@ organization's space, `/orgs/:slug/forms` ([organizations.md](organizations.md#i
   (App.Operation.SetFormState, #970). Testing, team admins download draft PDFs only,
   under a Testing only banner; on, they publish. Its admins **try it** on Coast Range SAR (App.Operation.TryForm): one of its activities the
   form shows on, every answer its default, marked SAMPLE, and nothing saved.
+- **A form's page shows the form**: its Sample, tried on an activity and drawn as
+  pictures as Change form draws it (Web.Components.FormSample), with Download sample
+  PDF; before it's written, the agency's blank page. Turned on and Testing top the
+  sidebar, above what it reads and asks, and its text folds under Show how it fills in.
 - **Delete form** (App.Operation.DeleteForm), under the form's title, for whoever sets
   it Off, Testing, or On, while no PDF was published from it: a form tried and never
   used. Its page and sign requests go with it; answers stay, as they're the activity's.
@@ -627,8 +631,8 @@ organization.
 - **The Forms tab shows on every team**, as Fields does: the team's own forms under its
   logo, with New form, while team forms are on, then its organization's testing or on,
   read-only, under the organization's. A team form its organization's replaced says so.
-  An organization's form's page there has its facts, a try on the team's activities, and
-  its text, with no switches.
+  An organization's form's page there has its state as a fact, read-only, where a team's
+  own form has its switches, and its sample on the team's own activities.
 - **Copy as your team's form** (App.Operation.CopyForm), with team forms on, makes an
   organization's form the team's own, named "Task report (copy)" for a Task report, off, with its text and page. It
   shows beside the organization's on activities, never instead: the organization's stays

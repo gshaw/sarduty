@@ -3,24 +3,24 @@ defmodule Web.FormChangeLive do
 
   import Web.Components.AIWriting
   import Web.Components.FileDrop
+  import Web.Components.FormSample
   import Web.Components.PageActions
   import Web.Components.Unsaved
 
   alias App.AI.FormJob
   alias App.Model.Form
   alias App.Model.Organization
-  alias App.Model.Team
   alias App.Operation.AskAI
   alias App.Operation.SaveForm
-  alias App.Operation.TryForm
+  alias Web.Components.FormSample
   alias Web.FormOwner
 
   # Change form (#1089): an admin writes the form with AI writing
   # (docs/ai-writing.md#forms), as the report editor does, a team's form or an
   # organization's, one page for both (Web.FormOwner). The form tried on an activity, the
-  # team's own or Coast Range SAR's for an organization, marked SAMPLE, as Try it prints
-  # it, is the main column; AI writing
-  # is the column beside it. Each ask runs in `start_async` (App.Operation.AskAI, with
+  # team's own or Coast Range SAR's for an organization, marked SAMPLE, drawn as the
+  # form's page draws its Sample (Web.Components.FormSample), is the main column; AI
+  # writing is the column beside it. Each ask runs in `start_async` (App.Operation.AskAI, with
   # App.AI.FormJob) with the visit's earlier asks and replies, and its text replaces the
   # draft, so the try reprints here, in SAR Duty, after Claude is done. Undo puts back
   # the text from before an ask and drops the asks after it. Two ways past AI writing sit
@@ -100,36 +100,7 @@ defmodule Web.FormChangeLive do
 
     socket
     |> assign(previewing: true)
-    |> start_async(:preview, fn -> print(draft, owner, page, activity_id) end)
-  end
-
-  defp print(draft, owner, page, activity_id) do
-    cond do
-      Form.written?(draft) -> try_draft(draft, owner, page, activity_id)
-      page -> Map.merge(%{activities: [], activity: nil}, pages(page))
-      true -> %{activities: [], activity: nil, pages: [], preview_error: nil}
-    end
-  end
-
-  defp try_draft(draft, owner, page, activity_id) do
-    activities = TryForm.activities(draft, owner)
-    activity = Enum.find(activities, &(&1.id == activity_id)) || TryForm.first(activities)
-
-    printed =
-      case activity && TryForm.call(draft, owner, activity.id, page: page) do
-        nil -> %{pages: [], preview_error: nil}
-        {:ok, attachment} -> pages(attachment.content)
-        {:error, reason} -> %{pages: [], preview_error: reason}
-      end
-
-    Map.merge(%{activities: activities, activity: activity}, printed)
-  end
-
-  defp pages(pdf) do
-    case Service.PDFImages.pages(pdf) do
-      {:ok, pages} -> %{pages: pages, preview_error: nil}
-      {:error, reason} -> %{pages: [], preview_error: reason}
-    end
+    |> start_async(:preview, fn -> FormSample.print(draft, owner, page, activity_id) end)
   end
 
   @new_page_ask "Fit the form to the agency's new PDF."
@@ -493,56 +464,17 @@ defmodule Web.FormChangeLive do
       </section>
 
       <section id="form-try" class="mb-8">
-        <%!-- The team's own activities, or Coast Range SAR's for an organization. On a team's
-        form, Open activity, at the label's end, checks the try against one in a new
-        window. --%>
-        <form
-          :if={@activities != []}
-          id="form-try-form"
-          phx-change="try_on"
-          phx-submit="try_on"
-          class="measure"
+        <.form_sample
+          owner={@owner}
+          written={written?(@text)}
+          activities={@activities}
+          activity={@activity}
+          pages={@pages}
+          previewing={@previewing}
+          preview_error={@preview_error}
         >
-          <div class="flex items-baseline justify-between gap-4">
-            <.label for="form-try-activity">{tried_on(@owner)}</.label>
-            <.a
-              :if={@activity && match?(%Team{}, @owner)}
-              id="form-try-open"
-              href={~p"/teams/#{@owner}/activities/#{@activity.id}"}
-              external={true}
-            >Open activity</.a>
-          </div>
-          <.input
-            id="form-try-activity"
-            name="activity"
-            type="select"
-            value={@activity && @activity.id}
-            options={Enum.map(@activities, &{activity_label(&1, @owner), &1.id})}
-          />
-        </form>
-        <p
-          :if={written?(@text) and @activities == [] and !@previewing}
-          id="form-try-none"
-          class="measure"
-        >
-          {no_activity(@owner)}
-        </p>
-        <p :if={!written?(@text)} id="form-blank-page" class="measure">
-          The agency's blank form. AI writes the form from it.
-        </p>
-        <p :if={@previewing} id="form-try-printing" class="hint mb-3">
-          <.spinner>Printing it…</.spinner>
-        </p>
-        <p :if={@preview_error} id="form-try-error" class="measure">{@preview_error}</p>
-        <div :if={@pages != []} id="form-pages" class="flex flex-col gap-4">
-          <img
-            :for={{png, n} <- Enum.with_index(@pages, 1)}
-            id={"form-page-#{n}"}
-            src={"data:image/png;base64," <> Base.encode64(png)}
-            alt={page_alt(n, length(@pages), @text)}
-            class="w-full border border-border-subtle shadow-sm"
-          />
-        </div>
+          <:blank>The agency's blank form. AI writes the form from it.</:blank>
+        </.form_sample>
       </section>
       <:bar>
         <.save_bar id="form-bar">
@@ -608,25 +540,6 @@ defmodule Web.FormChangeLive do
   defp text_shown?(assigns), do: assigns.text_open or assigns.text_error != nil
 
   defp written?(text), do: String.trim(text || "") != ""
-
-  defp page_alt(n, count, text) do
-    if written?(text),
-      do: "Page #{n} of #{count}, marked SAMPLE",
-      else: "Page #{n} of #{count} of the agency's blank form"
-  end
-
-  # Coast Range SAR's activities in its own zone, a team's in the team's.
-  defp activity_label(activity, owner),
-    do: "#{activity.title}, #{Service.Format.date_short(activity.started_at, zone(owner))}"
-
-  defp zone(%Organization{}), do: App.CoastRange.timezone()
-  defp zone(team), do: team.timezone
-
-  defp tried_on(%Organization{}), do: "Tried on Coast Range SAR"
-  defp tried_on(_team), do: "Tried on"
-
-  defp no_activity(%Organization{}), do: "Coast Range SAR has no activity this form shows on."
-  defp no_activity(_team), do: "Your team has no activity this form shows on."
 
   defp sees(%Organization{short_name: name}),
     do:

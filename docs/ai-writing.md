@@ -100,7 +100,7 @@ team in the organization has, never a team's own groups or tags.
 - **Change form**, `/teams/:subdomain/settings/forms/:id/edit`
   ([Web.FormChangeLive](../lib/web/live/form_change_live.ex)), linked from the form's
   page: the draft tried on one of the team's activities it shows on, marked SAMPLE, as
-  Try it prints it, every page a picture, is the main column, with Tried on to pick
+  the form's page draws its Sample (Web.Components.FormSample), every page a picture, is the main column, with Tried on to pick
   another and Open activity at the label's end, in a new window, to check the form
   against it. Before there's a text, it's the agency's blank form. AI writing is the column
   beside it, as on Change report: the conversation, the box, and the hint, "AI works only

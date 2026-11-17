@@ -59,32 +59,18 @@ defmodule Web.FormCollectionLive do
     </.heading_row>
 
     <p class="lead measure">
-      {@owner.short_name}'s forms for its teams, such as the claim after an incident. While a
-      form is testing, team admins fill it in from an activity and download draft PDFs. Once
-      it's on, they publish it.
+      The forms {@owner.short_name}'s teams fill in from an activity. Each team sees them on
+      its Forms tab, read-only.
     </p>
 
-    <.empty_state :if={@forms == []} id="no-forms" title="No forms yet">
+    <.empty_state :if={@forms == []} id="no-forms" title="No forms yet" class="mt-8">
       Choose New form and give SAR Duty the agency's PDF.
     </.empty_state>
 
-    <.table :if={@forms != []} id="forms" rows={@forms} row_id={&"form-#{&1.id}"}>
-      <:col :let={form} label="Form">
-        <.a id={"form-#{form.id}-name"} navigate={FormOwner.form_path(@owner, form)}>{form.name}</.a>
-        <div :if={form.about} class="hint">{form.about}</div>
-      </:col>
-      <:col :let={form} label={state_label(@owner)} class="whitespace-nowrap">
-        <span :if={Form.written?(form)} id={"form-#{form.id}-state"} class={state_class(form.state)}>
-          {Form.state_label(form.state)}
-        </span>
-        <span :if={!Form.written?(form)} id={"form-#{form.id}-state"} class="text-text-muted">
-          Not written yet
-        </span>
-      </:col>
-      <:col :let={form} label="Version" class="max-md:hidden">
-        <span id={"form-#{form.id}-version"}>{form.version}</span>
-      </:col>
-    </.table>
+    <%!-- A reader's width, so each row's chevron sits by its words, as on a team's tab. --%>
+    <div class="mt-8 max-w-3xl">
+      <.form_rows id="forms" forms={@forms} owner={@owner} />
+    </div>
     """
   end
 
@@ -155,7 +141,7 @@ defmodule Web.FormCollectionLive do
 
   attr :id, :string, required: true
   attr :forms, :list, required: true
-  attr :owner, Team, required: true
+  attr :owner, :any, required: true, doc: "the team or organization whose page it is"
   attr :replaced, :any, default: MapSet.new()
   attr :organization, Organization, default: nil
 
@@ -198,12 +184,4 @@ defmodule Web.FormCollectionLive do
     do: "When #{name} adds a form, such as a task report, it shows here and on your activities."
 
   defp no_forms(nil), do: "Your team has no forms in SAR Duty."
-
-  # Where it's off, testing, or on: every team's activities, or the team's.
-  def state_label(%Organization{}), do: "For teams"
-  def state_label(_team), do: "On activities"
-
-  defp state_class(:on), do: "text-success-text"
-  defp state_class(:testing), do: nil
-  defp state_class(:off), do: "text-text-muted"
 end

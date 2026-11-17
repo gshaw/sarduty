@@ -81,7 +81,7 @@ defmodule Web.FormPagesTest do
          %{conn: conn, dana: dana, form: form} do
       {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/forms/#{form}")
 
-      assert has_element?(lv, "#form-shows-on", "Activities where kind = 'incident'")
+      assert has_element?(lv, "#form-shows-on", "Incidents")
       assert has_element?(lv, "#form-questions", "Task leader")
       assert has_element?(lv, "#form-page", "2 pages")
       assert has_element?(lv, "#form-text", "for activity where kind = 'incident'")
@@ -98,13 +98,11 @@ defmodule Web.FormPagesTest do
       # Turning it on starts testing.
       lv |> element("#form-on") |> render_click()
       assert Repo.reload!(form).state == :testing
-      assert has_element?(lv, "#form-state", "Testing")
       assert has_element?(lv, "#form-on[checked]")
       assert has_element?(lv, "#form-testing[checked]:not([disabled])")
 
       lv |> element("#form-testing") |> render_click()
       assert Repo.reload!(form).state == :on
-      assert has_element?(lv, "#form-state", "On")
       refute has_element?(lv, "#form-testing[checked]")
 
       lv |> element("#form-on") |> render_click()
@@ -119,8 +117,12 @@ defmodule Web.FormPagesTest do
       conn = log_in_user(conn, dana)
       {:ok, lv, _html} = live(conn, ~p"/orgs/wsara/forms/#{form}")
 
+      # The sample prints after the page loads, drawn as pictures.
+      render_async(lv, 10_000)
       assert has_element?(lv, "#form-try-activity option", "Missing hiker")
+      assert has_element?(lv, "#form-page-1[alt='Page 1 of 2, marked SAMPLE']")
       [activity_id] = lv |> element("#form-try-activity option[selected]") |> render() |> ids()
+      assert has_element?(lv, "#form-try-download[href$='?activity=#{activity_id}']")
 
       conn = get(conn, ~p"/orgs/wsara/forms/#{form}/try?#{[activity: activity_id]}")
       assert "%PDF" <> _ = response(conn, 200)
@@ -304,6 +306,7 @@ defmodule Web.FormPagesTest do
       # Its organization's form is read-only, with no Copy while team forms are off.
       {:ok, lv, _html} = live(conn, team_path(team, "/#{form.id}"))
       assert has_element?(lv, "#form-from", "WSARA's form. Only WSARA can change it.")
+      assert has_element?(lv, "#form-state", "On, for every WSARA team")
       refute has_element?(lv, "#form-on-off")
       refute has_element?(lv, "#form-actions")
       assert has_element?(lv, "#form-try")
@@ -359,9 +362,10 @@ defmodule Web.FormPagesTest do
       assert has_element?(lv, "#form-on-hint", "Only Valley SAR sees it")
       lv |> element("#form-on") |> render_click()
       assert Repo.reload!(own).state == :testing
-      assert has_element?(lv, "#form-state", "Testing")
+      assert has_element?(lv, "#form-testing[checked]")
       assert Repo.get_by!(Event, kind: :form_set_testing).team_id == team.id
 
+      render_async(lv, 10_000)
       assert has_element?(lv, "#form-try-none", "Your team has no activity this form shows on.")
       refute has_element?(lv, "#form-replace")
     end
@@ -417,10 +421,13 @@ defmodule Web.FormPagesTest do
       assert started.state == :off
       assert Form.page_bytes(started) == page
 
-      assert has_element?(lv, "#form-state", "Not written yet")
+      # The switches wait, greyed, and the page shows the agency's blank form.
       assert has_element?(lv, "#form-not-written", "Incident debrief isn't written yet.")
-      refute has_element?(lv, "#form-on")
-      refute has_element?(lv, "#form-try")
+      assert has_element?(lv, "#form-on[disabled]:not([checked])")
+      assert has_element?(lv, "#form-on-hint", "Change form writes it first.")
+      render_async(lv, 10_000)
+      assert has_element?(lv, "#form-page-1[alt$='blank form']")
+      refute has_element?(lv, "#form-try-download")
       refute has_element?(lv, "#form-text")
       refute has_element?(lv, "#form-replace")
     end
