@@ -65,7 +65,8 @@ defmodule Web.Components.FormSample do
   @doc """
   The picker, the pages, and what's printing. The team's own activities, or Coast
   Range SAR's for an organization; on a team's, Open activity, at the label's end,
-  checks the sample against one in a new window.
+  checks the sample against one in a new window. The picker spans the pages' width, so
+  its end lines up with theirs.
   """
   def form_sample(assigns) do
     ~H"""
@@ -74,7 +75,6 @@ defmodule Web.Components.FormSample do
       id="form-try-form"
       phx-change="try_on"
       phx-submit="try_on"
-      class="measure"
     >
       <div class="flex items-baseline justify-between gap-4">
         <.label for="form-try-activity">{tried_on(@owner)}</.label>
