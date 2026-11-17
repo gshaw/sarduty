@@ -89,6 +89,7 @@ defmodule Web.ReportFormLive do
       rename_from: nil
     )
     |> assign_form(SavedReport.changeset(saved || %SavedReport{}, start))
+    |> then(&assign(&1, opened: report_fields(&1.assigns.form)))
     |> preview(start)
     |> assign_ai(blank_new?(socket.assigns.live_action, params))
     |> then(&{:ok, &1})
@@ -459,9 +460,9 @@ defmodule Web.ReportFormLive do
   end
 
   # The name, description, and query, as the form holds them.
-  # Not saved yet: a new report once it has anything in it, or a saved one that differs.
-  defp unsaved?(%{saved: nil, form: form}),
-    do: form |> report_fields() |> Map.values() |> Enum.any?(&(String.trim(&1) != ""))
+  # Not saved yet: a new report once it differs from how it opened (a blank one opens
+  # with a sample query, a copy with the built-in's), or a saved one that differs.
+  defp unsaved?(%{saved: nil, form: form, opened: opened}), do: report_fields(form) != opened
 
   defp unsaved?(%{saved: saved, form: form}),
     do: report_fields(form) != Map.new(~w(name about query)a, &{&1, Map.get(saved, &1) || ""})

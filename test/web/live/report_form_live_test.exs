@@ -897,7 +897,15 @@ defmodule Web.ReportFormLiveTest do
     lv |> form("#report-form", report: %{name: "Members by name"}) |> render_change()
     assert has_element?(lv, "#report-unsaved[data-unsaved=true]:not([hidden])", "Not saved yet")
 
+    # A new report, blank or a copy, asks only once it differs from how it opened, so a
+    # built-in's link on a blank New report goes without asking.
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/new")
+    assert has_element?(lv, "#report-unsaved[hidden]")
+
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/new?from=hours-by-member")
+    assert has_element?(lv, "#report-unsaved[hidden]")
+
+    lv |> form("#report-form", report: %{name: "Hours"}) |> render_change()
     assert has_element?(lv, "#report-unsaved:not([hidden])")
   end
 end
