@@ -32,7 +32,7 @@ defmodule Web.ReportFormLive do
 
   Changing a saved report asks What changed, kept in its History (#834), unless AI writes
   it. `?version=<id>` is Restore from History: that version's name, description, and
-  query, saved as a new version.
+  query, saved as a new version once Save report is pressed, which a toast says.
   """
   use Web, :live_view_app_layout
 
@@ -92,6 +92,7 @@ defmodule Web.ReportFormLive do
     |> then(&assign(&1, opened: report_fields(&1.assigns.form)))
     |> preview(start)
     |> assign_ai(blank_new?(socket.assigns.live_action, params))
+    |> restored_toast(params)
     |> then(&{:ok, &1})
   end
 
@@ -155,6 +156,15 @@ defmodule Web.ReportFormLive do
   end
 
   defp edit_start(_saved, _params), do: %{}
+
+  # Restore only fills the page, so a toast says Save report keeps it.
+  defp restored_toast(%{assigns: %{saved: saved}} = socket, %{"version" => id}) do
+    version = ReportVersion.get(saved, String.to_integer(id))
+    at = Format.datetime_short(version.inserted_at, socket.assigns.current_team.timezone)
+    put_flash(socket, :info, "Restored the version from #{at}. Save report to keep it.")
+  end
+
+  defp restored_toast(socket, _params), do: socket
 
   # Named for the picks: "Activities: Exercises, 2026, rope".
   defp list_name(list, values, team, now) do

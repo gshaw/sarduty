@@ -249,6 +249,7 @@ defmodule Web.ReportFormLiveTest do
         lv |> element("#version-restore-#{first.id}") |> render_click() |> follow_redirect(conn)
 
       assert has_element?(lv, "#report_query", "select title from groups")
+      assert render(lv) =~ "Save report to keep it."
       lv |> form("#report-form", report: %{change: "Back to titles"}) |> render_submit()
 
       assert SavedReport.get(team, report.id).query == "select title from groups"
