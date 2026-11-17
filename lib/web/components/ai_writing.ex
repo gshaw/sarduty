@@ -217,6 +217,18 @@ defmodule Web.Components.AIWriting do
   defp blank_or(ask, _default), do: ask
 
   @doc """
+  What an ask runs: `real`, or for Test (`test?`) a made-up answer, counting the visit's
+  Test presses in the socket's `ai_tests`. Returns the socket and the function.
+  """
+  def ask_task(socket, test?, ask, real)
+  def ask_task(socket, false, _ask, real), do: {socket, real}
+
+  def ask_task(socket, true, ask, _real) do
+    n = Map.get(socket.assigns, :ai_tests, 0)
+    {assign(socket, ai_tests: n + 1), fn -> test_ask(ask, n) end}
+  end
+
+  @doc """
   A made-up answer for Test, after 1.5 seconds so Thinking… and Stop show. `n` counts the
   visit's Test presses from 0: every fourth fails with too many steps, and the rest change nothing and
   reply at a length that varies, with Try next. Never on production (`test?/0`).

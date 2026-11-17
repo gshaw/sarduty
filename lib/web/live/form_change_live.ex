@@ -315,9 +315,6 @@ defmodule Web.FormChangeLive do
   # `test: true` is Test's made-up ask (AIWriting.test_ask/2), with no call to Claude.
   defp start_ask(socket, ask, before_page \\ nil, opts \\ []) do
     test? = Keyword.get(opts, :test, false)
-    # Test presses so far this visit, so every fourth fails, Ask again included.
-    tests = Map.get(socket.assigns, :ai_tests, 0)
-    socket = if test?, do: assign(socket, ai_tests: tests + 1), else: socket
 
     %{owner: owner, form: form, page: page, text: text, ai_asks: asks, current_user: user} =
       socket.assigns
@@ -330,19 +327,18 @@ defmodule Web.FormChangeLive do
 
     now = DateTime.utc_now()
 
+    {socket, run} =
+      ask_task(socket, test?, ask, fn ->
+        job = FormJob.build(owner, form, page, text, ask, now, earlier)
+        AskAI.call(owner, user, job, now)
+      end)
+
     socket
     |> assign(
       ai_pending: %{ask: ask, before: text, before_page: before_page || page, test?: test?},
       ai_form: ask_form("")
     )
-    |> start_async(:ai_ask, fn ->
-      if test? do
-        test_ask(ask, tests)
-      else
-        job = FormJob.build(owner, form, page, text, ask, now, earlier)
-        AskAI.call(owner, user, job, now)
-      end
-    end)
+    |> start_async(:ai_ask, run)
   end
 
   defp ask_done(socket, {:ok, %{text: text, note: note, blank: blank} = result}) do

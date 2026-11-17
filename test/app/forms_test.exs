@@ -20,7 +20,9 @@ defmodule App.FormsTest do
   @dir "priv/forms"
 
   defp forms do
+    # Each organization's folder; Finder's .DS_Store beside them isn't one.
     for org <- File.ls!(@dir),
+        File.dir?(Path.join(@dir, org)),
         name <- @dir |> Path.join(org) |> File.ls!(),
         Path.extname(name) == ".txt",
         do: Path.join([@dir, org, Path.rootname(name)])
