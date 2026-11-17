@@ -14,7 +14,11 @@ defmodule App.Report.Lexer do
   @symbols ["<=", ">=", "!=", "<>", "=", "<", ">", "(", ")", ",", ".", ":", "*", "+", "-", "/"]
 
   @doc "The tokens, or `{:error, %Error{}}` at the first character it cannot read."
-  def tokens(text) when is_binary(text), do: scan(text, 1, [])
+  def tokens(text) when is_binary(text) do
+    if String.valid?(text),
+      do: scan(text, 1, []),
+      else: {:error, Error.new(nil, "Retype the query: it has a character that isn't text.")}
+  end
 
   defp scan("", _line, acc), do: {:ok, Enum.reverse(acc)}
   defp scan("\r\n" <> rest, line, acc), do: scan(rest, line + 1, acc)
@@ -97,8 +101,16 @@ defmodule App.Report.Lexer do
   end
 
   # A number, or a percent: 15% is 0.15, worked out from the digits so 14.3% is 0.143.
+  # Capped so it fits SQLite's integers and Decimal's 34 digits.
   defp number(text, line, acc) do
     [digits | _] = Regex.run(~r/^\d+(\.\d+)?%?/, text)
+
+    if byte_size(digits) > 18,
+      do: {:error, Error.new(line, "Write a shorter number: #{digits} is too long.")},
+      else: number(digits, text, line, acc)
+  end
+
+  defp number(digits, text, line, acc) do
     rest = binary_part(text, byte_size(digits), byte_size(text) - byte_size(digits))
 
     number =
