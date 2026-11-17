@@ -8,7 +8,6 @@ defmodule Web.FormPagesTest do
 
   alias App.Model.Event
   alias App.Model.Form
-  alias App.Operation.SaveForm
   alias App.Operation.SetAISettings
   alias App.Repo
   alias Web.Components.TeamSettingsTabs
