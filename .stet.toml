@@ -4,8 +4,3 @@ kind = "code"
 paths = [".claude/"]
 reason = """
 Agent worktrees live here: checkouts of other branches, whose files those branches own."""
-
-[[ignore]]
-paths = ["deps/", "_build/"]
-reason = """
-Mix's dependencies and build output: other people's files, gitignored."""
