@@ -19,15 +19,18 @@ defmodule App.Report.ReportWordsFuzzTest do
   # Runner's message for SQL that SQLite refused: the compiler wrote it wrong.
   @bad_sql "This report could not run. Try again, or change its query."
 
+  # A fixed date, so a saved failure that depends on THIS_MONTH or LAST_N_DAYS replays.
+  @now ~U[2026-11-17 00:00:00Z]
+
   # A seed per built-in report, unchanged: the first byte picks it.
   @tag timeout: 5_000
   fuzz "built-in reports with words swapped run or give a report error",
        data <- binary(),
        seeds: Enum.map(0..(length(BuiltIn.all()) - 1), &<<&1>>) do
     text = query(data)
-    context = Context.new(App.SampleRepo.team(), DateTime.utc_now(), repo: App.SampleRepo)
+    context = Context.new(App.SampleRepo.team(), @now, repo: App.SampleRepo)
 
-    {run, log} = with_log(fn -> Report.run_sample(text) end)
+    {run, log} = with_log(fn -> Report.run_sample(text, %{}, @now) end)
     check!(run, log, text)
 
     {page, log} = with_log(fn -> Report.page_in(context, text) end)
@@ -126,7 +129,7 @@ defmodule App.Report.ReportWordsFuzzTest do
   end
 
   defp build_pools do
-    context = Context.new(App.SampleRepo.team(), DateTime.utc_now(), repo: App.SampleRepo)
+    context = Context.new(App.SampleRepo.team(), @now, repo: App.SampleRepo)
     reports = Enum.map(BuiltIn.all(), &lines(&1.query))
     tokens = List.flatten(reports)
 

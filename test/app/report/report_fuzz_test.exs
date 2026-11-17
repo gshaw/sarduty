@@ -14,14 +14,17 @@ defmodule App.Report.ReportFuzzTest do
   # Runner's message for SQL that SQLite refused: the compiler wrote it wrong.
   @bad_sql "This report could not run. Try again, or change its query."
 
+  # A fixed date, so a saved failure that depends on THIS_MONTH or LAST_N_DAYS replays.
+  @now ~U[2026-11-17 00:00:00Z]
+
   @tag timeout: 5_000
   fuzz "any text runs or gives a report error",
        data <- binary(),
        seeds: Enum.map(BuiltIn.all(), & &1.query) do
-    {run, log} = with_log(fn -> Report.run_sample(data) end)
+    {run, log} = with_log(fn -> Report.run_sample(data, %{}, @now) end)
     check!(run, log)
 
-    context = Context.new(App.SampleRepo.team(), DateTime.utc_now(), repo: App.SampleRepo)
+    context = Context.new(App.SampleRepo.team(), @now, repo: App.SampleRepo)
     {page, log} = with_log(fn -> Report.page_in(context, data) end)
     check!(page, log)
   end
