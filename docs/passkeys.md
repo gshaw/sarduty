@@ -11,7 +11,7 @@ Adminland, wait on #1002.
 
 ## How it fits together
 
-- **WebAuthn** is the wax_ library, wrapped by `App.Accounts.WebAuthn`. The relying party
+- **WebAuthn** is the `wax_` library, wrapped by `App.Accounts.WebAuthn`. The relying party
   is the endpoint's host, `sarduty.com` in production, so a passkey made there works
   nowhere else. Every passkey is discoverable and needs the device unlocked.
 - **Adding one** happens in account settings (`Web.AccountLive`). The `PasskeyAdd` hook

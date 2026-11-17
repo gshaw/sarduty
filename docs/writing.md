@@ -89,7 +89,7 @@ to do next, then gets out of the way. It does not sell, apologize, or celebrate.
     dashboard. One that opens something else names it: "Open member in D4H" on a
     certificate, "Open location bookmarks in D4H" on places. Never "Open D4H activity".
     It goes last in the page's Actions, as an action link with the arrow
-    ([/styles/typography](/styles/typography)). A Records team gets none.
+    ([/styles/typography](https://sarduty.com/styles/typography)). A Records team gets none.
 
 ## Patterns
 
@@ -127,7 +127,7 @@ reaches nobody checked greys out and says why. Nothing is picked at the start, a
 that greys out leaves nothing picked: the list never picks a change for the reader. A
 choice that needs a value, such as Add to group's group, shows its box beside it once
 picked. It never greys out, since another value could reach someone: the button greys
-instead, and says why beside it. The button counts who it reaches. See the [action bar](/styles/action-bar) for where the button
+instead, and says why beside it. The button counts who it reaches. See the [action bar](https://sarduty.com/styles/action-bar) for where the button
 goes.
 
 **Error messages.** Say how to fix it, starting with the verb: "Enter who authorizes tax
@@ -145,7 +145,7 @@ its own confirmation, such as a reply's "Signed up".
 "Delete First Aid? It comes off ID cards and the rules of Callout." The buttons are the action
 ("Delete endorsement") and "Cancel". For many members, name up to 3; past that, a line for
 each group by what happens to it, with its count, and a line for those it leaves out
-([/styles/confirm-dialog#many](/styles/confirm-dialog#many)).
+([/styles/confirm-dialog#many](https://sarduty.com/styles/confirm-dialog#many)).
 
 **Warnings.** The consequence first, then what to do: "Attendance cannot be changed once
 the activity is published. Unpublish it with Change activity first."

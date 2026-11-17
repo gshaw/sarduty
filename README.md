@@ -28,7 +28,6 @@ cp .mise.example.toml .mise.local.toml
 mise trust
 mise install
 mix setup
-git config core.hooksPath bin/git-hooks
 echo 4025 > ~/.puma-dev/sarduty
 ```
 
@@ -44,12 +43,14 @@ Then `mise run server` and open <https://sarduty.test>.
   without touching a real team's data. `--reset` builds them again with today's dates,
   and `--photo <file>` sets your photo. It needs `RECORDS_HOST` and `RECORDS_SARDUTY_KEY`
   ([records.md](docs/records.md#records-in-dev)).
-- `mise run check` formats, compiles, lints, and spell-checks.
+- `mise run check` formats, lints, spell-checks, and compiles. `mise run lint` checks
+  without changing anything.
 - `mise run test` runs the tests; `mise run ci` runs checks and tests. Run it before
   pushing.
-- `git push` first runs CI's static checks, all but the compile, through
-  `bin/git-hooks/pre-push`, once `core.hooksPath` is set as in Setup.
-  `git push --no-verify` skips them.
+- Every commit runs the pre-commit hook in [hk.pkl](hk.pkl): Markdown and spelling
+  through [stet](https://github.com/gshaw/stet), then `mix format --check-formatted` and
+  Credo, on the staged files only. It checks and never changes files. It needs hk's
+  global hook, once per Mac: `hk install --global --mise`.
 - `mise run deploy` deploys `origin/main` — see [docs/deployment.md](docs/deployment.md).
 
 How the app is built: [docs/README.md](docs/README.md). Working in this repo as an agent:
