@@ -22,6 +22,8 @@
       display: flex; flex-direction: column;
       border-left: 1px solid var(--border-subtle); padding-left: var(--sp-4);
     }
+    /* Its own height, not stretched to the column's: ai_panel.js measures it. */
+    .ai-editor.has-ai > .ai-main { align-self: start; }
     .ai-column .ai-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
     .ai-column .ai-earlier { display: none; }
   }
