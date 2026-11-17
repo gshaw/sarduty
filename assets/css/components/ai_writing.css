@@ -32,8 +32,6 @@
   @media (max-width: 1023px) {
     .ai-thread:not(.ai-thread-all) > .ai-older { display: none; }
   }
-  /* The Save bar under the main part (.action-bar), its buttons at the end. */
-  .ai-bar { justify-content: flex-end; }
 
   /* The conversation, newest first: each ask on the right, AI's reply under it. */
   .ai-next { margin-top: var(--sp-4); }
