@@ -301,20 +301,6 @@ defmodule App.Model.MemberCard do
     |> repo.one()
   end
 
-  @doc """
-  Gives a live card made before #969 a new 10-character code. The card keeps its serial
-  and token, so its passes update in place, and its old code matches no card.
-  """
-  def lengthen_code!(%MemberCard{} = card),
-    do: card |> change(code: generate_code()) |> Repo.update!()
-
-  @doc "The live cards still on an 8-character code from before #969."
-  def get_all_with_old_codes do
-    MemberCard
-    |> where([c], is_nil(c.revoked_at) and fragment("length(?)", c.code) == 8)
-    |> Repo.all()
-  end
-
   def find_current(%Team{} = team, %Member{} = member) do
     MemberCard
     |> where([c], c.team_id == ^team.id and c.member_id == ^member.id and is_nil(c.revoked_at))

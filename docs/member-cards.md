@@ -49,12 +49,10 @@ organization gets its branding: see [organizations.md](organizations.md).
   alphabet ([MemberCard](../lib/app/model/member_card.ex)), printed 5-5. Never derive
   one from the D4H member number or the local id: a guessable code would let anyone walk
   the roster.
-- **Only 10-character codes count.** Codes were 8 characters until #969. Each live card
-  then got a 10-character code
-  ([LengthenCardCodes](../lib/app/operation/lengthen_card_codes.ex)), keeping its row,
-  serial, and token, so its passes changed in place at the push that followed. An old
-  code matches no card, and a cancelled card from before then keeps its 8 characters,
-  which nothing looks up.
+- **Only 10-character codes count.** Codes were 8 characters until #969, when a one-off
+  move gave each live card a 10-character code in place (#972, removed once the last
+  deleted-team copy from before it expired). An old code matches no card, and a
+  cancelled card from before then keeps its 8 characters, which nothing looks up.
 - **Misses are capped per IP.** 20 codes that match no card in 10 minutes, on the page,
   the photo and banner routes, or the JSON check, and that IP gets "Too many tries" with
   no lookup ([Web.VerifyLimit](../lib/web/verify_limit.ex)). Real codes never count, so
