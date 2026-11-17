@@ -534,17 +534,18 @@ defmodule Web.FormChangeLive do
           />
         </div>
       </section>
+      <:bar>
+        <.save_bar id="form-bar">
+          <.unsaved id="form-unsaved" unsaved={@text != @form.text or page_changed?(assigns)} />
+          <.button id="form-save" variant={:success} phx-click="save" phx-disable-with="Saving…">
+            Save form
+          </.button>
+          <.button id="form-cancel" navigate={FormOwner.form_path(@owner, @form)} data-leave-ok>
+            Cancel
+          </.button>
+        </.save_bar>
+      </:bar>
     </.ai_editor>
-
-    <.save_bar id="form-bar">
-      <.unsaved id="form-unsaved" unsaved={@text != @form.text or page_changed?(assigns)} />
-      <.button id="form-save" variant={:success} phx-click="save" phx-disable-with="Saving…">
-        Save form
-      </.button>
-      <.button id="form-cancel" navigate={FormOwner.form_path(@owner, @form)} data-leave-ok>
-        Cancel
-      </.button>
-    </.save_bar>
 
     <%!-- Replace PDF: the upload in a dialog over the page. Cancel or Escape closes it. --%>
     <dialog

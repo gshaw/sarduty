@@ -1,9 +1,9 @@
 @layer components {
   /* AI writing (docs/ai-writing.md), on Change report and Change form (#1089). Under
      1024px one column: the head (title, description, links), AI writing, then the main
-     part. From 1024px the column starts beside the title and sticks under the site bar,
-     filling the window down to the Save bar (assets/js/ai_panel.js sizes it), and its
-     conversation scrolls on its own. */
+     part, with the Save bar at its foot. From 1024px the column starts beside the title
+     and sticks under the site bar, no taller than the window: the box at its top, and
+     under it the conversation scrolls on its own. */
   .ai-editor {
     display: grid; grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "head" "ai" "main"; row-gap: var(--sp-6);
@@ -19,10 +19,11 @@
     }
     .ai-editor.has-ai > .ai-column {
       position: sticky; top: calc(56px + var(--sp-4)); align-self: start;
+      max-height: calc(100dvh - 56px - 2 * var(--sp-4));
       display: flex; flex-direction: column;
       border-left: 1px solid var(--border-subtle); padding-left: var(--sp-4);
     }
-    /* Its own height, not stretched to the column's: ai_panel.js measures it. */
+    /* Its own height, not stretched to the column's, so the Save bar sits under it. */
     .ai-editor.has-ai > .ai-main { align-self: start; }
     .ai-column .ai-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
     .ai-column .ai-earlier { display: none; }
@@ -31,11 +32,13 @@
   @media (max-width: 1023px) {
     .ai-thread:not(.ai-thread-all) > .ai-older { display: none; }
   }
-  /* The Save bar under the page (.action-bar), its buttons at the end. */
+  /* The Save bar under the main part (.action-bar), its buttons at the end. */
   .ai-bar { justify-content: flex-end; }
 
-  /* The conversation: each ask on the right, AI's reply under it. */
-  .ai-thread { list-style: none; margin: 0 0 var(--sp-6); padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+  /* The conversation, newest first: each ask on the right, AI's reply under it. */
+  .ai-next { margin-top: var(--sp-4); }
+  .ai-scroll { margin-top: var(--sp-6); }
+  .ai-thread { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
   .ai-thread p { margin: 0; }
   .ai-you { align-self: flex-end; max-width: 90%; padding: var(--sp-2) var(--sp-3); background: var(--surface-alt); border-radius: var(--radius); overflow-wrap: anywhere; }
   .ai-reply .btn { margin-top: var(--sp-2); }
@@ -45,6 +48,4 @@
   .ai-blank ul { margin: var(--sp-1) 0 0; padding-left: var(--sp-4); list-style: disc; }
   .ai-step { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); color: var(--text-muted); }
   .ai-writing-form textarea { width: 100%; }
-  /* Enter sends only where there's a keyboard with Shift (assets/js/ask_enter.js). */
-  @media (pointer: coarse) { .ai-enter-hint { display: none; } }
 }

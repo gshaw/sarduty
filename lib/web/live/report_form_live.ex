@@ -635,17 +635,18 @@ defmodule Web.ReportFormLive do
           </div>
         </div>
       </.form>
+      <:bar>
+        <.save_bar id="report-bar">
+          <.unsaved id="report-unsaved" unsaved={unsaved?(assigns)} />
+          <.button id="report-save" form="report-form" variant={:success} phx-disable-with="Saving…">
+            Save report
+          </.button>
+          <.button id="report-cancel" navigate={cancel_path(@current_team, @saved)} data-leave-ok>
+            Cancel
+          </.button>
+        </.save_bar>
+      </:bar>
     </.ai_editor>
-
-    <.save_bar id="report-bar">
-      <.unsaved id="report-unsaved" unsaved={unsaved?(assigns)} />
-      <.button id="report-save" form="report-form" variant={:success} phx-disable-with="Saving…">
-        Save report
-      </.button>
-      <.button id="report-cancel" navigate={cancel_path(@current_team, @saved)} data-leave-ok>
-        Cancel
-      </.button>
-    </.save_bar>
     """
   end
 

@@ -17,19 +17,20 @@ On New report and Change report, for a user AI writing is open to
 
 - **The page** (`ai_editor` in Web.Components.AIWriting, the same on Change form): the
   title, the description, and the page's links, Rename and Show query; AI writing beside
-  them; the report under them; and a bar stuck to the window's foot with Not saved yet,
-  Save report, and Cancel.
-- **AI writing** starts beside the title. From 1024px it stays in view as the page
-  scrolls, filling the window down to the bar (assets/js/ai_panel.js), and its
-  conversation scrolls on its own, to the newest reply after each ask. Under 1024px
-  it's one column, title first, and the conversation shows its last two asks with Show
-  earlier asks. In it: what AI sees, one line with How it works; the asks as a
-  conversation, oldest first; then "Ask AI" with its hint, "A change, or a question
-  about the report.", and Ask.
+  them; the report under them; and under the report a bar with Not saved yet, Save
+  report, and Cancel, stuck to the window's foot while the report runs past it, like the
+  bar for checked rows.
+- **AI writing** starts beside the title. From 1024px it sticks under the site bar,
+  no taller than the window, and its conversation scrolls on its own, back to the top
+  when an ask starts or ends (assets/js/ai_panel.js). Under 1024px it's one column,
+  title first, and the conversation shows its last two asks with Show earlier asks
+  under them. In it: what AI sees, one line with How it works; "Ask AI" with its hint,
+  "A change, or a question about the report.", and Ask; Try next; then the asks as a
+  conversation, newest first, each ask above its reply.
 - **Rename** opens a dialog with the name and description, inside the form: Rename
   keeps them, to save with Save report, and Cancel or Escape puts them back. With AI
   writing off or the query written by hand, the fields show on the page as before.
-  Under the newest reply, **Try next**: two or three asks AI suggests, to show what it
+  Under the box, **Try next**: two or three asks AI suggests after the newest reply, to show what it
   can do. A tap puts one in the box; it never sends on its own. Every ask is still one
   someone sent.
 - The query is hidden, since AI writes it: Show query and Hide query toggle it, and a
@@ -40,9 +41,8 @@ On New report and Change report, for a user AI writing is open to
   what's saved (Web.Components.Unsaved). Leaving then asks first: a reload or closing
   the tab through the browser's own question, a link through a confirm. Save and Cancel
   never ask.
-- **Enter sends** the ask, and Shift+Enter starts a new line (assets/js/ask_enter.js).
-  On a touch screen, return starts a new line and Ask sends, and the hint saying so
-  hides.
+- **Enter sends** the ask, and Shift+Enter starts a new line (assets/js/ask_enter.js),
+  with no hint saying so. On a touch screen, return starts a new line and Ask sends.
 - The ask shows at once, with Thinking… and the seconds it has taken under it, and
   Stop. One steady line: an ask's own steps (writing, checking, trying) change too fast
   to read. The box clears and Ask waits until AI answers.

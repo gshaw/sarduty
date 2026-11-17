@@ -616,7 +616,6 @@ defmodule Web.ReportFormLiveTest do
       refute has_element?(lv, ".hidden #report_query")
       assert has_element?(lv, "#report-ai #report-ai-form", "Ask AI")
       assert has_element?(lv, "textarea[name='ai[ask]'][phx-hook=AskEnter]")
-      assert has_element?(lv, "#report-ai-form .ai-enter-hint", "Enter sends it.")
     end
 
     # Try next (#1089): the asks AI suggests after its reply. A tap puts one in the box;
