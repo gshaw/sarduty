@@ -375,6 +375,9 @@ defmodule Web.ReportFormLive do
   # `test: true` is Test's made-up ask (AIWriting.test_ask/2), with no call to Claude.
   defp start_ask(socket, ask, opts \\ []) do
     test? = Keyword.get(opts, :test, false)
+    # Test presses so far this visit, so every fourth fails, Ask again included.
+    tests = Map.get(socket.assigns, :ai_tests, 0)
+    socket = if test?, do: assign(socket, ai_tests: tests + 1), else: socket
     %{current_team: team, current_user: user, form: form, ai_asks: asks} = socket.assigns
     report = report_fields(form)
 
@@ -391,7 +394,7 @@ defmodule Web.ReportFormLive do
     |> assign(ai_pending: pending, ai_form: ask_form(""))
     |> start_async(:ai_ask, fn ->
       if test? do
-        test_ask(ask, length(asks))
+        test_ask(ask, tests)
       else
         job = ReportJob.build(team, report, ask, now, earlier)
         AskAI.call(team, user, job, now)

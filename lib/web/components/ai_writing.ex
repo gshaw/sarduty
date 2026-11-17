@@ -217,8 +217,8 @@ defmodule Web.Components.AIWriting do
   defp blank_or(ask, _default), do: ask
 
   @doc """
-  A made-up answer for Test, after 1.5 seconds so Thinking… and Stop show. The `n`th ask
-  of the visit: every fourth fails with too many steps, and the rest change nothing and
+  A made-up answer for Test, after 1.5 seconds so Thinking… and Stop show. `n` counts the
+  visit's Test presses from 0: every fourth fails with too many steps, and the rest change nothing and
   reply at a length that varies, with Try next. Never on production (`test?/0`).
   """
   def test_ask(ask, n) do

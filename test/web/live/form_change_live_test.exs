@@ -300,6 +300,32 @@ defmodule Web.FormChangeLiveTest do
     end
   end
 
+  # Test, on a dev server only: made-up replies, every fourth fails, and Ask again on a
+  # failed Test stays a test. Claude is never called and nothing counts.
+  test "Test beside Ask makes up replies on a dev server, with no call to Claude", ctx do
+    %{conn: conn, team: team, alex: alex, started: started} = ctx
+    Req.Test.stub(App.Adapter.Claude, fn _conn -> flunk("Test called Claude") end)
+    Application.put_env(:sarduty, :dev_routes, true)
+    on_exit(fn -> Application.delete_env(:sarduty, :dev_routes) end)
+
+    {:ok, lv, _html} = conn |> log_in_user(alex) |> live(forms_path(team, "/#{started.id}/edit"))
+
+    for _n <- 1..4 do
+      lv |> form("#form-ai-form", ai: %{ask: ""}) |> render_submit(%{"test" => "1"})
+      render_async(lv, @wait)
+    end
+
+    assert has_element?(lv, ".ai-you", "Test ask 3")
+    assert has_element?(lv, ".ai-reply", "This is a test reply, with no call to AI.")
+    assert has_element?(lv, ".ai-failed", "AI took too many steps")
+
+    lv |> element("[id^='form-ai-again-']", "Ask again") |> render_click()
+    render_async(lv, @wait)
+    refute has_element?(lv, ".ai-failed")
+    assert has_element?(lv, ".ai-reply", "You asked: Test ask 4.")
+    assert AIAsk.count_today(team, DateTime.utc_now()) == 0
+  end
+
   test "a fix by hand is checked as it's typed, and Save form saves it", ctx do
     %{conn: conn, team: team, alex: alex, started: started} = ctx
     stub_claude([%{"text" => written(), "note" => "Wrote it.", "blank" => []}])
