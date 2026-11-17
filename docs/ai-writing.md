@@ -42,6 +42,10 @@ On New report and Change report, for a user AI writing is open to
   what's saved (Web.Components.Unsaved). Leaving then asks first: a reload or closing
   the tab through the browser's own question, a link through a confirm. Save and Cancel
   never ask.
+- **Test**, beside Ask on a dev server only (`dev_routes`), runs a made-up ask instead
+  of calling Claude (`AIWriting.test_ask/2`): 1.5 seconds of Thinking…, then a reply
+  of varying length with Try next, and every fourth ask fails with too many steps. It
+  spends nothing and isn't counted. Ask again on a failed Test stays a test.
 - **Enter sends** the ask, and Shift+Enter starts a new line (assets/js/ask_enter.js),
   with no hint saying so. On a touch screen, return starts a new line and Ask sends.
 - The ask shows at once, with Thinking… and the seconds it has taken under it, and

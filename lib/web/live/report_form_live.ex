@@ -277,6 +277,12 @@ defmodule Web.ReportFormLive do
   def handle_event("write_own", _params, socket),
     do: {:noreply, assign(socket, starting: false, query_open: true)}
 
+  def handle_event("ask", %{"ai" => %{"ask" => ask}, "test" => _test}, socket) do
+    if test?() and socket.assigns.ai_pending == nil,
+      do: {:noreply, start_ask(socket, test_words(ask, socket.assigns.ai_asks), test: true)},
+      else: {:noreply, socket}
+  end
+
   def handle_event("ask", %{"ai" => %{"ask" => ask}}, socket) do
     case String.trim(ask) do
       "" -> {:noreply, socket}
@@ -303,7 +309,7 @@ defmodule Web.ReportFormLive do
   def handle_event("ask_again", %{"id" => id}, socket) do
     case Enum.split_with(socket.assigns.ai_asks, &(to_string(&1.id) == id and &1[:failed])) do
       {[failed], rest} when socket.assigns.ai_pending == nil ->
-        {:noreply, socket |> assign(ai_asks: rest) |> start_ask(failed.ask)}
+        {:noreply, socket |> assign(ai_asks: rest) |> start_ask(failed.ask, test: failed.test?)}
 
       _other ->
         {:noreply, socket}
@@ -366,7 +372,9 @@ defmodule Web.ReportFormLive do
   end
 
   # The ask runs beside the page, with the visit's earlier asks.
-  defp start_ask(socket, ask) do
+  # `test: true` is Test's made-up ask (AIWriting.test_ask/2), with no call to Claude.
+  defp start_ask(socket, ask, opts \\ []) do
+    test? = Keyword.get(opts, :test, false)
     %{current_team: team, current_user: user, form: form, ai_asks: asks} = socket.assigns
     report = report_fields(form)
 
@@ -377,13 +385,17 @@ defmodule Web.ReportFormLive do
       |> Enum.map(&Map.take(&1, [:ask, :note]))
 
     now = DateTime.utc_now()
-    pending = %{ask: ask, before: fields_params(form)}
+    pending = %{ask: ask, before: fields_params(form), test?: test?}
 
     socket
     |> assign(ai_pending: pending, ai_form: ask_form(""))
     |> start_async(:ai_ask, fn ->
-      job = ReportJob.build(team, report, ask, now, earlier)
-      AskAI.call(team, user, job, now)
+      if test? do
+        test_ask(ask, length(asks))
+      else
+        job = ReportJob.build(team, report, ask, now, earlier)
+        AskAI.call(team, user, job, now)
+      end
     end)
   end
 
@@ -416,6 +428,7 @@ defmodule Web.ReportFormLive do
       id: System.unique_integer([:positive]),
       ask: pending.ask,
       before: pending.before,
+      test?: pending.test?,
       note: nil,
       undo?: false,
       next: [],

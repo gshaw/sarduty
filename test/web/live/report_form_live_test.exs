@@ -641,6 +641,28 @@ defmodule Web.ReportFormLiveTest do
       assert has_element?(lv, "textarea[name='ai[ask]']", "Add each member's standing")
     end
 
+    # Test, on a dev server only, answers with a made-up reply and never calls Claude.
+    test "Test beside Ask makes up a reply on a dev server, with no call to Claude",
+         %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      Req.Test.stub(App.Adapter.Claude, fn _conn -> flunk("Test called Claude") end)
+
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+      refute has_element?(lv, "#report-ai-test")
+
+      Application.put_env(:sarduty, :dev_routes, true)
+      on_exit(fn -> Application.delete_env(:sarduty, :dev_routes) end)
+
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+      lv |> form("#report-ai-form", ai: %{ask: ""}) |> render_submit(%{"test" => "1"})
+      assert has_element?(lv, "#report-ai-ask-running", "Test ask 1")
+
+      render_async(lv, 5_000)
+      assert has_element?(lv, ".ai-reply", "This is a test reply, with no call to AI.")
+      assert has_element?(lv, "#report-ai-next-0", "Group by month")
+      assert AIAsk.count_today(team, DateTime.utc_now()) == 0
+    end
+
     # The column stays in view and scrolls on its own from 1024px (assets/js/ai_panel.js);
     # under that, the conversation shows its last two asks with Show earlier asks.
     test "past two asks, the older ones fold under Show earlier asks", %{conn: conn} do

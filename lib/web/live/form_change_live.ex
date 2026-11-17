@@ -193,6 +193,12 @@ defmodule Web.FormChangeLive do
     end
   end
 
+  def handle_event("ask", %{"ai" => %{"ask" => ask}, "test" => _test}, socket) do
+    if test?() and socket.assigns.ai_pending == nil,
+      do: {:noreply, start_ask(socket, test_words(ask, socket.assigns.ai_asks), nil, test: true)},
+      else: {:noreply, socket}
+  end
+
   def handle_event("ask", %{"ai" => %{"ask" => ask}}, socket) do
     case String.trim(ask) do
       "" -> {:noreply, socket}
@@ -225,7 +231,7 @@ defmodule Web.FormChangeLive do
          socket
          |> assign(ai_asks: rest, page: failed.page)
          |> preview()
-         |> start_ask(failed.ask, failed.before_page)}
+         |> start_ask(failed.ask, failed.before_page, test: failed.test?)}
 
       _other ->
         {:noreply, socket}
@@ -306,7 +312,10 @@ defmodule Web.FormChangeLive do
 
   # The ask runs beside the page, with the visit's earlier asks. `before_page` is the page
   # Undo puts back: the old one when the ask is for a new one.
-  defp start_ask(socket, ask, before_page \\ nil) do
+  # `test: true` is Test's made-up ask (AIWriting.test_ask/2), with no call to Claude.
+  defp start_ask(socket, ask, before_page \\ nil, opts \\ []) do
+    test? = Keyword.get(opts, :test, false)
+
     %{owner: owner, form: form, page: page, text: text, ai_asks: asks, current_user: user} =
       socket.assigns
 
@@ -320,12 +329,16 @@ defmodule Web.FormChangeLive do
 
     socket
     |> assign(
-      ai_pending: %{ask: ask, before: text, before_page: before_page || page},
+      ai_pending: %{ask: ask, before: text, before_page: before_page || page, test?: test?},
       ai_form: ask_form("")
     )
     |> start_async(:ai_ask, fn ->
-      job = FormJob.build(owner, form, page, text, ask, now, earlier)
-      AskAI.call(owner, user, job, now)
+      if test? do
+        test_ask(ask, length(asks))
+      else
+        job = FormJob.build(owner, form, page, text, ask, now, earlier)
+        AskAI.call(owner, user, job, now)
+      end
     end)
   end
 
@@ -352,6 +365,7 @@ defmodule Web.FormChangeLive do
       before: pending.before,
       before_page: pending.before_page,
       page: socket.assigns.page,
+      test?: pending.test?,
       note: nil,
       undo?: false,
       blank: [],

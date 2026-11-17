@@ -185,10 +185,55 @@ defmodule Web.Components.AIWriting do
       >
         {render_slot(@inner_block)}
       </.input>
-      <.button id={"#{@id}-ask"} variant={:success} disabled={@pending != nil}>{@button}</.button>
+      <div class="flex flex-wrap gap-2">
+        <.button id={"#{@id}-ask"} variant={:success} disabled={@pending != nil}>{@button}</.button>
+        <.button
+          :if={test?()}
+          id={"#{@id}-test"}
+          name="test"
+          value="1"
+          disabled={@pending != nil}
+        >
+          Test
+        </.button>
+      </div>
     </.form>
     <p :if={@ai != :ok} id={"#{@id}-closed"} class="hint">{@closed}</p>
     """
+  end
+
+  @doc """
+  Whether the box shows Test, beside Ask: only on a dev server. Test runs a made-up ask
+  (`test_ask/3`) instead of asking Claude, so trying the column spends no credit.
+  """
+  def test?, do: Application.get_env(:sarduty, :dev_routes) == true
+
+  @doc """
+  The words of a Test ask: the box's, or "Test ask N" for an empty box.
+  """
+  def test_words(ask, asks), do: blank_or(String.trim(ask), "Test ask #{length(asks) + 1}")
+
+  defp blank_or("", default), do: default
+  defp blank_or(ask, _default), do: ask
+
+  @doc """
+  A made-up answer for Test, after 1.5 seconds so Thinking… and Stop show. The `n`th ask
+  of the visit: every fourth fails with too many steps, and the rest change nothing and
+  reply at a length that varies, with Try next. Never on production (`test?/0`).
+  """
+  def test_ask(ask, n) do
+    Process.sleep(1_500)
+
+    if rem(n, 4) == 3 do
+      {:error, :too_many_steps}
+    else
+      line =
+        "This is a test reply, with no call to AI. A real reply says what changed and why, " <>
+          "or answers a question about the report."
+
+      note = Enum.join(["You asked: #{ask}." | List.duplicate(line, rem(n, 3) * 2 + 1)], " ")
+      {:unchanged, note, ["Group by month", "Add a total row", "Sort by name"]}
+    end
   end
 
   @doc """
