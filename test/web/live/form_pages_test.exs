@@ -83,7 +83,11 @@ defmodule Web.FormPagesTest do
 
       assert has_element?(lv, "#form-shows-on", "Incidents")
       assert has_element?(lv, "#form-questions", "Task leader")
-      assert has_element?(lv, "#form-page", "2 pages")
+      assert has_element?(lv, "#form-page[href='/orgs/wsara/forms/#{form.id}/page']")
+      # Each question with its type, checked on Coast Range SAR, and how it starts.
+      assert has_element?(lv, "#form-questions li", "Text, starts with the team's last answer")
+      assert has_element?(lv, "#form-questions li", "Number, starts at 0")
+      assert has_element?(lv, "#form-questions li", "Yes or No, starts at No")
       assert has_element?(lv, "#form-text", "for activity where kind = 'incident'")
       refute has_element?(lv, "#form-replace")
     end
@@ -92,18 +96,22 @@ defmodule Web.FormPagesTest do
          %{conn: conn, dana: dana, form: form} do
       {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/forms/#{form}")
 
-      # Off: Testing waits under Turned on.
-      assert has_element?(lv, "#form-testing[disabled]")
+      # Off: Ready to publish waits until it's ready to try.
+      refute has_element?(lv, "#form-publish")
 
-      # Turning it on starts testing.
+      # Ready to try starts testing.
       lv |> element("#form-on") |> render_click()
       assert Repo.reload!(form).state == :testing
       assert has_element?(lv, "#form-on[checked]")
-      assert has_element?(lv, "#form-testing[checked]:not([disabled])")
 
-      lv |> element("#form-testing") |> render_click()
+      assert has_element?(
+               lv,
+               "#form-publish:not([checked])[data-confirm-button='Ready to publish']"
+             )
+
+      lv |> element("#form-publish") |> render_click()
       assert Repo.reload!(form).state == :on
-      refute has_element?(lv, "#form-testing[checked]")
+      assert has_element?(lv, "#form-publish[checked]")
 
       lv |> element("#form-on") |> render_click()
       assert Repo.reload!(form).state == :off
@@ -140,7 +148,7 @@ defmodule Web.FormPagesTest do
         })
 
       {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/forms/#{form}")
-      assert has_element?(lv, "#form-page", "Drawn by its layout")
+      refute has_element?(lv, "#form-page")
       assert has_element?(lv, "#form-text", "EMCR HEADQUARTERS USE ONLY")
     end
 
@@ -308,7 +316,8 @@ defmodule Web.FormPagesTest do
       assert has_element?(lv, "#form-from", "WSARA's form. Only WSARA can change it.")
       assert has_element?(lv, "#form-state", "On, for every WSARA team")
       refute has_element?(lv, "#form-on-off")
-      refute has_element?(lv, "#form-actions")
+      refute has_element?(lv, "#form-change")
+      refute has_element?(lv, "#form-copy")
       assert has_element?(lv, "#form-try")
     end
 
@@ -362,7 +371,7 @@ defmodule Web.FormPagesTest do
       assert has_element?(lv, "#form-on-hint", "Only Valley SAR sees it")
       lv |> element("#form-on") |> render_click()
       assert Repo.reload!(own).state == :testing
-      assert has_element?(lv, "#form-testing[checked]")
+      assert has_element?(lv, "#form-publish:not([checked])")
       assert Repo.get_by!(Event, kind: :form_set_testing).team_id == team.id
 
       render_async(lv, 10_000)

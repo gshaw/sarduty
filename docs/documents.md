@@ -595,10 +595,13 @@ organization's space, `/orgs/:slug/forms` ([organizations.md](organizations.md#i
   under a Testing only banner; on, they publish. Its admins **try it** on Coast Range SAR (App.Operation.TryForm): one of its activities the
   form shows on, every answer its default, marked SAMPLE, and nothing saved.
 - **A form's page shows the form**: its Sample, tried on an activity and drawn as
-  pictures as Change form draws it (Web.Components.FormSample), with Download sample
-  PDF; before it's written, the agency's blank page. Turned on and Testing top the
-  sidebar, above what it reads and asks, and its text folds under Show how it fills in.
-- **Delete form** (App.Operation.DeleteForm), under the form's title, for whoever sets
+  pictures as Change form draws it (Web.Components.FormSample); before it's written,
+  the agency's blank page. Its text folds under Show how it fills in. The sidebar, in
+  order: Ready to try and Ready to publish, two switches for Off, Testing, and On, the
+  second shown once the first is on; Shows on; Version; Actions (Change form, Download
+  sample PDF, Download agency's blank PDF, Delete form); and Questions last, since they
+  run long, each with its type and how it starts.
+- **Delete form** (App.Operation.DeleteForm), in the sidebar's Actions, for whoever sets
   it Off, Testing, or On, while no PDF was published from it: a form tried and never
   used. Its page and sign requests go with it; answers stay, as they're the activity's.
   Once a PDF was published, turning it off is the way, so every PDF keeps its form.

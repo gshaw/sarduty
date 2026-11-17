@@ -76,12 +76,17 @@ defmodule App.Operation.TryForm do
     end
   end
 
-  defp context(%Organization{}, now) do
+  @doc """
+  `{context, repo}` a form is tried in: Coast Range SAR's in App.SampleRepo for an
+  organization's, with a nil context while it isn't seeded, and the team's own for a
+  team's. A form's page checks the form in it for each question's type.
+  """
+  def context(%Organization{}, now) do
     case SampleRepo.team() do
       nil -> {nil, SampleRepo}
       team -> {Context.new(team, now, repo: SampleRepo), SampleRepo}
     end
   end
 
-  defp context(%Team{} = team, now), do: {Context.new(team, now), App.Repo}
+  def context(%Team{} = team, now), do: {Context.new(team, now), App.Repo}
 end
