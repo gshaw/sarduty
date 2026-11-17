@@ -88,8 +88,7 @@ defmodule Web.ReportFormLive do
       renaming: false,
       rename_from: nil
     )
-    |> assign_form(SavedReport.changeset(saved || %SavedReport{}, start))
-    |> then(&assign(&1, opened: report_fields(&1.assigns.form)))
+    |> assign_opened(SavedReport.changeset(saved || %SavedReport{}, start))
     |> preview(start)
     |> assign_ai(blank_new?(socket.assigns.live_action, params))
     |> restored_toast(params)
@@ -470,6 +469,12 @@ defmodule Web.ReportFormLive do
   end
 
   # The name, description, and query, as the form holds them.
+  # The form as the page opened, which Not saved yet compares a new report with.
+  defp assign_opened(socket, changeset) do
+    socket = assign_form(socket, changeset)
+    assign(socket, opened: report_fields(socket.assigns.form))
+  end
+
   # Not saved yet: a new report once it differs from how it opened (a blank one opens
   # with a sample query, a copy with the built-in's), or a saved one that differs.
   defp unsaved?(%{saved: nil, form: form, opened: opened}), do: report_fields(form) != opened
