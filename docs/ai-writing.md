@@ -23,7 +23,7 @@ On New report and Change report, for a user AI writing is open to
 - **AI writing** starts beside the title, as a chat. From 1024px it sticks under the
   site bar and grows with the conversation, the box pushed down, until it's as tall as
   the window; then the conversation scrolls on its own, older asks off the top, and
-  goes to the newest when an ask starts or ends (assets/js/ai_panel.js). Under 1024px
+  goes to the newest whenever it grows or shrinks (assets/js/ai_panel.js). Under 1024px
   it's one column, title first, and the conversation shows its last two asks with Show
   earlier asks. In it: what AI sees, one line with How it works; the asks as a
   conversation, oldest first; Try next; then "Ask AI" with its hint, "A change, or a

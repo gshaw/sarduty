@@ -19,7 +19,7 @@
     }
     .ai-editor.has-ai > .ai-column {
       position: sticky; top: calc(56px + var(--sp-4)); align-self: start;
-      max-height: calc(100dvh - 56px - 2 * var(--sp-4));
+      max-height: calc(100dvh - 56px - 2 * var(--sp-4)); /* ai_panel.js sets it from where it starts */
       display: flex; flex-direction: column;
       border-left: 1px solid var(--border-subtle); padding-left: var(--sp-4);
     }
