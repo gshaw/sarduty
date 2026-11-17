@@ -245,6 +245,8 @@ defmodule Web.Router do
       live "/cards/:token", CardLinkLive
       # An ask for a photo's link (#1030): Add a photo for the member asked.
       live "/photos/:token", MemberPhotoFormLive
+      # An ask for an activity's photos' link (#1034): Add photos, as the member asked.
+      live "/photos/activities/:token", ActivityPhotoFormLive
     end
 
     # The card page's badges: each builds its pass on the tap.
@@ -392,6 +394,12 @@ defmodule Web.Router do
       # The task leader signs it there when a team admin asked (#993); members reach it.
       live "/teams/:subdomain/activities/:id/forms/:form_id/sign", SignFormLive
 
+      # An exercise's or an event's photos (#1032), while the team has a file store.
+      live "/teams/:subdomain/activities/:id/photos", ActivityPhotosLive, :photos
+      live "/teams/:subdomain/activities/:id/photos/new", ActivityPhotoFormLive
+      # A team admin asks everyone who attended for their photos (#1034).
+      live "/teams/:subdomain/activities/:id/photos/ask", ActivityPhotoAskLive
+
       live "/teams/:subdomain/templates", TemplateCollectionLive
       live "/teams/:subdomain/templates/new", TemplateFormLive, :new
       live "/teams/:subdomain/templates/:id", TemplateLive
@@ -453,6 +461,14 @@ defmodule Web.Router do
       live "/teams/:subdomain/photos/members/new", MemberPhotoFormLive
       live "/teams/:subdomain/photos/members/ask", PhotoAskLive
       live "/teams/:subdomain/photos/members/:id", MemberPhotoCheckLive
+      # An accepted activity photo's page (#1033), and Add photos from Photos, which asks
+      # which activity.
+      live "/teams/:subdomain/photos/new", PhotoAddLive
+      live "/teams/:subdomain/photos/:id", ActivityPhotoLive
+      # A team admin edits an accepted photo (#1032, part 8).
+      live "/teams/:subdomain/photos/:id/edit", ActivityPhotoEditLive
+      # A team admin exports an accepted photo for a post (#1032, part 9).
+      live "/teams/:subdomain/photos/:id/export", ActivityPhotoExportLive
       live "/teams/:subdomain/certificates", CertificateCollectionLive
       live "/teams/:subdomain/certificates/new", CertificateFormLive, :new
       live "/teams/:subdomain/certificates/:id", CertificateLive
@@ -527,6 +543,8 @@ defmodule Web.Router do
       get "/members/:id/image/original", MemberController, :original_image
       get "/certificates/:id/file", CertificateController, :file
       get "/photos/members/:id/file", MemberPhotoController, :file
+      # An activity photo's file (#1032). A waiting one is its member's and team admins'.
+      get "/photos/:id/file", ActivityPhotoController, :file
     end
 
     scope "/teams/:subdomain" do
@@ -534,6 +552,8 @@ defmodule Web.Router do
 
       get "/members/:id/certificates/:award_id", MemberController, :certificate
       get "/settings/logo/original", TeamController, :original_logo
+      # Export for a post's JPEG (#1032, part 9): nothing is saved.
+      get "/photos/:id/export/file", ActivityPhotoController, :export
       get "/tax-credit-letters/:year/members/:id/draft.png", TaxCreditLetterController, :draft
       # An organization's form on an activity (#950): posts its answers, gets the PDF.
       post "/activities/:id/forms/:form_id/pdf", ActivityFormPDFController, :create

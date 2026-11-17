@@ -295,7 +295,7 @@ defmodule Web.MemberPhotoFormLiveTest do
       lv
       |> form("#photo-form")
       |> render_submit(%{"photo" => placed})
-      |> follow_redirect(conn, ~p"/teams/#{team}/photos")
+      |> follow_redirect(conn, ~p"/teams/#{team}/photos?view=yours")
     end
 
     test "the page is theirs: no Member box, and their own words", %{conn: conn, team: team} do
@@ -310,7 +310,7 @@ defmodule Web.MemberPhotoFormLiveTest do
                "Coast Range SAR puts it on your ID card. A team admin checks it first."
              )
 
-      assert has_element?(lv, ~s|#photo-cancel[href="#{~p"/teams/#{team}/photos"}"]|)
+      assert has_element?(lv, ~s|#photo-cancel[href="#{~p"/teams/#{team}/photos?view=yours"}"]|)
 
       pick(lv, png_fixture(800, 600))
       assert has_element?(lv, "#photo-place-hint", "Move or zoom it so your face fills the oval.")
@@ -970,7 +970,7 @@ defmodule Web.MemberPhotoFormLiveTest do
       |> render_submit(%{
         "photo" => %{"turns" => "0", "x" => "0.5", "y" => "0.4", "side" => "0.5"}
       })
-      |> follow_redirect(conn, ~p"/teams/#{team}/photos")
+      |> follow_redirect(conn, ~p"/teams/#{team}/photos?view=yours")
 
       assert [%{status: :waiting, clean_up: true} = photo] = Repo.all(MemberPhoto)
       assert photo.member_id == cam.id
@@ -998,7 +998,7 @@ defmodule Web.MemberPhotoFormLiveTest do
       lv
       |> form("#photo-form")
       |> render_submit()
-      |> follow_redirect(conn, ~p"/teams/#{team}/photos")
+      |> follow_redirect(conn, ~p"/teams/#{team}/photos?view=yours")
 
       assert [%{status: :waiting, clean_up: false} = photo] = Repo.all(MemberPhoto)
       assert {photo.cleaned_width, photo.cleaned_height} == {600, 600}
@@ -1017,7 +1017,7 @@ defmodule Web.MemberPhotoFormLiveTest do
       lv
       |> form("#photo-form")
       |> render_submit()
-      |> follow_redirect(conn, ~p"/teams/#{team}/photos")
+      |> follow_redirect(conn, ~p"/teams/#{team}/photos?view=yours")
 
       assert [%{status: :waiting, clean_up: true}] = Repo.all(MemberPhoto)
     end
@@ -1034,7 +1034,7 @@ defmodule Web.MemberPhotoFormLiveTest do
       lv
       |> form("#photo-form")
       |> render_submit()
-      |> follow_redirect(conn, ~p"/teams/#{team}/photos")
+      |> follow_redirect(conn, ~p"/teams/#{team}/photos?view=yours")
 
       assert [%{status: :waiting, clean_up: false, cleaned_width: nil} = photo] =
                Repo.all(MemberPhoto)

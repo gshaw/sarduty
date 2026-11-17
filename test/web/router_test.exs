@@ -53,8 +53,8 @@ defmodule Web.RouterTest do
   # serves a member's own downloads, ActivityCalendarController Add to calendar,
   # MemberController's image the photo on a member's page (#440) and original_image the
   # same photo at full size (#1028), CertificateController's file a member's own sent
-  # certificate (#645), and MemberPhotoController's file the photo they added that waits
-  # (#1029).
+  # certificate (#645), MemberPhotoController's file the photo they added that waits
+  # (#1029), and ActivityPhotoController's file an activity's photo (#1032).
   # Opening a page to members means changing this list on purpose. Web.TeamScopingTest
   # checks every other team route 404s for a member.
   @member_routes [
@@ -84,6 +84,15 @@ defmodule Web.RouterTest do
     "/teams/:subdomain/photos",
     "/teams/:subdomain/photos/members/:id/file",
     "/teams/:subdomain/photos/members/new",
+    # An activity's photos (#1032): its Photos tab, Add photos for a member who attended,
+    # and a photo's file, where a waiting one is only its member's and team admins'.
+    "/teams/:subdomain/activities/:id/photos",
+    "/teams/:subdomain/activities/:id/photos/new",
+    "/teams/:subdomain/photos/:id/file",
+    # An accepted photo's page, where everyone stars it, and Add photos from Photos,
+    # which asks which activity (#1033).
+    "/teams/:subdomain/photos/:id",
+    "/teams/:subdomain/photos/new",
     "/teams/:subdomain/take-attendance",
     "/teams/:subdomain/whiteboard",
     "/teams/:subdomain/help",
@@ -128,6 +137,7 @@ defmodule Web.RouterTest do
 
   defp member_route?(%{plug: Web.CertificateController, plug_opts: action}), do: action == :file
   defp member_route?(%{plug: Web.MemberPhotoController, plug_opts: action}), do: action == :file
+  defp member_route?(%{plug: Web.ActivityPhotoController, plug_opts: action}), do: action == :file
 
   defp member_route?(%{plug: plug}),
     do: plug in [Web.MeController, Web.ActivityCalendarController]
@@ -150,6 +160,8 @@ defmodule Web.RouterTest do
     {"GET", "/cards/token/google-wallet", Web.CardLinkController, :google_pass},
     # An email that asks for a photo holds it for 30 days (#1030).
     {"GET", "/photos/token", Web.MemberPhotoFormLive, nil},
+    # And one that asks for an activity's photos (#1034).
+    {"GET", "/photos/activities/token", Web.ActivityPhotoFormLive, nil},
     {"POST", "/reminders/token", Web.InvitationRemindersController, :unsubscribe},
     {"GET", "/teams/nsr/logo", Web.TeamController, :logo},
     {"GET", "/teams/nsr/take-attendance", Web.TakeAttendanceLive, nil},

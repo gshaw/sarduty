@@ -10,6 +10,7 @@ defmodule Web.ActivityLive do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.ActivityPhoto
   alias App.Model.Attendance
   alias App.Model.AttendanceScan
   alias App.Model.Coordinate
@@ -19,6 +20,8 @@ defmodule Web.ActivityLive do
   alias App.Model.Reminder
   alias App.Model.Standing
   alias App.Model.Trip
+  alias App.Operation.AddActivityPhotos
+  alias App.Operation.AskForActivityPhotos
   alias App.Operation.DeleteActivity
   alias App.Operation.SendReminders
   alias App.Repo
@@ -49,7 +52,9 @@ defmodule Web.ActivityLive do
   # (#230), for team admins from the start, next to Members since it's the next job;
   # Equipment what was used; Fields its D4H custom fields, when it has any or a team
   # admin can fill one in, with Change fields (#705); Forms, an organization's forms on
-  # it (#1018); and History. Forms and History are for team admins. The
+  # it (#1018); History; and Photos, Web.ActivityPhotosLive's, on an exercise or an
+  # event while the team has activity photos (#1032). Forms and History are for team
+  # admins. The
   # facts and Actions sit beside every tab, but a phone shows them on Overview only, so
   # the other tabs start with their own content. Team admins also get Take attendance,
   # Actions, and the links to member and equipment pages. A member never gets an
@@ -81,12 +86,56 @@ defmodule Web.ActivityLive do
         map: build_map(activity),
         replier: Reply.replier(socket.assigns, now)
       )
+      |> assign_photos()
       |> assign_fields()
       |> assign_forms()
       |> assign_people()
 
     {:noreply, socket}
   end
+
+  # The Photos tab (#1032): on an exercise or an event, while the team has activity
+  # photos, and not found anywhere else. It counts the photos that wait, for team admins.
+  defp assign_photos(socket) do
+    %{current_team: team, activity: activity, team_admin?: team_admin?, now: now} = socket.assigns
+    photos? = AddActivityPhotos.available?(team) and Activity.takes_photos?(activity)
+    if socket.assigns.live_action == :photos && !photos?, do: raise(Web.Status.NotFound)
+    waiting = if photos? and team_admin?, do: ActivityPhoto.count_waiting_on(activity), else: 0
+    who = %{team_admin?: team_admin?, member: socket.assigns.replier}
+
+    socket
+    |> assign(
+      photos?: photos?,
+      photos_waiting: waiting,
+      may_add_photos?: photos? and AddActivityPhotos.may_add?(team, activity, who, now)
+    )
+    |> assign_photo_ask()
+    |> assign_featured()
+  end
+
+  # Ask for photos (#1034), for team admins, and on the Photos tab when the team last
+  # asked.
+  defp assign_photo_ask(%{assigns: %{photos?: true, team_admin?: true}} = socket) do
+    %{current_team: team, activity: activity, now: now} = socket.assigns
+    on_tab? = socket.assigns.live_action == :photos
+
+    assign(socket,
+      may_ask_photos?: AskForActivityPhotos.askable?(team, activity, now),
+      photo_ask: if(on_tab?, do: AskForActivityPhotos.last_ask(activity))
+    )
+  end
+
+  defp assign_photo_ask(socket), do: assign(socket, may_ask_photos?: false, photo_ask: nil)
+
+  # Overview shows the photos a team admin featured (#1033), and how many the team sees.
+  defp assign_featured(%{assigns: %{photos?: true, tab: :overview, activity: activity}} = socket) do
+    assign(socket,
+      featured: ActivityPhoto.featured(activity),
+      photo_count: ActivityPhoto.count_accepted_on(activity)
+    )
+  end
+
+  defp assign_featured(socket), do: assign(socket, featured: [], photo_count: 0)
 
   # The Forms tab (#1018): an organization's forms it shows on, for team admins only
   # (#950), each with its state (#970). The tab counts the out-of-date ones.
@@ -106,7 +155,7 @@ defmodule Web.ActivityLive do
     :ok
   end
 
-  @tabs [:overview, :members, :travel, :equipment, :fields, :forms, :history]
+  @tabs [:overview, :members, :travel, :equipment, :fields, :forms, :history, :photos]
 
   defp history(:history, team, activity), do: ChangeHistory.for_activity(team, activity)
   defp history(_tab, _team, _activity), do: []
@@ -121,6 +170,7 @@ defmodule Web.ActivityLive do
   defp page_title(activity, :equipment), do: "#{activity.title} · Equipment"
   defp page_title(activity, :fields), do: "#{activity.title} · Fields"
   defp page_title(activity, :forms), do: "#{activity.title} · Forms"
+  defp page_title(activity, :photos), do: "#{activity.title} · Photos"
   defp page_title(activity, :history), do: "#{activity.title} · History"
 
   @doc """
@@ -420,6 +470,14 @@ defmodule Web.ActivityLive do
       >
         History
       </:tab>
+      <%!-- Last, as the mockup has it (#1032): the tabs before it are the record. --%>
+      <:tab
+        :if={@photos?}
+        navigate={Web.ActivityPhoto.tab_path(@activity.team, @activity.id)}
+        current={@tab == :photos}
+      >
+        Photos<.badge :if={@photos_waiting > 0} kind={:warning}>{@photos_waiting}</.badge>
+      </:tab>
     </.tabs>
     <div class={["activity-columns", @tab == :overview && "is-overview"]}>
       <aside id="activity-facts" class="activity-columns-facts">
@@ -435,6 +493,9 @@ defmodule Web.ActivityLive do
           activity={@activity}
           hours_tags={@hours_tags}
           map={@map}
+          featured={@featured}
+          photo_count={@photo_count}
+          may_add_photos?={@may_add_photos?}
         />
         <.live_component
           :if={@tab == :travel and !@coming? and !@activity.deleted_at}
@@ -492,6 +553,18 @@ defmodule Web.ActivityLive do
           activity={@activity}
           rows={@form_rows}
           timezone={@current_team.timezone}
+        />
+        <Web.ActivityPhotosLive.photos_tab
+          :if={@tab == :photos}
+          activity={@activity}
+          team={@current_team}
+          photos={@photos}
+          ticks={@photo_ticks}
+          team_admin?={@team_admin?}
+          may_add?={@may_add_photos?}
+          may_ask?={@may_ask_photos?}
+          ask={@photo_ask}
+          now={@now}
         />
         <.change_history
           :if={@tab == :history}
@@ -691,15 +764,53 @@ defmodule Web.ActivityLive do
   attr :activity, :map, required: true
   attr :hours_tags, :map, required: true
   attr :map, :map, default: nil
+  attr :featured, :list, default: [], doc: "the photos a team admin featured, 2 at most"
+  attr :photo_count, :integer, default: 0, doc: "how many accepted photos it has"
+  attr :may_add_photos?, :boolean, default: false
 
-  # Overview: the tags, the map, and the description.
+  # Overview: the tags, the map with the featured photos beside it (#1033), a link to
+  # all the photos with Add photos, and the description.
   def main_content(assigns) do
     ~H"""
     <div>
       <div class="mb-4"><.activity_tags activity={@activity} hours_tags={@hours_tags} /></div>
 
-      <div :if={@map} class="mb-4">
-        <.activity_map id="activity-map" map={@map} label="Map of activity" />
+      <div
+        :if={@map || @featured != []}
+        class={["activity-featured mb-4", @map && @featured != [] && "has-map"]}
+      >
+        <.activity_map :if={@map} id="activity-map" map={@map} label="Map of activity" />
+        <ul :if={@featured != []} id="activity-featured">
+          <li :for={photo <- @featured} id={"featured-#{photo.id}"}>
+            <Web.ActivityPhoto.tile
+              id={"featured-#{photo.id}-tile"}
+              photo={photo}
+              team={@activity.team}
+              alt={photo.caption || "Photo from #{@activity.title}"}
+            />
+          </li>
+        </ul>
+      </div>
+
+      <div
+        :if={@photo_count > 0 or @may_add_photos?}
+        id="activity-photos-row"
+        class="activity-featured-links mb-4"
+      >
+        <p class="action mb-0">
+          <.a
+            :if={@photo_count > 0}
+            id="activity-photos-all"
+            navigate={Web.ActivityPhoto.tab_path(@activity.team, @activity.id)}
+          >{Service.Format.count(@photo_count, one: "%d photo", many: "All %d photos")}</.a>
+        </p>
+        <.button
+          :if={@may_add_photos?}
+          id="activity-photos-add"
+          navigate={Web.ActivityPhoto.add_path(@activity.team, @activity.id)}
+        >
+          Add photos
+        </.button>
       </div>
 
       <div class="mb-4">

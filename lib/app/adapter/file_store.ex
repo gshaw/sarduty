@@ -22,6 +22,7 @@ defmodule App.Adapter.FileStore do
   # here and a row in docs/files.md; App.Adapter.FileStoreKeysTest checks both.
   @kinds %{
     logo: %{folder: "logo", owner: :orgs, token: false, expires: nil},
+    activity_photo: %{folder: "activity-photos", owner: :teams, token: true, expires: nil},
     integration_test: %{folder: "integration-test", owner: :site, token: true, expires: "2d"}
   }
 

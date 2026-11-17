@@ -76,7 +76,9 @@ is left out, and so is its divider.
 - **Photos ends the first section** while the team has Photos on (#1028), after
   Whiteboard, or after Dashboard on a team with no Whiteboard. One link for everyone
   (#1029): team admins see the team's photos, and a member their own. It never moves
-  when the page grows: activity photos join the same link ([photos.md](photos.md)).
+  when the page grows: activity photos join the same link ([photos.md](photos.md)), and
+  it then opens on Best of the year, for everyone (#1033). An accepted photo's page,
+  `/photos/:id`, sits under it.
 - **Take attendance is always there**, after Activities, for members and team admins
   (#475). Not only while an activity is on: links that come and go with the clock make
   the menu harder to learn. It opens `/teams/:subdomain/take-attendance` in the app

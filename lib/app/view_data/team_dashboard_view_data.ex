@@ -8,6 +8,7 @@ defmodule App.ViewData.TeamDashboardViewData do
 
   alias App.Adapter.D4H
   alias App.Model.Activity
+  alias App.Model.ActivityPhoto
   alias App.Model.AttendanceScan
   alias App.Model.AttentionSnooze
   alias App.Model.Certificate
@@ -24,6 +25,7 @@ defmodule App.ViewData.TeamDashboardViewData do
   alias App.Model.Tag
   alias App.Model.TaxCreditLetter
   alias App.Model.Team
+  alias App.Operation.AddActivityPhotos
   alias App.Operation.BuildGroupRulePreview
   alias App.Operation.PrintTaxCreditLetter
   alias App.Operation.SyncD4HChanges
@@ -122,6 +124,9 @@ defmodule App.ViewData.TeamDashboardViewData do
           else: 0
         ),
       photo_count: if(Team.photos?(team), do: MemberPhoto.count_waiting(team, now), else: 0),
+      # An activity's photos wait too (#1032), while the team has activity photos.
+      activity_photo_count:
+        if(AddActivityPhotos.available?(team), do: ActivityPhoto.count_waiting(team), else: 0),
       chores_to_send: chores_to_send(team),
       attendance_to_send: attendance_to_send(team, now),
       no_shows: no_shows(team, now),

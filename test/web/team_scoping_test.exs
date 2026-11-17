@@ -65,6 +65,18 @@ defmodule Web.TeamScopingTest do
     # through it.
     "/teams/:subdomain/photos/members/:id",
     "/teams/:subdomain/photos/members/:id/file",
+    # An activity's photos (#1032), on another team's exercise, which takes photos, and
+    # its accepted photo, which anyone on its own team sees.
+    "/teams/:subdomain/activities/:id/photos",
+    "/teams/:subdomain/activities/:id/photos/new",
+    "/teams/:subdomain/activities/:id/photos/ask",
+    "/teams/:subdomain/photos/:id/file",
+    # That accepted photo's page (#1033), Edit photo (#1032, part 8), and Export for a
+    # post with its JPEG (part 9).
+    "/teams/:subdomain/photos/:id",
+    "/teams/:subdomain/photos/:id/edit",
+    "/teams/:subdomain/photos/:id/export",
+    "/teams/:subdomain/photos/:id/export/file",
     "/teams/:subdomain/endorsements/:id",
     "/teams/:subdomain/members/:id",
     "/teams/:subdomain/members/:id/edit",
@@ -123,10 +135,11 @@ defmodule Web.TeamScopingTest do
       )
       |> Repo.update!()
 
-    other_team = team_fixture()
+    other_team = team_fixture(%{photos_enabled: true})
     member = member_fixture(other_team)
     group = group_fixture(other_team)
     endorsement = endorsement_fixture(other_team)
+    exercise = activity_fixture(other_team)
 
     organization = organization_fixture([other_team])
 
@@ -150,6 +163,8 @@ defmodule Web.TeamScopingTest do
       outbox: OutboxMessage.add_text!("+16045551234", "Theirs"),
       certificate: certificate_fixture(member, qualification_fixture(other_team)),
       photo: member_photo_fixture(member),
+      exercise: exercise,
+      activity_photo: activity_photo_fixture(exercise, %{status: :accepted}),
       report:
         Repo.insert!(%App.Model.SavedReport{
           team_id: other_team.id,
@@ -380,6 +395,30 @@ defmodule Web.TeamScopingTest do
 
   defp path_for("/teams/:subdomain/photos/members/:id/file", s, o),
     do: ~p"/teams/#{s}/photos/members/#{o.photo.id}/file"
+
+  defp path_for("/teams/:subdomain/activities/:id/photos", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.exercise.id}/photos"
+
+  defp path_for("/teams/:subdomain/activities/:id/photos/new", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.exercise.id}/photos/new"
+
+  defp path_for("/teams/:subdomain/activities/:id/photos/ask", s, o),
+    do: ~p"/teams/#{s}/activities/#{o.exercise.id}/photos/ask"
+
+  defp path_for("/teams/:subdomain/photos/:id/file", s, o),
+    do: ~p"/teams/#{s}/photos/#{o.activity_photo.id}/file"
+
+  defp path_for("/teams/:subdomain/photos/:id", s, o),
+    do: ~p"/teams/#{s}/photos/#{o.activity_photo.id}"
+
+  defp path_for("/teams/:subdomain/photos/:id/edit", s, o),
+    do: ~p"/teams/#{s}/photos/#{o.activity_photo.id}/edit"
+
+  defp path_for("/teams/:subdomain/photos/:id/export", s, o),
+    do: ~p"/teams/#{s}/photos/#{o.activity_photo.id}/export"
+
+  defp path_for("/teams/:subdomain/photos/:id/export/file", s, o),
+    do: ~p"/teams/#{s}/photos/#{o.activity_photo.id}/export/file"
 
   defp path_for("/teams/:subdomain/members/:id", s, o), do: ~p"/teams/#{s}/members/#{o.member.id}"
 

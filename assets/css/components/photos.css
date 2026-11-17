@@ -31,6 +31,55 @@
   /* All of the photo as taken, tall or wide, on a mat the size of the card's square. */
   .photo-compare img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; margin-bottom: var(--sp-1); background: var(--surface-alt); border-radius: var(--radius); }
 
+  /* An activity's photos (#1032): tiles 3 wide by 2 tall that fill the row, 2 across on
+     a phone and 3 beside an activity's facts. Under each, who added it and when. */
+  .activity-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: var(--sp-6) var(--sp-4); max-width: 60rem; margin: 0; padding: 0; list-style: none; }
+  .activity-photo-grid > li { min-width: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+  .activity-photo-grid label { display: block; cursor: pointer; }
+  .activity-photo-tile { position: relative; aspect-ratio: 3 / 2; margin-bottom: var(--sp-2); overflow: hidden; background: var(--surface-alt); border-radius: var(--radius); }
+  .activity-photo-tile > a { display: block; height: 100%; }
+  .activity-photo-tile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  /* A photo's star count (#1033), on its corner: a dark chip that shows on any photo.
+     The star is filled and amber when the person looking gave one. */
+  .activity-photo-stars { position: absolute; right: var(--sp-2); bottom: var(--sp-2); display: inline-flex; gap: var(--sp-1); align-items: center; padding: 0 var(--sp-2); border-radius: var(--radius); background: var(--nav); color: var(--on-fill); font-size: var(--fs-sm); line-height: var(--lh-md); font-weight: 600; pointer-events: none; }
+  .activity-photo-stars.is-starred > .icon { color: var(--warning); }
+
+  /* One photo, on its page (#1033): all of it, as tall as most of the screen, then
+     Star with its count. */
+  .activity-photo-show { display: block; background: var(--surface-alt); border-radius: var(--radius); overflow: hidden; }
+  .activity-photo-show > img { display: block; width: 100%; height: auto; max-height: 75vh; object-fit: contain; }
+  .activity-photo-star { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; margin-top: var(--sp-4); }
+  .activity-photo-star-count { margin-left: var(--sp-1); padding: 0 var(--sp-2); border-radius: var(--radius); background: var(--surface-alt); color: var(--text); font-size: var(--fs-sm); line-height: var(--lh-sm); }
+
+  /* An activity's Overview (#1033): the map with the photos a team admin featured
+     beside it, 2 at most, one over the other and as tall as the map. On a phone they
+     sit under it, side by side. Then the link to all the photos, and Add photos. */
+  .activity-featured { display: grid; gap: var(--sp-2); }
+  .activity-featured > ul { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+  .activity-featured .activity-photo-tile { margin-bottom: 0; }
+  @media (width >= 40rem) {
+    .activity-featured.has-map { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+    /* The map alone sets the row's height: the photos fill it, whatever their shape. */
+    .activity-featured.has-map > ul { grid-auto-flow: row; grid-auto-rows: minmax(0, 1fr); contain: size; }
+    .activity-featured.has-map .activity-photo-tile { height: 100%; aspect-ratio: auto; }
+    .activity-featured:not(.has-map) > ul { max-width: 40rem; }
+  }
+  .activity-featured-links { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); align-items: center; justify-content: space-between; }
+
+  /* A waiting photo's check box, on its corner, ringed so it shows on any photo. */
+  .activity-photo-tile > input[type="checkbox"] { position: absolute; top: var(--sp-2); left: var(--sp-2); box-shadow: 0 0 0 2px var(--bg); }
+  /* What is checked, then Accept and Delete, over the waiting tiles. */
+  .activity-photo-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); align-items: center; margin: var(--sp-3) 0 var(--sp-4); }
+
+  /* Add photos (#1032): the rules, then each photo picked as a small tile beside its
+     name, its size, and Remove. */
+  .activity-photo-rules { margin: 0 0 var(--sp-6); padding-left: var(--sp-4); list-style: disc; }
+  .activity-photo-rules li + li { margin-top: var(--sp-1); }
+  .activity-photo-files { margin: var(--sp-4) 0 0; padding: 0; list-style: none; }
+  .activity-photo-files > li { display: flex; gap: var(--sp-3); align-items: center; margin-bottom: var(--sp-3); line-height: var(--lh-sm); }
+  .activity-photo-files > li > div { min-width: 0; overflow-wrap: anywhere; }
+  .activity-photo-files .activity-photo-tile { flex: none; width: 5.25rem; margin-bottom: 0; }
+
   /* The guide: one good example beside its rules, then what does not work, 3 across on
      a phone. The examples are drawn. */
   .photo-guide { display: flex; gap: var(--sp-4); align-items: flex-start; margin-bottom: var(--sp-6); }
@@ -61,4 +110,25 @@
   .photo-place-oval-edge { stroke: var(--nav); stroke-width: 4.5; opacity: 0.45; }
   .photo-place-oval-line { stroke: var(--paper); stroke-width: 2.5; stroke-dasharray: 7 5; }
   .photo-place-tools { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+
+  /* Edit photo (#1032, part 8): the photo as the team will see it, in a frame of the
+     turned photo's shape, no taller than most of the screen. The page sets the turn and
+     the zoom that cuts the empty corners; the browser draws them on the original. */
+  .photo-edit { position: relative; width: min(100%, calc(70vh * var(--photo-ratio))); aspect-ratio: var(--photo-ratio); overflow: hidden; background: var(--surface-alt); border-radius: var(--radius); }
+  .photo-edit > img { position: absolute; top: 50%; left: 50%; width: var(--photo-width); max-width: none; height: auto; transform: translate(-50%, -50%) rotate(var(--photo-turn)) scale(var(--photo-zoom)); transition: transform 0.15s; }
+  /* Lines to straighten against: 8 across and 6 down, light over a dark edge. */
+  .photo-edit-grid { position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(to right, color-mix(in srgb, var(--paper) 55%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--paper) 55%, transparent) 1px, transparent 1px); background-size: calc(100% / 8) calc(100% / 6); }
+  .photo-edit-tools { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-4); }
+  /* Straighten: its ends either side of the slider. */
+  .photo-edit-straighten { max-width: 26rem; margin-top: var(--sp-4); }
+  .photo-edit-straighten > div { display: flex; gap: var(--sp-3); align-items: center; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+  .photo-edit-straighten input[type="range"] { flex: 1; min-height: 44px; accent-color: var(--primary); }
+  .photo-edit-switch { max-width: 26rem; margin-top: var(--sp-4); }
+  /* The photo as taken, small beside the edit. */
+  .photo-edit-taken { display: block; width: 12rem; max-width: 100%; height: auto; margin-top: var(--sp-2); border-radius: var(--radius); }
+
+  /* Export for a post (#1032, part 9): the box, in the post's shape, as wide as fits
+     and no taller than most of the screen, with lines in thirds to place it by. */
+  .photo-export-box { aspect-ratio: var(--photo-place-ratio, 1); width: min(100%, calc(65vh * var(--photo-place-ratio, 1))); max-width: 40rem; }
+  .photo-export-thirds { position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(to right, color-mix(in srgb, var(--paper) 55%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--paper) 55%, transparent) 1px, transparent 1px); background-size: calc(100% / 3) calc(100% / 3); background-position: -1px -1px; }
 }

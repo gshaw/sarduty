@@ -28,6 +28,10 @@
      black like the arrow, never underlined, floated so a long label wraps under its
      words (<.a icon="…">). */
   .action-list a.has-mark::before, .action > a.has-mark::before, .page-actions-list a.has-mark::before { content: none; }
+  /* An action that cannot be taken now: greyed, its arrow too, with a hint under it
+     that says why, such as Export for a post on a photo the team may not post. */
+  .action-list .action-off { padding-block: var(--action-pad); color: var(--text-muted); }
+  .action-list .action-off::before { content: var(--list-style-type-arrow); float: left; white-space: pre; }
   /* A page's own actions with no sidebar (page_actions.ex): the same arrow links, side by
      side under the title and lead, wrapping on a phone. See /styles/page-actions. */
   .page-actions { margin-bottom: var(--sp-6); }
