@@ -1,0 +1,36 @@
+defmodule App.Report.ReportFuzzTest do
+  # Runs each input as a report, and as its page, on Coast Range SAR (App.SampleRepo).
+  # `mix test` replays the seeds and saved failures. To fuzz:
+  #   MIX_ENV=test mix fuzz test/app/report/report_fuzz_test.exs:"fuzz any text runs or gives a report error"
+  use ExUnit.Case, async: true
+  use ExFuzz
+
+  import ExUnit.CaptureLog
+
+  alias App.Report
+  alias App.Report.BuiltIn
+  alias App.Report.Context
+  alias App.Report.Error
+
+  # Runner's message for SQL that SQLite refused: the compiler wrote it wrong.
+  @bad_sql "This report could not run. Try again, or change its query."
+
+  @tag timeout: 5_000
+  fuzz "any text runs or gives a report error",
+       data <- binary(),
+       seeds: Enum.map(BuiltIn.all(), & &1.query) do
+    {run, log} = with_log(fn -> Report.run_sample(data) end)
+    check!(run, log)
+
+    context = Context.new(App.SampleRepo.team(), DateTime.utc_now(), repo: App.SampleRepo)
+    {page, log} = with_log(fn -> Report.page_in(context, data) end)
+    check!(page, log)
+  end
+
+  defp check!({:ok, _result}, _log), do: :ok
+
+  defp check!({:error, %Error{message: @bad_sql}}, log),
+    do: flunk("The compiler wrote SQL that SQLite refused:\n#{log}")
+
+  defp check!({:error, %Error{}}, _log), do: :ok
+end
