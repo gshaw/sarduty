@@ -178,9 +178,10 @@ page 50
 - `option` is a value for the URL, a label, the `where` it adds, and the sort it picks,
   if any. `each` makes an option for each value of a field: each year, a choice's
   values, a list's titles, or a record by its id, such as attendance's `activity`: an
-  activity's label adds its day, newest first. An `each`'s `where` that reads no picked
-  value narrows the menu too, as `each activity where activity.kind = 'Incident'` does.
-  A required filter with an `each` starts on its menu's first choice.
+  activity's label adds its day, newest first, and `activity = :activity` compares ids,
+  never titles, which repeat. The parts of the query's `where` and the `each`'s that read
+  no picked value narrow the menu too, so `where activity.kind = 'Incident'` lists only
+  incidents. A required filter with an `each` starts on its menu's first choice.
 - `sort` is a column header: its label, or its first field, names the column. `date` in
   the URL sorts as written, `date-` the other way.
 - `page` shows that many rows at a time, and sorts by `id` last so no row lands on two.

@@ -122,8 +122,52 @@ defmodule App.Report do
   end
 
   defp parse(text, context) do
-    with {:ok, query} <- Parser.parse(text), do: {:ok, visible(query, context)}
+    with {:ok, query} <- Parser.parse(text),
+         do: {:ok, query |> visible(context) |> by_id(context)}
   end
+
+  # A record a filter lists is picked by its id (#1106), so `activity = :activity`
+  # compares ids, as `activity.id = :activity` does, never titles, which repeat.
+  defp by_id(query, context) do
+    ids =
+      for %{name: name, each: %{expr: expr}} <- query.filters,
+          path = Compiler.id_path(query, expr, context),
+          into: %{},
+          do: {name, {expr, path}}
+
+    if ids == %{}, do: query, else: rewrite_ids(query, ids)
+  end
+
+  defp rewrite_ids(query, ids) do
+    filters =
+      Enum.map(query.filters, fn filter ->
+        %{
+          filter
+          | options: Enum.map(filter.options, &%{&1 | where: by_id_ast(&1.where, ids)}),
+            each: filter.each && %{filter.each | where: by_id_ast(filter.each.where, ids)}
+        }
+      end)
+
+    %{query | where: by_id_ast(query.where, ids), filters: filters}
+  end
+
+  defp by_id_ast({:op, op, field, {:value, name, _} = value, line}, ids) when op in [:eq, :ne],
+    do: {:op, op, id_field(field, ids[name]), value, line}
+
+  defp by_id_ast({:op, op, {:value, name, _} = value, field, line}, ids) when op in [:eq, :ne],
+    do: {:op, op, value, id_field(field, ids[name]), line}
+
+  defp by_id_ast(ast, ids) when is_tuple(ast),
+    do: ast |> Tuple.to_list() |> Enum.map(&by_id_ast(&1, ids)) |> List.to_tuple()
+
+  defp by_id_ast(list, ids) when is_list(list), do: Enum.map(list, &by_id_ast(&1, ids))
+  defp by_id_ast(other, _ids), do: other
+
+  defp id_field(field, {expr, path}) do
+    if Query.same?(field, expr), do: {:field, path, [], Query.line(field)}, else: field
+  end
+
+  defp id_field(field, nil), do: field
 
   # The page without the options, sorts, and search fields that read a field the team may
   # not read, and a filter left with no choices.
