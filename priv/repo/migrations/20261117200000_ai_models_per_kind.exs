@@ -4,13 +4,15 @@ defmodule App.Repo.Migrations.AiModelsPerKind do
   # AI writing picks a model for reports and one for forms, and how many next asks AI
   # suggests on each, 0 to 4, in place of one model and two on/off switches. Reports keep
   # the model they had (Haiku, no longer offered, becomes Sonnet); forms start on Opus. A
-  # switch that was on becomes 2 next asks.
+  # switch that was on becomes 2 next asks. Asks a day, 100 in the code until now, is a
+  # setting too.
   def up do
     alter table(:ai_settings) do
       add :report_model, :string, null: false, default: "claude-sonnet-5-5"
       add :form_model, :string, null: false, default: "claude-opus-5-5"
       add :report_next_asks, :integer, null: false, default: 2
       add :form_next_asks, :integer, null: false, default: 2
+      add :asks_per_day, :integer, null: false, default: 100
     end
 
     execute """
@@ -46,6 +48,7 @@ defmodule App.Repo.Migrations.AiModelsPerKind do
       remove :form_model
       remove :report_next_asks
       remove :form_next_asks
+      remove :asks_per_day
     end
   end
 end

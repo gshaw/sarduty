@@ -832,10 +832,12 @@ defmodule Web.ReportFormLiveTest do
       assert AIAsk.count_today(team, DateTime.utc_now()) == 0
     end
 
-    test "a team that used today's asks is told so", %{conn: conn} do
+    test "a team that used today's asks, as many as Adminland allows, is told so", %{conn: conn} do
+      params = %{access: "everyone", monthly_budget: "50", asks_per_day: "3"}
+      {:ok, _settings} = SetAISettings.call(params, make_admin(AccountsFixtures.user_fixture()))
       %{user: user, team: team} = user_with_team_fixture()
 
-      for _n <- 1..AskAI.asks_per_day() do
+      for _n <- 1..3 do
         AIAsk.record!(
           team_id: team.id,
           kind: :report,
@@ -847,7 +849,7 @@ defmodule Web.ReportFormLiveTest do
 
       {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
       refute has_element?(lv, "#report-ai-form")
-      assert has_element?(lv, "#report-ai-closed", "used today's 100 asks")
+      assert has_element?(lv, "#report-ai-closed", "used today's asks")
     end
 
     test "with AI writing off there is no column, and What changed stays", %{conn: conn} do

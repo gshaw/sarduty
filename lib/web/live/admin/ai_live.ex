@@ -5,17 +5,17 @@ defmodule Web.Admin.AILive do
   alias App.AI.Models
   alias App.Model.AIAsk
   alias App.Model.AISettings
-  alias App.Operation.AskAI
   alias App.Operation.SetAISettings
   alias Service.Format
 
   @limit 50
 
-  # Adminland › AI writing (docs/ai-writing.md): who gets it, the Claude model and next
-  # asks for reports and for forms, and the monthly budget, then this month's spend by
-  # team and by person, and the newest asks. Everything is summed from ai_asks. A History
-  # line AI wrote at a save has a row too: it counts in the cost, apart from the asks.
-  # Dollars show here only, never to a team.
+  # Adminland › AI writing (docs/ai-writing.md): the settings in the sidebar, who gets it,
+  # the Claude model and next asks for reports and for forms, the monthly budget, and
+  # asks a day; in
+  # the main column this month's spend by team and by person, and the newest asks.
+  # Everything is summed from ai_asks. A History line AI wrote at a save has a row too:
+  # it counts in the cost, apart from the asks. Dollars show here only, never to a team.
   def mount(_params, _session, socket) do
     {:ok,
      socket
@@ -38,7 +38,8 @@ defmodule Web.Admin.AILive do
       "form_model" => settings.form_model,
       "report_next_asks" => settings.report_next_asks,
       "form_next_asks" => settings.form_next_asks,
-      "monthly_budget" => div(settings.monthly_budget_cents, 100)
+      "monthly_budget" => div(settings.monthly_budget_cents, 100),
+      "asks_per_day" => settings.asks_per_day
     }
 
   defp assign_usage(socket) do
@@ -64,7 +65,7 @@ defmodule Web.Admin.AILive do
         {:noreply,
          socket
          |> assign(form: to_form(params, as: "settings"))
-         |> put_flash(:error, "Enter the budget in whole dollars.")}
+         |> put_flash(:error, "Enter the budget in whole dollars, and at least 1 ask a day.")}
 
       {:error, :not_allowed} ->
         {:noreply, put_flash(socket, :error, "Only a SAR Duty admin can change this.")}
@@ -79,7 +80,7 @@ defmodule Web.Admin.AILive do
     </.banner>
 
     <div class="content-wrapper">
-      <section class="content-1/3" aria-labelledby="ai-settings-title">
+      <aside class="content-1/3" aria-labelledby="ai-settings-title">
         <h2 id="ai-settings-title" class="heading">Settings</h2>
         <.form for={@form} id="ai-settings" phx-submit="save">
           <.input
@@ -131,11 +132,20 @@ defmodule Web.Admin.AILive do
           >
             Asks stop for every team once this month's cost reaches it.
           </.input>
+          <.input
+            field={@form[:asks_per_day]}
+            type="number"
+            label="Asks a day for each team or organization"
+            min="1"
+            step="1"
+          >
+            Reports and forms together. History lines don't count. Days are BC time.
+          </.input>
           <.button id="ai-settings-save" variant={:success} phx-disable-with="Saving…">
             Save
           </.button>
         </.form>
-      </section>
+      </aside>
 
       <section class="content-2/3" aria-labelledby="ai-month-title">
         <h2 id="ai-month-title" class="heading">This month</h2>
@@ -148,8 +158,8 @@ defmodule Web.Admin.AILive do
           Paused: this month's asks reached the budget.
         </p>
         <p class="hint mb-6">
-          {AskAI.asks_per_day()} asks a team or an organization a day at most. Months and days
-          are BC time.
+          {Format.number(@settings.asks_per_day)} asks a team or an organization a day at
+          most. Months and days are BC time.
         </p>
 
         <h3 class="heading">By team or organization</h3>
@@ -173,39 +183,39 @@ defmodule Web.Admin.AILive do
           <:col :let={row} label="Cost" class="text-right">{Format.money(dollars(row.cost))}</:col>
         </.table>
         <.hint :if={@people == []}>No asks this month.</.hint>
+
+        <h2 class="heading mt-8">Newest asks</h2>
+        <.table id="ai-asks" rows={@asks} row_id={&"ai-ask-#{&1.id}"} class="table-striped">
+          <:col :let={ask} label="When" class="whitespace-nowrap">
+            {Format.month_day_time(ask.asked_at, AIAsk.timezone())}
+          </:col>
+          <:col :let={ask} label="For">{AIAsk.owner_name(ask)}</:col>
+          <:col :let={ask} label="Account">{ask.user && ask.user.email}</:col>
+          <:col :let={ask} label="Ask">
+            {ask_text(ask)}
+            <.hint>
+              {[Models.name(ask.model), kind(ask), outcome(ask)]
+              |> Enum.reject(&is_nil/1)
+              |> Enum.join(" · ")}
+            </.hint>
+          </:col>
+          <:col :let={ask} label="Tokens" class="whitespace-nowrap">
+            {Format.number(ask.input_tokens + ask.cache_write_tokens + ask.cache_read_tokens)} in
+            <.hint>
+              {Format.number(ask.cache_read_tokens)} from cache · {Format.number(ask.output_tokens)} out
+            </.hint>
+          </:col>
+          <:col :let={ask} label="Cost" class="text-right">
+            {Format.money(dollars(ask.cost_microdollars))}
+          </:col>
+          <:col :let={ask} label="Took" class="whitespace-nowrap">
+            {ask.duration_ms && Format.run_time(ask.duration_ms)}
+          </:col>
+        </.table>
+        <.hint :if={@asks == []}>No asks yet.</.hint>
+        <.hint :if={length(@asks) == @limit}>The newest {@limit}.</.hint>
       </section>
     </div>
-
-    <h2 class="heading mt-8">Newest asks</h2>
-    <.table id="ai-asks" rows={@asks} row_id={&"ai-ask-#{&1.id}"} class="table-striped">
-      <:col :let={ask} label="When" class="whitespace-nowrap">
-        {Format.month_day_time(ask.asked_at, AIAsk.timezone())}
-      </:col>
-      <:col :let={ask} label="For">{AIAsk.owner_name(ask)}</:col>
-      <:col :let={ask} label="Account">{ask.user && ask.user.email}</:col>
-      <:col :let={ask} label="Ask">
-        {ask_text(ask)}
-        <.hint>
-          {[Models.name(ask.model), kind(ask), outcome(ask)]
-          |> Enum.reject(&is_nil/1)
-          |> Enum.join(" · ")}
-        </.hint>
-      </:col>
-      <:col :let={ask} label="Tokens" class="whitespace-nowrap">
-        {Format.number(ask.input_tokens + ask.cache_write_tokens + ask.cache_read_tokens)} in
-        <.hint>
-          {Format.number(ask.cache_read_tokens)} from cache · {Format.number(ask.output_tokens)} out
-        </.hint>
-      </:col>
-      <:col :let={ask} label="Cost" class="text-right">
-        {Format.money(dollars(ask.cost_microdollars))}
-      </:col>
-      <:col :let={ask} label="Took" class="whitespace-nowrap">
-        {ask.duration_ms && Format.run_time(ask.duration_ms)}
-      </:col>
-    </.table>
-    <.hint :if={@asks == []}>No asks yet.</.hint>
-    <.hint :if={length(@asks) == @limit}>The newest {@limit}.</.hint>
     """
   end
 

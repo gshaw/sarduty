@@ -30,16 +30,13 @@ defmodule App.Operation.AskAI do
   require Logger
 
   @max_requests 6
-  @asks_per_day 100
   @max_tokens 16_000
-
-  def asks_per_day, do: @asks_per_day
 
   @doc """
   Whether `user` can ask for `owner`, a team or an organization (an organization's
   form, #1089), now: `:ok`, or `{:error, reason}` with reason `:off` (not open to them,
   or no key here), `:daily_limit`, or `:paused` (the budget is spent). Each owner has
-  its own daily limit. `kind` is the job's: a `:history_line` skips the daily limit.
+  its own daily limit, the settings' `asks_per_day`. `kind` is the job's: a `:history_line` skips the daily limit.
   """
   def check(owner, %User{} = user, now, kind \\ :report)
       when is_struct(owner, Team) or is_struct(owner, Organization),
@@ -50,7 +47,7 @@ defmodule App.Operation.AskAI do
       not (Claude.configured?() and AISettings.open_to?(settings, user)) ->
         {:error, :off}
 
-      kind != :history_line and AIAsk.count_today(owner, now) >= @asks_per_day ->
+      kind != :history_line and AIAsk.count_today(owner, now) >= settings.asks_per_day ->
         {:error, :daily_limit}
 
       AIAsk.month_cost_microdollars(now) >= settings.monthly_budget_cents * 10_000 ->

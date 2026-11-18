@@ -1,7 +1,8 @@
 defmodule App.Operation.SetAISettings do
   @moduledoc """
   Saves AI writing's settings from Adminland › AI writing: who gets it, the model for
-  reports and for forms, how many next asks AI suggests on each, and the monthly budget.
+  reports and for forms, how many next asks AI suggests on each, the monthly budget, and
+  asks a day.
   Only a SAR Duty admin. Each save is an `ai_settings_changed` event with what it
   changed.
   """
@@ -13,7 +14,7 @@ defmodule App.Operation.SetAISettings do
 
   @doc """
   `attrs` takes `access`, `report_model`, `form_model`, `report_next_asks`,
-  `form_next_asks`, and `monthly_budget` in whole dollars. `{:ok, settings}`,
+  `form_next_asks`, `monthly_budget` in whole dollars, and `asks_per_day`. `{:ok, settings}`,
   `{:error, changeset}`, or `{:error, :not_allowed}`.
   """
   def call(attrs, %User{is_admin: true} = user) do

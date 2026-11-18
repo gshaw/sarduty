@@ -21,7 +21,6 @@ defmodule Web.Components.AIWriting do
 
   import Web.Components.A
 
-  alias App.Operation.AskAI
   alias Phoenix.LiveView.JS
 
   @doc """
@@ -306,8 +305,8 @@ defmodule Web.Components.AIWriting do
 
   defp failed_words(:daily_limit, thing),
     do:
-      {"Your team has used today's #{AskAI.asks_per_day()} asks.",
-       "Ask again tomorrow, or change the #{thing} yourself.", false}
+      {"Your team has used today's asks.", "Ask again tomorrow, or change the #{thing} yourself.",
+       false}
 
   defp failed_words(reason, thing) when reason in [:paused, :no_credit],
     do:

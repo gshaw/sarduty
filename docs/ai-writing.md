@@ -79,7 +79,7 @@ seconds after Save, `WriteHistoryLineWorker` asks Claude to compare the version 
 with the one saved ([App.Operation.WriteHistoryLine](../lib/app/operation/write_history_line.ex),
 [App.AI.HistoryLineJob](../lib/app/ai/history_line_job.ex)): the two names,
 descriptions, and queries, no tools, effort low. So the line covers every ask, any
-typing, and any Undo. It counts toward the monthly budget, never the 100 asks a day.
+typing, and any Undo. It counts toward the monthly budget, never the asks a day.
 With AI writing off or paused, the admin types What changed (optional), as before, and
 an empty one stays empty.
 
@@ -148,7 +148,7 @@ kind `form`:
 - **It streams under the hood**: a first draft with the PDF can take a minute or more,
   near the adapter's 120-second timeout, so the request streams and the timeout is
   between pieces (`App.Adapter.Claude.assemble/1`). Nothing streams to the page.
-- The limits are a report's: 100 asks a day, reports and forms together, for each team
+- The limits are a report's: the asks a day, reports and forms together, for each team
   and each organization apart, and the monthly budget.
 
 ## One ask
@@ -225,8 +225,8 @@ is an `ai_settings_changed` event.
 - **Monthly budget**: $50 by default. Once this month's asks cost that much, asks stop
   for every team and the box says AI writing is paused until next month. The Claude API
   stops too when the plan's credit is spent.
-- **100 asks a day**, reports and forms together, for each team and each organization,
-  in `AskAI`. History lines don't count. An organization's asks are its own rows
+- **Asks a day for each team or organization**: 100 by default, reports and forms
+  together, checked in `AskAI`. History lines don't count. An organization's asks are its own rows
   (`ai_asks.organization_id`), apart from its teams'.
 
 Months and days are BC time.

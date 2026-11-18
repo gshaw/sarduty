@@ -6,8 +6,8 @@ defmodule App.Model.AISettings do
   the Claude models each kind of ask uses: forms are harder, so they start on Opus.
   `monthly_budget_cents` stops asks once this month's asks cost that much
   (App.Model.AIAsk.month_cost_microdollars/1). `report_next_asks` and `form_next_asks`
-  are how many next asks AI suggests after each reply, 0 to 4. With no row yet, AI
-  writing is off.
+  are how many next asks AI suggests after each reply, 0 to 4. `asks_per_day` is each
+  team's and each organization's daily limit. With no row yet, AI writing is off.
   """
   use App, :model
 
@@ -23,7 +23,8 @@ defmodule App.Model.AISettings do
     :form_model,
     :monthly_budget_cents,
     :report_next_asks,
-    :form_next_asks
+    :form_next_asks,
+    :asks_per_day
   ]
   @most_next_asks 4
 
@@ -34,6 +35,7 @@ defmodule App.Model.AISettings do
     field :monthly_budget_cents, :integer, default: 5_000
     field :report_next_asks, :integer, default: 2
     field :form_next_asks, :integer, default: 2
+    field :asks_per_day, :integer, default: 100
     belongs_to :updated_by, User
     timestamps(type: :utc_datetime_usec)
   end
@@ -43,7 +45,7 @@ defmodule App.Model.AISettings do
 
   @doc """
   The settings, or the defaults when nobody has saved any: off, Sonnet for reports and
-  Opus for forms, two next asks each, $50.
+  Opus for forms, two next asks each, $50, 100 asks a day.
   """
   def get, do: AISettings |> order_by([s], s.id) |> limit(1) |> Repo.one() || %AISettings{}
 
@@ -56,6 +58,7 @@ defmodule App.Model.AISettings do
     |> validate_inclusion(:report_model, Models.ids())
     |> validate_inclusion(:form_model, Models.ids())
     |> validate_number(:monthly_budget_cents, greater_than_or_equal_to: 0)
+    |> validate_number(:asks_per_day, greater_than_or_equal_to: 1)
     |> validate_number(:report_next_asks,
       greater_than_or_equal_to: 0,
       less_than_or_equal_to: @most_next_asks

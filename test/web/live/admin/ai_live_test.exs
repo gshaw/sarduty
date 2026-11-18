@@ -88,7 +88,8 @@ defmodule Web.Admin.AILiveTest do
         form_model: "claude-sonnet-5-5",
         report_next_asks: "4",
         form_next_asks: "0",
-        monthly_budget: "75"
+        monthly_budget: "75",
+        asks_per_day: "40"
       }
     )
     |> render_submit()
@@ -100,6 +101,7 @@ defmodule Web.Admin.AILiveTest do
     assert settings.report_next_asks == 4
     assert settings.form_next_asks == 0
     assert settings.monthly_budget_cents == 7_500
+    assert settings.asks_per_day == 40
     assert Event.get_last(:ai_settings_changed).user_id == admin.id
   end
 
