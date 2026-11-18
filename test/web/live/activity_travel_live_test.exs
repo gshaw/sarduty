@@ -215,7 +215,7 @@ defmodule Web.ActivityTravelLiveTest do
       refute lv |> element("#travel-row-#{ctx.ann_row.id}") |> render() =~ ~r/\d km/
 
       assert lv |> element("#travel-not-set-warning") |> render() =~
-               "None of the 2 who attended have travel set, so forms and reports count 0 km for them. Set it before you publish."
+               "2 members have no travel set, so forms and reports count 0 km for them. Set it before you publish."
 
       set(lv, [ctx.ann_row], "icp")
 
@@ -392,7 +392,7 @@ defmodule Web.ActivityTravelLiveTest do
       refute has_element?(lv, "#travel-locked")
 
       assert lv |> element("#travel-not-set-warning") |> render() =~
-               "None of the 2 who attended have travel set, so forms and reports count 0 km for them. To set it, unpublish it with Change activity first."
+               "2 members have no travel set, so forms and reports count 0 km for them. To set it, unpublish it with Change activity first."
     end
 
     test "a published activity with every row set keeps the plain hint", ctx do

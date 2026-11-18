@@ -437,17 +437,11 @@ defmodule Web.Components.TravelTab do
   # What the rows not set cost, and what to do: set them, or unpublish first. A member
   # with two rows counts once.
   defp not_set_text(travel, locked?, team) do
-    all = travel.rows |> Enum.uniq_by(& &1.member.id) |> length()
-    not_set = travel.not_set |> Enum.uniq_by(& &1.member.id) |> length()
-
     who =
-      if not_set == all and all > 1,
-        do: "None of the #{all} who attended have travel set",
-        else:
-          Format.count(not_set,
-            one: "1 member has no travel set",
-            many: "%d members have no travel set"
-          )
+      travel.not_set
+      |> Enum.uniq_by(& &1.member.id)
+      |> length()
+      |> Format.count(one: "1 member has no travel set", many: "%d members have no travel set")
 
     fix =
       if locked?,
