@@ -33,6 +33,13 @@ defmodule Web.ReportFormLive do
   Changing a saved report asks What changed, kept in its History (#834), unless AI writes
   it. `?version=<id>` is Restore from History: that version's name, description, and
   query, saved as a new version once Save report is pressed, which a toast says.
+
+  Saved AI turns (#1089): after every ask and every change by hand, the name,
+  description, query, picks, and the conversation are kept as the person's draft
+  (App.Operation.SaveDraft); a new report's once AI has answered. Change report, and a
+  blank New report, open again as they were left, with a toast. Save report and Start
+  over discard it; Cancel leaves it for next time. Restore from History and a copy open
+  as they always did.
   """
   use Web, :live_view_app_layout
 
@@ -46,6 +53,7 @@ defmodule Web.ReportFormLive do
   alias App.Model.ReportVersion
   alias App.Model.SavedReport
   alias App.Operation.AskAI
+  alias App.Operation.SaveDraft
   alias App.Operation.SaveReport
   alias App.Operation.WriteHistoryLine
   alias App.Report
@@ -89,10 +97,65 @@ defmodule Web.ReportFormLive do
       rename_from: nil
     )
     |> assign_opened(SavedReport.changeset(saved || %SavedReport{}, start))
-    |> preview(start)
     |> assign_ai(blank_new?(socket.assigns.live_action, params))
+    |> open_draft(drafted?(socket.assigns.live_action, params))
+    |> then(&preview(&1, &1.assigns.params))
     |> restored_toast(params)
     |> then(&{:ok, &1})
+  end
+
+  # Change report and a blank New report open the person's draft; Restore from History
+  # and a copy don't.
+  defp drafted?(:edit, params), do: not Map.has_key?(params, "version")
+  defp drafted?(:new, params), do: blank_new?(:new, params)
+
+  defp open_draft(socket, false), do: assign(socket, draft_at: nil, rev: 0)
+
+  defp open_draft(socket, true) do
+    %{current_user: user, current_team: team, saved: saved} = socket.assigns
+
+    case SaveDraft.open(user, {team, saved}) do
+      nil ->
+        assign(socket, draft_at: nil, rev: 0)
+
+      %{fields: fields, asks: asks, at: at} ->
+        params = Map.merge(socket.assigns.params, fields)
+
+        socket
+        |> assign(params: params, ai_asks: asks, starting: false, draft_at: at, rev: 0)
+        |> assign_form(SavedReport.changeset(saved || %SavedReport{}, params))
+        |> put_flash(:info, back_toast(saved, at, team))
+    end
+  end
+
+  defp back_toast(saved, at, team) do
+    when_kept = Format.day_at_time(at, DateTime.utc_now(), team.timezone)
+
+    if saved,
+      do: "Your changes from #{when_kept} are back. Save report to keep them.",
+      else: "Your new report from #{when_kept} is back. Save report to keep it."
+  end
+
+  # Keeps the page as the person's draft, after an ask or a change by hand.
+  defp keep_draft(socket) do
+    %{current_user: user, current_team: team, saved: saved, form: form, ai_asks: asks} =
+      socket.assigns
+
+    fields = Map.put(fields_params(form), "values", form[:values].value || %{})
+    rev = socket.assigns.rev + 1
+
+    case SaveDraft.call(user, {team, saved}, fields, asks) do
+      {:ok, draft} ->
+        assign(socket, draft_at: draft && draft.updated_at, rev: rev)
+
+      {:error, _reason} ->
+        socket
+        |> assign(draft_at: nil, rev: rev)
+        |> put_flash(
+          :error,
+          "Save report before you leave. SAR Duty could not keep your changes."
+        )
+    end
   end
 
   # With AI writing open, the query starts folded: AI writes it. A blank New report
@@ -244,19 +307,9 @@ defmodule Web.ReportFormLive do
     )
   end
 
-  # The query's mistake goes on its field as you type, as Save would put it there.
-  def handle_event("change", %{"report" => params}, socket) do
-    socket = socket |> assign(params: params) |> preview(params)
-    report = socket.assigns.saved || %SavedReport{}
-    changeset = report |> SavedReport.changeset(params) |> Map.put(:action, :validate)
-
-    changeset =
-      if socket.assigns.query_error,
-        do: Ecto.Changeset.add_error(changeset, :query, socket.assigns.query_error),
-        else: changeset
-
-    {:noreply, assign_form(socket, changeset)}
-  end
+  # A change by hand, kept as the person's draft.
+  def handle_event("change", %{"report" => params}, socket),
+    do: {:noreply, socket |> change(params) |> keep_draft()}
 
   # Rename keeps the name and description as they were, for Cancel.
   def handle_event("rename", _params, socket) do
@@ -276,6 +329,21 @@ defmodule Web.ReportFormLive do
 
     {:noreply, socket} = handle_event("change", %{"report" => params}, socket)
     {:noreply, assign(socket, renaming: false, rename_from: nil)}
+  end
+
+  # Discards the draft and opens the page again: the saved report, or a blank New report.
+  def handle_event("start_over", _params, socket) do
+    %{current_user: user, current_team: team, saved: saved} = socket.assigns
+    SaveDraft.discard(user, {team, saved})
+
+    {to, said} =
+      if saved,
+        do:
+          {~p"/teams/#{team}/reports/#{saved.id}/edit",
+           "Started over. #{saved.name} is as saved."},
+        else: {~p"/teams/#{team}/reports/new", "Started over."}
+
+    {:noreply, socket |> put_flash(:info, said) |> push_navigate(to: to)}
   end
 
   def handle_event("show_query", _params, socket),
@@ -334,11 +402,11 @@ defmodule Web.ReportFormLive do
           |> Map.merge(fields_params(socket.assigns.form))
           |> Map.merge(ask.before)
 
-        {:noreply, socket} = handle_event("change", %{"report" => params}, socket)
-
         {:noreply,
          socket
+         |> change(params)
          |> assign(ai_asks: older)
+         |> keep_draft()
          |> put_flash(:info, "Undone. The query is back to before that ask.")}
 
       {_all, []} ->
@@ -371,14 +439,16 @@ defmodule Web.ReportFormLive do
   defp ai_agent(asks), do: if(Enum.any?(asks, & &1.undo?), do: Reports.ai_agent())
 
   def handle_async(:ai_ask, {:ok, result}, socket) do
-    {:noreply, socket |> ask_done(result) |> assign(ai_pending: nil) |> refresh_ai()}
+    {:noreply,
+     socket |> ask_done(result) |> assign(ai_pending: nil) |> keep_draft() |> refresh_ai()}
   end
 
   # Stop already put the words back.
   def handle_async(:ai_ask, {:exit, {:shutdown, :cancel}}, socket), do: {:noreply, socket}
 
   def handle_async(:ai_ask, {:exit, _reason}, socket) do
-    {:noreply, socket |> ask_done({:error, :unreachable}) |> assign(ai_pending: nil)}
+    {:noreply,
+     socket |> ask_done({:error, :unreachable}) |> assign(ai_pending: nil) |> keep_draft()}
   end
 
   # The ask runs beside the page, with the visit's earlier asks.
@@ -415,9 +485,8 @@ defmodule Web.ReportFormLive do
     params =
       socket.assigns.params |> Map.merge(fields_params(socket.assigns.form)) |> Map.merge(sent)
 
-    {:noreply, socket} = handle_event("change", %{"report" => params}, socket)
-
     socket
+    |> change(params)
     |> assign(starting: false)
     |> add_ask(blank_or(note, nil), true, Map.get(result, :next, []))
   end
@@ -466,6 +535,20 @@ defmodule Web.ReportFormLive do
   defp refresh_ai(socket) do
     %{current_team: team, current_user: user} = socket.assigns
     assign(socket, ai: AskAI.check(team, user, DateTime.utc_now()))
+  end
+
+  # The query's mistake goes on its field as you type, as Save would put it there.
+  defp change(socket, params) do
+    socket = socket |> assign(params: params) |> preview(params)
+    report = socket.assigns.saved || %SavedReport{}
+    changeset = report |> SavedReport.changeset(params) |> Map.put(:action, :validate)
+
+    changeset =
+      if socket.assigns.query_error,
+        do: Ecto.Changeset.add_error(changeset, :query, socket.assigns.query_error),
+        else: changeset
+
+    assign_form(socket, changeset)
   end
 
   # The name, description, and query, as the form holds them.
@@ -525,6 +608,7 @@ defmodule Web.ReportFormLive do
           button="Ask"
           closed={ai_closed_text(@ai)}
           sees={ai_sees()}
+          start_over={@draft_at && start_over_question(@saved)}
         >
           A change, or a question about the report.
         </.ai_writing>
@@ -669,7 +753,13 @@ defmodule Web.ReportFormLive do
           <.button id="report-cancel" navigate={cancel_path(@current_team, @saved)} data-leave-ok>
             Cancel
           </.button>
-          <.unsaved id="report-unsaved" unsaved={unsaved?(assigns)} />
+          <.unsaved
+            id="report-unsaved"
+            unsaved={unsaved?(assigns)}
+            kept={@draft_at != nil}
+            saving={@ai_pending != nil}
+            rev={@rev}
+          />
         </.save_bar>
       </:bar>
     </.ai_editor>
@@ -722,6 +812,13 @@ defmodule Web.ReportFormLive do
 
   defp field_id(%{custom: %{ids: ids}}), do: "custom-field-#{Enum.join(ids, "-")}"
   defp field_id(field), do: "field-#{field.name}"
+
+  # Start over's question: what goes, and what the report goes back to.
+  defp start_over_question(nil), do: "Start over? Your new report and the conversation go."
+
+  defp start_over_question(saved),
+    do:
+      "Start over? Your changes and the conversation go. #{saved.name} goes back to its saved version."
 
   defp ai_sees,
     do: "AI sees your team's field names, never its members or records."

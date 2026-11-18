@@ -76,6 +76,9 @@ defmodule Web.Components.AIWriting do
   line, since an ask's own steps change too fast to read. `ai` is `:ok`, or why the box
   is closed, said by `closed`. Undo sends
   `undo_ask` with the ask's id, Stop `cancel_ask`, and the box `ask`.
+
+  `start_over` is Start over's question, at the foot of the box while there's a draft to
+  discard (#1089): it asks first, then sends `start_over`.
   """
   attr :id, :string, required: true
   attr :ai, :any, required: true
@@ -86,6 +89,7 @@ defmodule Web.Components.AIWriting do
   attr :button, :string, required: true
   attr :closed, :string, default: nil
   attr :sees, :string, required: true
+  attr :start_over, :string, default: nil
   slot :inner_block
 
   def ai_writing(assigns) do
@@ -201,11 +205,61 @@ defmodule Web.Components.AIWriting do
         >
           Test
         </.button>
+        <.a
+          :if={@start_over && !@pending}
+          id={"#{@id}-start-over"}
+          href="#"
+          class="ml-auto self-center"
+          phx-click="start_over"
+          data-confirm={@start_over}
+          data-confirm-button="Start over"
+          data-confirm-danger
+        >Start over</.a>
       </div>
     </.form>
     <p :if={@ai != :ok} id={"#{@id}-closed"} class="hint">{@closed}</p>
     """
   end
+
+  @doc """
+  The banner on a report's or a form's page while the person has a draft of it (#1089),
+  shown only to them: when it's from, how many asks, Open Change report or Change form
+  (`change`, its words, and `change_path`), and Discard them, which asks first and sends
+  `discard_draft`.
+  """
+  attr :id, :string, required: true
+  attr :draft, :any, required: true
+  attr :name, :string, required: true
+  attr :change, :string, required: true
+  attr :change_path, :string, required: true
+  attr :timezone, :string, required: true
+
+  def draft_waiting(assigns) do
+    ~H"""
+    <div :if={@draft} class="measure mb-6">
+      <.banner id={@id} title="Your changes are not saved yet">
+        <p>
+          From {Service.Format.day_at_time(@draft.updated_at, DateTime.utc_now(), @timezone)}{asks_said(
+            @draft
+          )}. <.a id={"#{@id}-open"} navigate={@change_path}>Open {@change}</.a>
+          to pick up where you left off, or <.a
+            id={"#{@id}-discard"}
+            href="#"
+            phx-click="discard_draft"
+            data-confirm={"Discard your changes? Your changes and the conversation go. #{@name} stays as saved."}
+            data-confirm-button="Discard changes"
+            data-confirm-danger
+          >discard them</.a>.
+        </p>
+      </.banner>
+    </div>
+    """
+  end
+
+  defp asks_said(%{asks: []}), do: ""
+
+  defp asks_said(%{asks: asks}),
+    do: ", with " <> Service.Format.count(length(asks), one: "%d ask", many: "%d asks")
 
   @doc """
   Whether the box shows Test, beside Ask: only on a dev server. Test runs a made-up ask

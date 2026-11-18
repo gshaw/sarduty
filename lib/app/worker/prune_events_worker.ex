@@ -3,8 +3,8 @@ defmodule App.Worker.PruneEventsWorker do
   Deletes events past their kind's retention, D4H changes past theirs, the words of AI
   asks after 90 days, and snoozes a day after they end, once a night (App.Model.Event,
   App.Model.D4HChange, App.Model.AIAsk, App.Model.AttentionSnooze). Also reports deleted
-  30 days ago with their versions (#834), and database copies a team delete took 7 days
-  ago.
+  30 days ago with their versions (#834), AI writing drafts unchanged for 30 days with
+  their PDFs (#1089), and database copies a team delete took 7 days ago.
   """
 
   use Oban.Worker, queue: :default, max_attempts: 3
@@ -15,6 +15,7 @@ defmodule App.Worker.PruneEventsWorker do
   alias App.Model.Event
   alias App.Model.SavedReport
   alias App.Operation.DeleteTeam
+  alias App.Operation.SaveDraft
 
   require Logger
 
@@ -25,6 +26,7 @@ defmodule App.Worker.PruneEventsWorker do
     {&AIAsk.prune_words/1, "ai_asks (words cleared)"},
     {&AttentionSnooze.prune/1, "attention_snoozes"},
     {&SavedReport.prune_deleted/1, "reports deleted 30 days ago"},
+    {&SaveDraft.prune/1, "AI writing drafts unchanged for 30 days"},
     {&DeleteTeam.prune_snapshots/1, "team delete snapshots"}
   ]
 

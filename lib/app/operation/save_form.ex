@@ -13,7 +13,8 @@ defmodule App.Operation.SaveForm do
   Every `expect` must hold, and every place must be on a page of its page PDF. A form
   with a layout has no page, and its layout must print.
 
-  Saving it again raises its version, except writing a new form's first text.
+  Saving it again raises its version, except writing a new form's first text, and
+  discards the saver's draft of it (App.Operation.SaveDraft).
   """
 
   import Ecto.Query
@@ -27,6 +28,7 @@ defmodule App.Operation.SaveForm do
   alias App.Model.OrganizationAdmin
   alias App.Model.Team
   alias App.Operation.PrintDocument
+  alias App.Operation.SaveDraft
   alias App.Repo
   alias App.Report.Context
   alias App.Report.Error
@@ -169,8 +171,13 @@ defmodule App.Operation.SaveForm do
       result = Repo.transaction(fn -> write!(owner, form, doc, text, page, user) end)
 
       case result do
-        {:ok, saved} -> {:ok, saved}
-        {:error, message} -> {:error, :text, message}
+        {:ok, saved} ->
+          # Saved, the person's draft has nothing left to keep (#1089).
+          SaveDraft.discard(user, saved)
+          {:ok, saved}
+
+        {:error, message} ->
+          {:error, :text, message}
       end
     end
   end

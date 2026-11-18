@@ -4,14 +4,16 @@ defmodule App.Operation.SaveReport do
   fields: a mistake goes on the Query field with its line, as the editor shows it. Every
   save appends a version (#834), with What changed when changing a saved report. Left
   blank while AI writing is open to the team admin, AI writes it a few seconds later
-  (App.Operation.WriteHistoryLine). Delete
-  moves a report to Recently deleted for 30 days, and Restore brings it back.
+  (App.Operation.WriteHistoryLine). A save discards the saver's draft of it
+  (App.Operation.SaveDraft). Delete moves a report to Recently deleted for 30 days, and
+  Restore brings it back.
   """
 
   alias App.Accounts.User
   alias App.Model.ReportVersion
   alias App.Model.SavedReport
   alias App.Model.Team
+  alias App.Operation.SaveDraft
   alias App.Operation.WriteHistoryLine
   alias App.Repo
   alias App.Report
@@ -43,12 +45,21 @@ defmodule App.Operation.SaveReport do
     change = if report.id, do: Changeset.get_change(changeset, :change)
     ai_line? = WriteHistoryLine.writes?(team, user, report, change, now)
 
-    Repo.transact(fn ->
-      with {:ok, saved} <- Repo.insert_or_update(changeset) do
-        saved |> ReportVersion.build(user.id, change, agent) |> Repo.insert!() |> line(ai_line?)
-        {:ok, saved}
-      end
-    end)
+    result =
+      Repo.transact(fn ->
+        with {:ok, saved} <- Repo.insert_or_update(changeset) do
+          saved
+          |> ReportVersion.build(user.id, change, agent)
+          |> Repo.insert!()
+          |> line(ai_line?)
+
+          {:ok, saved}
+        end
+      end)
+
+    # Saved, the person's draft has nothing left to keep (#1089): a new report's too.
+    with {:ok, _saved} <- result, do: SaveDraft.discard(user, {team, report.id && report})
+    result
   end
 
   @doc "Moves the report to Recently deleted. Its rows were never kept, so nothing else goes."

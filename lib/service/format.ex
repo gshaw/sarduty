@@ -66,6 +66,20 @@ defmodule Service.Format do
   def month_day_time_seconds(datetime, timezone),
     do: datetime(datetime, timezone, "%b %-d, %H:%M:%S")
 
+  @doc """
+  When something was kept, in a sentence, counted in calendar days in `timezone`:
+  "today at 15:42", "yesterday at 15:42", then "Nov 14 at 15:42".
+  """
+  def day_at_time(datetime, now, timezone) do
+    time = time_short(datetime, timezone)
+
+    case now |> local_date(timezone) |> Date.diff(local_date(datetime, timezone)) do
+      days when days <= 0 -> "today at #{time}"
+      1 -> "yesterday at #{time}"
+      _days -> "#{month_day(datetime, timezone)} at #{time}"
+    end
+  end
+
   @doc "A date in a table, with the year only when it is not this year: \"Mar 1\"."
   def day_in_year(%Date{} = date, %Date{} = today),
     do: Calendar.strftime(date, if(date.year == today.year, do: "%b %-d", else: "%b %-d, %Y"))

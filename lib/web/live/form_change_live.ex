@@ -11,6 +11,7 @@ defmodule Web.FormChangeLive do
   alias App.Model.Form
   alias App.Model.Organization
   alias App.Operation.AskAI
+  alias App.Operation.SaveDraft
   alias App.Operation.SaveForm
   alias Web.Components.FormSample
   alias Web.FormOwner
@@ -33,8 +34,12 @@ defmodule Web.FormChangeLive do
   # New form's Write form opens it with its first ask, What it's for, in the flash, so a
   # reload never asks again. A form with no text, as after Stop or a failed ask, asks the
   # same in the box: What it's for and Write form, until it has text. Nothing
-  # is saved until Save form, which keeps the form's state; a reload loses the
-  # conversation.
+  # is saved until Save form, which keeps the form's state.
+  #
+  # Saved AI turns (#1089): after every ask and every fix by hand, the text, the PDF, and
+  # the conversation are kept as the person's draft (App.Operation.SaveDraft), so the
+  # page opens again as it was left, with a toast. Save form and Start over discard it;
+  # Cancel leaves it for next time.
   def mount(%{"id" => id}, _session, socket) do
     %{current_user: user} = socket.assigns
     owner = owner!(socket.assigns)
@@ -60,6 +65,7 @@ defmodule Web.FormChangeLive do
     )
     |> allow_upload(:page, accept: ~w(.pdf), max_entries: 1, max_file_size: 10_000_000)
     |> assign_ai(owner, user)
+    |> open_draft(first)
     |> preview()
     |> first_ask(first)
     |> then(&{:ok, &1})
@@ -82,6 +88,42 @@ defmodule Web.FormChangeLive do
       ai_pending: nil,
       ai_asks: []
     )
+  end
+
+  # The person's draft, as they left it, unless Write form's first ask opened the page.
+  defp open_draft(socket, first) when is_binary(first), do: assign(socket, draft_at: nil, rev: 0)
+
+  defp open_draft(socket, _first) do
+    %{current_user: user, form: form, owner: owner} = socket.assigns
+
+    case SaveDraft.open(user, form) do
+      nil ->
+        assign(socket, draft_at: nil, rev: 0)
+
+      %{fields: fields, asks: asks, at: at} ->
+        when_kept = Service.Format.day_at_time(at, DateTime.utc_now(), owner.timezone)
+
+        socket
+        |> assign(text: fields["text"], page: fields["page"], ai_asks: asks)
+        |> assign(draft_at: at, rev: 0)
+        |> put_flash(:info, "Your changes from #{when_kept} are back. Save form to keep them.")
+    end
+  end
+
+  # Keeps the page as the person's draft, after an ask or a fix by hand.
+  defp keep_draft(socket) do
+    %{current_user: user, form: form, text: text, page: page, ai_asks: asks, rev: rev} =
+      socket.assigns
+
+    case SaveDraft.call(user, form, %{"text" => text, "page" => page}, asks) do
+      {:ok, draft} ->
+        assign(socket, draft_at: draft && draft.updated_at, rev: rev + 1)
+
+      {:error, _reason} ->
+        socket
+        |> assign(draft_at: nil, rev: rev + 1)
+        |> put_flash(:error, "Save form before you leave. SAR Duty could not keep your changes.")
+    end
   end
 
   # Write form's first ask, once the page is live.
@@ -129,6 +171,7 @@ defmodule Web.FormChangeLive do
     {:noreply,
      socket
      |> assign(text: text)
+     |> keep_draft()
      |> start_async(:check_text, fn -> SaveForm.check_for(owner, form, text, page) end)}
   end
 
@@ -226,6 +269,7 @@ defmodule Web.FormChangeLive do
         {:noreply,
          socket
          |> assign(text: ask.before, page: ask.before_page, ai_asks: older)
+         |> keep_draft()
          |> preview()
          |> put_flash(:info, "Undone. The form is back to before that ask.")}
 
@@ -234,12 +278,26 @@ defmodule Web.FormChangeLive do
     end
   end
 
+  # Discards the draft and opens the page again on the saved version.
+  def handle_event("start_over", _params, socket) do
+    %{owner: owner, form: form, current_user: user} = socket.assigns
+    SaveDraft.discard(user, form)
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Started over. #{form.name} is as saved.")
+     |> push_navigate(to: FormOwner.change_path(owner, form))}
+  end
+
   def handle_event("save", _params, socket) do
     %{owner: owner, form: form, text: text, current_user: user} = socket.assigns
 
     page = if page_changed?(socket.assigns), do: socket.assigns.page
 
     if text == form.text and is_nil(page) do
+      # Nothing to save, and nothing left to keep: a draft of questions alone goes too.
+      SaveDraft.discard(user, form)
+
       {:noreply,
        socket
        |> put_flash(:info, "Nothing to save. #{form.name} is as it was.")
@@ -282,14 +340,16 @@ defmodule Web.FormChangeLive do
   def handle_async(:check_text, {:exit, _reason}, socket), do: {:noreply, socket}
 
   def handle_async(:ai_ask, {:ok, result}, socket) do
-    {:noreply, socket |> ask_done(result) |> assign(ai_pending: nil) |> refresh_ai()}
+    {:noreply,
+     socket |> ask_done(result) |> assign(ai_pending: nil) |> keep_draft() |> refresh_ai()}
   end
 
   # Stop already put the words back.
   def handle_async(:ai_ask, {:exit, {:shutdown, :cancel}}, socket), do: {:noreply, socket}
 
   def handle_async(:ai_ask, {:exit, _reason}, socket) do
-    {:noreply, socket |> ask_done({:error, :unreachable}) |> assign(ai_pending: nil)}
+    {:noreply,
+     socket |> ask_done({:error, :unreachable}) |> assign(ai_pending: nil) |> keep_draft()}
   end
 
   # The ask runs beside the page, with the visit's earlier asks. `before_page` is the page
@@ -445,6 +505,7 @@ defmodule Web.FormChangeLive do
           button={if written?(@text), do: "Ask", else: "Write form"}
           closed={ai_closed_text(@ai)}
           sees={sees(@owner)}
+          start_over={@draft_at && start_over_question(@form)}
         >
           {if written?(@text),
             do: "A change, or a question about the form.",
@@ -497,7 +558,13 @@ defmodule Web.FormChangeLive do
           <.button id="form-cancel" navigate={FormOwner.form_path(@owner, @form)} data-leave-ok>
             Cancel
           </.button>
-          <.unsaved id="form-unsaved" unsaved={@text != @form.text or page_changed?(assigns)} />
+          <.unsaved
+            id="form-unsaved"
+            unsaved={@text != @form.text or page_changed?(assigns)}
+            kept={@draft_at != nil}
+            saving={@ai_pending != nil}
+            rev={@rev}
+          />
         </.save_bar>
       </:bar>
     </.ai_editor>
@@ -553,6 +620,16 @@ defmodule Web.FormChangeLive do
   defp text_shown?(assigns), do: assigns.text_open or assigns.text_error != nil
 
   defp written?(text), do: String.trim(text || "") != ""
+
+  # Start over's question: what goes, and the version the form goes back to.
+  defp start_over_question(form) do
+    back =
+      if Form.written?(form),
+        do: "#{form.name} goes back to version #{form.version}, as saved.",
+        else: "#{form.name} goes back to the agency's blank form."
+
+    "Start over? Your changes and the conversation go. #{back}"
+  end
 
   defp sees(%Organization{short_name: name}),
     do:

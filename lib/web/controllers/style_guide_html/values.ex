@@ -79,7 +79,15 @@ defmodule Web.StyleGuideHTML.Values do
       {:month_day_time, "A time this year",
        [{"month_day_time(now, zone)", Format.month_day_time(@now, @zone)}]},
       {:month_day_time_seconds, "The same to the second",
-       [{"month_day_time_seconds(now, zone)", Format.month_day_time_seconds(@now, @zone)}]}
+       [{"month_day_time_seconds(now, zone)", Format.month_day_time_seconds(@now, @zone)}]},
+      {:day_at_time, "When a draft was kept, in a sentence",
+       [
+         {"day_at_time(now, now, zone)", Format.day_at_time(@now, @now, @zone)},
+         {"day_at_time(now - 1 day, now, zone)",
+          Format.day_at_time(DateTime.add(@now, -1, :day), @now, @zone)},
+         {"day_at_time(now - 3 days, now, zone)",
+          Format.day_at_time(DateTime.add(@now, -3, :day), @now, @zone)}
+       ]}
     ]
   end
 

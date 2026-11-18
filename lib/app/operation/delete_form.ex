@@ -3,7 +3,7 @@ defmodule App.Operation.DeleteForm do
   Deletes a form, an organization's or a team's, while no PDF was published from it: a
   form tried and never used. Once one was, turning it off is the way, so every published
   PDF keeps the form it printed from. Whoever may turn it on or off may delete it
-  (App.Operation.SetFormState). Its page and any sign requests go with it; answers stay,
+  (App.Operation.SetFormState). Its page, any sign requests, and every draft of it go with it; answers stay,
   since they're the activity's and shared by name.
   """
 
@@ -13,6 +13,7 @@ defmodule App.Operation.DeleteForm do
   alias App.Model.Event
   alias App.Model.Form
   alias App.Model.PublishedPDF
+  alias App.Operation.SaveDraft
   alias App.Operation.SetFormState
   alias App.Repo
 
@@ -34,6 +35,10 @@ defmodule App.Operation.DeleteForm do
     do: PublishedPDF |> where([p], p.form_id == ^id) |> Repo.exists?()
 
   defp delete(form, user) do
+    # Each person's draft, with its PDFs in the file store; the rows would go with the
+    # form, the files would not.
+    SaveDraft.discard_all(form)
+
     Repo.transaction(fn ->
       Repo.delete!(form)
 

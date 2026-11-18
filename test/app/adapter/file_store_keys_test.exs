@@ -25,7 +25,13 @@ defmodule App.Adapter.FileStoreKeysTest do
     for {kind, %{folder: folder, owner: owner, expires: expires}} <- FileStore.kinds() do
       row = Enum.find(rows, &String.starts_with?(&1, "| `#{folder}`"))
       assert row, "docs/files.md has no row for #{kind}: | `#{folder}` | …"
-      assert row =~ "`#{owner}`", "docs/files.md's #{folder} row doesn't name its owner, #{owner}"
+
+      for owner <- List.wrap(owner),
+          do:
+            assert(
+              row =~ "`#{owner}`",
+              "docs/files.md's #{folder} row doesn't name its owner, #{owner}"
+            )
 
       if expires,
         do:
