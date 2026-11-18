@@ -3,7 +3,10 @@
 What a reviewer of a SAR Duty PR looks for beyond [AGENTS.md](AGENTS.md). Bunter reads
 this file, AGENTS.md, and the shared checklists named below on every review.
 
-checks: web, elixir
+- checks: web, elixir
+- design: `/styles` (`lib/web/controllers/style_guide_html/`), `assets/css/`, and
+  `lib/web/components/`
+- writing: [docs/writing.md](docs/writing.md)
 
 ## Leave to CI
 
