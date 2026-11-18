@@ -99,10 +99,12 @@ defmodule Web.ReportFormLive do
     |> assign_opened(SavedReport.changeset(saved || %SavedReport{}, start))
     |> assign_ai(blank_new?(socket.assigns.live_action, params))
     |> open_draft(drafted?(socket.assigns.live_action, params))
-    |> then(&preview(&1, &1.assigns.params))
+    |> preview_params()
     |> restored_toast(params)
     |> then(&{:ok, &1})
   end
+
+  defp preview_params(socket), do: preview(socket, socket.assigns.params)
 
   # Change report and a blank New report open the person's draft; Restore from History
   # and a copy don't.
@@ -141,7 +143,7 @@ defmodule Web.ReportFormLive do
     %{current_user: user, current_team: team, saved: saved, form: form, ai_asks: asks} =
       socket.assigns
 
-    fields = Map.put(fields_params(form), "values", form[:values].value || %{})
+    fields = form |> fields_params() |> Map.put("values", form[:values].value || %{})
     rev = socket.assigns.rev + 1
 
     case SaveDraft.call(user, {team, saved}, fields, asks) do

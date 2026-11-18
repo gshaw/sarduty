@@ -259,7 +259,7 @@ defmodule Web.Components.AIWriting do
   defp asks_said(%{asks: []}), do: ""
 
   defp asks_said(%{asks: asks}),
-    do: ", with " <> Service.Format.count(length(asks), one: "%d ask", many: "%d asks")
+    do: ", with " <> (asks |> length() |> Service.Format.count(one: "%d ask", many: "%d asks"))
 
   @doc """
   Whether the box shows Test, beside Ask: only on a dev server. Test runs a made-up ask

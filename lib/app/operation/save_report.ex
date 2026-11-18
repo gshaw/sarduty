@@ -45,22 +45,27 @@ defmodule App.Operation.SaveReport do
     change = if report.id, do: Changeset.get_change(changeset, :change)
     ai_line? = WriteHistoryLine.writes?(team, user, report, change, now)
 
-    result =
-      Repo.transact(fn ->
-        with {:ok, saved} <- Repo.insert_or_update(changeset) do
-          saved
-          |> ReportVersion.build(user.id, change, agent)
-          |> Repo.insert!()
-          |> line(ai_line?)
+    changeset
+    |> write(user.id, change, agent, ai_line?)
+    |> discard_draft(user, {team, report.id && report})
+  end
 
-          {:ok, saved}
-        end
-      end)
+  defp write(changeset, user_id, change, agent, ai_line?) do
+    Repo.transact(fn ->
+      with {:ok, saved} <- Repo.insert_or_update(changeset) do
+        saved |> ReportVersion.build(user_id, change, agent) |> Repo.insert!() |> line(ai_line?)
+        {:ok, saved}
+      end
+    end)
+  end
 
-    # Saved, the person's draft has nothing left to keep (#1089): a new report's too.
-    with {:ok, _saved} <- result, do: SaveDraft.discard(user, {team, report.id && report})
+  # Saved, the person's draft has nothing left to keep (#1089): a new report's too.
+  defp discard_draft({:ok, _saved} = result, user, subject) do
+    SaveDraft.discard(user, subject)
     result
   end
+
+  defp discard_draft(result, _user, _subject), do: result
 
   @doc "Moves the report to Recently deleted. Its rows were never kept, so nothing else goes."
   def delete(%SavedReport{} = report, now \\ DateTime.utc_now()),

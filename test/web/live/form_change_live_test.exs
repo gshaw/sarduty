@@ -7,6 +7,7 @@ defmodule Web.FormChangeLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Adapter.FileStore
   alias App.Model.AIAsk
   alias App.Model.AIDraft
   alias App.Model.Form
@@ -401,10 +402,16 @@ defmodule Web.FormChangeLiveTest do
 
       [_, id] = ~r/id="form-ai-undo-(\d+)"/ |> Regex.scan(render(lv)) |> List.last()
       lv |> element("#form-ai-undo-#{id}") |> render_click()
-      assert Repo.one!(AIDraft).pages == []
+      refute has_element?(lv, ".ai-you", "Fit the form to the agency's new PDF.")
 
       {:ok, _lv, _html} = lv |> element("#form-save") |> render_click() |> follow_redirect(conn)
       assert Repo.reload!(started).page_sha256 == Form.sha256(page)
+
+      # Saved, the draft goes, and a job deletes its PDF from the store.
+      refute Repo.exists?(AIDraft)
+      file = "#{Form.sha256(new_page)}.pdf"
+      key = FileStore.key(:teams, team.id, :form_draft, draft.files_token, file)
+      assert FileStore.get(key) == {:error, :not_found}
     end
 
     test "Undo puts the old page back", %{conn: conn, lv: lv, page: page, started: started} do

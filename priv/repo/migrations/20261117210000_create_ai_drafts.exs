@@ -4,7 +4,8 @@ defmodule App.Repo.Migrations.CreateAiDrafts do
   # Saved AI turns (#1089): a draft for each person and each report or form, kept after
   # every ask and every hand edit on Change report and Change form, with the
   # conversation. A team's report or form, or an organization's form; a new report has
-  # no report yet. Its new PDFs are in the file store, under `files_token`.
+  # no report yet. Its new PDFs are in the file store, under `files_token`. A discarded
+  # draft with PDFs waits, `discarded_at` set, until a job deletes them and the row.
   def change do
     create table(:ai_drafts) do
       add :user_id, references(:users, on_delete: :delete_all), null: false
@@ -17,14 +18,20 @@ defmodule App.Repo.Migrations.CreateAiDrafts do
       add :asks, :map, null: false
       add :files_token, :string
       add :pages, :map, null: false
+      add :discarded_at, :utc_datetime_usec
       timestamps(type: :utc_datetime_usec)
     end
 
-    create unique_index(:ai_drafts, [:user_id, :form_id], where: "form_id IS NOT NULL")
-    create unique_index(:ai_drafts, [:user_id, :report_id], where: "report_id IS NOT NULL")
+    create unique_index(:ai_drafts, [:user_id, :form_id],
+             where: "form_id IS NOT NULL AND discarded_at IS NULL"
+           )
+
+    create unique_index(:ai_drafts, [:user_id, :report_id],
+             where: "report_id IS NOT NULL AND discarded_at IS NULL"
+           )
 
     create unique_index(:ai_drafts, [:user_id, :team_id],
-             where: "kind = 'report' AND report_id IS NULL",
+             where: "kind = 'report' AND report_id IS NULL AND discarded_at IS NULL",
              name: :ai_drafts_new_report_index
            )
 

@@ -11,7 +11,8 @@ defmodule App.Operation.SaveDraft do
 
   A form's PDFs go in the file store (docs/files.md), one file per PDF by its SHA-256,
   never the form's saved page, which stays in form_pages. The row names them, so Undo
-  can put back the PDF from before an ask.
+  can put back the PDF from before an ask. They stay until the draft goes; then a job
+  deletes them (App.Worker.DeleteDraftFilesWorker), so no page waits on the store.
   """
 
   alias App.Accounts.User
@@ -21,6 +22,7 @@ defmodule App.Operation.SaveDraft do
   alias App.Model.SavedReport
   alias App.Model.Team
   alias App.Repo
+  alias App.Worker.DeleteDraftFilesWorker
 
   # Each ask's keys, as the pages keep them. Only these come back as atoms.
   @ask_keys ~w(id ask before before_page page test? note undo? blank next failed)a
@@ -72,19 +74,18 @@ defmodule App.Operation.SaveDraft do
     pages = Map.reject(pages, fn {sha, _bytes} -> saved_page?(subject, sha) end)
     token = draft.files_token || if(pages != %{}, do: FileStore.new_token())
 
-    with :ok <- put_pages(draft, token, pages) do
+    with {:ok, stored} <- put_pages(draft, token, pages) do
       kept =
         draft
         |> Ecto.Changeset.change(
           fields: fields,
           asks: asks,
-          pages: Map.keys(pages),
+          pages: draft.pages ++ stored,
           files_token: token,
           updated_at: now
         )
         |> Repo.insert_or_update!()
 
-      delete_pages(kept, draft.pages -- kept.pages)
       {:ok, kept}
     end
   end
@@ -92,20 +93,18 @@ defmodule App.Operation.SaveDraft do
   defp saved_page?(%Form{page_sha256: sha}, sha), do: true
   defp saved_page?(_subject, _sha), do: false
 
-  # Each PDF not kept yet; the first the store refuses stops the save.
+  # Each PDF not kept yet: `{:ok, shas}` stored, or the store's error, which stops the
+  # save. Only an ask brings a new PDF, so only the save after it waits on the store.
   defp put_pages(draft, token, pages) do
     pages
     |> Enum.reject(fn {sha, _bytes} -> sha in draft.pages end)
-    |> Enum.reduce_while(:ok, fn {sha, bytes}, :ok ->
-      case FileStore.put(key(draft, token, sha), bytes, "application/pdf") do
-        :ok -> {:cont, :ok}
+    |> Enum.reduce_while({:ok, []}, fn {sha, bytes}, {:ok, stored} ->
+      case draft |> key(token, sha) |> FileStore.put(bytes, "application/pdf") do
+        :ok -> {:cont, {:ok, [sha | stored]}}
         error -> {:halt, error}
       end
     end)
   end
-
-  defp delete_pages(draft, shas),
-    do: Enum.each(shas, &FileStore.delete(key(draft, draft.files_token, &1)))
 
   defp key(%AIDraft{organization_id: id}, token, sha) when is_integer(id),
     do: FileStore.key(:orgs, id, :form_draft, token, "#{sha}.pdf")
@@ -182,17 +181,17 @@ defmodule App.Operation.SaveDraft do
     pages = Map.put(pages, :saved, saved)
     fields = decode_page(draft.fields, "page", pages)
 
-    asks =
-      Enum.map(draft.asks, fn ask ->
-        ask
-        |> atomize(@ask_keys)
-        |> Map.put(:id, System.unique_integer([:positive]))
-        |> Map.update(:failed, nil, &(&1 && atomize(&1, @failed_keys)))
-        |> Map.update(:blank, [], fn blank -> Enum.map(blank || [], &atomize(&1, @blank_keys)) end)
-        |> then(fn ask -> Enum.reduce(@page_keys, ask, &decode_page(&2, &1, pages)) end)
-      end)
-
+    asks = Enum.map(draft.asks, &decode_ask(&1, pages))
     %{fields: fields, asks: asks, at: draft.updated_at}
+  end
+
+  defp decode_ask(ask, pages) do
+    ask
+    |> atomize(@ask_keys)
+    |> Map.put(:id, System.unique_integer([:positive]))
+    |> Map.update(:failed, nil, &(&1 && atomize(&1, @failed_keys)))
+    |> Map.update(:blank, [], fn blank -> Enum.map(blank || [], &atomize(&1, @blank_keys)) end)
+    |> then(fn ask -> Enum.reduce(@page_keys, ask, &decode_page(&2, &1, pages)) end)
   end
 
   defp decode_page(map, key, pages) do
@@ -220,8 +219,12 @@ defmodule App.Operation.SaveDraft do
     end
   end
 
-  @doc "Discards every person's draft of `form`, with their PDFs, as the form goes."
-  def discard_all(%Form{} = form), do: form |> AIDraft.all_for_form() |> Enum.each(&delete/1)
+  @doc """
+  Deletes every person's draft of `form` and their PDFs now, as the form goes: its rows
+  would go with it, and leave the files.
+  """
+  def discard_all(%Form{} = form),
+    do: form |> AIDraft.all_for_form() |> Enum.each(&delete_files/1)
 
   @doc "Discards drafts unchanged for 30 days, with their PDFs. Returns how many."
   def prune(now) do
@@ -230,9 +233,39 @@ defmodule App.Operation.SaveDraft do
     length(expired)
   end
 
-  defp delete(draft) do
+  # A draft with no PDFs goes at once. One with PDFs is marked discarded, so it's never
+  # opened again, and a job deletes the files, then the row.
+  defp delete(%AIDraft{pages: []} = draft) do
     Repo.delete!(draft)
-    delete_pages(draft, draft.pages)
     :ok
+  end
+
+  defp delete(draft) do
+    Repo.transact(fn ->
+      draft |> Ecto.Changeset.change(discarded_at: DateTime.utc_now()) |> Repo.update!()
+      DeleteDraftFilesWorker.enqueue(draft)
+      {:ok, draft}
+    end)
+
+    :ok
+  end
+
+  @doc """
+  Deletes a draft's PDFs from the file store, then its row: `:ok`, or the store's
+  error, which leaves the row for a retry.
+  """
+  def delete_files(%AIDraft{} = draft) do
+    result =
+      Enum.reduce_while(draft.pages, :ok, fn sha, :ok ->
+        case draft |> key(draft.files_token, sha) |> FileStore.delete() do
+          :ok -> {:cont, :ok}
+          error -> {:halt, error}
+        end
+      end)
+
+    with :ok <- result do
+      Repo.delete!(draft, allow_stale: true)
+      :ok
+    end
   end
 end

@@ -163,7 +163,8 @@ or form, and one per person per team for a new report ([App.Model.AIDraft](../li
 
 - **What's kept**: a report's name, description, query, and picks, or a form's text and
   its PDF; and the conversation, with what Undo needs. A form's PDFs other than its saved
-  one go in the file store as `form-draft` ([files.md](files.md)), by SHA-256.
+  one go in the file store as `form-draft` ([files.md](files.md)), by SHA-256. Once the
+  draft goes, `DeleteDraftFilesWorker` deletes them, so no page waits on the store.
 - **When**: after every ask, failed or not, and every change by hand, such as typing the
   query or a fix in How it fills in. A page as saved with no conversation keeps no
   draft, and a new report keeps one only once AI has answered an ask.

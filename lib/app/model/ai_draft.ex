@@ -10,8 +10,9 @@ defmodule App.Model.AIDraft do
   `fields` is what the page holds: a report's `name`, `about`, `query`, and `values`, or
   a form's `text` and `page`, its PDF's SHA-256. `asks` is the conversation, newest
   first, as the page keeps it, with each PDF as its SHA-256. `pages` lists the PDFs
-  kept in the file store under `files_token`: every one the draft names but the form's
-  saved page.
+  kept in the file store under `files_token`: every one the draft has named but the
+  form's saved page. A discarded draft with PDFs waits, `discarded_at` set and never
+  found again, until App.Worker.DeleteDraftFilesWorker deletes them and the row.
   """
   use App, :model
 
@@ -38,6 +39,7 @@ defmodule App.Model.AIDraft do
     field :asks, {:array, :map}, redact: true
     field :files_token, :string, redact: true
     field :pages, {:array, :string}, default: []
+    field :discarded_at, :utc_datetime_usec
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -49,16 +51,22 @@ defmodule App.Model.AIDraft do
   `report` nil for a new one.
   """
   def get(%User{id: user_id}, subject),
-    do: AIDraft |> where([d], d.user_id == ^user_id) |> for_subject(subject) |> Repo.one()
+    do: kept() |> where([d], d.user_id == ^user_id) |> for_subject(subject) |> Repo.one()
 
-  @doc "Every draft of a form, each person's, for deleting the form."
+  @doc "Every draft of a form, each person's, discarded or not, for deleting the form."
   def all_for_form(%Form{id: id}), do: AIDraft |> where([d], d.form_id == ^id) |> Repo.all()
 
   @doc "Drafts unchanged for #{@days} days at `now`."
   def expired(now) do
     cutoff = DateTime.add(now, -@days, :day)
-    AIDraft |> where([d], d.updated_at < ^cutoff) |> Repo.all()
+    kept() |> where([d], d.updated_at < ^cutoff) |> Repo.all()
   end
+
+  @doc "The discarded draft `id` whose PDFs wait to be deleted, or nil."
+  def get_discarded(id),
+    do: AIDraft |> where([d], d.id == ^id and not is_nil(d.discarded_at)) |> Repo.one()
+
+  defp kept, do: where(AIDraft, [d], is_nil(d.discarded_at))
 
   @doc "A new draft of `subject` for the user: its owner and what it's of, no content."
   def new(%User{id: user_id}, %Form{} = form),

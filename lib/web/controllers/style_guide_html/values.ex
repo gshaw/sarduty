@@ -84,9 +84,9 @@ defmodule Web.StyleGuideHTML.Values do
        [
          {"day_at_time(now, now, zone)", Format.day_at_time(@now, @now, @zone)},
          {"day_at_time(now - 1 day, now, zone)",
-          Format.day_at_time(DateTime.add(@now, -1, :day), @now, @zone)},
+          @now |> DateTime.add(-1, :day) |> Format.day_at_time(@now, @zone)},
          {"day_at_time(now - 3 days, now, zone)",
-          Format.day_at_time(DateTime.add(@now, -3, :day), @now, @zone)}
+          @now |> DateTime.add(-3, :day) |> Format.day_at_time(@now, @zone)}
        ]}
     ]
   end
