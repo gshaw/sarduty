@@ -14,7 +14,8 @@ defmodule App.Report.ReportFuzzTest do
   # Runner's message for SQL that SQLite refused: the compiler wrote it wrong.
   @bad_sql "This report could not run. Try again, or change its query."
 
-  # A fixed date, so a saved failure that depends on THIS_MONTH or LAST_N_DAYS replays.
+  # The query's date only. The sample data is seeded from today at app start,
+  # so a saved failure that depends on THIS_MONTH or LAST_N_DAYS may still not replay.
   @now ~U[2026-11-17 00:00:00Z]
 
   @tag timeout: 5_000
