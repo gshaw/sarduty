@@ -171,7 +171,7 @@ defmodule App.Operation.BuildDemoTeam do
 
     demo
     |> insert_organization([team, second], names.slug, org_visitor, coast.organization_id)
-    |> put_logo(now)
+    |> put_logo()
 
     {:ok, team}
   rescue
@@ -302,12 +302,13 @@ defmodule App.Operation.BuildDemoTeam do
   end
 
   # WESARA's made-up logo, beside its name on its teams' pages. A store that refuses it
-  # leaves the demo without one rather than unbuilt.
-  defp put_logo(organization, now) do
+  # leaves the demo without one rather than unbuilt. logo_at keeps microseconds, so it
+  # takes its own clock, not the build's second-precision `now`.
+  defp put_logo(organization) do
     png = File.read!(CoastRange.organization_logo_file())
 
     case organization |> Organization.logo_key() |> FileStore.put(png, "image/png") do
-      :ok -> Organization.put_logo_at!(organization, now)
+      :ok -> Organization.put_logo_at!(organization, DateTime.utc_now())
       {:error, reason} -> Logger.error("WESARA's demo logo not saved: #{inspect(reason)}")
     end
   end
