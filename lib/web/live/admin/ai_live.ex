@@ -74,11 +74,6 @@ defmodule Web.Admin.AILive do
   def render(assigns) do
     ~H"""
     <h1 class="title">AI writing</h1>
-    <p class="lead max-w-3xl">
-      Team admins describe a report or a form, and organization admins a form, and AI
-      writes it. Requests go to Anthropic's Claude API in the US, with field names and never
-      a team's records.
-    </p>
     <.banner :if={!@configured} id="ai-not-set-up" title="Not set up here" class="mb-6">
       <p>Set ANTHROPIC_API_KEY to turn on AI writing on this server.</p>
     </.banner>
