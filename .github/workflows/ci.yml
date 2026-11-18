@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
 
+# same-tree reads the merged PR and its check runs.
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+
 jobs:
   checks:
     name: Checks and tests
@@ -25,10 +31,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      # A push to main whose tree matches its PR's green head was already tested.
+      # Skip the steps, not the job, so "Checks and tests" still reports success.
+      # Any doubt runs everything.
+      - name: Skip if the PR's CI tested this tree
+        id: same_tree
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if line=$(.github/scripts/same-tree "$GITHUB_SHA" "$GITHUB_REPOSITORY"); then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "$line" | tee -a "$GITHUB_STEP_SUMMARY"
+
       # Ubuntu's mirror sometimes crawls: libvips-dev is about 170 packages, and one
       # run spent 7 minutes on them while another hung. Retries and a timeout make a
       # slow mirror fail fast; the cache skips the mirror on every run after the first.
       - name: Make apt retry and time out
+        if: steps.same_tree.outputs.skip != 'true'
         run: |
           echo 'Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/80-ci
           echo 'Acquire::http::Timeout "20";' | sudo tee -a /etc/apt/apt.conf.d/80-ci
@@ -36,6 +57,7 @@ jobs:
       # A cold install from a slow mirror took 9 minutes on 2026-11-18. 15 lets it
       # finish and save the cache; a real hang still stops long before 6 hours.
       - name: Install libvips
+        if: steps.same_tree.outputs.skip != 'true'
         timeout-minutes: 15
         uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
         with:
@@ -44,9 +66,11 @@ jobs:
           execute_install_scripts: true
 
       - name: Install mise
+        if: steps.same_tree.outputs.skip != 'true'
         uses: jdx/mise-action@v4
 
       - name: Cache deps and _build
+        if: steps.same_tree.outputs.skip != 'true'
         uses: actions/cache@v6
         with:
           path: |
@@ -56,6 +80,7 @@ jobs:
           restore-keys: mix-${{ runner.os }}-
 
       - name: Fetch deps
+        if: steps.same_tree.outputs.skip != 'true'
         run: |
           mix local.hex --force
           mix local.rebar --force
@@ -68,9 +93,11 @@ jobs:
       # MISE_TASK_OUTPUT=interleave drops mise's per-task line prefix, which
       # would otherwise stop GitHub from reading annotation lines.
       - name: Run static analysis
+        if: steps.same_tree.outputs.skip != 'true'
         env:
           MISE_TASK_OUTPUT: interleave
         run: mise run -c ci-static-analysis
 
       - name: Run tests
+        if: steps.same_tree.outputs.skip != 'true'
         run: mise run test
