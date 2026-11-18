@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Can CI skip this push to main? Yes only when the squash-merged PR's head has
+# the same tree (byte-identical code) and its "Checks and tests" passed.
+# Prints one line for the job summary. Exit 0: skip. Exit 1: run everything.
+# Usage: same-tree <sha> <owner/repo>
+set -uo pipefail
+sha=$1 repo=$2
+run() { echo "Ran: $1."; exit 1; }
+
+# The PR whose squash merge made this commit.
+pr=$(gh api "repos/$repo/commits/$sha/pulls" \
+  --jq "[.[] | select(.merge_commit_sha == \"$sha\")][0].number // empty") ||
+  run "couldn't look up the PR for \`${sha:0:7}\`"
+[ -n "$pr" ] || run "no merged PR for \`${sha:0:7}\`"
+
+# The branch is gone after merge; refs/pull/N/head stays.
+git fetch --quiet --depth=1 origin "refs/pull/$pr/head" || run "couldn't fetch #$pr's head"
+head=$(git rev-parse FETCH_HEAD)
+
+[ "$(git rev-parse "$sha^{tree}")" = "$(git rev-parse "$head^{tree}")" ] ||
+  run "main's tree differs from #$pr's head \`${head:0:7}\` (main moved before merge)"
+
+conclusion=$(gh api "repos/$repo/commits/$head/check-runs?check_name=Checks%20and%20tests" \
+  --jq '.check_runs[0].conclusion // "none"') ||
+  run "couldn't read #$pr's checks"
+[ "$conclusion" = success ] || run "#$pr's head \`${head:0:7}\` CI was $conclusion"
+
+echo "Skipped: same tree as #$pr's head \`${head:0:7}\`, CI green."
