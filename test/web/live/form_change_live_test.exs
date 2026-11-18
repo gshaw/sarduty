@@ -449,6 +449,31 @@ defmodule Web.FormChangeLiveTest do
     assert AIAsk.count_today(team, DateTime.utc_now()) == 0
   end
 
+  test "a draft from before someone saved the form says so, and Save form asks twice", ctx do
+    %{conn: conn, team: team, alex: alex, started: started} = ctx
+    stub_claude([%{"text" => written(), "note" => "Wrote it.", "blank" => []}])
+    conn = log_in_user(conn, alex)
+    path = forms_path(team, "/#{started.id}/edit")
+
+    {:ok, lv, _html} = live(conn, path)
+    lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
+    render_async(lv, @wait)
+
+    # Saved elsewhere, as another admin would.
+    theirs = written(&String.replace(&1, "ask notes 'Notes'", "ask notes 'Theirs'"))
+    {:ok, _saved} = SaveForm.call(team, started, theirs, nil, make_admin(user_fixture()))
+
+    {:ok, lv, html} = live(conn, path)
+    assert html =~ "Incident debrief was saved after you started."
+
+    lv |> element("#form-save") |> render_click()
+    assert has_element?(lv, "#flash-error", "Not saved.")
+    assert Repo.reload!(started).text =~ "Theirs"
+
+    {:ok, _lv, _html} = lv |> element("#form-save") |> render_click() |> follow_redirect(conn)
+    refute Repo.reload!(started).text =~ "Theirs"
+  end
+
   test "a fix by hand is checked as it's typed, and Save form saves it", ctx do
     %{conn: conn, team: team, alex: alex, started: started} = ctx
     stub_claude([%{"text" => written(), "note" => "Wrote it.", "blank" => []}])

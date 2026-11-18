@@ -39,7 +39,9 @@ defmodule Web.ReportFormLive do
   (App.Operation.SaveDraft); a new report's once AI has answered. Change report, and a
   blank New report, open again as they were left, with a toast. Save report and Start
   over discard it; Close asks: Discard changes, or Keep for later. Restore from History and a copy open
-  as they always did.
+  as they always did. When someone saved the report after the page or its draft started,
+  the toast and the first Save report say so, and the next Save report replaces their
+  version.
   """
   use Web, :live_view_app_layout
 
@@ -89,6 +91,7 @@ defmodule Web.ReportFormLive do
     |> assign(
       page_title: if(saved, do: "Change report", else: "New report"),
       saved: saved,
+      base: base(saved),
       now: now,
       context: Context.new(team, now),
       subject: Catalog.subject("members"),
@@ -117,33 +120,63 @@ defmodule Web.ReportFormLive do
     %{current_user: user, current_team: team, saved: saved} = socket.assigns
 
     case SaveDraft.open(user, {team, saved}) do
-      nil ->
-        assign(socket, draft_at: nil, rev: 0)
-
-      %{fields: fields, asks: asks, at: at} ->
-        params = Map.merge(socket.assigns.params, fields)
-
-        socket
-        |> assign(params: params, ai_asks: asks, starting: false, draft_at: at, rev: 0)
-        |> assign_form(SavedReport.changeset(saved || %SavedReport{}, params))
-        |> put_flash(:info, back_toast(saved, at, team))
+      nil -> assign(socket, draft_at: nil, rev: 0)
+      draft -> reopen(socket, draft)
     end
   end
 
-  defp back_toast(saved, at, team) do
-    when_kept = Format.day_at_time(at, DateTime.utc_now(), team.timezone)
+  defp reopen(socket, %{fields: fields, asks: asks, at: at}) do
+    %{current_team: team, saved: saved} = socket.assigns
+    # A draft from before drafts kept their base is taken as from the report as saved.
+    {base, fields} = Map.pop(fields, "base", socket.assigns.base)
+    params = Map.merge(socket.assigns.params, fields)
 
-    if saved,
-      do: "Your changes from #{when_kept} are back. Save report to keep them.",
-      else: "Your new report from #{when_kept} is back. Save report to keep it."
+    socket
+    |> assign(params: params, ai_asks: asks, starting: false, draft_at: at, rev: 0)
+    |> assign(base: base)
+    |> assign_form(SavedReport.changeset(saved || %SavedReport{}, params))
+    |> put_flash(:info, back_toast(saved, base, at, team))
   end
+
+  defp back_toast(nil, _base, at, team),
+    do: "Your new report from #{when_kept(at, team)} is back. Save report to keep it."
+
+  # A draft started before someone saved the report says so: Save report would replace it.
+  defp back_toast(saved, base, at, team) do
+    if base == base(saved),
+      do: "Your changes from #{when_kept(at, team)} are back. Save report to keep them.",
+      else:
+        "Your changes from #{when_kept(at, team)} are back, but #{saved_by(team, saved)} " <>
+          "saved #{saved.name} after you started. Save report replaces their version, and " <>
+          "Start over keeps it."
+  end
+
+  defp when_kept(at, team), do: Format.day_at_time(at, DateTime.utc_now(), team.timezone)
+
+  # Which save a report is at: its latest version's id, or nil for a new report.
+  defp base(nil), do: nil
+
+  defp base(saved) do
+    case ReportVersion.latest(saved) do
+      nil -> nil
+      version -> version.id
+    end
+  end
+
+  defp saved_by(team, saved),
+    do: Reports.last_saved(team, saved, DateTime.utc_now()).by || "a team admin"
 
   # Keeps the page as the person's draft, after an ask or a change by hand.
   defp keep_draft(socket) do
     %{current_user: user, current_team: team, saved: saved, form: form, ai_asks: asks} =
       socket.assigns
 
-    fields = form |> fields_params() |> Map.put("values", form[:values].value || %{})
+    fields =
+      form
+      |> fields_params()
+      |> Map.put("values", form[:values].value || %{})
+      |> Map.put("base", socket.assigns.base)
+
     rev = socket.assigns.rev + 1
 
     case SaveDraft.call(user, {team, saved}, fields, asks) do
@@ -436,7 +469,28 @@ defmodule Web.ReportFormLive do
     end
   end
 
+  # Someone saved the report after this page or its draft started: the first Save report
+  # says so and saves nothing, and the next replaces their version.
   def handle_event("save", %{"report" => params}, socket) do
+    %{current_team: team, saved: saved, base: base} = socket.assigns
+    current = saved && (SavedReport.get(team, saved.id) || saved)
+
+    if base(current) == base do
+      save_report(socket, params)
+    else
+      {:noreply,
+       socket
+       |> assign(saved: current, base: base(current))
+       |> keep_draft()
+       |> put_flash(
+         :error,
+         "Not saved. #{saved_by(team, current)} saved #{current.name} after you started. " <>
+           "Save report again to replace their version, or Start over to keep it."
+       )}
+    end
+  end
+
+  defp save_report(socket, params) do
     %{current_team: team, current_user: user, saved: saved} = socket.assigns
 
     agent = ai_agent(socket.assigns.ai_asks)

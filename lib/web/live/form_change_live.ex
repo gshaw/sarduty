@@ -39,7 +39,9 @@ defmodule Web.FormChangeLive do
   # Saved AI turns (#1089): after every ask and every fix by hand, the text, the PDF, and
   # the conversation are kept as the person's draft (App.Operation.SaveDraft), so the
   # page opens again as it was left, with a toast. Save form and Start over discard it;
-  # Close asks first: Discard changes, or Keep for later.
+  # Close asks first: Discard changes, or Keep for later. When someone saved the form
+  # after the page or its draft started, the toast and the first Save form say so, and
+  # the next Save form replaces their version.
   def mount(%{"id" => id}, _session, socket) do
     %{current_user: user} = socket.assigns
     owner = owner!(socket.assigns)
@@ -52,6 +54,7 @@ defmodule Web.FormChangeLive do
       page_title: "Change form",
       owner: owner,
       form: form,
+      base: Form.saved_mark(form),
       page: Form.page_bytes(form),
       text: form.text,
       text_open: false,
@@ -102,12 +105,23 @@ defmodule Web.FormChangeLive do
 
       %{fields: fields, asks: asks, at: at} ->
         when_kept = Service.Format.day_at_time(at, DateTime.utc_now(), owner.timezone)
+        # A draft from before drafts kept their base is taken as from the form as saved.
+        base = fields["base"] || socket.assigns.base
 
         socket
-        |> assign(text: fields["text"], page: fields["page"], ai_asks: asks)
+        |> assign(text: fields["text"], page: fields["page"], ai_asks: asks, base: base)
         |> assign(draft_at: at, rev: 0)
-        |> put_flash(:info, "Your changes from #{when_kept} are back. Save form to keep them.")
+        |> put_flash(:info, back_toast(form, base, when_kept))
     end
+  end
+
+  # A draft started before someone saved the form says so: Save form would replace it.
+  defp back_toast(form, base, when_kept) do
+    if base == Form.saved_mark(form),
+      do: "Your changes from #{when_kept} are back. Save form to keep them.",
+      else:
+        "Your changes from #{when_kept} are back, but #{form.name} was saved after you " <>
+          "started. Save form replaces that version, and Start over keeps it."
   end
 
   # Keeps the page as the person's draft, after an ask or a fix by hand.
@@ -115,7 +129,9 @@ defmodule Web.FormChangeLive do
     %{current_user: user, form: form, text: text, page: page, ai_asks: asks, rev: rev} =
       socket.assigns
 
-    case SaveDraft.call(user, form, %{"text" => text, "page" => page}, asks) do
+    %{base: base} = socket.assigns
+
+    case SaveDraft.call(user, form, %{"text" => text, "page" => page, "base" => base}, asks) do
       {:ok, draft} ->
         assign(socket, draft_at: draft && draft.updated_at, rev: rev + 1)
 
@@ -313,7 +329,28 @@ defmodule Web.FormChangeLive do
      |> push_navigate(to: FormOwner.change_path(owner, form))}
   end
 
+  # Someone saved the form after this page or its draft started: the first Save form
+  # says so and saves nothing, and the next replaces their version.
   def handle_event("save", _params, socket) do
+    %{owner: owner, form: form, base: base} = socket.assigns
+    current = Form.get(owner, form.id) || form
+
+    if Form.saved_mark(current) == base do
+      save_form(socket)
+    else
+      {:noreply,
+       socket
+       |> assign(form: current, base: Form.saved_mark(current))
+       |> keep_draft()
+       |> put_flash(
+         :error,
+         "Not saved. #{current.name} was saved after you started. Save form again to " <>
+           "replace that version, or Start over to keep it."
+       )}
+    end
+  end
+
+  defp save_form(socket) do
     %{owner: owner, form: form, text: text, current_user: user} = socket.assigns
 
     page = if page_changed?(socket.assigns), do: socket.assigns.page

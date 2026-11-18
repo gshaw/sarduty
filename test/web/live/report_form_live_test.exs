@@ -794,6 +794,44 @@ defmodule Web.ReportFormLiveTest do
       refute App.Repo.exists?(App.Model.AIDraft)
     end
 
+    test "a draft from before someone saved the report says so, and Save report asks twice",
+         %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      conn = log_in_user(conn, user)
+      stub_claude("select name, standing from members", "Adds Standing after Name.", %{})
+
+      {:ok, report} =
+        SaveReport.call(team, user, nil, %{
+          "name" => "Members",
+          "query" => "select name from members"
+        })
+
+      path = ~p"/teams/#{team}/reports/#{report.id}/edit"
+      {:ok, lv, _html} = live(conn, path)
+      lv |> form("#report-ai-form", ai: %{ask: "Add each member's standing"}) |> render_submit()
+      render_async(lv)
+
+      # Saved elsewhere, as another team admin would.
+      theirs = "select name, last_attended from members"
+
+      {:ok, _saved} =
+        SaveReport.call(team, AccountsFixtures.user_fixture(), report, %{
+          "query" => theirs,
+          "change" => "Theirs."
+        })
+
+      {:ok, lv, html} = live(conn, path)
+      assert html =~ "saved Members after you started."
+
+      lv |> form("#report-form") |> render_submit()
+      assert has_element?(lv, "#flash-error", "Not saved.")
+      assert App.Repo.reload!(report).query == theirs
+
+      lv |> form("#report-form") |> render_submit()
+      assert_redirect(lv, ~p"/teams/#{team}/reports/#{report.id}")
+      assert App.Repo.reload!(report).query == "select name, standing from members"
+    end
+
     test "Cancel leaves the draft: the report's page says it waits, only to its author",
          %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
