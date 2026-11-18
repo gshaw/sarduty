@@ -44,6 +44,7 @@
   .ai-failed .font-semibold { color: var(--danger-text); }
   .ai-blank { margin-top: var(--sp-2); }
   .ai-blank ul { margin: var(--sp-1) 0 0; padding-left: var(--sp-4); list-style: disc; }
-  .ai-step { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); color: var(--text-muted); }
+  /* Thinking… and Stop, under the part that scrolls, so they stay in view. */
+  .ai-step { margin-bottom: var(--sp-4); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); color: var(--text-muted); }
   .ai-writing-form textarea { width: 100%; }
 }

@@ -3,7 +3,8 @@ defmodule Web.Components.AIWriting do
   AI writing's column (docs/ai-writing.md), on Change report and Change form (#1089):
   what AI sees, the asks as a conversation, oldest first, each with AI's reply
   and Undo when it changed the page, or what went wrong and Ask again when it failed, and
-  the running ask with Stop last, then Try next; under them the box, as in a chat. Each
+  the running ask, then Try next; under them Thinking… with Stop, which never scrolls
+  away, and the box, as in a chat. Each
   page runs the asks (App.Operation.AskAI) and keeps the conversation; this draws it.
 
   `ai_editor` lays out the page: its head (the title, description, and links), the
@@ -155,14 +156,6 @@ defmodule Web.Components.AIWriting do
             </li>
           <% end %>
           <li :if={@pending} id={"#{@id}-ask-running"} class="ai-you">{@pending.ask}</li>
-          <li :if={@pending} id={"#{@id}-step"} class="ai-step">
-            <.spinner>
-              Thinking… <span id={"#{@id}-seconds"} phx-hook="Seconds" phx-update="ignore"></span>
-            </.spinner>
-            <.button id={"#{@id}-stop"} type="button" size={:sm} phx-click="cancel_ask">
-              Stop
-            </.button>
-          </li>
         </ol>
       </div>
       <div :if={@ai == :ok and !@pending and next(@asks) != []} id={"#{@id}-next"} class="mt-4">
@@ -178,6 +171,14 @@ defmodule Web.Components.AIWriting do
           >{ask}</.button>
         </div>
       </div>
+    </div>
+    <div :if={@pending} id={"#{@id}-step"} class="ai-step">
+      <.spinner>
+        Thinking… <span id={"#{@id}-seconds"} phx-hook="Seconds" phx-update="ignore"></span>
+      </.spinner>
+      <.button id={"#{@id}-stop"} type="button" size={:sm} phx-click="cancel_ask">
+        Stop
+      </.button>
     </div>
     <.form :if={@ai == :ok} for={@form} id={"#{@id}-form"} class="ai-writing-form" phx-submit="ask">
       <.input

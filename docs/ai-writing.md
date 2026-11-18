@@ -26,9 +26,10 @@ On New report and Change report, for a user AI writing is open to
   AI sees and older asks off the top, so a small laptop shows more of the conversation,
   and it goes to the newest whenever it grows or shrinks (assets/js/ai_panel.js). Under
   1024px it's one column, title first, and the conversation shows its last two asks with
-  Show earlier asks. In it: the title, AI writing, fixed; what AI sees, one line with How it
-  works; the asks as a conversation, oldest first; Try next; then, fixed under them,
-  "Ask AI" with its hint, "A change, or a question about the report.", and Ask.
+  Show earlier asks. In it: the title, AI writing, fixed; what AI sees, one line with
+  How it works; the asks as a conversation, oldest first; Try next; then, fixed under
+  them, Thinking… with Stop while an ask runs, and "Ask AI" with its hint, "A change,
+  or a question about the report.", and Ask.
 - **Rename** opens a dialog with the name and description, inside the form: Rename
   keeps them, to save with Save report, and Cancel or Escape puts them back. With AI
   writing off or the query written by hand, the fields show on the page as before.
