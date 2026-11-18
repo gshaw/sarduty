@@ -1,7 +1,7 @@
 defmodule Web.Components.AIWriting do
   @moduledoc """
   AI writing's column (docs/ai-writing.md), on Change report and Change form (#1089):
-  its title, what AI sees, the asks as a conversation, oldest first, each with AI's reply
+  what AI sees, the asks as a conversation, oldest first, each with AI's reply
   and Undo when it changed the page, or what went wrong and Ask again when it failed, and
   the running ask with Stop last, then Try next; under them the box, as in a chat. Each
   page runs the asks (App.Operation.AskAI) and keeps the conversation; this draws it.
@@ -9,9 +9,9 @@ defmodule Web.Components.AIWriting do
   `ai_editor` lays out the page: its head (the title, description, and links), the
   column, and its main part with the Save bar at its foot. From 1024px the column starts
   beside the title and sticks under the site bar. It grows as the conversation does, the
-  box pushed down, until it's as tall as the window; then everything above the box
-  scrolls on its own, the title and older asks off the top, so a small laptop shows more
-  of the conversation. Under that it's one column: the head, AI writing,
+  box pushed down, until it's as tall as the window; then everything between its title
+  and the box scrolls on its own, what AI sees and older asks off the top, so a small
+  laptop shows more of the conversation. Under that it's one column: the head, AI writing,
   then the main part, and the conversation shows its last two asks with Show earlier
   asks. Its CSS is assets/css/components/ai_writing.css, and /styles/ai-writing shows
   it.
@@ -41,6 +41,7 @@ defmodule Web.Components.AIWriting do
     <div id={@id} class={["ai-editor", @ai? && "has-ai"]}>
       <div class="ai-head">{render_slot(@head)}</div>
       <aside :if={@ai?} id={@column_id} class="ai-column" aria-label={@label} phx-hook="AIPanel">
+        <h2 class="subheading mb-2">{@label}</h2>
         {render_slot(@column)}
       </aside>
       <div class="ai-main">
@@ -66,8 +67,8 @@ defmodule Web.Components.AIWriting do
   end
 
   @doc """
-  The conversation, the box, and what AI sees, with `heading` over them in the column.
-  `id` starts each element's id, such as `report-ai`. `asks` is the conversation, newest first: each `%{id, ask, note, undo?}`
+  The conversation, the box, and what AI sees. `id` starts each element's id, such as
+  `report-ai`. `asks` is the conversation, newest first: each `%{id, ask, note, undo?}`
   and, for a form, `blank`, the labels AI left blank, `[%{label, why}]`, and `next`, the
   asks AI suggests after it: Try next shows the newest's, and a tap sends `suggest`
   with the ask, which the page puts in the box. `pending` is
@@ -85,7 +86,6 @@ defmodule Web.Components.AIWriting do
   attr :button, :string, required: true
   attr :closed, :string, default: nil
   attr :sees, :string, required: true
-  attr :heading, :string, default: nil, doc: "the column's title, AI writing"
   slot :inner_block
 
   def ai_writing(assigns) do
@@ -93,7 +93,6 @@ defmodule Web.Components.AIWriting do
 
     ~H"""
     <div class="ai-scroll">
-      <h2 :if={@heading} class="subheading mb-2">{@heading}</h2>
       <p class="hint">
         {@sees}
         <.a id={"#{@id}-agents-link"} href={~p"/agents"} external={true}>How it works</.a>

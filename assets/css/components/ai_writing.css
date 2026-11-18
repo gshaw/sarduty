@@ -3,8 +3,8 @@
      1024px one column: the head (title, description, links), AI writing, then the main
      part, with the Save bar at its foot. From 1024px the column starts beside the title
      and sticks under the site bar. It grows with the conversation, the box under it,
-     until it's as tall as the window; then all above the box scrolls on its own: the
-     title, what AI sees, the conversation, and Try next. */
+     until it's as tall as the window; then all between its title and the box scrolls
+     on its own: what AI sees, the conversation, and Try next. */
   .ai-editor {
     display: grid; grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "head" "ai" "main"; row-gap: var(--sp-6);

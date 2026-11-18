@@ -1,8 +1,8 @@
 // AI writing's column (Web.Components.AIWriting), a chat: the conversation oldest first,
 // then Try next and the box. From 1024px it grows with the conversation until it reaches
 // the window's foot, Ask level with Save, from wherever it starts (beside the title at
-// first, under the site bar once stuck); then all above the box scrolls on its own,
-// the title and what AI sees with the conversation, so a small screen shows more of it. Only
+// first, under the site bar once stuck); then all between its title and the box scrolls
+// on its own, what AI sees with the conversation, so a small screen shows more of it. Only
 // its most is set, so it never makes the page longer than its content. Whenever the
 // conversation grows or shrinks, it goes to the newest; the seconds ticking while AI
 // thinks don't count.

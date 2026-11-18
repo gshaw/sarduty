@@ -192,14 +192,14 @@ defmodule Web.FormChangeLiveTest do
     assert Repo.aggregate(AIAsk, :count) == 1
   end
 
-  test "a form not written yet asks to write it, as New form does, until the first ask", ctx do
+  test "a form with no text asks to write it, as New form does, until it has text", ctx do
     %{conn: conn, team: team, alex: alex, started: started} = ctx
     stub_claude([%{"text" => written(), "note" => "Wrote it.", "next" => ["A", "B", "C"]}])
 
     {:ok, lv, _html} = conn |> log_in_user(alex) |> live(forms_path(team, "/#{started.id}/edit"))
 
     assert has_element?(lv, "#form-ai-form", "What it's for (optional)")
-    assert has_element?(lv, "#form-ai-form", "When it's filled in and who signs it.")
+    assert has_element?(lv, "#form-ai-form", "AI writes the form from the agency's PDF.")
     assert has_element?(lv, "#form-ai-ask", "Write form")
 
     # An empty box writes it too.

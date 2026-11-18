@@ -150,7 +150,7 @@ defmodule Web.FormStartLive do
 
   @doc """
   A form's first ask: What it's for, or "Write this form." without it. Change form
-  sends it too, from Write form, on a form not written yet.
+  sends it too, from Write form, on a form with no text.
   """
   def first_ask(for_text) do
     case String.trim(for_text || "") do

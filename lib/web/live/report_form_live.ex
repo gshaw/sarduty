@@ -517,7 +517,6 @@ defmodule Web.ReportFormLive do
       <:column>
         <.ai_writing
           id="report-ai"
-          heading="AI writing"
           ai={@ai}
           form={@ai_form}
           pending={@ai_pending}

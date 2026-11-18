@@ -31,8 +31,8 @@ defmodule Web.FormChangeLive do
   # puts the old PDF back, and Save form saves both.
   #
   # New form's Write form opens it with its first ask, What it's for, in the flash, so a
-  # reload never asks again. A form still not written, with nothing asked, as after Stop,
-  # asks the same in the box: What it's for and Write form, until the first ask. Nothing
+  # reload never asks again. A form with no text, as after Stop or a failed ask, asks the
+  # same in the box: What it's for and Write form, until it has text. Nothing
   # is saved until Save form, which keeps the form's state; a reload loses the
   # conversation.
   def mount(%{"id" => id}, _session, socket) do
@@ -175,10 +175,17 @@ defmodule Web.FormChangeLive do
 
   def handle_event("ask", %{"ai" => %{"ask" => ask}}, socket) do
     cond do
-      socket.assigns.ai_pending != nil -> {:noreply, socket}
-      first?(socket.assigns) -> {:noreply, start_ask(socket, FormStartLive.first_ask(ask))}
-      String.trim(ask) == "" -> {:noreply, socket}
-      true -> {:noreply, start_ask(socket, String.trim(ask))}
+      socket.assigns.ai_pending != nil ->
+        {:noreply, socket}
+
+      !written?(socket.assigns.text) ->
+        {:noreply, start_ask(socket, FormStartLive.first_ask(ask))}
+
+      String.trim(ask) == "" ->
+        {:noreply, socket}
+
+      true ->
+        {:noreply, start_ask(socket, String.trim(ask))}
     end
   end
 
@@ -430,19 +437,18 @@ defmodule Web.FormChangeLive do
       <:column>
         <.ai_writing
           id="form-ai"
-          heading="AI writing"
           ai={@ai}
           form={@ai_form}
           pending={@ai_pending}
           asks={@ai_asks}
-          label={if first?(assigns), do: "What it's for (optional)", else: "Ask AI"}
-          button={if first?(assigns), do: "Write form", else: "Ask"}
+          label={if written?(@text), do: "Ask AI", else: "What it's for (optional)"}
+          button={if written?(@text), do: "Ask", else: "Write form"}
           closed={ai_closed_text(@ai)}
           sees={sees(@owner)}
         >
-          {if first?(assigns),
-            do: "When it's filled in and who signs it.",
-            else: "A change, or a question about the form."}
+          {if written?(@text),
+            do: "A change, or a question about the form.",
+            else: "AI writes the form from the agency's PDF."}
         </.ai_writing>
       </:column>
 
@@ -547,10 +553,6 @@ defmodule Web.FormChangeLive do
   defp text_shown?(assigns), do: assigns.text_open or assigns.text_error != nil
 
   defp written?(text), do: String.trim(text || "") != ""
-
-  # A form not written yet, before any ask: the box writes it, as New form's Write form
-  # does, with What it's for or without.
-  defp first?(%{text: text, ai_asks: asks}), do: !written?(text) and asks == []
 
   defp sees(%Organization{short_name: name}),
     do:
