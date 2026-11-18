@@ -531,7 +531,6 @@ defmodule Web.ReportFormLiveTest do
   describe "AI writing" do
     alias App.AccountsFixtures
     alias App.Model.AIAsk
-    alias App.Operation.AskAI
     alias App.Operation.SetAISettings
     alias App.Report.BuiltIn
 
