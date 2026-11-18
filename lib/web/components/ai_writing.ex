@@ -222,6 +222,36 @@ defmodule Web.Components.AIWriting do
   end
 
   @doc """
+  Close, in the Save bar: back to `path`, the report's or the form's page. With nothing
+  to lose it just leaves. Otherwise it asks first with `ask`: Discard changes sends
+  `close`, and with a draft that keeps the changes (`keep`), Keep for later leaves with
+  the draft kept (#1089).
+  """
+  attr :id, :string, required: true
+  attr :path, :string, required: true
+  attr :ask, :string, default: nil
+  attr :keep, :boolean, default: false
+
+  def close_button(assigns) do
+    ~H"""
+    <.button :if={!@ask} id={@id} navigate={@path} data-leave-ok>Close</.button>
+    <.button
+      :if={@ask}
+      id={@id}
+      type="button"
+      phx-click="close"
+      data-confirm={@ask}
+      data-confirm-button="Discard changes"
+      data-confirm-danger
+      data-confirm-alt={@keep && "Keep for later"}
+      data-confirm-alt-href={@keep && @path}
+    >
+      Close
+    </.button>
+    """
+  end
+
+  @doc """
   The banner on a report's or a form's page while the person has a draft of it (#1089),
   shown only to them: when it's from, how many asks, Open Change report or Change form
   (`change`, its words, and `change_path`), and Discard them, which asks first and sends

@@ -6,7 +6,7 @@ defmodule Web.Components.Unsaved do
   lost. Leaving asks first (assets/js/unsaved.js) only while something isn't kept yet:
   changes no draft keeps, an ask AI is still answering (`saving`), or typing the
   server hasn't kept, which `rev` tells it, a number that goes up each time it keeps
-  one. Save, and a link marked `data-leave-ok` such as Cancel, never ask.
+  one. Save, and a link marked `data-leave-ok` such as Close, never ask.
   """
   use Phoenix.Component
 

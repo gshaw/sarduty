@@ -38,7 +38,7 @@ defmodule Web.ReportFormLive do
   description, query, picks, and the conversation are kept as the person's draft
   (App.Operation.SaveDraft); a new report's once AI has answered. Change report, and a
   blank New report, open again as they were left, with a toast. Save report and Start
-  over discard it; Cancel leaves it for next time. Restore from History and a copy open
+  over discard it; Close asks: Discard changes, or Keep for later. Restore from History and a copy open
   as they always did.
   """
   use Web, :live_view_app_layout
@@ -331,6 +331,19 @@ defmodule Web.ReportFormLive do
 
     {:noreply, socket} = handle_event("change", %{"report" => params}, socket)
     {:noreply, assign(socket, renaming: false, rename_from: nil)}
+  end
+
+  # Close's Discard changes: the draft goes, and so does the page.
+  def handle_event("close", _params, socket) do
+    %{current_user: user, current_team: team, saved: saved} = socket.assigns
+    SaveDraft.discard(user, {team, saved})
+
+    said =
+      if saved,
+        do: "Discarded your changes to #{saved.name}.",
+        else: "Discarded your new report."
+
+    {:noreply, socket |> put_flash(:info, said) |> push_navigate(to: cancel_path(team, saved))}
   end
 
   # Discards the draft and opens the page again: the saved report, or a blank New report.
@@ -752,9 +765,12 @@ defmodule Web.ReportFormLive do
           <.button id="report-save" form="report-form" variant={:success} phx-disable-with="Saving…">
             Save report
           </.button>
-          <.button id="report-cancel" navigate={cancel_path(@current_team, @saved)} data-leave-ok>
-            Cancel
-          </.button>
+          <.close_button
+            id="report-close"
+            path={cancel_path(@current_team, @saved)}
+            ask={close_question(assigns)}
+            keep={@draft_at != nil}
+          />
           <.unsaved
             id="report-unsaved"
             unsaved={unsaved?(assigns)}
@@ -814,6 +830,25 @@ defmodule Web.ReportFormLive do
 
   defp field_id(%{custom: %{ids: ids}}), do: "custom-field-#{Enum.join(ids, "-")}"
   defp field_id(field), do: "field-#{field.name}"
+
+  # Close's question, when closing loses something: a draft, changes, or a running ask.
+  defp close_question(%{draft_at: nil, ai_pending: nil} = assigns) do
+    if unsaved?(assigns),
+      do: close_lost(assigns.saved, "Your changes go.", "Your new report goes.")
+  end
+
+  defp close_question(assigns),
+    do:
+      close_lost(
+        assigns.saved,
+        "Your changes and the conversation go.",
+        "Your new report and the conversation go."
+      )
+
+  defp close_lost(nil, _changes, new), do: "Close without saving? #{new}"
+
+  defp close_lost(saved, changes, _new),
+    do: "Close without saving? #{changes} #{saved.name} stays as saved."
 
   # Start over's question: what goes, and what the report goes back to.
   defp start_over_question(nil), do: "Start over? Your new report and the conversation go."

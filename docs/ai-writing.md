@@ -18,7 +18,7 @@ On New report and Change report, for a user AI writing is open to
 - **The page** (`ai_editor` in Web.Components.AIWriting, the same on Change form): the
   title, the description, and the page's links, Rename and Show query; AI writing beside
   them; the report under them; and under the report a bar with Not saved yet, Save
-  report, and Cancel, stuck to the window's foot while the report runs past it, like the
+  report, and Close, stuck to the window's foot while the report runs past it, like the
   bar for checked rows.
 - **AI writing** starts beside the title, as a chat. From 1024px it sticks under the
   site bar and grows with the conversation, the box pushed down, until it's as tall as
@@ -45,7 +45,7 @@ On New report and Change report, for a user AI writing is open to
   [draft](#drafts) keeps it. Leaving asks first only while something isn't kept yet:
   an ask still running, typing the server hasn't kept, or a new report's changes before
   AI has answered. A reload or closing the tab asks through the browser's own question,
-  a link through a confirm. Save and Cancel never ask.
+  a link through a confirm. Save and Close never ask that: Close asks its own.
 - **Test**, beside Ask on a dev server only (`dev_routes`), runs a made-up ask instead
   of calling Claude (`AIWriting.test_ask/2`): 1.5 seconds of Thinking…, then a reply
   of varying length with Try next, and every fourth ask fails with too many steps. It
@@ -174,8 +174,12 @@ or form, and one per person per team for a new report ([App.Model.AIDraft](../li
   Restore from History and a copy open as they always did, and a copy's first answer
   replaces any new-report draft.
 - **Save** saves the draft as the new version and discards it (SaveForm, SaveReport).
-- **Cancel** leaves it. The form's or the report's page then says "Your changes are not
-  saved yet", with when they're from and how many asks, Open Change form or Open Change
+- **Close**, in place of Cancel, leaves at once when there's nothing to lose. Otherwise
+  it asks: "Close without saving? Your changes and the conversation go. Task report
+  stays as saved." Discard changes discards the draft; Keep for later leaves it, and
+  Cancel stays. A reload, a link, or closing the tab keeps it too.
+- **A draft waiting**: the form's or the report's page says "Your changes are not saved
+  yet", with when they're from and how many asks, Open Change form or Open Change
   report, and Discard them, which asks first.
 - **Start over**, under the box once there's a draft, asks first, then discards it and
   opens the page again: the saved version, or a blank New report with "Describe the

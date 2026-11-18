@@ -39,7 +39,7 @@ defmodule Web.FormChangeLive do
   # Saved AI turns (#1089): after every ask and every fix by hand, the text, the PDF, and
   # the conversation are kept as the person's draft (App.Operation.SaveDraft), so the
   # page opens again as it was left, with a toast. Save form and Start over discard it;
-  # Cancel leaves it for next time.
+  # Close asks first: Discard changes, or Keep for later.
   def mount(%{"id" => id}, _session, socket) do
     %{current_user: user} = socket.assigns
     owner = owner!(socket.assigns)
@@ -276,6 +276,17 @@ defmodule Web.FormChangeLive do
       {_all, []} ->
         {:noreply, socket}
     end
+  end
+
+  # Close's Discard changes: the draft goes, and so does the page.
+  def handle_event("close", _params, socket) do
+    %{owner: owner, form: form, current_user: user} = socket.assigns
+    SaveDraft.discard(user, form)
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Discarded your changes to #{form.name}.")
+     |> push_navigate(to: FormOwner.form_path(owner, form))}
   end
 
   # Discards the draft and opens the page again on the saved version.
@@ -555,9 +566,12 @@ defmodule Web.FormChangeLive do
           <.button id="form-save" variant={:success} phx-click="save" phx-disable-with="Saving…">
             Save form
           </.button>
-          <.button id="form-cancel" navigate={FormOwner.form_path(@owner, @form)} data-leave-ok>
-            Cancel
-          </.button>
+          <.close_button
+            id="form-close"
+            path={FormOwner.form_path(@owner, @form)}
+            ask={close_question(assigns)}
+            keep={@draft_at != nil}
+          />
           <.unsaved
             id="form-unsaved"
             unsaved={@text != @form.text or page_changed?(assigns)}
@@ -620,6 +634,15 @@ defmodule Web.FormChangeLive do
   defp text_shown?(assigns), do: assigns.text_open or assigns.text_error != nil
 
   defp written?(text), do: String.trim(text || "") != ""
+
+  # Close's question, when closing loses something: a draft, changes, or a running ask.
+  defp close_question(%{draft_at: nil, ai_pending: nil} = assigns) do
+    if assigns.text != assigns.form.text or page_changed?(assigns),
+      do: "Close without saving? Your changes go. #{assigns.form.name} stays as saved."
+  end
+
+  defp close_question(%{form: form}),
+    do: "Close without saving? Your changes and the conversation go. #{form.name} stays as saved."
 
   # Start over's question: what goes, and the version the form goes back to.
   defp start_over_question(form) do

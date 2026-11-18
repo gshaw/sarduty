@@ -203,7 +203,7 @@ defmodule Web.ReportFormLiveTest do
     {:ok, lv, html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
 
     assert has_element?(lv, "#report-bar.action-bar #report-save[form=report-form]")
-    assert has_element?(lv, "#report-bar #report-cancel[data-leave-ok]")
+    assert has_element?(lv, "#report-bar #report-close[data-leave-ok]")
     assert has_element?(lv, "label[for=report_about]", "Description")
     {name, _} = :binary.match(html, ~s(id="report_name"))
     {query, _} = :binary.match(html, ~s(id="report_query"))
@@ -1012,10 +1012,23 @@ defmodule Web.ReportFormLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
     assert has_element?(lv, "#report-unsaved[hidden][phx-hook=Unsaved]")
-    assert has_element?(lv, "#report-cancel[data-leave-ok]")
+    assert has_element?(lv, "#report-close[data-leave-ok]")
 
     lv |> form("#report-form", report: %{name: "Members by name"}) |> render_change()
     assert has_element?(lv, "#report-unsaved[data-unsaved=true]:not([hidden])", "Not saved yet")
+
+    # Close asks first now: Discard changes, or Keep for later with the draft kept.
+    assert has_element?(
+             lv,
+             "#report-close[phx-click=close][data-confirm-button='Discard changes'][data-confirm-alt='Keep for later'][data-confirm-alt-href='/teams/#{team.subdomain}/reports/#{report.id}']"
+           )
+
+    assert lv |> element("#report-close") |> render() =~
+             "Close without saving? Your changes and the conversation go. Members stays as saved."
+
+    lv |> element("#report-close") |> render_click()
+    assert_redirect(lv, ~p"/teams/#{team}/reports/#{report.id}")
+    refute App.Repo.exists?(App.Model.AIDraft)
 
     # A new report, blank or a copy, asks only once it differs from how it opened, so a
     # built-in's link on a blank New report goes without asking.

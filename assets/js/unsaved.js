@@ -4,7 +4,7 @@
 // hasn't kept yet. data-rev goes up each time the server keeps a change, so typing
 // counts until the next one. A reload or closing the tab asks through the browser's
 // own question, and a link in the app through a confirm. Save and links marked
-// data-leave-ok, such as Cancel, go without asking.
+// data-leave-ok, such as Close, go without asking.
 export const Unsaved = {
   mounted() {
     this.rev = this.el.dataset.rev
