@@ -21,11 +21,9 @@ if System.get_env("PHX_SERVER") do
 end
 
 # Tests read no environment variables: their values are in config/test.exs and
-# test/test_helper.exs, so any checkout runs `mix test` without .mise.local.toml. Below,
-# the first block is for production and the dev server, each value optional in dev; the
-# second is production only, and every value there is required.
+# test/test_helper.exs, so any checkout runs `mix test` without .mise.local.toml.
 if config_env() != :test do
-  # Required in production. Without it, dev draws maps on a plain background.
+  # Without it, dev draws maps on a plain background.
   config :sarduty, App.Adapter.Mapbox,
     access_token:
       if(config_env() == :prod,
