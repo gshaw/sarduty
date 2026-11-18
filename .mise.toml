@@ -42,6 +42,17 @@ run = "mix test --color --warnings-as-errors"
 description = "Run all checks, then the test suite"
 run = [{ task = "check" }, { task = "test" }]
 
+# By hand, never in CI: `mix test` only replays the seeds and saved failures. See
+# docs/testing-strategy.md, Fuzz tests. MINUTES sets each test's time (default 5).
+[tasks.fuzz]
+description = "Fuzz the report language, a few minutes per test"
+env = { MIX_ENV = "test" }
+run = """
+ms=$(( ${MINUTES:-5} * 60000 ))
+mix fuzz 'test/app/report/parser_fuzz_test.exs:fuzz any text parses or gives a report error' --max-time $ms
+mix fuzz 'test/app/report/report_words_fuzz_test.exs:fuzz built-in reports with words swapped run or give a report error' --max-time $ms
+"""
+
 # CI only checks and never changes the tree, so a CI run fails loudly instead of
 # reformatting. `mise run -c ci-static-analysis` locally runs every check even
 # after one fails.

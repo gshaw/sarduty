@@ -36,7 +36,7 @@ defmodule App.Report do
   does on a real team: `{:ok, %App.Report.Result{}}` or `{:error, %App.Report.Error{}}`.
   An agent tries a report here, so it never reads a real team's rows.
   """
-  def run_sample(text, given \\ %{}, now \\ DateTime.utc_now()) do
+  def run_sample(text, given \\ %{}, now \\ App.SampleRepo.now()) do
     case App.SampleRepo.team() do
       nil -> {:error, Error.new(nil, "Coast Range SAR isn't ready. Try again in a minute.")}
       team -> run_in(Context.new(team, now, repo: App.SampleRepo), text, given)

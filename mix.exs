@@ -50,6 +50,7 @@ defmodule App.MixProject do
       {:image, "~> 0.72"},
       {:jason, "~> 1.2"},
       {:oban, "~> 2.19"},
+      {:ex_fuzz, "~> 0.1.0", only: :test},
       {:lazy_html, ">= 0.0.0", only: :test},
       {:mdex, "~> 0.13"},
       {:phoenix_ecto, "~> 4.4"},

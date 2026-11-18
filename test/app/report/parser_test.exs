@@ -115,7 +115,11 @@ defmodule App.Report.ParserTest do
           {"select name from members limit ten", 1, "Write a whole number after limit."},
           {"select name from members where name ; 'x'", 1, "Remove ;: a query cannot use it."},
           {"select name from members where groups includes 'Callout'", 1,
-           "Put the list in brackets: ('Callout', 'Rope')."}
+           "Put the list in brackets: ('Callout', 'Rope')."},
+          {"select name from members limit 1234567890123456789", 1,
+           "Write a shorter number: 1234567890123456789 is too long."},
+          {"select name from members where name = '" <> <<0xFF>> <> "'", nil,
+           "Retype the query: it has a character that isn't text."}
         ] do
       assert Parser.parse(text) == {:error, %Error{line: line, message: message}}, text
     end

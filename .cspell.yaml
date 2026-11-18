@@ -15,6 +15,7 @@ ignorePaths:
   - "cspell.config.yml"
   - "deps/*"
   - "erl_crash.dump"
+  - "test/fixtures/fuzz/*" # inputs the fuzzer saved, garbled on purpose
   - "priv/fonts/*" # Arimo and its licence, as published
   - "priv/static/assets/*"
   - "priv/static/images/add-to-apple-wallet.svg" # Apple's badge, as published: its rules forbid editing it (#952)
