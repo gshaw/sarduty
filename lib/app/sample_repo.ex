@@ -25,11 +25,17 @@ defmodule App.SampleRepo do
   require Logger
 
   @doc """
+  The date Coast Range SAR is seeded and a sample report runs as of: now, or the fixed
+  date config/test.exs sets, so a saved fuzz failure replays on the same rows.
+  """
+  def now, do: Application.get_env(:sarduty, :sample_now) || DateTime.utc_now()
+
+  @doc """
   Before the supervisor, as App.Release.migrate/0 is: migrates the file and seeds it, on
   one connection so no migration is prepared against a stale schema. A failure is
   logged, never raised: the site runs without Coast Range SAR, and run_sample/3 says so.
   """
-  def prepare(now \\ DateTime.utc_now()) do
+  def prepare(now \\ now()) do
     {:ok, {:ok, _rows}, _} = Ecto.Migrator.with_repo(__MODULE__, &prepare(&1, now), pool_size: 1)
     :ok
   rescue
@@ -59,7 +65,7 @@ defmodule App.SampleRepo do
   report that runs meanwhile reads the old rows or the new, never none. Ids start from 1
   each time.
   """
-  def reseed!(now \\ DateTime.utc_now()) do
+  def reseed!(now \\ now()) do
     transaction(fn ->
       query!("PRAGMA defer_foreign_keys = ON")
       Enum.each(tables(), &query!(~s(DELETE FROM "#{&1}")))

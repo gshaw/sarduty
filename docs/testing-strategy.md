@@ -113,7 +113,9 @@ error. A crash, or SQL that SQLite refuses, fails it.
 `test/fixtures/fuzz/`, in milliseconds. Fuzzing is by hand, never in CI: run
 `mise run fuzz` (5 minutes a test; `MINUTES=10 mise run fuzz` for longer) after changing
 the lexer, parser, compiler, or catalog. A failure saves its input to
-`test/fixtures/fuzz/`; commit it with the fix, and it replays from then on.
+`test/fixtures/fuzz/`; commit it with the fix, and it replays from then on. Coast Range SAR
+is seeded from a fixed date in tests (`App.SampleRepo.now/0`), so a failure that depends
+on `THIS_MONTH` or `LAST_N_DAYS` replays on the same rows.
 
 ## High-value targets
 

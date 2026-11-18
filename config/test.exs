@@ -25,6 +25,9 @@ config :sarduty, App.Repo,
 config :sarduty, App.SampleRepo,
   database: Path.expand("../db/sarduty_sample_test.db", Path.dirname(__ENV__.file))
 
+# Coast Range SAR's date (App.SampleRepo.now/0): fixed, so its rows never move.
+config :sarduty, :sample_now, ~U[2026-11-17 00:00:00Z]
+
 # The file store (docs/files.md) is a scratch folder of this run's own, so two runs at
 # once never share files. It goes when the run ends (test/test_helper.exs). A test turns
 # the store off, or tries S3 against Req.Test, with App.FileStoreOff.

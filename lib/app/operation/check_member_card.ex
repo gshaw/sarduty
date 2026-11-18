@@ -9,11 +9,12 @@ defmodule App.Operation.CheckMemberCard do
   no card has it, else `%{status:, card:, sample:, qualifications:}`, with qualifications
   only for an active card. A sample card's code (#854) is looked up in Coast Range SAR's
   own database, never the real one. A Try a demo team's card is a sample too: a visitor
-  made it (#857).
+  made it (#857). A sample card is checked as of the date its rows were seeded from.
   """
-  def call(code, now \\ DateTime.utc_now()) do
+  def call(code, now \\ nil) do
     sample? = MemberCard.sample_code?(code)
     repo = if sample?, do: App.SampleRepo, else: App.Repo
+    now = now || if(sample?, do: App.SampleRepo.now(), else: DateTime.utc_now())
 
     case MemberCard.find_by_code(code, repo) do
       %MemberCard{} = card ->
