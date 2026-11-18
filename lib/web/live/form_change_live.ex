@@ -164,7 +164,11 @@ defmodule Web.FormChangeLive do
   def handle_event("hide_text", _params, socket), do: {:noreply, assign(socket, text_open: false)}
 
   # A fix by hand: checked as saving checks it, beside the page, and tried again once it
-  # passes. A newer check replaces one still running.
+  # passes. A newer check replaces one still running. While AI answers, the text is
+  # read only, since its answer replaces it.
+  def handle_event("edit_text", _params, socket) when socket.assigns.ai_pending != nil,
+    do: {:noreply, socket}
+
   def handle_event("edit_text", %{"text" => text}, socket) do
     %{owner: owner, form: form, page: page} = socket.assigns
 
@@ -185,7 +189,8 @@ defmodule Web.FormChangeLive do
     {:noreply, assign(socket, replacing: false, page_error: nil)}
   end
 
-  # The agency's new PDF takes the old one's place, and AI fits the form to it.
+  # The agency's new PDF takes the old one's place, and AI fits the form to it. With AI
+  # writing off to them, the PDF alone changes, for a fix by hand.
   def handle_event("replace_pdf", _params, socket) do
     page =
       socket
@@ -193,7 +198,7 @@ defmodule Web.FormChangeLive do
       |> List.first()
 
     case SaveForm.check_page(page) do
-      :ok when socket.assigns.ai_pending == nil ->
+      :ok when socket.assigns.ai_pending == nil and socket.assigns.ai == :ok ->
         old = socket.assigns.page
 
         {:noreply,
@@ -201,6 +206,14 @@ defmodule Web.FormChangeLive do
          |> assign(page: page, replacing: false, page_error: nil)
          |> preview()
          |> start_ask(@new_page_ask, old)}
+
+      :ok when socket.assigns.ai_pending == nil ->
+        {:noreply,
+         socket
+         |> assign(page: page, replacing: false, page_error: nil)
+         |> preview()
+         |> keep_draft()
+         |> put_flash(:info, "PDF replaced. Save form to keep it.")}
 
       :ok ->
         {:noreply, assign(socket, page_error: "Wait for AI to answer, then replace the PDF.")}
@@ -377,7 +390,9 @@ defmodule Web.FormChangeLive do
 
     {socket, test} = count_test(socket, test?)
 
+    # A check of text typed before the ask would put its mistake on AI's answer.
     socket
+    |> cancel_async(:check_text)
     |> assign(
       ai_pending: %{ask: ask, before: text, before_page: before_page || page, test?: test?},
       ai_form: ask_form("")
@@ -500,7 +515,7 @@ defmodule Web.FormChangeLive do
           <:action :if={text_shown?(assigns)}>
             <.a id="form-hide-text" href="#" phx-click="hide_text">Hide how it fills in</.a>
           </:action>
-          <:action :if={@ai == :ok and is_nil(@ai_pending)}>
+          <:action :if={is_nil(@ai_pending)}>
             <.a id="form-replace-pdf" href="#" phx-click="open_replace">Replace PDF</.a>
           </:action>
         </.page_actions>
@@ -541,6 +556,7 @@ defmodule Web.FormChangeLive do
             class="font-mono"
             phx-debounce="500"
             spellcheck="false"
+            readonly={@ai_pending != nil}
             errors={List.wrap(@text_error)}
           >
             What each value is, and where it goes on the page. For a small fix by hand.
@@ -602,9 +618,12 @@ defmodule Web.FormChangeLive do
         <h2 id="form-replace-question" class="confirm-dialog-question">
           Replace the agency's PDF?
         </h2>
-        <p>
+        <p :if={@ai == :ok}>
           The agency's new PDF takes the old one's place, and AI fits the form to it. Nothing
           is saved until Save form, and Undo puts the old PDF back.
+        </p>
+        <p :if={@ai != :ok}>
+          The agency's new PDF takes the old one's place. Nothing is saved until Save form.
         </p>
         <div class="confirm-dialog-fields">
           <.file_drop

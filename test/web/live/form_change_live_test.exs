@@ -547,7 +547,7 @@ defmodule Web.FormChangeLiveTest do
     assert has_element?(lv, ".ai-you", "Write this form.")
   end
 
-  test "without AI writing, New form adds the form and there's no Change form", ctx do
+  test "without AI writing, New form adds the form, and Change form writes it by hand", ctx do
     %{conn: conn, team: team, alex: alex, started: started} = ctx
     admin = make_admin(user_fixture())
 
@@ -563,10 +563,12 @@ defmodule Web.FormChangeLiveTest do
     refute has_element?(lv, "#form-start-for")
 
     {:ok, lv, _html} = live(conn, forms_path(team, "/#{started.id}"))
-    refute has_element?(lv, "#form-change")
+    assert has_element?(lv, "#form-change")
 
     {:ok, lv, _html} = live(conn, forms_path(team, "/#{started.id}/edit"))
     assert has_element?(lv, "#form-ai-closed", "AI writing is off.")
+    assert has_element?(lv, "#form-show-text")
+    assert has_element?(lv, "#form-replace-pdf")
   end
 
   test "the form's page links Change form for its team admin", ctx do

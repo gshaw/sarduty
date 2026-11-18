@@ -9,7 +9,6 @@ defmodule Web.FormLive do
   alias App.Model.CustomField
   alias App.Model.Form
   alias App.Model.Organization
-  alias App.Operation.AskAI
   alias App.Operation.CopyForm
   alias App.Operation.DeleteForm
   alias App.Operation.SaveDraft
@@ -28,7 +27,7 @@ defmodule Web.FormLive do
   # agency's blank page. Its text folds under Show how it fills in. The sidebar: Ready to
   # try and Ready to publish, two switches for three states (#970) that save as they're
   # flipped, then Shows on, Version, Actions, and Questions last, since they run long,
-  # each with its type and how it starts. With AI writing open, its admins write it on
+  # each with its type and how it starts. Its admins write it on
   # Change form (#1089). Delete form shows while no PDF was published from it; after,
   # turning it off is the way.
   #
@@ -80,12 +79,9 @@ defmodule Web.FormLive do
 
   defp assign_draft(socket, _form), do: assign(socket, draft: nil)
 
-  # Change form writes the form with AI writing (#1089), for whoever saves the owner's
-  # forms while AI writing is open to them.
-  defp change?(owner, user),
-    do:
-      SaveForm.allowed?(owner, user) and
-        AskAI.check(owner, user, DateTime.utc_now(), :form) != {:error, :off}
+  # Change form, for whoever saves the owner's forms: with AI writing (#1089), or by
+  # hand and Replace PDF while AI writing is off to them, its one way to write a form.
+  defp change?(owner, user), do: SaveForm.allowed?(owner, user)
 
   defp assign_form(socket, form) do
     page = Form.page_bytes(form)

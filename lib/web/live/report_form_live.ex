@@ -309,9 +309,16 @@ defmodule Web.ReportFormLive do
     )
   end
 
-  # A change by hand, kept as the person's draft.
-  def handle_event("change", %{"report" => params}, socket),
-    do: {:noreply, socket |> change(params) |> keep_draft()}
+  # A change by hand, kept as the person's draft. While AI answers, the query is read
+  # only, since its answer replaces it; a pick still changes the preview.
+  def handle_event("change", %{"report" => params}, socket) do
+    params =
+      if socket.assigns.ai_pending,
+        do: Map.put(params, "query", socket.assigns.form[:query].value),
+        else: params
+
+    {:noreply, socket |> change(params) |> keep_draft()}
+  end
 
   # Rename keeps the name and description as they were, for Cancel.
   def handle_event("rename", _params, socket) do
@@ -724,6 +731,7 @@ defmodule Web.ReportFormLive do
             class="font-mono"
             phx-debounce="300"
             spellcheck="false"
+            readonly={@ai_pending != nil}
           >
             Write :year for a value you pick each time it runs. For one member, use their ID: member.ref_id = '112'.
           </.input>
