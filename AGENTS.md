@@ -112,9 +112,9 @@ Every boundary, its credentials, and what breaks without it:
 
 - First-time setup is in [README.md](README.md). Secrets go in `.mise.local.toml`
   (gitignored); start from `.mise.example.toml`.
-- `config/runtime.exs` reads `MAPBOX_ACCESS_TOKEN` in **every** environment, so
-  `mix test`, `mix phx.server`, and `mix ecto.migrate` fail without it. Any value works
-  when you are not testing the mileage report: `MAPBOX_ACCESS_TOKEN=dummy mix test`.
+- Tests need no secrets: `config/runtime.exs` reads no environment variables in test.
+  Never copy `.mise.local.toml` into a worktree to run them; it pulls every dev secret
+  from fnox. Only `tools/dev-server.sh` copies it, because the dev server needs it.
 - D4H tokens are not environment variables. Each team has one key, a D4H personal access
   token pasted into team settings, stored encrypted (Cloak) in the database.
 - The dev server is `https://sarduty.test` through puma-dev, proxying to port 4025.

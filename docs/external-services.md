@@ -1,7 +1,9 @@
 # External services
 
 Every boundary the app crosses, what it needs, and what breaks without it. Environment
-variables are read in [config/runtime.exs](../config/runtime.exs) unless noted.
+variables are read in [config/runtime.exs](../config/runtime.exs) unless noted, and
+never in tests: those set their own values in `config/test.exs`, so `mix test` needs no
+`.mise.local.toml`.
 
 A SAR Duty site admin tests each one from Adminland › Integrations (#789, at
 `/admin/integrations`): one real call per service, saved as an `integration_tested` event. A service added
@@ -46,9 +48,9 @@ on Mapbox's cache header. Since every call comes from the server, the token can'
 restrictions: Mapbox checks those against the browser's `Referer`, so they block the
 mileage report and the map proxy alike.
 
-- `MAPBOX_ACCESS_TOKEN` — read with `fetch_env!` in **every** environment, so the app,
-  the tests, and migrations won't start without it. `dummy` is fine locally unless you are
-  testing mileage or place search; without a real token the form lists no places.
+- `MAPBOX_ACCESS_TOKEN` — required in production, which won't start without it. Optional
+  in dev: without it there are no map images, and the form lists no places. Tests set
+  their own.
 
 ## Mail
 

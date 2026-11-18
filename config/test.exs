@@ -61,8 +61,16 @@ config :phoenix, :plug_init_mode, :runtime
 config :sarduty, App.Adapter.D4H, plug: {Req.Test, App.Adapter.D4H}
 config :sarduty, :records_sarduty_key, "sarduty-test-key"
 
-# Mapbox too: map images and the mileage report's lookups.
-config :sarduty, App.Adapter.Mapbox, plug: {Req.Test, App.Adapter.Mapbox}
+# Mapbox too: map images and the mileage report's lookups. "dummy" counts as configured
+# but draws no map image.
+config :sarduty, App.Adapter.Mapbox,
+  access_token: "dummy",
+  plug: {Req.Test, App.Adapter.Mapbox}
+
+# Wallets start off; a test that needs one turns it on with App.ApplePassCredentials or
+# App.GoogleWalletCredentials.
+config :sarduty, :apple_pass, []
+config :sarduty, :google_wallet, []
 
 # Healthchecks pings too, when a test sets a check's URL.
 config :sarduty, App.Adapter.Healthchecks, plug: {Req.Test, App.Adapter.Healthchecks}

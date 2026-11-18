@@ -24,7 +24,7 @@ SAR Duty builds on a team's D4H records with tools made for volunteer teams. It 
 brew install mise flyctl puma-dev
 puma-dev -install
 cp .mise.example.toml .mise.local.toml
-# Add MAPBOX_ACCESS_TOKEN; the rest are optional in dev
+# All optional in dev; tests need none
 mise trust
 mise install
 mix setup
