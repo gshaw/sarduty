@@ -4,7 +4,7 @@
 set -eu
 kit=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$kit/../.." && pwd)
-(cd "$root" && MAPBOX_ACCESS_TOKEN=dummy mise exec -- mix assets.build >/dev/null)
+(cd "$root" && mise exec -- mix assets.build >/dev/null)
 # The app serves fonts from /fonts/; a file:// page needs them beside the CSS.
 sed 's#url("/fonts/#url("fonts/#g' "$root/priv/static/assets/css/app.css" >"$kit/app.css"
 mkdir -p "$kit/fonts"
