@@ -125,13 +125,13 @@ defmodule Web.MeFieldsLiveTest do
     member_fields(team, member)
 
     team
-    |> member_fixture(%{custom_values: %{"630" => "SF 99", "855" => "1950"}})
+    |> member_fixture(%{custom_values: %{"630" => "SF 99", "855" => "Year 1950"}})
     |> Repo.preload(:team)
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/me/fields")
 
     refute render(lv) =~ "SF 99"
-    refute render(lv) =~ "1950"
+    refute render(lv) =~ "Year 1950"
   end
 
   test "a key that cannot fill in fields shows them read only", %{
