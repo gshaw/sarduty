@@ -80,6 +80,16 @@ defmodule Web.Admin.AILiveTest do
     assert has_element?(lv, "#ai-ask-#{line.id}", "History line at save")
     refute has_element?(lv, "#ai-not-set-up")
 
+    # Each model's price shows under it, and follows a change before Save.
+    assert has_element?(lv, "#ai-settings", "$2.00 in, $10.00 out per million tokens.")
+    assert has_element?(lv, "#ai-settings", "$4.00 in, $20.00 out per million tokens.")
+
+    lv
+    |> form("#ai-settings", settings: %{form_model: "claude-sonnet-5-5"})
+    |> render_change()
+
+    refute has_element?(lv, "#ai-settings", "$4.00 in")
+
     lv
     |> form("#ai-settings",
       settings: %{

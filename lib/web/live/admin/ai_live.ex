@@ -55,6 +55,10 @@ defmodule Web.Admin.AILive do
     )
   end
 
+  # A model picked shows its price under it before Save.
+  def handle_event("change", %{"settings" => params}, socket),
+    do: {:noreply, assign(socket, form: to_form(params, as: "settings"))}
+
   def handle_event("save", %{"settings" => params}, socket) do
     case SetAISettings.call(params, socket.assigns.current_user) do
       {:ok, settings} ->
@@ -82,7 +86,7 @@ defmodule Web.Admin.AILive do
     <div class="content-wrapper">
       <aside class="content-1/3" aria-labelledby="ai-settings-title">
         <h2 id="ai-settings-title" class="heading">Settings</h2>
-        <.form for={@form} id="ai-settings" phx-submit="save">
+        <.form for={@form} id="ai-settings" phx-change="change" phx-submit="save">
           <.input
             field={@form[:access]}
             type="select"
@@ -99,7 +103,7 @@ defmodule Web.Admin.AILive do
             label="Reports model"
             options={model_options()}
           >
-            Per million tokens: {prices()}.
+            {price(@form[:report_model].value)}
           </.input>
           <.input
             field={@form[:form_model]}
@@ -107,7 +111,7 @@ defmodule Web.Admin.AILive do
             label="Forms model"
             options={model_options()}
           >
-            Forms are harder to write: Opus reads the agency's PDF better.
+            {price(@form[:form_model].value)}
           </.input>
           <.input
             field={@form[:report_next_asks]}
@@ -226,11 +230,15 @@ defmodule Web.Admin.AILive do
   defp next_label(0), do: "None"
   defp next_label(n), do: to_string(n)
 
-  # Each model's price per million tokens, for the hint under Reports model.
-  defp prices do
-    Enum.map_join(Models.all(), "; ", fn model ->
-      "#{model.name}, #{Format.money(model.input)} in and #{Format.money(model.output)} out"
-    end)
+  # The picked model's price, under its select.
+  defp price(id) do
+    case Models.get(id) do
+      nil ->
+        nil
+
+      model ->
+        "#{Format.money(model.input)} in, #{Format.money(model.output)} out per million tokens."
+    end
   end
 
   defp dollars(microdollars), do: (microdollars || 0) |> Decimal.new() |> Decimal.div(1_000_000)
