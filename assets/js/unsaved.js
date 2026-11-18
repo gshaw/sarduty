@@ -35,6 +35,9 @@ export const Unsaved = {
     this.click = event => {
       const question = this.question()
       if (!question) return
+      // A new tab or window (⌘, Ctrl, Shift, or a middle click) leaves nothing behind.
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)
+        return
       const link = event.target.closest("a[href]")
       if (!link || link.closest("[data-leave-ok]") || link.target === "_blank") return
       if (link.getAttribute("href").startsWith("#")) return
