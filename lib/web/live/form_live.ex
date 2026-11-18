@@ -200,9 +200,12 @@ defmodule Web.FormLive do
                 <.a id="form-change" navigate={FormOwner.change_path(@owner, @form)}>Change form</.a>
               </li>
               <li :if={@copy?}>
-                <.a id="form-copy" href="#" phx-click="copy" phx-disable-with="Copying…">
-                  Copy as your team's form
-                </.a>
+                <.a
+                  id="form-copy"
+                  href="#"
+                  phx-click="copy"
+                  phx-disable-with="Copying…"
+                >Copy as your team's form</.a>
               </li>
               <li :if={@activity}>
                 <.a
