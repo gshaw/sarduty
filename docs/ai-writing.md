@@ -41,9 +41,11 @@ On New report and Change report, for a user AI writing is open to
   write a report, What each chart takes, and What each field means. The preview's count
   drops "runs as you type" while the query is hidden.
 - **Not saved yet** shows beside Save report or Save form once the page differs from
-  what's saved (Web.Components.Unsaved). Leaving then asks first: a reload or closing
-  the tab through the browser's own question, a link through a confirm. Save and Cancel
-  never ask.
+  what's saved (Web.Components.Unsaved), with "Kept for you until you save." once a
+  [draft](#drafts) keeps it. Leaving asks first only while something isn't kept yet:
+  an ask still running, typing the server hasn't kept, or a new report's changes before
+  AI has answered. A reload or closing the tab asks through the browser's own question,
+  a link through a confirm. Save and Cancel never ask.
 - **Test**, beside Ask on a dev server only (`dev_routes`), runs a made-up ask instead
   of calling Claude (`AIWriting.test_ask/2`): 1.5 seconds of Thinking…, then a reply
   of varying length with Try next, and every fourth ask fails with too many steps. It
@@ -57,7 +59,7 @@ On New report and Change report, for a user AI writing is open to
   would, so the preview reruns. AI's one-line note is its reply under the ask, with
   Undo when it changed the report.
 - Undo puts back the query, name, and description from before an ask and drops the
-  asks after it. The conversation is in the page only: a reload loses it.
+  asks after it. The conversation is kept with the [draft](#drafts).
 - Stop is a toast, and the ask's words go back in the box to change and send again. A
   stopped ask still counts (below).
 - A failed ask stays in the conversation: what went wrong (too many steps, an answer cut
@@ -125,7 +127,8 @@ team in the organization has, never a team's own groups or tags.
     the text. A scan is refused in the dialog.
 - **Save form** saves the text (App.Operation.SaveForm) and keeps the form's state, so a
   new form stays off until a team admin turns on testing. Nothing is saved until then,
-  a reload loses the conversation, and forms have no History line.
+  but the [draft](#drafts) keeps the text, the PDF, and the conversation. Forms have no
+  History line.
 
 [App.AI.FormJob](../lib/app/ai/form_job.ex) says what one ask sends, run by `AskAI` with
 kind `form`:
@@ -150,6 +153,37 @@ kind `form`:
   between pieces (`App.Adapter.Claude.assemble/1`). Nothing streams to the page.
 - The limits are a report's: the asks a day, reports and forms together, for each team
   and each organization apart, and the monthly budget.
+
+## Drafts
+
+Saved AI turns (#1089). Gerry lost a useful form when Change form reloaded
+mid-conversation, so each person's changes are kept as a draft, one per person per report
+or form, and one per person per team for a new report ([App.Model.AIDraft](../lib/app/model/ai_draft.ex),
+[App.Operation.SaveDraft](../lib/app/operation/save_draft.ex)).
+
+- **What's kept**: a report's name, description, query, and picks, or a form's text and
+  its PDF; and the conversation, with what Undo needs. A form's PDFs other than its saved
+  one go in the file store as `form-draft` ([files.md](files.md)), by SHA-256.
+- **When**: after every ask, failed or not, and every change by hand, such as typing the
+  query or a fix in How it fills in. A page as saved with no conversation keeps no
+  draft, and a new report keeps one only once AI has answered an ask.
+- **Opening** Change form, Change report, or a blank New report brings it back as it was,
+  with a toast: "Your changes from today at 15:42 are back. Save form to keep them." A
+  new report's: "Your new report from today at 15:42 is back. Save report to keep it."
+  Restore from History and a copy open as they always did, and a copy's first answer
+  replaces any new-report draft.
+- **Save** saves the draft as the new version and discards it (SaveForm, SaveReport).
+- **Cancel** leaves it. The form's or the report's page then says "Your changes are not
+  saved yet", with when they're from and how many asks, Open Change form or Open Change
+  report, and Discard them, which asks first.
+- **Start over**, under the box once there's a draft, asks first, then discards it and
+  opens the page again: the saved version, or a blank New report with "Describe the
+  report you want".
+- **Private**: only its author ever sees a draft. Another admin sees the saved version
+  with no hint that a draft waits.
+- **Short-lived**: `PruneEventsWorker` discards drafts unchanged for 30 days, with their
+  PDFs. Deleting a form discards every draft of it; deleting a team, an organization, a
+  user, or a report for good takes their rows.
 
 ## One ask
 

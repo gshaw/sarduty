@@ -17,6 +17,7 @@
           label="Ask AI"
           button="Ask"
           sees="AI sees the agency's form and your team's field names, never its members or records."
+          start_over="Start over? Your changes and the conversation go. Task report goes back to version 3, as saved."
         />
       </:column>
       <p class="hint">The page's main part: the report, or the form tried on an activity.</p>
@@ -67,6 +68,22 @@
     </div>
   </div>
 
+  <h3>A draft waiting</h3>
+  <p>
+    On the report's or the form's page, only to the person whose draft it is. Discard them
+    asks first, as Start over does.
+  </p>
+  <div class="demo">
+    <.draft_waiting
+      id="ai-writing-demo-draft"
+      draft={%{updated_at: DateTime.add(DateTime.utc_now(), -20, :minute), asks: [%{}, %{}]}}
+      name="Task report"
+      change="Change form"
+      change_path="#"
+      timezone="America/Vancouver"
+    />
+  </div>
+
   <h3>Closed</h3>
   <div class="demo">
     <div class="measure">
@@ -108,14 +125,20 @@
     </li>
     <li>The line under the heading says what AI sees, and links to How it works.</li>
     <li>Enter sends; Shift+Enter starts a new line.</li>
+    <li>
+      Each ask and each change by hand is kept as the person's draft, so the page opens
+      again as they left it, with a toast saying when it's from. Start over, under the box,
+      asks first, then discards it and goes back to what's saved.
+    </li>
   </ul>
 
   <h2>In the app</h2>
   <p>
     <code>&lt;.ai_editor&gt;</code>
     and <code>&lt;.ai_writing&gt;</code>
+    and <code>&lt;.draft_waiting&gt;</code>
     in <code>Web.Components.AIWriting</code>. The page runs each ask with
     <code>App.Operation.AskAI</code>
-    and keeps the conversation.
+    and keeps the conversation as a draft with <code>App.Operation.SaveDraft</code>.
   </p>
 </.shell>

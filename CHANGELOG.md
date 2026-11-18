@@ -2,6 +2,11 @@
 
 What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
+## Nov 16–22
+
+- Change report and Change form keep your changes and the AI conversation as you go.
+  Reload or close the tab and they're back; Save keeps them, Start over drops them.
+
 ## Nov 9–15
 
 - AI agents connected to SAR Duty stop working. AI writing in the report editor does
