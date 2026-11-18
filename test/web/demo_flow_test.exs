@@ -1,7 +1,7 @@
 defmodule Web.DemoFlowTest do
-  # Try a demo (#857), from the button or the API to the delete. The build itself runs
-  # against a throwaway Records in sarduty-records' bin/check-sarduty; here Records is
-  # stubbed.
+  # Try a demo (#857), from the button or the API to the delete. Records is stubbed.
+  # sarduty-records' bin/check-sarduty sends the casts to a throwaway Records but never
+  # runs the build, so the one test here that builds to the end is the only one that does.
   use Web.ConnCase
   use Oban.Testing, repo: App.Repo, engine: Oban.Engines.Lite
 
@@ -13,6 +13,7 @@ defmodule Web.DemoFlowTest do
   alias App.Accounts
   alias App.Accounts.User
   alias App.Adapter.D4H
+  alias App.DemoCast
   alias App.Model.DemoTeam
   alias App.Model.Organization
   alias App.Model.OrganizationAdmin
@@ -152,17 +153,45 @@ defmodule Web.DemoFlowTest do
   end
 
   # Records' answer to a cast: the team, and an id for each key it names, options too.
-  defp made(id, cast) do
-    keys = for row <- cast["rows"], key <- [row["key"] | row["optionKeys"] || []], key, do: key
+  defp made(id, cast),
+    do:
+      {200,
+       %{"id" => id, "key" => "k", "ids" => ids(id, cast), "organizationId" => 2_000_000_000}}
 
-    {200,
-     %{
-       "id" => id,
-       "key" => "k",
-       "ids" => keys |> Enum.with_index(1) |> Map.new(fn {key, i} -> {key, id * 1000 + i} end),
-       "organizationId" => 2_000_000_000
-     }}
+  defp ids(id, cast) do
+    keys = for row <- cast["rows"], key <- [row["key"] | row["optionKeys"] || []], key, do: key
+    keys |> Enum.with_index(1) |> Map.new(fn {key, i} -> {key, id * 1000 + i} end)
   end
+
+  # Records' sync of a team made from `cast`, as `ids` named its rows: what Coast Range's
+  # local rows link to. Silver Basin syncs the same rows, which nothing checks.
+  defp synced(cast, ids) do
+    cast["rows"]
+    |> Enum.map(&{"/#{&1["resource"]}", read(&1["resource"], ids[&1["key"]], &1["body"])})
+    |> Enum.reject(&is_nil(elem(&1, 1)))
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Map.update("/tags", RecordsStub.tags_json(), &(RecordsStub.tags_json() ++ &1))
+  end
+
+  defp read("members", id, body),
+    do:
+      RecordsStub.member_json(id, %{
+        "name" => body["name"],
+        "email" => %{"value" => body["email"]},
+        "permission" => body["permission"] || "MEMBER"
+      })
+
+  defp read(resource, id, body) when resource in ~w(member-groups tags),
+    do: %{"id" => id, "title" => body["title"]}
+
+  defp read("equipment", id, body), do: body |> Map.take(~w(ref type status)) |> Map.put("id", id)
+
+  defp read(resource, id, body) when resource in ~w(events exercises incidents) do
+    kind = resource |> String.trim_trailing("s") |> String.capitalize()
+    RecordsStub.activity_json(id, Map.put(body, "resourceType", kind))
+  end
+
+  defp read(_resource, _id, _body), do: nil
 
   test "when Records makes only the first team, it deletes that one there (#963)" do
     demo = start!()
@@ -227,6 +256,30 @@ defmodule Web.DemoFlowTest do
     assert Repo.aggregate(Team, :count) == 0
     assert Repo.aggregate(Organization, :count) == 0
     assert %DemoTeam{team_id: nil, second_team_id: nil} = Repo.reload!(demo)
+  end
+
+  # The only build that runs to the end here: #1067's logo_at broke only the last step.
+  test "a build Records answers in full makes both teams, and WESARA with its logo" do
+    demo = start!()
+    now = DateTime.utc_now(:second)
+
+    cast =
+      DemoCast.cast(now, %{name: DemoTeam.visitor_name(demo), email: DemoTeam.visitor_email(demo)})
+
+    reply = fn
+      "POST", _path, %{"team" => %{"title" => "Coast Range SAR"}} = cast -> made(41, cast)
+      "POST", _path, %{"team" => %{"organizationId" => 2_000_000_000}} = cast -> made(42, cast)
+      "DELETE", _path, _body -> {200, %{}}
+    end
+
+    RecordsStub.stub(reply, synced(cast, ids(41, cast)))
+
+    assert {:ok, %Team{name: "Coast Range SAR"} = team} = BuildDemoTeam.call(demo, now)
+    assert %DemoTeam{team_id: team_id, second_team_id: second_id} = Repo.reload!(demo)
+    assert team_id == team.id and is_integer(second_id)
+
+    assert %Organization{logo_at: %DateTime{}} =
+             Repo.get_by!(Organization, slug: "wesara-#{demo.id}")
   end
 
   test "a forged, expired, or deleted demo's link goes back to /demo", %{conn: conn} do
