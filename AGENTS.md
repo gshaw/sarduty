@@ -121,6 +121,15 @@ Every boundary, its credentials, and what breaks without it:
   Try and iterate on the dev teams (`tools/dev-teams.exs`): Coast Range SAR (`coastrange`),
   Silver Basin SAR (`silverbasin`), and WESARA (`/orgs/wesara`), never South Fraser.
 
+## Trying a change
+
+How the `try` skill, or a person, runs a PR to click through it.
+
+- Run `tools/dev-server.sh --detach` from the PR's checkout. It serves one checkout at a
+  time on 4025: if something already serves it, stop that first.
+- Links go to <https://sarduty.gshaw.ca>, as a dev-team admin (`tools/dev-teams.exs`):
+  Coast Range SAR at `/teams/coastrange`, never South Fraser.
+
 ## Shell environment
 
 - Developers on this project use Apple Silicon Macs, and Homebrew installs tools under
