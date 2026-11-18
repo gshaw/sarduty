@@ -148,8 +148,11 @@ defmodule Web.FormStartLive do
   defp lead(_owner, false),
     do: "Give SAR Duty the agency's PDF. The form starts off, and stays off until it's written."
 
-  # What it's for, or "Write this form." without it.
-  defp first_ask(for_text) do
+  @doc """
+  A form's first ask: What it's for, or "Write this form." without it. Change form
+  sends it too, from Write form, on a form not written yet.
+  """
+  def first_ask(for_text) do
     case String.trim(for_text || "") do
       "" -> "Write this form."
       text -> String.slice(text, 0, @max_for)

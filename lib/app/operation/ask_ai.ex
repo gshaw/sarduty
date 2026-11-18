@@ -178,14 +178,14 @@ defmodule App.Operation.AskAI do
   defp with_next({:unchanged, note}, _job, output), do: {:unchanged, note, next(output)}
   defp with_next(result, _job, _output), do: result
 
-  @doc "Up to three short next asks from an answer's `next`, each trimmed."
+  @doc "Up to two short next asks from an answer's `next`, each trimmed: two fit on one line in the column."
   def next(%{"next" => list}) when is_list(list) do
     list
     |> Enum.filter(&is_binary/1)
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == "" or String.length(&1) > 80))
     |> Enum.uniq()
-    |> Enum.take(3)
+    |> Enum.take(2)
   end
 
   def next(_output), do: []
@@ -194,7 +194,7 @@ defmodule App.Operation.AskAI do
     "type" => "array",
     "items" => %{"type" => "string"},
     "description" =>
-      "Two or three short asks the admin might try next, a few words each in their own " <>
+      "One or two short asks the admin might try next, a few words each in their own " <>
         "voice, such as \"Group by quarter\". Only what SAR Duty can do. None when " <>
         "nothing more would help."
   }

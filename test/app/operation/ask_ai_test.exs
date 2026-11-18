@@ -51,11 +51,11 @@ defmodule App.Operation.AskAITest do
              schema.(%{job() | suggest: true})
   end
 
-  test "next asks are trimmed, blanks and long ones dropped, three at most" do
+  test "next asks are trimmed, blanks and long ones dropped, two at most" do
     long = String.duplicate("a", 81)
 
     assert AskAI.next(%{"next" => [" Group by quarter ", "", long, "A", "B", "C"]}) ==
-             ["Group by quarter", "A", "B"]
+             ["Group by quarter", "A"]
 
     assert AskAI.next(%{"note" => "no next"}) == []
   end

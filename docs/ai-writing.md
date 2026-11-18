@@ -22,16 +22,17 @@ On New report and Change report, for a user AI writing is open to
   bar for checked rows.
 - **AI writing** starts beside the title, as a chat. From 1024px it sticks under the
   site bar and grows with the conversation, the box pushed down, until it's as tall as
-  the window; then the conversation scrolls on its own, older asks off the top, and
-  goes to the newest whenever it grows or shrinks (assets/js/ai_panel.js). Under 1024px
-  it's one column, title first, and the conversation shows its last two asks with Show
-  earlier asks. In it: what AI sees, one line with How it works; the asks as a
-  conversation, oldest first; Try next; then "Ask AI" with its hint, "A change, or a
-  question about the report.", and Ask.
+  the window; then everything above the box scrolls on its own, the title, what AI
+  sees, and older asks off the top, so a small laptop shows more of the conversation,
+  and it goes to the newest whenever it grows or shrinks (assets/js/ai_panel.js). Under
+  1024px it's one column, title first, and the conversation shows its last two asks with
+  Show earlier asks. In it: the title, AI writing; what AI sees, one line with How it
+  works; the asks as a conversation, oldest first; Try next; then, fixed under them,
+  "Ask AI" with its hint, "A change, or a question about the report.", and Ask.
 - **Rename** opens a dialog with the name and description, inside the form: Rename
   keeps them, to save with Save report, and Cancel or Escape puts them back. With AI
   writing off or the query written by hand, the fields show on the page as before.
-  Above the box, **Try next**: two or three asks AI suggests after the newest reply, to show what it
+  Above the box, **Try next**: one or two asks AI suggests after the newest reply, to show what it
   can do. A tap puts one in the box; it never sends on its own. Every ask is still one
   someone sent.
 - The query is hidden, since AI writes it: Show query and Hide query toggle it, and a
@@ -96,7 +97,10 @@ team in the organization has, never a team's own groups or tags.
   and who signs it." With AI writing open, its button is Write form. It saves the form
   off with no text, as before, and opens Change form with What it's for as the first
   ask, already running, or "Write this form." without it. The ask goes in the flash, so
-  a reload of Change form never asks again.
+  a reload of Change form never asks again. A form still not written with nothing asked,
+  as after Stop or one made before AI writing, gets the same in Change form's box: What
+  it's for (optional) and Write form, which sends the same first ask, empty or not,
+  until the first ask; then Ask AI.
 - **Change form**, `/teams/:subdomain/settings/forms/:id/edit`
   ([Web.FormChangeLive](../lib/web/live/form_change_live.ex)), linked from the form's
   page: the draft tried on one of the team's activities it shows on, marked SAMPLE, as

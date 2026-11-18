@@ -192,6 +192,30 @@ defmodule Web.FormChangeLiveTest do
     assert Repo.aggregate(AIAsk, :count) == 1
   end
 
+  test "a form not written yet asks to write it, as New form does, until the first ask", ctx do
+    %{conn: conn, team: team, alex: alex, started: started} = ctx
+    stub_claude([%{"text" => written(), "note" => "Wrote it.", "next" => ["A", "B", "C"]}])
+
+    {:ok, lv, _html} = conn |> log_in_user(alex) |> live(forms_path(team, "/#{started.id}/edit"))
+
+    assert has_element?(lv, "#form-ai-form", "What it's for (optional)")
+    assert has_element?(lv, "#form-ai-form", "When it's filled in and who signs it.")
+    assert has_element?(lv, "#form-ai-ask", "Write form")
+
+    # An empty box writes it too.
+    lv |> form("#form-ai-form", ai: %{ask: ""}) |> render_submit()
+    assert has_element?(lv, "#form-ai-ask-running", "Write this form.")
+    render_async(lv, @wait)
+    render_async(lv, @wait)
+
+    assert has_element?(lv, "#form-ai-form", "Ask AI")
+    assert has_element?(lv, "#form-ai-form", "A change, or a question about the form.")
+    assert has_element?(lv, "#form-ai-ask", "Ask")
+    # Two suggestions at most, so they fit on one line.
+    assert has_element?(lv, "#form-ai-next-1", "B")
+    refute has_element?(lv, "#form-ai-next-2")
+  end
+
   test "Change form after two asks: the second carries the first, and Undo puts it back",
        ctx do
     %{conn: conn, team: team, alex: alex, started: started} = ctx
@@ -204,7 +228,7 @@ defmodule Web.FormChangeLiveTest do
     ])
 
     {:ok, lv, _html} = conn |> log_in_user(alex) |> live(forms_path(team, "/#{started.id}/edit"))
-    assert has_element?(lv, "#form-ai #form-ai-form", "Ask AI")
+    assert has_element?(lv, "#form-ai #form-ai-form", "What it's for (optional)")
     assert has_element?(lv, "#form-ai", "AI sees the agency's form and your team's field names")
     assert has_element?(lv, "#form-ai-agents-link[href='/agents']")
 

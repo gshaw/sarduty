@@ -1,16 +1,17 @@
 defmodule Web.Components.AIWriting do
   @moduledoc """
   AI writing's column (docs/ai-writing.md), on Change report and Change form (#1089):
-  what AI sees, the asks as a conversation, oldest first, each with AI's reply and Undo
-  when it changed the page, or what went wrong and Ask again when it failed, and the
-  running ask with Stop last; then Try next and the box, as in a chat. Each page runs the asks
-  (App.Operation.AskAI) and keeps the conversation; this draws it.
+  its title, what AI sees, the asks as a conversation, oldest first, each with AI's reply
+  and Undo when it changed the page, or what went wrong and Ask again when it failed, and
+  the running ask with Stop last, then Try next; under them the box, as in a chat. Each
+  page runs the asks (App.Operation.AskAI) and keeps the conversation; this draws it.
 
   `ai_editor` lays out the page: its head (the title, description, and links), the
   column, and its main part with the Save bar at its foot. From 1024px the column starts
   beside the title and sticks under the site bar. It grows as the conversation does, the
-  box pushed down, until it's as tall as the window; then the conversation scrolls on
-  its own, older asks off the top. Under that it's one column: the head, AI writing,
+  box pushed down, until it's as tall as the window; then everything above the box
+  scrolls on its own, the title and older asks off the top, so a small laptop shows more
+  of the conversation. Under that it's one column: the head, AI writing,
   then the main part, and the conversation shows its last two asks with Show earlier
   asks. Its CSS is assets/css/components/ai_writing.css, and /styles/ai-writing shows
   it.
@@ -40,7 +41,6 @@ defmodule Web.Components.AIWriting do
     <div id={@id} class={["ai-editor", @ai? && "has-ai"]}>
       <div class="ai-head">{render_slot(@head)}</div>
       <aside :if={@ai?} id={@column_id} class="ai-column" aria-label={@label} phx-hook="AIPanel">
-        <h2 class="subheading mb-2">{@label}</h2>
         {render_slot(@column)}
       </aside>
       <div class="ai-main">
@@ -66,8 +66,8 @@ defmodule Web.Components.AIWriting do
   end
 
   @doc """
-  The conversation, the box, and what AI sees. `id` starts each element's id, such as
-  `report-ai`. `asks` is the conversation, newest first: each `%{id, ask, note, undo?}`
+  The conversation, the box, and what AI sees, with `heading` over them in the column.
+  `id` starts each element's id, such as `report-ai`. `asks` is the conversation, newest first: each `%{id, ask, note, undo?}`
   and, for a form, `blank`, the labels AI left blank, `[%{label, why}]`, and `next`, the
   asks AI suggests after it: Try next shows the newest's, and a tap sends `suggest`
   with the ask, which the page puts in the box. `pending` is
@@ -85,93 +85,99 @@ defmodule Web.Components.AIWriting do
   attr :button, :string, required: true
   attr :closed, :string, default: nil
   attr :sees, :string, required: true
+  attr :heading, :string, default: nil, doc: "the column's title, AI writing"
   slot :inner_block
 
   def ai_writing(assigns) do
     assigns = assign(assigns, :older, max(length(assigns.asks) - 2, 0))
 
     ~H"""
-    <p class="hint mb-4">
-      {@sees}
-      <.a id={"#{@id}-agents-link"} href={~p"/agents"} external={true}>How it works</.a>
-    </p>
-    <div :if={@pending || @asks != []} class="ai-scroll">
-      <p :if={@older > 0} class="action ai-earlier mb-3">
-        <.a
-          id={"#{@id}-earlier"}
-          href="#"
-          phx-click={JS.add_class("ai-thread-all", to: "##{@id}-asks") |> JS.hide()}
-        >{Service.Format.count(@older, one: "Show %d earlier ask", many: "Show %d earlier asks")}</.a>
+    <div class="ai-scroll">
+      <h2 :if={@heading} class="subheading mb-2">{@heading}</h2>
+      <p class="hint">
+        {@sees}
+        <.a id={"#{@id}-agents-link"} href={~p"/agents"} external={true}>How it works</.a>
       </p>
-      <ol id={"#{@id}-asks"} class="ai-thread">
-        <%= for {ask, n} <- @asks |> Enum.reverse() |> Enum.with_index() do %>
-          <li id={"#{@id}-ask-#{ask.id}"} class={["ai-you", n < @older && "ai-older"]}>{ask.ask}</li>
-          <li
-            :if={ask[:failed]}
-            id={"#{@id}-reply-#{ask.id}"}
-            class={["ai-reply ai-failed", n < @older && "ai-older"]}
-          >
-            <p class="font-semibold">{ask.failed.title}</p>
-            <p>{ask.failed.detail}</p>
-            <.button
-              :if={ask.failed.again? and @ai == :ok and !@pending}
-              id={"#{@id}-again-#{ask.id}"}
-              type="button"
-              size={:sm}
-              phx-click="ask_again"
-              phx-value-id={ask.id}
+      <div :if={@pending || @asks != []} class="mt-4">
+        <p :if={@older > 0} class="action ai-earlier mb-3">
+          <.a
+            id={"#{@id}-earlier"}
+            href="#"
+            phx-click={JS.add_class("ai-thread-all", to: "##{@id}-asks") |> JS.hide()}
+          >{Service.Format.count(@older, one: "Show %d earlier ask", many: "Show %d earlier asks")}</.a>
+        </p>
+        <ol id={"#{@id}-asks"} class="ai-thread">
+          <%= for {ask, n} <- @asks |> Enum.reverse() |> Enum.with_index() do %>
+            <li id={"#{@id}-ask-#{ask.id}"} class={["ai-you", n < @older && "ai-older"]}>
+              {ask.ask}
+            </li>
+            <li
+              :if={ask[:failed]}
+              id={"#{@id}-reply-#{ask.id}"}
+              class={["ai-reply ai-failed", n < @older && "ai-older"]}
             >
-              Ask again
+              <p class="font-semibold">{ask.failed.title}</p>
+              <p>{ask.failed.detail}</p>
+              <.button
+                :if={ask.failed.again? and @ai == :ok and !@pending}
+                id={"#{@id}-again-#{ask.id}"}
+                type="button"
+                size={:sm}
+                phx-click="ask_again"
+                phx-value-id={ask.id}
+              >
+                Ask again
+              </.button>
+            </li>
+            <li
+              :if={!ask[:failed] and (ask.note || ask.undo? || blank(ask) != [])}
+              id={"#{@id}-reply-#{ask.id}"}
+              class={["ai-reply", n < @older && "ai-older"]}
+            >
+              <p :if={ask.note}>{ask.note}</p>
+              <div :if={blank(ask) != []} id={"#{@id}-blank-#{ask.id}"} class="ai-blank">
+                <p class="font-semibold">Left blank</p>
+                <ul>
+                  <li :for={item <- blank(ask)}>
+                    <span class="font-semibold">{item.label}</span><span :if={item.why != ""}>: {item.why}</span>
+                  </li>
+                </ul>
+              </div>
+              <.button
+                :if={ask.undo?}
+                id={"#{@id}-undo-#{ask.id}"}
+                type="button"
+                size={:sm}
+                phx-click="undo_ask"
+                phx-value-id={ask.id}
+              >
+                Undo
+              </.button>
+            </li>
+          <% end %>
+          <li :if={@pending} id={"#{@id}-ask-running"} class="ai-you">{@pending.ask}</li>
+          <li :if={@pending} id={"#{@id}-step"} class="ai-step">
+            <.spinner>
+              Thinking… <span id={"#{@id}-seconds"} phx-hook="Seconds" phx-update="ignore"></span>
+            </.spinner>
+            <.button id={"#{@id}-stop"} type="button" size={:sm} phx-click="cancel_ask">
+              Stop
             </.button>
           </li>
-          <li
-            :if={!ask[:failed] and (ask.note || ask.undo? || blank(ask) != [])}
-            id={"#{@id}-reply-#{ask.id}"}
-            class={["ai-reply", n < @older && "ai-older"]}
-          >
-            <p :if={ask.note}>{ask.note}</p>
-            <div :if={blank(ask) != []} id={"#{@id}-blank-#{ask.id}"} class="ai-blank">
-              <p class="font-semibold">Left blank</p>
-              <ul>
-                <li :for={item <- blank(ask)}>
-                  <span class="font-semibold">{item.label}</span><span :if={item.why != ""}>: {item.why}</span>
-                </li>
-              </ul>
-            </div>
-            <.button
-              :if={ask.undo?}
-              id={"#{@id}-undo-#{ask.id}"}
-              type="button"
-              size={:sm}
-              phx-click="undo_ask"
-              phx-value-id={ask.id}
-            >
-              Undo
-            </.button>
-          </li>
-        <% end %>
-        <li :if={@pending} id={"#{@id}-ask-running"} class="ai-you">{@pending.ask}</li>
-        <li :if={@pending} id={"#{@id}-step"} class="ai-step">
-          <.spinner>
-            Thinking… <span id={"#{@id}-seconds"} phx-hook="Seconds" phx-update="ignore"></span>
-          </.spinner>
-          <.button id={"#{@id}-stop"} type="button" size={:sm} phx-click="cancel_ask">
-            Stop
-          </.button>
-        </li>
-      </ol>
-    </div>
-    <div :if={@ai == :ok and !@pending and next(@asks) != []} id={"#{@id}-next"} class="ai-next">
-      <p class="hint mb-2">Try next</p>
-      <div class="flex flex-wrap gap-2">
-        <.button
-          :for={{ask, n} <- Enum.with_index(next(@asks))}
-          id={"#{@id}-next-#{n}"}
-          type="button"
-          size={:sm}
-          phx-click="suggest"
-          phx-value-ask={ask}
-        >{ask}</.button>
+        </ol>
+      </div>
+      <div :if={@ai == :ok and !@pending and next(@asks) != []} id={"#{@id}-next"} class="mt-4">
+        <p class="hint mb-2">Try next</p>
+        <div class="flex flex-wrap gap-2">
+          <.button
+            :for={{ask, n} <- Enum.with_index(next(@asks))}
+            id={"#{@id}-next-#{n}"}
+            type="button"
+            size={:sm}
+            phx-click="suggest"
+            phx-value-ask={ask}
+          >{ask}</.button>
+        </div>
       </div>
     </div>
     <.form :if={@ai == :ok} for={@form} id={"#{@id}-form"} class="ai-writing-form" phx-submit="ask">
@@ -251,7 +257,7 @@ defmodule Web.Components.AIWriting do
           "or answers a question about the report."
 
       note = Enum.join(["You asked: #{ask}." | List.duplicate(line, rem(n, 3) * 2 + 1)], " ")
-      {:unchanged, note, ["Group by month", "Add a total row", "Sort by name"]}
+      {:unchanged, note, ["Group by month", "Add a total row"]}
     end
   end
 
