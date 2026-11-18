@@ -13,6 +13,12 @@ hk = "2.12.0"
 oxipng = "10.2.1"
 typst = "0.15.1"
 
+# Every `mise install` also fetches the Mix deps, so a fresh checkout compiles; from
+# ~/.hex, about a second. Skipped in CI, where it would run before the deps cache is
+# restored and before Hex is installed; the workflow's own `mix deps.get` covers it.
+[hooks]
+postinstall = '[ -n "$CI" ] || mix deps.get >/dev/null'
+
 # Everything except the test suite. hk formats and lints (Markdown and spelling
 # through stet, Elixir with mix format and Credo), then the Mix steps that need
 # the whole project. What to run before committing.
