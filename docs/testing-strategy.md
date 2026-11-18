@@ -108,8 +108,6 @@ error. A crash, or SQL that SQLite refuses, fails it.
   two crashes: text that isn't UTF-8, and a number of 35 digits (Decimal's cap is 34).
 - `report_words_fuzz_test.exs`: the built-in reports with whole words, values, and lines
   swapped from Coast Range SAR's catalog, so most inputs reach the compiler and the SQL.
-- `report_fuzz_test.exs`: any bytes, run as a report and its page. Weaker: most inputs
-  never parse.
 
 `mix test` only replays each test's seeds and the failing inputs saved in
 `test/fixtures/fuzz/`, in milliseconds. Fuzzing is by hand, never in CI: run
