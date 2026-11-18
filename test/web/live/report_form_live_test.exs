@@ -537,7 +537,7 @@ defmodule Web.ReportFormLiveTest do
 
     setup do
       admin = make_admin(AccountsFixtures.user_fixture())
-      params = %{access: "everyone", model: "claude-sonnet-5-5", monthly_budget: "50"}
+      params = %{access: "everyone", monthly_budget: "50"}
       {:ok, _settings} = SetAISettings.call(params, admin)
       :ok
     end
@@ -682,14 +682,13 @@ defmodule Web.ReportFormLiveTest do
       refute has_element?(lv, "#report-ai-asks .ai-you.ai-older", "by name")
     end
 
-    test "with suggestions off for reports, AI is never asked for them", %{conn: conn} do
+    test "with no next asks on reports, AI is never asked for them", %{conn: conn} do
       {:ok, _settings} =
         SetAISettings.call(
           %{
             access: "everyone",
-            model: "claude-sonnet-5-5",
             monthly_budget: "50",
-            suggest_reports: "false"
+            report_next_asks: "0"
           },
           make_admin(AccountsFixtures.user_fixture())
         )
@@ -853,7 +852,7 @@ defmodule Web.ReportFormLiveTest do
 
     test "with AI writing off there is no column, and What changed stays", %{conn: conn} do
       admin = make_admin(AccountsFixtures.user_fixture())
-      params = %{access: "off", model: "claude-sonnet-5-5", monthly_budget: "50"}
+      params = %{access: "off", monthly_budget: "50"}
       {:ok, _settings} = SetAISettings.call(params, admin)
       %{user: user, team: team} = user_with_team_fixture()
       conn = log_in_user(conn, user)

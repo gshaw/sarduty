@@ -8,7 +8,7 @@ defmodule Web.Admin.AILiveTest do
   alias App.Model.AISettings
   alias App.Model.Event
 
-  test "a SAR Duty admin sets who gets it, the model, and the budget, and sees the month",
+  test "a SAR Duty admin sets who gets it, the models, next asks, and the budget, and sees the month",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     admin = make_admin(user)
@@ -84,19 +84,22 @@ defmodule Web.Admin.AILiveTest do
     |> form("#ai-settings",
       settings: %{
         access: "everyone",
-        model: "claude-opus-5-5",
-        monthly_budget: "75",
-        suggest_forms: "false"
+        report_model: "claude-opus-5-5",
+        form_model: "claude-sonnet-5-5",
+        report_next_asks: "4",
+        form_next_asks: "0",
+        monthly_budget: "75"
       }
     )
     |> render_submit()
 
     settings = AISettings.get()
     assert settings.access == "everyone"
-    assert settings.model == "claude-opus-5-5"
+    assert settings.report_model == "claude-opus-5-5"
+    assert settings.form_model == "claude-sonnet-5-5"
+    assert settings.report_next_asks == 4
+    assert settings.form_next_asks == 0
     assert settings.monthly_budget_cents == 7_500
-    assert settings.suggest_reports
-    refute settings.suggest_forms
     assert Event.get_last(:ai_settings_changed).user_id == admin.id
   end
 

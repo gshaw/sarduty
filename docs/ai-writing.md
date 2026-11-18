@@ -33,9 +33,9 @@ On New report and Change report, for a user AI writing is open to
 - **Rename** opens a dialog with the name and description, inside the form: Rename
   keeps them, to save with Save report, and Cancel or Escape puts them back. With AI
   writing off or the query written by hand, the fields show on the page as before.
-  Above the box, **Try next**: one or two asks AI suggests after the newest reply, to show what it
-  can do. A tap puts one in the box; it never sends on its own. Every ask is still one
-  someone sent.
+  Above the box, **Try next**: the asks AI suggests after the newest reply, 2 unless
+  Adminland says otherwise, to show what it can do. A tap puts one in the box; it never
+  sends on its own. Every ask is still one someone sent.
 - The query is hidden, since AI writes it: Show query and Hide query toggle it, and a
   mistake in it opens it. With the query, the fields are buttons under it, with How to
   write a report, What each chart takes, and What each field means. The preview's count
@@ -211,13 +211,17 @@ Adminland › AI writing, `/admin/ai` ([Web.Admin.AILive](../lib/web/live/admin/
 one `ai_settings` row ([App.Model.AISettings](../lib/app/model/ai_settings.ex)). Each save
 is an `ai_settings_changed` event.
 
-- **Suggest next asks on reports** and **on forms**: whether AI gives Try next after
-  each reply (`AISettings.suggest?/2`). Both start on. Off, `AskAI` doesn't ask for
-  them, so the answer is a little shorter.
 - **Who gets it**: Nobody, SAR Duty admins only (to try it on a team first), or Every
   team and organization admin. Off with no row.
-- **Model**: Claude Sonnet 5.5 by default, or Opus 5.5 or Haiku 5.5. Prices are in
+- **Reports model** and **Forms model**: Claude Sonnet 5.5 or Opus 5.5
+  (`AISettings.model/2`). Reports start on Sonnet, and a History line uses the reports
+  model. Forms start on Opus, which reads the agency's PDF better. Prices are in
   [App.AI.Models](../lib/app/ai/models.ex), Anthropic's list prices on 2026-11-15.
+  Haiku isn't offered: too weak for either.
+- **Next asks on reports** and **on forms**: how many asks AI suggests in Try next
+  after each reply, None to 4 (`AISettings.next_asks/2`). Both start at 2, which fit on
+  one line in the column. None, and `AskAI` doesn't ask for them, so the answer is a
+  little shorter.
 - **Monthly budget**: $50 by default. Once this month's asks cost that much, asks stop
   for every team and the box says AI writing is paused until next month. The Claude API
   stops too when the plan's credit is spent.

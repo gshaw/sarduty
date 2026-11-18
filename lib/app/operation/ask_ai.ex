@@ -71,7 +71,7 @@ defmodule App.Operation.AskAI do
       when is_struct(owner, Team) or is_struct(owner, Organization) do
     settings = AISettings.get()
 
-    job = %{job | suggest: AISettings.suggest?(settings, job.kind)}
+    job = %{job | next_asks: AISettings.next_asks(settings, job.kind)}
 
     with :ok <- check(owner, user, now, job.kind, settings) do
       history = [%{"role" => "user", "content" => job.prompt}]
@@ -83,7 +83,7 @@ defmodule App.Operation.AskAI do
               user_id: user.id,
               kind: job.kind,
               ask: job.ask,
-              model: settings.model,
+              model: AISettings.model(settings, job.kind),
               outcome: :stopped,
               duration_ms: 0,
               asked_at: now
@@ -106,7 +106,7 @@ defmodule App.Operation.AskAI do
   defp took(acc), do: System.monotonic_time(:millisecond) - acc.started
 
   # Each response's usage goes on the row as it returns.
-  defp count(acc, response, settings) do
+  defp count(acc, response, model) do
     usage = add(acc.usage, usage(response))
     requests = acc.requests + 1
 
@@ -116,7 +116,7 @@ defmodule App.Operation.AskAI do
         cache_write_tokens: usage.cache_write,
         cache_read_tokens: usage.cache_read,
         output_tokens: usage.output,
-        cost_microdollars: Models.cost_microdollars(settings.model, usage),
+        cost_microdollars: Models.cost_microdollars(model, usage),
         turns: requests,
         duration_ms: took(acc)
       )
@@ -134,7 +134,7 @@ defmodule App.Operation.AskAI do
          |> request(job, Enum.reverse(history))
          |> Claude.create_message(stream: job.stream) do
       {:ok, response} ->
-        acc = count(acc, response, settings)
+        acc = count(acc, response, AISettings.model(settings, job.kind))
         history = [%{"role" => "assistant", "content" => response["content"]} | history]
         answer(next_step(response), settings, job, history, acc, retried)
 
@@ -171,33 +171,40 @@ defmodule App.Operation.AskAI do
 
   defp answer(error, _settings, _job, _history, acc, _retried), do: {error, acc}
 
-  # With suggestions on, the next asks AI gave: `result.next`, or a third element after
-  # an unchanged ask's note.
-  defp with_next(result, %Job{suggest: false}, _output), do: result
-  defp with_next({:ok, result}, _job, output), do: {:ok, Map.put(result, :next, next(output))}
-  defp with_next({:unchanged, note}, _job, output), do: {:unchanged, note, next(output)}
+  # With next asks on, the ones AI gave: `result.next`, or a third element after an
+  # unchanged ask's note.
+  defp with_next(result, %Job{next_asks: 0}, _output), do: result
+
+  defp with_next({:ok, result}, job, output),
+    do: {:ok, Map.put(result, :next, next(output, job.next_asks))}
+
+  defp with_next({:unchanged, note}, job, output),
+    do: {:unchanged, note, next(output, job.next_asks)}
+
   defp with_next(result, _job, _output), do: result
 
-  @doc "Up to two short next asks from an answer's `next`, each trimmed: two fit on one line in the column."
-  def next(%{"next" => list}) when is_list(list) do
+  @doc "Up to `most` short next asks from an answer's `next`, each trimmed."
+  def next(%{"next" => list}, most) when is_list(list) do
     list
     |> Enum.filter(&is_binary/1)
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == "" or String.length(&1) > 80))
     |> Enum.uniq()
-    |> Enum.take(2)
+    |> Enum.take(most)
   end
 
-  def next(_output), do: []
+  def next(_output, _most), do: []
 
-  @next %{
-    "type" => "array",
-    "items" => %{"type" => "string"},
-    "description" =>
-      "One or two short asks the admin might try next, a few words each in their own " <>
-        "voice, such as \"Group by quarter\". Only what SAR Duty can do. None when " <>
-        "nothing more would help."
-  }
+  defp next_schema(most) do
+    %{
+      "type" => "array",
+      "items" => %{"type" => "string"},
+      "description" =>
+        "Up to #{most} short asks the admin might try next, a few words each in their " <>
+          "own voice, such as \"Group by quarter\". Only what SAR Duty can do. None when " <>
+          "nothing more would help."
+    }
+  end
 
   defp run_tool(%{"id" => id, "name" => name, "input" => input}, job) do
     result =
@@ -230,13 +237,14 @@ defmodule App.Operation.AskAI do
   end
 
   @doc """
-  The Messages API request for `job` on `settings`' model, with `messages` so far. Runs
+  The Messages API request for `job` on `settings`' model for its kind, with `messages`
+  so far. Runs
   in the US. Every system part is a cache breakpoint. Thinking is left to the model
   (adaptive on every model listed) at the job's effort. A job with no tools sends none.
   """
   def request(%AISettings{} = settings, %Job{} = job, messages) do
     %{
-      "model" => settings.model,
+      "model" => AISettings.model(settings, job.kind),
       "max_tokens" => @max_tokens,
       "inference_geo" => "us",
       "output_config" => %{
@@ -253,11 +261,13 @@ defmodule App.Operation.AskAI do
     |> put_tools(job.tools)
   end
 
-  defp schema(%Job{suggest: false, schema: schema}), do: schema
+  defp schema(%Job{next_asks: 0, schema: schema}), do: schema
 
-  defp schema(%Job{schema: schema}) do
+  defp schema(%Job{schema: schema, next_asks: most}) do
+    next = next_schema(most)
+
     schema
-    |> Map.update("properties", %{"next" => @next}, &Map.put(&1, "next", @next))
+    |> Map.update("properties", %{"next" => next}, &Map.put(&1, "next", next))
     |> Map.update("required", ["next"], &["next" | &1])
   end
 

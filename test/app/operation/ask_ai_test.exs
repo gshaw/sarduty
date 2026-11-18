@@ -21,7 +21,7 @@ defmodule App.Operation.AskAITest do
   end
 
   test "a request runs in the US, caches each system part, and lists the tools" do
-    settings = %AISettings{model: "claude-sonnet-5-5"}
+    settings = %AISettings{report_model: "claude-sonnet-5-5"}
     messages = [%{"role" => "user", "content" => "hi"}]
     request = AskAI.request(settings, job(), messages)
 
@@ -41,23 +41,35 @@ defmodule App.Operation.AskAITest do
     refute Map.has_key?(request, "temperature")
   end
 
-  test "with suggestions on, the answer's schema asks for next asks too" do
-    settings = %AISettings{model: "claude-sonnet-5-5"}
+  test "a form asks on the forms model, the rest on the reports model" do
+    settings = %AISettings{report_model: "claude-sonnet-5-5", form_model: "claude-opus-5-5"}
+    assert AskAI.request(settings, job(), [])["model"] == "claude-sonnet-5-5"
+    assert AskAI.request(settings, %{job() | kind: :form}, [])["model"] == "claude-opus-5-5"
+
+    assert AskAI.request(settings, %{job() | kind: :history_line}, [])["model"] ==
+             "claude-sonnet-5-5"
+  end
+
+  test "with next asks on, the answer's schema asks for that many too" do
+    settings = %AISettings{}
     schema = fn job -> AskAI.request(settings, job, [])["output_config"]["format"]["schema"] end
 
     refute Map.has_key?(schema.(job())["properties"] || %{}, "next")
 
     assert %{"properties" => %{"next" => %{"type" => "array"}}, "required" => ["next"]} =
-             schema.(%{job() | suggest: true})
+             schema.(%{job() | next_asks: 3})
+
+    assert schema.(%{job() | next_asks: 3})["properties"]["next"]["description"] =~ "Up to 3"
   end
 
-  test "next asks are trimmed, blanks and long ones dropped, two at most" do
+  test "next asks are trimmed, blanks and long ones dropped, as many as the settings say" do
     long = String.duplicate("a", 81)
 
-    assert AskAI.next(%{"next" => [" Group by quarter ", "", long, "A", "B", "C"]}) ==
+    assert AskAI.next(%{"next" => [" Group by quarter ", "", long, "A", "B", "C"]}, 2) ==
              ["Group by quarter", "A"]
 
-    assert AskAI.next(%{"note" => "no next"}) == []
+    assert AskAI.next(%{"next" => ["A", "B", "C"]}, 4) == ["A", "B", "C"]
+    assert AskAI.next(%{"note" => "no next"}, 2) == []
   end
 
   test "a response asks for tools, gives an answer, or ends the ask" do

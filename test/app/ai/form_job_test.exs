@@ -67,7 +67,7 @@ defmodule App.AI.FormJobTest do
     ]
 
     job = FormJob.build(team, form, page, @text, "tick Search for a search", @now, earlier)
-    request = AskAI.request(%AISettings{model: "claude-sonnet-5-5"}, job, [prompt(job)])
+    request = AskAI.request(%AISettings{}, job, [prompt(job)])
     sent = Jason.encode!(request)
 
     assert sent =~ "Rope rescue team"

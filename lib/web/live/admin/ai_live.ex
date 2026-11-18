@@ -11,10 +11,11 @@ defmodule Web.Admin.AILive do
 
   @limit 50
 
-  # Adminland › AI writing (docs/ai-writing.md): who gets it, which Claude model, and the
-  # monthly budget, then this month's spend by team and by person, and the newest asks.
-  # Everything is summed from ai_asks. A History line AI wrote at a save has a row too:
-  # it counts in the cost, apart from the asks. Dollars show here only, never to a team.
+  # Adminland › AI writing (docs/ai-writing.md): who gets it, the Claude model and next
+  # asks for reports and for forms, and the monthly budget, then this month's spend by
+  # team and by person, and the newest asks. Everything is summed from ai_asks. A History
+  # line AI wrote at a save has a row too: it counts in the cost, apart from the asks.
+  # Dollars show here only, never to a team.
   def mount(_params, _session, socket) do
     {:ok,
      socket
@@ -33,10 +34,11 @@ defmodule Web.Admin.AILive do
   defp form_params(settings),
     do: %{
       "access" => settings.access,
-      "model" => settings.model,
-      "monthly_budget" => div(settings.monthly_budget_cents, 100),
-      "suggest_reports" => settings.suggest_reports,
-      "suggest_forms" => settings.suggest_forms
+      "report_model" => settings.report_model,
+      "form_model" => settings.form_model,
+      "report_next_asks" => settings.report_next_asks,
+      "form_next_asks" => settings.form_next_asks,
+      "monthly_budget" => div(settings.monthly_budget_cents, 100)
     }
 
   defp assign_usage(socket) do
@@ -96,10 +98,34 @@ defmodule Web.Admin.AILive do
             ]}
           />
           <.input
-            field={@form[:model]}
+            field={@form[:report_model]}
             type="select"
-            label="Model"
-            options={Enum.map(Models.all(), &{model_label(&1), &1.id})}
+            label="Reports model"
+            options={model_options()}
+          >
+            Per million tokens: {prices()}.
+          </.input>
+          <.input
+            field={@form[:form_model]}
+            type="select"
+            label="Forms model"
+            options={model_options()}
+          >
+            Forms are harder to write: Opus reads the agency's PDF better.
+          </.input>
+          <.input
+            field={@form[:report_next_asks]}
+            type="select"
+            label="Next asks on reports"
+            options={next_options()}
+          >
+            How many asks AI suggests under its reply, to show what it can do.
+          </.input>
+          <.input
+            field={@form[:form_next_asks]}
+            type="select"
+            label="Next asks on forms"
+            options={next_options()}
           />
           <.input
             field={@form[:monthly_budget]}
@@ -110,10 +136,6 @@ defmodule Web.Admin.AILive do
           >
             Asks stop for every team once this month's cost reaches it.
           </.input>
-          <.input field={@form[:suggest_reports]} type="checkbox" label="Suggest next asks on reports">
-            Two or three asks under AI's reply, to show what it can do.
-          </.input>
-          <.input field={@form[:suggest_forms]} type="checkbox" label="Suggest next asks on forms" />
           <.button id="ai-settings-save" variant={:success} phx-disable-with="Saving…">
             Save
           </.button>
@@ -192,9 +214,19 @@ defmodule Web.Admin.AILive do
     """
   end
 
-  defp model_label(model),
-    do:
-      "#{model.name}: #{Format.money(model.input)} in, #{Format.money(model.output)} out per million tokens"
+  defp model_options, do: Enum.map(Models.all(), &{&1.name, &1.id})
+
+  defp next_options, do: Enum.map(0..AISettings.most_next_asks(), &{next_label(&1), &1})
+
+  defp next_label(0), do: "None"
+  defp next_label(n), do: to_string(n)
+
+  # Each model's price per million tokens, for the hint under Reports model.
+  defp prices do
+    Enum.map_join(Models.all(), "; ", fn model ->
+      "#{model.name}, #{Format.money(model.input)} in and #{Format.money(model.output)} out"
+    end)
+  end
 
   defp dollars(microdollars), do: (microdollars || 0) |> Decimal.new() |> Decimal.div(1_000_000)
 

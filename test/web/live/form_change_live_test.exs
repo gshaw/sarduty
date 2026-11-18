@@ -52,7 +52,7 @@ defmodule Web.FormChangeLiveTest do
 
     {:ok, _settings} =
       SetAISettings.call(
-        %{access: "everyone", model: "claude-sonnet-5-5", monthly_budget: "50"},
+        %{access: "everyone", monthly_budget: "50"},
         admin
       )
 
@@ -454,7 +454,7 @@ defmodule Web.FormChangeLiveTest do
 
     {:ok, _settings} =
       SetAISettings.call(
-        %{access: "admins", model: "claude-sonnet-5-5", monthly_budget: "50"},
+        %{access: "admins", monthly_budget: "50"},
         admin
       )
 

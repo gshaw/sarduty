@@ -204,7 +204,7 @@ defmodule Web.FormPagesTest do
          %{conn: conn, dana: dana, form: form} do
       {:ok, _settings} =
         SetAISettings.call(
-          %{access: "everyone", model: "claude-sonnet-5-5", monthly_budget: "50"},
+          %{access: "everyone", monthly_budget: "50"},
           make_admin(user_fixture())
         )
 

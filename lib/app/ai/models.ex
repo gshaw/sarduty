@@ -20,13 +20,6 @@ defmodule App.AI.Models do
       input: 4.0,
       output: 20.0,
       cache_read: 0.20
-    },
-    %{
-      id: "claude-haiku-5-5",
-      name: "Claude Haiku 5.5",
-      input: 0.10,
-      output: 0.50,
-      cache_read: 0.01
     }
   ]
 
