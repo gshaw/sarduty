@@ -9,6 +9,8 @@ jobs:
   checks:
     name: Checks and tests
     runs-on: ubuntu-24.04
+    # A normal run takes about 5 minutes. Without this, a hang runs for 6 hours.
+    timeout-minutes: 20
 
     env:
       # runtime.exs reads it in every environment; no test calls Mapbox.
@@ -23,8 +25,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      # Ubuntu's mirror sometimes crawls: libvips-dev is about 170 packages, and one
+      # run spent 7 minutes on them while another hung. Retries and a timeout make a
+      # slow mirror fail fast; the cache skips the mirror on every run after the first.
+      - name: Make apt retry and time out
+        run: |
+          echo 'Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/80-ci
+          echo 'Acquire::http::Timeout "20";' | sudo tee -a /etc/apt/apt.conf.d/80-ci
+
+      # A cold install from a slow mirror took 9 minutes on 2026-11-18. 15 lets it
+      # finish and save the cache; a real hang still stops long before 6 hours.
       - name: Install libvips
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvips-dev
+        timeout-minutes: 15
+        uses: awalsh128/cache-apt-pkgs-action@553a35bb8ebd9fcabcb1c9451aa4c98e1b4ca8a9 # v1.6.3
+        with:
+          packages: libvips-dev
+          version: "1"
+          execute_install_scripts: true
 
       - name: Install mise
         uses: jdx/mise-action@v4
