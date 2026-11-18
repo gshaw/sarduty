@@ -80,14 +80,19 @@ defmodule App.Operation.BuildDemoTeam do
     visitor = visitor(demo)
 
     result =
-      with {:ok, records} <- create_in_records(now, visitor) do
-        names = %{
-          coast_range: %{subdomain: subdomain()},
-          silver_basin: %{subdomain: subdomain()},
-          slug: "wesara-#{demo.id}"
-        }
+      case create_in_records(now, visitor) do
+        {:ok, records} ->
+          names = %{
+            coast_range: %{subdomain: subdomain()},
+            silver_basin: %{subdomain: subdomain()},
+            slug: "wesara-#{demo.id}"
+          }
 
-        build(demo, records, visitor, names, now)
+          build(demo, records, visitor, names, now)
+
+        {:error, reason} = error ->
+          notify(%RuntimeError{message: "Try a demo: Records refused: #{inspect(reason)}"}, demo)
+          error
       end
 
     tell(demo, result)
@@ -177,8 +182,14 @@ defmodule App.Operation.BuildDemoTeam do
   rescue
     error ->
       Logger.error("Try a demo build failed: " <> Exception.message(error))
+      notify(error, demo, __STACKTRACE__)
       clean_up(demo, records, names.slug)
       {:error, :build_failed}
+  end
+
+  # The visitor sees only Try again, and the build rolls back, so nothing else says it broke.
+  defp notify(error, demo, stacktrace \\ []) do
+    Honeybadger.notify(error, metadata: %{demo_id: demo && demo.id}, stacktrace: stacktrace)
   end
 
   defp refresh!(team) do
