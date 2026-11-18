@@ -36,7 +36,7 @@ defmodule App.Report.Picks do
   defp pick(filter, params, today, menus) do
     picked(filter, blank(params[filter.name]), menus) ||
       picked(filter, default(filter.default, today), menus) ||
-      if(filter.required, do: first(filter), else: :all)
+      if(filter.required, do: first(filter, menus), else: :all)
   end
 
   defp picked(_filter, nil, _menus), do: nil
@@ -70,8 +70,16 @@ defmodule App.Report.Picks do
     end
   end
 
-  defp first(%{options: [option | _]}), do: {:option, option}
-  defp first(_filter), do: :each_default
+  # A required filter with nothing picked starts on its first option, or its menu's
+  # first choice, such as the newest activity. With neither, the value's own default.
+  defp first(%{options: [option | _]}, _menus), do: {:option, option}
+
+  defp first(filter, menus) do
+    case Map.get(menus, filter.name) do
+      [{_label, value} | _] when filter.each != nil -> {:each, value}
+      _other -> :each_default
+    end
+  end
 
   defp default(:this_year, today), do: Integer.to_string(today.year)
   defp default(default, _today), do: default

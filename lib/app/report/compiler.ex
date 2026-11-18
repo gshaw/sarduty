@@ -129,26 +129,30 @@ defmodule App.Report.Compiler do
       ])
 
   @doc """
-  The values `expr` takes in the subject's rows, for a filter's `each` (#784):
-  `{:ok, {:choices, [{label, value}]}}` for a field that holds a few, such as a choice or a
-  list's titles, or `{:ok, {:sql, {sql, params}, type}}` for the SQL that reads the rest,
-  blanks and all: App.Report.Runner.values/3 leaves them out.
+  The values `expr` takes in the subject's rows, for a filter's `each` (#784), in the rows
+  an each's `where` keeps when it reads no picked value: `{:ok, {:choices, [{label, value}]}}` for a field that
+  holds a few, such as a choice or a list's titles, `{:ok, {:sql, {sql, params}, type}}`
+  for the SQL that reads the rest, blanks and all: App.Report.Runner.values/3 leaves them
+  out, or `{:ok, {:records, {sql, params}, kind}}` for a record, such as attendance's
+  activity: each one's id and text, and an activity's start, newest first.
   """
-  def values(%Query{} = query, expr, %Context{} = context) do
+  def values(%Query{} = query, expr, where \\ nil, %Context{} = context) do
     with_subject(query, context, %{}, fn st ->
       e = Expr.compile(expr, st)
       if e.agg, do: fail(Query.line(expr), "Write each with a field, not #{Query.text(expr)}.")
-      {:ok, each_values(e, expr, st)}
+      w = menu_where(where, st)
+      {:ok, each_values(e, w, expr, st)}
     end)
   end
 
-  defp each_values(%{type: type, field: %{choices: choices}}, _expr, st)
+  defp each_values(%{type: type, field: %{choices: choices}}, _w, _expr, st)
        when type in [:choice, :list] and is_function(choices),
        do: {:choices, choices.(st.context)}
 
-  defp each_values(%{type: :bool}, _expr, _st), do: {:choices, [{"Yes", "true"}, {"No", "false"}]}
+  defp each_values(%{type: :bool}, _w, _expr, _st),
+    do: {:choices, [{"Yes", "true"}, {"No", "false"}]}
 
-  defp each_values(%{type: type} = e, _expr, st)
+  defp each_values(%{type: type} = e, w, _expr, st)
        when type in [:year, :month, :quarter, :weekday, :hour, :text, :number] do
     {sql, params} = Expr.id_sql(e)
 
@@ -157,19 +161,56 @@ defmodule App.Report.Compiler do
     query =
       SQL.join([
         {["SELECT ", sql], params},
-        from_sql(st.subject, [e], st.context),
+        from_sql(st.subject, Enum.reject([e, w], &is_nil/1), st.context),
+        where_sql(w),
         {" GROUP BY 1", []}
       ])
 
     {:sql, query, type}
   end
 
-  defp each_values(_e, expr, _st),
+  # A record by its id, labelled by its text. An activity's start tells apart activities
+  # with one title, such as a monthly training, so its menu lists the newest first.
+  defp each_values(%{type: {:record, kind}} = e, w, expr, st) do
+    started = if kind == :activity, do: expr |> started_at() |> Expr.compile(st)
+    es = Enum.reject([e, started, w], &is_nil/1)
+    {date_sql, date_params} = if started, do: {started.sql, started.params}, else: {"NULL", []}
+
+    query =
+      SQL.join([
+        {["SELECT "], []},
+        SQL.join([Expr.id_sql(e), Expr.sort_sql(e), {date_sql, date_params}], ", "),
+        from_sql(st.subject, es, st.context),
+        where_sql(w),
+        {" GROUP BY 1", []}
+      ])
+
+    {:records, query, kind}
+  end
+
+  defp each_values(_e, _w, expr, _st),
     do:
       fail(
         Query.line(expr),
-        "Write each with a field it can list, such as year(started_at), kind, or member.groups."
+        "Write each with a field it can list, such as year(started_at), kind, activity, or member.groups."
       )
+
+  # An each's where narrows its menu when it reads no picked value, as
+  # `each activity where activity.kind = 'Incident'` does. One that reads its own, as
+  # `each year(started_at) where year(started_at) = :year`, only keeps the picked rows.
+  defp menu_where(nil, _st), do: nil
+
+  defp menu_where(where, st) do
+    w = Expr.condition(where, st)
+    if w.values == [], do: w
+  end
+
+  # The start of the activity `expr` names: attendance's activity.started_at, or an
+  # activity's own started_at for its title.
+  defp started_at({:field, [parent], [], line}) when parent != "title",
+    do: {:field, [parent, "started_at"], [], line}
+
+  defp started_at({:field, _path, _args, line}), do: {:field, ["started_at"], [], line}
 
   defp with_subject(query, context, given, fun) do
     case Catalog.subject(query.from) do
