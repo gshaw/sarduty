@@ -4,8 +4,9 @@ defmodule Web.AgentsLive do
   # The lander for agents (#816): public, beside Privacy and Terms, for teams and
   # organizations deciding about agents, and for agents and the people building with
   # them. AI writing in the report editor links here. Each thing
-  # agents can do is one entry in uses/0, with its own page under /agents; a new one is an
-  # entry there, and shows here and in /agents.md (Web.MarkdownController).
+  # agents can do is one entry in uses/0, linking its page under /agents (`path`) or the
+  # public repository (`href`); a new one is an entry there, and shows here and in
+  # /agents.md (Web.MarkdownController).
   def mount(_params, _session, socket) do
     {:ok,
      assign(socket,
@@ -28,7 +29,10 @@ defmodule Web.AgentsLive do
             <h3 class="subheading mb-1">{use.title}</h3>
             <p class="mb-1">{use.text}</p>
             <p class="hint mb-1">{use.access}</p>
-            <p class="action mb-0"><.a navigate={use.path}>{use.link}</.a></p>
+            <p class="action mb-0">
+              <.a :if={use[:path]} navigate={use[:path]}>{use.link}</.a>
+              <.a :if={use[:href]} href={use[:href]} external>{use.link}</.a>
+            </p>
           </li>
         </ul>
 
@@ -62,7 +66,7 @@ defmodule Web.AgentsLive do
 
         #{use.access}
 
-        [#{use.link}](#{url}#{use.path}.md)
+        [#{use.link}](#{link(use, url)})
         """
       end)
 
@@ -82,8 +86,12 @@ defmodule Web.AgentsLive do
     """
   end
 
+  # A page under /agents links its Markdown; the repository links as it is.
+  defp link(%{path: path}, url), do: "#{url}#{path}.md"
+  defp link(%{href: href}, _url), do: href
+
   defp lead do
-    "An AI agent, such as Claude or ChatGPT, can help a team with SAR Duty, and so can the apps people build with one. Each thing they can do has its own page."
+    "An AI agent, such as Claude or ChatGPT, can help a team with SAR Duty, and so can the apps people build with one. Each thing they can do links to how."
   end
 
   defp stays do
@@ -91,10 +99,12 @@ defmodule Web.AgentsLive do
   end
 
   defp who do
-    "SAR Duty decides which team admins get AI writing, and it runs in SAR Duty: no agent connects to a team. A public check, such as an ID card's, shows only what anyone can see. Agents never change anything."
+    "SAR Duty decides which admins get AI writing, and it runs in SAR Duty: no agent connects to a team. A public check, such as an ID card's, shows only what anyone can see. Agents never change anything."
   end
 
-  # What agents can do, each with its page under /agents. `access` says who decides.
+  @repo "https://github.com/gshaw/sarduty"
+
+  # What agents can do, each with its page under /agents or on GitHub. `access` says who decides.
   defp uses do
     [
       %{
@@ -114,6 +124,25 @@ defmodule Web.AgentsLive do
         access: "A team admin asks in SAR Duty. There is nothing to connect.",
         link: "How to write a report",
         path: ~p"/agents/reports"
+      },
+      %{
+        id: "agents-use-forms",
+        title: "Write forms",
+        text:
+          "A team or organization admin gives SAR Duty an agency's PDF, such as a task report. AI writing writes the form: what it fills in from an activity, and where each answer goes on the page. The admin tries it on an activity, marked SAMPLE, and saves it.",
+        access:
+          "An admin asks in SAR Duty, once SAR Duty turns on forms for their team or organization. There is nothing to connect.",
+        link: "How forms are written",
+        href: "#{@repo}/blob/main/docs/ai-writing.md#forms"
+      },
+      %{
+        id: "agents-use-code",
+        title: "Answer questions about SAR Duty",
+        text:
+          "SAR Duty's code and its docs are public. An agent pointed at the repository can read how a feature works or where a rule lives. It can answer general questions about SAR Duty.",
+        access: "Public, with no key or login. The code holds no team's records.",
+        link: "SAR Duty on GitHub",
+        href: @repo
       },
       %{
         id: "agents-use-id-cards",
