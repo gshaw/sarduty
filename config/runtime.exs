@@ -20,59 +20,67 @@ if System.get_env("PHX_SERVER") do
   config :sarduty, Web.Endpoint, server: true
 end
 
-config :sarduty, App.Adapter.Mapbox, access_token: System.fetch_env!("MAPBOX_ACCESS_TOKEN")
-
-# SAR Duty Records (docs/records.md) is records.sarduty.com. Dev can call a local copy.
-if config_env() == :dev and System.get_env("RECORDS_HOST") do
-  config :sarduty, :records_host, System.get_env("RECORDS_HOST")
-end
-
-# SAR Duty's own key for deleting a team in Records (App.Adapter.D4H.delete_records_team/1,
-# #889): Records' SARDUTY_KEY. Unset, deleting a Records team is refused.
-if key = System.get_env("RECORDS_SARDUTY_KEY") do
-  config :sarduty, :records_sarduty_key, key
-end
-
-# The file store in S3 (docs/files.md): sarduty-files in production, sarduty-files-dev
-# in dev when its key is set. Tests never read these; they use a scratch folder.
-if config_env() != :test and System.get_env("FILES_BUCKET") not in [nil, ""] do
-  config :sarduty, App.Adapter.FileStore,
-    bucket: System.fetch_env!("FILES_BUCKET"),
-    region: System.get_env("FILES_REGION", "ca-west-1"),
-    access_key_id: System.fetch_env!("FILES_ACCESS_KEY_ID"),
-    secret_access_key: System.fetch_env!("FILES_SECRET_ACCESS_KEY")
-end
-
-# The key a script sends to make a test demo, for checking SAR Duty on a live server
-# (docs/demo.md). Without it, only visitors' demos can be made.
-config :sarduty, :demo_test_key, System.get_env("DEMO_TEST_KEY")
-
-config :sarduty, :healthchecks_url, System.get_env("HEALTHCHECKS_URL")
-# Its own Healthchecks check, with a 10-minute period, for the D4H sync (#163).
-config :sarduty, :healthchecks_sync_url, System.get_env("HEALTHCHECKS_SYNC_URL")
-
-# Apple Wallet passes for member ID cards. Optional: without them the ID Card tab
-# offers no pass. The certificate and key are PEM text.
-config :sarduty, :apple_pass,
-  pass_type_id: System.get_env("APPLE_PASS_TYPE_ID"),
-  team_id: System.get_env("APPLE_TEAM_ID"),
-  certificate: System.get_env("APPLE_PASS_CERTIFICATE"),
-  private_key: System.get_env("APPLE_PASS_PRIVATE_KEY")
-
-# Google Wallet passes for member ID cards. Optional, like Apple's. The service account
-# is the key file's JSON. Google refuses a pass whose images it can't load, and it can't
-# reach a dev server, so only production passes have a logo and photo, and only
-# production's class asks Google for save and delete callbacks.
-config :sarduty, :google_wallet,
-  issuer_id: System.get_env("GOOGLE_WALLET_ISSUER_ID"),
-  service_account: System.get_env("GOOGLE_WALLET_SERVICE_ACCOUNT"),
-  images: config_env() == :prod,
-  callbacks: config_env() == :prod
-
-# Twilio, for texting login codes. Optional: without all four, there is no text login.
-# Dev only logs texts unless DEV_SEND_SMS is set, like DEV_SEND_EMAIL for mail. Tests
-# ignore the env vars and turn text login on themselves.
+# Tests read no environment variables: their values are in config/test.exs and
+# test/test_helper.exs, so any checkout runs `mix test` without .mise.local.toml.
 if config_env() != :test do
+  # Without it, dev draws maps on a plain background.
+  config :sarduty, App.Adapter.Mapbox,
+    access_token:
+      if(config_env() == :prod,
+        do: System.fetch_env!("MAPBOX_ACCESS_TOKEN"),
+        else: System.get_env("MAPBOX_ACCESS_TOKEN")
+      )
+
+  # SAR Duty Records (docs/records.md) is records.sarduty.com. Dev can call a local copy.
+  if config_env() == :dev and System.get_env("RECORDS_HOST") do
+    config :sarduty, :records_host, System.get_env("RECORDS_HOST")
+  end
+
+  # SAR Duty's own key for deleting a team in Records (App.Adapter.D4H.delete_records_team/1,
+  # #889): Records' SARDUTY_KEY. Unset, deleting a Records team is refused.
+  if key = System.get_env("RECORDS_SARDUTY_KEY") do
+    config :sarduty, :records_sarduty_key, key
+  end
+
+  # The file store in S3 (docs/files.md): sarduty-files in production, sarduty-files-dev
+  # in dev when its key is set. Tests use a scratch folder.
+  if System.get_env("FILES_BUCKET") not in [nil, ""] do
+    config :sarduty, App.Adapter.FileStore,
+      bucket: System.fetch_env!("FILES_BUCKET"),
+      region: System.get_env("FILES_REGION", "ca-west-1"),
+      access_key_id: System.fetch_env!("FILES_ACCESS_KEY_ID"),
+      secret_access_key: System.fetch_env!("FILES_SECRET_ACCESS_KEY")
+  end
+
+  # The key a script sends to make a test demo, for checking SAR Duty on a live server
+  # (docs/demo.md). Without it, only visitors' demos can be made.
+  config :sarduty, :demo_test_key, System.get_env("DEMO_TEST_KEY")
+
+  config :sarduty, :healthchecks_url, System.get_env("HEALTHCHECKS_URL")
+  # Its own Healthchecks check, with a 10-minute period, for the D4H sync (#163).
+  config :sarduty, :healthchecks_sync_url, System.get_env("HEALTHCHECKS_SYNC_URL")
+
+  # Apple Wallet passes for member ID cards. Optional: without them the ID Card tab
+  # offers no pass. The certificate and key are PEM text.
+  config :sarduty, :apple_pass,
+    pass_type_id: System.get_env("APPLE_PASS_TYPE_ID"),
+    team_id: System.get_env("APPLE_TEAM_ID"),
+    certificate: System.get_env("APPLE_PASS_CERTIFICATE"),
+    private_key: System.get_env("APPLE_PASS_PRIVATE_KEY")
+
+  # Google Wallet passes for member ID cards. Optional, like Apple's. The service account
+  # is the key file's JSON. Google refuses a pass whose images it can't load, and it can't
+  # reach a dev server, so only production passes have a logo and photo, and only
+  # production's class asks Google for save and delete callbacks.
+  config :sarduty, :google_wallet,
+    issuer_id: System.get_env("GOOGLE_WALLET_ISSUER_ID"),
+    service_account: System.get_env("GOOGLE_WALLET_SERVICE_ACCOUNT"),
+    images: config_env() == :prod,
+    callbacks: config_env() == :prod
+
+  # Twilio, for texting login codes. Optional: without all four, there is no text login.
+  # Dev only logs texts unless DEV_SEND_SMS is set, like DEV_SEND_EMAIL for mail. Tests
+  # turn text login on themselves.
   config :sarduty, App.Adapter.Twilio,
     account_sid: System.get_env("TWILIO_ACCOUNT_SID"),
     api_key_sid: System.get_env("TWILIO_API_KEY_SID"),

@@ -14,8 +14,3 @@ System.put_env("TEAM_LOGO_PATH", Path.join(System.tmp_dir!(), "sarduty-test-logo
 # The file store's scratch folder is this run's own, and goes when the run ends.
 file_store_dir = Application.fetch_env!(:sarduty, App.Adapter.FileStore)[:dir]
 ExUnit.after_suite(fn _result -> File.rm_rf!(file_store_dir) end)
-
-# Wallets start off whatever keys the developer's environment holds; a test that needs one
-# turns it on with App.ApplePassCredentials or App.GoogleWalletCredentials.
-Application.put_env(:sarduty, :apple_pass, [])
-Application.put_env(:sarduty, :google_wallet, [])

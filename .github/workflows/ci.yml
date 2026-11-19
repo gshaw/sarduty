@@ -19,8 +19,6 @@ jobs:
     timeout-minutes: 20
 
     env:
-      # runtime.exs reads it in every environment; no test calls Mapbox.
-      MAPBOX_ACCESS_TOKEN: dummy
       # Fail fast instead of spending ten minutes compiling Erlang from source
       # if mise ever can't find a precompiled build for this runner.
       MISE_ERLANG_COMPILE: "false"

@@ -11,4 +11,4 @@ mkdir -p "$root/test/mockups"
 cp "$1" "$dest"
 trap 'rm -f "$dest"; rmdir "$root/test/mockups" 2>/dev/null || true' EXIT
 cd "$root"
-MOCKUP_OUT="$round/real" MAPBOX_ACCESS_TOKEN=dummy mise exec -- mix test "test/mockups/$(basename "$1")"
+MOCKUP_OUT="$round/real" mise exec -- mix test "test/mockups/$(basename "$1")"
