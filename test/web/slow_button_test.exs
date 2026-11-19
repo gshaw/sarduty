@@ -19,8 +19,15 @@ defmodule Web.SlowButtonTest do
   @slow [{Req, :_}, {App.Mailer, :_}, {Service.LetterPDF, :_}, {System, :cmd}]
 
   # Req functions that only build a request, and functions that wait only the first
-  # time: an organization's logo comes from S3 once, then from memory (#1067).
-  @not_slow [{Req, :new}, {Req, :merge}, {App.Operation.LoadImage, :fetch_organization_logo}]
+  # time: an organization's logo comes from S3 once, then from memory (#1067), and a
+  # form draft's new PDF goes to S3 once, kept after the ask that brought it, which
+  # isn't an event (#1089).
+  @not_slow [
+    {Req, :new},
+    {Req, :merge},
+    {App.Operation.LoadImage, :fetch_organization_logo},
+    {App.Operation.SaveDraft, :put_pages}
+  ]
 
   # Work these run after the event has answered, so the page shows its own progress.
   # The macros expand to Phoenix.LiveView.Async.

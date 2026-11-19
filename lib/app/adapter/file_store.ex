@@ -17,11 +17,13 @@ defmodule App.Adapter.FileStore do
 
   # cspell:ignore enoent -- the file system's "no such file", as File's functions name it
 
-  # Every kind of file: its folder name, whose it is, whether each file has its own
-  # random token, and the `expires` tag S3 deletes it by, if any. A new kind is a line
-  # here and a row in docs/files.md; App.Adapter.FileStoreKeysTest checks both.
+  # Every kind of file: its folder name, whose it is (one owner, or a list when either
+  # may own it), whether each file has its own random token, and the `expires` tag S3
+  # deletes it by, if any. A new kind is a line here and a row in docs/files.md;
+  # App.Adapter.FileStoreKeysTest checks both.
   @kinds %{
     logo: %{folder: "logo", owner: :orgs, token: false, expires: nil},
+    form_draft: %{folder: "form-draft", owner: [:teams, :orgs], token: true, expires: nil},
     integration_test: %{folder: "integration-test", owner: :site, token: true, expires: "2d"}
   }
 
@@ -40,7 +42,10 @@ defmodule App.Adapter.FileStore do
   """
   def key(owner, id, kind, token, file) when is_binary(file) do
     %{folder: folder, owner: kind_owner, token: tokened} = Map.fetch!(@kinds, kind)
-    if owner != kind_owner, do: raise(ArgumentError, "#{kind} belongs to #{kind_owner}")
+
+    if owner not in List.wrap(kind_owner),
+      do: raise(ArgumentError, "#{kind} belongs to #{inspect(kind_owner)}")
+
     check_token!(kind, tokened, token)
     [prefix(owner, id), folder, token, file] |> Enum.reject(&is_nil/1) |> Enum.join("/")
   end

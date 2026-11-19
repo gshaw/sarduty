@@ -1,15 +1,17 @@
 defmodule Web.FormLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.AIWriting, only: [draft_waiting: 1]
   import Web.Components.FormSample
 
   alias App.Document
+  alias App.Model.AIDraft
   alias App.Model.CustomField
   alias App.Model.Form
   alias App.Model.Organization
-  alias App.Operation.AskAI
   alias App.Operation.CopyForm
   alias App.Operation.DeleteForm
+  alias App.Operation.SaveDraft
   alias App.Operation.SaveForm
   alias App.Operation.SetFormState
   alias App.Operation.TryForm
@@ -25,9 +27,12 @@ defmodule Web.FormLive do
   # agency's blank page. Its text folds under Show how it fills in. The sidebar: Ready to
   # try and Ready to publish, two switches for three states (#970) that save as they're
   # flipped, then Shows on, Version, Actions, and Questions last, since they run long,
-  # each with its type and how it starts. With AI writing open, its admins write it on
+  # each with its type and how it starts. Its admins write it on
   # Change form (#1089). Delete form shows while no PDF was published from it; after,
   # turning it off is the way.
+  #
+  # While its admin has a draft from Change form (#1089), a banner says so, to them alone,
+  # with Open Change form and Discard them.
   #
   # On a team's page, its organization's form is read-only: its state as a fact where the
   # switches sit, the sample on the team's own activities, and its text. With team forms
@@ -39,6 +44,7 @@ defmodule Web.FormLive do
     socket
     |> assign(page_title: form.name, owner: owner, own?: own?)
     |> assign_actions(form, owner, own?, socket.assigns.current_user)
+    |> assign_draft(form)
     |> assign(activity: nil, activities: [], pages: [], preview_error: nil)
     |> assign_form(form)
     |> preview()
@@ -67,12 +73,15 @@ defmodule Web.FormLive do
         replaced?: false
       )
 
-  # Change form writes the form with AI writing (#1089), for whoever saves the owner's
-  # forms while AI writing is open to them.
-  defp change?(owner, user),
-    do:
-      SaveForm.allowed?(owner, user) and
-        AskAI.check(owner, user, DateTime.utc_now(), :form) != {:error, :off}
+  # The person's own draft, while they may still change the form.
+  defp assign_draft(%{assigns: %{change?: true, current_user: user}} = socket, form),
+    do: assign(socket, draft: AIDraft.get(user, form))
+
+  defp assign_draft(socket, _form), do: assign(socket, draft: nil)
+
+  # Change form, for whoever saves the owner's forms: with AI writing (#1089), or by
+  # hand and Replace PDF while AI writing is off to them, its one way to write a form.
+  defp change?(owner, user), do: SaveForm.allowed?(owner, user)
 
   defp assign_form(socket, form) do
     page = Form.page_bytes(form)
@@ -139,6 +148,14 @@ defmodule Web.FormLive do
     <p :if={@from} id="form-from" class="measure">
       {@from.short_name}'s form. Only {@from.short_name} can change it.
     </p>
+    <.draft_waiting
+      id="form-draft"
+      draft={@draft}
+      name={@form.name}
+      change="Change form"
+      change_path={FormOwner.change_path(@owner, @form)}
+      timezone={@owner.timezone}
+    />
 
     <div class="content-wrapper">
       <aside class="content-1/3">
@@ -386,6 +403,14 @@ defmodule Web.FormLive do
       {:error, :not_written} ->
         {:noreply, put_flash(socket, :error, "Save the form's text before you turn it on.")}
     end
+  end
+
+  def handle_event("discard_draft", _params, socket) do
+    %{form: form, current_user: user} = socket.assigns
+    SaveDraft.discard(user, form)
+
+    {:noreply,
+     socket |> assign(draft: nil) |> put_flash(:info, "Discarded your changes to #{form.name}.")}
   end
 
   def handle_event("copy", _params, socket) do

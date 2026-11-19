@@ -203,7 +203,7 @@ defmodule Web.ReportFormLiveTest do
     {:ok, lv, html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
 
     assert has_element?(lv, "#report-bar.action-bar #report-save[form=report-form]")
-    assert has_element?(lv, "#report-bar #report-cancel[data-leave-ok]")
+    assert has_element?(lv, "#report-bar #report-close[data-leave-ok]")
     assert has_element?(lv, "label[for=report_about]", "Description")
     {name, _} = :binary.match(html, ~s(id="report_name"))
     {query, _} = :binary.match(html, ~s(id="report_query"))
@@ -749,6 +749,167 @@ defmodule Web.ReportFormLiveTest do
       refute has_element?(lv, "#report-ai-asks")
     end
 
+    # Saved AI turns (#1089): each ask and each change by hand is kept as the person's
+    # draft, so the page opens again as it was left.
+    test "a reload brings back the changes and the conversation, and Save report discards them",
+         %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      conn = log_in_user(conn, user)
+      stub_claude("select name, standing from members", "Adds Standing after Name.", %{})
+
+      {:ok, report} =
+        SaveReport.call(team, user, nil, %{
+          "name" => "Members",
+          "query" => "select name from members"
+        })
+
+      path = ~p"/teams/#{team}/reports/#{report.id}/edit"
+      {:ok, lv, _html} = live(conn, path)
+      refute has_element?(lv, "#report-ai-start-over")
+      lv |> form("#report-ai-form", ai: %{ask: "Add each member's standing"}) |> render_submit()
+      render_async(lv)
+      assert has_element?(lv, "#report-unsaved", "Kept for you until you save.")
+      assert has_element?(lv, "#report-unsaved[data-kept=true][data-saving=false]")
+      assert has_element?(lv, "#report-ai-start-over[data-confirm^='Start over?']")
+
+      {:ok, lv, html} = live(conn, path)
+      assert html =~ "Your changes from today at"
+      assert html =~ "Save report to keep them."
+      assert has_element?(lv, "#report_query", "select name, standing from members")
+      assert has_element?(lv, "#report-ai .ai-you", "Add each member's standing")
+      assert has_element?(lv, "#report-ai .ai-reply", "Adds Standing after Name.")
+
+      # Undo still knows what came before.
+      [_, id] = Regex.run(~r/id="report-ai-undo-(\d+)"/, render(lv))
+      lv |> element("#report-ai-undo-#{id}") |> render_click()
+      assert has_element?(lv, "#report_query", "select name from members")
+      refute App.Repo.exists?(App.Model.AIDraft)
+
+      lv |> form("#report-form", report: %{name: "Everyone"}) |> render_change()
+      {:ok, lv, _html} = live(conn, path)
+      assert has_element?(lv, "h1#report-title", "Everyone")
+
+      lv |> form("#report-form") |> render_submit()
+      assert_redirect(lv, ~p"/teams/#{team}/reports/#{report.id}")
+      refute App.Repo.exists?(App.Model.AIDraft)
+    end
+
+    test "a draft from before someone saved the report says so, and Save report asks twice",
+         %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      conn = log_in_user(conn, user)
+      stub_claude("select name, standing from members", "Adds Standing after Name.", %{})
+
+      {:ok, report} =
+        SaveReport.call(team, user, nil, %{
+          "name" => "Members",
+          "query" => "select name from members"
+        })
+
+      path = ~p"/teams/#{team}/reports/#{report.id}/edit"
+      {:ok, lv, _html} = live(conn, path)
+      lv |> form("#report-ai-form", ai: %{ask: "Add each member's standing"}) |> render_submit()
+      render_async(lv)
+
+      # Saved elsewhere, as another team admin would.
+      theirs = "select name, last_attended from members"
+
+      {:ok, _saved} =
+        SaveReport.call(team, AccountsFixtures.user_fixture(), report, %{
+          "query" => theirs,
+          "change" => "Theirs."
+        })
+
+      {:ok, lv, html} = live(conn, path)
+      assert html =~ "saved Members after you started."
+
+      lv |> form("#report-form") |> render_submit()
+      assert has_element?(lv, "#flash-error", "Not saved.")
+      assert App.Repo.reload!(report).query == theirs
+
+      lv |> form("#report-form") |> render_submit()
+      assert_redirect(lv, ~p"/teams/#{team}/reports/#{report.id}")
+      assert App.Repo.reload!(report).query == "select name, standing from members"
+    end
+
+    test "Cancel leaves the draft: the report's page says it waits, only to its author",
+         %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      other = AccountsFixtures.user_fixture(%{email: manager_fixture(team).email})
+
+      {:ok, report} =
+        SaveReport.call(team, user, nil, %{
+          "name" => "Members",
+          "query" => "select name from members"
+        })
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/#{report.id}/edit")
+
+      lv |> form("#report-form", report: %{name: "Everyone"}) |> render_change()
+
+      {:ok, lv, _html} =
+        conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/#{report.id}")
+
+      assert has_element?(lv, "#report-draft", "Your changes are not saved yet")
+      assert has_element?(lv, "#report-draft", "From today at")
+      assert has_element?(lv, "#report-draft-open[href$='/reports/#{report.id}/edit']")
+
+      {:ok, other_lv, _html} =
+        build_conn() |> log_in_user(other) |> live(~p"/teams/#{team}/reports/#{report.id}")
+
+      refute has_element?(other_lv, "#report-draft")
+
+      {:ok, other_lv, _html} =
+        build_conn() |> log_in_user(other) |> live(~p"/teams/#{team}/reports/#{report.id}/edit")
+
+      assert has_element?(other_lv, "h1#report-title", "Members")
+
+      lv |> element("#report-draft-discard") |> render_click()
+      refute has_element?(lv, "#report-draft")
+      assert render(lv) =~ "Discarded your changes to Members."
+      refute App.Repo.exists?(App.Model.AIDraft)
+    end
+
+    test "a blank New report reopens its draft once AI has answered, and Start over goes back",
+         %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      conn = log_in_user(conn, user)
+
+      stub_claude("select name, standing from members", "Lists each member's standing.", %{
+        "name" => "Hours by member"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/new")
+      lv |> form("#report-ai-form", ai: %{ask: "Hours per member"}) |> render_submit()
+      render_async(lv)
+
+      {:ok, lv, html} = live(conn, ~p"/teams/#{team}/reports/new")
+      assert html =~ "Your new report from today at"
+      assert html =~ "Save report to keep it."
+      refute has_element?(lv, "#report-start")
+      assert has_element?(lv, "h1#report-title", "Hours by member")
+      assert has_element?(lv, "#report-ai .ai-you", "Hours per member")
+
+      # A copy opens as it always did.
+      {:ok, copy, _html} = live(conn, ~p"/teams/#{team}/reports/new?from=hours-by-member")
+      refute render(copy) =~ "is back"
+
+      # Typing in the copy leaves the waiting draft alone.
+      copy |> form("#report-form", report: %{name: "Hours, mine"}) |> render_change()
+      assert App.Repo.exists?(App.Model.AIDraft)
+
+      {:ok, lv, _html} =
+        lv
+        |> element("#report-ai-start-over")
+        |> render_click()
+        |> follow_redirect(conn, ~p"/teams/#{team}/reports/new")
+
+      assert render(lv) =~ "Started over."
+      assert has_element?(lv, "#report-start #report-ai-form", "Describe the report you want")
+      refute App.Repo.exists?(App.Model.AIDraft)
+    end
+
     test "Stop puts the words back, and the ask counts with what it spent", %{conn: conn} do
       %{user: user, team: team} = user_with_team_fixture()
       test = self()
@@ -893,10 +1054,23 @@ defmodule Web.ReportFormLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
     assert has_element?(lv, "#report-unsaved[hidden][phx-hook=Unsaved]")
-    assert has_element?(lv, "#report-cancel[data-leave-ok]")
+    assert has_element?(lv, "#report-close[data-leave-ok]")
 
     lv |> form("#report-form", report: %{name: "Members by name"}) |> render_change()
     assert has_element?(lv, "#report-unsaved[data-unsaved=true]:not([hidden])", "Not saved yet")
+
+    # Close asks first now: Discard changes, or Keep for later with the draft kept.
+    assert has_element?(
+             lv,
+             "#report-close[phx-click=close][data-confirm-button='Discard changes'][data-confirm-alt='Keep for later'][data-confirm-alt-href='/teams/#{team.subdomain}/reports/#{report.id}']"
+           )
+
+    assert lv |> element("#report-close") |> render() =~
+             "Close without saving? Your changes and the conversation go. Members stays as saved."
+
+    lv |> element("#report-close") |> render_click()
+    assert_redirect(lv, ~p"/teams/#{team}/reports/#{report.id}")
+    refute App.Repo.exists?(App.Model.AIDraft)
 
     # A new report, blank or a copy, asks only once it differs from how it opened, so a
     # built-in's link on a blank New report goes without asking.

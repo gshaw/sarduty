@@ -7,7 +7,9 @@ defmodule Web.FormChangeLiveTest do
   import App.DataFixtures
   import Phoenix.LiveViewTest
 
+  alias App.Adapter.FileStore
   alias App.Model.AIAsk
+  alias App.Model.AIDraft
   alias App.Model.Form
   alias App.Operation.SaveForm
   alias App.Operation.SetAISettings
@@ -185,10 +187,11 @@ defmodule Web.FormChangeLiveTest do
     lv |> element("#form-show-text", "Show how it fills in") |> render_click()
     assert has_element?(lv, "#form-text-input", "form 'Debrief'")
 
-    # Nothing is saved until Save form, a reload asks nothing, and the conversation goes.
+    # Nothing is saved until Save form, and a reload asks nothing: the draft brings the
+    # conversation back.
     refute form |> Repo.reload!() |> Form.written?()
     {:ok, lv, _html} = live(conn, forms_path(team, "/#{form.id}/edit"))
-    refute has_element?(lv, "#form-ai-asks")
+    assert has_element?(lv, "#form-ai-asks")
     assert Repo.aggregate(AIAsk, :count) == 1
   end
 
@@ -271,6 +274,78 @@ defmodule Web.FormChangeLiveTest do
     assert form.state == :off
   end
 
+  # Saved AI turns (#1089): each ask and each fix by hand is kept as the person's draft.
+  test "a reload brings the draft back, with its conversation, and Start over discards it",
+       ctx do
+    %{conn: conn, team: team, alex: alex, started: started} = ctx
+    stub_claude([%{"text" => written(), "note" => "Wrote it.", "blank" => []}])
+    conn = log_in_user(conn, alex)
+    path = forms_path(team, "/#{started.id}/edit")
+
+    {:ok, lv, _html} = live(conn, path)
+    lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
+    render_async(lv, @wait)
+    assert has_element?(lv, "#form-unsaved", "Kept for you until you save.")
+
+    {:ok, lv, html} = live(conn, path)
+    assert html =~ "Your changes from today at"
+    assert html =~ "Save form to keep them."
+    assert has_element?(lv, "#form-ai .ai-reply", "Wrote it.")
+    lv |> element("#form-show-text") |> render_click()
+    assert has_element?(lv, "#form-text-input", "Incident debrief")
+
+    assert lv |> element("#form-ai-start-over") |> render() =~
+             "Incident debrief goes back to the agency&#39;s blank form."
+
+    {:ok, lv, _html} =
+      lv |> element("#form-ai-start-over") |> render_click() |> follow_redirect(conn, path)
+
+    assert has_element?(lv, "#flash-info", "Started over.")
+    assert has_element?(lv, "#flash-info", "Incident debrief is as saved.")
+    refute has_element?(lv, "#form-ai-asks")
+    refute Repo.exists?(AIDraft)
+  end
+
+  test "Cancel leaves the draft: the form's page says it waits, only to its author", ctx do
+    %{conn: conn, team: team, alex: alex, started: started} = ctx
+    stub_claude([%{"text" => written(), "note" => "Wrote it.", "blank" => []}])
+    other = user_fixture(%{email: manager_fixture(team).email})
+
+    {:ok, lv, _html} =
+      conn |> log_in_user(alex) |> live(forms_path(team, "/#{started.id}/edit"))
+
+    lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
+    render_async(lv, @wait)
+
+    {:ok, lv, _html} = conn |> log_in_user(alex) |> live(forms_path(team, "/#{started.id}"))
+    assert has_element?(lv, "#form-draft", "Your changes are not saved yet")
+    assert has_element?(lv, "#form-draft", "with 1 ask")
+    assert has_element?(lv, "#form-draft-open[href$='/forms/#{started.id}/edit']")
+
+    {:ok, other_lv, _html} =
+      build_conn() |> log_in_user(other) |> live(forms_path(team, "/#{started.id}"))
+
+    refute has_element?(other_lv, "#form-draft")
+
+    lv |> element("#form-draft-discard") |> render_click()
+    refute has_element?(lv, "#form-draft")
+    assert render(lv) =~ "Discarded your changes to Incident debrief."
+    refute Repo.exists?(AIDraft)
+  end
+
+  test "Save form discards the draft", ctx do
+    %{conn: conn, team: team, alex: alex, started: started} = ctx
+    stub_claude([%{"text" => written(), "note" => "Wrote it.", "blank" => []}])
+    conn = log_in_user(conn, alex)
+    {:ok, lv, _html} = live(conn, forms_path(team, "/#{started.id}/edit"))
+    lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
+    render_async(lv, @wait)
+    assert Repo.exists?(AIDraft)
+
+    {:ok, _lv, _html} = lv |> element("#form-save") |> render_click() |> follow_redirect(conn)
+    refute Repo.exists?(AIDraft)
+  end
+
   describe "a new PDF from the agency" do
     # The form written, then the agency's new page: AI fits the form to it and changes
     # nothing, as the made-up page only adds a word.
@@ -315,6 +390,30 @@ defmodule Web.FormChangeLiveTest do
       assert Repo.reload!(started).page_sha256 == Form.sha256(new_page)
     end
 
+    # The new PDF is kept in the file store with the draft, and Undo still knows the old.
+    test "a reload keeps the new PDF, and Undo still puts the old one back", ctx do
+      %{conn: conn, team: team, page: page, new_page: new_page, started: started} = ctx
+      draft = Repo.one!(AIDraft)
+      assert draft.pages == [Form.sha256(new_page)]
+
+      {:ok, lv, _html} = live(conn, forms_path(team, "/#{started.id}/edit"))
+      assert has_element?(lv, ".ai-you", "Fit the form to the agency's new PDF.")
+      assert has_element?(lv, "#form-unsaved:not([hidden])")
+
+      [_, id] = ~r/id="form-ai-undo-(\d+)"/ |> Regex.scan(render(lv)) |> List.last()
+      lv |> element("#form-ai-undo-#{id}") |> render_click()
+      refute has_element?(lv, ".ai-you", "Fit the form to the agency's new PDF.")
+
+      {:ok, _lv, _html} = lv |> element("#form-save") |> render_click() |> follow_redirect(conn)
+      assert Repo.reload!(started).page_sha256 == Form.sha256(page)
+
+      # Saved, the draft goes, and a job deletes its PDF from the store.
+      refute Repo.exists?(AIDraft)
+      file = "#{Form.sha256(new_page)}.pdf"
+      key = FileStore.key(:teams, team.id, :form_draft, draft.files_token, file)
+      assert FileStore.get(key) == {:error, :not_found}
+    end
+
     test "Undo puts the old page back", %{conn: conn, lv: lv, page: page, started: started} do
       [_, id] = ~r/id="form-ai-undo-(\d+)"/ |> Regex.scan(render(lv)) |> List.last()
       lv |> element("#form-ai-undo-#{id}") |> render_click()
@@ -348,6 +447,31 @@ defmodule Web.FormChangeLiveTest do
     refute has_element?(lv, ".ai-failed")
     assert has_element?(lv, ".ai-reply", "You asked: Test ask 4.")
     assert AIAsk.count_today(team, DateTime.utc_now()) == 0
+  end
+
+  test "a draft from before someone saved the form says so, and Save form asks twice", ctx do
+    %{conn: conn, team: team, alex: alex, started: started} = ctx
+    stub_claude([%{"text" => written(), "note" => "Wrote it.", "blank" => []}])
+    conn = log_in_user(conn, alex)
+    path = forms_path(team, "/#{started.id}/edit")
+
+    {:ok, lv, _html} = live(conn, path)
+    lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
+    render_async(lv, @wait)
+
+    # Saved elsewhere, as another admin would.
+    theirs = written(&String.replace(&1, "ask notes 'Notes'", "ask notes 'Theirs'"))
+    {:ok, _saved} = SaveForm.call(team, started, theirs, nil, make_admin(user_fixture()))
+
+    {:ok, lv, html} = live(conn, path)
+    assert html =~ "Incident debrief was saved after you started."
+
+    lv |> element("#form-save") |> render_click()
+    assert has_element?(lv, "#flash-error", "Not saved.")
+    assert Repo.reload!(started).text =~ "Theirs"
+
+    {:ok, _lv, _html} = lv |> element("#form-save") |> render_click() |> follow_redirect(conn)
+    refute Repo.reload!(started).text =~ "Theirs"
   end
 
   test "a fix by hand is checked as it's typed, and Save form saves it", ctx do
@@ -448,7 +572,7 @@ defmodule Web.FormChangeLiveTest do
     assert has_element?(lv, ".ai-you", "Write this form.")
   end
 
-  test "without AI writing, New form adds the form and there's no Change form", ctx do
+  test "without AI writing, New form adds the form, and Change form writes it by hand", ctx do
     %{conn: conn, team: team, alex: alex, started: started} = ctx
     admin = make_admin(user_fixture())
 
@@ -464,10 +588,12 @@ defmodule Web.FormChangeLiveTest do
     refute has_element?(lv, "#form-start-for")
 
     {:ok, lv, _html} = live(conn, forms_path(team, "/#{started.id}"))
-    refute has_element?(lv, "#form-change")
+    assert has_element?(lv, "#form-change")
 
     {:ok, lv, _html} = live(conn, forms_path(team, "/#{started.id}/edit"))
     assert has_element?(lv, "#form-ai-closed", "AI writing is off.")
+    assert has_element?(lv, "#form-show-text")
+    assert has_element?(lv, "#form-replace-pdf")
   end
 
   test "the form's page links Change form for its team admin", ctx do

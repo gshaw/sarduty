@@ -110,6 +110,13 @@ defmodule App.Model.Form do
   """
   def written?(%Form{text: text}), do: text not in [nil, ""]
 
+  @doc """
+  Which save the form is at: its version, or 0 before its first text, which keeps
+  version 1. Change form compares it at Save, so a newer save is never replaced unseen
+  (#1089).
+  """
+  def saved_mark(%Form{} = form), do: if(written?(form), do: form.version, else: 0)
+
   @doc "How the state reads: Off, Testing, or On."
   def state_label(:off), do: "Off"
   def state_label(:testing), do: "Testing"

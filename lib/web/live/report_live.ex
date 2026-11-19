@@ -6,15 +6,20 @@ defmodule Web.ReportLive do
   admins can run it for different years; what the URL leaves out, a team's own report
   takes from the values saved with it. Download CSV gives the same rows, every page.
   Its actions are a line of links under its description (`<.page_actions>`); History and
-  Delete report are two of them, for a team's own report (#834).
+  Delete report are two of them, for a team's own report (#834). While the team admin
+  has a draft of it from Change report (#1089), a banner says so, to them alone, with
+  Open Change report and Discard them.
   """
   use Web, :live_view_app_layout
 
+  import Web.Components.AIWriting, only: [draft_waiting: 1]
   import Web.Components.ReportPage
   import Web.Components.ReportTable
 
   alias App.Adapter.D4H
+  alias App.Model.AIDraft
   alias App.Model.SavedReport
+  alias App.Operation.SaveDraft
   alias App.Operation.SaveReport
   alias App.Report
   alias App.Report.BuiltIn
@@ -37,6 +42,9 @@ defmodule Web.ReportLive do
       socket
       |> assign(page_title: report.name, report: report, now: now)
       |> assign(last_saved: report.saved && Reports.last_saved(team, report.saved, now))
+      |> assign(
+        draft: report.saved && AIDraft.get(socket.assigns.current_user, {team, report.saved})
+      )
       |> assign(fix: BuiltIn.fix(report.id, D4H.service(team)))
       |> run(report, given(params, report), now)
 
@@ -82,6 +90,16 @@ defmodule Web.ReportLive do
     {:noreply, push_patch(socket, to: path, replace: true)}
   end
 
+  def handle_event("discard_draft", _params, socket) do
+    %{current_team: team, current_user: user, report: %{saved: %SavedReport{} = saved}} =
+      socket.assigns
+
+    SaveDraft.discard(user, {team, saved})
+
+    {:noreply,
+     socket |> assign(draft: nil) |> put_flash(:info, "Discarded your changes to #{saved.name}.")}
+  end
+
   def handle_event("delete", _params, socket) do
     %{current_team: team, report: %{saved: %SavedReport{} = saved}} = socket.assigns
     SaveReport.delete(saved)
@@ -104,6 +122,14 @@ defmodule Web.ReportLive do
 
     <h1 class="title">{@report.name}</h1>
     <p :if={@report.about} class="lead">{@report.about}</p>
+    <.draft_waiting
+      id="report-draft"
+      draft={@draft}
+      name={@report.name}
+      change="Change report"
+      change_path={~p"/teams/#{@current_team}/reports/#{@report.id}/edit"}
+      timezone={@current_team.timezone}
+    />
     <.page_actions id="report-actions">
       <:byline :if={@last_saved}>
         Saved by {@last_saved.by || "a team admin"} on {Format.date_short(
