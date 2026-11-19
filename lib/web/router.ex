@@ -333,17 +333,18 @@ defmodule Web.Router do
       live "/orgs/:slug/settings/hours-tags", Org.HoursTagsLive
       live "/orgs/:slug/settings/fields", Org.FieldsLive
       live "/orgs/:slug/settings/fields/:id", Org.FieldLive
-      live "/orgs/:slug/forms", Org.FormCollectionLive
-      live "/orgs/:slug/forms/new", Org.FormUploadLive, :new
-      live "/orgs/:slug/forms/:id", Org.FormLive
-      live "/orgs/:slug/forms/:id/edit", Org.FormUploadLive, :edit
+      # The same pages as a team's own forms (#1083), under /teams/:subdomain/forms.
+      live "/orgs/:slug/forms", FormCollectionLive
+      live "/orgs/:slug/forms/new", FormUploadLive, :new
+      live "/orgs/:slug/forms/:id", FormLive
+      live "/orgs/:slug/forms/:id/edit", FormUploadLive, :edit
     end
 
     # A form's page and a try on Coast Range SAR (#950): PDFs, which a LiveView can't send.
     scope "/orgs/:slug/forms/:id" do
       pipe_through :require_org_access
-      get "/page", Org.FormController, :page
-      get "/try", Org.FormController, :try
+      get "/page", FormController, :page
+      get "/try", FormController, :try
     end
 
     # Every team page, in one live_session so moving between them doesn't reload (#406).
@@ -454,6 +455,11 @@ defmodule Web.Router do
       live "/teams/:subdomain/whiteboard/:id/edit", WhiteboardNoteFormLive, :edit
       live "/teams/:subdomain/chores/:id", ChoreLive
       live "/teams/:subdomain/chores/:id/edit", ChoreFormLive, :edit
+      # A team's own forms (#1083), while SAR Duty has team forms on for it.
+      live "/teams/:subdomain/forms", FormCollectionLive
+      live "/teams/:subdomain/forms/new", FormUploadLive, :new
+      live "/teams/:subdomain/forms/:id", FormLive
+      live "/teams/:subdomain/forms/:id/edit", FormUploadLive, :edit
       live "/teams/:subdomain/tax-credit-letters", TaxCreditLetterCollectionLive
       # A member's letter for a year, sent or not (#970).
       live "/teams/:subdomain/tax-credit-letters/:year/members/:id", TaxCreditLetterLive
@@ -526,6 +532,9 @@ defmodule Web.Router do
       get "/tax-credit-letters/:year/members/:id/draft.png", TaxCreditLetterController, :draft
       # An organization's form on an activity (#950): posts its answers, gets the PDF.
       post "/activities/:id/forms/:form_id/pdf", ActivityFormPDFController, :create
+      # A team's own form's page and a try on one of its activities (#1083).
+      get "/forms/:id/page", FormController, :page
+      get "/forms/:id/try", FormController, :try
       # A published PDF as it was saved, current or not (#970).
       get "/pdfs/:id", PublishedPDFController, :show
       get "/pdfs/:id/preview.png", PublishedPDFController, :preview

@@ -1,14 +1,16 @@
-defmodule Web.Org.FormController do
+defmodule Web.FormController do
   use Web, :controller
 
   alias App.Model.Form
   alias App.Operation.TryForm
+  alias Web.FormOwner
 
-  # An organization's form as PDFs (#950): its blank page, and a try on Coast Range SAR.
-  # Found through the URL's organization, so another's is a 404.
+  # A form as PDFs (#950): its blank page, and a try, for an organization's form or a
+  # team's own (#1083). Found through the URL's organization or team, so another's is a
+  # 404, and a team's while team forms are off.
 
   def page(conn, %{"id" => id}) do
-    form = form!(conn, id)
+    {_owner, form} = form!(conn, id)
 
     case Form.page_bytes(form) do
       nil -> raise Web.Status.NotFound
@@ -17,21 +19,23 @@ defmodule Web.Org.FormController do
   end
 
   def try(conn, %{"id" => id} = params) do
-    form = form!(conn, id)
+    {owner, form} = form!(conn, id)
 
-    case TryForm.call(form, params["activity"]) do
+    case TryForm.call(form, owner, params["activity"]) do
       {:ok, attachment} ->
         send_pdf(conn, attachment.content, "Sample #{attachment.filename}")
 
       {:error, message} ->
         conn
         |> put_flash(:error, message)
-        |> redirect(to: ~p"/orgs/#{conn.assigns.current_organization}/forms/#{form}")
+        |> redirect(to: FormOwner.form_path(owner, form))
     end
   end
 
-  defp form!(conn, id),
-    do: Form.get(conn.assigns.current_organization, id) || raise(Web.Status.NotFound)
+  defp form!(conn, id) do
+    owner = FormOwner.get(conn.assigns)
+    {owner, Form.get(owner, id) || raise(Web.Status.NotFound)}
+  end
 
   defp send_pdf(conn, bytes, filename) do
     send_download(conn, {:binary, bytes},

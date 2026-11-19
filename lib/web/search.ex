@@ -45,6 +45,7 @@ defmodule Web.Search do
       Web.Settings.PlaceFormLive => "A setting, found from Team settings.",
       Web.Settings.FieldLive => "A field's details, found from Team settings' Fields tab.",
       Web.ReportLive => "Reports lists every report on one page.",
+      Web.FormLive => "A team's own forms are few, all on its Forms page.",
       Web.GroupRuleLive => "A group rule: find the group, then its rule.",
       Web.OutboxLive => "Only a demo has an Outbox, and its banner links it."
     }
