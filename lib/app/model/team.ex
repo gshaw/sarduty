@@ -63,6 +63,9 @@ defmodule App.Model.Team do
     # The MCP switch (#28). Set only by App.Operation.SetTeamMCP, from the team's admin
     # page.
     field :mcp_enabled, :boolean, default: false
+    # The team keeps its own forms (#1083). Set only by App.Operation.SetTeamForms, from
+    # the team's admin page.
+    field :forms_enabled, :boolean, default: false
     # The team's features: member logins (#156), and on a team with them on, chores
     # (#341) and members sending certificates (#493). Set only by
     # App.Operation.SetTeamFeature from team settings' Features tab.

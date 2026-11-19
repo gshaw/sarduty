@@ -40,4 +40,35 @@ defmodule App.Operation.SetFormStateTest do
 
     assert Repo.reload!(form).state == :off
   end
+
+  describe "a team's own form (#1083)" do
+    setup %{organization: organization} do
+      team =
+        team_fixture()
+        |> Ecto.Changeset.change(forms_enabled: true, organization_id: organization.id)
+        |> Repo.update!()
+
+      %{team: team, own: form_fixture(team, %{name: "Debrief"})}
+    end
+
+    test "the team's admins set it, and the event names the team", %{team: team, own: own} do
+      manager = manager_fixture(team)
+      user = user_fixture(%{email: manager.email})
+
+      assert {:ok, %{state: :testing}} = SetFormState.call(own, :testing, user)
+      assert %Event{team_id: team_id} = Repo.get_by!(Event, kind: :form_set_testing)
+      assert team_id == team.id
+    end
+
+    test "its organization's admins and another team's admins can't",
+         %{organization: organization, own: own} do
+      org_admin = user_fixture()
+      organization_admin_fixture(organization, org_admin.email)
+      other = manager_fixture(team_fixture())
+
+      for user <- [org_admin, user_fixture(%{email: other.email})] do
+        assert SetFormState.call(own, :on, user) == {:error, :forbidden}
+      end
+    end
+  end
 end

@@ -232,4 +232,29 @@ defmodule Web.Settings.FeaturesLiveTest do
     refute has_element?(lv, "#feature-mcp input")
     assert has_element?(lv, "#feature-mcp a[href='/teams/#{team.subdomain}/settings/mcp']")
   end
+
+  test "Team forms shows only once SAR Duty turns it on (#1083)", %{conn: conn, team: team} do
+    {:ok, lv, _html} = open(conn, team)
+    refute has_element?(lv, "#feature-team-forms")
+
+    team |> Ecto.Changeset.change(forms_enabled: true) |> Repo.update!()
+    {:ok, lv, _html} = open(conn, team)
+    assert has_element?(lv, "#feature-team-forms .badge", "On")
+    refute has_element?(lv, "#feature-team-forms input")
+  end
+
+  test "Features are A to Z, every one shown", %{conn: conn, team: team} do
+    team |> Ecto.Changeset.change(mcp_enabled: true, forms_enabled: true) |> Repo.update!()
+    {:ok, lv, _html} = open(conn, team)
+
+    labels =
+      lv
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("#features > .switch-row .font-semibold")
+      |> Enum.map(&LazyHTML.text/1)
+
+    assert "Team forms" in labels
+    assert labels == Enum.sort_by(labels, &String.downcase/1)
+  end
 end

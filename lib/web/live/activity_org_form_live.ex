@@ -20,8 +20,10 @@ defmodule Web.ActivityOrgFormLive do
   Page 1 folds under it, and History lists every PDF published for the activity, as a
   tax credit letter's page does.
 
-  The form is found on for the team's organization, and the activity through the team,
-  so another organization's form, one turned off, or one not for this activity is a 404.
+  The form is found among those shown for the team (`Form.get_shown/2`): its
+  organization's, and its own while team forms are on (#1083). The activity is found
+  through the team, so another organization's or team's form, one turned off, or one
+  not for this activity is a 404.
   """
   use Web, :live_view_app_layout
 

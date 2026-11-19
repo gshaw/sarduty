@@ -135,6 +135,58 @@ defmodule App.Operation.SaveFormTest do
              {:error, :text, "WSARA has a form called Task report. Replace that one instead."}
   end
 
+  describe "a team's own form (#1083)" do
+    setup %{team: team}, do: %{team: Repo.reload!(team)}
+
+    test "is the team's, checked on that team alone, RESTRICTED fields and all",
+         %{team: team, organization: organization, admin: admin, page: page} do
+      custom_field_fixture(team, %{title: "Debrief", restricted: true})
+      text = String.replace(@text, "`People helped`\n", "`People helped`, `Debrief`\n")
+
+      # A team in the organization without the form's fields doesn't matter to it.
+      %{name: "Alpine SAR"}
+      |> team_fixture()
+      |> Ecto.Changeset.change(organization_id: organization.id)
+      |> Repo.update!()
+
+      assert {:ok, %Form{team_id: team_id, organization_id: nil} = form} =
+               SaveForm.call(team, nil, text, page, admin)
+
+      assert team_id == team.id
+      assert Form.get_all(team) == [form]
+      assert Form.get_all(organization) == []
+
+      assert %Event{team_id: ^team_id, data: %{"team_id" => ^team_id}} =
+               Repo.get_by!(Event, kind: :form_saved)
+    end
+
+    test "can't take the name of one of its organization's forms",
+         %{team: team, organization: organization, admin: admin, page: page} do
+      form_fixture(organization)
+
+      assert SaveForm.call(team, nil, @text, page, admin) ==
+               {:error, :text, "WSARA has a form called Task report. Give yours another name."}
+    end
+
+    test "two of the team's forms can't share a name", %{team: team, admin: admin, page: page} do
+      {:ok, _form} = SaveForm.call(team, nil, @text, page, admin)
+
+      assert SaveForm.call(team, nil, @text, page, admin) ==
+               {:error, :text,
+                "Valley SAR has a form called Task report. Replace that one instead."}
+    end
+
+    test "another team's form, or the organization's, isn't replaced here",
+         %{team: team, organization: organization, admin: admin, page: page} do
+      theirs = form_fixture(team_fixture())
+
+      assert SaveForm.call(team, theirs, @text, page, admin) == {:error, :forbidden}
+
+      assert SaveForm.call(team, form_fixture(organization), @text, page, admin) ==
+               {:error, :forbidden}
+    end
+  end
+
   describe "a form with a layout" do
     # Its layout draws the page: there's none to upload.
     @layout_form """

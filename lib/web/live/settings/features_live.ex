@@ -8,12 +8,12 @@ defmodule Web.Settings.FeaturesLive do
   alias App.Operation.SetTeamFeature
 
   # The team's features, /teams/:subdomain/settings/features: one switch each, saved when
-  # flipped, A to Z. Certificates and chores need member logins, so they sit under it, A
-  # to Z too. MCP (Agents) and ID
-  # cards are SAR Duty's to turn on, from /admin/teams/:id (App.Operation.SetTeamMCP,
-  # App.Operation.SetTeamIdCards), so they show only as on or off. A team asks for ID
-  # cards; MCP isn't offered, so it shows only once on. Every member gets a card (#893)
-  # sits under ID cards, for a team admin.
+  # flipped. Certificates and chores need member logins, so they sit under it, A to Z.
+  # MCP (Agents) and ID cards are SAR Duty's to turn on, from /admin/teams/:id
+  # (App.Operation.SetTeamMCP, App.Operation.SetTeamIdCards), so they show only as on or
+  # off. A team asks for ID cards; MCP isn't offered, so it shows only once on. Team forms
+  # (#1083) is SAR Duty's too, and shows only once on, so no other team learns of it while
+  # it's tried. Every member gets a card (#893) sits under ID cards, for a team admin.
   def mount(_params, _session, socket) do
     socket
     |> assign(page_title: "Team settings · Features", reading_whiteboard?: false)
@@ -211,6 +211,16 @@ defmodule Web.Settings.FeaturesLive do
             >Chore categories</.a>
           </.switch>
         </div>
+
+        <.set_by_sar_duty
+          :if={@current_team.forms_enabled}
+          id="feature-team-forms"
+          label="Team forms"
+          on?={true}
+        >
+          Your own forms, filled in from an activity. Only your team sees them. SAR Duty
+          turned them on.
+        </.set_by_sar_duty>
 
         <.switch
           id="feature-travel"

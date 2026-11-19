@@ -60,6 +60,21 @@ defmodule Web.Admin.TeamLiveTest do
     assert has_element?(lv, "#team-mcp-state", "On")
   end
 
+  test "a SAR Duty admin turns team forms on and off, and sees how many the team has (#1083)",
+       %{conn: conn, team: team} do
+    form_fixture(team, %{name: "Debrief"})
+    {:ok, lv, _html} = live(conn, ~p"/admin/teams/#{team.id}")
+    assert has_element?(lv, "#team-forms-state", "Off · 1 form")
+
+    lv |> element("#team-forms-on") |> render_click()
+    assert Repo.reload!(team).forms_enabled
+    assert has_element?(lv, "#team-forms-state", "On")
+
+    lv |> element("#team-forms-off") |> render_click()
+    refute Repo.reload!(team).forms_enabled
+    assert has_element?(lv, "#team-forms-state", "Off")
+  end
+
   describe "login grants" do
     test "a SAR Duty admin adds one, stored lowercase, with an event naming who acted",
          %{conn: conn, admin: admin, team: team} do

@@ -594,6 +594,26 @@ organization's space, `/orgs/:slug/forms` ([organizations.md](organizations.md#i
 - **Coast Range SAR has BCSARA's 27 incident fields**, with made-up values, so a BC form
   tried there fills every line. Its draft Missing hiker has no Agency File #.
 
+### A team's own forms
+
+A form can belong to one team instead (#1083): `forms.team_id`, with exactly one of it
+and `organization_id` set. It lets a team try a form that still needs work, which an
+organization's form in testing can't do: testing shows on every team in the
+organization.
+
+- **SAR Duty turns team forms on per team**, in Adminland's team page
+  (`teams.forms_enabled`, App.Operation.SetTeamForms). Team settings' Features tab shows
+  it only once on, so no other team learns of it. Off, the team's forms are hidden and
+  kept, with every PDF published from them.
+- **It shows for that team only**, with its organization's, A to Z. `Form.shown_for/1`
+  is the one rule; `get_shown/2` and `shown?/2` ask it, so the Forms tab, a form's page,
+  Publish, Sign, and the PDF treat both alike.
+- **Saving checks it on that team alone**, RESTRICTED fields and all, since the form is
+  the team's. It can't take the name of one of its organization's forms, and an
+  organization's form saved later with its name replaces it on the team's activities.
+- **The team's admins set it Off, Testing, or On** (App.Operation.SetFormState); its
+  organization's admins can't.
+
 ### On an activity
 
 Testing or on, a form shows on the **Forms tab** of each activity its `where` shows it

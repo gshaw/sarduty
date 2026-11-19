@@ -57,7 +57,8 @@ has its own page.
   They try it on Coast Range SAR, a made-up team, and set it Off, Testing (draft PDFs
   only), or On (team admins publish it) for every team (#970).
 - **Once on, it shows for every team** in the organization, for team admins only. A team
-  with no organization has none.
+  with no organization has none. A team can also keep its own forms, which SAR Duty
+  turns on per team ([documents.md](documents.md#a-teams-own-forms)).
 
 BCSARA's are EMBC's Task Report Form, on the page D4H draws, and EMCR's Expense
 reimbursement request and the request's Supplement, in D4H's layout

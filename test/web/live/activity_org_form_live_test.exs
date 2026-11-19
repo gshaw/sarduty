@@ -102,6 +102,49 @@ defmodule Web.ActivityOrgFormLiveTest do
     end
   end
 
+  describe "a team's own form (#1083)" do
+    setup %{cast: cast, page: page} do
+      own = form_fixture(cast.team, %{name: "Debrief", text: @text, page: page, state: :on})
+      %{own: own}
+    end
+
+    defp team_forms(team, enabled),
+      do: team |> Ecto.Changeset.change(forms_enabled: enabled) |> Repo.update!()
+
+    test "shows with its organization's while team forms are on, and publishes", ctx do
+      %{cast: cast, hiker: hiker, form: form, own: own} = ctx
+      team_forms(cast.team, true)
+      conn = log_in_user(build_conn(), cast.alex)
+
+      {:ok, tab, _html} = live(conn, forms_path(hiker))
+      assert has_element?(tab, "#activity-form-#{own.id}", "Debrief")
+      assert has_element?(tab, "#activity-form-#{form.id}")
+
+      {:ok, lv, _html} = live(conn, form_path(hiker, own))
+
+      lv
+      |> form("#org-form-answers", answers: %{"leader" => "Alex Chen", "injured" => "0"})
+      |> render_change()
+
+      lv |> element("#org-form-publish") |> render_click()
+      render_async(lv, 5_000)
+      lv |> element("#publish-confirm") |> render_click()
+
+      assert %PublishedPDF{form_id: form_id} =
+               PublishedPDF |> order_by(desc: :id) |> limit(1) |> Repo.one!()
+
+      assert form_id == own.id
+    end
+
+    test "is found nowhere while team forms are off", %{cast: cast, hiker: hiker, own: own} do
+      conn = log_in_user(build_conn(), cast.alex)
+
+      {:ok, tab, _html} = live(conn, forms_path(hiker))
+      refute has_element?(tab, "#activity-form-#{own.id}")
+      assert_raise Web.Status.NotFound, fn -> live(conn, form_path(hiker, own)) end
+    end
+  end
+
   describe "the form's page" do
     test "shows what SAR Duty filled in, and links each empty field to Change fields", ctx do
       %{cast: cast, hiker: hiker, form: form} = ctx

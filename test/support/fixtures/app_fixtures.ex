@@ -115,22 +115,28 @@ defmodule App.DataFixtures do
   end
 
   @doc """
-  An organization's form (#950), inserted directly with the test form's text and a
-  stand-in page, or `page:` in `attrs`, so it isn't checked. Off unless `attrs` says
-  `enabled: true`.
+  An organization's form (#950), or a team's own (#1083), inserted directly with the test
+  form's text and a stand-in page, or `page:` in `attrs`, so it isn't checked. Off
+  unless `attrs` sets `state:`.
   """
-  def form_fixture(%Organization{} = organization, attrs \\ %{}) do
+  def form_fixture(owner, attrs \\ %{}) do
     {page, attrs} = Map.pop(attrs, :page, "%PDF-1.7 a stand-in page")
     text = File.read!("test/support/fixtures/forms/task_report.txt")
 
+    owner_id =
+      case owner do
+        %Organization{id: id} -> %{organization_id: id}
+        %Team{id: id} -> %{team_id: id}
+      end
+
     form =
       %Form{
-        organization_id: organization.id,
         name: "Task report",
         about: "A made-up agency's task report, for tests.",
         text: text,
         page_sha256: Form.sha256(page)
       }
+      |> Map.merge(owner_id)
       |> Map.merge(attrs)
       |> Repo.insert!()
 
