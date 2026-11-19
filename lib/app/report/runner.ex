@@ -55,6 +55,21 @@ defmodule App.Report.Runner do
     end
   end
 
+  @doc """
+  The records an each's SQL gives (App.Report.Compiler.values/3): each one's id, its
+  text, and an activity's start or nil, with no blank text.
+  """
+  def records({sql, params}, repo) do
+    case query(repo, sql, params) do
+      {:ok, %{rows: rows}} ->
+        {:ok,
+         for([id, text, started] <- rows, text != nil, do: {id, text, decode(started, :date)})}
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
   defp query(repo, sql, params) do
     case repo.query(sql, Enum.map(params, &SQL.param/1), timeout: @timeout) do
       {:ok, result} -> {:ok, result}

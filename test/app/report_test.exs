@@ -1042,6 +1042,88 @@ defmodule App.ReportTest do
                view.filters
     end
 
+    test "each activity lists the activities its where keeps, newest first", %{team: team} do
+      activities = Activity |> where([a], a.team_id == ^team.id) |> Repo.all()
+      member = member_fixture(team, %{name: "Ann Smith"})
+      for activity <- activities, do: attendance_fixture(activity, member)
+      night = Enum.find(activities, &(&1.title == "Night search"))
+
+      text = """
+      select member, activity from attendance
+      where activity.id = :activity
+      filter activity 'Incident' required
+        each activity where activity.kind = 'Incident'
+      """
+
+      view = page!(team, %{}, text)
+      assert [%{options: options, picked: picked}] = view.filters
+
+      assert Enum.map(options, &elem(&1, 0)) == [
+               "Night search · Aug 1, 2026",
+               "Lost hiker · Apr 1, 2026"
+             ]
+
+      assert picked == to_string(night.id)
+      assert [[_member, night_id]] = view.result.rows
+      assert night_id == night.id
+
+      lost = Enum.find(activities, &(&1.title == "Lost hiker"))
+      view = page!(team, %{"activity" => to_string(lost.id)}, text)
+      assert [[_member, lost_id]] = view.result.rows
+      assert lost_id == lost.id
+    end
+
+    test "activity = :activity picks by id, and the query's where narrows the menu", %{
+      team: team
+    } do
+      activities = Activity |> where([a], a.team_id == ^team.id) |> Repo.all()
+      member = member_fixture(team, %{name: "Ann Smith"})
+      for activity <- activities, do: attendance_fixture(activity, member)
+      lost = Enum.find(activities, &(&1.title == "Lost hiker"))
+
+      text = """
+      select member, activity from attendance
+      where activity.kind = 'Incident' and activity = :activity
+      filter activity 'Incident' required
+        each activity
+      """
+
+      view = page!(team, %{"activity" => to_string(lost.id)}, text)
+      assert [%{options: options}] = view.filters
+
+      assert Enum.map(options, &elem(&1, 0)) == [
+               "Night search · Aug 1, 2026",
+               "Lost hiker · Apr 1, 2026"
+             ]
+
+      assert [[_member, lost_id]] = view.result.rows
+      assert lost_id == lost.id
+    end
+
+    test "each activity.title dates its choices by the activity, not the member", %{team: team} do
+      activities = Activity |> where([a], a.team_id == ^team.id) |> Repo.all()
+      member = member_fixture(team, %{name: "Ann Smith"})
+      lost = Enum.find(activities, &(&1.title == "Lost hiker"))
+      night = Enum.find(activities, &(&1.title == "Night search"))
+      attendance_fixture(lost, member, %{started_at: ~U[2026-09-01 18:00:00Z]})
+      attendance_fixture(night, member)
+
+      text = """
+      select member, activity from attendance
+      where activity.kind = 'Incident' and activity.title = :activity
+      filter activity 'Incident' required
+        each activity.title
+      """
+
+      view = page!(team, %{}, text)
+      assert [%{options: options}] = view.filters
+
+      assert Enum.map(options, &elem(&1, 0)) == [
+               "Night search · Aug 1, 2026",
+               "Lost hiker · Apr 1, 2026"
+             ]
+    end
+
     test "a filter's value can feed the query's own where, when it's required", %{team: team} do
       text = """
       select title from activities
@@ -1104,7 +1186,7 @@ defmodule App.ReportTest do
                "Line 2, sort when: Label it like the column it sorts, one of 'Activity', or show its field."
 
       assert error("select title from activities\nfilter f 'F'\n  each started_at", team) ==
-               "Line 3, filter f: Write each with a field it can list, such as year(started_at), kind, or member.groups."
+               "Line 3, filter f: Write each with a field it can list, such as year(started_at), kind, activity, or member.groups."
     end
   end
 
