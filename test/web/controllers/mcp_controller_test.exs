@@ -175,7 +175,7 @@ defmodule Web.MCPControllerTest do
       member =
         member_fixture(team, %{
           name: "Pat Example",
-          ref_id: "4471",
+          ref_id: "REF-4471",
           email: "pat.secret@example.com",
           phone: "604-555-0199",
           address: "42 Hidden Road"
@@ -202,11 +202,11 @@ defmodule Web.MCPControllerTest do
 
       tax_credit_letter_fixture(member, %{letter_content: "Dear Pat, private letter text"})
       # A list saved while searching for a member keeps the search in its values.
-      saved_report_fixture(team, "Callout list", %{"q" => "4471"})
+      saved_report_fixture(team, "Callout list", %{"q" => "REF-4471"})
 
       secrets = [
         "Pat Example",
-        "4471",
+        "REF-4471",
         "pat.secret@example.com",
         "604-555-0199",
         "42 Hidden Road",
