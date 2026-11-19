@@ -178,8 +178,17 @@ defmodule Web.ReportFormLive do
       |> Map.put("base", socket.assigns.base)
 
     rev = socket.assigns.rev + 1
+    subject = {team, saved}
 
-    case SaveDraft.call(user, {team, saved}, fields, asks) do
+    # Nothing to keep discards only this page's own draft: a copy never opened the one
+    # waiting from another visit, so it stays.
+    if socket.assigns.draft_at == nil and not SaveDraft.keep?(subject, fields, asks),
+      do: assign(socket, rev: rev),
+      else: save_draft(socket, user, subject, fields, asks, rev)
+  end
+
+  defp save_draft(socket, user, subject, fields, asks, rev) do
+    case SaveDraft.call(user, subject, fields, asks) do
       {:ok, draft} ->
         assign(socket, draft_at: draft && draft.updated_at, rev: rev)
 

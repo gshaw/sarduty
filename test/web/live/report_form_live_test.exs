@@ -895,6 +895,10 @@ defmodule Web.ReportFormLiveTest do
       {:ok, copy, _html} = live(conn, ~p"/teams/#{team}/reports/new?from=hours-by-member")
       refute render(copy) =~ "is back"
 
+      # Typing in the copy leaves the waiting draft alone.
+      copy |> form("#report-form", report: %{name: "Hours, mine"}) |> render_change()
+      assert App.Repo.exists?(App.Model.AIDraft)
+
       {:ok, lv, _html} =
         lv
         |> element("#report-ai-start-over")
