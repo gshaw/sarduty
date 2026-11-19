@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
-# Serves this checkout, a worktree or the main one, as the one dev server: port 4025,
-# https://sarduty.test and https://sarduty.gshaw.ca, on the main checkout's dev database,
-# with watchers and live reload. Stop any other server on 4025 first.
+# Serves this checkout, a worktree or the main one, as the one dev server: port 4025, on
+# the main checkout's dev database, with watchers and live reload. Stop any other server
+# on 4025 first.
 #
 #   tools/dev-server.sh            # in the foreground
 #   tools/dev-server.sh --detach   # in the background, log in tmp/dev-server.log
 #
-# The dev teams (tools/dev-teams.exs) are the teams to try things on. DEV_URL_HOST, such as
-# sarduty.gshaw.ca, is the app's own URL in QR codes and emailed links, so a phone can
-# open them; sarduty.test otherwise.
+# It prints the URL to open. DEV_URL_HOST in .mise.local.toml is the host in that URL, QR
+# codes, and emailed links, such as one a phone can reach; http://localhost:4025 without it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -36,10 +35,15 @@ serve=(mise exec -- mix run --no-halt --no-start -e '
   {:ok, _} = Application.ensure_all_started(:sarduty)
 ')
 
+host=$(mise exec -- printenv DEV_URL_HOST || true)
+url=${host:+https://$host}
+url=${url:-http://localhost:4025}
+
 if [ "${1:-}" = "--detach" ]; then
   mkdir -p tmp
   nohup "${serve[@]}" > tmp/dev-server.log 2>&1 < /dev/null &
-  echo "Serving on 4025, pid $!, log tmp/dev-server.log"
+  echo "Serving $url on 4025, pid $!, log tmp/dev-server.log"
 else
+  echo "Serving $url on 4025"
   exec "${serve[@]}"
 fi
