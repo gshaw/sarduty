@@ -31,7 +31,7 @@ defmodule Web.AgentsLive do
             <p class="hint mb-1">{use.access}</p>
             <p class="action mb-0">
               <.a :if={use[:path]} navigate={use[:path]}>{use.link}</.a>
-              <.a :if={use[:href]} href={use[:href]}>{use.link}</.a>
+              <.a :if={use[:href]} href={use[:href]} external>{use.link}</.a>
             </p>
           </li>
         </ul>

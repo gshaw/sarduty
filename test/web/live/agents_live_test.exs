@@ -30,10 +30,13 @@ defmodule Web.AgentsLiveTest do
 
     assert has_element?(
              lv,
-             ~s(#agents-use-forms a[href="https://github.com/gshaw/sarduty/blob/main/docs/ai-writing.md#forms"])
+             ~s(#agents-use-forms a[href="https://github.com/gshaw/sarduty/blob/main/docs/ai-writing.md#forms"][target="_blank"])
            )
 
-    assert has_element?(lv, ~s(#agents-use-code a[href="https://github.com/gshaw/sarduty"]))
+    assert has_element?(
+             lv,
+             ~s(#agents-use-code a[href="https://github.com/gshaw/sarduty"][target="_blank"])
+           )
   end
 
   test "the lander is Markdown too, linking each page's Markdown", %{conn: conn} do
