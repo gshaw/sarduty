@@ -130,7 +130,7 @@ defmodule Web.Navigation do
       activity_links(team),
       people_links(team),
       [link("equipment", "Equipment", ~p"/teams/#{team}/equipment") | chore_links(team)],
-      [link("reports", "Reports", ~p"/teams/#{team}/reports") | form_links(team)],
+      [link("reports", "Reports", ~p"/teams/#{team}/reports")],
       [link("settings", "Team settings", ~p"/teams/#{team}/settings")]
     ]
   end
@@ -170,12 +170,6 @@ defmodule Web.Navigation do
       do: [link("chores", "Chores", ~p"/teams/#{team}/chores")],
       else: []
   end
-
-  # A team's own forms (#1083) follow Reports, only while SAR Duty has team forms on.
-  defp form_links(%Team{forms_enabled: true} = team),
-    do: [link("forms", "Forms", ~p"/teams/#{team}/forms")]
-
-  defp form_links(_team), do: []
 
   # Certificates follow Qualifications on a team where members send them (#493).
   defp people_links(team) do

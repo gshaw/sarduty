@@ -21,7 +21,7 @@ SAR Duty builds on a team's D4H records with tools made for volunteer teams. It 
 ## Setup
 
 ```sh
-brew install mise flyctl puma-dev
+brew install mise flyctl puma-dev mupdf  # mupdf's mutool reads a form's page
 puma-dev -install
 cp .mise.example.toml .mise.local.toml
 # All optional in dev; tests need none

@@ -21,6 +21,10 @@ ignorePaths:
   - "priv/static/images/add-to-apple-wallet.svg" # Apple's badge, as published: its rules forbid editing it (#952)
 words:
   - typst # makes tax credit letters as PDFs (#918)
+  - mupdf # the PDF library whose mutool reads a team form's page (#1083)
+  - mutool # MuPDF's command line program (Service.PDFGeometry, #1083)
+  - moveto # MuPDF's trace output: a path's points (Service.PDFGeometry and its test)
+  - lineto # MuPDF's trace output: a path's points (Service.PDFGeometry and its test)
   - Arimo # the letters' font, Helvetica's widths (#918)
   - wght # a variable font's weight axis, in DancingScript[wght].ttf, the letters' signature (#995)
   - mult # Decimal.mult, the decimal library's multiply: a form's money and Service.Format.money (#950)

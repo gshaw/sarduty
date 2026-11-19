@@ -219,7 +219,7 @@ defmodule Web.Settings.FeaturesLive do
           on?={true}
         >
           Your own forms, filled in from an activity. Only your team sees them. SAR Duty
-          turned them on. <.a navigate={~p"/teams/#{@current_team}/forms"}>Forms</.a>
+          turned them on. <.a navigate={~p"/teams/#{@current_team}/settings/forms"}>Forms</.a>
         </.set_by_sar_duty>
 
         <.switch

@@ -34,10 +34,10 @@ defmodule Web.TeamScopingTest do
     "/teams/:subdomain/activities/:id/forms/:form_id/publish",
     "/teams/:subdomain/activities/:id/forms/:form_id/sign",
     # A team's own form (#1083), with team forms on here, so the 404 is the scoping's.
-    "/teams/:subdomain/forms/:id",
-    "/teams/:subdomain/forms/:id/edit",
-    "/teams/:subdomain/forms/:id/page",
-    "/teams/:subdomain/forms/:id/try",
+    "/teams/:subdomain/settings/forms/:id",
+    "/teams/:subdomain/settings/forms/:id/edit",
+    "/teams/:subdomain/settings/forms/:id/page",
+    "/teams/:subdomain/settings/forms/:id/try",
     "/teams/:subdomain/equipment/:id",
     "/teams/:subdomain/equipment/:id/fields",
     "/teams/:subdomain/equipment/:id/fields/edit",
@@ -446,8 +446,8 @@ defmodule Web.TeamScopingTest do
   defp path_for("/teams/:subdomain/outbox/:id" <> rest, s, o),
     do: "/teams/#{s}/outbox/#{o.outbox.id}#{rest}"
 
-  defp path_for("/teams/:subdomain/forms/:id" <> rest, s, o),
-    do: "/teams/#{s}/forms/#{o.team_form.id}#{rest}"
+  defp path_for("/teams/:subdomain/settings/forms/:id" <> rest, s, o),
+    do: "/teams/#{s}/settings/forms/#{o.team_form.id}#{rest}"
 
   defp path_for("/teams/:subdomain/reports/:id" <> rest, s, o),
     do: "/teams/#{s}/reports/#{o.report.id}#{rest}"

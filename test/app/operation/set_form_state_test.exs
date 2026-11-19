@@ -30,6 +30,15 @@ defmodule App.Operation.SetFormStateTest do
     assert {:ok, %{state: :on}} = SetFormState.call(form, :on, user_fixture(%{is_admin: true}))
   end
 
+  test "a team's form with no text yet stays off (#1083)" do
+    form = form_fixture(team_fixture(), %{text: ""})
+    admin = user_fixture(%{is_admin: true})
+
+    assert SetFormState.call(form, :testing, admin) == {:error, :not_written}
+    assert SetFormState.call(form, :on, admin) == {:error, :not_written}
+    assert {:ok, %{state: :off}} = SetFormState.call(form, :off, admin)
+  end
+
   test "anyone else is refused, another organization's admin too", %{form: form} do
     other = user_fixture()
     organization_admin_fixture(organization_fixture(), other.email)

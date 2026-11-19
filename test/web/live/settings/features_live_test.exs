@@ -241,7 +241,11 @@ defmodule Web.Settings.FeaturesLiveTest do
     {:ok, lv, _html} = open(conn, team)
     assert has_element?(lv, "#feature-team-forms .badge", "On")
     refute has_element?(lv, "#feature-team-forms input")
-    assert has_element?(lv, "#feature-team-forms a[href='/teams/#{team.subdomain}/forms']")
+
+    assert has_element?(
+             lv,
+             "#feature-team-forms a[href='/teams/#{team.subdomain}/settings/forms']"
+           )
   end
 
   test "Features are A to Z, every one shown", %{conn: conn, team: team} do

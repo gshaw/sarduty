@@ -110,6 +110,10 @@ defmodule App.DocumentTest do
 
   defp money(values, name), do: Service.Format.money(values[name])
 
+  test "the language is docs/documents.md, built in for a model's prompt (#1088)" do
+    assert Document.language() == File.read!("docs/documents.md")
+  end
+
   test "every document parses, checks against the catalog, and its expects hold" do
     names = Document.names()
     assert "tax_credit_letter" in names

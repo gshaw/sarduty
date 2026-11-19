@@ -13,7 +13,8 @@ defmodule Web.FormLive do
   # One form (#950), an organization's or a team's own (#1083): what it reads and asks,
   # whether it's off, testing, or on (#970), and a try: on Coast Range SAR, a made-up
   # team, for an organization's, and on the team's own activities for a team's. Found
-  # through its owner, so another's is a 404. SAR Duty admins also replace it.
+  # through its owner, so another's is a 404. SAR Duty admins replace it. A team's new
+  # form says it's not written yet, and nothing more, until it has its text (#1088).
   def mount(%{"id" => id}, _session, socket) do
     owner = FormOwner.get(socket.assigns)
     form = Form.get(owner, id) || raise(Web.Status.NotFound)
@@ -50,6 +51,11 @@ defmodule Web.FormLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
+      <:item
+        :if={FormOwner.settings_path(@owner)}
+        label="Team settings"
+        path={FormOwner.settings_path(@owner)}
+      />
       <:item label="Forms" path={FormOwner.forms_path(@owner)} />
       <:item label={@form.name} />
     </.breadcrumbs>
@@ -61,7 +67,7 @@ defmodule Web.FormLive do
         <dl id="form-facts">
           <dt>{FormCollectionLive.state_label(@owner)}</dt>
           <dd id="form-state">
-            {Form.state_label(@form.state)}
+            {if Form.written?(@form), do: Form.state_label(@form.state), else: "Not written yet"}
           </dd>
           <dt>Shows on</dt>
           <dd id="form-shows-on">{shows_on(@doc)}</dd>
@@ -91,9 +97,17 @@ defmodule Web.FormLive do
         </dl>
       </aside>
       <main class="content-2/3">
+        <p :if={!Form.written?(@form)} id="form-not-written" class="mb-8 measure">
+          {@form.name} isn't written yet. It stays off until it is.
+        </p>
+
         <%!-- Two switches for three states, as Features nests one under another: on shows
         it to teams, and testing under it keeps it to drafts. Turning it on starts testing. --%>
-        <section id="form-on-off" class="mb-8 measure flex flex-col gap-6">
+        <section
+          :if={Form.written?(@form)}
+          id="form-on-off"
+          class="mb-8 measure flex flex-col gap-6"
+        >
           <h2 class="heading mb-0">{FormCollectionLive.state_label(@owner)}</h2>
           <.switch
             id="form-on"
@@ -121,7 +135,7 @@ defmodule Web.FormLive do
           </div>
         </section>
 
-        <section id="form-try" class="mb-8 measure">
+        <section :if={Form.written?(@form)} id="form-try" class="mb-8 measure">
           <h2 class="heading">Try it</h2>
           <p>{try_text(@owner)} The PDF says SAMPLE across it.</p>
           <p :if={@activities == []} id="form-try-none">{try_none(@owner)}</p>
@@ -147,14 +161,14 @@ defmodule Web.FormLive do
         <section :if={@current_user.is_admin} id="form-replace" class="mb-8 measure">
           <h2 class="heading">Replace</h2>
           <p>
-            Upload a new text or page.
+            {if Form.written?(@form), do: "Upload a new text or page.", else: "Upload its text."}
           </p>
           <.button id="form-replace-button" navigate={FormOwner.edit_path(@owner, @form)}>
             Replace form
           </.button>
         </section>
 
-        <section id="form-text">
+        <section :if={Form.written?(@form)} id="form-text">
           <h2 class="heading">Its text</h2>
           <p class="measure">
             What the form reads, what it asks, and where each value goes on the page.
@@ -231,6 +245,9 @@ defmodule Web.FormLive do
 
       {:error, :forbidden} ->
         {:noreply, put_flash(socket, :error, "You can no longer turn this form on or off.")}
+
+      {:error, :not_written} ->
+        {:noreply, put_flash(socket, :error, "Save the form's text before you turn it on.")}
     end
   end
 

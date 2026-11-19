@@ -11,7 +11,8 @@ defmodule Web.FormUploadLive do
   # Upload form and Replace form (#950), for SAR Duty admins: the form's text and its page
   # PDF, prepared on a Mac. There's no editor here. Saving checks the text on every team
   # in the organization and on Coast Range SAR, or on the team alone for a team's own
-  # form (#1083, App.Operation.SaveForm).
+  # form (#1083, App.Operation.SaveForm). A team's form not written yet takes its first
+  # text here, and stays version 1 (#1088).
   def mount(params, _session, socket) do
     unless socket.assigns.current_user.is_admin, do: raise(Web.Status.NotFound)
     owner = FormOwner.get(socket.assigns)
@@ -41,6 +42,11 @@ defmodule Web.FormUploadLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
+      <:item
+        :if={FormOwner.settings_path(@owner)}
+        label="Team settings"
+        path={FormOwner.settings_path(@owner)}
+      />
       <:item label="Forms" path={FormOwner.forms_path(@owner)} />
       <:item :if={@form} label={@form.name} path={FormOwner.form_path(@owner, @form)} />
       <:item label={if @form, do: "Replace", else: "Upload form"} />
@@ -59,12 +65,12 @@ defmodule Web.FormUploadLive do
       <.file_drop
         id="form-text-file"
         upload={@uploads.text}
-        label={if @form, do: "Text (optional)", else: "Text"}
+        label={if written?(@form), do: "Text (optional)", else: "Text"}
         kinds="a text file"
         errors={List.wrap(@errors[:text])}
       >
         The form's .txt file, starting with form and its name.
-        <span :if={@form}>Leave it empty to keep its text.</span>
+        <span :if={written?(@form)}>Leave it empty to keep its text.</span>
         <:current :if={@kept[:text]}>
           <span id="form-text-kept" class="hint">The text from your last try. Choose another to change it.</span>
         </:current>
@@ -106,11 +112,13 @@ defmodule Web.FormUploadLive do
     kept = %{text: upload(socket, :text, kept), page: upload(socket, :page, kept)}
     socket = assign(socket, kept: kept)
 
-    case kept.text || (form && form.text) do
-      nil -> {:noreply, assign(socket, errors: %{text: "Upload the form's text, a .txt file."})}
-      text -> save(socket, text, kept.page)
+    case kept.text || (written?(form) && form.text) do
+      text when is_binary(text) -> save(socket, text, kept.page)
+      _none -> {:noreply, assign(socket, errors: %{text: "Upload the form's text, a .txt file."})}
     end
   end
+
+  defp written?(form), do: form != nil and Form.written?(form)
 
   defp save(socket, text, page) do
     %{owner: owner, current_user: user, form: form} = socket.assigns
@@ -141,6 +149,10 @@ defmodule Web.FormUploadLive do
   defp checks_text(team), do: "Saving checks the text on #{team.name}."
 
   defp saved_message(nil, saved), do: "#{saved.name} uploaded."
+
+  defp saved_message(%Form{version: same}, %Form{version: same} = saved),
+    do: "#{saved.name} saved."
+
   defp saved_message(_form, saved), do: "#{saved.name} replaced. It's version #{saved.version}."
 
   # A file just chosen, or the one kept from the last try.

@@ -1,26 +1,37 @@
 defmodule Web.FormCollectionLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.TeamSettingsTabs
+
   alias App.Model.Form
   alias App.Model.Organization
   alias Web.FormOwner
 
   # An organization's forms (#950), such as EMCR's Task report, or a team's own (#1083),
-  # one page for both (Web.FormOwner). SAR Duty admins upload them; an organization's
-  # admins try each and turn it on for every team, and a team's admins turn its own on
-  # for their team.
+  # one page for both (Web.FormOwner). SAR Duty admins upload an organization's, and its
+  # admins try each and turn it on for every team. A team's admins start their own from
+  # the agency's PDF, and turn it on for their team once it's written.
   def mount(_params, _session, socket) do
     owner = FormOwner.get(socket.assigns)
-    {:ok, assign(socket, page_title: "Forms", owner: owner, forms: Form.get_all(owner))}
+    {:ok, assign(socket, page_title: title(owner), owner: owner, forms: Form.get_all(owner))}
   end
+
+  defp title(%Organization{}), do: "Forms"
+  defp title(_team), do: "Team settings · Forms"
 
   def render(assigns) do
     ~H"""
+    <.team_settings_tabs :if={!match?(%Organization{}, @owner)} team={@owner} current={:forms} />
     <.heading_row>
-      <h1 class="title">Forms</h1>
-      <:action :if={@current_user.is_admin}>
+      <h1 :if={match?(%Organization{}, @owner)} class="title">Forms</h1>
+      <:action :if={match?(%Organization{}, @owner) and @current_user.is_admin}>
         <.button id="upload-form" navigate={FormOwner.new_path(@owner)} variant={:success}>
           Upload form
+        </.button>
+      </:action>
+      <:action :if={!match?(%Organization{}, @owner)}>
+        <.button id="new-form" navigate={FormOwner.new_path(@owner)} variant={:success}>
+          New form
         </.button>
       </:action>
     </.heading_row>
@@ -31,12 +42,24 @@ defmodule Web.FormCollectionLive do
       it's on, they publish it.
     </p>
     <p :if={!match?(%Organization{}, @owner)} class="lead measure">
-      {@owner.name}'s own forms, filled in from an activity. Only your team sees them. While
-      a form is testing, you download draft PDFs. Once it's on, you publish it.
+      {@owner.name}'s own forms, filled in from an activity. Only your team sees them. Start
+      one from the agency's PDF. While a form is testing, you download draft PDFs. Once it's
+      on, you publish it.
     </p>
 
-    <.empty_state :if={@forms == []} id="no-forms" title="No forms yet">
+    <.empty_state
+      :if={@forms == [] and match?(%Organization{}, @owner)}
+      id="no-forms"
+      title="No forms yet"
+    >
       A SAR Duty site admin uploads {FormOwner.name(@owner)}'s forms. Reach them at <.a href="mailto:support@sarduty.com">support@sarduty.com</.a>.
+    </.empty_state>
+    <.empty_state
+      :if={@forms == [] and !match?(%Organization{}, @owner)}
+      id="no-forms"
+      title="No forms yet"
+    >
+      Choose New form and give SAR Duty the agency's PDF.
     </.empty_state>
 
     <.table :if={@forms != []} id="forms" rows={@forms} row_id={&"form-#{&1.id}"}>
@@ -45,8 +68,11 @@ defmodule Web.FormCollectionLive do
         <div :if={form.about} class="hint">{form.about}</div>
       </:col>
       <:col :let={form} label={state_label(@owner)} class="whitespace-nowrap">
-        <span id={"form-#{form.id}-state"} class={state_class(form.state)}>
+        <span :if={Form.written?(form)} id={"form-#{form.id}-state"} class={state_class(form.state)}>
           {Form.state_label(form.state)}
+        </span>
+        <span :if={!Form.written?(form)} id={"form-#{form.id}-state"} class="text-text-muted">
+          Not written yet
         </span>
       </:col>
       <:col :let={form} label="Version" class="max-md:hidden">

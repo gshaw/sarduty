@@ -352,7 +352,8 @@ Values print in black Arimo, as a form typed in Acrobat. A form is never locked.
 
 ### Preparing a form
 
-A form's places come from its page, measured on a Mac with
+A team's form's places come from its page's measured points instead
+([Writing a team's form](#writing-a-teams-form)). An organization's form's places come from its page, measured on a Mac with
 [tools/forms/find_places.py](../tools/forms/find_places.py). Each place's comment names
 the printed label it sits after, and the script finds it and writes the place's lengths,
 leaving its other options as they are:
@@ -613,10 +614,45 @@ organization.
   organization's form saved later with its name replaces it on the team's activities.
 - **The team's admins set it Off, Testing, or On** (App.Operation.SetFormState); its
   organization's admins can't.
-- **Its pages are the organization's pages**, under `/teams/:subdomain/forms`, after
-  Reports in the side navigation, and a 404 while team forms are off. Web.FormOwner
-  gives each page its owner, paths, and the words that differ. SAR Duty admins upload
-  and replace; the team's admins try it on the team's own activities, marked SAMPLE.
+- **Its pages are the organization's pages**, as Team settings' Forms tab, after Fields,
+  under `/teams/:subdomain/settings/forms`, and a 404 while team forms are off. Web.FormOwner
+  gives each page its owner, paths, and the words that differ. SAR Duty admins replace
+  it; the team's admins try it on the team's own activities, marked SAMPLE.
+- **The team's admins start it from the agency's PDF**, and save its text; see
+  [Writing a team's form](#writing-a-teams-form).
+
+### Writing a team's form
+
+A team admin starts their team's form without a Mac (#1083, #1088):
+
+1. **New form** on the Forms tab takes a name and the agency's PDF
+   (`SaveForm.start/5`). The form saves off, with its page and no text (`""`), and
+   can't be turned on until it's written (`Form.written?/1`). A scan is refused: it has
+   no text to measure.
+2. **Its page's measures**: `Service.PDFGeometry.describe/1` writes out each line of
+   text, each blank (a run of underscores), each rule (a drawn line), and each box, in
+   points from the page's top left, read by MuPDF's `mutool`. The labels say what each
+   place is, and the numbers say where.
+3. **`SaveForm.check_for/5`** runs every check saving runs, and saves nothing.
+4. **Saving its first text** keeps it version 1; each later save adds one. Until a
+   model writes it in SAR Duty, a SAR Duty admin writes it and uploads the text on
+   Replace. The form's page says it's not written yet, and nothing more.
+
+A model writing a team's form gets this page, built in (`App.Document.language/0`), and
+the page's measures. It writes each place from the measures, as find_places.py does:
+
+- **On a rule or a blank after a label**: `left` is the rule's `x0` plus 2pt and
+  `width` its length less 4pt, so the value clears each end. Its baseline sits 1.5pt
+  above the rule's `y`, or a blank's `baseline`, so `top` is that baseline less
+  three quarters of `size`. A rule under a label is the one nearest below it, on its
+  right or under it; `fit, align center` suits a short line.
+- **In a box to write in**, such as Details: inset 8.6pt from its left edge, its width
+  less 17.2pt, the first line's top 10pt below the box's, with `pitch` and `lines` to
+  fill its height, and `more '…'` for an attached page.
+- **A tick** in a small square box: `top` and `left` its corner and `size` its width.
+- **The size** is 9pt or 10pt, or the label's own `size` when that's smaller.
+
+Then try it on an activity. A value off its line is a place to fix.
 
 ### On an activity
 
