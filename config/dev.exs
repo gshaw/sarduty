@@ -23,9 +23,11 @@ config :sarduty, App.Adapter.FileStore,
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
 config :sarduty, Web.Endpoint,
-  url: [host: "sarduty.test", scheme: "https", port: 443],
+  # Caddy serves https://sd.dev.gshaw.ca to the Mac and the tailnet and forwards here, so
+  # listen on 127.0.0.1 only: nothing on the Wi-Fi reaches 4025 past Caddy.
+  url: [host: "sd.dev.gshaw.ca", scheme: "https", port: 443],
   force_ssl: [rewrite_on: [:x_forwarded_proto]],
-  http: [port: 4025],
+  http: [ip: {127, 0, 0, 1}, port: 4025],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,

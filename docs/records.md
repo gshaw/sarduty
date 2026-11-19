@@ -148,9 +148,10 @@ on a real Records team. Run Records from
 `~/Developer/sarduty-records` with a `SARDUTY_KEY`, then set SAR Duty's
 `RECORDS_HOST` and `RECORDS_SARDUTY_KEY` (that key) in `.mise.local.toml`.
 
-SAR Duty only calls Records over HTTPS with a certificate Erlang trusts, so puma-dev's
-`*.test` won't do: put Records behind a proxy with a public certificate, such as Caddy
-with Let's Encrypt. `RECORDS_HOST` may carry a port, like `records.example.ca:8443`.
+SAR Duty only calls Records over HTTPS with a certificate Erlang trusts, so put Records
+behind a proxy with a public certificate, such as Caddy with Let's Encrypt. On Gerry's
+Mac that is `RECORDS_HOST = "sr.dev.gshaw.ca"`, Records on 4029. `RECORDS_HOST` may
+carry a port, like `records.example.ca:8443`.
 
 ## Where the code is
 

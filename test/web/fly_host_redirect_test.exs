@@ -16,7 +16,7 @@ defmodule Web.FlyHostRedirectTest do
   end
 
   test "every other host is left alone, dev ones included" do
-    for host <- ~w(sarduty.test sarduty-orgs.test sarduty.gshaw.ca localhost other.fly.dev) do
+    for host <- ~w(sd.dev.gshaw.ca sarduty.gshaw.ca localhost other.fly.dev) do
       conn = conn(:get, "https://#{host}/") |> FlyHostRedirect.redirect(@hosts)
       refute conn.halted, host
     end

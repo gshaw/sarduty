@@ -1,9 +1,9 @@
 # The dev teams: the made-up cast as SAR Duty Records teams in the dev database, for
 # trying a branch on made-up people instead of South Fraser's (#963).
 #
-#   https://sarduty.gshaw.ca/teams/coastrange   Coast Range SAR (App.CoastRange)
-#   https://sarduty.gshaw.ca/teams/silverbasin  Silver Basin SAR (App.SilverBasin)
-#   https://sarduty.gshaw.ca/orgs/wesara        WESARA, their organization
+#   https://sd.dev.gshaw.ca/teams/coastrange   Coast Range SAR (App.CoastRange)
+#   https://sd.dev.gshaw.ca/teams/silverbasin  Silver Basin SAR (App.SilverBasin)
+#   https://sd.dev.gshaw.ca/orgs/wesara        WESARA, their organization
 #
 # Built like a Try a demo (App.Operation.BuildDemoTeam.build_dev_teams/2), so edits,
 # photos, and the sync work as for any Records team, but with no demo row: they keep
@@ -118,7 +118,7 @@ end
 Repo.update_all(from(u in User, where: u.id == ^user.id), set: [last_team_id: team.id])
 
 card = team |> MemberCard.find_current(member)
-site = "https://sarduty.gshaw.ca"
+site = "https://sd.dev.gshaw.ca"
 basin = Repo.get_by!(Team, subdomain: "silverbasin")
 
 IO.puts("""
