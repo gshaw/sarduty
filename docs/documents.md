@@ -377,8 +377,10 @@ uv run --with pdfplumber python -I tools/forms/find_places.py \
 ```
 
 A form can have no page at all: its own [layout](#layout) draws it each time it prints,
-and it's only the text to upload. Change the layout and upload it again: saving prints
-it once, and FormsTest prints it on Coast Range SAR.
+and it's only its text. BCSARA's Expense request is the one. No new form starts this
+way: New form takes the agency's PDF, and someone with no PDF asks for a blank one
+outside SAR Duty and starts from that. Change a layout with Show how it fills in on
+Change form: saving prints it once, and FormsTest prints it on Coast Range SAR.
 
 A form whose agency takes a page drawn in another's layout, such as D4H's, gets a blank
 page SAR Duty draws once: a Typst program beside it, such as
@@ -390,14 +392,13 @@ after changing the program; `App.FormsTest` checks the PDF is the one it draws:
 mise exec -- mix run --no-start tools/forms/draw_page.exs priv/forms/bcsara/supplement.typ
 ```
 
-Each form's text and page are in `priv/forms/<organization>/`, as uploaded.
-`App.FormsTest` saves each one as an upload does, checking it on Coast Range SAR and
+Each form's text and page are in `priv/forms/<organization>/`, as saved.
+`App.FormsTest` saves each one as Save form does, checking it on Coast Range SAR and
 running its expects, then prints it there.
 
 - **BCSARA's Task report** ([task_report.txt](../priv/forms/bcsara/task_report.txt)) is
   EMBC's Task Report Form (#993), the page D4H draws and EMCR takes today, as Andrew's
-  version 4 on production: `form 'EMBC Task Report Form'`, so an upload replaces
-  production's form. It reads the incident and BCSARA's fields (Agency, Agency File #,
+  version 4 on production: `form 'EMBC Task Report Form'`. It reads the incident and BCSARA's fields (Agency, Agency File #,
   ASE#, Region, Task Type, Equipment Used/Lost, Task Leader's Name) and asks nothing.
   Details of Task has 10 lines and Equipment Used/Lost 4, at 9pt, and each goes on an
   attached page when it's too long for them at 8pt
@@ -576,15 +577,16 @@ with its page PDF's bytes in `form_pages` and its SHA-256 on the form, so a list
 loads the page. Its name and about come from its text. Its pages are under the
 organization's space, `/orgs/:slug/forms` ([organizations.md](organizations.md#its-forms)).
 
-- **A SAR Duty admin uploads it**, the text and the page, and replaces it
-  (App.Operation.SaveForm). A form with a layout is its text alone. SAR Duty prepares
-  each form's places on a Mac: there's no editor in the browser. Replacing raises its
-  `version`, and keeps the page while the new text says `page`.
+- **Its organization admins or a SAR Duty admin write it**, as a team's admins write
+  theirs: New form from the agency's PDF, then Change form with AI writing, Show how it
+  fills in, and Replace PDF (App.Operation.SaveForm, #1089,
+  [ai-writing.md](ai-writing.md#forms)). A form with a layout is its text alone. Saving
+  again raises its `version`, and keeps the page while the new text says `page`.
 - **Saving checks it everywhere it will print**: against the catalog of each of the
   organization's teams and of Coast Range SAR, then every `expect`, then that each place
   is on a page of the page PDF (`PrintDocument.check_page/2`), or that its layout prints
-  (`PrintDocument.check_layout/1`). An error names the team,
-  and the upload page shows it under the file to fix. A team's RESTRICTED fields are left
+  (`PrintDocument.check_layout/1`). An error names the team, under How it fills in or in
+  the toast Save form shows. A team's RESTRICTED fields are left
   out of the check, so a form never reads one ([organizations.md](organizations.md#what-an-organization-never-sees)).
   A team without a field a form reads, such as a Records team outside BCSARA, fails the
   check, so the form can't be saved for its organization.
@@ -592,6 +594,17 @@ organization's space, `/orgs/:slug/forms` ([organizations.md](organizations.md#i
   (App.Operation.SetFormState, #970). Testing, team admins download draft PDFs only,
   under a Testing only banner; on, they publish. Its admins **try it** on Coast Range SAR (App.Operation.TryForm): one of its activities the
   form shows on, every answer its default, marked SAMPLE, and nothing saved.
+- **A form's page shows the form**: its Sample, tried on an activity and drawn as
+  pictures as Change form draws it (Web.Components.FormSample); before it's written,
+  the agency's blank page. Its text folds under Show how it fills in. The sidebar, in
+  order: Ready to try and Ready to publish, two switches for Off, Testing, and On, the
+  second shown once the first is on; Shows on; Version; Actions (Change form, Download
+  sample PDF, Download agency's blank PDF, Delete form); and Questions last, since they
+  run long, each with its type and how it starts.
+- **Delete form** (App.Operation.DeleteForm), in the sidebar's Actions, for whoever sets
+  it Off, Testing, or On, while no PDF was published from it: a form tried and never
+  used. Its page and sign requests go with it; answers stay, as they're the activity's.
+  Once a PDF was published, turning it off is the way, so every PDF keeps its form.
 - **Coast Range SAR has BCSARA's 27 incident fields**, with made-up values, so a BC form
   tried there fills every line. Its draft Missing hiker has no Agency File #.
 
@@ -616,8 +629,17 @@ organization.
   organization's admins can't.
 - **Its pages are the organization's pages**, as Team settings' Forms tab, after Fields,
   under `/teams/:subdomain/settings/forms`, and a 404 while team forms are off. Web.FormOwner
-  gives each page its owner, paths, and the words that differ. SAR Duty admins replace
-  it; the team's admins try it on the team's own activities, marked SAMPLE.
+  gives each page its owner, paths, and the words that differ. The team's admins try it
+  on the team's own activities, marked SAMPLE.
+- **The Forms tab shows on every team**, as Fields does: the team's own forms under its
+  logo, with New form, while team forms are on, then its organization's testing or on,
+  read-only, under the organization's. A team form its organization's replaced says so.
+  An organization's form's page there has its state as a fact, read-only, where a team's
+  own form has its switches, and its sample on the team's own activities.
+- **Copy as your team's form** (App.Operation.CopyForm), with team forms on, makes an
+  organization's form the team's own, named "Task report (copy)" for a Task report, off, with its text and page. It
+  shows beside the organization's on activities, never instead: the organization's stays
+  the one its teams file.
 - **The team's admins start it from the agency's PDF**, and save its text; see
   [Writing a team's form](#writing-a-teams-form).
 
@@ -634,9 +656,11 @@ A team admin starts their team's form without a Mac (#1083, #1088):
    points from the page's top left, read by MuPDF's `mutool`. The labels say what each
    place is, and the numbers say where.
 3. **`SaveForm.check_for/5`** runs every check saving runs, and saves nothing.
-4. **Saving its first text** keeps it version 1; each later save adds one. Until a
-   model writes it in SAR Duty, a SAR Duty admin writes it and uploads the text on
-   Replace. The form's page says it's not written yet, and nothing more.
+4. **Saving its first text** keeps it version 1; each later save adds one. With AI
+   writing open, the team's admins write it on Change form, and New form's Write form
+   opens it with the first ask running ([ai-writing.md](ai-writing.md#forms), #1089).
+   Without it, the form's page says it's not written yet, and nothing more, until AI
+   writing opens to them. The agency's new PDF goes in on Change form too.
 
 A model writing a team's form gets this page, built in (`App.Document.language/0`), and
 the page's measures. It writes each place from the measures, as find_places.py does:

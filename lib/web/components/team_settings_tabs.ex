@@ -59,22 +59,15 @@ defmodule Web.Components.TeamSettingsTabs do
       tab(:members, "Members", ~p"/teams/#{team}/settings/members",
         words: ~w(retiring attendance check)
       ),
-      tab(:fields, "Fields", ~p"/teams/#{team}/settings/fields", words: ~w(custom))
-    ] ++
-      forms(team) ++
-      [
-        tab(:signer, "Signer", ~p"/teams/#{team}/settings/signer", words: ~w(signature)),
-        tab(:hours_tags, "Hours tags", ~p"/teams/#{team}/settings/hours-tags"),
-        tab(:places, "Places", ~p"/teams/#{team}/settings/places")
-      ] ++ optional(team)
+      tab(:fields, "Fields", ~p"/teams/#{team}/settings/fields", words: ~w(custom)),
+      # Forms follow Fields, which they read: its organization's forms on every team, and
+      # its own while SAR Duty has team forms on for it (#1083).
+      tab(:forms, "Forms", ~p"/teams/#{team}/settings/forms", words: ~w(pdf)),
+      tab(:signer, "Signer", ~p"/teams/#{team}/settings/signer", words: ~w(signature)),
+      tab(:hours_tags, "Hours tags", ~p"/teams/#{team}/settings/hours-tags"),
+      tab(:places, "Places", ~p"/teams/#{team}/settings/places")
+    ] ++ optional(team)
   end
-
-  # The team's own forms (#1083) follow Fields, which they read, while SAR Duty has team
-  # forms on for it.
-  defp forms(%Team{forms_enabled: true} = team),
-    do: [tab(:forms, "Forms", ~p"/teams/#{team}/settings/forms", words: ~w(pdf))]
-
-  defp forms(_team), do: []
 
   # The tabs a feature turns on.
   defp optional(team) do

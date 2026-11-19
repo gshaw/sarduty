@@ -70,6 +70,14 @@ defmodule Web.DeleteConfirm do
     |> Map.put("data-confirm-warning", "#{D4H.service_name(team)} can't bring it back.")
   end
 
+  @doc "A form no PDF was published from (App.Operation.DeleteForm), so only it goes."
+  def form(form) do
+    simple(
+      "Delete #{form.name}? No PDF was published from it, so nothing else goes. Answers on activities stay.",
+      "Delete form"
+    )
+  end
+
   @doc "A template is SAR Duty's own, so deleting it changes nothing in D4H."
   def template(template) do
     simple(

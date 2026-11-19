@@ -1,35 +1,41 @@
 defmodule App.Model.AIAsk do
   @moduledoc """
-  One AI writing ask (App.Operation.AskAI): who asked, on which team, for what, and what
-  it cost. Adminland › AI writing sums these for this month's spend against the budget,
-  and a team's asks today against the daily limit. A row is written as the ask starts,
+  One AI writing ask (App.Operation.AskAI): who asked, for which team or organization,
+  for what, and what it cost. Adminland › AI writing sums these for this month's spend
+  against the budget, and a team's or an organization's asks today against the daily
+  limit. A row is written as the ask starts,
   as stopped, and its tokens and cost as each request returns, so an ask stopped or cut
   off keeps what it spent; the end sets how it ended. An ask that never reached Claude, a
   limit or the budget, has no row.
 
-  Kind `report` is an ask on the report editor. Kind `history_line` is the line AI writes
+  Kind `report` is an ask on the report editor, and `form` one on Change form, a team's
+  or an organization's (#1089); both count toward the daily limit. Kind `history_line` is the line AI writes
   in a report's History after a save (App.Worker.WriteHistoryLineWorker): it counts
   toward the budget, never the daily limit, and Adminland counts it apart from asks.
 
   The ask's words can hold whatever a team admin typed, so they are redacted from error
-  reports and cleared after 90 days; the numbers stay. Delete team deletes a team's asks.
+  reports and cleared after 90 days; the numbers stay. Deleting a team or an organization
+  deletes its asks.
   """
   use App, :model
 
   alias App.Accounts.User
   alias App.Model.AIAsk
+  alias App.Model.Organization
   alias App.Model.Team
   alias App.Repo
 
   @outcomes [:used, :unchanged, :refused_by_checks, :refused, :failed, :stopped]
-  @kinds [:report, :history_line]
+  @kinds [:report, :form, :history_line]
   @words_days 90
 
   # SAR Duty's own month and day, in BC, as Adminland's other times are.
   @timezone "America/Vancouver"
 
   schema "ai_asks" do
+    # Exactly one: the team, or the organization whose form it was for.
     belongs_to :team, Team
+    belongs_to :organization, Organization
     belongs_to :user, User
     field :kind, Ecto.Enum, values: @kinds
     field :ask, :string, redact: true
@@ -47,6 +53,14 @@ defmodule App.Model.AIAsk do
 
   def outcomes, do: @outcomes
   def timezone, do: @timezone
+
+  @doc "`team_id:` or `organization_id:` for the ask's owner, as `record!/1` takes it."
+  def owner(%Team{id: id}), do: [team_id: id]
+  def owner(%Organization{id: id}), do: [organization_id: id]
+
+  @doc "The name its row shows: its team's, or its organization's."
+  def owner_name(%AIAsk{team: %Team{name: name}}), do: name
+  def owner_name(%AIAsk{organization: %Organization{name: name}}), do: name
 
   @doc "Records an ask. `attrs` takes every field but the id."
   def record!(attrs), do: AIAsk |> struct!(Map.new(attrs)) |> Repo.insert!()
@@ -79,19 +93,23 @@ defmodule App.Model.AIAsk do
     AIAsk |> where([a], a.asked_at >= ^since) |> Repo.aggregate(:sum, :cost_microdollars) || 0
   end
 
-  @doc "How many asks `team` made today, BC time. History lines don't count."
-  def count_today(%Team{id: team_id}, now) do
+  @doc """
+  How many asks a team or an organization made today, BC time. History lines don't
+  count.
+  """
+  def count_today(owner, now) do
     since = day_start(now)
 
     AIAsk
-    |> where([a], a.team_id == ^team_id and a.asked_at >= ^since and a.kind != ^:history_line)
+    |> where(^owner(owner))
+    |> where([a], a.asked_at >= ^since and a.kind != ^:history_line)
     |> Repo.aggregate(:count)
   end
 
   @doc """
-  This month's asks summed by team, then by person: `%{teams: rows, people: rows}`,
-  each row with its asks, its History lines, tokens, and cost, costliest first. Tokens
-  and cost cover both.
+  This month's asks summed by team or organization, then by person: `%{teams: rows,
+  people: rows}`, each row with its asks, its History lines, tokens, and cost, costliest
+  first. Tokens and cost cover both.
   """
   def month_summary(now) do
     since = month_start(now)
@@ -99,21 +117,35 @@ defmodule App.Model.AIAsk do
     %{teams: costliest(by_team(base)), people: costliest(by_person(base))}
   end
 
+  # A row's id is its owner's, `team-1` or `organization-1`, as one may share the other's.
   defp by_team(query) do
     query
-    |> join(:inner, [a], t in assoc(a, :team))
-    |> group_by([a, t], [t.id, t.name])
-    |> select([a, t], %{id: t.id, name: t.name})
+    |> with_owner()
+    |> group_by([a], [a.team_id, a.organization_id])
+    |> select([a, team: t, organization: o], %{
+      id: fragment("coalesce('team-' || ?, 'organization-' || ?)", a.team_id, a.organization_id),
+      name: coalesce(t.name, o.name)
+    })
     |> sums()
   end
 
   defp by_person(query) do
     query
-    |> join(:left, [a], u in assoc(a, :user))
-    |> join(:inner, [a], t in assoc(a, :team))
-    |> group_by([a, u, t], [u.id, u.email, t.name])
-    |> select([a, u, t], %{id: u.id, email: u.email, team: t.name})
+    |> with_owner()
+    |> join(:left, [a], u in assoc(a, :user), as: :user)
+    |> group_by([a, user: u], [u.id, u.email, a.team_id, a.organization_id])
+    |> select([team: t, organization: o, user: u], %{
+      id: u.id,
+      email: u.email,
+      team: coalesce(t.name, o.name)
+    })
     |> sums()
+  end
+
+  defp with_owner(query) do
+    query
+    |> join(:left, [a], t in assoc(a, :team), as: :team)
+    |> join(:left, [a], o in assoc(a, :organization), as: :organization)
   end
 
   defp costliest(query), do: query |> Repo.all() |> Enum.sort_by(&(-&1.cost))
@@ -130,12 +162,12 @@ defmodule App.Model.AIAsk do
     })
   end
 
-  @doc "The newest asks, newest first, with team and user."
+  @doc "The newest asks, newest first, with team or organization, and user."
   def get_recent(limit) do
     AIAsk
     |> order_by([a], desc: a.asked_at, desc: a.id)
     |> limit(^limit)
-    |> preload([:team, :user])
+    |> preload([:team, :organization, :user])
     |> Repo.all()
   end
 

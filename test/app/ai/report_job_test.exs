@@ -28,7 +28,7 @@ defmodule App.AI.ReportJobTest do
 
     report = %{query: "select name from members", name: "", about: ""}
     job = ReportJob.build(team, report, "hours per member this year", @now)
-    request = AskAI.request(%AISettings{model: "claude-sonnet-5-5"}, job, [prompt(job)])
+    request = AskAI.request(%AISettings{}, job, [prompt(job)])
     sent = Jason.encode!(request)
 
     assert sent =~ "Rope rescue team"

@@ -4,7 +4,8 @@ A team admin describes a report in plain words, and SAR Duty asks Claude to writ
 query. Claude works from the report language and the team's names for things, checks
 its query with SAR Duty's tools, and SAR Duty puts the answer in the editor. The rows
 come from the editor's preview, in SAR Duty, after Claude is done. Claude never sees a
-member, a row, or a count, and only the admin saves. Forms come next, the same way.
+member, a row, or a count, and only the admin saves. A team's form is written the same
+way, from the agency's PDF ([Forms](#forms)).
 
 It replaced connecting an AI agent through MCP (#1087): connecting one was too hard for
 most team admins. See [Before AI writing](#before-ai-writing-mcp).
@@ -14,23 +15,55 @@ most team admins. See [Before AI writing](#before-ai-writing-mcp).
 On New report and Change report, for a user AI writing is open to
 ([Web.ReportFormLive](../lib/web/live/report_form_live.ex)).
 
-- **AI writing** is a column beside the report, where the help column was; under
-  1024px it sits above the report. In it, the asks as a conversation, oldest first, then
-  "Describe a change" and Change it, then what AI sees and How agents work with SAR Duty.
-  AI suggests no next asks: every ask is one someone typed.
+- **The page** (`ai_editor` in Web.Components.AIWriting, the same on Change form): the
+  title, the description, and the page's links, Rename and Show query; AI writing beside
+  them; the report under them; and under the report a bar with Not saved yet, Save
+  report, and Cancel, stuck to the window's foot while the report runs past it, like the
+  bar for checked rows.
+- **AI writing** starts beside the title, as a chat. From 1024px it sticks under the
+  site bar and grows with the conversation, the box pushed down, until it's as tall as
+  the window; then everything between its title and the box scrolls on its own, what
+  AI sees and older asks off the top, so a small laptop shows more of the conversation,
+  and it goes to the newest whenever it grows or shrinks (assets/js/ai_panel.js). Under
+  1024px it's one column, title first, and the conversation shows its last two asks with
+  Show earlier asks. In it: the title, AI writing, fixed; what AI sees, one line with
+  How it works; the asks as a conversation, oldest first; Try next; then, fixed under
+  them, Thinking… with Stop while an ask runs, and "Ask AI" with its hint, "A change,
+  or a question about the report.", and Ask.
+- **Rename** opens a dialog with the name and description, inside the form: Rename
+  keeps them, to save with Save report, and Cancel or Escape puts them back. With AI
+  writing off or the query written by hand, the fields show on the page as before.
+  Above the box, **Try next**: the asks AI suggests after the newest reply, 2 unless
+  Adminland says otherwise, to show what it can do. A tap puts one in the box; it never
+  sends on its own. Every ask is still one someone sent.
 - The query is hidden, since AI writes it: Show query and Hide query toggle it, and a
   mistake in it opens it. With the query, the fields are buttons under it, with How to
   write a report, What each chart takes, and What each field means. The preview's count
   drops "runs as you type" while the query is hidden.
-- The ask shows at once, with the step under it (Writing…, Checking it…, Trying it on
-  made-up data…) and Stop. The box clears and Change it waits until AI answers.
+- **Not saved yet** shows beside Save report or Save form once the page differs from
+  what's saved (Web.Components.Unsaved). Leaving then asks first: a reload or closing
+  the tab through the browser's own question, a link through a confirm. Save and Cancel
+  never ask.
+- **Test**, beside Ask on a dev server only (`dev_routes`), runs a made-up ask instead
+  of calling Claude (`AIWriting.test_ask/2`): 1.5 seconds of Thinking…, then a reply
+  of varying length with Try next, and every fourth ask fails with too many steps. It
+  spends nothing and isn't counted. Ask again on a failed Test stays a test.
+- **Enter sends** the ask, and Shift+Enter starts a new line (assets/js/ask_enter.js),
+  with no hint saying so. On a touch screen, return starts a new line and Ask sends.
+- The ask shows at once, with Thinking… and the seconds it has taken under it, and
+  Stop. One steady line: an ask's own steps (writing, checking, trying) change too fast
+  to read. The box clears and Ask waits until AI answers.
 - The answer fills the query, and a new report's name and description, as typing
   would, so the preview reruns. AI's one-line note is its reply under the ask, with
   Undo when it changed the report.
 - Undo puts back the query, name, and description from before an ask and drops the
   asks after it. The conversation is in the page only: a reload loses it.
-- Stop and a failed ask are a toast, and the ask's words go back in the box to change
-  and send again. A stopped ask still counts (below).
+- Stop is a toast, and the ask's words go back in the box to change and send again. A
+  stopped ask still counts (below).
+- A failed ask stays in the conversation: what went wrong (too many steps, an answer cut
+  off, busy, unreachable, declined, a mistake left after one fix) and what to try, with
+  Ask again when the same words could work. Ask again runs it in the failed row's place.
+  A failed ask isn't sent with later asks. The words are `AIWriting.failed/2`.
 - Save notes the version came "from the AI's draft" (`reports.agent` is `AI`).
 - When nothing answers the ask, the query stays and the note says what would work.
 
@@ -46,9 +79,77 @@ seconds after Save, `WriteHistoryLineWorker` asks Claude to compare the version 
 with the one saved ([App.Operation.WriteHistoryLine](../lib/app/operation/write_history_line.ex),
 [App.AI.HistoryLineJob](../lib/app/ai/history_line_job.ex)): the two names,
 descriptions, and queries, no tools, effort low. So the line covers every ask, any
-typing, and any Undo. It counts toward the monthly budget, never the 100 asks a day.
+typing, and any Undo. It counts toward the monthly budget, never the asks a day.
 With AI writing off or paused, the admin types What changed (optional), as before, and
 an empty one stays empty.
+
+## Forms
+
+An admin writes a form from the agency's PDF (#1089) when AI writing is open to them:
+a team's admins their team's own, on a team with team forms on
+([documents.md](documents.md#a-teams-own-forms)), and an organization's admins its
+forms for every team in it. The pages are one set for both (Web.FormOwner). An
+organization's form is tried on Coast Range SAR, and AI gets the custom fields every
+team in the organization has, never a team's own groups or tags.
+
+- **New form** (Team settings › Forms, or an organization's Forms,
+  [Web.FormStartLive](../lib/web/live/form_start_live.ex))
+  takes the name, the agency's PDF, and What it's for (optional), "When it's filled in
+  and who signs it." With AI writing open, its button is Write form. It saves the form
+  off with no text, as before, and opens Change form with What it's for as the first
+  ask, already running, or "Write this form." without it. The ask goes in the flash, so
+  a reload of Change form never asks again. While a form has no text, as after Stop, a
+  failed ask, or Undo, or one made before AI writing, Change form's box asks the same:
+  What it's for (optional), "AI writes the form from the agency's PDF.", and Write form,
+  which sends the same first ask, empty or not. Once it has text, Ask AI.
+- **Change form**, `/teams/:subdomain/settings/forms/:id/edit`
+  ([Web.FormChangeLive](../lib/web/live/form_change_live.ex)), linked from the form's
+  page: the draft tried on one of the team's activities it shows on, marked SAMPLE, as
+  the form's page draws its Sample (Web.Components.FormSample), every page a picture, is the main column, with Tried on to pick
+  another and Open activity at the label's end, in a new window, to check the form
+  against it. Before there's a text, it's the agency's blank form. AI writing is the column
+  beside it, as on Change report: the conversation, the box, and the hint, "AI works only
+  with the agency's blank form, the form language, and your team's field names."
+- The running ask is Thinking…, as for reports. Stop and a failed ask work as for reports. Ask again on a new PDF that failed to fit puts that PDF back first.
+- **AI's reply** is its note, then **Left blank**: each label on the page it didn't
+  fill, and why. Ask for one in the box, or leave it. Undo puts back the text from
+  before an ask.
+- **Two ways past AI writing**, the page's links under the title:
+  - **Show how it fills in** opens the text, "How it fills in", for a small fix by
+    hand, as Show query does on a report. Each change runs the checks saving runs
+    (`SaveForm.check_for/5`); a mistake shows under it and keeps it open, and once it
+    passes the try reprints. Nobody writes a form by hand from nothing.
+  - **Replace PDF** opens a dialog for the agency's new PDF. It takes the page's place
+    and asks AI to "Fit the form to the agency's new PDF." The try prints on it at once.
+    Undo, Stop, or a failed ask puts the old PDF back, and Save form saves the PDF with
+    the text. A scan is refused in the dialog.
+- **Save form** saves the text (App.Operation.SaveForm) and keeps the form's state, so a
+  new form stays off until a team admin turns on testing. Nothing is saved until then,
+  a reload loses the conversation, and forms have no History line.
+
+[App.AI.FormJob](../lib/app/ai/form_job.ex) says what one ask sends, run by `AskAI` with
+kind `form`:
+
+- **Cached first**: the rules and the form language (`App.Document.language/0`, the
+  text of [documents.md](documents.md)) with the report language its queries use, then
+  the team's names for things, as a report's ask has them. Each is a cache breakpoint.
+- **Then**: the PDF as a document block, the agency's blank form, never a filled one,
+  and its page's measures (`Service.PDFGeometry.describe/1`), cached together as the
+  third breakpoint; then the visit's earlier asks and replies, the form's text as it
+  stands, and the ask.
+- **The tool**: `check_form(text)` ([App.AI.Tool.CheckForm](../lib/app/ai/tool/check_form.ex))
+  runs `SaveForm.check_for/5`: every check saving runs, saving nothing, reading no
+  records. It answers with the text's questions and places, or the mistake.
+- **The answer** is `{text, note, blank: [{label, why}]}`, checked once more with
+  `check_for`. A mistake goes back once, unseen; a second keeps the form as it was and
+  shows the checker's line.
+- **The try** runs after, in SAR Duty (App.Operation.TryForm), on one of the team's
+  activities. That activity never reaches Claude.
+- **It streams under the hood**: a first draft with the PDF can take a minute or more,
+  near the adapter's 120-second timeout, so the request streams and the timeout is
+  between pieces (`App.Adapter.Claude.assemble/1`). Nothing streams to the page.
+- The limits are a report's: the asks a day, reports and forms together, for each team
+  and each organization apart, and the monthly budget.
 
 ## One ask
 
@@ -94,7 +195,8 @@ letter text, or another team. SAR data is sensitive, and this is what lets a tea
 organization say yes to AI. Tests hold this:
 
 - `App.AI.ReportJobTest` seeds a team with members, contact details, and activities,
-  builds the request, and checks it for each seeded value.
+  builds the request, and checks it for each seeded value. `App.AI.FormJobTest` does
+  the same for a form's ask and check_form's answers, with an incident to try it on.
 - `App.AI.ToolTest` seeds the same, calls each tool, and checks its answer for each
   seeded value, and that it holds only the keys on that tool's list. A tool builds its
   answer from explicit maps. try_report's rows are Coast Range SAR's, marked `made_up`.
@@ -110,21 +212,29 @@ one `ai_settings` row ([App.Model.AISettings](../lib/app/model/ai_settings.ex)).
 is an `ai_settings_changed` event.
 
 - **Who gets it**: Nobody, SAR Duty admins only (to try it on a team first), or Every
-  team admin. Off with no row.
-- **Model**: Claude Sonnet 5.5 by default, or Opus 5.5 or Haiku 5.5. Prices are in
+  team and organization admin. Off with no row.
+- **Reports model** and **Forms model**: Claude Sonnet 5.5 or Opus 5.5
+  (`AISettings.model/2`). Reports start on Sonnet, and a History line uses the reports
+  model. Forms start on Opus, which reads the agency's PDF better. Prices are in
   [App.AI.Models](../lib/app/ai/models.ex), Anthropic's list prices on 2026-11-15.
+  Haiku isn't offered: too weak for either.
+- **Next asks on reports** and **on forms**: how many asks AI suggests in Try next
+  after each reply, None to 4 (`AISettings.next_asks/2`). Both start at 2, which fit on
+  one line in the column. None, and `AskAI` doesn't ask for them, so the answer is a
+  little shorter.
 - **Monthly budget**: $50 by default. Once this month's asks cost that much, asks stop
   for every team and the box says AI writing is paused until next month. The Claude API
   stops too when the plan's credit is spent.
-- **100 asks a team a day**, reports and forms together, in `AskAI`. History lines
-  don't count.
+- **Asks a day for each team or organization**: 100 by default, reports and forms
+  together, checked in `AskAI`. History lines don't count. An organization's asks are its own rows
+  (`ai_asks.organization_id`), apart from its teams'.
 
 Months and days are BC time.
 
 ## Usage
 
 `ai_asks` ([App.Model.AIAsk](../lib/app/model/ai_ask.ex)), a row per ask: team, user,
-kind (`report`, or `history_line` with the report's name as its words), the ask's
+kind (`report`, `form`, or `history_line` with the report's name as its words), the ask's
 words, model, tokens in, cache written, cache read, and out, the cost in millionths of
 a dollar from the model's price, requests, time taken, and how it ended (used, nothing
 changed, failed SAR Duty's checks, declined, failed, stopped). The words are
@@ -132,8 +242,10 @@ changed, failed SAR Duty's checks, declined, failed, stopped). The words are
 Delete team deletes a team's rows.
 
 Adminland › AI writing shows this month's cost against the budget, with asks and History
-lines counted apart ("3 asks, 1 History line"), the cost by team and by person, whose
-Asks columns leave History lines out, and the newest 50 rows. Teams never see dollars. Adminland › Integrations
+lines counted apart ("3 asks, 1 History line"), the cost by team or organization and
+by person, whose
+Asks columns leave History lines out, and the newest 50 rows, each naming its kind,
+report or form. Teams never see dollars. Adminland › Integrations
 tests the key with a few tokens.
 
 ## Caching, later

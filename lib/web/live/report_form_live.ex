@@ -1,6 +1,6 @@
 defmodule Web.ReportFormLive do
   @moduledoc """
-  New report and Change report (#768). Save report at the top; the name and description
+  New report and Change report (#768). Save report in the bar at the window's foot; the name and description
   first, then the query and its rows as you type (#784). The preview draws the page's clauses too
   (#784): its tiles, filters, and headers pick as they will on the report's page. Save
   keeps the query and the picked values, never the rows. Under the query, the fields of
@@ -15,7 +15,7 @@ defmodule Web.ReportFormLive do
   The query is hidden, since AI writes it; Show query opens it. Each ask runs in
   `start_async` (App.Operation.AskAI) with the visit's earlier asks and notes, and fills
   the form as typing would, so the rows rerun here, on the team's records, after Claude
-  is done. The running ask shows at once, with its step and Stop under it. Undo puts back
+  is done. The running ask shows at once, with Thinking… and Stop under it. Undo puts back
   the query, name, and description from before an ask and drops the asks after it. A
   failed or stopped ask is a toast, and its words go back in the box. Nothing is saved
   until Save, which notes the version came from AI. With AI writing open, What changed
@@ -32,10 +32,13 @@ defmodule Web.ReportFormLive do
 
   Changing a saved report asks What changed, kept in its History (#834), unless AI writes
   it. `?version=<id>` is Restore from History: that version's name, description, and
-  query, saved as a new version.
+  query, saved as a new version once Save report is pressed, which a toast says.
   """
   use Web, :live_view_app_layout
 
+  import Web.Components.AIWriting
+  import Web.Components.PageActions
+  import Web.Components.Unsaved
   import Web.Components.ReportPage
   import Web.Components.ReportTable
 
@@ -85,9 +88,10 @@ defmodule Web.ReportFormLive do
       renaming: false,
       rename_from: nil
     )
-    |> assign_form(SavedReport.changeset(saved || %SavedReport{}, start))
+    |> assign_opened(SavedReport.changeset(saved || %SavedReport{}, start))
     |> preview(start)
     |> assign_ai(blank_new?(socket.assigns.live_action, params))
+    |> restored_toast(params)
     |> then(&{:ok, &1})
   end
 
@@ -101,7 +105,6 @@ defmodule Web.ReportFormLive do
       ai: ai,
       ai_line: WriteHistoryLine.writes?(team, user, saved, nil, now),
       ai_form: ask_form(""),
-      ai_step: nil,
       ai_pending: nil,
       ai_asks: [],
       starting: blank_new? and ai == :ok,
@@ -111,8 +114,6 @@ defmodule Web.ReportFormLive do
 
   defp blank_new?(:new, params), do: not Enum.any?(~w(from list), &Map.has_key?(params, &1))
   defp blank_new?(_action, _params), do: false
-
-  defp ask_form(ask), do: to_form(%{"ask" => ask}, as: "ai")
 
   defp start(:edit, %{"id" => id} = params, team, now) do
     case Reports.find(team, id, now) do
@@ -154,6 +155,15 @@ defmodule Web.ReportFormLive do
   end
 
   defp edit_start(_saved, _params), do: %{}
+
+  # Restore only fills the page, so a toast says Save report keeps it.
+  defp restored_toast(%{assigns: %{saved: saved}} = socket, %{"version" => id}) do
+    version = ReportVersion.get(saved, String.to_integer(id))
+    at = Format.datetime_short(version.inserted_at, socket.assigns.current_team.timezone)
+    put_flash(socket, :info, "Restored the version from #{at}. Save report to keep it.")
+  end
+
+  defp restored_toast(socket, _params), do: socket
 
   # Named for the picks: "Activities: Exercises, 2026, rope".
   defp list_name(list, values, team, now) do
@@ -277,10 +287,16 @@ defmodule Web.ReportFormLive do
   def handle_event("write_own", _params, socket),
     do: {:noreply, assign(socket, starting: false, query_open: true)}
 
+  def handle_event("ask", %{"ai" => %{"ask" => ask}, "test" => _test}, socket) do
+    if test?() and socket.assigns.ai_pending == nil,
+      do: {:noreply, start_ask(socket, test_words(ask, socket.assigns.ai_asks), test: true)},
+      else: {:noreply, socket}
+  end
+
   def handle_event("ask", %{"ai" => %{"ask" => ask}}, socket) do
     case String.trim(ask) do
       "" -> {:noreply, socket}
-      _ask when socket.assigns.ai_step != nil -> {:noreply, socket}
+      _ask when socket.assigns.ai_pending != nil -> {:noreply, socket}
       ask -> {:noreply, start_ask(socket, ask)}
     end
   end
@@ -291,8 +307,23 @@ defmodule Web.ReportFormLive do
     {:noreply,
      socket
      |> cancel_async(:ai_ask)
-     |> assign(ai_step: nil, ai_pending: nil, ai_form: ask_form((pending && pending.ask) || ""))
+     |> assign(ai_pending: nil, ai_form: ask_form((pending && pending.ask) || ""))
      |> put_flash(:info, "Stopped. Nothing changed.")}
+  end
+
+  # A suggested next ask goes in the box, to change or send.
+  def handle_event("suggest", %{"ask" => ask}, socket),
+    do: {:noreply, assign(socket, ai_form: ask_form(ask))}
+
+  # A failed ask runs again in its place.
+  def handle_event("ask_again", %{"id" => id}, socket) do
+    case Enum.split_with(socket.assigns.ai_asks, &(to_string(&1.id) == id and &1[:failed])) do
+      {[failed], rest} when socket.assigns.ai_pending == nil ->
+        {:noreply, socket |> assign(ai_asks: rest) |> start_ask(failed.ask, test: failed.test?)}
+
+      _other ->
+        {:noreply, socket}
+    end
   end
 
   def handle_event("undo_ask", %{"id" => id}, socket) do
@@ -340,7 +371,6 @@ defmodule Web.ReportFormLive do
   defp ai_agent(asks), do: if(Enum.any?(asks, & &1.undo?), do: Reports.ai_agent())
 
   def handle_async(:ai_ask, {:ok, result}, socket) do
-    socket = assign(socket, ai_step: nil)
     {:noreply, socket |> ask_done(result) |> assign(ai_pending: nil) |> refresh_ai()}
   end
 
@@ -348,25 +378,31 @@ defmodule Web.ReportFormLive do
   def handle_async(:ai_ask, {:exit, {:shutdown, :cancel}}, socket), do: {:noreply, socket}
 
   def handle_async(:ai_ask, {:exit, _reason}, socket) do
-    {:noreply,
-     socket |> ask_done({:error, :unreachable}) |> assign(ai_step: nil, ai_pending: nil)}
+    {:noreply, socket |> ask_done({:error, :unreachable}) |> assign(ai_pending: nil)}
   end
 
-  # The ask runs beside the page, with the visit's earlier asks; its steps arrive as
-  # messages while it does.
-  defp start_ask(socket, ask) do
+  # The ask runs beside the page, with the visit's earlier asks.
+  # `test: true` is Test's made-up ask (AIWriting.test_ask/2), with no call to Claude.
+  defp start_ask(socket, ask, opts \\ []) do
+    test? = Keyword.get(opts, :test, false)
     %{current_team: team, current_user: user, form: form, ai_asks: asks} = socket.assigns
     report = report_fields(form)
-    earlier = asks |> Enum.reverse() |> Enum.map(&Map.take(&1, [:ask, :note]))
+
+    earlier = earlier(asks, [:ask, :note])
+
     now = DateTime.utc_now()
-    pid = self()
-    pending = %{ask: ask, before: fields_params(form)}
+    pending = %{ask: ask, before: fields_params(form), test?: test?}
+
+    {socket, test} = count_test(socket, test?)
 
     socket
-    |> assign(ai_step: :writing, ai_pending: pending, ai_form: ask_form(""))
+    |> assign(ai_pending: pending, ai_form: ask_form(""))
     |> start_async(:ai_ask, fn ->
-      job = ReportJob.build(team, report, ask, now, earlier)
-      AskAI.call(team, user, job, now, on_step: &send(pid, {:ai_step, &1}))
+      if test do
+        test_ask(ask, test)
+      else
+        AskAI.call(team, user, ReportJob.build(team, report, ask, now, earlier), now)
+      end
     end)
   end
 
@@ -380,21 +416,38 @@ defmodule Web.ReportFormLive do
       socket.assigns.params |> Map.merge(fields_params(socket.assigns.form)) |> Map.merge(sent)
 
     {:noreply, socket} = handle_event("change", %{"report" => params}, socket)
-    socket |> assign(starting: false) |> add_ask(blank_or(note, nil), true)
+
+    socket
+    |> assign(starting: false)
+    |> add_ask(blank_or(note, nil), true, Map.get(result, :next, []))
   end
 
-  defp ask_done(socket, {:unchanged, note}),
-    do: add_ask(socket, blank_or(note, "Nothing changed."), false)
+  defp ask_done(socket, {:unchanged, note}), do: ask_done(socket, {:unchanged, note, []})
 
-  # A failed ask leaves no row: a toast says why, and its words go back in the box.
+  defp ask_done(socket, {:unchanged, note, next}),
+    do: add_ask(socket, blank_or(note, "Nothing changed."), false, next)
+
+  # A failed ask stays in the conversation, saying what went wrong, with Ask again.
   defp ask_done(socket, {:error, reason}) do
-    socket
-    |> assign(ai_form: ask_form(socket.assigns.ai_pending.ask))
-    |> put_flash(:error, ai_error_text(reason))
+    pending = socket.assigns.ai_pending
+
+    entry = %{
+      id: System.unique_integer([:positive]),
+      ask: pending.ask,
+      before: pending.before,
+      test?: pending.test?,
+      note: nil,
+      undo?: false,
+      next: [],
+      failed: failed(reason, "query")
+    }
+
+    assign(socket, ai_asks: [entry | socket.assigns.ai_asks])
   end
 
   # The conversation, newest first. `undo?` is false for an ask that changed nothing.
-  defp add_ask(socket, note, undo?) do
+  # `next` is what AI suggests asking after it.
+  defp add_ask(socket, note, undo?, next) do
     pending = socket.assigns.ai_pending
 
     entry = %{
@@ -402,7 +455,8 @@ defmodule Web.ReportFormLive do
       ask: pending.ask,
       before: pending.before,
       note: note,
-      undo?: undo?
+      undo?: undo?,
+      next: next
     }
 
     assign(socket, ai_asks: [entry | socket.assigns.ai_asks])
@@ -414,30 +468,20 @@ defmodule Web.ReportFormLive do
     assign(socket, ai: AskAI.check(team, user, DateTime.utc_now()))
   end
 
-  defp ai_error_text(:daily_limit),
-    do:
-      "Your team has used today's #{AskAI.asks_per_day()} asks. Ask again tomorrow, or change the query yourself."
-
-  defp ai_error_text(reason) when reason in [:paused, :no_credit],
-    do: "AI writing is paused until next month. You can still change the query yourself."
-
-  defp ai_error_text(:busy), do: "AI writing is busy. Try again in a minute."
-  defp ai_error_text(:refused), do: "AI writing cannot help with that. Try other words."
-
-  defp ai_error_text({:checks, mistake}),
-    do: "Its query still had a mistake: #{mistake} Ask again in other words, or fix it yourself."
-
-  defp ai_error_text(:off), do: "AI writing is off."
-  defp ai_error_text(_reason), do: "AI writing did not answer. Try again."
-
-  # A step of the running ask: Writing, Checking it, Trying it.
-  def handle_info({:ai_step, step}, socket) do
-    if socket.assigns.ai_step,
-      do: {:noreply, assign(socket, ai_step: step)},
-      else: {:noreply, socket}
+  # The name, description, and query, as the form holds them.
+  # The form as the page opened, which Not saved yet compares a new report with.
+  defp assign_opened(socket, changeset) do
+    socket = assign_form(socket, changeset)
+    assign(socket, opened: report_fields(socket.assigns.form))
   end
 
-  # The name, description, and query, as the form holds them.
+  # Not saved yet: a new report once it differs from how it opened (a blank one opens
+  # with a sample query, a copy with the built-in's), or a saved one that differs.
+  defp unsaved?(%{saved: nil, form: form, opened: opened}), do: report_fields(form) != opened
+
+  defp unsaved?(%{saved: saved, form: form}),
+    do: report_fields(form) != Map.new(~w(name about query)a, &{&1, Map.get(saved, &1) || ""})
+
   defp report_fields(form), do: Map.new(~w(name about query)a, &{&1, form[&1].value || ""})
 
   defp fields_params(form),
@@ -454,159 +498,181 @@ defmodule Web.ReportFormLive do
       />
       <:item label={@page_title} />
     </.breadcrumbs>
-    <.heading_row>
-      <h1 id="report-title" class="title">{title(@form, @page_title)}</h1>
-      <:action>
-        <.button id="report-save" form="report-form" variant={:success} phx-disable-with="Saving…">
-          Save report
-        </.button>
-        <.button id="report-cancel" navigate={cancel_path(@current_team, @saved)}>Cancel</.button>
-      </:action>
-    </.heading_row>
-    <p :if={!@starting and (about(@form) || !@renaming)} id="report-about" class="lead">
-      {about(@form)}
-      <.a :if={!@renaming} id="report-rename" href="#" phx-click="rename">Rename</.a>
-    </p>
-
-    <div id="report-editor" class={["report-editor", ai_column?(assigns) && "has-ai"]}>
-      <aside :if={ai_column?(assigns)} id="report-ai" class="report-ai" aria-label="AI writing">
-        <h2 class="subheading mb-4">AI writing</h2>
+    <.ai_editor id="report-editor" ai?={ai_column?(assigns)} column_id="report-ai">
+      <:head>
+        <h1 id="report-title" class="title mb-2">{title(@form, @page_title)}</h1>
+        <p :if={!@starting and about(@form)} id="report-about" class="lead">{about(@form)}</p>
+        <.page_actions :if={!@starting and !@renaming} id="report-actions">
+          <:action>
+            <.a id="report-rename" href="#" phx-click="rename">Rename</.a>
+          </:action>
+          <:action :if={query_toggle?(assigns) and !query_shown?(assigns)}>
+            <.a id="report-show-query" href="#" phx-click="show_query">Show query</.a>
+          </:action>
+          <:action :if={query_toggle?(assigns) and query_shown?(assigns)}>
+            <.a id="report-hide-query" href="#" phx-click="hide_query">Hide query</.a>
+          </:action>
+        </.page_actions>
+      </:head>
+      <:column>
         <.ai_writing
+          id="report-ai"
           ai={@ai}
           form={@ai_form}
-          step={@ai_step}
           pending={@ai_pending}
           asks={@ai_asks}
-          label="Describe a change"
-          button="Change it"
-        />
-      </aside>
+          label="Ask AI"
+          button="Ask"
+          closed={ai_closed_text(@ai)}
+          sees={ai_sees()}
+        >
+          A change, or a question about the report.
+        </.ai_writing>
+      </:column>
 
-      <div class="report-main">
-        <section :if={@starting} id="report-start" class="measure mb-8">
-          <.ai_writing
-            ai={@ai}
-            form={@ai_form}
-            step={@ai_step}
-            pending={@ai_pending}
-            asks={@ai_asks}
-            label="Describe the report you want"
-            button="Write it"
+      <section :if={@starting} id="report-start" class="measure mb-8">
+        <.ai_writing
+          id="report-ai"
+          ai={@ai}
+          form={@ai_form}
+          pending={@ai_pending}
+          asks={@ai_asks}
+          label="Describe the report you want"
+          button="Write it"
+          closed={ai_closed_text(@ai)}
+          sees={ai_sees()}
+        >
+          For example: members who haven't attended in a year, or a chart of incidents by month.
+        </.ai_writing>
+        <h2 class="subheading mt-8">Or start from a built-in report</h2>
+        <p class="hint mb-3">A click opens a copy to change. No ask is spent.</p>
+        <ul id="report-start-list" class="action-list report-start-list">
+          <li :for={report <- BuiltIn.starters(@current_team)} id={"report-start-#{report.slug}"}>
+            <.a navigate={~p"/teams/#{@current_team}/reports/new?from=#{report.slug}"}>{report.name}</.a>
+            <span :if={chart_icon(report)} class="report-start-chart">
+              <.icon name={chart_icon(report)} size={:sm} />Chart
+            </span>
+          </li>
+        </ul>
+        <p class="mt-3">
+          <.a id="report-start-all" navigate={~p"/teams/#{@current_team}/reports?show=built-in"}>{all_built_in(
+            @current_team
+          )}</.a>
+        </p>
+        <p class="action mt-8">
+          <.a id="report-write-own" href="#" phx-click="write_own">Write the query yourself</.a>
+        </p>
+      </section>
+      <.form for={@form} id="report-form" phx-change="change" phx-submit="save">
+        <.error_summary form={@form} />
+        <div
+          :if={@renaming and !@rename_from}
+          id="report-names"
+          phx-mounted={JS.focus(to: "#report_name")}
+        >
+          <.name_fields form={@form} />
+        </div>
+        <%!-- Rename: the name and description in a dialog over the page, inside the form
+        so they save with it. Escape or Cancel puts them back. --%>
+        <dialog
+          :if={@rename_from}
+          id="report-rename-dialog"
+          class="confirm-dialog"
+          phx-hook="AskDialog"
+          phx-mounted={JS.ignore_attributes(["open"])}
+          data-cancel-event="rename_cancel"
+          aria-labelledby="report-rename-question"
+        >
+          <h2 id="report-rename-question" class="confirm-dialog-question">Rename the report</h2>
+          <p>The new name shows once you save the report.</p>
+          <div data-part="fields" class="confirm-dialog-fields">
+            <.name_fields form={@form} />
+          </div>
+          <div class="confirm-dialog-actions">
+            <.button id="report-rename-keep" type="button" variant={:primary} phx-click="rename_keep">
+              Rename
+            </.button>
+            <.button
+              id="report-rename-cancel"
+              type="button"
+              value="cancel"
+              phx-click="rename_cancel"
+            >
+              Cancel
+            </.button>
+          </div>
+        </dialog>
+        <div :if={!@renaming} id="report-names-hidden" hidden>
+          <.name_fields form={@form} />
+        </div>
+        <div id="report-body" class={@starting && "hidden"}>
+          <.input
+            :if={change_field?(assigns)}
+            field={@form[:change]}
+            type="text"
+            label="What changed (optional)"
+            maxlength={SavedReport.max_change()}
           >
-            For example: members who haven't attended in a year, or a chart of incidents by month.
-          </.ai_writing>
-          <h2 class="subheading mt-8">Or start from a built-in report</h2>
-          <p class="hint mb-3">A click opens a copy to change. No ask is spent.</p>
-          <ul id="report-start-list" class="action-list report-start-list">
-            <li :for={report <- BuiltIn.starters(@current_team)} id={"report-start-#{report.slug}"}>
-              <.a navigate={~p"/teams/#{@current_team}/reports/new?from=#{report.slug}"}>{report.name}</.a>
-              <span :if={chart_icon(report)} class="report-start-chart">
-                <.icon name={chart_icon(report)} size={:sm} />Chart
-              </span>
-            </li>
-          </ul>
-          <p class="mt-3">
-            <.a id="report-start-all" navigate={~p"/teams/#{@current_team}/reports?show=built-in"}>{all_built_in(
-              @current_team
-            )}</.a>
-          </p>
-          <p class="action mt-8">
-            <.a id="report-write-own" href="#" phx-click="write_own">Write the query yourself</.a>
-          </p>
-        </section>
-        <.form for={@form} id="report-form" phx-change="change" phx-submit="save">
-          <.error_summary form={@form} />
-          <div :if={@renaming} id="report-names" phx-mounted={JS.focus(to: "#report_name")}>
-            <.name_fields form={@form} />
-            <div :if={@rename_from} id="report-rename-actions" class="flex gap-3">
-              <.button
-                id="report-rename-keep"
-                type="button"
-                variant={:success}
-                phx-click="rename_keep"
-              >
-                Rename
-              </.button>
-              <.button id="report-rename-cancel" type="button" phx-click="rename_cancel">
-                Cancel
-              </.button>
-            </div>
-          </div>
-          <div :if={!@renaming} id="report-names-hidden" hidden>
-            <.name_fields form={@form} />
-          </div>
-          <div id="report-body" class={(@rename_from || @starting) && "hidden"}>
-            <.input
-              :if={change_field?(assigns)}
-              field={@form[:change]}
-              type="text"
-              label="What changed (optional)"
-              maxlength={SavedReport.max_change()}
-            >
-              One line in the report's History.
-            </.input>
+            One line in the report's History.
+          </.input>
 
-            <p :if={query_toggle?(assigns)} id="report-query-toggle" class="action mb-6">
-              <.a
-                :if={!query_shown?(assigns)}
-                id="report-show-query"
-                href="#"
-                phx-click="show_query"
-              >Show query</.a>
-              <.a
-                :if={query_shown?(assigns)}
-                id="report-hide-query"
-                href="#"
-                phx-click="hide_query"
-              >Hide query</.a>
-            </p>
-            <.input
-              field={@form[:query]}
-              field_class={!query_shown?(assigns) && "hidden"}
-              type="textarea"
-              label="Query"
-              rows="9"
-              class="font-mono"
-              phx-debounce="300"
-              spellcheck="false"
-            >
-              Write :year for a value you pick each time it runs. For one member, use their ID: member.ref_id = '112'.
-            </.input>
-            <.field_buttons
-              :if={query_shown?(assigns) and !@rename_from}
-              subject={@subject}
-              context={@context}
+          <.input
+            field={@form[:query]}
+            field_class={!query_shown?(assigns) && "hidden"}
+            type="textarea"
+            label="Query"
+            rows="9"
+            class="font-mono"
+            phx-debounce="300"
+            spellcheck="false"
+          >
+            Write :year for a value you pick each time it runs. For one member, use their ID: member.ref_id = '112'.
+          </.input>
+          <.field_buttons
+            :if={query_shown?(assigns) and !@rename_from}
+            subject={@subject}
+            context={@context}
+            team={@current_team}
+          />
+
+          <.report_value
+            :for={value <- (@view && @view.values) || []}
+            value={value}
+            id={"report-form-value-#{value.name}"}
+            name={"report[values][#{value.name}]"}
+          />
+          <input
+            :for={{name, value} <- picks(@view)}
+            type="hidden"
+            name={"report[values][#{name}]"}
+            value={value}
+          />
+
+          <div :if={@view} id="report-preview">
+            <.report_page
+              id="report-preview"
+              view={@view}
+              records={@records}
               team={@current_team}
+              now={@now}
+              maps_app={@current_user.maps_app}
+              count={preview_count(@view, query_shown?(assigns))}
             />
-
-            <.report_value
-              :for={value <- (@view && @view.values) || []}
-              value={value}
-              id={"report-form-value-#{value.name}"}
-              name={"report[values][#{value.name}]"}
-            />
-            <input
-              :for={{name, value} <- picks(@view)}
-              type="hidden"
-              name={"report[values][#{name}]"}
-              value={value}
-            />
-
-            <div :if={@view} id="report-preview">
-              <.report_page
-                id="report-preview"
-                view={@view}
-                records={@records}
-                team={@current_team}
-                now={@now}
-                maps_app={@current_user.maps_app}
-                count={preview_count(@view, query_shown?(assigns))}
-              />
-            </div>
           </div>
-        </.form>
-      </div>
-    </div>
+        </div>
+      </.form>
+      <:bar>
+        <.save_bar id="report-bar">
+          <.button id="report-save" form="report-form" variant={:success} phx-disable-with="Saving…">
+            Save report
+          </.button>
+          <.button id="report-cancel" navigate={cancel_path(@current_team, @saved)} data-leave-ok>
+            Cancel
+          </.button>
+          <.unsaved id="report-unsaved" unsaved={unsaved?(assigns)} />
+        </.save_bar>
+      </:bar>
+    </.ai_editor>
     """
   end
 
@@ -657,65 +723,15 @@ defmodule Web.ReportFormLive do
   defp field_id(%{custom: %{ids: ids}}), do: "custom-field-#{Enum.join(ids, "-")}"
   defp field_id(field), do: "field-#{field.name}"
 
-  attr :ai, :any, required: true
-  attr :form, :map, required: true
-  attr :step, :atom, default: nil
-  attr :pending, :map, default: nil
-  attr :asks, :list, required: true
-  attr :label, :string, required: true
-  attr :button, :string, required: true
-  slot :inner_block
+  defp ai_sees,
+    do: "AI sees your team's field names, never its members or records."
 
-  # The conversation, oldest first: each ask, then AI's note with Undo when it changed
-  # the report, and the running ask with its step and Stop. Then the describe box and
-  # what AI sees.
-  defp ai_writing(assigns) do
-    ~H"""
-    <ol :if={@pending || @asks != []} id="report-ai-asks" class="ai-thread">
-      <%= for ask <- Enum.reverse(@asks) do %>
-        <li id={"report-ai-ask-#{ask.id}"} class="ai-you">{ask.ask}</li>
-        <li :if={ask.note || ask.undo?} id={"report-ai-reply-#{ask.id}"} class="ai-reply">
-          <p :if={ask.note}>{ask.note}</p>
-          <.button
-            :if={ask.undo?}
-            id={"report-ai-undo-#{ask.id}"}
-            type="button"
-            size={:sm}
-            phx-click="undo_ask"
-            phx-value-id={ask.id}
-          >
-            Undo
-          </.button>
-        </li>
-      <% end %>
-      <li :if={@pending} id="report-ai-ask-running" class="ai-you">{@pending.ask}</li>
-      <li :if={@pending} id="report-ai-step" class="ai-step">
-        <.spinner>{step_text(@step)}</.spinner>
-        <.button id="report-ai-stop" type="button" size={:sm} phx-click="cancel_ask">
-          Stop
-        </.button>
-      </li>
-    </ol>
-    <.form :if={@ai == :ok} for={@form} id="report-ai-form" phx-submit="ask">
-      <.input field={@form[:ask]} type="textarea" rows="3" label={@label}>
-        {render_slot(@inner_block)}
-      </.input>
-      <.button id="report-ai-ask" variant={:success} disabled={@step != nil}>{@button}</.button>
-    </.form>
-    <p :if={@ai != :ok} id="report-ai-closed" class="hint">{ai_closed_text(@ai)}</p>
-    <p class="hint mt-4">
-      AI works only with the report language and your team's field names. Agents never see your team's members or records.
-      <.a id="report-ai-agents-link" href={~p"/agents"} external={true}>How agents work with SAR Duty</.a>
-    </p>
-    """
+  defp ai_closed_text(:ok), do: nil
+
+  defp ai_closed_text({:error, reason}) do
+    %{title: title, detail: detail} = failed(reason, "query")
+    "#{title} #{detail}"
   end
-
-  defp step_text(:writing), do: "Writing…"
-  defp step_text(:checking), do: "Checking it…"
-  defp step_text(:trying), do: "Trying it on made-up data…"
-
-  defp ai_closed_text({:error, :daily_limit}), do: ai_error_text(:daily_limit)
-  defp ai_closed_text({:error, reason}), do: ai_error_text(reason)
 
   defp all_built_in(team) do
     team
@@ -761,9 +777,8 @@ defmodule Web.ReportFormLive do
   # so there is nothing to toggle then.
   defp query_toggle?(assigns), do: assigns.ai == :ok and assigns.query_error == nil
 
-  # AI writing beside the report: open to the admin, past the blank start, not renaming.
-  defp ai_column?(assigns),
-    do: assigns.ai != {:error, :off} and !assigns.starting and assigns.rename_from == nil
+  # AI writing beside the report: open to the admin, past the blank start.
+  defp ai_column?(assigns), do: assigns.ai != {:error, :off} and !assigns.starting
 
   # What changed, unless AI writes the History line.
   defp change_field?(assigns), do: assigns.saved != nil and !assigns.ai_line

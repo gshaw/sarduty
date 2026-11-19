@@ -148,7 +148,7 @@ defmodule Web.ReportFormLiveTest do
     assert has_element?(lv, "#report-errors", "activities has no field hour_tags")
   end
 
-  test "the name is the title, and Rename shows its fields", %{conn: conn} do
+  test "the name is the title, and Rename opens its fields in a dialog", %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
     assert has_element?(lv, "h1#report-title", "New report")
@@ -164,17 +164,18 @@ defmodule Web.ReportFormLiveTest do
     lv |> form("#report-form", report: %{name: "Members"}) |> render_change()
     assert has_element?(lv, "h1#report-title", "Members")
 
-    # Rename is a step: the fields, with the rest hidden until Rename or Cancel.
+    # Rename opens a dialog with the fields, inside the form, over the page. Escape or
+    # Cancel puts them back; Rename keeps them, to save with the report.
     lv |> element("#report-rename") |> render_click()
-    assert has_element?(lv, "#report-names:not([hidden]) #report_name")
+    assert has_element?(lv, "#report-form #report-rename-dialog[phx-hook=AskDialog] #report_name")
+    assert has_element?(lv, "#report-rename-dialog[data-cancel-event=rename_cancel]")
     refute has_element?(lv, "#report-rename")
-    assert has_element?(lv, "#report-body.hidden")
-    refute has_element?(lv, "#report-fields")
+    refute has_element?(lv, "#report-body.hidden")
 
     lv |> form("#report-form", report: %{name: "Crew"}) |> render_change()
     lv |> element("#report-rename-cancel") |> render_click()
     assert has_element?(lv, "h1#report-title", "Members")
-    refute has_element?(lv, "#report-body.hidden")
+    refute has_element?(lv, "#report-rename-dialog")
     assert has_element?(lv, "#report-fields")
 
     lv |> element("#report-rename") |> render_click()
@@ -196,12 +197,13 @@ defmodule Web.ReportFormLiveTest do
     assert has_element?(lv, "#report-form", "Enter a name for the report")
   end
 
-  test "the name and description come first, Save is at the top, and help can hide",
+  test "the name and description come first, Save is in the bar at the foot",
        %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
     {:ok, lv, html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
 
-    assert has_element?(lv, ".heading-row #report-save[form=report-form]")
+    assert has_element?(lv, "#report-bar.action-bar #report-save[form=report-form]")
+    assert has_element?(lv, "#report-bar #report-cancel[data-leave-ok]")
     assert has_element?(lv, "label[for=report_about]", "Description")
     {name, _} = :binary.match(html, ~s(id="report_name"))
     {query, _} = :binary.match(html, ~s(id="report_query"))
@@ -247,6 +249,7 @@ defmodule Web.ReportFormLiveTest do
         lv |> element("#version-restore-#{first.id}") |> render_click() |> follow_redirect(conn)
 
       assert has_element?(lv, "#report_query", "select title from groups")
+      assert render(lv) =~ "Save report to keep it."
       lv |> form("#report-form", report: %{change: "Back to titles"}) |> render_submit()
 
       assert SavedReport.get(team, report.id).query == "select title from groups"
@@ -528,13 +531,12 @@ defmodule Web.ReportFormLiveTest do
   describe "AI writing" do
     alias App.AccountsFixtures
     alias App.Model.AIAsk
-    alias App.Operation.AskAI
     alias App.Operation.SetAISettings
     alias App.Report.BuiltIn
 
     setup do
       admin = make_admin(AccountsFixtures.user_fixture())
-      params = %{access: "everyone", model: "claude-sonnet-5-5", monthly_budget: "50"}
+      params = %{access: "everyone", monthly_budget: "50"}
       {:ok, _settings} = SetAISettings.call(params, admin)
       :ok
     end
@@ -612,7 +614,93 @@ defmodule Web.ReportFormLiveTest do
       refute has_element?(lv, "#report-start")
       refute has_element?(lv, "#report-body.hidden")
       refute has_element?(lv, ".hidden #report_query")
-      assert has_element?(lv, "#report-ai #report-ai-form", "Describe a change")
+      assert has_element?(lv, "#report-ai #report-ai-form", "Ask AI")
+      assert has_element?(lv, "textarea[name='ai[ask]'][phx-hook=AskEnter]")
+    end
+
+    # Try next (#1089): the asks AI suggests after its reply. A tap puts one in the box;
+    # nothing is sent. Adminland can turn them off for reports.
+    test "Try next shows AI's suggested asks, and a tap puts one in the box", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+
+      stub_claude("select name from members order by name", "Lists every member.", %{
+        "next" => ["Add each member's standing", "  ", "Only counted members"]
+      })
+
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+      lv |> form("#report-ai-form", ai: %{ask: "every member"}) |> render_submit()
+      render_async(lv)
+
+      assert_received {:claude, request}
+      assert "next" in request["output_config"]["format"]["schema"]["required"]
+      assert has_element?(lv, "#report-ai-next", "Try next")
+      assert has_element?(lv, "#report-ai-next-1", "Only counted members")
+      refute has_element?(lv, "#report-ai-next-2")
+
+      lv |> element("#report-ai-next-0") |> render_click()
+      assert has_element?(lv, "textarea[name='ai[ask]']", "Add each member's standing")
+    end
+
+    # Test, on a dev server only, answers with a made-up reply and never calls Claude.
+    test "Test beside Ask makes up a reply on a dev server, with no call to Claude",
+         %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      Req.Test.stub(App.Adapter.Claude, fn _conn -> flunk("Test called Claude") end)
+
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+      refute has_element?(lv, "#report-ai-test")
+
+      Application.put_env(:sarduty, :dev_routes, true)
+      on_exit(fn -> Application.delete_env(:sarduty, :dev_routes) end)
+
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+      lv |> form("#report-ai-form", ai: %{ask: ""}) |> render_submit(%{"test" => "1"})
+      assert has_element?(lv, "#report-ai-ask-running", "Test ask 1")
+
+      render_async(lv, 5_000)
+      assert has_element?(lv, ".ai-reply", "This is a test reply, with no call to AI.")
+      assert has_element?(lv, "#report-ai-next-0", "Group by month")
+      assert AIAsk.count_today(team, DateTime.utc_now()) == 0
+    end
+
+    # The column stays in view and scrolls on its own from 1024px (assets/js/ai_panel.js);
+    # under that, the conversation shows its last two asks with Show earlier asks.
+    test "past two asks, the older ones fold under Show earlier asks", %{conn: conn} do
+      %{user: user, team: team} = user_with_team_fixture()
+      stub_claude("select name from members", "Lists every member.", %{})
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+
+      for ask <- ["every member", "by name", "with standing"] do
+        lv |> form("#report-ai-form", ai: %{ask: ask}) |> render_submit()
+        render_async(lv)
+      end
+
+      assert has_element?(lv, "aside#report-ai[phx-hook=AIPanel] .ai-scroll #report-ai-asks")
+      assert has_element?(lv, "#report-ai-earlier", "Show 1 earlier ask")
+      assert has_element?(lv, "#report-ai-asks .ai-you.ai-older", "every member")
+      refute has_element?(lv, "#report-ai-asks .ai-you.ai-older", "by name")
+    end
+
+    test "with no next asks on reports, AI is never asked for them", %{conn: conn} do
+      {:ok, _settings} =
+        SetAISettings.call(
+          %{
+            access: "everyone",
+            monthly_budget: "50",
+            report_next_asks: "0"
+          },
+          make_admin(AccountsFixtures.user_fixture())
+        )
+
+      %{user: user, team: team} = user_with_team_fixture()
+      stub_claude("select name from members", "Lists every member.", %{})
+      {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
+      lv |> form("#report-ai-form", ai: %{ask: "every member"}) |> render_submit()
+      render_async(lv)
+
+      assert_received {:claude, request}
+      refute Map.has_key?(request["output_config"]["format"]["schema"]["properties"], "next")
+      refute has_element?(lv, "#report-ai-next")
     end
 
     test "an ask writes the query, name, and description, the next carries it, and Undo puts it back",
@@ -638,7 +726,7 @@ defmodule Web.ReportFormLiveTest do
       assert has_element?(lv, "#report-about", "When each member last came.")
       assert has_element?(lv, "#report-ai .ai-you", "when did each member last come")
       assert has_element?(lv, "#report-ai .ai-reply", "Shows when each member last came.")
-      assert has_element?(lv, "#report-ai #report-ai-form", "Describe a change")
+      assert has_element?(lv, "#report-ai #report-ai-form", "Ask AI")
       refute has_element?(lv, "#report-start")
 
       ask = App.Repo.get_by!(AIAsk, team_id: team.id)
@@ -686,18 +774,22 @@ defmodule Web.ReportFormLiveTest do
       {:ok, lv, _html} =
         conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new?from=hours-by-member")
 
+      box = box_id(lv)
       lv |> form("#report-ai-form", ai: %{ask: "add a menu for the period"}) |> render_submit()
       assert_receive :waiting
 
       # The ask shows at once, with its step and Stop, and the box waits.
       assert has_element?(lv, "#report-ai-ask-running", "add a menu for the period")
+      assert has_element?(lv, "#report-ai-step", "Thinking…")
       assert has_element?(lv, "#report-ai-step #report-ai-stop")
       assert has_element?(lv, "#report-ai-ask[disabled]")
-      refute has_element?(lv, "#ai_ask", "add a menu for the period")
+      refute has_element?(lv, "textarea[name='ai[ask]']", "add a menu for the period")
+      # A new box, so one Safari leaves focused still clears.
+      refute box_id(lv) == box
 
       lv |> element("#report-ai-stop") |> render_click()
 
-      assert has_element?(lv, "#ai_ask", "add a menu for the period")
+      assert has_element?(lv, "textarea[name='ai[ask]']", "add a menu for the period")
       refute has_element?(lv, "#report-ai-asks")
 
       ask = App.Repo.get_by!(AIAsk, team_id: team.id)
@@ -739,10 +831,12 @@ defmodule Web.ReportFormLiveTest do
       assert AIAsk.count_today(team, DateTime.utc_now()) == 0
     end
 
-    test "a team that used today's asks is told so", %{conn: conn} do
+    test "a team that used today's asks, as many as Adminland allows, is told so", %{conn: conn} do
+      params = %{access: "everyone", monthly_budget: "50", asks_per_day: "3"}
+      {:ok, _settings} = SetAISettings.call(params, make_admin(AccountsFixtures.user_fixture()))
       %{user: user, team: team} = user_with_team_fixture()
 
-      for _n <- 1..AskAI.asks_per_day() do
+      for _n <- 1..3 do
         AIAsk.record!(
           team_id: team.id,
           kind: :report,
@@ -754,12 +848,12 @@ defmodule Web.ReportFormLiveTest do
 
       {:ok, lv, _html} = conn |> log_in_user(user) |> live(~p"/teams/#{team}/reports/new")
       refute has_element?(lv, "#report-ai-form")
-      assert has_element?(lv, "#report-ai-closed", "used today's 100 asks")
+      assert has_element?(lv, "#report-ai-closed", "used today's asks")
     end
 
     test "with AI writing off there is no column, and What changed stays", %{conn: conn} do
       admin = make_admin(AccountsFixtures.user_fixture())
-      params = %{access: "off", model: "claude-sonnet-5-5", monthly_budget: "50"}
+      params = %{access: "off", monthly_budget: "50"}
       {:ok, _settings} = SetAISettings.call(params, admin)
       %{user: user, team: team} = user_with_team_fixture()
       conn = log_in_user(conn, user)
@@ -777,5 +871,42 @@ defmodule Web.ReportFormLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
       assert has_element?(lv, "#report_change")
     end
+  end
+
+  defp box_id(lv) do
+    html = lv |> element("textarea[name='ai[ask]']") |> render()
+    [id] = Regex.run(~r/ id="([^"]+)"/, html, capture: :all_but_first)
+    id
+  end
+
+  # Not saved yet shows beside Save once the page differs from what's saved, and leaving
+  # then asks first (assets/js/unsaved.js); Cancel never asks.
+  test "Not saved yet shows once the report differs from what's saved", %{conn: conn} do
+    %{user: user, team: team} = user_with_team_fixture()
+    conn = log_in_user(conn, user)
+
+    {:ok, report} =
+      SaveReport.call(team, user, nil, %{
+        "name" => "Members",
+        "query" => "select name from members"
+      })
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/#{report.id}/edit")
+    assert has_element?(lv, "#report-unsaved[hidden][phx-hook=Unsaved]")
+    assert has_element?(lv, "#report-cancel[data-leave-ok]")
+
+    lv |> form("#report-form", report: %{name: "Members by name"}) |> render_change()
+    assert has_element?(lv, "#report-unsaved[data-unsaved=true]:not([hidden])", "Not saved yet")
+
+    # A new report, blank or a copy, asks only once it differs from how it opened, so a
+    # built-in's link on a blank New report goes without asking.
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/new")
+    assert has_element?(lv, "#report-unsaved[hidden]")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/reports/new?from=hours-by-member")
+    assert has_element?(lv, "#report-unsaved[hidden]")
+
+    lv |> form("#report-form", report: %{name: "Hours"}) |> render_change()
+    assert has_element?(lv, "#report-unsaved:not([hidden])")
   end
 end

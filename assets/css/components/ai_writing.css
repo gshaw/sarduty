@@ -1,0 +1,50 @@
+@layer components {
+  /* AI writing (docs/ai-writing.md), on Change report and Change form (#1089). Under
+     1024px one column: the head (title, description, links), AI writing, then the main
+     part, with the Save bar at its foot. From 1024px the column starts beside the title
+     and sticks under the site bar. It grows with the conversation, the box under it,
+     until it's as tall as the window; then all between its title and the box scrolls
+     on its own: what AI sees, the conversation, and Try next. */
+  .ai-editor {
+    display: grid; grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "head" "ai" "main"; row-gap: var(--sp-6);
+  }
+  .ai-editor > .ai-head { grid-area: head; }
+  .ai-editor > .ai-column { grid-area: ai; }
+  .ai-editor > .ai-main { grid-area: main; min-width: 0; }
+  @media (min-width: 1024px) {
+    .ai-editor.has-ai {
+      grid-template-columns: minmax(0, 1fr) min(33%, var(--sidebar-max));
+      grid-template-rows: auto 1fr; grid-template-areas: "head ai" "main ai";
+      column-gap: var(--sp-6); row-gap: var(--sp-4);
+    }
+    .ai-editor.has-ai > .ai-column {
+      position: sticky; top: calc(56px + var(--sp-4)); align-self: start;
+      max-height: calc(100dvh - 56px - 2 * var(--sp-4)); /* ai_panel.js sets it from where it starts */
+      display: flex; flex-direction: column;
+      border-left: 1px solid var(--border-subtle); padding-left: var(--sp-4);
+    }
+    /* Its own height, not stretched to the column's, so the Save bar sits under it. */
+    .ai-editor.has-ai > .ai-main { align-self: start; }
+    .ai-column .ai-scroll { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+    .ai-column .ai-earlier { display: none; }
+  }
+  /* Under 1024px the conversation shows its last two asks until Show earlier asks. */
+  @media (max-width: 1023px) {
+    .ai-thread:not(.ai-thread-all) > .ai-older { display: none; }
+  }
+
+  /* The conversation, oldest first: each ask on the right, AI's reply under it. */
+  .ai-scroll { margin-bottom: var(--sp-4); }
+  .ai-thread { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+  .ai-thread p { margin: 0; }
+  .ai-you { align-self: flex-end; max-width: 90%; padding: var(--sp-2) var(--sp-3); background: var(--surface-alt); border-radius: var(--radius); overflow-wrap: anywhere; }
+  .ai-reply .btn { margin-top: var(--sp-2); }
+  .ai-failed { padding-left: var(--sp-3); border-left: 3px solid var(--danger); }
+  .ai-failed .font-semibold { color: var(--danger-text); }
+  .ai-blank { margin-top: var(--sp-2); }
+  .ai-blank ul { margin: var(--sp-1) 0 0; padding-left: var(--sp-4); list-style: disc; }
+  /* Thinking… and Stop, under the part that scrolls, so they stay in view. */
+  .ai-step { margin-bottom: var(--sp-4); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); color: var(--text-muted); }
+  .ai-writing-form textarea { width: 100%; }
+}

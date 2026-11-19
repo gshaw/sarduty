@@ -7,7 +7,8 @@ defmodule Web.FormController do
 
   # A form as PDFs (#950): its blank page, and a try, for an organization's form or a
   # team's own (#1083). Found through the URL's organization or team, so another's is a
-  # 404, and a team's while team forms are off.
+  # 404, and a team's while team forms are off. A team tries its organization's forms on
+  # its own activities too.
 
   def page(conn, %{"id" => id}) do
     {_owner, form} = form!(conn, id)
@@ -33,8 +34,9 @@ defmodule Web.FormController do
   end
 
   defp form!(conn, id) do
-    owner = FormOwner.get(conn.assigns)
-    {owner, Form.get(owner, id) || raise(Web.Status.NotFound)}
+    owner = FormOwner.viewer(conn.assigns)
+    {form, _own?} = FormOwner.form!(owner, id)
+    {owner, form}
   end
 
   defp send_pdf(conn, bytes, filename) do

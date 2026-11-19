@@ -3,19 +3,35 @@ defmodule Web.FormStartLive do
 
   import Web.Components.FileDrop
 
+  alias App.Model.Organization
+  alias App.Operation.AskAI
   alias App.Operation.SaveForm
   alias Web.FormOwner
 
-  # New form on a team's Forms tab (#1083): its name and the agency's PDF. It saves off,
-  # with no text, and stays off until it's written. An organization's forms are uploaded
-  # instead (Web.FormUploadLive).
+  # New form on a Forms page, an organization's or a team's (#1083, #1089): its name and
+  # the agency's PDF. It saves off, with no text, and stays off until it's written.
+  #
+  # With AI writing open (#1089), it takes What it's for too, and Write form opens Change
+  # form with it as the first ask, already running, or "Write this form." without it.
+  # The ask goes in the flash, so a reload of Change form never asks again.
+  @max_for 500
   def mount(_params, _session, socket) do
-    team = FormOwner.get(socket.assigns)
-    unless SaveForm.allowed?(team, socket.assigns.current_user), do: raise(Web.Status.NotFound)
+    owner = FormOwner.get(socket.assigns)
+    unless SaveForm.allowed?(owner, socket.assigns.current_user), do: raise(Web.Status.NotFound)
 
     socket =
       socket
-      |> assign(page_title: "New form", team: team, errors: %{}, name: "")
+      |> assign(
+        page_title: "New form",
+        owner: owner,
+        errors: %{},
+        name: "",
+        for: "",
+        max_for: @max_for
+      )
+      |> assign(
+        ai?: AskAI.check(owner, socket.assigns.current_user, DateTime.utc_now(), :form) == :ok
+      )
       |> allow_upload(:page, accept: ~w(.pdf), max_entries: 1, max_file_size: 10_000_000)
 
     {:ok, socket}
@@ -24,14 +40,16 @@ defmodule Web.FormStartLive do
   def render(assigns) do
     ~H"""
     <.breadcrumbs>
-      <:item label="Team settings" path={FormOwner.settings_path(@team)} />
-      <:item label="Forms" path={FormOwner.forms_path(@team)} />
+      <:item
+        :if={FormOwner.settings_path(@owner)}
+        label="Team settings"
+        path={FormOwner.settings_path(@owner)}
+      />
+      <:item label="Forms" path={FormOwner.forms_path(@owner)} />
       <:item label="New form" />
     </.breadcrumbs>
     <h1 class="title">New form</h1>
-    <p class="lead measure">
-      Give SAR Duty the agency's PDF. The form starts off, and stays off until it's written.
-    </p>
+    <p class="lead measure">{lead(@owner, @ai?)}</p>
 
     <.form for={%{}} id="form-start" phx-change="validate" phx-submit="save" class="measure">
       <.input
@@ -52,16 +70,31 @@ defmodule Web.FormStartLive do
         The blank form, as the agency gives it. A scan has no text to read.
       </.file_drop>
 
+      <.input
+        :if={@ai?}
+        id="form-start-for"
+        name="for"
+        type="textarea"
+        rows="3"
+        value={@for}
+        label="What it's for (optional)"
+        maxlength={@max_for}
+      >
+        When it's filled in and who signs it.
+      </.input>
+
       <.form_actions>
-        <.button variant={:success} phx-disable-with="Reading the PDF…">Add form</.button>
-        <.button navigate={FormOwner.forms_path(@team)}>Cancel</.button>
+        <.button id="form-start-save" variant={:success} phx-disable-with="Reading the PDF…">
+          {if @ai?, do: "Write form", else: "Add form"}
+        </.button>
+        <.button navigate={FormOwner.forms_path(@owner)}>Cancel</.button>
       </.form_actions>
     </.form>
     """
   end
 
-  def handle_event("validate", %{"name" => name}, socket),
-    do: {:noreply, assign(socket, name: name)}
+  def handle_event("validate", %{"name" => name} = params, socket),
+    do: {:noreply, assign(socket, name: name, for: params["for"] || socket.assigns.for)}
 
   def handle_event("validate", _params, socket), do: {:noreply, socket}
 
@@ -69,24 +102,60 @@ defmodule Web.FormStartLive do
     do: {:noreply, cancel_upload(socket, :page, ref)}
 
   def handle_event("save", params, socket) do
-    %{team: team, current_user: user} = socket.assigns
+    %{owner: owner, current_user: user} = socket.assigns
     name = params["name"]
-    socket = assign(socket, name: name)
+    socket = assign(socket, name: name, for: params["for"] || "")
 
-    case SaveForm.start(team, name, page(socket), user) do
+    case SaveForm.start(owner, name, page(socket), user) do
       {:ok, form} ->
-        socket =
-          socket
-          |> put_flash(:info, "#{form.name} added.")
-          |> push_navigate(to: FormOwner.form_path(team, form))
-
-        {:noreply, socket}
+        {:noreply, started(socket, owner, form, params["for"])}
 
       {:error, field, message} ->
         {:noreply, assign(socket, errors: %{field => message})}
 
       {:error, :forbidden} ->
-        {:noreply, put_flash(socket, :error, "You can no longer add this team's forms.")}
+        {:noreply,
+         put_flash(socket, :error, "You can no longer add #{FormOwner.name(owner)}'s forms.")}
+    end
+  end
+
+  # With AI writing open, Change form with the first ask; else the form's page.
+  defp started(%{assigns: %{ai?: true}} = socket, owner, form, for_text) do
+    socket
+    |> put_flash(:info, "#{form.name} added. AI is writing it.")
+    |> put_flash(:ai_ask, first_ask(for_text))
+    |> push_navigate(to: FormOwner.change_path(owner, form))
+  end
+
+  defp started(socket, owner, form, _for_text) do
+    socket
+    |> put_flash(:info, "#{form.name} added.")
+    |> push_navigate(to: FormOwner.form_path(owner, form))
+  end
+
+  # An organization's form must hold on every team in it, and is tried on Coast Range SAR.
+  defp lead(%Organization{short_name: name}, true),
+    do:
+      "Give SAR Duty the agency's PDF, and AI writes the form from it. It's checked on " <>
+        "every team in #{name} and tried on Coast Range SAR, a made-up team. The form " <>
+        "starts off, and stays off until you turn it on."
+
+  defp lead(_team, true),
+    do:
+      "Give SAR Duty the agency's PDF, and AI writes the form from it. The form starts off, " <>
+        "and stays off until you turn it on."
+
+  defp lead(_owner, false),
+    do: "Give SAR Duty the agency's PDF. The form starts off, and stays off until it's written."
+
+  @doc """
+  A form's first ask: What it's for, or "Write this form." without it. Change form
+  sends it too, from Write form, on a form with no text.
+  """
+  def first_ask(for_text) do
+    case String.trim(for_text || "") do
+      "" -> "Write this form."
+      text -> String.slice(text, 0, @max_for)
     end
   end
 

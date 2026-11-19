@@ -27,6 +27,8 @@ import {WebOTP} from "./webotp"
 import {PasskeyAdd, PasskeyLogin} from "./passkey"
 import topbar from "../vendor/topbar"
 import {AskDialog, listenForConfirms} from "./confirm_dialog"
+import {AskEnter} from "./ask_enter"
+import {AIPanel} from "./ai_panel"
 import {trackPointer} from "./pointer_focus"
 import {QRScanner} from "./qr_scanner"
 import {SoundSwitch, listenForScanSounds} from "./scan_sound"
@@ -40,6 +42,8 @@ import {ScannerInput} from "./scanner_input"
 import {RichText} from "./rich_text"
 import {SaveImage} from "./save_image"
 import {Search} from "./search"
+import {Seconds} from "./seconds"
+import {Unsaved} from "./unsaved"
 import {Toast} from "./toast"
 import {listenForBarMenuKeys} from "./bar_menu_keys"
 import {hideImagesOnError} from "./hide_on_error"
@@ -48,7 +52,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, AskDialog, Combobox, DemoBanner, DragList, FileDrop, InsertField, PasskeyAdd, PasskeyLogin, QRScanner, RichText, SaveImage, ScannerInput, Search, SelectAll, SoundSwitch, Toast, WebOTP},
+  hooks: {...colocatedHooks, AIPanel, AskDialog, AskEnter, Combobox, DemoBanner, DragList, FileDrop, InsertField, PasskeyAdd, PasskeyLogin, QRScanner, RichText, SaveImage, ScannerInput, Search, Seconds, SelectAll, SoundSwitch, Toast, Unsaved, WebOTP},
 })
 
 trackPointer()

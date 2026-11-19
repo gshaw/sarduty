@@ -109,6 +109,33 @@ defmodule Web.StyleGuideHTML.SampleData do
     }
   end
 
+  @doc "A conversation with AI writing, newest first, as Change form keeps it (#1089)."
+  def ai_asks do
+    [
+      %{
+        id: 2,
+        ask: "Tick Search when the task type says search",
+        note: "Search is ticked when Task type starts with Search.",
+        undo?: true,
+        blank: [],
+        next: ["Fill EPC Name from a question", "Leave Section B blank"]
+      },
+      %{
+        id: 1,
+        ask: "Our debrief after each incident. The task leader signs it.",
+        note: "Wrote it from the agency's page, for incidents.",
+        undo?: true,
+        blank: [
+          %{
+            label: "Injured",
+            why: "No field holds it. Ask for a question, or fill it in by hand."
+          },
+          %{label: "Signature", why: "The task leader signs it by hand."}
+        ]
+      }
+    ]
+  end
+
   @doc """
   An upload like the certificate form's, for the file drop: `:empty`, `:chosen` with a
   PDF, or `:too_large` with one refused. The guide has no LiveView, so it is built on a

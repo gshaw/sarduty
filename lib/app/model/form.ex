@@ -55,10 +55,35 @@ defmodule App.Model.Form do
     Enum.sort_by(organization ++ own, & &1.name)
   end
 
-  defp organization_forms(%Team{organization_id: nil}), do: []
+  @doc """
+  The team's organization's forms testing or on, A to Z: the ones its activities show,
+  which its team admins see read-only on Team settings' Forms tab.
+  """
+  def organization_forms(%Team{organization_id: nil}), do: []
 
-  defp organization_forms(%Team{organization_id: id}),
-    do: Form |> where([f], f.organization_id == ^id and f.state != :off) |> Repo.all()
+  def organization_forms(%Team{organization_id: id}),
+    do:
+      Form
+      |> where([f], f.organization_id == ^id and f.state != :off)
+      |> order_by([f], asc: f.name)
+      |> Repo.all()
+
+  @doc "The team's organization's form `id`, testing or on, or nil."
+  def get_organization_form(%Team{} = team, id) do
+    case id |> to_string() |> Integer.parse() do
+      {id, ""} -> team |> organization_forms() |> Enum.find(&(&1.id == id))
+      _other -> nil
+    end
+  end
+
+  @doc """
+  Whether the team's own `form` is replaced on its activities by one of its
+  organization's of the same name (`shown_for/1`), saved after it.
+  """
+  def replaced?(%Form{team_id: id, name: name}, %Team{id: id} = team),
+    do: team |> organization_forms() |> Enum.any?(&(&1.name == name))
+
+  def replaced?(_form, _team), do: false
 
   defp own_forms(%Team{forms_enabled: false}), do: []
 

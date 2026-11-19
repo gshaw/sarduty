@@ -22,8 +22,11 @@ defmodule App.Adapter.Claude do
   Sends one Messages API request: `body` is the request as a map. `{:ok, response}` with
   the response's JSON as a map, `{:error, :no_credit}` when the credit is spent,
   `{:error, :busy}` for a rate limit or an overloaded API, or `{:error, :unreachable}`.
+  `stream: true` streams it under the hood and gives the same answer.
   """
-  def create_message(body) when is_map(body) do
+  def create_message(body, opts \\ []) when is_map(body) do
+    body = if opts[:stream], do: Map.put(body, "stream", true), else: body
+
     response =
       [
         base_url: @host,
@@ -44,6 +47,9 @@ defmodule App.Adapter.Claude do
     case response do
       {:ok, %{status: 200, body: body}} when is_map(body) ->
         {:ok, body}
+
+      {:ok, %{status: 200, body: body}} when is_binary(body) ->
+        streamed(body)
 
       {:ok, %{status: status, body: body}} ->
         error(status, body)
@@ -69,6 +75,102 @@ defmodule App.Adapter.Claude do
       {:error, reason} -> {:error, reason}
     end
   end
+
+  defp streamed(body) do
+    case assemble(body) do
+      {:ok, message} -> {:ok, message}
+      {:error, error} -> error(200, %{"error" => error})
+    end
+  end
+
+  @doc """
+  A streamed response's events, as the API sends them, put back into one message:
+  `{:ok, message}`, or `{:error, error}` with the API's error when the stream ends in
+  one. Text, thinking and its signature, and a tool call's input come in pieces.
+  """
+  def assemble(events) when is_binary(events) do
+    streamed =
+      events
+      |> String.split(~r/\r?\n\r?\n/)
+      |> Enum.flat_map(&event_data/1)
+      |> Enum.reduce_while({%{"content" => []}, %{}}, &apply_event/2)
+
+    case streamed do
+      {:error, error} -> {:error, error}
+      {message, _partial} -> {:ok, Map.update!(message, "content", &Enum.reverse/1)}
+    end
+  end
+
+  defp event_data(event) do
+    data =
+      for "data:" <> rest <- String.split(event, ~r/\r?\n/), do: String.trim_leading(rest)
+
+    case data |> Enum.join("\n") |> Jason.decode() do
+      {:ok, %{"type" => _type} = decoded} -> [decoded]
+      _not_data -> []
+    end
+  end
+
+  # The content is kept newest first while it streams; `partial` holds each tool call's
+  # input as text until its block stops.
+  defp apply_event(%{"type" => "message_start", "message" => start}, {_message, partial}),
+    do: {:cont, {Map.put(start, "content", []), partial}}
+
+  defp apply_event(%{"type" => "content_block_start", "content_block" => block}, {message, p}),
+    do: {:cont, {Map.update!(message, "content", &[block | &1]), p}}
+
+  defp apply_event(%{"type" => "content_block_delta", "index" => i, "delta" => delta}, acc),
+    do: {:cont, delta(acc, i, delta)}
+
+  defp apply_event(%{"type" => "content_block_stop", "index" => i}, {message, partial}) do
+    case Map.pop(partial, i) do
+      {nil, partial} ->
+        {:cont, {message, partial}}
+
+      {json, partial} ->
+        input = if json == "", do: %{}, else: Jason.decode!(json)
+        {:cont, {update_last(message, &Map.put(&1, "input", input)), partial}}
+    end
+  end
+
+  defp apply_event(%{"type" => "message_delta"} = event, {message, partial}) do
+    message =
+      message
+      |> Map.merge(event["delta"] || %{})
+      |> Map.update("usage", event["usage"] || %{}, &Map.merge(&1, event["usage"] || %{}))
+
+    {:cont, {message, partial}}
+  end
+
+  defp apply_event(%{"type" => "error", "error" => error}, _acc), do: {:halt, {:error, error}}
+  defp apply_event(_ping_or_stop, acc), do: {:cont, acc}
+
+  # Blocks stream one at a time, so a delta is always for the newest block.
+  defp delta({message, partial}, i, %{"type" => "input_json_delta", "partial_json" => json}),
+    do: {message, Map.update(partial, i, json, &(&1 <> json))}
+
+  defp delta({message, partial}, _i, %{"type" => type} = delta) do
+    key =
+      case type do
+        "text_delta" -> "text"
+        "thinking_delta" -> "thinking"
+        "signature_delta" -> "signature"
+        _other -> nil
+      end
+
+    if key,
+      do:
+        {update_last(
+           message,
+           &Map.update(&1, key, delta[key], fn text -> text <> delta[key] end)
+         ), partial},
+      else: {message, partial}
+  end
+
+  defp update_last(%{"content" => [block | rest]} = message, fun),
+    do: %{message | "content" => [fun.(block) | rest]}
+
+  defp update_last(message, _fun), do: message
 
   # A spent credit is a 400 whose message names the credit balance. Only the error's type
   # and message are logged: the body never repeats the request.

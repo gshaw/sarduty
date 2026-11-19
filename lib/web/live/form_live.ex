@@ -1,37 +1,112 @@
 defmodule Web.FormLive do
   use Web, :live_view_app_layout
 
+  import Web.Components.FormSample
+
   alias App.Document
+  alias App.Model.CustomField
   alias App.Model.Form
   alias App.Model.Organization
+  alias App.Operation.AskAI
+  alias App.Operation.CopyForm
+  alias App.Operation.DeleteForm
+  alias App.Operation.SaveForm
   alias App.Operation.SetFormState
   alias App.Operation.TryForm
-  alias App.Report.Query
-  alias Web.FormCollectionLive
+  alias App.Repo
+  alias Web.Components.FormSample
   alias Web.FormOwner
 
-  # One form (#950), an organization's or a team's own (#1083): what it reads and asks,
-  # whether it's off, testing, or on (#970), and a try: on Coast Range SAR, a made-up
-  # team, for an organization's, and on the team's own activities for a team's. Found
-  # through its owner, so another's is a 404. SAR Duty admins replace it. A team's new
-  # form says it's not written yet, and nothing more, until it has its text (#1088).
+  # One form (#950), an organization's or a team's own (#1083), found through its owner,
+  # so another's is a 404. The page shows the form: its Sample, tried on an activity it
+  # shows on and drawn as pictures as Change form draws it (Web.Components.FormSample),
+  # on Coast Range SAR, a made-up team, for an organization's, and on the team's own
+  # activities for a team's, with Download sample PDF. Before it's written (#1088), the
+  # agency's blank page. Its text folds under Show how it fills in. The sidebar: Ready to
+  # try and Ready to publish, two switches for three states (#970) that save as they're
+  # flipped, then Shows on, Version, Actions, and Questions last, since they run long,
+  # each with its type and how it starts. With AI writing open, its admins write it on
+  # Change form (#1089). Delete form shows while no PDF was published from it; after,
+  # turning it off is the way.
+  #
+  # On a team's page, its organization's form is read-only: its state as a fact where the
+  # switches sit, the sample on the team's own activities, and its text. With team forms
+  # on, its team admins copy it as their own to change (App.Operation.CopyForm).
   def mount(%{"id" => id}, _session, socket) do
-    owner = FormOwner.get(socket.assigns)
-    form = Form.get(owner, id) || raise(Web.Status.NotFound)
-    activities = TryForm.activities(form, owner)
+    owner = FormOwner.viewer(socket.assigns)
+    {form, own?} = FormOwner.form!(owner, id)
 
-    socket =
-      socket
-      |> assign(page_title: form.name, owner: owner, activities: activities)
-      |> assign(activity: TryForm.first(activities))
-      |> assign_form(form)
-
-    {:ok, socket}
+    socket
+    |> assign(page_title: form.name, owner: owner, own?: own?)
+    |> assign_actions(form, owner, own?, socket.assigns.current_user)
+    |> assign(activity: nil, activities: [], pages: [], preview_error: nil)
+    |> assign_form(form)
+    |> preview()
+    |> then(&{:ok, &1})
   end
+
+  # What the user may do with it: the owner's own form, or on a team's page, its
+  # organization's, read-only, which they may copy.
+  defp assign_actions(socket, form, owner, true = _own?, user),
+    do:
+      assign(socket,
+        change?: change?(owner, user),
+        delete?: DeleteForm.allowed?(form, user),
+        copy?: false,
+        from: nil,
+        replaced?: Form.replaced?(form, owner)
+      )
+
+  defp assign_actions(socket, _form, team, false = _own?, user),
+    do:
+      assign(socket,
+        change?: false,
+        delete?: false,
+        copy?: CopyForm.allowed?(team, user),
+        from: Repo.preload(team, :organization).organization,
+        replaced?: false
+      )
+
+  # Change form writes the form with AI writing (#1089), for whoever saves the owner's
+  # forms while AI writing is open to them.
+  defp change?(owner, user),
+    do:
+      SaveForm.allowed?(owner, user) and
+        AskAI.check(owner, user, DateTime.utc_now(), :form) != {:error, :off}
 
   defp assign_form(socket, form) do
     page = Form.page_bytes(form)
-    assign(socket, form: form, doc: parse(form.text), pages: page && pages(page))
+
+    assign(socket,
+      form: form,
+      doc: form.text |> parse() |> checked(socket.assigns.owner),
+      page: page,
+      page_count: page && page_count(page)
+    )
+  end
+
+  # Checked where it's tried, for each question's type; unchecked, the questions show
+  # without one.
+  defp checked(nil, _owner), do: nil
+
+  defp checked(doc, owner) do
+    with {%{} = context, _repo} <- TryForm.context(owner, DateTime.utc_now()),
+         {:ok, checked} <- Document.check(doc, context) do
+      checked
+    else
+      _unchecked -> doc
+    end
+  end
+
+  # The sample prints beside the page, after it loads; a newer print replaces one still
+  # running.
+  defp preview(socket) do
+    %{form: form, owner: owner, page: page, activity: activity} = socket.assigns
+    activity_id = activity && activity.id
+
+    socket
+    |> assign(previewing: true)
+    |> start_async(:preview, fn -> FormSample.print(form, owner, page, activity_id) end)
   end
 
   defp parse(text) do
@@ -41,7 +116,7 @@ defmodule Web.FormLive do
     end
   end
 
-  defp pages(page) do
+  defp page_count(page) do
     case Service.PDFPages.count(page) do
       {:ok, pages} -> pages
       :error -> nil
@@ -61,32 +136,56 @@ defmodule Web.FormLive do
     </.breadcrumbs>
     <h1 class="title">{@form.name}</h1>
     <p :if={@form.about} class="lead measure">{@form.about}</p>
+    <p :if={@from} id="form-from" class="measure">
+      {@from.short_name}'s form. Only {@from.short_name} can change it.
+    </p>
 
     <div class="content-wrapper">
       <aside class="content-1/3">
+        <%!-- Two switches for three states, each a step the form is ready for: Ready to try
+        shows it on activities for drafts, and Ready to publish, once it's on, lets team
+        admins publish. Greyed until the form is written. --%>
+        <div
+          :if={@own?}
+          id="form-on-off"
+          class="flex flex-col gap-4 pb-6 mb-6 border-b border-border-subtle"
+        >
+          <.switch
+            id="form-on"
+            label="Ready to try"
+            checked={@form.state != :off}
+            disabled={!Form.written?(@form)}
+            phx-click="state"
+            phx-value-state={if @form.state == :off, do: "testing", else: "off"}
+            {off_confirm(@form)}
+          >
+            {try_hint(@owner, @form, @doc)}
+          </.switch>
+          <.switch
+            :if={@form.state != :off}
+            id="form-publish"
+            label="Ready to publish"
+            checked={@form.state == :on}
+            phx-click="state"
+            phx-value-state={if @form.state == :on, do: "testing", else: "on"}
+            {publish_confirm(@owner, @form)}
+          >
+            Team admins publish it, with an ID and a verify code. Until then, draft PDFs only,
+            marked DRAFT.
+          </.switch>
+          <%!-- It looks on, but its organization's of the same name shows instead. --%>
+          <p :if={@replaced?} id="form-replaced" class="hint">
+            <strong>Replaced by your organization's {@form.name}.</strong>
+            Your organization's shows on your activities instead.
+          </p>
+        </div>
         <dl id="form-facts">
-          <dt>{FormCollectionLive.state_label(@owner)}</dt>
-          <dd id="form-state">
-            {if Form.written?(@form), do: Form.state_label(@form.state), else: "Not written yet"}
+          <dt :if={@from}>State</dt>
+          <dd :if={@from} id="form-state">
+            {Form.state_label(@form.state)}, for every {@from.short_name} team
           </dd>
           <dt>Shows on</dt>
           <dd id="form-shows-on">{shows_on(@doc)}</dd>
-          <dt>Questions</dt>
-          <dd id="form-questions">
-            <div :if={asks(@doc) == []}>None</div>
-            <div :for={ask <- asks(@doc)}>{ask.label}</div>
-          </dd>
-          <dt>Page</dt>
-          <dd id="form-page">
-            <div :if={is_nil(@pages) and layout?(@doc)}>Drawn by its layout</div>
-            <div :if={is_nil(@pages) and not layout?(@doc)}>None</div>
-            <div :if={@pages}>
-              <.a
-                href={FormOwner.page_path(@owner, @form)}
-                target="_blank"
-              >{Service.Format.count(@pages, one: "%d page", many: "%d pages")}</.a>
-            </div>
-          </dd>
           <dt>Version</dt>
           <dd id="form-version">
             {@form.version}
@@ -94,110 +193,114 @@ defmodule Web.FormLive do
               {Service.Format.date_long(@form.updated_at, @owner.timezone)}
             </span>
           </dd>
+          <dt>Actions</dt>
+          <dd>
+            <ul id="form-actions" class="action-list">
+              <li :if={@change?}>
+                <.a id="form-change" navigate={FormOwner.change_path(@owner, @form)}>Change form</.a>
+              </li>
+              <li :if={@copy?}>
+                <.a
+                  id="form-copy"
+                  href="#"
+                  phx-click="copy"
+                  phx-disable-with="Copying…"
+                >Copy as your team's form</.a>
+              </li>
+              <li :if={@activity}>
+                <.a
+                  id="form-try-download"
+                  href={FormOwner.try_path(@owner, @form) <> "?activity=#{@activity.id}"}
+                  target="_blank"
+                >Download sample PDF</.a>
+              </li>
+              <li :if={@page_count}>
+                <.a
+                  id="form-page"
+                  href={FormOwner.page_path(@owner, @form)}
+                  target="_blank"
+                >Download agency's blank PDF</.a>
+              </li>
+              <li :if={@delete?}>
+                <.a
+                  id="form-delete"
+                  href="#"
+                  phx-click="delete"
+                  phx-disable-with="Deleting…"
+                  {Web.DeleteConfirm.form(@form)}
+                >Delete form</.a>
+              </li>
+            </ul>
+          </dd>
+          <%!-- Last, since a form can ask a lot. --%>
+          <dt>Questions</dt>
+          <dd id="form-questions">
+            <div :if={asks(@doc) == []}>None</div>
+            <ul :if={asks(@doc) != []} class="list-disc pl-6">
+              <li :for={ask <- asks(@doc)} class="mb-1">
+                {ask.label}
+                <span :if={question_line(@doc, ask, @owner)} class="hint block">
+                  {question_line(@doc, ask, @owner)}
+                </span>
+              </li>
+            </ul>
+          </dd>
         </dl>
       </aside>
       <main class="content-2/3">
-        <p :if={!Form.written?(@form)} id="form-not-written" class="mb-8 measure">
-          {@form.name} isn't written yet. It stays off until it is.
+        <p :if={!Form.written?(@form)} id="form-not-written" class="mb-4 measure">
+          {@form.name} isn't written yet.
         </p>
 
-        <%!-- Two switches for three states, as Features nests one under another: on shows
-        it to teams, and testing under it keeps it to drafts. Turning it on starts testing. --%>
-        <section
-          :if={Form.written?(@form)}
-          id="form-on-off"
-          class="mb-8 measure flex flex-col gap-6"
-        >
-          <h2 class="heading mb-0">{FormCollectionLive.state_label(@owner)}</h2>
-          <.switch
-            id="form-on"
-            label="Turned on"
-            checked={@form.state != :off}
-            phx-click="state"
-            phx-value-state={if @form.state == :off, do: "testing", else: "off"}
-            {off_confirm(@form)}
-          >
-            {on_hint(@owner)}
-          </.switch>
-          <div class="pl-8">
-            <.switch
-              id="form-testing"
-              label="Testing"
-              checked={@form.state != :on}
-              disabled={@form.state == :off}
-              phx-click="state"
-              phx-value-state={if @form.state == :testing, do: "on", else: "testing"}
-              {publish_confirm(@owner, @form)}
-            >
-              Draft PDFs only, marked DRAFT. Turn testing off and team admins publish it, with an
-              ID and a verify code.
-            </.switch>
-          </div>
+        <section id="form-try" class="mb-8">
+          <h2 :if={Form.written?(@form)} class="heading mb-2">Sample</h2>
+          <p :if={Form.written?(@form)} class="measure">{sample_lead(@owner, @own?)}</p>
+          <.form_sample
+            owner={@owner}
+            written={Form.written?(@form)}
+            activities={@activities}
+            activity={@activity}
+            pages={@pages}
+            previewing={@previewing}
+            preview_error={@preview_error}
+          />
         </section>
 
-        <section :if={Form.written?(@form)} id="form-try" class="mb-8 measure">
-          <h2 class="heading">Try it</h2>
-          <p>{try_text(@owner)} The PDF says SAMPLE across it.</p>
-          <p :if={@activities == []} id="form-try-none">{try_none(@owner)}</p>
-          <form
-            :if={@activities != []}
-            id="form-try-form"
-            action={FormOwner.try_path(@owner, @form)}
-            method="get"
-            target="_blank"
-          >
-            <.input
-              id="form-try-activity"
-              name="activity"
-              type="select"
-              label="Activity"
-              value={@activity && @activity.id}
-              options={Enum.map(@activities, &{activity_label(&1, @owner), &1.id})}
-            />
-            <.button id="form-try-button">Try form</.button>
-          </form>
-        </section>
-
-        <section :if={@current_user.is_admin} id="form-replace" class="mb-8 measure">
-          <h2 class="heading">Replace</h2>
-          <p>
-            {if Form.written?(@form), do: "Upload a new text or page.", else: "Upload its text."}
-          </p>
-          <.button id="form-replace-button" navigate={FormOwner.edit_path(@owner, @form)}>
-            Replace form
-          </.button>
-        </section>
-
-        <section :if={Form.written?(@form)} id="form-text">
-          <h2 class="heading">Its text</h2>
-          <p class="measure">
+        <details :if={Form.written?(@form)} id="form-text" class="mb-8">
+          <summary class="link cursor-pointer">Show how it fills in</summary>
+          <p class="measure mt-2">
             What the form reads, what it asks, and where each value goes on the page.
           </p>
           <pre class="code-block"><code>{@form.text}</code></pre>
-        </section>
+        </details>
       </main>
     </div>
     """
   end
 
-  defp on_hint(%Organization{short_name: name}),
+  # Not written yet, what comes first; else who fills it in, and from what.
+  defp try_hint(owner, form, doc) do
+    cond do
+      !Form.written?(form) ->
+        "Change form writes it first."
+
+      match?(%Organization{}, owner) ->
+        "Team admins of every #{owner.short_name} team fill it in from #{an_activity(doc)}."
+
+      true ->
+        "Team admins fill it in from #{an_activity(doc)}. Only #{owner.name} sees it."
+    end
+  end
+
+  defp sample_lead(%Organization{}, _own?),
     do:
-      "Team admins of every team in #{name} fill it in from an activity it shows on. " <>
-        "Members never see it. Turning it off keeps every PDF already published."
+      "Printed from Coast Range SAR, a made-up team, never one of your teams' people. " <>
+        "Each question's default answer."
 
-  defp on_hint(team),
-    do:
-      "Team admins fill it in from an activity it shows on. Only #{team.name} sees it, " <>
-        "and members never do. Turning it off keeps every PDF already published."
+  defp sample_lead(_team, true), do: "Each question's default answer."
 
-  defp try_text(%Organization{}),
-    do: "Prints it from Coast Range SAR, a made-up team, with each question's default answer."
-
-  defp try_text(_team),
-    do: "Prints it from one of your activities, with each question's default answer."
-
-  defp try_none(%Organization{}), do: "Coast Range SAR has no activity this form shows on."
-  defp try_none(_team), do: "Your team has no activity this form shows on."
+  defp sample_lead(_team, false),
+    do: "Tried on your own activity. Each question's default answer."
 
   defp off_confirm(%Form{state: :off}), do: %{}
 
@@ -209,32 +312,66 @@ defmodule Web.FormLive do
 
   defp publish_confirm(owner, %Form{state: :testing} = form),
     do: %{
-      "data-confirm" => "Turn off testing for #{form.name}? #{who_publishes(owner)}",
-      "data-confirm-button" => "Turn off testing"
+      "data-confirm" => "Publish #{form.name}? #{who_publishes(owner)}",
+      "data-confirm-button" => "Ready to publish"
     }
 
   defp publish_confirm(_owner, _form), do: %{}
 
-  defp who_publishes(%Organization{}), do: "Team admins of every team can then publish it."
-  defp who_publishes(_team), do: "Team admins can then publish it."
+  defp who_publishes(%Organization{}),
+    do: "Team admins of every team can then publish it, with an ID and a verify code."
 
+  defp who_publishes(_team), do: "Team admins can then publish it, with an ID and a verify code."
+
+  # Which activities, in words: a kind's plural for `where kind = '…'`, else Some
+  # activities; Show how it fills in has the rule.
   defp shows_on(nil), do: "Activities"
   defp shows_on(%Document{where: nil}), do: "Every activity"
-  defp shows_on(%Document{where: where}), do: "Activities where #{Query.text(where)}"
 
-  # A form with a layout draws its own page each time it prints (#950).
-  defp layout?(%Document{layout: %{}}), do: true
-  defp layout?(_doc), do: false
+  defp shows_on(%Document{where: {:op, :eq, {:field, ["kind"], _, _}, {:literal, kind, _}, _}})
+       when kind in ~w(incident exercise event),
+       do: CustomField.target_title(kind)
+
+  defp shows_on(%Document{}), do: "Some activities"
+
+  # What team admins fill it in from: "an incident" for a form on incidents.
+  defp an_activity(%Document{where: {:op, :eq, {:field, ["kind"], _, _}, {:literal, kind, _}, _}})
+       when kind in ~w(incident exercise event),
+       do: "an #{kind}"
+
+  defp an_activity(_doc), do: "an activity"
+
+  # A question's type and how it starts: "Number, starts at 0".
+  defp question_line(doc, ask, owner) do
+    case Enum.reject([kind(doc, ask), each(ask), start(ask, owner)], &is_nil/1) do
+      [] -> nil
+      parts -> Enum.join(parts, ", ")
+    end
+  end
+
+  defp kind(_doc, %{choices: [_ | _] = choices}), do: Service.Format.or_list(choices)
+  defp kind(doc, ask), do: doc |> Document.ask_type(ask) |> type_word()
+
+  defp type_word(:text), do: "Text"
+  defp type_word(:number), do: "Number"
+  defp type_word(:day), do: "Date"
+  defp type_word(_unchecked), do: nil
+
+  defp each(%{each: nil}), do: nil
+  defp each(%{each: report}), do: "one on each row of #{report}"
+
+  defp start(%{remember: true}, %Organization{}), do: "starts with the team's last answer"
+  defp start(%{remember: true}, _team), do: "starts with your last answer"
+  defp start(%{default: {:literal, value, _line}}, _owner), do: "starts at #{value}"
+  defp start(_ask, _owner), do: nil
 
   defp asks(nil), do: []
   defp asks(%Document{asks: asks}), do: asks
 
-  # Coast Range SAR's activities in its own zone, a team's in the team's.
-  defp activity_label(activity, owner),
-    do: "#{activity.title}, #{Service.Format.date_short(activity.started_at, try_zone(owner))}"
-
-  defp try_zone(%Organization{}), do: App.CoastRange.timezone()
-  defp try_zone(team), do: team.timezone
+  def handle_event("try_on", %{"activity" => id}, socket) do
+    activity = Enum.find(socket.assigns.activities, &(to_string(&1.id) == id))
+    {:noreply, socket |> assign(activity: activity) |> preview()}
+  end
 
   def handle_event("state", %{"state" => state}, socket) when state in ~w(off testing on) do
     %{form: form, owner: owner, current_user: user} = socket.assigns
@@ -251,10 +388,53 @@ defmodule Web.FormLive do
     end
   end
 
+  def handle_event("copy", _params, socket) do
+    %{form: form, owner: owner, current_user: user} = socket.assigns
+
+    case CopyForm.call(form, owner, user) do
+      {:ok, copy} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Copied as #{copy.name}. It's off until you turn it on.")
+         |> push_navigate(to: FormOwner.form_path(owner, copy))}
+
+      {:error, :forbidden} ->
+        {:noreply, put_flash(socket, :error, "You can no longer copy this form.")}
+
+      {:error, message} ->
+        {:noreply, put_flash(socket, :error, message)}
+    end
+  end
+
+  def handle_event("delete", _params, socket) do
+    %{form: form, owner: owner, current_user: user} = socket.assigns
+
+    case DeleteForm.call(form, user) do
+      :ok ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Deleted #{form.name}.")
+         |> push_navigate(to: FormOwner.forms_path(owner))}
+
+      {:error, :forbidden} ->
+        {:noreply, put_flash(socket, :error, "You can no longer delete this form.")}
+
+      {:error, :published} ->
+        {:noreply,
+         put_flash(socket, :error, "Turn #{form.name} off instead. PDFs were published from it.")}
+    end
+  end
+
   defp state_message(%Organization{}, %Form{state: :on, name: name}),
     do: "#{name} turned on for every team."
 
   defp state_message(_team, %Form{state: :on, name: name}), do: "#{name} turned on."
   defp state_message(_owner, %Form{state: :testing, name: name}), do: "#{name} set to testing."
   defp state_message(_owner, %Form{state: :off, name: name}), do: "#{name} turned off."
+
+  def handle_async(:preview, {:ok, printed}, socket),
+    do: {:noreply, socket |> assign(printed) |> assign(previewing: false)}
+
+  def handle_async(:preview, {:exit, _reason}, socket),
+    do: {:noreply, assign(socket, previewing: false)}
 end

@@ -50,12 +50,13 @@ An organization hosts its agency forms for its teams (#950), such as the claim a
 sends EMCR after an incident. Its Forms page, `/orgs/:slug/forms`, lists them, and each
 has its own page.
 
-- **SAR Duty admins upload and replace them**, the form's text and its page PDF, unless
-  its own layout draws the page. Saving checks it on each of the organization's teams
-  ([documents.md](documents.md#an-organizations-forms)).
-- **Organization admins see each one**: what it reads and asks, its page, and its text.
-  They try it on Coast Range SAR, a made-up team, and set it Off, Testing (draft PDFs
-  only), or On (team admins publish it) for every team (#970).
+- **Its organization admins and SAR Duty admins write them**, as a team's admins write
+  the team's own: New form from the agency's PDF, then Change form, with AI writing
+  (#1089, [ai-writing.md](ai-writing.md#forms)). Saving checks it on each of the
+  organization's teams ([documents.md](documents.md#an-organizations-forms)).
+- **Organization admins see each one**: its sample, printed on Coast Range SAR, a made-up
+  team, what it reads and asks, its page, and its text. They set it Off, Testing (draft
+  PDFs only), or On (team admins publish it) for every team (#970).
 - **Once on, it shows for every team** in the organization, for team admins only. A team
   with no organization has none. A team can also keep its own forms, which SAR Duty
   turns on per team ([documents.md](documents.md#a-teams-own-forms)).

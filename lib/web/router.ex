@@ -304,9 +304,9 @@ defmodule Web.Router do
       live "/orgs/:slug/settings/fields/:id", Org.FieldLive
       # The same pages as a team's own forms (#1083), under /teams/:subdomain/forms.
       live "/orgs/:slug/forms", FormCollectionLive
-      live "/orgs/:slug/forms/new", FormUploadLive, :new
+      live "/orgs/:slug/forms/new", FormStartLive
       live "/orgs/:slug/forms/:id", FormLive
-      live "/orgs/:slug/forms/:id/edit", FormUploadLive, :edit
+      live "/orgs/:slug/forms/:id/edit", FormChangeLive
     end
 
     # A form's page and a try on Coast Range SAR (#950): PDFs, which a LiveView can't send.
@@ -445,7 +445,8 @@ defmodule Web.Router do
       live "/teams/:subdomain/settings/forms", FormCollectionLive
       live "/teams/:subdomain/settings/forms/new", FormStartLive
       live "/teams/:subdomain/settings/forms/:id", FormLive
-      live "/teams/:subdomain/settings/forms/:id/edit", FormUploadLive, :edit
+      # Change form writes it with AI writing (#1089), from the agency's PDF.
+      live "/teams/:subdomain/settings/forms/:id/edit", FormChangeLive
       live "/teams/:subdomain/settings/features", Settings.FeaturesLive
       live "/teams/:subdomain/settings/signer", Settings.SignerLive
       live "/teams/:subdomain/settings/hours-tags", Settings.HoursTagsLive

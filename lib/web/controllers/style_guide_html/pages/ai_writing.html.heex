@@ -1,0 +1,121 @@
+<.shell current={:ai_writing}>
+  <h1>AI writing</h1>
+  <p class="lead">Asks in plain words, and AI's replies, beside what it changes.</p>
+
+  <div class="demo">
+    <.ai_editor id="ai-writing-demo" ai?={true} column_id="ai-writing-demo-column">
+      <:head>
+        <p class="title mb-2">Task report</p>
+        <p class="hint">The head: the title, the description, and the page's links.</p>
+      </:head>
+      <:column>
+        <.ai_writing
+          id="ai-writing-demo-ai"
+          ai={:ok}
+          form={ask_form("")}
+          asks={SampleData.ai_asks()}
+          label="Ask AI"
+          button="Ask"
+          sees="AI sees the agency's form and your team's field names, never its members or records."
+        />
+      </:column>
+      <p class="hint">The page's main part: the report, or the form tried on an activity.</p>
+    </.ai_editor>
+  </div>
+
+  <h3>An ask running</h3>
+  <div class="demo">
+    <div class="measure">
+      <.ai_writing
+        id="ai-writing-demo-running"
+        ai={:ok}
+        form={ask_form("")}
+        asks={[]}
+        pending={%{ask: "Write this form."}}
+        label="Ask AI"
+        button="Ask"
+        sees="AI sees your team's field names, never its members or records."
+      />
+    </div>
+  </div>
+
+  <h3>An ask that failed</h3>
+  <p>
+    It stays in the conversation with what went wrong and what to try, never a toast.
+    Ask again runs it in its place when that could work.
+  </p>
+  <div class="demo">
+    <div class="measure">
+      <.ai_writing
+        id="ai-writing-demo-failed"
+        ai={:ok}
+        form={ask_form("")}
+        asks={[
+          %{
+            id: 1,
+            ask: "Group by quarter",
+            note: nil,
+            undo?: false,
+            next: [],
+            failed: failed(:too_many_steps, "query")
+          }
+        ]}
+        label="Ask AI"
+        button="Ask"
+        sees="AI sees your team's field names, never its members or records."
+      />
+    </div>
+  </div>
+
+  <h3>Closed</h3>
+  <div class="demo">
+    <div class="measure">
+      <.ai_writing
+        id="ai-writing-demo-closed"
+        ai={{:error, :paused}}
+        form={ask_form("")}
+        asks={[]}
+        label="Ask AI"
+        button="Ask"
+        closed="AI writing is paused until next month. You can still change the query yourself."
+        sees="AI sees your team's field names, never its members or records."
+      />
+    </div>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    A page AI writes for an admin: Change report and Change form. From 1024px the column
+    starts beside the title and stays in view as the page scrolls, down to the Save bar at
+    the window's foot, and its conversation scrolls on its own. Under that it's one column:
+    the head, AI writing, then the page, with the last two asks and Show earlier asks.
+  </p>
+
+  <h2>How it works</h2>
+  <ul>
+    <li>
+      The asks show as a conversation, oldest first: each ask on the right, AI's reply under it.
+    </li>
+    <li>A reply that changed the page has Undo, which puts it back to before that ask.</li>
+    <li>A form's reply ends with Left blank: each label AI didn't fill, and why.</li>
+    <li>
+      A running ask shows at once, with Thinking…, the seconds it has taken, and Stop. The box
+      clears and its button waits. No steps: they change too fast to read.
+    </li>
+    <li>
+      Try next, under the newest reply: two or three asks AI suggests. A tap puts one in the
+      box, to change or send; it never sends on its own.
+    </li>
+    <li>The line under the heading says what AI sees, and links to How it works.</li>
+    <li>Enter sends; Shift+Enter starts a new line.</li>
+  </ul>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.ai_editor&gt;</code>
+    and <code>&lt;.ai_writing&gt;</code>
+    in <code>Web.Components.AIWriting</code>. The page runs each ask with
+    <code>App.Operation.AskAI</code>
+    and keeps the conversation.
+  </p>
+</.shell>

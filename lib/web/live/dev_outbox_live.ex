@@ -25,7 +25,7 @@ defmodule Web.DevOutboxLive do
 
   def render(assigns) do
     ~H"""
-    <div class="container mx-auto px-2 py-6">
+    <div class="page-width mx-auto px-2 py-6">
       <%= if @message do %>
         <p class="mb-4"><.a patch={~p"/dev/outbox"}>Outbox</.a></p>
         <.outbox_message

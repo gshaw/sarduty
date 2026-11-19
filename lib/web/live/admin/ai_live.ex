@@ -5,14 +5,15 @@ defmodule Web.Admin.AILive do
   alias App.AI.Models
   alias App.Model.AIAsk
   alias App.Model.AISettings
-  alias App.Operation.AskAI
   alias App.Operation.SetAISettings
   alias Service.Format
 
   @limit 50
 
-  # Adminland › AI writing (docs/ai-writing.md): who gets it, which Claude model, and the
-  # monthly budget, then this month's spend by team and by person, and the newest asks.
+  # Adminland › AI writing (docs/ai-writing.md): the settings in the sidebar, who gets it,
+  # the Claude model and next asks for reports and for forms, the monthly budget, and
+  # asks a day; in
+  # the main column this month's spend by team and by person, and the newest asks.
   # Everything is summed from ai_asks. A History line AI wrote at a save has a row too:
   # it counts in the cost, apart from the asks. Dollars show here only, never to a team.
   def mount(_params, _session, socket) do
@@ -33,8 +34,12 @@ defmodule Web.Admin.AILive do
   defp form_params(settings),
     do: %{
       "access" => settings.access,
-      "model" => settings.model,
-      "monthly_budget" => div(settings.monthly_budget_cents, 100)
+      "report_model" => settings.report_model,
+      "form_model" => settings.form_model,
+      "report_next_asks" => settings.report_next_asks,
+      "form_next_asks" => settings.form_next_asks,
+      "monthly_budget" => div(settings.monthly_budget_cents, 100),
+      "asks_per_day" => settings.asks_per_day
     }
 
   defp assign_usage(socket) do
@@ -50,6 +55,10 @@ defmodule Web.Admin.AILive do
     )
   end
 
+  # A model picked shows its price under it before Save.
+  def handle_event("change", %{"settings" => params}, socket),
+    do: {:noreply, assign(socket, form: to_form(params, as: "settings"))}
+
   def handle_event("save", %{"settings" => params}, socket) do
     case SetAISettings.call(params, socket.assigns.current_user) do
       {:ok, settings} ->
@@ -60,7 +69,7 @@ defmodule Web.Admin.AILive do
         {:noreply,
          socket
          |> assign(form: to_form(params, as: "settings"))
-         |> put_flash(:error, "Enter the budget in whole dollars.")}
+         |> put_flash(:error, "Enter the budget in whole dollars, and at least 1 ask a day.")}
 
       {:error, :not_allowed} ->
         {:noreply, put_flash(socket, :error, "Only a SAR Duty admin can change this.")}
@@ -70,18 +79,14 @@ defmodule Web.Admin.AILive do
   def render(assigns) do
     ~H"""
     <h1 class="title">AI writing</h1>
-    <p class="lead max-w-3xl">
-      Team admins describe a report and AI writes its query. Requests go to Anthropic's
-      Claude API in the US, with the team's field names and never its records.
-    </p>
     <.banner :if={!@configured} id="ai-not-set-up" title="Not set up here" class="mb-6">
       <p>Set ANTHROPIC_API_KEY to turn on AI writing on this server.</p>
     </.banner>
 
     <div class="content-wrapper">
-      <section class="content-1/3" aria-labelledby="ai-settings-title">
+      <aside class="content-1/3" aria-labelledby="ai-settings-title">
         <h2 id="ai-settings-title" class="heading">Settings</h2>
-        <.form for={@form} id="ai-settings" phx-submit="save">
+        <.form for={@form} id="ai-settings" phx-change="change" phx-submit="save">
           <.input
             field={@form[:access]}
             type="select"
@@ -89,14 +94,38 @@ defmodule Web.Admin.AILive do
             options={[
               {"Nobody", "off"},
               {"SAR Duty admins only", "admins"},
-              {"Every team admin", "everyone"}
+              {"Every team and organization admin", "everyone"}
             ]}
           />
           <.input
-            field={@form[:model]}
+            field={@form[:report_model]}
             type="select"
-            label="Model"
-            options={Enum.map(Models.all(), &{model_label(&1), &1.id})}
+            label="Reports model"
+            options={model_options()}
+          >
+            {price(@form[:report_model].value)}
+          </.input>
+          <.input
+            field={@form[:form_model]}
+            type="select"
+            label="Forms model"
+            options={model_options()}
+          >
+            {price(@form[:form_model].value)}
+          </.input>
+          <.input
+            field={@form[:report_next_asks]}
+            type="select"
+            label="Next asks on reports"
+            options={next_options()}
+          >
+            How many asks AI suggests under its reply, to show what it can do.
+          </.input>
+          <.input
+            field={@form[:form_next_asks]}
+            type="select"
+            label="Next asks on forms"
+            options={next_options()}
           />
           <.input
             field={@form[:monthly_budget]}
@@ -107,11 +136,20 @@ defmodule Web.Admin.AILive do
           >
             Asks stop for every team once this month's cost reaches it.
           </.input>
+          <.input
+            field={@form[:asks_per_day]}
+            type="number"
+            label="Asks a day for each team or organization"
+            min="1"
+            step="1"
+          >
+            Reports and forms together. History lines don't count. Days are BC time.
+          </.input>
           <.button id="ai-settings-save" variant={:success} phx-disable-with="Saving…">
             Save
           </.button>
         </.form>
-      </section>
+      </aside>
 
       <section class="content-2/3" aria-labelledby="ai-month-title">
         <h2 id="ai-month-title" class="heading">This month</h2>
@@ -124,12 +162,13 @@ defmodule Web.Admin.AILive do
           Paused: this month's asks reached the budget.
         </p>
         <p class="hint mb-6">
-          {AskAI.asks_per_day()} asks a team a day at most. Months and days are BC time.
+          {Format.number(@settings.asks_per_day)} asks a team or an organization a day at
+          most. Months and days are BC time.
         </p>
 
-        <h3 class="heading">By team</h3>
-        <.table id="ai-teams" rows={@teams} row_id={&"ai-team-#{&1.id}"}>
-          <:col :let={row} label="Team">{row.name}</:col>
+        <h3 class="heading">By team or organization</h3>
+        <.table id="ai-teams" rows={@teams} row_id={&"ai-#{&1.id}"}>
+          <:col :let={row} label="For">{row.name}</:col>
           <:col :let={row} label="Asks" class="text-right">{Format.number(row.asks)}</:col>
           <:col :let={row} label="Tokens in" class="text-right">{Format.number(row.input)}</:col>
           <:col :let={row} label="From cache" class="text-right">
@@ -143,46 +182,64 @@ defmodule Web.Admin.AILive do
         <h3 class="heading mt-8">By person</h3>
         <.table id="ai-people" rows={@people} row_id={&"ai-person-#{&1.id}-#{&1.team}"}>
           <:col :let={row} label="Account">{row.email || "Deleted account"}</:col>
-          <:col :let={row} label="Team">{row.team}</:col>
+          <:col :let={row} label="For">{row.team}</:col>
           <:col :let={row} label="Asks" class="text-right">{Format.number(row.asks)}</:col>
           <:col :let={row} label="Cost" class="text-right">{Format.money(dollars(row.cost))}</:col>
         </.table>
         <.hint :if={@people == []}>No asks this month.</.hint>
+
+        <h2 class="heading mt-8">Newest asks</h2>
+        <.table id="ai-asks" rows={@asks} row_id={&"ai-ask-#{&1.id}"} class="table-striped">
+          <:col :let={ask} label="When" class="whitespace-nowrap">
+            {Format.month_day_time(ask.asked_at, AIAsk.timezone())}
+          </:col>
+          <:col :let={ask} label="For">{AIAsk.owner_name(ask)}</:col>
+          <:col :let={ask} label="Account">{ask.user && ask.user.email}</:col>
+          <:col :let={ask} label="Ask">
+            {ask_text(ask)}
+            <.hint>
+              {[Models.name(ask.model), kind(ask), outcome(ask)]
+              |> Enum.reject(&is_nil/1)
+              |> Enum.join(" · ")}
+            </.hint>
+          </:col>
+          <:col :let={ask} label="Tokens" class="whitespace-nowrap">
+            {Format.number(ask.input_tokens + ask.cache_write_tokens + ask.cache_read_tokens)} in
+            <.hint>
+              {Format.number(ask.cache_read_tokens)} from cache · {Format.number(ask.output_tokens)} out
+            </.hint>
+          </:col>
+          <:col :let={ask} label="Cost" class="text-right">
+            {Format.money(dollars(ask.cost_microdollars))}
+          </:col>
+          <:col :let={ask} label="Took" class="whitespace-nowrap">
+            {ask.duration_ms && Format.run_time(ask.duration_ms)}
+          </:col>
+        </.table>
+        <.hint :if={@asks == []}>No asks yet.</.hint>
+        <.hint :if={length(@asks) == @limit}>The newest {@limit}.</.hint>
       </section>
     </div>
-
-    <h2 class="heading mt-8">Newest asks</h2>
-    <.table id="ai-asks" rows={@asks} row_id={&"ai-ask-#{&1.id}"} class="table-striped">
-      <:col :let={ask} label="When" class="whitespace-nowrap">
-        {Format.month_day_time(ask.asked_at, AIAsk.timezone())}
-      </:col>
-      <:col :let={ask} label="Team">{ask.team.name}</:col>
-      <:col :let={ask} label="Account">{ask.user && ask.user.email}</:col>
-      <:col :let={ask} label="Ask">
-        {ask_text(ask)}
-        <.hint>{Models.name(ask.model)} · {outcome(ask)}</.hint>
-      </:col>
-      <:col :let={ask} label="Tokens" class="whitespace-nowrap">
-        {Format.number(ask.input_tokens + ask.cache_write_tokens + ask.cache_read_tokens)} in
-        <.hint>
-          {Format.number(ask.cache_read_tokens)} from cache · {Format.number(ask.output_tokens)} out
-        </.hint>
-      </:col>
-      <:col :let={ask} label="Cost" class="text-right">
-        {Format.money(dollars(ask.cost_microdollars))}
-      </:col>
-      <:col :let={ask} label="Took" class="whitespace-nowrap">
-        {ask.duration_ms && Format.run_time(ask.duration_ms)}
-      </:col>
-    </.table>
-    <.hint :if={@asks == []}>No asks yet.</.hint>
-    <.hint :if={length(@asks) == @limit}>The newest {@limit}.</.hint>
     """
   end
 
-  defp model_label(model),
-    do:
-      "#{model.name}: #{Format.money(model.input)} in, #{Format.money(model.output)} out per million tokens"
+  defp model_options, do: Enum.map(Models.all(), &{&1.name, &1.id})
+
+  defp next_options, do: Enum.map(0..AISettings.most_next_asks(), &{next_label(&1), &1})
+
+  defp next_label(0), do: "None"
+  defp next_label(n), do: to_string(n)
+
+  # The picked model's price, under its select.
+  defp price(id) do
+    case Models.get(id) do
+      nil ->
+        nil
+
+      model ->
+        "#{Format.money(model.input)} in, #{Format.money(model.output)} out per million tokens."
+    end
+  end
 
   defp dollars(microdollars), do: (microdollars || 0) |> Decimal.new() |> Decimal.div(1_000_000)
 
@@ -203,6 +260,10 @@ defmodule Web.Admin.AILive do
   defp ask_text(%{kind: :history_line, ask: nil}), do: "History line"
   defp ask_text(%{kind: :history_line, ask: name}), do: "History line: #{name}"
   defp ask_text(ask), do: ask.ask
+
+  # The kind an ask is, for its row: a History line's outcome already says it is one.
+  defp kind(%{kind: :history_line}), do: nil
+  defp kind(%{kind: kind}), do: Atom.to_string(kind)
 
   defp outcome(%{kind: :history_line, outcome: :used}), do: "History line at save"
   defp outcome(%{kind: :history_line} = ask), do: "History line at save, #{outcome(ask.outcome)}"

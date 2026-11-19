@@ -8,7 +8,7 @@ defmodule Web.FormPagesTest do
 
   alias App.Model.Event
   alias App.Model.Form
-  alias App.Operation.SaveForm
+  alias App.Operation.SetAISettings
   alias App.Repo
   alias Web.Components.TeamSettingsTabs
 
@@ -65,18 +65,14 @@ defmodule Web.FormPagesTest do
       assert has_element?(lv, "#form-#{form.id}-name", "Task report")
       assert has_element?(lv, "#form-#{form.id}-state", "Off")
       assert has_element?(lv, "#side-nav a[href='/orgs/wsara/forms']")
-      refute has_element?(lv, "#upload-form")
+      assert has_element?(lv, "#new-form[href='/orgs/wsara/forms/new']", "New form")
     end
 
-    test "says who uploads them when there are none", %{conn: conn, dana: dana, form: form} do
+    test "says to start one from the agency's PDF when there are none",
+         %{conn: conn, dana: dana, form: form} do
       Repo.delete!(form)
       {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/forms")
-      assert has_element?(lv, "#no-forms", "A SAR Duty site admin uploads WSARA's forms.")
-    end
-
-    test "a SAR Duty admin uploads one", %{conn: conn} do
-      {:ok, lv, _html} = conn |> log_in_user(sar_duty_admin()) |> live(~p"/orgs/wsara/forms")
-      assert has_element?(lv, "#upload-form")
+      assert has_element?(lv, "#no-forms", "Choose New form and give SAR Duty the agency's PDF.")
     end
   end
 
@@ -85,9 +81,13 @@ defmodule Web.FormPagesTest do
          %{conn: conn, dana: dana, form: form} do
       {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/forms/#{form}")
 
-      assert has_element?(lv, "#form-shows-on", "Activities where kind = 'incident'")
+      assert has_element?(lv, "#form-shows-on", "Incidents")
       assert has_element?(lv, "#form-questions", "Task leader")
-      assert has_element?(lv, "#form-page", "2 pages")
+      assert has_element?(lv, "#form-page[href='/orgs/wsara/forms/#{form.id}/page']")
+      # Each question with its type, checked on Coast Range SAR, and how it starts.
+      assert has_element?(lv, "#form-questions li", "Text, starts with the team's last answer")
+      assert has_element?(lv, "#form-questions li", "Number, starts at 0")
+      assert has_element?(lv, "#form-questions li", "Yes or No, starts at No")
       assert has_element?(lv, "#form-text", "for activity where kind = 'incident'")
       refute has_element?(lv, "#form-replace")
     end
@@ -96,20 +96,22 @@ defmodule Web.FormPagesTest do
          %{conn: conn, dana: dana, form: form} do
       {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/forms/#{form}")
 
-      # Off: Testing waits under Turned on.
-      assert has_element?(lv, "#form-testing[disabled]")
+      # Off: Ready to publish waits until it's ready to try.
+      refute has_element?(lv, "#form-publish")
 
-      # Turning it on starts testing.
+      # Ready to try starts testing.
       lv |> element("#form-on") |> render_click()
       assert Repo.reload!(form).state == :testing
-      assert has_element?(lv, "#form-state", "Testing")
       assert has_element?(lv, "#form-on[checked]")
-      assert has_element?(lv, "#form-testing[checked]:not([disabled])")
 
-      lv |> element("#form-testing") |> render_click()
+      assert has_element?(
+               lv,
+               "#form-publish:not([checked])[data-confirm-button='Ready to publish']"
+             )
+
+      lv |> element("#form-publish") |> render_click()
       assert Repo.reload!(form).state == :on
-      assert has_element?(lv, "#form-state", "On")
-      refute has_element?(lv, "#form-testing[checked]")
+      assert has_element?(lv, "#form-publish[checked]")
 
       lv |> element("#form-on") |> render_click()
       assert Repo.reload!(form).state == :off
@@ -123,8 +125,12 @@ defmodule Web.FormPagesTest do
       conn = log_in_user(conn, dana)
       {:ok, lv, _html} = live(conn, ~p"/orgs/wsara/forms/#{form}")
 
+      # The sample prints after the page loads, drawn as pictures.
+      render_async(lv, 10_000)
       assert has_element?(lv, "#form-try-activity option", "Missing hiker")
+      assert has_element?(lv, "#form-page-1[alt='Page 1 of 2, marked SAMPLE']")
       [activity_id] = lv |> element("#form-try-activity option[selected]") |> render() |> ids()
+      assert has_element?(lv, "#form-try-download[href$='?activity=#{activity_id}']")
 
       conn = get(conn, ~p"/orgs/wsara/forms/#{form}/try?#{[activity: activity_id]}")
       assert "%PDF" <> _ = response(conn, 200)
@@ -142,7 +148,7 @@ defmodule Web.FormPagesTest do
         })
 
       {:ok, lv, _html} = conn |> log_in_user(dana) |> live(~p"/orgs/wsara/forms/#{form}")
-      assert has_element?(lv, "#form-page", "Drawn by its layout")
+      refute has_element?(lv, "#form-page")
       assert has_element?(lv, "#form-text", "EMCR HEADQUARTERS USE ONLY")
     end
 
@@ -166,56 +172,62 @@ defmodule Web.FormPagesTest do
     end
   end
 
-  describe "Upload form and Replace form" do
-    test "are for SAR Duty admins only", %{conn: conn, dana: dana, form: form} do
+  # The same New form and Change form a team has (#1089), for its organization admins.
+  describe "an organization's New form and Change form" do
+    test "its organization admin starts one from the agency's PDF", ctx do
+      %{conn: conn, dana: dana, organization: organization, page: page} = ctx
       conn = log_in_user(conn, dana)
+      {:ok, lv, _html} = live(conn, ~p"/orgs/wsara/forms/new")
+
+      start(lv, "debrief.pdf", page)
+
+      {:ok, lv, html} =
+        lv
+        |> form("#form-start", %{"name" => "Incident debrief"})
+        |> render_submit()
+        |> follow_redirect(conn)
+
+      assert html =~ "Incident debrief added."
+      assert has_element?(lv, "#form-not-written")
+
+      assert %Form{text: ""} =
+               Repo.get_by!(Form, organization_id: organization.id, name: "Incident debrief")
+    end
+
+    test "are a 404 for anyone else", %{conn: conn, form: form} do
+      conn = log_in_user(conn, user_fixture())
       assert_error_sent 404, fn -> get(conn, ~p"/orgs/wsara/forms/new") end
       assert_error_sent 404, fn -> get(conn, ~p"/orgs/wsara/forms/#{form}/edit") end
     end
 
-    test "a SAR Duty admin uploads the text and page",
-         %{conn: conn, form: form, organization: organization, page: page} do
-      Repo.delete!(form)
-      conn = log_in_user(conn, sar_duty_admin())
-      {:ok, lv, _html} = live(conn, ~p"/orgs/wsara/forms/new")
+    test "with AI writing open, Change form tries it on Coast Range SAR, and a fix by hand saves",
+         %{conn: conn, dana: dana, form: form} do
+      {:ok, _settings} =
+        SetAISettings.call(
+          %{access: "everyone", monthly_budget: "50"},
+          make_admin(user_fixture())
+        )
 
-      upload(lv, :text, "task_report.txt", @text, "text/plain")
-      upload(lv, :page, "task_report.pdf", page, "application/pdf")
+      conn = log_in_user(conn, dana)
+      {:ok, lv, _html} = live(conn, ~p"/orgs/wsara/forms/#{form}")
+      assert has_element?(lv, "#form-change[href='/orgs/wsara/forms/#{form.id}/edit']")
 
-      {:ok, lv, _html} = lv |> form("#form-upload") |> render_submit() |> follow_redirect(conn)
+      {:ok, lv, _html} = live(conn, ~p"/orgs/wsara/forms/#{form}/edit")
+      render_async(lv, 5_000)
+      assert has_element?(lv, "label[for='form-try-activity']", "Tried on Coast Range SAR")
+      assert has_element?(lv, "#form-try-activity option", "Missing hiker")
+      refute has_element?(lv, "#form-try-open")
+      assert has_element?(lv, "#form-ai", "every team in WSARA has")
 
-      [form] = Form.get_all(organization)
-      assert form.version == 1
-      assert has_element?(lv, "#form-version", "1")
-    end
+      lv |> element("#form-show-text") |> render_click()
+      fixed = String.replace(@text, "ask notes 'Notes'", "ask notes 'Anything else'")
+      lv |> form("#form-text-form", text: fixed) |> render_change()
+      render_async(lv, 5_000)
 
-    test "names what's wrong under its file, and keeps the other", %{conn: conn, form: form} do
-      {:ok, lv, _html} =
-        conn |> log_in_user(sar_duty_admin()) |> live(~p"/orgs/wsara/forms/#{form}/edit")
-
-      text = String.replace(@text, "`People helped`\n", "`People halped`\n")
-      upload(lv, :text, "task_report.txt", text, "text/plain")
-      lv |> form("#form-upload") |> render_submit()
-
-      assert has_element?(lv, "#form-text-file", "Valley SAR: Line 10:")
-      assert has_element?(lv, "#form-text-kept")
-      assert Repo.reload!(form).version == 1
-
-      # The kept text is the one that fails; the page stays the form's.
-      lv |> form("#form-upload") |> render_submit()
-      assert has_element?(lv, "#form-text-file", "Valley SAR: Line 10:")
-    end
-
-    test "replacing keeps the page and raises the version", %{conn: conn, form: form, page: page} do
-      {:ok, lv, _html} =
-        conn |> log_in_user(sar_duty_admin()) |> live(~p"/orgs/wsara/forms/#{form}/edit")
-
-      upload(lv, :text, "task_report.txt", @text, "text/plain")
-      lv |> form("#form-upload") |> render_submit()
-
-      form = Repo.reload!(form)
-      assert form.version == 2
-      assert Form.page_bytes(form) == page
+      {:ok, lv, _html} = lv |> element("#form-save") |> render_click() |> follow_redirect(conn)
+      assert render(lv) =~ "Task report saved."
+      assert %Form{version: 2, text: text} = Repo.reload!(form)
+      assert text =~ "Anything else"
     end
   end
 
@@ -236,14 +248,15 @@ defmodule Web.FormPagesTest do
 
     defp team_path(team, rest \\ ""), do: "/teams/#{team.subdomain}/settings/forms#{rest}"
 
-    test "lists the team's forms only, on Team settings' Forms tab after Fields", ctx do
+    test "lists the team's forms, on Team settings' Forms tab after Fields", ctx do
       %{conn: conn, team: team, own: own, form: form, alex: alex} = ctx
       {:ok, lv, _html} = conn |> log_in_user(alex) |> live(team_path(team))
 
-      assert has_element?(lv, "#form-#{own.id}-name[href='#{team_path(team, "/#{own.id}")}']")
+      assert has_element?(lv, "#forms-team a[href='#{team_path(team, "/#{own.id}")}']", "Debrief")
       assert has_element?(lv, "#form-#{own.id}-state", "Off")
+      # The organization's form is off, so its teams don't see it.
       refute has_element?(lv, "#form-#{form.id}-name")
-      assert has_element?(lv, "th", "On activities")
+      refute has_element?(lv, "#forms-organization")
       assert has_element?(lv, "nav a[href='#{team_path(team)}'][aria-current]", "Forms")
       refute has_element?(lv, "#side-nav-forms")
       refute has_element?(lv, "#upload-form")
@@ -253,17 +266,102 @@ defmodule Web.FormPagesTest do
       assert Enum.at(tabs, Enum.find_index(tabs, &(&1 == :fields)) + 1) == :forms
     end
 
-    test "are a 404 while team forms are off, with no Forms tab", ctx do
+    test "Delete form deletes a form no PDF was published from, and goes back to Forms",
+         ctx do
       %{conn: conn, team: team, own: own, alex: alex} = ctx
+      conn = log_in_user(conn, alex)
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}"))
+
+      assert has_element?(lv, "#form-actions #form-delete[data-confirm-button='Delete form']")
+
+      {:ok, lv, html} = lv |> element("#form-delete") |> render_click() |> follow_redirect(conn)
+
+      assert html =~ "Deleted Debrief."
+      refute has_element?(lv, "#form-#{own.id}-name")
+      refute Repo.get(Form, own.id)
+    end
+
+    test "no Delete form once a PDF was published from it", ctx do
+      %{conn: conn, team: team, own: own, alex: alex} = ctx
+
+      team
+      |> member_fixture()
+      |> tax_credit_letter_fixture()
+      |> Ecto.Changeset.change(form_id: own.id)
+      |> Repo.update!()
+
+      {:ok, lv, _html} = conn |> log_in_user(alex) |> live(team_path(team, "/#{own.id}"))
+      refute has_element?(lv, "#form-delete")
+    end
+
+    test "are a 404 while team forms are off; the Forms tab shows the organization's", ctx do
+      %{conn: conn, team: team, own: own, form: form, alex: alex} = ctx
       team |> Ecto.Changeset.change(forms_enabled: false) |> Repo.update!()
+      form |> Ecto.Changeset.change(state: :on) |> Repo.update!()
       conn = log_in_user(conn, alex)
 
-      {:ok, lv, _html} = live(conn, "/teams/#{team.subdomain}/settings/fields")
-      refute has_element?(lv, "nav a[href='#{team_path(team)}']")
+      {:ok, lv, _html} = live(conn, team_path(team))
+      assert has_element?(lv, "nav a[href='#{team_path(team)}'][aria-current]", "Forms")
+      refute has_element?(lv, "#forms-team")
+      refute has_element?(lv, "#new-form")
+      refute has_element?(lv, "#form-#{own.id}")
+      assert has_element?(lv, "#forms-organization h2", "WSARA's forms")
+      assert has_element?(lv, "#forms-who-changes", "Only WSARA can change its forms.")
 
-      assert_raise Web.Status.NotFound, fn -> live(conn, team_path(team)) end
       assert_raise Web.Status.NotFound, fn -> live(conn, team_path(team, "/#{own.id}")) end
       assert_error_sent 404, fn -> get(conn, team_path(team, "/#{own.id}/page")) end
+
+      # Its organization's form is read-only, with no Copy while team forms are off.
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{form.id}"))
+      assert has_element?(lv, "#form-from", "WSARA's form. Only WSARA can change it.")
+      assert has_element?(lv, "#form-state", "On, for every WSARA team")
+      refute has_element?(lv, "#form-on-off")
+      refute has_element?(lv, "#form-change")
+      refute has_element?(lv, "#form-copy")
+      assert has_element?(lv, "#form-try")
+    end
+
+    test "with no organization forms and team forms off, the tab says where forms come from",
+         ctx do
+      %{conn: conn, team: team, alex: alex} = ctx
+      team |> Ecto.Changeset.change(forms_enabled: false) |> Repo.update!()
+      {:ok, lv, _html} = conn |> log_in_user(alex) |> live(team_path(team))
+
+      assert has_element?(lv, "#no-forms", "When WSARA adds a form")
+    end
+
+    test "its team admin copies an organization's form as the team's own, off", ctx do
+      %{conn: conn, team: team, form: form, alex: alex} = ctx
+      form = form |> Ecto.Changeset.change(state: :on) |> Repo.update!()
+      conn = log_in_user(conn, alex)
+
+      {:ok, lv, _html} = live(conn, team_path(team))
+      assert has_element?(lv, "#organization-forms a[href='#{team_path(team, "/#{form.id}")}']")
+
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{form.id}"))
+      refute has_element?(lv, "#form-change")
+      refute has_element?(lv, "#form-delete")
+
+      {:ok, lv, html} = lv |> element("#form-copy") |> render_click() |> follow_redirect(conn)
+
+      copy = Repo.get_by!(Form, team_id: team.id, name: "#{form.name} (copy)")
+      assert html =~ "Copied as #{copy.name}."
+      assert copy.state == :off
+      assert copy.text =~ "form '#{form.name} (copy)'"
+      assert Form.page_bytes(copy) == Form.page_bytes(form)
+      assert has_element?(lv, "#form-on-off")
+    end
+
+    test "a team's form its organization's replaced says so", ctx do
+      %{conn: conn, team: team, own: own, form: form, alex: alex} = ctx
+      form |> Ecto.Changeset.change(state: :on, name: own.name) |> Repo.update!()
+      conn = log_in_user(conn, alex)
+
+      {:ok, lv, _html} = live(conn, team_path(team))
+      assert has_element?(lv, "#form-#{own.id}-replaced", "Replaced by WSARA's")
+
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}"))
+      assert has_element?(lv, "#form-replaced")
     end
 
     test "its team admin sets it testing, and sees there's no activity to try it on", ctx do
@@ -273,9 +371,10 @@ defmodule Web.FormPagesTest do
       assert has_element?(lv, "#form-on-hint", "Only Valley SAR sees it")
       lv |> element("#form-on") |> render_click()
       assert Repo.reload!(own).state == :testing
-      assert has_element?(lv, "#form-state", "Testing")
+      assert has_element?(lv, "#form-publish:not([checked])")
       assert Repo.get_by!(Event, kind: :form_set_testing).team_id == team.id
 
+      render_async(lv, 10_000)
       assert has_element?(lv, "#form-try-none", "Your team has no activity this form shows on.")
       refute has_element?(lv, "#form-replace")
     end
@@ -296,33 +395,14 @@ defmodule Web.FormPagesTest do
       end
     end
 
-    test "a SAR Duty admin uploads a text, named apart from its organization's", ctx do
+    test "has no Replace, even for a SAR Duty admin: AI writing writes it (#1089)", ctx do
       %{conn: conn, team: team, own: own} = ctx
       conn = log_in_user(conn, sar_duty_admin())
-      {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}/edit"))
-      assert has_element?(lv, "h1", "Replace Debrief")
-      assert has_element?(lv, "p", "Saving checks the text on Valley SAR.")
+      {:ok, lv, _html} = live(conn, team_path(team, "/#{own.id}"))
 
-      upload(lv, :text, "task_report.txt", @text, "text/plain")
-      lv |> form("#form-upload") |> render_submit()
+      refute has_element?(lv, "#form-replace")
 
-      assert has_element?(
-               lv,
-               "#form-text-file",
-               "WSARA has a form called Task report. Give yours another name."
-             )
-
-      text = String.replace(@text, "form 'Task report'", "form 'Task report v2'")
-      upload(lv, :text, "task_report.txt", text, "text/plain")
-      {:ok, lv, _html} = lv |> form("#form-upload") |> render_submit() |> follow_redirect(conn)
-
-      assert [%Form{name: "Task report v2", version: 2}] = Form.get_all(team)
-      assert has_element?(lv, "h1", "Task report v2")
-
-      assert has_element?(
-               lv,
-               "#form-replace-button[href='#{team_path(team, "/#{own.id}/edit")}']"
-             )
+      assert conn |> get(team_path(team, "/#{own.id}/replace")) |> html_response(404)
     end
 
     test "its team admin starts one from the agency's PDF, not written yet", ctx do
@@ -350,40 +430,15 @@ defmodule Web.FormPagesTest do
       assert started.state == :off
       assert Form.page_bytes(started) == page
 
-      assert has_element?(lv, "#form-state", "Not written yet")
+      # The switches wait, greyed, and the page shows the agency's blank form.
       assert has_element?(lv, "#form-not-written", "Incident debrief isn't written yet.")
-      refute has_element?(lv, "#form-on")
-      refute has_element?(lv, "#form-try")
+      assert has_element?(lv, "#form-on[disabled]:not([checked])")
+      assert has_element?(lv, "#form-on-hint", "Change form writes it first.")
+      render_async(lv, 10_000)
+      assert has_element?(lv, "#form-page-1[alt$='blank form']")
+      refute has_element?(lv, "#form-try-download")
       refute has_element?(lv, "#form-text")
       refute has_element?(lv, "#form-replace")
-    end
-
-    test "a SAR Duty admin writes a started form with a text file, and it stays version 1",
-         ctx do
-      %{conn: conn, team: team, alex: alex, page: page} = ctx
-      {:ok, started} = SaveForm.start(team, "Incident debrief", page, alex)
-
-      assert_raise Web.Status.NotFound, fn ->
-        conn |> log_in_user(alex) |> live(team_path(team, "/#{started.id}/edit"))
-      end
-
-      conn = log_in_user(conn, sar_duty_admin())
-      {:ok, lv, _html} = live(conn, team_path(team, "/#{started.id}"))
-      assert has_element?(lv, "#form-replace", "Upload its text.")
-
-      {:ok, lv, _html} = live(conn, team_path(team, "/#{started.id}/edit"))
-      assert has_element?(lv, "#form-text-file", "Text")
-      refute has_element?(lv, "#form-text-file", "Leave it empty to keep its text.")
-      lv |> form("#form-upload") |> render_submit()
-      assert has_element?(lv, "#form-text-file", "Upload the form's text, a .txt file.")
-
-      text = String.replace(@text, "form 'Task report'", "form 'Incident debrief'")
-      upload(lv, :text, "debrief.txt", text, "text/plain")
-      {:ok, lv, html} = lv |> form("#form-upload") |> render_submit() |> follow_redirect(conn)
-
-      assert html =~ "Incident debrief saved."
-      assert %Form{version: 1, text: ^text} = Repo.reload!(started)
-      assert has_element?(lv, "#form-on")
     end
 
     test "a scan has no text to read, so it can't start a form", ctx do
@@ -404,12 +459,6 @@ defmodule Web.FormPagesTest do
     |> file_input("#form-start", :page, [
       %{name: filename, content: content, type: "application/pdf"}
     ])
-    |> render_upload(filename)
-  end
-
-  defp upload(lv, name, filename, content, type) do
-    lv
-    |> file_input("#form-upload", name, [%{name: filename, content: content, type: type}])
     |> render_upload(filename)
   end
 

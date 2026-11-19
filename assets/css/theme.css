@@ -76,11 +76,17 @@
   --list-style-type-arrow: '→ ';
 
   /* Breakpoints */
-  --breakpoint-*: initial; /* remove all breakpoints to only define md, lg, xl & 2xl */
+  --breakpoint-*: initial; /* remove all breakpoints to only define md & lg */
   --breakpoint-md: 40rem; /* 640px */
   --breakpoint-lg: 60rem; /* 960px */
-  --breakpoint-xl: 80rem; /* 1280px, so team pages use a wide monitor */
-  --breakpoint-2xl: 96rem; /* 1536px, so tables use a big monitor */
+}
+
+/* The page fills the window up to 96rem (1536px), so tables use a big monitor. Fluid, not
+   Tailwind's container, which steps at each breakpoint: a window just under a step got a
+   page a few hundred pixels narrower, and half a 5K screen sits right on one. */
+@utility page-width {
+  width: 100%;
+  max-width: 96rem;
 }
 
 @media print {

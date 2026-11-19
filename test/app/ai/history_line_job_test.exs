@@ -10,7 +10,7 @@ defmodule App.AI.HistoryLineJobTest do
 
   test "the request is small: both versions, no tools, low effort" do
     job = HistoryLineJob.build(@before, @saved)
-    request = AskAI.request(%AISettings{model: "claude-sonnet-5-5"}, job, [])
+    request = AskAI.request(%AISettings{}, job, [])
 
     assert job.kind == :history_line
     assert job.ask == "Members"
