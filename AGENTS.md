@@ -96,6 +96,11 @@
   [lib/app/adapter/cloudflare_email.ex](lib/app/adapter/cloudflare_email.ex): mail in
   production. Dev keeps email and texts in the Outbox at `/dev/outbox` (docs/outbox.md).
 - **Litestream to Cloudflare R2**: continuous SQLite backup.
+- **Claude API**: AI writing. A team admin describes a report and Claude writes its query,
+  with SAR Duty's checks as its tools ([lib/app/adapter/claude.ex](lib/app/adapter/claude.ex),
+  [App.Operation.AskAI](lib/app/operation/ask_ai.ex)). Never a member or a record in a
+  request; a test checks it. Adminland › AI writing sets who gets it, the model, and the
+  monthly budget. See [docs/ai-writing.md](docs/ai-writing.md).
 - **MCP**: at `/teams/:subdomain/mcp` (#28, #595). A SAR Duty admin turns Agents on for
   a team, and a team admin connects an AI agent with OAuth (#761): the agent registers,
   the admin chooses Allow, and the agent gets tokens, all under `/teams/:subdomain`. The

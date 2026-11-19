@@ -17,6 +17,9 @@ config :sarduty, App.Repo,
   # 50 ms once it's busy, which failed 10 to 20 tests at random in a run.
   queue_target: 30_000,
   queue_interval: 60_000,
+  # A write that waits out busy_timeout (30 s) must not be cut off first by the 15 s
+  # default, which failed a fixture insert as "Database busy" on a slow CI runner.
+  timeout: 60_000,
   # `mix test` migrates first, and the :warning level below isn't applied until the app
   # starts, so each migration query would print at :debug.
   log: false
@@ -94,3 +97,9 @@ config :sarduty, App.Adapter.GoogleWallet, plug: {Req.Test, App.Adapter.GoogleWa
 # And Twilio's, so no test sends a text. Text login stays off until a test turns it on
 # with App.AccountsFixtures.text_login_fixture/0.
 config :sarduty, App.Adapter.Twilio, plug: {Req.Test, App.Adapter.Twilio}, deliver: true
+
+# And the Claude API's, so no test spends credit. A key is set so AI writing can be on.
+config :sarduty, App.Adapter.Claude,
+  plug: {Req.Test, App.Adapter.Claude},
+  api_key: "test-key",
+  retry: false

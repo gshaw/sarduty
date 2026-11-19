@@ -68,7 +68,8 @@ defmodule App.Model.Event do
     form_set_testing: 730,
     team_forms_turned_on: 730,
     team_forms_turned_off: 730,
-    prod_task: 730
+    prod_task: 730,
+    ai_settings_changed: 730
   }
 
   @kinds Map.keys(@retention_days)

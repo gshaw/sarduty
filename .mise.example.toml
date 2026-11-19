@@ -21,6 +21,9 @@ TEAM_LOGO_PATH = "/path/to/team-logos"
 # TWILIO_API_KEY_SECRET = ""
 # TWILIO_FROM_NUMBER = "+16045550100"
 # DEV_SEND_SMS = "true"
+# Optional: the Claude API key for AI writing, from SAR Duty's Console workspace. Without it,
+# AI writing is off (docs/ai-writing.md).
+# ANTHROPIC_API_KEY = { value = "{{ exec(command='fnox get SARDUTY_ANTHROPIC_API_KEY') }}", tools = true, redact = true }
 # Optional: Healthchecks ping URLs, once per nightly refresh and once per sync round.
 # HEALTHCHECKS_URL = ""
 # HEALTHCHECKS_SYNC_URL = ""

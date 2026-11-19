@@ -20,7 +20,7 @@ defmodule Web.PrivacyLive do
     <article id="privacy" class="container mx-auto px-2 pt-8">
       <div class="max-w-prose">
         <h1 class="title">Privacy</h1>
-        <p class="hint">Last changed November 11, 2026.</p>
+        <p class="hint">Last changed November 15, 2026.</p>
         <p>
           SAR Duty copies your team's data from D4H to run its tools for your team. Your team decides what is in D4H.
         </p>
@@ -56,6 +56,9 @@ defmodule Web.PrivacyLive do
         </p>
         <p class="action">
           <.a id="privacy-agents-link" navigate={~p"/agents"}>How agents work with SAR Duty</.a>
+        </p>
+        <p id="privacy-ai">
+          A team admin can ask SAR Duty's AI writing to write a report. SAR Duty sends Anthropic's Claude API, in the United States, the report's query, what the admin asked, and the team's names for groups, qualifications, tags, and custom fields. It never sends members or their records.
         </p>
         <p id="privacy-demo">
           Try a demo asks for no email. A name, if you give one, is kept on your demo until it is deleted, {Service.Format.days(

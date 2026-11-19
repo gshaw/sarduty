@@ -155,6 +155,7 @@ have decided since the page loaded, stays in `call`.
 - [urls.md](urls.md) — how paths are named, and the URLs that can never move.
 - [navigation.md](navigation.md) — areas, the side navigation, and the account menu that switches between them.
 - [search.md](search.md) — the top bar's search: what it matches, how it ranks, and who finds what.
+- [ai-writing.md](ai-writing.md) — AI writing: the describe box, the Claude API, limits, and usage.
 - [mcp.md](mcp.md) — the MCP endpoint: connecting agents with OAuth, the report tools, and the call log.
 - [documents.md](documents.md) — documents: the tax credit letter and an organization's forms as text files, the language they're written in, and how they're checked.
 - [reports.md](reports.md) — reports: the query language, the catalog of fields, how a query runs, and Coast Range SAR, the made-up team agents try them on.

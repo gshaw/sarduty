@@ -1,0 +1,87 @@
+defmodule App.Operation.AskAITest do
+  use ExUnit.Case, async: true
+
+  alias App.AI.Job
+  alias App.AI.Models
+  alias App.AI.Tool.CheckReport
+  alias App.Model.AISettings
+  alias App.Operation.AskAI
+
+  defp job do
+    %Job{
+      kind: :report,
+      system: ["rules and language", "the team's names"],
+      tools: [CheckReport],
+      prompt: "The report as it stands",
+      schema: %{"type" => "object"},
+      finish: fn _output -> {:unchanged, ""} end,
+      context: %{},
+      ask: "hours this year"
+    }
+  end
+
+  test "a request runs in the US, caches each system part, and lists the tools" do
+    settings = %AISettings{model: "claude-sonnet-5-5"}
+    messages = [%{"role" => "user", "content" => "hi"}]
+    request = AskAI.request(settings, job(), messages)
+
+    assert request["model"] == "claude-sonnet-5-5"
+    assert request["inference_geo"] == "us"
+    assert request["output_config"]["effort"] == "medium"
+    assert request["output_config"]["format"]["type"] == "json_schema"
+    assert Enum.map(request["tools"], & &1["name"]) == ["check_report"]
+    assert request["messages"] == messages
+
+    assert [
+             %{"text" => "rules and language", "cache_control" => %{"type" => "ephemeral"}},
+             %{"text" => "the team's names", "cache_control" => %{"type" => "ephemeral"}}
+           ] = request["system"]
+
+    refute Map.has_key?(request, "thinking")
+    refute Map.has_key?(request, "temperature")
+  end
+
+  test "a response asks for tools, gives an answer, or ends the ask" do
+    use = %{"type" => "tool_use", "id" => "t1", "name" => "check_report", "input" => %{}}
+
+    assert {:tools, [^use]} =
+             AskAI.next_step(%{
+               "stop_reason" => "tool_use",
+               "content" => [%{"type" => "thinking", "thinking" => ""}, use]
+             })
+
+    assert {:answer, %{"query" => "select name from members"}} =
+             AskAI.next_step(%{
+               "stop_reason" => "end_turn",
+               "content" => [
+                 %{"type" => "text", "text" => ~s({"query":"select name from members"})}
+               ]
+             })
+
+    assert {:error, :failed} =
+             AskAI.next_step(%{
+               "stop_reason" => "end_turn",
+               "content" => [%{"type" => "text", "text" => "not json"}]
+             })
+
+    assert {:error, :refused} = AskAI.next_step(%{"stop_reason" => "refusal", "content" => []})
+    assert {:error, :failed} = AskAI.next_step(%{"stop_reason" => "max_tokens", "content" => []})
+  end
+
+  test "usage reads every token count, and the cost comes from the model's price" do
+    usage =
+      AskAI.usage(%{
+        "usage" => %{
+          "input_tokens" => 1_000,
+          "cache_creation_input_tokens" => 8_000,
+          "cache_read_input_tokens" => 0,
+          "output_tokens" => 2_000
+        }
+      })
+
+    assert usage == %{input: 1_000, cache_write: 8_000, cache_read: 0, output: 2_000}
+    # Sonnet 5.5: 1,000 × $2 + 8,000 × $2.50 + 2,000 × $10, per million tokens.
+    assert Models.cost_microdollars("claude-sonnet-5-5", usage) == 42_000
+    assert Models.cost_microdollars("claude-opus-5-5", usage) == 84_000
+  end
+end

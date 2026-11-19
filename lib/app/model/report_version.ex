@@ -8,8 +8,9 @@ defmodule App.Model.ReportVersion do
 
   # One save of a team's own report (#834): its name, description, and query as saved,
   # who saved it, the agent whose draft it came from, and What changed. Rows are never
-  # changed. Picked values stay out: they can hold a member's ID a team admin typed.
-  # Agents never read these.
+  # changed, but for What changed when AI writes it after the save
+  # (App.Operation.WriteHistoryLine). Picked values stay out: they can hold a member's ID
+  # a team admin typed. Agents never read these.
   schema "report_versions" do
     belongs_to :report, SavedReport
     belongs_to :user, User
@@ -52,6 +53,24 @@ defmodule App.Model.ReportVersion do
     |> preload(:user)
     |> Repo.one()
   end
+
+  @doc "The version saved before `version`, or nil for the first."
+  def previous(%ReportVersion{} = version) do
+    ReportVersion
+    |> where([v], v.report_id == ^version.report_id)
+    |> where(
+      [v],
+      v.inserted_at < ^version.inserted_at or
+        (v.inserted_at == ^version.inserted_at and v.id < ^version.id)
+    )
+    |> order_by([v], desc: v.inserted_at, desc: v.id)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  @doc "Sets What changed on a version saved without it."
+  def put_change!(%ReportVersion{} = version, change),
+    do: version |> Ecto.Changeset.change(change: change) |> Repo.update!()
 
   @doc "The report's version with `id`, or nil."
   def get(%SavedReport{} = report, id) do

@@ -497,6 +497,17 @@ defmodule App.Report.BuiltIn do
   @doc "Every built-in report, in the order Reports lists them."
   def all, do: @reports
 
+  @doc """
+  The built-in reports New report offers to start from, before the first ask: two
+  charts and three lists. Those the team can run.
+  """
+  def starters(%Team{} = team) do
+    slugs =
+      ~w(activities-by-month hours-by-member qualification-coverage not-attended-in-a-year awards-expiring)
+
+    for slug <- slugs, report = get(slug), runs?(report, team), do: report
+  end
+
   @doc "The built-in reports the team can run, in the order Reports lists them."
   def for_team(%Team{} = team), do: Enum.filter(@reports, &runs?(&1, team))
 

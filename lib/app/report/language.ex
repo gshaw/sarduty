@@ -152,6 +152,7 @@ defmodule App.Report.Language do
       [
         intro(),
         clauses(),
+        charts(),
         conditions(),
         functions(),
         formats(),
@@ -227,6 +228,33 @@ defmodule App.Report.Language do
   end
 
   defp query_clauses, do: Parser.clauses()
+
+  # What each chart takes (#826): the report editor links here, and the model reads it.
+  defp chart_kinds,
+    do: [
+      {"stat", "A number, and a line of it when the first column is a month."},
+      {"columns", "A time or a name first, then counts. A pivot stacks them."},
+      {"lines", "A time first, then counts. compare year adds last year."},
+      {"bars", "A name first, then a count, longest first."},
+      {"calendar", "date(started_at), then a count."},
+      {"week", "day_of_week(started_at), hour(started_at), then a count."},
+      {"map", "An activity and its place: a dot each, near the team's base."}
+    ]
+
+  defp charts do
+    rows =
+      Enum.map_join(chart_kinds(), "\n", fn {kind, takes} -> "| `chart #{kind}` | #{takes} |" end)
+
+    """
+    ## Charts
+
+    What each chart takes. The `chart` line is the last; the rows decide the rest.
+
+    | Chart | Takes |
+    | ----- | ----- |
+    #{rows}\
+    """
+  end
 
   defp clause_name({name, _written, _does, _example}), do: name
 

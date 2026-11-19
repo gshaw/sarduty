@@ -188,6 +188,7 @@ defmodule Web.NavigationTest do
                "admin-admins",
                "admin-events",
                "admin-mcp",
+               "admin-ai",
                "admin-integrations"
              ]
 

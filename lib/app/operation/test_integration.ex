@@ -7,6 +7,7 @@ defmodule App.Operation.TestIntegration do
   """
 
   alias App.Accounts.User
+  alias App.Adapter.Claude
   alias App.Adapter.D4H
   alias App.Adapter.FileStore
   alias App.Adapter.GoogleWallet
@@ -16,8 +17,10 @@ defmodule App.Operation.TestIntegration do
   alias App.Adapter.R2
   alias App.Adapter.Twilio
   alias App.Adapter.Website
+  alias App.AI.Models
   alias App.Mailer
   alias App.Mailer.IntegrationTestMailer
+  alias App.Model.AISettings
   alias App.Model.Event
   alias App.Model.Team
   alias App.Operation.BuildApplePass
@@ -32,7 +35,7 @@ defmodule App.Operation.TestIntegration do
   @jobs_wait_ms 30_000
   @poll_ms 500
 
-  @services ~w(website jobs backups typst email texts errors d4h maps health files apple google)
+  @services ~w(website jobs backups typst email texts errors d4h maps ai health files apple google)
 
   def services, do: @services
 
@@ -45,6 +48,7 @@ defmodule App.Operation.TestIntegration do
   def set_up?("texts"), do: Twilio.configured?()
   def set_up?("errors"), do: honeybadger_reports?()
   def set_up?("maps"), do: Mapbox.configured?()
+  def set_up?("ai"), do: Claude.configured?()
   def set_up?("health"), do: Healthchecks.configured?()
   def set_up?("apple"), do: BuildApplePass.configured?()
   def set_up?("google"), do: BuildGooglePass.configured?()
@@ -91,6 +95,7 @@ defmodule App.Operation.TestIntegration do
   defp not_set_up("backups"), do: "Backup not checked. R2 isn't set up on this server."
   defp not_set_up("texts"), do: "Test text not sent. Twilio isn't set up on this server."
   defp not_set_up("errors"), do: "Test error not sent. Honeybadger is off on this server."
+  defp not_set_up("ai"), do: "Key not checked. There is no Claude API key on this server."
   defp not_set_up("maps"), do: "Token not checked. Mapbox has no token on this server."
   defp not_set_up("health"), do: "Nothing pinged. No Healthchecks check is set up on this server."
   defp not_set_up("apple"), do: "Test pass not made. Apple Wallet isn't set up on this server."
@@ -186,6 +191,22 @@ defmodule App.Operation.TestIntegration do
 
       {:error, code} ->
         {:error, "failed", "The Mapbox token doesn't work. Mapbox says #{code}."}
+    end
+  end
+
+  # The settings' model, with a few tokens: a fraction of a cent.
+  defp run("ai", _params, _user, _now) do
+    model = AISettings.get().model
+
+    case Claude.check(model) do
+      :ok ->
+        {:ok, "works", "The Claude API key works. #{Models.name(model)} answered."}
+
+      {:error, :no_credit} ->
+        {:error, "failed", "The Claude API key works, but this month's credit is spent."}
+
+      {:error, _reason} ->
+        {:error, "failed", "The Claude API did not answer. Check the key in Fly secrets."}
     end
   end
 
