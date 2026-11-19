@@ -129,7 +129,7 @@ defmodule Web.AgentsLive do
         id: "agents-use-forms",
         title: "Write forms",
         text:
-          "A team admin, or an organization's, gives SAR Duty an agency's PDF, such as a task report, and AI writing writes the form: what SAR Duty fills in from an activity, and where each answer goes on the page. The admin tries it on an activity, marked SAMPLE, and saves it.",
+          "A team or organization admin gives SAR Duty an agency's PDF, such as a task report. AI writing writes the form: what it fills in from an activity, and where each answer goes on the page. The admin tries it on an activity, marked SAMPLE, and saves it.",
         access:
           "An admin asks in SAR Duty, once SAR Duty turns on forms for their team or organization. There is nothing to connect.",
         link: "How forms are written",
@@ -139,7 +139,7 @@ defmodule Web.AgentsLive do
         id: "agents-use-code",
         title: "Answer questions about SAR Duty",
         text:
-          "SAR Duty's code and its docs are public. An agent pointed at the repository can read how a feature works, what a page is for, or where a rule lives, and answer general questions about SAR Duty.",
+          "SAR Duty's code and its docs are public. An agent pointed at the repository can read how a feature works or where a rule lives. It can answer general questions about SAR Duty.",
         access: "Public, with no key or login. The code holds no team's records.",
         link: "SAR Duty on GitHub",
         href: @repo
