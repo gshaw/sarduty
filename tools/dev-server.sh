@@ -6,8 +6,9 @@
 #   tools/dev-server.sh            # in the foreground
 #   tools/dev-server.sh --detach   # in the background, log in tmp/dev-server.log
 #
-# It prints the URL to open. DEV_URL_HOST in .mise.local.toml is the host in that URL, QR
-# codes, and emailed links, such as one a phone can reach; http://localhost:4025 without it.
+# It prints the URL to open, https://sd.dev.gshaw.ca, which Caddy forwards to 4025 for the
+# Mac and the phone. DEV_URL_HOST in .mise.local.toml overrides the host in that URL, QR
+# codes, and emailed links.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -37,8 +38,7 @@ serve=(mise exec -- mix run --no-halt --no-start -e '
 ')
 
 host=$(mise exec -- printenv DEV_URL_HOST || true)
-url=${host:+https://$host}
-url=${url:-http://localhost:4025}
+url=https://${host:-sd.dev.gshaw.ca}
 
 if [ "${1:-}" = "--detach" ]; then
   mkdir -p tmp

@@ -16,7 +16,7 @@ tests that need to be checked by a human as well as the automated tests.
 
 - [ ] `mise run check` passes (format, compile, Credo, spelling, Markdown)
 - [ ] `mise run test` passes
-- [ ] Manual: <steps at sarduty.test, which team, which page>
+- [ ] Manual: <steps at sd.dev.gshaw.ca, which team, which page>
 - [ ] Migrations: <none, or what they change and whether existing rows are touched>
 
 ## Screenshots

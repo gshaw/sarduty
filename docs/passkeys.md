@@ -35,5 +35,5 @@ Adminland, wait on #1002.
 ## Trying it in development
 
 WebAuthn needs HTTPS or `localhost`, and the page's host must be the relying party. The
-dev server at `https://sarduty.test` works on this Mac. A phone needs a host it trusts
-over HTTPS, such as the Tailscale name, with the endpoint's `url` host set to match.
+dev server at `https://sd.dev.gshaw.ca` works on the Mac and the phone alike: a real
+certificate, and the endpoint's `url` host set to match.

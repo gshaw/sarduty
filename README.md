@@ -21,17 +21,16 @@ SAR Duty builds on a team's D4H records with tools made for volunteer teams. It 
 ## Setup
 
 ```sh
-brew install mise flyctl puma-dev mupdf  # mupdf's mutool reads a form's page
-puma-dev -install
+brew install mise flyctl mupdf  # mupdf's mutool reads a form's page
 cp .mise.example.toml .mise.local.toml
 # All optional in dev; tests need none
 mise trust
 mise install
 mix setup
-echo 4025 > ~/.puma-dev/sarduty
 ```
 
-Then `mise run server` and open <https://sarduty.test>.
+Then `mise run server` and open <https://sd.dev.gshaw.ca>. Caddy on Gerry's Mac serves
+that name and forwards it to 4025, which listens on 127.0.0.1 only.
 
 ## Tasks
 

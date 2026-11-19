@@ -2,8 +2,8 @@ defmodule Web.FlyHostRedirect do
   @moduledoc """
   Sends Fly's own host, `sarduty.fly.dev`, to the app's URL (#824). That host serves the
   whole app, but LiveView can't connect from it. Only the exact hosts in
-  `config :sarduty, :redirect_hosts`, which prod alone sets: dev runs under sarduty.test,
-  sarduty-orgs.test, sarduty.gshaw.ca, and localhost, and must never be sent away.
+  `config :sarduty, :redirect_hosts`, which prod alone sets: dev runs under sd.dev.gshaw.ca,
+  sarduty.gshaw.ca, and localhost, and must never be sent away.
   """
 
   @behaviour Plug
