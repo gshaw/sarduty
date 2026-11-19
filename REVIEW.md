@@ -56,7 +56,8 @@ AGENTS.md rules that no test checks. A miss here only a reviewer catches.
 - **A confirm for many records** follows `/styles/confirm-dialog#many`.
 - **Tests.** An operation's tests call its pure function, LiveView tests target ids, and
   a test file mirrors its `lib/` path.
-- **CHANGELOG.md.** A PR a team will notice adds its line under this week's heading.
+- **CHANGELOG.md.** A medium or large feature a team will notice adds its line under this
+  week's heading. A UI tweak or small fix doesn't.
 
 ## Text
 

@@ -4,214 +4,61 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 9–15
 
-- A field's page and a chore's keep their actions under the title, like a report's:
-  Change field, Delete or Archive field, and Change chore.
-- Search finds every Team settings tab, and words like logo, access key, and time zone
-  find Team settings. Members find Your membership by card, phone, or address.
-- Your membership's Contact details page is now four short ones: Change mobile number,
-  Change mailing address, Change emergency contacts, and Change fields, each linked
-  from Your membership. Your email shows there too.
-- Team settings' General is now an overview of your team, with Change team, Change
-  logo, Change team contacts, and Change access key as actions. Team admins is now
-  Admins, and Access key is no longer a tab.
-- ⭐ Change your team's logo in SAR Duty. It goes to D4H or SAR Duty Records too, and
-  ID cards, letters, and the Dashboard show it at once.
-- A new team logo in D4H shows as soon as the next refresh saves it, Google Wallet
-  passes included. Before, browsers kept the old one for up to an hour.
-- Fill in the fields your organization asks of your team, such as Duty Phone, on Team
-  settings → General with Change fields. Team settings → Fields lists them under Team,
-  and you can add your team's own there too.
-- ⭐ Add your team's own fields in Team settings → Fields, and change, archive, or
-  delete them from a field's page, in D4H and in SAR Duty Records. A D4H key that can't
-  change fields says so, and how to fix it.
-- Put your team's own fields in order with Change order on Team settings → Fields, and
-  a field's choices on Change field: drag a row, or move it with the keyboard.
-- Members change their own answers to the member fields your team lets them change, on
-  Your membership's Change fields. Fields they may only see stay read only there.
-- SAR Duty now keeps every member field, restricted ones too, so team admins see each
-  member's answers without picking fields first. The Copy boxes are gone. Team
-  settings' Fields tab lists your team's own fields, then your organization's, and each
-  field's page says what its settings mean.
-- Join dates, leave dates, and qualification dates no longer show a day early. A
-  qualification or item now counts through its expiry day, with Today on that day.
-- Needs attention now counts members whose email bounces, with their missing details.
-  Members missing details says why, such as Email (does not exist), so you know what
-  to fix in D4H.
-- Team settings has a Fields tab: every custom field on your records, with its hint,
-  choices, who added it, and when. Member fields' Copy boxes moved there. Fields tabs
-  and Change fields now group fields under D4H's headings, such as KMS Data.
-  Organization settings has a Fields tab for the organization's own.
-- An activity's forms moved from the sidebar to a Forms tab. Each form says what it's
-  for, its state, and when it was published, with Download PDF. The tab counts the
-  forms that are out of date.
-- Equipment items have a History tab: what you changed in SAR Duty, such as a field
-  or the status, and what changed in D4H, such as a move, a new status, or a cost.
-- The home page keeps Sign up a team and Log in side by side on a phone, and lists your
-  teams one per row when you have several.
-- Teams on SAR Duty Records get custom fields: the Fields tab, Change fields, member
-  fields, templates, and reports work as on D4H. Try a demo shows them on every incident.
-- The login page has Use a passkey: log in with Face ID, Touch ID, or your phone instead
-  of a code. Andrew and I are trying passkeys first, so only we can add one for now.
-  Codes keep working for everyone.
-- Tax credit letters have two actions, Email and Withdraw. Email sends each checked
-  member their latest letter, and publishes a new one first when there's none or it's
-  out of date. A To email tile counts who it would reach.
-- Tax credit letters are signed by typing the signer's name, /s/ in a script, so nobody
-  uploads a signature picture. The Signer tab shows how every letter ends as you type.
-- A letter or form can't be published while something it needs is blank, such as the
-  signer's title. A banner says what's needed and where to add it. Drafts still print.
-- You can email a year's letters before the year is over, to try them: Email asks you
-  to tick that you know it's early, since hours added later make them out of date. From
-  August 1 of the next year a year's letters are closed: a member may have filed one, so
-  it never shows Out of date.
-- Team settings: your mailing address is on General, and who signs letters is on a new
-  Signer tab.
-- EMCR's forms are signed when they're published. The task leader signs them as
-  "/s/ Cameron Ruiz". Another team admin signs in their own name, "/s/ Alex Chen for
-  Cameron Ruiz", and the task leader gets the PDF by email.
-- A team admin can ask the task leader to sign an EMCR form instead. They get it in For
-  you to do and by email, and Sign and publish on its page publishes it. The form says
-  who it's waiting for until then, with Cancel request.
-- No more yellow buttons. Send changes on Chores asks first and says what it sends.
-- ⭐ The ID card page shows your card, front and back, under the Wallet buttons. No
-  Wallet? Save image puts each side in Photos, and Print ID card prints both at card
-  size, in black on white, to cut out for a badge holder.
-- Your membership's ID card link is Show ID card, and it's there even without a Wallet.
-  Verify your ID card moved to the card page.
-- Login codes are 8 digits, shown as 4829 1375 (4829-1375 in a text), so they're far
-  harder to guess. On an iPhone or a Mac, Safari offers the code from Mail or Messages.
-  On Android, Chrome asks to fill in a texted code.
-- The login page asks for the email or mobile number your team has for you.
+- ⭐ Change your team's logo in SAR Duty. It goes to D4H or SAR Duty Records too, and ID
+  cards, letters, and the Dashboard show it at once.
+- ⭐ Custom fields in SAR Duty: add your team's own, put them in order, change, archive,
+  or delete them, in D4H and in SAR Duty Records. Fill in the ones your organization
+  asks of your team, such as Duty Phone.
+- Team admins see every member field, restricted ones too. Members change their own
+  answers to the fields your team lets them change.
+- Needs attention counts members whose email bounces.
+- Equipment items have a History tab: what changed, in SAR Duty and in D4H.
+- Log in with a passkey: Face ID, Touch ID, or your phone instead of a code. Andrew and I
+  are trying passkeys first. Codes keep working for everyone.
+- Login codes are 8 digits, far harder to guess, and phones offer to fill them in.
+- Email tax credit letters to checked members. It publishes a new letter first when
+  there's none or it's out of date.
+- Letters and EMCR forms are signed by typing the signer's name, /s/ style, so nobody
+  uploads a signature picture. A team admin can sign an EMCR form for the task leader, or
+  ask them to sign it.
+- ⭐ The ID card page shows your card, front and back. No Wallet? Save it to Photos, or
+  print it at card size for a badge holder.
 
 ## Nov 2–8
 
-- A tax credit letter's Email letter asks first, naming the address it goes to.
-- A retiring or retired member's ID Card tab has Cancel ID card, for the rare one who
-  shouldn't keep a card at all. Their pass shows Cancelled at once, and History says who.
-- The ID card page says which Wallet SAR Duty sees your card in, without a device count.
-  An iPad that gets the card through iCloud made one card read as 2 devices.
-- An ID card's email has one button, Get your ID card. It opens a page with Add to Apple
-  Wallet and Add to Google Wallet, so members on either phone find theirs. No more pass
-  attached under the signature.
-- Add ID card to Wallet on Your membership and the Dashboard opens the same page as the
-  email. On a computer, it has a QR code to open it on your phone.
-- The ID card page no longer spins after you tap Add to Wallet. Its line says where SAR
-  Duty sees your card, and changes when that does. After a lost phone, it counts only
-  the devices that hold the new card.
-- BC teams: EMCR's forms are in early development, for testing only. Don't send them
-  to EMCR yet.
-  - Each incident has EMCR's Task report under Forms, filled in from the incident and
-    BCSARA's fields on EMCR's own page, ready for the task leader to sign.
-  - EMCR's Expense reimbursement request supplement is under Forms too, with a row for
-    each person who attended: their travel, meals, and personal equipment allowance,
-    worked out from EMCR's rates. Mark who wasn't on task and the meals given.
-  - EMCR's Expense reimbursement request is under Forms as well: each item's km, hours,
-    and uses at its costs, your other expenses, the Supplement's total, and the 15%
-    safety allowance, signed by your team's signer. Add your city and postal code in
-    team settings, under Tax credit letters.
-- Reports read each attendance row's finish time and travel km, and each item's D4H costs
-  per km, hour, and use, in dollars.
-- A chore activity's page shows its chores' total under Duration, where it showed 0.
-- Try a demo opens with something to see on every page: you're a member with an ID card
-  and travel to confirm, group rules with changes to review, templates, whiteboard notes,
-  and mileage set on the two latest incidents.
-- Needs attention's links for retiring members open a list of them again, not an empty one.
-- While you search a list, its tiles count the matches, so you can see which tile they're in.
-- Members: retiring members move from Not retired to the Retired tile, with their Retiring
-  badge, since they no longer count as members. The Retiring tile is gone.
-- A member's Standing says Mark as not retiring, the opposite of Mark as retiring.
-- Members: Add to group and Remove from group move under the table, say who each one
-  reaches before you click, and ask first before marking anyone as retiring.
-- The choices for checked members start with nothing picked, so you always pick the change
-  yourself.
-- From January to April, the Dashboard says when tax credit letters are missing a
-  mailing address, signer, or signature, so the CRA accepts them without question.
-- A tax credit letter's page shows its reference to copy, and Verify letter opens the page
-  anyone checking it sees.
-- Tax credit letters print names with letters outside Western European ones, such as Ł
-  or ễ. Those letters used to fail to download or email.
-- Reports can read each member's tax credit hours by year, counted just as the letters
-  count them, and the team's own details: its legal name, mailing address, and signer.
-- A tax credit letter's PDF is kept as it was made. Every download and email sends that
-  same file, even after the team changes its logo.
-- Removing many members at once, from a group or an activity, names up to 3 of them, and
-  from 10 asks you to tick a box first.
-- Send a reminder is now Ask for a reply, and each choice for checked members says who it
-  reaches.
-- Activity Members tab: one table, with reply tiles, search by name, and a button that
-  stays in view.
-- Say it before the click: Travel's Change names who loses Confirmed, Send letters counts
-  who gets the email and names who has none, and Same as last counts only the items it
-  adds, with why the rest stay out.
-- Reports can list each member's ID card: its code, its verify link, and when it was
-  issued. Handy for printing cards or loading codes into another app. Thanks to Andrew at
-  South Fraser.
-- ⭐ Try a demo, on the home page: a made-up team of your own for 3 days, opened by a
-  link, with no sign-up. It sends no email or texts; they land in its Outbox.
-- ⭐ Every member gets a card: once a pilot is done, one switch on the Features tab gives
-  every current member an ID card and emails it. New members get theirs at the next
-  refresh. Members with no email are named under the switch.
-- Travel shows the yard to the ICP and back again, for a team vehicle's mileage.
-- Change an item's hours, or a vehicle's km, after it's on an activity: Change on its
-  Equipment tab. Thanks to Andrew at South Fraser.
-- ID cards follow standing. A member marked Retiring or retired keeps their card, and it
-  reads Not active at once. Take them out of Retiring and it's active again. Replace ID
-  card, for a lost phone, gives a new code and emails it; Cancel ID card is gone. The ID
-  Card tab says when the card was last emailed.
-- SAR Duty saved to an iPhone home screen gets its icon and is named SAR Duty, not the
-  page. Links shared in a chat show a small preview with the page's title.
-- Other apps can check a SAR Duty ID card when they scan it: the same answer as the verify
-  site, with the member's D4H ID so the app can match them.
+- ⭐ Try a demo, on the home page: a made-up team of your own for 3 days, with no sign-up.
+  It sends no email or texts.
+- ⭐ Every member gets a card: one switch on the Features tab gives every current member
+  an ID card and emails it. New members get theirs at the next refresh.
+- ID cards follow standing: a retiring or retired member's card reads Not active at once.
+  Replace ID card gives a new code after a lost phone, and Cancel ID card is there for
+  the rare one who shouldn't keep a card.
+- An ID card's email opens one page with Apple Wallet and Google Wallet, so members on
+  either phone find theirs.
+- Other apps can check a SAR Duty ID card when they scan it.
   [How to check an ID card](https://sarduty.com/agents/id-cards) shows how.
-- ⭐ Travel replaces the mileage report. After an activity, check members and set how they
-  got there: drove to the ICP or the yard, a passenger, or km you type. SAR Duty saves it,
-  and a browser agent such as Claude in Chrome can copy the km into D4H for you. Thanks to
-  Andrew at South Fraser for the idea and the first version. Distances come from SAR Duty's
-  own copy and are looked up once, so the page opens at once.
-- An activity opens on Overview: its tags, map, and description. Members, Travel, Equipment,
-  Fields, and History are tabs beside it.
-- Members check their own travel: it's on the activity's page and their Dashboard, with
-  That's right or Change, until the activity is published. Travel says who has.
-- ⭐ Change attendance after an activity, on its Members tab: check members, then mark
-  them attended or absent, or remove them, with one button. Add members works until it's
-  published, adding them as attended once it has started. Send attendance shows only
-  once someone has scanned at Take attendance.
-- An activity's Members tab filters by group, before and after the start: pick Team
-  leaders to see how many signed up. The link keeps the filter.
-- Remind or email part of an activity's members: check them on its Members tab, a table per
-  reply, then Send a reminder or Send an update. Send reminders and Send an update are gone
-  from Actions.
-- Remove members before an activity joins them: check members on its Members tab, then
-  Remove from the activity. Members who signed up get your message; with none of them
-  checked, it asks once and removes them. The Remove members link is gone.
-- Send an update after an activity too, published or not: a thank-you, or "check your
-  hours". After the start everyone gets the same email: your message and Open activity.
-- Add members lists who you find under Not added yet, checked, so it's clear nobody is on
-  the activity until you add them. The button counts who's checked: Add 5 members.
-  Uncheck anyone found by mistake, or one member of a group.
-- The Dashboard's numbers and charts open the reports that draw them, so you can see how
-  each is counted and copy one. Its numbers' lines now cover this year.
-- ⭐ Reports draw charts: end one with `chart columns`, `lines`, `stat`, `bars`,
-  `calendar`, `week`, or `map`. Activities by month, the Dashboard's numbers, Every day out,
-  When incidents start, and Where the team went are built-in chart reports to copy.
-- Reports read members' email, mobile number, and address (team admins only), and an
-  activity's address and place. A callout contact list or a map of incidents is now one
-  report; Download CSV gives places as latitude and longitude.
-- Every save of a report is kept: History shows who changed it and why, and Restore
-  brings back an older version. A deleted report waits 30 days under Recently deleted.
-- Your AI agent's report now shows up in the report you have open: each try reruns the
-  rows on your records, and you save once. Start from the first link it gives you.
-- [How to write a report](https://sarduty.com/agents/reports): one page on the report
-  language, linked from the editor. Point your AI agent at it and it has what it needs to
-  write one.
-- ⭐ Connect Claude or ChatGPT from its own settings: paste your team's address, log in,
-  and choose Allow.
-- AI agents now help you write reports and nothing else. They work from your report
-  language, saved reports, and names for groups and tags, never your members or
-  activities. You open the report in SAR Duty, where it runs. How it works is at
-  [sarduty.com/agents](https://sarduty.com/agents).
-- Reports can show a column another way: `format started_at as month`, a member as plain
-  text, hours as a number.
+- ⭐ Travel replaces the mileage report. Set how each member got there, and members check
+  their own. A browser agent such as Claude in Chrome can copy the km into D4H. Thanks to
+  Andrew at South Fraser for the idea and the first version.
+- Change an item's hours, or a vehicle's km, after it's on an activity. Thanks to Andrew
+  at South Fraser.
+- ⭐ Change attendance after an activity: check members on its Members tab, then mark them
+  attended or absent, remove them, remind them, or send them an update.
+- BC teams: EMCR's Task report, Expense reimbursement request, and its supplement are under
+  each incident's Forms, filled in from the incident and EMCR's rates. In early
+  development, for testing only. Don't send them to EMCR yet.
+- From January to April, the Dashboard says when tax credit letters are missing something
+  the CRA needs.
+- ⭐ Reports draw charts: columns, lines, bars, calendars, maps and more. The Dashboard's
+  numbers open the reports behind them.
+- Reports read more: travel km, equipment costs, tax credit hours by year, members'
+  contact details (team admins only), and each member's ID card, thanks to Andrew at
+  South Fraser.
+- Every save of a report is kept, with History and Restore. A deleted report waits 30
+  days.
+- ⭐ Connect Claude or ChatGPT to help write reports. Agents work from your report
+  language, never your members or activities, and you run the report in SAR Duty. How it
+  works is at [sarduty.com/agents](https://sarduty.com/agents).
 
 ## Oct 26–Nov 1
 
@@ -220,160 +67,96 @@ hours this year, which activities have no hours tag, who's missing a qualificati
 far the truck went. Until now that meant a D4H export and an afternoon in a spreadsheet.
 Now it's a page. This one will make a lot of people's lives easier.
 
-- ⭐ 19 built-in reports for team admins: hours by member, activities by month, activities
-  with two hours tags or none, members without a qualification, vehicle use, equipment out
-  of service and more. Download CSV for a spreadsheet.
-- ⭐ Write your own in a small query language, close to Google Sheets' QUERY. It runs as
-  you type, and a mistake names the line and the field you probably meant. Or ask an AI
-  assistant to write one and paste it in.
-- ⭐ Copy and change any built-in report. Save as report on Activities and Members turns
-  the list you're looking at into a report.
-- Reports get the same tiles, search, filters, sortable headers and pages as the lists.
-- Reports never show contact details, emergency contacts or keys.
+- ⭐ 19 built-in reports for team admins, with Download CSV for a spreadsheet.
+- ⭐ Write your own in a small query language, close to Google Sheets' QUERY, or ask an AI
+  assistant to write one.
+- ⭐ Copy and change any built-in report, or save the list you're looking at as one.
 
 The rest of the week:
 
 - ⭐ Custom fields: D4H's custom fields show on activities, equipment and members, and you
-  change them in SAR Duty. Needs attention lists drafts missing a required field.
-- ⭐ Templates hold an activity's details, custom fields included. Add activity starts
-  from a template.
+  change them in SAR Duty.
+- ⭐ Templates hold an activity's details. Add activity starts from a template.
 - ⭐ Enough at and Full at: an activity shows "4 more needed" until it has enough, then
-  Full. Reminders open with "We need 4 more people."
+  Full.
 - Send reminders with your own message. Send an update emails everyone on an activity.
-- Places come from the team's D4H location bookmarks. Activity descriptions take bold,
-  links and lists.
 - Change a member's role, and an item's status and barcode, without going to D4H.
-- Snooze a Needs attention item for a day, a week or a month. It comes back early if
-  something new turns up.
-- No-shows get a follow-up line and notes. Members who never replied are marked absent,
-  not no-shows.
+- Snooze a Needs attention item for a day, a week or a month.
+- No-shows get a follow-up line and notes.
 - Retiring members: a D4H group for members still returning gear, and who holds what.
-- Three team names: the everyday name, the legal name for tax credit letters and ID cards,
-  and a short name for texts.
-- Activity pages get Members, Equipment and History tabs. Every page's Actions sit in the
-  same order, with Open in D4H.
-- Log a chore faster: pick a category, type 2.5h, Log and add another.
-- Take attendance: a smaller camera picture, sized for an iPad mini and a phone.
-- The team name leads the top bar. Get help lists your team's contacts.
-- Messages show as a pill under the top bar. Errors stay until you close them.
-- A confirm dialog of our own. Big deletes and emails to 10 or more members ask you to
-  tick a box first.
-- Team settings by topic, with a Features tab. The D4H key tab says whose key it is and
-  what it can do.
-- AI assistant (MCP) for team admins, turned on in team settings. It reads attendance,
-  hours, chores and Needs attention, and changes nothing.
-- Fixed: chores send to D4H again.
-- Behind the scenes: one admin page tests every outside service SAR Duty uses, from email
-  to backups.
+- Three team names: the everyday name, the legal name, and a short name for texts.
+- AI assistant (MCP) for team admins. It reads attendance, hours, chores and Needs
+  attention, and changes nothing.
 
 ## Oct 19–25
 
-- ⭐ Add and change activities for D4H teams right in SAR Duty.
-- Add members to an activity by name, or a whole group at once.
+- ⭐ Add and change activities for D4H teams right in SAR Duty, and add members by name or
+  a whole group at once.
 - Groups: add, rename and delete them, and add or remove many members at once.
 - ⭐ Certificates: members send a photo or file, and a team admin accepts it into D4H.
-- Take attendance: a team page for the iPad at the hall with Now and Coming up. A plug-in
-  barcode scanner reads ID cards.
-- ⭐ Replies: members answer an activity invite from the email, no login needed. Team
-  admins see who replied and send reminders.
-- Add to calendar once you've signed up.
+- Take attendance: a team page for the iPad at the hall. A plug-in barcode scanner reads
+  ID cards.
+- ⭐ Replies: members answer an activity invite from the email, no login needed, and add
+  it to their calendar.
 - ⭐ Chores: members log chores, a team admin accepts them, and SAR Duty sends them to
-  D4H. Chore hours count on tax credit letters. Off until a team turns it on.
-- Whiteboard: D4H's notes on the Dashboard. Post, change and archive them in SAR Duty.
-- Search in the top bar finds members, activities, chores and pages. Works on phones too.
-- One space per team: team admins and members open the same pages. Phones get a new top
-  bar.
+  D4H. Chore hours count on tax credit letters.
+- Whiteboard: D4H's notes on the Dashboard, posted and changed in SAR Duty.
+- Search in the top bar finds members, activities, chores and pages.
 - ⭐ Your membership: a member's own page with their ID card, hours, qualifications,
-  milestones, emergency contacts and gear. A Year page counts hours the way the tax credit
-  letter does.
+  milestones, emergency contacts and gear.
 - Members see the Dashboard, activities and members list, read only. Team admins can view
   any page as a member.
 - Milestones: hours, years on the team and incidents.
-- Member standing: away periods, check-ins, and Retired. Filter members by standing, last
-  attended and activity tag.
+- Member standing: away periods, check-ins, and Retired.
 - Emergency contacts from D4H, shown to team admins and the member only.
-- Qualifications show days left on the ones expiring.
-- Count tiles above lists filter the list with one tap.
 - Organizations get their own space with each team's totals and ID cards.
-- Fixed: a member listed twice on one activity no longer gets two reminders.
-- Fixed: the stalls that slowed syncs and pages.
-- Slow buttons say what they're doing while you wait.
-- Behind the scenes: emails, reminders and letters send from background jobs that retry.
 
 ## Oct 12–18
 
-- ⭐ Equipment and kits on activities. Scan barcodes with a phone's camera. Kits become
-  templates that invite their groups, with tags.
+- ⭐ Equipment and kits on activities. Scan barcodes with a phone's camera.
 - Endorsements: a team list of qualification sets, used by group rules and ID cards.
-- Group rules: a group can start from another, and a rule can say "in" or "not in" a group
-  or endorsement.
-- ⭐ Hours tags per organization, so OSARVA teams can make tax credit letters. Needs
-  attention lists activities missing one through letter season.
-- Plainer tax credit letter wording in whole hours, with the organization's logo beside
-  the team's.
+- Group rules can start from another group, and say "in" or "not in" a group or
+  endorsement.
+- ⭐ Hours tags per organization, so OSARVA teams can make tax credit letters.
 - Needs attention lists members who haven't attended in 90 days.
-- Expiring qualifications filter by group and time frame.
-- A filter bar on every list: search and menus in one row. Long menus let you type to find
-  an option.
-- Call and Text buttons on phone numbers, copy buttons on emails and phones, Open in maps
-  on addresses.
-- Side navigation for team, member and admin pages. Wider pages on big monitors.
-- Fixed: the scan beep no longer stops music on the phone.
 
 ## Oct 5–11
 
-- ⭐ Take attendance at the door. Scan an ID card or pick a name, with a sound and a big
-  banner for each scan. A team admin reviews it and sends it to D4H.
-- Yet to arrive: who signed up and hasn't shown up, with Call and Text.
-- ⭐ Log in with a code by email or text. Every login must match a current D4H member.
-- Members log in for their own ID card, tax credit letters, hours, activities and
-  qualifications.
-- ⭐ Tax credit letters: hours from each row's own times, a signer's title and signature,
-  letters for every eligible member made and emailed at once, and a flag when hours
-  change. Each letter has a QR code checked at verify.sarduty.com/letters.
+- ⭐ Take attendance at the door. Scan an ID card or pick a name, then a team admin sends
+  it to D4H. Yet to arrive shows who signed up and hasn't shown up.
+- ⭐ Log in with a code by email or text. Members log in for their own ID card, tax credit
+  letters, hours, activities and qualifications.
+- ⭐ Tax credit letters for every eligible member, made and emailed at once, each with a
+  QR code to verify it.
 - A new team home page: what's next, what needs attention, then the team's year.
 - ⭐ SAR Duty syncs with D4H every 10 minutes, not once a night.
 - A history of every change to D4H data, for each member and activity.
 - SAR Duty Records: teams without D4H keep their records in SAR Duty.
-- New public home page, privacy and terms pages, logo and favicon.
-- Every button is a 44px tap target on touch screens. Pages fit a phone.
-- Security: a review of the public pages, and login and sign-up events recorded.
 
 ## Sep 28–Oct 4
 
 - ⭐ Member ID cards, checked by QR code at verify.sarduty.com.
-- ⭐ ID cards in Apple Wallet and Google Wallet, emailed to members and updated on their
-  phones when something changes.
+- ⭐ ID cards in Apple Wallet and Google Wallet, updated on members' phones when something
+  changes.
 - Verify pages branded for parent organizations.
-- Members D4H stops listing are marked departed.
 - ⭐ Teams sign themselves up. A team's D4H owners and editors manage it in SAR Duty.
-- A design system and writing guide at /styles.
-- Database backed up continuously to Cloudflare R2.
 
 ## Sep 10–24
 
 Work picks up again.
 
-- ⭐ Group rules: review changes and apply them in D4H, see why each member would leave a
-  group, and who expires within 60 days.
-- Mail sends through Cloudflare.
-- Keyboard focus shows, badges are easier to read, and tables read well on phones.
-- Security: new D4H keys are checked with D4H, and a saved key stays hidden.
-- Errors report to Honeybadger, and a failed team refresh says why.
-- Upgraded to Elixir 1.20 and OTP 29.
+- ⭐ Group rules: review changes and apply them in D4H, and see who expires within 60 days.
 
 ## Before Sep 2026
 
 A side project for South Fraser SAR, built on top of D4H. Small bursts of work.
 
-- **Feb–Mar 2026:** ⭐ qualifications and awards from D4H, member attendance pages, hours
-  from attendance rows, background refresh with progress, and D4H groups with
-  qualification rules. MIT licence in July.
-- **Dec 2025–Jan 2026:** upgrades, continuous backups, and a new email provider.
+- **Feb–Mar 2026:** ⭐ qualifications and awards from D4H, member attendance pages, and D4H
+  groups with qualification rules. MIT licence in July.
 - **Oct 2024–Feb 2025:** moved to D4H's v3 API, and works with personal access tokens.
 - **Jan–Apr 2024:** ⭐ tax credit letters made and emailed to members, first for the 2023
-  tax year. Times in the team's time zone, and the team logo from D4H.
+  tax year.
 - **Nov–Dec 2023:** the first version. Connect a team's D4H key, copy members, activities
-  and attendance, sortable lists, hours by year for each member, and a mileage report.
+  and attendance, hours by year for each member, and a mileage report.
 
 <!-- cspell:ignore OSARVA -->
