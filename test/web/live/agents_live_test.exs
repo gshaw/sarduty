@@ -25,6 +25,15 @@ defmodule Web.AgentsLiveTest do
 
     assert has_element?(lv, "#agents-use-id-cards", "Public")
     assert has_element?(lv, ~s(#agents-use-id-cards a[href="/agents/id-cards"]))
+
+    assert has_element?(lv, "#agents-use-forms", "nothing to connect")
+
+    assert has_element?(
+             lv,
+             ~s(#agents-use-forms a[href="https://github.com/gshaw/sarduty/blob/main/docs/ai-writing.md#forms"])
+           )
+
+    assert has_element?(lv, ~s(#agents-use-code a[href="https://github.com/gshaw/sarduty"]))
   end
 
   test "the lander is Markdown too, linking each page's Markdown", %{conn: conn} do
@@ -35,5 +44,6 @@ defmodule Web.AgentsLiveTest do
     assert markdown =~ "# How agents work with SAR Duty"
     assert markdown =~ "(#{Web.Endpoint.url()}/agents/reports.md)"
     assert markdown =~ "(#{Web.Endpoint.url()}/agents/id-cards.md)"
+    assert markdown =~ "[SAR Duty on GitHub](https://github.com/gshaw/sarduty)"
   end
 end

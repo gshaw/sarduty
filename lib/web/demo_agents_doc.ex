@@ -52,7 +52,7 @@ defmodule Web.DemoAgentsDoc do
 
     The team belongs to WESARA, a made-up organization, beside a second team, Silver Basin SAR. The demo's team admin is also one of WESARA's organization admins: the banner links to its space, `#{url}/orgs/wesara-<demo id>`, which shows each team's totals but never its people. Show it to someone who runs an organization of teams.
 
-    For what a page is for, read its heading and the one-line description under it. SAR Duty's own [Agents](#{url}/agents.md) page lists what else agents can do.
+    For what a page is for, read its heading and the one-line description under it. For how something works that a demo doesn't show, read SAR Duty's code and docs on [GitHub](https://github.com/gshaw/sarduty). SAR Duty's own [Agents](#{url}/agents.md) page lists what else agents can do.
 
     ## End a demo
 
