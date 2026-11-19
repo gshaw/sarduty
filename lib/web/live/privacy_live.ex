@@ -51,14 +51,11 @@ defmodule Web.PrivacyLive do
         <p id="privacy-access">
           SAR Duty site admins can see every team's data in SAR Duty. There are 2 today: Gerry Shaw and Andrew Wallwork. They look at team data only to run, fix, support, secure, or improve SAR Duty, or to look into a security problem, misuse, or failure. They share it only when the law requires it. SAR Duty does not use team data for anything else.
         </p>
-        <p id="privacy-agents">
-          A team admin can connect an AI agent, such as Claude or ChatGPT. The agent's company gets the team's names for groups, qualifications, tags, and custom fields, and its saved reports. It never gets members or their records.
+        <p id="privacy-ai">
+          A team admin can ask SAR Duty's AI writing to write a report. SAR Duty sends Anthropic's Claude API, in the United States, the report's query, what the admin asked, and the team's names for groups, qualifications, tags, and custom fields. It never sends members or their records.
         </p>
         <p class="action">
           <.a id="privacy-agents-link" navigate={~p"/agents"}>How agents work with SAR Duty</.a>
-        </p>
-        <p id="privacy-ai">
-          A team admin can ask SAR Duty's AI writing to write a report. SAR Duty sends Anthropic's Claude API, in the United States, the report's query, what the admin asked, and the team's names for groups, qualifications, tags, and custom fields. It never sends members or their records.
         </p>
         <p id="privacy-demo">
           Try a demo asks for no email. A name, if you give one, is kept on your demo until it is deleted, {Service.Format.days(

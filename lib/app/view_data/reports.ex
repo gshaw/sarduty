@@ -47,8 +47,9 @@ defmodule App.ViewData.Reports do
   end
 
   @doc """
-  An agent's name to own something: "Claude's", or "an AI agent's" for one that gave no
-  name, as AgentClient.display_name/2 calls it.
+  Who wrote a version, to own its draft: "the AI's" for AI writing. Versions from before
+  #1087 name the MCP agent that wrote them, "Claude's", or "an AI agent's" for one that
+  gave no name.
   """
   def possessive("An AI agent"), do: "an AI agent's"
   def possessive("AI"), do: "the AI's"

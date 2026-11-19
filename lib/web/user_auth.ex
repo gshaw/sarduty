@@ -639,15 +639,12 @@ defmodule Web.UserAuth do
     if conn.assigns.current_user.is_admin, do: conn, else: raise(Web.Status.NotFound)
   end
 
-  # On the way to Take attendance (#475) or to allow an AI agent (#761) the login page
-  # says what logging in is for, so a toast there would only cover it.
+  # On the way to Take attendance (#475) the login page says what logging in is for, so a
+  # toast there would only cover it.
   defp put_login_flash(conn) do
-    path = current_path(conn)
-
-    if conn.method == "GET" and
-         (Web.TakeAttendanceLive.path?(path) or Web.AgentAuthorizeLive.login_team_name(path)),
-       do: conn,
-       else: put_flash(conn, :error, "Log in to see this page.")
+    if conn.method == "GET" and conn |> current_path() |> Web.TakeAttendanceLive.path?(),
+      do: conn,
+      else: put_flash(conn, :error, "Log in to see this page.")
   end
 
   def require_authorized_team_subdomain(conn, _opts) do
@@ -693,8 +690,8 @@ defmodule Web.UserAuth do
     |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
   end
 
-  # The session is a 4 KB cookie, and an agent's report link can carry a long query
-  # (App.MCP.Tool.CheckReport). Past 2 KB the login returns to the page without it.
+  # The session is a 4 KB cookie, and a link can carry a long query string. Past 2 KB the
+  # login returns to the page without it.
   @max_return_to 2_000
 
   defp maybe_store_return_to(%{method: "GET"} = conn) do

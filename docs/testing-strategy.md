@@ -88,10 +88,10 @@ data?
   `/teams/:subdomain/…/:id` route and expects a 404. It fails when a new route of that
   shape is not in its list. `test/web/live/group_live_test.exs` does the same for the rule
   editor's events.
-- The MCP endpoint (#28): `test/web/controllers/mcp_controller_test.exs` checks a token
-  reads only its own team, that revoked tokens, teams with MCP off, and users who lost
-  the D4H bar get 401, and that no tool returns a key outside its `fields/0` or any
-  contact detail. Each tool's output is tested pure in `test/app/mcp/`.
+- AI writing ([ai-writing.md](ai-writing.md)): `App.AI.ReportJobTest` checks a request
+  holds no member or record, `App.AI.ToolTest` that no tool answers with one or with a
+  key outside its list, and `App.AI.ToolsTest` that nothing in AI writing writes or runs
+  a query on the team's records.
 - URLs: `test/web/router_test.exs` checks every top-level path against the list in
   [urls.md](urls.md), and that the URLs devices and shared links hold still route.
 - Most LiveViews have one smoke test that the page renders or redirects.

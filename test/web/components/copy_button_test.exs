@@ -10,16 +10,17 @@ defmodule Web.Components.CopyButtonTest do
 
     document =
       ~H"""
-      <.copy_code_block id="cmd" value="claude mcp add" label="Copy command" />
+      <.copy_code_block id="cmd" value="verify.sarduty.com/orgs/wesara" label="Copy address" />
       """
       |> rendered_to_string()
       |> LazyHTML.from_fragment()
 
-    assert document |> LazyHTML.query("pre#cmd.code-block") |> LazyHTML.text() == "claude mcp add"
+    assert document |> LazyHTML.query("pre#cmd.code-block") |> LazyHTML.text() ==
+             "verify.sarduty.com/orgs/wesara"
 
     assert document
            |> LazyHTML.query(
-             ~s(button#cmd-copy[value="claude mcp add"][aria-label="Copy command"])
+             ~s(button#cmd-copy[value="verify.sarduty.com/orgs/wesara"][aria-label="Copy address"])
            )
            |> Enum.count() == 1
 

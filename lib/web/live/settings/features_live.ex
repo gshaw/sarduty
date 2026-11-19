@@ -9,11 +9,11 @@ defmodule Web.Settings.FeaturesLive do
 
   # The team's features, /teams/:subdomain/settings/features: one switch each, saved when
   # flipped. Certificates and chores need member logins, so they sit under it, A to Z.
-  # MCP (Agents) and ID cards are SAR Duty's to turn on, from /admin/teams/:id
-  # (App.Operation.SetTeamMCP, App.Operation.SetTeamIdCards), so they show only as on or
-  # off. A team asks for ID cards; MCP isn't offered, so it shows only once on. Team forms
-  # (#1083) is SAR Duty's too, and shows only once on, so no other team learns of it while
-  # it's tried. Every member gets a card (#893) sits under ID cards, for a team admin.
+  # ID cards and Team forms (#1083) are SAR Duty's to turn on, from /admin/teams/:id
+  # (App.Operation.SetTeamIdCards, App.Operation.SetTeamForms), so they show only as on
+  # or off; a team asks for ID cards. Team forms shows only once on, so no other team
+  # learns of it while it's tried. Every member gets a card (#893) sits under ID cards,
+  # for a team admin.
   def mount(_params, _session, socket) do
     socket
     |> assign(page_title: "Team settings · Features", reading_whiteboard?: false)
@@ -126,16 +126,6 @@ defmodule Web.Settings.FeaturesLive do
       <p class="lead">Turn on what your team uses.</p>
 
       <div id="features" class="flex flex-col gap-6">
-        <.set_by_sar_duty
-          :if={@current_team.mcp_enabled}
-          id="feature-mcp"
-          label="Agents"
-          on?={true}
-        >
-          Team admins connect an AI agent, such as Claude or ChatGPT, that helps write
-          reports. <.a navigate={~p"/teams/#{@current_team}/settings/mcp"}>Agents</.a>
-        </.set_by_sar_duty>
-
         <.set_by_sar_duty id="feature-id-cards" label="ID cards" on?={@current_team.id_cards_enabled}>
           Members add their ID card to Apple Wallet or Google Wallet. SAR Duty turns ID cards
           on. Email support@sarduty.com to ask.

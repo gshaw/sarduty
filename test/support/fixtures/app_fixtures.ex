@@ -3,7 +3,6 @@ defmodule App.DataFixtures do
   alias App.Adapter.D4H
   alias App.Adapter.FileStore
   alias App.Model.Activity
-  alias App.Model.AgentConnection
   alias App.Model.Attendance
   alias App.Model.Certificate
   alias App.Model.CertificateFile
@@ -33,9 +32,6 @@ defmodule App.DataFixtures do
   alias App.Model.TemplateGroup
   alias App.Model.TemplateItem
   alias App.Model.TemplateTag
-  alias App.Operation.AuthorizeAgent
-  alias App.Operation.ExchangeAgentToken
-  alias App.Operation.RegisterAgentClient
   alias App.Repo
 
   require Ecto.Query
@@ -283,49 +279,6 @@ defmodule App.DataFixtures do
       user_id: attrs[:user_id],
       expires_at: DateTime.utc_now(:second) |> DateTime.add(3, :day)
     })
-  end
-
-  @doc "A PKCE verifier and its S256 challenge (RFC 7636)."
-  def pkce_fixture do
-    verifier = "verifier-" <> String.duplicate("a", 43)
-    {verifier, :crypto.hash(:sha256, verifier) |> Base.url_encode64(padding: false)}
-  end
-
-  @doc """
-  An AI agent `user` connected to `team` (#761), through the same steps an agent takes:
-  register, Allow, then trade the code. The team must have Agents on. Returns its
-  `client`, the `tokens` it got, and its `connection`.
-  """
-  def agent_connection_fixture(%Team{} = team, user, now \\ DateTime.utc_now()) do
-    redirect_uri = "http://localhost:33418/callback"
-
-    {:ok, client} =
-      RegisterAgentClient.call(%{
-        "client_name" => "Laptop agent",
-        "redirect_uris" => [redirect_uri]
-      })
-
-    {verifier, challenge} = pkce_fixture()
-
-    request = %{
-      client: client,
-      name: "Laptop agent",
-      redirect_uri: redirect_uri,
-      state: "xyz",
-      code_challenge: challenge
-    }
-
-    {:ok, url} = AuthorizeAgent.allow(team, user, request, now)
-    code = URI.decode_query(URI.parse(url).query)["code"]
-
-    params = %{"grant_type" => "authorization_code", "code" => code, "code_verifier" => verifier}
-
-    {:ok, tokens} =
-      ExchangeAgentToken.call(team, "unused", params, now)
-
-    hash = AgentConnection.hash(tokens["access_token"])
-    connection = Repo.get_by!(AgentConnection, access_token_hash: hash)
-    %{client: client, tokens: tokens, connection: connection}
   end
 
   @doc "The same, for a team on SAR Duty Records (docs/records.md)."

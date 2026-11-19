@@ -10,8 +10,6 @@ defmodule App.Operation.SetTeamFeature do
   - `:travel` (#230), on incidents only (App.Model.Activity.travel?/2).
   - `:whiteboard` (#515). Once it's on, the page calls read_whiteboard/1, so its notes
     show at once and the page can say when D4H has the module off.
-
-  MCP has its own, App.Operation.SetTeamMCP: turning it off revokes every token.
   """
 
   alias App.Accounts.User

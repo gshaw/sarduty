@@ -4,8 +4,7 @@ defmodule App.AI.Tool.TryReport do
   Claude catches a wrong answer, such as no rows or a double count, before the team
   admin sees it. Never the team's own records: App.Report.run_sample/3 reads only
   App.SampleRepo. Its answer names Coast Range SAR's groups, qualifications, and tags, so
-  Claude tries with those and answers with the team's own. The MCP tool of the same name
-  calls `try_query/2`.
+  Claude tries with those and answers with the team's own.
   """
   @behaviour App.AI.Tool
 

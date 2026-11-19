@@ -179,7 +179,7 @@ defmodule Web.Settings.FieldFormLive do
       </.input>
 
       <.input field={@form[:hint]} type="textarea" label="What it means (optional)">
-        Shown under the name when someone fills it in. Reports and AI agents read it too.
+        Shown under the name when someone fills it in. Reports read it too.
       </.input>
 
       <.input

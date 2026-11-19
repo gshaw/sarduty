@@ -60,9 +60,6 @@ defmodule App.Model.Team do
     # newest change, and how long syncs have been failing. App.Operation.SyncD4HChanges.
     field :d4h_synced_at, :utc_datetime_usec
     field :d4h_sync_state, :map
-    # The MCP switch (#28). Set only by App.Operation.SetTeamMCP, from the team's admin
-    # page.
-    field :mcp_enabled, :boolean, default: false
     # The team keeps its own forms (#1083). Set only by App.Operation.SetTeamForms, from
     # the team's admin page.
     field :forms_enabled, :boolean, default: false

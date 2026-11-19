@@ -123,13 +123,13 @@ defmodule Web.HoneybadgerFilterTest do
   test "a crashed request's logger context keeps its method and path, not its headers or body" do
     conn =
       :post
-      |> Plug.Test.conn("/teams/nsr/mcp", ~s({"arguments":{"code":"BODYSECRET"}}))
+      |> Plug.Test.conn("/teams/nsr/reports", ~s({"report":{"code":"BODYSECRET"}}))
       |> Plug.Conn.put_req_header("authorization", "Bearer HEADERSECRET")
 
     filtered = HoneybadgerFilter.filter_context(%{conn: conn, request_id: "abc"})
 
     assert filtered == %{
-             conn: %{method: "POST", host: "www.example.com", request_path: "/teams/nsr/mcp"},
+             conn: %{method: "POST", host: "www.example.com", request_path: "/teams/nsr/reports"},
              request_id: "abc"
            }
   end

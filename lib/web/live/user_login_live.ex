@@ -18,9 +18,6 @@ defmodule Web.UserLoginLive do
       <p :if={@take_attendance?} id="login-take-attendance" class="lead">
         Log in to take attendance.
       </p>
-      <p :if={@agent_team} id="login-agent" class="lead">
-        Log in to connect an AI agent to {@agent_team}.
-      </p>
       <p :if={@text_login}>
         Enter the email or mobile number your team has for you. If you may log in, we'll send you a
         code. There's no password.
@@ -102,7 +99,6 @@ defmodule Web.UserLoginLive do
        page_title: "Log in",
        page_description: "Log in to SAR Duty with a one-time code. There is no password.",
        take_attendance?: Web.TakeAttendanceLive.path?(session["user_return_to"]),
-       agent_team: Web.AgentAuthorizeLive.login_team_name(session["user_return_to"]),
        text_login: Accounts.text_login?(),
        form: to_form(%{"login" => nil}, as: "user"),
        trigger_submit: false

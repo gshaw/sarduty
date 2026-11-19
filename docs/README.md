@@ -33,7 +33,7 @@ database.
 | Models      | `lib/app/model/`, `lib/app/accounts/` | Ecto schemas and their queries                        | `Repo`, fields, validators                               |
 | View models | `lib/app/view_model/`                 | Embedded schemas that validate filter and form params | Models                                                   |
 | View data   | `lib/app/view_data/`                  | Read-only query bundles for one page                  | Models                                                   |
-| MCP tools   | `lib/app/mcp/`                        | Views of a team's data for agents, and proposals      | Models, operations                                       |
+| AI writing  | `lib/app/ai/`                         | What an ask sends Claude, and the tools it may call   | Reports, models                                          |
 | Ops         | `lib/app/ops/`                        | Tasks `bin/prod` runs in production, each recorded    | Operations, models, `Repo`                               |
 | Reports     | `lib/app/report/`                     | The report language: parse, check, and run a query    | Models, `Repo`                                           |
 | Documents   | `lib/app/document/`                   | PDFs from a letter's or form's text: parse, check     | Reports' parser and catalog; no `Repo`                   |
@@ -54,7 +54,7 @@ The rules that are easy to break:
 
 A rule is code that decides what may happen or what is true: a guard, an eligibility
 check, or a value that gets saved or sent. Each rule has one home, so every page, job,
-and MCP tool that needs it gets the same answer.
+and AI tool that needs it gets the same answer.
 
 - **A rule about one action** lives in the operation every entry point calls, as a pure
   function the tests call directly: `SetGroupMember.check_keeps_a_team_admin/4`,
@@ -75,7 +75,7 @@ and MCP tool that needs it gets the same answer.
 - **Views keep what to show and how**: wording, layout, and filtering rows already
   loaded. Read bundles for a page go in view data, and a view data module may hold a
   pure rule when only reading needs it, like `TeamAttention`, which the dashboard and
-  the MCP tool share.
+  a member's page share.
 
 A guard that must read inside the write's transaction, like a chore a team admin may
 have decided since the page loaded, stays in `call`.
@@ -118,8 +118,8 @@ have decided since the page loaded, stays in `call`.
   imported by those pages. Icons are `<.icon name="…">`, Lucide's, copied in with `bin/icons`. Styling is the design system at
   `/styles`: components and classes first, Tailwind utilities on its scale for one-off
   layout (AGENTS.md has the rules).
-- **New MCP tool** → a module in `lib/app/mcp/tool/` with the `App.MCP.Tool` behaviour,
-  listed in `App.MCP.Tools`. See [mcp.md](mcp.md).
+- **New AI writing tool** → a module in `lib/app/ai/tool/` with the `App.AI.Tool`
+  behaviour, listed in the job that offers it. See [ai-writing.md](ai-writing.md).
 - **New kind of file** (a logo, a photo, a document people upload) → the file store,
   `App.Adapter.FileStore`, with its key from `FileStore.key/5`, never a column in
   SQLite. See [files.md](files.md#adding-a-kind).
@@ -156,7 +156,6 @@ have decided since the page loaded, stays in `call`.
 - [navigation.md](navigation.md) — areas, the side navigation, and the account menu that switches between them.
 - [search.md](search.md) — the top bar's search: what it matches, how it ranks, and who finds what.
 - [ai-writing.md](ai-writing.md) — AI writing: the describe box, the Claude API, limits, and usage.
-- [mcp.md](mcp.md) — the MCP endpoint: connecting agents with OAuth, the report tools, and the call log.
 - [documents.md](documents.md) — documents: the tax credit letter and an organization's forms as text files, the language they're written in, and how they're checked.
 - [reports.md](reports.md) — reports: the query language, the catalog of fields, how a query runs, and Coast Range SAR, the made-up team agents try them on.
 - [taking-attendance.md](taking-attendance.md) — Take attendance: who scans ID cards at an activity and when, the times they record, and sending them to D4H.

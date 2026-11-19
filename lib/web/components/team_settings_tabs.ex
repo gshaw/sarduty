@@ -24,8 +24,7 @@ defmodule Web.Components.TeamSettingsTabs do
       :signer,
       :hours_tags,
       :places,
-      :chore_categories,
-      :mcp
+      :chore_categories
     ]
 
   def team_settings_tabs(assigns) do
@@ -79,19 +78,11 @@ defmodule Web.Components.TeamSettingsTabs do
 
   # The tabs a feature turns on.
   defp optional(team) do
-    chores =
-      if Team.chores?(team),
-        do: [
-          tab(:chore_categories, "Chore categories", ~p"/teams/#{team}/settings/chore-categories")
-        ],
-        else: []
-
-    agents =
-      if team.mcp_enabled,
-        do: [tab(:mcp, "Agents", ~p"/teams/#{team}/settings/mcp", words: ~w(mcp ai))],
-        else: []
-
-    chores ++ agents
+    if Team.chores?(team),
+      do: [
+        tab(:chore_categories, "Chore categories", ~p"/teams/#{team}/settings/chore-categories")
+      ],
+      else: []
   end
 
   defp tab(key, label, path, opts \\ []),

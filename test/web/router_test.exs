@@ -143,16 +143,7 @@ defmodule Web.RouterTest do
     {"GET", "/cards/token/google-wallet", Web.CardLinkController, :google_pass},
     {"POST", "/reminders/token", Web.InvitationRemindersController, :unsubscribe},
     {"GET", "/teams/nsr/logo", Web.TeamController, :logo},
-    {"GET", "/teams/nsr/take-attendance", Web.TakeAttendanceLive, nil},
-    {"POST", "/teams/nsr/mcp", Web.MCPController, :post},
-    # Agents keep these from their first connection (#761).
-    {"GET", "/.well-known/oauth-protected-resource/teams/nsr/mcp", Web.OAuthController,
-     :resource_metadata},
-    {"GET", "/.well-known/oauth-authorization-server/teams/nsr", Web.OAuthController,
-     :server_metadata},
-    {"POST", "/teams/nsr/oauth/register", Web.OAuthController, :register},
-    {"POST", "/teams/nsr/oauth/token", Web.OAuthController, :token},
-    {"GET", "/teams/nsr/oauth/authorize", Web.AgentAuthorizeLive, nil}
+    {"GET", "/teams/nsr/take-attendance", Web.TakeAttendanceLive, nil}
   ]
 
   @pinned_verify [
@@ -207,10 +198,8 @@ defmodule Web.RouterTest do
   # Search vs agents (#824). Every route is hidden from search, behind a login, or public,
   # and exactly one. Hidden routes send X-Robots-Tag: noindex through the :noindex
   # pipeline; public ones never do. robots.txt blocks nothing either way.
-  @hidden_prefixes ~w(/wallet/ /replies/ /reminders/ /cards/ /maps/ /.well-known/oauth- /csp-reports
-                       /demo/open /api/)
-  @hidden_team_routes ~w(/teams/:subdomain/mcp /teams/:subdomain/oauth/register
-                         /teams/:subdomain/oauth/token)
+  @hidden_prefixes ~w(/wallet/ /replies/ /reminders/ /cards/ /maps/ /csp-reports /demo/open
+                       /api/)
 
   @public_routes [
     "/",
@@ -263,8 +252,7 @@ defmodule Web.RouterTest do
   end
 
   defp hidden?(route) do
-    verify_route?(route) or route.path in @hidden_team_routes or
-      Enum.any?(@hidden_prefixes, &String.starts_with?(route.path, &1))
+    verify_route?(route) or Enum.any?(@hidden_prefixes, &String.starts_with?(route.path, &1))
   end
 
   defp logged_in?(route), do: :require_authenticated_user in pipe_through(route)

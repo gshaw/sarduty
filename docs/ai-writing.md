@@ -6,8 +6,8 @@ its query with SAR Duty's tools, and SAR Duty puts the answer in the editor. The
 come from the editor's preview, in SAR Duty, after Claude is done. Claude never sees a
 member, a row, or a count, and only the admin saves. Forms come next, the same way.
 
-It replaces the MCP endpoint ([mcp.md](mcp.md)) for writing reports: connecting an agent
-was too hard for most team admins. MCP goes once this works on South Fraser.
+It replaced connecting an AI agent through MCP (#1087): connecting one was too hard for
+most team admins. See [Before AI writing](#before-ai-writing-mcp).
 
 ## The box
 
@@ -64,7 +64,11 @@ an empty one stays empty.
    the model, `inference_geo: "us"`, and the answer as JSON: query, name, note.
 3. **Tools**: `check_report` compiles a query against the team's fields without running
    it; `try_report` runs it on Coast Range SAR, the made-up team, and gives back its
-   rows. Both in [lib/app/ai/tool/](../lib/app/ai/tool).
+   first 50 rows as the CSV writes them. Its answer lists Coast Range SAR's groups,
+   qualifications, tags, and custom fields, one of every type: a query that names the
+   team's own, such as Wilderness First Aid for First aid, finds nothing there, so
+   Claude tries with Coast Range's names and answers with the team's. Both in
+   [lib/app/ai/tool/](../lib/app/ai/tool).
 4. **The answer** is checked again with `App.Report.check/4`. A mistake goes back to
    Claude once, unseen; a second keeps the query as it was and shows the mistake.
 5. At most 6 requests per ask. Each ask sends the report as it stands, with the visit's
@@ -86,13 +90,18 @@ earlier asks and AI's notes, the ask, and
 the tools' answers: column labels, a compiler mistake, or Coast Range SAR's made-up rows.
 
 Never: a member, an activity, a row or a count from the team's records, contact details,
-letter text, or another team. Tests hold this:
+letter text, or another team. SAR data is sensitive, and this is what lets a team or an
+organization say yes to AI. Tests hold this:
 
 - `App.AI.ReportJobTest` seeds a team with members, contact details, and activities,
   builds the request, and checks it for each seeded value.
+- `App.AI.ToolTest` seeds the same, calls each tool, and checks its answer for each
+  seeded value, and that it holds only the keys on that tool's list. A tool builds its
+  answer from explicit maps. try_report's rows are Coast Range SAR's, marked `made_up`.
 - `App.AI.ToolsTest` fails if a file in `lib/app/ai/` runs a query on the team
   (`Report.run(`, `Report.page`, `Report.ids`, the runner) or writes anything (a change
-  set, a Repo write, D4H).
+  set, a Repo write, D4H). A reply that hung on the team's rows would let Claude learn
+  about the team one yes-or-no question at a time (#834).
 
 ## Settings
 
@@ -133,3 +142,20 @@ The default 5-minute cache is all there is for now. Asks come in bursts, so asks
 minutes apart read the language from cache and only a burst's first ask pays full
 price. Warming the cache when the editor opens, the 1-hour cache, and a shorter language
 for the model wait for a month of `ai_asks` cache numbers.
+
+## Before AI writing: MCP
+
+From #28 to #1087 (2026-10-08 to 2026-11-16), a team admin could connect their own AI
+agent, such as Claude or ChatGPT, to `/teams/:subdomain/mcp` with OAuth (#761), once a
+SAR Duty admin turned Agents on for the team. Its tools gave the report language, the
+team's names for things, its reports' queries, and check_report and try_report, which AI
+writing kept. check_report's link opened New report with the query, and the editor
+followed the agent's live draft (#834). Gerry couldn't connect Coast Range SAR's agent
+himself on 2026-11-15, and MCP went once AI writing worked.
+
+What stays: the rules above, which MCP's tests held first (#627, #816); the events for
+turning Agents on and off, connecting and disconnecting, and the older `mcp_token_*`
+kinds, kept two years; and `reports.agent` on old versions, which names the agent whose
+draft it was ("from Claude's draft"). New saves set it only for AI writing. An agent
+still configured with the old address gets a 404. Scripts and outside agents still read
+the `/agents` pages, and `/agents/reports` is AI writing's prompt.

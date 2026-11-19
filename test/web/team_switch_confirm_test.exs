@@ -20,20 +20,4 @@ defmodule Web.TeamSwitchConfirmTest do
     assert TeamSwitchConfirm.id_cards_off(@team, 12)["data-confirm-check"] ==
              "I understand 12 ID cards stop working."
   end
-
-  test "Turn off Agents asks nothing with none, and waits on a box from 1" do
-    assert TeamSwitchConfirm.agents_off(@team, 0) == %{}
-
-    assert TeamSwitchConfirm.agents_off(@team, 1) == %{
-             "data-confirm" =>
-               "Turn off Agents for Coast Range SAR? This disconnects 1 AI agent.",
-             "data-confirm-check" => "I understand 1 AI agent stops working."
-           }
-
-    assert TeamSwitchConfirm.agents_off(@team, 2)["data-confirm-check"] ==
-             "I understand 2 AI agents stop working."
-
-    assert TeamSwitchConfirm.agents_off(@team, 12)["data-confirm-check"] ==
-             "I understand 12 AI agents stop working."
-  end
 end

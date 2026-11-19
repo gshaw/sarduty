@@ -11,8 +11,6 @@ defmodule Web.FormCancelTest do
   @in_place %{
     "lib/web/live/activity_attendance_live.ex" =>
       "the review step's Cancel returns to the list on the same page",
-    "lib/web/live/agent_authorize_live.ex" =>
-      "Allow and Cancel both post, so Cancel can send the agent access denied",
     "lib/web/live/admin/team_live.ex" => "login grants are added on the team's admin page",
     "lib/web/live/certificate_live.ex" => "accept, decline, and rotate on the certificate's page",
     "lib/web/live/chore_collection_live.ex" => "accepts the chores ticked in the list",

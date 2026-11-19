@@ -139,8 +139,8 @@ page, `/orgs/:slug/settings/fields/:id`, read from its teams' copies
 there's no list of teams; a choice a team added names the team. A
 RESTRICTED field shows what it is, never values: the page shows no values at all.
 
-The report editor's Custom fields, the Agents tab, and an empty Fields tab link to the
-team's page with "What each field means", for team admins.
+The report editor's fields and an empty Fields tab link to the team's page with "What
+each field means", for team admins.
 
 ## Missing required fields
 
@@ -345,7 +345,7 @@ Fraser's one is "SFSAR Custom PRIVATE", working notes on a task report. So:
   permission to see one.
 - **Nothing an organization sees reads RESTRICTED values**: the org space
   ([organizations.md](organizations.md)), org reports such as unique file numbers
-  (#363), and the MCP. A report across an organization's teams uses its own,
+  (#363), and AI writing. A report across an organization's teams uses its own,
   unrestricted fields, which mean the same thing on every team.
 - Member fields are different: RESTRICTED changes nothing on one in SAR Duty. Team
   admins see every member's values, members their own as member privacy allows, and an

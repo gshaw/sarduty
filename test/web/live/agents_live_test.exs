@@ -14,7 +14,8 @@ defmodule Web.AgentsLiveTest do
   test "each thing agents can do says who decides and links its page", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/agents")
 
-    assert has_element?(lv, "#agents-use-reports", "A team admin connects")
+    assert has_element?(lv, "#agents-use-reports", "nothing to connect")
+    refute has_element?(lv, "#agents-who", "disconnect")
 
     assert has_element?(
              lv,

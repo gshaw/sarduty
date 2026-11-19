@@ -117,32 +117,6 @@ defmodule Web.Router do
     post "/", GoogleWalletController, :callback
   end
 
-  # The MCP endpoint (#28): an agent's access token only, so no session, CSRF token, or
-  # Accept check. The token decides the team. How an agent gets one (#761): metadata,
-  # registration, and tokens, also without a session. docs/mcp.md.
-  scope "/teams/:subdomain", Web do
-    pipe_through :noindex
-
-    post "/mcp", MCPController, :post
-    get "/mcp", MCPController, :get
-    delete "/mcp", MCPController, :delete
-    post "/oauth/register", OAuthController, :register
-    post "/oauth/token", OAuthController, :token
-    options "/oauth/register", OAuthController, :preflight
-    options "/oauth/token", OAuthController, :preflight
-  end
-
-  # RFC 9728 and RFC 8414 put metadata under /.well-known/, with the resource's or the
-  # issuer's path after it.
-  scope "/.well-known", Web do
-    pipe_through :noindex
-
-    get "/oauth-protected-resource/teams/:subdomain/mcp", OAuthController, :resource_metadata
-    get "/oauth-authorization-server/teams/:subdomain", OAuthController, :server_metadata
-    options "/oauth-protected-resource/teams/:subdomain/mcp", OAuthController, :preflight
-    options "/oauth-authorization-server/teams/:subdomain", OAuthController, :preflight
-  end
-
   # A mail app's one-click unsubscribe from a reminder (RFC 8058, #444): it posts with no
   # session or CSRF token. The signed token is the only access. Its page is the GET below.
   scope "/reminders", Web do
@@ -284,12 +258,7 @@ defmodule Web.Router do
       live "/account", AccountLive
       # Builds a visitor's demo the first time its link logs them in (#857).
       live "/demo/building", DemoBuildLive
-      # Allowing an AI agent (#761). Anyone logged in reaches it; the page says who may
-      # allow, so a member who tries learns why not.
-      live "/teams/:subdomain/oauth/authorize", AgentAuthorizeLive
     end
-
-    post "/teams/:subdomain/oauth/authorize", OAuthController, :authorize
 
     live_session :require_admin_session,
       on_mount: [
@@ -301,7 +270,6 @@ defmodule Web.Router do
       live "/admin/teams/:id", Admin.TeamLive
       live "/admin/admins", Admin.AdminCollectionLive
       live "/admin/events", Admin.EventCollectionLive
-      live "/admin/mcp", Admin.MCPLive
       live "/admin/ai", Admin.AILive
       live "/admin/orgs", Admin.OrganizationCollectionLive
       live "/admin/orgs/new", Admin.OrganizationNewLive
@@ -491,7 +459,6 @@ defmodule Web.Router do
            Settings.ChoreCategoryFormLive,
            :edit
 
-      live "/teams/:subdomain/settings/mcp", Settings.MCPLive
       live "/teams/:subdomain/help", HelpLive
       # A Try a demo team's Outbox (#857): the email it kept instead of sending.
       live "/teams/:subdomain/outbox", OutboxLive

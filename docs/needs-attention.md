@@ -19,9 +19,8 @@ and its ids now are a subset of those saved (`TeamAttention.items/4`). Something
 it is progress and keeps it hidden; anything new brings it back at once. A count would
 miss a swap, and the title changes with every one done.
 
-`SnoozeAttentionItem` reads the ids from the item, never from the browser. The MCP tool
-lists snoozed items last, with `snoozed_until`, and the nightly prune deletes snoozes a
-day after they end.
+`SnoozeAttentionItem` reads the ids from the item, never from the browser. The nightly
+prune deletes snoozes a day after they end.
 
 ## Which items can be snoozed
 

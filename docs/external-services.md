@@ -270,15 +270,6 @@ AI writing picks the model and the monthly budget.
   box never shows. With no bought credit and no auto-reload, asks stop when the credit
   is spent, and the box says AI writing is paused.
 
-## MCP endpoint
-
-Agents call in rather than SAR Duty calling out: `POST /teams/:subdomain/mcp`,
-read-only, for teams an admin turns it on for (#28). Agents connect with OAuth, and
-SAR Duty is the authorization server itself (#761): registrations and tokens are in the
-database, hashed, so there is no environment variable and no outside service. The old
-test version's `MCP_ACCESS_KEY` and its `?access=…` parameter are gone; unset the Fly
-secret if it is still there. See [mcp.md](mcp.md).
-
 ## Other secrets
 
 | Variable          | Purpose                                                          |

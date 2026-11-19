@@ -101,14 +101,6 @@
   [App.Operation.AskAI](lib/app/operation/ask_ai.ex)). Never a member or a record in a
   request; a test checks it. Adminland › AI writing sets who gets it, the model, and the
   monthly budget. See [docs/ai-writing.md](docs/ai-writing.md).
-- **MCP**: at `/teams/:subdomain/mcp` (#28, #595). A SAR Duty admin turns Agents on for
-  a team, and a team admin connects an AI agent with OAuth (#761): the agent registers,
-  the admin chooses Allow, and the agent gets tokens, all under `/teams/:subdomain`. The
-  tools in [lib/app/mcp/tool/](lib/app/mcp/tool) help an agent write reports and nothing
-  else (#816): the language, the fields, the team's names for things, and its reports'
-  queries. Never a member, an activity, a row, or a count from the records, and a test
-  checks it. They only read (#627): no change sets, no writes.
-  See [docs/mcp.md](docs/mcp.md).
 
 Every boundary, its credentials, and what breaks without it:
 [docs/external-services.md](docs/external-services.md).

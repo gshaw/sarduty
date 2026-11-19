@@ -7,9 +7,7 @@ defmodule Web.ReportFormLive do
   the subject after `from` as buttons; a click puts one in the query where the cursor is.
   How to write a report has the page's clauses and what each chart takes. `?from=<id>` starts from a copy of another report, such as a
   built-in one. `?list=<slug>` is Save as report on a list such as Activities (#784): the
-  list's text, with the list's picks as the values and in the name. `?query=` is an
-  agent's link from check_report (#816): its query, name, and description fill the form,
-  and `agent` names who wrote it, saved with the report.
+  list's text, with the list's picks as the values and in the name.
 
   AI writing (docs/ai-writing.md): when it's open to the admin, a column beside the
   report, above it under 1024px: the asks as a conversation, oldest first, in the page
@@ -27,20 +25,14 @@ defmodule Web.ReportFormLive do
   reports to start from (BuiltIn.starters/1) and Write the query yourself. The first
   ask that changes the report, or Write the query yourself, opens the editor.
 
-  With `draft`, the page follows the agent's live draft (#834): each query the agent
-  checks fills the form and reruns the rows, at most one run a second. Once the team
-  admin has typed since the agent's last query, a new one waits in a toast instead of
-  overwriting their typing. Nothing is saved until they save.
-
   The name is the page's title and the description the line under it (#834). Rename is a
   step of its own: their fields with Rename and Cancel, and the rest of the page hidden
   until one is chosen. A save they stop shows their fields too, with the rest. The fields
-  show whenever the query does. While following a draft the query is hidden, since the agent writes it; Show query and Hide query toggle
-  it, and stopping or a mistake in it opens it.
+  show whenever the query does.
 
-  Changing a saved report asks What changed, kept in its History (#834); an agent's draft
-  can fill it. `?version=<id>` is Restore from History: that version's name,
-  description, and query, saved as a new version.
+  Changing a saved report asks What changed, kept in its History (#834), unless AI writes
+  it. `?version=<id>` is Restore from History: that version's name, description, and
+  query, saved as a new version.
   """
   use Web, :live_view_app_layout
 
@@ -57,7 +49,6 @@ defmodule Web.ReportFormLive do
   alias App.Report.BuiltIn
   alias App.Report.Catalog
   alias App.Report.Context
-  alias App.Report.Draft
   alias App.Report.Error
   alias App.Report.Expr
   alias App.Report.Lists
@@ -70,7 +61,6 @@ defmodule Web.ReportFormLive do
 
   @preview_rows 50
   @chart_icons %{columns: "chart-column", bars: "chart-bar"}
-  @draft_every_ms 1_000
 
   @first_query """
   select name, standing, last_attended
@@ -92,14 +82,11 @@ defmodule Web.ReportFormLive do
       context: Context.new(team, now),
       subject: Catalog.subject("members"),
       params: start,
-      agent: agent(params),
       renaming: false,
-      rename_from: nil,
-      query_open: draft(params) == nil
+      rename_from: nil
     )
     |> assign_form(SavedReport.changeset(saved || %SavedReport{}, start))
     |> preview(start)
-    |> follow(draft(params))
     |> assign_ai(blank_new?(socket.assigns.live_action, params))
     |> then(&{:ok, &1})
   end
@@ -118,40 +105,14 @@ defmodule Web.ReportFormLive do
       ai_pending: nil,
       ai_asks: [],
       starting: blank_new? and ai == :ok,
-      query_open: socket.assigns.query_open and ai != :ok
+      query_open: ai != :ok
     )
   end
 
-  defp blank_new?(:new, params), do: not Enum.any?(~w(query from list), &Map.has_key?(params, &1))
+  defp blank_new?(:new, params), do: not Enum.any?(~w(from list), &Map.has_key?(params, &1))
   defp blank_new?(_action, _params), do: false
 
   defp ask_form(ask), do: to_form(%{"ask" => ask}, as: "ai")
-
-  # The agent's draft to follow, from its link: an id check_report made.
-  defp draft(%{"draft" => id, "query" => _query}), do: if(Draft.id?(id), do: id)
-  defp draft(_params), do: nil
-
-  defp follow(socket, draft) do
-    %{current_team: team, current_user: user} = socket.assigns
-    if draft && connected?(socket), do: Draft.subscribe(team, user.id, draft)
-
-    assign(socket,
-      draft: draft,
-      draft_applied: draft_fields(socket.assigns.form),
-      draft_at: socket.assigns.now,
-      draft_waiting: nil,
-      draft_seq: 0,
-      draft_next: nil,
-      draft_timer: nil,
-      draft_ran_ms: nil
-    )
-  end
-
-  # What a draft fills, as the form holds it: the agent's last one, or the admin's typing.
-  defp draft_fields(form), do: Map.new(~w(name about query)a, &{&1, form[&1].value || ""})
-
-  defp typed_since_draft?(socket),
-    do: draft_fields(socket.assigns.form) != socket.assigns.draft_applied
 
   defp start(:edit, %{"id" => id} = params, team, now) do
     case Reports.find(team, id, now) do
@@ -159,9 +120,6 @@ defmodule Web.ReportFormLive do
       _built_in_or_none -> raise Web.Status.NotFound
     end
   end
-
-  defp start(:new, %{"query" => query} = params, _team, _now) when is_binary(query),
-    do: {nil, params |> Map.take(["query", "name", "about"]) |> Map.put("values", %{})}
 
   defp start(:new, %{"from" => id}, team, now) do
     report = Reports.find(team, id, now) || raise Web.Status.NotFound
@@ -185,7 +143,7 @@ defmodule Web.ReportFormLive do
 
   defp start(:new, _params, _team, _now), do: {nil, %{"query" => @first_query}}
 
-  # Restore from History, or an agent's link: what it changes over the saved report.
+  # Restore from History: what it changes over the saved report.
   defp edit_start(saved, %{"version" => version_id}) do
     with {id, ""} <- Integer.parse(version_id),
          %ReportVersion{} = version <- ReportVersion.get(saved, id) do
@@ -195,13 +153,7 @@ defmodule Web.ReportFormLive do
     end
   end
 
-  defp edit_start(_saved, params), do: Map.take(params, ["query", "name", "about", "change"])
-
-  # Who wrote the query, from an agent's link: a name, cut short.
-  defp agent(%{"agent" => agent, "query" => _query}) when is_binary(agent) and agent != "",
-    do: String.slice(agent, 0, 80)
-
-  defp agent(_params), do: nil
+  defp edit_start(_saved, _params), do: %{}
 
   # Named for the picks: "Activities: Exercises, 2026, rope".
   defp list_name(list, values, team, now) do
@@ -325,33 +277,6 @@ defmodule Web.ReportFormLive do
   def handle_event("write_own", _params, socket),
     do: {:noreply, assign(socket, starting: false, query_open: true)}
 
-  def handle_event("load_draft", _params, socket) do
-    case socket.assigns.draft_waiting do
-      nil -> {:noreply, socket}
-      draft -> {:noreply, apply_draft(socket, draft)}
-    end
-  end
-
-  def handle_event("stop_following", _params, socket) do
-    %{current_team: team, current_user: user, draft: draft, agent: agent} = socket.assigns
-    if draft, do: Draft.unsubscribe(team, user.id, draft)
-    if socket.assigns.draft_timer, do: Process.cancel_timer(socket.assigns.draft_timer)
-
-    {:noreply,
-     socket
-     |> assign(
-       draft: nil,
-       draft_waiting: nil,
-       draft_next: nil,
-       draft_timer: nil,
-       query_open: true
-     )
-     |> put_flash(
-       :info,
-       "Stopped following #{Reports.possessive(agent)} draft. The form keeps what's in it."
-     )}
-  end
-
   def handle_event("ask", %{"ai" => %{"ask" => ask}}, socket) do
     case String.trim(ask) do
       "" -> {:noreply, socket}
@@ -393,7 +318,7 @@ defmodule Web.ReportFormLive do
   def handle_event("save", %{"report" => params}, socket) do
     %{current_team: team, current_user: user, saved: saved} = socket.assigns
 
-    agent = socket.assigns.agent || ai_agent(socket.assigns.ai_asks)
+    agent = ai_agent(socket.assigns.ai_asks)
 
     case SaveReport.call(team, user, saved, params, socket.assigns.now, agent) do
       {:ok, report} ->
@@ -431,7 +356,7 @@ defmodule Web.ReportFormLive do
   # messages while it does.
   defp start_ask(socket, ask) do
     %{current_team: team, current_user: user, form: form, ai_asks: asks} = socket.assigns
-    report = draft_fields(form)
+    report = report_fields(form)
     earlier = asks |> Enum.reverse() |> Enum.map(&Map.take(&1, [:ask, :note]))
     now = DateTime.utc_now()
     pid = self()
@@ -512,97 +437,14 @@ defmodule Web.ReportFormLive do
       else: {:noreply, socket}
   end
 
-  # A query the agent checked. It waits in a toast when the admin has typed since the
-  # last one; otherwise it fills the form, at most one run a second, the latest winning.
-  def handle_info({:report_draft, %Draft{} = draft}, socket) do
-    saved_id = socket.assigns.saved && socket.assigns.saved.id
-
-    cond do
-      socket.assigns.draft == nil or draft.report_id != saved_id ->
-        {:noreply, socket}
-
-      typed_since_draft?(socket) ->
-        {:noreply,
-         assign(socket,
-           agent: draft.agent,
-           draft_waiting: draft,
-           draft_seq: socket.assigns.draft_seq + 1
-         )}
-
-      true ->
-        {:noreply, socket |> assign(agent: draft.agent, draft_next: draft) |> run_draft_soon()}
-    end
-  end
-
-  def handle_info(:apply_draft, socket) do
-    socket = assign(socket, draft_timer: nil)
-
-    case socket.assigns.draft_next do
-      nil ->
-        {:noreply, socket}
-
-      draft ->
-        if typed_since_draft?(socket),
-          do: {:noreply, assign(socket, draft_next: nil, draft_waiting: draft)},
-          else: {:noreply, apply_draft(socket, draft)}
-    end
-  end
-
-  defp run_draft_soon(%{assigns: %{draft_timer: timer}} = socket) when timer != nil, do: socket
-
-  defp run_draft_soon(socket) do
-    wait =
-      case socket.assigns.draft_ran_ms do
-        nil -> 0
-        ran -> @draft_every_ms - (System.monotonic_time(:millisecond) - ran)
-      end
-
-    if wait <= 0,
-      do: apply_draft(socket, socket.assigns.draft_next),
-      else: assign(socket, draft_timer: Process.send_after(self(), :apply_draft, wait))
-  end
-
-  # The draft fills the form as a change would, so the rows rerun. A saved report's name
-  # and description stay unless the agent sent new ones.
-  defp apply_draft(socket, %Draft{} = draft) do
-    sent =
-      %{
-        "query" => draft.query,
-        "name" => draft.name,
-        "about" => draft.about,
-        "change" => draft.change
-      }
-      |> Map.reject(fn {_key, value} -> is_nil(value) end)
-
-    params =
-      socket.assigns.params |> Map.merge(fields_params(socket.assigns.form)) |> Map.merge(sent)
-
-    {:noreply, socket} = handle_event("change", %{"report" => params}, socket)
-
-    assign(socket,
-      draft_applied: draft_fields(socket.assigns.form),
-      draft_at: draft.at,
-      draft_waiting: nil,
-      draft_next: nil,
-      draft_ran_ms: System.monotonic_time(:millisecond)
-    )
-  end
+  # The name, description, and query, as the form holds them.
+  defp report_fields(form), do: Map.new(~w(name about query)a, &{&1, form[&1].value || ""})
 
   defp fields_params(form),
-    do: form |> draft_fields() |> Map.new(fn {key, value} -> {Atom.to_string(key), value} end)
+    do: form |> report_fields() |> Map.new(fn {key, value} -> {Atom.to_string(key), value} end)
 
   def render(assigns) do
     ~H"""
-    <div :if={@draft_waiting} class="toasts" id="report-draft-toasts">
-      <.flash
-        id={"report-draft-waiting-#{@draft_seq}"}
-        kind={:info}
-        title={"New query from #{@draft_waiting.agent}"}
-      >
-        You changed the query since.
-        <.a id="report-draft-load" href="#" phx-click="load_draft">Load it</.a>
-      </.flash>
-    </div>
     <.breadcrumbs>
       <:item label="Reports" path={~p"/teams/#{@current_team}/reports"} />
       <:item
@@ -641,17 +483,6 @@ defmodule Web.ReportFormLive do
       </aside>
 
       <div class="report-main">
-        <.banner
-          :if={@draft && !@rename_from}
-          id="report-draft-following"
-          title={"Following #{Reports.possessive(@agent)} draft"}
-          class="mb-6"
-        >
-          <p>
-            Each query it checks runs here on your records. Nothing is saved until you save.
-            <.a id="report-draft-stop" href="#" phx-click="stop_following">Stop following</.a>
-          </p>
-        </.banner>
         <section :if={@starting} id="report-start" class="measure mb-8">
           <.ai_writing
             ai={@ai}
@@ -769,7 +600,7 @@ defmodule Web.ReportFormLive do
                 team={@current_team}
                 now={@now}
                 maps_app={@current_user.maps_app}
-                count={preview_count(@view, draft_line(assigns))}
+                count={preview_count(@view, query_shown?(assigns))}
               />
             </div>
           </div>
@@ -923,23 +754,19 @@ defmodule Web.ReportFormLive do
     end
   end
 
-  # The agent writes the query while the page follows its draft; a mistake shows it.
+  # AI writes the query, so it can be folded; a mistake shows it.
   defp query_shown?(assigns), do: assigns.query_open or assigns.query_error != nil
 
-  # Show query and Hide query, while AI writing or an agent writes it. A mistake keeps
-  # the query open, so there is nothing to toggle then.
-  defp query_toggle?(assigns),
-    do: (assigns.ai == :ok or assigns.draft != nil) and assigns.query_error == nil
+  # Show query and Hide query, while AI writing writes it. A mistake keeps the query open,
+  # so there is nothing to toggle then.
+  defp query_toggle?(assigns), do: assigns.ai == :ok and assigns.query_error == nil
 
   # AI writing beside the report: open to the admin, past the blank start, not renaming.
   defp ai_column?(assigns),
     do: assigns.ai != {:error, :off} and !assigns.starting and assigns.rename_from == nil
 
-  # What changed, unless AI writes the History line. A line an agent's draft filled stays.
-  defp change_field?(assigns),
-    do:
-      assigns.saved != nil and
-        (!assigns.ai_line or blank_or(assigns.form[:change].value, nil) != nil)
+  # What changed, unless AI writes the History line.
+  defp change_field?(assigns), do: assigns.saved != nil and !assigns.ai_line
 
   defp cancel_path(team, nil), do: ~p"/teams/#{team}/reports"
   defp cancel_path(team, saved), do: ~p"/teams/#{team}/reports/#{saved.id}"
@@ -953,25 +780,15 @@ defmodule Web.ReportFormLive do
     switch ++ sort
   end
 
-  # The count, how many show, and where the rows come from: nothing to say about typing
-  # while the query is folded.
-  defp preview_count(view, source) do
+  # The count, how many show, and "runs as you type" while the query shows: nothing to
+  # say about typing while it is folded.
+  defp preview_count(view, typing?) do
     shown = length(view.result.rows)
     first = if view.total > shown, do: "shows the first #{Format.number(shown)}"
+    typing = if typing?, do: "runs as you type"
 
-    [ReportPage.count(view), first, source]
+    [ReportPage.count(view), first, typing]
     |> Enum.reject(&is_nil/1)
     |> Enum.join(" · ")
   end
-
-  # Whose query the rows are from: the agent's while the page follows it and the query
-  # is still the agent's, otherwise the admin's typing.
-  defp draft_line(%{draft: draft} = assigns) when draft != nil do
-    if assigns.form[:query].value == assigns.draft_applied.query,
-      do:
-        "the agent's query from #{Format.time_short(assigns.draft_at, assigns.current_team.timezone)}",
-      else: "runs as you type"
-  end
-
-  defp draft_line(assigns), do: if(query_shown?(assigns), do: "runs as you type")
 end
