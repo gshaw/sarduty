@@ -119,8 +119,9 @@ Every boundary, its credentials, and what breaks without it:
 
 How the `try` skill, or a person, runs a PR to click through it.
 
-- Run `tools/dev-server.sh --detach` from the PR's checkout. It serves one checkout at a
-  time on 4025: if something already serves it, stop that first.
+- Run `devhost serve sd` from the PR's checkout. It stops whatever serves 4025 and runs
+  `tools/dev-server.sh` there as a launchd job, which outlives your session (a background
+  command stops at 2 hours). `devhost stop sd` ends it.
 - The dev server is <https://sd.dev.gshaw.ca>, the URL it prints. Caddy on this Mac
   forwards it to 4025, which listens on 127.0.0.1 only, and the Mac and the phone both
   reach it. Give Gerry `https://sd.dev.gshaw.ca` to try a branch, never a ts.net address
