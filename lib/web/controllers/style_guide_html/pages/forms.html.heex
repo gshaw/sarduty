@@ -16,6 +16,7 @@
     <li>
       Choice switch: the same, for one of two to four named choices, such as the maps app.
     </li>
+    <li>Theme switch: System, Light, or Dark for this device.</li>
     <li>File: one photo or image people pick from their device, such as a logo or a photo.</li>
   </ul>
 
@@ -275,24 +276,50 @@
       value="google"
       options={[{"google", "Google Maps"}, {"apple", "Apple Maps"}]}
     />
+  </div>
+  <p class="spec">
+    The switch with names on it: its track, its blue knob, its slide. One choice is always on, and a tap saves it, with a toast to say so. Two to four choices of equal width. No underline and no square tabs, so it never reads as moving to another page. Radio buttons underneath, so the arrow keys move between choices. Used for Maps app on Account settings.
+  </p>
+
+  <h3>With icons</h3>
+  <div class="demo">
     <.choice_switch
-      id="e-theme"
-      name="e_theme"
-      label="Theme"
-      value="system"
-      options={[
-        {"system", "System", "monitor"},
-        {"light", "Light", "sun"},
-        {"dark", "Dark", "moon"}
-      ]}
+      id="e-view"
+      name="e_view"
+      label="Show as"
+      value="list"
+      options={[{"list", "List", "list"}, {"chart", "Chart", "chart-column"}]}
+    />
+    <.choice_switch
+      id="e-view-icons"
+      name="e_view_icons"
+      label="Show as"
+      value="list"
+      options={[{"list", "List", "list"}, {"chart", "Chart", "chart-column"}]}
+      labels={false}
       class="mt-4"
     />
   </div>
   <p class="spec">
-    The switch with names on it: its track, its blue knob, its slide. One choice is always on, and a tap saves it, with a toast to say so. Two to four choices of equal width, each with an optional icon. No underline and no square tabs, so it never reads as moving to another page. Radio buttons underneath, so the arrow keys move between choices. Used for Maps app and Theme on Account settings.
+    An icon before each name, or icons alone where the icons are plain enough to need no words. Icons alone keep each name for screen readers and as a tooltip.
+  </p>
+
+  <h2 id="theme-switch">Theme switch</h2>
+  <div class="demo">
+    <.theme_switch id="e-theme" theme={@theme} return_to="/styles/forms" />
+    <.theme_switch
+      id="e-theme-icons"
+      theme={@theme}
+      return_to="/styles/forms"
+      show={:icons}
+      class="mt-4"
+    />
+  </div>
+  <p class="spec">
+    System, Light, and Dark as a choice switch. Icons and names in settings, such as Account settings. Icons alone on page content, such as a home page's footer. Names alone where space is tight, such as this guide's side nav.
   </p>
   <p class="spec">
-    Theme is kept for this device only, since a shared iPad and your phone may want different ones, and a new device follows the system. A choice that changes how the page looks reloads it, so Safari's toolbar changes too. One that looks the same, such as Dark on a device that is already dark, saves with no reload.
+    Kept for this device only, since a shared iPad and your phone may want different ones, and a new device follows the system. A choice that changes how the page looks reloads it, so Safari's toolbar changes too. One that looks the same, such as Dark on a device that is already dark, saves with no reload.
   </p>
 
   <h2>How it works</h2>

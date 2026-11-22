@@ -110,20 +110,19 @@ defmodule Web.AccountLive do
           label="Maps app"
           value={@current_user.maps_app}
           options={[{"google", "Google Maps"}, {"apple", "Apple Maps"}]}
-          class="mt-3"
+          class="mt-4"
         />
       </form>
       <section id="theme" class="mt-8">
         <h2 class="subheading">Theme</h2>
         <p class="hint">On this device only. System follows this phone or computer's own setting.</p>
-        <div class="mt-3">
-          <.theme_switch
-            id="theme-form"
-            theme={@theme}
-            return_to={~p"/account"}
-            phx-hook="ThemeSaved"
-          />
-        </div>
+        <.theme_switch
+          id="theme-form"
+          theme={@theme}
+          return_to={~p"/account"}
+          phx-hook="ThemeSaved"
+          class="mt-4"
+        />
       </section>
       <section :if={@member_logins != []} id="emails" class="mt-8">
         <h2 class="subheading">Emails</h2>

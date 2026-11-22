@@ -64,7 +64,8 @@
     --choices: 2;
     --at: 0;
     position: relative;
-    display: inline-grid;
+    display: grid;
+    width: fit-content;
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
     padding: 3px;
@@ -110,6 +111,7 @@
   .choice-switch .choice-text { display: inline-flex; flex-direction: column; align-items: center; }
   .choice-switch .choice-text::after { content: attr(data-text) / ""; height: 0; overflow: hidden; visibility: hidden; font-weight: 700; }
   .choice-switch label:has(input:focus-visible) { outline: 3px solid var(--focus); box-shadow: inset 0 0 0 2px #0b0c0c; }
+  .choice-switch.is-icons label { min-width: 44px; padding-inline: var(--sp-3); }
   .choice-switch input { position: absolute; opacity: 0; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { .choice-switch::before { transition: none; } }
 

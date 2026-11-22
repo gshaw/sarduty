@@ -3,6 +3,7 @@ defmodule Web.ThemeTest do
 
   import App.AccountsFixtures
   import Phoenix.LiveViewTest
+  import Web.Components.ThemeSwitch, only: [theme_switch: 1]
 
   test "a fresh device follows the system", %{conn: conn} do
     html = conn |> get(~p"/") |> html_response(200)
@@ -94,6 +95,21 @@ defmodule Web.ThemeTest do
     for to <- ["https://example.com", "//example.com", "/\\example.com", nil] do
       assert conn |> put(~p"/theme", %{theme: "light", return_to: to}) |> redirected_to() == "/"
     end
+  end
+
+  test "icons alone keep each name for screen readers and as a tooltip" do
+    html =
+      render_component(&theme_switch/1,
+        id: "t",
+        theme: "dark",
+        return_to: "/",
+        show: :icons
+      )
+
+    assert html =~ ~s{class="choice-switch is-icons"}
+    assert html =~ ~s{title="Dark"}
+    assert html =~ ~s{<span class="sr-only">Dark</span>}
+    refute html =~ "choice-text"
   end
 
   defp theme_colors(html) do
