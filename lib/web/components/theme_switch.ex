@@ -5,7 +5,7 @@ defmodule Web.Components.ThemeSwitch do
   A device with no choice follows the system. theme.js posts a choice once the knob has
   slid; Web.ThemeController saves it for this device and comes back to the page, so
   Safari's toolbar picks up the new theme too. A choice that looks the same on this device
-  saves in the background instead, and a `phx-hook="ThemeSaved"` shows its toast. See /styles/forms.
+  saves in the background instead, and a `phx-hook="ThemeSaved"` shows its toast. See /styles/switches.
   """
   use Phoenix.Component
 

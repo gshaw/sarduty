@@ -5,7 +5,7 @@ defmodule Web.Components.ChoiceSwitch do
   toast says so. Radio buttons underneath, so arrow keys move between choices, and CSS
   alone moves the knob, so a LiveView patch can't leave it behind. Names, icons, or both;
   with icons alone, the name is still there for screen readers and as a tooltip. See
-  /styles/forms.
+  /styles/switches.
   """
   use Phoenix.Component
 

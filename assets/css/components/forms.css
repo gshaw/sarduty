@@ -32,7 +32,7 @@
   }
 
   /* A switch: a checkbox drawn as a track and knob, on the trailing edge of its row. See
-     /styles/forms. */
+     /styles/switches. */
   .switch-row { display: flex; align-items: center; gap: var(--sp-3); }
   .switch-row + .switch-row { margin-top: var(--sp-4); }
   input.switch {
@@ -59,7 +59,7 @@
 
   /* A choice switch: the switch with two to four named choices, one always on. The
      knob is one pseudo-element under the labels, slid to the checked radio. Choices are
-     equal widths, so --at alone places it. See /styles/forms. */
+     equal widths, so --at alone places it. See /styles/switches. */
   .choice-switch {
     --choices: 2;
     --at: 0;
