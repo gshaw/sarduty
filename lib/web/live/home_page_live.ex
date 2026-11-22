@@ -114,7 +114,13 @@ defmodule Web.HomePageLive do
               Gerry Shaw at <a href="mailto:support@sarduty.com">support@sarduty.com</a>.
             </p>
             <p class="home-lead">
-              The code is open: <a id="home-github" href="https://github.com/gshaw/sarduty"><.icon name="github" class="mr-1.5" />SAR Duty on GitHub</a>.
+              The code is open: <.a
+                id="home-github"
+                href="https://github.com/gshaw/sarduty"
+                kind={:custom}
+                external={true}
+                external_icon="github"
+              >SAR Duty on GitHub</.a>.
             </p>
           </div>
         </div>

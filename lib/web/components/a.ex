@@ -8,6 +8,8 @@ defmodule Web.Components.A do
 
   attr :external, :boolean, default: false
 
+  attr :external_icon, :string, default: "external-link", doc: "github for a link to GitHub"
+
   attr :icon, :string,
     default: nil,
     doc: "an icon in the arrow's place, for an action that has one, such as calendar-plus"
@@ -33,7 +35,7 @@ defmodule Web.Components.A do
       size={:sm}
       class="link-mark"
     /><span class="link-text">{render_slot(@inner_block)}</span><.icon
-      name={external_icon()}
+      name={@external_icon}
       size={:sm}
       class="link-icon"
     /></.link>
@@ -50,8 +52,6 @@ defmodule Web.Components.A do
     />{render_slot(@inner_block)}</.link>
     """
   end
-
-  defp external_icon, do: "external-link"
 
   defp determine_link_class(assigns) do
     [determine_kind_classes(assigns), assigns.icon && "has-mark", assigns.class]
