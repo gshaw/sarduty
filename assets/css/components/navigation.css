@@ -10,6 +10,14 @@
   }
 
   .site-bar-inner { display: flex; align-items: center; gap: var(--sp-4); min-height: 52px; }
+
+  /* Safari tints its toolbar from the fixed element at the top centre of the page. After a
+     click it stops looking and reuses that element, and live navigation replaces the bar,
+     so the toolbar went white (#656). The root layout's anchor is never replaced: clicks
+     pass through it, and only a 1px target where Safari looks is solid to a hit test. */
+  .toolbar-anchor { position: fixed; inset: 0 0 auto; z-index: 31; height: 56px; pointer-events: none; }
+  .toolbar-anchor::after { content: ""; position: absolute; top: 0; left: 50%; width: 1px; height: 8px; pointer-events: auto; }
+
   .site-bar .brand { color: #fff; font-weight: 700; font-size: var(--fs-lg); line-height: var(--lh-lg); text-decoration: none; white-space: nowrap; }
   .site-bar .brand span { color: var(--accent); }
 

@@ -33,6 +33,7 @@ defmodule Web.Layouts do
         </script>
       </head>
       <body>
+        <div class="toolbar-anchor" aria-hidden="true"></div>
         {@inner_content}
         <.confirm_dialog />
       </body>
