@@ -19,6 +19,7 @@ defmodule Web.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers_and_csp
     plug :assign_current_user
+    plug Web.Theme
   end
 
   # The verify site (verify.sarduty.com): a card's QR code opens /<code> here. No login,
@@ -192,6 +193,7 @@ defmodule Web.Router do
     get "/security.txt", SiteController, :to_security_txt
     get "/styles", StyleGuideController, :index
     get "/styles/:page", StyleGuideController, :show
+    put "/theme", ThemeController, :update
 
     # Public, before the team scope: Google Wallet objects fetch these.
     get "/teams/:subdomain/logo", TeamController, :logo

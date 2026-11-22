@@ -1,6 +1,8 @@
-<.shell current={:forms}>
+<.shell current={:forms} theme={@theme}>
   <h1>Forms</h1>
-  <p class="lead">Bold labels above, hints under them, errors on the field.</p>
+  <p class="lead">
+    Bold labels above, hints under them, errors on the field, and a Save button at the end.
+  </p>
 
   <h2>Which to use</h2>
   <ul>
@@ -11,7 +13,7 @@
       Checkboxes: a yes or no setting in a form with a save button, or any number of things from a list.
     </li>
     <li>
-      Switch: a setting with no save button, which changes the moment it's tapped. Inside a form with a save button, use a checkbox: a switch says the change already happened.
+      <a href={page_path(:switches)}>Switch</a>: a setting with no save button, which changes the moment it's tapped. Inside a form with a save button, use a checkbox.
     </li>
     <li>File: one photo or image people pick from their device, such as a logo or a photo.</li>
   </ul>
@@ -238,31 +240,6 @@
     around it.
   </p>
 
-  <h2 id="switch">Switch</h2>
-  <div class="demo">
-    <div class="max-w-sm">
-      <.switch id="e-sound" label="Sound" checked class="mb-4">A tone for each scan.</.switch>
-      <.switch id="e-off" label="Off" class="mb-4" />
-      <.switch id="e-disabled" label="Disabled" checked disabled class="mb-4" />
-      <.switch id="e-focus" label="Keyboard focus" class="is-focus" />
-    </div>
-  </div>
-
-  <p class="spec">
-    Label on the leading edge, switch on the trailing edge, a 48 by 28px track. Used on Take attendance and the ID card check.
-  </p>
-
-  <h3>Compact switch</h3>
-  <div class="demo">
-    <div class="max-w-sm">
-      <.button variant={:success} class="w-full">Scan ID cards</.button>
-      <.switch id="e-compact" label="Sound" compact checked class="mt-2" />
-    </div>
-  </div>
-  <p class="spec">
-    One page-level setting under the page's main action, such as Sound under the scan button. A small muted label and the switch, together on the trailing edge. No hint. The track stays full size, since it's tapped in a hurry.
-  </p>
-
   <h2>How it works</h2>
   <ul>
     <li>Label md semibold. Hint sm muted. Error md bold in <code>--danger</code>. Input md.</li>
@@ -287,9 +264,6 @@
       A checkbox or radio list is a <code>&lt;fieldset&gt;</code>
       of <code>&lt;label class="choice"&gt;</code>
       inputs, as on the organization page.
-    </li>
-    <li>
-      <code>&lt;.switch id="…" label="…"&gt;</code>, with <code>compact</code> for the small one.
     </li>
   </ul>
 </.shell>

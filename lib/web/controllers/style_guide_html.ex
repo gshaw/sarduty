@@ -37,6 +37,8 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.Scanner
   import Web.Components.StatSwitch
   import Web.Components.Table
+  import Web.Components.ChoiceSwitch, only: [choice_switch: 1]
+  import Web.Components.ThemeSwitch, only: [theme_switch: 1]
   import Web.Components.WalletBadges
 
   alias App.Mailer.ActivityMailer
@@ -105,7 +107,7 @@ defmodule Web.StyleGuideHTML do
          {:file_drop, "File drop", "Drop, paste, or select a file to upload."},
          {:filter_bar, "Filter bar", "Search and filters above a long list."},
          {:forms, "Forms",
-          "Every input: text, select, date, text area, checkboxes, radios, and switches."},
+          "Fields that wait for Save: text, select, date, checkboxes, and radios."},
          {:heading_row, "Heading row", "A heading with its action, and a note."},
          {:map, "Map", "A dot per activity on a Mapbox map."},
          {:member_letter, "Member letter", "A member's tax credit letter for a year."},
@@ -128,6 +130,8 @@ defmodule Web.StyleGuideHTML do
          {:spinner, "Spinner", "Says what slow thing is happening."},
          {:stat, "Stat", "A number, what it counts, and how it compares."},
          {:stat_switch, "Stat switch", "A list's split as counts, each one a filter."},
+         {:switches, "Switches",
+          "Settings that save when tapped: on or off, one of a few, and the theme."},
          {:table, "Table", "Dense rows, sorting, header groups, and row groups."},
          {:tabs, "Tabs", "Pages about one record, a link each."},
          {:tag, "Tag", "A word or two of status."},
@@ -219,21 +223,6 @@ defmodule Web.StyleGuideHTML do
     }
   end
 
-  # Auto, Light, and Dark, at the foot of the side nav and the phone's Menu. The frame's
-  # script marks the one in use and saves a choice.
-  def theme_switch(assigns) do
-    ~H"""
-    <div class="guide-theme">
-      <span>Theme</span>
-      <div class="theme-switch" role="group" aria-label="Theme">
-        <button type="button" data-theme-choice="">Auto</button>
-        <button type="button" data-theme-choice="light">Light</button>
-        <button type="button" data-theme-choice="dark">Dark</button>
-      </div>
-    </div>
-    """
-  end
-
   # The logo files that uv run assets/brand/draw_logo.py writes, and where each goes.
   def logo_files do
     [
@@ -275,6 +264,9 @@ defmodule Web.StyleGuideHTML do
       {"file", "A file in a file drop that is not a photo, and an email's attachment"},
       {"calendar-plus", "Add to calendar, in the arrow's place"},
       {"map-pin", "Open in Google Maps or Apple Maps, in the arrow's place"},
+      {"monitor", "Theme: System"},
+      {"sun", "Theme: Light"},
+      {"moon", "Theme: Dark"},
       {"printer", "Print ID card, in the arrow's place"},
       {"download", "Save an ID card's front or back image, in the arrow's place"},
       {"clock", "Hours milestones"},

@@ -1,0 +1,113 @@
+<.shell current={:switches} theme={@theme}>
+  <h1>Switches</h1>
+  <p class="lead">Settings that save the moment they're tapped, with no Save button.</p>
+
+  <h2>Which to use</h2>
+  <ul>
+    <li>Switch: a setting that's on or off, such as Sound.</li>
+    <li>Choice switch: one of two to four named choices, such as the maps app.</li>
+    <li>Theme switch: System, Light, or Dark for this device.</li>
+    <li>
+      Inside a form with a Save button, use a checkbox or
+      <a href={page_path(:forms) <> "#radios"}>radios</a>
+      instead: a switch says the change already happened.
+    </li>
+  </ul>
+
+  <h2 id="switch">Switch</h2>
+  <div class="demo">
+    <div class="max-w-sm">
+      <.switch id="e-sound" label="Sound" checked class="mb-4">A tone for each scan.</.switch>
+      <.switch id="e-off" label="Off" class="mb-4" />
+      <.switch id="e-disabled" label="Disabled" checked disabled class="mb-4" />
+      <.switch id="e-focus" label="Keyboard focus" class="is-focus" />
+    </div>
+  </div>
+
+  <p class="spec">
+    Label on the leading edge, switch on the trailing edge, a 48 by 28px track. Used on Take attendance and the ID card check.
+  </p>
+
+  <h3 id="compact">Compact switch</h3>
+  <div class="demo">
+    <div class="max-w-sm">
+      <.button variant={:success} class="w-full">Scan ID cards</.button>
+      <.switch id="e-compact" label="Sound" compact checked class="mt-2" />
+    </div>
+  </div>
+  <p class="spec">
+    One page-level setting under the page's main action, such as Sound under the scan button. A small muted label and the switch, together on the trailing edge. No hint. The track stays full size, since it's tapped in a hurry.
+  </p>
+
+  <h2 id="choice-switch">Choice switch</h2>
+  <div class="demo">
+    <.choice_switch
+      id="e-maps"
+      name="e_maps"
+      label="Maps app"
+      value="google"
+      options={[{"google", "Google Maps"}, {"apple", "Apple Maps"}]}
+    />
+  </div>
+  <p class="spec">
+    The switch with names on it: its track, its blue knob, its slide. One choice is always on, and a tap saves it, with a toast to say so. Two to four choices of equal width. No underline and no square tabs, so it never reads as moving to another page. Radio buttons underneath, so the arrow keys move between choices. Used for Maps app on Account settings.
+  </p>
+
+  <h3>With icons</h3>
+  <div class="demo">
+    <.choice_switch
+      id="e-view"
+      name="e_view"
+      label="Show as"
+      value="list"
+      options={[{"list", "List", "list"}, {"chart", "Chart", "chart-column"}]}
+    />
+    <.choice_switch
+      id="e-view-icons"
+      name="e_view_icons"
+      label="Show as"
+      value="list"
+      options={[{"list", "List", "list"}, {"chart", "Chart", "chart-column"}]}
+      labels={false}
+      class="mt-4"
+    />
+  </div>
+  <p class="spec">
+    An icon before each name, or icons alone where the icons are plain enough to need no words. Icons alone keep each name for screen readers and as a tooltip.
+  </p>
+
+  <h2 id="theme-switch">Theme switch</h2>
+  <div class="demo">
+    <.theme_switch id="e-theme" theme={@theme} return_to="/styles/switches" />
+    <.theme_switch
+      id="e-theme-icons"
+      theme={@theme}
+      return_to="/styles/switches"
+      show={:icons}
+      class="mt-4"
+    />
+  </div>
+  <p class="spec">
+    System, Light, and Dark as a choice switch. Icons and names in settings, such as Account settings. Icons alone on page content, such as a home page's footer. Names alone where space is tight, such as this guide's side nav.
+  </p>
+  <p class="spec">
+    Kept for this device only, since a shared iPad and your phone may want different ones, and a new device follows the system. A choice that changes how the page looks reloads it, so Safari's toolbar changes too. One that looks the same, such as Dark on a device that is already dark, saves with no reload.
+  </p>
+
+  <h2>In the app</h2>
+  <ul>
+    <li>
+      <code>&lt;.switch id="…" label="…"&gt;</code>, with <code>compact</code> for the small one.
+    </li>
+    <li>
+      <code>&lt;.choice_switch id="…" name="…" label="…" value=&#123;…&#125; options=&#123;…&#125;&gt;</code>
+      inside a form with <code>phx-change</code>; <code>labels=&#123;false&#125;</code>
+      for icons alone.
+    </li>
+    <li>
+      <code>&lt;.theme_switch id="…" theme=&#123;@theme&#125; return_to="…"&gt;</code>, with
+      <code>show=&#123;:icons&#125;</code>
+      or <code>show=&#123;:labels&#125;</code>.
+    </li>
+  </ul>
+</.shell>

@@ -15,15 +15,14 @@ does in the app. The page-text rules skip anything inside one. --%>
   .guide > .side-nav .guide-groups a { font-size: var(--fs-md); line-height: var(--lh-md); }
   .guide > .side-nav .guide-pages a { padding-top: var(--sp-1); padding-bottom: var(--sp-1); }
 
-  /* Auto, Light, and Dark, at the foot of the side nav and on the phone Menu's navy. */
-  .guide-theme { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) 0; color: var(--text-muted); font-size: var(--fs-sm); line-height: var(--lh-sm); }
-  .theme-switch { display: flex; border: 1px solid var(--border); border-radius: var(--radius); }
-  .theme-switch button { background: none; border: 0; color: var(--text); font-size: var(--fs-xs); line-height: var(--lh-xs); padding: var(--sp-1) var(--sp-3); cursor: pointer; }
-  .theme-switch button[aria-pressed="true"] { background: var(--surface-alt); font-weight: 700; }
-  .site-bar-phone-panel .guide-theme { padding: var(--sp-2) var(--sp-4); color: rgb(255 255 255 / 0.6); }
-  .site-bar-phone-panel .theme-switch { border-color: rgb(255 255 255 / 0.3); }
-  .site-bar-phone-panel .theme-switch button { color: #d5dbe3; font-size: var(--fs-sm); line-height: var(--lh-sm); padding: var(--sp-2) var(--sp-4); }
-  .site-bar-phone-panel .theme-switch button[aria-pressed="true"] { background: rgb(255 255 255 / 0.16); color: #fff; }
+  /* The theme switch at the foot of the side nav, in line with its links, and on the phone
+     Menu. Tighter choices, so three fit the side nav's 200px. */
+  .theme-choice { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); color: var(--text-muted); font-size: var(--fs-xs); line-height: var(--lh-xs); }
+  .guide > .side-nav .theme-choice { padding-inline: var(--sp-3); }
+  .guide > .side-nav .choice-switch label { padding-inline: var(--sp-2); }
+  .site-bar-phone-panel .theme-choice { color: rgb(255 255 255 / 0.6); }
+  .site-bar-phone-panel .choice-switch { background: rgb(255 255 255 / 0.06); border-color: rgb(255 255 255 / 0.3); }
+  .site-bar-phone-panel .choice-switch label:not(:has(input:checked)) { color: #d5dbe3; }
 
   /* Page text, outside the examples. */
   .guide-main :is(h1, h2, h3, h4):not(.demo *, .example *, .table-wrap *) { font-weight: 700; margin: 0 0 var(--sp-3); }

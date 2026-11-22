@@ -8,7 +8,7 @@ defmodule Web.Layouts do
   def root(assigns) do
     ~H"""
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang="en" data-theme={assigns[:theme]}>
       <head>
         <meta charset="utf-8" />
         <%!-- A public page sets its own, for search results and link previews. --%>
@@ -21,8 +21,7 @@ defmodule Web.Layouts do
         <meta name="apple-mobile-web-app-title" content="SAR Duty" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
-        <meta name="theme-color" content="#13243a" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#0a111b" media="(prefers-color-scheme: dark)" />
+        <.theme_colors theme={assigns[:theme]} />
         <.live_title suffix=" · SAR Duty">
           {assigns[:page_title] || "Untitled page"}
         </.live_title>
@@ -33,6 +32,7 @@ defmodule Web.Layouts do
         </script>
       </head>
       <body>
+        <div class="toolbar-anchor" aria-hidden="true"></div>
         {@inner_content}
         <.confirm_dialog />
       </body>
@@ -53,6 +53,23 @@ defmodule Web.Layouts do
       {@inner_content}
     </main>
     <.site_footer />
+    """
+  end
+
+  attr :theme, :string, default: nil, doc: "from Web.Theme: light, dark, or nil for System"
+
+  @doc """
+  The browser's colour around the page, the top bar's navy, so iOS fills the area under
+  the clock with it. A theme the device chose sets both.
+  """
+  def theme_colors(assigns) do
+    ~H"""
+    <meta
+      :for={scheme <- ~w(light dark)}
+      name="theme-color"
+      media={"(prefers-color-scheme: #{scheme})"}
+      content={Web.Theme.nav_color(@theme || scheme)}
+    />
     """
   end
 
