@@ -50,7 +50,7 @@ defmodule Web.StyleGuideSearch do
   @doc "A page's HTML, as the controller renders it inside the guide's frame."
   def render(page) do
     StyleGuideHTML
-    |> apply(StyleGuideHTML.template(page), [%{current: page}])
+    |> apply(StyleGuideHTML.template(page), [%{current: page, theme: nil}])
     |> Phoenix.HTML.Safe.to_iodata()
     |> IO.iodata_to_binary()
   end
