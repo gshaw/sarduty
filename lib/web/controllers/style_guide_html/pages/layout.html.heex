@@ -66,13 +66,15 @@
     </li>
   </ul>
 
-  <h2 id="page-lead">Pages without side navigation</h2>
+  <h2 id="page-frame">Page frame</h2>
   <p>
-    The home page, Terms, Privacy, the changelog, and Account settings have no side navigation, but keep its column empty from 1024px up. Content starts on the same line as on a page with one, and as this guide's does.
+    From 1024px up a page has the same margin on both sides, so its content sits centred. Side navigation sits in the leading margin: it is navigation, not the page's content. A page's own sidebar sits inside the content. Content starts on the same line with or without side navigation, as on the home page, Terms, and this guide.
   </p>
   <p class="spec">
     In the app: <code>class="page-frame"</code>
-    on the page's outer element. The column is <code>--side-nav-width</code>, and content starts at <code>--page-lead</code>.
+    on the page's outer element. Each margin is <code>--page-lead</code>: the side nav's
+    <code>--side-nav-width</code>
+    and the gaps either side of it.
   </p>
 
   <h2 id="narrow-pages">Narrow pages</h2>

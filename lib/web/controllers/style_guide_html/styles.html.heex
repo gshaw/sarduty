@@ -4,7 +4,9 @@ does in the app. The page-text rules skip anything inside one. --%>
 <style>
   /* Under the app's fixed bar, which is 52px and its 4px rule. */
   html { scroll-padding-top: 80px; }
+  /* The page frame's margins, with the side nav in the leading one. */
   .container { max-width: 96rem; margin: 0 auto; padding-inline: var(--sp-2); }
+  @media (width >= 64rem) { .container { padding-right: var(--page-lead); } }
   .guide { display: grid; grid-template-columns: var(--side-nav-width) minmax(0, 1fr); gap: var(--sp-8); padding-top: calc(56px + var(--sp-8)); padding-bottom: var(--sp-16); }
   .guide > .side-nav { width: auto; }
 
