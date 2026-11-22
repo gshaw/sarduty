@@ -1,8 +1,8 @@
 defmodule Web.Components.ThemeSwitch do
   @moduledoc """
   System, Light, and Dark, in the account menu and the style guide. A device with no
-  choice follows the system. theme.js applies a choice at once and saves it for this
-  device; Web.Theme reads it back. See /styles/top-bar.
+  choice follows the system. theme.js saves a choice for this device and reloads the page,
+  so Safari's toolbar follows; Web.Theme reads it back. See /styles/top-bar.
   """
   use Phoenix.Component
 

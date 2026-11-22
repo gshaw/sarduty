@@ -61,8 +61,7 @@ defmodule Web.Layouts do
 
   @doc """
   The browser's colour around the page, the top bar's navy, so iOS fills the area under
-  the clock with it. A theme the device chose sets both; theme.js reads data-system to
-  switch without a reload.
+  the clock with it. A theme the device chose sets both.
   """
   def theme_colors(assigns) do
     ~H"""
@@ -71,7 +70,6 @@ defmodule Web.Layouts do
       name="theme-color"
       media={"(prefers-color-scheme: #{scheme})"}
       content={Web.Theme.nav_color(@theme || scheme)}
-      data-system={Web.Theme.nav_color(scheme)}
     />
     """
   end
