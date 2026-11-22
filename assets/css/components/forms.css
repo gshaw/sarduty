@@ -57,6 +57,58 @@
   input.switch:checked { background: var(--primary); border-color: var(--primary); }
   input.switch:checked::after { left: 24px; background: var(--on-fill); transform: none; }
 
+  /* A choice switch: the switch with two to four named choices, one always on. The
+     knob is one pseudo-element under the labels, slid to the checked radio. Choices are
+     equal widths, so --at alone places it. See /styles/forms. */
+  .choice-switch {
+    --choices: 2;
+    --at: 0;
+    position: relative;
+    display: inline-grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    padding: 3px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: var(--surface-alt);
+  }
+  .choice-switch:has(> label:nth-child(3)) { --choices: 3; }
+  .choice-switch:has(> label:nth-child(4)) { --choices: 4; }
+  .choice-switch:has(> label:nth-child(2) input:checked) { --at: 1; }
+  .choice-switch:has(> label:nth-child(3) input:checked) { --at: 2; }
+  .choice-switch:has(> label:nth-child(4) input:checked) { --at: 3; }
+  .choice-switch::before {
+    content: "";
+    position: absolute;
+    inset-block: 3px;
+    left: 3px;
+    width: calc((100% - 6px) / var(--choices));
+    border-radius: 19px;
+    background: var(--primary);
+    translate: calc(100% * var(--at)) 0;
+    transition: translate 0.15s;
+  }
+  .choice-switch:not(:has(input:checked))::before { display: none; }
+  .choice-switch label {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    min-height: 36px;
+    padding: 0 var(--sp-4);
+    border-radius: 19px;
+    font-size: var(--fs-sm);
+    line-height: var(--lh-sm);
+    color: var(--text);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .choice-switch label:has(input:checked) { color: var(--on-fill); font-weight: 700; }
+  .choice-switch label:has(input:focus-visible) { outline: 3px solid var(--focus); box-shadow: inset 0 0 0 2px #0b0c0c; }
+  .choice-switch input { position: absolute; opacity: 0; pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { .choice-switch::before { transition: none; } }
+
   /* A file input's own button looks like a secondary button, so the place to tap is
      clear (#282). The file name stays beside it. See /styles/forms. */
   input[type="file"] { max-width: 100%; font-size: var(--fs-sm); color: var(--text-muted); }

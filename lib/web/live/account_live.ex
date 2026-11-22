@@ -1,7 +1,7 @@
 defmodule Web.AccountLive do
   @moduledoc """
   Account settings, at /account: who you're logged in as, the maps app place links open
-  (#301), and invitation reminders (#444) for each team the user logs in to as a member.
+  (#301), this device's theme (Web.Theme), and invitation reminders (#444) for each team the user logs in to as a member.
   Team settings live under each team, so the URL names the team they change (#153); the
   account menu reaches them (#312).
 
@@ -16,7 +16,9 @@ defmodule Web.AccountLive do
 
   use Web, :live_view_app_layout
 
+  import Web.Components.ChoiceSwitch, only: [choice_switch: 1]
   import Web.Components.Columns, only: [date_cell: 1]
+  import Web.Components.ThemeSwitch, only: [theme_switch: 1]
 
   alias App.Accounts.UserPasskey
   alias App.Accounts.WebAuthn
@@ -37,6 +39,7 @@ defmodule Web.AccountLive do
        viewing_as?: UserAuth.viewing_as?(session),
        passkey_challenge: nil,
        client_ip: session["client_ip"],
+       theme: session["theme"],
        user_agent: get_connect_info(socket, :user_agent),
        timezone: timezone(socket.assigns),
        now: DateTime.utc_now()
@@ -99,24 +102,24 @@ defmodule Web.AccountLive do
         </div>
       </section>
       <form id="maps-app-form" class="mt-8" phx-change="set-maps-app" phx-submit="set-maps-app">
-        <fieldset>
-          <legend class="subheading">Maps app</legend>
-          <p class="hint">Places in SAR Duty open in this app.</p>
-          <label
-            :for={{app, name} <- [{"google", "Google Maps"}, {"apple", "Apple Maps"}]}
-            class="choice"
-          >
-            <input
-              type="radio"
-              id={"maps-app-#{app}"}
-              name="maps_app"
-              value={app}
-              checked={@current_user.maps_app == app}
-            />
-            {name}
-          </label>
-        </fieldset>
+        <h2 class="subheading">Maps app</h2>
+        <p class="hint">Places in SAR Duty open in this app.</p>
+        <.choice_switch
+          id="maps-app"
+          name="maps_app"
+          label="Maps app"
+          value={@current_user.maps_app}
+          options={[{"google", "Google Maps"}, {"apple", "Apple Maps"}]}
+          class="mt-3"
+        />
       </form>
+      <section id="theme" class="mt-8">
+        <h2 class="subheading">Theme</h2>
+        <p class="hint">On this device only. System follows this phone or computer's own setting.</p>
+        <div class="mt-3">
+          <.theme_switch id="theme-form" theme={@theme} return_to={~p"/account"} />
+        </div>
+      </section>
       <section :if={@member_logins != []} id="emails" class="mt-8">
         <h2 class="subheading">Emails</h2>
         <p :if={@viewing_as?} id="emails-view-as" class="hint">

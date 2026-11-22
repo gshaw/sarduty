@@ -31,7 +31,10 @@
       </:search>
       <:menu_foot>
         <hr />
-        <.theme_switch id="phone-menu-theme" />
+        <div class="theme-choice">
+          <span>Theme</span>
+          <.theme_switch id="phone-menu-theme" theme={@theme} return_to={@conn.request_path} />
+        </div>
       </:menu_foot>
     </Web.Layouts.main_nav_bar>
     {@inner_content}

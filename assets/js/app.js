@@ -47,13 +47,13 @@ import {Unsaved} from "./unsaved"
 import {Toast} from "./toast"
 import {listenForBarMenuKeys} from "./bar_menu_keys"
 import {hideImagesOnError} from "./hide_on_error"
-import {ThemeSwitch, listenForThemeChoices} from "./theme"
+import {listenForThemeChoices} from "./theme"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, AIPanel, AskDialog, AskEnter, Combobox, DemoBanner, DragList, FileDrop, InsertField, PasskeyAdd, PasskeyLogin, QRScanner, RichText, SaveImage, ScannerInput, Search, Seconds, SelectAll, SoundSwitch, ThemeSwitch, Toast, Unsaved, WebOTP},
+  hooks: {...colocatedHooks, AIPanel, AskDialog, AskEnter, Combobox, DemoBanner, DragList, FileDrop, InsertField, PasskeyAdd, PasskeyLogin, QRScanner, RichText, SaveImage, ScannerInput, Search, Seconds, SelectAll, SoundSwitch, Toast, Unsaved, WebOTP},
 })
 
 trackPointer()

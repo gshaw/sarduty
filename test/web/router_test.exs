@@ -9,7 +9,7 @@ defmodule Web.RouterTest do
   # /teams/ or /orgs/ would block a team or organization with that name.
   @main_top_level ~w(teams orgs admin account signup login logout replies reminders cards wallet styles
                      terms privacy agents agents.md changelog changelog.md maps .well-known
-                     security.txt llms.txt csp-reports demo api)
+                     security.txt llms.txt csp-reports demo api theme)
   @verify_top_level [
     "api",
     ".well-known",
@@ -228,7 +228,8 @@ defmodule Web.RouterTest do
     "/styles",
     "/styles/:page",
     "/teams/:subdomain/logo",
-    "/terms"
+    "/terms",
+    "/theme"
   ]
 
   test "every route is hidden from search, behind a login, or public" do

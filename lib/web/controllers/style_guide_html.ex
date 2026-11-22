@@ -37,6 +37,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.Scanner
   import Web.Components.StatSwitch
   import Web.Components.Table
+  import Web.Components.ChoiceSwitch, only: [choice_switch: 1]
   import Web.Components.ThemeSwitch, only: [theme_switch: 1]
   import Web.Components.WalletBadges
 
@@ -261,6 +262,9 @@ defmodule Web.StyleGuideHTML do
       {"file", "A file in a file drop that is not a photo, and an email's attachment"},
       {"calendar-plus", "Add to calendar, in the arrow's place"},
       {"map-pin", "Open in Google Maps or Apple Maps, in the arrow's place"},
+      {"monitor", "Theme: System"},
+      {"sun", "Theme: Light"},
+      {"moon", "Theme: Dark"},
       {"printer", "Print ID card, in the arrow's place"},
       {"download", "Save an ID card's front or back image, in the arrow's place"},
       {"clock", "Hours milestones"},

@@ -256,21 +256,6 @@
   .menu .menu-heading { padding: var(--sp-3) var(--sp-4) var(--sp-1); }
   .menu hr { margin: var(--sp-1) 0; border-color: var(--border-subtle); }
 
-  /* The theme switch: System, Light, and Dark, in the account menu, and in the style
-     guide's side nav and phone Menu. Touch screens get 44px buttons. */
-  .theme-choice { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); color: var(--text-muted); font-size: var(--fs-xs); line-height: var(--lh-xs); }
-  .theme-switch { display: flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .theme-switch button { flex: 1; padding: var(--sp-1) var(--sp-3); background: none; border: 0; color: var(--text); font-size: var(--fs-sm); line-height: var(--lh-sm); cursor: pointer; }
-  .theme-switch button + button { border-left: 1px solid var(--border); }
-  .theme-switch button:hover { background: var(--row-hover); }
-  .theme-switch button[aria-pressed="true"] { background: var(--surface-alt); font-weight: 700; }
-  @media (pointer: coarse) { .theme-switch button { min-height: 44px; } }
-  .site-bar-phone-panel .theme-choice { color: rgb(255 255 255 / 0.6); }
-  .site-bar-phone-panel .theme-switch, .site-bar-phone-panel .theme-switch button + button { border-color: rgb(255 255 255 / 0.3); }
-  .site-bar-phone-panel .theme-switch button { color: #d5dbe3; }
-  .site-bar-phone-panel .theme-switch button:hover { background: rgb(255 255 255 / 0.06); }
-  .site-bar-phone-panel .theme-switch button[aria-pressed="true"] { background: rgb(255 255 255 / 0.16); color: #fff; }
-
   /* Side navigation (#312): an area's pages down the left of each of its pages, in
      sections split by a line (#406). Square links, so the current page's bar stays
      straight. Below 1024px the Menu button holds

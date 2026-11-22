@@ -1,4 +1,4 @@
-<.shell current={:forms}>
+<.shell current={:forms} theme={@theme}>
   <h1>Forms</h1>
   <p class="lead">Bold labels above, hints under them, errors on the field.</p>
 
@@ -12,6 +12,9 @@
     </li>
     <li>
       Switch: a setting with no save button, which changes the moment it's tapped. Inside a form with a save button, use a checkbox: a switch says the change already happened.
+    </li>
+    <li>
+      Choice switch: the same, for one of two to four named choices, such as the maps app.
     </li>
     <li>File: one photo or image people pick from their device, such as a logo or a photo.</li>
   </ul>
@@ -261,6 +264,35 @@
   </div>
   <p class="spec">
     One page-level setting under the page's main action, such as Sound under the scan button. A small muted label and the switch, together on the trailing edge. No hint. The track stays full size, since it's tapped in a hurry.
+  </p>
+
+  <h2 id="choice-switch">Choice switch</h2>
+  <div class="demo">
+    <.choice_switch
+      id="e-maps"
+      name="e_maps"
+      label="Maps app"
+      value="google"
+      options={[{"google", "Google Maps"}, {"apple", "Apple Maps"}]}
+    />
+    <.choice_switch
+      id="e-theme"
+      name="e_theme"
+      label="Theme"
+      value="system"
+      options={[
+        {"system", "System", "monitor"},
+        {"light", "Light", "sun"},
+        {"dark", "Dark", "moon"}
+      ]}
+      class="mt-4"
+    />
+  </div>
+  <p class="spec">
+    The switch with names on it: its track, its blue knob, its slide. One choice is always on, and a tap saves it, with a toast to say so. Two to four choices of equal width, each with an optional icon. No underline and no square tabs, so it never reads as moving to another page. Radio buttons underneath, so the arrow keys move between choices. Used for Maps app and Theme on Account settings.
+  </p>
+  <p class="spec">
+    Theme is kept for this device only, since a shared iPad and your phone may want different ones, and a new device follows the system. Picking one reloads the page, so Safari's toolbar changes too.
   </p>
 
   <h2>How it works</h2>

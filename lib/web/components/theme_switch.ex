@@ -1,32 +1,37 @@
 defmodule Web.Components.ThemeSwitch do
   @moduledoc """
-  System, Light, and Dark, in the account menu and the style guide. A device with no
-  choice follows the system. theme.js saves a choice for this device and reloads the page,
-  so Safari's toolbar follows; Web.Theme reads it back. See /styles/top-bar.
+  System, Light, and Dark, as a choice switch, on Account settings and in the style guide.
+  A device with no choice follows the system. theme.js posts a choice once the knob has
+  slid; Web.ThemeController saves it for this device and comes back to the page, so
+  Safari's toolbar picks up the new theme too. See /styles/forms.
   """
   use Phoenix.Component
 
-  attr :id, :string, required: true
+  import Web.Components.ChoiceSwitch, only: [choice_switch: 1]
 
-  # LiveView renders it without knowing the theme, so theme.js marks the pressed button
-  # and phx-update="ignore" stops a patch from clearing the mark.
+  @choices [{"system", "System"}, {"light", "Light"}, {"dark", "Dark"}]
+  @icon %{"system" => "monitor", "light" => "sun", "dark" => "moon"}
+
+  attr :id, :string, required: true
+  attr :theme, :string, default: nil, doc: "from Web.Theme: light, dark, or nil for System"
+  attr :return_to, :string, required: true, doc: "the page to come back to"
+  attr :icons, :boolean, default: true
+
   def theme_switch(assigns) do
     ~H"""
-    <div class="theme-choice">
-      <span id={"#{@id}-label"}>Theme</span>
-      <div
-        id={@id}
-        class="theme-switch"
-        role="group"
-        aria-labelledby={"#{@id}-label"}
-        phx-hook="ThemeSwitch"
-        phx-update="ignore"
-      >
-        <button type="button" data-theme-choice="">System</button>
-        <button type="button" data-theme-choice="light">Light</button>
-        <button type="button" data-theme-choice="dark">Dark</button>
-      </div>
-    </div>
+    <.form for={%{}} id={@id} action="/theme" method="put" data-theme-form>
+      <input type="hidden" name="return_to" value={@return_to} />
+      <.choice_switch
+        id={"#{@id}-choice"}
+        name="theme"
+        label="Theme"
+        value={@theme || "system"}
+        options={options(@icons)}
+      />
+    </.form>
     """
   end
+
+  defp options(false), do: @choices
+  defp options(true), do: for({value, label} <- @choices, do: {value, label, @icon[value]})
 end

@@ -2,7 +2,6 @@ defmodule Web.Layouts do
   use Web, :html
 
   import Web.Components.CopyButton, only: [copy_button: 1]
-  import Web.Components.ThemeSwitch, only: [theme_switch: 1]
 
   alias Web.Navigation
 
@@ -646,8 +645,6 @@ defmodule Web.Layouts do
         </div>
         <.menu_divider />
         <.a id="nav-account-settings" kind={:custom} navigate={~p"/account"}>Account settings</.a>
-        <.menu_divider />
-        <.theme_switch id="account-theme" />
         <.menu_divider />
         <.a id="nav-log-out" kind={:custom} method="delete" href="/logout">Log out</.a>
       </div>

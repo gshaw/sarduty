@@ -4,7 +4,7 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
 ## Nov 16–22
 
-- Pick Light, Dark, or System from your account menu. Each phone, iPad, or computer
+- Pick Light, Dark, or System on Account settings. Each phone, iPad, or computer
   keeps its own choice, and a new one follows the system.
 - Change report and Change form keep your changes and the AI conversation as you go.
   Reload or close the tab and they're back; Save keeps them, Start over drops them.

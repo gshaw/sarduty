@@ -193,6 +193,7 @@ defmodule Web.Router do
     get "/security.txt", SiteController, :to_security_txt
     get "/styles", StyleGuideController, :index
     get "/styles/:page", StyleGuideController, :show
+    put "/theme", ThemeController, :update
 
     # Public, before the team scope: Google Wallet objects fetch these.
     get "/teams/:subdomain/logo", TeamController, :logo

@@ -1,5 +1,5 @@
 <% {group, title, about, pages} = @group %>
-<.shell current={group}>
+<.shell current={group} theme={@theme}>
   <h1>{title}</h1>
   <p class="lead">{about}</p>
   <.table id="guide-pages" rows={pages}>
