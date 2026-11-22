@@ -67,9 +67,10 @@ defmodule Web.HomePageLiveTest do
     end
   end
 
-  test "the footer links to the terms and privacy pages", %{conn: conn} do
+  test "the footer links to the home, terms and privacy pages", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/")
 
+    assert has_element?(lv, ~s(#footer-home[href="/"]))
     assert has_element?(lv, ~s(#footer-terms[href="/terms"]))
     assert has_element?(lv, ~s(#footer-privacy[href="/privacy"]))
   end
