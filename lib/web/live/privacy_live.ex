@@ -1,81 +1,26 @@
 defmodule Web.PrivacyLive do
   use Web, :live_view_marketing_layout
 
-  # Kept short and general on purpose, so it holds while features change. Update the date
-  # when the meaning changes.
-  @contact "privacy@sarduty.com"
+  # PRIVACY.md, kept short and general on purpose, so it holds while features change.
+  # Update its date when the meaning changes.
+  @path Path.expand("../../../PRIVACY.md", __DIR__)
+  @external_resource @path
+  @html Web.Components.Markdown.markdown_file_html(@path)
 
   def mount(_params, _session, socket) do
     {:ok,
      assign(socket,
        page_title: "Privacy",
        page_description:
-         "What SAR Duty keeps about your team and its members, who sees it, and where it is stored.",
-       contact: @contact
+         "What SAR Duty keeps about your team and its members, who sees it, and where it is stored."
      )}
   end
 
   def render(assigns) do
     ~H"""
-    <article id="privacy" class="page-frame pt-8">
-      <div class="max-w-prose">
-        <h1 class="title">Privacy</h1>
-        <p class="hint">Last changed November 15, 2026.</p>
-        <p>
-          SAR Duty copies your team's data from D4H to run its tools for your team. Your team decides what is in D4H.
-        </p>
-        <p>
-          Your team is responsible for its members' data. SAR Duty handles that data for your team as a service provider.
-        </p>
-        <p>
-          SAR Duty also keeps the email or phone number you log in with. For each passkey you add, it keeps the passkey's public key, its name, and when you added and last used it. Face ID and fingerprints stay on your device. It keeps records of each login and each try, with the email or number typed and the IP address, for 90 days.
-        </p>
-        <p id="privacy-certificates">
-          SAR Duty keeps a certificate a member sends only until a team admin accepts or declines it.
-        </p>
-        <p>
-          Anyone with a member's ID card code can see the member's name, photo, and team on the verify site. An app that scans the card gets the same answer, with the member's ID in D4H or SAR Duty Records, which opens nothing without the team's own key.
-        </p>
-        <p id="privacy-members">
-          On a team with member logins on, members see each other's names, photos, attendance, groups, and qualifications. Phone numbers, addresses, emails, and emergency contacts stay with team admins.
-        </p>
-        <p>
-          SAR Duty does not sell data, show ads, or use tracking cookies. Its cookies keep you logged in.
-        </p>
-        <p>
-          SAR Duty's server and database are in Canada. The other services it uses can be anywhere, and get only what they need.
-        </p>
-        <p id="privacy-operator">
-          Gerry Shaw, a volunteer member of South Fraser Search and Rescue, runs SAR Duty. SAR Duty is an independent project. South Fraser Search and Rescue and the other teams that use it do not run, own, or endorse it.
-        </p>
-        <p id="privacy-access">
-          SAR Duty site admins can see every team's data in SAR Duty. There are 2 today: Gerry Shaw and Andrew Wallwork. They look at team data only to run, fix, support, secure, or improve SAR Duty, or to look into a security problem, misuse, or failure. They share it only when the law requires it. SAR Duty does not use team data for anything else.
-        </p>
-        <p id="privacy-ai">
-          A team admin can ask SAR Duty's AI writing to write a report. SAR Duty sends Anthropic's Claude API, in the United States, the report's query, what the admin asked, and the team's names for groups, qualifications, tags, and custom fields. It never sends members or their records.
-        </p>
-        <p class="action">
-          <.a id="privacy-agents-link" navigate={~p"/agents"}>How agents work with SAR Duty</.a>
-        </p>
-        <p id="privacy-demo">
-          Try a demo asks for no email. A name, if you give one, is kept on your demo until it is deleted, {Service.Format.days(
-            App.Model.DemoTeam.days()
-          )} after you first open it. Its made-up team's records are kept in SAR Duty Records, in Canada, and deleted with it.
-        </p>
-        <p id="privacy-organizations">
-          When a team belongs to an organization, its organization admins, such as an association's staff, see each of its teams' totals, never members' names or contact details.
-        </p>
-        <p>
-          To see, fix, or remove your data, ask your team. Most of it comes from D4H, so the change is made there. For anything else, email <.a
-            id="privacy-contact"
-            href={"mailto:" <> @contact}
-          >{@contact}</.a>.
-        </p>
-        <p class="action">
-          <.a id="privacy-terms" navigate={~p"/terms"}>Terms</.a>
-        </p>
-      </div>
-    </article>
+    <.markdown_page id="privacy-page" html={html()} />
     """
   end
+
+  defp html, do: @html
 end

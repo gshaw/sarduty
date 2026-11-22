@@ -27,8 +27,7 @@ still lists the area's pages.
   Admins, Events, AI writing, and Integrations. The Style guide is in the team switcher.
   Each team has its own page, `/admin/teams/:id`, under Teams, with its refresh, team
   admins and login grants, its ID cards switch (#513), and Delete team. Every admin page is a 404 for anyone else.
-- **The footer** (Verify an ID card, Terms, Privacy, Agents, Changelog, Support SAR Duty,
-  GitHub) is only on the public pages in the marketing layout: home, terms, privacy,
+- **The footer** (Verify an ID card, Terms, Privacy, Agents, Changelog, GitHub) is only on the public pages in the marketing layout: home, terms, privacy,
   changelog, and the agents pages. Sign up and Log in are narrow pages, with none. In an
   area its links are noise. In dev, app pages keep a line with
   the dashboard and the Outbox.

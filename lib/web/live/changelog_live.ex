@@ -2,11 +2,9 @@ defmodule Web.ChangelogLive do
   use Web, :live_view_marketing_layout
 
   # The repo's CHANGELOG.md, read at compile time, so the page and GitHub show one text.
-  @changelog_path Path.expand("../../../CHANGELOG.md", __DIR__)
-  @external_resource @changelog_path
-  @changelog_html @changelog_path
-                  |> File.read!()
-                  |> MDEx.to_html!(extension: [header_id_prefix: ""])
+  @path Path.expand("../../../CHANGELOG.md", __DIR__)
+  @external_resource @path
+  @html Web.Components.Markdown.markdown_file_html(@path)
 
   def mount(_params, _session, socket) do
     {:ok,
@@ -17,12 +15,10 @@ defmodule Web.ChangelogLive do
   end
 
   def render(assigns) do
-    assigns = assign(assigns, changelog_html: Phoenix.HTML.raw(@changelog_html))
-
     ~H"""
-    <article id="changelog" class="page-frame pt-8">
-      <div class="max-w-prose prose">{@changelog_html}</div>
-    </article>
+    <.markdown_page id="changelog" html={html()} />
     """
   end
+
+  defp html, do: @html
 end
