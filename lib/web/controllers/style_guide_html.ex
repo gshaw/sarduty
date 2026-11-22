@@ -37,6 +37,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.Scanner
   import Web.Components.StatSwitch
   import Web.Components.Table
+  import Web.Components.ThemeSwitch, only: [theme_switch: 1]
   import Web.Components.WalletBadges
 
   alias App.Mailer.ActivityMailer
@@ -217,21 +218,6 @@ defmodule Web.StyleGuideHTML do
       open: key == open and key != current,
       count: nil
     }
-  end
-
-  # Auto, Light, and Dark, at the foot of the side nav and the phone's Menu. The frame's
-  # script marks the one in use and saves a choice.
-  def theme_switch(assigns) do
-    ~H"""
-    <div class="guide-theme">
-      <span>Theme</span>
-      <div class="theme-switch" role="group" aria-label="Theme">
-        <button type="button" data-theme-choice="">Auto</button>
-        <button type="button" data-theme-choice="light">Light</button>
-        <button type="button" data-theme-choice="dark">Dark</button>
-      </div>
-    </div>
-    """
   end
 
   # The logo files that uv run assets/brand/draw_logo.py writes, and where each goes.

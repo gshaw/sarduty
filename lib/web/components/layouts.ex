@@ -2,13 +2,14 @@ defmodule Web.Layouts do
   use Web, :html
 
   import Web.Components.CopyButton, only: [copy_button: 1]
+  import Web.Components.ThemeSwitch, only: [theme_switch: 1]
 
   alias Web.Navigation
 
   def root(assigns) do
     ~H"""
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang="en" data-theme={assigns[:theme]}>
       <head>
         <meta charset="utf-8" />
         <%!-- A public page sets its own, for search results and link previews. --%>
@@ -21,8 +22,7 @@ defmodule Web.Layouts do
         <meta name="apple-mobile-web-app-title" content="SAR Duty" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
-        <meta name="theme-color" content="#13243a" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#0a111b" media="(prefers-color-scheme: dark)" />
+        <.theme_colors theme={assigns[:theme]} />
         <.live_title suffix=" · SAR Duty">
           {assigns[:page_title] || "Untitled page"}
         </.live_title>
@@ -53,6 +53,25 @@ defmodule Web.Layouts do
       {@inner_content}
     </main>
     <.site_footer />
+    """
+  end
+
+  attr :theme, :string, default: nil, doc: "from Web.Theme: light, dark, or nil for System"
+
+  @doc """
+  The browser's colour around the page, the top bar's navy, so iOS fills the area under
+  the clock with it. A theme the device chose sets both; theme.js reads data-system to
+  switch without a reload.
+  """
+  def theme_colors(assigns) do
+    ~H"""
+    <meta
+      :for={scheme <- ~w(light dark)}
+      name="theme-color"
+      media={"(prefers-color-scheme: #{scheme})"}
+      content={Web.Theme.nav_color(@theme || scheme)}
+      data-system={Web.Theme.nav_color(scheme)}
+    />
     """
   end
 
@@ -628,6 +647,8 @@ defmodule Web.Layouts do
         </div>
         <.menu_divider />
         <.a id="nav-account-settings" kind={:custom} navigate={~p"/account"}>Account settings</.a>
+        <.menu_divider />
+        <.theme_switch id="account-theme" />
         <.menu_divider />
         <.a id="nav-log-out" kind={:custom} method="delete" href="/logout">Log out</.a>
       </div>

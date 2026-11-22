@@ -19,6 +19,7 @@ defmodule Web.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers_and_csp
     plug :assign_current_user
+    plug Web.Theme
   end
 
   # The verify site (verify.sarduty.com): a card's QR code opens /<code> here. No login,

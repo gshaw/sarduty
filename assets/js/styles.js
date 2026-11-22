@@ -6,6 +6,7 @@ import {DragList} from "./drag_list"
 import {listenForConfirms} from "./confirm_dialog"
 import {RichText} from "./rich_text"
 import {Search} from "./search"
+import {listenForThemeChoices} from "./theme"
 import {hideImagesOnError} from "./hide_on_error"
 // The top bar's Log out is a DELETE link, which phoenix_html sends.
 import "phoenix_html"
@@ -26,6 +27,9 @@ listenForConfirms()
 
 // The bar's ` key and arrow keys, as in the app.
 listenForBarMenuKeys()
+
+// The theme switch in the side nav, the phone's Menu, and the account menu.
+listenForThemeChoices()
 
 // A drag list here has no LiveView to tell, so its rows only move on the page.
 for (const [name, Hook] of Object.entries({Combobox, DragList, RichText})) {
@@ -59,28 +63,6 @@ document.addEventListener("submit", event => {
 
 // iOS Safari only applies :active, the pressed look, when a touch listener exists.
 document.addEventListener("touchstart", () => {}, {passive: true})
-
-// The theme buttons. styles_theme.js applied the saved theme before first paint.
-const themeButtons = document.querySelectorAll("[data-theme-choice]")
-const showTheme = () => {
-  const current = document.documentElement.dataset.theme || ""
-  themeButtons.forEach(b => b.setAttribute("aria-pressed", b.dataset.themeChoice === current))
-}
-themeButtons.forEach(button => {
-  button.addEventListener("click", () => {
-    const theme = button.dataset.themeChoice
-    if (theme) {
-      document.documentElement.dataset.theme = theme
-      localStorage.setItem("styles-theme", theme)
-    } else {
-      delete document.documentElement.dataset.theme
-      localStorage.removeItem("styles-theme")
-    }
-    window.setThemeColor(theme)
-    showTheme()
-  })
-})
-showTheme()
 
 // The phone's Menu opens at the page you're on, not 30 pages above it.
 const phoneMenu = document.getElementById("phone-menu")
