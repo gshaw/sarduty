@@ -32,7 +32,7 @@ defmodule Web.Components.ChoiceSwitch do
           checked={elem(option, 0) == @value}
         />
         <.icon :if={tuple_size(option) == 3} name={elem(option, 2)} size={:sm} />
-        {elem(option, 1)}
+        <span class="choice-text" data-text={elem(option, 1)}>{elem(option, 1)}</span>
       </label>
     </div>
     """

@@ -105,6 +105,10 @@
     cursor: pointer;
   }
   .choice-switch label:has(input:checked) { color: var(--on-fill); font-weight: 700; }
+  /* A hidden bold copy holds each label at its bold width, so the control keeps its width
+     as the bold moves from choice to choice. */
+  .choice-switch .choice-text { display: inline-flex; flex-direction: column; align-items: center; }
+  .choice-switch .choice-text::after { content: attr(data-text) / ""; height: 0; overflow: hidden; visibility: hidden; font-weight: 700; }
   .choice-switch label:has(input:focus-visible) { outline: 3px solid var(--focus); box-shadow: inset 0 0 0 2px #0b0c0c; }
   .choice-switch input { position: absolute; opacity: 0; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { .choice-switch::before { transition: none; } }
