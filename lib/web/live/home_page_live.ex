@@ -108,19 +108,13 @@ defmodule Web.HomePageLive do
       <section class="home-section" id="home-coming">
         <div class="home-wrap">
           <div class="home-measure">
-            <h2>In active development</h2>
+            <h2>Get involved</h2>
             <p class="home-lead">
-              SAR Duty grows with the teams that use it. To get involved, email Andrew Wallwork or
-              Gerry Shaw at <a href="mailto:support@sarduty.com">support@sarduty.com</a>.
+              SAR Duty is in active development and grows with the teams that use it. To get
+              involved, email Andrew Wallwork or Gerry Shaw at <a href="mailto:support@sarduty.com">support@sarduty.com</a>.
             </p>
             <p class="home-lead">
-              The code is open: <.a
-                id="home-github"
-                href="https://github.com/gshaw/sarduty"
-                kind={:custom}
-                external={true}
-                external_icon="github"
-              >SAR Duty on GitHub</.a>.
+              <a id="home-github" href="https://github.com/gshaw/sarduty">github.com/gshaw/sarduty</a>
             </p>
           </div>
         </div>
