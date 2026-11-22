@@ -19,6 +19,8 @@
 !docs/writing.md
 !docs/documents.md
 !CHANGELOG.md
+!TERMS.md
+!PRIVACY.md
 
 # Built inside the image, so skip local copies
 /assets/node_modules/
