@@ -350,7 +350,6 @@ defmodule Web.Layouts do
         · <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
         · <.a id="footer-agents" navigate={~p"/agents"}>Agents</.a>
         · <.a id="footer-changelog" navigate={~p"/changelog"}>Changelog</.a>
-        · <.a id="footer-github" href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
       </p>
     </footer>
     """
