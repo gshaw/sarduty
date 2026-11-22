@@ -111,10 +111,9 @@ defmodule Web.HomePageLive do
             <h2>Get involved</h2>
             <p class="home-lead">
               SAR Duty is in active development and grows with the teams that use it. To get
-              involved, email Andrew Wallwork or Gerry Shaw at <a href="mailto:support@sarduty.com">support@sarduty.com</a>.
-            </p>
-            <p class="home-lead">
-              <a id="home-github" href="https://github.com/gshaw/sarduty">github.com/gshaw/sarduty</a>
+              involved, email Andrew Wallwork or Gerry Shaw at
+              <a href="mailto:support@sarduty.com">support@sarduty.com</a>
+              or visit <a id="home-github" href="https://github.com/gshaw/sarduty">github.com/gshaw/sarduty</a>.
             </p>
           </div>
         </div>
