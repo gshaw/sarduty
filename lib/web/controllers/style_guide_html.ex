@@ -294,7 +294,9 @@ defmodule Web.StyleGuideHTML do
       {"list-ordered", "Numbered list, in rich text"},
       {"grip-vertical", "The handle that drags a row, in a drag list"},
       {"chart-column", "A built-in report that draws columns, on New report"},
-      {"chart-bar", "A built-in report that draws bars, on New report"}
+      {"chart-bar", "A built-in report that draws bars, on New report"},
+      {"github",
+       "SAR Duty on GitHub, at the end of the footer. Filled: GitHub's own mark, from Simple Icons"}
     ]
   end
 
