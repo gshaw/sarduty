@@ -7,8 +7,13 @@
   .home h3 { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; margin-bottom: var(--sp-2); }
   .home a:not(.btn) { text-decoration: underline; text-underline-offset: 0.15em; }
 
-  .home-wrap { max-width: 1120px; margin: 0 auto; padding: 0 var(--sp-6); }
+  .home-wrap { max-width: 96rem; margin: 0 auto; padding: 0 var(--sp-6); }
+  /* The page frame's margins (page-frame), with the home page's own gutter below 64rem. */
+  @media (width >= 64rem) {
+    .home-wrap { padding-inline: var(--page-lead); }
+  }
   .home-measure { max-width: 60ch; }
+  .home-measure > :last-child { margin-bottom: 0; }
   .home-hero { background: linear-gradient(180deg, var(--surface-alt), var(--bg)); padding: var(--sp-16) 0 var(--sp-8); }
   .home-hero-split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--sp-12); align-items: center; }
   .home-lead { font-size: var(--fs-lg); line-height: var(--lh-lg); color: var(--text-muted); margin-bottom: var(--sp-6); }
@@ -16,6 +21,9 @@
   .home-cta { display: flex; gap: var(--sp-3); }
   .home-section { padding: var(--sp-16) 0; }
   .home-section.is-alt { background: var(--surface-alt); }
+  /* Last and white, it runs into the footer: the main's 32px margin makes up the rest of
+     its 64px, so the space under it matches the space above. */
+  .home-section:not(.is-alt):last-child { padding-bottom: var(--sp-8); }
 
   .home-feature { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--sp-12); align-items: center; padding: var(--sp-12) 0; border-top: 1px solid var(--border-subtle); }
   .home-feature:first-child { border-top: 0; padding-top: 0; }
@@ -40,7 +48,7 @@
   .home-start .action { margin-top: var(--sp-3); }
   /* On a touch screen the link takes a 44px tap, without moving. */
   @media (pointer: coarse) { .home-start .action > a { padding-block: 10px; margin-block: -10px; } }
-  .home-end { max-width: 640px; }
+  .home-end > .home-start { max-width: 592px; margin-inline: auto; }
   .home-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-8) var(--sp-12); margin-top: var(--sp-8); }
   .home-grid p { color: var(--text-muted); }
   .home-hero-art figcaption { margin-top: var(--sp-2); text-align: center; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
@@ -119,9 +127,12 @@
   .home-phone li { display: flex; justify-content: space-between; gap: var(--sp-2); padding: 6px 0; border-bottom: 1px solid var(--border-subtle); }
 
 
-  @media (max-width: 900px) {
+  /* Under 80rem the frame's margins leave too little for a picture beside its words. */
+  @media (width < 80rem) {
     .home-hero-split, .home-feature { grid-template-columns: minmax(0, 1fr); gap: var(--sp-6); }
     .home-feature.is-flipped > :first-child { order: 0; }
+  }
+  @media (max-width: 900px) {
     .home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-8); }
   }
 
@@ -130,6 +141,7 @@
     .home-wrap { padding: 0 var(--sp-4); }
     .home-hero { padding: var(--sp-8) 0 var(--sp-6); }
     .home-section, .home-feature { padding: var(--sp-8) 0; }
+    .home-section:not(.is-alt):last-child { padding-bottom: 0; }
     /* The buttons fill the row, each as wide as its words need, and teams fill the box. */
     .home-cta .btn { flex: 1 1 auto; }
     .home-teams { width: 100%; }

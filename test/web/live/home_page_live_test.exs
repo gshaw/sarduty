@@ -44,7 +44,7 @@ defmodule Web.HomePageLiveTest do
     assert has_element?(lv, "#start-top", "Your team")
     refute has_element?(lv, "#start-top", "Your teams")
     assert has_element?(lv, ~s(#start-top a[href="/teams/#{team.subdomain}"]))
-    assert has_element?(lv, ~s(#start-end a[href="/teams/#{team.subdomain}"]))
+    refute has_element?(lv, "#start-end")
     assert has_element?(lv, "#home-title")
   end
 
@@ -67,9 +67,10 @@ defmodule Web.HomePageLiveTest do
     end
   end
 
-  test "the footer links to the terms and privacy pages", %{conn: conn} do
+  test "the footer links to the home, terms and privacy pages", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/")
 
+    assert has_element?(lv, ~s(#footer-home[href="/"]))
     assert has_element?(lv, ~s(#footer-terms[href="/terms"]))
     assert has_element?(lv, ~s(#footer-privacy[href="/privacy"]))
   end
@@ -80,10 +81,9 @@ defmodule Web.HomePageLiveTest do
     assert has_element?(lv, ~s(#footer-verify[href="#{Web.VerifyHost.url()}"]))
   end
 
-  test "the footer links everyone to Buy Me a Coffee and GitHub", %{conn: conn} do
+  test "the home page links to the code on GitHub", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/")
 
-    assert has_element?(lv, ~s(#footer-support[href="https://buymeacoffee.com/gshaw"]))
-    assert has_element?(lv, ~s(#footer-github[href="https://github.com/gshaw/sarduty"]))
+    assert has_element?(lv, ~s(#home-github[href="https://github.com/gshaw/sarduty"]))
   end
 end

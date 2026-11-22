@@ -6,9 +6,8 @@ defmodule Web.TermsLiveTest do
   test "anyone can read the terms", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/terms")
 
-    assert has_element?(lv, "#terms h1", "Terms")
-    assert has_element?(lv, "#terms-operator", "Gerry Shaw")
-    assert has_element?(lv, ~s(#terms-privacy[href="/privacy"]))
+    assert has_element?(lv, "#terms-page h1", "Terms")
+    assert has_element?(lv, "#terms-page p", "Gerry Shaw runs SAR Duty")
   end
 
   test "the footer links to them", %{conn: conn} do

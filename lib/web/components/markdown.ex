@@ -29,4 +29,21 @@ defmodule Web.Components.Markdown do
   end
 
   defp build_raw_html(_), do: Phoenix.HTML.raw("<p>Content unavailable</p>")
+
+  @doc "A repo Markdown file as HTML, for a page that reads it at compile time."
+  def markdown_file_html(path),
+    do: path |> File.read!() |> MDEx.to_html!(extension: [header_id_prefix: ""])
+
+  attr :id, :string, required: true
+  attr :html, :string, required: true, doc: "from markdown_file_html/1"
+
+  # A public page that is one Markdown file in the repo, such as CHANGELOG.md, so the
+  # page and GitHub show one text.
+  def markdown_page(assigns) do
+    ~H"""
+    <article id={@id} class="page-frame pt-8">
+      <div class="max-w-prose prose">{Phoenix.HTML.raw(@html)}</div>
+    </article>
+    """
+  end
 end

@@ -106,7 +106,7 @@ defmodule Web.Layouts do
         </main>
       </div>
     <% else %>
-      <main role="main" class="page-width mx-auto pt-16 px-2 mb-8">
+      <main role="main" class="page-frame pt-16 mb-8">
         <.view_as_banner
           :if={assigns[:viewing_as]}
           member={@viewing_as}
@@ -341,25 +341,15 @@ defmodule Web.Layouts do
 
   # The public pages' footer. The verify site is a separate host, so its link is a full URL.
   defp site_footer(assigns) do
-    assigns =
-      assign(assigns,
-        support_url: "https://buymeacoffee.com/gshaw",
-        outbox?: dev_outbox?()
-      )
-
     ~H"""
-    <footer id="site-footer" class="page-width mx-auto px-2 mb-8">
+    <footer id="site-footer" class="page-frame mb-8">
       <p class="pt-4 border-t border-border-subtle">
-        <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
+        <.a id="footer-home" navigate={~p"/"}>SAR Duty</.a>
+        · <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
         · <.a id="footer-terms" navigate={~p"/terms"}>Terms</.a>
         · <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
         · <.a id="footer-agents" navigate={~p"/agents"}>Agents</.a>
         · <.a id="footer-changelog" navigate={~p"/changelog"}>Changelog</.a>
-        · <.a id="footer-support" href={@support_url} external={true}>Support SAR Duty</.a>
-        · <.a id="footer-github" href="https://github.com/gshaw/sarduty" external={true}>GitHub</.a>
-        <%= if @outbox? do %>
-          · <.a href="/dev/outbox" external={true}>Outbox</.a>
-        <% end %>
       </p>
     </footer>
     """
