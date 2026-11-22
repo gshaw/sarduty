@@ -13,7 +13,7 @@ defmodule Web.TermsLive do
 
   def render(assigns) do
     ~H"""
-    <article id="terms" class="page-width mx-auto px-2 pt-8">
+    <article id="terms" class="page-frame pt-8">
       <div class="max-w-prose">
         <h1 class="title">Terms</h1>
         <p class="hint">Last changed October 7, 2026.</p>

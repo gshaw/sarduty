@@ -4,8 +4,8 @@ does in the app. The page-text rules skip anything inside one. --%>
 <style>
   /* Under the app's fixed bar, which is 52px and its 4px rule. */
   html { scroll-padding-top: 80px; }
-  .container { max-width: 1536px; margin: 0 auto; padding-inline: var(--sp-6); }
-  .guide { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: var(--sp-8); padding-top: calc(56px + var(--sp-8)); padding-bottom: var(--sp-16); }
+  .container { max-width: 96rem; margin: 0 auto; padding-inline: var(--sp-2); }
+  .guide { display: grid; grid-template-columns: var(--side-nav-width) minmax(0, 1fr); gap: var(--sp-8); padding-top: calc(56px + var(--sp-8)); padding-bottom: var(--sp-16); }
   .guide > .side-nav { width: auto; }
 
   /* The side nav: the groups a size up, and the pages tighter, so more of a long group fits.
@@ -97,7 +97,6 @@ does in the app. The page-text rules skip anything inside one. --%>
     .guide { display: block; padding-top: calc(56px + var(--sp-6)); }
   }
   @media (max-width: 800px) {
-    .container { padding-inline: var(--sp-4); }
     .modes { grid-template-columns: minmax(0, 1fr); }
   }
 </style>

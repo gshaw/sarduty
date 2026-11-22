@@ -17,7 +17,7 @@ defmodule Web.PrivacyLive do
 
   def render(assigns) do
     ~H"""
-    <article id="privacy" class="page-width mx-auto px-2 pt-8">
+    <article id="privacy" class="page-frame pt-8">
       <div class="max-w-prose">
         <h1 class="title">Privacy</h1>
         <p class="hint">Last changed November 15, 2026.</p>

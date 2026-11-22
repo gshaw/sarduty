@@ -30,7 +30,7 @@ defmodule Web.ReportLanguageLive do
 
   def render(assigns) do
     ~H"""
-    <article id="report-language" class="page-width mx-auto px-2 pt-8">
+    <article id="report-language" class="page-frame pt-8">
       <.breadcrumbs>
         <:item label="Agents" path={~p"/agents"} />
         <:item label="How to write a report" />

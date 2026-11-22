@@ -7,7 +7,12 @@
   .home h3 { font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 700; margin-bottom: var(--sp-2); }
   .home a:not(.btn) { text-decoration: underline; text-underline-offset: 0.15em; }
 
-  .home-wrap { max-width: 1120px; margin: 0 auto; padding: 0 var(--sp-6); }
+  .home-wrap { max-width: 96rem; margin: 0 auto; padding: 0 var(--sp-6); }
+  /* Content starts at --page-lead, as on every page. The right side takes what keeps the
+     content near 67rem wide, up to the same lead, so it stays centred on a wide screen. */
+  @media (width >= 64rem) {
+    .home-wrap { padding-left: var(--page-lead); padding-right: clamp(var(--sp-6), 100vw - var(--page-lead) - 67rem, var(--page-lead)); }
+  }
   .home-measure { max-width: 60ch; }
   .home-hero { background: linear-gradient(180deg, var(--surface-alt), var(--bg)); padding: var(--sp-16) 0 var(--sp-8); }
   .home-hero-split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--sp-12); align-items: center; }

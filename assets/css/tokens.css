@@ -111,6 +111,10 @@
   --border-width: 2px;
   /* A page's sidebar of facts and actions stops here; the main column takes the rest. */
   --sidebar-max: 20rem;
+  /* The side nav's column and the gap after it. At 64rem and up, where the side nav shows,
+     a page's content starts --page-lead from the edge, with or without a side nav. */
+  --side-nav-width: 200px;
+  --page-lead: calc(var(--sp-2) + var(--side-nav-width) + var(--sp-8));
   --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }

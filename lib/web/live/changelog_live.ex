@@ -20,7 +20,7 @@ defmodule Web.ChangelogLive do
     assigns = assign(assigns, changelog_html: Phoenix.HTML.raw(@changelog_html))
 
     ~H"""
-    <article id="changelog" class="page-width mx-auto px-2 pt-8">
+    <article id="changelog" class="page-frame pt-8">
       <div class="max-w-prose prose">{@changelog_html}</div>
     </article>
     """

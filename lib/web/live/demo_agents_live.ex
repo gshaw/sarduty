@@ -17,7 +17,7 @@ defmodule Web.DemoAgentsLive do
 
   def render(assigns) do
     ~H"""
-    <article id="demo-agents" class="page-width mx-auto px-2 pt-8">
+    <article id="demo-agents" class="page-frame pt-8">
       <.breadcrumbs>
         <:item label="Agents" path={~p"/agents"} />
         <:item label="How to show someone SAR Duty" />

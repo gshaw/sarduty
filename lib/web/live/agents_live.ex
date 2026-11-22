@@ -18,7 +18,7 @@ defmodule Web.AgentsLive do
 
   def render(assigns) do
     ~H"""
-    <article id="agents" class="page-width mx-auto px-2 pt-8">
+    <article id="agents" class="page-frame pt-8">
       <div class="max-w-prose">
         <h1 class="title">How agents work with SAR Duty</h1>
         <p class="lead">{lead()}</p>

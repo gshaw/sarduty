@@ -255,7 +255,7 @@
   .with-side-nav { display: flex; gap: var(--sp-8); }
   .side-nav-main { flex: 1; min-width: 0; }
   .side-nav {
-    width: 200px;
+    width: var(--side-nav-width);
     flex-shrink: 0;
     position: sticky;
     top: var(--sp-16);
