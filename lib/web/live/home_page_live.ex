@@ -120,7 +120,7 @@ defmodule Web.HomePageLive do
         </div>
       </section>
 
-      <section class="home-section is-alt">
+      <section :if={!@current_user} class="home-section is-alt">
         <div class="home-wrap home-end">
           <.start
             id="start-end"

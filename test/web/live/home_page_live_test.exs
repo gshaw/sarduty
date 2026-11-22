@@ -44,7 +44,7 @@ defmodule Web.HomePageLiveTest do
     assert has_element?(lv, "#start-top", "Your team")
     refute has_element?(lv, "#start-top", "Your teams")
     assert has_element?(lv, ~s(#start-top a[href="/teams/#{team.subdomain}"]))
-    assert has_element?(lv, ~s(#start-end a[href="/teams/#{team.subdomain}"]))
+    refute has_element?(lv, "#start-end")
     assert has_element?(lv, "#home-title")
   end
 
