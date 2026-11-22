@@ -13,6 +13,7 @@
     .home-wrap { padding-inline: var(--page-lead); }
   }
   .home-measure { max-width: 60ch; }
+  .home-measure > :last-child { margin-bottom: 0; }
   .home-hero { background: linear-gradient(180deg, var(--surface-alt), var(--bg)); padding: var(--sp-16) 0 var(--sp-8); }
   .home-hero-split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--sp-12); align-items: center; }
   .home-lead { font-size: var(--fs-lg); line-height: var(--lh-lg); color: var(--text-muted); margin-bottom: var(--sp-6); }
