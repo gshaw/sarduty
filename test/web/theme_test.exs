@@ -70,6 +70,26 @@ defmodule Web.ThemeTest do
              "The theme follows this device's setting."
   end
 
+  test "a background save gets the cookie alone, with no redirect or toast", %{conn: conn} do
+    conn =
+      conn
+      |> put_req_header("x-theme-save", "background")
+      |> put(~p"/theme", %{theme: "dark", return_to: "/account"})
+
+    assert response(conn, 204) == ""
+    assert conn.resp_cookies["theme"].value == "dark"
+    refute Phoenix.Flash.get(conn.assigns.flash, :info)
+  end
+
+  test "Account settings confirms a background save with a toast", %{conn: conn} do
+    {:ok, lv, _html} = conn |> log_in_user(user_fixture()) |> live(~p"/account")
+
+    assert lv |> element("#theme-form") |> render_hook("theme-saved", %{theme: "dark"}) =~
+             "Dark on this device."
+
+    assert has_element?(lv, "#theme-form-choice-dark[checked]")
+  end
+
   test "only goes back to a page on this site", %{conn: conn} do
     for to <- ["https://example.com", "//example.com", "/\\example.com", nil] do
       assert conn |> put(~p"/theme", %{theme: "light", return_to: to}) |> redirected_to() == "/"

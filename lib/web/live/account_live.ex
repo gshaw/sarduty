@@ -117,7 +117,12 @@ defmodule Web.AccountLive do
         <h2 class="subheading">Theme</h2>
         <p class="hint">On this device only. System follows this phone or computer's own setting.</p>
         <div class="mt-3">
-          <.theme_switch id="theme-form" theme={@theme} return_to={~p"/account"} />
+          <.theme_switch
+            id="theme-form"
+            theme={@theme}
+            return_to={~p"/account"}
+            phx-hook="ThemeSaved"
+          />
         </div>
       </section>
       <section :if={@member_logins != []} id="emails" class="mt-8">
@@ -197,6 +202,11 @@ defmodule Web.AccountLive do
     else
       _ -> {:noreply, assign_passkeys(socket)}
     end
+  end
+
+  def handle_event("theme-saved", %{"theme" => theme}, socket) do
+    theme = Web.Theme.parse(theme)
+    {:noreply, socket |> assign(:theme, theme) |> put_flash(:info, Web.Theme.saved(theme))}
   end
 
   def handle_event("set-maps-app", %{"maps_app" => app}, socket) do
