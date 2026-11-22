@@ -343,25 +343,14 @@ defmodule Web.Layouts do
   defp site_footer(assigns) do
     ~H"""
     <footer id="site-footer" class="page-frame mb-8">
-      <div class="flex items-start justify-between gap-4 pt-4 border-t border-border-subtle">
-        <p class="mb-0">
-          <.a id="footer-home" navigate={~p"/"}>SAR Duty</.a>
-          · <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
-          · <.a id="footer-terms" navigate={~p"/terms"}>Terms</.a>
-          · <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
-          · <.a id="footer-agents" navigate={~p"/agents"}>Agents</.a>
-          · <.a id="footer-changelog" navigate={~p"/changelog"}>Changelog</.a>
-        </p>
-        <a
-          id="footer-github"
-          href="https://github.com/gshaw/sarduty"
-          aria-label="SAR Duty on GitHub"
-          title="SAR Duty on GitHub"
-          class="text-text-muted hover:text-text"
-        >
-          <.icon name="github" />
-        </a>
-      </div>
+      <p class="pt-4 border-t border-border-subtle">
+        <.a id="footer-home" navigate={~p"/"}>SAR Duty</.a>
+        · <.a id="footer-verify" href={Web.VerifyHost.url()}>Verify an ID card</.a>
+        · <.a id="footer-terms" navigate={~p"/terms"}>Terms</.a>
+        · <.a id="footer-privacy" navigate={~p"/privacy"}>Privacy</.a>
+        · <.a id="footer-agents" navigate={~p"/agents"}>Agents</.a>
+        · <.a id="footer-changelog" navigate={~p"/changelog"}>Changelog</.a>
+      </p>
     </footer>
     """
   end

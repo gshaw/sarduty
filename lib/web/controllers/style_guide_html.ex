@@ -296,7 +296,7 @@ defmodule Web.StyleGuideHTML do
       {"chart-column", "A built-in report that draws columns, on New report"},
       {"chart-bar", "A built-in report that draws bars, on New report"},
       {"github",
-       "SAR Duty on GitHub, at the end of the footer. Filled: GitHub's own mark, from Simple Icons"}
+       "SAR Duty on GitHub, on the home page. Filled: GitHub's own mark, from Simple Icons"}
     ]
   end
 
