@@ -41,6 +41,19 @@ defmodule App.Operation.AskAITest do
     refute Map.has_key?(request, "temperature")
   end
 
+  test "the last request lists the tools but can't call one, so it answers" do
+    settings = %AISettings{}
+    first = AskAI.request(settings, job(), [])
+    refute Map.has_key?(first, "tool_choice")
+
+    last = AskAI.request(settings, job(), [], true)
+    assert Enum.map(last["tools"], & &1["name"]) == ["check_report"]
+    assert last["tool_choice"] == %{"type" => "none"}
+
+    no_tools = AskAI.request(settings, %{job() | tools: []}, [], true)
+    refute Map.has_key?(no_tools, "tool_choice")
+  end
+
   test "a form asks on the forms model, the rest on the reports model" do
     settings = %AISettings{report_model: "claude-sonnet-5-5", form_model: "claude-opus-5-5"}
     assert AskAI.request(settings, job(), [])["model"] == "claude-sonnet-5-5"

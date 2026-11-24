@@ -35,6 +35,9 @@ defmodule App.AI.ReportJob do
   - Check each query with check_report before you answer. Use try_report to see whether
     it gives sensible rows on Coast Range SAR, a made-up team. Its names for things
     differ from this team's: answer with this team's.
+  - Once a query passes the check and does what was asked, answer with it. Don't check
+    it again, and don't change what the ask didn't name: no new labels, columns, or
+    rewritten dates. An ask has 6 requests to SAR Duty, and the last can't call a tool.
   - You never see the team's members or records. The admin runs the report in SAR Duty.
   - Answer with the whole query, a name, a description, and a note. The name and
     description are for a report that has none yet: the name at most 80 characters, and
