@@ -345,8 +345,14 @@ defmodule Web.ChoreFormLive do
 
       person ->
         people = people |> Enum.concat([person]) |> Enum.uniq_by(& &1.id)
-        {:noreply, socket |> assign(people_error: nil) |> assign_listed(people)}
+        {:noreply, socket |> someone_listed() |> assign_listed(people)}
     end
+  end
+
+  defp someone_listed(socket) do
+    changeset = socket.assigns.form.source
+    errors = Keyword.delete(changeset.errors, :people)
+    socket |> assign(people_error: nil) |> assign_form(%{changeset | errors: errors})
   end
 
   # A member's own row has no Remove, and stays.

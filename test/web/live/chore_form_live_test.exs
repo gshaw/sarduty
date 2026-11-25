@@ -129,6 +129,10 @@ defmodule Web.ChoreFormLiveTest do
     assert has_element?(lv, "#who-form .field-error", "Add who did it")
     assert has_element?(lv, ~s{#chore-errors a[href="#chore_people"]}, "Add who did it")
     assert Repo.all(Chore) == []
+
+    pick(lv, ctx.cameron)
+    refute has_element?(lv, "#who-form .field-error")
+    refute has_element?(lv, ~s{#chore-errors a[href="#chore_people"]})
   end
 
   test "a member stays on the list, and logs for a teammate with no login", ctx do
