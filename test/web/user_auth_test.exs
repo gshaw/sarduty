@@ -311,6 +311,7 @@ defmodule Web.UserAuthTest do
       assert UserAuth.view_events(Web.ChoreFormLive) == [
                "validate",
                "date",
+               "add-others",
                "add-person",
                "remove-person"
              ]
