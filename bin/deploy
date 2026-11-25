@@ -82,6 +82,23 @@ die() {
   exit 1
 }
 
+# Bunter reads the newest `production` deployment as what's live. Gerry's own gh login
+# writes it, and a failure only warns: the deploy itself already happened.
+REPO=gshaw/sarduty
+record() {
+  local full id
+  full=$(git rev-parse origin/main)
+  id=$(gh api "repos/$REPO/deployments" -f ref="$full" -f environment=production \
+    -F auto_merge=false -f 'required_contexts[]' --jq .id 2>>"$log") && [ -n "$id" ] &&
+    gh api "repos/$REPO/deployments/$id/statuses" -f state=success \
+      -f environment_url="$SITE" >/dev/null 2>>"$log" &&
+    { ok "GitHub" "${D}deployment $id to production${R}"; return; }
+  warn "GitHub" "couldn't record the deployment; see $log"
+}
+recorded() {
+  [ "$(gh api "repos/$REPO/deployments?environment=production&per_page=1" --jq '.[0].sha' 2>>"$log")" = "$(git rev-parse origin/main)" ]
+}
+
 # --- Before anything changes ---------------------------------------------------------
 
 printf '\n  %s → %s  %s\n\n' "${B}SAR Duty$R" "${B}production$R" "${D}$APP on Fly$R"
@@ -128,6 +145,7 @@ if [ -n "$live_sha" ]; then
     echo
     note "Production already runs $sha. Nothing to deploy (--force to deploy anyway)."
     echo
+    [ "$dry" = 0 ] && ! recorded && { record; echo; }
     exit 0
   fi
 else
@@ -242,6 +260,8 @@ if [ "$code" = 200 ]; then
 else
   warn "$SITE" "answered $code; check fly logs -a $APP"
 fi
+
+record
 
 printf '\n  %s✔ v%s is live%s · %s%s%s · %s\n' "$G$B" "$new_version" "$R" "$C" "$sha" "$R" "$(elapsed "$started")"
 note "Log: $log"
