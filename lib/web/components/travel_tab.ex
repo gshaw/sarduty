@@ -2,8 +2,9 @@ defmodule Web.Components.TravelTab do
   @moduledoc """
   An activity's Travel tab (#230), for team admins from the start: the yard to the ICP
   and back, for a team vehicle's mileage (#877), then a table of the rows
-  set, with how each got there and its km, then one of the rows not set, with each
-  member's round trips to the ICP and the yard, which show the Mapbox routes are sane.
+  set, with how each got there and its km, then one of the rows not set. Rows not set show
+  no km: forms and reports count 0 km for them, and a warning says so. Round trips to the
+  ICP and the yard show only in Change's dialog, where they're choices.
   Change on a row, or on the bar under the tables for every checked row, opens one
   dialog with the ways they got there: drove to the ICP or the yard at the saved round
   trip, a passenger at 0 km, Other with its km, or Not set. A row's dialog shows its km;
@@ -148,9 +149,12 @@ defmodule Web.Components.TravelTab do
           <p id="travel-error">Travel did not load. Reload the page to try again.</p>
         </:failed>
 
-        <p :if={@locked?} id="travel-locked" class="hint measure">
+        <p :if={@locked? and travel.not_set == []} id="travel-locked" class="hint measure">
           Published, so travel cannot be changed. {D4H.unpublish_text(@team)}
         </p>
+        <.warning_text :if={@locked? and travel.not_set != []} id="travel-not-set-warning">
+          {not_set_text(travel, @locked?, @team)}
+        </.warning_text>
         <p :if={!@activity.coordinate} id="travel-no-location" class="hint measure">
           The activity has no latitude and longitude, so there's no route to the ICP. Check their rows and choose Other.
         </p>
@@ -204,6 +208,9 @@ defmodule Web.Components.TravelTab do
           </div>
 
           <%!-- Not set sits last, next to the bar that sets it. --%>
+          <.warning_text :if={!@locked? and travel.not_set != []} id="travel-not-set-warning">
+            {not_set_text(travel, @locked?, @team)}
+          </.warning_text>
           <.table
             :if={travel.not_set != []}
             id="travel-not-set"
@@ -221,12 +228,6 @@ defmodule Web.Components.TravelTab do
                 label_for={if !@locked?, do: "travel-select-#{row.attendance.id}"}
               />
               <.row_hints row={row} team={@team} service={@service} />
-            </:col>
-            <:col :let={row} label="To the ICP" align="right" class="whitespace-nowrap">
-              <.route km={row.activity_km} />
-            </:col>
-            <:col :let={row} label="To the yard" align="right" class="whitespace-nowrap">
-              <.route km={row.yard_km} />
             </:col>
             <:col :let={row} :if={!@locked?} label="" class="w-px">
               <.change_button row={row} myself={@myself} />
@@ -340,16 +341,6 @@ defmodule Web.Components.TravelTab do
   defp dialog_rows(travel, :checked, selected),
     do: Enum.filter(travel.rows, &MapSet.member?(selected, &1.attendance.id))
 
-  attr :km, :integer, default: nil
-
-  # A round trip from home, or No route when Mapbox found none.
-  defp route(assigns) do
-    ~H"""
-    <span :if={@km}>{Format.km(@km)}</span>
-    <span :if={!@km} class="hint">No route</span>
-    """
-  end
-
   attr :rows, :list, required: true, doc: "one row, or the checked rows"
   attr :own_id, :any, required: true, doc: "the team admin's own member id, or nil"
   attr :myself, :any, required: true
@@ -442,6 +433,25 @@ defmodule Web.Components.TravelTab do
     do: "Mapbox could not find their address, so choose Other."
 
   defp home_text(:unknown, _service), do: "Mapbox didn't answer. Reload the page to try again."
+
+  # What the rows not set cost, and what to do: set them, or unpublish first. A member
+  # with two rows counts once.
+  defp not_set_text(travel, locked?, team) do
+    who =
+      travel.not_set
+      |> Enum.uniq_by(& &1.member.id)
+      |> length()
+      |> Format.count(one: "1 member has no travel set", many: "%d members have no travel set")
+
+    fix =
+      if locked?,
+        do: "To set it, " <> lower_first(D4H.unpublish_text(team)),
+        else: "Set it before you publish."
+
+    "#{who}, so forms and reports count 0 km for them. #{fix}"
+  end
+
+  defp lower_first(<<first::utf8, rest::binary>>), do: String.downcase(<<first::utf8>>) <> rest
 
   # "3 of 7 members have confirmed." A member with two rows has when both are.
   defp members_checked_text(set) do

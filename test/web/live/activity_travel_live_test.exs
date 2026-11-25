@@ -104,6 +104,12 @@ defmodule Web.ActivityTravelLiveTest do
     lv
   end
 
+  # A row's Change dialog, as rendered.
+  defp change_dialog(lv, row) do
+    lv |> element("#travel-change-#{row.id}") |> render_click()
+    lv |> element("#travel-edit-dialog-#{row.id}") |> render()
+  end
+
   # Checks the rows, presses the bar's Change, then the dialog's Save travel.
   defp set(lv, rows, travel, km \\ "") do
     check(lv, rows)
@@ -120,15 +126,18 @@ defmodule Web.ActivityTravelLiveTest do
   end
 
   describe "round trips (#230)" do
-    test "each attended row's round trips, with no D4H call", ctx do
+    test "round trips show in a row's Change, not the table, with no D4H call", ctx do
       # No D4H stub: a D4H call would fail the test.
       lv = open(ctx)
       html = lv |> element("#travel-not-set") |> render()
 
       assert html =~ "Ann Smith"
-      assert html =~ "50 km"
-      assert html =~ "80 km"
+      refute html =~ ~r/\d km/
       assert html =~ "No home address in D4H, so choose Other."
+
+      dialog = change_dialog(lv, ctx.ann_row)
+      assert dialog =~ "Drove to the ICP, 50 km"
+      assert dialog =~ "Drove to the yard, 80 km"
     end
 
     test "the yard to the ICP and back, for a team vehicle (#877)", ctx do
@@ -149,7 +158,7 @@ defmodule Web.ActivityTravelLiveTest do
 
       lv = open(ctx)
       assert mapbox_calls() == []
-      assert lv |> element("#travel-not-set") |> render() =~ "50 km"
+      assert change_dialog(lv, ctx.ann_row) =~ "50 km"
     end
 
     test "a changed address is looked up again", ctx do
@@ -172,8 +181,7 @@ defmodule Web.ActivityTravelLiveTest do
 
       lv = open(ctx)
 
-      refute lv |> element("#travel-row-#{ctx.ann_row.id}") |> render() =~ ~r/\d km/
-      assert has_element?(lv, "#travel-row-#{ctx.ann_row.id}", "No route")
+      assert change_dialog(lv, ctx.ann_row) =~ "Drove to the ICP, no route"
     end
   end
 
@@ -200,14 +208,22 @@ defmodule Web.ActivityTravelLiveTest do
                Repo.get_by!(Trip, d4h_attendance_id: ctx.ann_row.d4h_attendance_id)
     end
 
-    test "Set comes first with its km in total, then Not set with the round trips", ctx do
+    test "rows not set show no km, under a warning that they count 0 km", ctx do
       lv = open(ctx)
-      ann = lv |> element("#travel-row-#{ctx.ann_row.id}") |> render()
       assert has_element?(lv, "#travel-not-set #travel-row-#{ctx.ann_row.id}")
       refute has_element?(lv, "#travel-set")
-      assert ann =~ "50 km"
-      assert ann =~ "80 km"
-      assert lv |> element("#travel-row-#{ctx.bob_row.id}") |> render() =~ "No route"
+      refute lv |> element("#travel-row-#{ctx.ann_row.id}") |> render() =~ ~r/\d km/
+
+      assert lv |> element("#travel-not-set-warning") |> render() =~
+               "2 members have no travel set, so forms and reports count 0 km for them. Set it before you publish."
+
+      set(lv, [ctx.ann_row], "icp")
+
+      assert lv |> element("#travel-not-set-warning") |> render() =~
+               "1 member has no travel set, so forms and reports count 0 km for them."
+
+      set(lv, [ctx.bob_row], "passenger")
+      refute has_element?(lv, "#travel-not-set-warning")
     end
 
     test "the bar's Change counts the checked members, and says to check some first", ctx do
@@ -369,11 +385,32 @@ defmodule Web.ActivityTravelLiveTest do
       assert prompt =~ "Leave the Mileage km box alone on these rows:\nBob Jones | "
     end
 
+    test "a published activity with travel not set warns it counts 0 km", ctx do
+      ctx.activity |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
+      lv = open(ctx)
+
+      refute has_element?(lv, "#travel-locked")
+
+      assert lv |> element("#travel-not-set-warning") |> render() =~
+               "2 members have no travel set, so forms and reports count 0 km for them. To set it, unpublish it with Change activity first."
+    end
+
+    test "a published activity with every row set keeps the plain hint", ctx do
+      lv = open(ctx)
+      set(lv, [ctx.ann_row], "icp")
+      set(lv, [ctx.bob_row], "passenger")
+      ctx.activity |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
+
+      lv = open(ctx)
+      assert has_element?(lv, "#travel-locked")
+      refute has_element?(lv, "#travel-not-set-warning")
+    end
+
     test "a published activity's travel can't change", ctx do
       ctx.activity |> Ecto.Changeset.change(is_published: true) |> Repo.update!()
       lv = open(ctx)
 
-      assert has_element?(lv, "#travel-locked")
+      assert has_element?(lv, "#travel-not-set-warning")
       refute has_element?(lv, "#travel-bar")
       refute has_element?(lv, "#travel-select-#{ctx.ann_row.id}")
 
@@ -381,7 +418,6 @@ defmodule Web.ActivityTravelLiveTest do
       |> form("#travel-form")
       |> render_submit(%{"travel" => "icp", "row_ids" => [to_string(ctx.ann_row.id)]})
 
-      assert render(lv) =~ "Published, so travel cannot be changed."
       assert Repo.all(Trip) == []
     end
   end
