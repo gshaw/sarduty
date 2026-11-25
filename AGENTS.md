@@ -160,8 +160,10 @@ fi
   only checks. When it fails, run `mise run check`, stage the fix, and commit again.
   Never `--no-verify`. stet writes the top of `hk.pkl` from `.stet.toml`; the repo's own
   steps go below its marker line. Markdown ignores go in `.stet.toml`, then `stet sync`.
-- **Deploys are manual**: `mise run deploy`, only when asked. The how is in
+- **Deploys are manual**: `mise run deploy`, only when Gerry asks. The how is in
   [docs/deployment.md](docs/deployment.md).
+  Bunter deploys with `mise run deploy`, on Gerry's Deploy or Ship, from a worktree of a
+  merge commit with CI green.
 - **Production data only through `bin/prod`** ([docs/production.md](docs/production.md)).
   Read tasks run whenever a question needs production; `bin/prod fix` and `backup` only
   when asked. A question no task answers gets a task in a PR. The repo's hook refuses raw
