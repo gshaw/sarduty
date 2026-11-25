@@ -31,6 +31,10 @@ log named at the end; `--verbose` shows it as it comes, and the output is plain 
 it isn't a terminal. `--wait` waits for another deploy's lock, and `--dry-run` stops
 before Fly builds anything. A builder that loses DNS (`_api.internal`) gets one retry.
 
+Each deploy records a GitHub deployment of that commit to `production` with your own `gh`
+login, and so does a run that finds main already live and not yet recorded. Bunter reads
+the newest one as what's live. A failed record only warns.
+
 The [Dockerfile](../Dockerfile) builds a release;
 [rel/overlays/bin/server](../rel/overlays/bin/server) starts it.
 
