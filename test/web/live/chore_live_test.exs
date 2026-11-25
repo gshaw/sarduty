@@ -381,7 +381,6 @@ defmodule Web.ChoreLiveTest do
     assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/chores/new") end
   end
 
-  # Log a chore for everyone who did it (#1102).
   describe "chores logged together" do
     setup %{me: me, team: team} do
       me = me |> Ecto.Changeset.change(name: "Alex Chen") |> Repo.update!()

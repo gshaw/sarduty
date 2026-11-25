@@ -15,10 +15,7 @@ defmodule Web.MemberChoresLive do
   alias App.ViewData.MemberChores
   alias Web.ChoreText
 
-  # A member's Chores tab (#1102), /teams/:subdomain/members/:id/chores, on a team with
-  # chores on. A team admin sees every chore, each linked to its page, and logs one for
-  # the member. A member sees the accepted ones, as they count toward the member's hours;
-  # their own page is Your membership.
+  # A member sees only accepted chores (#1102): those are what count toward hours.
   def mount(_params, _session, socket) do
     if !Team.chores?(socket.assigns.current_team), do: raise(Web.Status.NotFound)
     {:ok, socket}
@@ -41,8 +38,6 @@ defmodule Web.MemberChoresLive do
 
   defp accepted(chores), do: Enum.filter(chores, &(&1.status == :accepted))
 
-  # Log a chore, when Who did it would offer the member: a team admin with a member of
-  # their own on the team, for a current member the team counts.
   defp log?(%{team_admin?: true, current_member: %Member{}, current_team: team}, member) do
     Member.current?(member, DateTime.utc_now()) and
       Member.counted?(member, Standing.retiring_ids(team))

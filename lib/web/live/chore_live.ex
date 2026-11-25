@@ -145,8 +145,7 @@ defmodule Web.ChoreLive do
     """
   end
 
-  # Who logged it, when that isn't its member (#1102). Chores logged before then have
-  # nobody recorded.
+  # Chores logged before #1102 have no logger recorded.
   defp logged_by(%Chore{logged_by_member: %Member{} = logger, member_id: member_id})
        when logger.id != member_id,
        do: logger

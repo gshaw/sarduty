@@ -204,7 +204,6 @@ defmodule App.Operation.SaveChore do
 
   # The chore's event has changes to send even when the chore stays on it, since its
   # minutes or what it says may have changed. Placing it may move it to another event.
-  # `check` reads the chore as it is now, with the chores logged with it.
   defp admin_change(team, chore, build, check \\ fn _chore -> :ok end) do
     transaction(fn ->
       current =

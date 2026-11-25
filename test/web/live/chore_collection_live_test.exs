@@ -226,7 +226,6 @@ defmodule Web.ChoreCollectionLiveTest do
     end
   end
 
-  # Chores a team admin logs for a member (#1102): the member has their say.
   describe "a chore someone else logged" do
     setup %{team: team} do
       alex = manager_fixture(team, %{name: "Alex Chen"})

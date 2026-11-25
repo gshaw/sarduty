@@ -6,7 +6,6 @@ defmodule Web.MemberChoresLiveTest do
 
   alias App.Repo
 
-  # A member's Chores tab (#1102).
   setup %{conn: conn} do
     %{user: user, team: team} = user_with_team_fixture()
 
@@ -117,7 +116,6 @@ defmodule Web.MemberChoresLiveTest do
     refute has_element?(lv, "#chore-#{c.declined.id}")
     refute has_element?(lv, "#member-chore-log")
 
-    # Their own page is Your membership.
     assert {:error, {:live_redirect, %{to: to}}} =
              live(member_conn, ~p"/teams/#{team}/members/#{cameron.id}/chores")
 

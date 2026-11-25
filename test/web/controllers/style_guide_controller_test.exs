@@ -14,7 +14,6 @@ defmodule Web.StyleGuideControllerTest do
     assert html_response(get(conn, ~p"/styles/forms"), 200) =~ ~s(<a href="/" class="brand">)
   end
 
-  # Who did it on Log a chore picks members from a combobox, and You marks the reader (#1102).
   test "combobox takes members, and You is not a status tag", %{conn: conn} do
     html = html_response(get(conn, ~p"/styles/combobox"), 200)
     [when_to_use, when_not] = String.split(html, "When not to use")

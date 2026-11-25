@@ -27,7 +27,6 @@ defmodule App.Operation.SaveChoreTest do
     end
   end
 
-  # Who did it (#1102): who a chore may be logged for, by whom.
   describe "check_people/4" do
     setup do
       now = ~U[2026-11-25 12:00:00Z]

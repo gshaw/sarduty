@@ -385,8 +385,6 @@ defmodule Web.ChoreCollectionLive do
   attr :current_team, :map, required: true
   attr :current_member, :map, default: nil
 
-  # Waiting, a row for each claim: chores logged together are one row, with one box that
-  # sends its first chore's id (#1102). Select all passes over the team admin's own.
   defp waiting_table(assigns) do
     ~H"""
     <.table id={@id} rows={@rows} row_id={&"chore-#{&1.id}"} class="table-striped table-stack">
@@ -445,7 +443,6 @@ defmodule Web.ChoreCollectionLive do
   attr :category, :boolean, default: true
   attr :current_member, :map, default: nil
 
-  # Chores, each linking its page, and You on the reader's.
   defp chore_table(assigns) do
     ~H"""
     <.table id={@id} rows={@chores} row_id={&"chore-#{&1.id}"} class="table-striped table-stack">
@@ -539,8 +536,6 @@ defmodule Web.ChoreCollectionLive do
     |> then(&{:noreply, &1})
   end
 
-  # The rows checked, by their first chore's id, how many chores they hold, and whether
-  # any is the team admin's own, which shows the box.
   defp select(socket, selected) do
     %{rows: rows, current_member: member} = socket.assigns
     checked = Enum.filter(rows, &MapSet.member?(selected, &1.id))

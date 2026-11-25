@@ -41,8 +41,6 @@ defmodule Web.ChoreFormLive do
     |> then(&{:ok, &1})
   end
 
-  # Who did it, on a new chore: the reader, or with a team admin's `?member=` that member
-  # alone, when the picker offers them.
   defp assign_people(%{assigns: %{chore: nil}} = socket, params) do
     %{current_team: team, current_member: me, team_admin?: team_admin?} = socket.assigns
     offered = offered(team, DateTime.utc_now())
@@ -56,7 +54,6 @@ defmodule Web.ChoreFormLive do
   defp assign_people(socket, _params),
     do: assign(socket, offered: [], from_member: nil, people: [], people_error: nil)
 
-  # Who the picker offers: current members the team counts, as Add members does.
   defp offered(team, now) do
     retiring = Standing.retiring_ids(team)
 
@@ -349,13 +346,6 @@ defmodule Web.ChoreFormLive do
     end
   end
 
-  defp someone_listed(socket) do
-    changeset = socket.assigns.form.source
-    errors = Keyword.delete(changeset.errors, :people)
-    socket |> assign(people_error: nil) |> assign_form(%{changeset | errors: errors})
-  end
-
-  # A member's own row has no Remove, and stays.
   def handle_event("remove-person", %{"id" => id}, socket) do
     %{people: people, current_member: me, team_admin?: team_admin?} = socket.assigns
 
@@ -434,6 +424,12 @@ defmodule Web.ChoreFormLive do
     |> push_navigate(to: saved_path(socket.assigns))
   end
 
+  defp someone_listed(socket) do
+    changeset = socket.assigns.form.source
+    errors = Keyword.delete(changeset.errors, :people)
+    socket |> assign(people_error: nil) |> assign_form(%{changeset | errors: errors})
+  end
+
   # A list a stale page or a crafted event sent; the form shows neither.
   defp not_logged(socket, :without_you),
     do: put_flash(socket, :error, "Add yourself to Who did it.")
@@ -444,11 +440,9 @@ defmodule Web.ChoreFormLive do
   defp not_logged(socket, %Ecto.Changeset{} = changeset),
     do: socket |> assign(people_error: nil) |> assign_form(changeset)
 
-  # "Logged Truck 2 wash" for one person, "Logged 3 chores" for several.
   defp logged([chore]), do: "Logged #{chore.description}"
   defp logged(chores), do: "Logged #{length(chores)} chores"
 
-  # Saving with nobody listed: the form's own errors too, with Who did it first.
   defp nobody(socket, params, who) do
     %{form: form, categories: categories, today: today} = socket.assigns
 
@@ -461,8 +455,7 @@ defmodule Web.ChoreFormLive do
     socket |> assign(people_error: "Add who did it", params: params) |> assign_form(changeset)
   end
 
-  # Back to the member's Chores tab it opened from; else Waiting, which shows every chore
-  # a team admin logs for others, or Yours.
+  # Waiting shows every chore a team admin logs for others.
   defp saved_path(%{from_member: %Member{} = member, current_team: team}),
     do: ~p"/teams/#{team}/members/#{member.id}/chores"
 
@@ -479,8 +472,6 @@ defmodule Web.ChoreFormLive do
 
   defp cancel_path(%{current_team: team}), do: ChoreCollectionLive.view_path(team, :yours)
 
-  # Log and add another: the same page, empty but for the last chore's date and category,
-  # and Who did it as it was.
   defp start_another(socket, [saved | _others] = chores) do
     changeset =
       saved.date |> new_chore(saved.chore_category_id) |> Chore.build_changeset(%{}, [], nil)

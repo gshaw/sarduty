@@ -87,8 +87,6 @@ defmodule App.Model.ChoreTest do
     assert Ecto.Changeset.get_field(accepted, :decline_reason) == nil
   end
 
-  # A chore logged together with one of yours is yours too (#1102), even once yours is
-  # declined. Logging chores for others doesn't make them yours.
   describe "own?/2" do
     setup do
       alex = %Member{id: 1}

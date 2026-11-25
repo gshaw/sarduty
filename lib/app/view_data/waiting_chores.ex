@@ -49,7 +49,6 @@ defmodule App.ViewData.WaitingChores do
     end
   end
 
-  # In the order date, time, category, and words.
   defp values(first, chore) do
     [
       chore.date != first.date && Format.date_short(chore.date),
