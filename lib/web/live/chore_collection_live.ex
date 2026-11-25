@@ -489,7 +489,7 @@ defmodule Web.ChoreCollectionLive do
     %{current_team: team, current_user: user, current_member: member} = socket.assigns
     now = DateTime.utc_now()
 
-    with [_id | _ids] = ids <- ids(params, "chore_ids"),
+    with [_id | _ids] = ids <- params |> ids("chore_ids") |> row_ids(socket.assigns),
          {:ok, count} <-
            SaveChore.accept(team, ids, user, now, member: member, own: params["own"] == "true") do
       result = SendChores.call(team, user, now)
@@ -550,6 +550,12 @@ defmodule Web.ChoreCollectionLive do
       selected_count: checked |> Enum.map(&length(&1.chores)) |> Enum.sum(),
       own_selected?: Enum.any?(checked, &own_row?(&1, member))
     )
+  end
+
+  # A row's box sends its first chore's id, which a member may have deleted since the
+  # page loaded, so each checked row sends every chore it had.
+  defp row_ids(ids, %{rows: rows}) do
+    Enum.flat_map(ids, fn id -> Enum.find_value(rows, [id], &(&1.id == id && &1.ids)) end)
   end
 
   defp ids(params, key) do

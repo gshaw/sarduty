@@ -537,6 +537,20 @@ defmodule Web.ChoreLiveTest do
       assert Repo.get!(Chore, first.id).status == :declined
     end
 
+    test "a row whose first chore was deleted since the page loaded still accepts the rest",
+         ctx do
+      %{conn: conn, team: team, me: me, member: sam, others: others, category: category} = ctx
+      [first | rest] = log_together(me, [sam | others], category)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+      Repo.delete!(first)
+
+      stub_d4h_echo()
+      html = lv |> form("#accept-form", %{chore_ids: ["#{first.id}"]}) |> render_submit()
+      assert html =~ "Accepted 6 chores."
+      assert Enum.all?(rest, &(Repo.get!(Chore, &1.id).status == :accepted))
+    end
+
     test "chores a team admin logged only for others aren't theirs: checked, and no box", ctx do
       %{conn: conn, team: team, me: me, member: sam, others: [cameron | _], category: category} =
         ctx
