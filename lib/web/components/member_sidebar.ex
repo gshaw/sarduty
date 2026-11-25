@@ -8,6 +8,7 @@ defmodule Web.Components.MemberSidebar do
   import Web.Components.OpenInMaps
   import Web.Components.PersonHead
   import Web.Components.Phone
+  import Web.Components.Private
 
   alias App.Adapter.D4H
   alias App.Model.CustomField
@@ -109,7 +110,8 @@ defmodule Web.Components.MemberSidebar do
 
   # The header has the photo, role, joined, standing, and last attended, so the
   # sidebar is the member's ID, how to reach them, and D4H. Members see the ID and
-  # milestones: other members' contact details stay with team admins (#440).
+  # milestones: other members' contact details stay with team admins (#440), blurred
+  # until tapped so they aren't read off a shared screen.
   def sidebar_content(assigns) do
     ~H"""
     <dl>
@@ -167,20 +169,26 @@ defmodule Web.Components.MemberSidebar do
     ~H"""
     <dt>Email</dt>
     <dd>
-      <.email id="member-copy-email" email={@member.email} />
+      <.private id="member-private-email">
+        <.email id="member-copy-email" email={@member.email} />
+      </.private>
     </dd>
     <dt>Phone</dt>
     <dd id="member-phone">
-      <.phone id="member-phone" phone={@member.phone} call_and_text class="mt-2" />
+      <.private id="member-private-phone">
+        <.phone id="member-phone" phone={@member.phone} call_and_text class="mt-2" />
+      </.private>
     </dd>
     <dt>Address</dt>
     <dd>
-      <.copy_button
-        text={@member.address}
-        id="member-copy-address"
-        value={OpenInMaps.one_line(@member.address)}
-        label="Copy address"
-      />
+      <.private id="member-private-address">
+        <.copy_button
+          text={@member.address}
+          id="member-copy-address"
+          value={OpenInMaps.one_line(@member.address)}
+          label="Copy address"
+        />
+      </.private>
       <%!-- No label: the member's name beside their address would leave SAR Duty. --%>
       <.open_in_maps id="member-maps" app={@maps_app} address={@member.address} />
     </dd>
@@ -228,16 +236,18 @@ defmodule Web.Components.MemberSidebar do
     ~H"""
     <dd id={@id}>
       <%= if shown?(@contact) do %>
-        {contact_name(@contact)}
-        <span :for={{phone, i} <- Enum.with_index(phones(@contact))} class="block">
-          <.phone id={"#{@id}-#{i}"} phone={phone} />
-        </span>
-        <.call_and_text
-          :if={present?(@contact["primary_phone"])}
-          id={@id}
-          phone={@contact["primary_phone"]}
-          class="mt-2"
-        />
+        <.private id={"#{@id}-private"}>
+          <span class="private-text">{contact_name(@contact)}</span>
+          <span :for={{phone, i} <- Enum.with_index(phones(@contact))} class="block">
+            <.phone id={"#{@id}-#{i}"} phone={phone} />
+          </span>
+          <.call_and_text
+            :if={present?(@contact["primary_phone"])}
+            id={@id}
+            phone={@contact["primary_phone"]}
+            class="mt-2"
+          />
+        </.private>
       <% else %>
         None
       <% end %>
