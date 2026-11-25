@@ -34,6 +34,9 @@ what they did, a date, and a time ([Chore](../lib/app/model/chore.ex),
   `SaveChore.check_people/4` checks the same. The reader starts on it, even a member who
   is not a person. A member stays on it; a team admin can take themselves off. Nobody
   listed is told, and nothing goes to D4H until a team admin accepts.
+- **Most chores are the reader's own**, so Who did it starts as one line, the reader,
+  and Add others opens the picker. Once open it stays open, through Log and add another,
+  which keeps the list. A member's Chores tab opens it with that member.
 - **Chores logged together share a `logged_together_id`**, a UUID, and each records its
   logger, `logged_by_member_id`. Not "group id", which reads as a D4H group here. Chores
   logged before #1102 have neither, so nobody is recorded as their logger. There is no

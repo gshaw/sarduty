@@ -41,8 +41,13 @@ defmodule Web.ChoreFormLiveTest do
   defp as_cameron(%{conn: conn, cameron: cameron}),
     do: log_in_user(conn, App.AccountsFixtures.user_fixture(%{email: cameron.email}))
 
+  defp add_others(lv) do
+    if has_element?(lv, "#add-others"), do: lv |> element("#add-others") |> render_click()
+    lv
+  end
+
   defp pick(lv, member),
-    do: lv |> form("#who-form", %{"member-id" => member.id}) |> render_change()
+    do: lv |> add_others() |> form("#who-form", %{"member-id" => member.id}) |> render_change()
 
   defp chore_params(ctx, attrs \\ %{}) do
     Map.merge(
@@ -62,10 +67,15 @@ defmodule Web.ChoreFormLiveTest do
 
     assert has_element?(lv, "#person-#{alex.id}", "Alex Chen")
     assert has_element?(lv, "#person-#{alex.id}-badge-you", "You")
-    assert has_element?(lv, "#remove-person-#{alex.id}")
+    refute has_element?(lv, "#who-form")
+    refute has_element?(lv, "#remove-person-#{alex.id}")
     assert has_element?(lv, "#chore-form label", "What you did")
     assert has_element?(lv, "#chore-save", "Log chore")
     assert has_element?(lv, "#chore-form", "Any date that has passed.")
+
+    lv |> element("#add-others") |> render_click()
+    assert has_element?(lv, "#who-form #person-#{alex.id}")
+    assert has_element?(lv, "#remove-person-#{alex.id}")
 
     pick(lv, cameron)
     assert has_element?(lv, "#person-#{cameron.id}", "Cameron Diaz")
@@ -100,7 +110,7 @@ defmodule Web.ChoreFormLiveTest do
     %{admin: conn, team: team, alex: alex, cameron: cameron, riley: riley} = ctx
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
 
-    lv |> element("#remove-person-#{alex.id}") |> render_click()
+    lv |> add_others() |> element("#remove-person-#{alex.id}") |> render_click()
     refute has_element?(lv, "#person-#{alex.id}")
     pick(lv, cameron)
     pick(lv, riley)
@@ -122,7 +132,8 @@ defmodule Web.ChoreFormLiveTest do
   test "saving with nobody listed asks who did it and saves nothing", ctx do
     %{admin: conn, team: team, alex: alex} = ctx
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
-    lv |> element("#remove-person-#{alex.id}") |> render_click()
+    lv |> add_others() |> element("#remove-person-#{alex.id}") |> render_click()
+    assert has_element?(lv, "#who-form")
     assert has_element?(lv, "#chore-save", "Log chore")
 
     lv |> form("#chore-form", chore: chore_params(ctx)) |> render_submit()
@@ -141,6 +152,8 @@ defmodule Web.ChoreFormLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
 
     assert has_element?(lv, "#person-#{cameron.id}-badge-you", "You")
+    assert has_element?(lv, "#add-others")
+    lv |> element("#add-others") |> render_click()
     refute has_element?(lv, "#remove-person-#{cameron.id}")
     assert has_element?(lv, "#chore-form", "In the last 60 days.")
     assert has_element?(lv, "#chore-form label", "What you did")
@@ -274,13 +287,21 @@ defmodule Web.ChoreFormLiveTest do
     assert length(Repo.all(Chore)) == 2
   end
 
+  test "Log and add another keeps the picker open once Add others was pressed", ctx do
+    {:ok, lv, _html} = live(ctx.admin, ~p"/teams/#{ctx.team}/chores/new")
+    lv |> element("#add-others") |> render_click()
+    lv |> form("#chore-form", chore: chore_params(ctx)) |> render_submit(%{another: "true"})
+    assert has_element?(lv, "#who-form #person-#{ctx.alex.id}")
+    refute has_element?(lv, "#add-others")
+  end
+
   test "from a member's Chores tab, the list starts with that member and goes back there",
        ctx do
     %{admin: conn, team: team, alex: alex, cameron: cameron} = ctx
     tab = ~p"/teams/#{team}/members/#{cameron.id}/chores"
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new?member=#{cameron.id}")
 
-    assert has_element?(lv, "#person-#{cameron.id}")
+    assert has_element?(lv, "#who-form #person-#{cameron.id}")
     refute has_element?(lv, "#person-#{alex.id}")
     assert has_element?(lv, ~s{#chore-log-cancel[href="#{tab}"]})
 

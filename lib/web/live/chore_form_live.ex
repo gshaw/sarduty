@@ -2,7 +2,7 @@ defmodule Web.ChoreFormLive do
   use Web,
       {:live_view_app_layout,
        access: :team,
-       view_events: ["validate", "date", "add-person", "remove-person"],
+       view_events: ["validate", "date", "add-others", "add-person", "remove-person"],
        member_events: ["save", "delete"]}
 
   alias App.Model.Chore
@@ -47,12 +47,19 @@ defmodule Web.ChoreFormLive do
     from = if team_admin?, do: Enum.find(offered, &(Integer.to_string(&1.id) == params["member"]))
 
     socket
-    |> assign(offered: offered, from_member: from, people_error: nil)
+    |> assign(offered: offered, from_member: from, people_error: nil, adding_others?: false)
     |> assign_listed(if(from, do: [from], else: [me]))
   end
 
   defp assign_people(socket, _params),
-    do: assign(socket, offered: [], from_member: nil, people: [], people_error: nil)
+    do:
+      assign(socket,
+        offered: [],
+        from_member: nil,
+        people: [],
+        people_error: nil,
+        adding_others?: false
+      )
 
   defp offered(team, now) do
     retiring = Standing.retiring_ids(team)
@@ -73,6 +80,11 @@ defmodule Web.ChoreFormLive do
 
   defp others_listed?(%{people: people, current_member: me}),
     do: Enum.any?(people, &(&1.id != me.id))
+
+  # Most chores are the reader's own, so the picker waits for Add others.
+  defp just_you?(%{adding_others?: true}), do: false
+  defp just_you?(%{people: [person], current_member: me}), do: person.id == me.id
+  defp just_you?(_assigns), do: false
 
   defp mode_and_chore(%{live_action: :new, current_member: nil}, _id),
     do: raise(Web.Status.NotFound)
@@ -145,8 +157,10 @@ defmodule Web.ChoreFormLive do
 
     <div :if={@categories != []} class="measure">
       <.error_summary form={@form} />
+      <.just_you :if={!@chore and just_you?(assigns)} you={@current_member} team={@current_team} />
       <.who_field
-        :if={!@chore}
+        :if={!@chore and !just_you?(assigns)}
+        focus?={@adding_others?}
         people={@people}
         options={@member_options}
         error={@people_error}
@@ -212,6 +226,24 @@ defmodule Web.ChoreFormLive do
   defp save_label(nil, _people), do: "Log chore"
   defp save_label(_chore, _people), do: "Save chore"
 
+  attr :you, :map, required: true
+  attr :team, :map, required: true
+
+  defp just_you(assigns) do
+    ~H"""
+    <div id="who-you" class="mb-6">
+      <p class="label mb-1">Who did it</p>
+      <div id={"person-#{@you.id}"} class="flex items-center gap-3">
+        <.member_cell member={@you} team={@team} link={false} you id={"person-#{@you.id}-badge"} />
+        <.button id="add-others" type="button" size={:sm} phx-click="add-others">
+          Add others
+        </.button>
+      </div>
+    </div>
+    """
+  end
+
+  attr :focus?, :boolean, default: false
   attr :people, :list, required: true
   attr :options, :list, required: true
   attr :error, :string, default: nil
@@ -224,7 +256,12 @@ defmodule Web.ChoreFormLive do
   # links: leaving the page drops the list.
   defp who_field(assigns) do
     ~H"""
-    <form id="who-form" phx-change="add-person" phx-submit="add-person">
+    <form
+      id="who-form"
+      phx-change="add-person"
+      phx-submit="add-person"
+      phx-mounted={@focus? && JS.focus(to: "#chore_people")}
+    >
       <.input
         type="combobox"
         name="member-id"
@@ -329,6 +366,9 @@ defmodule Web.ChoreFormLive do
   # Today or Yesterday: the date box takes it, and the rest of the form stays as typed.
   def handle_event("date", %{"date" => date}, socket),
     do: {:noreply, validate(socket, Map.put(socket.assigns.params, "date", date))}
+
+  def handle_event("add-others", _params, socket),
+    do: {:noreply, assign(socket, adding_others?: true)}
 
   def handle_event("add-person", %{"member-id" => ""}, socket), do: {:noreply, socket}
 
