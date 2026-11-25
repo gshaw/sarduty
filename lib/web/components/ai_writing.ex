@@ -384,7 +384,7 @@ defmodule Web.Components.AIWriting do
 
   defp failed_words({:checks, mistake}, thing),
     do:
-      {"AI's #{thing} still had a mistake after one fix.",
+      {"AI's #{thing} still had a mistake.",
        "#{mistake} Nothing changed. Ask in other words, or fix the #{thing} yourself.", true}
 
   defp failed_words(:daily_limit, thing),

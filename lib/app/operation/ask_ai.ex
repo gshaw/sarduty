@@ -12,7 +12,8 @@ defmodule App.Operation.AskAI do
   each request returns, so Stop, which kills the ask's task, still counts what it spent.
   Each ask sends the text as it stands, with the job's earlier asks in its prompt. At
   most 6 requests per ask; the last can't call a tool, so it answers. A mistake in the
-  answer goes back once, unseen; a second keeps the text as it was.
+  answer goes back once, unseen, while a request is left; a second keeps the text as it
+  was.
 
   `request/4`, `next_step/1`, and `usage/1` are pure, for tests. `call/4` runs the loop.
   """
@@ -149,7 +150,7 @@ defmodule App.Operation.AskAI do
 
   defp answer({:answer, output}, settings, job, history, acc, retried) do
     case job.finish.(output) do
-      {:retry, mistake} when not retried ->
+      {:retry, mistake} when not retried and acc.requests < @max_requests ->
         again = "SAR Duty's check found a mistake: #{mistake} Fix it and answer again."
 
         loop(

@@ -63,7 +63,7 @@ On New report and Change report, for a user AI writing is open to
 - Stop is a toast, and the ask's words go back in the box to change and send again. A
   stopped ask still counts (below).
 - A failed ask stays in the conversation: what went wrong (too many steps, an answer cut
-  off, busy, unreachable, declined, a mistake left after one fix) and what to try, with
+  off, busy, unreachable, declined, a mistake AI didn't fix) and what to try, with
   Ask again when the same words could work. Ask again runs it in the failed row's place.
   A failed ask isn't sent with later asks. The words are `AIWriting.failed/2`.
 - Save notes the version came "from the AI's draft" (`reports.agent` is `AI`).
@@ -210,7 +210,8 @@ or form, and one per person per team for a new report ([App.Model.AIDraft](../li
    Claude tries with Coast Range's names and answers with the team's. Both in
    [lib/app/ai/tool/](../lib/app/ai/tool).
 4. **The answer** is checked again with `App.Report.check/4`. A mistake goes back to
-   Claude once, unseen; a second keeps the query as it was and shows the mistake.
+   Claude once, unseen, while a request is left; a second, or one on the last request,
+   keeps the query as it was and shows the mistake.
 5. At most 6 requests per ask. The last can't call a tool (`tool_choice` none), so it
    answers with what Claude has, still checked as in 4. Before this, Sonnet checked a
    passing query again after small unasked edits, a label or a date written another
