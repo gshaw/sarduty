@@ -402,14 +402,16 @@ defmodule Web.ChoreCollectionLive do
         />
       </:col>
       <:col :let={row} label="Member" class="stack-title">
-        <span :for={{chore, i} <- Enum.with_index(row.chores)}>
-          <.member_cell
+        <%!-- Each name keeps its badge and comma on its line, and the names wrap between
+        them. --%>
+        <span class="flex flex-wrap gap-x-1">
+          <span :for={{chore, i} <- Enum.with_index(row.chores)} class="whitespace-nowrap"><.member_cell
             member={chore.member}
             team={@current_team}
             standing={@standings[chore.member.id]}
             id={"chore-#{chore.id}-member"}
             you={you?(chore.member, @current_member)}
-          />{if i < length(row.chores) - 1, do: ","}
+          />{if i < length(row.chores) - 1, do: ","}</span>
         </span>
         <span :for={line <- row.differs} class="hint block">{line}</span>
       </:col>
