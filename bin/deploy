@@ -4,7 +4,8 @@
 #
 #   -v, --verbose   stream Fly's own output under each step
 #   --wait          wait for another deploy's lock instead of stopping
-#   --force         deploy even when production already runs origin/main
+#   --force         deploy even when CI hasn't passed on origin/main, or production
+#                   already runs it
 #   --dry-run       show what would ship, then stop before Fly builds anything
 #
 # Output is plain lines, no colour or spinner, when it isn't a terminal or NO_COLOR is
@@ -30,7 +31,7 @@ for arg in "$@"; do
     --wait) wait=1 ;;
     --force) force=1 ;;
     --dry-run) dry=1 ;;
-    -h | --help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h | --help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "deploy: unknown option $arg (try --help)" >&2; exit 2 ;;
   esac
 done
@@ -103,7 +104,7 @@ recorded() {
 
 printf '\n  %s → %s  %s\n\n' "${B}SAR Duty$R" "${B}production$R" "${D}$APP on Fly$R"
 
-for tool in git fly fnox curl; do
+for tool in git gh fly fnox curl; do
   command -v "$tool" >/dev/null || die "Tools" "$tool isn't on PATH"
 done
 
@@ -131,6 +132,27 @@ ok "Lock" "$D$LOCK$R"
 git fetch --quiet origin main 2>>"$log" || die "Fetch" "git fetch origin main failed"
 sha=$(git rev-parse --short=8 origin/main)
 ok "main" "${C}$sha${R} $(cut_to 60 "$(git log -1 --format='%s' origin/main)") ${D}($(git log -1 --format='%cr' origin/main))${R}"
+
+# Only a commit CI passed ships. Any passing run counts; otherwise the newest says why not.
+if [ "$force" = 1 ]; then
+  warn "CI" "--force: not checking CI"
+else
+  runs=$(gh run list -R "$REPO" --commit "$(git rev-parse origin/main)" \
+    --json workflowName,status,conclusion \
+    --jq '.[] | select(.workflowName == "CI") | "\(.status) \(.conclusion)"' 2>>"$log") ||
+    { fail "CI" "can't read CI for $sha"; exit 1; }
+  if printf '%s\n' "$runs" | grep -q '^completed success$'; then
+    ok "CI" "${D}passed on $sha${R}"
+  else
+    case $(printf '%s\n' "$runs" | head -1) in
+      '') why="hasn't run on $sha" ;;
+      completed*) why="failed on $sha" ;;
+      *) why="is still running on $sha" ;;
+    esac
+    fail "CI" "$why; deploy refused (--force to deploy anyway)"
+    exit 1
+  fi
+fi
 
 # Images this script builds are tagged main-<sha>, so the next run knows what's live.
 releases() { fly releases -a "$APP" --json 2>>"$log"; }

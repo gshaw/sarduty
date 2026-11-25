@@ -26,7 +26,9 @@ roll back each other's work. Hand deploys take the same lock (`mkdir` it, write 
 `owner`, remove it when done).
 
 It tags each image `main-<sha>`, so the next run lists the commits and migrations it
-ships, and stops when production already runs `origin/main`. Fly's full output goes to a
+ships, and stops when production already runs `origin/main`. It refuses, with one line,
+unless the CI workflow passed on `origin/main`'s commit; `--force` skips that and the
+already-live stop, for an emergency. Fly's full output goes to a
 log named at the end; `--verbose` shows it as it comes, and the output is plain lines when
 it isn't a terminal. `--wait` waits for another deploy's lock, and `--dry-run` stops
 before Fly builds anything. A builder that loses DNS (`_api.internal`) gets one retry.
