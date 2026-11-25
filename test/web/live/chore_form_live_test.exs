@@ -180,6 +180,13 @@ defmodule Web.ChoreFormLiveTest do
     assert Repo.all(Chore) == []
 
     riley |> Ecto.Changeset.change(d4h_status: nil) |> Repo.update!()
+    leavers = group_fixture(team, %{title: "Retiring"})
+    group_member_fixture(leavers, riley)
+    team |> Ecto.Changeset.change(retiring_d4h_group_id: leavers.d4h_group_id) |> Repo.update!()
+    lv |> form("#chore-form", chore: chore_params(ctx)) |> render_submit()
+    assert Repo.all(Chore) == []
+
+    team |> Ecto.Changeset.change(retiring_d4h_group_id: nil) |> Repo.update!()
     Repo.delete!(cameron)
     lv |> form("#chore-form", chore: chore_params(ctx)) |> render_submit()
     assert Repo.all(Chore) == []

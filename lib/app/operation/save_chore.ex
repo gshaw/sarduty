@@ -37,10 +37,8 @@ defmodule App.Operation.SaveChore do
       Chore.build_changeset(%Chore{}, params, category_ids(team.id, nil), today, who)
 
     transaction(fn ->
-      context = %{retiring: Standing.retiring_ids(team), now: DateTime.utc_now()}
-
       with {:ok, current} <- current_people(team, people),
-           {:ok, people} <- check_people(logger, current, who, context),
+           {:ok, people} <- check_people(logger, current, who, context_now(team)),
            {:ok, _valid} <- Ecto.Changeset.apply_action(changeset, :insert),
            do: {:ok, insert_all(changeset, people, team, logger)}
     end)
@@ -52,6 +50,12 @@ defmodule App.Operation.SaveChore do
     ids = people |> Enum.map(& &1.id) |> Enum.uniq()
     found = Member |> where([m], m.team_id == ^team.id and m.id in ^ids) |> Repo.all()
     if length(found) == length(ids), do: {:ok, found}, else: {:error, :not_listed}
+  end
+
+  # The team as it is now too: a group may have become its Retiring group.
+  defp context_now(team) do
+    retiring = Team |> Repo.get!(team.id) |> Standing.retiring_ids()
+    %{retiring: retiring, now: DateTime.utc_now()}
   end
 
   defp insert_all(changeset, people, team, logger) do
