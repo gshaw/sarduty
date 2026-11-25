@@ -36,9 +36,9 @@ defmodule Web.Components.Columns do
 
   attr :link, :boolean, default: true, doc: "false for the name alone, such as on a scanner"
   attr :id, :string, default: nil, doc: "the badge's id"
-  attr :you, :boolean, default: false, doc: "the person reading: a This is you badge"
+  attr :you, :boolean, default: false, doc: "the person reading: a You badge"
 
-  @doc "Member: the name, linked to the member's page, the standing badge, and This is you."
+  @doc "Member: the name, linked to the member's page, the standing badge, and You."
   def member_cell(assigns) do
     ~H"""
     <span class="with-badge">
@@ -48,7 +48,7 @@ defmodule Web.Components.Columns do
         <.a :if={!@label_for and @link} navigate={@path || ~p"/teams/#{@team}/members/#{@member.id}"}>{@member.name}</.a>
       </span>
       <.standing_badge id={@id} standing={@standing || :active} />
-      <.badge :if={@you} id={@id && "#{@id}-you"} kind={:primary}>This is you</.badge>
+      <.badge :if={@you} id={@id && "#{@id}-you"} kind={:primary}>You</.badge>
     </span>
     """
   end

@@ -30,6 +30,17 @@ defmodule App.Model.Chore do
     field :status, Ecto.Enum, values: [:waiting, :accepted, :declined], default: :waiting
     field :decided_at, :utc_datetime_usec
     field :decline_reason, TrimmedString, redact: true
+    # Chores logged at once for several people (#1102) share this UUID; nil for one logged
+    # alone. Each person's chore is its own row, the same in every other way.
+    field :logged_together_id, :string
+    # Who logged it. Nil for chores logged before #1102, and once that member is removed.
+    belongs_to :logged_by_member, Member
+    # Every chore logged with it, itself included, in any status. Preload it with
+    # logged_with_query/1, which keeps it to the team.
+    has_many :logged_with, Chore,
+      foreign_key: :logged_together_id,
+      references: :logged_together_id
+
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -128,11 +139,45 @@ defmodule App.Model.Chore do
   end
 
   @doc """
-  Whether `member` logged it: a team admin's own chore, which another team admin should
-  accept (#697). Nil, a user who isn't one of the team's members, has none.
+  Whether it's `member`'s own, which another team admin should accept (#697): theirs, or
+  logged together with one of theirs that still exists, in any status (#1102). Logging
+  chores for others doesn't make them yours. Nil, a user who isn't one of the team's
+  members, has none. Reads the preloaded `logged_with` of a chore logged together.
   """
   def own?(%Chore{member_id: member_id}, %Member{id: member_id}), do: true
-  def own?(%Chore{}, _member), do: false
+  def own?(%Chore{logged_together_id: nil}, _member), do: false
+
+  def own?(%Chore{logged_with: logged_with}, %Member{id: member_id}) when is_list(logged_with),
+    do: Enum.any?(logged_with, &(&1.member_id == member_id))
+
+  def own?(%Chore{}, nil), do: false
+
+  @doc "The chores logged with it, in any status, not counting itself: [] for one logged alone."
+  def others(%Chore{logged_together_id: nil}), do: []
+
+  def others(%Chore{id: id, logged_with: logged_with}),
+    do: Enum.reject(logged_with, &(&1.id == id))
+
+  @doc """
+  The query `logged_with` preloads through, kept to the team, with each chore's member,
+  A to Z.
+  """
+  def logged_with_query(team_id) do
+    from c in Chore,
+      join: m in assoc(c, :member),
+      where: c.team_id == ^team_id,
+      order_by: [asc: m.name, asc: c.id],
+      preload: [member: m]
+  end
+
+  @doc """
+  Whether a team admin can delete their own declined chore (#1102): not while a chore
+  logged with it waits, since deleting it would end Accept my own chores for the rest.
+  """
+  def team_admin_can_delete?(%Chore{status: :declined} = chore),
+    do: chore |> others() |> Enum.all?(&(&1.status != :waiting))
+
+  def team_admin_can_delete?(%Chore{}), do: false
 
   @doc "Whether the member can change or delete it: only while it waits."
   def member_can_change?(%Chore{status: status}), do: status == :waiting
@@ -150,7 +195,8 @@ defmodule App.Model.Chore do
     |> filter_status(opts[:status])
     |> order_by([c], desc: c.date, desc: c.id)
     |> take(opts[:limit])
-    |> preload([:chore_category, :decided_by_user])
+    |> preload([:chore_category, :decided_by_user, :logged_by_member])
+    |> preload(logged_with: ^logged_with_query(member.team_id))
     |> Repo.all()
   end
 
@@ -169,6 +215,7 @@ defmodule App.Model.Chore do
     |> where([c], c.team_id == ^team_id and c.status == ^status)
     |> order_by_status(status)
     |> preload([:member, :chore_category])
+    |> preload(logged_with: ^logged_with_query(team_id))
     |> Repo.all()
   end
 
@@ -201,7 +248,20 @@ defmodule App.Model.Chore do
     |> Repo.aggregate(:count)
   end
 
-  defp without_own(query, %Member{id: id}, true), do: where(query, [c], c.member_id != ^id)
+  defp without_own(query, %Member{id: id, team_id: team_id}, true) do
+    together =
+      from c in Chore,
+        where: c.team_id == ^team_id and c.member_id == ^id and not is_nil(c.logged_together_id),
+        select: c.logged_together_id
+
+    where(
+      query,
+      [c],
+      c.member_id != ^id and
+        (is_nil(c.logged_together_id) or c.logged_together_id not in subquery(together))
+    )
+  end
+
   defp without_own(query, _member, _other_managers?), do: query
 
   @doc "How many chores each of the team's categories has in `year`, as category id to count."
@@ -217,11 +277,15 @@ defmodule App.Model.Chore do
     |> Map.new()
   end
 
-  @doc "One of the team's chores, with its member, category, event, and who decided it."
+  @doc """
+  One of the team's chores, with its member, category, event, who decided it, who logged
+  it, and the chores logged with it.
+  """
   def find!(%Team{} = team, id) do
     Chore
     |> Repo.get_by!(id: id, team_id: team.id)
     |> Repo.preload([:member, :chore_category, :chore_event, :decided_by_user])
+    |> Repo.preload([:logged_by_member, logged_with: logged_with_query(team.id)])
   end
 
   @doc "One of the member's own chores."
@@ -229,5 +293,6 @@ defmodule App.Model.Chore do
     Chore
     |> Repo.get_by!(id: id, team_id: member.team_id, member_id: member.id)
     |> Repo.preload([:chore_category, :decided_by_user])
+    |> Repo.preload(logged_with: logged_with_query(member.team_id))
   end
 end

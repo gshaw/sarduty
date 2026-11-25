@@ -2,6 +2,12 @@
 
 What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 
+## Nov 23–29
+
+- ⭐ Log a chore for everyone who did it: pick them under Who did it, and each gets
+  their own chore. Team admins accept the claim as one row on Waiting, and a member's
+  page has a Chores tab.
+
 ## Nov 16–22
 
 - Pick Light, Dark, or System on Account settings. Each phone, iPad, or computer

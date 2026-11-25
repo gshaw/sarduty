@@ -225,4 +225,47 @@ defmodule Web.ChoreCollectionLiveTest do
       end
     end
   end
+
+  # Chores a team admin logs for a member (#1102): the member has their say.
+  describe "a chore someone else logged" do
+    setup %{team: team} do
+      alex = manager_fixture(team, %{name: "Alex Chen"})
+      %{alex: alex, riley: member_fixture(team, %{name: "Riley Okafor"})}
+    end
+
+    test "says who logged it and how many others, and the member deletes it", ctx do
+      %{conn: conn, team: team, member: member, alex: alex, riley: riley, category: category} =
+        ctx
+
+      category = category |> Ecto.Changeset.change(title: "Hall and gear") |> Repo.update!()
+      together = %{logged_together_id: Ecto.UUID.generate(), logged_by_member_id: alex.id}
+      mine = chore_fixture(member, category, together)
+      chore_fixture(riley, category, together)
+      long_ago = DateTime.utc_now() |> Service.Period.today(team.timezone) |> Date.add(-200)
+      old = chore_fixture(member, category, %{logged_by_member_id: alex.id, date: long_ago})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+
+      assert has_element?(
+               lv,
+               "#chore-#{mine.id}",
+               "Hall and gear · With 1 other · Logged by Alex Chen"
+             )
+
+      assert has_element?(lv, "#chore-#{old.id}", "Hall and gear · Logged by Alex Chen")
+      refute has_element?(lv, "#chore-#{old.id}", "With")
+
+      {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/chores/#{old.id}/edit")
+
+      assert edit |> form("#chore-form", chore: %{time: "2h"}) |> render_submit() =~
+               "Enter a date in the last 60 days"
+
+      edit |> element("#chore-delete") |> render_click()
+      refute Repo.get(Chore, old.id)
+
+      {:ok, edit, _html} = live(conn, ~p"/teams/#{team}/chores/#{mine.id}/edit")
+      edit |> element("#chore-delete") |> render_click()
+      refute Repo.get(Chore, mine.id)
+    end
+  end
 end

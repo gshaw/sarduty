@@ -13,6 +13,7 @@ defmodule Web.Components.MemberTabs do
       :attendance,
       :qualifications,
       :groups,
+      :chores,
       :equipment,
       :standing,
       :card,
@@ -28,7 +29,8 @@ defmodule Web.Components.MemberTabs do
     default: false,
     doc: "adds Equipment, Standing, ID card, Fields, and History"
 
-  # Standing, ID card, Fields, and History are team admins' own records (#440, #681), and
+  # Chores shows on a team with chores on (#1102), to members too, with only the accepted
+  # ones. Standing, ID card, Fields, and History are team admins' own records (#440, #681), and
   # the team's equipment pages are theirs too. A member sees what they hold, and their
   # own fields, on Your membership.
   def member_tabs(assigns) do
@@ -51,6 +53,13 @@ defmodule Web.Components.MemberTabs do
         current={@active_tab == :groups}
       >
         Groups
+      </:tab>
+      <:tab
+        :if={App.Model.Team.chores?(@member.team)}
+        navigate={~p"/teams/#{@member.team}/members/#{@member.id}/chores"}
+        current={@active_tab == :chores}
+      >
+        Chores
       </:tab>
       <:tab
         :if={@team_admin? and (@equipment != [] or @active_tab == :equipment)}

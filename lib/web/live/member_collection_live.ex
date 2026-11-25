@@ -334,7 +334,7 @@ defmodule Web.MemberCollectionLive do
   attr :group_form?, :boolean, required: true, doc: "tick boxes for Add to group"
   attr :selected, :any, required: true
   attr :retired?, :boolean, required: true
-  attr :current_member, :any, required: true, doc: "the person reading, for This is you"
+  attr :current_member, :any, required: true, doc: "the person reading, for You"
 
   defp member_table(assigns) do
     ~H"""

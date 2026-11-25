@@ -15,7 +15,8 @@ defmodule Web.ChoreLive do
   # One chore (#341), /teams/:subdomain/chores/:id: a team admin accepts it, changes it,
   # or declines it with a reason the member sees, in any status. Each sends its chore
   # category's activity for the month to D4H. A team admin accepts their own chore only
-  # once they select the box that says they meant it (#697).
+  # once they select the box that says they meant it (#697), and a chore logged together
+  # with one of theirs counts as their own (#1102).
   def mount(%{"id" => id}, _session, socket) do
     team = socket.assigns.current_team
     if !Team.chores?(team), do: raise(Web.Status.NotFound)
@@ -24,6 +25,7 @@ defmodule Web.ChoreLive do
     socket
     |> assign(page_title: chore.description, chore: chore, own: false)
     |> assign(own_chore?: Chore.own?(chore, socket.assigns.current_member))
+    |> assign(others: Chore.others(chore))
     |> assign(decided_by: Member.name_for_user(team, chore.decided_by_user, DateTime.utc_now()))
     |> assign(activity: chore.chore_event && ChoreEvent.local_activity(chore.chore_event))
     |> assign_decline_form(%{})
@@ -58,9 +60,21 @@ defmodule Web.ChoreLive do
       <dt>Category</dt>
       <dd>{@chore.chore_category.title}</dd>
       <dt>Logged</dt>
-      <dd>
-        {Format.datetime_short(@chore.inserted_at, @current_team.timezone)}
+      <dd id="chore-logged">
+        {Format.datetime_short(@chore.inserted_at, @current_team.timezone)}{if logger =
+                                                                                 logged_by(@chore),
+                                                                               do:
+                                                                                 ", by #{logger.name}"}
       </dd>
+      <div :if={@others != []}>
+        <dt>Others on this chore</dt>
+        <dd id="chore-others">
+          <span :for={other <- @others} id={"chore-other-#{other.id}"} class="block">
+            <.a navigate={~p"/teams/#{@current_team}/chores/#{other.id}"}>{other.member.name}</.a>
+            · {status_word(other)}
+          </span>
+        </dd>
+      </div>
       <dt>Status</dt>
       <dd id="chore-status">
         <.status_badge chore={@chore} />
@@ -130,6 +144,18 @@ defmodule Web.ChoreLive do
     </section>
     """
   end
+
+  # Who logged it, when that isn't its member (#1102). Chores logged before then have
+  # nobody recorded.
+  defp logged_by(%Chore{logged_by_member: %Member{} = logger, member_id: member_id})
+       when logger.id != member_id,
+       do: logger
+
+  defp logged_by(_chore), do: nil
+
+  defp status_word(%Chore{status: :waiting}), do: "Waiting"
+  defp status_word(%Chore{status: :accepted}), do: "Accepted"
+  defp status_word(%Chore{status: :declined}), do: "Declined"
 
   def handle_event("own", params, socket),
     do: {:noreply, assign(socket, :own, params["own"] == "true")}

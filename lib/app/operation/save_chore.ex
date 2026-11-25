@@ -18,14 +18,66 @@ defmodule App.Operation.SaveChore do
   alias App.Model.ChoreCategory
   alias App.Model.ChoreEvent
   alias App.Model.Member
+  alias App.Model.Standing
   alias App.Model.Team
   alias App.Repo
 
-  @doc "A member logs a chore. `{:ok, chore}` or `{:error, changeset}`."
-  def log(%Member{} = member, params, %Date{} = today) do
-    %Chore{team_id: member.team_id, member_id: member.id}
-    |> Chore.build_changeset(params, category_ids(member.team_id, nil), today)
-    |> Repo.insert()
+  @doc """
+  `logger`, a member of `team`, logs a chore for `people` (#1102): each gets their own
+  waiting chore, the same in every other way, logged by `logger`, and sharing a
+  `logged_together_id` when there are several. `who` is `:member` or `:team_admin`, from
+  who is logged in, and decides the date rule and who may be listed (`check_people/4`).
+  Nobody is told, and nothing goes to D4H.
+
+  `{:ok, chores}`, `{:error, changeset}`, or `{:error, reason}` from check_people/4.
+  """
+  def log(%Team{} = team, %Member{} = logger, people, params, %Date{} = today, who)
+      when who in [:member, :team_admin] do
+    context = %{retiring: Standing.retiring_ids(team), now: DateTime.utc_now()}
+
+    changeset =
+      Chore.build_changeset(%Chore{}, params, category_ids(team.id, nil), today, who)
+
+    with {:ok, people} <- check_people(logger, people, who, context),
+         {:ok, _valid} <- Ecto.Changeset.apply_action(changeset, :insert),
+         do: insert_all(changeset, people, team, logger)
+  end
+
+  defp insert_all(changeset, people, team, logger) do
+    together = if length(people) > 1, do: Ecto.UUID.generate()
+    fields = [team_id: team.id, logged_by_member_id: logger.id, logged_together_id: together]
+    Repo.transaction(fn -> Enum.map(people, &insert_for(changeset, &1, fields)) end)
+  end
+
+  defp insert_for(changeset, person, fields) do
+    changeset
+    |> Ecto.Changeset.change([{:member_id, person.id} | fields])
+    |> Repo.insert!()
+  end
+
+  @doc """
+  Who `logger` may log a chore for (#1102), with anyone listed twice once: `{:ok, people}`.
+  Each is on the logger's team, and anyone but the logger is a current member the team
+  counts, so not retiring and not a member who is not a person. The logger may log for
+  themselves whatever they are. A member lists themselves; only a team admin may log for
+  others alone. `{:error, :nobody}`, `{:error, :without_you}`, or `{:error, :not_listed}`.
+  `context` has `retiring`, the team's retiring member ids, and `now`.
+  """
+  def check_people(%Member{} = logger, people, who, %{retiring: retiring, now: now}) do
+    people = Enum.uniq_by(people, & &1.id)
+
+    listable? = fn person ->
+      person.team_id == logger.team_id and
+        (person.id == logger.id or
+           (Member.current?(person, now) and Member.counted?(person, retiring)))
+    end
+
+    cond do
+      people == [] -> {:error, :nobody}
+      who == :member and not Enum.any?(people, &(&1.id == logger.id)) -> {:error, :without_you}
+      not Enum.all?(people, listable?) -> {:error, :not_listed}
+      true -> {:ok, people}
+    end
   end
 
   @doc """
@@ -44,12 +96,21 @@ defmodule App.Operation.SaveChore do
 
   @doc """
   A member deletes their own chore while it waits, or once declined. `:ok`, or
-  `{:error, :decided}` once a team admin has accepted it.
+  `{:error, :decided}` once a team admin has accepted it. A team admin, `who`
+  `:team_admin`, deletes only a declined one, and `{:error, :others_wait}` while a chore
+  logged with it waits (`Chore.team_admin_can_delete?/1`): deleting it would end Accept my
+  own chores for the rest.
   """
-  def delete_own(%Member{} = member, %Chore{} = chore) do
+  def delete_own(%Member{} = member, %Chore{} = chore, who \\ :member) do
+    allowed? =
+      if who == :team_admin,
+        do: &(&1.status == :declined),
+        else: &Chore.member_can_delete?/1
+
     result =
       transaction(fn ->
-        with {:ok, current} <- own_now(member, chore, &Chore.member_can_delete?/1),
+        with {:ok, current} <- own_now(member, chore, allowed?),
+             :ok <- others_wait(current, who),
              do: Repo.delete(current)
       end)
 
@@ -67,19 +128,28 @@ defmodule App.Operation.SaveChore do
   end
 
   @doc """
-  A team admin accepts the team's waiting chores among `ids`. Others are left as they
-  are. `{:ok, count}`, or `{:error, :own}` when they include the team admin's own and
-  `own: true` doesn't say they meant it (#697).
+  A team admin accepts the team's waiting chores among `ids`, and every waiting chore
+  logged together with one of them (#1102), whatever that one's status is now: Waiting
+  sends one id for a row. Others are left as they are. `{:ok, count}`, or `{:error,
+  :own}` when they include the team admin's own and `own: true` doesn't say they meant it
+  (#697).
 
   `member:` is the team admin's member on the team, or nil.
   """
   def accept(%Team{} = team, ids, user, now, opts) do
     member = Keyword.fetch!(opts, :member)
 
+    together =
+      from c in Chore,
+        where: c.team_id == ^team.id and c.id in ^ids and not is_nil(c.logged_together_id),
+        select: c.logged_together_id
+
     Repo.transaction(fn ->
       chores =
         Chore
-        |> where([c], c.team_id == ^team.id and c.status == :waiting and c.id in ^ids)
+        |> where([c], c.team_id == ^team.id and c.status == :waiting)
+        |> where([c], c.id in ^ids or c.logged_together_id in subquery(together))
+        |> preload(logged_with: ^Chore.logged_with_query(team.id))
         |> Repo.all()
 
       if own_unmeant?(chores, member, opts), do: Repo.rollback(:own)
@@ -99,9 +169,14 @@ defmodule App.Operation.SaveChore do
   """
   def accept_one(%Team{} = team, %Chore{team_id: team_id} = chore, user, now, opts)
       when team_id == team.id do
-    if own_unmeant?([chore], Keyword.fetch!(opts, :member), opts),
-      do: {:error, :own},
-      else: admin_change(team, chore, &Chore.decide_changeset(&1, :accepted, user, now))
+    member = Keyword.fetch!(opts, :member)
+
+    admin_change(
+      team,
+      chore,
+      &Chore.decide_changeset(&1, :accepted, user, now),
+      &if(own_unmeant?([&1], member, opts), do: {:error, :own}, else: :ok)
+    )
   end
 
   @doc """
@@ -118,11 +193,16 @@ defmodule App.Operation.SaveChore do
 
   # The chore's event has changes to send even when the chore stays on it, since its
   # minutes or what it says may have changed. Placing it may move it to another event.
-  defp admin_change(team, chore, build) do
+  # `check` reads the chore as it is now, with the chores logged with it.
+  defp admin_change(team, chore, build, check \\ fn _chore -> :ok end) do
     transaction(fn ->
-      current = Repo.get_by!(Chore, id: chore.id, team_id: team.id)
+      current =
+        Chore
+        |> Repo.get_by!(id: chore.id, team_id: team.id)
+        |> Repo.preload(logged_with: Chore.logged_with_query(team.id))
 
-      with {:ok, saved} <- current |> build.() |> Repo.update() do
+      with :ok <- check.(current),
+           {:ok, saved} <- current |> build.() |> Repo.update() do
         :ok = ChoreEvent.mark_for_send!([current.chore_event_id])
         :ok = ChoreEvent.place!(team.id)
         {:ok, Repo.get!(Chore, saved.id)}
@@ -133,9 +213,18 @@ defmodule App.Operation.SaveChore do
   # The member's chore as it is now, read in the transaction: a team admin may have
   # decided it since the member's page loaded it.
   defp own_now(member, chore, allowed?) do
-    current = Repo.get_by(Chore, id: chore.id, team_id: member.team_id, member_id: member.id)
+    current =
+      Chore
+      |> Repo.get_by(id: chore.id, team_id: member.team_id, member_id: member.id)
+      |> Repo.preload(logged_with: Chore.logged_with_query(member.team_id))
+
     if current && allowed?.(current), do: {:ok, current}, else: {:error, :decided}
   end
+
+  defp others_wait(chore, :team_admin),
+    do: if(Chore.team_admin_can_delete?(chore), do: :ok, else: {:error, :others_wait})
+
+  defp others_wait(_chore, :member), do: :ok
 
   defp transaction(fun), do: Repo.transaction(fn -> fun.() |> ok_or_rollback() end)
 

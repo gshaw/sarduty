@@ -12,6 +12,7 @@ defmodule Web.ChoreCollectionLive do
   alias App.Operation.SaveChore
   alias App.Operation.SendChores
   alias App.ViewData.MemberChores
+  alias App.ViewData.WaitingChores
   alias Service.Format
   alias Web.ChoreText
 
@@ -22,8 +23,9 @@ defmodule Web.ChoreCollectionLive do
   # every row starts selected, and a cleared row stays. Accepting sends them to D4H, onto
   # each chore category's activity for the month, and Accepted lists them under those
   # activities. Every chore opens its own page, to change or decline it. A team admin's
-  # own chores say Yours and start cleared: another team admin should accept them, and
-  # accepting their own takes a box that says they meant it (#697).
+  # own chores start cleared: another team admin should accept them, and accepting their
+  # own takes a box that says they meant it (#697). Chores logged together wait as one
+  # row, and accepting it accepts them all (#1102).
   @team_views [waiting: "Waiting", accepted: "Accepted", declined: "Declined"]
 
   def mount(_params, _session, socket) do
@@ -81,7 +83,12 @@ defmodule Web.ChoreCollectionLive do
   defp assign_standings(socket) do
     %{current_team: team} = socket.assigns
     events = Map.get(socket.assigns, :events, [])
-    chores = Map.get(socket.assigns, :chores, []) ++ Enum.flat_map(events, & &1.chores)
+    rows = Map.get(socket.assigns, :rows, [])
+
+    chores =
+      Map.get(socket.assigns, :chores, []) ++
+        Enum.flat_map(events, & &1.chores) ++ Enum.flat_map(rows, & &1.chores)
+
     members = chores |> Enum.map(& &1.member) |> Enum.uniq_by(& &1.id)
     assign(socket, :standings, Standing.by_member(team, members, DateTime.utc_now()))
   end
@@ -104,9 +111,12 @@ defmodule Web.ChoreCollectionLive do
 
   defp load_view(socket, :waiting, team_id) do
     member = socket.assigns.current_member
-    waiting = Chore.get_all_for_team(team_id, :waiting)
-    others = Enum.reject(waiting, &Chore.own?(&1, member))
-    socket |> assign(chores: waiting, own: false) |> select(MapSet.new(others, & &1.id))
+    rows = team_id |> Chore.get_all_for_team(:waiting) |> WaitingChores.rows()
+    others = Enum.reject(rows, &own_row?(&1, member))
+
+    socket
+    |> assign(chores: [], rows: rows, own: false)
+    |> select(MapSet.new(others, & &1.id))
   end
 
   defp load_view(socket, :accepted, team_id) do
@@ -121,6 +131,10 @@ defmodule Web.ChoreCollectionLive do
 
   defp load_view(socket, :declined, team_id),
     do: assign(socket, chores: Chore.get_all_for_team(team_id, :declined))
+
+  # Every chore in a row is the reader's own or none is: own?/2 reads the chores logged
+  # together, which they share.
+  defp own_row?(row, member), do: Enum.any?(row.chores, &Chore.own?(&1, member))
 
   @doc "When it was logged, under its date, only when that was a later month."
   def logged_note(chore, timezone) do
@@ -180,18 +194,18 @@ defmodule Web.ChoreCollectionLive do
 
     <%= case @view do %>
       <% :waiting -> %>
-        <.empty_state :if={@chores == []} id="no-waiting-chores" title="No chores waiting">
+        <.empty_state :if={@rows == []} id="no-waiting-chores" title="No chores waiting">
           Chores members log show here for you to accept.
         </.empty_state>
 
-        <div :if={@chores != []}>
+        <div :if={@rows != []}>
           <p class="hint mb-4">
-            Clear the box next to a chore to leave it waiting. Open a chore to change or decline it.
+            Uncheck a chore to leave it waiting. Open a chore to change or decline it.
           </p>
           <.form for={%{}} id="accept-form" phx-change="select" phx-submit="accept">
-            <.chore_table
+            <.waiting_table
               id="waiting-chores"
-              chores={@chores}
+              rows={@rows}
               standings={@standings}
               selected={@selected}
               current_team={@current_team}
@@ -204,10 +218,10 @@ defmodule Web.ChoreCollectionLive do
               <.button
                 id="accept"
                 variant={:success}
-                disabled={MapSet.size(@selected) == 0 or (@own_selected? and !@own)}
+                disabled={@selected_count == 0 or (@own_selected? and !@own)}
                 phx-disable-with="Sending…"
               >
-                Accept {count_chores(MapSet.size(@selected))}
+                Accept {count_chores(@selected_count)}
               </.button>
             </.form_actions>
           </.form>
@@ -254,6 +268,7 @@ defmodule Web.ChoreCollectionLive do
             chores={row.chores}
             standings={@standings}
             current_team={@current_team}
+            current_member={@current_member}
             category={false}
           />
         </section>
@@ -267,6 +282,7 @@ defmodule Web.ChoreCollectionLive do
           chores={@chores}
           standings={@standings}
           current_team={@current_team}
+          current_member={@current_member}
         />
       <% :yours -> %>
         <.yours
@@ -329,7 +345,7 @@ defmodule Web.ChoreCollectionLive do
         <:col :let={chore} label="What you did" class="stack-title">
           <.a :if={@team_admin?} navigate={~p"/teams/#{@team}/chores/#{chore.id}"}>{chore.description}</.a>
           <span :if={!@team_admin?}>{chore.description}</span>
-          <span class="hint block">{chore.chore_category.title}</span>
+          <span class="hint block">{ChoreText.category_line(chore)}</span>
           <span :if={chore.status == :declined} class="hint block mt-1">
             {ChoreText.declined(chore, @team.timezone)}
           </span>
@@ -345,7 +361,7 @@ defmodule Web.ChoreCollectionLive do
             navigate={~p"/teams/#{@team}/chores/#{chore.id}/edit"}
           >Change</.a>
           <.a
-            :if={chore.status == :declined}
+            :if={chore.status == :declined and (!@team_admin? or Chore.team_admin_can_delete?(chore))}
             id={"chore-delete-#{chore.id}"}
             href="#"
             phx-click="delete"
@@ -363,44 +379,82 @@ defmodule Web.ChoreCollectionLive do
   end
 
   attr :id, :string, required: true
-  attr :chores, :list, required: true
+  attr :rows, :list, required: true, doc: "from WaitingChores.rows/1"
   attr :standings, :map, required: true
-  attr :selected, :any, default: nil, doc: "the ids checked, or nil for no boxes"
+  attr :selected, :any, required: true, doc: "the rows checked, by their first chore's id"
   attr :current_team, :map, required: true
-  attr :category, :boolean, default: true
   attr :current_member, :map, default: nil
 
-  # Chores, each linking its page. With `selected`, a box each, for accepting. Select all
-  # passes over the team admin's own.
-  defp chore_table(assigns) do
+  # Waiting, a row for each claim: chores logged together are one row, with one box that
+  # sends its first chore's id (#1102). Select all passes over the team admin's own.
+  defp waiting_table(assigns) do
     ~H"""
-    <.table id={@id} rows={@chores} row_id={&"chore-#{&1.id}"} class="table-striped table-stack">
-      <:col :let={chore} :if={@selected} label="" class="w-px stack-check" select_all>
+    <.table id={@id} rows={@rows} row_id={&"chore-#{&1.id}"} class="table-striped table-stack">
+      <:col :let={row} label="" class="w-px stack-check" select_all>
         <input
           type="checkbox"
-          id={"#{@id}-select-#{chore.id}"}
+          id={"#{@id}-select-#{row.id}"}
           name="chore_ids[]"
-          value={chore.id}
-          checked={MapSet.member?(@selected, chore.id)}
-          aria-label={"Select #{chore.description}"}
-          data-select-all={Chore.own?(chore, @current_member) && "skip"}
+          value={row.id}
+          checked={MapSet.member?(@selected, row.id)}
+          aria-label={"Select #{row.first.description}"}
+          data-select-all={own_row?(row, @current_member) && "skip"}
         />
       </:col>
-      <:col :let={chore} label="Member" class="stack-title">
-        <span class="with-badge">
+      <:col :let={row} label="Member" class="stack-title">
+        <span :for={{chore, i} <- Enum.with_index(row.chores)}>
           <.member_cell
             member={chore.member}
             team={@current_team}
             standing={@standings[chore.member.id]}
-          />
-          <.badge
-            :if={Chore.own?(chore, @current_member)}
-            id={"chore-yours-#{chore.id}"}
-            kind={:primary}
-          >
-            Yours
-          </.badge>
+            id={"chore-#{chore.id}-member"}
+            you={you?(chore.member, @current_member)}
+          />{if i < length(row.chores) - 1, do: ","}
         </span>
+        <span :for={line <- row.differs} class="hint block">{line}</span>
+      </:col>
+      <:col :let={row} label="Date" class="w-px whitespace-nowrap">
+        <.date_cell value={row.first.date} timezone={@current_team.timezone} />
+        <span :if={note = logged_note(row.first, @current_team.timezone)} class="hint block">
+          {note}
+        </span>
+      </:col>
+      <:col :let={row} label="What they did" class="stack-full">
+        <.a navigate={~p"/teams/#{@current_team}/chores/#{row.first.id}"}>{row.first.description}</.a>
+      </:col>
+      <:col :let={row} label="Category">{row.first.chore_category.title}</:col>
+      <:col :let={row} label="Hours" class="w-px whitespace-nowrap" align="right">
+        <span :if={row.minutes_each} id={"chore-#{row.id}-each"}>
+          <.hours_cell minutes={row.minutes_each} /> each
+        </span>
+        <span :if={row.minutes_each} class="hint block"><.hours_cell minutes={row.minutes} /></span>
+        <.hours_cell :if={!row.minutes_each} minutes={row.minutes} />
+      </:col>
+    </.table>
+    """
+  end
+
+  defp you?(member, current_member), do: current_member != nil and member.id == current_member.id
+
+  attr :id, :string, required: true
+  attr :chores, :list, required: true
+  attr :standings, :map, required: true
+  attr :current_team, :map, required: true
+  attr :category, :boolean, default: true
+  attr :current_member, :map, default: nil
+
+  # Chores, each linking its page, and You on the reader's.
+  defp chore_table(assigns) do
+    ~H"""
+    <.table id={@id} rows={@chores} row_id={&"chore-#{&1.id}"} class="table-striped table-stack">
+      <:col :let={chore} label="Member" class="stack-title">
+        <.member_cell
+          member={chore.member}
+          team={@current_team}
+          standing={@standings[chore.member.id]}
+          id={"chore-#{chore.id}-member"}
+          you={you?(chore.member, @current_member)}
+        />
       </:col>
       <:col :let={chore} label="Date" class="w-px whitespace-nowrap">
         <.date_cell value={chore.date} timezone={@current_team.timezone} />
@@ -450,16 +504,23 @@ defmodule Web.ChoreCollectionLive do
   end
 
   def handle_event("delete", %{"id" => id}, socket) do
-    member = socket.assigns.current_member
+    %{current_member: member, team_admin?: team_admin?} = socket.assigns
     chore = Chore.find_for_member!(member, id)
 
     socket =
-      case SaveChore.delete_own(member, chore) do
+      case SaveChore.delete_own(member, chore, if(team_admin?, do: :team_admin, else: :member)) do
         :ok ->
           put_flash(socket, :info, "Deleted #{chore.description}.")
 
         {:error, :decided} ->
           put_flash(socket, :error, "This chore cannot be deleted. A team admin has accepted it.")
+
+        {:error, :others_wait} ->
+          put_flash(
+            socket,
+            :error,
+            "This chore cannot be deleted while a chore logged with it waits."
+          )
       end
 
     {:noreply, load(socket)}
@@ -476,14 +537,17 @@ defmodule Web.ChoreCollectionLive do
     |> then(&{:noreply, &1})
   end
 
-  # The rows checked, and whether any is the team admin's own, which shows the box.
+  # The rows checked, by their first chore's id, how many chores they hold, and whether
+  # any is the team admin's own, which shows the box.
   defp select(socket, selected) do
-    %{chores: chores, current_member: member} = socket.assigns
+    %{rows: rows, current_member: member} = socket.assigns
+    checked = Enum.filter(rows, &MapSet.member?(selected, &1.id))
 
-    own_selected? =
-      Enum.any?(chores, &(Chore.own?(&1, member) and MapSet.member?(selected, &1.id)))
-
-    assign(socket, selected: selected, own_selected?: own_selected?)
+    assign(socket,
+      selected: MapSet.new(checked, & &1.id),
+      selected_count: checked |> Enum.map(&length(&1.chores)) |> Enum.sum(),
+      own_selected?: Enum.any?(checked, &own_row?(&1, member))
+    )
   end
 
   defp ids(params, key) do

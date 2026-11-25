@@ -89,6 +89,7 @@ defmodule Web.MemberPagesTest do
       "/teams/#{s}/members/#{avery.id}",
       "/teams/#{s}/members/#{avery.id}/qualifications",
       "/teams/#{s}/members/#{avery.id}/groups",
+      "/teams/#{s}/members/#{avery.id}/chores",
       "/teams/#{s}/milestones",
       "/teams/#{s}/chores",
       "/teams/#{s}/chores/new",
