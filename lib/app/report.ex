@@ -122,8 +122,52 @@ defmodule App.Report do
   end
 
   defp parse(text, context) do
-    with {:ok, query} <- Parser.parse(text), do: {:ok, visible(query, context)}
+    with {:ok, query} <- Parser.parse(text),
+         do: {:ok, query |> visible(context) |> by_id(context)}
   end
+
+  # A record a filter lists is picked by its id (#1106), so `activity = :activity`
+  # compares ids, as `activity.id = :activity` does, never titles, which repeat.
+  defp by_id(query, context) do
+    ids =
+      for %{name: name, each: %{expr: expr}} <- query.filters,
+          path = Compiler.id_path(query, expr, context),
+          into: %{},
+          do: {name, {expr, path}}
+
+    if ids == %{}, do: query, else: rewrite_ids(query, ids)
+  end
+
+  defp rewrite_ids(query, ids) do
+    filters =
+      Enum.map(query.filters, fn filter ->
+        %{
+          filter
+          | options: Enum.map(filter.options, &%{&1 | where: by_id_ast(&1.where, ids)}),
+            each: filter.each && %{filter.each | where: by_id_ast(filter.each.where, ids)}
+        }
+      end)
+
+    %{query | where: by_id_ast(query.where, ids), filters: filters}
+  end
+
+  defp by_id_ast({:op, op, field, {:value, name, _} = value, line}, ids) when op in [:eq, :ne],
+    do: {:op, op, id_field(field, ids[name]), value, line}
+
+  defp by_id_ast({:op, op, {:value, name, _} = value, field, line}, ids) when op in [:eq, :ne],
+    do: {:op, op, value, id_field(field, ids[name]), line}
+
+  defp by_id_ast(ast, ids) when is_tuple(ast),
+    do: ast |> Tuple.to_list() |> Enum.map(&by_id_ast(&1, ids)) |> List.to_tuple()
+
+  defp by_id_ast(list, ids) when is_list(list), do: Enum.map(list, &by_id_ast(&1, ids))
+  defp by_id_ast(other, _ids), do: other
+
+  defp id_field(field, {expr, path}) do
+    if Query.same?(field, expr), do: {:field, path, [], Query.line(field)}, else: field
+  end
+
+  defp id_field(field, nil), do: field
 
   # The page without the options, sorts, and search fields that read a field the team may
   # not read, and a filter left with no choices.
@@ -164,7 +208,8 @@ defmodule App.Report do
   end
 
   # What each control starts on, whatever the URL picks, so a URL leaves it out: the sort
-  # without one in the URL, and a required filter's value's own default, such as this year.
+  # without one in the URL, and a required filter's value's own default, such as this year,
+  # or its menu's first choice.
   defp starts(query, given, menus, context) do
     sort = Picks.resolve(query, Map.delete(given, "sort"), context.today, menus).sort
 
@@ -176,13 +221,20 @@ defmodule App.Report do
         menus
       )
 
+    with {:ok, values} <- default_values(query, start, context) do
+      # A menu's own start, such as its newest activity.
+      menu_starts = for {name, {:each, value}} <- start.filters, into: %{}, do: {name, value}
+      {:ok, %{sort: sort, values: Map.merge(values, menu_starts)}}
+    end
+  end
+
+  defp default_values(query, start, context) do
     if Enum.any?(start.filters, &(elem(&1, 1) == :each_default)) do
       with {:ok, plan} <-
-             query |> Picks.plain(start) |> Compiler.compile(context, start.given) do
-        {:ok, %{sort: sort, values: Map.new(plan.values, &{&1.name, Value.param(&1)})}}
-      end
+             query |> Picks.plain(start) |> Compiler.compile(context, start.given),
+           do: {:ok, Map.new(plan.values, &{&1.name, Value.param(&1)})}
     else
-      {:ok, %{sort: sort, values: %{}}}
+      {:ok, %{}}
     end
   end
 
@@ -495,18 +547,47 @@ defmodule App.Report do
   end
 
   defp each_menu(query, filter, context) do
-    case query |> Picks.clear() |> Compiler.values(filter.each.expr, context) do
+    case query
+         |> Picks.clear()
+         |> Compiler.values(filter.each.expr, filter.each.where, context) do
       {:ok, {:choices, choices}} ->
         {:ok, choices}
 
+      {:ok, {:records, sql, kind}} ->
+        record_menu(sql, kind, context)
+
       {:ok, {:sql, sql, type}} ->
-        with {:ok, values} <- Runner.values(sql, type, context.repo),
-             do: {:ok, each_choices(values, type, context)}
+        sql_menu(sql, type, context)
 
       error ->
         error
     end
   end
+
+  defp record_menu(sql, kind, context) do
+    with {:ok, records} <- Runner.records(sql, context.repo),
+         do: {:ok, record_choices(records, kind, context)}
+  end
+
+  defp sql_menu(sql, type, context) do
+    with {:ok, values} <- Runner.values(sql, type, context.repo),
+         do: {:ok, each_choices(values, type, context)}
+  end
+
+  # Activities newest first, each with its day, as one title can start many times.
+  defp record_choices(records, :activity, context),
+    do:
+      records
+      |> Enum.sort_by(fn {_id, _text, started} -> started end, {:desc, DateTime})
+      |> Enum.map(fn {id, text, started} ->
+        {"#{text} · #{Service.Format.date_short(started, context.timezone)}", to_string(id)}
+      end)
+
+  defp record_choices(records, _kind, _context),
+    do:
+      records
+      |> Enum.sort_by(fn {_id, text, _started} -> String.downcase(text) end)
+      |> Enum.map(fn {id, text, _started} -> {text, to_string(id)} end)
 
   defp each_choices(values, :year, context),
     do:
@@ -634,7 +715,11 @@ defmodule App.Report do
   defp check_each(_base, %{each: nil}, _context), do: :ok
 
   defp check_each(base, filter, context),
-    do: part(Compiler.values(base, filter.each.expr, context), "filter #{filter.name}")
+    do:
+      part(
+        Compiler.values(base, filter.each.expr, filter.each.where, context),
+        "filter #{filter.name}"
+      )
 
   defp check_wheres(base, wheres, context) do
     Enum.reduce_while(wheres, :ok, fn {where, given, part}, :ok ->
