@@ -555,7 +555,7 @@ defmodule Web.FormChangeLiveTest do
     lv |> form("#form-ai-form", ai: %{ask: "Write this form."}) |> render_submit()
     render_async(lv, @wait)
 
-    assert has_element?(lv, ".ai-failed", "AI's text still had a mistake after one fix.")
+    assert has_element?(lv, ".ai-failed", "AI's text still had a mistake.")
     assert has_element?(lv, ".ai-failed", "People halped")
     refute has_element?(lv, "#flash-error")
     refute has_element?(lv, "textarea[name='ai[ask]']", "Write this form.")

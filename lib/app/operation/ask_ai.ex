@@ -11,10 +11,11 @@ defmodule App.Operation.AskAI do
   asks cost less than the budget. The ask's row is written as it starts and its usage as
   each request returns, so Stop, which kills the ask's task, still counts what it spent.
   Each ask sends the text as it stands, with the job's earlier asks in its prompt. At
-  most 6 requests per ask. A mistake in the answer goes back once, unseen; a second keeps
-  the text as it was.
+  most 6 requests per ask; the last can't call a tool, so it answers. A mistake in the
+  answer goes back once, unseen, while a request is left; a second keeps the text as it
+  was.
 
-  `request/3`, `next_step/1`, and `usage/1` are pure, for tests. `call/4` runs the loop.
+  `request/4`, `next_step/1`, and `usage/1` are pure, for tests. `call/4` runs the loop.
   """
 
   alias App.Accounts.User
@@ -127,8 +128,10 @@ defmodule App.Operation.AskAI do
        do: {{:error, :too_many_steps}, acc}
 
   defp loop(settings, job, history, acc, retried) do
+    last? = acc.requests == @max_requests - 1
+
     case settings
-         |> request(job, Enum.reverse(history))
+         |> request(job, Enum.reverse(history), last?)
          |> Claude.create_message(stream: job.stream) do
       {:ok, response} ->
         acc = count(acc, response, AISettings.model(settings, job.kind))
@@ -147,7 +150,7 @@ defmodule App.Operation.AskAI do
 
   defp answer({:answer, output}, settings, job, history, acc, retried) do
     case job.finish.(output) do
-      {:retry, mistake} when not retried ->
+      {:retry, mistake} when not retried and acc.requests < @max_requests ->
         again = "SAR Duty's check found a mistake: #{mistake} Fix it and answer again."
 
         loop(
@@ -238,8 +241,10 @@ defmodule App.Operation.AskAI do
   so far. Runs
   in the US. Every system part is a cache breakpoint. Thinking is left to the model
   (adaptive on every model listed) at the job's effort. A job with no tools sends none.
+  `last?` is the ask's last request: its tools stay listed, since the messages hold
+  their calls, but it can't call one, so it answers.
   """
-  def request(%AISettings{} = settings, %Job{} = job, messages) do
+  def request(%AISettings{} = settings, %Job{} = job, messages, last? \\ false) do
     %{
       "model" => AISettings.model(settings, job.kind),
       "max_tokens" => @max_tokens,
@@ -255,7 +260,7 @@ defmodule App.Operation.AskAI do
         ),
       "messages" => messages
     }
-    |> put_tools(job.tools)
+    |> put_tools(job.tools, last?)
   end
 
   defp schema(%Job{next_asks: 0, schema: schema}), do: schema
@@ -268,10 +273,12 @@ defmodule App.Operation.AskAI do
     |> Map.update("required", ["next"], &["next" | &1])
   end
 
-  defp put_tools(request, []), do: request
+  defp put_tools(request, [], _last?), do: request
 
-  defp put_tools(request, tools),
-    do: Map.put(request, "tools", Enum.map(tools, &Tool.definition/1))
+  defp put_tools(request, tools, last?) do
+    request = Map.put(request, "tools", Enum.map(tools, &Tool.definition/1))
+    if last?, do: Map.put(request, "tool_choice", %{"type" => "none"}), else: request
+  end
 
   @doc """
   What a response asks for next: `{:tools, uses}`, `{:answer, map}`, or
