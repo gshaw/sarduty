@@ -47,6 +47,7 @@ import {Unsaved} from "./unsaved"
 import {Toast} from "./toast"
 import {listenForBarMenuKeys} from "./bar_menu_keys"
 import {hideImagesOnError} from "./hide_on_error"
+import {listenForPrivateTaps} from "./private"
 import {ThemeSaved, listenForThemeChoices} from "./theme"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
@@ -61,6 +62,7 @@ listenForConfirms()
 listenForScanSounds()
 listenForBarMenuKeys()
 listenForThemeChoices()
+listenForPrivateTaps()
 
 // Photos that fail to load show the initials under them (Web.CSP: no onerror=).
 hideImagesOnError()

@@ -29,7 +29,10 @@ defmodule Web.Components.CopyButton do
     assigns = assign(assigns, head: head, tail: tail)
 
     ~H"""
-    {@head}<span class="copy-tail"><.text_or_link text={@tail} href={@href} /><button
+    <span :if={@head != ""} class="private-text">{@head}</span><span class="copy-tail"><.text_or_link
+      text={@tail}
+      href={@href}
+    /><button
       id={@id}
       type="button"
       class="copy-button"
@@ -45,6 +48,7 @@ defmodule Web.Components.CopyButton do
     """
   end
 
+  # The text is .private-text, so Web.Components.Private blurs it and not the button.
   # A link stays whole, so its text is never split.
   defp split_last_word(%{text: nil}), do: {"", nil}
   defp split_last_word(%{text: text, href: href}) when is_binary(href), do: {"", text}
@@ -56,10 +60,12 @@ defmodule Web.Components.CopyButton do
     end
   end
 
-  defp text_or_link(%{href: href} = assigns) when is_binary(href),
-    do: ~H|<.a href={@href}>{@text}</.a>|
+  defp text_or_link(%{text: nil} = assigns), do: ~H""
 
-  defp text_or_link(assigns), do: ~H"{@text}"
+  defp text_or_link(%{href: href} = assigns) when is_binary(href),
+    do: ~H|<span class="private-text"><.a href={@href}>{@text}</.a></span>|
+
+  defp text_or_link(assigns), do: ~H|<span class="private-text">{@text}</span>|
 
   attr :id, :string, required: true, doc: "the block's id; its button is <id>-copy"
   attr :value, :string, required: true

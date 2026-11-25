@@ -29,6 +29,7 @@ defmodule Web.StyleGuideHTML do
   import Web.Components.PersonHead
   import Web.Components.Email
   import Web.Components.Phone, only: [phone: 1]
+  import Web.Components.Private
   import Web.Components.Place, only: [place_field: 1]
   import Web.Components.Reply, only: [reply: 1]
   import Web.Components.ReportPage, only: [report_page: 1]
@@ -121,6 +122,7 @@ defmodule Web.StyleGuideHTML do
          {:person_head, "Person head", "A member's photo, name, standing, and facts."},
          {:phone, "Phone", "A phone number with a copy button, and Call and Text buttons."},
          {:place, "Place", "An address box that finds places and takes a pin."},
+         {:private, "Private", "Contact details blurred until tapped."},
          {:qr_scanner, "QR scanner", "Scan ID cards with the phone's camera."},
          {:reply, "Reply", "A member's answer to an invitation."},
          {:rich_text, "Rich text", "Text with bold, italics, links, and lists."},

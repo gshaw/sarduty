@@ -1,0 +1,57 @@
+<.shell current={:private} theme={@theme}>
+  <h1>Private</h1>
+  <p class="lead">Contact details blurred until tapped.</p>
+
+  <div class="demo max-w-sm">
+    <dl>
+      <dt>Email</dt>
+      <dd>
+        <.private id="private-demo-email">
+          <.email id="private-demo-copy-email" email="alex.chen@example.com" />
+        </.private>
+      </dd>
+      <dt>Phone</dt>
+      <dd>
+        <.private id="private-demo-phone">
+          <.phone id="private-demo-phone-number" phone="604-555-0112" />
+        </.private>
+      </dd>
+      <dt>Address</dt>
+      <dd>
+        <.private id="private-demo-address">
+          <.copy_button
+            text="112 Example Road"
+            id="private-demo-copy-address"
+            value="112 Example Road"
+            label="Copy address"
+          />
+        </.private>
+      </dd>
+    </dl>
+  </div>
+
+  <h2>When to use</h2>
+  <p>
+    A member's email, phone, address, and emergency contact on a page a team admin opens often, such as the member sidebar. Screens get shared and projected at meetings, and read over shoulders.
+  </p>
+
+  <h2>When not to use</h2>
+  <p>
+    A page someone opens to reach a person, such as a call-out list. A tap before every call slows them down. Never to hide details from someone who shouldn't see them: they're still in the page. Leave those out.
+  </p>
+
+  <h2>How it works</h2>
+  <p>
+    A 5px blur. The first tap shows the details, even on an email link; the next tap opens Mail. The copy button copies while blurred. Each page load blurs them again. A keyboard focus inside shows them while it's there.
+  </p>
+
+  <h2>In the app</h2>
+  <p>
+    <code>&lt;.private id="…"&gt;…&lt;/.private&gt;</code>
+    blurs the <code>.private-text</code>
+    inside it. A copy button's text is one, so it works around <a href={page_path(:email)}>email</a>, <a href={
+      page_path(:phone)
+    }>phone</a>, and <a href={page_path(:copy_button)}>copy button</a>
+    with nothing to add. Wrap other text in <code>&lt;span class="private-text"&gt;</code>.
+  </p>
+</.shell>
