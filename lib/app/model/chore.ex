@@ -165,10 +165,12 @@ defmodule App.Model.Chore do
   def logged_with_query(team_id) do
     from c in Chore,
       join: m in assoc(c, :member),
-      where: c.team_id == ^team_id,
+      where: c.team_id == ^team_id and m.team_id == ^team_id,
       order_by: [asc: m.name, asc: c.id],
       preload: [member: m]
   end
+
+  defp team_members(team_id), do: where(Member, [m], m.team_id == ^team_id)
 
   @doc """
   Whether a team admin can delete their own declined chore (#1102): not while a chore
@@ -195,7 +197,8 @@ defmodule App.Model.Chore do
     |> filter_status(opts[:status])
     |> order_by([c], desc: c.date, desc: c.id)
     |> take(opts[:limit])
-    |> preload([:chore_category, :decided_by_user, :logged_by_member])
+    |> preload([:chore_category, :decided_by_user])
+    |> preload(logged_by_member: ^team_members(member.team_id))
     |> preload(logged_with: ^logged_with_query(member.team_id))
     |> Repo.all()
   end
@@ -285,7 +288,10 @@ defmodule App.Model.Chore do
     Chore
     |> Repo.get_by!(id: id, team_id: team.id)
     |> Repo.preload([:member, :chore_category, :chore_event, :decided_by_user])
-    |> Repo.preload([:logged_by_member, logged_with: logged_with_query(team.id)])
+    |> Repo.preload(
+      logged_by_member: team_members(team.id),
+      logged_with: logged_with_query(team.id)
+    )
   end
 
   @doc "One of the member's own chores."
