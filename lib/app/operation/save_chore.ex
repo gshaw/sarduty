@@ -33,20 +33,31 @@ defmodule App.Operation.SaveChore do
   """
   def log(%Team{} = team, %Member{} = logger, people, params, %Date{} = today, who)
       when who in [:member, :team_admin] do
-    context = %{retiring: Standing.retiring_ids(team), now: DateTime.utc_now()}
-
     changeset =
       Chore.build_changeset(%Chore{}, params, category_ids(team.id, nil), today, who)
 
-    with {:ok, people} <- check_people(logger, people, who, context),
-         {:ok, _valid} <- Ecto.Changeset.apply_action(changeset, :insert),
-         do: insert_all(changeset, people, team, logger)
+    transaction(fn ->
+      context = %{retiring: Standing.retiring_ids(team), now: DateTime.utc_now()}
+
+      with {:ok, current} <- current_people(team, people),
+           {:ok, people} <- check_people(logger, current, who, context),
+           {:ok, _valid} <- Ecto.Changeset.apply_action(changeset, :insert),
+           do: {:ok, insert_all(changeset, people, team, logger)}
+    end)
+  end
+
+  # The people as they are now: the form's list is from when it opened, and someone on
+  # it may have left, retired, or been removed since.
+  defp current_people(team, people) do
+    ids = people |> Enum.map(& &1.id) |> Enum.uniq()
+    found = Member |> where([m], m.team_id == ^team.id and m.id in ^ids) |> Repo.all()
+    if length(found) == length(ids), do: {:ok, found}, else: {:error, :not_listed}
   end
 
   defp insert_all(changeset, people, team, logger) do
     together = if length(people) > 1, do: Ecto.UUID.generate()
     fields = [team_id: team.id, logged_by_member_id: logger.id, logged_together_id: together]
-    Repo.transaction(fn -> Enum.map(people, &insert_for(changeset, &1, fields)) end)
+    Enum.map(people, &insert_for(changeset, &1, fields))
   end
 
   defp insert_for(changeset, person, fields) do

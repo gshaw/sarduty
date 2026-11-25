@@ -164,6 +164,23 @@ defmodule Web.ChoreFormLiveTest do
     refute_email_sent()
   end
 
+  test "a save checks the list as it is now, not as the form opened", ctx do
+    %{admin: conn, team: team, cameron: cameron, riley: riley} = ctx
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/new")
+    pick(lv, cameron)
+    pick(lv, riley)
+
+    riley |> Ecto.Changeset.change(d4h_status: "RETIRED") |> Repo.update!()
+    html = lv |> form("#chore-form", chore: chore_params(ctx)) |> render_submit()
+    assert html =~ "Remove anyone who is not a current member."
+    assert Repo.all(Chore) == []
+
+    riley |> Ecto.Changeset.change(d4h_status: nil) |> Repo.update!()
+    Repo.delete!(cameron)
+    lv |> form("#chore-form", chore: chore_params(ctx)) |> render_submit()
+    assert Repo.all(Chore) == []
+  end
+
   test "the picker offers neither another team's member, a retiring one, nor one not a person",
        ctx do
     %{team: team} = ctx
