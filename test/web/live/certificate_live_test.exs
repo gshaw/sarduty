@@ -62,7 +62,7 @@ defmodule Web.CertificateLiveTest do
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{ctx.team}/certificates")
     assert has_element?(lv, "#side-nav-certificates[aria-current=page]")
     refute has_element?(lv, "#side-nav-certificates .badge")
-    refute has_element?(lv, "#certificate-yours-#{ctx.certificate.id}")
+    refute has_element?(lv, "#certificate-#{ctx.certificate.id}-member-you")
     assert has_element?(lv, "#certificates-view-waiting", "1")
     assert has_element?(lv, "#certificate-#{ctx.certificate.id}", "Sam Rivera")
     assert has_element?(lv, "#certificate-#{ctx.certificate.id}", "Oct 18, 2026 to Oct 18, 2029")
@@ -336,14 +336,14 @@ defmodule Web.CertificateLiveTest do
   end
 
   # A team admin who is also a member sends their own from the page they manage (#645).
-  test "a team admin's own certificate says Yours and takes a box to accept (#697)", ctx do
+  test "a team admin's own certificate says You and takes a box to accept (#697)", ctx do
     %{user: user, team: team, qualification: qualification} = ctx
     me = Repo.get_by!(App.Model.Member, team_id: team.id, email: user.email)
     mine = certificate_fixture(me, qualification)
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{team}/certificates")
-    assert has_element?(lv, "#certificate-yours-#{mine.id}", "Yours")
-    refute has_element?(lv, "#certificate-yours-#{ctx.certificate.id}")
+    assert has_element?(lv, "#certificate-#{mine.id}-member-you.badge-primary", "You")
+    refute has_element?(lv, "#certificate-#{ctx.certificate.id}-member-you")
 
     {:ok, lv, _html} = live(ctx.conn, ~p"/teams/#{team}/certificates/#{ctx.certificate.id}")
     refute has_element?(lv, "#accept-own")

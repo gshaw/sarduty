@@ -6,6 +6,7 @@ defmodule Web.ChoreLiveTest do
 
   alias App.Model.Chore
   alias App.Model.ChoreEvent
+  alias App.Operation.SaveChore
   alias App.Repo
 
   setup %{conn: conn} do
@@ -24,7 +25,15 @@ defmodule Web.ChoreLiveTest do
     category = chore_category_fixture(team)
     member = member_fixture(team, %{name: "Sam Rivera"})
     me = Repo.get_by!(App.Model.Member, team_id: team.id, email: user.email)
-    %{conn: log_in_user(conn, user), team: team, member: member, me: me, category: category}
+
+    %{
+      conn: log_in_user(conn, user),
+      user: user,
+      team: team,
+      member: member,
+      me: me,
+      category: category
+    }
   end
 
   # D4H answering every write: event 900, and attendance row 701 for `member`. `fail`
@@ -261,14 +270,15 @@ defmodule Web.ChoreLiveTest do
   end
 
   # Another team admin should accept a team admin's chores (#697).
-  test "a team admin's own chores say Yours, start cleared, and take a box to accept", ctx do
+  test "a team admin's own chores say You, start cleared, and take a box to accept", ctx do
     %{conn: conn, team: team, member: member, me: me, category: category} = ctx
     theirs = chore_fixture(member, category, %{date: ~D[2026-10-06]})
     mine = chore_fixture(me, category, %{date: ~D[2026-10-06], description: "Grant report"})
 
     {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
-    assert has_element?(lv, "#chore-yours-#{mine.id}", "Yours")
-    refute has_element?(lv, "#chore-yours-#{theirs.id}")
+    assert has_element?(lv, "#chore-#{mine.id}-member-you.badge-primary", "You")
+    refute has_element?(lv, "#chore-#{theirs.id}-member-you")
+    assert has_element?(lv, "#chores-view-yours", "Yours")
     assert has_element?(lv, "#waiting-chores-select-#{theirs.id}[checked]")
     refute has_element?(lv, "#waiting-chores-select-#{mine.id}[checked]")
     assert has_element?(lv, ~s{#waiting-chores-select-#{mine.id}[data-select-all="skip"]})
@@ -369,5 +379,305 @@ defmodule Web.ChoreLiveTest do
     refute has_element?(lv, "#chores-view-yours")
     refute has_element?(lv, "#chore-log")
     assert_raise Web.Status.NotFound, fn -> live(conn, ~p"/teams/#{team}/chores/new") end
+  end
+
+  describe "chores logged together" do
+    setup %{me: me, team: team} do
+      me = me |> Ecto.Changeset.change(name: "Alex Chen") |> Repo.update!()
+
+      others =
+        for name <- ~w(Blake Cameron Dana Eli Riley Zoe),
+            do: member_fixture(team, %{name: "#{name} #{name}son"})
+
+      %{me: me, others: others}
+    end
+
+    defp log_together(logger, members, category, attrs \\ %{}) do
+      together = %{logged_together_id: Ecto.UUID.generate(), logged_by_member_id: logger.id}
+
+      members
+      |> Enum.map(&chore_fixture(&1, category, Map.merge(together, attrs)))
+      |> Enum.sort_by(&Repo.get!(App.Model.Member, &1.member_id).name)
+    end
+
+    # D4H answering every write, each attendance row its member's.
+    defp stub_d4h_echo do
+      Req.Test.stub(App.Adapter.D4H, fn conn ->
+        cond do
+          conn.request_path =~ "/attendance" and conn.method == "GET" ->
+            Req.Test.json(conn, %{"results" => [], "totalSize" => 0})
+
+          conn.request_path =~ "/attendance" ->
+            {:ok, body, conn} = Plug.Conn.read_body(conn)
+            member_id = body |> Jason.decode!() |> Map.get("memberId")
+
+            Req.Test.json(conn, %{
+              "id" => System.unique_integer([:positive]),
+              "activity" => %{"resourceType" => "Event", "id" => 900},
+              "member" => %{"resourceType" => "Member", "id" => member_id},
+              "status" => "ATTENDING",
+              "startsAt" => "2026-10-06T07:00:00Z",
+              "endsAt" => "2026-10-06T08:30:00Z"
+            })
+
+          true ->
+            Req.Test.json(conn, %{
+              "id" => 900,
+              "resourceType" => "Event",
+              "owner" => %{"resourceType" => "Team", "id" => 1},
+              "published" => false,
+              "startsAt" => "2026-10-06T07:00:00Z",
+              "endsAt" => "2026-10-06T08:30:00Z",
+              "tags" => []
+            })
+        end
+      end)
+    end
+
+    test "a gear day for 8 is one row, the team admin's own, accepted together", ctx do
+      %{conn: conn, team: team, me: me, member: sam, others: others, category: category} = ctx
+
+      gear =
+        log_together(me, [me, sam | others], category, %{minutes: 180, description: "Gear day"})
+
+      [first | _rest] = gear
+      assert first.member_id == me.id
+      single = chore_fixture(sam, category, %{description: "Hall floors"})
+      left = chore_fixture(sam, category, %{description: "Radio check"})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+      assert has_element?(lv, "#chores-view-waiting", "10")
+      for chore <- tl(gear), do: refute(has_element?(lv, "#waiting-chores #chore-#{chore.id}"))
+
+      row = lv |> element("#waiting-chores #chore-#{first.id}") |> render()
+      names = ["Alex Chen", "Blake Blakeson", "Cameron Cameronson", "Sam Rivera", "Zoe Zoeson"]
+      positions = Enum.map(names, &(row |> :binary.match(&1) |> elem(0)))
+      assert positions == Enum.sort(positions)
+      assert has_element?(lv, "#chore-#{first.id}-member-you", "You")
+      refute has_element?(lv, "#chore-#{List.last(gear).id}-member-you")
+      assert has_element?(lv, "#chore-#{first.id}-each", "3 hours each")
+      assert row =~ "24 hours"
+
+      refute has_element?(lv, "#waiting-chores-select-#{first.id}[checked]")
+      assert has_element?(lv, ~s{#waiting-chores-select-#{first.id}[data-select-all="skip"]})
+      assert has_element?(lv, "#accept", "Accept 2 chores")
+
+      assert render(lv) =~
+               "Uncheck a chore to leave it waiting. Open a chore to change or decline it."
+
+      lv |> form("#accept-form", %{chore_ids: ["#{single.id}"]}) |> render_change()
+      assert has_element?(lv, "#accept", "Accept 1 chore")
+
+      ids = Enum.map([first, single, left], &"#{&1.id}")
+      lv |> form("#accept-form", %{chore_ids: ids}) |> render_change()
+      assert has_element?(lv, "#accept[disabled]", "Accept 10 chores")
+
+      assert has_element?(
+               lv,
+               "#accept-form",
+               "I know another team admin should accept the chores I did."
+             )
+
+      stub_d4h_echo()
+      html = lv |> form("#accept-form", %{chore_ids: ids, own: "true"}) |> render_submit()
+      assert html =~ "Accepted 10 chores."
+
+      for chore <- Repo.all(Chore) do
+        assert %{status: :accepted, chore_event_id: event_id} = chore
+        assert event_id
+      end
+    end
+
+    test "checking a single chore's row accepts it alone", ctx do
+      %{conn: conn, team: team, member: sam, category: category} = ctx
+      one = chore_fixture(sam, category)
+      other = chore_fixture(sam, category, %{description: "Radio check"})
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+      stub_d4h(sam)
+      lv |> form("#accept-form", %{chore_ids: ["#{one.id}"]}) |> render_submit()
+      assert Repo.get!(Chore, one.id).status == :accepted
+      assert Repo.get!(Chore, other.id).status == :waiting
+    end
+
+    test "accept/5 takes a row by one of its ids, and needs own: true for the team admin's own",
+         ctx do
+      %{team: team, me: me, user: user, member: sam, others: others, category: category} = ctx
+      now = DateTime.utc_now()
+      mine = log_together(me, [me | others], category)
+      theirs = log_together(me, [sam | Enum.take(others, 2)], category)
+
+      assert SaveChore.accept(team, [List.last(mine).id], user, now, member: me) == {:error, :own}
+      assert Enum.all?(mine, &(Repo.get!(Chore, &1.id).status == :waiting))
+
+      [other_admin] = Enum.take(others, -1)
+
+      assert {:ok, 3} =
+               SaveChore.accept(team, [List.last(theirs).id], user, now, member: other_admin)
+
+      assert Enum.all?(theirs, &(Repo.get!(Chore, &1.id).status == :accepted))
+
+      assert {:ok, 7} = SaveChore.accept(team, [hd(mine).id], user, now, member: me, own: true)
+    end
+
+    test "a row whose first chore was declined since the page loaded still accepts the rest",
+         ctx do
+      %{conn: conn, team: team, me: me, member: sam, others: others, category: category} = ctx
+      [first | rest] = log_together(me, [sam | others], category)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+      assert has_element?(lv, "#waiting-chores-select-#{first.id}[checked]")
+      first |> Ecto.Changeset.change(status: :declined) |> Repo.update!()
+
+      stub_d4h_echo()
+      html = lv |> form("#accept-form", %{chore_ids: ["#{first.id}"]}) |> render_submit()
+      assert html =~ "Accepted 6 chores."
+      assert Enum.all?(rest, &(Repo.get!(Chore, &1.id).status == :accepted))
+      assert Repo.get!(Chore, first.id).status == :declined
+    end
+
+    test "a row whose first chore was deleted since the page loaded still accepts the rest",
+         ctx do
+      %{conn: conn, team: team, me: me, member: sam, others: others, category: category} = ctx
+      [first | rest] = log_together(me, [sam | others], category)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+      Repo.delete!(first)
+
+      stub_d4h_echo()
+      html = lv |> form("#accept-form", %{chore_ids: ["#{first.id}"]}) |> render_submit()
+      assert html =~ "Accepted 6 chores."
+      assert Enum.all?(rest, &(Repo.get!(Chore, &1.id).status == :accepted))
+    end
+
+    test "chores a team admin logged only for others aren't theirs: checked, and no box", ctx do
+      %{conn: conn, team: team, me: me, member: sam, others: [cameron | _], category: category} =
+        ctx
+
+      [one, _two] = log_together(me, [sam, cameron], category)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+      assert has_element?(lv, "#waiting-chores-select-#{one.id}[checked]")
+      refute has_element?(lv, "#waiting-chores-select-#{one.id}[data-select-all]")
+      assert has_element?(lv, "#accept", "Accept 2 chores")
+
+      stub_d4h_echo()
+      lv |> form("#accept-form", %{chore_ids: ["#{one.id}"]}) |> render_submit()
+      assert Chore |> Repo.all() |> Enum.all?(&(&1.status == :accepted))
+    end
+
+    test "a changed or declined chore stays in its row, which keeps the box", ctx do
+      %{conn: conn, team: team, me: me, member: sam, others: others, category: category} = ctx
+      [mine | _rest] = gear = log_together(me, [me, sam | others], category, %{minutes: 180})
+      riley = Enum.find(gear, &(&1.member_id == Enum.at(others, 4).id))
+      stub_d4h(sam)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{riley.id}/edit")
+      lv |> form("#chore-form", chore: %{time: "2h"}) |> render_submit()
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+      refute has_element?(lv, "#waiting-chores #chore-#{riley.id}")
+      refute has_element?(lv, "#chore-#{mine.id}-each")
+      assert has_element?(lv, "#waiting-chores #chore-#{mine.id}", "23 hours")
+      assert has_element?(lv, "#waiting-chores #chore-#{mine.id}", "Riley Rileyson: 2 hours")
+
+      sam_chore = Enum.find(gear, &(&1.member_id == sam.id))
+      {:ok, page, _html} = live(conn, ~p"/teams/#{team}/chores/#{sam_chore.id}")
+
+      page
+      |> form("#decline-form", decline: %{reason: "Not that day"})
+      |> render_submit()
+
+      {:ok, page, _html} = live(conn, ~p"/teams/#{team}/chores/#{mine.id}")
+      page |> form("#decline-form", decline: %{reason: "Mine"}) |> render_submit()
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores")
+      [first | _rest] = gear |> Enum.reject(&(&1.id in [mine.id, sam_chore.id]))
+      row = lv |> element("#waiting-chores #chore-#{first.id}") |> render()
+      refute row =~ "Alex Chen"
+      refute row =~ "Sam Rivera"
+      refute row =~ ">You<"
+      refute has_element?(lv, "#waiting-chores-select-#{first.id}[checked]")
+      assert has_element?(lv, "#accept", "Accept 0 chores")
+
+      lv |> element("#chores-view-yours") |> render_click()
+      assert has_element?(lv, "#chore-#{mine.id}", "Declined")
+      refute has_element?(lv, "#chore-delete-#{mine.id}")
+
+      assert render_click(lv, "delete", %{"id" => "#{mine.id}"}) =~
+               "while a chore logged with it waits"
+
+      assert Repo.get(Chore, mine.id)
+
+      stub_d4h_echo()
+      SaveChore.accept(team, [first.id], ctx.user, DateTime.utc_now(), member: me, own: true)
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores?view=yours")
+      lv |> element("#chore-delete-#{mine.id}") |> render_click()
+      refute Repo.get(Chore, mine.id)
+    end
+
+    test "a chore's page says who logged it and lists the others on it", ctx do
+      %{conn: conn, team: team, me: me, member: sam, others: [cameron | _], category: category} =
+        ctx
+
+      [alex, cam, _sam] = log_together(me, [me, sam, cameron], category)
+      cam |> Ecto.Changeset.change(status: :declined) |> Repo.update!()
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{cam.id}")
+      assert has_element?(lv, "#chore-logged", ", by Alex Chen")
+      refute has_element?(lv, "#chore-other-#{cam.id}")
+
+      assert has_element?(
+               lv,
+               ~s{#chore-other-#{alex.id} a[href="/teams/#{team.subdomain}/chores/#{alex.id}"]},
+               "Alex Chen"
+             )
+
+      assert has_element?(lv, "#chore-other-#{alex.id}", "Waiting")
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{alex.id}")
+      refute has_element?(lv, "#chore-logged", "by")
+      assert has_element?(lv, "#chore-other-#{cam.id}", "Declined")
+
+      alone = chore_fixture(sam, category, %{logged_by_member_id: sam.id})
+      old = chore_fixture(sam, category)
+
+      for chore <- [alone, old] do
+        {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{chore.id}")
+        refute has_element?(lv, "#chore-logged", "by")
+        refute has_element?(lv, "#chore-others")
+      end
+    end
+
+    test "a member's chore logged with the team admin's takes the box, and accepts alone", ctx do
+      %{conn: conn, team: team, me: me, others: [cameron | _], category: category} = ctx
+      [alex, cam] = log_together(cameron, [me, cameron], category)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{cam.id}")
+      assert has_element?(lv, "#accept-own")
+      assert has_element?(lv, "#chore-accept[disabled]")
+      assert render_submit(lv, "accept", %{}) =~ "Select Accept my own chores to accept yours."
+      assert Repo.get!(Chore, cam.id).status == :waiting
+
+      stub_d4h_echo()
+
+      {:ok, _lv, _html} =
+        lv |> form("#accept-form", %{own: "true"}) |> render_submit() |> follow_redirect(conn)
+
+      assert Repo.get!(Chore, cam.id).status == :accepted
+      assert Repo.get!(Chore, alex.id).status == :waiting
+    end
+
+    test "the team home's count leaves out chores logged with the team admin's", ctx do
+      %{conn: conn, team: team, me: me, member: sam, others: [cameron | _], category: category} =
+        ctx
+
+      manager_fixture(team)
+      log_together(me, [me, cameron], category)
+      chore_fixture(sam, category)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}")
+      assert has_element?(lv, "#attention-chores", "1 chore to accept")
+    end
   end
 end

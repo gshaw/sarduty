@@ -644,10 +644,10 @@ on these pages already, on the member's page and its tabs.
 
 ### Members for members
 
-Members open the Members list, Milestones, and three tabs of a member's page (#440). They
-see what they could work out from activities they open, plus role, ID, groups, and
-qualifications. They don't see what comes from team admins' own tools: contact details,
-away periods, check-ins, history, and ID cards.
+Members open the Members list, Milestones, and four tabs of a member's page
+(#440 and #1102). They see what they could work out from activities they open, plus
+role, ID, groups, and qualifications. They don't see what comes from team admins' own
+tools: contact details, away periods, check-ins, history, and ID cards.
 
 - **The list**: the same columns, search, and Period and Group filters. A
   member's Standing reads Away as Active (decision 4 of #784), so the switch is Not
@@ -656,8 +656,8 @@ away periods, check-ins, history, and ID cards.
   filter, and no Add member or Save as report. The Member
   column's badge never says Away.
 - **A member's page** is the team admin's minus controls: Attendance, Qualifications
-  (with no Certificate, since D4H marks the documents RESTRICTED), and Groups as plain
-  text. The sidebar is the ID and Milestones. The header has the photo and facts, a
+  (with no Certificate, since D4H marks the documents RESTRICTED), Groups as plain
+  text, and Chores, on a team with chores on, with only the accepted ones. The sidebar is the ID and Milestones. The header has the photo and facts, a
   Retired or Not a person badge, never Away, and no View as member. Equipment, Standing,
   ID card, and History stay team admins'.
 - **Their own page** opens Your membership: a member opening their own member page is

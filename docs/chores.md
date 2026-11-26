@@ -24,9 +24,27 @@ secondary), and other D4H tags, picked as on an activity's Change tags page.
 
 ## Logging and deciding
 
-A member logs a chore at `/teams/:subdomain/chores/new`: a chore category, what they
-did, a date, and a time ([Chore](../lib/app/model/chore.ex),
+A member logs a chore at `/teams/:subdomain/chores/new`: who did it, a chore category,
+what they did, a date, and a time ([Chore](../lib/app/model/chore.ex),
 [SaveChore](../lib/app/operation/save_chore.ex)).
+
+- **Who did it lists everyone, and each gets their own chore** (#1102), the same in
+  every other way, waiting. One claim for a gear day of 8 used to be 8 forms. The picker
+  offers Add members' list, current members the team counts, with or without a login;
+  `SaveChore.check_people/4` checks the same. The reader starts on it, even a member who
+  is not a person. A member stays on it; a team admin can take themselves off. Nobody
+  listed is told, and nothing goes to D4H until a team admin accepts.
+- **Most chores are the reader's own**, so Who did it starts as one line, the reader,
+  and Add others opens the picker. Once open it stays open, through Log and add another,
+  which keeps the list. A member's Chores tab opens it with that member.
+- **Chores logged together share a `logged_together_id`**, a UUID, and each records its
+  logger, `logged_by_member_id`. Not "group id", which reads as a D4H group here. Chores
+  logged before #1102 have neither, so nobody is recorded as their logger. There is no
+  table of who was on a claim: what's left of it is the chores that still exist.
+- **A team admin's Log a chore opens from a member's Chores tab** with `?member=`,
+  starting with that member alone, and goes back there. A member's `?member=` is
+  ignored.
+- **The label follows who's listed**: What you did, or What they did once anyone else is.
 
 - **The time is typed as people say it**: 45m, 2h, 2.5h, 1h 30m, or 1:30, read by
   `Chore.parse_time/1` and stored as minutes. A bare number is hours up to 24, since most
@@ -51,15 +69,32 @@ did, a date, and a time ([Chore](../lib/app/model/chore.ex),
 - **A chore counts on the day it was done**, not the day it was logged, so its month
   and year are the ones it was done in.
 - **Waiting, Accepted, Declined.** A member changes or deletes a chore only while it
-  waits, and deletes a declined one once they have read why. Accepted has no tag.
+  waits, and deletes a declined one once they have read why, a chore a team admin logged
+  for them too. Change keeps the 60 days, so one a team admin dated earlier can be
+  deleted but not changed. Accepted has no tag.
 - **A team admin accepts waiting chores in one step** at `/teams/:subdomain/chores`, with
   the Review changes pattern: every row starts selected, and a cleared row stays
   waiting. A chore's own page accepts it, changes any field, or declines it with a
   reason the member sees, in any status, and links its D4H activity.
 - **Another team admin should accept a team admin's own chores** (#697), but it is not a
-  rule: a team with one team admin has no one else. Their own say Yours and start
-  cleared, and select all passes over them. Accepting one, on Chores or its page, takes
-  a box, Accept my own chores, and SaveChore refuses it without one. Declining needs none.
+  rule: a team with one team admin has no one else. Their own start cleared, and select
+  all passes over them. Accepting one, on Chores or its page, takes a box, Accept my own
+  chores, and SaveChore refuses it without one, checking the chore as it is now in its
+  transaction. Declining needs none.
+- **A chore logged together with one of yours is yours too** (#1102), in any status:
+  a team admin on a gear day can't accept the others without the box, even once their
+  own is declined. Logging chores only for others doesn't make them yours
+  (`Chore.own?/2`). So a team admin can't delete their own declined chore while one
+  logged with it waits: that would end the box for the rest. A team admin's own waiting
+  chore has no Delete; declining is the undo.
+- **Waiting shows a claim as one row** (#1102): everyone A to Z, the hours each and the
+  total, and one box that sends its first chore's id. `SaveChore.accept/5` takes every
+  waiting chore logged with any id it's sent, so a row whose first chore was declined
+  since the page loaded still accepts the rest. A chore changed on its page stays in its
+  row, with a hint for what differs ([WaitingChores](../lib/app/view_data/waiting_chores.ex)).
+  The counts stay chores. Accepted and Declined stay a row per chore.
+- **You marks the reader** on Waiting, Accepted, and Declined, as on Members and
+  Certificates. It used to say Yours, the name of the switch's view too.
 - **AI agents proposed chores** through the MCP from #595 until it became read-only
   (#627, 2026-10-26). The chores stay; their proposals were deleted (2026-10-28). MCP
   went in #1087.
@@ -140,6 +175,13 @@ send, so a team admin who accepted chores every day got an activity a day (2026-
   activity's and each member's history.
 
 ## Where else chores show
+
+- **A chore's page** says who logged it, when that isn't its member, and lists Others on
+  this chore, each linked, with its status. Yours and the Chores tab say "With 1 other"
+  and "Logged by Alex Chen" under the category.
+- **A member's Chores tab** (#1102), `/teams/:subdomain/members/:id/chores`, on a team
+  with chores on: the year's accepted time and what waits, and every chore for a team
+  admin, with Log a chore. A member sees only the accepted ones, as they count.
 
 - **Team home**: for team admins, "N chores to accept" under Needs attention, and a
   warning when a chore activity is out of date in D4H. The count leaves out the reader's

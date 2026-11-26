@@ -1,8 +1,11 @@
 defmodule App.Model.ChoreTest do
-  use ExUnit.Case, async: true
+  use App.DataCase, async: true
+
+  import App.DataFixtures
 
   alias App.Accounts.User
   alias App.Model.Chore
+  alias App.Model.Member
 
   @today ~D[2026-11-05]
   @params %{
@@ -82,5 +85,74 @@ defmodule App.Model.ChoreTest do
     accepted = Chore.decide_changeset(%Chore{decline_reason: "No"}, :accepted, user, now)
     assert accepted.valid?
     assert Ecto.Changeset.get_field(accepted, :decline_reason) == nil
+  end
+
+  describe "own?/2" do
+    setup do
+      alex = %Member{id: 1}
+      mine = %Chore{id: 10, member_id: 1, status: :declined, logged_together_id: "g"}
+      cameron = %Chore{id: 11, member_id: 2, logged_together_id: "g", logged_by_member_id: 1}
+      group = [mine, cameron]
+
+      %{
+        alex: alex,
+        mine: %{mine | logged_with: group},
+        cameron: %{cameron | logged_with: group},
+        logged_for: %Chore{id: 12, member_id: 3, logged_by_member_id: 1}
+      }
+    end
+
+    test "is the member's chore and one logged together with it", ctx do
+      assert Chore.own?(ctx.mine, ctx.alex)
+      assert Chore.own?(ctx.cameron, ctx.alex)
+      refute Chore.own?(ctx.cameron, %Member{id: 3})
+    end
+
+    test "isn't a chore the member only logged", ctx do
+      refute Chore.own?(ctx.logged_for, ctx.alex)
+
+      riley = %Chore{id: 13, member_id: 3, logged_together_id: "h", logged_by_member_id: 1}
+      blake = %Chore{id: 14, member_id: 4, logged_together_id: "h", logged_by_member_id: 1}
+      refute Chore.own?(%{riley | logged_with: [riley, blake]}, ctx.alex)
+    end
+
+    test "a user who isn't one of the team's members has none", ctx do
+      refute Chore.own?(ctx.cameron, nil)
+    end
+  end
+
+  describe "count_to_accept/3" do
+    setup do
+      team = member_logins_team_fixture()
+      alex = manager_fixture(team, %{name: "Alex Chen"})
+      jordan = manager_fixture(team, %{name: "Jordan Lee"})
+      %{team: team, alex: alex, jordan: jordan, category: chore_category_fixture(team)}
+    end
+
+    test "leaves out the team admin's own and those logged with them", ctx do
+      %{team: team, alex: alex, category: category} = ctx
+      cameron = member_fixture(team, %{name: "Cameron Diaz"})
+      riley = member_fixture(team, %{name: "Riley Okafor"})
+      together = %{logged_together_id: Ecto.UUID.generate(), logged_by_member_id: alex.id}
+
+      chore_fixture(alex, category, together)
+      chore_fixture(cameron, category, together)
+      chore_fixture(riley, category, %{logged_by_member_id: alex.id})
+      chore_fixture(riley, category)
+
+      assert Chore.count_to_accept(team, alex, DateTime.utc_now()) == 2
+      assert Chore.count_to_accept(team, ctx.jordan, DateTime.utc_now()) == 4
+    end
+
+    test "counts them when the declined chore of theirs is still there", ctx do
+      %{team: team, alex: alex, category: category} = ctx
+      cameron = member_fixture(team)
+      together = %{logged_together_id: Ecto.UUID.generate(), logged_by_member_id: alex.id}
+
+      chore_fixture(alex, category, Map.put(together, :status, :declined))
+      chore_fixture(cameron, category, together)
+
+      assert Chore.count_to_accept(team, alex, DateTime.utc_now()) == 0
+    end
   end
 end

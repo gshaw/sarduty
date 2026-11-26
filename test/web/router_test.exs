@@ -93,6 +93,7 @@ defmodule Web.RouterTest do
     "/teams/:subdomain/me/tax-credit-letters/:id/pdf",
     "/teams/:subdomain/members",
     "/teams/:subdomain/members/:id",
+    "/teams/:subdomain/members/:id/chores",
     "/teams/:subdomain/members/:id/groups",
     "/teams/:subdomain/members/:id/image",
     "/teams/:subdomain/members/:id/image/original",

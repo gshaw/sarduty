@@ -10,7 +10,7 @@ defmodule Web.CertificateCollectionLive do
 
   # The certificates members sent (#493), /teams/:subdomain/certificates, by status. Each
   # opens its own page, where a team admin compares the file with its dates and accepts
-  # or declines it. A team admin's own say Yours: another team admin should accept them
+  # or declines it. A team admin's own say You: another team admin should accept them
   # (#697).
   @views [waiting: "Waiting", accepted: "Accepted", declined: "Declined"]
 
@@ -93,20 +93,13 @@ defmodule Web.CertificateCollectionLive do
       class="table-stack"
     >
       <:col :let={certificate} label="Member" class="stack-title">
-        <span class="with-badge">
-          <.member_cell
-            member={certificate.member}
-            team={@current_team}
-            standing={@standings[certificate.member.id]}
-          />
-          <.badge
-            :if={Certificate.own?(certificate, @current_member)}
-            id={"certificate-yours-#{certificate.id}"}
-            kind={:primary}
-          >
-            Yours
-          </.badge>
-        </span>
+        <.member_cell
+          member={certificate.member}
+          team={@current_team}
+          standing={@standings[certificate.member.id]}
+          id={"certificate-#{certificate.id}-member"}
+          you={Certificate.own?(certificate, @current_member)}
+        />
       </:col>
       <:col :let={certificate} label="Qualification" class="stack-full">
         <.a navigate={~p"/teams/#{@current_team}/certificates/#{certificate.id}"}>{CertificateText.title(

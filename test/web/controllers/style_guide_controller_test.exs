@@ -14,6 +14,18 @@ defmodule Web.StyleGuideControllerTest do
     assert html_response(get(conn, ~p"/styles/forms"), 200) =~ ~s(<a href="/" class="brand">)
   end
 
+  test "combobox takes members, and You is not a status tag", %{conn: conn} do
+    html = html_response(get(conn, ~p"/styles/combobox"), 200)
+    [when_to_use, when_not] = String.split(html, "When not to use")
+    assert when_to_use =~ "or members. Add members and Who did it"
+    refute when_not |> String.split("How it works") |> hd() =~ "members"
+
+    html = html_response(get(conn, ~p"/styles/tag"), 200)
+    assert html =~ "You marks the person reading"
+    assert html =~ "Team admin, You"
+    refute html =~ "This is you"
+  end
+
   defp count(html, selector),
     do: html |> LazyHTML.from_document() |> LazyHTML.query(selector) |> Enum.count()
 

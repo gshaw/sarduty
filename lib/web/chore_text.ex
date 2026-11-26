@@ -8,6 +8,7 @@ defmodule Web.ChoreText do
 
   import Web.Components.Core, only: [badge: 1, input: 1]
 
+  alias App.Model.Chore
   alias Service.Format
 
   attr :chore, :map, required: true
@@ -36,9 +37,40 @@ defmodule Web.ChoreText do
       value={@checked}
       label="Accept my own chores"
     >
-      I know another team admin should accept the chores I log. I'm making an exception.
+      I know another team admin should accept the chores I did. I'm making an exception.
     </.input>
     """
+  end
+
+  @doc """
+  The line under a chore's words on Yours and a member's Chores tab (#1102): its
+  category, how many others it was logged with, and who logged it when that isn't its
+  member. "Hall and gear · With 1 other · Logged by Alex Chen". The chore needs its
+  category, `logged_with`, and `logged_by_member`.
+  """
+  def category_line(chore) do
+    others = chore |> Chore.others() |> length()
+    logger = chore.logged_by_member
+
+    [
+      chore.chore_category.title,
+      others > 0 && Format.count(others, one: "With 1 other", many: "With %d others"),
+      logger && logger.id != chore.member_id && "Logged by #{logger.name}"
+    ]
+    |> Enum.filter(& &1)
+    |> Enum.join(" · ")
+  end
+
+  @doc """
+  A member's chores in a line, for their Chores tab: "3 hours accepted in 2026, 6 hours
+  waiting". The waiting part only when there is some, and only for a team admin.
+  """
+  def tab_summary(stats, year, team_admin?) do
+    accepted = "#{Format.duration(stats.accepted_minutes)} accepted in #{year}"
+
+    if team_admin? and stats.waiting_minutes > 0,
+      do: "#{accepted}, #{Format.duration(stats.waiting_minutes)} waiting",
+      else: accepted
   end
 
   @doc "The flash when a team admin's own chores go to accept without the box checked."

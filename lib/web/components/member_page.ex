@@ -1,7 +1,8 @@
 defmodule Web.Components.MemberPage do
   @moduledoc """
   The frame of every tab of a member's page: the header, the tabs, and the sidebar
-  around the tab's own content. Members open three tabs (#440), and the frame takes
+  around the tab's own content. Members open four tabs (#440, #1102): Attendance,
+  Qualifications, Groups, and Chores on a team with chores on. The frame takes
   `team_admin?` once and decides what they see: no View as member, no Equipment, Standing,
   ID card, Fields, or History tab, and no contact details or Actions.
   """

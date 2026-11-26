@@ -20,8 +20,6 @@ defmodule Web.TableColumnsTest do
       "Start, Finish, and Hours: times come with attendance, from the start",
     {"lib/web/components/travel_tab.ex", "!@locked?"} =>
       "the checkboxes set travel, and a published activity's travel cannot change",
-    {"lib/web/live/chore_collection_live.ex", "@selected"} =>
-      "the checkboxes accept chores, and only Waiting has them",
     {"lib/web/live/chore_collection_live.ex", "@category"} =>
       "Accepted puts each table under its category's heading",
     {"lib/web/live/endorsement_collection_live.ex", "@current_team.id_cards_enabled"} =>

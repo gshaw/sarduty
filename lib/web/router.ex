@@ -382,6 +382,7 @@ defmodule Web.Router do
       live "/teams/:subdomain/members/:id/edit", MemberFormLive, :edit
       live "/teams/:subdomain/members/:id/photo", MemberPhotoLive
       live "/teams/:subdomain/members/:id/groups", MemberGroupsLive
+      live "/teams/:subdomain/members/:id/chores", MemberChoresLive
       live "/teams/:subdomain/members/:id/equipment", MemberEquipmentLive
       live "/teams/:subdomain/members/:id/qualifications", MemberQualificationsLive
       live "/teams/:subdomain/members/:id/standing", MemberStandingLive
