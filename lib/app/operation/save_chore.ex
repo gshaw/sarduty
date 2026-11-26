@@ -21,6 +21,7 @@ defmodule App.Operation.SaveChore do
   alias App.Model.Standing
   alias App.Model.Team
   alias App.Repo
+  alias App.ViewData.WaitingChores
 
   @doc """
   `logger`, a member of `team`, logs a chore for `people` (#1102): each gets their own
@@ -149,10 +150,13 @@ defmodule App.Operation.SaveChore do
   :own}` when they include the team admin's own and `own: true` doesn't say they meant it
   (#697).
 
-  `member:` is the team admin's member on the team, or nil.
+  `member:` is the team admin's member on the team, or nil. `filter:` is Waiting's
+  `category:` and `member:` (#1116): only the rows it shows are accepted, read again here,
+  so a hidden chore's id added to the post stays waiting.
   """
   def accept(%Team{} = team, ids, user, now, opts) do
     member = Keyword.fetch!(opts, :member)
+    filter = Keyword.get(opts, :filter, %{category: nil, member: nil})
 
     together =
       from c in Chore,
@@ -160,12 +164,8 @@ defmodule App.Operation.SaveChore do
         select: c.logged_together_id
 
     Repo.transaction(fn ->
-      chores =
-        Chore
-        |> where([c], c.team_id == ^team.id and c.status == :waiting)
-        |> where([c], c.id in ^ids or c.logged_together_id in subquery(together))
-        |> preload(logged_with: ^Chore.logged_with_query(team.id))
-        |> Repo.all()
+      rows = team.id |> Chore.get_all_for_team(:waiting) |> WaitingChores.rows()
+      chores = to_accept(rows, ids, Repo.all(together), filter)
 
       if own_unmeant?(chores, member, opts), do: Repo.rollback(:own)
 
@@ -176,6 +176,23 @@ defmodule App.Operation.SaveChore do
       :ok = ChoreEvent.place!(team.id)
       length(chores)
     end)
+  end
+
+  @doc """
+  The chores to accept: those on Waiting's `rows` that `filter` shows and that `ids` pick,
+  by any chore's id or a `logged_together_id` in `together`, the chores logged together
+  that the ids had.
+  """
+  def to_accept(rows, ids, together, filter) do
+    ids = MapSet.new(ids)
+
+    rows
+    |> WaitingChores.filter(filter)
+    |> Enum.filter(fn row ->
+      Enum.any?(row.ids, &MapSet.member?(ids, &1)) or
+        (row.first.logged_together_id != nil and row.first.logged_together_id in together)
+    end)
+    |> Enum.flat_map(& &1.chores)
   end
 
   @doc """

@@ -61,7 +61,9 @@ to do next, then gets out of the way. It does not sell, apologize, or celebrate.
     the month first ("Sep 28, 2025", or "September 28, 2025" in letters), times use the
     24-hour clock ("14:05"), and durations read "212h 30m", never "212:30" or "212.5
     hours". No formatter fits? Add one. The style guide's Values page, `/styles/values`,
-    runs every formatter on an example.
+    runs every formatter on an example. Short units are the same everywhere, in text and
+    in URLs: `s` second, `m` minute, `h` hour, `d` day, `mo` month, `y` year. A month is
+    never `m`, which is minutes in "1h 30m": Last 3 months is `when=3mo` (#1116).
 11. **Talk to the reader as "you".** Say "your team" and "your access key". Use "we"
     only for SAR Duty the service, and rarely. Words the reader says are in their own
     voice: the reply buttons ("I'll be there") and a box they check to agree ("I'll use

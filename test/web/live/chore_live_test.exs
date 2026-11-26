@@ -137,6 +137,48 @@ defmodule Web.ChoreLiveTest do
     assert [%{needs_send: false, d4h_activity_id: 900}] = Repo.all(ChoreEvent)
   end
 
+  # Accepted and Declined open on the last 12 months, so an older chore comes back on its
+  # year (#1116).
+  test "a decided chore stays in sight: an old one opens its year", ctx do
+    %{conn: conn, team: team, member: member, category: category} = ctx
+    today = Service.Period.today(DateTime.utc_now(), team.timezone)
+    old_date = today |> Date.beginning_of_month() |> Date.shift(month: -13)
+    old = chore_fixture(member, category, %{date: old_date})
+    declined = chore_fixture(member, category, %{date: old_date, description: "Rope check"})
+    recent_date = today |> Date.beginning_of_month() |> Date.shift(month: -1)
+    recent = chore_fixture(member, category, %{date: recent_date, description: "Hall floors"})
+    stub_d4h(member)
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{old.id}")
+    accepted_path = ~p"/teams/#{team}/chores?view=accepted&when=#{old_date.year}"
+
+    {:ok, lv, _html} =
+      lv |> form("#accept-form") |> render_submit() |> follow_redirect(conn, accepted_path)
+
+    assert has_element?(lv, "#chore-#{old.id}")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{declined.id}")
+    declined_path = ~p"/teams/#{team}/chores?view=declined&when=#{old_date.year}"
+
+    {:ok, lv, _html} =
+      lv
+      |> form("#decline-form", decline: %{reason: "Not that day"})
+      |> render_submit()
+      |> follow_redirect(conn, declined_path)
+
+    assert has_element?(lv, "#chore-#{declined.id}")
+
+    {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores/#{recent.id}")
+
+    {:ok, lv, _html} =
+      lv
+      |> form("#accept-form")
+      |> render_submit()
+      |> follow_redirect(conn, ~p"/teams/#{team}/chores?view=accepted")
+
+    assert has_element?(lv, "#chore-#{recent.id}")
+  end
+
   test "a team admin declines a chore with a reason", ctx do
     %{conn: conn, team: team, member: member, category: category} = ctx
     chore = chore_fixture(member, category)
@@ -183,6 +225,7 @@ defmodule Web.ChoreLiveTest do
     assert %{status: :declined, chore_event_id: nil} = Repo.get!(Chore, chore.id)
   end
 
+  # Back on its year, since the last 12 months leave it out (#1116).
   test "a team admin changes an accepted chore to any date", ctx do
     %{conn: conn, team: team, member: member, category: category} = ctx
     chore = chore_fixture(member, category, %{status: :accepted})
@@ -195,7 +238,7 @@ defmodule Web.ChoreLiveTest do
       lv
       |> form("#chore-form", chore: %{date: "2025-01-15", time: "2h"})
       |> render_submit()
-      |> follow_redirect(conn, ~p"/teams/#{team}/chores?view=accepted")
+      |> follow_redirect(conn, ~p"/teams/#{team}/chores?view=accepted&when=2025")
 
     assert html =~ "Saved Truck 1 wash."
 

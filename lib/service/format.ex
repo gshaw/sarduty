@@ -123,6 +123,10 @@ defmodule Service.Format do
 
   def months(n) when is_integer(n), do: count(n, one: "1 month", many: "%d months")
 
+  @doc ~s(A period of whole months, this one included: "This month", "Last 3 months", "Last 12 months".)
+  def last_months(1), do: "This month"
+  def last_months(n) when is_integer(n) and n > 1, do: "Last #{number(n)} months"
+
   @doc ~s(A length of text: "1 character", "20 characters".)
   def characters(n) when is_integer(n), do: count(n, one: "1 character", many: "%d characters")
 

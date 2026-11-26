@@ -38,4 +38,33 @@ defmodule Service.PeriodTest do
                {~U[2026-01-01 08:00:00Z], ~U[2027-01-01 07:00:00Z]}
     end
   end
+
+  describe "the last n months (#1116)" do
+    test "are whole calendar months, this one included, in the team's zone" do
+      november = ~U[2026-11-25 20:00:00Z]
+      assert Period.month_dates(3, november, @tz) == {~D[2026-09-01], ~D[2026-11-30]}
+      assert Period.month_dates(1, november, @tz) == {~D[2026-11-01], ~D[2026-11-30]}
+
+      assert Period.month_dates(12, ~U[2027-01-15 20:00:00Z], @tz) ==
+               {~D[2026-02-01], ~D[2027-01-31]}
+
+      # Still October 31 in Vancouver.
+      assert Period.month_dates(1, ~U[2026-11-01 05:00:00Z], @tz) ==
+               {~D[2026-10-01], ~D[2026-10-31]}
+    end
+
+    test "are written mo, never m, and a filter's days period doesn't take them" do
+      assert Period.month_kinds() == [
+               {"This month", "1mo"},
+               {"Last 3 months", "3mo"},
+               {"Last 6 months", "6mo"},
+               {"Last 12 months", "12mo"}
+             ]
+
+      assert Period.month_period?("3mo")
+      refute Period.month_period?("3m")
+      refute Period.valid?("3mo")
+      assert Period.valid?("90d")
+    end
+  end
 end

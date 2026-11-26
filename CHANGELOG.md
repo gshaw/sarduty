@@ -7,6 +7,8 @@ What changed for search and rescue teams, newest first. ⭐ marks the big ones.
 - ⭐ Log a chore for everyone who did it: pick them under Who did it, and each gets
   their own chore. Team admins accept the claim as one row on Waiting, and a member's
   page has a Chores tab.
+- Filter chores by category and member, so you can accept just the chores you look
+  after. Accepted and Declined also filter by period, and open on the last 12 months.
 
 ## Nov 16–22
 
