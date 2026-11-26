@@ -188,7 +188,9 @@ defmodule Web.StyleGuideHTML.Values do
          {:days_left, "Days until an expiry day, beside its date",
           [{"days_left(0)", Format.days_left(0)}, {"days_left(30)", Format.days_left(30)}]},
          {:months, "How long a qualification lasts",
-          [{"months(6)", Format.months(6)}, {"months(36)", Format.months(36)}]}
+          [{"months(6)", Format.months(6)}, {"months(36)", Format.months(36)}]},
+         {:last_months, "A filter's period of whole months",
+          [{"last_months(1)", Format.last_months(1)}, {"last_months(12)", Format.last_months(12)}]}
        ] ++ measures()}
   end
 

@@ -3,16 +3,20 @@ defmodule Web.ChoreCollectionLive do
 
   import Web.ChoreText, only: [own_box: 1, status_badge: 1]
   import Web.Components.Chart, only: [stat: 1]
+  import Web.Components.FilterBar
   import Web.Components.StatSwitch
 
   alias App.Model.Chore
+  alias App.Model.ChoreCategory
   alias App.Model.ChoreEvent
+  alias App.Model.Member
   alias App.Model.Standing
   alias App.Model.Team
   alias App.Operation.SaveChore
   alias App.Operation.SendChores
   alias App.ViewData.MemberChores
   alias App.ViewData.WaitingChores
+  alias App.ViewModel.ChoreFilterViewModel
   alias Service.Format
   alias Web.ChoreText
 
@@ -25,7 +29,9 @@ defmodule Web.ChoreCollectionLive do
   # activities. Every chore opens its own page, to change or decline it. A team admin's
   # own chores start cleared: another team admin should accept them, and accepting their
   # own takes a box that says they meant it (#697). Chores logged together wait as one
-  # row, and accepting it accepts them all (#1102).
+  # row, and accepting it accepts them all (#1102). Team admins filter the three by
+  # category and member, and Accepted and Declined by period too (#1116): each tile counts
+  # its view with the filters on, and Accept takes only the rows shown.
   @team_views [waiting: "Waiting", accepted: "Accepted", declined: "Declined"]
 
   def mount(_params, _session, socket) do
@@ -45,39 +51,126 @@ defmodule Web.ChoreCollectionLive do
     |> then(&{:ok, &1})
   end
 
-  # A team admin opens on Waiting, a member on Yours.
+  # A team admin opens on Waiting, a member on Yours. Waiting has no period, so it ignores
+  # `when`. Another team's category or member is not found.
   def handle_params(params, _uri, socket) do
-    [{first, _label} | _views] = views = socket.assigns.views
-    wanted = params["view"] || Atom.to_string(first)
-    view = views |> Keyword.keys() |> Enum.find(&(Atom.to_string(&1) == wanted))
-    if !view, do: raise(Web.Status.NotFound)
+    team = socket.assigns.current_team
+    view = view!(socket.assigns.views, params["view"])
+    {filter_options, changeset} = filter_options!(params, view)
+    categories = if socket.assigns.team_admin?, do: ChoreCategory.get_all(team.id), else: []
+    picked = picked!(team, categories, filter_options)
 
     socket
-    |> assign(view: view)
+    |> assign(
+      view: view,
+      filter_options: filter_options,
+      form: to_form(changeset, as: "form"),
+      categories: categories,
+      picked: picked
+    )
     |> load()
     |> then(&{:noreply, &1})
   end
 
-  @doc "The Chores page showing chores in `status`, or `:yours`, the member's own."
-  def view_path(team, :waiting), do: ~p"/teams/#{team}/chores"
-  def view_path(team, view), do: ~p"/teams/#{team}/chores?#{[view: view]}"
+  # The member picked, nil for All. Another team's category or member is not found.
+  defp picked!(team, categories, %{category: category, member: member}) do
+    if category && !Enum.any?(categories, &(&1.id == category)), do: raise(Web.Status.NotFound)
+    picked = member && Member.find(team, member)
+    if member && !picked, do: raise(Web.Status.NotFound)
+    picked
+  end
+
+  defp view!([{first, _label} | _rest] = views, wanted) do
+    wanted = wanted || Atom.to_string(first)
+
+    views |> Keyword.keys() |> Enum.find(&(Atom.to_string(&1) == wanted)) ||
+      raise Web.Status.NotFound
+  end
+
+  defp filter_options!(params, view) do
+    case ChoreFilterViewModel.validate(params) do
+      {:ok, filter_options, changeset} when view == :waiting ->
+        {%{filter_options | when: ChoreFilterViewModel.default_when()}, changeset}
+
+      {:ok, filter_options, changeset} ->
+        {filter_options, changeset}
+
+      {:error, _changeset} ->
+        raise Web.Status.NotFound
+    end
+  end
+
+  @doc """
+  The Chores page showing chores in `status`, or `:yours`, the member's own, with
+  `filter_options` from `ChoreFilterViewModel` (#1116).
+  """
+  def view_path(team, view, filter_options \\ %ChoreFilterViewModel{}) do
+    case ChoreFilterViewModel.query_params(view, filter_options) do
+      [] -> ~p"/teams/#{team}/chores"
+      params -> ~p"/teams/#{team}/chores?#{params}"
+    end
+  end
+
+  @doc """
+  Where a team admin goes after deciding or changing `chore` on its page: the view it's in
+  now, on its year when the last 12 months leave it out (#1116).
+  """
+  def decided_path(team, chore, now) do
+    year =
+      chore.status != :waiting && ChoreFilterViewModel.when_for(chore.date, now, team.timezone)
+
+    filter_options = if year, do: %ChoreFilterViewModel{when: year}, else: %ChoreFilterViewModel{}
+    view_path(team, chore.status, filter_options)
+  end
 
   defp load(%{assigns: %{team_admin?: false}} = socket),
     do: socket |> assign(counts: %{}, to_send: 0) |> load_yours()
 
   defp load(socket) do
-    team_id = socket.assigns.current_team.id
-    counts = Chore.count_by_status(team_id)
+    %{current_team: team, filter_options: filter_options} = socket.assigns
+    filter = %{category: filter_options.category, member: filter_options.member}
+    dates = ChoreFilterViewModel.dates(filter_options.when, DateTime.utc_now(), team.timezone)
+    decided = Map.put(filter, :dates, dates)
+    waiting = team.id |> Chore.get_all_for_team(:waiting) |> WaitingChores.rows()
+    rows = WaitingChores.filter(waiting, filter)
 
     socket
     |> assign(
-      counts: counts,
-      to_send: ChoreEvent.count_to_send(team_id)
+      counts: counts(team.id, rows, decided),
+      totals: Chore.count_by_status(team.id),
+      to_send: ChoreEvent.count_to_send(team.id),
+      filter: filter,
+      decided: decided
     )
     |> load_yours()
-    |> load_view(socket.assigns.view, team_id)
+    |> load_view(socket.assigns.view, team.id, {waiting, rows})
     |> assign_standings()
   end
+
+  # Each tile counts its view with the filters on. Waiting's counts the chores on its rows.
+  defp counts(team_id, rows, decided) do
+    %{
+      waiting: rows |> Enum.map(&length(&1.chores)) |> Enum.sum(),
+      accepted: Chore.count_for_team(team_id, :accepted, decided),
+      declined: Chore.count_for_team(team_id, :declined, decided)
+    }
+  end
+
+  # Who has a chore in the view, for Member, and the member picked even with none.
+  defp assign_members(socket, members) do
+    picked = socket.assigns.picked
+
+    members =
+      if picked && !Enum.any?(members, &(&1.id == picked.id)),
+        do: Enum.sort_by([picked | members], &{String.downcase(&1.name), &1.id}),
+        else: members
+
+    assign(socket, member_options: Enum.map(members, &{&1.name, Integer.to_string(&1.id)}))
+  end
+
+  defp assign_years(socket, team_id),
+    do:
+      assign(socket, when_options: team_id |> Chore.years() |> ChoreFilterViewModel.when_kinds())
 
   # The standing of everyone in the view's tables, which only team admins see.
   defp assign_standings(socket) do
@@ -107,30 +200,47 @@ defmodule Web.ChoreCollectionLive do
     )
   end
 
-  defp load_view(socket, :yours, _team_id), do: socket
+  defp load_view(socket, :yours, _team_id, _waiting), do: socket
 
-  defp load_view(socket, :waiting, team_id) do
+  # Every row shown starts checked but the reader's own, and the box starts cleared, so a
+  # filter that changes starts over.
+  defp load_view(socket, :waiting, _team_id, {waiting, rows}) do
     member = socket.assigns.current_member
-    rows = team_id |> Chore.get_all_for_team(:waiting) |> WaitingChores.rows()
     others = Enum.reject(rows, &own_row?(&1, member))
 
     socket
     |> assign(chores: [], rows: rows, own: false)
+    |> assign_members(WaitingChores.members(waiting, socket.assigns.filter))
     |> select(MapSet.new(others, & &1.id))
   end
 
-  defp load_view(socket, :accepted, team_id) do
-    by_event = team_id |> Chore.get_all_for_team(:accepted) |> Enum.group_by(& &1.chore_event_id)
+  # Only the activities with a chore that matches, each with those chores. An activity's
+  # totals stay whole.
+  defp load_view(socket, :accepted, team_id, _waiting) do
+    decided = socket.assigns.decided
+
+    by_event =
+      team_id |> Chore.get_all_for_team(:accepted, decided) |> Enum.group_by(& &1.chore_event_id)
 
     events =
       for row <- ChoreEvent.get_all_with_totals(team_id),
-          do: Map.put(row, :chores, Map.get(by_event, row.event.id, []))
+          chores = Map.get(by_event, row.event.id),
+          do: Map.put(row, :chores, chores)
 
-    assign(socket, events: events)
+    socket
+    |> assign(events: events)
+    |> assign_members(Chore.members_for_team(team_id, :accepted, %{decided | member: nil}))
+    |> assign_years(team_id)
   end
 
-  defp load_view(socket, :declined, team_id),
-    do: assign(socket, chores: Chore.get_all_for_team(team_id, :declined))
+  defp load_view(socket, :declined, team_id, _waiting) do
+    decided = socket.assigns.decided
+
+    socket
+    |> assign(chores: Chore.get_all_for_team(team_id, :declined, decided))
+    |> assign_members(Chore.members_for_team(team_id, :declined, %{decided | member: nil}))
+    |> assign_years(team_id)
+  end
 
   # Every chore in a row is the reader's own or none is: own?/2 reads the chores logged
   # together, which they share.
@@ -184,7 +294,7 @@ defmodule Web.ChoreCollectionLive do
       <:view
         :for={{view, label} <- @views}
         id={"chores-view-#{view}"}
-        patch={view_path(@current_team, view)}
+        patch={view_path(@current_team, view, @filter_options)}
         current={@view == view}
         count={Map.fetch!(@counts, view)}
       >
@@ -192,9 +302,45 @@ defmodule Web.ChoreCollectionLive do
       </:view>
     </.stat_switch>
 
+    <.filter_bar
+      :if={@team_admin? and @view != :yours}
+      for={@form}
+      id="chore_filter_form"
+      count={count_chores(Map.fetch!(@counts, @view))}
+      repeats
+      clear={view_path(@current_team, @view)}
+      path_fn={&filter_path(@current_team, @view, @filter_options, &1)}
+    >
+      <:filter
+        field={@form[:category]}
+        label="Category"
+        options={[{"All", ""} | Enum.map(@categories, &{&1.title, &1.id})]}
+        default=""
+      />
+      <:filter
+        field={@form[:member]}
+        label="Member"
+        type="combobox"
+        options={@member_options}
+        default=""
+      />
+      <:filter
+        :if={@view != :waiting}
+        field={@form[:when]}
+        label="Period"
+        options={@when_options}
+        default={ChoreFilterViewModel.default_when()}
+      />
+    </.filter_bar>
+
     <%= case @view do %>
       <% :waiting -> %>
-        <.empty_state :if={@rows == []} id="no-waiting-chores" title="No chores waiting">
+        <.no_match :if={@rows == [] and @totals.waiting > 0} period={false} />
+        <.empty_state
+          :if={@rows == [] and @totals.waiting == 0}
+          id="no-waiting-chores"
+          title="No chores waiting"
+        >
           Chores members log show here for you to accept.
         </.empty_state>
 
@@ -210,6 +356,7 @@ defmodule Web.ChoreCollectionLive do
               selected={@selected}
               current_team={@current_team}
               current_member={@current_member}
+              picked={@picked}
             />
             <div :if={@own_selected?} class="mt-4">
               <.own_box checked={@own} />
@@ -227,7 +374,12 @@ defmodule Web.ChoreCollectionLive do
           </.form>
         </div>
       <% :accepted -> %>
-        <.empty_state :if={@events == []} id="no-chore-events" title="Nothing sent yet">
+        <.no_match :if={@events == [] and @totals.accepted > 0} period />
+        <.empty_state
+          :if={@events == [] and @totals.accepted == 0}
+          id="no-chore-events"
+          title="Nothing sent yet"
+        >
           Chores you accept show here, under their activity.
         </.empty_state>
         <p :if={@events != []} class="hint">
@@ -240,7 +392,7 @@ defmodule Web.ChoreCollectionLive do
               {Format.month_year_long(row.event.month)} · {row.event.chore_category.title}
             </h2>
             <:note>
-              {Format.count(row.members, one: "1 member", many: "%d members")} · {Format.duration(
+              Activity total: {Format.count(row.members, one: "1 member", many: "%d members")} · {Format.duration(
                 row.minutes
               )}
             </:note>
@@ -273,7 +425,12 @@ defmodule Web.ChoreCollectionLive do
           />
         </section>
       <% :declined -> %>
-        <.empty_state :if={@chores == []} id="no-declined-chores" title="No chores declined">
+        <.no_match :if={@chores == [] and @totals.declined > 0} period />
+        <.empty_state
+          :if={@chores == [] and @totals.declined == 0}
+          id="no-declined-chores"
+          title="No chores declined"
+        >
           Chores you decline show here, with the reason.
         </.empty_state>
         <.chore_table
@@ -293,6 +450,19 @@ defmodule Web.ChoreCollectionLive do
           team_admin?={@team_admin?}
         />
     <% end %>
+    """
+  end
+
+  attr :period, :boolean, required: true
+
+  # Filters that match nothing stay as they are and say so.
+  defp no_match(assigns) do
+    ~H"""
+    <.empty_state id="no-matching-chores" title="No chores match">
+      {if @period,
+        do: "Change the filters, or select All under Period.",
+        else: "Change the filters."}
+    </.empty_state>
     """
   end
 
@@ -384,6 +554,7 @@ defmodule Web.ChoreCollectionLive do
   attr :selected, :any, required: true, doc: "the rows checked, by their first chore's id"
   attr :current_team, :map, required: true
   attr :current_member, :map, default: nil
+  attr :picked, :map, default: nil, doc: "the member Member picks, in bold"
 
   defp waiting_table(assigns) do
     ~H"""
@@ -403,7 +574,14 @@ defmodule Web.ChoreCollectionLive do
         <%!-- Each name keeps its badge and comma on its line, and the names wrap between
         them. --%>
         <span class="flex flex-wrap gap-x-1">
-          <span :for={{chore, i} <- Enum.with_index(row.chores)} class="whitespace-nowrap"><.member_cell
+          <span
+            :for={{chore, i} <- Enum.with_index(row.chores)}
+            id={"chore-#{chore.id}-name"}
+            class={[
+              "whitespace-nowrap",
+              @picked && length(row.chores) > 1 && chore.member.id == @picked.id && "font-semibold"
+            ]}
+          ><.member_cell
             member={chore.member}
             team={@current_team}
             standing={@standings[chore.member.id]}
@@ -475,6 +653,17 @@ defmodule Web.ChoreCollectionLive do
     """
   end
 
+  def handle_event("change", %{"form" => form_params}, socket) do
+    case ChoreFilterViewModel.validate(form_params) do
+      {:ok, filter_options, _changeset} ->
+        %{current_team: team, view: view} = socket.assigns
+        {:noreply, push_patch(socket, to: view_path(team, view, filter_options), replace: true)}
+
+      {:error, _changeset} ->
+        raise Web.Status.NotFound
+    end
+  end
+
   def handle_event("select", params, socket) do
     socket
     |> assign(:own, params["own"] == "true")
@@ -483,19 +672,18 @@ defmodule Web.ChoreCollectionLive do
   end
 
   def handle_event("accept", params, socket) do
-    %{current_team: team, current_user: user, current_member: member} = socket.assigns
+    %{current_team: team, current_user: user, current_member: member, filter: filter} =
+      socket.assigns
+
     now = DateTime.utc_now()
+    opts = [member: member, own: params["own"] == "true", filter: filter]
 
     with [_id | _ids] = ids <- params |> ids("chore_ids") |> row_ids(socket.assigns),
-         {:ok, count} <-
-           SaveChore.accept(team, ids, user, now, member: member, own: params["own"] == "true") do
-      result = SendChores.call(team, user, now)
-      {kind, text} = ChoreText.send_flash("Accepted #{count_chores(count)}", result)
+         {:ok, count} <- SaveChore.accept(team, ids, user, now, opts) do
+      {kind, text} =
+        ChoreText.send_flash("Accepted #{count_chores(count)}", SendChores.call(team, user, now))
 
-      socket
-      |> put_flash(kind, text)
-      |> load()
-      |> then(&{:noreply, &1})
+      {:noreply, socket |> put_flash(kind, text) |> load()}
     else
       [] -> {:noreply, put_flash(socket, :error, "Select at least 1 chore to accept.")}
       {:error, :own} -> {:noreply, put_flash(socket, :error, ChoreText.own_refused())}
@@ -562,6 +750,14 @@ defmodule Web.ChoreCollectionLive do
         _other -> []
       end
     end)
+  end
+
+  # A chip's path, with the filter it removes back at its default.
+  defp filter_path(team, view, filter_options, changed) do
+    changed =
+      Map.new(changed, fn {key, value} -> {key, if(value == "", do: nil, else: value)} end)
+
+    view_path(team, view, Map.merge(filter_options, changed))
   end
 
   defp count_chores(n), do: Format.count(n, one: "%d chore", many: "%d chores")

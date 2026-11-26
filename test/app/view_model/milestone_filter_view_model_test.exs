@@ -75,4 +75,11 @@ defmodule App.ViewModel.MilestoneFilterViewModelTest do
 
     assert {"2025", "2025"} in MilestoneFilterViewModel.when_kinds(milestones())
   end
+
+  # Month periods are Chores' alone (#1116).
+  test "refuses a month period, and offers the day periods it did" do
+    assert {:error, _changeset} = MilestoneFilterViewModel.validate(%{"when" => "3mo"})
+    values = [] |> MilestoneFilterViewModel.when_kinds() |> Enum.map(&elem(&1, 1))
+    assert values == ~w(all 30d 60d 90d 180d 365d)
+  end
 end

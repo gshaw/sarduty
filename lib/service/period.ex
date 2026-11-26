@@ -15,11 +15,16 @@ defmodule Service.Period do
     made or changed for these years, so their activities must match D4H.
   - **A filter's period**: All, a year as `"2026"`, or the last 30 to 365 days as
     `"90d"`. The members list and a member's activities offer the same.
+  - **The last n months**: whole calendar months, this one included, as `"3mo"` (#1116).
+    In November 2026, `"3mo"` is September 1 to November 30. A month is `mo`, never `m`,
+    which is minutes in a duration. Only Chores offers them, so a month's chore activity
+    shows whole or not at all; `valid?/1` doesn't take them.
   """
 
   @recent_days 30
   @letter_months 1..4
   @rolling_days [30, 60, 90, 180, 365]
+  @rolling_months [1, 3, 6, 12]
 
   @doc "Today's date in `timezone`."
   def today(%DateTime{} = now, timezone),
@@ -46,6 +51,22 @@ defmodule Service.Period do
 
   @doc ~s(The rolling periods a filter offers, as `{label, value}`: "Last 90 days" is `"90d"`.)
   def rolling_kinds, do: Enum.map(@rolling_days, &{"Last #{Service.Format.days(&1)}", "#{&1}d"})
+
+  @doc ~s(The month periods, as `{label, value}`: "Last 3 months" is `"3mo"`, and `"1mo"` is This month.)
+  def month_kinds,
+    do: Enum.map(@rolling_months, &{Service.Format.last_months(&1), "#{&1}mo"})
+
+  @doc "Whether `value` is a month period, such as `\"3mo\"`."
+  def month_period?(value), do: value in Enum.map(@rolling_months, &"#{&1}mo")
+
+  @doc """
+  The first and last dates of the last `months` whole months in `timezone`, this one
+  included.
+  """
+  def month_dates(months, %DateTime{} = now, timezone) when months > 0 do
+    this_month = now |> today(timezone) |> Date.beginning_of_month()
+    {Date.shift(this_month, month: 1 - months), Date.end_of_month(this_month)}
+  end
 
   @doc ~s(Whether `value` is a period a filter takes: `"all"`, a year, or a rolling period.)
   def valid?(value) when is_binary(value),

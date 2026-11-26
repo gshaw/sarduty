@@ -189,16 +189,17 @@ defmodule Web.ChoreLive do
 
   @doc """
   Sends the team's chore events after a team admin's change, and goes back to the Chores
-  page, which shows why a send did not go through, on the view `chore` is in now. `done`
-  says what changed.
+  page, which shows why a send did not go through, on the view `chore` is in now, and on
+  its year when that's older than the last 12 months (#1116). `done` says what changed.
   """
   def send_and_return(socket, chore, done) do
     %{current_team: team, current_user: user} = socket.assigns
-    result = SendChores.call(team, user, DateTime.utc_now())
+    now = DateTime.utc_now()
+    result = SendChores.call(team, user, now)
     {kind, text} = ChoreText.send_flash(done, result)
 
     socket
     |> put_flash(kind, text)
-    |> push_navigate(to: Web.ChoreCollectionLive.view_path(team, chore.status))
+    |> push_navigate(to: Web.ChoreCollectionLive.decided_path(team, chore, now))
   end
 end

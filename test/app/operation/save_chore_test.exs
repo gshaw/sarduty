@@ -4,6 +4,7 @@ defmodule App.Operation.SaveChoreTest do
   alias App.Model.Chore
   alias App.Model.Member
   alias App.Operation.SaveChore
+  alias App.ViewData.WaitingChores
 
   # Another team admin should accept a team admin's chores (#697).
   describe "own_unmeant?/3" do
@@ -72,6 +73,61 @@ defmodule App.Operation.SaveChoreTest do
     test "a member who is not a person logs for themselves", %{context: context} do
       bot = %Member{id: 1, team_id: 9, not_a_person: true}
       assert SaveChore.check_people(bot, [bot], :member, context) == {:ok, [bot]}
+    end
+  end
+
+  # Accept takes only the rows the filters show (#1116).
+  describe "to_accept/4" do
+    setup do
+      hall = %{id: 10, title: "Hall and gear"}
+      board = %{id: 20, title: "Board work"}
+
+      people =
+        for {id, name} <- [{1, "Alex"}, {2, "Blake"}, {3, "Cameron"}],
+            do: {id, %Member{id: id, name: name}}
+
+      people = Map.new(people)
+
+      chore = fn id, member_id, category, together ->
+        %Chore{
+          id: id,
+          member_id: member_id,
+          member: people[member_id],
+          chore_category_id: category.id,
+          chore_category: category,
+          logged_together_id: together,
+          date: ~D[2026-11-02],
+          minutes: 60,
+          description: "Chore #{id}"
+        }
+      end
+
+      chores = [
+        chore.(1, 1, hall, nil),
+        chore.(2, 2, board, nil),
+        chore.(3, 1, hall, "gear"),
+        chore.(4, 2, hall, "gear"),
+        chore.(5, 3, hall, "gear")
+      ]
+
+      %{rows: WaitingChores.rows(chores), hall: hall, board: board}
+    end
+
+    defp accepted(chores), do: chores |> Enum.map(& &1.id) |> Enum.sort()
+
+    test "a hidden chore's id added to the post stays waiting", %{rows: rows, hall: hall} do
+      filter = %{category: hall.id, member: nil}
+      assert accepted(SaveChore.to_accept(rows, [1, 2], [], filter)) == [1]
+    end
+
+    test "with a member picked, a group row they're on is accepted whole", %{rows: rows} do
+      filter = %{category: nil, member: 3}
+      assert accepted(SaveChore.to_accept(rows, [3, 1], ["gear"], filter)) == [3, 4, 5]
+    end
+
+    test "a row is picked by a chore logged with it, whatever that one is now", %{rows: rows} do
+      filter = %{category: nil, member: nil}
+      assert accepted(SaveChore.to_accept(rows, [99], ["gear"], filter)) == [3, 4, 5]
     end
   end
 end

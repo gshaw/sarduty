@@ -113,6 +113,36 @@ what they did, a date, and a time ([Chore](../lib/app/model/chore.ex),
   After a change, the page opens on the view the chore is in now. Search finds a chore
   by its words.
 
+## Filters
+
+Team admins filter Waiting, Accepted, and Declined (#1116): a chore category and a
+member, and on Accepted and Declined a period
+([ChoreFilterViewModel](../lib/app/view_model/chore_filter_view_model.ex)). A team admin
+who looks after the hall and gear accepts only those chores. Yours has none.
+
+- **Category and Member are local ids** in the URL, `?category=7&member=4`, since a
+  chore category has no slug. Another team's id is Page not found. Category lists
+  archived categories too, since old chores keep theirs.
+- **Member lists who has a chore in the view**, so it stays short as years pile up: on
+  Waiting, who has one waiting; on Accepted and Declined, who has one in the period; with
+  a category picked, in that category. A member picked stays listed with nothing to show.
+- **Period is whole calendar months, this one included,** `1mo` to `12mo`, then each
+  year with chores and All (`Service.Period.month_dates/3`). A chore belongs to the month
+  it was done, so an activity shows whole or not at all. Accepted and Declined open on
+  the last 12 months, which stays out of the URL. Waiting has no period: an old chore
+  waiting never hides.
+- **The filters follow you** between the tiles: Category and Member to every team view,
+  Period between Accepted and Declined. Each tile counts its view with them on.
+- **Filters that match nothing stay put** and say "No chores match".
+- **Accept takes only the rows shown.** Waiting filters its rows
+  (`WaitingChores.filter/2`): a row logged together shows whole when one of its chores
+  matches, and is accepted whole. `SaveChore.accept/5` reads the rows again with the
+  same filter, so a hidden chore's id added to the post stays waiting.
+- **Accepted lists only the activities with a chore that matches**, and only those
+  chores. The heading's Activity total counts the whole activity.
+- **A chore decided on its page stays in sight**: one done before the last 12 months
+  opens Accepted or Declined on its year, `?view=accepted&when=2025`.
+
 ## The send
 
 Every team admin decision sends to D4H at once

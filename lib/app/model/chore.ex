@@ -211,16 +211,60 @@ defmodule App.Model.Chore do
 
   @doc """
   The team's chores in `status`, with their members and categories: waiting ones oldest
-  first, to accept in turn, and the rest newest first.
+  first, to accept in turn, and the rest newest first. `filter` keeps a chore category,
+  `category:`, a member, `member:`, and the dates done, `dates:` as `{first, last}`
+  (#1116). Waiting's rows filter on their own (`App.ViewData.WaitingChores.filter/2`).
   """
-  def get_all_for_team(team_id, status) do
-    Chore
-    |> where([c], c.team_id == ^team_id and c.status == ^status)
+  def get_all_for_team(team_id, status, filter \\ %{}) do
+    team_id
+    |> filtered_query(status, filter)
     |> order_by_status(status)
     |> preload([:member, :chore_category])
     |> preload(logged_with: ^logged_with_query(team_id))
     |> Repo.all()
   end
+
+  @doc "How many of the team's chores in `status` `filter` keeps, as get_all_for_team/3."
+  def count_for_team(team_id, status, filter),
+    do: team_id |> filtered_query(status, filter) |> Repo.aggregate(:count)
+
+  @doc """
+  The members with a chore in `status` that `filter` keeps, as get_all_for_team/3, by
+  name.
+  """
+  def members_for_team(team_id, status, filter) do
+    member_ids = team_id |> filtered_query(status, filter) |> select([c], c.member_id)
+
+    Member
+    |> where([m], m.team_id == ^team_id and m.id in subquery(member_ids))
+    |> order_by([m], asc: m.name, asc: m.id)
+    |> Repo.all()
+  end
+
+  @doc "Each year the team has a chore in, in any status, newest first."
+  def years(team_id) do
+    Chore
+    |> where([c], c.team_id == ^team_id)
+    |> select([c], fragment("CAST(substr(?, 1, 4) AS INTEGER)", c.date))
+    |> distinct(true)
+    |> Repo.all()
+    |> Enum.sort(:desc)
+  end
+
+  defp filtered_query(team_id, status, filter) do
+    Chore
+    |> where([c], c.team_id == ^team_id and c.status == ^status)
+    |> filter_by(:category, filter[:category])
+    |> filter_by(:member, filter[:member])
+    |> filter_by(:dates, filter[:dates])
+  end
+
+  defp filter_by(query, _key, nil), do: query
+  defp filter_by(query, :category, id), do: where(query, [c], c.chore_category_id == ^id)
+  defp filter_by(query, :member, id), do: where(query, [c], c.member_id == ^id)
+
+  defp filter_by(query, :dates, {first, last}),
+    do: where(query, [c], c.date >= ^first and c.date <= ^last)
 
   defp order_by_status(query, :waiting), do: order_by(query, [c], asc: c.date, asc: c.id)
   defp order_by_status(query, _status), do: order_by(query, [c], desc: c.date, desc: c.id)
