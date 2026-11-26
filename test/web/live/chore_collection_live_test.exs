@@ -455,6 +455,24 @@ defmodule Web.ChoreCollectionLiveTest do
       assert has_element?(lv, ~s{#chores-view-waiting[href="/teams/#{team.subdomain}/chores"]})
     end
 
+    test "a year with no chores left stays picked under Period", %{conn: conn, team: team} do
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores?view=accepted&when=2020")
+      assert has_element?(lv, ~s{#form_when option[value="2020"][selected]})
+    end
+
+    test "submitting the same filters keeps the rows checked", ctx do
+      %{conn: conn, team: team, hall: hall, cameron: cameron, dana: dana} = ctx
+      kept = chore_fixture(cameron, hall)
+      chore_fixture(dana, hall)
+
+      {:ok, lv, _html} = live(conn, ~p"/teams/#{team}/chores?category=#{hall.id}")
+      lv |> form("#accept-form", %{chore_ids: ["#{kept.id}"]}) |> render_change()
+      assert has_element?(lv, "#accept", "Accept 1 chore")
+
+      lv |> form("#chore_filter_form", form: %{category: hall.id}) |> render_submit()
+      assert has_element?(lv, "#accept", "Accept 1 chore")
+    end
+
     test "a month is mo: when=3m is not found", %{conn: conn, team: team} do
       assert_raise Web.Status.NotFound, fn ->
         live(conn, ~p"/teams/#{team}/chores?view=accepted&when=3m")
@@ -557,7 +575,6 @@ defmodule Web.ChoreCollectionLiveTest do
       assert Repo.get!(Chore, hidden.id).status == :waiting
     end
 
-    # D4H answering every write.
     defp stub_d4h do
       Req.Test.stub(App.Adapter.D4H, fn conn ->
         cond do

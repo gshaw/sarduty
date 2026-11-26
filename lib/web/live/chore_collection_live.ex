@@ -168,9 +168,16 @@ defmodule Web.ChoreCollectionLive do
     assign(socket, member_options: Enum.map(members, &{&1.name, Integer.to_string(&1.id)}))
   end
 
-  defp assign_years(socket, team_id),
-    do:
-      assign(socket, when_options: team_id |> Chore.years() |> ChoreFilterViewModel.when_kinds())
+  # The year picked stays an option with no chores left in it, as Member keeps its member.
+  defp assign_years(socket, team_id) do
+    years =
+      case Integer.parse(socket.assigns.filter_options.when) do
+        {year, ""} -> [year | Chore.years(team_id)] |> Enum.uniq() |> Enum.sort(:desc)
+        _other -> Chore.years(team_id)
+      end
+
+    assign(socket, when_options: ChoreFilterViewModel.when_kinds(years))
+  end
 
   # The standing of everyone in the view's tables, which only team admins see.
   defp assign_standings(socket) do
@@ -455,7 +462,6 @@ defmodule Web.ChoreCollectionLive do
 
   attr :period, :boolean, required: true
 
-  # Filters that match nothing stay as they are and say so.
   defp no_match(assigns) do
     ~H"""
     <.empty_state id="no-matching-chores" title="No chores match">
@@ -655,6 +661,10 @@ defmodule Web.ChoreCollectionLive do
 
   def handle_event("change", %{"form" => form_params}, socket) do
     case ChoreFilterViewModel.validate(form_params) do
+      # Enter in a closed combobox submits the same filters; a patch would recheck every row.
+      {:ok, filter_options, _changeset} when filter_options == socket.assigns.filter_options ->
+        {:noreply, socket}
+
       {:ok, filter_options, _changeset} ->
         %{current_team: team, view: view} = socket.assigns
         {:noreply, push_patch(socket, to: view_path(team, view, filter_options), replace: true)}
